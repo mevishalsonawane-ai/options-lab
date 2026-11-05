@@ -3,6 +3,7 @@
     IRAALGO_LAKE=~/.cache/iraalgo/lake R51_CLEAN=1 python research/hunt/r151_donchian_winrate60/study.py design
     IRAALGO_LAKE=~/.cache/iraalgo/lake R51_CLEAN=1 python research/hunt/r151_donchian_winrate60/study.py final
     IRAALGO_LAKE=~/.cache/iraalgo/lake R51_CLEAN=1 python research/hunt/r151_donchian_winrate60/study.py old
+    IRAALGO_LAKE=~/.cache/iraalgo/lake R51_CLEAN=1 python research/hunt/r151_donchian_winrate60/study.py design_w20   # Amendment B
     python research/hunt/r151_donchian_winrate60/study.py decide
 
 Exits are the app's (R101 XL: -15%, the 30-60-100 lock + L25, 30 min, 15:15), priced by R101 / R106's engine on R51's clean
@@ -345,9 +346,64 @@ def design() -> None:
 
 
 # ================================================================================================ final / old
-def later(phase: str) -> None:
+def w20_keep(g, j, key, c) -> bool:
+    """Amendment B: R150 B's W20 (no 5-min 3+-turn level of the last 20 sessions within 0.25% ahead)."""
+    return Dm.base_keep(g, j, key, c)
+
+
+def design_w20() -> None:
+    """Amendment B: the pickers on the W20-kept candidates; the bar stays the arm's TODAY (no W20)."""
+    d = json.loads((RESULTS / "design.json").read_text())
+    out = {"_meta": dict(phase="design_w20", written=datetime.now(timezone.utc).isoformat())}
+    models = {}
+    for arm in ARMS:
+        today = tuple(TODAY_PARAMS[arm])
+        base_wf = next(v["base_wf"] for v in d[arm]["pickers"].values() if tuple(v["params"]) == today)
+        sets = []
+        for v in d[arm]["pickers"].values():
+            if tuple(v["params"]) not in sets:
+                sets.append(tuple(v["params"]))
+        res = {"pickers": {}, "w20_alone": {}}
+        for params in sets:
+            us = S.filtered(units(arm, params, K.START, K.DESIGN_END), w20_keep)
+            trades = S.walk(arm, us)
+            fx = feats_of_units(us)
+            res["w20_alone"][f"{params[0]}-{params[1]}"] = summ([t for t in trades if in_(t, *WF)])
+            for kind in ("M1", "M2"):
+                pid = f"{arm}-{params[0]}-{params[1]}-{kind}-W20"
+                sc = oof_scores(arm, us, trades, fx, kind)
+                ch = choose_threshold(arm, us, sc, base_wf)
+                tk = [cand_key(t["und"], t["day"], t["er_sig"], t["side"]) for t in trades]
+                y = np.array([t["net"] > 0 for t in trades], int)
+                models[pid] = (make_model(kind).fit(matrix(tk, fx), y), list(params))
+                res["pickers"][pid] = {"params": list(params), "model": kind, "w20": True, "base_wf": base_wf,
+                                       "w20_wf": res["w20_alone"][f"{params[0]}-{params[1]}"], **ch}
+                pk = ch["pick"]
+                print(arm, pid, "w20 wf", res["w20_alone"][f"{params[0]}-{params[1]}"].get("trades"),
+                      round(res["w20_alone"][f"{params[0]}-{params[1]}"].get("win", 0), 3),
+                      "pick", None if pk is None else (pk["trades"], round(pk["win"], 3), round(pk["per_trade"]), round(pk["thr"], 3)),
+                      "best win", round(max((m.get("win", 0) for m in ch["curve"] if m.get("trades", 0) >= 0.25 * base_wf["trades"]),
+                                            default=0), 3), flush=True)
+        out[arm] = res
+    (CACHE / "models_w20.pkl").write_bytes(pickle.dumps(models))
+    (RESULTS / "design_w20.json").write_text(json.dumps(out, indent=1, default=str))
+
+
+def _pickers() -> tuple:
+    """Every picker tried at design (sections 1-4, Amendment A, Amendment B) and its frozen model."""
     d = json.loads((RESULTS / "design.json").read_text())
     models = pickle.loads((CACHE / "models.pkl").read_bytes())
+    allp = {arm: dict(d[arm]["pickers"]) for arm in ARMS}
+    if (RESULTS / "design_w20.json").exists():
+        dw = json.loads((RESULTS / "design_w20.json").read_text())
+        models.update(pickle.loads((CACHE / "models_w20.pkl").read_bytes()))
+        for arm in ARMS:
+            allp[arm].update(dw[arm]["pickers"])
+    return d, allp, models
+
+
+def later(phase: str) -> None:
+    d, allp, models = _pickers()
     rng = np.random.default_rng(SEED + (1 if phase == "final" else 2))
     if phase == "old":
         k = S.mods()["r51data"].K
@@ -360,19 +416,21 @@ def later(phase: str) -> None:
     for arm in ARMS:
         res = {}
         base_us = units(arm, TODAY_PARAMS[arm], lo, hi)
-        base = [t for t in S.walk(arm, base_us) if in_(t, lo, hi)]
-        res["today"] = summ(base)
+        res["today"] = summ([t for t in S.walk(arm, base_us) if in_(t, lo, hi)])
+        res["today_w20"] = summ([t for t in S.walk(arm, S.filtered(base_us, w20_keep)) if in_(t, lo, hi)])
         cp = d[arm]["chosen_params"]
         if cp and tuple(cp) != tuple(TODAY_PARAMS[arm]):
             res["chosen_variant"] = summ([t for t in S.walk(arm, units(arm, tuple(cp), lo, hi)) if in_(t, lo, hi)])
             res["chosen_variant"]["params"] = cp
         res["pickers"] = {}
-        for pid, pk in d[arm]["pickers"].items():
+        for pid, pk in allp[arm].items():
             if pk["pick"] is None:
                 res["pickers"][pid] = {"design_failed": True}
                 continue
             mdl, params = models[pid]
             us = units(arm, tuple(params), lo, hi)
+            if pk.get("w20"):
+                us = S.filtered(us, w20_keep)
             fx = feats_of_units(us)
             ck = [cand_key(key[0], key[1], c["er"], c["side"]) for key, cs, _, _ in us for c in cs]
             sc = dict(zip(ck, mdl.predict_proba(matrix(ck, fx))[:, 1])) if ck else {}
@@ -383,15 +441,16 @@ def later(phase: str) -> None:
             res["pickers"][pid] = m
             print(phase, arm, pid, m.get("trades"), round(m.get("win", 0), 3), round(m.get("net", 0)), m.get("twin_win_p"), flush=True)
         out[arm] = res
-        print(phase, arm, "today", res["today"], flush=True)
+        print(phase, arm, "today", res["today"], "w20", res["today_w20"], flush=True)
     (RESULTS / f"{phase}.json").write_text(json.dumps(out, indent=1, default=str))
 
 
 def decide() -> dict:
-    d, f, o = (json.loads((RESULTS / f"{p}.json").read_text()) for p in ("design", "final", "old"))
+    _, allp, _ = _pickers()
+    f, o = (json.loads((RESULTS / f"{p}.json").read_text()) for p in ("final", "old"))
     rows, ps = [], []
     for arm in ARMS:
-        for pid, pk in d[arm]["pickers"].items():
+        for pid, pk in allp[arm].items():
             if pk["pick"] is None:
                 rows.append({"id": pid, "pass": False, "fails": ["design: no threshold gave 60% with profit"]})
                 ps.append(np.nan)
@@ -422,4 +481,4 @@ def decide() -> dict:
 
 
 if __name__ == "__main__":
-    {"design": design, "final": lambda: later("final"), "old": lambda: later("old"), "decide": lambda: print(json.dumps(decide(), indent=1))}[CMD]()
+    {"design": design, "design_w20": design_w20, "final": lambda: later("final"), "old": lambda: later("old"), "decide": lambda: print(json.dumps(decide(), indent=1))}[CMD]()
