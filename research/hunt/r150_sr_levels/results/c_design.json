@@ -1,0 +1,120 @@
+{
+ "_meta": {
+  "phase": "design",
+  "lo": "2024-11-20",
+  "hi": "2026-03-31",
+  "seed": 1503,
+  "written": "2026-11-05T13:37:44.003417+00:00"
+ },
+ "parity": {
+  "trades": 3071,
+  "net": 216929,
+  "published": [
+   3071,
+   216929
+  ],
+  "reproduced": true
+ },
+ "today": {
+  "design": {
+   "trades": 3071,
+   "win": 0.4676,
+   "net": 216929,
+   "avg_win": 1715,
+   "avg_loss": -1374,
+   "worst_day": -58613,
+   "max_dd": 199077,
+   "bad_months": 5,
+   "loss_sum": -1154058,
+   "losing_days": 176,
+   "days": 323,
+   "worst_month": -78467,
+   "sum_losing_trades": -2246151
+  },
+  "wf": {
+   "trades": 2238,
+   "win": 0.4897,
+   "net": 335882,
+   "avg_win": 1669,
+   "avg_loss": -1307,
+   "worst_day": -25837,
+   "max_dd": 86529,
+   "bad_months": 2,
+   "loss_sum": -708002,
+   "losing_days": 122,
+   "days": 236,
+   "worst_month": -72605,
+   "sum_losing_trades": -1493024
+  }
+ },
+ "W20-72": {
+  "design": {
+   "trades": 1569,
+   "win": 0.4901,
+   "net": 166877,
+   "avg_win": 1777,
+   "avg_loss": -1499,
+   "worst_day": -28317,
+   "max_dd": 113730,
+   "bad_months": 5,
+   "loss_sum": -615130,
+   "losing_days": 157,
+   "days": 299,
+   "worst_month": -32475,
+   "sum_losing_trades": -1199518,
+   "changed_vs_today": 2190
+  },
+  "wf": {
+   "trades": 1098,
+   "win": 0.5182,
+   "net": 266050,
+   "avg_win": 1812,
+   "avg_loss": -1446,
+   "worst_day": -28317,
+   "max_dd": 56813,
+   "bad_months": 1,
+   "loss_sum": -369819,
+   "losing_days": 104,
+   "days": 217,
+   "worst_month": -17098,
+   "sum_losing_trades": -765048,
+   "changed_vs_today": 1628
+  },
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions)"
+ },
+ "W5-72": {
+  "design": {
+   "trades": 2216,
+   "win": 0.4752,
+   "net": 199111,
+   "avg_win": 1791,
+   "avg_loss": -1451,
+   "worst_day": -44067,
+   "max_dd": 180227,
+   "bad_months": 5,
+   "loss_sum": -859447,
+   "losing_days": 179,
+   "days": 314,
+   "worst_month": -53179,
+   "sum_losing_trades": -1687173,
+   "changed_vs_today": 1421
+  },
+  "wf": {
+   "trades": 1578,
+   "win": 0.5006,
+   "net": 315997,
+   "avg_win": 1784,
+   "avg_loss": -1387,
+   "worst_day": -28317,
+   "max_dd": 57434,
+   "bad_months": 1,
+   "loss_sum": -505413,
+   "losing_days": 124,
+   "days": 228,
+   "worst_month": -34039,
+   "sum_losing_trades": -1093176,
+   "changed_vs_today": 1084
+  },
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 5 sessions)"
+ }
+}
