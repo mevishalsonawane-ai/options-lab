@@ -121,3 +121,17 @@ Pytest tests cover:
   pickers per arm-variant; BH runs over all pickers tried.
 - **Every variant is reported** (win rate, trades, net, per trade) on DESIGN, with FINAL and OLD for the chosen one
   only.
+
+## Amendment B, 5 Nov 2026: W20 under the picker (Boss: "Try adding W20 skip on top of picker"); before any B result
+
+- **Seen before.** Parts of R151's design run were already printed: the R51 sweep and the two R51 pickers at today's
+  parameters (both found NO threshold at design). Nothing on FINAL or OLD. W20 is R150 B's rule (skip a trade when a
+  5-min level, 3+ turns, last 20 sessions, lies within 0.25% ahead); on R72 it failed (R150 C, p 0.35).
+- **What changes.** The arm's candidates are first cut by W20, then the picker (same features, models, folds and
+  threshold rule as sections 1-3) is trained and scored on the W20-kept candidates and trades.
+- **Which.** Both arms, at today's parameters and at the Amendment A variant if that variant got pickers. This adds up
+  to 2 models x (1-2 parameter sets) per arm; ids end in "-W20".
+- **The bar does not move.** The threshold must give >= 60% wins and per trade >= the arm's TODAY (no W20) on the WF
+  folds, keeping >= 25% of the arm's (no W20) WF trades. FINAL / OLD gates as section 4; the twin drops at random from
+  the W20-kept candidates; BH over every picker tried in R151.
+- **Also reported:** the arm + W20 alone, per period.
