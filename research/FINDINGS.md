@@ -1828,3 +1828,18 @@ the app's seed to 5e-7), real option prices, app costs plus real half-spreads.
     20%), and with a ±0.7-0.8% S&P move overnight.
   - Night is on the right side of big gaps 2.5-3 times as often as the wrong side; on small gaps it is a coin flip.
   - Winning and losing Night nights look the same at the close.
+
+## Night enhancements (R148, 5 Nov 2026) - 0 of 9 pass; Night's real risk is its drawdown
+Full study: `HUNT_R148_NIGHT_ENHANCE.md` (pre-registered `hunt/r148_night_enhance/PREREG.md`, commit e9b63b0). The
+book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on real lake prices.
+- **None of the 9 ideas passed:**
+  - a 2nd lot on likely-big nights: no better than a random 2nd lot, p 0.76;
+  - straddles on likely-big nights: -Rs 469 to -1,063 each, since those nights are priced in;
+  - resting stops at -20% / -40%: -Rs 45 / -18 a trade;
+  - a target at +40%: caps the winners;
+  - a cap of 2 or 1 index a night: barely cuts the drawdown and gives up 33-52% of the net.
+- **Risk:**
+  - Night as it is (NIFTY + BANKNIFTY, 1 lot each) had a max drawdown of -Rs 80,885 in Jan 2025 - Oct 2026, twice
+    the account stop.
+  - FINNIFTY adds +Rs 38.6k for -Rs 1.5k more drawdown.
+  - SENSEX adds +Rs 51.1k but takes the worst month to -Rs 81.7k (Apr 2026).

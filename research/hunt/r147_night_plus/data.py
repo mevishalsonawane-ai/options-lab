@@ -228,6 +228,20 @@ def price_leg(g0: pd.DataFrame, g1: pd.DataFrame, k: float, side: int) -> tuple[
     return float(e[er, O]), xp, "ok"
 
 
+def leg_extra(g0: pd.DataFrame, g1: pd.DataFrame, k: float, side: int) -> tuple:
+    """R148: the next session's 09:15 bar (O H L C) and the entry day's lowest low after the entry bar (15:21-15:29).
+    The 09:15 OPEN is replaced by the bar's close when it fails the guard (R146 NOTES A3). NaN where missing."""
+    r = "C" if side > 0 else "P"
+    e = grid(g0[(g0.strike == k) & (g0.side == r)], ["open", "high", "low", "close"])
+    er = next((t for t in K.ENTRY_ROWS if np.isfinite(e[t, O])), None)
+    low_after = float(np.nanmin(e[er + 1: K.R1529 + 1, L])) if er is not None and np.isfinite(e[er + 1: K.R1529 + 1, L]).any() else np.nan
+    x = grid(g1[(g1.strike == k) & (g1.side == r)], ["open", "high", "low", "close"], K.MORN + 4)
+    o, h, lo, c = (float(v) for v in x[0])
+    if np.isfinite(o) and not guard_ok(x, 0):
+        o = c
+    return o, h, lo, c, low_after
+
+
 # ================================================================================================ build
 def daily_close(df: pd.DataFrame | None, d: date) -> float:
     if df is None or d not in df.index:
@@ -312,6 +326,7 @@ def build(und: str, vix: dict, br: pd.Series, hsi, spx, us_ev: set, in_ev: set) 
                 for itm in (0, 1, 2):                       # ATM, 1-ITM (Night), 2-ITM
                     k = atm(x, step) - side * itm * step
                     rec["legs"][(side, itm)] = (k, *price_leg(td_by[d], td_by[nd], k, side))
+                    rec.setdefault("extra", {})[(side, itm)] = leg_extra(td_by[d], td_by[nd], k, side)
         out.append(rec)
     return out
 

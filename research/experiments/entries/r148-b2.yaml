@@ -1,0 +1,28 @@
+id: r148-b2
+title: 'R148 Night enhancement B2: at most 1 index a night (strongest close)'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R148_NIGHT_ENHANCE.md
+hypothesis: at most 1 index a night (strongest close) improves the Night book (NIFTY, BANKNIFTY, FINNIFTY r3; SENSEX s17).
+data_version: Drive lake copied 5 Nov 2026 (R147 stores + 09:15 bar and same-day low per leg); to 16 Oct 2026
+period:
+  design: 2022-2024
+  holdout: Jan 2025 - Oct 2026 (a second look; R147's holdout)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Night''s rule); India VIX and the calendar for likely-big nights; option premium for stops /
+  targets'
+model_or_rule: at most 1 index a night (strongest close)
+settings: research/hunt/r148_night_enhance/study.py
+prereg: research/hunt/r148_night_enhance/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design: dropped 153 of 771, net 183,908 -> 151,715, max DD -35,137 -> -35,137; check: dropped 170, net 213,747
+    -> 101,591, max DD -122,964 -> -102,876, DD better than 48% of random drops. Pass False.'
+  costs: app fills (+-5 bps, stop -10 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs
+holdout_read: true
+verdict: rejected

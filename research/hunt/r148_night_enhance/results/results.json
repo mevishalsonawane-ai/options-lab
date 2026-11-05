@@ -1,0 +1,717 @@
+{
+ "prereg_sha256": "09048177d46add5b90c2d1a7c3005fea354864e0a6af97f87aefadb85ba6ca72",
+ "run": "2026-11-05T12:43:29",
+ "design": {
+  "part": "design",
+  "book": {
+   "trades": 771,
+   "per_index": {
+    "BANKNIFTY": {
+     "size": 256,
+     "mean": 295.8,
+     "sum": 75715.1
+    },
+    "FINNIFTY": {
+     "size": 134,
+     "mean": 315.1,
+     "sum": 42226.5
+    },
+    "NIFTY": {
+     "size": 247,
+     "mean": 200.1,
+     "sum": 49425.2
+    },
+    "SENSEX": {
+     "size": 134,
+     "mean": 123.4,
+     "sum": 16541.0
+    }
+   },
+   "risk": {
+    "total": 183907.87675000002,
+    "max_dd": -35137.034000000014,
+    "worst_month": -31685.160000000003,
+    "worst_night": -15516.178000000004,
+    "nights": 438,
+    "months_positive": 20,
+    "months": 36
+   },
+   "L_share": 0.49416342412451364
+  },
+  "A": [
+   {
+    "id": "A1",
+    "rule": "2nd lot on likely-big nights (weekend/holiday or VIX >= 16)",
+    "trades": 381,
+    "extra_total": 66913.7434,
+    "extra_per_trade": 175.62662309711288,
+    "by_year": {
+     "2022": 57982.58919999999,
+     "2023": 16927.3038,
+     "2024": -7996.149600000001
+    },
+    "p": 0.7551224387806097,
+    "metric": "extra_total",
+    "bh_q": 1.0,
+    "gate": {
+     "design_pos": true,
+     "years_2of3": true,
+     "design_p": false,
+     "bh": false,
+     "check_pos": true,
+     "check_p": false
+    },
+    "pass": false
+   },
+   {
+    "id": "A2",
+    "rule": "ATM straddle 15:20 -> 09:16 on likely-big nights",
+    "trades": 725,
+    "net_total": -340246.7275,
+    "net_per_trade": -469.3058310344827,
+    "by_year": {
+     "2022": -190879.62879999998,
+     "2023": -48167.8736,
+     "2024": -101199.22509999998
+    },
+    "per_index": {
+     "BANKNIFTY": -168515.72559999995,
+     "FINNIFTY": -51270.384900000005,
+     "NIFTY": -100943.58599999998,
+     "SENSEX": -19517.030999999995
+    },
+    "random_nights_mean_total": -313518.99820554996,
+    "p": 0.9240379810094953,
+    "metric": "net_total",
+    "bh_q": 1.0,
+    "gate": {
+     "design_pos": false,
+     "years_2of3": false,
+     "design_p": false,
+     "bh": false,
+     "check_pos": false,
+     "check_p": false
+    },
+    "pass": false
+   },
+   {
+    "id": "A3",
+    "rule": "ATM straddle 15:20 -> 09:16 on likely-big nights where Night has no trade",
+    "trades": 344,
+    "net_total": -171722.21099999995,
+    "net_per_trade": -499.19247383720915,
+    "by_year": {
+     "2022": -100475.64559999999,
+     "2023": -24048.22059999999,
+     "2024": -47198.344800000006
+    },
+    "per_index": {
+     "BANKNIFTY": -94429.6604,
+     "FINNIFTY": -28133.126600000003,
+     "NIFTY": -45369.238,
+     "SENSEX": -3790.1860000000015
+    },
+    "random_nights_mean_total": -165737.71818604995,
+    "p": 0.6686656671664168,
+    "metric": "net_total",
+    "bh_q": 1.0,
+    "gate": {
+     "design_pos": false,
+     "years_2of3": false,
+     "design_p": false,
+     "bh": false,
+     "check_pos": false,
+     "check_p": false
+    },
+    "pass": false
+   }
+  ],
+  "C": [
+   {
+    "id": "C1",
+    "rule": "resting stop -20%",
+    "trades": 771,
+    "diff_total": -34808.968909999996,
+    "diff_per_trade": -45.147819597924766,
+    "by_year": {
+     "2022": -10700.68,
+     "2023": -12295.452879999997,
+     "2024": -11812.836029999995
+    },
+    "exits": {
+     "x16": 553,
+     "stop_gap_through": 125,
+     "stop_0915": 86,
+     "stop_same_day": 7
+    },
+    "p": 1.0,
+    "risk_base": {
+     "total": 183907.87675000002,
+     "max_dd": -35137.034000000014,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "risk_alt": {
+     "total": 149098.90784000003,
+     "max_dd": -37506.32711000003,
+     "worst_month": -31704.650000000005,
+     "worst_night": -13469.078000000001,
+     "nights": 438,
+     "months_positive": 21,
+     "months": 36
+    },
+    "metric": "diff_total",
+    "bh_q": 1.0,
+    "gate": {
+     "design_pos": false,
+     "years_2of3": false,
+     "design_p": false,
+     "bh": false,
+     "check_pos": false,
+     "check_p": false
+    },
+    "pass": false
+   },
+   {
+    "id": "C2",
+    "rule": "resting stop -40%",
+    "trades": 771,
+    "diff_total": -13787.532759999993,
+    "diff_per_trade": -17.88266246433203,
+    "by_year": {
+     "2022": -6477.555279999995,
+     "2023": -2624.8548000000014,
+     "2024": -4685.122679999996
+    },
+    "exits": {
+     "x16": 702,
+     "stop_gap_through": 49,
+     "stop_0915": 20
+    },
+    "p": 0.9945027486256871,
+    "risk_base": {
+     "total": 183907.87675000002,
+     "max_dd": -35137.034000000014,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "risk_alt": {
+     "total": 170120.34399000002,
+     "max_dd": -34880.724720000006,
+     "worst_month": -31397.682000000004,
+     "worst_night": -15472.840000000002,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "metric": "diff_total",
+    "bh_q": 1.0,
+    "gate": {
+     "design_pos": false,
+     "years_2of3": false,
+     "design_p": false,
+     "bh": false,
+     "check_pos": false,
+     "check_p": false
+    },
+    "pass": false
+   },
+   {
+    "id": "C3",
+    "rule": "resting target +40%",
+    "trades": 771,
+    "diff_total": -19812.885740000005,
+    "diff_per_trade": -25.69764687418937,
+    "by_year": {
+     "2022": -6835.598400000011,
+     "2023": -7272.931239999998,
+     "2024": -5704.356099999994
+    },
+    "exits": {
+     "x16": 689,
+     "target_at_open": 66,
+     "target_0915": 16
+    },
+    "p": 0.9975012493753124,
+    "risk_base": {
+     "total": 183907.87675000002,
+     "max_dd": -35137.034000000014,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "risk_alt": {
+     "total": 164094.99101,
+     "max_dd": -35619.828000000016,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "metric": "diff_total",
+    "bh_q": 1.0,
+    "gate": {
+     "design_pos": false,
+     "years_2of3": false,
+     "design_p": false,
+     "bh": false,
+     "check_pos": false,
+     "check_p": false
+    },
+    "pass": false
+   },
+   {
+    "id": "C4",
+    "rule": "stop -20% + target +40%",
+    "trades": 771,
+    "diff_total": -54621.854649999994,
+    "diff_per_trade": -70.84546647211413,
+    "by_year": {
+     "2022": -17536.27840000001,
+     "2023": -19568.384119999995,
+     "2024": -17517.19212999999
+    },
+    "exits": {
+     "x16": 471,
+     "stop_gap_through": 125,
+     "stop_0915": 86,
+     "target_at_open": 66,
+     "target_0915": 16,
+     "stop_same_day": 7
+    },
+    "p": 1.0,
+    "risk_base": {
+     "total": 183907.87675000002,
+     "max_dd": -35137.034000000014,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "risk_alt": {
+     "total": 129286.02209999997,
+     "max_dd": -41118.417989999994,
+     "worst_month": -31704.650000000005,
+     "worst_night": -13469.078000000001,
+     "nights": 438,
+     "months_positive": 21,
+     "months": 36
+    },
+    "metric": "diff_total",
+    "bh_q": 1.0,
+    "gate": {
+     "design_pos": false,
+     "years_2of3": false,
+     "design_p": false,
+     "bh": false,
+     "check_pos": false,
+     "check_p": false
+    },
+    "pass": false
+   }
+  ],
+  "B": [
+   {
+    "id": "B1",
+    "rule": "at most 2 indexes a night (strongest close)",
+    "trades": 771,
+    "dropped": 77,
+    "crowded_nights": 76,
+    "base": {
+     "total": 183907.87675000002,
+     "max_dd": -35137.034000000014,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "capped": {
+     "total": 169362.11589999998,
+     "max_dd": -35137.034000000014,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "net_given_up": 14545.76085000005,
+    "dd_better_than_twins_share": 1.0,
+    "by_year_capped_minus_base": {
+     "2022": 2538.175199999999,
+     "2023": -12056.176800000001,
+     "2024": -5027.759250000002
+    },
+    "gate": {
+     "design_dd_cut_10pct": false,
+     "design_worst_month_not_worse": true,
+     "design_net_given_up_le_15pct": true,
+     "design_dd_beats_95pct_twins": true,
+     "check_dd_cut_10pct": false,
+     "check_worst_month_not_worse": true,
+     "check_net_given_up_le_15pct": false,
+     "check_dd_beats_95pct_twins": false
+    },
+    "pass": false
+   },
+   {
+    "id": "B2",
+    "rule": "at most 1 index a night (strongest close)",
+    "trades": 771,
+    "dropped": 153,
+    "crowded_nights": 76,
+    "base": {
+     "total": 183907.87675000002,
+     "max_dd": -35137.034000000014,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 20,
+     "months": 36
+    },
+    "capped": {
+     "total": 151715.18484999996,
+     "max_dd": -35137.034000000014,
+     "worst_month": -31685.160000000003,
+     "worst_night": -15516.178000000004,
+     "nights": 438,
+     "months_positive": 23,
+     "months": 36
+    },
+    "net_given_up": 32192.691900000063,
+    "dd_better_than_twins_share": 1.0,
+    "by_year_capped_minus_base": {
+     "2022": 4025.552799999999,
+     "2023": -24822.514000000003,
+     "2024": -11395.730700000004
+    },
+    "gate": {
+     "design_dd_cut_10pct": false,
+     "design_worst_month_not_worse": true,
+     "design_net_given_up_le_15pct": false,
+     "design_dd_beats_95pct_twins": true,
+     "check_dd_cut_10pct": true,
+     "check_worst_month_not_worse": true,
+     "check_net_given_up_le_15pct": false,
+     "check_dd_beats_95pct_twins": false
+    },
+    "pass": false
+   }
+  ]
+ },
+ "check": {
+  "part": "hold",
+  "book": {
+   "trades": 562,
+   "per_index": {
+    "BANKNIFTY": {
+     "size": 173,
+     "mean": 557.5,
+     "sum": 96440.1
+    },
+    "FINNIFTY": {
+     "size": 105,
+     "mean": 367.2,
+     "sum": 38560.7
+    },
+    "NIFTY": {
+     "size": 137,
+     "mean": 201.6,
+     "sum": 27621.8
+    },
+    "SENSEX": {
+     "size": 147,
+     "mean": 347.8,
+     "sum": 51124.7
+    }
+   },
+   "risk": {
+    "total": 213747.32770000002,
+    "max_dd": -122964.47700000003,
+    "worst_month": -81660.1988,
+    "worst_night": -25560.6666,
+    "nights": 288,
+    "months_positive": 15,
+    "months": 22
+   },
+   "L_share": 0.4483985765124555
+  },
+  "A": [
+   {
+    "id": "A1",
+    "rule": "2nd lot on likely-big nights (weekend/holiday or VIX >= 16)",
+    "trades": 252,
+    "extra_total": 127267.72085000001,
+    "extra_per_trade": 505.03063829365084,
+    "by_year": {
+     "2025": 88257.55385,
+     "2026": 39010.16700000001
+    },
+    "p": 0.26186906546726635,
+    "metric": "extra_total"
+   },
+   {
+    "id": "A2",
+    "rule": "ATM straddle 15:20 -> 09:16 on likely-big nights",
+    "trades": 523,
+    "net_total": -556059.04885,
+    "net_per_trade": -1063.210418451243,
+    "by_year": {
+     "2025": -236411.79025,
+     "2026": -319647.2586
+    },
+    "per_index": {
+     "BANKNIFTY": -166397.21799999996,
+     "FINNIFTY": -176878.84365,
+     "NIFTY": -97059.62319999999,
+     "SENSEX": -115723.36400000003
+    },
+    "random_nights_mean_total": -449804.9076331,
+    "p": 1.0,
+    "metric": "net_total"
+   },
+   {
+    "id": "A3",
+    "rule": "ATM straddle 15:20 -> 09:16 on likely-big nights where Night has no trade",
+    "trades": 272,
+    "net_total": -304676.6749,
+    "net_per_trade": -1120.1348341911764,
+    "by_year": {
+     "2025": -130627.2979,
+     "2026": -174049.37699999998
+    },
+    "per_index": {
+     "BANKNIFTY": -91859.11799999999,
+     "FINNIFTY": -133606.2825,
+     "NIFTY": -45212.662399999994,
+     "SENSEX": -33998.61200000001
+    },
+    "random_nights_mean_total": -245309.75912322497,
+    "p": 0.9965017491254373,
+    "metric": "net_total"
+   }
+  ],
+  "C": [
+   {
+    "id": "C1",
+    "rule": "resting stop -20%",
+    "trades": 562,
+    "diff_total": -20169.31615000002,
+    "diff_per_trade": -35.88846290035591,
+    "by_year": {
+     "2025": -11391.334630000012,
+     "2026": -8777.98152000001
+    },
+    "exits": {
+     "x16": 422,
+     "stop_gap_through": 92,
+     "stop_0915": 48
+    },
+    "p": 0.9120439780109945,
+    "risk_base": {
+     "total": 213747.32770000002,
+     "max_dd": -122964.47700000003,
+     "worst_month": -81660.1988,
+     "worst_night": -25560.6666,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "risk_alt": {
+     "total": 193578.01155,
+     "max_dd": -123531.68484000007,
+     "worst_month": -82535.82264,
+     "worst_night": -26284.0334,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "metric": "diff_total"
+   },
+   {
+    "id": "C2",
+    "rule": "resting stop -40%",
+    "trades": 562,
+    "diff_total": -5080.060000000009,
+    "diff_per_trade": -9.039252669039161,
+    "by_year": {
+     "2025": -994.3204000000023,
+     "2026": -4085.7396000000062
+    },
+    "exits": {
+     "x16": 511,
+     "stop_gap_through": 35,
+     "stop_0915": 16
+    },
+    "p": 0.9450274862568716,
+    "risk_base": {
+     "total": 213747.32770000002,
+     "max_dd": -122964.47700000003,
+     "worst_month": -81660.1988,
+     "worst_night": -25560.6666,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "risk_alt": {
+     "total": 208667.26770000003,
+     "max_dd": -125750.84180000004,
+     "worst_month": -82370.01288,
+     "worst_night": -26284.0334,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "metric": "diff_total"
+   },
+   {
+    "id": "C3",
+    "rule": "resting target +40%",
+    "trades": 562,
+    "diff_total": -39555.13683000001,
+    "diff_per_trade": -70.38280574733098,
+    "by_year": {
+     "2025": -18779.282670000008,
+     "2026": -20775.854160000003
+    },
+    "exits": {
+     "x16": 499,
+     "target_at_open": 46,
+     "target_0915": 17
+    },
+    "p": 1.0,
+    "risk_base": {
+     "total": 213747.32770000002,
+     "max_dd": -122964.47700000003,
+     "worst_month": -81660.1988,
+     "worst_night": -25560.6666,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "risk_alt": {
+     "total": 174192.19087000002,
+     "max_dd": -122964.477,
+     "worst_month": -81660.1988,
+     "worst_night": -25560.6666,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "metric": "diff_total"
+   },
+   {
+    "id": "C4",
+    "rule": "stop -20% + target +40%",
+    "trades": 562,
+    "diff_total": -48370.93218000003,
+    "diff_per_trade": -86.06927434163707,
+    "by_year": {
+     "2025": -18817.096500000014,
+     "2026": -29553.835680000015
+    },
+    "exits": {
+     "x16": 360,
+     "stop_gap_through": 92,
+     "stop_0915": 47,
+     "target_at_open": 46,
+     "target_0915": 17
+    },
+    "p": 1.0,
+    "risk_base": {
+     "total": 213747.32770000002,
+     "max_dd": -122964.47700000003,
+     "worst_month": -81660.1988,
+     "worst_night": -25560.6666,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "risk_alt": {
+     "total": 165376.39552,
+     "max_dd": -123531.68484000005,
+     "worst_month": -82535.82264,
+     "worst_night": -26284.0334,
+     "nights": 288,
+     "months_positive": 14,
+     "months": 22
+    },
+    "metric": "diff_total"
+   }
+  ],
+  "B": [
+   {
+    "id": "B1",
+    "rule": "at most 2 indexes a night (strongest close)",
+    "trades": 562,
+    "dropped": 91,
+    "crowded_nights": 79,
+    "base": {
+     "total": 213747.32770000002,
+     "max_dd": -122964.47700000003,
+     "worst_month": -81660.1988,
+     "worst_night": -25560.6666,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "capped": {
+     "total": 142459.28320000006,
+     "max_dd": -113190.06479999996,
+     "worst_month": -78849.7144,
+     "worst_night": -15395.681,
+     "nights": 288,
+     "months_positive": 16,
+     "months": 22
+    },
+    "net_given_up": 71288.04449999996,
+    "dd_better_than_twins_share": 0.4415,
+    "by_year_capped_minus_base": {
+     "2025": -79155.41709999999,
+     "2026": 7867.372600000002
+    }
+   },
+   {
+    "id": "B2",
+    "rule": "at most 1 index a night (strongest close)",
+    "trades": 562,
+    "dropped": 170,
+    "crowded_nights": 79,
+    "base": {
+     "total": 213747.32770000002,
+     "max_dd": -122964.47700000003,
+     "worst_month": -81660.1988,
+     "worst_night": -25560.6666,
+     "nights": 288,
+     "months_positive": 15,
+     "months": 22
+    },
+    "capped": {
+     "total": 101590.57500000007,
+     "max_dd": -102875.82040000001,
+     "worst_month": -75229.11839999999,
+     "worst_night": -15395.681,
+     "nights": 288,
+     "months_positive": 14,
+     "months": 22
+    },
+    "net_given_up": 112156.75269999995,
+    "dd_better_than_twins_share": 0.479,
+    "by_year_capped_minus_base": {
+     "2025": -129557.36269999998,
+     "2026": 17400.610000000004
+    }
+   }
+  ]
+ }
+}

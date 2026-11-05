@@ -1,0 +1,29 @@
+id: r148-a2
+title: 'R148 Night enhancement A2: ATM straddle 15:20 -> 09:16 on likely-big nights'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R148_NIGHT_ENHANCE.md
+hypothesis: ATM straddle 15:20 -> 09:16 on likely-big nights improves the Night book (NIFTY, BANKNIFTY, FINNIFTY r3; SENSEX
+  s17).
+data_version: Drive lake copied 5 Nov 2026 (R147 stores + 09:15 bar and same-day low per leg); to 16 Oct 2026
+period:
+  design: 2022-2024
+  holdout: Jan 2025 - Oct 2026 (a second look; R147's holdout)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Night''s rule); India VIX and the calendar for likely-big nights; option premium for stops /
+  targets'
+model_or_rule: ATM straddle 15:20 -> 09:16 on likely-big nights
+settings: research/hunt/r148_night_enhance/study.py
+prereg: research/hunt/r148_night_enhance/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design: 725 trades, net_total Rs -340,247 (by year {''2022'': -190879.62879999998, ''2023'': -48167.8736, ''2024'':
+    -101199.22509999998}), p 0.924, BH q 1.000; check: 523 trades, net_total Rs -556,059, p 1.000. Pass False.'
+  costs: app fills (+-5 bps, stop -10 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs
+holdout_read: true
+verdict: rejected
