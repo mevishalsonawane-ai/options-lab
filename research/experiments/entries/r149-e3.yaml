@@ -1,0 +1,27 @@
+id: r149-e3
+title: 'R149 Night on expiry nights E3: monthly option on a weekly expiry day'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R149_NIGHT_EXPIRY.md
+hypothesis: 'Night''s signal on its skipped expiry nights pays when traded as: monthly option on a weekly expiry day.'
+data_version: Drive lake copied 5 Nov 2026 (WEEK + MONTH option files); to 16 Oct 2026
+period:
+  design: 2022-2024
+  holdout: Jan 2025 - Oct 2026 (a second look; R147's holdout)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Night''s rule); contract choice by the expiry calendar'
+model_or_rule: monthly option on a weekly expiry day
+settings: research/hunt/r149_night_expiry/study.py
+prereg: research/hunt/r149_night_expiry/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 76 trades, Rs 287 a trade (stress 268), by year {''2022'': -7004.39, ''2023'': 15750.918, ''2024'': 13062.66315},
+    twin p 0.188, BH q 0.188; check 64 trades, Rs 374 a trade (stress 343), twin p 0.096. Pass False.'
+  costs: app fills, app charges (BSE for SENSEX), h28 half-spreads; stress 1.5x
+holdout_read: true
+verdict: rejected

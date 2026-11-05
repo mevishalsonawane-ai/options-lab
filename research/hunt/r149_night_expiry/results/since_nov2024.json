@@ -1,0 +1,278 @@
+{
+ "note": "since 1 Nov 2024, information only (Boss's regime view)",
+ "results": {
+  "E1": {
+   "pooled": {
+    "trades": 108,
+    "net_per_trade": 133.48755092592592,
+    "win_rate": 0.5370370370370371,
+    "total": 14416.655499999999,
+    "worst_month": -33794.4642,
+    "worst_month_id": "2026-04",
+    "months_positive": 12,
+    "months": 23,
+    "max_dd": -39802.5944,
+    "worst_trade": -11679.459599999998,
+    "by_year": {
+     "2024": 24008.0642,
+     "2025": 17482.655900000005,
+     "2026": -27074.0646
+    },
+    "share_loss_gt_30pct_premium": 0.26851851851851855,
+    "stress_net_per_trade": 120.20229861111112,
+    "unpriced": 33,
+    "twin_p": 0.03298350824587706
+   },
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 8,
+     "net_per_trade": -704.1273000000001,
+     "win_rate": 0.625,
+     "total": -5633.018400000001,
+     "worst_month": -5157.647599999999,
+     "worst_month_id": "2026-05",
+     "months_positive": 5,
+     "months": 8,
+     "max_dd": -8281.534,
+     "worst_trade": -5157.647599999999,
+     "by_year": {
+      "2025": 738.8671999999988,
+      "2026": -6371.885599999999
+     },
+     "share_loss_gt_30pct_premium": 0.25,
+     "stress_net_per_trade": -716.824075,
+     "unpriced": 3,
+     "twin_p": 0.3473263368315842
+    },
+    "FINNIFTY": {
+     "trades": 7,
+     "net_per_trade": 434.58021428571413,
+     "win_rate": 0.5714285714285714,
+     "total": 3042.061499999999,
+     "worst_month": -4438.6494,
+     "worst_month_id": "2026-04",
+     "months_positive": 4,
+     "months": 7,
+     "max_dd": -4954.535800000001,
+     "worst_trade": -4438.6494,
+     "by_year": {
+      "2024": 6708.958199999999,
+      "2025": 771.7526999999991,
+      "2026": -4438.6494
+     },
+     "share_loss_gt_30pct_premium": 0.14285714285714285,
+     "stress_net_per_trade": 406.30746428571405,
+     "unpriced": 2,
+     "twin_p": 0.1619190404797601
+    },
+    "NIFTY": {
+     "trades": 43,
+     "net_per_trade": 110.60298604651186,
+     "win_rate": 0.5581395348837209,
+     "total": 4755.92840000001,
+     "worst_month": -22654.0788,
+     "worst_month_id": "2026-04",
+     "months_positive": 11,
+     "months": 21,
+     "max_dd": -39802.5944,
+     "worst_trade": -11679.459599999998,
+     "by_year": {
+      "2024": 13579.746000000001,
+      "2025": 17148.104000000007,
+      "2026": -25971.921599999998
+     },
+     "share_loss_gt_30pct_premium": 0.2558139534883721,
+     "stress_net_per_trade": 98.99459534883749,
+     "unpriced": 12,
+     "twin_p": 0.18940529735132433
+    },
+    "SENSEX": {
+     "trades": 50,
+     "net_per_trade": 245.03367999999998,
+     "win_rate": 0.5,
+     "total": 12251.684,
+     "worst_month": -12421.72,
+     "worst_month_id": "2025-01",
+     "months_positive": 12,
+     "months": 23,
+     "max_dd": -15191.940000000002,
+     "worst_trade": -6701.736,
+     "by_year": {
+      "2024": 3719.3600000000006,
+      "2025": -1176.0680000000025,
+      "2026": 9708.391999999993
+     },
+     "share_loss_gt_30pct_premium": 0.3,
+     "stress_net_per_trade": 232.31041999999982,
+     "unpriced": 16,
+     "twin_p": 0.08595702148925537
+    }
+   }
+  },
+  "E2": {
+   "pooled": {
+    "trades": 71,
+    "net_per_trade": 193.2352450704226,
+    "win_rate": 0.5211267605633803,
+    "total": 13719.702400000004,
+    "worst_month": -18880.658400000004,
+    "worst_month_id": "2026-04",
+    "months_positive": 10,
+    "months": 24,
+    "max_dd": -34424.511600000005,
+    "worst_trade": -14143.114800000001,
+    "by_year": {
+     "2024": 14581.322000000004,
+     "2025": 7311.026000000002,
+     "2026": -8172.6456000000035
+    },
+    "share_loss_gt_30pct_premium": 0.056338028169014086,
+    "stress_net_per_trade": 160.65983943661973,
+    "unpriced": 22,
+    "twin_p": 0.10594702648675662
+   },
+   "per_index": {
+    "FINNIFTY": {
+     "trades": 0,
+     "stress_net_per_trade": null,
+     "unpriced": 1,
+     "twin_p": null
+    },
+    "NIFTY": {
+     "trades": 38,
+     "net_per_trade": 35.84211578947365,
+     "win_rate": 0.5263157894736842,
+     "total": 1362.0003999999988,
+     "worst_month": -18880.658400000004,
+     "worst_month_id": "2026-04",
+     "months_positive": 12,
+     "months": 21,
+     "max_dd": -34424.511600000005,
+     "worst_trade": -14143.114800000001,
+     "by_year": {
+      "2024": 11579.014000000003,
+      "2025": 7021.686000000003,
+      "2026": -17238.699600000007
+     },
+     "share_loss_gt_30pct_premium": 0.07894736842105263,
+     "stress_net_per_trade": 2.5871210526315704,
+     "unpriced": 1,
+     "twin_p": 0.30634682658670664
+    },
+    "SENSEX": {
+     "trades": 33,
+     "net_per_trade": 374.4758181818182,
+     "win_rate": 0.5151515151515151,
+     "total": 12357.702000000001,
+     "worst_month": -3892.8339999999994,
+     "worst_month_id": "2026-08",
+     "months_positive": 9,
+     "months": 22,
+     "max_dd": -10365.098000000002,
+     "worst_trade": -3892.8339999999994,
+     "by_year": {
+      "2024": 3002.308,
+      "2025": 289.3399999999983,
+      "2026": 9066.054000000004
+     },
+     "share_loss_gt_30pct_premium": 0.030303030303030304,
+     "stress_net_per_trade": 342.6829696969698,
+     "unpriced": 20,
+     "twin_p": 0.02848575712143928
+    }
+   }
+  },
+  "E3": {
+   "pooled": {
+    "trades": 71,
+    "net_per_trade": 360.386422535211,
+    "win_rate": 0.43661971830985913,
+    "total": 25587.435999999983,
+    "worst_month": -9794.456000000002,
+    "worst_month_id": "2025-10",
+    "months_positive": 11,
+    "months": 24,
+    "max_dd": -32207.574000000008,
+    "worst_trade": -6897.387999999997,
+    "by_year": {
+     "2024": 1663.0323999999982,
+     "2025": 13490.767999999996,
+     "2026": 10433.635599999992
+    },
+    "share_loss_gt_30pct_premium": 0.056338028169014086,
+    "stress_net_per_trade": 330.18935211267575,
+    "unpriced": 16,
+    "twin_p": 0.10444777611194403
+   },
+   "per_index": {
+    "BANKNIFTY": {
+     "trades": 1,
+     "net_per_trade": 858.7503999999992,
+     "win_rate": 1.0,
+     "total": 858.7503999999992,
+     "worst_month": 858.7503999999992,
+     "worst_month_id": "2024-11",
+     "months_positive": 1,
+     "months": 1,
+     "max_dd": 0.0,
+     "worst_trade": 858.7503999999992,
+     "by_year": {
+      "2024": 858.7503999999992
+     },
+     "share_loss_gt_30pct_premium": 0.0,
+     "stress_net_per_trade": 846.7005999999992,
+     "unpriced": 0,
+     "twin_p": 0.4912543728135932
+    },
+    "FINNIFTY": {
+     "trades": 0,
+     "stress_net_per_trade": null,
+     "unpriced": 2,
+     "twin_p": null
+    },
+    "NIFTY": {
+     "trades": 34,
+     "net_per_trade": 906.5679294117646,
+     "win_rate": 0.5,
+     "total": 30823.309599999997,
+     "worst_month": -6004.399600000001,
+     "worst_month_id": "2026-08",
+     "months_positive": 10,
+     "months": 21,
+     "max_dd": -16987.433600000004,
+     "worst_trade": -5964.6912,
+     "by_year": {
+      "2024": 5272.534,
+      "2025": 29211.206,
+      "2026": -3660.4304000000043
+     },
+     "share_loss_gt_30pct_premium": 0.058823529411764705,
+     "stress_net_per_trade": 877.4679235294113,
+     "unpriced": 1,
+     "twin_p": 0.053973013493253376
+    },
+    "SENSEX": {
+     "trades": 36,
+     "net_per_trade": -169.2951111111112,
+     "win_rate": 0.3611111111111111,
+     "total": -6094.624000000003,
+     "worst_month": -6897.387999999997,
+     "worst_month_id": "2026-03",
+     "months_positive": 10,
+     "months": 21,
+     "max_dd": -23271.186,
+     "worst_trade": -6897.387999999997,
+     "by_year": {
+      "2024": -4468.252,
+      "2025": -15720.438000000002,
+      "2026": 14094.065999999995
+     },
+     "share_loss_gt_30pct_premium": 0.05555555555555555,
+     "stress_net_per_trade": -201.03238888888905,
+     "unpriced": 13,
+     "twin_p": 0.463768115942029
+    }
+   }
+  }
+ }
+}

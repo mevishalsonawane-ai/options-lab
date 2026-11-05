@@ -73,15 +73,15 @@ def build() -> None:
 
 def nets(t: pd.DataFrame, mult: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
     c, p = [], []
-    for r in t.itertuples():
+    for r in t.to_dict("records"):
         for s, acc in ((1, c), (-1, p)):
-            e, x = getattr(r, f"e{s}"), getattr(r, f"x{s}")
+            e, x = r[f"e{s}"], r[f"x{s}"]
             if not (np.isfinite(e) and np.isfinite(x)):
                 acc.append(np.nan)
                 continue
-            v = costs_net(r.und, r.qty, e, x)
+            v = costs_net(r["und"], r["qty"], e, x)
             if mult != 1.0:
-                v -= (mult - 1) * K7.HALF_SPREAD[r.und] * (e + x) * r.qty
+                v -= (mult - 1) * K7.HALF_SPREAD[r["und"]] * (e + x) * r["qty"]
             acc.append(v)
     return np.array(c), np.array(p)
 
@@ -93,7 +93,7 @@ def block(t: pd.DataFrame, rng) -> dict:
     s = t.side.to_numpy()
     x = np.where(s > 0, c, p)[ok]
     st = np.where(s > 0, cs, ps)[ok]
-    prem = np.array([getattr(r, "e1") if r.side > 0 else getattr(r, "e-1") for r in t.itertuples()], float)[ok] * t.qty.to_numpy()[ok]
+    prem = np.array([r["e1"] if r["side"] > 0 else r["e-1"] for r in t.to_dict("records")], float)[ok] * t.qty.to_numpy()[ok]
     dts = t.d.to_numpy()[ok]
     m = S7.metrics(dts, x, prem)
     m["stress_net_per_trade"] = float(st.mean()) if len(st) else None

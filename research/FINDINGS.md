@@ -1843,3 +1843,11 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
     the account stop.
   - FINNIFTY adds +Rs 38.6k for -Rs 1.5k more drawdown.
   - SENSEX adds +Rs 51.1k but takes the worst month to -Rs 81.7k (Apr 2026).
+
+## Night on expiry nights (R149, 5 Nov 2026) - 0 of 3 pass; keep the expiry rule
+`HUNT_R149_NIGHT_EXPIRY.md` (pre-registered, commit d4d88d0).
+- Holding the expiring option into expiry morning: design +Rs 164 a trade (197 trades, 2023-24 negative), check
+  -Rs 101 (95). About 30% of trades lose more than 30% of premium.
+- The monthly option the night before a weekly expiry: design +Rs 231 (85), check -Rs 13 (65).
+- The monthly option on a weekly expiry day: design +Rs 287 (76, p 0.19), check +Rs 374 (64, p 0.10). The NIFTY part
+  (+Rs 824 a trade, 31 trades in check) is a shadow-log lead only.
