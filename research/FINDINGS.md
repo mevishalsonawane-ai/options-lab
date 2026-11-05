@@ -1851,3 +1851,15 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
 - The monthly option the night before a weekly expiry: design +Rs 231 (85), check -Rs 13 (65).
 - The monthly option on a weekly expiry day: design +Rs 287 (76, p 0.19), check +Rs 374 (64, p 0.10). The NIFTY part
   (+Rs 824 a trade, 31 trades in check) is a shadow-log lead only.
+
+## 3-month support / resistance levels on R51 Donchian, and fake breakouts (R150, 5 Nov 2026) - 0 of 7 pass
+`HUNT_R150_SR_LEVELS.md`. Charts of every 3-month level (3+ turns) per index to 5 Nov are in
+`hunt/r150_sr_levels/results/`.
+- On R51 exactly as the app runs it (parity: 4,208 design / 1,670 final trades), nothing passed R140's lose-less
+  gates:
+  - "only breaks through a level" halves trades and losses, but no better than random skips (p 0.76);
+  - "skip if a level is within 0.25% ahead" cut final losses better than random (p 0.02-0.03) but lost or got worse
+    in design (q 0.107);
+  - fake-breakout exits (sell on a close back through the broken level) lost.
+- **Fake breakouts:** breaks through a 3+-turn level fail within 30 minutes 52% of the time, vs 77% for breaks through
+  no level. They still fail about half the time.

@@ -1,0 +1,31 @@
+id: r150-w3m
+title: 'R150 R51 Donchian + 3-month S/R levels W3M: skip when a 3+-turn level lies within 0.25% ahead of the trade (major
+  levels: 12 bars each side)'
+family: patterns-indicators
+date: '2026-11-05'
+doc: research/HUNT_R150_SR_LEVELS.md
+hypothesis: 'skip when a 3+-turn level lies within 0.25% ahead of the trade (major levels: 12 bars each side) makes R51 lose
+  less (R140 gates).'
+data_version: Drive lake copied 5 Nov 2026; R51 clean stores (Amendment A), to 13 Oct 2026
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: 1 Apr - 13 Oct 2026, read once 5 Nov 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-min Donchian 20 + Supertrend); S/R levels from 15-min index pivots over 63 sessions'
+model_or_rule: 'skip when a 3+-turn level lies within 0.25% ahead of the trade (major levels: 12 bars each side)'
+settings: research/hunt/r150_sr_levels/study.py
+prereg: research/hunt/r150_sr_levels/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 3319 trades net Rs -92,122 (today 4208 / Rs 50,425); wf net Rs 60,341; final 1360 trades net Rs 120,649,
+    losing days Rs -341,740 (today Rs -395,932), max DD Rs 58,276 (today Rs 81,683); twin p 0.182, BH q 0.426. Fails: design:
+    worst month worse; design: the arm no longer makes money; wf: drawdown worse; twin p 0.182 >= 0.05'
+  costs: 'R101 / R106 engine: app fills, dated charges, R51''s clean stores (as R140)'
+holdout_read: true
+verdict: rejected

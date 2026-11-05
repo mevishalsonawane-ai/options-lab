@@ -1,0 +1,89 @@
+{
+ "W3": {
+  "rule": "skip when a 3+-turn level lies within 0.25% ahead of the trade (15-min pivots, 4 bars each side)",
+  "p": 0.01999000499750125,
+  "q": 0.10669665167416292,
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "BH q 0.107 > 0.1"
+  ]
+ },
+ "W2": {
+  "rule": "skip when a 2+-turn level lies within 0.25% ahead of the trade (15-min pivots, 4 bars each side)",
+  "p": 0.030484757621189407,
+  "q": 0.10669665167416292,
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "BH q 0.107 > 0.1"
+  ]
+ },
+ "B3": {
+  "rule": "skip unless the break crossed a 3+-turn level (15-min pivots, 4 bars each side)",
+  "p": 0.7556221889055472,
+  "q": 0.9112943528235883,
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "twin p 0.756 >= 0.05",
+   "BH q 0.911 > 0.1"
+  ]
+ },
+ "W3M": {
+  "rule": "skip when a 3+-turn level lies within 0.25% ahead of the trade (major levels: 12 bars each side)",
+  "p": 0.18240879560219891,
+  "q": 0.4256205230717975,
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "design: the arm no longer makes money",
+   "wf: drawdown worse",
+   "twin p 0.182 >= 0.05",
+   "BH q 0.426 > 0.1"
+  ]
+ },
+ "B3M": {
+  "rule": "skip unless the break crossed a 3+-turn level (major levels: 12 bars each side)",
+  "p": 0.7321339330334833,
+  "q": 0.9112943528235883,
+  "passed": false,
+  "fails": [
+   "final: the arm no longer makes money",
+   "twin p 0.732 >= 0.05",
+   "BH q 0.911 > 0.1"
+  ]
+ },
+ "FX": {
+  "rule": "sell when a 5-minute bar closes back through the 3+-turn level the break crossed (fake breakout) (15-min pivots, 4 bars each side)",
+  "p": 1.0,
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "design: losing days not smaller",
+   "design: drawdown worse",
+   "design: worst month worse",
+   "design: the arm no longer makes money",
+   "wf: losing days not smaller",
+   "wf: drawdown worse",
+   "wf: worst month worse",
+   "final: losing days not smaller",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ]
+ },
+ "FXM": {
+  "rule": "sell when a 5-minute bar closes back through the 3+-turn level the break crossed (fake breakout) (major levels: 12 bars each side)",
+  "p": 0.7811094452773614,
+  "q": 0.9112943528235883,
+  "passed": false,
+  "fails": [
+   "design: losing days not smaller",
+   "design: drawdown worse",
+   "design: worst month worse",
+   "wf: worst month worse",
+   "twin p 0.781 >= 0.05",
+   "BH q 0.911 > 0.1"
+  ]
+ }
+}
