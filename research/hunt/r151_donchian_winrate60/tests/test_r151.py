@@ -98,3 +98,27 @@ print("OK")
     r = subprocess.run([sys.executable, "-W", "ignore", "-c", code], capture_output=True, text=True, timeout=1800,
                        env={**os.environ, "R51_CLEAN": "1"})
     assert r.returncode == 0 and r.stdout.strip().endswith("OK"), r.stdout[-2000:] + r.stderr[-3000:]
+
+
+@pytest.mark.skipif(not (_STORE.exists() and (_LAKE / "index_daily.parquet").exists()), reason="needs the R51 store and lake")
+def test_features_are_not_reused_across_arms():
+    """Amendment D: two calls with the same (index, day, minute, side) but different candidates must not share features,
+    and "breaks today" counts the earlier candidates of the units passed in."""
+    code = r'''
+import sys
+sys.argv = [sys.argv[0], "design"]
+sys.path.insert(0, %r)
+import study as T
+from datetime import date
+T.features = lambda und, day, er, side, c, n: {"f_count": c.get("f_count"), "breaks_today": n}
+k = ("NIFTY", date(2025, 5, 2))
+a = T.feats_of_units([(k, [{"er": 30, "side": "C"}], None, None)])
+b = T.feats_of_units([(k, [{"er": 10, "side": "P"}, {"er": 30, "side": "C", "f_count": 5}], None, None)])
+key = ("NIFTY", date(2025, 5, 2), 30, "C")
+assert a[key] == {"f_count": None, "breaks_today": 0}, a
+assert b[key] == {"f_count": 5, "breaks_today": 1}, b
+print("OK")
+''' % str(HERE)
+    r = subprocess.run([sys.executable, "-W", "ignore", "-c", code], capture_output=True, text=True, timeout=600,
+                       env={**os.environ, "R51_CLEAN": "1"})
+    assert r.returncode == 0 and r.stdout.strip().endswith("OK"), r.stdout[-2000:] + r.stderr[-3000:]

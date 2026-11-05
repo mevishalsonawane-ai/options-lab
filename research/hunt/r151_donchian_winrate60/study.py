@@ -147,22 +147,18 @@ def features(und: str, day, er: int, side: str, cand: dict, earlier: int) -> dic
     return f
 
 
-_FC: dict = {}
-
-
 def cand_key(und, day, er, side):
     return (und, day, int(er), side)
 
 
 def feats_of_units(us: list) -> dict:
+    """Features of every candidate of THESE units. No cache across calls (Amendment D: a shared cache gave R72 the
+    R51 features of the same minute). Pass the arm's full units: "breaks today" counts all its earlier breaks."""
     out = {}
     for key, cands, _, _ in us:
         und, day = key[0], key[1]
         for n, c in enumerate(sorted(cands, key=lambda c: int(c["er"]))):
-            k = cand_key(und, day, c["er"], c["side"])
-            if k not in _FC:
-                _FC[k] = features(und, day, int(c["er"]), c["side"], c, n)
-            out[k] = _FC[k]
+            out[cand_key(und, day, c["er"], c["side"])] = features(und, day, int(c["er"]), c["side"], c, n)
     return out
 
 
@@ -363,9 +359,10 @@ def design_w20() -> None:
                 sets.append(tuple(v["params"]))
         res = {"pickers": {}, "w20_alone": {}}
         for params in sets:
-            us = S.filtered(units(arm, params, K.START, K.DESIGN_END), w20_keep)
+            us_all = units(arm, params, K.START, K.DESIGN_END)
+            fx = feats_of_units(us_all)
+            us = S.filtered(us_all, w20_keep)
             trades = S.walk(arm, us)
-            fx = feats_of_units(us)
             res["w20_alone"][f"{params[0]}-{params[1]}"] = summ([t for t in trades if in_(t, *WF)])
             for kind in ("M1", "M2"):
                 pid = f"{arm}-{params[0]}-{params[1]}-{kind}-W20"
@@ -427,9 +424,9 @@ def later(phase: str) -> None:
                 continue
             mdl, params = models[pid]
             us = units(arm, tuple(params), lo, hi)
+            fx = feats_of_units(us)
             if pk.get("w20"):
                 us = S.filtered(us, w20_keep)
-            fx = feats_of_units(us)
             ck = [cand_key(key[0], key[1], c["er"], c["side"]) for key, cs, _, _ in us for c in cs]
             sc = dict(zip(ck, mdl.predict_proba(matrix(ck, fx))[:, 1])) if ck else {}
             tr = [t for t in kept_walk(arm, us, sc, pk["pick"]["thr"]) if in_(t, lo, hi)]

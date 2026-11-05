@@ -156,3 +156,20 @@ Pytest tests cover:
   arm alone beside it; the trade-off curve on Apr - Oct 2026 for the same thresholds as the design curve.
 - **Second look:** Apr - Oct 2026 was read for R72 itself by earlier studies (R105C, R140-R144a, R150 C), not for this
   picker. Even a pass is shadow / paper-exception only (CLAUDE.md).
+
+## Amendment D, 5 Nov 2026: a feature-cache bug; everything re-run (found while running Amendment C)
+
+- **The bug.** `feats_of_units` cached features by (index, day, minute, side) for the whole process. `design` and
+  `design_w20` ran R51 before R72 in one process, so R72 candidates on the same minute as an R51 candidate took R51's
+  features: R51's "breaks today" count and no R72 breadth count (`f_count`). R51 at 30 / 4 likewise took 20 / 3's
+  counts. Under W20, "breaks today" counted only W20-kept breaks. Found because the clean Amendment C run kept 634
+  Apr 2025 - Mar 2026 trades at the threshold where `design.json` showed 598.
+- **The fix.** The cache is per call, so each arm / setting gets its own features. Under W20, features come from the
+  arm's full candidate list, and W20 only removes candidates after that.
+- **What is re-run, with no rule changed:** `design`, `design_w20`, then `final` / `old` (for any picker that now
+  passes design), and Amendment C as written: R72-20-4-M2, threshold 0.4656, the same gate. The model is re-frozen on
+  the clean features.
+- **Both versions are reported.** The buggy files are kept as `results/bug_cache/`.
+- Every Amendment C number already printed (Apr - Oct 2026: 403 trades, 47.4%, Rs 115 a trade, twin p 0.22) came from
+  the buggy frozen model on clean features. It is therefore a second look at Apr - Oct 2026 for this picker, and that
+  is disclosed.
