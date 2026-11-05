@@ -1877,3 +1877,7 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
 - **On top of R51 + W20 (R150 Amendment D): pivot points, EMA, VWAP and volume profile do not help more.** Pivots cut
   Apr - Oct 2026's net from Rs 1.14 lakh to Rs 42k; EMA never disagrees with R51's break; VWAP and the volume profile
   (52 sessions of futures volume) both lowered the net.
+- **EMA / VWAP cross on top of R51 + W20 (R150 Amendment E): worse in the recent market.** Requiring the 20-bar 5-min
+  EMA to be above VWAP (index TWAP) for a call turned design's +Rs 27k into -Rs 88k and cut Apr - Oct 2026's +Rs 1.14
+  lakh to +Rs 20k. Win rate falls 1-5 points. It only lost less in Dec 2022 - Nov 2024. A fresh cross is no better;
+  the futures' real VWAP on 52 sessions turned +Rs 60k into -Rs 10k. It removes the early breakouts.

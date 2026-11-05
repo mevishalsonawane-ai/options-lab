@@ -1,0 +1,29 @@
+id: r150-e-e2
+title: 'R150 E on top of R51 + W20 E2: take R51 + W20 only on a fresh EMA / VWAP cross the trade''s way within 30 minutes'
+family: patterns-indicators
+date: '2026-11-05'
+doc: research/HUNT_R150_SR_LEVELS.md
+hypothesis: take R51 + W20 only on a fresh EMA / VWAP cross the trade's way within 30 minutes makes R51 + W20 lose less.
+data_version: Drive lake copied 5 Nov 2026; R51 clean stores + R143's old store; fut_1m_live_index
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: Dec 2022 - Nov 2024 (a second look) and Apr - Oct 2026 (a second look)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (R51''s break); EMA and time-weighted VWAP from index prices; futures VWAP for E3 / E4'
+model_or_rule: take R51 + W20 only on a fresh EMA / VWAP cross the trade's way within 30 minutes
+settings: research/hunt/r150_sr_levels/study_e.py
+prereg: research/hunt/r150_sr_levels/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design net Rs -48,844 vs base Rs 26,861; Apr - Oct 2026 net Rs 8,090 vs Rs 114,026 (twin p 0.048); Dec 2022 -
+    Nov 2024 net Rs -18,186 vs Rs -231,720, twin p 0.000. Fails: design: the arm no longer makes money; wf: the arm no longer
+    makes money; unseen: the arm no longer makes money'
+  costs: 'R101 / R106 engine: app fills, dated charges (as R140 / R143)'
+holdout_read: true
+verdict: rejected

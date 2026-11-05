@@ -170,3 +170,31 @@ Pre-registered in `bdfa037`, design committed in `b583cb1` before the other read
 Descriptive only (futures minute volume exists for 52 of these sessions, 29 Jul - 13 Oct 2026): R51 + W20 made 316 trades, Rs 60,288. **D3 VWAP** (skip a call below the future's session VWAP, a put above): 295 trades, Rs 37,599. **D4 volume profile** (previous session's point of control and value-area edges as extra walls): 277 trades, Rs 47,355. Both made less.
 
 **Short answer: no, they do not help more.** Pivot points looked good in Nov 2024 - Mar 2026 (net Rs 53k vs Rs 27k) but in Apr - Oct 2026 they cut the net from Rs 1.14 lakh to Rs 42k with a bigger drawdown and a lower win rate (43.2% vs 45.2%); in the old two years they lost less (-Rs 1.46 lakh vs -Rs 2.32 lakh) but only at p 0.052 and the worst day got worse. EMA changes nothing (it never disagrees with a Donchian-20 break that Supertrend confirms). VWAP and the volume profile, on the only 52 sessions with futures volume, both lowered the net. Each of these was also tested ALONE on R51 before (R73, R51-r29 / r41, R105D, R63 / R73 / R74) and failed. The lead stays W20 alone.
+
+## Amendment E: EMA / VWAP cross on top of R51 + W20 (Boss: "When ema and vwap cross each other, does it help?")
+
+- **Pre-registration:** commit `5586617`.
+- **A bug found before any read except design:** numpy True / False failed identity checks. E1 skipped nothing and E2 skipped everything, until fixed and tested (`c4b95cf`). Amendment D was not affected.
+- **Definitions:** VWAP is the index's time-weighted typical price (the index has no volume); the EMA is the 20-bar EMA of 5-minute closes.
+- **Periods:** Dec 2022 - Nov 2024 and Apr - Oct 2026 are second looks.
+
+Each cell: trades / win rate / net / losing days / max drawdown.
+
+| on top of R51 + W20 | design Nov 2024 - Mar 2026 | Apr - Oct 2026 | Dec 2022 - Nov 2024 | twin p (Apr-Oct / Dec 22-Nov 24) | verdict |
+|---|---|---|---|---|---|
+| R51 + W20 (base) | 2,414 / 45.4% / Rs 26,861 / -Rs 841,719 / Rs 164,922 | 980 / 45.2% / Rs 114,026 / -Rs 259,662 / Rs 46,534 | 2,717 / 38.9% / Rs -231,720 / -Rs 650,446 / Rs 245,762 | | |
+| E1: EMA on the trade's side of VWAP (EMA has crossed VWAP the trade's way) | 1,606 / 42.7% / Rs -87,618 / -Rs 628,474 / Rs 137,499 | 636 / 43.9% / Rs 20,062 / -Rs 229,373 / Rs 59,044 | 1,790 / 38.8% / Rs -92,582 / -Rs 432,167 / Rs 109,243 | 0.61 / 0.000 | fail: design: worst day worse; design: worst month worse; design: the arm no longer makes money; wf: worst day worse; wf: worst month worse; unseen: the arm no longer makes money |
+| E2: a FRESH cross the trade's way in the last 30 minutes | 462 / 40.9% / Rs -48,844 / -Rs 266,979 / Rs 68,519 | 172 / 43.6% / Rs 8,090 / -Rs 79,137 / Rs 31,611 | 507 / 37.5% / Rs -18,186 / -Rs 156,386 / Rs 32,379 | 0.05 / 0.000 | fail: design: the arm no longer makes money; wf: the arm no longer makes money; unseen: the arm no longer makes money |
+
+**Descriptive only, futures' real VWAP and EMA,** on the 52 sessions with futures volume. R51 + W20 made 316 trades, Rs 60,288:
+- E3 (EMA on the trade's side of VWAP): 189 trades, Rs -9,948;
+- E4 (fresh cross): 49 trades, Rs 1,504.
+
+**Short answer: no. In the recent market the EMA / VWAP cross makes R51 worse.**
+- **Nov 2024 - Mar 2026:** E1 turns +Rs 26,861 into -Rs 87,618.
+- **Apr - Oct 2026:** it cuts +Rs 1.14 lakh to +Rs 20k.
+- **Win rate drops 1-5 points.**
+- **Only in the old two years (Dec 2022 - Nov 2024) did it lose less** (-Rs 93k vs -Rs 2.32 lakh, better than random skips). That regime does not carry into the current one.
+- **A 'fresh cross' (E2)** keeps only 6-20% of trades and is no better.
+- **With the futures' real VWAP**, on the only 52 sessions with volume, E1 turned +Rs 60k into -Rs 10k.
+- **Why:** R51 buys a breakout. Requiring the EMA to be above VWAP as well mostly removes the early breakouts (the ones that start a move, before the EMA catches up) and keeps the late ones.
