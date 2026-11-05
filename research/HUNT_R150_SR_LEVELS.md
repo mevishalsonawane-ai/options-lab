@@ -81,3 +81,53 @@ by Rs 1.3-1.5 lakh, better than random skipping. It failed in the design period,
   test scrambles later bars.
 - **Chart data:** the lake (to 16 Oct) and Yahoo 15-minute bars (17 Oct - 5 Nov). Only index prices are committed; no
   option data.
+
+## Amendment B: support / resistance on the 5-MINUTE timeframe (Boss: "What if we add support and resistance on 5min time frame?")
+
+- **Pre-registration:** commit `52535e0`, before any 5-minute result.
+- **Design results:** committed in `090f2af` before the other reads.
+- **The deciding holdout:** R51's **unseen two years, Dec 2022 to Nov 2024**, read once (`results/UNSEEN_READ_B`). The
+  base reproduced R143 exactly: 4,815 trades, -Rs 4,00,363.
+- **Apr - Oct 2026** is a second look, reported but not deciding.
+- **Levels:**
+  - pivots on 5-minute index bars, held 30 minutes each side;
+  - 3+ turns within 0.15%;
+  - over the last 5 sessions (L5, about 6-9 levels) or 20 sessions (L20, about 15-19 levels).
+
+Each cell: trades / win rate / net / losing days / max drawdown.
+
+| rule | design Nov 2024 - Mar 2026 | final Apr - Oct 2026 (2nd look) | UNSEEN Dec 2022 - Nov 2024 (read once) | twin p final / unseen | verdict |
+|---|---|---|---|---|---|
+| R51 today | 4,208 / 44.5% / Rs 50,425 / Rs -1,346,619 / Rs 214,239 | 1,670 / 44.9% / Rs 134,743 / Rs -395,932 / Rs 81,683 | 4,815 / 39.2% / Rs -400,363 / Rs -1,012,120 / Rs 423,510 | | |
+| W5: skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 5 sessions) | 3,181 / 45.3% / Rs 63,961 / Rs -1,111,079 / Rs 182,768 | 1,242 / 44.5% / Rs 94,656 / Rs -330,902 / Rs 54,298 | 3,597 / 39.4% / Rs -319,374 / Rs -830,149 / Rs 335,630 | 0.144 / 0.006 (q 0.019) | fail: unseen: worst month worse; unseen: the arm no longer makes money |
+| W20: skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions) | 2,414 / 45.4% / Rs 26,861 / Rs -841,719 / Rs 164,922 | 980 / 45.2% / Rs 114,026 / Rs -259,662 / Rs 46,534 | 2,717 / 38.9% / Rs -231,720 / Rs -650,446 / Rs 245,762 | 0.011 / 0.000 (q 0.002) | fail: unseen: the arm no longer makes money |
+| B5: skip unless the break crossed a 3+-turn 5-min level (lookback 5 sessions) | 1,812 / 44.1% / Rs -25,022 / Rs -676,425 / Rs 132,198 | 726 / 42.0% / Rs 12,494 / Rs -271,257 / Rs 61,033 | 2,074 / 40.6% / Rs -133,995 / Rs -484,619 / Rs 170,122 | 0.963 / 0.731 (q 1.000) | fail: design: the arm no longer makes money; wf: worst month worse; unseen: the arm no longer makes money; twin p 0.731 >= 0.05; BH q 1 > 0.1 |
+| B20: skip unless the break crossed a 3+-turn 5-min level (lookback 20 sessions) | 2,357 / 43.6% / Rs -64,194 / Rs -879,418 / Rs 159,129 | 897 / 44.5% / Rs 37,054 / Rs -297,245 / Rs 59,537 | 2,658 / 41.8% / Rs -136,370 / Rs -580,369 / Rs 144,668 | 0.895 / 0.595 (q 1.000) | fail: design: worst month worse; design: the arm no longer makes money; wf: worst month worse; unseen: the arm no longer makes money; twin p 0.595 >= 0.05; BH q 1 > 0.1 |
+| FX5: sell when a 5-min bar closes back through the 3+-turn 5-min level the break crossed (fake breakout) (lookback 5 sessions) | 4,219 / 42.7% / Rs 57,932 / Rs -1,314,940 / Rs 211,011 | 1,672 / 43.2% / Rs 134,743 / Rs -387,966 / Rs 87,634 | 4,825 / 37.8% / Rs -403,558 / Rs -1,000,891 / Rs 426,513 | 1.000 / 1.000 (q 1.000) | fail: wf: worst month worse; unseen: drawdown worse; unseen: worst month worse; unseen: the arm no longer makes money; twin p 1 >= 0.05; BH q 1 > 0.1 |
+| FX20: sell when a 5-min bar closes back through the 3+-turn 5-min level the break crossed (fake breakout) (lookback 20 sessions) | 4,223 / 42.3% / Rs 68,485 / Rs -1,282,299 / Rs 199,635 | 1,671 / 43.3% / Rs 148,871 / Rs -389,408 / Rs 78,461 | 4,827 / 37.4% / Rs -402,642 / Rs -998,321 / Rs 424,580 | 1.000 / 1.000 (q 1.000) | fail: wf: worst month worse; unseen: drawdown worse; unseen: worst month worse; unseen: the arm no longer makes money; twin p 1 >= 0.05; BH q 1 > 0.1 |
+
+**The finding: W20 is the strongest R51 lead in many studies, but it fails one pre-registered gate.**
+
+W20 means: skip an R51 trade when a 5-minute level (3+ turns in the last 20 sessions) sits within 0.25% ahead of it.
+- **On every period it lost much less than R51:**
+  - design: losing days -Rs 8.4 lakh vs -Rs 13.5 lakh, drawdown Rs 1.65 lakh vs Rs 2.14 lakh;
+  - Apr - Oct 2026: -Rs 2.6 lakh vs -Rs 4.0 lakh, drawdown Rs 46.5k vs Rs 81.7k, net Rs 1.14 lakh vs Rs 1.35 lakh;
+  - unseen two years: -Rs 6.5 lakh vs -Rs 10.1 lakh, net -Rs 2.3 lakh vs -Rs 4.0 lakh, drawdown Rs 2.46 lakh vs Rs 4.24 lakh.
+- **It skips better than chance:**
+  - random skips of the same number of trades did as well only 1.1% of the time (Apr - Oct 2026);
+  - never, in 2,000 tries (unseen; BH q 0.002).
+- **Win rate barely moves:** 45.4% vs 44.5% (design), 45.2% vs 44.9%, 38.9% vs 39.2%. The gain is in skipping the
+  trades that run into a wall, not in winning more often.
+- **It fails "the arm still makes money in the unseen years".** That is only because R51 itself lost Rs 4 lakh there.
+  This gate is R140 / R143's, and was pre-registered here unchanged, so W20 stays a NOTE.
+  - Under CLAUDE.md it can act on paper only as Boss's exception, labelled "failed gates, Boss's exception". It skips
+    trades only, so it lowers risk.
+  - The cleaner route is a SHADOW log first.
+  - Live: shadow only.
+- **The other 5-minute rules are like the 15-minute ones:**
+  - W5 helps less;
+  - "only breaks through a level" (B5 / B20) is no better than random skipping;
+  - the fake-breakout exits (FX5 / FX20) still lose. They sell fakes that would have recovered and lower the win rate
+    by 1-2 points.
+- **Note from the unseen years:** R51 itself lost Rs 4 lakh in Dec 2022 - Nov 2024 (39% wins). It only made money from
+  Nov 2024. W20 halves that loss but does not fix it.

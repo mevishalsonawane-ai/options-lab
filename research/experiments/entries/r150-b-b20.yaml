@@ -1,0 +1,31 @@
+id: r150-b-b20
+title: 'R150 B R51 Donchian + 5-min S/R levels B20: skip unless the break crossed a 3+-turn 5-min level (lookback 20 sessions)'
+family: patterns-indicators
+date: '2026-11-05'
+doc: research/HUNT_R150_SR_LEVELS.md
+hypothesis: skip unless the break crossed a 3+-turn 5-min level (lookback 20 sessions) makes R51 lose less (R140 gates).
+data_version: Drive lake copied 5 Nov 2026; R51 clean stores + R143's old store (Dec 2022 - Dec 2024)
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: 1 Dec 2022 - 19 Nov 2024 (unseen, read once 5 Nov 2026); Apr - Oct 2026 second look
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-min Donchian 20 + Supertrend); S/R levels from 5-min index pivots'
+model_or_rule: skip unless the break crossed a 3+-turn 5-min level (lookback 20 sessions)
+settings: research/hunt/r150_sr_levels/study_b.py
+prereg: research/hunt/r150_sr_levels/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 2357 trades net Rs -64,194 win 0.436 (today 4208 / Rs 50,425); final (2nd look) net Rs 37,054 vs Rs 134,743,
+    twin p 0.895; unseen 2658 trades net Rs -136,370 vs Rs -400,363, losing days Rs -580,369 vs Rs -1,012,120, twin p 0.595,
+    BH q 1.000. Fails: design: worst month worse; design: the arm no longer makes money; wf: worst month worse; unseen: the
+    arm no longer makes money; twin p 0.595 >= 0.05; BH q 1 > 0.1'
+  costs: 'R101 / R106 engine: app fills, dated charges (as R140 / R143)'
+holdout_read: true
+verdict: rejected
+notes: Failed the gates.

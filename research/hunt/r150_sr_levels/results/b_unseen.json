@@ -1,0 +1,198 @@
+{
+ "_meta": {
+  "phase": "unseen",
+  "lo": "2022-12-01",
+  "hi": "2024-11-19",
+  "seed": 1502,
+  "written": "2026-11-05T13:20:19.827391+00:00"
+ },
+ "parity": {
+  "trades": 4815,
+  "net": -400363,
+  "published": [
+   4815,
+   -400363
+  ]
+ },
+ "today": {
+  "unseen": {
+   "trades": 4815,
+   "win": 0.3921,
+   "net": -400363,
+   "avg_win": 817,
+   "avg_loss": -664,
+   "worst_day": -17346,
+   "max_dd": 423510,
+   "bad_months": 13,
+   "loss_sum": -1012120,
+   "losing_days": 312,
+   "days": 487,
+   "worst_month": -51440,
+   "sum_losing_trades": -1943132
+  }
+ },
+ "W5": {
+  "unseen": {
+   "trades": 3597,
+   "win": 0.3942,
+   "net": -319374,
+   "avg_win": 846,
+   "avg_loss": -697,
+   "worst_day": -11244,
+   "max_dd": 335630,
+   "bad_months": 12,
+   "loss_sum": -830149,
+   "losing_days": 307,
+   "days": 483,
+   "worst_month": -60025,
+   "sum_losing_trades": -1519233,
+   "changed_vs_today": 2782
+  },
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 5 sessions)",
+  "twin": {
+   "p": 0.006496751624187906,
+   "p_mc": 0.006496751624187906,
+   "p_norm": 0.0072262443013796016,
+   "twin_mean": -887382,
+   "twin_sd": 23400,
+   "hits": 12
+  }
+ },
+ "W20": {
+  "unseen": {
+   "trades": 2717,
+   "win": 0.389,
+   "net": -231720,
+   "avg_win": 848,
+   "avg_loss": -680,
+   "worst_day": -8974,
+   "max_dd": 245762,
+   "bad_months": 8,
+   "loss_sum": -650446,
+   "losing_days": 311,
+   "days": 484,
+   "worst_month": -36016,
+   "sum_losing_trades": -1128339,
+   "changed_vs_today": 3946
+  },
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions)",
+  "twin": {
+   "p": 0.0002554199797097917,
+   "p_mc": 0.0004997501249375312,
+   "p_norm": 0.0002554199797097917,
+   "twin_mean": -740806,
+   "twin_sd": 26003,
+   "hits": 0
+  }
+ },
+ "B5": {
+  "unseen": {
+   "trades": 2074,
+   "win": 0.4065,
+   "net": -133995,
+   "avg_win": 804,
+   "avg_loss": -659,
+   "worst_day": -12052,
+   "max_dd": 170122,
+   "bad_months": 5,
+   "loss_sum": -484619,
+   "losing_days": 266,
+   "days": 452,
+   "worst_month": -28991,
+   "sum_losing_trades": -811803,
+   "changed_vs_today": 4531
+  },
+  "rule": "skip unless the break crossed a 3+-turn 5-min level (lookback 5 sessions)",
+  "twin": {
+   "p": 0.7311344327836082,
+   "p_mc": 0.7311344327836082,
+   "p_norm": 0.7357157135964194,
+   "twin_mean": -470852,
+   "twin_sd": 21846,
+   "hits": 1462
+  }
+ },
+ "B20": {
+  "unseen": {
+   "trades": 2658,
+   "win": 0.4176,
+   "net": -136370,
+   "avg_win": 825,
+   "avg_loss": -680,
+   "worst_day": -13641,
+   "max_dd": 144668,
+   "bad_months": 5,
+   "loss_sum": -580369,
+   "losing_days": 299,
+   "days": 470,
+   "worst_month": -28412,
+   "sum_losing_trades": -1052639,
+   "changed_vs_today": 4527
+  },
+  "rule": "skip unless the break crossed a 3+-turn 5-min level (lookback 20 sessions)",
+  "twin": {
+   "p": 0.5947026486756621,
+   "p_mc": 0.5947026486756621,
+   "p_norm": 0.5974649868501339,
+   "twin_mean": -574405,
+   "twin_sd": 24168,
+   "hits": 1189
+  }
+ },
+ "FX5": {
+  "unseen": {
+   "trades": 4825,
+   "win": 0.3782,
+   "net": -403558,
+   "avg_win": 822,
+   "avg_loss": -635,
+   "worst_day": -17346,
+   "max_dd": 426513,
+   "bad_months": 13,
+   "loss_sum": -1000891,
+   "losing_days": 314,
+   "days": 487,
+   "worst_month": -55724,
+   "sum_losing_trades": -1904341,
+   "changed_vs_today": 430
+  },
+  "rule": "sell when a 5-min bar closes back through the 3+-turn 5-min level the break crossed (fake breakout) (lookback 5 sessions)",
+  "twin": {
+   "p": 1.0,
+   "p_mc": 1.0,
+   "p_norm": 1.0,
+   "twin_mean": -960895,
+   "twin_sd": 4188,
+   "hits": 2000,
+   "sold_earlier": 341
+  }
+ },
+ "FX20": {
+  "unseen": {
+   "trades": 4827,
+   "win": 0.3737,
+   "net": -402642,
+   "avg_win": 830,
+   "avg_loss": -629,
+   "worst_day": -16715,
+   "max_dd": 424580,
+   "bad_months": 13,
+   "loss_sum": -998321,
+   "losing_days": 316,
+   "days": 487,
+   "worst_month": -57125,
+   "sum_losing_trades": -1900700,
+   "changed_vs_today": 544
+  },
+  "rule": "sell when a 5-min bar closes back through the 3+-turn 5-min level the break crossed (fake breakout) (lookback 20 sessions)",
+  "twin": {
+   "p": 1.0,
+   "p_mc": 1.0,
+   "p_norm": 1.0,
+   "twin_mean": -943261,
+   "twin_sd": 4722,
+   "hits": 2000,
+   "sold_earlier": 424
+  }
+ }
+}

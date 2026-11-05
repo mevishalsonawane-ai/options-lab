@@ -1863,3 +1863,11 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
   - fake-breakout exits (sell on a close back through the broken level) lost.
 - **Fake breakouts:** breaks through a 3+-turn level fail within 30 minutes 52% of the time, vs 77% for breaks through
   no level. They still fail about half the time.
+- **5-minute levels (R150 Amendment B; unseen Dec 2022 - Nov 2024 read once):** "skip an R51 trade when a 3+-turn
+  5-min level from the last 20 sessions is within 0.25% ahead" (W20) lost far less than R51 in every period, and was
+  better than random skips:
+  - unseen: -Rs 2.3 lakh vs -Rs 4.0 lakh (p < 0.001, q 0.002);
+  - Apr - Oct 2026: drawdown Rs 46.5k vs Rs 81.7k (p 0.011).
+  - It failed only the "still makes money in the unseen years" gate, because R51 itself lost there. It is a note:
+    paper only as Boss's exception, shadow suggested.
+  - Fake-breakout exits and "only breaks through a level" failed again.

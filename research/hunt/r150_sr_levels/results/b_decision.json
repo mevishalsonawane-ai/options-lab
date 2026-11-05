@@ -1,0 +1,76 @@
+{
+ "W5": {
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 5 sessions)",
+  "p": 0.006496751624187906,
+  "q": 0.019490254872563718,
+  "passed": false,
+  "fails": [
+   "unseen: worst month worse",
+   "unseen: the arm no longer makes money"
+  ]
+ },
+ "W20": {
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions)",
+  "p": 0.0002554199797097917,
+  "q": 0.0015325198782587502,
+  "passed": false,
+  "fails": [
+   "unseen: the arm no longer makes money"
+  ]
+ },
+ "B5": {
+  "rule": "skip unless the break crossed a 3+-turn 5-min level (lookback 5 sessions)",
+  "p": 0.7311344327836082,
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "wf: worst month worse",
+   "unseen: the arm no longer makes money",
+   "twin p 0.731 >= 0.05",
+   "BH q 1 > 0.1"
+  ]
+ },
+ "B20": {
+  "rule": "skip unless the break crossed a 3+-turn 5-min level (lookback 20 sessions)",
+  "p": 0.5947026486756621,
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "design: the arm no longer makes money",
+   "wf: worst month worse",
+   "unseen: the arm no longer makes money",
+   "twin p 0.595 >= 0.05",
+   "BH q 1 > 0.1"
+  ]
+ },
+ "FX5": {
+  "rule": "sell when a 5-min bar closes back through the 3+-turn 5-min level the break crossed (fake breakout) (lookback 5 sessions)",
+  "p": 1.0,
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "wf: worst month worse",
+   "unseen: drawdown worse",
+   "unseen: worst month worse",
+   "unseen: the arm no longer makes money",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ]
+ },
+ "FX20": {
+  "rule": "sell when a 5-min bar closes back through the 3+-turn 5-min level the break crossed (fake breakout) (lookback 20 sessions)",
+  "p": 1.0,
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "wf: worst month worse",
+   "unseen: drawdown worse",
+   "unseen: worst month worse",
+   "unseen: the arm no longer makes money",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ]
+ }
+}
