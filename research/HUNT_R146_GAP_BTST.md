@@ -241,3 +241,33 @@ python -m research.hunt.r146_gap_btst.study holdout      # refuses a second read
 python -m research.hunt.r146_gap_btst.study report
 python -m pytest research/hunt/r146_gap_btst/tests -q
 ```
+
+## Case: the 4 -> 5 Nov 2026 gap up (Yahoo minutes, after the study; one night, not evidence)
+
+**Known at 4 Nov 15:19:**
+- NIFTY +0.42% on the day, close location 0.86; BANKNIFTY +0.49%, 0.79.
+- All 4 indices were up (breadth +1). Hang Seng +1.67%.
+- India VIX -3.07%, just inside R144c's 3.13% skip, so the trade is not skipped.
+- **Every close rule said CALL:** momentum, close location and the strong close without OI. Only the last 30 minutes
+  said put (-0.03% / -0.12%).
+- **R146's daily models,** trained on every day before 4 Nov: P(gap up) 0.73 / 0.74 on NIFTY and 0.68 / 0.66 on
+  BANKNIFTY. The predicted gap was only +0.16% / +0.13%.
+- Night's own decision also needs the OI build-up z and 214-stock breadth, which are not in this data. The app's Night
+  log has it.
+
+**What came overnight:**
+- the S&P 500's US session +1.59%;
+- S&P futures from 15:20 IST to 09:14 IST +0.81%;
+- the Hang Seng opened +1.66%.
+
+**The gap:**
+
+| index | gap from 15:19 | gap from 15:29 |
+|---|---|---|
+| NIFTY | +1.93% | +1.73% |
+| BANKNIFTY | +2.26% | +2.08% |
+| FINNIFTY | +2.48% | |
+| SENSEX | +2.13% | |
+
+**The pattern R146 found, on one night:** the close got the DIRECTION right (a 66-74% "up"), but it saw about a tenth of
+the SIZE (+0.13-0.16% predicted vs about +2% real). The rest arrived overnight from the US.
