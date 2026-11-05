@@ -135,3 +135,24 @@ Pytest tests cover:
   folds, keeping >= 25% of the arm's (no W20) WF trades. FINAL / OLD gates as section 4; the twin drops at random from
   the W20-kept candidates; BH over every picker tried in R151.
 - **Also reported:** the arm + W20 alone, per period.
+
+## Amendment C, 5 Nov 2026: the R72 logistic picker over Nov 2024 - Oct 2026 (Boss: "Test the R72 picker on nov 24 - Oct 2026"); before any C result
+
+- **Seen before.** The picker's design curve (out-of-fold, Apr 2025 - Mar 2026), from which its best point was quoted to
+  Boss: score >= 0.4656 keeps 598 of 2,238 trades, 53.7% won, Rs 389 a trade. That point was CHOSEN because it looked
+  best, so it is biased upward. Nothing of this picker on Apr - Oct 2026 or Dec 2022 - Nov 2024 (R151 never read it
+  there: it failed at design).
+- **The rule, fixed now:** R72 as the app (Donchian 20, 4 of 5), the picker R72-20-4-M2 (L2 logistic, C 0.1), take a
+  candidate when its score >= 0.4656.
+- **Scores per period (no score from a model that saw the trade):**
+  - Nov 2024 - Mar 2025: no out-of-sample score exists (these months train the first model). Reported as in-sample,
+    flagged, and NOT counted.
+  - Apr 2025 - Mar 2026: the walk-forward out-of-fold scores already in `design.json`.
+  - Apr - Oct 2026: the frozen model trained on all design trades (`models.pkl`), read once.
+- **Gate on Apr - Oct 2026 (the only new read):** kept trades win >= 50%, net > 0, per trade >= the arm's, >= 60 trades,
+  and a random-skip twin (same number kept at random, 2,000 times) wins at least as often with p <= 0.05. One test, no
+  BH.
+- **Reported:** each period and Apr 2025 - Oct 2026 together (trades, win, net, per trade, worst month, drawdown); the
+  arm alone beside it; the trade-off curve on Apr - Oct 2026 for the same thresholds as the design curve.
+- **Second look:** Apr - Oct 2026 was read for R72 itself by earlier studies (R105C, R140-R144a, R150 C), not for this
+  picker. Even a pass is shadow / paper-exception only (CLAUDE.md).
