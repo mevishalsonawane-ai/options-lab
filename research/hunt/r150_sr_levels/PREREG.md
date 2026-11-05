@@ -105,3 +105,22 @@ Pytest tests cover:
 - **BH runs over all 5 filters** (W3, W2, B3, W3M, B3M). Everything else is unchanged.
 - **Charts.** They draw the major levels (solid: 3+ turns, labelled with the count; dashed: 2). A second "dense" chart
   per index draws section 1's levels.
+
+## Amendment A2, 5 Nov 2026: fake breakouts (Boss: "While studying also take care of fake break outs"); before any R51 result
+
+**Two exits added (each can only sell earlier; R51's own exits stay on, and the earlier one wins):**
+
+| id | exit |
+|---|---|
+| FX | for an R51 trade whose break crossed a 3+-turn level (dense levels), sell at the next minute's open after the first 5-minute index bar (09:15-anchored, closing at or after the fill) that CLOSES back on the other side of that level. A call crossed above it: a close below it; mirror for puts. That is a fake breakout. Trades that crossed no level are unchanged |
+| FXM | the same with major levels |
+
+- **Pricing:** R115 / R106's forced-exit engine, as R140's exit rules.
+- **Twin:** R140's exit twin. Each trade the rule sold earlier is sold at a uniformly random minute between the fill
+  and today's exit instead.
+- **Gates:** R140's, as for the filters.
+- **BH** now runs over the 7 tests: W3, W2, B3, W3M, B3M, FX, FXM.
+
+**Descriptive (design only, no gate):** for R51's signals, the share whose break crossed a level, and of those the
+share that closed back through it within 30 minutes (fake). This is compared with how often signals that crossed no
+level went back below their own break bar's close within 30 minutes.
