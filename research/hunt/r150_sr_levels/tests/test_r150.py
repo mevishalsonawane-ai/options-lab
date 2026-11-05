@@ -83,3 +83,29 @@ def test_crossed_level_and_fake_exit():
 def test_bars5():
     b = V.bars15([day(100, 1)], minutes=5)
     assert len(b["c"]) == 75 and list(b["end"][:2]) == [4, 9]
+
+
+def test_floor_pivots_and_wall_prices():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import study_d as SD
+    p = SD.floor_pivots(110.0, 90.0, 100.0)
+    assert p == [100.0, 110.0, 90.0, 120.0, 80.0]
+    assert SD.wall_prices(p, 109.9, "C") and not SD.wall_prices(p, 100.0, "C")
+    e = SD.ema(np.array([1.0, 1.0, 1.0, 2.0]), n=3)
+    assert e[2] == 1.0 and abs(e[3] - 1.5) < 1e-12
+
+
+def test_profile_levels_poc():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import study_d as SD
+    a = np.full((375, 4), np.nan)
+    a[:100, 0] = 100.0
+    a[:100, 3] = 10.0
+    a[100:130, 0] = 101.0
+    a[100:130, 3] = 1.0
+    lv = SD.profile_levels(a, 100.0)
+    assert abs(lv[0] - 100.025) < 0.03
