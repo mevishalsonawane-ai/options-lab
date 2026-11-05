@@ -78,3 +78,8 @@ def test_crossed_level_and_fake_exit():
     assert V.fake_exit_row(closes, 10, 100.5, "C") == 15
     assert V.fake_exit_row(closes, 15, 100.5, "C") == -1       # bars before the fill are not looked at
     assert V.fake_exit_row(np.full(N, 100.7), 10, 100.5, "C") == -1
+
+
+def test_bars5():
+    b = V.bars15([day(100, 1)], minutes=5)
+    assert len(b["c"]) == 75 and list(b["end"][:2]) == [4, 9]

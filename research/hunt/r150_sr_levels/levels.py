@@ -13,13 +13,13 @@ BAR_MIN = 15
 N = 375
 
 
-def bars15(day_arrays: list) -> dict:
-    """Continuous 15-minute bars from a list of (4, 375) O H L C day arrays (oldest first). Returns arrays:
+def bars15(day_arrays: list, minutes: int = BAR_MIN) -> dict:
+    """Continuous `minutes`-minute bars (15 by default; Amendment B uses 5) from a list of (4, 375) O H L C day arrays (oldest first). Returns arrays:
     o h l c, day (index into the list), end (the bar's last minute row within its day). A bar with no minute is dropped."""
     o, h, l_, c, day, end = [], [], [], [], [], []
     for di, a in enumerate(day_arrays):
-        for s in range(0, N, BAR_MIN):
-            seg = slice(s, min(s + BAR_MIN, N))
+        for s in range(0, N, minutes):
+            seg = slice(s, min(s + minutes, N))
             ok = np.isfinite(a[3, seg])
             if not ok.any():
                 continue
@@ -29,7 +29,7 @@ def bars15(day_arrays: list) -> dict:
             l_.append(np.nanmin(a[2, seg]))
             c.append(a[3, rows[-1]])
             day.append(di)
-            end.append(min(s + BAR_MIN, N) - 1)
+            end.append(min(s + minutes, N) - 1)
     return {k: np.asarray(v, float if k not in ("day", "end") else int)
             for k, v in (("o", o), ("h", h), ("l", l_), ("c", c), ("day", day), ("end", end))}
 
