@@ -1,0 +1,30 @@
+id: r150-d-d4
+title: 'R150 D on top of R51 + W20 D4: previous session''s volume-profile POC / value-area edges as extra walls, on top of
+  R51 + W20 (52 sessions, descriptive)'
+family: patterns-indicators
+date: '2026-11-05'
+doc: research/HUNT_R150_SR_LEVELS.md
+hypothesis: previous session's volume-profile POC / value-area edges as extra walls, on top of R51 + W20 (52 sessions, descriptive)
+  makes R51 + W20 lose less.
+data_version: Drive lake copied 5 Nov 2026; R51 clean stores + R143's old store; fut_1m_live_index (29 Jul - 19 Oct 2026)
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: Dec 2022 - Nov 2024 (a second look) and Apr - Oct 2026 (a second look)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (R51''s break); pivots / EMA from index prices; VWAP / volume profile from index futures volume'
+model_or_rule: previous session's volume-profile POC / value-area edges as extra walls, on top of R51 + W20 (52 sessions,
+  descriptive)
+settings: research/hunt/r150_sr_levels/study_d.py
+prereg: research/hunt/r150_sr_levels/PREREG.md
+variants_tried: 1
+results:
+  summary: 'descriptive on 163 sessions: R51 + W20 316 trades Rs 60,288 -> 277 trades Rs 47,355'
+  costs: 'R101 / R106 engine: app fills, dated charges (as R140 / R143)'
+holdout_read: true
+verdict: rejected

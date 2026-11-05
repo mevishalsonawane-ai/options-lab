@@ -1,0 +1,29 @@
+{
+ "D1": {
+  "p": 0.051974012993503245,
+  "q": 0.10394802598700649,
+  "passed": false,
+  "fails": [
+   "design: worst day worse",
+   "wf: worst day worse",
+   "wf: worst month worse",
+   "unseen: the arm no longer makes money",
+   "twin p 0.052 >= 0.05",
+   "BH q 0.104 > 0.1"
+  ]
+ },
+ "D2": {
+  "p": 1.0,
+  "q": 1.0,
+  "passed": false,
+  "fails": [
+   "design: losing days not smaller",
+   "wf: losing days not smaller",
+   "unseen: losing days not smaller",
+   "unseen: the arm no longer makes money",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1",
+   "< 30 final trades differ"
+  ]
+ }
+}

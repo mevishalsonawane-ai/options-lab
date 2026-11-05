@@ -1874,3 +1874,6 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
 - **The same skip on R72 Breadth Donchian (R150 Amendment C): fails.** W20 skips half of R72's trades and halves its
   losses, but in the unseen two years random skips of the same number do as well (p 0.35; Apr - Oct 2026 p 0.006, a
   second look). The worst day got worse in the walk-forward. On R72 the gain is from trading less.
+- **On top of R51 + W20 (R150 Amendment D): pivot points, EMA, VWAP and volume profile do not help more.** Pivots cut
+  Apr - Oct 2026's net from Rs 1.14 lakh to Rs 42k; EMA never disagrees with R51's break; VWAP and the volume profile
+  (52 sessions of futures volume) both lowered the net.

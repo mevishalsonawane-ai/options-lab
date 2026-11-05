@@ -1,0 +1,29 @@
+id: r150-d-d1
+title: 'R150 D on top of R51 + W20 D1: previous day''s floor pivots (P, R1, S1, R2, S2) as extra walls on top of R51 + W20'
+family: patterns-indicators
+date: '2026-11-05'
+doc: research/HUNT_R150_SR_LEVELS.md
+hypothesis: previous day's floor pivots (P, R1, S1, R2, S2) as extra walls on top of R51 + W20 makes R51 + W20 lose less.
+data_version: Drive lake copied 5 Nov 2026; R51 clean stores + R143's old store; fut_1m_live_index (29 Jul - 19 Oct 2026)
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: Dec 2022 - Nov 2024 (a second look) and Apr - Oct 2026 (a second look)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (R51''s break); pivots / EMA from index prices; VWAP / volume profile from index futures volume'
+model_or_rule: previous day's floor pivots (P, R1, S1, R2, S2) as extra walls on top of R51 + W20
+settings: research/hunt/r150_sr_levels/study_d.py
+prereg: research/hunt/r150_sr_levels/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design net Rs 53,453 vs base Rs 26,861; Apr - Oct 2026 net Rs 41,717 vs Rs 114,026 (twin p 0.558); Dec 2022 -
+    Nov 2024 net Rs -146,061 vs Rs -231,720, twin p 0.052, BH q 0.104. Fails: design: worst day worse; wf: worst day worse;
+    wf: worst month worse; unseen: the arm no longer makes money; twin p 0.052 >= 0.05; BH q 0.104 > 0.1'
+  costs: 'R101 / R106 engine: app fills, dated charges (as R140 / R143)'
+holdout_read: true
+verdict: rejected

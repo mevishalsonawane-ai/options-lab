@@ -156,3 +156,17 @@ Each cell: trades / win rate / net / losing days / max drawdown.
 - **It also fails:** the walk-forward's worst day got worse (-Rs 28,317 vs -Rs 25,837), and R72 itself lost money in
   the unseen years.
 - **Nothing changes for R72.**
+
+## Amendment D: pivot points, EMA, VWAP and volume profile ON TOP of R51 + W20 (Boss: "will this help more" / "on top of this")
+
+Pre-registered in `bdfa037`, design committed in `b583cb1` before the other reads. The unseen two years are a SECOND look (already read for W20). Each cell: trades / win rate / net / losing days / max drawdown.
+
+| on top of R51 + W20 | design Nov 2024 - Mar 2026 | Apr - Oct 2026 | Dec 2022 - Nov 2024 | twin p (Apr-Oct / Dec 22-Nov 24) | verdict |
+|---|---|---|---|---|---|
+| R51 + W20 (the base) | 2,414 / 45.4% / Rs 26,861 / -Rs 841,719 / Rs 164,922 | 980 / 45.2% / Rs 114,026 / -Rs 259,662 / Rs 46,534 | 2,717 / 38.9% / Rs -231,720 / -Rs 650,446 / Rs 245,762 | | |
+| D1 pivot points (previous day's P, R1, S1, R2, S2 also count as walls) | 1,648 / 46.2% / Rs 53,453 / -Rs 669,601 / Rs 145,762 | 666 / 43.2% / Rs 41,717 / -Rs 230,320 / Rs 54,996 | 1,756 / 38.8% / Rs -146,061 / -Rs 485,123 / Rs 163,469 | 0.56 / 0.052 | fail: design: worst day worse; wf: worst day worse; wf: worst month worse; unseen: the arm no longer makes money; twin p 0.052 >= 0.05; BH q 0.104 > 0.1 |
+| D2 EMA (close on the trade's side of the 20-bar 5-min EMA) | 2,414 / 45.4% / Rs 26,861 / -Rs 841,719 / Rs 164,922 | 980 / 45.2% / Rs 114,026 / -Rs 259,662 / Rs 46,534 | 2,717 / 38.9% / Rs -231,720 / -Rs 650,446 / Rs 245,762 | - | no effect: R51's break already closes at a 20-bar high above its EMA |
+
+Descriptive only (futures minute volume exists for 52 of these sessions, 29 Jul - 13 Oct 2026): R51 + W20 made 316 trades, Rs 60,288. **D3 VWAP** (skip a call below the future's session VWAP, a put above): 295 trades, Rs 37,599. **D4 volume profile** (previous session's point of control and value-area edges as extra walls): 277 trades, Rs 47,355. Both made less.
+
+**Short answer: no, they do not help more.** Pivot points looked good in Nov 2024 - Mar 2026 (net Rs 53k vs Rs 27k) but in Apr - Oct 2026 they cut the net from Rs 1.14 lakh to Rs 42k with a bigger drawdown and a lower win rate (43.2% vs 45.2%); in the old two years they lost less (-Rs 1.46 lakh vs -Rs 2.32 lakh) but only at p 0.052 and the worst day got worse. EMA changes nothing (it never disagrees with a Donchian-20 break that Supertrend confirms). VWAP and the volume profile, on the only 52 sessions with futures volume, both lowered the net. Each of these was also tested ALONE on R51 before (R73, R51-r29 / r41, R105D, R63 / R73 / R74) and failed. The lead stays W20 alone.
