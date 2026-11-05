@@ -1881,3 +1881,19 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
   EMA to be above VWAP (index TWAP) for a call turned design's +Rs 27k into -Rs 88k and cut Apr - Oct 2026's +Rs 1.14
   lakh to +Rs 20k. Win rate falls 1-5 points. It only lost less in Dec 2022 - Nov 2024. A fresh cross is no better;
   the futures' real VWAP on 52 sessions turned +Rs 60k into -Rs 10k. It removes the early breakouts.
+
+## Both Donchian arms to a 60%+ win rate (R151, 5 Nov 2026) - 0 of 18 pass
+`HUNT_R151_DONCHIAN_WINRATE60.md`. The exits were kept exactly as the app runs them; R151 only chose which trades to take.
+- **Indicator settings (12 per arm, design Nov 2024 - Mar 2026):** win rates run 43.7-46.4% for R51 (Donchian
+  10-55 x Supertrend 2-4) and 43.8-50.5% for R72 (Donchian 10-55 x 3-5 indices). The chosen settings (R51 30 / 4,
+  R72 30 / 5) win no more than today's on Apr - Oct 2026 (45.1% / 45.3% vs 44.9% / 45.8%) or on Dec 2022 - Nov 2024
+  (about 39%).
+  - A lead, not a pass: R51 at 30 / 4 made Rs 1.67 lakh vs Rs 1.35 lakh in 2026 (drawdown Rs 48.8k vs Rs 81.7k), and
+    lost Rs 3.40 lakh vs Rs 4.00 lakh in 2022-24.
+- **Trade pickers (16: 2 models x 2 settings x with / without W20):** all fail at design, so none was read later.
+  - The best win rate any picker reached while keeping a quarter of the trades was 53.7%; its top slice reached 57.6%
+    on 139 trades.
+  - The pickers raise per trade more than wins: R72 20/4 logistic kept 598 trades at Rs 389 a trade vs Rs 150. That is
+    a lead for a per-trade study only.
+- With R105C (60% from exits only by selling at +5%, then both arms lose): a 60% win rate is not reachable on these
+  arms with profit. They earn from a few big winners at about 45-50% wins.

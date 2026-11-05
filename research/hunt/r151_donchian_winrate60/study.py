@@ -21,9 +21,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 CMD = (sys.argv[1:] or [""])[0]
-if CMD == "old":                          # before anything imports r51cfg: R143's old store
-    _b = Path(os.environ.get("R51_OUT", Path.home() / ".cache" / "iraalgo" / "r51")).expanduser()
-    os.environ["R51_OUT"] = str(_b / "r143_old")
+# "old": study_b (imported below as "unseen") points R51_OUT at R143's old store before r51cfg is imported
 sys.argv = [sys.argv[0], "unseen" if CMD == "old" else "design"] + sys.argv[2:]   # study_b reads its own CMD
 sys.path.insert(0, str(HERE.parent / "r150_sr_levels"))
 sys.path.insert(0, str(HERE.parents[2]))
