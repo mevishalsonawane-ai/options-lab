@@ -1806,3 +1806,25 @@ research-data release minutes (NIFTY / BANKNIFTY options, Feb 2024 - Feb 2026).
   - Selling at 09:30 instead cut it to Rs 74 / 34 (as R27). A -30% stop changed nothing.
 - **Data lesson:** the 09:15 option OPEN in minute data is often a stale print at the bar's high, 20-50% above the
   real trades. Never fill at it.
+
+## Night (R3) on 5 indices, every gap since Nov 2024, 8 filters (R147, 5 Nov 2026) - FINNIFTY and SENSEX (no-OI) pass; no filter helps
+Full study: `HUNT_R147_NIGHT_PLUS.md` (pre-registered `hunt/r147_night_plus/PREREG.md`, commit 98f961d; Drive lake to
+16 Oct 2026; design 2022-24, holdout Jan 2025 - Oct 2026 read once). Night rebuilt exactly (the OI build-up matches
+the app's seed to 5e-7), real option prices, app costs plus real half-spreads.
+- **New indices:**
+  - FINNIFTY with Night's exact rule passed both periods: 134 trades +Rs 315 a trade, then 105 trades +Rs 367, twin p
+    0.002. It has been weak in 2026 (-Rs 18k).
+  - SENSEX without the OI check passed both: 134 trades +Rs 123, then 147 trades +Rs 348.
+  - SENSEX with the exact rule is best since Nov 2024 (129 trades, +Rs 733, 20/24 months up). It failed design only on
+    sample size (35 trades).
+  - MIDCPNIFTY failed the holdout (-Rs 169 a trade, 154 trades).
+- **Filters on Night (NIFTY + BANKNIFTY):** none passed.
+  - Skipping weekends would have cost Rs 116k in design and Rs 111k in the holdout. Weekend nights carry the big gaps
+    Night catches.
+  - VIX >= 18 helped only in the holdout.
+  - 2-ITM gave +Rs 34 a trade but with a bigger drawdown (holdout p 0.075). ATM was worse.
+- **Gap atlas since Nov 2024:**
+  - Big gaps (abs >= 0.5%, about 1 night in 5) come with high VIX (about 16 vs 13), after weekends (29-44% vs about
+    20%), and with a ±0.7-0.8% S&P move overnight.
+  - Night is on the right side of big gaps 2.5-3 times as often as the wrong side; on small gaps it is a coin flip.
+  - Winning and losing Night nights look the same at the close.

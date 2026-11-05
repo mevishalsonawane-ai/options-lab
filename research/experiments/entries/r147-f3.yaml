@@ -1,0 +1,29 @@
+id: r147-f3
+title: 'R147 Night (R3) NIFTY + BANKNIFTY: skip when |day move| >= 1.5%'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R147_NIGHT_PLUS.md
+hypothesis: skip when |day move| >= 1.5% raises Night's net on the same nights.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 5 Nov 2026: index_1m (5 indices + INDIAVIX), options_rolling_1m
+  WEEK/MONTH, equity_1m (59 stocks); to 16 Oct 2026'
+period:
+  design: 2022, 2023, 2024 (yearly folds)
+  holdout: 1 Jan 2025 - 16 Oct 2026, read once 5 Nov 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index (Night''s rule) + the filter''s input (calendar, VIX, Hang Seng, last hour, option straddle as
+  context)'
+model_or_rule: skip when |day move| >= 1.5%
+settings: research/hunt/r147_night_plus/cfg.py
+prereg: research/hunt/r147_night_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design: 503 Night trades, 91 skipped, difference Rs -49,337 (by year {''2022'': -37725.236000000004, ''2023'':
+    -21242.3204, ''2024'': 9630.468400000005}), p 0.858, BH q 0.999, design pass False; holdout: 310 trades, 41 skipped, difference
+    Rs 1,080 (by year {''2025'': -7829.2903999999935, ''2026'': 8909.718400000003}), p 0.236'
+  costs: app fills (+-5 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs; stress 1.5x spread
+holdout_read: true
+verdict: rejected
+notes: Failed the pre-registered gates.

@@ -1,0 +1,28 @@
+id: r147-x-sensex-s17
+title: R147 Night's strong close without the OI check on SENSEX (1-ITM, 15:20 -> 09:16)
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R147_NIGHT_PLUS.md
+hypothesis: Night's overnight rule makes money on SENSEX after real costs, beating random sides.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 5 Nov 2026: index_1m (5 indices + INDIAVIX), options_rolling_1m
+  WEEK/MONTH, equity_1m (59 stocks); to 16 Oct 2026'
+period:
+  design: 2022, 2023, 2024 (yearly folds)
+  holdout: 1 Jan 2025 - 16 Oct 2026, read once 5 Nov 2026
+instruments:
+- SENSEX
+features:
+- 'signal source: the index (close location, day move, 59-stock breadth)'
+model_or_rule: research/hunt/r147_night_plus/data.py (NightRules on this index)
+settings: research/hunt/r147_night_plus/cfg.py
+prereg: research/hunt/r147_night_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 134 trades, Rs 123 a trade (stress 114), by year {''2023'': 12469.353000000003, ''2024'': 4071.6170000000056},
+    worst month -12,315, max DD -26,305, twin p 0.0079960019990005, BH q 0.01199400299850075, design pass True; holdout 147
+    trades, Rs 348 a trade (stress 328), by year {''2025'': 46408.58, ''2026'': 4716.114000000005}, worst month -44,374, max
+    DD -46,782, twin p 0.0029985007496251873, holdout pass True'
+  costs: app fills (+-5 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs; stress 1.5x spread
+holdout_read: true
+verdict: paper-only
+notes: 'Passed design and holdout: a PAPER candidate for the Night arm; live in shadow first.'

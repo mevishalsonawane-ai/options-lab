@@ -367,5 +367,32 @@ def holdout() -> None:
     _dump(res, K.RESULTS / "holdout.json")
 
 
+def regime(start=None) -> None:
+    """Boss (5 Nov, after the holdout read): "Check data only from nov 2024". The SEBI regime from Nov 2024 (one weekly
+    expiry per exchange, bigger lots). Information only: no gate, the holdout already read (NOTES R1)."""
+    from datetime import date as _date
+    start = start or _date(2024, 11, 1)
+    rng = np.random.default_rng(K.SEED + 2)
+    dfs = {}
+    for u in K.UNDS:
+        df = pd.concat([nights(u, "design"), nights(u, "hold")], ignore_index=True)
+        dfs[u] = df[df.d >= start].reset_index(drop=True)
+    res = {"prereg_sha256": prereg_sha(), "part": f"since {start}", "note": "information only (NOTES R1)",
+           "run": datetime.now().isoformat(timespec="seconds"), "sessions": {u: int(len(df)) for u, df in dfs.items()},
+           "night": [], "filters": [], "contracts": [], "atlas": {}, "monthly": {}}
+    for u in K.UNDS:
+        for rule in ("r3", "s17"):
+            b = index_block(dfs[u], u, rule, rng)
+            res["night"].append(b)
+        side = night_side(dfs[u], "r3")
+        m = (side != 0) & priced(dfs[u])
+        x = side_net(dfs[u], side)[m]
+        res["monthly"][u] = {k: float(v) for k, v in pd.Series(x, index=[f"{d.year}-{d.month:02d}" for d in dfs[u].d.to_numpy()[m]]).groupby(level=0).sum().items()}
+        res["atlas"][u] = atlas(dfs[u], u)
+    res["filters"] = [filter_block(dfs, f, rng) for f in FILTERS]
+    res["contracts"] = [contract_block(dfs, 0, rng), contract_block(dfs, 2, rng)]
+    _dump(res, K.RESULTS / "since_nov2024.json")
+
+
 if __name__ == "__main__":
-    {"design": design, "holdout": holdout}[sys.argv[1]]()
+    {"design": design, "holdout": holdout, "regime": regime}[sys.argv[1]]()
