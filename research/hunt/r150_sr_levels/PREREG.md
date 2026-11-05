@@ -162,3 +162,25 @@ level went back below their own break bar's close within 30 minutes.
 - twin p < 0.05 in UNSEEN;
 - BH q <= 0.10 over the 6;
 - at least 40 UNSEEN trades and 30 changed.
+
+## Amendment C, 5 Nov 2026: the same 5-minute "wall ahead" skips on R72 Breadth Donchian (Boss: "What we add this in breath donchain"); before any R72 result
+
+**What was seen before this was written.** Amendment B's R51 results: W20 was the lead. No R72 number with these
+rules had been computed.
+
+**The arm.** R72 Breadth Donchian exactly as the app runs it, from R115's engine with parity against the published
+arm (as R140 / R143).
+
+**Tests:**
+- **W20-72:** skip an R72 trade when a 3+-turn 5-minute level (last 20 sessions) is within 0.25% ahead of it, on the
+  traded index. This is the primary test.
+- **W5-72:** the same over the last 5 sessions.
+- **BH** runs over these 2.
+
+**Periods, gates and holdout:**
+- As Amendment B.
+- **Deciding holdout:** R72 on the unseen two years (1 Dec 2022 to 19 Nov 2024; R143's base 3,395 trades,
+  -Rs 3,06,931), read once (`results/UNSEEN_READ_C`).
+- **Apr to Oct 2026:** a second look.
+- **Gates:** R140's lose-less gates in design, walk-forward and unseen, twin p < 0.05, BH q <= 0.10, at least 40
+  unseen trades and 30 changed.
