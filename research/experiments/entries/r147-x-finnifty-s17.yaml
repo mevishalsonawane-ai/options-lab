@@ -1,0 +1,28 @@
+id: r147-x-finnifty-s17
+title: R147 Night's strong close without the OI check on FINNIFTY (1-ITM, 15:20 -> 09:16)
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R147_NIGHT_PLUS.md
+hypothesis: Night's overnight rule makes money on FINNIFTY after real costs, beating random sides.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 5 Nov 2026: index_1m (5 indices + INDIAVIX), options_rolling_1m
+  WEEK/MONTH, equity_1m (59 stocks); to 16 Oct 2026'
+period:
+  design: 2022, 2023, 2024 (yearly folds)
+  holdout: 1 Jan 2025 - 16 Oct 2026, read once 5 Nov 2026
+instruments:
+- FINNIFTY
+features:
+- 'signal source: the index (close location, day move, 59-stock breadth)'
+model_or_rule: research/hunt/r147_night_plus/data.py (NightRules on this index)
+settings: research/hunt/r147_night_plus/cfg.py
+prereg: research/hunt/r147_night_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 181 trades, Rs 110 a trade (stress 81), by year {''2022'': -18498.010399999996, ''2023'': 1366.0468, ''2024'':
+    36962.923650000004}, worst month -9,556, max DD -22,310, twin p 0.005497251374312844, BH q 0.010994502748625687, design
+    pass True; holdout 206 trades, Rs -337 a trade (stress -424), by year {''2025'': 11178.75220000002, ''2026'': -80682.5802},
+    worst month -30,381, max DD -97,743, twin p 0.13193403298350825, holdout pass False'
+  costs: app fills (+-5 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs; stress 1.5x spread
+holdout_read: true
+verdict: rejected
+notes: Failed the pre-registered gates.

@@ -1806,3 +1806,100 @@ research-data release minutes (NIFTY / BANKNIFTY options, Feb 2024 - Feb 2026).
   - Selling at 09:30 instead cut it to Rs 74 / 34 (as R27). A -30% stop changed nothing.
 - **Data lesson:** the 09:15 option OPEN in minute data is often a stale print at the bar's high, 20-50% above the
   real trades. Never fill at it.
+
+## Night (R3) on 5 indices, every gap since Nov 2024, 8 filters (R147, 5 Nov 2026) - FINNIFTY and SENSEX (no-OI) pass; no filter helps
+Full study: `HUNT_R147_NIGHT_PLUS.md` (pre-registered `hunt/r147_night_plus/PREREG.md`, commit 98f961d; Drive lake to
+16 Oct 2026; design 2022-24, holdout Jan 2025 - Oct 2026 read once). Night rebuilt exactly (the OI build-up matches
+the app's seed to 5e-7), real option prices, app costs plus real half-spreads.
+- **New indices:**
+  - FINNIFTY with Night's exact rule passed both periods: 134 trades +Rs 315 a trade, then 105 trades +Rs 367, twin p
+    0.002. It has been weak in 2026 (-Rs 18k).
+  - SENSEX without the OI check passed both: 134 trades +Rs 123, then 147 trades +Rs 348.
+  - SENSEX with the exact rule is best since Nov 2024 (129 trades, +Rs 733, 20/24 months up). It failed design only on
+    sample size (35 trades).
+  - MIDCPNIFTY failed the holdout (-Rs 169 a trade, 154 trades).
+- **Filters on Night (NIFTY + BANKNIFTY):** none passed.
+  - Skipping weekends would have cost Rs 116k in design and Rs 111k in the holdout. Weekend nights carry the big gaps
+    Night catches.
+  - VIX >= 18 helped only in the holdout.
+  - 2-ITM gave +Rs 34 a trade but with a bigger drawdown (holdout p 0.075). ATM was worse.
+- **Gap atlas since Nov 2024:**
+  - Big gaps (abs >= 0.5%, about 1 night in 5) come with high VIX (about 16 vs 13), after weekends (29-44% vs about
+    20%), and with a ±0.7-0.8% S&P move overnight.
+  - Night is on the right side of big gaps 2.5-3 times as often as the wrong side; on small gaps it is a coin flip.
+  - Winning and losing Night nights look the same at the close.
+
+## Night enhancements (R148, 5 Nov 2026) - 0 of 9 pass; Night's real risk is its drawdown
+Full study: `HUNT_R148_NIGHT_ENHANCE.md` (pre-registered `hunt/r148_night_enhance/PREREG.md`, commit e9b63b0). The
+book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on real lake prices.
+- **None of the 9 ideas passed:**
+  - a 2nd lot on likely-big nights: no better than a random 2nd lot, p 0.76;
+  - straddles on likely-big nights: -Rs 469 to -1,063 each, since those nights are priced in;
+  - resting stops at -20% / -40%: -Rs 45 / -18 a trade;
+  - a target at +40%: caps the winners;
+  - a cap of 2 or 1 index a night: barely cuts the drawdown and gives up 33-52% of the net.
+- **Risk:**
+  - Night as it is (NIFTY + BANKNIFTY, 1 lot each) had a max drawdown of -Rs 80,885 in Jan 2025 - Oct 2026, twice
+    the account stop.
+  - FINNIFTY adds +Rs 38.6k for -Rs 1.5k more drawdown.
+  - SENSEX adds +Rs 51.1k but takes the worst month to -Rs 81.7k (Apr 2026).
+
+## Night on expiry nights (R149, 5 Nov 2026) - 0 of 3 pass; keep the expiry rule
+`HUNT_R149_NIGHT_EXPIRY.md` (pre-registered, commit d4d88d0).
+- Holding the expiring option into expiry morning: design +Rs 164 a trade (197 trades, 2023-24 negative), check
+  -Rs 101 (95). About 30% of trades lose more than 30% of premium.
+- The monthly option the night before a weekly expiry: design +Rs 231 (85), check -Rs 13 (65).
+- The monthly option on a weekly expiry day: design +Rs 287 (76, p 0.19), check +Rs 374 (64, p 0.10). The NIFTY part
+  (+Rs 824 a trade, 31 trades in check) is a shadow-log lead only.
+
+## 3-month support / resistance levels on R51 Donchian, and fake breakouts (R150, 5 Nov 2026) - 0 of 7 pass
+`HUNT_R150_SR_LEVELS.md`. Charts of every 3-month level (3+ turns) per index to 5 Nov are in
+`hunt/r150_sr_levels/results/`.
+- On R51 exactly as the app runs it (parity: 4,208 design / 1,670 final trades), nothing passed R140's lose-less
+  gates:
+  - "only breaks through a level" halves trades and losses, but no better than random skips (p 0.76);
+  - "skip if a level is within 0.25% ahead" cut final losses better than random (p 0.02-0.03) but lost or got worse
+    in design (q 0.107);
+  - fake-breakout exits (sell on a close back through the broken level) lost.
+- **Fake breakouts:** breaks through a 3+-turn level fail within 30 minutes 52% of the time, vs 77% for breaks through
+  no level. They still fail about half the time.
+- **5-minute levels (R150 Amendment B; unseen Dec 2022 - Nov 2024 read once):** "skip an R51 trade when a 3+-turn
+  5-min level from the last 20 sessions is within 0.25% ahead" (W20) lost far less than R51 in every period, and was
+  better than random skips:
+  - unseen: -Rs 2.3 lakh vs -Rs 4.0 lakh (p < 0.001, q 0.002);
+  - Apr - Oct 2026: drawdown Rs 46.5k vs Rs 81.7k (p 0.011).
+  - It failed only the "still makes money in the unseen years" gate, because R51 itself lost there. It is a note:
+    paper only as Boss's exception, shadow suggested.
+  - Fake-breakout exits and "only breaks through a level" failed again.
+- **The same skip on R72 Breadth Donchian (R150 Amendment C): fails.** W20 skips half of R72's trades and halves its
+  losses, but in the unseen two years random skips of the same number do as well (p 0.35; Apr - Oct 2026 p 0.006, a
+  second look). The worst day got worse in the walk-forward. On R72 the gain is from trading less.
+- **On top of R51 + W20 (R150 Amendment D): pivot points, EMA, VWAP and volume profile do not help more.** Pivots cut
+  Apr - Oct 2026's net from Rs 1.14 lakh to Rs 42k; EMA never disagrees with R51's break; VWAP and the volume profile
+  (52 sessions of futures volume) both lowered the net.
+- **EMA / VWAP cross on top of R51 + W20 (R150 Amendment E): worse in the recent market.** Requiring the 20-bar 5-min
+  EMA to be above VWAP (index TWAP) for a call turned design's +Rs 27k into -Rs 88k and cut Apr - Oct 2026's +Rs 1.14
+  lakh to +Rs 20k. Win rate falls 1-5 points. It only lost less in Dec 2022 - Nov 2024. A fresh cross is no better;
+  the futures' real VWAP on 52 sessions turned +Rs 60k into -Rs 10k. It removes the early breakouts.
+
+## Both Donchian arms to a 60%+ win rate (R151, 5 Nov 2026) - 0 of 19 pass
+`HUNT_R151_DONCHIAN_WINRATE60.md`. The exits were kept exactly as the app runs them; R151 only chose which trades to take.
+- **Indicator settings (12 per arm, design Nov 2024 - Mar 2026):** win rates run 43.7-46.4% for R51 (Donchian
+  10-55 x Supertrend 2-4) and 43.8-50.5% for R72 (Donchian 10-55 x 3-5 indices). The chosen settings (R51 30 / 4,
+  R72 30 / 5) win no more than today's on Apr - Oct 2026 (45.1% / 45.3% vs 44.9% / 45.8%) or on Dec 2022 - Nov 2024
+  (about 39%).
+  - A lead, not a pass: R51 at 30 / 4 made Rs 1.67 lakh vs Rs 1.35 lakh in 2026 (drawdown Rs 48.8k vs Rs 81.7k), and
+    lost Rs 3.40 lakh vs Rs 4.00 lakh in 2022-24.
+- **Trade pickers (16: 2 models x 2 settings x with / without W20):** all fail at design, so none was read later.
+  - The best win rate any picker reached while keeping a quarter of the trades was 53.9%; the top slice reached 58.9%
+    on 73 trades.
+- **The R72 logistic picker over Nov 2024 - Oct 2026 (Amendment C): fails by 1.1 points.**
+  - Apr - Oct 2026: 652 trades won 48.9% (gate 50%), making Rs 2.19 lakh vs R72's Rs 1.71 lakh.
+  - Per trade Rs 336 vs Rs 143; worst month -Rs 8.3k vs -Rs 40.9k; drawdown Rs 29.2k vs Rs 61.9k; better than random
+    skips (p 0.006).
+  - Apr 2025 - Mar 2026 (walk-forward): 634 trades, 52.5%, Rs 302 a trade.
+  - This is a second look, disclosed. It is a lead for a per-trade / drawdown test (Dec 2022 - Nov 2024 not yet read),
+    not a pass.
+- **A feature-cache bug** (R72 read R51's features) was found and fixed, and everything was re-run; no verdict changed.
+- With R105C (60% from exits only by selling at +5%, then both arms lose): a 60% win rate is not reachable on these
+  arms with profit. They earn from a few big winners at about 45-50% wins.

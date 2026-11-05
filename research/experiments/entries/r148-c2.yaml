@@ -1,0 +1,28 @@
+id: r148-c2
+title: 'R148 Night enhancement C2: resting stop -40%'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R148_NIGHT_ENHANCE.md
+hypothesis: resting stop -40% improves the Night book (NIFTY, BANKNIFTY, FINNIFTY r3; SENSEX s17).
+data_version: Drive lake copied 5 Nov 2026 (R147 stores + 09:15 bar and same-day low per leg); to 16 Oct 2026
+period:
+  design: 2022-2024
+  holdout: Jan 2025 - Oct 2026 (a second look; R147's holdout)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- 'signal source: the index (Night''s rule); India VIX and the calendar for likely-big nights; option premium for stops /
+  targets'
+model_or_rule: resting stop -40%
+settings: research/hunt/r148_night_enhance/study.py
+prereg: research/hunt/r148_night_enhance/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design: 771 trades, diff_total Rs -13,788 (by year {''2022'': -6477.555279999995, ''2023'': -2624.8548000000014,
+    ''2024'': -4685.122679999996}), p 0.995, BH q 1.000; check: 562 trades, diff_total Rs -5,080, p 0.945. Pass False.'
+  costs: app fills (+-5 bps, stop -10 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs
+holdout_read: true
+verdict: rejected

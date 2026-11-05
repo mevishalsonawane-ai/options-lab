@@ -1,0 +1,319 @@
+{
+ "_meta": {
+  "phase": "design",
+  "lo": "2024-11-20",
+  "hi": "2026-03-31",
+  "twins": 0,
+  "seed": 150,
+  "written": "2026-11-05T13:02:40.510880+00:00"
+ },
+ "parity": {
+  "trades": 4208,
+  "net": 50425,
+  "published": [
+   4208,
+   50425
+  ],
+  "reproduced": true
+ },
+ "today": {
+  "design": {
+   "trades": 4208,
+   "win": 0.4446,
+   "net": 50425,
+   "avg_win": 1752,
+   "avg_loss": -1381,
+   "worst_day": -49738,
+   "max_dd": 214239,
+   "bad_months": 8,
+   "loss_sum": -1346619,
+   "losing_days": 185,
+   "days": 337,
+   "worst_month": -69428,
+   "sum_losing_trades": -3227023
+  },
+  "wf": {
+   "trades": 3044,
+   "win": 0.4589,
+   "net": 213748,
+   "avg_win": 1716,
+   "avg_loss": -1326,
+   "worst_day": -28942,
+   "max_dd": 94176,
+   "bad_months": 4,
+   "loss_sum": -851416,
+   "losing_days": 127,
+   "days": 247,
+   "worst_month": -53654,
+   "sum_losing_trades": -2183438
+  }
+ },
+ "fakes": {
+  "dense": {
+   "signals": 12483,
+   "crossed_a_level": 2950,
+   "crossed_and_back_within_30m": 1525,
+   "fake_share": 0.5169491525423728,
+   "no_level_back_below_break_close_within_30m": 0.7725794608203084
+  },
+  "major": {
+   "signals": 12483,
+   "crossed_a_level": 1497,
+   "crossed_and_back_within_30m": 783,
+   "fake_share": 0.5230460921843687,
+   "no_level_back_below_break_close_within_30m": 0.7683415255780084
+  }
+ },
+ "W3": {
+  "design": {
+   "trades": 2397,
+   "win": 0.4422,
+   "net": -55994,
+   "avg_win": 1771,
+   "avg_loss": -1446,
+   "worst_day": -33621,
+   "max_dd": 189815,
+   "bad_months": 5,
+   "loss_sum": -865308,
+   "losing_days": 182,
+   "days": 334,
+   "worst_month": -67543,
+   "sum_losing_trades": -1932925,
+   "changed_vs_today": 3519
+  },
+  "wf": {
+   "trades": 1719,
+   "win": 0.4654,
+   "net": 131786,
+   "avg_win": 1744,
+   "avg_loss": -1374,
+   "worst_day": -25640,
+   "max_dd": 62868,
+   "bad_months": 1,
+   "loss_sum": -528098,
+   "losing_days": 124,
+   "days": 245,
+   "worst_month": -17440,
+   "sum_losing_trades": -1263151,
+   "changed_vs_today": 2515
+  },
+  "rule": "skip when a 3+-turn level lies within 0.25% ahead of the trade (15-min pivots, 4 bars each side)",
+  "removed_candidates": 7323
+ },
+ "W2": {
+  "design": {
+   "trades": 2142,
+   "win": 0.4519,
+   "net": 19910,
+   "avg_win": 1783,
+   "avg_loss": -1453,
+   "worst_day": -33621,
+   "max_dd": 158280,
+   "bad_months": 5,
+   "loss_sum": -773512,
+   "losing_days": 181,
+   "days": 332,
+   "worst_month": -72263,
+   "sum_losing_trades": -1706308,
+   "changed_vs_today": 3824
+  },
+  "wf": {
+   "trades": 1539,
+   "win": 0.4763,
+   "net": 167083,
+   "avg_win": 1756,
+   "avg_loss": -1390,
+   "worst_day": -25059,
+   "max_dd": 57749,
+   "bad_months": 1,
+   "loss_sum": -467201,
+   "losing_days": 120,
+   "days": 243,
+   "worst_month": -24682,
+   "sum_losing_trades": -1120262,
+   "changed_vs_today": 2725
+  },
+  "rule": "skip when a 2+-turn level lies within 0.25% ahead of the trade (15-min pivots, 4 bars each side)",
+  "removed_candidates": 8173
+ },
+ "B3": {
+  "design": {
+   "trades": 2190,
+   "win": 0.4598,
+   "net": 121489,
+   "avg_win": 1689,
+   "avg_loss": -1335,
+   "worst_day": -45858,
+   "max_dd": 114490,
+   "bad_months": 7,
+   "loss_sum": -746340,
+   "losing_days": 175,
+   "days": 326,
+   "worst_month": -69704,
+   "sum_losing_trades": -1578841,
+   "changed_vs_today": 4052
+  },
+  "wf": {
+   "trades": 1515,
+   "win": 0.4845,
+   "net": 221149,
+   "avg_win": 1665,
+   "avg_loss": -1281,
+   "worst_day": -23443,
+   "max_dd": 64033,
+   "bad_months": 3,
+   "loss_sum": -440296,
+   "losing_days": 121,
+   "days": 239,
+   "worst_month": -50887,
+   "sum_losing_trades": -1000798,
+   "changed_vs_today": 2969
+  },
+  "rule": "skip unless the break crossed a 3+-turn level (15-min pivots, 4 bars each side)",
+  "removed_candidates": 9535
+ },
+ "W3M": {
+  "design": {
+   "trades": 3319,
+   "win": 0.4327,
+   "net": -92122,
+   "avg_win": 1799,
+   "avg_loss": -1421,
+   "worst_day": -34440,
+   "max_dd": 205429,
+   "bad_months": 6,
+   "loss_sum": -1192413,
+   "losing_days": 196,
+   "days": 337,
+   "worst_month": -76512,
+   "sum_losing_trades": -2675309,
+   "changed_vs_today": 2105
+  },
+  "wf": {
+   "trades": 2336,
+   "win": 0.4418,
+   "net": 60341,
+   "avg_win": 1782,
+   "avg_loss": -1364,
+   "worst_day": -28942,
+   "max_dd": 95844,
+   "bad_months": 4,
+   "loss_sum": -759518,
+   "losing_days": 138,
+   "days": 247,
+   "worst_month": -53412,
+   "sum_losing_trades": -1779142,
+   "changed_vs_today": 1592
+  },
+  "rule": "skip when a 3+-turn level lies within 0.25% ahead of the trade (major levels: 12 bars each side)",
+  "removed_candidates": 3962
+ },
+ "B3M": {
+  "design": {
+   "trades": 1254,
+   "win": 0.4474,
+   "net": 43021,
+   "avg_win": 1597,
+   "avg_loss": -1231,
+   "worst_day": -17400,
+   "max_dd": 116609,
+   "bad_months": 4,
+   "loss_sum": -475361,
+   "losing_days": 146,
+   "days": 269,
+   "worst_month": -63491,
+   "sum_losing_trades": -852966,
+   "changed_vs_today": 4304
+  },
+  "wf": {
+   "trades": 886,
+   "win": 0.4774,
+   "net": 143853,
+   "avg_win": 1549,
+   "avg_loss": -1105,
+   "worst_day": -9354,
+   "max_dd": 39696,
+   "bad_months": 1,
+   "loss_sum": -245653,
+   "losing_days": 94,
+   "days": 192,
+   "worst_month": -30109,
+   "sum_losing_trades": -511448,
+   "changed_vs_today": 3148
+  },
+  "rule": "skip unless the break crossed a 3+-turn level (major levels: 12 bars each side)",
+  "removed_candidates": 10988
+ },
+ "FX": {
+  "design": {
+   "trades": 4219,
+   "win": 0.4245,
+   "net": -27915,
+   "avg_win": 1749,
+   "avg_loss": -1302,
+   "worst_day": -38279,
+   "max_dd": 235846,
+   "bad_months": 8,
+   "loss_sum": -1348490,
+   "losing_days": 192,
+   "days": 337,
+   "worst_month": -69953,
+   "sum_losing_trades": -3160611,
+   "changed_vs_today": 526
+  },
+  "wf": {
+   "trades": 3050,
+   "win": 0.438,
+   "net": 138879,
+   "avg_win": 1716,
+   "avg_loss": -1256,
+   "worst_day": -26261,
+   "max_dd": 104824,
+   "bad_months": 4,
+   "loss_sum": -865967,
+   "losing_days": 133,
+   "days": 247,
+   "worst_month": -69953,
+   "sum_losing_trades": -2153255,
+   "changed_vs_today": 364
+  },
+  "rule": "sell when a 5-minute bar closes back through the 3+-turn level the break crossed (fake breakout) (15-min pivots, 4 bars each side)",
+  "removed_candidates": 0
+ },
+ "FXM": {
+  "design": {
+   "trades": 4217,
+   "win": 0.434,
+   "net": 21182,
+   "avg_win": 1760,
+   "avg_loss": -1341,
+   "worst_day": -49738,
+   "max_dd": 226552,
+   "bad_months": 9,
+   "loss_sum": -1347126,
+   "losing_days": 185,
+   "days": 337,
+   "worst_month": -69597,
+   "sum_losing_trades": -3200265,
+   "changed_vs_today": 278
+  },
+  "wf": {
+   "trades": 3047,
+   "win": 0.4477,
+   "net": 194449,
+   "avg_win": 1729,
+   "avg_loss": -1286,
+   "worst_day": -28942,
+   "max_dd": 92179,
+   "bad_months": 5,
+   "loss_sum": -851302,
+   "losing_days": 128,
+   "days": 247,
+   "worst_month": -69597,
+   "sum_losing_trades": -2163669,
+   "changed_vs_today": 201
+  },
+  "rule": "sell when a 5-minute bar closes back through the 3+-turn level the break crossed (fake breakout) (major levels: 12 bars each side)",
+  "removed_candidates": 0
+ }
+}

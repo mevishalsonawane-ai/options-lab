@@ -1,0 +1,130 @@
+[
+ {
+  "id": "R51-20-3.0-M1",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R51-20-3.0-M2",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R51-30-4.0-M1",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R51-30-4.0-M2",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R51-20-3.0-M1-W20",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R51-20-3.0-M2-W20",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R51-30-4.0-M1-W20",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R51-30-4.0-M2-W20",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R72-20-4-M1",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R72-20-4-M2",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R72-30-5-M1",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R72-30-5-M2",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R72-20-4-M1-W20",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R72-20-4-M2-W20",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R72-30-5-M1-W20",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ },
+ {
+  "id": "R72-30-5-M2-W20",
+  "pass": false,
+  "fails": [
+   "design: no threshold gave 60% with profit"
+  ],
+  "bh_q": 1.0
+ }
+]

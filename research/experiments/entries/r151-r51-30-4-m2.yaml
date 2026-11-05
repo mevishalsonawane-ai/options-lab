@@ -1,0 +1,30 @@
+id: r151-r51-30-4-m2
+family: ml
+title: R151 R51 trade picker M2 on Donchian 30 / Supertrend 4.0
+date: '2026-11-05'
+doc: research/HUNT_R151_DONCHIAN_WINRATE60.md
+data_version: Drive lake copied 5 Nov 2026; R51 clean stores + R143's old store (Dec 2022 - Dec 2024)
+period:
+  design: 20 Nov 2024 - 31 Mar 2026 (WF folds Apr 2025 - Mar 2026)
+  holdout: Apr - Oct 2026 and Dec 2022 - Nov 2024 (both second looks; read once 5 Nov 2026)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+settings: research/hunt/r151_donchian_winrate60/study.py
+prereg: research/hunt/r151_donchian_winrate60/PREREG.md
+hypothesis: A model scoring R51's candidates picks a subset that wins >= 60% with more per trade.
+features:
+- 'signal source: the index (5-min Donchian); features: index minutes, 5-min EMA, 5-min S/R levels, pivots, India VIX, 5-index
+  breadth, all at the decision minute'
+model_or_rule: L2 logistic (C 0.1); take when score >= the design threshold
+variants_tried: 16
+results:
+  summary: 'WF folds: the arm 2536 trades, 47.7% won, net Rs 212,084, Rs 84 a trade; best win keeping >= 25% of trades: 49.8%
+    on 990 trades (Rs 112 a trade). No threshold gave >= 60% wins with per trade >= the arm''s: fails at design, FINAL / OLD
+    not read for it. BH q 1.00.'
+  costs: 'R101 / R106 engine: app fills, dated charges'
+holdout_read: false
+verdict: rejected

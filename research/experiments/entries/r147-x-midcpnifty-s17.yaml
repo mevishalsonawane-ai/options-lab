@@ -1,0 +1,28 @@
+id: r147-x-midcpnifty-s17
+title: R147 Night's strong close without the OI check on MIDCPNIFTY (1-ITM, 15:20 -> 09:16)
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R147_NIGHT_PLUS.md
+hypothesis: Night's overnight rule makes money on MIDCPNIFTY after real costs, beating random sides.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 5 Nov 2026: index_1m (5 indices + INDIAVIX), options_rolling_1m
+  WEEK/MONTH, equity_1m (59 stocks); to 16 Oct 2026'
+period:
+  design: 2022, 2023, 2024 (yearly folds)
+  holdout: 1 Jan 2025 - 16 Oct 2026, read once 5 Nov 2026
+instruments:
+- MIDCPNIFTY
+features:
+- 'signal source: the index (close location, day move, 59-stock breadth)'
+model_or_rule: research/hunt/r147_night_plus/data.py (NightRules on this index)
+settings: research/hunt/r147_night_plus/cfg.py
+prereg: research/hunt/r147_night_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 122 trades, Rs 261 a trade (stress 241), by year {''2023'': 28060.06525, ''2024'': 3758.1862250000095},
+    worst month -17,909, max DD -28,529, twin p 0.02948525737131434, BH q 0.03538230884557721, design pass True; holdout 243
+    trades, Rs -366 a trade (stress -420), by year {''2025'': -14011.089200000011, ''2026'': -75027.95739999998}, worst month
+    -54,626, max DD -144,642, twin p 0.41879060469765117, holdout pass False'
+  costs: app fills (+-5 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs; stress 1.5x spread
+holdout_read: true
+verdict: rejected
+notes: Failed the pre-registered gates.

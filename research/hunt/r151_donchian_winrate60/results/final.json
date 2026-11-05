@@ -1,0 +1,120 @@
+{
+ "_meta": {
+  "phase": "final",
+  "lo": "2026-04-01",
+  "hi": "2026-10-13",
+  "written": "2026-11-05T19:59:42.147275+00:00"
+ },
+ "R51": {
+  "today": {
+   "trades": 1670,
+   "win": 0.4485029940119761,
+   "net": 134742.87999999942,
+   "per_trade": 80.68435928143678,
+   "worst_month": -54587.27000000001,
+   "max_dd": 81683
+  },
+  "today_w20": {
+   "trades": 980,
+   "win": 0.4520408163265306,
+   "net": 114026.06999999972,
+   "per_trade": 116.35313265306094,
+   "worst_month": -14068.300000000054,
+   "max_dd": 46534
+  },
+  "chosen_variant": {
+   "trades": 1420,
+   "win": 0.4507042253521127,
+   "net": 166729.23999999944,
+   "per_trade": 117.41495774647848,
+   "worst_month": -15279.160000000078,
+   "max_dd": 48760,
+   "params": [
+    30,
+    4.0
+   ]
+  },
+  "pickers": {
+   "R51-20-3.0-M1": {
+    "design_failed": true
+   },
+   "R51-20-3.0-M2": {
+    "design_failed": true
+   },
+   "R51-30-4.0-M1": {
+    "design_failed": true
+   },
+   "R51-30-4.0-M2": {
+    "design_failed": true
+   },
+   "R51-20-3.0-M1-W20": {
+    "design_failed": true
+   },
+   "R51-20-3.0-M2-W20": {
+    "design_failed": true
+   },
+   "R51-30-4.0-M1-W20": {
+    "design_failed": true
+   },
+   "R51-30-4.0-M2-W20": {
+    "design_failed": true
+   }
+  }
+ },
+ "R72": {
+  "today": {
+   "trades": 1202,
+   "win": 0.4584026622296173,
+   "net": 171365.63999999966,
+   "per_trade": 142.5670881863558,
+   "worst_month": -40908.25000000007,
+   "max_dd": 61884
+  },
+  "today_w20": {
+   "trades": 610,
+   "win": 0.46885245901639344,
+   "net": 129781.2499999999,
+   "per_trade": 212.75614754098345,
+   "worst_month": -8783.820000000042,
+   "max_dd": 47466
+  },
+  "chosen_variant": {
+   "trades": 632,
+   "win": 0.4525316455696203,
+   "net": 95221.02999999975,
+   "per_trade": 150.66618670886038,
+   "worst_month": -33126.75000000001,
+   "max_dd": 99512,
+   "params": [
+    30,
+    5
+   ]
+  },
+  "pickers": {
+   "R72-20-4-M1": {
+    "design_failed": true
+   },
+   "R72-20-4-M2": {
+    "design_failed": true
+   },
+   "R72-30-5-M1": {
+    "design_failed": true
+   },
+   "R72-30-5-M2": {
+    "design_failed": true
+   },
+   "R72-20-4-M1-W20": {
+    "design_failed": true
+   },
+   "R72-20-4-M2-W20": {
+    "design_failed": true
+   },
+   "R72-30-5-M1-W20": {
+    "design_failed": true
+   },
+   "R72-30-5-M2-W20": {
+    "design_failed": true
+   }
+  }
+ }
+}

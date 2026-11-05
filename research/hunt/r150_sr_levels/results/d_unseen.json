@@ -1,0 +1,79 @@
+{
+ "_meta": {
+  "phase": "unseen",
+  "lo": "2022-12-01",
+  "hi": "2024-11-19",
+  "seed": 1504,
+  "second_look_unseen": true,
+  "written": "2026-11-05T13:50:40.942846+00:00"
+ },
+ "base_r51_w20": {
+  "unseen": {
+   "trades": 2717,
+   "win": 0.389,
+   "net": -231720,
+   "avg_win": 848,
+   "avg_loss": -680,
+   "worst_day": -8974,
+   "max_dd": 245762,
+   "bad_months": 8,
+   "loss_sum": -650446,
+   "losing_days": 311,
+   "days": 484,
+   "worst_month": -36016,
+   "sum_losing_trades": -1128339
+  }
+ },
+ "D1": {
+  "unseen": {
+   "trades": 1756,
+   "win": 0.3884,
+   "net": -146061,
+   "avg_win": 908,
+   "avg_loss": -713,
+   "worst_day": -8939,
+   "max_dd": 163469,
+   "bad_months": 6,
+   "loss_sum": -485123,
+   "losing_days": 298,
+   "days": 442,
+   "worst_month": -30604,
+   "sum_losing_trades": -765369,
+   "changed_vs_base": 1697
+  },
+  "twin": {
+   "p": 0.051974012993503245,
+   "p_mc": 0.051974012993503245,
+   "p_norm": 0.059274249034905885,
+   "twin_mean": -512604,
+   "twin_sd": 17606,
+   "hits": 103
+  }
+ },
+ "D2": {
+  "unseen": {
+   "trades": 2717,
+   "win": 0.389,
+   "net": -231720,
+   "avg_win": 848,
+   "avg_loss": -680,
+   "worst_day": -8974,
+   "max_dd": 245762,
+   "bad_months": 8,
+   "loss_sum": -650446,
+   "losing_days": 311,
+   "days": 484,
+   "worst_month": -36016,
+   "sum_losing_trades": -1128339,
+   "changed_vs_base": 0
+  },
+  "twin": {
+   "p": 1.0,
+   "p_mc": 1.0,
+   "p_norm": 1.0,
+   "twin_mean": -650446,
+   "twin_sd": 0,
+   "hits": 2000
+  }
+ }
+}

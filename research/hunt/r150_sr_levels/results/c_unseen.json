@@ -1,0 +1,88 @@
+{
+ "_meta": {
+  "phase": "unseen",
+  "lo": "2022-12-01",
+  "hi": "2024-11-19",
+  "seed": 1503,
+  "written": "2026-11-05T13:41:44.413992+00:00"
+ },
+ "parity": {
+  "trades": 3395,
+  "net": -306931,
+  "published": [
+   3395,
+   -306931
+  ]
+ },
+ "today": {
+  "unseen": {
+   "trades": 3395,
+   "win": 0.3897,
+   "net": -306931,
+   "avg_win": 820,
+   "avg_loss": -672,
+   "worst_day": -16757,
+   "max_dd": 337564,
+   "bad_months": 10,
+   "loss_sum": -886970,
+   "losing_days": 277,
+   "days": 453,
+   "worst_month": -54175,
+   "sum_losing_trades": -1392158
+  }
+ },
+ "W20-72": {
+  "unseen": {
+   "trades": 1718,
+   "win": 0.383,
+   "net": -172937,
+   "avg_win": 864,
+   "avg_loss": -699,
+   "worst_day": -16704,
+   "max_dd": 180610,
+   "bad_months": 6,
+   "loss_sum": -507024,
+   "losing_days": 269,
+   "days": 418,
+   "worst_month": -37824,
+   "sum_losing_trades": -741185,
+   "changed_vs_today": 2383
+  },
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions)",
+  "twin": {
+   "p": 0.34632683658170915,
+   "p_mc": 0.34632683658170915,
+   "p_norm": 0.3400382177528971,
+   "twin_mean": -515043,
+   "twin_sd": 19447,
+   "hits": 692
+  }
+ },
+ "W5-72": {
+  "unseen": {
+   "trades": 2463,
+   "win": 0.3845,
+   "net": -262863,
+   "avg_win": 858,
+   "avg_loss": -709,
+   "worst_day": -14707,
+   "max_dd": 280615,
+   "bad_months": 10,
+   "loss_sum": -694878,
+   "losing_days": 286,
+   "days": 443,
+   "worst_month": -41777,
+   "sum_losing_trades": -1075071,
+   "changed_vs_today": 1560
+  },
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 5 sessions)",
+  "twin": {
+   "p": 0.585207396301849,
+   "p_mc": 0.585207396301849,
+   "p_norm": 0.5776553712860244,
+   "twin_mean": -691278,
+   "twin_sd": 18379,
+   "hits": 1170
+  }
+ }
+}

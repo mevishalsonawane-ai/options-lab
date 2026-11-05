@@ -1,0 +1,26 @@
+{
+ "W20-72": {
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions)",
+  "p": 0.34632683658170915,
+  "q": 0.585207396301849,
+  "passed": false,
+  "fails": [
+   "wf: worst day worse",
+   "unseen: the arm no longer makes money",
+   "twin p 0.346 >= 0.05",
+   "BH q 0.585 > 0.1"
+  ]
+ },
+ "W5-72": {
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 5 sessions)",
+  "p": 0.585207396301849,
+  "q": 0.585207396301849,
+  "passed": false,
+  "fails": [
+   "wf: worst day worse",
+   "unseen: the arm no longer makes money",
+   "twin p 0.585 >= 0.05",
+   "BH q 0.585 > 0.1"
+  ]
+ }
+}

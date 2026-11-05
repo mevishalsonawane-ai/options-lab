@@ -1,0 +1,25 @@
+{
+ "E1": {
+  "p": 2.1437090874264998e-08,
+  "q": 4.2874181748529996e-08,
+  "passed": false,
+  "fails": [
+   "design: worst day worse",
+   "design: worst month worse",
+   "design: the arm no longer makes money",
+   "wf: worst day worse",
+   "wf: worst month worse",
+   "unseen: the arm no longer makes money"
+  ]
+ },
+ "E2": {
+  "p": 2.5793252626501975e-05,
+  "q": 2.5793252626501975e-05,
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "wf: the arm no longer makes money",
+   "unseen: the arm no longer makes money"
+  ]
+ }
+}

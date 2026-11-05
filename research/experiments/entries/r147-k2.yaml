@@ -1,0 +1,29 @@
+id: r147-k2
+title: 'R147 Night (R3) NIFTY + BANKNIFTY: 2-ITM instead of 1-ITM'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R147_NIGHT_PLUS.md
+hypothesis: 2-ITM instead of 1-ITM raises Night's net on the same nights.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 5 Nov 2026: index_1m (5 indices + INDIAVIX), options_rolling_1m
+  WEEK/MONTH, equity_1m (59 stocks); to 16 Oct 2026'
+period:
+  design: 2022, 2023, 2024 (yearly folds)
+  holdout: 1 Jan 2025 - 16 Oct 2026, read once 5 Nov 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index (Night''s rule) + the filter''s input (calendar, VIX, Hang Seng, last hour, option straddle as
+  context)'
+model_or_rule: 2-ITM instead of 1-ITM
+settings: research/hunt/r147_night_plus/cfg.py
+prereg: research/hunt/r147_night_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design: 501 Night trades, difference Rs 17,101 (by year {''2022'': 4077.0200000000245, ''2023'': 6586.334799999998,
+    ''2024'': 6437.908799999999}), p 0.008, BH q 0.080, design pass False; holdout: 310 trades, difference Rs 10,505 (by year
+    {''2025'': 12211.7324, ''2026'': -1706.656000000029}), p 0.075'
+  costs: app fills (+-5 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs; stress 1.5x spread
+holdout_read: true
+verdict: rejected
+notes: Failed the pre-registered gates.

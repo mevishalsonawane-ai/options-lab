@@ -1,0 +1,260 @@
+{
+ "_meta": {
+  "phase": "design",
+  "lo": "2024-11-20",
+  "hi": "2026-03-31",
+  "seed": 1502,
+  "written": "2026-11-05T13:13:28.692793+00:00"
+ },
+ "parity": {
+  "trades": 4208,
+  "net": 50425,
+  "published": [
+   4208,
+   50425
+  ],
+  "reproduced": true
+ },
+ "today": {
+  "design": {
+   "trades": 4208,
+   "win": 0.4446,
+   "net": 50425,
+   "avg_win": 1752,
+   "avg_loss": -1381,
+   "worst_day": -49738,
+   "max_dd": 214239,
+   "bad_months": 8,
+   "loss_sum": -1346619,
+   "losing_days": 185,
+   "days": 337,
+   "worst_month": -69428,
+   "sum_losing_trades": -3227023
+  },
+  "wf": {
+   "trades": 3044,
+   "win": 0.4589,
+   "net": 213748,
+   "avg_win": 1716,
+   "avg_loss": -1326,
+   "worst_day": -28942,
+   "max_dd": 94176,
+   "bad_months": 4,
+   "loss_sum": -851416,
+   "losing_days": 127,
+   "days": 247,
+   "worst_month": -53654,
+   "sum_losing_trades": -2183438
+  }
+ },
+ "W5": {
+  "design": {
+   "trades": 3181,
+   "win": 0.4527,
+   "net": 63961,
+   "avg_win": 1770,
+   "avg_loss": -1427,
+   "worst_day": -31104,
+   "max_dd": 182768,
+   "bad_months": 8,
+   "loss_sum": -1111079,
+   "losing_days": 184,
+   "days": 336,
+   "worst_month": -49956,
+   "sum_losing_trades": -2484870,
+   "changed_vs_today": 2345
+  },
+  "wf": {
+   "trades": 2279,
+   "win": 0.4677,
+   "net": 201214,
+   "avg_win": 1744,
+   "avg_loss": -1366,
+   "worst_day": -28942,
+   "max_dd": 88979,
+   "bad_months": 4,
+   "loss_sum": -709389,
+   "losing_days": 129,
+   "days": 247,
+   "worst_month": -49956,
+   "sum_losing_trades": -1657496,
+   "changed_vs_today": 1751
+  },
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 5 sessions)"
+ },
+ "W20": {
+  "design": {
+   "trades": 2414,
+   "win": 0.454,
+   "net": 26861,
+   "avg_win": 1762,
+   "avg_loss": -1445,
+   "worst_day": -20692,
+   "max_dd": 164922,
+   "bad_months": 6,
+   "loss_sum": -841719,
+   "losing_days": 187,
+   "days": 332,
+   "worst_month": -43781,
+   "sum_losing_trades": -1904659,
+   "changed_vs_today": 3446
+  },
+  "wf": {
+   "trades": 1689,
+   "win": 0.4731,
+   "net": 166159,
+   "avg_win": 1757,
+   "avg_loss": -1391,
+   "worst_day": -20692,
+   "max_dd": 63222,
+   "bad_months": 3,
+   "loss_sum": -527832,
+   "losing_days": 128,
+   "days": 243,
+   "worst_month": -20002,
+   "sum_losing_trades": -1238067,
+   "changed_vs_today": 2533
+  },
+  "rule": "skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions)"
+ },
+ "B5": {
+  "design": {
+   "trades": 1812,
+   "win": 0.4409,
+   "net": -25022,
+   "avg_win": 1637,
+   "avg_loss": -1316,
+   "worst_day": -25184,
+   "max_dd": 132198,
+   "bad_months": 5,
+   "loss_sum": -676425,
+   "losing_days": 183,
+   "days": 316,
+   "worst_month": -64182,
+   "sum_losing_trades": -1332906,
+   "changed_vs_today": 3930
+  },
+  "wf": {
+   "trades": 1275,
+   "win": 0.4588,
+   "net": 79709,
+   "avg_win": 1592,
+   "avg_loss": -1234,
+   "worst_day": -23674,
+   "max_dd": 73857,
+   "bad_months": 2,
+   "loss_sum": -408637,
+   "losing_days": 126,
+   "days": 229,
+   "worst_month": -64182,
+   "sum_losing_trades": -851552,
+   "changed_vs_today": 2893
+  },
+  "rule": "skip unless the break crossed a 3+-turn 5-min level (lookback 5 sessions)"
+ },
+ "B20": {
+  "design": {
+   "trades": 2357,
+   "win": 0.4361,
+   "net": -64194,
+   "avg_win": 1664,
+   "avg_loss": -1336,
+   "worst_day": -43727,
+   "max_dd": 159129,
+   "bad_months": 5,
+   "loss_sum": -879418,
+   "losing_days": 196,
+   "days": 330,
+   "worst_month": -72526,
+   "sum_losing_trades": -1775104,
+   "changed_vs_today": 3863
+  },
+  "wf": {
+   "trades": 1659,
+   "win": 0.4527,
+   "net": 50960,
+   "avg_win": 1610,
+   "avg_loss": -1275,
+   "worst_day": -21179,
+   "max_dd": 82139,
+   "bad_months": 2,
+   "loss_sum": -543459,
+   "losing_days": 136,
+   "days": 242,
+   "worst_month": -65514,
+   "sum_losing_trades": -1158108,
+   "changed_vs_today": 2901
+  },
+  "rule": "skip unless the break crossed a 3+-turn 5-min level (lookback 20 sessions)"
+ },
+ "FX5": {
+  "design": {
+   "trades": 4219,
+   "win": 0.4274,
+   "net": 57932,
+   "avg_win": 1774,
+   "avg_loss": -1300,
+   "worst_day": -45086,
+   "max_dd": 211011,
+   "bad_months": 8,
+   "loss_sum": -1314940,
+   "losing_days": 185,
+   "days": 337,
+   "worst_month": -63185,
+   "sum_losing_trades": -3140674,
+   "changed_vs_today": 497
+  },
+  "wf": {
+   "trades": 3051,
+   "win": 0.4448,
+   "net": 219047,
+   "avg_win": 1724,
+   "avg_loss": -1252,
+   "worst_day": -28942,
+   "max_dd": 88537,
+   "bad_months": 4,
+   "loss_sum": -826631,
+   "losing_days": 130,
+   "days": 247,
+   "worst_month": -62046,
+   "sum_losing_trades": -2121037,
+   "changed_vs_today": 344
+  },
+  "rule": "sell when a 5-min bar closes back through the 3+-turn 5-min level the break crossed (fake breakout) (lookback 5 sessions)"
+ },
+ "FX20": {
+  "design": {
+   "trades": 4223,
+   "win": 0.4227,
+   "net": 68485,
+   "avg_win": 1773,
+   "avg_loss": -1270,
+   "worst_day": -42306,
+   "max_dd": 199635,
+   "bad_months": 8,
+   "loss_sum": -1282299,
+   "losing_days": 183,
+   "days": 337,
+   "worst_month": -64424,
+   "sum_losing_trades": -3095972,
+   "changed_vs_today": 625
+  },
+  "wf": {
+   "trades": 3055,
+   "win": 0.4367,
+   "net": 206408,
+   "avg_win": 1729,
+   "avg_loss": -1221,
+   "worst_day": -27650,
+   "max_dd": 89512,
+   "bad_months": 4,
+   "loss_sum": -821690,
+   "losing_days": 128,
+   "days": 247,
+   "worst_month": -64424,
+   "sum_losing_trades": -2100487,
+   "changed_vs_today": 445
+  },
+  "rule": "sell when a 5-min bar closes back through the 3+-turn 5-min level the break crossed (fake breakout) (lookback 20 sessions)"
+ }
+}

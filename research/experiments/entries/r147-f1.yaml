@@ -1,0 +1,29 @@
+id: r147-f1
+title: 'R147 Night (R3) NIFTY + BANKNIFTY: skip weekend / holiday nights'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R147_NIGHT_PLUS.md
+hypothesis: skip weekend / holiday nights raises Night's net on the same nights.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake copied 5 Nov 2026: index_1m (5 indices + INDIAVIX), options_rolling_1m
+  WEEK/MONTH, equity_1m (59 stocks); to 16 Oct 2026'
+period:
+  design: 2022, 2023, 2024 (yearly folds)
+  holdout: 1 Jan 2025 - 16 Oct 2026, read once 5 Nov 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index (Night''s rule) + the filter''s input (calendar, VIX, Hang Seng, last hour, option straddle as
+  context)'
+model_or_rule: skip weekend / holiday nights
+settings: research/hunt/r147_night_plus/cfg.py
+prereg: research/hunt/r147_night_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design: 503 Night trades, 170 skipped, difference Rs -116,415 (by year {''2022'': -79921.706, ''2023'': -22139.4292,
+    ''2024'': -14353.382399999997}), p 0.997, BH q 0.999, design pass False; holdout: 310 trades, 90 skipped, difference Rs
+    -111,256 (by year {''2025'': -48125.888799999986, ''2026'': -63130.22320000001}), p 0.985'
+  costs: app fills (+-5 bps), app charges (BSE for SENSEX), h28 half-spreads on both legs; stress 1.5x spread
+holdout_read: true
+verdict: rejected
+notes: Failed the pre-registered gates.
