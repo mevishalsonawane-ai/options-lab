@@ -216,3 +216,29 @@ These are DESCRIPTIVE only, with no gate:
 - a random-skip twin (dropping the same number of R51 + W20 trades at random) p < 0.05 in unseen;
 - BH q <= 0.10 over the 2.
 - **Even a pass needs the forward shadow test** before any paper use, because no unread data is left.
+
+## Amendment E, 5 Nov 2026: EMA / VWAP cross on top of R51 + W20 (Boss: "When ema and vwap cross each other, does it help?"); before any result
+
+**Seen before.**
+- Amendment D's results.
+- Earlier EMA + VWAP rules as signals of their own (TREND_FILTER: 9 EMA + VWAP; F1 factory C1: EMA 9/21 + Supertrend +
+  VWAP, -Rs 2.99 lakh in its holdout). None as a filter on R51 + W20.
+
+**VWAP.**
+- **On all periods:** the index has no volume, so VWAP is the session's TIME-weighted average of the index's typical
+  price (H + L + C) / 3 per minute from 09:15. This is what earlier studies used.
+- **On the 52 sessions with index futures minutes (29 Jul - 13 Oct 2026):** the futures' real volume-weighted VWAP as
+  well. That part is descriptive only.
+
+**EMA:** the 20-bar EMA of 5-minute index closes (Amendment D2's), at the last closed 5-minute bar.
+
+**Rules (each an extra skip on R51 + W20):**
+
+| id | rule |
+|---|---|
+| E1 | take the trade only when the EMA is on the trade's side of VWAP (call: EMA >= VWAP; put: EMA <= VWAP), i.e. the EMA has crossed VWAP the trade's way |
+| E2 | take it only when that cross happened FRESHLY, within the last 6 closed 5-minute bars (30 minutes) |
+| E3 / E4 | E1 / E2 with the futures' real VWAP, on the 52 sessions only (descriptive) |
+
+**Gates and periods:** as Amendment D, with BH over E1 and E2. The Dec 2022 - Nov 2024 years and Apr - Oct 2026 are
+both second looks, so even a pass needs the forward shadow test.
