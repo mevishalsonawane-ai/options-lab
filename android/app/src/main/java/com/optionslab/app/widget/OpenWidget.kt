@@ -418,7 +418,9 @@ class OpenWidget : AppWidgetProvider() {
             val zOrders = OpenBook.decodeOrders(textNow(K_ZO), now.toLocalDate().toString())
             // Zerodha's orders only beside a read of its positions: an unreadable account shows no stale orders.
             val z = OpenBook.decode(textNow(K_Z))?.let { if (it.problem == null) it.copy(orders = zOrders) else it }?.copy(primary = live)
-            val p = OpenBook.decode(textNow(K_P))?.copy(primary = !live)
+            // 5 Nov (Boss: "only live orders should be shown on the widget"): in Live the paper books are left out - no paper row,
+            // no paper line. In Paper mode the paper books lead as before.
+            val p = if (live) null else OpenBook.decode(textNow(K_P))?.copy(primary = true)
             return OpenBook.view(listOfNotNull(z, p), now, maxRows)
         }
 

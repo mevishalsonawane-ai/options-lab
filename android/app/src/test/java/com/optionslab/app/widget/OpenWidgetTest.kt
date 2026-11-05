@@ -223,6 +223,26 @@ class OpenWidgetTest : RobolectricTest() {
         assertNull(SecurePrefs.getString("ow.paper"))
     }
 
+    /** 5 Nov (Boss: "only live orders should be shown on the widget"): in Live the paper books are left out entirely. */
+    @Test fun inLiveOnlyZerodhaIsShownNoPaperRowOrLine() {
+        Background.linkZerodha()
+        AppSettings.save(AppSettings.load().copy(mode = "live"))
+        allow()
+        runBlocking { assertTrue(Paper.place(contract(24_500, Right.CE), "BUY", 1, "MARKET", "MIS", null, null, Quote(100.0)).ok) }
+        OpenWidget.fromPaper(context, Paper.localSnapshot()!!.first)
+        OpenWidget.fromWatch(context, true, true, Broker.Positions(listOf(open, closed), emptyList()), null)
+        assertEquals("Today's P&L · Zerodha", text(R.id.ow_caption))
+        assertEquals("+₹550", text(R.id.ow_pnl))
+        assertEquals("no paper line under the figure", false, shown(R.id.ow_split))
+        assertEquals("NIFTY26OCT25000CE", text(R.id.ow_t0))
+        assertEquals("the Zerodha row carries no venue tag", "-75 · LTP 90.00", text(R.id.ow_d0))
+        assertEquals("no paper row", false, shown(R.id.ow_row1))
+        // Back in Paper mode, the paper books lead again.
+        AppSettings.save(AppSettings.load().copy(mode = "paper"))
+        updated()
+        assertEquals("Today's P&L · Paper", text(R.id.ow_caption))
+    }
+
     @Test fun zerodhaAfterHoursShowsTheDaysFigureTheAppRecorded() {
         Background.linkZerodha()
         AppSettings.save(AppSettings.load().copy(mode = "live"))
