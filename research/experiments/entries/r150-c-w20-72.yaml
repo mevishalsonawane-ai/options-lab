@@ -1,0 +1,30 @@
+id: r150-c-w20-72
+title: 'R150 C R72 Breadth Donchian + 5-min S/R wall-ahead skip W20-72: skip when a 3+-turn 5-min level is within 0.25% ahead
+  (lookback 20 sessions)'
+family: patterns-indicators
+date: '2026-11-05'
+doc: research/HUNT_R150_SR_LEVELS.md
+hypothesis: skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions) makes R72 lose less (R140 gates).
+data_version: Drive lake copied 5 Nov 2026; R51 clean stores + R143's old store (Dec 2022 - Dec 2024)
+period:
+  design: 20 Nov 2024 - 31 Mar 2026
+  holdout: 1 Dec 2022 - 19 Nov 2024 (unseen, read once 5 Nov 2026); Apr - Oct 2026 second look
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (cross-index breadth Donchian); S/R levels from 5-min index pivots'
+model_or_rule: skip when a 3+-turn 5-min level is within 0.25% ahead (lookback 20 sessions)
+settings: research/hunt/r150_sr_levels/study_c.py
+prereg: research/hunt/r150_sr_levels/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 1569 trades net Rs 166,877 win 0.490 (today 3071 / Rs 216,929 / 0.468); final (2nd look) net Rs 129,781
+    vs Rs 171,366, twin p 0.006; unseen 1718 trades net Rs -172,937 vs Rs -306,931, twin p 0.346, BH q 0.585. Fails: wf: worst
+    day worse; unseen: the arm no longer makes money; twin p 0.346 >= 0.05; BH q 0.585 > 0.1'
+  costs: 'R101 / R106 engine: app fills, dated charges (as R140 / R143)'
+holdout_read: true
+verdict: rejected

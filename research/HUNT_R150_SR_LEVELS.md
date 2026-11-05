@@ -131,3 +131,28 @@ W20 means: skip an R51 trade when a 5-minute level (3+ turns in the last 20 sess
     by 1-2 points.
 - **Note from the unseen years:** R51 itself lost Rs 4 lakh in Dec 2022 - Nov 2024 (39% wins). It only made money from
   Nov 2024. W20 halves that loss but does not fix it.
+
+## Amendment C: the same 5-minute "wall ahead" skip on R72 Breadth Donchian (Boss: "What we add this in breath donchain")
+
+- **Pre-registration:** commit `2eaca03`.
+- **Design results:** committed in `e039701` before the other reads.
+- **Deciding holdout:** R72's unseen two years, read once (`results/UNSEEN_READ_C`). The base reproduced R143: 3,395
+  trades, -Rs 3,06,931.
+
+Each cell: trades / win rate / net / losing days / max drawdown.
+
+| rule | design Nov 2024 - Mar 2026 | Apr - Oct 2026 (2nd look) | UNSEEN Dec 2022 - Nov 2024 | twin p (2nd look / unseen) | verdict |
+|---|---|---|---|---|---|
+| R72 today | 3,071 / 46.8% / Rs 2,16,929 / -Rs 11.5 lakh / Rs 1.99 lakh | 1,202 / 45.8% / Rs 1,71,366 / -Rs 3.90 lakh / Rs 61.9k | 3,395 / 39.0% / -Rs 3,06,931 / -Rs 8.87 lakh / Rs 3.38 lakh | | |
+| W20-72 (20-session 5-min levels) | 1,569 / 49.0% / Rs 1,66,877 / -Rs 6.15 lakh / Rs 1.14 lakh | 610 / 46.9% / Rs 1,29,781 / -Rs 1.95 lakh / Rs 47.5k | 1,718 / 38.3% / -Rs 1,72,937 / -Rs 5.07 lakh / Rs 1.81 lakh | 0.006 / 0.35 | fail |
+| W5-72 (5-session) | 2,216 / 47.5% / Rs 1,99,111 / -Rs 8.59 lakh / Rs 1.80 lakh | 828 / 46.1% / Rs 1,41,389 / -Rs 2.59 lakh / Rs 75.2k | 2,463 / 38.5% / -Rs 2,62,863 / -Rs 6.95 lakh / Rs 2.81 lakh | 0.008 / 0.59 | fail |
+
+**Short answer: on Breadth Donchian the rule does not hold up.**
+- **It skips about half of R72's trades and halves its losses, but in the unseen years random skips of the same number
+  did as well** (p 0.35). On R72 the gain comes from trading less, not from avoiding the right trades.
+- **On R51 it was different:** better than random in the unseen years (p < 0.001).
+- **Win rate rises 1-3 points in the recent periods** (49.0% vs 46.8% design; 51.8% vs 49.0% walk-forward), but falls
+  in the unseen years (38.3% vs 39.0%).
+- **It also fails:** the walk-forward's worst day got worse (-Rs 28,317 vs -Rs 25,837), and R72 itself lost money in
+  the unseen years.
+- **Nothing changes for R72.**

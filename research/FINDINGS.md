@@ -1871,3 +1871,6 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
   - It failed only the "still makes money in the unseen years" gate, because R51 itself lost there. It is a note:
     paper only as Boss's exception, shadow suggested.
   - Fake-breakout exits and "only breaks through a level" failed again.
+- **The same skip on R72 Breadth Donchian (R150 Amendment C): fails.** W20 skips half of R72's trades and halves its
+  losses, but in the unseen two years random skips of the same number do as well (p 0.35; Apr - Oct 2026 p 0.006, a
+  second look). The worst day got worse in the walk-forward. On R72 the gain is from trading less.
