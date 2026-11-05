@@ -1,0 +1,34 @@
+id: r146-d-banknifty
+title: 'R146 next-open gap direction from the close (daily): BANKNIFTY'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R146_GAP_BTST.md
+hypothesis: Information known by 15:20 IST predicts the sign of the next 09:15 open vs the decision price better than the
+  gap-up base rate.
+data_version: Yahoo chart API daily bars 2007 - 4 Nov 2026 (^NSEI, ^NSEBANK, NIFTY_FIN_SERVICE.NS, ^BSESN, ^INDIAVIX, ^N225,
+  ^HSI, ^KS11, ^GSPC, USDINR=X)
+period:
+  design: D walk-forward test years 2012 - Feb 2025 (yearly retrain)
+  holdout: 1 Mar 2025 - 20 Feb 2026 (M) / 1 Mar 2025 - 3 Nov 2026 (D), read once 5 Nov 2026
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the index daily bar (return, close location, gap, 5-day return, range), India VIX, Asian closes, previous
+  S&P session, USD/INR (lagged), weekday'
+model_or_rule: 'R_mom: sign of the day''s move; R_loc: close location >= 0.6 up / <= 0.4 down; R_asia: sign of the Hang Seng''s
+  day; LR: L2 logistic on all features; GB: gradient trees (depth 2) on all features'
+settings: research/hunt/r146_gap_btst/cfg.py (frozen in PREREG)
+prereg: research/hunt/r146_gap_btst/PREREG.md
+variants_tried: 5
+results:
+  summary: 'R_mom: design 3242 nights hit 0.553 vs base rate 0.626 p 0.000 q 0.001; holdout 412 hit 0.568 vs 0.507 p 0.005
+    | R_loc: design 2717 nights hit 0.548 vs base rate 0.631 p 0.000 q 0.001; holdout 349 hit 0.593 vs 0.501 p 0.001 | R_asia:
+    design 3082 nights hit 0.516 vs base rate 0.625 p 0.046 q 0.084; holdout 393 hit 0.542 vs 0.504 p 0.057 | LR: design 3242
+    nights hit 0.619 vs base rate 0.626 AUC 0.546 p 0.000 q 0.001; holdout 412 hit 0.507 vs 0.507 AUC 0.611 p 0.000 | GB:
+    design 3242 nights hit 0.609 vs base rate 0.626 AUC 0.538 p 0.002 q 0.004; holdout 412 hit 0.522 vs 0.507 AUC 0.599 p
+    0.001. Gate: hit above the base rate on the same nights, p <= 0.05, BH q (36) <= 0.10, >= 100 nights. None passed design.'
+  costs: none (direction of the index gap; no trade)
+holdout_read: true
+verdict: rejected
+notes: Design hit rates beat random sides (p < 0.001 on D) but not the gap-up base rate. In the holdout the up-drift faded
+  and momentum / location beat the base rate on some indices (information only).

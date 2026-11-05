@@ -1779,3 +1779,30 @@ BTC/ETH perp, the stock); options bought by the strike rule, chain only as conte
 - New strategies N1-N6 all failed: volume-confirmed breaks (N1) and a daily-trend filter (N5) made the Donchian arms worse;
   skipping vol-rich days (N3) removed good trades; the hedged straddle on rich vol (N6) lost in the holdout (18 trades).
 - Bennett: the 09:20 skew adds almost nothing to ATM IV for the day's range (NIFTY R2 0.214 -> 0.216, 1,285 days).
+
+## Predicting the next opening gap at 15:20, and BTST options on it (R146, 5 Nov 2026) - 0 of 36 predictors and 0 of 5 trade rules pass
+Full study: `HUNT_R146_GAP_BTST.md` (pre-registered `hunt/r146_gap_btst/PREREG.md`, commit 133c5c2; design committed in
+f5ef0c5 before the holdout; holdout 1 Mar 2025 on, read once). Data: Yahoo daily 2008 - Nov 2026 (4 indices) and the
+research-data release minutes (NIFTY / BANKNIFTY options, Feb 2024 - Feb 2026).
+- **What is known at the close explains almost none of the gap.**
+  - Out-of-sample R² is -0.37 to +0.04, from the day's move, close location, last 30/60 minutes, breadth, VIX, OI,
+    expiry, events and Asian closes.
+  - The S&P 500's overnight session alone explains 0.08-0.24 (correlation 0.34-0.50). It arrives after 15:30 IST.
+- **No predictor beat the gap-up base rate in design**, 2012 to Feb 2025, about 3,230 nights an index.
+  - The index opened up on 63-71% of days.
+  - Momentum was right 55% (better than random sides, p < 0.001, but below "always up").
+- **In the holdout the drift faded** (50-55% up, 412 days).
+  - BANKNIFTY / FINNIFTY close location was then right 58-59% vs 50%.
+  - On 15:19 minutes, BANKNIFTY's Night strong close + OI rule was right 64% vs 54% (126 nights). This is information
+    only.
+- **BTST (1-ITM, bought 15:20, sold 09:16, 1 lot, app fills / charges / 0.16% half-spread):**
+  - Carrying options overnight costs 2-4% of premium a night.
+  - "Always the call" lost Rs 289-728 a trade (82-212 trades).
+  - Logistic, gradient trees and last-30-minutes failed design (Rs -563 to +166 a trade).
+  - The strong close without OI made Rs 209-512 a trade in both periods, but failed BH (q 0.38) and was below Night
+    per session in design.
+  - The Night (R3) proxy was best: design Rs 188 / 816 a trade (47 / 50 trades); holdout Rs 480 / 458 (84 / 110,
+    twin p 0.008 / 0.002).
+  - Selling at 09:30 instead cut it to Rs 74 / 34 (as R27). A -30% stop changed nothing.
+- **Data lesson:** the 09:15 option OPEN in minute data is often a stale print at the bar's high, 20-50% above the
+  real trades. Never fill at it.

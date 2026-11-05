@@ -1,0 +1,38 @@
+id: r146-m-nifty
+title: 'R146 next-open gap direction from 15:19: NIFTY'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R146_GAP_BTST.md
+hypothesis: Information known by 15:20 IST predicts the sign of the next 09:15 open vs the decision price better than the
+  gap-up base rate.
+data_version: 'research-data release (gh api): nifty_prev/year, banknifty_prev_year_wide/year_wide (index + nearest-expiry
+  option minutes), finnifty_index, sensex_index, extra_series (INDIAVIX); Yahoo daily N225/HSI/KS11/GSPC; r98 events.csv'
+period:
+  design: M walk-forward test months Aug 2024 - Feb 2025 (monthly retrain)
+  holdout: 1 Mar 2025 - 20 Feb 2026 (M) / 1 Mar 2025 - 3 Nov 2026 (D), read once 5 Nov 2026
+instruments:
+- NIFTY
+features:
+- 'signal source: the index (day move, close location, last 30/60 min, gap, cross-index breadth), India VIX, option-chain
+  OI build-up / PCR / straddle as context, expiry calendar, weekday, scheduled events, Asian closes, previous S&P session'
+model_or_rule: 'R_mom: sign of the day''s move; R_loc: close location >= 0.6 up / <= 0.4 down; R_l30: sign of the last 30
+  minutes; R_r17: Night''s strong close (location + move + cross-index breadth); R_r3p: Night (R3) proxy: strong close + OI
+  build-up z agrees; R_asia: sign of the Hang Seng''s day; LR: L2 logistic on all features; GB: gradient trees (depth 2) on
+  all features'
+settings: research/hunt/r146_gap_btst/cfg.py (frozen in PREREG)
+prereg: research/hunt/r146_gap_btst/PREREG.md
+variants_tried: 8
+results:
+  summary: 'R_mom: design 146 nights hit 0.541 vs base rate 0.596 p 0.160 q 0.222; holdout 238 hit 0.550 vs 0.580 p 0.080
+    | R_loc: design 115 nights hit 0.548 vs base rate 0.600 p 0.103 q 0.161; holdout 204 hit 0.544 vs 0.583 p 0.124 | R_l30:
+    design 146 nights hit 0.521 vs base rate 0.596 p 0.374 q 0.421; holdout 238 hit 0.483 vs 0.580 p 0.750 | R_r17: design
+    98 nights hit 0.551 vs base rate 0.622 p 0.092 q 0.150; holdout 173 hit 0.555 vs 0.566 p 0.093 | R_r3p: design 79 nights
+    hit 0.620 vs base rate 0.620 p 0.017 q 0.034; holdout 149 hit 0.570 vs 0.557 p 0.054 | R_asia: design 136 nights hit 0.529
+    vs base rate 0.588 p 0.312 q 0.375; holdout 226 hit 0.504 vs 0.580 p 0.578 | LR: design 146 nights hit 0.555 vs base rate
+    0.596 AUC 0.561 p 0.111 q 0.166; holdout 238 hit 0.567 vs 0.580 AUC 0.595 p 0.006 | GB: design 146 nights hit 0.514 vs
+    base rate 0.596 AUC 0.512 p 0.419 q 0.448; holdout 238 hit 0.555 vs 0.580 AUC 0.562 p 0.048. Gate: hit above the base
+    rate on the same nights, p <= 0.05, BH q (36) <= 0.10, >= 100 nights. None passed design.'
+  costs: none (direction of the index gap; no trade)
+holdout_read: true
+verdict: rejected
+notes: Information only in the holdout since nothing passed design.

@@ -1,0 +1,34 @@
+id: r146-btst-t2
+title: R146 BTST 1-ITM option 15:20 -> 09:16 on 'strong close (R17)'
+family: overnight
+date: '2026-11-05'
+doc: research/HUNT_R146_GAP_BTST.md
+hypothesis: Buying the predicted side at 15:20 and selling at 09:16 pays after real costs and beats the Night (R3) proxy per
+  session and a random-side twin.
+data_version: 'research-data release (gh api): nifty_prev/year, banknifty_prev_year_wide/year_wide (index + nearest-expiry
+  option minutes), finnifty_index, sensex_index, extra_series (INDIAVIX); Yahoo daily N225/HSI/KS11/GSPC; r98 events.csv'
+period:
+  design: walk-forward test months Aug 2024 - Feb 2025
+  holdout: 1 Mar 2025 - 20 Feb 2026, read once 5 Nov 2026
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index at 15:19 (see r146-m-*), option bought; exits X16 (gate), X15 / X20 / X30 / S30 stop as comparisons'
+model_or_rule: T2 strong close (R17); Night's contract (1-ITM nearest expiry, no expiry day, not held into expiry), 1 lot,
+  buy 15:20 open, sell 09:16 open
+settings: research/hunt/r146_gap_btst/cfg.py
+prereg: research/hunt/r146_gap_btst/PREREG.md
+variants_tried: 2
+results:
+  summary: 'design NIFTY: 55 trades, Rs 324 a trade, win 58%, total Rs 17,845, Rs 122/session, worst month Rs -801, 5/7 months
+    up, max DD Rs -7,929, twin p 0.077, BH q 0.38; design BANKNIFTY: 68 trades, Rs 512 a trade, win 60%, total Rs 34,801,
+    Rs 240/session, worst month Rs -7,504, 4/7 months up, max DD Rs -23,437, twin p 0.042, BH q 0.38; holdout NIFTY: 95 trades,
+    Rs 209 a trade, win 49%, total Rs 19,878, Rs 83/session, worst month Rs -18,993, 6/12 months up, max DD Rs -31,046, twin
+    p 0.032; holdout BANKNIFTY: 147 trades, Rs 398 a trade, win 55%, total Rs 58,496, Rs 245/session, worst month Rs -10,141,
+    7/12 months up, max DD Rs -20,987, twin p 0.001. Gate (design): net > 0 also at 1.5x spread, Rs/session >= T0, twin p
+    <= 0.05, BH q (10) <= 0.10, >= 30 trades. Failed design.'
+  costs: 'app fills (+-5 bps, stop -10 bps), app charges (Costs(''app''): Rs 20 an order, STT 0.15%, exchange, SEBI, stamp,
+    GST), 0.16% half-spread on both legs; stress 1.5x spread'
+holdout_read: true
+verdict: rejected
