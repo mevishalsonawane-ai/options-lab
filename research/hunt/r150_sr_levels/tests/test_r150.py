@@ -109,3 +109,30 @@ def test_profile_levels_poc():
     a[100:130, 3] = 1.0
     lv = SD.profile_levels(a, 100.0)
     assert abs(lv[0] - 100.025) < 0.03
+
+
+def test_ema_vwap_cross_rules():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import study_e as SE
+    assert SE.cross_decision([False, False, True], fresh=False) is True
+    assert SE.cross_decision([True, False], fresh=False) is False
+    assert SE.cross_decision([False, True, True], fresh=True) is True
+    assert SE.cross_decision([True] * 10, fresh=True) is False          # crossed long ago: not fresh
+    assert SE.cross_decision([None], fresh=False) is None and SE.cross_decision([], fresh=True) is None
+    a = np.full((4, N), np.nan)
+    a[1:, :3] = [[3, 6, 9], [1, 2, 3], [2, 4, 6]]
+    assert np.allclose(SE.twap(a)[:3], [2, 3, 4])
+    v = SE.vwap(np.array([10.0, 20.0]), np.array([10.0, 20.0]), np.array([10.0, 20.0]), np.array([1.0, 3.0]))
+    assert np.allclose(v, [10.0, 17.5])
+
+
+def test_cross_decision_with_numpy_bools():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import study_e as SE
+    assert SE.cross_decision([np.False_, np.True_], fresh=True) is True
+    assert SE.cross_decision([np.True_, np.False_], fresh=False) is False
+    assert SE.side_of(np.float64(2.0), np.float64(1.0), "C") is True

@@ -114,7 +114,7 @@ def vwap_ok(und, day, er, side) -> bool | None:
     tp = (seg[ok, 0] + seg[ok, 1] + seg[ok, 2]) / 3
     vw = float((tp * seg[ok, 3]).sum() / seg[ok, 3].sum())
     px = float(seg[ok, 0][-1])
-    return px >= vw if side == "C" else px <= vw
+    return bool(px >= vw) if side == "C" else bool(px <= vw)
 
 
 def profile_levels(a: np.ndarray, ref: float, bin_pct: float = 0.0005) -> list:
@@ -162,12 +162,13 @@ def layer_skip(test, und, day, er, side) -> bool:
         return bool(np.isfinite(price) and wall_prices(pivots_of(und, day), price, side))
     if test == "D2":
         ok = ema_ok(und, day, er, side)
-        return ok is False
+        return ok is not None and not ok
     if test == "D3":
         ok = vwap_ok(und, day, er, side)
-        return ok is False
+        return ok is not None and not ok
     if test == "D4":
-        return vp_wall(und, day, er, side) is True
+        v = vp_wall(und, day, er, side)
+        return v is not None and bool(v)
     raise ValueError(test)
 
 
