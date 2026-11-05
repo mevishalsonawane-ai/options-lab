@@ -42,3 +42,11 @@
 - **Unaffected.** Night's real exit, X16 (09:16 open), failed the guard on 3 of these nights.
 - **The lesson for X15.** Any study pricing a 09:15 option OPEN from minute data overstates it on these mornings. X15
   is reported as a comparison only, and it is not a gate.
+
+## A4, 5 Nov 2026: a reporting bug found after the holdout read (no result changes)
+
+- **The bug.** `size_stats` did not drop the one NIFTY holdout night that has no next-session open, so the four
+  M:NIFTY holdout size-model R² values in `holdout.json` are null.
+- **The fix.** The code is fixed and tested. The holdout is NOT re-run (one read).
+- **Nothing is lost.** The same ridge model's R² on g is in the decomposition (`known_at_1519`: -0.002, 238 nights),
+  which drops the night correctly. No gate reads the size models.

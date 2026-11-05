@@ -374,3 +374,11 @@ def test_x15_stale_open_uses_bar_close_and_stop_reads_it():
     lg, why = T.leg("NIFTY", date(2024, 9, 10), 1, x, od, on)
     assert why == "" and lg.why["X15"] == "X15_close" and lg.x["X15"] == 68.0
     assert lg.why["S30"] == "stop_gap_through" and lg.x["S30"] == 68.0     # 68 <= 70: gapped through the stop
+
+
+def test_size_stats_ignores_a_night_without_next_open():
+    t = pd.DataFrame({"g": [0.01, np.nan, -0.02, 0.005], "gm_train": 0.0, "am_train": 0.01,
+                      "g_ridge": [0.0, 0.0, -0.01, 0.0], "g_gb": [0.0, 0.0, -0.01, 0.0],
+                      "a_ridge": [0.01, 0.01, 0.02, 0.01], "a_gb": [0.01, 0.01, 0.02, 0.01]})
+    r = S.size_stats(t)
+    assert all(np.isfinite(v["r2_vs_train_mean"]) for v in r.values())
