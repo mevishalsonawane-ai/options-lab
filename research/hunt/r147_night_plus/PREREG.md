@@ -162,3 +162,11 @@ If nothing passes DESIGN, the holdout is reported as information only.
   - each filter;
   - the paired / skip twins;
   - the holdout flag.
+
+## Note added before any result (5 Nov 2026, after the build)
+
+- **SENSEX's option files start on 15 May 2023.** Its design is therefore 2023-24, and "positive in 2 of 3 years"
+  becomes "positive in both" for SENSEX.
+- **MIDCPNIFTY's start in Feb 2022.**
+- **The build reproduces the app.** For NIFTY, the OI build-up matches `NightRules.SEED` (the app's last 60 sessions)
+  to within 0.0000005.
