@@ -100,3 +100,24 @@ Pytest tests cover:
 - each feature's look-ahead (scrambling minutes after the decision changes nothing);
 - the threshold choice on synthetic scores;
 - the walk-forward folds (no training trade from a fold or later).
+
+## Amendment A, 5 Nov 2026: the indicators' own parameters too (Boss: "Try to change level, or parameters in the indicator too"); before any result
+
+- **Seen before.** Nothing of R151. R105C already swept the EXIT levels (targets +5/+10/+20%, stops -10/-15%): none
+  gave 60% with profit. R126 swept indicator settings for direction forecasts, not these arms.
+
+**Part P, signal parameters (exits as the app; 1-ITM; every other rule unchanged):**
+
+| arm | Donchian lookback (5-min bars) | other | variants | today's |
+|---|---|---|---|---|
+| R51 | 10, 20, 30, 55 | Supertrend (ATR 10) multiple 2, 3, 4 | 12 | 20 / 3 |
+| R72 | 10, 20, 30, 55 | indices breaking together (of 5) M = 3, 4, 5 | 12 | 20 / 4 |
+
+- **Choice, on DESIGN only:** the variant with the highest win rate among those whose design net per trade >= the arm's
+  today, with at least 300 design trades. Then that ONE variant is read on FINAL and OLD.
+- **Part P passes** on R151's section 4 gates (>= 60% wins, net > 0 and per trade >= today's, enough trades), with
+  the twin replaced by: its win rate is above today's on both FINAL and OLD.
+- **The picker (sections 1-4) is ALSO run on the chosen variant** if its design win rate is above today's. This adds 2
+  pickers per arm-variant; BH runs over all pickers tried.
+- **Every variant is reported** (win rate, trades, net, per trade) on DESIGN, with FINAL and OLD for the chosen one
+  only.
