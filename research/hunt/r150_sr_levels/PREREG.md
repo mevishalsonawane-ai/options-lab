@@ -184,3 +184,35 @@ arm (as R140 / R143).
 - **Apr to Oct 2026:** a second look.
 - **Gates:** R140's lose-less gates in design, walk-forward and unseen, twin p < 0.05, BH q <= 0.10, at least 40
   unseen trades and 30 changed.
+
+## Amendment D, 5 Nov 2026: EMA, pivot points, VWAP and volume profile ON TOP of R51 + W20 (Boss: "What we add vertical volumn and pilot point, and ema and vwap to this, will this help more" / "I am asking on top of this"); before any result
+
+**The base: R51 with Amendment B's W20 skip** (R51 + W20), as the app would run it.
+- **Each layer** below is an EXTRA skip on that base, tested against it.
+- **Seen before:**
+  - each layer ALONE on R51 was tested and rejected before: R73 (EMA), R51-r29 / R51-r41 (R1 / S1 pivots), R105D
+    (volume), R63 / R73 / R74 (VWAP);
+  - R51 + W20's own results.
+
+**Layers testable on all periods (index prices only):**
+- **D1 PIV:** previous session's floor pivots, P = (H + L + C) / 3, R1 = 2P - L, S1 = 2P - H, R2 = P + (H - L),
+  S2 = P - (H - L), from the index's previous session. Skip when any of them lies within 0.25% ahead of the trade (as
+  W20's wall rule).
+- **D2 EMA:** skip unless the last closed 5-minute index close is on the trade's side of the 20-bar EMA of 5-minute
+  closes (continuous across sessions). A call needs the close at or above the EMA; mirror for puts.
+
+**Layers with data on only 57 sessions** (index futures minutes, 29 Jul to 19 Oct 2026; the R51 store ends 13 Oct).
+These are DESCRIPTIVE only, with no gate:
+- **D3 VWAP:** skip a call when the near-month future's session VWAP (from 09:15) is above the future's price at the
+  decision (mirror for puts).
+- **D4 volume profile ("vertical volume"):** the previous session's point of control and value area (70% of volume)
+  from the future's minute volume at price (0.05% bins). They are added to the levels for the wall-ahead rule.
+
+**Periods and gates (D1, D2):**
+- design and walk-forward;
+- Apr - Oct 2026 (second look);
+- the unseen two years. **These were already read for W20, so this is a SECOND look there too** (disclosed).
+- R140's lose-less gates vs R51 + W20 in design, walk-forward and unseen;
+- a random-skip twin (dropping the same number of R51 + W20 trades at random) p < 0.05 in unseen;
+- BH q <= 0.10 over the 2.
+- **Even a pass needs the forward shadow test** before any paper use, because no unread data is left.
