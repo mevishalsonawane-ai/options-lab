@@ -124,3 +124,41 @@ Pytest tests cover:
 **Descriptive (design only, no gate):** for R51's signals, the share whose break crossed a level, and of those the
 share that closed back through it within 30 minutes (fake). This is compared with how often signals that crossed no
 level went back below their own break bar's close within 30 minutes.
+
+## Amendment B, 5 Nov 2026: support / resistance on the 5-MINUTE timeframe (Boss: "What if we add support and resistance on 5min time frame?"); before any 5-minute result
+
+**What was seen before this was written.**
+- R150's own results, with no level filter passing.
+- Level COUNTS for 5-minute pivots on NIFTY / BANKNIFTY to 16 Oct (no trade result). Over 63 sessions they are again
+  too dense: 22-35 levels with 3+ turns.
+
+**5-minute levels:**
+- **Pivots:** 5-minute index bars (09:15-anchored); a pivot needs **6 bars (30 minutes) each side**. It is known 30
+  minutes after its bar.
+- **Grouping:** the same rule, 0.15%.
+- **Two lookbacks:**
+  - **L5:** the last 5 sessions (about 6-9 levels with 3+ turns);
+  - **L20:** the last 20 sessions (about 15-19).
+
+**Tests (on R51 exactly as R150):**
+
+| id | rule |
+|---|---|
+| W5 / W20 | skip when a 3+-turn level is within 0.25% ahead |
+| B5 / B20 | skip unless the break crossed a 3+-turn level |
+| FX5 / FX20 | the fake-breakout exit at the crossed 3+-turn level (A2's rule) |
+
+**BH** runs over these 6. R150's 7 are also reported together with them (13).
+
+**Periods:**
+- **DESIGN:** 20 Nov 2024 to 31 Mar 2026 (with R115's walk-forward part).
+- **FINAL:** Apr to Oct 2026. Already read by R150 for 15-minute levels, so this is a second look, reported but not
+  the deciding read.
+- **UNSEEN: 1 Dec 2022 to 19 Nov 2024.** R143's old store (R51's trades there were read by R143 / R144a; these level
+  rules never were). This is the deciding holdout, read ONCE (`results/UNSEEN_READ_B`).
+
+**Gates (R140's lose-less gates):**
+- in DESIGN, WF and UNSEEN: losing days smaller, drawdown / worst day / worst month no worse, still in profit;
+- twin p < 0.05 in UNSEEN;
+- BH q <= 0.10 over the 6;
+- at least 40 UNSEEN trades and 30 changed.
