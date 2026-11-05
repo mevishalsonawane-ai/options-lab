@@ -22,9 +22,9 @@ features:
 model_or_rule: HistGradientBoosting (depth 3); take when score >= the design threshold
 variants_tried: 16
 results:
-  summary: 'WF folds: the arm 2238 trades, 49.0% won, net Rs 335,882, Rs 150 a trade; best win keeping >= 25% of trades: 50.1%
-    on 581 trades (Rs 285 a trade). No threshold gave >= 60% wins with per trade >= the arm''s: fails at design, FINAL / OLD
-    not read for it. BH q 1.00.'
+  summary: 'WF folds: the arm 2238 trades, 49.0% won, net Rs 335,882, Rs 150 a trade; best win keeping >= 25% of trades: 50.2%
+    on 1003 trades (Rs 248 a trade). No threshold gave >= 60% wins with per trade >= the arm''s: fails at design, FINAL /
+    OLD not read for it. BH q 1.00.'
   costs: 'R101 / R106 engine: app fills, dated charges'
 holdout_read: false
 verdict: rejected

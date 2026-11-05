@@ -1882,7 +1882,7 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
   lakh to +Rs 20k. Win rate falls 1-5 points. It only lost less in Dec 2022 - Nov 2024. A fresh cross is no better;
   the futures' real VWAP on 52 sessions turned +Rs 60k into -Rs 10k. It removes the early breakouts.
 
-## Both Donchian arms to a 60%+ win rate (R151, 5 Nov 2026) - 0 of 18 pass
+## Both Donchian arms to a 60%+ win rate (R151, 5 Nov 2026) - 0 of 19 pass
 `HUNT_R151_DONCHIAN_WINRATE60.md`. The exits were kept exactly as the app runs them; R151 only chose which trades to take.
 - **Indicator settings (12 per arm, design Nov 2024 - Mar 2026):** win rates run 43.7-46.4% for R51 (Donchian
   10-55 x Supertrend 2-4) and 43.8-50.5% for R72 (Donchian 10-55 x 3-5 indices). The chosen settings (R51 30 / 4,
@@ -1891,9 +1891,15 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
   - A lead, not a pass: R51 at 30 / 4 made Rs 1.67 lakh vs Rs 1.35 lakh in 2026 (drawdown Rs 48.8k vs Rs 81.7k), and
     lost Rs 3.40 lakh vs Rs 4.00 lakh in 2022-24.
 - **Trade pickers (16: 2 models x 2 settings x with / without W20):** all fail at design, so none was read later.
-  - The best win rate any picker reached while keeping a quarter of the trades was 53.7%; its top slice reached 57.6%
-    on 139 trades.
-  - The pickers raise per trade more than wins: R72 20/4 logistic kept 598 trades at Rs 389 a trade vs Rs 150. That is
-    a lead for a per-trade study only.
+  - The best win rate any picker reached while keeping a quarter of the trades was 53.9%; the top slice reached 58.9%
+    on 73 trades.
+- **The R72 logistic picker over Nov 2024 - Oct 2026 (Amendment C): fails by 1.1 points.**
+  - Apr - Oct 2026: 652 trades won 48.9% (gate 50%), making Rs 2.19 lakh vs R72's Rs 1.71 lakh.
+  - Per trade Rs 336 vs Rs 143; worst month -Rs 8.3k vs -Rs 40.9k; drawdown Rs 29.2k vs Rs 61.9k; better than random
+    skips (p 0.006).
+  - Apr 2025 - Mar 2026 (walk-forward): 634 trades, 52.5%, Rs 302 a trade.
+  - This is a second look, disclosed. It is a lead for a per-trade / drawdown test (Dec 2022 - Nov 2024 not yet read),
+    not a pass.
+- **A feature-cache bug** (R72 read R51's features) was found and fixed, and everything was re-run; no verdict changed.
 - With R105C (60% from exits only by selling at +5%, then both arms lose): a 60% win rate is not reachable on these
   arms with profit. They earn from a few big winners at about 45-50% wins.

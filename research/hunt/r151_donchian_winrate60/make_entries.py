@@ -55,6 +55,21 @@ for arm in ("R51", "R72"):
                 "model_or_rule": f"Donchian 10/20/30/55 x {'Supertrend (ATR 10) 2/3/4' if arm == 'R51' else 'M 3/4/5 of 5 indices'}",
                 "variants_tried": 12, "results": {"summary": s, "costs": "R101 / R106 engine: app fills, dated charges"},
                 "holdout_read": True, "verdict": "rejected"})
+c = json.loads((R / "c_r72_picker.json").read_text())
+cf, ca, g = c["final_apr_oct26"]["picker"], c["final_apr_oct26"]["arm"], c["gate"]
+out.append({"id": "r151-c-r72-picker", "family": "ml", "title": "R151 Amendment C: R72 logistic picker (score >= 0.4656) over Nov 2024 - Oct 2026",
+            **COMMON, "period": {"design": "20 Nov 2024 - 31 Mar 2026 (Nov 2024 - Mar 2025 in-sample, Apr 2025 - Mar 2026 walk-forward)",
+                                 "holdout": "Apr - Oct 2026 (frozen model; second look, disclosed)"},
+            "hypothesis": "The R72 logistic picker at its quoted design point keeps trades that win >= 50% with more per trade on Apr - Oct 2026.",
+            "features": ["signal source: the index (5-min Donchian 20 breadth, 4 of 5); picker features as R151 section 2"],
+            "model_or_rule": "L2 logistic (C 0.1); take when score >= 0.4656", "variants_tried": 1,
+            "results": {"summary": (f"Apr 2025 - Mar 2026 WF {fm(c['wf_apr25_mar26']['picker'])} (arm {fm(c['wf_apr25_mar26']['arm'])}); "
+                                    f"Apr - Oct 2026 {fm(cf)}, worst month Rs {cf['worst_month']:,.0f}, DD Rs {cf['max_dd']:,} "
+                                    f"(arm {fm(ca)}, worst month Rs {ca['worst_month']:,.0f}, DD Rs {ca['max_dd']:,}); twin p {g['twin_win_p']:.3f}. "
+                                    f"Fails: {'; '.join(g['fails'])}. Lead: more net and per trade, smaller worst month and drawdown."),
+                        "costs": "R101 / R106 engine: app fills, dated charges"},
+            "holdout_read": True, "verdict": "rejected",
+            "notes": "Amendment D: the first run's features had a cache bug (R72 took R51's); re-run clean, buggy files in results/bug_cache."})
 for e in out:
     Path(f"research/experiments/entries/{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, width=120))
 print(len(out), "entries")

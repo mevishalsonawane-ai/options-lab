@@ -22,8 +22,8 @@ features:
 model_or_rule: L2 logistic (C 0.1); take when score >= the design threshold
 variants_tried: 16
 results:
-  summary: 'WF folds: the arm 2238 trades, 49.0% won, net Rs 335,882, Rs 150 a trade; best win keeping >= 25% of trades: 53.7%
-    on 598 trades (Rs 389 a trade). No threshold gave >= 60% wins with per trade >= the arm''s: fails at design, FINAL / OLD
+  summary: 'WF folds: the arm 2238 trades, 49.0% won, net Rs 335,882, Rs 150 a trade; best win keeping >= 25% of trades: 52.9%
+    on 646 trades (Rs 312 a trade). No threshold gave >= 60% wins with per trade >= the arm''s: fails at design, FINAL / OLD
     not read for it. BH q 1.00.'
   costs: 'R101 / R106 engine: app fills, dated charges'
 holdout_read: false

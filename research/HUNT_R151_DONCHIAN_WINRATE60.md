@@ -1,11 +1,11 @@
-# R151: can the two Donchian arms reach a 60%+ win rate with profit? (5 Nov 2026) - 0 of 18 pass
+# R151: can the two Donchian arms reach a 60%+ win rate with profit? (5 Nov 2026) - 0 of 19 pass
 
 Boss (5 Nov): "Use all the resources you can, and try to both donchain winrate to 60%+", then "Try to change level, or
 parameters in the indicator too", then "Try adding W20 skip on top of picker".
 
-Pre-registration: `hunt/r151_donchian_winrate60/PREREG.md` (with Amendments A and B, each committed before its results).
-Code: `study.py`, `pick.py`, `make_entries.py`; tests: `tests/test_r151.py` (5). Results: `results/*.json`.
-Entries: `research/experiments/entries/r151-*.yaml` (18). Research only; nothing under `android/` changed.
+Pre-registration: `hunt/r151_donchian_winrate60/PREREG.md` (with Amendments A-D, each committed before its results).
+Code: `study.py`, `pick.py`, `make_entries.py`; tests: `tests/test_r151.py` (6). Results: `results/*.json`.
+Entries: `research/experiments/entries/r151-*.yaml` (19). Research only; nothing under `android/` changed.
 
 **Signal source:** the index (5-min Donchian on the index, plus Supertrend for R51 and 5-index breadth for R72). The
 option is bought by the arm's strike rule (1-ITM). Exits are exactly the app's (-15% stop, the 30-60-100 lock with L25,
@@ -98,27 +98,70 @@ Apr 2025 - Mar 2026, out-of-fold:
 |---|---|---|---|
 | R51 20/3 M1 | 3,044, 45.9%, Rs 70 | 46.3% (2,501 trades, Rs 77) | 46.3% |
 | R51 20/3 M2 | | 49.1% (852, Rs 293) | 49.1% |
-| R51 30/4 M1 | 2,536, 47.7%, Rs 84 | 48.8% (1,083, Rs 70) | 48.8% |
-| R51 30/4 M2 | | 49.6% (1,051, Rs 101) | 49.6% |
-| R51 20/3 M1 + W20 | W20 alone 1,689, 47.3% | 48.0% (1,542, Rs 124) | 48.1% |
-| R51 20/3 M2 + W20 | | 50.6% (892, Rs 235) | 52.5% (282) |
-| R51 30/4 M1 + W20 | W20 alone 1,459, 48.0% | 48.3% (1,232, Rs 124) | 48.3% |
-| R51 30/4 M2 + W20 | | 49.1% (873, Rs 163) | 52.6% (171) |
-| R72 20/4 M1 | 2,238, 49.0%, Rs 150 | 50.1% (581, Rs 285) | 50.1% |
-| R72 20/4 M2 | | 53.7% (598, Rs 389) | 56.7% (208) |
-| R72 30/5 M1 | 1,083, 52.8%, Rs 210 | 53.4% (380, Rs 242) | 53.6% |
-| R72 30/5 M2 | | 52.8% (1,083, Rs 210) | 52.8% |
-| R72 20/4 M1 + W20 | W20 alone 1,098, 51.8% | 51.8% (1,098, Rs 242) | 51.9% |
-| R72 20/4 M2 + W20 | | 52.6% (943, Rs 276) | 57.6% (139) |
+| R51 30/4 M1 | 2,536, 47.7%, Rs 84 | 48.3% (1,060, Rs 70) | 48.7% (298) |
+| R51 30/4 M2 | | 49.8% (990, Rs 112) | 49.8% |
+| R51 20/3 M1 + W20 | W20 alone 1,689, 47.3% | 48.6% (1,540, Rs 134) | 48.6% |
+| R51 20/3 M2 + W20 | | 50.3% (837, Rs 249) | 54.3% (256) |
+| R51 30/4 M1 + W20 | W20 alone 1,459, 48.0% | 48.1% (1,418, Rs 91) | 48.1% |
+| R51 30/4 M2 + W20 | | 48.8% (818, Rs 153) | 55.6% (162) |
+| R72 20/4 M1 | 2,238, 49.0%, Rs 150 | 50.2% (1,003, Rs 248) | 54.1% (181) |
+| R72 20/4 M2 | | 52.9% (646, Rs 312) | 53.4% (307) |
+| R72 30/5 M1 | 1,083, 52.8%, Rs 210 | 53.9% (271, Rs 342) | 58.9% (73) |
+| R72 30/5 M2 | | 52.8% (1,083, Rs 210) | 55.5% (110) |
+| R72 20/4 M1 + W20 | W20 alone 1,098, 51.8% | 52.1% (1,024, Rs 271) | 56.1% (114) |
+| R72 20/4 M2 + W20 | | 52.7% (980, Rs 276) | 56.3% (126) |
 | R72 30/5 M1 / M2 + W20 | W20 alone 546, 54.0% | (546 < 560, 25% of the arm) | 54.0% |
 
-- **The best any picker reached is 57.6%**, on 139 trades out of 2,238 (6%). Even the narrowest slice the models can
-  pick does not reach 60%.
-- **The models sort profit better than wins.** R72 20/4 M2 keeps 598 trades at Rs 389 a trade vs the arm's Rs 150,
-  while winning only 53.7%. The arms' edge is in the size of the winners, which a win-rate target cannot capture.
-  - This is out-of-fold design data only; it was never read on FINAL or OLD.
-  - A future study could pre-register "a picker that raises per trade", and test it then.
+(Clean features, after the Amendment D fix. The first run's numbers, with R72 reading R51's features, are in
+`results/bug_cache/`; every verdict is the same.)
+
+- **The best any picker reached is 58.9%**, on 73 trades out of 1,083. Even the narrowest slice the models pick does
+  not reach 60% on a useful number of trades.
+- **The models sort profit better than wins.** R72 20/4 M2 keeps 646 trades at Rs 312 a trade vs the arm's Rs 150,
+  while winning 52.9%. The arms' edge is in the size of the winners, which a win-rate target cannot capture.
 - **Ties to R123:** networks that say "70%" are right about 58% of the time.
+
+## 2b. The R72 logistic picker over Nov 2024 - Oct 2026 (Amendment C; Boss: "Test the R72 picker on nov 24 - Oct 2026")
+
+**The rule, fixed before the run:** R72 as the app (Donchian 20, 4 of 5 indices). Take a signal only when the
+logistic picker's score is >= 0.4656, the point quoted to Boss from the design curve. **Gate on Apr - Oct 2026:**
+>= 50% wins, net > 0, per trade >= the arm's, >= 60 trades, and better than random skips (p <= 0.05).
+
+| period (how scored) | picker | R72 alone |
+|---|---|---|
+| Nov 2024 - Mar 2025 (IN-SAMPLE: the model learned these months; not counted) | 508 trades, 46.1%, +Rs 2,550, worst month -Rs 20.0k | 833, 40.8%, -Rs 1,18,952, worst month -Rs 78.5k |
+| Apr 2025 - Mar 2026 (walk-forward, each quarter by a model of earlier trades) | 634, 52.5%, +Rs 1,91,363, Rs 302 a trade, worst month -Rs 22.0k, DD Rs 57.1k | 2,238, 49.0%, +Rs 3,35,882, Rs 150, worst month -Rs 72.6k, DD Rs 86.5k |
+| **Apr - Oct 2026 (frozen model, the test)** | **652, 48.9%, +Rs 2,19,057, Rs 336 a trade, worst month -Rs 8.3k, DD Rs 29.2k** | 1,202, 45.8%, +Rs 1,71,366, Rs 143, worst month -Rs 40.9k, DD Rs 61.9k |
+| Apr 2025 - Oct 2026 (both out-of-sample periods) | 1,286, 50.7%, +Rs 4,10,420, Rs 319 | 3,440, 47.9%, +Rs 5,07,247, Rs 147 |
+
+- **Verdict: FAILS, by 1.1 points of win rate** (48.9% < 50%).
+- **It passes every other part of the gate on Apr - Oct 2026:**
+  - It made more money than the arm (Rs 2.19 lakh vs Rs 1.71 lakh) with about half the trades.
+  - It made 2.4 times the arm's per trade.
+  - Its worst month was a fifth of the arm's, and its drawdown under half.
+  - Random skips of the same size win as often in only 0.6% of 2,000 tries (p 0.006).
+- **The cut-off curve on Apr - Oct 2026 tops out at 49.5%** (531 trades). No cut-off would have reached 50% there.
+- **Disclosed:**
+  - This is a second look at Apr - Oct 2026. The arm was read there by earlier studies, and this picker once by the
+    buggy run (403 trades, 47.4%).
+  - The cut-off was the best-looking point of the design curve, quoted to Boss before the run.
+  - Dec 2022 - Nov 2024 was not part of Amendment C, so it was not read.
+- **What it means:** the R72 picker does not raise the win rate to 50%. It does pick the bigger trades: more profit,
+  far smaller bad months.
+  - That is a different question from the one tested, and it was not the pre-registered gate.
+  - It deserves its own pre-registered test, judged on per trade and drawdown, on Dec 2022 - Nov 2024 (not yet read
+    for it) and as a shadow log on new days.
+
+## 2c. The feature-cache bug (Amendment D)
+
+- **What went wrong:** the first run cached features by (index, day, minute, side) across arms. R72 candidates on an R51
+  minute took R51's features: no breadth count, and R51's "breaks today".
+- **How it was found:** while running Amendment C (634 trades where `design.json` showed 598).
+- **What was done:**
+  - The cache is now per call, and W20 removes candidates only after features are built.
+  - A test fails on the old code and passes on the fix.
+  - Everything was re-run with no rule changed. The buggy files are kept in `results/bug_cache/`.
+- **The verdicts did not change:** all 16 pickers fail at design either way.
 
 ## 3. Checks
 
@@ -135,7 +178,7 @@ Apr 2025 - Mar 2026, out-of-fold:
 - **What counts as a second look, disclosed:**
   - Both FINAL and OLD were read by earlier studies of these arms (R105C, R140-R144a, R150).
   - The R51 sweep and the two R51 pickers at today's setting were printed before Amendment B was written.
-  - BH over all 16 pickers: q = 1.0 (no picker reached a twin test).
+  - BH over all 16 pickers: q = 1.0 (no picker reached a twin test). Amendment C is one test (no BH).
 
 ## 4. What this means for Boss
 
@@ -145,5 +188,6 @@ Apr 2025 - Mar 2026, out-of-fold:
 - **Nothing here goes into the app.** Possible next steps, each only on Boss's word and each as a new pre-registered
   study:
   1. R51 at Donchian 30 / Supertrend 4 as a profit and drawdown test.
-  2. A picker judged on per trade, not on win rate.
+  2. The R72 logistic picker judged on per trade and drawdown (section 2b): Dec 2022 - Nov 2024 first, then a shadow
+     log.
   3. W20 on R51 as a shadow log (from R150).
