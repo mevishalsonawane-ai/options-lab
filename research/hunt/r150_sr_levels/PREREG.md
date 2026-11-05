@@ -91,3 +91,17 @@ Pytest tests cover:
 - the 63-session window;
 - the look-ahead guard (scrambling bars after the decision minute changes nothing);
 - each filter's rule.
+
+## Amendment A1, 5 Nov 2026: before any R51 result (only the level counts had been seen)
+
+- **What the levels looked like.** Section 1's levels (pivots with 4 bars each side) are too dense to mean much. On
+  5 Nov there were 26-31 levels with 3+ turns per index over 3 months, about one every 0.3%. A level was therefore
+  within 0.25% of almost any price. No R51 trade, P&L or filter result had been computed when this was seen.
+- **Added: "major" levels.** These are the same, but a pivot needs **12 bars (3 hours) each side**. That gives 11-13
+  levels with 3+ turns per index over the same 3 months.
+- **Two filters are added:**
+  - **W3M:** W3 on major levels.
+  - **B3M:** B3 on major levels.
+- **BH runs over all 5 filters** (W3, W2, B3, W3M, B3M). Everything else is unchanged.
+- **Charts.** They draw the major levels (solid: 3+ turns, labelled with the count; dashed: 2). A second "dense" chart
+  per index draws section 1's levels.

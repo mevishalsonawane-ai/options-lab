@@ -1,0 +1,537 @@
+{
+ "NIFTY": {
+  "dense_3plus": 31,
+  "as_of": "2026-11-05",
+  "last": 24536.6,
+  "levels": [
+   {
+    "level": 22384.63,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 22566.21,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 22636.45,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 22774.71,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 22823.85,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 23137.39,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 23191.98,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 23361.87,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 23475.09,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 23582.2,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 24014.63,
+    "turns": 6,
+    "role": "support"
+   },
+   {
+    "level": 24129.3,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 24202.54,
+    "turns": 8,
+    "role": "support"
+   },
+   {
+    "level": 24291.04,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 24381.3,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 24432.6,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 24505.58,
+    "turns": 3,
+    "role": "support"
+   }
+  ]
+ },
+ "BANKNIFTY": {
+  "dense_3plus": 26,
+  "as_of": "2026-11-05",
+  "last": 57773.65,
+  "levels": [
+   {
+    "level": 53781.6,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 54058.62,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 54405.12,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 54610.68,
+    "turns": 6,
+    "role": "support"
+   },
+   {
+    "level": 55040.07,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 55179.59,
+    "turns": 6,
+    "role": "support"
+   },
+   {
+    "level": 55332.31,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 55516.07,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 55672.07,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 55819.45,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 56070.32,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 56568.4,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 56707.07,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 56999.05,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 57209.98,
+    "turns": 10,
+    "role": "support"
+   },
+   {
+    "level": 57387.93,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 57632.6,
+    "turns": 7,
+    "role": "support"
+   },
+   {
+    "level": 57766.75,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 57879.8,
+    "turns": 2,
+    "role": "resistance"
+   },
+   {
+    "level": 58025.22,
+    "turns": 5,
+    "role": "resistance"
+   }
+  ]
+ },
+ "FINNIFTY": {
+  "dense_3plus": 30,
+  "as_of": "2026-11-05",
+  "last": 26600.45,
+  "levels": [
+   {
+    "level": 24359.8,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 24516.43,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 24591.65,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 24670.4,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 24741.03,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 24812.38,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 24880.19,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 25043.17,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 25119.02,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 25216.13,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 25383.15,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 25435.2,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 25595.78,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 25661.78,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 25929.53,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 26072.31,
+    "turns": 6,
+    "role": "support"
+   },
+   {
+    "level": 26170.7,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 26274.39,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 26336.52,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 26434.88,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 26486.65,
+    "turns": 2,
+    "role": "support"
+   }
+  ]
+ },
+ "MIDCPNIFTY": {
+  "dense_3plus": 27,
+  "as_of": "2026-11-05",
+  "last": 13968.1,
+  "levels": [
+   {
+    "level": 13142.88,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 13174.3,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 13301.93,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 13375.15,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 13571.45,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 13598.03,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 13630.38,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 13712.53,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 13747.08,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 13834.19,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 14468.05,
+    "turns": 2,
+    "role": "resistance"
+   },
+   {
+    "level": 14503.4,
+    "turns": 2,
+    "role": "resistance"
+   },
+   {
+    "level": 14550.58,
+    "turns": 3,
+    "role": "resistance"
+   },
+   {
+    "level": 14587.25,
+    "turns": 4,
+    "role": "resistance"
+   },
+   {
+    "level": 14655.58,
+    "turns": 2,
+    "role": "resistance"
+   },
+   {
+    "level": 14690.58,
+    "turns": 2,
+    "role": "resistance"
+   },
+   {
+    "level": 14793.89,
+    "turns": 4,
+    "role": "resistance"
+   },
+   {
+    "level": 14824.39,
+    "turns": 4,
+    "role": "resistance"
+   },
+   {
+    "level": 14893.96,
+    "turns": 4,
+    "role": "resistance"
+   },
+   {
+    "level": 14925.29,
+    "turns": 5,
+    "role": "resistance"
+   },
+   {
+    "level": 14970.79,
+    "turns": 4,
+    "role": "resistance"
+   },
+   {
+    "level": 15016.02,
+    "turns": 6,
+    "role": "resistance"
+   },
+   {
+    "level": 15083.95,
+    "turns": 2,
+    "role": "resistance"
+   }
+  ]
+ },
+ "SENSEX": {
+  "dense_3plus": 28,
+  "as_of": "2026-11-05",
+  "last": 79310.01,
+  "levels": [
+   {
+    "level": 71310.32,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 72080.09,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 72608.94,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 73045.96,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 73498.03,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 73749.47,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 73956.12,
+    "turns": 3,
+    "role": "support"
+   },
+   {
+    "level": 74162.05,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 74292.53,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 74718.96,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 74926.05,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 76144.29,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 76809.1,
+    "turns": 5,
+    "role": "support"
+   },
+   {
+    "level": 76929.04,
+    "turns": 2,
+    "role": "support"
+   },
+   {
+    "level": 77224.56,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 77437.55,
+    "turns": 6,
+    "role": "support"
+   },
+   {
+    "level": 77723.6,
+    "turns": 4,
+    "role": "support"
+   },
+   {
+    "level": 78033.37,
+    "turns": 6,
+    "role": "support"
+   },
+   {
+    "level": 78271.92,
+    "turns": 2,
+    "role": "support"
+   }
+  ]
+ }
+}
