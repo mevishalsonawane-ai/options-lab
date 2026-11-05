@@ -65,3 +65,16 @@ def test_wall_and_cross():
     assert V.wall_ahead(lv, 100.8, "C", min_touches=2)
     assert V.crossed(lv, 99.9, 100.2, "C") and not V.crossed(lv, 100.1, 100.2, "C")
     assert V.crossed(lv, 99.1, 98.9, "P")
+
+
+def test_crossed_level_and_fake_exit():
+    lv = [(100.0, 3), (100.5, 4), (101.0, 2)]
+    assert V.crossed_level(lv, 99.8, 100.7, "C") == 100.5
+    assert V.crossed_level(lv, 100.7, 99.8, "P") == 100.0
+    assert V.crossed_level(lv, 100.6, 100.7, "C") is None
+    closes = np.full(N, 100.7)
+    closes[13] = 100.4                       # the 5-min bar ending row 14 closes at row 13 (row 14 missing)
+    closes[14] = np.nan
+    assert V.fake_exit_row(closes, 10, 100.5, "C") == 15
+    assert V.fake_exit_row(closes, 15, 100.5, "C") == -1       # bars before the fill are not looked at
+    assert V.fake_exit_row(np.full(N, 100.7), 10, 100.5, "C") == -1

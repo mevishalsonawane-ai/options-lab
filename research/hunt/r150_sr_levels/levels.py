@@ -103,3 +103,27 @@ def crossed(levels: list, prev: float, price: float, side: str, min_touches: int
         if side == "P" and price < lv <= prev:
             return True
     return False
+
+
+def crossed_level(levels: list, prev: float, price: float, side: str, min_touches: int = 3):
+    """The level the break crossed (the nearest to price: the highest crossed for a call, the lowest for a put); None."""
+    xs = [lv for lv, n in levels if n >= min_touches and ((side == "C" and prev <= lv < price) or (side == "P" and price < lv <= prev))]
+    if not xs:
+        return None
+    return max(xs) if side == "C" else min(xs)
+
+
+def fake_exit_row(closes: np.ndarray, er: int, level: float, side: str, n: int = N) -> int:
+    """FX (Amendment A2): the first 5-minute bar (09:15-anchored) ending at or after the fill row er whose close is back
+    through `level` (below it for a call, above for a put); sold at the next minute: that bar's last row + 1. -1 if none."""
+    for end in range(4, n, 5):
+        if end < er:
+            continue
+        seg = closes[end - 4: end + 1]
+        ok = np.flatnonzero(np.isfinite(seg))
+        if not ok.size:
+            continue
+        c = seg[ok[-1]]
+        if (side == "C" and c < level) or (side == "P" and c > level):
+            return end + 1 if end + 1 < n else -1
+    return -1
