@@ -3052,6 +3052,8 @@ object OrbArms {
      * Returns the position, and (when only part sold) the rest, still open, to be sold on the next pass.
      */
     private suspend fun exitLive(b: Book, p: Position, sym: String, why: String): Pair<Position, Position?> {
+        // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): the arm's own sale waits (his covers it; next pass).
+        if (ArmLive.handsOffNow("NFO", sym)) return p to null
         runCatching { OrderTiming.decided() }
         val label = armOf(p.arm).label
         // The sell certainly did not go: a stop that was taken out is placed again so the position is never left unprotected.

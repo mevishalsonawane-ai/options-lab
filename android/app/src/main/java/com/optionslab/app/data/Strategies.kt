@@ -1242,6 +1242,8 @@ object Strategies {
             val qty = minOf(leg.entryFilledQty.takeIf { it > 0 } ?: leg.qty, room)
             if (!b.legStops.containsKey(k)) {
                 if (!com.optionslab.engine.orb.LiveMirror.mayRest(want, ltp, ref.tick, dir) || leg.exitInFlight || qty <= 0) continue
+                // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no stop beside his sale (tried again next look).
+                if (ArmLive.handsOffNow(ex, kiteSym)) continue
                 val id: String? = if (product != "MIS") {
                     // A carried (NRML) leg: a single-leg GTT, the only broker-side stop that outlives the session (review C7).
                     val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null)

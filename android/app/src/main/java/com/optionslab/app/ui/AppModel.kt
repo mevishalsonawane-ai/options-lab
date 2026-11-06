@@ -1653,7 +1653,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                             if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", cur.source, f.orderId) } }
                             if (f.filled > 0 && cur.source.startsWith(com.optionslab.app.data.Origins.MANUAL)) com.optionslab.app.ira.BossTradeLog.filled("kite:${f.orderId}",
                                 leg.tradingSymbol, leg.side == com.optionslab.engine.Kite.Side.BUY, live = true, entry = f.avgPrice, closing = true)
-                            com.optionslab.app.data.ArmLive.handsBack(leg.exchange, leg.tradingSymbol)
+                            // (6 Nov review: the contract stays hands-off until the whole exit is done - later slices go too - [finally].)
                             if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                                 if (f.status in WORKING) stuck.value = StuckLeg(cur, i, took.id, fills.toList(), f.status)
                                 sending.value = Load.Failed("${done}Leg ${i + 1}: its stop at Zerodha was turned into a sell at %.2f, but it is %s%s%s. "
@@ -1667,7 +1667,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         // Cleared (or nothing rested): this contract's legs are checked again now, before the leg goes.
                         val same = cur.legs.drop(i).filter { it.tradingSymbol == leg.tradingSymbol && it.exchange == leg.exchange && it.product == leg.product && it.side == leg.side }
                         exitsStillValid(same)?.let { why ->
-                            com.optionslab.app.data.ArmLive.handsBack(leg.exchange, leg.tradingSymbol)
                             sending.value = Load.Failed("${done}Not sent: $why"); refreshLedger(); loadAccount(); return@launch
                         }
                     }
@@ -1687,15 +1686,26 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     // goes again (never into a short: takeOverLeg does nothing unless the position still holds what the leg closes).
                     if (cur.exit && f.filled == 0 && f.status == "REJECTED" && exitRefusedForMargin(f.message)) {
                         runCatching { com.optionslab.app.data.Diag.record("orders", "exit ${leg.tradingSymbol}: Zerodha refused it for margin (an exit rested on it); its resting exits taken over, sent again (you, the exit)") }
-                        when (val took = runCatching { takeOverLeg(cur.legs, i) }.getOrNull()) {
+                        // (6 Nov review: from this slice on, so a later freeze slice is the contract's first and its resting exits are taken.)
+                        when (val took = runCatching { takeOverLeg(cur.legs.drop(i), 0) }.getOrNull()) {
                             is Took.Exit -> {
                                 launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:${took.id}", cur.source) } }
                                 f = runCatching { b.awaitOrder(took.id) }.getOrElse { e -> com.optionslab.app.data.Broker.Fill(took.id, "UNKNOWN", 0.0, 0, e.message ?: "status not confirmed") }
                             }
                             Took.Cleared -> {
                                 val again = exitsStillValid(listOf(leg))
-                                if (again == null) {
-                                    val id2 = b.placeOrder(leg, exit = true, verdict = cur.verdicts.getOrNull(i))
+                                if (again != null) {
+                                    // Not sent again: the reason now, not Zerodha's old margin words.
+                                    f = f.copy(message = "sent again was refused: $again")
+                                } else {
+                                    val id2 = try {
+                                        b.placeOrder(leg, exit = true, verdict = cur.verdicts.getOrNull(i))
+                                    } catch (e: Exception) {
+                                        if (b.definite(e)) throw e
+                                        // A lost reply is not a lost order: looked for before anything is said ([findRecentRetrying]).
+                                        runCatching { b.findRecentRetrying(leg, (fills.map { it.orderId } + f.orderId)) }.getOrNull()
+                                            ?: throw java.io.IOException("${e.message}. No matching order was found at Zerodha; check the order book before trying again.")
+                                    }
                                     launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:$id2", cur.source) } }
                                     f = runCatching { b.awaitOrder(id2) }.getOrElse { com.optionslab.app.data.Broker.Fill(id2, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
                                 }
@@ -1704,7 +1714,6 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         }
                     }
                     fills += f
-                    if (takeOver) com.optionslab.app.data.ArmLive.handsBack(leg.exchange, leg.tradingSymbol)
                     // The notification is posted beside the send, not before the next leg or the fill shown.
                     if (f.filled > 0) launch { runCatching { com.optionslab.app.work.Notifier.orderFilled(ctx, leg.side.name, f.filled, leg.tradingSymbol, f.avgPrice, "Live", cur.source, f.orderId) } }
                     // S10: a hand order's fill (one memory write; the "why?" card and the context come off this path).
@@ -1773,7 +1782,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 // 6 Nov: the exit is done (or refused): the arms and protections may rest stops on its contracts again. A leg still
                 // working at Zerodha (Boss decides on it) keeps them off until its hands-off runs out ([ArmLive.handsOff], 90 s).
-                if (stuck.value == null) handsOn.forEach { (ex, sym) -> com.optionslab.app.data.ArmLive.handsBack(ex, sym) }
+                // (6 Nov review: only the stuck leg's own contract stays hands-off - Boss's working sale covers it; every other
+                // contract, flat or never sent, is watched by its arm again at once.)
+                val keep = stuck.value?.takeIf { it.plan === cur }?.let { st -> st.plan.legs.getOrNull(st.index)?.let { it.exchange to it.tradingSymbol } }
+                handsOn.filter { it != keep }.forEach { (ex, sym) -> com.optionslab.app.data.ArmLive.handsBack(ex, sym) }
             }
         }
     }
@@ -1782,6 +1794,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun cancelStuck() {
         val st = stuck.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
+            // 6 Nov review: cancelled, the leg no longer covers its contract: its arm watches it again at once.
+            st.plan.legs.getOrNull(st.index)?.let { com.optionslab.app.data.ArmLive.handsBack(it.exchange, it.tradingSymbol) }
             try {
                 com.optionslab.app.data.Broker.cancel(st.orderId)
                 val f = com.optionslab.app.data.Broker.orderState(st.orderId)

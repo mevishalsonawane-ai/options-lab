@@ -329,7 +329,7 @@ class OrderFlowLive2Test : RobolectricTest() {
         val m = model()
         m.planSquareOff(position(ce))
         BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
-        kite.nextPlace(outcome = FakeKite.Outcome.FILL_AFTER_POLLS, polls = 6)
+        kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.FILL_AFTER_POLLS, polls = 6))
         m.sendPlan()
         BrokerArea.await("the exit at Zerodha") { kite.placed.firstOrNull() }
         assertTrue("hands off while it works", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))

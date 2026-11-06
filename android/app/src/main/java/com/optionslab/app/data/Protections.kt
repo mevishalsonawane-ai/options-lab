@@ -731,6 +731,9 @@ object Protections {
     private suspend fun placeDayExits(p: Item, net: Int, ordersNow: Boolean = false): Item {
         if (net == 0 || net.sign() != p.qty.sign()) return p.copy(active = false, note = "position closed")
         val cover = p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)))
+        // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (asked again next look,
+        // without using up a GTT try).
+        if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p.copy(qty = cover.qty)
         if (!ordersNow && dayOco(cover) && (gttTries[p.id] ?: 0) < GTT_TRIES) {
             when (val r = restDayGtt(cover, net)) {
                 is DayGtt.Placed -> return r.item
@@ -1049,6 +1052,8 @@ object Protections {
                 }
                 // Never more than this protection covered: lots added since, or another owner's lots (an arm's trade with its own
                 // GTT), are not this protection's to sell (second review).
+                // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (next look).
+                if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p
                 val again = p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)), gttId = null)
                 // 21 Oct, enhancement round 4 (idea 1): [DayOco] on, as one GTT; not placed, the day's two orders as before.
                 var refused = false
