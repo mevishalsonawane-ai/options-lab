@@ -897,7 +897,7 @@ object AutoChange {
         what = "R52 Open outside value's 09:25 no-progress exit (paper)")
 
     /** 6 Nov 2026: the target of R151's R72 and R51 pickers, acting on paper and live (Boss's exception, [passedPicker]). */
-    const val PICK_TARGET = "filter:r72_picker_shadow"
+    const val PICK_TARGET = "filter:r72_r51_pickers"
 
     /**
      * 6 Nov 2026 (Boss: "I am the owner, i want you to skip the rule, and i want live"; CLAUDE.md's fourth exception): R151's R72 and R51

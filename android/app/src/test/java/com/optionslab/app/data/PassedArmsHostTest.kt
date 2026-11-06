@@ -2317,6 +2317,27 @@ class PassedArmsHostTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /** Boss's exception: R51's picker skips too - a would-be trade labelled as the picker's skip, its score kept, nothing at Zerodha. */
+    @Test fun r51sPickerSkipsALowScoredBreakAsAWouldBeTrade() {
+        w20Day(true)
+        runBlocking { PassedArmsHost.setPicker(true) }
+        PassedArmsHost.testPickThreshold = 1.1                  // every score under it: the break is skipped
+        try {
+            tick(LocalTime.of(9, 21))
+            val p = view().open.single { it.arm == DonchianArm.SOURCE }
+            assertEquals(PassedArmsHost.SHADOW_PICK, p.shadow)
+            assertNull(p.orderId)
+            assertNotNull("its score is kept on the would-be trade", p.pick)
+            assertTrue(PassedArmsHost.shadowWords(p), PassedArmsHost.shadowWords(p).contains("skipped by R151's picker"))
+            val said = view().status["${DonchianArm.SOURCE}|NIFTY"].orEmpty()
+            assertTrue(said, said.contains("break skipped: R151's picker scored it") && said.contains("kept as a would-be trade"))
+            // Decided once: a later look in the window neither buys it nor books a second would-be.
+            tick(LocalTime.of(9, 22))
+            assertEquals(1, view().open.count { it.arm == DonchianArm.SOURCE })
+            assertNothingAtZerodha()
+        } finally { PassedArmsHost.testPickThreshold = null }
+    }
+
     @Test fun withW20OffR51sTradeIsUnlabelled() {
         w20Day(false)
         tick(LocalTime.of(9, 21))
