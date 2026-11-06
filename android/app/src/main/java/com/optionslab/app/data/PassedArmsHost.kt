@@ -1100,10 +1100,11 @@ object PassedArmsHost {
     /**
      * 6 Nov (R151's R72 picker, a shadow log only): each of today's R72 breaks [sigs] (all five indices) scored once and logged
      * ("would take / would skip"), its score kept for the trade it becomes ([pickOf]). Skipped on an index's expiry day (the
-     * research had no break there), and while that index's picker history is not in (said once; scored on a later look). Never
+     * research had no break there), and while that index's picker history is not in (said once a day per index; scored on a later
+     * look). Never
      * throws and never changes a trade: R72's taking goes on whatever happens here.
      */
-    private suspend fun scoreBreaks(b: Book, today: LocalDate, sigs: List<DonchianArm.Signal>, reads: Reads): Boolean {
+    private fun scoreBreaks(b: Book, today: LocalDate, sigs: List<DonchianArm.Signal>, reads: Reads): Boolean {
         if (!b.pickOn || sigs.isEmpty()) return false
         if (pickScores.keys.any { !it.startsWith("$today|") }) pickScores.keys.removeAll { !it.startsWith("$today|") }
         val src = BreadthDonchianArm.SOURCE
@@ -1117,7 +1118,8 @@ object PassedArmsHost {
                 if (dk in pickScores) return@forEachIndexed
                 val logged = "$dk|pick"
                 if (pickReady(u, today) == null) {
-                    if ("$logged|wait" !in b.decided) { b.decided += "$logged|wait"; note(b, "${R72Picker.LABEL} $u ${s.entryTime.toLocalTime()}: its history is still loading (scored on a later look; the trade goes on as always)"); changed = true }
+                    val wait = "$today|$src|$u|pick_wait"
+                    if (wait !in b.decided) { b.decided += wait; note(b, "${R72Picker.LABEL} $u ${s.entryTime.toLocalTime()}: its history is still loading (scored on a later look; the trade goes on as always)"); changed = true }
                     return@forEachIndexed
                 }
                 val score = runCatching { R72Picker.score(R72Picker.features(pickInput(today, s, earlier, count[s.bar.b to s.side] ?: 0, reads))) }.getOrNull()
