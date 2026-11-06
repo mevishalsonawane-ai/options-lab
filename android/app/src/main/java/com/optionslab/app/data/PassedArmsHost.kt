@@ -1055,7 +1055,7 @@ object PassedArmsHost {
                     // 1 Nov: R72's wide-day skip and R52's 09:25 exit (paper; live in shadow), with the trades that entered with the exit.
                     (if (s == BreadthDonchianArm.SOURCE) " · wide-day skip (R140) ${if (v.wideOn) "on" else "off"} for new breaks (live in shadow)" else "") +
                     // 6 Nov: R151's R72 picker (failed gates, Boss's exception): the closed trades it took and the breaks it skipped.
-                    (if (s == BreadthDonchianArm.SOURCE) " · ${pickerWords(v.pickOn, c) { m(it) }}" else "") +
+                    (if (s == BreadthDonchianArm.SOURCE) " · ${pickerWords(v.pickOn, c, m = { m(it) })}" else "") +
                     // 6 Nov: R150 B's W20 on R51 (failed gates; a shadow log only): the closed trades it would skip and keep.
                     (if (s == DonchianArm.SOURCE) " · ${w20Words(v.w20On, c) { m(it) }} · " +
                         pickerWords(v.pickOn, c, { m(it) }, R51Picker.LABEL, R51Picker::takes, R51Picker.STATUS) else "") +

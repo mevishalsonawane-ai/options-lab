@@ -131,7 +131,7 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     // 6 Nov (Boss's exception, CLAUDE.md): R151's picker, acting on paper and live, when on, with its record and what it has done so far.
     if (source == BreadthDonchianArm.SOURCE && v.pickOn) "${com.optionslab.engine.orb.R72Picker.LABEL} on (" +
         "${com.optionslab.engine.orb.R72Picker.STATUS}): ${com.optionslab.engine.orb.R72Picker.RULE}. ${com.optionslab.engine.orb.R72Picker.RECORD}. " +
-        "${PassedArmsHost.pickerWords(true, v.closedOf(source)) { rs(it) }}." else null,
+        "${PassedArmsHost.pickerWords(true, v.closedOf(source), m = { rs(it) })}." else null,
     // 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20, a log only, when on, with its record and what it has labelled.
     if (source == DonchianArm.SOURCE && v.w20On) "${com.optionslab.engine.orb.W20Rule.LABEL} on (${com.optionslab.engine.orb.W20Rule.STATUS}): " +
         "${com.optionslab.engine.orb.W20Rule.RULE}. ${com.optionslab.engine.orb.W20Rule.RECORD}. " +
