@@ -111,17 +111,17 @@ object Relay {
     /**
      * Connect & test: [newHost] saved, the relay on and connected, and the IP Zerodha would see read. On any failure the relay is
      * switched back OFF before the answer comes back (never left on, pointing at a server that does not answer), unless the
-     * switch was tapped meanwhile: then Boss's tap stands. The host and "on" are saved in turn with the switch's saves, so an
+     * switch was tapped after this test switched it on: then Boss's tap stands. The host and "on" are saved in turn with the switch's saves, so an
      * "off" tapped during the test lands after them and closes the connect (it fails at once with "switched off").
      */
     suspend fun connectAndTest(newHost: String): Result<StaticIp.Status> {
-        val taps = switchTaps.get()
         return tests.async {
+            var taps = -1                                                    // read once this test's own "on" is saved (review)
             runCatching {
-                saves.async { host = newHost.trim(); enabled = true }.await()
+                saves.async { host = newHost.trim(); enabled = true; taps = switchTaps.get() }.await()
                 proxy()                                                      // throws with the reason if the server refuses or is unreachable
                 StaticIp.status(force = true)
-            }.onFailure { saves.async { if (switchTaps.get() == taps) runCatching { enabled = false } }.await() }
+            }.onFailure { saves.async { if (taps == -1 || switchTaps.get() == taps) runCatching { enabled = false } }.await() }
         }.await()
     }
 
