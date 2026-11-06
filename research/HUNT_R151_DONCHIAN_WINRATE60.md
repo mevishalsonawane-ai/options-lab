@@ -141,7 +141,7 @@ logistic picker's score is >= 0.4656, the point quoted to Boss from the design c
   - It made more money than the arm (Rs 2.19 lakh vs Rs 1.71 lakh) with about half the trades.
   - It made 2.4 times the arm's per trade.
   - Its worst month was a fifth of the arm's, and its drawdown under half.
-  - Random skips of the same size win as often in only 0.6% of 2,000 tries (p 0.006).
+  - Random skips of the same size win as often in only 0.6% of 2,000 tries (p 0.0065).
 - **The cut-off curve on Apr - Oct 2026 tops out at 49.5%** (531 trades). No cut-off would have reached 50% there.
 - **Disclosed:**
   - This is a second look at Apr - Oct 2026. The arm was read there by earlier studies, and this picker once by the
@@ -209,7 +209,7 @@ picker's score is >= 0.4469, the point quoted to Boss. **The gate:** Amendment C
 - **What counts as a second look, disclosed:**
   - Both FINAL and OLD were read by earlier studies of these arms (R105C, R140-R144a, R150).
   - The R51 sweep and the two R51 pickers at today's setting were printed before Amendment B was written.
-  - BH over all 16 pickers: q = 1.0 (no picker reached a twin test). Amendment C is one test (no BH).
+  - BH over all 16 pickers: q = 1.0 (no picker reached a twin test). Amendments C and E: BH over their two twin tests (section 2d).
 
 ## 4. What this means for Boss
 

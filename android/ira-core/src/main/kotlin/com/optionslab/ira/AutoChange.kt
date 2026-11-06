@@ -924,7 +924,7 @@ object AutoChange {
         if (on) "your ask (6 Nov, \"Do whatever you recommend\"): each R51 Donchian 20 break is labelled \"W20 would skip\" when a " +
             "5-minute support / resistance level (3+ touches, last 20 sessions) is within 0.25% ahead, else \"would keep\", and scored by " +
             "R151's R51 picker (would take at 0.4469 or more; Apr - Oct 2026, a second look: 693 trades won 49.9%, the bar was 50%, " +
-            "+₹1.59 lakh vs R51's ₹1.35 lakh on 1,670 with 40% of the drawdown); nothing is " +
+            "+₹1.59 lakh vs R51's +₹1.35 lakh on 1,670 with 40% of the drawdown); nothing is " +
             "skipped or changed, paper or live. Failed gates, so a shadow log only: in Dec 2022 - Nov 2024 W20 lost -₹2.32 lakh on 2,717 " +
             "trades vs R51's -₹4.00 lakh on 4,815 (beat random skips, p < 0.001) and cut Apr - Oct 2026's drawdown to ₹46.5k (980 trades) " +
             "from ₹81.7k (1,670), but R51 still lost " +

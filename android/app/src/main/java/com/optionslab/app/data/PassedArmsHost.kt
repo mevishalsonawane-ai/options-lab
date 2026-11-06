@@ -1190,11 +1190,12 @@ object PassedArmsHost {
                 val dk = "$today|$src|$u|${s.bar.b}|${s.side}"
                 if (w20Labels.containsKey(dk)) return@forEachIndexed
                 val skip = W20Rule.skips(h.hist5, t, s.bar.entryRow, s.side) ?: return@forEachIndexed
-                // Both or neither: a score that could not be made this pass is tried again on the next look, with its label.
+                // The features are pure, so a score that cannot be made now would not be made later: the W20 label is kept either way
+                // and the line says the picker could not score it (the trade then counts in W20's record, not the picker's).
                 val score = runCatching { R51Picker.score(R72Picker.features(pickInput(today, s, earlier, 0, reads))) }.getOrNull()
-                    ?.takeIf { it.isFinite() } ?: return@forEachIndexed
+                    ?.takeIf { it.isFinite() }
                 w20Labels[dk] = skip
-                r51Scores[dk] = score
+                score?.let { r51Scores[dk] = it }
                 if ("$dk|w20" in b.decided) return@forEachIndexed
                 b.decided += "$dk|w20"
                 lines.getOrPut(s.bar.b) { ArrayList() } += R51Picker.part(u, s.side, skip, score)
@@ -1246,8 +1247,7 @@ object PassedArmsHost {
      * 6 Nov (R151's R72 picker, a shadow log only): each of today's R72 breaks [sigs] (all five indices) scored once and logged
      * ("would take / would skip"), one line per bar; its score is kept for the trade it became ([patchPicks]). Skipped on an index's
      * expiry day (the research had no break there), and until all six histories are in (said once a day; scored on a later look).
-     * Never
-     * throws and never changes a trade: R72's taking goes on whatever happens here.
+     * Never throws and never changes a trade: R72's taking goes on whatever happens here.
      */
     private fun scoreBreaks(b: Book, today: LocalDate, sigs: List<DonchianArm.Signal>, reads: Reads): Boolean {
         if (!b.pickOn || sigs.isEmpty()) return false

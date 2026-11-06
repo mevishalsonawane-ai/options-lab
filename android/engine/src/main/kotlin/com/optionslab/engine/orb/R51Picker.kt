@@ -54,8 +54,9 @@ object R51Picker {
     fun score(f: DoubleArray): Double = MODEL.score(f)
     fun takes(score: Double): Boolean = MODEL.takes(score)
 
-    /** One index's part of R51's shadow line for a bar: the W20 label and the picker's score (null: not scored). */
+    /** One index's part of R51's shadow line for a bar: the W20 label and the picker's score (null: it could not be scored). */
     fun part(und: String, side: Int, w20Skips: Boolean, score: Double?): String =
         "$und ${if (side > 0) "call" else "put"}: W20 ${if (w20Skips) "would skip" else "would keep"}" +
-            (score?.let { ", picker ${"%.3f".format(java.util.Locale.ENGLISH, it)} ${if (takes(it)) "would take" else "would skip"}" } ?: "")
+            (score?.let { ", picker ${"%.3f".format(java.util.Locale.ENGLISH, it)} ${if (takes(it)) "would take" else "would skip"}" }
+                ?: ", picker could not score it")
 }
