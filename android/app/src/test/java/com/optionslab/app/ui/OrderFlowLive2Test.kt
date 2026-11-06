@@ -277,6 +277,66 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertEquals("MCX's rupee tick", 174_365.0, marketableLimit(Kite.Side.SELL, 183_543.0, 1.0), 1e-9)
     }
 
+    /** 6 Nov: a manual exit is priced to fill at once; a delivery sale, another order type or no price is left as it was. */
+    @Test fun settleNowPricesAnExitFivePercentThroughTheTouch() {
+        val sell = Kite.Order(ce, Kite.Side.SELL, 75, 75, "MIS", "LIMIT", 99.95, 0.05, "NFO")
+        assertEquals(94.95, settleNow(sell, 99.95, 100.05, 100.0).price!!, 1e-9)
+        assertEquals("a buy: over the offer", 105.10, settleNow(sell.copy(side = Kite.Side.BUY), 99.95, 100.05, 100.0).price!!, 1e-9)
+        assertEquals("no bid: the last price", 95.0, settleNow(sell, null, null, 100.0).price!!, 1e-9)
+        assertEquals("a zero bid: the last price", 95.0, settleNow(sell, 0.0, 100.05, 100.0).price!!, 1e-9)
+        assertEquals("no price at all: as it was", sell, settleNow(sell, null, null, null))
+        assertEquals("a delivery sale: as it was", sell.copy(product = "CNC"), settleNow(sell.copy(product = "CNC"), 99.95, 100.05, 100.0))
+        val market = sell.copy(orderType = "MARKET", price = null)
+        assertEquals("not a limit: as it was", market, settleNow(market, 99.95, 100.05, 100.0))
+        assertTrue(exitRefusedForMargin("Insufficient funds. Margin required: 57675.75. Margin available: 52312.70."))
+        assertTrue(exitRefusedForMargin("RMS:Margin Exceeds, Required:1,20,000.00"))
+        assertFalse(exitRefusedForMargin("Price exceeds the circuit limit"))
+        assertFalse(exitRefusedForMargin(null))
+    }
+
+    /**
+     * 6 Nov (Boss's SELLs at 10:08 and 11:55 were REJECTED "Insufficient funds" and went 11 and 8 minutes later): an exit Zerodha
+     * refuses for margin goes again once, at once, and the arms keep their hands off the contract until it is done.
+     */
+    @Test fun anExitRefusedForMarginIsSentAgainOnceAtOnce() {
+        kite.position(ce, 75, 90.0)
+        val m = model()
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "Insufficient funds. Margin required: 57675.75. Margin available: 52312.70.")
+        m.sendPlan()
+        val f = sent(m).single()
+        assertEquals("COMPLETE", f.status); assertEquals(75, f.filled)
+        assertEquals("the refused sale and the one that went", 2, kite.placed.count { it.form["transaction_type"] == "SELL" })
+        assertEquals("flat", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        assertFalse("the arms may rest stops on it again", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
+    }
+
+    @Test fun anExitRefusedForAnotherReasonIsNotSentAgain() {
+        kite.position(ce, 75, 90.0)
+        val m = model()
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "Price exceeds the circuit limit")
+        m.sendPlan()
+        assertTrue(refused(m), refused(m).contains("rejected"))
+        assertEquals("sent once", 1, kite.placed.size)
+    }
+
+    /** 6 Nov: from the confirmation until the exit is done, no arm or protection rests a stop on the contract. */
+    @Test fun theArmsKeepTheirHandsOffWhileTheExitGoes() {
+        kite.position(ce, 75, 90.0)
+        val m = model()
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.nextPlace(outcome = FakeKite.Outcome.FILL_AFTER_POLLS, polls = 6)
+        m.sendPlan()
+        BrokerArea.await("the exit at Zerodha") { kite.placed.firstOrNull() }
+        assertTrue("hands off while it works", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
+        assertEquals("COMPLETE", sent(m).single().status)
+        assertFalse("hands back once it filled", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
+    }
+
     @Test fun anOrderOnTheOtherSideDoesNotBlockTheExit() {
         kite.position(ce, 75, 90.0)
         resting(leg(ce, Kite.Side.BUY, price = 50.0))                      // a buy far below: adds, never closes
@@ -328,7 +388,8 @@ class OrderFlowLive2Test : RobolectricTest() {
         val fills = sent(m)
         assertEquals(listOf("COMPLETE", "COMPLETE"), fills.map { it.status })
         assertEquals(listOf("1800", "900"), kite.placed.map { it.form["quantity"] })
-        assertTrue(kite.placed.all { it.form["transaction_type"] == "BUY" && it.form["price"] == "100.05" && it.form["product"] == "NRML" })
+        // 6 Nov: priced to fill at once, 5% over the offer (100.05), on the tick.
+        assertTrue(kite.placed.all { it.form["transaction_type"] == "BUY" && it.form["price"] == "105.10" && it.form["product"] == "NRML" })
         assertEquals("flat", 0, kite.positions.getValue("NFO:$pe:NRML").first)
     }
 

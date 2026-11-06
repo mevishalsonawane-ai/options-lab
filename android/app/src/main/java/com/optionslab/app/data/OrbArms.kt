@@ -3012,6 +3012,8 @@ object OrbArms {
      */
     private suspend fun restExchangeStop(b: Book, p: Position, sym: String, held: Int, ltp: Double, tick: Double): Position? {
         if (!runCatching { AppSettings.load().exchangeStops }.getOrDefault(false)) return null
+        // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no new stop beside his sale (asked again next look).
+        if (ArmLive.handsOffNow("NFO", sym)) return null
         val key = "${p.arm}|$sym|${p.entryTime}"
         val now = System.currentTimeMillis()
         if (now - (restoppedAt[key] ?: 0L) < 60_000L) return null

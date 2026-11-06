@@ -1015,6 +1015,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val legs = positions.flatMap { ps ->
                     val qt = q["${ps.exchange}:${ps.symbol}"]
                     com.optionslab.engine.Kite.squareOffSlices(b.spec(ps.exchange, ps.symbol), ps.product, ps.qty, qt?.bid, qt?.ask, qt?.last ?: ps.last)
+                        .map { settleNow(it, qt?.bid, qt?.ask, qt?.last ?: ps.last) }
                 }
                 if (legs.isEmpty()) error("nothing is open")
                 Load.Done(OrderPlan(title, null, legs, q, gate(legs, false, exit = true), false, exit = true, source = source))
@@ -1484,7 +1485,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             com.optionslab.app.data.Diag.record("tap", "Exit's price over ${com.optionslab.engine.Kite.PRICE_MAX_AGE_MS / 1000} s old; the fresh quote could not be read: sent as priced (${p.title})")
             return p
         }
-        val legs = p.legs.map { l -> q["${l.exchange}:${l.tradingSymbol}"]?.let { qt -> com.optionslab.engine.Kite.repriced(l, qt.bid, qt.ask, qt.last) } ?: l }
+        val legs = p.legs.map { l -> q["${l.exchange}:${l.tradingSymbol}"]?.let { qt -> settleNow(com.optionslab.engine.Kite.repriced(l, qt.bid, qt.ask, qt.last), qt.bid, qt.ask, qt.last) } ?: l }
         val moved = legs.indices.count { legs[it].price != p.legs[it].price }
         com.optionslab.app.data.Diag.record("tap", "Exit priced again at the PIN (its price was over ${com.optionslab.engine.Kite.PRICE_MAX_AGE_MS / 1000} s old): " +
             "$moved of ${legs.size} legs moved (${p.title})")
@@ -1615,6 +1616,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     private fun sendFrom(cur: OrderPlan, start: Int, before: List<com.optionslab.app.data.Broker.Fill>, checks: Boolean) {
         sending.value = Load.Busy("Sending to Zerodha")
+        // 6 Nov (Boss: "manual settling the trades is taking too much time"; the day's orders: his SELLs at 10:08 and 11:55 were
+        // REJECTED "Insufficient funds" and went 11 and 8 minutes later): an arm or a protection rested a stop on the contract
+        // between the exit's check and its send, so his sale and that stop together sold more than he held and Zerodha read
+        // the rest as a new short. From the moment he confirms an exit, nothing rests a new stop on its contracts until it is done.
+        val handsOn = if (cur.exit) cur.legs.drop(start).map { it.exchange to it.tradingSymbol }.distinct() else emptyList()
+        handsOn.forEach { (ex, sym) -> com.optionslab.app.data.ArmLive.handsOff(ex, sym) }
         viewModelScope.launch(Dispatchers.IO) {
             val b = com.optionslab.app.data.Broker
             val fills = ArrayList(before)
@@ -1674,7 +1681,28 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     }
                     // Named before the fill is awaited, so the order book shows who sent it from its first refresh.
                     launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:$id", cur.source) } }
-                    val f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
+                    var f = runCatching { b.awaitOrder(id) }.getOrElse { com.optionslab.app.data.Broker.Fill(id, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
+                    // 6 Nov: an exit Zerodha refused for margin ("Insufficient funds") means an exit already resting on the contract
+                    // made his sale look like a new short. Once, at once: the resting exits are taken over ([takeOverLeg]) and the exit
+                    // goes again (never into a short: takeOverLeg does nothing unless the position still holds what the leg closes).
+                    if (cur.exit && f.filled == 0 && f.status == "REJECTED" && exitRefusedForMargin(f.message)) {
+                        runCatching { com.optionslab.app.data.Diag.record("orders", "exit ${leg.tradingSymbol}: Zerodha refused it for margin (an exit rested on it); its resting exits taken over, sent again (you, the exit)") }
+                        when (val took = runCatching { takeOverLeg(cur.legs, i) }.getOrNull()) {
+                            is Took.Exit -> {
+                                launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:${took.id}", cur.source) } }
+                                f = runCatching { b.awaitOrder(took.id) }.getOrElse { e -> com.optionslab.app.data.Broker.Fill(took.id, "UNKNOWN", 0.0, 0, e.message ?: "status not confirmed") }
+                            }
+                            Took.Cleared -> {
+                                val again = exitsStillValid(listOf(leg))
+                                if (again == null) {
+                                    val id2 = b.placeOrder(leg, exit = true, verdict = cur.verdicts.getOrNull(i))
+                                    launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:$id2", cur.source) } }
+                                    f = runCatching { b.awaitOrder(id2) }.getOrElse { com.optionslab.app.data.Broker.Fill(id2, "UNKNOWN", 0.0, 0, "status not confirmed; check the order book") }
+                                }
+                            }
+                            null -> Unit
+                        }
+                    }
                     fills += f
                     if (takeOver) com.optionslab.app.data.ArmLive.handsBack(leg.exchange, leg.tradingSymbol)
                     // The notification is posted beside the send, not before the next leg or the fill shown.
@@ -1684,7 +1712,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         leg.tradingSymbol, leg.side == com.optionslab.engine.Kite.Side.BUY, live = true, entry = f.avgPrice, closing = if (cur.exit) true else null)
                     if (f.status != "COMPLETE" || f.filled < leg.quantity) {
                         val working = f.status in WORKING
-                        if (working) stuck.value = StuckLeg(cur, i, id, fills.toList(), f.status)
+                        if (working) stuck.value = StuckLeg(cur, i, f.orderId, fills.toList(), f.status)
                         sending.value = Load.Failed(
                             "Leg ${i + 1} ${f.status.lowercase()}${if (f.filled > 0) " (${f.filled} of ${leg.quantity} filled)" else ""}" +
                                 "${if (f.message.isNotBlank()) ": ${f.message}" else ""}. " +
@@ -1742,6 +1770,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     else "Not all sent: ${e.message}. $filledLegs earlier leg${if (filledLegs == 1) "" else "s"} filled at Zerodha; check Positions before sending again.")
                 if (fills.isNotEmpty()) cur.session?.let { runCatching { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) } }
                 loadAccount()
+            } finally {
+                // 6 Nov: the exit is done (or refused): the arms and protections may rest stops on its contracts again. A leg still
+                // working at Zerodha (Boss decides on it) keeps them off until its hands-off runs out ([ArmLive.handsOff], 90 s).
+                if (stuck.value == null) handsOn.forEach { (ex, sym) -> com.optionslab.app.data.ArmLive.handsBack(ex, sym) }
             }
         }
     }
@@ -2500,6 +2532,24 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
 /** The automatic "log in to Zerodha again" prompt. Screen tests switch it off (a dialog over every page); LoginPromptTest turns it on. */
 object LoginPrompt { @Volatile var enabled = true }
+
+/**
+ * 6 Nov (Boss: "manual settling the trades is taking too much time"; a SELL priced at the bid sat unfilled at 14:34 and went as a
+ * MARKET 3 minutes later): a manual exit's LIMIT is priced to fill at once - 5% through the bid (a sale) or the offer (a buy), as
+ * the stop takeover prices it ([marketableLimit]). Zerodha fills it at the best price there is; the limit only caps a runaway fill.
+ * A delivery sale (CNC), another order type, or no usable price: unchanged.
+ */
+internal fun settleNow(o: com.optionslab.engine.Kite.Order, bid: Double?, ask: Double?, last: Double?): com.optionslab.engine.Kite.Order {
+    if (o.orderType != "LIMIT" || o.product == "CNC") return o
+    val ref = (if (o.side == com.optionslab.engine.Kite.Side.SELL) bid else ask)?.takeIf { it > 0 && it.isFinite() }
+        ?: last?.takeIf { it > 0 && it.isFinite() } ?: return o
+    val tick = o.tickSize.takeIf { it > 0 } ?: return o
+    return o.copy(price = marketableLimit(o.side, ref, tick))
+}
+
+/** 6 Nov: Zerodha's refusal of an order for margin ("Insufficient funds. Margin required ..."). */
+internal fun exitRefusedForMargin(message: String?): Boolean =
+    message != null && listOf("insufficient funds", "margin required", "margin exceeds").any { message.contains(it, ignoreCase = true) }
 
 /**
  * 2 Nov: a LIMIT that fills at once: 5% through the last price (a sell under it, a buy over it), on the tick. It still fills at the

@@ -414,13 +414,13 @@ class OrderFlowLiveTest : RobolectricTest() {
         val model = model()
         model.planSquareOff(position(75), "Square off", direct = true)
         val p = await("the exit priced") { (model.plan.value as? Load.Done)?.value }
-        assertEquals("priced at the bid", 99.95, p.legs.single().price!!, 1e-9)
+        assertEquals("priced to fill at once: 5% under the bid (99.95), on the tick (6 Nov)", 94.95, p.legs.single().price!!, 1e-9)
         kite.quote("NFO:$sym", 90.0, 89.95, 90.05)                                               // the market fell meanwhile
         model.plan.value = Load.Done(p.copy(pricedAt = System.currentTimeMillis() - 45_000))
         model.confirmDirect(model.directOrder.value)
         val post = await("the exit at Zerodha") { kite.placed.firstOrNull() }
         assertEquals("SELL", post.form["transaction_type"]); assertEquals("75", post.form["quantity"])
-        assertEquals("priced again at the fresh bid", "89.95", post.form["price"])
+        assertEquals("priced again to fill at once: 5% under the fresh bid (89.95)", "85.45", post.form["price"])
         await("filled") { model.sending.value as? Load.Done }
     }
 

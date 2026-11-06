@@ -760,6 +760,8 @@ object Protections {
 
     /** [said]: what the owner is told once they are placed (21 Oct, round 4: the day GTT switched off); null: the next session's words. */
     private suspend fun restAgainInTurn(p00: Item, net0: Int, said: String? = null): Item? {
+        // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (asked again next look).
+        if (ArmLive.handsOffNow(p00.exchange, p00.symbol)) return p00
         val side = if (p00.qty > 0) Kite.Side.SELL else Kite.Side.BUY
         val known = listOfNotNull(p00.stopOrderId, p00.targetOrderId)
         // Second review: an exit already resting on it (Boss's own after-market order, another owner's) is subtracted first, so
