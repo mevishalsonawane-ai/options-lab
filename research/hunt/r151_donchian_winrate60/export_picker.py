@@ -50,10 +50,7 @@ def fit() -> None:
 
 
 def model_numbers(mdl) -> dict:
-    imp, sc, lr = mdl.named_steps["simpleimputer"], mdl.named_steps["standardscaler"], mdl.named_steps["logisticregression"]
-    return {"feats": T.FEATS, "median": [float(v) for v in imp.statistics_], "mean": [float(v) for v in sc.mean_],
-            "scale": [float(v) for v in sc.scale_], "coef": [float(v) for v in lr.coef_[0]],
-            "intercept": float(lr.intercept_[0]), "threshold": THR}
+    return T.PK.model_numbers(mdl, T.FEATS, THR)
 
 
 def _bars5(und, day_i, n_sessions):

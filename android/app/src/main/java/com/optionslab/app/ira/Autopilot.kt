@@ -1374,7 +1374,7 @@ internal object Autopilot {
     /** 6 Nov (Boss: "R72 picker (shadow log)"): R151's R72 picker, a shadow log, on by the update - logged once as Boss's. */
     fun logPassedPickerOn() {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.passedPicker(true), "the 6 Nov update (your ask: \"R72 picker (shadow log)\"); a log only - failed gates, Boss's exception")
+        logBossOwnOnce(AutoChange.passedPicker(true), "the 6 Nov update (your ask: \"R72 picker (shadow log)\"); a log only - failed gates, never changes a trade")
     }
 
     /** 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit on R52's paper trades, on by the update - logged once as Boss's. */

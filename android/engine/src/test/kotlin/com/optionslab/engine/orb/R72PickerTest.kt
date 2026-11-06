@@ -38,7 +38,7 @@ class R72PickerTest {
         val x = R72Picker.features(input(syms = emptyMap()))
         assertTrue(f(x, "day_move").isNaN() && f(x, "vix").isNaN() && f(x, "ema_slope").isNaN() && f(x, "breadth5").isNaN())
         assertEquals(0.05, f(x, "sr_ahead")); assertEquals(0.05, f(x, "piv_ahead")); assertEquals(0.0, f(x, "sr_crossed"))
-        assertEquals(60.0, f(x, "tod")); assertEquals(4.0, f(x, "f_dow")); assertEquals(0.0, f(x, "f_breadth"))
+        assertEquals(60.0, f(x, "tod")); assertEquals(4.0, f(x, "f_dow")); assertTrue(f(x, "f_breadth").isNaN(), "no index's bar known")
         val s = R72Picker.score(x)
         assertTrue(s > 0 && s < 1)
     }
@@ -116,5 +116,6 @@ class R72PickerTest {
         assertEquals("NIFTY call 10:35: picker score 0.512 - would take", R72Picker.line("NIFTY", 1, LocalTime.of(10, 35), 0.5123))
         assertEquals("SENSEX put 09:20: picker score 0.300 - would skip", R72Picker.line("SENSEX", -1, LocalTime.of(9, 20), 0.3))
         assertFailsWith<IllegalArgumentException> { R72Picker.score(DoubleArray(3)) }
+        assertEquals("NIFTY 0.512 would take", R72Picker.part("NIFTY", 0.5123)); assertEquals("SENSEX 0.300 would skip", R72Picker.part("SENSEX", 0.3))
     }
 }

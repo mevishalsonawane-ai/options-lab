@@ -2131,11 +2131,11 @@ class PassedArmsHostTest : RobolectricTest() {
         PassedArmsHost.wipe(); bookFile.delete()
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         assertTrue(view().pickOn)
-        assertEquals(1, view().log.count { "turned on by the 6 Nov update" in it && "failed gates, Boss's exception" in it })
+        assertEquals(1, view().log.count { "turned on by the 6 Nov update" in it && "failed gates; a shadow log only" in it })
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertTrue(view().pickOn)
         assertEquals("once only", 1, view().log.count { "turned on by the 6 Nov update" in it })
-        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R72 picker (shadow) on (a log only; failed gates, Boss's exception)"))
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R72 picker (shadow) on (failed gates; a shadow log only)"))
         val pick = AutoChange.passedPicker(true)
         assertTrue(Autopilot.apply(AutoChange.inverse(pick, "undone by you"), false)!!.contains("no longer scored"))
         assertFalse(view().pickOn)
@@ -2148,11 +2148,22 @@ class PassedArmsHostTest : RobolectricTest() {
         assertFalse(view().pickOn)
     }
 
-    /** R72 on an ordinary day (its 09:20 breadth break), the picker [on] with its own history read first. */
-    private fun pickerDay(on: Boolean) {
+    /** All six of the picker's histories (the five indices and India VIX): yesterday's minutes and 300 daily candles each. */
+    private fun pickerHistory() {
+        val prev = PassedArmsHost.previousSession(day)!!
+        val base = bases + ("INDIAVIX" to 14.0)
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") yesterday() else base[u]?.let { b ->
+            (0 until 375).map { Bar(prev.atTime(9, 15).plusMinutes(it.toLong()), b, b + 1, b - 1, b) } }.orEmpty() }
+        PassedArmsHost.testDaily = { u -> base[u]?.let { b -> (300 downTo 1).map { k ->
+            Bar(prev.minusDays(k.toLong() - 1).atStartOfDay(), b, b * 1.01, b * 0.99, b * (1 + 0.001 * (k % 7))) } }.orEmpty() }
+        runBlocking { PassedArmsHost.prefetchPickerNow(day) }
+    }
+
+    /** R72 on an ordinary day (its 09:20 breadth break), the picker [on]; [history]: its six histories read first. */
+    private fun pickerDay(on: Boolean, history: Boolean = true) {
         wideDay(110.0)
         runBlocking { PassedArmsHost.setPicker(on) }
-        runBlocking { PassedArmsHost.prefetchPickerNow(day) }
+        if (history) pickerHistory()
     }
 
     @Test fun thePickerScoresAndLogsR72sBreakOnceAndTheTradeGoesOnAsBefore() {
@@ -2164,13 +2175,15 @@ class PassedArmsHostTest : RobolectricTest() {
         val score = r72.single().pick
         assertNotNull("its score is kept on the trade", score)
         assertTrue(score!! > 0 && score < 1)
-        val said = v.log.filter { "R72 picker (shadow) NIFTY" in it && "picker score" in it }
-        assertEquals(said.toString(), 1, said.size)
+        val said = v.log.filter { "R72 picker (shadow) 09:20" in it && "breaks: NIFTY " in it }
+        assertEquals(v.log.toString(), 1, said.size)
         assertTrue(said.single(), said.single().contains(if (score >= 0.4656) "would take" else "would skip"))
         // Scored once: a later look in the window neither scores it again nor changes the trade.
         tick(LocalTime.of(9, 22))
-        assertEquals(1, view().log.count { "R72 picker (shadow) NIFTY" in it && "picker score" in it })
+        assertEquals(1, view().log.count { "R72 picker (shadow) 09:20" in it })
         assertEquals(1, view().open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+        assertEquals(score, view().open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
+        assertTrue(PassedArmsHost.pickKey(view().open.single { it.arm == BreadthDonchianArm.SOURCE })!!.endsWith("|NIFTY|0|${r72.single().side}"))
         assertNothingAtZerodha()
     }
 
@@ -2181,19 +2194,32 @@ class PassedArmsHostTest : RobolectricTest() {
         val r72 = v.open.filter { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null }
         assertEquals(1, r72.size)
         assertNull(r72.single().pick)
-        assertTrue(v.log.none { "picker score" in it })
+        assertTrue(v.log.none { "R72 picker (shadow) 09:20" in it })
     }
 
-    @Test fun beforeThePickersHistoryIsInTheBreakIsTakenAndTheWaitSaidOnce() {
-        wideDay(110.0)
-        runBlocking { PassedArmsHost.setPicker(true) }       // its history never read
+    @Test fun beforeThePickersHistoryIsInTheBreakIsTakenAndScoredOnceItComes() {
+        pickerDay(true, history = false)
         tick(LocalTime.of(9, 21))
-        tick(LocalTime.of(9, 22))
-        val v = view()
-        assertEquals(1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+        tick(LocalTime.of(9, 21), seconds = 40)
+        var v = view()
+        assertEquals("taken as always", 1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
         assertNull(v.open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
-        assertEquals(1, v.log.count { "R72 picker (shadow) NIFTY" in it && "history is still loading" in it })
-        assertTrue(v.log.none { "picker score" in it })
+        assertEquals("said once", 1, v.log.count { "history is still loading" in it })
+        assertTrue(v.log.none { "R72 picker (shadow) 09:20" in it })
+        // The history comes in: the break is scored on the next look and its trade gets the score.
+        pickerHistory()
+        tick(LocalTime.of(9, 22))
+        v = view()
+        assertEquals(1, v.log.count { "R72 picker (shadow) 09:20" in it })
+        assertNotNull(v.open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
+        assertEquals(1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+    }
+
+    @Test fun onlyR72sTradesHaveAPickKey() {
+        val p = PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "NIFTY-X", "CE", 65, 100.0, day.atTime(9, 20, 30), null)
+        assertNull(PassedArmsHost.pickKey(p))
+        assertEquals("$day|${BreadthDonchianArm.SOURCE}|NIFTY|0|1", PassedArmsHost.pickKey(p.copy(arm = BreadthDonchianArm.SOURCE)))
+        assertEquals("$day|${BreadthDonchianArm.SOURCE}|NIFTY|0|-1", PassedArmsHost.pickKey(p.copy(arm = BreadthDonchianArm.SOURCE, right = "PE", entryTime = day.atTime(9, 22, 59))))
     }
 
     @Test fun afterAVeryWideDayR72TakesNoBreakOnPaperAndSaysWhy() {

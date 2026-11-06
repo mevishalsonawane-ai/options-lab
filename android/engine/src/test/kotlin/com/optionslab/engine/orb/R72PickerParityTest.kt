@@ -74,6 +74,26 @@ class R72PickerParityTest {
         assertEquals(71, n)
     }
 
+    /**
+     * The look-ahead wall: every index's and VIX's minutes from the entry row on scrambled (the fixtures hold the whole day), the
+     * features and the score do not change.
+     */
+    @Test fun nothingFromTheEntryMinuteOnIsRead() {
+        val rnd = java.util.Random(151)
+        for (day in days) for ((inp, _, _) in inputs(day)) {
+            fun scramble(d: PassedArms.DayBars?): PassedArms.DayBars? = d?.let { x ->
+                fun cut(a: DoubleArray) = DoubleArray(a.size) { r -> if (r < inp.er) a[r] else 1e5 * (1 + rnd.nextDouble()) }
+                PassedArms.DayBars(x.date, cut(x.o), cut(x.h), cut(x.l), cut(x.c))
+            }
+            val later = R72Picker.Input(inp.und, inp.date, inp.er, inp.side, inp.earlier, inp.fCount,
+                inp.syms.mapValues { (_, y) -> R72Picker.Sym(y.hist5, scramble(y.today), y.daily, y.todayOpen) }, scramble(inp.vixToday),
+                inp.vixPrevClose, inp.vixDaily)
+            val a = R72Picker.features(inp); val b = R72Picker.features(later)
+            for (i in a.indices) assertTrue((a[i].isNaN() && b[i].isNaN()) || a[i] == b[i], "$day ${inp.und} ${inp.er} ${R72Picker.FEATS[i]}")
+            assertEquals(R72Picker.score(a), R72Picker.score(b))
+        }
+    }
+
     /** Both decisions appear on these days, so the threshold is exercised either way. */
     @Test fun theDaysHoldBothDecisions() {
         val s = days.flatMap { inputs(it) }.map { it.third }

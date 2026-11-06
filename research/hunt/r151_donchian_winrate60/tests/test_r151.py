@@ -44,6 +44,33 @@ def test_thresholds_ascending_unique_and_empty_safe():
     assert list(PK.thresholds([0.5, 0.5])) == [0.5]
 
 
+def test_model_numbers_score_as_the_pipeline_does():
+    """The app's score from the exported numbers (R72Picker.score) is sklearn's predict_proba, NaNs included."""
+    from sklearn.impute import SimpleImputer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    rng = np.random.default_rng(3)
+    X = rng.normal(size=(400, 5)) * [1, 10, 0.01, 3, 100]
+    y = (X[:, 0] + X[:, 1] / 10 + rng.normal(size=400) > 0).astype(int)
+    X[rng.random(X.shape) < 0.1] = np.nan
+    mdl = make_pipeline(SimpleImputer(strategy="median", keep_empty_features=True), StandardScaler(), LogisticRegression(C=0.1, max_iter=3000)).fit(X, y)
+    nums = PK.model_numbers(mdl, list("abcde"), 0.4656)
+    assert nums["feats"] == list("abcde") and nums["threshold"] == 0.4656
+    got = [PK.score_from_numbers(nums, x) for x in X[:50]]
+    assert np.allclose(got, mdl.predict_proba(X[:50])[:, 1], atol=1e-12)
+
+
+def test_the_committed_model_is_the_apps():
+    """results/r72_picker_model.json holds the numbers R72Picker.kt carries (its first and last coefficient and intercept)."""
+    import json
+    d = json.loads((HERE / "results" / "r72_picker_model.json").read_text())
+    kt = (HERE.parents[2] / "android" / "engine" / "src" / "main" / "kotlin" / "com" / "optionslab" / "engine" / "orb" / "R72Picker.kt").read_text()
+    assert len(d["feats"]) == 28 and d["threshold"] == 0.4656
+    for v in (d["coef"][0], d["coef"][-1], d["intercept"], d["median"][18], d["scale"][-1]):
+        assert repr(v) in kt, v
+
+
 def test_train_mask_takes_no_trade_from_the_fold_or_later():
     days = [date(2025, 3, 31), date(2025, 4, 1), date(2025, 6, 30), date(2024, 12, 2), date(2025, 7, 1)]
     m = PK.train_mask(days, date(2025, 4, 1))

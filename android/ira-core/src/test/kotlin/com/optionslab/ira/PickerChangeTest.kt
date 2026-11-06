@@ -9,8 +9,8 @@ import kotlin.test.assertTrue
 
 /**
  * 6 Nov 2026 (Boss: "R72 picker (shadow log)"): R151's R72 picker in the change timeline ([AutoChange.passedPicker]). A log only - it
- * never skips or changes a trade - so it is shadow either way (never "lowers" or "adds" risk), no PIN, Boss's own (undone by its
- * own tap, never by "undo everything"), and its words carry the failed gate.
+ * never skips or changes a trade - so it is shadow either way (never "lowers" or "adds" risk), no PIN, logged as Boss's own choice
+ * (undone by its own tap, never by "undo everything"), and its words carry the failed gate.
  */
 class PickerChangeTest {
     private val day = LocalDate.of(2026, 11, 6)
@@ -26,9 +26,9 @@ class PickerChangeTest {
         assertEquals(AutoChange.SWITCHED_OFF, back.to); assertEquals(AutoChange.Risk.NEUTRAL_SHADOW, AutoChange.riskOf(back))
         assertFalse(AutoChange.never(on)); assertFalse(AutoChange.undoNeedsPin(on)); assertFalse(AutoChange.undoNeedsPin(AutoChange.passedPicker(false)))
         assertTrue(AutoChange.bossOwn(on.kind))
-        for (w in listOf("R72 picker (shadow log)", "nothing is skipped or changed", "Failed gates, Boss's exception", "48.9%", "50%", "0.4656", "about 100"))
+        for (w in listOf("R72 picker (shadow log)", "nothing is skipped or changed", "Failed gates, so a shadow log only", "48.9%", "50%", "0.4656", "about 100"))
             assertTrue(on.reason.contains(w), "$w: ${on.reason}")
-        assertTrue(on.what.contains("failed gates, Boss's exception"))
+        assertTrue(on.what.contains("failed gates; a shadow log only"))
         assertTrue(AutoChange.passedPicker(false).reason.contains("none was ever skipped"))
     }
 
