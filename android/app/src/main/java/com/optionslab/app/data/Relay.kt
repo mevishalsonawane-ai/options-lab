@@ -92,20 +92,38 @@ object Relay {
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private val saves = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
 
+    /** Connect & test runs here, never on [saves], so a switch "off" tapped during a slow test is saved at once (review, 6 Nov). */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val tests = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
+
+    /** Switch taps asked so far: a Connect & test that fails leaves the switch alone if Boss touched it meanwhile. */
+    private val switchTaps = java.util.concurrent.atomic.AtomicInteger()
+
+    /** Test seam: told each switch save as it lands, in the order it lands. */
+    @Volatile internal var savedForTest: ((Boolean) -> Unit)? = null
+
     /** The switch saved ([enabled]) in the order asked; null when it was saved, else why not. */
-    suspend fun saveSwitch(on: Boolean): Throwable? = saves.async { runCatching { enabled = on }.exceptionOrNull() }.await()
+    suspend fun saveSwitch(on: Boolean): Throwable? {
+        switchTaps.incrementAndGet()
+        return saves.async { runCatching { enabled = on; savedForTest?.invoke(on) }.exceptionOrNull() }.await()
+    }
 
     /**
      * Connect & test: [newHost] saved, the relay on and connected, and the IP Zerodha would see read. On any failure the relay is
-     * switched back OFF before the answer comes back (never left on, pointing at a server that does not answer).
+     * switched back OFF before the answer comes back (never left on, pointing at a server that does not answer), unless the
+     * switch was tapped meanwhile: then Boss's tap stands. The host and "on" are saved in turn with the switch's saves, so an
+     * "off" tapped during the test lands after them and closes the connect (it fails at once with "switched off").
      */
-    suspend fun connectAndTest(newHost: String): Result<StaticIp.Status> = saves.async {
-        runCatching {
-            host = newHost.trim(); enabled = true
-            proxy()                                                          // throws with the reason if the server refuses or is unreachable
-            StaticIp.status(force = true)
-        }.onFailure { runCatching { enabled = false } }
-    }.await()
+    suspend fun connectAndTest(newHost: String): Result<StaticIp.Status> {
+        val taps = switchTaps.get()
+        return tests.async {
+            runCatching {
+                saves.async { host = newHost.trim(); enabled = true }.await()
+                proxy()                                                      // throws with the reason if the server refuses or is unreachable
+                StaticIp.status(force = true)
+            }.onFailure { saves.async { if (switchTaps.get() == taps) runCatching { enabled = false } }.await() }
+        }.await()
+    }
 
     /** The public key to paste into the server ("Add SSH keys" when creating it). */
     val publicKey: String? get() = SecurePrefs.getString(K_PUB)

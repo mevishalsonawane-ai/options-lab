@@ -44,6 +44,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -835,6 +836,7 @@ internal fun StaticIpCard(
     var hostText by remember { mutableStateOf(relay.host ?: com.optionslab.app.data.StaticIp.registered.orEmpty()) }
     var testing by remember { mutableStateOf(false) }
     var relayMsg by remember { mutableStateOf<String?>(null) }
+    var switchTaps by remember { mutableIntStateOf(0) }                      // 6 Nov (review): a tap during Connect & test wins
     fun check() { checking = true; scope.launch(kotlinx.coroutines.Dispatchers.Main) { status = readStatus(); checking = false } }
     // 4 Nov: the relay switch is saved off the screen's thread, one save at a time in tap order, never lost when the card goes
     // ([com.optionslab.app.data.Relay.saveSwitch]; 6 Nov: on the app's scope, so nothing writes this card after it is gone).
@@ -913,9 +915,12 @@ internal fun StaticIpCard(
             // 4 Nov (review): a failed test always switches the relay back off, the card shown or not: done by the relay itself on
             // the app's scope ([com.optionslab.app.data.Relay.connectAndTest]); this card only shows the answer while it is here.
             val host0 = hostText
+            val taps0 = switchTaps
             scope.launch {
                 val r = relay.connectAndTest(host0)
                 testing = false
+                // 6 Nov (review): Boss tapped the switch while the test ran: the switch shows that tap, never the test's answer.
+                if (switchTaps != taps0) { relayMsg = "The switch was changed during the test; press Connect & test again to check the server."; return@launch }
                 r.onSuccess { st ->
                     relayOn = true
                     if (com.optionslab.app.data.StaticIp.registered == null && st.current != null) { com.optionslab.app.data.StaticIp.registered = st.current; ipText = st.current }
@@ -938,7 +943,7 @@ internal fun StaticIpCard(
                     // 4 Nov (Boss's diagnostics: the screen froze 1.3 s in the vault write, and the 08:38 close waited on the
                     // relay's lock): the switch is saved, and the relay closed, off the screen's thread; the IP is read after.
                     if (on && relay.host == null) com.optionslab.app.work.Alerts.error("Connect & test first.") else {
-                        relayOn = on
+                        relayOn = on; switchTaps++
                         scope.launch { saveRelay(on); check() }
                     }
                 }

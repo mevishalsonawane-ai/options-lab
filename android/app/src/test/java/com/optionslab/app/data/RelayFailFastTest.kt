@@ -130,14 +130,64 @@ class RelayFailFastTest : RobolectricTest() {
         assertTrue(!Relay.connected)
     }
 
-    /** 6 Nov: the switch's saves land in the order asked, on the relay's own queue (never the card's), whoever waits for them. */
+    /** 6 Nov: the switch's saves land one by one in the order asked, on the relay's own queue (never the card's). */
     @Test fun theSwitchSavesLandInTheOrderAsked() {
         Relay.host = "203.0.113.5"
-        val asked = (1..20).map { it % 2 == 1 }                               // on, off, on, ... ending off
-        kotlinx.coroutines.runBlocking {
-            asked.map { on -> kotlinx.coroutines.GlobalScope.async(kotlinx.coroutines.Dispatchers.Unconfined) { Relay.saveSwitch(on) } }.forEach { assertNull(it.await()) }
-        }
+        val asked = (1..40).map { it % 3 != 0 }                               // a mixed run of on and off
+        val landed = java.util.Collections.synchronizedList(mutableListOf<Boolean>())
+        Relay.savedForTest = { landed += it }
+        try {
+            kotlinx.coroutines.runBlocking {
+                asked.map { on -> kotlinx.coroutines.GlobalScope.async(kotlinx.coroutines.Dispatchers.Unconfined) { Relay.saveSwitch(on) } }.forEach { assertNull(it.await()) }
+            }
+        } finally { Relay.savedForTest = null }
+        assertEquals("every save, in tap order", asked, landed.toList())
         assertEquals("the last tap wins", asked.last(), Relay.enabled)
+    }
+
+    /**
+     * 6 Nov (review): switching the relay off while Connect & test waits on a server that does not answer is saved at once (not
+     * after the test's 15-45 s), the test then fails, and the switch stays off.
+     */
+    @Test fun switchingOffDuringConnectAndTestLandsAtOnce() {
+        val accepted = java.util.concurrent.atomic.AtomicInteger()
+        val kept = java.util.Collections.synchronizedList(mutableListOf<java.net.Socket>())
+        val port = standIn(hold = true, accepted = accepted, kept = kept)
+        Relay.sshPort = port
+        Relay.newKey()
+        kotlinx.coroutines.runBlocking {
+            val test = kotlinx.coroutines.GlobalScope.async(kotlinx.coroutines.Dispatchers.IO) { Relay.connectAndTest("127.0.0.1") }
+            val end = System.currentTimeMillis() + 10_000
+            while (accepted.get() == 0 && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertEquals("the test is waiting on the server", 1, accepted.get())
+            val t0 = System.nanoTime()
+            assertNull(kotlinx.coroutines.withTimeout(5_000) { Relay.saveSwitch(false) })
+            assertTrue("off was saved without waiting for the test", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0) < 2_000)
+            assertTrue(!Relay.enabled)
+            synchronized(kept) { kept.forEach { runCatching { it.close() } } }   // the server goes away
+            val r = kotlinx.coroutines.withTimeout(30_000) { test.await() }
+            assertTrue("the test failed: $r", r.isFailure)
+        }
+        assertTrue("still off", !Relay.enabled)
+        assertTrue(!Relay.connected)
+    }
+
+    /** 6 Nov (review): a failed Connect & test leaves Boss's later switch tap alone (it only undoes its own "on"). */
+    @Test fun aFailedConnectAndTestLeavesALaterTapAlone() {
+        val accepted = java.util.concurrent.atomic.AtomicInteger()
+        val kept = java.util.Collections.synchronizedList(mutableListOf<java.net.Socket>())
+        Relay.sshPort = standIn(hold = true, accepted = accepted, kept = kept)
+        Relay.newKey()
+        kotlinx.coroutines.runBlocking {
+            val test = kotlinx.coroutines.GlobalScope.async(kotlinx.coroutines.Dispatchers.IO) { Relay.connectAndTest("127.0.0.1") }
+            val end = System.currentTimeMillis() + 10_000
+            while (accepted.get() == 0 && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertNull(Relay.saveSwitch(false))
+            assertNull(Relay.saveSwitch(true))                                // off, then on again, while the test runs
+            synchronized(kept) { kept.forEach { runCatching { it.close() } } }
+            assertTrue(kotlinx.coroutines.withTimeout(30_000) { test.await() }.isFailure)
+        }
+        assertTrue("Boss's last tap (on) stands", Relay.enabled)
     }
 
     /** 6 Nov: Connect & test against a server that does not answer leaves the relay OFF (never on, pointing at a dead server). */
