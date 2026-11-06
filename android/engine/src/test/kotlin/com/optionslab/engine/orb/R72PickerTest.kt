@@ -1,7 +1,6 @@
 package com.optionslab.engine.orb
 
 import java.time.LocalDate
-import java.time.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -111,10 +110,8 @@ class R72PickerTest {
         assertTrue(e[0].isNaN()); assertEquals(2.0, e[1]); assertEquals(2.0 + 2.0 * 2 / 21, e[2], 1e-12)
     }
 
-    @Test fun theThresholdTheLineAndAWrongVector() {
+    @Test fun theThresholdThePartAndAWrongVector() {
         assertTrue(R72Picker.takes(R72Picker.THRESHOLD)); assertFalse(R72Picker.takes(0.4655))
-        assertEquals("NIFTY call 10:35: picker score 0.512 - would take", R72Picker.line("NIFTY", 1, LocalTime.of(10, 35), 0.5123))
-        assertEquals("SENSEX put 09:20: picker score 0.300 - would skip", R72Picker.line("SENSEX", -1, LocalTime.of(9, 20), 0.3))
         assertFailsWith<IllegalArgumentException> { R72Picker.score(DoubleArray(3)) }
         assertEquals("NIFTY 0.512 would take", R72Picker.part("NIFTY", 0.5123)); assertEquals("SENSEX 0.300 would skip", R72Picker.part("SENSEX", 0.3))
     }

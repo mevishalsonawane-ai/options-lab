@@ -38,6 +38,11 @@ object R72Picker {
     const val HIST_SESSIONS = 25
     /** Daily candles f_rv needs (20-session vol ranked among the 250 before): 271; with room for holidays. */
     const val DAILY_SESSIONS = 300
+    /** The least history the picker scores from (what the research always had): the S/R window and range average's 20 sessions
+     * and today; f_rv's 271 daily closes; VIX's regime, 61. */
+    const val MIN_SESSIONS = 21
+    const val MIN_DAILY = 271
+    const val MIN_VIX_DAILY = 61
 
     val FEATS = listOf("tod", "side", "day_move", "from_open", "range_ratio", "gap", "twap_dist", "ema_slope", "ema_dist", "bar_size",
         "break_size", "breaks_today", "ret5d", "sr_ahead", "sr_behind", "sr_touch_ahead", "sr_crossed", "piv_ahead", "vix", "dvix",
@@ -93,19 +98,11 @@ object R72Picker {
     class Input(val und: String, val date: LocalDate, val er: Int, val side: Int, val earlier: Int, val fCount: Int,
                 val syms: Map<String, Sym>, val vixToday: PassedArms.DayBars?, val vixPrevClose: Double, val vixDaily: List<Daily>)
 
-    /** The research's 5-minute bars of [d]: every bar whose last row is below [er] and that has a close (bars15, minutes = 5). */
-    fun bars5(d: PassedArms.DayBars, er: Int = PassedArms.Session.N): List<PassedArms.Bar5> {
-        val out = ArrayList<PassedArms.Bar5>()
-        for (b in 0 until PassedArms.Session.N / 5) {
-            if (5 * b + 4 >= er) break
-            val rows = (5 * b until 5 * b + 5).filter { !d.c[it].isNaN() }
-            if (rows.isEmpty()) continue
-            val hs = (5 * b until 5 * b + 5).map { d.h[it] }.filter { !it.isNaN() }
-            val ls = (5 * b until 5 * b + 5).map { d.l[it] }.filter { !it.isNaN() }
-            out += PassedArms.Bar5(d.date, b, d.o[rows.first()], hs.max(), ls.min(), d.c[rows.last()])
-        }
-        return out
-    }
+    /**
+     * The research's 5-minute bars of [d] (bars15, minutes = 5): every bar whose last row is below [er] and that has a close. The
+     * same as R51's own [PassedArms.bars5] through row er - 1 (one implementation, so the picker's bars are R72's).
+     */
+    fun bars5(d: PassedArms.DayBars, er: Int = PassedArms.Session.N): List<PassedArms.Bar5> = PassedArms.bars5(d, er - 1)
 
     /** The 20-bar EMA of [v] (study_d `ema`: seeded by the first finite value). */
     fun ema(v: DoubleArray, n: Int = EMA_N): DoubleArray {
@@ -268,9 +265,4 @@ object R72Picker {
     /** One index's part of the shadow log's line for a bar: its score and the decision. */
     fun part(und: String, score: Double): String =
         "$und ${"%.3f".format(java.util.Locale.ENGLISH, score)} ${if (takes(score)) "would take" else "would skip"}"
-
-    /** The shadow log's line for one break. */
-    fun line(und: String, side: Int, at: java.time.LocalTime, score: Double): String =
-        "$und ${if (side > 0) "call" else "put"} ${at}: picker score ${"%.3f".format(java.util.Locale.ENGLISH, score)} - " +
-            if (takes(score)) "would take" else "would skip"
 }

@@ -137,7 +137,7 @@ object PassedArmsHost {
     /**
      * 6 Nov (Boss: "R72 picker (shadow log)"): R151's R72 picker switched on once as a SHADOW LOG ([setPicker], [R72Picker]): each R72
      * break scored and logged "would take / would skip". It never skips or changes a trade (paper or live). It failed its gate, so it
-     * is Boss's exception, labelled so everywhere.
+     * stays a note (CLAUDE.md): a log only, labelled "failed gates; a shadow log only" everywhere - no exception is used.
      */
     internal const val PICK_ON = "r72_picker_shadow_2026-11-06"
     /**
@@ -1116,7 +1116,8 @@ object PassedArmsHost {
                     .map { (d, l) -> PassedArms.DayBars.of(d, l) }.filter { it.count > 0 }.takeLast(R72Picker.HIST_SESSIONS)
                 val days = daily.filter { it.start.toLocalDate().isBefore(day) }.sortedBy { it.start }.distinctBy { it.start.toLocalDate() }
                     .takeLast(R72Picker.DAILY_SESSIONS).map { R72Picker.Daily(it.start.toLocalDate(), it.open, it.close) }
-                if (sessions.isNotEmpty() && days.isNotEmpty())
+                // Kept only when it holds what the features need (the research always had it): else read again later.
+                if (sessions.size >= R72Picker.MIN_SESSIONS && days.size >= (if (u == VIX) R72Picker.MIN_VIX_DAILY else R72Picker.MIN_DAILY))
                     pickHist[u] = PickHist(day, sessions.flatMap { R72Picker.bars5(it) }, days, sessions.last().lastClose)
             }
         }
@@ -1142,6 +1143,8 @@ object PassedArmsHost {
             note(b, "${R72Picker.LABEL}: its history is still loading, so R72's breaks are not scored yet (scored on a later look; the trades go on as always)")
             return true
         }
+        // This pass's own reads must be whole too (each index's minutes and VIX's): a read that failed is scored on a later look.
+        if (reads.vix == null || R72Picker.INDICES.any { reads.bars[it] == null }) return false
         val byIndex = sigs.groupBy { it.underlying }.mapValues { (_, l) -> l.sortedBy { it.bar.b } }
         val count = sigs.groupingBy { it.bar.b to it.side }.eachCount()
         // One log line per bar and side, with each index's score (not one line per index: the trade lines stay easy to read).
@@ -1478,6 +1481,11 @@ object PassedArmsHost {
             if (!r72First && work.active(BreadthDonchianArm.SOURCE)) changed = runCatching { breadth(work, now, reads) }.getOrElse { work.status["${BreadthDonchianArm.SOURCE}|error"] = it.javaClass.simpleName; true } || changed
             // R72 has decided its breaks (bought, refused or let go): the place is no longer kept for them.
             runCatching { noteR72Due(work, now, reads) }
+            // 6 Nov: R151's R72 picker scores and logs R72's breaks AFTER every arm's entries (a shadow log: no buy waits for it, and
+            // nothing it does can stop or change one); each trade gets its score when the pass is merged ([patchPicks]).
+            if (work.active(BreadthDonchianArm.SOURCE)) changed = runCatching {
+                scoreBreaks(work, now.toLocalDate(), BreadthDonchianArm.signals(seriesAll(now.toLocalDate(), reads), now.toLocalDate()), reads)
+            }.getOrDefault(false) || changed
             // 26 Oct (R105 lead 3): a bar this check could not settle (a break due and not decided, or an index's bar not whole
             // yet) is looked at again 10 s on, inside its fill window, not on the next full pass up to a minute later.
             runCatching { planRetry(now, retryEnds(work, now, reads)) }
@@ -1988,17 +1996,14 @@ object PassedArmsHost {
     private suspend fun breadth(b: Book, now: LocalDateTime, reads: Reads): Boolean {
         val src = BreadthDonchianArm.SOURCE
         val today = now.toLocalDate()
-        val all = BreadthDonchianArm.signals(seriesAll(today, reads), today)
-        val sigs = all.groupBy { it.underlying }
+        val sigs = BreadthDonchianArm.signals(seriesAll(today, reads), today).groupBy { it.underlying }
         var changed = false
         for (u in BreadthDonchianArm.UNDERLYINGS) {
             if (reads.bars[u] == null) continue
             val (skip, noted) = wideSkip(b, src, u, today, sigs[u].orEmpty().isNotEmpty())
             changed = breaks(b, src, u, sigs[u].orEmpty(), now, skipRule = skip) || noted || changed
         }
-        // 6 Nov: R151's R72 picker scores and logs the breaks AFTER the taking (a shadow log: the buys never wait for it, and
-        // nothing it does can stop or change them); each trade gets its score when the pass is merged ([patchPicks]).
-        return runCatching { scoreBreaks(b, today, all, reads) }.getOrDefault(false) || changed
+        return changed
     }
 
     /**
@@ -2617,7 +2622,7 @@ object PassedArmsHost {
             pendingBytes.set(null)
             written.forget()
         }
-        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; pickHist.clear(); pickTried = null; pickScores.clear(); pickBusy.set(false); lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
+        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; pickHist.clear(); pickTried = null; pickScores.clear(); lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
         runCatching { com.optionslab.ira.ArmExits.set("passed", emptyList()) }
         // 26 Oct: the exit looks' kept minutes and the entry retry are memory too.
         exitReads.clear(); exitBars.clear(); retryJob?.cancel(); retryJob = null; plannedRetry = null; retriesOf = null to 0

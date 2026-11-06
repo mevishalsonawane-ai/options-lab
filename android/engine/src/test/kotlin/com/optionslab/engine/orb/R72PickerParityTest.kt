@@ -94,6 +94,26 @@ class R72PickerParityTest {
         }
     }
 
+    /**
+     * The phone has no daily candle for today at 09:20, so its f_gap reads today's 09:15 minute open where the research read the
+     * daily file's open. On these days they are the same for 14 of the 15 index-days: f_gap is Python's for nearly every break,
+     * and never off by more than 0.1%.
+     */
+    @Test fun theAppsTodayOpenGivesPythonsGap() {
+        val all = days.flatMap { inputs(it) }
+        val i = R72Picker.FEATS.indexOf("f_gap")
+        val same = all.count { (inp, want, _) ->
+            val app = R72Picker.Input(inp.und, inp.date, inp.er, inp.side, inp.earlier, inp.fCount,
+                inp.syms.mapValues { (_, y) -> R72Picker.Sym(y.hist5, y.today, y.daily, y.today?.o?.get(0) ?: Double.NaN) },
+                inp.vixToday, inp.vixPrevClose, inp.vixDaily)
+            val got = R72Picker.features(app)[i]
+            val w = d(want["f_gap"])
+            assertTrue(kotlin.math.abs(got - w) < 1e-3, "${inp.und} ${inp.date}: $got vs $w")
+            kotlin.math.abs(got - w) < 1e-12
+        }
+        assertTrue(same >= all.size * 9 / 10, "$same of ${all.size}")
+    }
+
     /** Both decisions appear on these days, so the threshold is exercised either way. */
     @Test fun theDaysHoldBothDecisions() {
         val s = days.flatMap { inputs(it) }.map { it.third }

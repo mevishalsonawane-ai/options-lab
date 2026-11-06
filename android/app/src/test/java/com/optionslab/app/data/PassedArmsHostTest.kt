@@ -2148,12 +2148,13 @@ class PassedArmsHostTest : RobolectricTest() {
         assertFalse(view().pickOn)
     }
 
-    /** All six of the picker's histories (the five indices and India VIX): yesterday's minutes and 300 daily candles each. */
+    /** All six of the picker's histories (the five indices and India VIX): 25 sessions of minutes and 300 daily candles each. */
     private fun pickerHistory() {
         val prev = PassedArmsHost.previousSession(day)!!
         val base = bases + ("INDIAVIX" to 14.0)
-        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") yesterday() else base[u]?.let { b ->
-            (0 until 375).map { Bar(prev.atTime(9, 15).plusMinutes(it.toLong()), b, b + 1, b - 1, b) } }.orEmpty() }
+        val sessions = generateSequence(prev) { it.minusDays(1) }.filter { Market.isTradingDay(it) }.take(25).toList()
+        PassedArmsHost.testHistory = { u -> base[u]?.let { b -> sessions.flatMap { d ->
+            (0 until 375).map { m -> val x = b * (1 + 0.0004 * (m % 9)); Bar(d.atTime(9, 15).plusMinutes(m.toLong()), x, x + 1, x - 1, x) } } }.orEmpty() }
         PassedArmsHost.testDaily = { u -> base[u]?.let { b -> (300 downTo 1).map { k ->
             Bar(prev.minusDays(k.toLong() - 1).atStartOfDay(), b, b * 1.01, b * 0.99, b * (1 + 0.001 * (k % 7))) } }.orEmpty() }
         runBlocking { PassedArmsHost.prefetchPickerNow(day) }
@@ -2213,6 +2214,37 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(1, v.log.count { "R72 picker (shadow) 09:20" in it })
         assertNotNull(v.open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
         assertEquals(1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+    }
+
+    /** A history with too few sessions is not kept: nothing is scored from less than the research had. */
+    @Test fun aShortHistoryIsNeverScoredFrom() {
+        pickerDay(true, history = false)
+        val base = bases + ("INDIAVIX" to 14.0)
+        PassedArmsHost.testHistory = { u -> base[u]?.let { b -> (0 until 375).map { Bar(day.minusDays(1).atTime(9, 15).plusMinutes(it.toLong()), b, b + 1, b - 1, b) } }.orEmpty() }
+        PassedArmsHost.testDaily = { u -> base[u]?.let { b -> (300 downTo 1).map { k -> Bar(day.minusDays(k.toLong()).atStartOfDay(), b, b, b, b) } }.orEmpty() }
+        runBlocking { PassedArmsHost.prefetchPickerNow(day) }
+        tick(LocalTime.of(9, 21))
+        val v = view()
+        assertEquals(1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+        assertNull(v.open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
+        assertTrue(v.log.none { "R72 picker (shadow) 09:20" in it })
+    }
+
+    /** CLAUDE.md (open positions first): the picker's download hanging never holds up a pass or the open trade's exit check. */
+    @Test fun aStuckPickerDownloadNeverHoldsUpTheWatch() {
+        pickerDay(true, history = false)
+        val hold = java.util.concurrent.CountDownLatch(1)
+        val plain = PassedArmsHost.testHistory
+        PassedArmsHost.testHistory = { u -> hold.await(30, java.util.concurrent.TimeUnit.SECONDS); plain?.invoke(u).orEmpty() }
+        try {
+            val t0 = System.nanoTime()
+            tick(LocalTime.of(9, 21))                        // the buy; the picker's download starts in the background and hangs
+            runBlocking { PassedArmsHost.manageOnly() }       // the open trade's exit check
+            tick(LocalTime.of(9, 22))
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            assertTrue("the passes did not wait for the download ($ms ms)", ms < 20_000)
+            assertEquals(1, view().open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+        } finally { hold.countDown(); PassedArmsHost.testHistory = plain }
     }
 
     @Test fun onlyR72sTradesHaveAPickKey() {
