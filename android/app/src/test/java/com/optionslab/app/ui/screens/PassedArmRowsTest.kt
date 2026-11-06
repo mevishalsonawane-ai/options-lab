@@ -289,4 +289,19 @@ class PassedArmRowsTest {
         org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, off).none { "Wide-day" in it })
         org.junit.Assert.assertTrue(passedExplanation(OovArm.SOURCE, off).none { "09:25 exit" in it })
     }
+
+    /** 6 Nov (Boss: "R72 picker (shadow log)"): R151's picker is said in R72's dialog when on - a log only, failed gates, Boss's exception. */
+    @Test fun r72sDialogSaysThePickerWhenOnAndWhatItScored() {
+        val scored = listOf(0.6, 0.3).mapIndexed { i, sc ->
+            PassedArmsHost.Pos(BreadthDonchianArm.SOURCE, "NIFTY", "NIFTY-$i", "CE", 65, 100.0, java.time.LocalDateTime.of(2026, 11, 6, 9, 20), null,
+                exit = 110.0 - 30 * i, exitTime = java.time.LocalDateTime.of(2026, 11, 6, 9, 40), why = "lock", pick = sc)
+        }
+        val on = PassedArmsHost.View(pickOn = true, all = scored)
+        val line = passedExplanation(BreadthDonchianArm.SOURCE, on).single { com.optionslab.engine.orb.R72Picker.LABEL in it }
+        for (w in listOf("failed gates, Boss's exception", "nothing is skipped or changed", "48.9% won", "would take 1 closed +₹650",
+                "would skip 1 closed −₹1,300", "judged at about 100")) org.junit.Assert.assertTrue("$w: $line", w in line)
+        // Only on R72's dialog, and never when off.
+        org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, on).none { com.optionslab.engine.orb.R72Picker.LABEL in it })
+        org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, PassedArmsHost.View()).none { com.optionslab.engine.orb.R72Picker.LABEL in it })
+    }
 }

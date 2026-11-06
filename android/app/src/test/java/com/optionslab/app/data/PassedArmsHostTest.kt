@@ -2124,6 +2124,78 @@ class PassedArmsHostTest : RobolectricTest() {
         }
     }
 
+    // ---- 6 Nov (Boss: "R72 picker (shadow log)"): R151's picker scores and logs R72's breaks, never changing a trade ------------
+
+    @Test fun theUpdateSwitchesThePickerOnOnceAndItsUndoSwitchesItOff() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        assertTrue(view().pickOn)
+        assertEquals(1, view().log.count { "turned on by the 6 Nov update" in it && "failed gates, Boss's exception" in it })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue(view().pickOn)
+        assertEquals("once only", 1, view().log.count { "turned on by the 6 Nov update" in it })
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R72 picker (shadow) on (a log only; failed gates, Boss's exception)"))
+        val pick = AutoChange.passedPicker(true)
+        assertTrue(Autopilot.apply(AutoChange.inverse(pick, "undone by you"), false)!!.contains("no longer scored"))
+        assertFalse(view().pickOn)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("its Undo stays undone after a restart", view().pickOn)
+        assertTrue(Autopilot.apply(pick, false)!!.contains("nothing is skipped"))
+        assertTrue(view().pickOn)
+        // A book that cannot be read is never switched on by itself.
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().pickOn)
+    }
+
+    /** R72 on an ordinary day (its 09:20 breadth break), the picker [on] with its own history read first. */
+    private fun pickerDay(on: Boolean) {
+        wideDay(110.0)
+        runBlocking { PassedArmsHost.setPicker(on) }
+        runBlocking { PassedArmsHost.prefetchPickerNow(day) }
+    }
+
+    @Test fun thePickerScoresAndLogsR72sBreakOnceAndTheTradeGoesOnAsBefore() {
+        pickerDay(true)
+        tick(LocalTime.of(9, 21))
+        val v = view()
+        val r72 = v.open.filter { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null }
+        assertEquals("the trade is taken as without the picker", 1, r72.size)
+        val score = r72.single().pick
+        assertNotNull("its score is kept on the trade", score)
+        assertTrue(score!! > 0 && score < 1)
+        val said = v.log.filter { "R72 picker (shadow) NIFTY" in it && "picker score" in it }
+        assertEquals(said.toString(), 1, said.size)
+        assertTrue(said.single(), said.single().contains(if (score >= 0.4656) "would take" else "would skip"))
+        // Scored once: a later look in the window neither scores it again nor changes the trade.
+        tick(LocalTime.of(9, 22))
+        assertEquals(1, view().log.count { "R72 picker (shadow) NIFTY" in it && "picker score" in it })
+        assertEquals(1, view().open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withThePickerOffNothingIsScoredAndTheTradeIsTheSame() {
+        pickerDay(false)
+        tick(LocalTime.of(9, 21))
+        val v = view()
+        val r72 = v.open.filter { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null }
+        assertEquals(1, r72.size)
+        assertNull(r72.single().pick)
+        assertTrue(v.log.none { "picker score" in it })
+    }
+
+    @Test fun beforeThePickersHistoryIsInTheBreakIsTakenAndTheWaitSaidOnce() {
+        wideDay(110.0)
+        runBlocking { PassedArmsHost.setPicker(true) }       // its history never read
+        tick(LocalTime.of(9, 21))
+        tick(LocalTime.of(9, 22))
+        val v = view()
+        assertEquals(1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+        assertNull(v.open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
+        assertEquals(1, v.log.count { "R72 picker (shadow) NIFTY" in it && "history is still loading" in it })
+        assertTrue(v.log.none { "picker score" in it })
+    }
+
     @Test fun afterAVeryWideDayR72TakesNoBreakOnPaperAndSaysWhy() {
         wideDay(200.0)
         tick(LocalTime.of(9, 21))

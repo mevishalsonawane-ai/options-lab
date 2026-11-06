@@ -120,6 +120,10 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     // 1 Nov (Boss: "Make the change the arms"): R72's wide-day skip and R52's 09:25 exit, when on, with their records (paper; live in shadow).
     if (source == BreadthDonchianArm.SOURCE && v.wideOn) "Wide-day skip on: ${BreadthDonchianArm.WIDE_RULE}; ${BreadthDonchianArm.WIDE_RECORD}. " +
         "Paper only: while it may be copied live its breaks are taken and the skip is only logged." else null,
+    // 6 Nov (Boss: "R72 picker (shadow log)"): R151's picker, a log only, when on, with its record and what it has scored so far.
+    if (source == BreadthDonchianArm.SOURCE && v.pickOn) "${com.optionslab.engine.orb.R72Picker.LABEL} on (" +
+        "${com.optionslab.engine.orb.R72Picker.STATUS}): ${com.optionslab.engine.orb.R72Picker.RULE}. ${com.optionslab.engine.orb.R72Picker.RECORD}. " +
+        "${PassedArmsHost.pickerWords(true, v.closedOf(source)) { rs(it) }}." else null,
     if (source == OovArm.SOURCE && v.np5On) "09:25 exit on: ${OovArm.NO_PROGRESS_RULE}; ${OovArm.NO_PROGRESS_RECORD}. " +
         "Paper only: a trade that may be copied live keeps the plain exits and the early exit is only logged." else null,
     if (source == BreadthDonchianArm.SOURCE) v.comparison() + "." else null,

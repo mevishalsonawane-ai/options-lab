@@ -518,6 +518,12 @@ internal object Autopilot {
                 // switch back for paper (live stays in shadow). Paper only: no PIN; not logged again.
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 com.optionslab.app.data.LiquidityTest.setNoTwin(c.to == AutoChange.ON, log = false)
+            } else if (c.target == AutoChange.PICK_TARGET) {
+                // 6 Nov (Boss: "R72 picker (shadow log)"): R151's picker ([logPassedPickerOn]): the Undo switches the log off or on. A
+                // log only (never skips or changes a trade): no PIN; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setPicker(c.to == AutoChange.ON, log = false) }
+                    .takeIf { !it.contains("not ready") }
             } else if (c.target == AutoChange.WIDE_TARGET || c.target == AutoChange.NO_PROGRESS_TARGET) {
                 // 1 Nov (Boss: "Make the change the arms"): R72's wide-day skip and R52's 09:25 exit ([logPassedWideSkipOn],
                 // [logPassedNoProgressOn]): the Undo flips the switch for new trades. Paper only (live stays in shadow): no PIN;
@@ -1363,6 +1369,12 @@ internal object Autopilot {
     fun logPassedWideSkipOn() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedWideSkip(true), "the 1 Nov update (your ask: \"Make the change the arms\"); paper only - live in shadow")
+    }
+
+    /** 6 Nov (Boss: "R72 picker (shadow log)"): R151's R72 picker, a shadow log, on by the update - logged once as Boss's. */
+    fun logPassedPickerOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedPicker(true), "the 6 Nov update (your ask: \"R72 picker (shadow log)\"); a log only - failed gates, Boss's exception")
     }
 
     /** 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit on R52's paper trades, on by the update - logged once as Boss's. */

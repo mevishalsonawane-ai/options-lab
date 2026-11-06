@@ -13,6 +13,7 @@ import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.PassedArms
 import com.optionslab.engine.orb.ProfitLock
+import com.optionslab.engine.orb.R72Picker
 import com.optionslab.engine.orb.ShadowRules
 import com.optionslab.engine.orb.SharedSales
 import com.optionslab.engine.orb.Solo2
@@ -134,6 +135,12 @@ object PassedArmsHost {
     /** 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit switched on once for R52's new trades ([setNoProgress]). */
     internal const val NP5_ON = "r52_no_progress_2026-11-01"
     /**
+     * 6 Nov (Boss: "R72 picker (shadow log)"): R151's R72 picker switched on once as a SHADOW LOG ([setPicker], [R72Picker]): each R72
+     * break scored and logged "would take / would skip". It never skips or changes a trade (paper or live). It failed its gate, so it
+     * is Boss's exception, labelled so everywhere.
+     */
+    internal const val PICK_ON = "r72_picker_shadow_2026-11-06"
+    /**
      * 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): R51 Donchian 20 set to record only once, when it was on
      * ([Book.recordOnly]); R72 Breadth Donchian stays on. Logged as Boss's ask; one tap undoes it (back on).
      */
@@ -233,6 +240,11 @@ object PassedArmsHost {
          * exit is only logged); a trade keeps the exits it entered with.
          */
         val np5: Boolean = false,
+        /**
+         * 6 Nov (R151 Amendment C, Boss's exception, shadow log only): an R72 Breadth Donchian trade's picker score when its break was
+         * scored ([R72Picker]); null: not scored (the picker off, its history not in yet, another arm). A label only: never changes a trade.
+         */
+        val pick: Double? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -281,10 +293,12 @@ object PassedArmsHost {
         var wideOn: Boolean = false,
         /** 1 Nov: R142's 09:25 no-progress exit on R52's new trades ([setNoProgress]). */
         var np5On: Boolean = false,
+        /** 6 Nov: R151's R72 picker scores and logs each R72 break (shadow log only, [setPicker]). */
+        var pickOn: Boolean = false,
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), status.copyMap(), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On)
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On, pickOn)
 
         /**
          * [source]'s entries run this pass. 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record
@@ -317,6 +331,8 @@ object PassedArmsHost {
         val wideOn: Boolean = false,
         /** 1 Nov: R142's 09:25 no-progress exit is on for R52's new trades (paper; live in shadow). */
         val np5On: Boolean = false,
+        /** 6 Nov: R151's R72 picker scores each R72 break (shadow log only; failed gates, Boss's exception). */
+        val pickOn: Boolean = false,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         /**
@@ -412,6 +428,7 @@ object PassedArmsHost {
             b.stOn = o.optBoolean("donchianST", false)
             b.wideOn = o.optBoolean("r72WideSkip", false)
             b.np5On = o.optBoolean("r52NoProgress", false)
+            b.pickOn = o.optBoolean("r72PickerShadow", false)
             // 19 Oct: absent in an older book (no arm record only); never beside "on" (on wins).
             o.optJSONArray("recordOnly")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { it in SOURCES && b.armed[it] != true }?.let { b.recordOnly += it } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
@@ -506,6 +523,19 @@ object PassedArmsHost {
             }
             save(b)
         }
+        // 6 Nov (Boss chose "R72 picker (shadow log)" after R151): the picker FAILED its gate (Apr - Oct 2026: 48.9% won, the bar was
+        // 50%), so it is Boss's exception and only LOGS: each R72 break scored, "would take / would skip"; nothing is skipped or
+        // changed, paper or live. On once, logged in the change timeline (one tap undoes it). Same care: never on an unreadable book,
+        // never in Gold.
+        if (PICK_ON !in b.migrated) {
+            b.migrated += PICK_ON
+            if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && !b.pickOn) {
+                b.pickOn = true
+                note(b, "${R72Picker.LABEL}: turned on by the 6 Nov update, your ask (${R72Picker.STATUS}): ${R72Picker.RULE}")
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedPickerOn() }
+            }
+            save(b)
+        }
         // 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): only R72 Breadth Donchian buys the Donchian breaks on paper; R51
         // Donchian 20, when on, is set to record only once - its breaks still decided, each kept as a would-be trade (nothing bought),
         // so the two can still be compared. Logged as Boss's ask in the change timeline (one tap puts it back on). R72, Liquidity, the
@@ -553,7 +583,7 @@ object PassedArmsHost {
             d("entryRef"), d("idx"), d("atr"), d("exit"), p.optString("exitTime").ifEmpty { null }?.let { LocalDateTime.parse(it) },
             p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
             p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false),
-            p.optString("shadow").ifEmpty { null }, p.optBoolean("np5", false))
+            p.optString("shadow").ifEmpty { null }, p.optBoolean("np5", false), d("pick"))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -569,6 +599,7 @@ object PassedArmsHost {
             if (p.st) put("st", true)
             p.shadow?.let { put("shadow", it) }
             if (p.np5) put("np5", true)
+            p.pick?.let { put("pick", it) }
         }
 
     private val written = Vault.LastWrite()
@@ -597,6 +628,7 @@ object PassedArmsHost {
         o.put("donchianST", b.stOn)
         o.put("r72WideSkip", b.wideOn)
         o.put("r52NoProgress", b.np5On)
+        o.put("r72PickerShadow", b.pickOn)
         o.put("recordOnly", JSONArray().apply { b.recordOnly.sorted().forEach { put(it) } })
         o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
@@ -647,7 +679,7 @@ object PassedArmsHost {
         _view.value = View(b.armed.toMap(), b.status.shown({ k, _ -> k == ST_UNJUDGED_KEY }), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
             model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet(),
-            wideOn = b.wideOn, np5On = b.np5On)
+            wideOn = b.wideOn, np5On = b.np5On, pickOn = b.pickOn)
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open && it.shadow == null }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
@@ -872,6 +904,25 @@ object PassedArmsHost {
     }
 
     /**
+     * 6 Nov (Boss: "R72 picker (shadow log)"): R151's R72 picker on or off. On, each new R72 break is scored and logged "would take /
+     * would skip" ([R72Picker]); it never skips or changes a trade, paper or live. [log]: false for the change log's own Undo (the
+     * switch-on is logged by the 6 Nov update).
+     */
+    suspend fun setPicker(on: Boolean, log: Boolean = false): String {
+        if (!ready()) return "The passed arms are not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.pickOn == on) return@withLock "${R72Picker.LABEL} is already ${if (on) "on" else "off"} (a log only)."
+            b.pickOn = on
+            note(b, if (on) "${R72Picker.LABEL} on (${R72Picker.STATUS}): ${R72Picker.RULE}" else "${R72Picker.LABEL} off: R72's breaks are no longer scored")
+            save(b)
+            if (log && on) runCatching { com.optionslab.app.ira.Autopilot.logPassedPickerOn() }
+            if (on) "${R72Picker.LABEL} on: each R72 break is scored and logged; nothing is skipped (${R72Picker.STATUS})."
+            else "${R72Picker.LABEL} off: R72's breaks are no longer scored (they were never skipped)."
+        }
+    }
+
+    /**
      * 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit on or off for R52 Open outside value's NEW trades (open
      * trades keep the exits they entered with). Paper only; a trade that may be copied live keeps the plain exits and the early
      * exit is only logged. [log]: false for the change log's own Undo (the switch-on is logged by the 1 Nov update).
@@ -890,6 +941,17 @@ object PassedArmsHost {
             if (on) "${OovArm.LABEL}'s new paper trades are sold at 09:25 when the option is not up 5% by then (live: logged only)."
             else "${OovArm.LABEL}'s new paper trades keep their plain exits (no 09:25 exit)."
         }
+    }
+
+    /**
+     * 6 Nov (R151 Amendment C, Boss's exception): R72's picker in words - on or off, and R72's closed trades it scored ([closed]: R72's,
+     * would-be ones included) split by its decision, with their nets ([m]: a rupee figure, hidden where the caller hides them).
+     * Judged after about 100 scored trades (CLAUDE.md: a shadow log first).
+     */
+    internal fun pickerWords(on: Boolean, closed: List<Pos>, m: (Double) -> String = { "%,.0f".format(Locale.ENGLISH, it) }): String {
+        val (take, skip) = closed.filter { it.pick != null }.partition { R72Picker.takes(it.pick!!) }
+        return "${R72Picker.LABEL} ${if (on) "on" else "off"} (a log only; ${R72Picker.STATUS}): would take ${take.size} closed " +
+            "${m(take.sumOf { it.net ?: 0.0 })}, would skip ${skip.size} closed ${m(skip.sumOf { it.net ?: 0.0 })} (judged at about 100)"
     }
 
     /**
@@ -924,6 +986,8 @@ object PassedArmsHost {
                     (if (s == Solo2.SOURCE) " · model ${if (v.modelLoaded) "loaded" else modelFailed ?: "not loaded yet"}" else "") +
                     // 1 Nov: R72's wide-day skip and R52's 09:25 exit (paper; live in shadow), with the trades that entered with the exit.
                     (if (s == BreadthDonchianArm.SOURCE) " · wide-day skip (R140) ${if (v.wideOn) "on" else "off"} for new breaks (live in shadow)" else "") +
+                    // 6 Nov: R151's R72 picker (a log only; failed gates, Boss's exception): the closed trades it would take and skip.
+                    (if (s == BreadthDonchianArm.SOURCE) " · ${pickerWords(v.pickOn, c) { m(it) }}" else "") +
                     (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
                         "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
                 // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)
@@ -979,6 +1043,103 @@ object PassedArmsHost {
     }
 
     internal const val VIX = "INDIAVIX"
+
+    /**
+     * 6 Nov (R151's R72 picker, a shadow log): the picker's OWN history, apart from [hist] so nothing another rule reads changes (R51's
+     * Supertrend reads every session [hist] holds): each of the five indices' and India VIX's last [R72Picker.HIST_SESSIONS]
+     * sessions as 5-minute bars, its daily candles (the last [R72Picker.DAILY_SESSIONS]) and its last session's last close. Memory only.
+     */
+    internal class PickHist(val day: LocalDate, val hist5: List<PassedArms.Bar5>, val daily: List<R72Picker.Daily>, val prevClose: Double)
+
+    private val pickHist = java.util.concurrent.ConcurrentHashMap<String, PickHist>()
+    @Volatile private var pickTried: Pair<LocalDate, Long>? = null
+
+    /** 6 Nov: each R72 break's picker score, by its decision key ("day|arm|index|bar|side"), for the trade it becomes. Memory only. */
+    private val pickScores = java.util.concurrent.ConcurrentHashMap<String, Double>()
+
+    /** The picker's score for [arm]'s entry decided by [keys] (R72's only; null: not scored). */
+    private fun pickOf(arm: String, keys: List<String>): Double? =
+        if (arm != BreadthDonchianArm.SOURCE) null else keys.firstNotNullOfOrNull { pickScores[it] }
+
+    private fun pickReady(u: String, day: LocalDate): PickHist? = pickHist[u]?.takeIf { it.day == day }
+
+    /**
+     * Starts the picker's history reads in the background (from 08:45; at most every 10 minutes until they are in), as [prefetch]:
+     * 40 calendar days of 1-minute bars and 460 of daily candles for the five indices and India VIX. Never waited for: until they are
+     * in, a break is not scored (its trade goes on as always).
+     */
+    internal fun prefetchPicker(now: LocalDateTime) {
+        val day = now.toLocalDate()
+        if (now.toLocalTime().isBefore(LocalTime.of(8, 45))) return
+        if ((R72Picker.INDICES + VIX).all { pickReady(it, day) != null }) return
+        val t = pickTried
+        val ms = System.currentTimeMillis()
+        if (t != null && t.first == day && ms - t.second < 10 * 60_000L) return
+        pickTried = day to ms
+        background.launch { runCatching { prefetchPickerNow(day) } }
+    }
+
+    /** [prefetchPicker]'s reads for [day] (tests call it directly); an index read only in part is not kept (read again later). */
+    internal suspend fun prefetchPickerNow(day: LocalDate) {
+        for (u in R72Picker.INDICES + VIX) {
+            if (pickReady(u, day) != null) continue
+            runCatching {
+                val key = if (u == VIX) Upstox.INDEX_KEYS.getValue("INDIAVIX") else upKey(u)
+                val ones = testHistory?.invoke(u) ?: toBars(Net.history(key, day.minusDays(40), day.minusDays(1)))
+                val daily = testDaily?.invoke(u) ?: toBars(Net.daily(key, day.minusDays(460), day.minusDays(1)))
+                val sessions = ones.filter { it.start.toLocalDate().isBefore(day) }.groupBy { it.start.toLocalDate() }.toSortedMap()
+                    .map { (d, l) -> PassedArms.DayBars.of(d, l) }.filter { it.count > 0 }.takeLast(R72Picker.HIST_SESSIONS)
+                val days = daily.filter { it.start.toLocalDate().isBefore(day) }.sortedBy { it.start }.distinctBy { it.start.toLocalDate() }
+                    .takeLast(R72Picker.DAILY_SESSIONS).map { R72Picker.Daily(it.start.toLocalDate(), it.open, it.close) }
+                if (sessions.isNotEmpty() && days.isNotEmpty())
+                    pickHist[u] = PickHist(day, sessions.flatMap { R72Picker.bars5(it) }, days, sessions.last().lastClose)
+            }
+        }
+    }
+
+    /**
+     * 6 Nov (R151's R72 picker, a shadow log only): each of today's R72 breaks [sigs] (all five indices) scored once and logged
+     * ("would take / would skip"), its score kept for the trade it becomes ([pickOf]). Skipped on an index's expiry day (the
+     * research had no break there), and while that index's picker history is not in (said once; scored on a later look). Never
+     * throws and never changes a trade: R72's taking goes on whatever happens here.
+     */
+    private suspend fun scoreBreaks(b: Book, today: LocalDate, sigs: List<DonchianArm.Signal>, reads: Reads): Boolean {
+        if (!b.pickOn || sigs.isEmpty()) return false
+        if (pickScores.keys.any { !it.startsWith("$today|") }) pickScores.keys.removeAll { !it.startsWith("$today|") }
+        val src = BreadthDonchianArm.SOURCE
+        var changed = false
+        val byIndex = sigs.groupBy { it.underlying }.mapValues { (_, l) -> l.sortedBy { it.bar.b } }
+        val count = sigs.groupingBy { it.bar.b to it.side }.eachCount()
+        for ((u, list) in byIndex) {
+            if (expiryToday(u, today) != false) continue
+            list.forEachIndexed { earlier, s ->
+                val dk = "$today|$src|$u|${s.bar.b}|${s.side}"
+                if (dk in pickScores) return@forEachIndexed
+                val logged = "$dk|pick"
+                if (pickReady(u, today) == null) {
+                    if ("$logged|wait" !in b.decided) { b.decided += "$logged|wait"; note(b, "${R72Picker.LABEL} $u ${s.entryTime.toLocalTime()}: its history is still loading (scored on a later look; the trade goes on as always)"); changed = true }
+                    return@forEachIndexed
+                }
+                val score = runCatching { R72Picker.score(R72Picker.features(pickInput(today, s, earlier, count[s.bar.b to s.side] ?: 0, reads))) }.getOrNull()
+                    ?.takeIf { it.isFinite() } ?: return@forEachIndexed
+                pickScores[dk] = score
+                if (logged !in b.decided) { b.decided += logged; note(b, "${R72Picker.LABEL} ${R72Picker.line(u, s.side, s.entryTime.toLocalTime(), score)}"); changed = true }
+            }
+        }
+        return changed
+    }
+
+    /** One break's picker input from this pass's reads and the picker's history (an index without either is left out). */
+    private fun pickInput(today: LocalDate, s: DonchianArm.Signal, earlier: Int, fCount: Int, reads: Reads): R72Picker.Input {
+        val syms = R72Picker.INDICES.mapNotNull { u ->
+            val h = pickReady(u, today) ?: return@mapNotNull null
+            val t = todayBars(u, today, reads)
+            u to R72Picker.Sym(h.hist5, t, h.daily, t?.o?.get(0) ?: Double.NaN)
+        }.toMap()
+        val v = pickReady(VIX, today)
+        return R72Picker.Input(s.underlying, today, s.bar.entryRow, s.side, earlier, fCount, syms,
+            reads.vix?.let { PassedArms.DayBars.of(today, it) }, v?.prevClose ?: Double.NaN, v?.daily.orEmpty())
+    }
 
     /** [prefetch]'s reads for [day] (tests call it directly). */
     internal suspend fun prefetchNow(day: LocalDate, indices: List<String> = ALL_INDICES) {
@@ -1238,6 +1399,8 @@ object PassedArmsHost {
         if (cache == null) lock.withLock { book() }
         ensureModel()
         runCatching { prefetch(now) }
+        // 6 Nov: R151's R72 picker reads its own history only while it is on (a shadow log; background, never waited for).
+        if (_view.value.pickOn) runCatching { prefetchPicker(now) }
         lock.withLock {
             val b = book()
             var changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
@@ -1613,7 +1776,7 @@ object PassedArmsHost {
                 val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
                 val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
                     l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn,
-                    np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy)
+                    np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy, pick = pickOf(arm, keys))
                 b.positions += pos
                 b.marks[c.symbol] = fill.price
                 b.decided += keys
@@ -1677,7 +1840,8 @@ object PassedArmsHost {
                                 idx: Double?, atr: Double?, keys: List<String>, breadth: Boolean?, kind: String, because: String): Pos {
         runCatching { Paper.rememberContract(c) }
         val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
-            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On)
+            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On,
+            pick = pickOf(arm, keys))
         b.positions += pos
         if (c.symbol !in b.marks) b.marks[c.symbol] = ref
         b.decided += keys
@@ -1786,8 +1950,10 @@ object PassedArmsHost {
     private suspend fun breadth(b: Book, now: LocalDateTime, reads: Reads): Boolean {
         val src = BreadthDonchianArm.SOURCE
         val today = now.toLocalDate()
-        val sigs = BreadthDonchianArm.signals(seriesAll(today, reads), today).groupBy { it.underlying }
-        var changed = false
+        val all = BreadthDonchianArm.signals(seriesAll(today, reads), today)
+        // 6 Nov: R151's R72 picker scores and logs the breaks first (a shadow log: it never stops or changes the taking below).
+        var changed = runCatching { scoreBreaks(b, today, all, reads) }.getOrDefault(false)
+        val sigs = all.groupBy { it.underlying }
         for (u in BreadthDonchianArm.UNDERLYINGS) {
             if (reads.bars[u] == null) continue
             val (skip, noted) = wideSkip(b, src, u, today, sigs[u].orEmpty().isNotEmpty())
@@ -2412,7 +2578,7 @@ object PassedArmsHost {
             pendingBytes.set(null)
             written.forget()
         }
-        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
+        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; pickHist.clear(); pickTried = null; pickScores.clear(); lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
         runCatching { com.optionslab.ira.ArmExits.set("passed", emptyList()) }
         // 26 Oct: the exit looks' kept minutes and the entry retry are memory too.
         exitReads.clear(); exitBars.clear(); retryJob?.cancel(); retryJob = null; plannedRetry = null; retriesOf = null to 0
