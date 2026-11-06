@@ -518,6 +518,12 @@ internal object Autopilot {
                 // switch back for paper (live stays in shadow). Paper only: no PIN; not logged again.
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 com.optionslab.app.data.LiquidityTest.setNoTwin(c.to == AutoChange.ON, log = false)
+            } else if (c.target == AutoChange.W20_TARGET) {
+                // 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20 label ([logPassedW20On]): the Undo switches the log
+                // off or on. A log only (never skips or changes a trade): no PIN; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
+                    .takeIf { !it.contains("not ready") }
             } else if (c.target == AutoChange.PICK_TARGET) {
                 // 6 Nov (Boss: "R72 picker (shadow log)"): R151's picker ([logPassedPickerOn]): the Undo switches the log off or on. A
                 // log only (never skips or changes a trade): no PIN; not logged again.
@@ -1369,6 +1375,12 @@ internal object Autopilot {
     fun logPassedWideSkipOn() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedWideSkip(true), "the 1 Nov update (your ask: \"Make the change the arms\"); paper only - live in shadow")
+    }
+
+    /** 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20 label on R51, a shadow log, on by the update - logged once as Boss's. */
+    fun logPassedW20On() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedW20(true), "the 6 Nov update (your ask: \"Do whatever you recommend\", on R51); a log only - failed gates, never changes a trade")
     }
 
     /** 6 Nov (Boss: "R72 picker (shadow log)"): R151's R72 picker, a shadow log, on by the update - logged once as Boss's. */

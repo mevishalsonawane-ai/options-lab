@@ -2109,14 +2109,15 @@ class PassedArmsHostTest : RobolectricTest() {
      * R72 on, its wide-day skip [skipOn], NIFTY's daily candles with yesterday's range [last] ([candles] false: none read), the
      * history read first (so no write of the book is pending when it is), then the 09:20 breadth break (NIFTY + 3 others).
      */
-    private fun wideDay(last: Double, skipOn: Boolean = true, candles: Boolean = true, lag: Long = 0, paper: Boolean = true) {
+    private fun wideDay(last: Double, skipOn: Boolean = true, candles: Boolean = true, lag: Long = 0, paper: Boolean = true,
+                        arm: String = BreadthDonchianArm.SOURCE) {
         PassedArmsHost.testDaily = { u -> if (u == "NIFTY" && candles) niftyDaily(last, lag) else emptyList() }
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") yesterday() else bases[u]?.let { b ->
             (0 until 375).map { Bar(day.minusDays(1).atTime(9, 15).plusMinutes(it.toLong()), b, b + 1, b - 1, b) } }.orEmpty() }
         PassedArmsHost.wipe(); runBlocking { PassedArmsHost.prefetchNow(day) }
-        only(BreadthDonchianArm.SOURCE)
+        only(arm)
         runBlocking { PassedArmsHost.setWideSkip(skipOn) }
-        if (paper) paperOnly(BreadthDonchianArm.SOURCE)
+        if (paper) paperOnly(arm)
         market(LocalTime.of(9, 21))
         for (u in setOf("BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")) {
             val b = bases.getValue(u)
@@ -2247,9 +2248,69 @@ class PassedArmsHostTest : RobolectricTest() {
         } finally { hold.countDown(); PassedArmsHost.testHistory = plain }
     }
 
-    @Test fun onlyR72sTradesHaveAPickKey() {
-        val p = PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "NIFTY-X", "CE", 65, 100.0, day.atTime(9, 20, 30), null)
+    // ---- 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20 labels R51's breaks, never changing a trade ---------
+
+    @Test fun theUpdateSwitchesW20OnOnceAndItsUndoSwitchesItOff() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        assertTrue(view().w20On)
+        assertEquals(1, view().log.count { "R51 shadow (W20 + picker): turned on by the 6 Nov update" in it })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertEquals("once only", 1, view().log.count { "R51 shadow (W20 + picker): turned on by the 6 Nov update" in it })
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R51 W20 (shadow) on (failed gates; a shadow log only)"))
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R51 picker (shadow) on (failed gates; a shadow log only)"))
+        val w = AutoChange.passedW20(true)
+        assertTrue(Autopilot.apply(AutoChange.inverse(w, "undone by you"), false)!!.contains("no longer labelled"))
+        assertFalse(view().w20On)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().w20On)
+        assertTrue(Autopilot.apply(w, false)!!.contains("nothing is skipped"))
+        assertTrue(view().w20On)
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse(view().w20On)
+    }
+
+    /** R51 alone on an ordinary day (its 09:20 NIFTY break), W20 [on], the picker's history (which W20 reads) in. */
+    private fun w20Day(on: Boolean) {
+        wideDay(110.0, arm = DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setW20(on) }
+        pickerHistory()
+    }
+
+    @Test fun w20LabelsR51sBreakOnceAndTheTradeGoesOnAsBefore() {
+        w20Day(true)
+        tick(LocalTime.of(9, 21))
+        val v = view()
+        val r51 = v.open.filter { it.arm == DonchianArm.SOURCE && it.shadow == null }
+        assertEquals("the trade is taken as without W20", 1, r51.size)
+        assertNotNull("its W20 label is kept on the trade", r51.single().w20)
+        val score = r51.single().pick
+        assertNotNull("and its R51 picker score", score)
+        val said = v.log.filter { "R51 shadow (W20 + picker) 09:20 breaks: NIFTY " in it }
+        assertEquals(v.log.toString(), 1, said.size)
+        assertTrue(said.single(), said.single().contains("W20 " + if (r51.single().w20 == true) "would skip" else "would keep"))
+        assertTrue(said.single(), said.single().contains("picker " + "%.3f".format(java.util.Locale.ENGLISH, score!!)))
+        tick(LocalTime.of(9, 22))
+        assertEquals("labelled once", 1, view().log.count { "R51 shadow (W20 + picker) 09:20" in it })
+        assertEquals(1, view().open.count { it.arm == DonchianArm.SOURCE && it.shadow == null })
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withW20OffR51sTradeIsUnlabelled() {
+        w20Day(false)
+        tick(LocalTime.of(9, 21))
+        val v = view()
+        assertEquals(1, v.open.count { it.arm == DonchianArm.SOURCE && it.shadow == null })
+        assertNull(v.open.single { it.arm == DonchianArm.SOURCE }.w20)
+        assertNull(v.open.single { it.arm == DonchianArm.SOURCE }.pick)
+        assertTrue(v.log.none { "R51 shadow (W20 + picker) 09:20" in it })
+    }
+
+    @Test fun onlyR72AndR51TradesHaveAnEntryKey() {
+        val p = PassedArmsHost.Pos(OovArm.SOURCE, "NIFTY", "NIFTY-X", "CE", 65, 100.0, day.atTime(9, 20, 30), null)
         assertNull(PassedArmsHost.pickKey(p))
+        assertEquals("$day|${DonchianArm.SOURCE}|NIFTY|0|1", PassedArmsHost.pickKey(p.copy(arm = DonchianArm.SOURCE)))
         assertEquals("$day|${BreadthDonchianArm.SOURCE}|NIFTY|0|1", PassedArmsHost.pickKey(p.copy(arm = BreadthDonchianArm.SOURCE)))
         assertEquals("$day|${BreadthDonchianArm.SOURCE}|NIFTY|0|-1", PassedArmsHost.pickKey(p.copy(arm = BreadthDonchianArm.SOURCE, right = "PE", entryTime = day.atTime(9, 22, 59))))
     }

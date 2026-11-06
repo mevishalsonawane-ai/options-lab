@@ -1882,7 +1882,7 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
   lakh to +Rs 20k. Win rate falls 1-5 points. It only lost less in Dec 2022 - Nov 2024. A fresh cross is no better;
   the futures' real VWAP on 52 sessions turned +Rs 60k into -Rs 10k. It removes the early breakouts.
 
-## Both Donchian arms to a 60%+ win rate (R151, 5 Nov 2026) - 0 of 19 pass
+## Both Donchian arms to a 60%+ win rate (R151, 5 Nov 2026) - 0 of 20 pass
 `HUNT_R151_DONCHIAN_WINRATE60.md`. The exits were kept exactly as the app runs them; R151 only chose which trades to take.
 - **Indicator settings (12 per arm, design Nov 2024 - Mar 2026):** win rates run 43.7-46.4% for R51 (Donchian
   10-55 x Supertrend 2-4) and 43.8-50.5% for R72 (Donchian 10-55 x 3-5 indices). The chosen settings (R51 30 / 4,
@@ -1900,6 +1900,10 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
   - Apr 2025 - Mar 2026 (walk-forward): 634 trades, 52.5%, Rs 302 a trade.
   - This is a second look, disclosed. It is a lead for a per-trade / drawdown test (Dec 2022 - Nov 2024 not yet read),
     not a pass.
+- **The R51 logistic picker over Nov 2024 - Oct 2026 (Amendment E): fails by 0.1 point.**
+  - Apr - Oct 2026: 693 trades won 49.9%, making Rs 1.59 lakh vs R51's Rs 1.35 lakh.
+  - Per trade Rs 229 vs Rs 81; worst month -Rs 15.6k vs -Rs 54.6k; drawdown Rs 33.6k vs Rs 81.7k; p 0.0005.
+  - It runs in the app as a shadow log on R51 with W20, as R72's picker does on R72 (6 Nov).
 - **A feature-cache bug** (R72 read R51's features) was found and fixed, and everything was re-run; no verdict changed.
 - With R105C (60% from exits only by selling at +5%, then both arms lose): a 60% win rate is not reachable on these
   arms with profit. They earn from a few big winners at about 45-50% wins.

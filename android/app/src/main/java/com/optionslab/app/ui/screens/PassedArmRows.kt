@@ -124,6 +124,14 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     if (source == BreadthDonchianArm.SOURCE && v.pickOn) "${com.optionslab.engine.orb.R72Picker.LABEL} on (" +
         "${com.optionslab.engine.orb.R72Picker.STATUS}): ${com.optionslab.engine.orb.R72Picker.RULE}. ${com.optionslab.engine.orb.R72Picker.RECORD}. " +
         "${PassedArmsHost.pickerWords(true, v.closedOf(source)) { rs(it) }}." else null,
+    // 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20, a log only, when on, with its record and what it has labelled.
+    if (source == DonchianArm.SOURCE && v.w20On) "${com.optionslab.engine.orb.W20Rule.LABEL} on (${com.optionslab.engine.orb.W20Rule.STATUS}): " +
+        "${com.optionslab.engine.orb.W20Rule.RULE}. ${com.optionslab.engine.orb.W20Rule.RECORD}. " +
+        "${PassedArmsHost.w20Words(true, v.closedOf(source)) { rs(it) }}." else null,
+    // 6 Nov (R151 Amendment E): R51's picker, under the same switch (a log only).
+    if (source == DonchianArm.SOURCE && v.w20On) "${com.optionslab.engine.orb.R51Picker.LABEL} on: each R51 break is also scored " +
+        "(would take at ${com.optionslab.engine.orb.R51Picker.THRESHOLD} or more). ${com.optionslab.engine.orb.R51Picker.RECORD}. " +
+        "${PassedArmsHost.pickerWords(true, v.closedOf(source), { rs(it) }, com.optionslab.engine.orb.R51Picker.LABEL, com.optionslab.engine.orb.R51Picker::takes)}." else null,
     if (source == OovArm.SOURCE && v.np5On) "09:25 exit on: ${OovArm.NO_PROGRESS_RULE}; ${OovArm.NO_PROGRESS_RECORD}. " +
         "Paper only: a trade that may be copied live keeps the plain exits and the early exit is only logged." else null,
     if (source == BreadthDonchianArm.SOURCE) v.comparison() + "." else null,

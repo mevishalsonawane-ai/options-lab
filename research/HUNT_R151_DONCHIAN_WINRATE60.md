@@ -1,11 +1,11 @@
-# R151: can the two Donchian arms reach a 60%+ win rate with profit? (5 Nov 2026) - 0 of 19 pass
+# R151: can the two Donchian arms reach a 60%+ win rate with profit? (5 Nov 2026) - 0 of 20 pass
 
 Boss (5 Nov): "Use all the resources you can, and try to both donchain winrate to 60%+", then "Try to change level, or
 parameters in the indicator too", then "Try adding W20 skip on top of picker".
 
-Pre-registration: `hunt/r151_donchian_winrate60/PREREG.md` (with Amendments A-D, each committed before its results).
+Pre-registration: `hunt/r151_donchian_winrate60/PREREG.md` (with Amendments A-E, each committed before its results).
 Code: `study.py`, `pick.py`, `make_entries.py`; tests: `tests/test_r151.py` (6). Results: `results/*.json`.
-Entries: `research/experiments/entries/r151-*.yaml` (19). Research only; nothing under `android/` changed.
+Entries: `research/experiments/entries/r151-*.yaml` (20). Research only; nothing under `android/` changed.
 
 **Signal source:** the index (5-min Donchian on the index, plus Supertrend for R51 and 5-index breadth for R72). The
 option is bought by the arm's strike rule (1-ITM). Exits are exactly the app's (-15% stop, the 30-60-100 lock with L25,
@@ -151,6 +151,33 @@ logistic picker's score is >= 0.4656, the point quoted to Boss from the design c
   - That is a different question from the one tested, and it was not the pre-registered gate.
   - It deserves its own pre-registered test, judged on per trade and drawdown, on Dec 2022 - Nov 2024 (not yet read
     for it) and as a shadow log on new days.
+
+## 2d. The R51 logistic picker over Nov 2024 - Oct 2026 (Amendment E; Boss: "What about r51?" ... "Do whatever you recommend")
+
+**The rule, fixed before the run:** R51 as the app (Donchian 20 + Supertrend (10, 3)). Take a signal only when R51's logistic
+picker's score is >= 0.4469, the point quoted to Boss. **The gate:** Amendment C's.
+
+| period (how scored) | picker | R51 alone |
+|---|---|---|
+| Nov 2024 - Mar 2025 (IN-SAMPLE, not counted) | 565 trades, 46.9%, +Rs 39,544 | 1,164, 40.7%, -Rs 1,63,323 |
+| Apr 2025 - Mar 2026 (walk-forward) | 852, 49.1%, +Rs 2,49,385, Rs 293 a trade, worst month -Rs 18.4k, DD Rs 40.9k | 3,044, 45.9%, +Rs 2,13,748, Rs 70, worst month -Rs 53.7k, DD Rs 94.2k |
+| **Apr - Oct 2026 (frozen model, the test)** | **693, 49.9%, +Rs 1,59,040, Rs 229 a trade, worst month -Rs 15.6k, DD Rs 33.6k** | 1,670, 44.9%, +Rs 1,34,743, Rs 81, worst month -Rs 54.6k, DD Rs 81.7k |
+| Apr 2025 - Oct 2026 | 1,545, 49.4%, +Rs 4,08,425, Rs 264 | 4,714, 45.5%, +Rs 3,48,491, Rs 74 |
+
+- **Verdict: FAILS, by 0.1 point of win rate** (49.9% < 50%).
+- **Every other part of the gate passes, more strongly than R72's:**
+  - more money than the arm with 41% of its trades;
+  - 2.8 times its profit per trade;
+  - a worst month and drawdown about 40% of the arm's;
+  - better than random skips at p 0.0005.
+- **Disclosed:**
+  - Apr - Oct 2026 is a second look for R51.
+  - The cut-off was the best-looking design point.
+  - R72's result (Amendment C) was known when this was registered.
+- **In the app (6 Nov, Boss's "Do whatever you recommend"):** it is a shadow log on R51 beside R150's W20, as R72's picker is on
+  R72. Each R51 break is labelled and scored, and nothing is skipped or changed.
+- **R51 at Donchian 30 / Supertrend 4 is not tested:** every period with data has been read for it, and the data has only 4 new
+  sessions. It stays a lead.
 
 ## 2c. The feature-cache bug (Amendment D)
 

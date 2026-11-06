@@ -304,4 +304,21 @@ class PassedArmRowsTest {
         org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, on).none { com.optionslab.engine.orb.R72Picker.LABEL in it })
         org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, PassedArmsHost.View()).none { com.optionslab.engine.orb.R72Picker.LABEL in it })
     }
+
+    /** 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20 is said in R51's dialog when on - a log only (failed gates). */
+    @Test fun r51sDialogSaysW20WhenOnAndWhatItLabelled() {
+        val labelled = listOf(true, false).mapIndexed { i, w ->
+            PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "NIFTY-$i", "CE", 65, 100.0, java.time.LocalDateTime.of(2026, 11, 6, 9, 20), null,
+                exit = 90.0 + 20 * i, exitTime = java.time.LocalDateTime.of(2026, 11, 6, 9, 40), why = "stop", w20 = w, pick = 0.3 + 0.3 * i)
+        }
+        val on = PassedArmsHost.View(w20On = true, all = labelled)
+        val line = passedExplanation(DonchianArm.SOURCE, on).single { com.optionslab.engine.orb.W20Rule.LABEL in it }
+        for (w in listOf("failed gates; a shadow log only", "0.25%", "nothing is skipped or changed", "would skip 1 closed −₹650",
+                "would keep 1 closed +₹650", "judged at about 100")) org.junit.Assert.assertTrue("$w: $line", w in line)
+        val pick = passedExplanation(DonchianArm.SOURCE, on).single { "R51 picker (shadow) on:" in it }
+        for (w in listOf("0.4469", "49.9% won", "R51 picker (shadow) on (failed gates; a shadow log only): would take 1 closed +₹650",
+                "would skip 1 closed −₹650")) org.junit.Assert.assertTrue("$w: $pick", w in pick)
+        org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, on).none { com.optionslab.engine.orb.W20Rule.LABEL in it })
+        org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, PassedArmsHost.View()).none { com.optionslab.engine.orb.W20Rule.LABEL in it })
+    }
 }

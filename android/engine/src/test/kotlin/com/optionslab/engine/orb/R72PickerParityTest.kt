@@ -16,8 +16,8 @@ class R72PickerParityTest {
     private val days = listOf("2026-04-07", "2026-06-24", "2026-09-01")
 
     @Suppress("UNCHECKED_CAST")
-    private fun load(day: String): Map<String, Any?> = MiniJson.parse(
-        GZIPInputStream(javaClass.getResourceAsStream("/r72picker/$day.json.gz")!!).bufferedReader().readText()) as Map<String, Any?>
+    private fun load(name: String): Map<String, Any?> = MiniJson.parse(
+        GZIPInputStream(javaClass.getResourceAsStream("/r72picker/$name.json.gz")!!).bufferedReader().readText()) as Map<String, Any?>
 
     private fun d(v: Any?): Double = (v as Number?)?.toDouble() ?: Double.NaN
 
@@ -38,9 +38,9 @@ class R72PickerParityTest {
         (rows as List<List<Any?>>).map { R72Picker.Daily(LocalDate.parse(it[0] as String), d(it[1]), d(it[2])) }
 
     @Suppress("UNCHECKED_CAST")
-    private fun inputs(day: String): List<Triple<R72Picker.Input, Map<String, Any?>, Double>> {
-        val fx = load(day)
-        val date = LocalDate.parse(day)
+    private fun inputs(name: String): List<Triple<R72Picker.Input, Map<String, Any?>, Double>> {
+        val fx = load(name)
+        val date = LocalDate.parse(fx["day"] as String)
         val sy = fx["symbols"] as Map<String, Map<String, Any?>>
         val syms = R72Picker.INDICES.filter { it in sy }.associateWith { u ->
             val m = sy.getValue(u)
@@ -52,7 +52,7 @@ class R72PickerParityTest {
         val vixPrev = (v["prev_closes"] as List<List<Any?>>).last()[1].let { d(it) }
         return (fx["candidates"] as List<Map<String, Any?>>).map { c ->
             val inp = R72Picker.Input(c["und"] as String, date, (c["er"] as Number).toInt(), if (c["side"] == "C") 1 else -1,
-                (c["earlier"] as Number).toInt(), (c["f_count"] as Number).toInt(), syms, minutes(date, v["today"] as List<Any?>?),
+                (c["earlier"] as Number).toInt(), (c["f_count"] as Number?)?.toInt() ?: 0, syms, minutes(date, v["today"] as List<Any?>?),
                 vixPrev, daily(v["daily"]))
             Triple(inp, c["features"] as Map<String, Any?>, d(c["score"]))
         }
@@ -112,6 +112,42 @@ class R72PickerParityTest {
             kotlin.math.abs(got - w) < 1e-12
         }
         assertTrue(same >= all.size * 9 / 10, "$same of ${all.size}")
+    }
+
+    /**
+     * 6 Nov (R150 B's W20 on R51, shadow log): W20 would skip a break exactly when Python's nearest 3+-touch level ahead is within
+     * 0.25% (its sr_ahead feature, held to 1e-9 above), on the same 71 real Donchian breaks; both decisions appear.
+     */
+    @Test fun w20IsR150sWallOnTheSameBreaks() {
+        var skips = 0; var n = 0
+        for (day in days) for ((inp, want, _) in inputs(day)) {
+            val me = inp.syms.getValue(inp.und)
+            val got = W20Rule.skips(me.hist5, me.today!!, inp.er, inp.side)
+            assertEquals(d(want["sr_ahead"]) <= W20Rule.DIST, got, "$day ${inp.und} ${inp.er}")
+            if (got == true) skips++
+            n++
+        }
+        assertTrue(skips in 1 until n, "$skips of $n")
+    }
+
+    /**
+     * 6 Nov (R151 Amendment E): R51's picker - the same features on R51's own breaks (no breadth count) and R51's frozen numbers - is
+     * Python's on two real days (69 breaks), both decisions appearing.
+     */
+    @Test fun r51sPickerIsPythonsOnItsOwnBreaks() {
+        val scores = ArrayList<Double>()
+        for (name in listOf("r51-2026-04-07", "r51-2026-09-01")) for ((inp, want, score) in inputs(name)) {
+            val got = R72Picker.features(inp)
+            R72Picker.FEATS.forEachIndexed { i, f ->
+                val w = d(want[f])
+                if (w.isNaN()) assertTrue(got[i].isNaN(), "$name ${inp.und} ${inp.er} $f: Python has none, got ${got[i]}")
+                else assertEquals(w, got[i], 1e-9 * maxOf(1.0, kotlin.math.abs(w)), "$name ${inp.und} ${inp.er} $f")
+            }
+            assertEquals(score, R51Picker.score(got), 1e-9, "$name ${inp.und} ${inp.er} score")
+            scores += score
+        }
+        assertEquals(69, scores.size)
+        assertTrue(scores.any { R51Picker.takes(it) } && scores.any { !R51Picker.takes(it) })
     }
 
     /** Both decisions appear on these days, so the threshold is exercised either way. */

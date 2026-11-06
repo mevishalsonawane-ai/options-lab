@@ -32,6 +32,24 @@ class PickerChangeTest {
         assertTrue(AutoChange.passedPicker(false).reason.contains("none was ever skipped"))
     }
 
+    /** 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20 label on R51 is the same kind of log only. */
+    @Test fun w20IsABossOwnShadowChangeEitherWayToo() {
+        val on = AutoChange.passedW20(true)
+        assertEquals(AutoChange.Kind.PAPER_FILTER, on.kind); assertEquals(AutoChange.W20_TARGET, on.target)
+        assertEquals(AutoChange.Scope.SHADOW, on.scope)
+        assertEquals(AutoChange.Risk.NEUTRAL_SHADOW, AutoChange.riskOf(on))
+        assertEquals(AutoChange.Risk.NEUTRAL_SHADOW, AutoChange.riskOf(AutoChange.inverse(on, "undone by you")))
+        assertFalse(AutoChange.undoNeedsPin(on)); assertFalse(AutoChange.undoNeedsPin(AutoChange.passedW20(false)))
+        for (w in listOf("Do whatever you recommend", "0.25%", "nothing is skipped or changed", "Failed gates, so a shadow log only", "p < 0.001",
+                "R51 picker", "0.4469", "49.9%", "about 100"))
+            assertTrue(on.reason.contains(w), "$w: ${on.reason}")
+        assertTrue(AutoChange.passedW20(false).reason.contains("none was ever skipped"))
+        assertTrue(AutoChange.W20_TARGET != AutoChange.PICK_TARGET && "liquidity" !in AutoChange.W20_TARGET)
+        val (b, e) = AutoChange.record(AutoChange.Book(), on, AutoChange.Status.KEPT, 1_000L, day, by = "your ask")
+        assertFalse(AutoChange.undo(b, e.id)!!.needsPin)
+        assertNull(AutoChange.lastUndoable(b))
+    }
+
     @Test fun itsTargetIsItsOwnAndItsUndoIsItsOwnTap() {
         val others = listOf(AutoChange.ST_TARGET, AutoChange.LOCK_TARGET, AutoChange.L25_TARGET, AutoChange.SAME_DIR_TARGET, AutoChange.NO_TWIN_TARGET,
             AutoChange.BOOK_PRICE_TARGET, AutoChange.WIDE_TARGET, AutoChange.NO_PROGRESS_TARGET) + AutoChange.BOSS_PAPER_RULES

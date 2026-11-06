@@ -69,17 +69,16 @@ def _minutes(arr):
 
 
 def export() -> None:
-    assert ARG == "R72", "only the R72 picker is exported to the app"
     S.mods()["C"].open_final()
     mdl, _ = pickle.loads((T.CACHE / "models.pkl").read_bytes())[PID]
     nums = model_numbers(mdl)
-    (T.RESULTS / "r72_picker_model.json").write_text(json.dumps(nums, indent=1))
+    (T.RESULTS / f"{ARM.lower()}_picker_model.json").write_text(json.dumps(nums, indent=1))
     FIX.mkdir(parents=True, exist_ok=True)
     daily = S.mods()["A"].feats()["daily"]           # R101's daily frames (index_daily: date, open, close)
     vixm = T.vix_days()
-    for day in DAYS:
+    for day in (DAYS if ARM == "R72" else DAYS[::2]):        # R51: two days (the features' code is held on R72's three)
         us = [u for u in T.units(ARM, PARAMS, day, day) if u[0][1] == day]
-        assert us, f"no R72 candidates on {day}"
+        assert us, f"no {ARM} candidates on {day}"
         fx = T.feats_of_units(us)
         cands = []
         for key, cs, _, _ in us:
@@ -108,7 +107,7 @@ def export() -> None:
                                                               [float(vt[r, 0]), float(vt[r, 1]), float(vt[r, 2]), float(vt[r, 3])] for r in range(375)],
                             "daily": [[str(r.date), float(r.open), float(r.close)] for r in vv[vv.date < day].tail(300).itertuples()]}
         out = {"day": str(day), "candidates": cands, "symbols": syms}
-        with gzip.open(FIX / f"{day}.json.gz", "wt") as fh:
+        with gzip.open(FIX / (f"{day}.json.gz" if ARM == "R72" else f"{ARM.lower()}-{day}.json.gz"), "wt") as fh:
             json.dump(out, fh, separators=(",", ":"))
         print(day, len(cands), "candidates")
 

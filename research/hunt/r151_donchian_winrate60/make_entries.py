@@ -70,6 +70,20 @@ out.append({"id": "r151-c-r72-picker", "family": "ml", "title": "R151 Amendment 
                         "costs": "R101 / R106 engine: app fills, dated charges"},
             "holdout_read": True, "verdict": "rejected",
             "notes": "Amendment D: the first run's features had a cache bug (R72 took R51's); re-run clean, buggy files in results/bug_cache."})
+e5 = json.loads((R / "e_r51_picker.json").read_text())
+ef, ea, eg = e5["final_apr_oct26"]["picker"], e5["final_apr_oct26"]["arm"], e5["gate"]
+out.append({"id": "r151-e-r51-picker", "family": "ml", "title": "R151 Amendment E: R51 logistic picker (score >= 0.4469) over Nov 2024 - Oct 2026",
+            **COMMON, "period": {"design": "20 Nov 2024 - 31 Mar 2026 (Nov 2024 - Mar 2025 in-sample, Apr 2025 - Mar 2026 walk-forward)",
+                                 "holdout": "Apr - Oct 2026 (frozen model; second look, disclosed)"},
+            "hypothesis": "The R51 logistic picker at its quoted design point keeps trades that win >= 50% with more per trade on Apr - Oct 2026.",
+            "features": ["signal source: the index (5-min Donchian 20 + Supertrend (10, 3)); picker features as R151 section 2"],
+            "model_or_rule": "L2 logistic (C 0.1); take when score >= 0.4469", "variants_tried": 1,
+            "results": {"summary": (f"Apr 2025 - Mar 2026 WF {fm(e5['wf_apr25_mar26']['picker'])} (arm {fm(e5['wf_apr25_mar26']['arm'])}); "
+                                    f"Apr - Oct 2026 {fm(ef)}, worst month Rs {ef['worst_month']:,.0f}, DD Rs {ef['max_dd']:,} "
+                                    f"(arm {fm(ea)}, worst month Rs {ea['worst_month']:,.0f}, DD Rs {ea['max_dd']:,}); twin p {eg['twin_win_p']:.4f}. "
+                                    f"Fails: {'; '.join(eg['fails'])}. In the app as a shadow log (6 Nov)."),
+                        "costs": "R101 / R106 engine: app fills, dated charges"},
+            "holdout_read": True, "verdict": "rejected"})
 for e in out:
     Path(f"research/experiments/entries/{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, width=120))
 print(len(out), "entries")

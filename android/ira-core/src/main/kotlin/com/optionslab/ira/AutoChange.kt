@@ -344,7 +344,7 @@ object AutoChange {
             // 28 Oct: the paper book price ([BOOK_PRICE_TARGET]) is the one that adds entries (an untraded option bought at the ask):
             // on raises paper risk, off takes those entries away.
             // 6 Nov: R151's R72 picker ([PICK_TARGET]) is a log only - it never skips or changes a trade, on or off.
-            Kind.PAPER_FILTER -> if (c.target == PICK_TARGET) Risk.NEUTRAL_SHADOW
+            Kind.PAPER_FILTER -> if (c.target == PICK_TARGET || c.target == W20_TARGET) Risk.NEUTRAL_SHADOW
                 else if (c.target == BOOK_PRICE_TARGET) { if (c.to == ON) Risk.RAISE else Risk.LOWER } else if (c.to == ON) Risk.LOWER else Risk.RAISE
             // 18 Oct: an arm's own live switch on lets its live entries go (adds live risk); off keeps it on paper.
             Kind.ARM_LIVE -> if (c.to == ON) Risk.RAISE else Risk.LOWER
@@ -911,6 +911,26 @@ object AutoChange {
         else "R72 Breadth Donchian's breaks are no longer scored by R151's picker (none was ever skipped)",
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), Risk.NEUTRAL_SHADOW, Scope.SHADOW,
         what = "R72 picker shadow log (R151; failed gates; a shadow log only)")
+
+    /** 6 Nov 2026: the target of R150 B's W20, a shadow log on R51 Donchian 20's breaks ([passedW20]). */
+    const val W20_TARGET = "filter:r51_w20_shadow"
+
+    /**
+     * 6 Nov 2026 (Boss: "Do whatever you recommend", on R51): R150 B's W20 switched [on] to LABEL each of R51 Donchian 20's breaks
+     * ("W20 would skip / keep"), or off again. It failed R140's gate (the arm still losing in the unseen years), so it is a log only:
+     * it never skips or changes a trade, paper or live - shadow either way, no PIN.
+     */
+    fun passedW20(on: Boolean): Change = Change(Kind.PAPER_FILTER, W20_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (6 Nov, \"Do whatever you recommend\"): each R51 Donchian 20 break is labelled \"W20 would skip\" when a " +
+            "5-minute support / resistance level (3+ touches, last 20 sessions) is within 0.25% ahead, else \"would keep\", and scored by " +
+            "R151's R51 picker (would take at 0.4469 or more; Apr - Oct 2026, a second look: 49.9% won, the bar was 50%, +₹1.59 lakh vs " +
+            "R51's ₹1.35 lakh with 40% of the drawdown); nothing is " +
+            "skipped or changed, paper or live. Failed gates, so a shadow log only: in Dec 2022 - Nov 2024 it lost -₹2.32 lakh vs R51's " +
+            "-₹4.00 lakh (beat random skips, p < 0.001) and cut Apr - Oct 2026's drawdown to ₹46.5k from ₹81.7k, but R51 still lost " +
+            "money in those years; both judged after about 100 labelled trades"
+        else "R51 Donchian 20's breaks are no longer labelled by W20 (none was ever skipped)",
+        Evidence(0, 0.0, AgentLessons.Confidence.WEAK), Risk.NEUTRAL_SHADOW, Scope.SHADOW,
+        what = "R51 shadow log: W20 + picker (R150 B, R151 E; failed gates; a shadow log only)")
 
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"

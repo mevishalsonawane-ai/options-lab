@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  * never skips, sizes or changes a trade, paper or live.
  *
  *   the model  L2 logistic (C 0.1) on 28 features, missing ones filled with the training median, then standardised
- *              ([MEDIAN], [MEAN], [SCALE], [COEF], [INTERCEPT]: research/hunt/r151_donchian_winrate60/results/r72_picker_model.json,
+ *              ([MODEL]: research/hunt/r151_donchian_winrate60/results/r72_picker_model.json,
  *              written by export_picker.py from the model that reproduces Amendment C exactly).
  *   features   research/hunt/r151_donchian_winrate60/study.py `features`, line for line, from what is known when the signal bar
  *              closes (minute rows below the entry row [Input.er]); held to Python by R72PickerParityTest on three real days.
@@ -47,26 +47,29 @@ object R72Picker {
     val FEATS = listOf("tod", "side", "day_move", "from_open", "range_ratio", "gap", "twap_dist", "ema_slope", "ema_dist", "bar_size",
         "break_size", "breaks_today", "ret5d", "sr_ahead", "sr_behind", "sr_touch_ahead", "sr_crossed", "piv_ahead", "vix", "dvix",
         "breadth5", "f_rv", "f_gap", "f_vixchg", "f_breadth", "f_dow", "f_count", "f_vixreg")
-    private val MEDIAN = doubleArrayOf(150.0, 1.0, 0.0035795598201211476, 0.002038765254845698, 0.6886626638198432, 0.0008175398043315241,
+    /** R72-20-4-M2 (results/r72_picker_model.json). */
+    val MODEL = Model(
+        median = doubleArrayOf(150.0, 1.0, 0.0035795598201211476, 0.002038765254845698, 0.6886626638198432, 0.0008175398043315241,
         0.0021306766263454735, 0.0004901235550675433, 0.0024852560483146447, 1.614585737364515, 0.0006474160507453316, 1.0,
         0.003296818741822305, 0.002022462590201113, 0.0018025621751652787, 7.0, 0.0, 0.0025124256752460106, 13.51, 0.005791521979588825,
-        0.4, 0.356, 0.0004589928235019247, 0.005032361851600831, 5.0, 2.0, 4.0, 2.0)
-    private val MEAN = doubleArrayOf(154.9967437316835, 0.015955714750895474, 0.0036127365936460707, 0.002399937910342995,
+        0.4, 0.356, 0.0004589928235019247, 0.005032361851600831, 5.0, 2.0, 4.0, 2.0),
+        mean = doubleArrayOf(154.9967437316835, 0.015955714750895474, 0.0036127365936460707, 0.002399937910342995,
         0.7395070776617516, 0.0012138059227249965, 0.0023781271866017187, 0.0006525279103530064, 0.0034498769719174256, 2.185900096875879,
         0.0015264785662875552, 1.2692933897753176, 0.0038866802594901963, 0.010631249312246342, 0.004575627458191103, 8.904916965157929,
         0.298599804623901, 0.00899968047652664, 13.980937805275223, 0.010535179998816955, 0.5043308368609596, 0.42211917942038246,
-        0.00014705397955315418, 0.01164685956057948, 4.612504070335396, 2.0524259198957995, 4.47704330836861, 1.000325626831651)
-    private val SCALE = doubleArrayOf(116.28992833958644, 0.9998726994806666, 0.00732368927460415, 0.00424127561605725,
+        0.00014705397955315418, 0.01164685956057948, 4.612504070335396, 2.0524259198957995, 4.47704330836861, 1.000325626831651),
+        scale = doubleArrayOf(116.28992833958644, 0.9998726994806666, 0.00732368927460415, 0.00424127561605725,
         0.35364510760048185, 0.0064773054232207285, 0.0021581919998758356, 0.0005891170120044025, 0.003480857413416736, 1.8371336900054402,
         0.003242177357538386, 1.646196326894377, 0.020434326201978797, 0.018124928632846815, 0.009916203746730141, 7.837868560608332,
         0.45764392414024013, 0.016092844095322974, 3.261414247114277, 0.05317077925679518, 0.4423717198004967, 0.32641166221057605,
-        0.007009676578713278, 0.05932645834691269, 1.1022134923752318, 1.5035569925110013, 0.4994727122769977, 0.9999999469836016)
-    private val COEF = doubleArrayOf(-0.08027770792375717, -0.01196682539925786, -0.08851984826305802, -0.08188143935955194,
+        0.007009676578713278, 0.05932645834691269, 1.1022134923752318, 1.5035569925110013, 0.4994727122769977, 0.9999999469836016),
+        coef = doubleArrayOf(-0.08027770792375717, -0.01196682539925786, -0.08851984826305802, -0.08188143935955194,
         -0.025462150197724468, -0.03199251294244068, 0.1439023590127, -0.12064720018817085, -0.00419025247632626, 0.05026111844870985,
         0.03217099040382738, -0.07435235950570358, 0.026410733970102487, 0.06951177857882593, 0.0022053690269226533, -0.027500305083412214,
         -0.004366711200744361, 0.09269804581025348, 0.18620647842260254, -0.0568002548206924, 0.03090922206669158, -0.10800968957790316,
-        0.02796771690870808, 0.18244517917606703, -0.050360102925355435, 0.11198230799006502, 0.06119536633474934, -0.025803038146987235)
-    private const val INTERCEPT = -0.13101807454805045
+        0.02796771690870808, 0.18244517917606703, -0.050360102925355435, 0.11198230799006502, 0.06119536633474934, -0.025803038146987235),
+        intercept = -0.13101807454805045,
+        threshold = THRESHOLD)
 
     // The research's constants (study.py / R150 levels.py / R101 r101feat.py).
     private const val EMA_N = 20
@@ -134,6 +137,17 @@ object R72Picker {
         return out
     }
 
+    /**
+     * R150 B's 5-minute levels known after the last bar of [all] (the earlier sessions' bars, then today's closed ones): pivots
+     * (6 bars each side) confirmed by then, of today's and the 19 earlier sessions, grouped within 0.15%. (level, touches).
+     */
+    fun levels(all: List<PassedArms.Bar5>): List<Pair<Double, Int>> {
+        val dates = all.map { it.date }.distinct()
+        val winStart = dates.getOrNull(maxOf(0, dates.size - SR_WINDOW)) ?: return emptyList()
+        val first = all.indexOfFirst { it.date >= winStart }.coerceAtLeast(0)
+        return group(pivotPrices(all, first))
+    }
+
     /** Floor pivots of a session's high, low and close: P, R1, S1, R2, S2. */
     fun floorPivots(h: Double, l: Double, c: Double): List<Double> {
         val p = (h + l + c) / 3
@@ -198,11 +212,7 @@ object R72Picker {
             set("break_size", s * (all[j].close - edge) / price)
         }
         val p5 = if (sessions.size >= 5) sessions[sessions.size - 5].last().close else Double.NaN
-        // R150's levels known now: pivots confirmed by the last closed bar, in today's and the 19 earlier sessions.
-        val dates = all.map { it.date }.distinct()
-        val winStart = dates.getOrNull(maxOf(0, dates.size - SR_WINDOW))
-        val first = all.indexOfFirst { it.date >= (winStart ?: x.date) }.coerceAtLeast(0)
-        val lv = group(pivotPrices(all, first))
+        val lv = levels(all)
         val strong = lv.filter { it.second >= SR_MIN_TOUCHES }
         val ahead = strong.filter { s * (it.first - price) > 0 }.map { abs(it.first / price - 1) }
         val behind = strong.filter { s * (it.first - price) <= 0 }.map { abs(it.first / price - 1) }
@@ -246,21 +256,35 @@ object R72Picker {
         set("f_breadth", if (colours.isEmpty()) Double.NaN
             else colours.count { kotlin.math.sign(it.close - it.open).toInt() == x.side }.toDouble())
         set("f_dow", (x.date.dayOfWeek.value - 1).toDouble())
-        set("f_count", x.fCount.toDouble())
+        set("f_count", if (x.fCount > 0) x.fCount.toDouble() else Double.NaN)       // R51's breaks have none (0)
         set("f_vixreg", vixRegime(x.vixDaily.map { it.close }))
         return f
     }
 
-    /** The model's probability for [f] (features in [FEATS]' order; NaN filled with the training median). */
-    fun score(f: DoubleArray): Double {
-        require(f.size == FEATS.size) { "R72Picker.score: ${f.size} features, want ${FEATS.size}" }
-        var z = INTERCEPT
-        for (i in f.indices) z += COEF[i] * ((if (f[i].isNaN()) MEDIAN[i] else f[i]) - MEAN[i]) / SCALE[i]
-        return 1.0 / (1.0 + exp(-z))
+    /**
+     * One arm's frozen logistic picker: missing features filled with the training [median], standardised by [mean] / [scale], then
+     * [coef] and [intercept]; a break is taken at a score of [threshold] or more.
+     */
+    class Model(val median: DoubleArray, val mean: DoubleArray, val scale: DoubleArray, val coef: DoubleArray, val intercept: Double,
+                val threshold: Double) {
+        init { require(listOf(median, mean, scale, coef).all { it.size == FEATS.size }) { "R72Picker.Model: want ${FEATS.size} numbers each" } }
+
+        /** The probability for [f] (features in [FEATS]' order). */
+        fun score(f: DoubleArray): Double {
+            require(f.size == FEATS.size) { "R72Picker.score: ${f.size} features, want ${FEATS.size}" }
+            var z = intercept
+            for (i in f.indices) z += coef[i] * ((if (f[i].isNaN()) median[i] else f[i]) - mean[i]) / scale[i]
+            return 1.0 / (1.0 + exp(-z))
+        }
+
+        fun takes(score: Double): Boolean = score >= threshold - 1e-12
     }
 
+    /** R72's model's probability for [f]. */
+    fun score(f: DoubleArray): Double = MODEL.score(f)
+
     /** Whether the picker would take a break scoring [score]. */
-    fun takes(score: Double): Boolean = score >= THRESHOLD - 1e-12
+    fun takes(score: Double): Boolean = MODEL.takes(score)
 
     /** One index's part of the shadow log's line for a bar: its score and the decision. */
     fun part(und: String, score: Double): String =
