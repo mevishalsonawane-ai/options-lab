@@ -309,7 +309,8 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertEquals("COMPLETE", f.status); assertEquals(75, f.filled)
         assertEquals("the refused sale and the one that went", 2, kite.placed.count { it.form["transaction_type"] == "SELL" })
         assertEquals("flat", 0, kite.positions.getValue("NFO:$ce:NRML").first)
-        assertFalse("the arms may rest stops on it again", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
+        // Given back once the exit's last steps are done (just after "filled" is shown).
+        BrokerArea.await("the arms may rest stops on it again") { (!com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce)).takeIf { it } }
     }
 
     @Test fun anExitRefusedForAnotherReasonIsNotSentAgain() {
@@ -334,7 +335,7 @@ class OrderFlowLive2Test : RobolectricTest() {
         BrokerArea.await("the exit at Zerodha") { kite.placed.firstOrNull() }
         assertTrue("hands off while it works", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
         assertEquals("COMPLETE", sent(m).single().status)
-        assertFalse("hands back once it filled", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
+        BrokerArea.await("hands back once it filled") { (!com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce)).takeIf { it } }
     }
 
     /** 6 Nov review: a stuck exit leg keeps only its own contract hands-off; a leg never sent is watched again; Cancel gives it back. */
