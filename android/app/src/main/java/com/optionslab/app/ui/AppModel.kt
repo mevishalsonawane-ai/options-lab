@@ -1794,11 +1794,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun cancelStuck() {
         val st = stuck.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            // 6 Nov review: cancelled, the leg no longer covers its contract: its arm watches it again at once.
-            st.plan.legs.getOrNull(st.index)?.let { com.optionslab.app.data.ArmLive.handsBack(it.exchange, it.tradingSymbol) }
             try {
                 com.optionslab.app.data.Broker.cancel(st.orderId)
                 val f = com.optionslab.app.data.Broker.orderState(st.orderId)
+                // 6 Nov review: confirmed no longer working, the leg covers nothing: its contract's arm watches it again at once.
+                if (f == null || f.status !in WORKING) st.plan.legs.getOrNull(st.index)?.let { com.optionslab.app.data.ArmLive.handsBack(it.exchange, it.tradingSymbol) }
                 say("Leg ${st.index + 1} cancelled${f?.filled?.takeIf { it > 0 }?.let { " after $it filled - check Positions" } ?: ""}. The remaining legs were not sent.")
                 stuck.value = null
             } catch (e: Exception) { say("Cancel failed: ${e.message}") }

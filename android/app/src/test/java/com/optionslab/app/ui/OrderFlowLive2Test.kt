@@ -337,6 +337,35 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertFalse("hands back once it filled", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
     }
 
+    /** 6 Nov review: a stuck exit leg keeps only its own contract hands-off; a leg never sent is watched again; Cancel gives it back. */
+    @Test fun aStuckExitKeepsOnlyItsOwnContractHandsOffUntilItIsCancelled() {
+        kite.position(ce, 75, 90.0); kite.position(pe, 75, 90.0)
+        val m = model()
+        review(m, "Exit both", leg(ce, Kite.Side.SELL, price = 99.95), leg(pe, Kite.Side.SELL, price = 99.95), exit = true)
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)                   // leg 1 rests at the exchange
+        m.sendPlan()
+        assertTrue(refused(m).startsWith("Leg 1 open"))
+        BrokerArea.await("the unsent leg's contract given back") { (!com.optionslab.app.data.ArmLive.handsOffNow("NFO", pe)).takeIf { it } }
+        assertTrue("the stuck leg's own contract stays hands-off", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
+        m.cancelStuck()
+        BrokerArea.await("the cancel said") { BrokerArea.alerted("Leg 1 cancelled. The remaining legs were not sent.").takeIf { it } }
+        assertFalse("cancelled: given back", com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce))
+    }
+
+    /** 6 Nov review: a later freeze slice Zerodha refuses for margin is sent again too (it is taken as the contract's first). */
+    @Test fun aLaterSliceRefusedForMarginIsSentAgain() {
+        kite.position(pe, -2700, 110.0)
+        val m = model()
+        m.planSquareOff(position(pe))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.nextPlace()                                                    // slice 1 fills
+        kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "Insufficient funds. Margin required: 57675.75. Margin available: 52312.70.")
+        m.sendPlan()
+        assertEquals(listOf("COMPLETE", "COMPLETE"), sent(m).map { it.status })
+        assertEquals("slice 1, the refused slice 2 and slice 2 again", listOf("1800", "900", "900"), kite.placed.map { it.form["quantity"] })
+        assertEquals("flat, never long", 0, kite.positions.getValue("NFO:$pe:NRML").first)
+    }
+
     @Test fun anOrderOnTheOtherSideDoesNotBlockTheExit() {
         kite.position(ce, 75, 90.0)
         resting(leg(ce, Kite.Side.BUY, price = 50.0))                      // a buy far below: adds, never closes
