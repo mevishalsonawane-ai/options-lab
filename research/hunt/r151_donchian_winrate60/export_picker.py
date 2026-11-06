@@ -21,13 +21,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 CMD = (sys.argv[1:] or [""])[0]
+ARG = (sys.argv[2:] or ["R72"])[0]
 sys.argv = [sys.argv[0], "design"]
 import numpy as np  # noqa: E402
 
 import study as T  # noqa: E402
 
 S, K, B = T.S, T.K, T.B
-PID, ARM, PARAMS, THR = "R72-20-4-M2", "R72", (20, 4), 0.4656
+PID, ARM, PARAMS, THR = {"R72": ("R72-20-4-M2", "R72", (20, 4), 0.4656), "R51": ("R51-20-3.0-M2", "R51", (20, 3.0), 0.4469)}[ARG]
 FIX = HERE.parents[2] / "android" / "engine" / "src" / "test" / "resources" / "r72picker"
 DAYS = (date(2026, 4, 7), date(2026, 6, 24), date(2026, 9, 1))     # final-period days with R72 candidates (checked below)
 SYMS = ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")
@@ -68,6 +69,7 @@ def _minutes(arr):
 
 
 def export() -> None:
+    assert ARG == "R72", "only the R72 picker is exported to the app"
     S.mods()["C"].open_final()
     mdl, _ = pickle.loads((T.CACHE / "models.pkl").read_bytes())[PID]
     nums = model_numbers(mdl)

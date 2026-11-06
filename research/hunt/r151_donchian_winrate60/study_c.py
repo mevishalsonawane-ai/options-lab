@@ -1,6 +1,8 @@
-"""R151 Amendment C: the R72 logistic picker (R72-20-4-M2, score >= 0.4656) over Nov 2024 - Oct 2026.
+"""R151 Amendment C (R72) and E (R51): an arm's logistic picker at its fixed threshold over Nov 2024 - Oct 2026.
 
-    IRAALGO_LAKE=~/.cache/iraalgo/lake R51_CLEAN=1 python research/hunt/r151_donchian_winrate60/study_c.py run
+    IRAALGO_LAKE=~/.cache/iraalgo/lake R51_CLEAN=1 python research/hunt/r151_donchian_winrate60/study_c.py run        # C: R72
+    IRAALGO_LAKE=~/.cache/iraalgo/lake R51_CLEAN=1 python research/hunt/r151_donchian_winrate60/study_c.py run R51    # E: R51
+The model must be in the cache first (export_picker.py fit [R51]).
 """
 from __future__ import annotations
 
@@ -12,13 +14,16 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+ARG = (sys.argv[2:] or ["R72"])[0]
 sys.argv = [sys.argv[0], "design"]
 import numpy as np  # noqa: E402
 
 import study as T  # noqa: E402
 
 S, K = T.S, T.K
-PID, ARM, THR = "R72-20-4-M2", "R72", 0.4656
+# Amendment C: R72; Amendment E: R51 (each threshold fixed in PREREG.md before its run).
+SETS = {"R72": ("R72-20-4-M2", "R72", 0.4656, "c_r72_picker.json"), "R51": ("R51-20-3.0-M2", "R51", 0.4469, "e_r51_picker.json")}
+PID, ARM, THR, OUT = SETS[ARG]
 SEED = 1513
 WF0 = T.FOLDS[0][0]
 
@@ -42,6 +47,7 @@ def run() -> dict:
     keys = [T.cand_key(k[0], k[1], c["er"], c["side"]) for k, cs, _, _ in us for c in cs]
     frozen = dict(zip(keys, mdl.predict_proba(T.matrix(keys, fx))[:, 1]))
     oof = T.oof_scores(ARM, [u for u in us if u[0][1] <= K.DESIGN_END], des, fx, "M2")
+    # Fold scores of Nov 2024 - Mar 2025 do not exist (no earlier trade): those months use the frozen model, in-sample.
     sc = {k: (oof.get(k, -1.0) if WF0 <= k[1] <= K.DESIGN_END else float(frozen[k])) for k in keys}
     kept = T.kept_walk(ARM, us, sc, THR)
     out = {"_meta": dict(pid=PID, thr=THR, written=datetime.now(timezone.utc).isoformat(),
@@ -77,7 +83,7 @@ def run() -> dict:
         mm["thr"] = c["thr"]
         curve.append(mm)
     out["final_curve"] = curve
-    (T.RESULTS / "c_r72_picker.json").write_text(json.dumps(out, indent=1, default=str))
+    (T.RESULTS / OUT).write_text(json.dumps(out, indent=1, default=str))
     return out
 
 
