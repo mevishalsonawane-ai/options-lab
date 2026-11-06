@@ -4,18 +4,19 @@ package com.optionslab.engine.orb
  * "R51 picker (shadow)" (6 Nov 2026, Boss: "Do whatever you recommend", after "What about r51?"): research R151's logistic trade
  * picker for R51 Donchian 20 (research/HUNT_R151_DONCHIAN_WINRATE60.md, Amendment E; model R51-20-3.0-M2, threshold [THRESHOLD]
  * fixed before its read). The same 28 features as R72's ([R72Picker.features], R51's breaks with no breadth count) and its own
- * frozen numbers. It FAILED its gate by 0.1 point (Apr - Oct 2026: 693 trades won 49.9%, the bar was 50%), so it is a SHADOW LOG
- * ONLY (CLAUDE.md: a failed idea stays a note): each R51 break is scored and logged; nothing is skipped or changed, paper or live.
+ * frozen numbers. It FAILED its gate by 0.1 point (Apr - Oct 2026: 693 trades won 49.9%, the bar was 50%). 6 Nov (Boss: "i want
+ * live"): Boss's exception (CLAUDE.md) - it ACTS on paper and live: a break it scores under [THRESHOLD] is skipped (kept as a
+ * would-be trade). It only ever skips; one it cannot score is taken. W20 ([W20Rule]) stays a label only.
  *
  * Pure: no clock, no network, no storage, no orders.
  */
 object R51Picker {
-    const val LABEL = "R51 picker (shadow)"
+    const val LABEL = "R51 picker"
     /** R51's shadow log: W20 and this picker, one line per bar, under one switch. */
     const val LINE = "R51 shadow (W20 + picker)"
     const val RESEARCH_ID = "R151 Amendment E (R51-20-3.0-M2)"
     const val THRESHOLD = 0.4469
-    const val STATUS = "failed gates; a shadow log only"
+    const val STATUS = "failed gates, Boss's exception"
     const val RECORD = "Research R151 Amendment E, Apr - Oct 2026 (2nd look): 693 trades, 49.9% won (gate 50%: failed by 0.1 point), " +
         "+₹1,59,040 vs R51's +₹1,34,743 (1,670 trades); per trade ₹229 vs ₹81; worst month −₹15.6k vs −₹54.6k; drawdown ₹33.6k vs ₹81.7k; " +
         "better than random skips (p 0.0005)"

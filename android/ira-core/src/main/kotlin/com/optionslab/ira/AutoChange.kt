@@ -343,8 +343,9 @@ object AutoChange {
             // 16 Oct: an entry filter only skips paper entries: on lowers risk, off takes the skips away.
             // 28 Oct: the paper book price ([BOOK_PRICE_TARGET]) is the one that adds entries (an untraded option bought at the ask):
             // on raises paper risk, off takes those entries away.
-            // 6 Nov: R151's R72 picker ([PICK_TARGET]) is a log only - it never skips or changes a trade, on or off.
-            Kind.PAPER_FILTER -> if (c.target == PICK_TARGET || c.target == W20_TARGET) Risk.NEUTRAL_SHADOW
+            // 6 Nov: R150's W20 label on R51 ([W20_TARGET]) is a log only - it never skips or changes a trade, on or off. (R151's pickers,
+            // [PICK_TARGET], act: an entry filter like the others.)
+            Kind.PAPER_FILTER -> if (c.target == W20_TARGET) Risk.NEUTRAL_SHADOW
                 else if (c.target == BOOK_PRICE_TARGET) { if (c.to == ON) Risk.RAISE else Risk.LOWER } else if (c.to == ON) Risk.LOWER else Risk.RAISE
             // 18 Oct: an arm's own live switch on lets its live entries go (adds live risk); off keeps it on paper.
             Kind.ARM_LIVE -> if (c.to == ON) Risk.RAISE else Risk.LOWER
@@ -895,22 +896,24 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (on) Risk.LOWER else Risk.RAISE, Scope.PAPER,
         what = "R52 Open outside value's 09:25 no-progress exit (paper)")
 
-    /** 6 Nov 2026: the target of R151's R72 picker, a shadow log on R72 Breadth Donchian's breaks ([passedPicker]). */
+    /** 6 Nov 2026: the target of R151's R72 and R51 pickers, acting on paper and live (Boss's exception, [passedPicker]). */
     const val PICK_TARGET = "filter:r72_picker_shadow"
 
     /**
-     * 6 Nov 2026 (Boss: "R72 picker (shadow log)"): R151's logistic picker switched [on] to score and LOG each of R72 Breadth Donchian's
-     * breaks ("would take / would skip"), or off again. It failed its gate (Apr - Oct 2026: 48.9% won, the bar was 50%), so it is a
-     * log only (CLAUDE.md: a failed idea stays a note): it never skips or changes a trade, paper or live - shadow either way, no PIN.
+     * 6 Nov 2026 (Boss: "I am the owner, i want you to skip the rule, and i want live"; CLAUDE.md's fourth exception): R151's R72 and R51
+     * logistic pickers switched [on] - a new R72 / R51 break scored under its arm's threshold is skipped on paper and live (kept as a
+     * would-be trade) - or off again. Both failed their gates. On only skips (risk down); off adds those live trades back (risk up,
+     * live scope: its Undo takes the PIN).
      */
     fun passedPicker(on: Boolean): Change = Change(Kind.PAPER_FILTER, PICK_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
-        if (on) "your ask (6 Nov, \"R72 picker (shadow log)\"): each R72 Breadth Donchian break is scored by R151's logistic picker and " +
-            "logged as \"would take\" (score at least 0.4656) or \"would skip\"; nothing is skipped or changed, paper or live. Failed gates, " +
-            "so a shadow log only: on Apr - Oct 2026 (a second look) its picks won 48.9% (the bar was 50%) but made ₹2.19 lakh vs R72's ₹1.71 lakh " +
-            "with half the drawdown; judged after about 100 scored trades"
-        else "R72 Breadth Donchian's breaks are no longer scored by R151's picker (none was ever skipped)",
-        Evidence(0, 0.0, AgentLessons.Confidence.WEAK), Risk.NEUTRAL_SHADOW, Scope.SHADOW,
-        what = "R72 picker shadow log (R151; failed gates; a shadow log only)")
+        if (on) "your ask (6 Nov, \"I am the owner, i want you to skip the rule, and i want live\"): each R72 Breadth Donchian break " +
+            "R151's R72 picker scores under 0.4656, and each R51 Donchian 20 break R151's R51 picker scores under 0.4469, is skipped on " +
+            "paper and live (kept as a would-be trade); a break it cannot score yet is taken. Failed gates, Boss's exception: on Apr - Oct " +
+            "2026 (a second look) R72's picks won 48.9% on 652 trades and R51's 49.9% on 693 (the bar was 50%), but made ₹2.19 lakh vs " +
+            "R72's ₹1.71 lakh and ₹1.59 lakh vs R51's ₹1.35 lakh, with about half the drawdown or less"
+        else "R72's and R51's breaks are taken without R151's pickers (the skipped ones come back, live too)",
+        Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
+        what = "R72 and R51 pickers, paper and live (R151; failed gates, Boss's exception)")
 
     /** 6 Nov 2026: the target of R150 B's W20, a shadow log on R51 Donchian 20's breaks ([passedW20]). */
     const val W20_TARGET = "filter:r51_w20_shadow"

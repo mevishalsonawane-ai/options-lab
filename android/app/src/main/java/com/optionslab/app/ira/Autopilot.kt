@@ -525,8 +525,8 @@ internal object Autopilot {
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
             } else if (c.target == AutoChange.PICK_TARGET) {
-                // 6 Nov (Boss: "R72 picker (shadow log)"): R151's picker ([logPassedPickerOn]): the Undo switches the log off or on. A
-                // log only (never skips or changes a trade): no PIN; not logged again.
+                // 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers ([logPassedPickerOn]): the Undo switches them off or on.
+                // Off adds live trades back: the PIN, by the change's live scope ([needsPin]); not logged again.
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setPicker(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
@@ -1383,10 +1383,10 @@ internal object Autopilot {
         logBossOwnOnce(AutoChange.passedW20(true), "the 6 Nov update (your ask: \"Do whatever you recommend\", on R51); a log only - failed gates, never changes a trade")
     }
 
-    /** 6 Nov (Boss: "R72 picker (shadow log)"): R151's R72 picker, a shadow log, on by the update - logged once as Boss's. */
+    /** 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers, acting on paper and live, on by the update - logged once as Boss's. */
     fun logPassedPickerOn() {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.passedPicker(true), "the 6 Nov update (your ask: \"R72 picker (shadow log)\"); a log only - failed gates, never changes a trade")
+        logBossOwnOnce(AutoChange.passedPicker(true), "the 6 Nov update (your ask: \"i want live\"); failed gates, Boss's exception - paper and live")
     }
 
     /** 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit on R52's paper trades, on by the update - logged once as Boss's. */

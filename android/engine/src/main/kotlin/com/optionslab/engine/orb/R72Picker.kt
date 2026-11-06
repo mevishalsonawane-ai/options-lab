@@ -9,9 +9,9 @@ import kotlin.math.sqrt
 /**
  * "R72 picker (shadow)" (6 Nov 2026, Boss: "R72 picker (shadow log)"): research R151's logistic trade picker for R72 Breadth
  * Donchian (research/HUNT_R151_DONCHIAN_WINRATE60.md section 2b; model R72-20-4-M2, threshold [THRESHOLD] fixed in Amendment C).
- * It FAILED its gate (Apr - Oct 2026: 652 trades won 48.9%, the bar was 50%), so it runs as a SHADOW LOG ONLY (CLAUDE.md: a
- * failed idea stays a note; this log only notes): each R72 break is scored and logged "the picker would / would not take it". It
- * never skips, sizes or changes a trade, paper or live.
+ * It FAILED its gate (Apr - Oct 2026: 652 trades won 48.9%, the bar was 50%). 6 Nov (Boss: "I am the owner, i want you to skip
+ * the rule, and i want live"): Boss's exception (CLAUDE.md) - it ACTS on paper and live: a break it scores under [THRESHOLD] is
+ * skipped (kept as a would-be trade). It only ever skips (never adds or sizes); one it cannot score is taken.
  *
  *   the model  L2 logistic (C 0.1) on 28 features, missing ones filled with the training median, then standardised
  *              ([MODEL]: research/hunt/r151_donchian_winrate60/results/r72_picker_model.json,
@@ -22,15 +22,15 @@ import kotlin.math.sqrt
  * Pure: no clock, no network, no storage, no orders.
  */
 object R72Picker {
-    const val LABEL = "R72 picker (shadow)"
+    const val LABEL = "R72 picker"
     const val RESEARCH_ID = "R151 Amendment C (R72-20-4-M2)"
     /** Take when the score is at or above this (Amendment C, the point quoted to Boss from the design curve). */
     const val THRESHOLD = 0.4656
-    const val STATUS = "failed gates; a shadow log only"
+    const val STATUS = "failed gates, Boss's exception"
     const val RECORD = "Research R151 Amendment C, Apr - Oct 2026 (2nd look): 652 trades, 48.9% won (gate 50%: failed), +₹2,19,057 " +
         "vs R72's +₹1,71,366 (1,202 trades); per trade ₹336 vs ₹143; worst month −₹8.3k vs −₹40.9k; drawdown ₹29.2k vs ₹61.9k"
-    const val RULE = "every R72 break is scored by R151's logistic picker and logged as 'would take' (score at least 0.4656) or " +
-        "'would skip'; nothing is skipped or changed (shadow log only)"
+    const val RULE = "every R72 break is scored by R151's logistic picker; one scoring under 0.4656 is skipped, on paper and live " +
+        "(kept as a would-be trade, never sent to Zerodha); one it cannot score yet is taken as before"
 
     /** The five indices R72 reads together (breadth5, f_breadth). */
     val INDICES = listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX")

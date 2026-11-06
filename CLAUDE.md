@@ -66,6 +66,21 @@ notes; match the surrounding code.
       - Same terms: labelled "failed gates, Boss's exception", logged, one tap off; live stays in shadow (logged only, never
         skips a trade that would really go live).
       - The Hero ₹1,000 ticket was switched off by the same choice (a risk-lowering switch, one tap back on).
+    - A fourth exception, chosen by Boss on 6 Nov ("I am the owner, i wNt you to skip the rule, and i want live", after being told this
+      rule): R151's R72 and R51 trade pickers act on PAPER AND LIVE although both failed their gates.
+      - The rule: a new R72 Breadth Donchian break that R151's R72 logistic picker scores under 0.4656, and a new R51 Donchian 20 break
+        that R151's R51 picker scores under 0.4469, is skipped. It is kept as a would-be trade, so it never goes to Zerodha. A break
+        it cannot score yet (history loading, a read failed) is taken as before.
+      - Their record on Apr - Oct 2026 (a second look):
+        - R72: 652 picks won 48.9% and made ₹2.19 lakh, vs R72's ₹1.71 lakh;
+        - R51: 693 picks won 49.9% and made ₹1.59 lakh, vs R51's ₹1.35 lakh;
+        - both had about half the drawdown or less. The bar was 50% wins.
+      - It only ever skips entries (never adds or resizes).
+      - Every other live gate still holds: PIN, Live, AI trades go live, each arm's Trade live switch, the guard and the kill switch.
+      - It is labelled "failed gates, Boss's exception", logged in the change timeline, and one tap off. Off adds live trades back,
+        so the Undo takes the PIN.
+      - It is the one exception to "anything new that could skip live trades starts in shadow", by Boss's explicit choice.
+      - R150's W20 on R51 stays a label only (shadow).
     - No other failed idea may use these exceptions.
   - Paper changes never carry over to live by themselves.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.

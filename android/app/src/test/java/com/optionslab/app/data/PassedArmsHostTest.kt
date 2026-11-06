@@ -15,6 +15,7 @@ import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
 import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.PassedArms
+import com.optionslab.engine.orb.R72Picker
 import com.optionslab.engine.orb.Solo2
 import com.optionslab.ira.AutoChange
 import kotlinx.coroutines.runBlocking
@@ -2132,17 +2133,18 @@ class PassedArmsHostTest : RobolectricTest() {
         PassedArmsHost.wipe(); bookFile.delete()
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         assertTrue(view().pickOn)
-        assertEquals(1, view().log.count { "turned on by the 6 Nov update" in it && "failed gates; a shadow log only" in it })
+        assertEquals(1, view().log.count { "R72 picker and R51 picker: turned on by the 6 Nov update" in it && "failed gates, Boss's exception" in it })
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertTrue(view().pickOn)
-        assertEquals("once only", 1, view().log.count { "turned on by the 6 Nov update" in it })
-        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R72 picker (shadow) on (failed gates; a shadow log only)"))
+        assertEquals("once only", 1, view().log.count { "R72 picker and R51 picker: turned on by the 6 Nov update" in it })
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R72 picker on (failed gates, Boss's exception)"))
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R51 picker on (failed gates, Boss's exception)"))
         val pick = AutoChange.passedPicker(true)
-        assertTrue(Autopilot.apply(AutoChange.inverse(pick, "undone by you"), false)!!.contains("no longer scored"))
+        assertTrue(Autopilot.apply(AutoChange.inverse(pick, "undone by you"), false)!!.contains("taken without them"))
         assertFalse(view().pickOn)
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertFalse("its Undo stays undone after a restart", view().pickOn)
-        assertTrue(Autopilot.apply(pick, false)!!.contains("nothing is skipped"))
+        assertTrue(Autopilot.apply(pick, false)!!.contains("is skipped, on paper and live"))
         assertTrue(view().pickOn)
         // A book that cannot be read is never switched on by itself.
         PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
@@ -2168,25 +2170,43 @@ class PassedArmsHostTest : RobolectricTest() {
         if (history) pickerHistory()
     }
 
-    @Test fun thePickerScoresAndLogsR72sBreakOnceAndTheTradeGoesOnAsBefore() {
+    /**
+     * Boss's exception (CLAUDE.md): with the picker on, R72's 09:20 break is scored before its buy - taken when the score is at or
+     * above 0.4656, else skipped (a would-be trade, never at Zerodha); either way logged once and the score kept on the position.
+     */
+    @Test fun thePickerDecidesR72sBreakAndLogsItOnce() {
         pickerDay(true)
         tick(LocalTime.of(9, 21))
         val v = view()
-        val r72 = v.open.filter { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null }
-        assertEquals("the trade is taken as without the picker", 1, r72.size)
-        val score = r72.single().pick
-        assertNotNull("its score is kept on the trade", score)
-        assertTrue(score!! > 0 && score < 1)
-        val said = v.log.filter { "R72 picker (shadow) 09:20" in it && "breaks: NIFTY " in it }
-        assertEquals(v.log.toString(), 1, said.size)
-        assertTrue(said.single(), said.single().contains(if (score >= 0.4656) "would take" else "would skip"))
-        // Scored once: a later look in the window neither scores it again nor changes the trade.
+        val mine = v.open.filter { it.arm == BreadthDonchianArm.SOURCE }
+        assertEquals(v.log.toString(), 1, mine.size)
+        val p = mine.single()
+        val score = p.pick
+        assertNotNull("its score is kept on the position", score)
+        if (score!! >= R72Picker.THRESHOLD) assertNull("taken: a real paper trade", p.shadow)
+        else {
+            assertEquals("skipped: a would-be trade", PassedArmsHost.SHADOW_PICK, p.shadow)
+            val said = v.status["${BreadthDonchianArm.SOURCE}|NIFTY"].orEmpty()
+            assertTrue(said, said.contains("break skipped: R151's picker scored it") && said.contains("your exception"))
+        }
+        assertEquals(v.log.toString(), 1, v.log.count { "R72 picker 09:20" in it && "breaks: NIFTY " in it })
         tick(LocalTime.of(9, 22))
-        assertEquals(1, view().log.count { "R72 picker (shadow) 09:20" in it })
-        assertEquals(1, view().open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
-        assertEquals(score, view().open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
-        assertTrue(PassedArmsHost.pickKey(view().open.single { it.arm == BreadthDonchianArm.SOURCE })!!.endsWith("|NIFTY|0|${r72.single().side}"))
+        assertEquals("decided and logged once", 1, view().log.count { "R72 picker 09:20" in it })
+        assertEquals(1, view().open.count { it.arm == BreadthDonchianArm.SOURCE })
         assertNothingAtZerodha()
+    }
+
+    /** A break the picker skips is a would-be trade only: nothing bought, so nothing for the live copy either. */
+    @Test fun aSkippedBreakIsAWouldBeTradeNeverBought() {
+        pickerDay(true)
+        PassedArmsHost.testPickThreshold = 1.1                  // every score under it: the break is skipped
+        try {
+            tick(LocalTime.of(9, 21))
+            val p = view().open.single { it.arm == BreadthDonchianArm.SOURCE }
+            assertEquals(PassedArmsHost.SHADOW_PICK, p.shadow)
+            assertNull(p.orderId)
+            assertTrue(view().open.none { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+        } finally { PassedArmsHost.testPickThreshold = null }
     }
 
     @Test fun withThePickerOffNothingIsScoredAndTheTradeIsTheSame() {
@@ -2196,7 +2216,7 @@ class PassedArmsHostTest : RobolectricTest() {
         val r72 = v.open.filter { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null }
         assertEquals(1, r72.size)
         assertNull(r72.single().pick)
-        assertTrue(v.log.none { "R72 picker (shadow) 09:20" in it })
+        assertTrue(v.log.none { "R72 picker 09:20" in it })
     }
 
     @Test fun beforeThePickersHistoryIsInTheBreakIsTakenAndScoredOnceItComes() {
@@ -2207,12 +2227,12 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals("taken as always", 1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
         assertNull(v.open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
         assertEquals("said once", 1, v.log.count { "history is still loading" in it })
-        assertTrue(v.log.none { "R72 picker (shadow) 09:20" in it })
+        assertTrue(v.log.none { "R72 picker 09:20" in it })
         // The history comes in: the break is scored on the next look and its trade gets the score.
         pickerHistory()
         tick(LocalTime.of(9, 22))
         v = view()
-        assertEquals(1, v.log.count { "R72 picker (shadow) 09:20" in it })
+        assertEquals(1, v.log.count { "R72 picker 09:20" in it })
         assertNotNull(v.open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
         assertEquals(1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
     }
@@ -2228,7 +2248,7 @@ class PassedArmsHostTest : RobolectricTest() {
         val v = view()
         assertEquals(1, v.open.count { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
         assertNull(v.open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
-        assertTrue(v.log.none { "R72 picker (shadow) 09:20" in it })
+        assertTrue(v.log.none { "R72 picker 09:20" in it })
     }
 
     /** CLAUDE.md (open positions first): the picker's download hanging never holds up a pass or the open trade's exit check. */
@@ -2259,7 +2279,7 @@ class PassedArmsHostTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertEquals("once only", 1, view().log.count { "R51 shadow (W20 + picker): turned on by the 6 Nov update" in it })
         assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R51 W20 (shadow) on (failed gates; a shadow log only)"))
-        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R51 picker (shadow) on (failed gates; a shadow log only)"))
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R51 picker on (failed gates, Boss's exception)"))
         val w = AutoChange.passedW20(true)
         assertTrue(Autopilot.apply(AutoChange.inverse(w, "undone by you"), false)!!.contains("no longer labelled"))
         assertFalse(view().w20On)

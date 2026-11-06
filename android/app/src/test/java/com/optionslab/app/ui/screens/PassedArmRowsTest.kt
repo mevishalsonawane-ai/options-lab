@@ -290,16 +290,17 @@ class PassedArmRowsTest {
         org.junit.Assert.assertTrue(passedExplanation(OovArm.SOURCE, off).none { "09:25 exit" in it })
     }
 
-    /** 6 Nov (Boss: "R72 picker (shadow log)"): R151's picker is said in R72's dialog when on - a log only (failed gates). */
+    /** 6 Nov (Boss's exception): R151's picker is said in R72's dialog when on - acting on paper and live (failed gates). */
     @Test fun r72sDialogSaysThePickerWhenOnAndWhatItScored() {
         val scored = listOf(0.6, 0.3).mapIndexed { i, sc ->
             PassedArmsHost.Pos(BreadthDonchianArm.SOURCE, "NIFTY", "NIFTY-$i", "CE", 65, 100.0, java.time.LocalDateTime.of(2026, 11, 6, 9, 20), null,
-                exit = 110.0 - 30 * i, exitTime = java.time.LocalDateTime.of(2026, 11, 6, 9, 40), why = "lock", pick = sc)
+                exit = 110.0 - 30 * i, exitTime = java.time.LocalDateTime.of(2026, 11, 6, 9, 40), why = "lock", pick = sc,
+                shadow = if (i == 1) PassedArmsHost.SHADOW_PICK else null)
         }
         val on = PassedArmsHost.View(pickOn = true, all = scored)
         val line = passedExplanation(BreadthDonchianArm.SOURCE, on).single { com.optionslab.engine.orb.R72Picker.LABEL in it }
-        for (w in listOf("failed gates; a shadow log only", "nothing is skipped or changed", "48.9% won", "would take 1 closed +₹650",
-                "would skip 1 closed −₹1,300", "judged at about 100")) org.junit.Assert.assertTrue("$w: $line", w in line)
+        for (w in listOf("failed gates, Boss's exception", "is skipped, on paper and live", "48.9% won", "taken 1 closed +₹650",
+                "skipped 1 (would-be) −₹1,300")) org.junit.Assert.assertTrue("$w: $line", w in line)
         // Only on R72's dialog, and never when off.
         org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, on).none { com.optionslab.engine.orb.R72Picker.LABEL in it })
         org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, PassedArmsHost.View()).none { com.optionslab.engine.orb.R72Picker.LABEL in it })
@@ -309,15 +310,16 @@ class PassedArmRowsTest {
     @Test fun r51sDialogSaysW20WhenOnAndWhatItLabelled() {
         val labelled = listOf(true, false).mapIndexed { i, w ->
             PassedArmsHost.Pos(DonchianArm.SOURCE, "NIFTY", "NIFTY-$i", "CE", 65, 100.0, java.time.LocalDateTime.of(2026, 11, 6, 9, 20), null,
-                exit = 90.0 + 20 * i, exitTime = java.time.LocalDateTime.of(2026, 11, 6, 9, 40), why = "stop", w20 = w, pick = 0.3 + 0.3 * i)
+                exit = 90.0 + 20 * i, exitTime = java.time.LocalDateTime.of(2026, 11, 6, 9, 40), why = "stop", w20 = w, pick = 0.3 + 0.3 * i,
+                shadow = if (i == 0) PassedArmsHost.SHADOW_PICK else null)
         }
-        val on = PassedArmsHost.View(w20On = true, all = labelled)
+        val on = PassedArmsHost.View(w20On = true, pickOn = true, all = labelled)
         val line = passedExplanation(DonchianArm.SOURCE, on).single { com.optionslab.engine.orb.W20Rule.LABEL in it }
         for (w in listOf("failed gates; a shadow log only", "0.25%", "nothing is skipped or changed", "would skip 1 closed −₹650",
                 "would keep 1 closed +₹650", "judged at about 100")) org.junit.Assert.assertTrue("$w: $line", w in line)
-        val pick = passedExplanation(DonchianArm.SOURCE, on).single { "scored by R151's R51 picker" in it }
-        for (w in listOf("0.4469", "49.9% won", "R51 picker (shadow) on (failed gates; a shadow log only): would take 1 closed +₹650",
-                "would skip 1 closed −₹650")) org.junit.Assert.assertTrue("$w: $pick", w in pick)
+        val pick = passedExplanation(DonchianArm.SOURCE, on).single { "an R51 break it scores under" in it }
+        for (w in listOf("0.4469", "49.9% won", "failed gates, Boss's exception", "skipped, on paper and live", "taken 1 closed +₹650",
+                "skipped 1 (would-be) −₹650")) org.junit.Assert.assertTrue("$w: $pick", w in pick)
         org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, on).none { com.optionslab.engine.orb.W20Rule.LABEL in it })
         org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, PassedArmsHost.View()).none { com.optionslab.engine.orb.W20Rule.LABEL in it })
     }
