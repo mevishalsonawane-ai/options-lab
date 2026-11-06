@@ -2140,7 +2140,10 @@ class PassedArmsHostTest : RobolectricTest() {
         assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R72 picker on (failed gates, Boss's exception)"))
         assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("R51 picker on (failed gates, Boss's exception)"))
         val pick = AutoChange.passedPicker(true)
-        assertTrue(Autopilot.apply(AutoChange.inverse(pick, "undone by you"), false)!!.contains("taken without them"))
+        // Off adds live trades back: without the PIN it is refused and the pickers stay on; with it they go off.
+        assertNull(Autopilot.apply(AutoChange.inverse(pick, "undone by you"), false))
+        assertTrue(view().pickOn)
+        assertTrue(Autopilot.apply(AutoChange.inverse(pick, "undone by you"), true)!!.contains("taken without them"))
         assertFalse(view().pickOn)
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertFalse("its Undo stays undone after a restart", view().pickOn)
