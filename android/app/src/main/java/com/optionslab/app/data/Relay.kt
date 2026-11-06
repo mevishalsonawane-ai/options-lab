@@ -104,15 +104,14 @@ object Relay {
 
     /** The switch saved ([enabled]) in the order asked; null when it was saved, else why not. */
     suspend fun saveSwitch(on: Boolean): Throwable? {
-        switchTaps.incrementAndGet()
-        return saves.async { runCatching { enabled = on; savedForTest?.invoke(on) }.exceptionOrNull() }.await()
+        return saves.async { switchTaps.incrementAndGet(); runCatching { enabled = on; savedForTest?.invoke(on) }.exceptionOrNull() }.await()
     }
 
     /**
      * Connect & test: [newHost] saved, the relay on and connected, and the IP Zerodha would see read. On any failure the relay is
      * switched back OFF before the answer comes back (never left on, pointing at a server that does not answer), unless the
      * switch was tapped after this test switched it on: then Boss's tap stands. The host and "on" are saved in turn with the switch's saves, so an
-     * "off" tapped during the test lands after them and closes the connect (it fails at once with "switched off").
+     * "off" tapped during the test lands after them and closes the relay at once; the connect still running keeps nothing.
      */
     suspend fun connectAndTest(newHost: String): Result<StaticIp.Status> {
         return tests.async {
