@@ -9,6 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.IOException
+import kotlinx.coroutines.async
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -127,6 +128,28 @@ class RelayFailFastTest : RobolectricTest() {
         assertTrue("the connect failed: ${outcome.get()}", outcome.get()?.startsWith("Relay:") == true)
         assertNull("a failure from before the close is not held against the next call", Relay.recentFailure())
         assertTrue(!Relay.connected)
+    }
+
+    /** 6 Nov: the switch's saves land in the order asked, on the relay's own queue (never the card's), whoever waits for them. */
+    @Test fun theSwitchSavesLandInTheOrderAsked() {
+        Relay.host = "203.0.113.5"
+        val asked = (1..20).map { it % 2 == 1 }                               // on, off, on, ... ending off
+        kotlinx.coroutines.runBlocking {
+            asked.map { on -> kotlinx.coroutines.GlobalScope.async(kotlinx.coroutines.Dispatchers.Unconfined) { Relay.saveSwitch(on) } }.forEach { assertNull(it.await()) }
+        }
+        assertEquals("the last tap wins", asked.last(), Relay.enabled)
+    }
+
+    /** 6 Nov: Connect & test against a server that does not answer leaves the relay OFF (never on, pointing at a dead server). */
+    @Test fun aFailedConnectAndTestLeavesTheRelayOff() {
+        val accepted = java.util.concurrent.atomic.AtomicInteger()
+        val port = standIn(hold = false, accepted = accepted, kept = mutableListOf())
+        Relay.sshPort = port
+        Relay.newKey()
+        val r = kotlinx.coroutines.runBlocking { Relay.connectAndTest("127.0.0.1") }
+        assertTrue("it failed: $r", r.isFailure)
+        assertEquals("127.0.0.1", Relay.host)
+        assertTrue("switched back off", !Relay.enabled)
     }
 
     @Test fun switchingTheRelayOffNeverWaitsOnAConnectInProgress() {

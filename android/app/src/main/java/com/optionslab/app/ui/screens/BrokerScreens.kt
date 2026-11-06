@@ -94,7 +94,6 @@ import com.optionslab.engine.Kite
 import com.optionslab.engine.Right
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.withLock
 import java.time.format.DateTimeFormatter
 
 private val secureDialog get() = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy)
@@ -837,16 +836,13 @@ internal fun StaticIpCard(
     var testing by remember { mutableStateOf(false) }
     var relayMsg by remember { mutableStateOf<String?>(null) }
     fun check() { checking = true; scope.launch(kotlinx.coroutines.Dispatchers.Main) { status = readStatus(); checking = false } }
-    // 4 Nov: the relay switch's saves, run off the screen's thread one at a time in tap order (a fair lock: on-then-off never
-    // lands as on). Not cancelled when the card leaves the screen (review: a queued "off" must still be saved). A save that
-    // fails shows the switch as it really is, and says why.
-    val relaySaves = remember { kotlinx.coroutines.sync.Mutex() }
-    suspend fun saveRelay(on: Boolean) = kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
-        val failed = relaySaves.withLock { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { relay.enabled = on }.exceptionOrNull() } }
-        if (failed != null) {
-            relayOn = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { relay.enabled }.getOrDefault(!on) }
-            com.optionslab.app.work.Alerts.error("The relay switch could not be saved: ${failed.message ?: "try again"}")
-        }
+    // 4 Nov: the relay switch is saved off the screen's thread, one save at a time in tap order, never lost when the card goes
+    // ([com.optionslab.app.data.Relay.saveSwitch]; 6 Nov: on the app's scope, so nothing writes this card after it is gone).
+    // A save that fails shows the switch as it really is, and says why.
+    suspend fun saveRelay(on: Boolean) {
+        val failed = relay.saveSwitch(on) ?: return
+        relayOn = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { relay.enabled }.getOrDefault(!on) }
+        com.optionslab.app.work.Alerts.error("The relay switch could not be saved: ${failed.message ?: "try again"}")
     }
     LaunchedEffect(Unit) { check() }
     fun open(url: String) = runCatching {
@@ -914,15 +910,11 @@ internal fun StaticIpCard(
         BrassButton(if (testing) "Connecting…" else "Connect & test", Modifier.fillMaxWidth().padding(top = 8.dp), enabled = !testing && pub != null) {
             if (!com.optionslab.app.data.StaticIp.valid(hostText)) { com.optionslab.app.work.Alerts.error("Enter the server's IP, like 144.24.125.164."); return@BrassButton }
             testing = true; relayMsg = null
-            // 4 Nov (review): not cancelled when the card leaves the screen, so a failed test always switches the relay back off.
-            scope.launch(kotlinx.coroutines.NonCancellable) {
-                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    runCatching {
-                        relay.host = hostText.trim(); relay.enabled = true
-                        relay.proxy()                                        // throws with the reason if the server refuses or is unreachable
-                        com.optionslab.app.data.StaticIp.status(force = true)
-                    }
-                }
+            // 4 Nov (review): a failed test always switches the relay back off, the card shown or not: done by the relay itself on
+            // the app's scope ([com.optionslab.app.data.Relay.connectAndTest]); this card only shows the answer while it is here.
+            val host0 = hostText
+            scope.launch {
+                val r = relay.connectAndTest(host0)
                 testing = false
                 r.onSuccess { st ->
                     relayOn = true
@@ -933,7 +925,6 @@ internal fun StaticIpCard(
                     // 4 Nov: the switch is saved off the screen's thread (a vault write; it froze the screen 1.3 s).
                     relayOn = false
                     relayMsg = e.message ?: "Could not connect"
-                    saveRelay(false)
                 }
             }
         }
@@ -948,7 +939,7 @@ internal fun StaticIpCard(
                     // relay's lock): the switch is saved, and the relay closed, off the screen's thread; the IP is read after.
                     if (on && relay.host == null) com.optionslab.app.work.Alerts.error("Connect & test first.") else {
                         relayOn = on
-                        scope.launch(kotlinx.coroutines.NonCancellable) { saveRelay(on); check() }
+                        scope.launch { saveRelay(on); check() }
                     }
                 }
                 .semantics { contentDescription = "Send orders through your server" },

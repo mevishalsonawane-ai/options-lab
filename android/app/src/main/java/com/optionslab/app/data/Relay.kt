@@ -18,6 +18,7 @@ import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.ServerSocket
 import java.net.Socket
+import kotlinx.coroutines.async
 
 /**
  * The static-IP relay built into the app: an SSH connection to the owner's own cloud
@@ -81,6 +82,30 @@ object Relay {
     var user: String
         get() = SecurePrefs.getString(K_USER) ?: "ubuntu"
         set(v) { SecurePrefs.put(K_USER, v.trim().ifEmpty { "ubuntu" }); close() }
+
+    /**
+     * 6 Nov (CI: a screen test tripped Compose's "multithreaded access" check after the 4 Nov relay switch kept running, and writing
+     * the card's state, once its screen had gone): the switch's saves and Connect & test run HERE, one at a time in the order asked
+     * (one worker thread), on the app's own scope - never cancelled when the card leaves the screen, so a queued "off" or a failed
+     * test's "off" is always saved. The card only awaits the answer, and updates itself only while it is still shown.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val saves = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
+
+    /** The switch saved ([enabled]) in the order asked; null when it was saved, else why not. */
+    suspend fun saveSwitch(on: Boolean): Throwable? = saves.async { runCatching { enabled = on }.exceptionOrNull() }.await()
+
+    /**
+     * Connect & test: [newHost] saved, the relay on and connected, and the IP Zerodha would see read. On any failure the relay is
+     * switched back OFF before the answer comes back (never left on, pointing at a server that does not answer).
+     */
+    suspend fun connectAndTest(newHost: String): Result<StaticIp.Status> = saves.async {
+        runCatching {
+            host = newHost.trim(); enabled = true
+            proxy()                                                          // throws with the reason if the server refuses or is unreachable
+            StaticIp.status(force = true)
+        }.onFailure { runCatching { enabled = false } }
+    }.await()
 
     /** The public key to paste into the server ("Add SSH keys" when creating it). */
     val publicKey: String? get() = SecurePrefs.getString(K_PUB)
