@@ -1153,7 +1153,7 @@ object PassedArmsHost {
             if (expiryToday(u, today) != false) continue
             list.forEachIndexed { earlier, s ->
                 val dk = "$today|$src|$u|${s.bar.b}|${s.side}"
-                if (dk in pickScores) return@forEachIndexed
+                if (pickScores.containsKey(dk)) return@forEachIndexed
                 val score = runCatching { R72Picker.score(R72Picker.features(pickInput(today, s, earlier, count[s.bar.b to s.side] ?: 0, reads))) }.getOrNull()
                     ?.takeIf { it.isFinite() } ?: return@forEachIndexed
                 pickScores[dk] = score
