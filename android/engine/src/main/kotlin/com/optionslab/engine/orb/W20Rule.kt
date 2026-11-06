@@ -16,8 +16,9 @@ object W20Rule {
     const val STATUS = "failed gates; a shadow log only"
     const val RULE = "each R51 break is labelled 'W20 would skip' when a 5-minute support / resistance level (3+ touches, last 20 " +
         "sessions) is within 0.25% ahead of it, else 'would keep'; nothing is skipped or changed (shadow log only)"
-    const val RECORD = "Research R150 B: unseen Dec 2022 - Nov 2024 -₹2.32 lakh vs R51's -₹4.00 lakh (beat random skips, p < 0.001); " +
-        "Apr - Oct 2026 drawdown ₹46.5k vs ₹81.7k; win rate about the same (45%); failed only 'the arm still makes money' in the unseen years"
+    const val RECORD = "Research R150 B: unseen Dec 2022 - Nov 2024 -₹2.32 lakh on 2,717 trades vs R51's -₹4.00 lakh on 4,815 (beat " +
+        "random skips, p < 0.001); Apr - Oct 2026 +₹1.14 lakh on 980 trades, drawdown ₹46.5k, vs R51's +₹1.35 lakh on 1,670, drawdown " +
+        "₹81.7k; win rate about the same (45%); failed only 'the arm still makes money' in the unseen years"
     /** How near ahead a level must be (0.25%), and its least touches. */
     const val DIST = 0.0025
     const val MIN_TOUCHES = 3

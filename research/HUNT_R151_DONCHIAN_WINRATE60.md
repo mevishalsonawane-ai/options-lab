@@ -4,8 +4,10 @@ Boss (5 Nov): "Use all the resources you can, and try to both donchain winrate t
 parameters in the indicator too", then "Try adding W20 skip on top of picker".
 
 Pre-registration: `hunt/r151_donchian_winrate60/PREREG.md` (with Amendments A-E, each committed before its results).
-Code: `study.py`, `pick.py`, `make_entries.py`; tests: `tests/test_r151.py` (6). Results: `results/*.json`.
-Entries: `research/experiments/entries/r151-*.yaml` (20). Research only; nothing under `android/` changed.
+Code: `study.py`, `pick.py`, `make_entries.py`; tests: `tests/test_r151.py` (8). Results: `results/*.json`.
+Entries: `research/experiments/entries/r151-*.yaml` (20). The research changed nothing in the app. On 6 Nov (Boss's choices) the
+two pickers, and R150's W20 on R51, went into the app as SHADOW LOGS only: each break is labelled and nothing is skipped or
+changed (`android/engine/.../R72Picker.kt`, `R51Picker.kt`, `W20Rule.kt`).
 
 **Signal source:** the index (5-min Donchian on the index, plus Supertrend for R51 and 5-index breadth for R72). The
 option is bought by the arm's strike rule (1-ITM). Exits are exactly the app's (-15% stop, the 30-60-100 lock with L25,
@@ -176,6 +178,8 @@ picker's score is >= 0.4469, the point quoted to Boss. **The gate:** Amendment C
   - R72's result (Amendment C) was known when this was registered.
 - **In the app (6 Nov, Boss's "Do whatever you recommend"):** it is a shadow log on R51 beside R150's W20, as R72's picker is on
   R72. Each R51 break is labelled and scored, and nothing is skipped or changed.
+- **Two pickers, one holdout:** C and E are two tests on Apr - Oct 2026. BH over the two twin p values (0.0065, 0.0005) gives q
+  0.0065 and 0.001, so both still beat random skips; both fail on the win rate, the pre-set bar.
 - **R51 at Donchian 30 / Supertrend 4 is not tested:** every period with data has been read for it, and the data has only 4 new
   sessions. It stays a lead.
 

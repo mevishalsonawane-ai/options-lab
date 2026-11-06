@@ -315,7 +315,7 @@ class PassedArmRowsTest {
         val line = passedExplanation(DonchianArm.SOURCE, on).single { com.optionslab.engine.orb.W20Rule.LABEL in it }
         for (w in listOf("failed gates; a shadow log only", "0.25%", "nothing is skipped or changed", "would skip 1 closed −₹650",
                 "would keep 1 closed +₹650", "judged at about 100")) org.junit.Assert.assertTrue("$w: $line", w in line)
-        val pick = passedExplanation(DonchianArm.SOURCE, on).single { "R51 picker (shadow) on:" in it }
+        val pick = passedExplanation(DonchianArm.SOURCE, on).single { "scored by R151's R51 picker" in it }
         for (w in listOf("0.4469", "49.9% won", "R51 picker (shadow) on (failed gates; a shadow log only): would take 1 closed +₹650",
                 "would skip 1 closed −₹650")) org.junit.Assert.assertTrue("$w: $pick", w in pick)
         org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, on).none { com.optionslab.engine.orb.W20Rule.LABEL in it })

@@ -108,6 +108,13 @@ internal fun passedNumbersLine(source: String, v: PassedArmsHost.View): String {
     return "${c.size} closed$apartWb, ${rs(c.sumOf { it.net ?: 0.0 })} · ${PassedArmsHost.apart(source)} ${rs(ap.sumOf { it.net ?: 0.0 })} · forward test $n"
 }
 
+/** 6 Nov (R151 Amendment E, a shadow log): R51's picker in R51's dialog - its rule, record and what it has scored ([closed]: R51's). */
+private fun r51PickerLine(closed: List<PassedArmsHost.Pos>): String {
+    val p = com.optionslab.engine.orb.R51Picker
+    val words = PassedArmsHost.pickerWords(true, closed, { rs(it) }, p.LABEL, p::takes, p.STATUS)
+    return "Each R51 break is also scored by R151's R51 picker (would take at ${p.THRESHOLD} or more). ${p.RECORD}. $words."
+}
+
 /** What the name's dialog says: the label, settings, research id and result, new trades' exits, the forward-test bar, the signal source. */
 internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<String> = listOfNotNull(
     PassedArms.PASSED,
@@ -129,9 +136,7 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
         "${com.optionslab.engine.orb.W20Rule.RULE}. ${com.optionslab.engine.orb.W20Rule.RECORD}. " +
         "${PassedArmsHost.w20Words(true, v.closedOf(source)) { rs(it) }}." else null,
     // 6 Nov (R151 Amendment E): R51's picker, under the same switch (a log only).
-    if (source == DonchianArm.SOURCE && v.w20On) "${com.optionslab.engine.orb.R51Picker.LABEL} on: each R51 break is also scored " +
-        "(would take at ${com.optionslab.engine.orb.R51Picker.THRESHOLD} or more). ${com.optionslab.engine.orb.R51Picker.RECORD}. " +
-        "${PassedArmsHost.pickerWords(true, v.closedOf(source), { rs(it) }, com.optionslab.engine.orb.R51Picker.LABEL, com.optionslab.engine.orb.R51Picker::takes)}." else null,
+    if (source == DonchianArm.SOURCE && v.w20On) r51PickerLine(v.closedOf(source)) else null,
     if (source == OovArm.SOURCE && v.np5On) "09:25 exit on: ${OovArm.NO_PROGRESS_RULE}; ${OovArm.NO_PROGRESS_RECORD}. " +
         "Paper only: a trade that may be copied live keeps the plain exits and the early exit is only logged." else null,
     if (source == BreadthDonchianArm.SOURCE) v.comparison() + "." else null,

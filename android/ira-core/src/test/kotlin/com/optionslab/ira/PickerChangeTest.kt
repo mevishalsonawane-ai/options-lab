@@ -52,7 +52,7 @@ class PickerChangeTest {
 
     @Test fun itsTargetIsItsOwnAndItsUndoIsItsOwnTap() {
         val others = listOf(AutoChange.ST_TARGET, AutoChange.LOCK_TARGET, AutoChange.L25_TARGET, AutoChange.SAME_DIR_TARGET, AutoChange.NO_TWIN_TARGET,
-            AutoChange.BOOK_PRICE_TARGET, AutoChange.WIDE_TARGET, AutoChange.NO_PROGRESS_TARGET) + AutoChange.BOSS_PAPER_RULES
+            AutoChange.BOOK_PRICE_TARGET, AutoChange.WIDE_TARGET, AutoChange.NO_PROGRESS_TARGET, AutoChange.W20_TARGET) + AutoChange.BOSS_PAPER_RULES
         assertFalse(AutoChange.PICK_TARGET in others)
         assertFalse("liquidity" in AutoChange.PICK_TARGET)
         val (b, e) = AutoChange.record(AutoChange.Book(), AutoChange.passedPicker(true), AutoChange.Status.KEPT, 1_000L, day, by = "your ask")
