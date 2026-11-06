@@ -10,6 +10,7 @@ import kotlin.test.assertTrue
 class R51PickerTest {
     @Test fun theThresholdAndThePart() {
         assertTrue(R51Picker.takes(R51Picker.THRESHOLD)); assertFalse(R51Picker.takes(0.4468))
+        assertFalse(R51Picker.MODEL.takes(0.9, at = 1.1)); assertTrue(R51Picker.MODEL.takes(0.3, at = 0.2))
         assertEquals("NIFTY call: W20 would keep, picker 0.512 would take", R51Picker.part("NIFTY", 1, false, 0.5123))
         assertEquals("SENSEX put: W20 would skip, picker 0.300 would skip", R51Picker.part("SENSEX", -1, true, 0.3))
         assertEquals("FINNIFTY put: W20 would keep, picker could not score it", R51Picker.part("FINNIFTY", -1, false, null))

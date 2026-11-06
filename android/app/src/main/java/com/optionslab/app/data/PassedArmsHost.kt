@@ -177,6 +177,7 @@ object PassedArmsHost {
 
     /** TEST SEAM: a picker threshold in place of R72's and R51's own (6 Nov); null in the app. Its setter throws in a release build. */
     @Volatile internal var testPickThreshold: Double? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /** TEST SEAM: the book's bytes read this way instead of from the vault (a throw: a read that failed). Null in the app. */
     @Volatile internal var testRead: (() -> ByteArray?)? = null
@@ -1270,7 +1271,7 @@ object PassedArmsHost {
     private fun pickWords(sc: Double?, model: R72Picker.Model): String? {
         if (sc == null) return null
         val thr = testPickThreshold ?: model.threshold
-        if (sc >= thr - 1e-12) return null            // the model's own [R72Picker.Model.takes]
+        if (model.takes(sc, thr)) return null
         return "R151's picker scored it %.3f, under %.4f (your exception)".format(Locale.ENGLISH, sc, thr)
     }
 
@@ -1954,14 +1955,14 @@ object PassedArmsHost {
         // priced at the ask when the quote has one (a buyer pays it), else the last price, as the cap's. Never mirrored live, never
         // on the account (so never counted by the same-direction cap and never a twin for R72), no notice.
         // 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record only"): every arm that is off.
-        // 6 Nov (Boss's exception): R151's picker skipped it - a would-be trade at the ask, nothing bought, never copied live (first,
-        // so an arm that is off keeps the same record of the picker's skips as one that is on).
-        if (pickSkip != null)
-            return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_PICK, pickSkip),
-                "would-be", true)
         if (b.armed[arm] != true)
             return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_OFF,
                 "switched off, it runs in shadow"), "would-be", true)
+        // 6 Nov (Boss's exception): R151's picker skipped it - a would-be trade at the ask, nothing bought, never copied live. (After the
+        // arm-off check: an arm that is off keeps every break as its own would-be, so its record stays whole.)
+        if (pickSkip != null)
+            return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_PICK, pickSkip),
+                "would-be", true)
         // 22 Oct: another of these arms holds this option (not R51 / R72's twin): a would-be trade at the ask (a buyer pays it), else
         // the last price, as the cap's; the line names the arm.
         if (held != null) {

@@ -277,7 +277,8 @@ object R72Picker {
             return 1.0 / (1.0 + exp(-z))
         }
 
-        fun takes(score: Double): Boolean = score >= threshold - 1e-12
+        /** Whether a break scoring [score] is taken at [at] (the model's own [threshold] unless another is given). */
+        fun takes(score: Double, at: Double = threshold): Boolean = score >= at - 1e-12
     }
 
     /** R72's model's probability for [f]. */

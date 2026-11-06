@@ -75,7 +75,9 @@ notes; match the surrounding code.
         - R72: 652 picks won 48.9% and made ₹2.19 lakh, vs R72's ₹1.71 lakh;
         - R51: 693 picks won 49.9% and made ₹1.59 lakh, vs R51's ₹1.35 lakh;
         - both had about half the drawdown or less. The bar was 50% wins.
-      - It only ever skips entries (never adds or resizes).
+      - It only ever skips entries (never adds or resizes). A skipped break still holds its side and counts in the arm's day caps,
+        as the trade would have, so the picker can never free a place for a trade the arm would not have made. It may therefore
+        skip a little more than the research did.
       - Every other live gate still holds: PIN, Live, AI trades go live, each arm's Trade live switch, the guard and the kill switch.
       - It is labelled "failed gates, Boss's exception", logged in the change timeline, and one tap off. Off adds live trades back,
         so the Undo takes the PIN.
