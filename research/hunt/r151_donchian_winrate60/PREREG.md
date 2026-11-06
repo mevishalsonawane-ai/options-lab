@@ -173,3 +173,18 @@ Pytest tests cover:
 - Every Amendment C number already printed (Apr - Oct 2026: 403 trades, 47.4%, Rs 115 a trade, twin p 0.22) came from
   the buggy frozen model on clean features. It is therefore a second look at Apr - Oct 2026 for this picker, and that
   is disclosed.
+
+## Amendment E, 6 Nov 2026: R51's logistic picker over Nov 2024 - Oct 2026, as Amendment C (Boss: "What about r51?" ... "Do whatever you recommend"); before any E result
+
+- **Seen before.** The picker's design curve (out-of-fold, Apr 2025 - Mar 2026), from which its best point was quoted to
+  Boss: R51-20-3.0-M2, score >= 0.4469 keeps 852 of 3,044 trades, 49.1% won, Rs 293 a trade (the arm: 45.9%, Rs 70). That
+  point was CHOSEN because it looked best, so it is biased upward. Nothing of this picker on Apr - Oct 2026 (R151 never read it
+  there: it failed at design). Amendment C's R72 result (fails 50% by 1.1 points; more net, half the drawdown) is known.
+- **The rule, fixed now:** R51 as the app (Donchian 20 + Supertrend (10, 3)), the picker R51-20-3.0-M2 (L2 logistic, C 0.1,
+  fit on all design trades as `study.py design` did), take a candidate when its score >= 0.4469.
+- **Periods, gate and report: exactly Amendment C's** (Nov 2024 - Mar 2025 in-sample and not counted; Apr 2025 - Mar 2026
+  walk-forward; Apr - Oct 2026 frozen, read once; the gate on Apr - Oct 2026: >= 50% wins, net > 0, per trade >= the arm's,
+  >= 60 trades, random-skip twin p <= 0.05; one test, no BH). Second look on Apr - Oct 2026 for R51 itself, disclosed.
+- **Not tested here: R51 at Donchian 30 / Supertrend 4.** Every period with data (Dec 2022 - Oct 2026) has already been read
+  for it (R151 Part P); the lake now reaches 19 Oct 2026, 4 sessions past R151's end, too few for a test. It stays a lead until
+  enough new days exist (about three months).
