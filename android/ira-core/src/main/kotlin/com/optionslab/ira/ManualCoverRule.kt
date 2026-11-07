@@ -105,6 +105,8 @@ object ManualCoverRule {
         // only on a contract with NO long today ([heldToday]: held now, held overnight, or bought today). On one Boss holds or held
         // today it is an exit left over (an OCO's other half for a moment, Boss's own stop after his target filled, a stop larger
         // than what is left after a part sold by hand), never a short. The app's own protections' exits never reach here.
+        // 7 Nov, fourth review, an accepted gap: a short-leg sell still working on a contract Boss traded LONG earlier today is
+        // therefore not counted while it works; it counts once it fills (the positions then show the short).
         val opening = sells.filter { isOption(it.symbol) && it.qty > 0 && it.key !in heldToday }.map { underlying(it.symbol, names) }
         return (book.filter { it.qty < 0 && isOption(it.symbol) }.map { underlying(it.symbol, names) } + opening).toSet()
     }

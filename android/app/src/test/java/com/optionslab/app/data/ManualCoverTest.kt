@@ -447,6 +447,36 @@ class ManualCoverTest : RobolectricTest() {
         assertTrue(Diag.lines().any { it.contains("checked again before placing: Zerodha's orders not read") })
     }
 
+    // ---- 7 Nov, fourth review -------------------------------------------------------------------------------------------------
+
+    @Test fun switchedOffWithNoneOfItsOwnItReadsNothingMore() {
+        ManualCover.resetForTest(on = false)
+        kite.requests.clear()
+        twoLooks(); later(25); look()
+        assertTrue("no orders read", kite.requests.none { it.path == "/orders" })
+        assertTrue("no holdings read", kite.requests.none { it.path == "/portfolio/holdings" })
+        assertTrue(writes().isEmpty())
+    }
+
+    @Test fun theSpreadDecisionReadsThePositionsAfresh() {
+        kite.position("NIFTY26N1625000PE", -65, 80.0)
+        kite.requests.clear()
+        look()
+        // The pass's shared read (outside a pass: one read), then a fresh read after the orders for the spread decision.
+        val reads = kite.requests.map { it.path }.filter { it == "/orders" || it == "/portfolio/positions" }
+        assertEquals(listOf("/portfolio/positions", "/orders", "/portfolio/positions"), reads)
+        assertEquals(1, Alerts.posted.count { it.text.contains("left alone (part of a spread)") })
+    }
+
+    @Test fun aLookCancelledInsideTheLockGivesTheTurnBack() {
+        look(); later(25)
+        kite.afterNext("/quote") { kite.afterNext("/orders") { kite.hang += "/orders" } }
+        runBlocking { kotlinx.coroutines.withTimeoutOrNull(1_500) { ManualCover.run(AppSettings.load()) } }
+        kite.hang.clear()
+        assertTrue("the turn was given back: ${ExitCoordinator.busyForTest()}", ExitCoordinator.busyForTest().isEmpty())
+        assertTrue(kite.placed.isEmpty())
+    }
+
     @Test fun aSpreadsWorkingShortSellLeavesANewWingAlone() {
         kite.orders["9202"] = FakeKite.Order("9202", "NIFTY26N1625000PE", "NFO", "SELL", 65, "NRML", "LIMIT", 85.0, 0.0, "", "OPEN")
         twoLooks(); later(25); look()

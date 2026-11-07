@@ -187,13 +187,19 @@ object ManualCover {
         // 7 Nov, second review: the protections this switch set (only those are ever taken off by it).
         val autos = prot.first.filter { it.live && it.auto && it.note != "removing" }
         if (candidates.isEmpty() && autos.isEmpty()) { synchronized(mem) { looks.clear() }; return }
+        // 7 Nov, fourth review: switched off with none of its own protections, there is nothing to do: nothing more is read.
+        if (!placing && autos.isEmpty()) { synchronized(mem) { looks.clear() }; return }
         // Zerodha's orders (working sells open shorts too), and the stock held for a stock option: not read in time, nothing.
         val orders = Broker.within(8_000) { Broker.orders() } ?: return
+        // 7 Nov, fourth review: the spread and hedge decision (taking one off, leaving one alone, saying so) on Zerodha's positions
+        // read now, after the orders, never the pass's shared read (it can be some seconds old).
+        val now0 = Broker.within(8_000) { Broker.positionBook() } ?: return
+        val allNow = posOf(now0)
         val equity = equityFor(candidates.map { it.symbol } + autos.map { it.symbol }) ?: return
-        val names = namesFor(all.map { it.symbol } + orders.map { it.symbol })
+        val names = namesFor(allNow.map { it.symbol } + all.map { it.symbol } + orders.map { it.symbol })
         val tracked = trackedIds(prot.first)
-        val shorts = ManualCoverRule.shortUnderlyings(all, sellsOf(orders, tracked), heldTodayOf(book), names)
-        val hedges = ManualCoverRule.hedgeUnderlyings(all, equity, names)
+        val shorts = ManualCoverRule.shortUnderlyings(allNow, sellsOf(orders, tracked), heldTodayOf(now0), names)
+        val hedges = ManualCoverRule.hedgeUnderlyings(allNow, equity, names)
         unhedge(d, autos, shorts, hedges, names)
         if (!placing || candidates.isEmpty()) { synchronized(mem) { looks.clear() }; return }
         // What the app follows (arms, Pine, arms' live trades, protections). A book not read in time: nothing this look.
@@ -481,13 +487,19 @@ object ManualCover {
     private suspend fun lastCheck(p: ManualCoverRule.Pos, keep: (com.optionslab.ira.ExitTurns.Pass) -> Unit): Pair<ManualCoverRule.Skip?, String>? {
         if (!(loaded && on)) return ManualCoverRule.precheckInLock(false, true, true, false, true, false)
         val turn = ExitCoordinator.tryEnter(p.exchange, p.symbol, WHO) ?: return ManualCoverRule.precheckInLock(true, false, true, false, true, false)
-        val orders = Broker.within(2_500) { ExitCoordinator.orders(p.exchange, p.symbol, WHO) }
-        val gtts = if (orders == null) null else Broker.within(2_500) { ExitCoordinator.gtts(p.exchange, p.symbol, WHO) }
-        val r = ManualCoverRule.precheckInLock(true, true, orders != null,
-            orders?.any { it.working && it.exchange == p.exchange && it.symbol == p.symbol } == true, gtts != null,
-            gtts?.any { it.active && it.exchange == p.exchange && it.symbol == p.symbol } == true)
-        if (r == null) keep(turn) else turn.leave()
-        return r
+        // 7 Nov, fourth review: the turn is always given back if anything throws before it is handed on (a cancellation too).
+        try {
+            val orders = Broker.within(2_500) { ExitCoordinator.orders(p.exchange, p.symbol, WHO) }
+            val gtts = if (orders == null) null else Broker.within(2_500) { ExitCoordinator.gtts(p.exchange, p.symbol, WHO) }
+            val r = ManualCoverRule.precheckInLock(true, true, orders != null,
+                orders?.any { it.working && it.exchange == p.exchange && it.symbol == p.symbol } == true, gtts != null,
+                gtts?.any { it.active && it.exchange == p.exchange && it.symbol == p.symbol } == true)
+            if (r == null) keep(turn) else turn.leave()
+            return r
+        } catch (e: Throwable) {
+            turn.leave()
+            throw e
+        }
     }
 
     /**

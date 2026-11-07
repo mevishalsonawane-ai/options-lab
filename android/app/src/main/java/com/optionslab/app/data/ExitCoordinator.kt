@@ -388,6 +388,9 @@ object ExitCoordinator {
     /** TEST ONLY: the longest wait for a turn. */
     internal fun waitForTest(ms: Long) { turns = ExitTurns(ms) }
 
+    /** TEST ONLY (7 Nov): who is inside each contract's turn now. */
+    internal fun busyForTest(): Map<String, String> = turns.busy()
+
     /** TEST ONLY: as after a restart (memory gone, the switch as saved). */
     internal fun restartForTest() { registry.clear() }
 
