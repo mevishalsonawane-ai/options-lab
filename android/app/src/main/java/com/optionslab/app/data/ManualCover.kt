@@ -156,7 +156,8 @@ object ManualCover {
      * pass kicks again). Never throws.
      */
     fun kick(s: AppSettings): Boolean {
-        if (com.optionslab.app.BuildConfig.GOLD || !running.compareAndSet(false, true)) return false
+        // Switched off, it looks only while one of its own protections is active (to take it off if it became a spread's leg).
+        if (com.optionslab.app.BuildConfig.GOLD || (loaded && !on && !Protections.autoHint) || !running.compareAndSet(false, true)) return false
         return runCatching {
             scope.launch { try { runCatching { run(s) } } finally { running.set(false) } }
             true

@@ -133,6 +133,10 @@ object Protections {
     @Volatile var activeHint: Boolean? = null
         private set
 
+    /** 7 Nov: an active live protection set by [ManualCover] (memory, as [activeHint]): its look runs while switched off only then. */
+    @Volatile var autoHint: Boolean = false
+        private set
+
     /** "EXCHANGE:SYMBOL" of the active live protections, as [activeHint] (round 2: followed on the stream, trailed from it). */
     @Volatile var liveKeysHint: List<String> = emptyList()
         private set
@@ -141,6 +145,7 @@ object Protections {
         // 26 Oct: never the hints of a list read before an erase.
         if (loadGen != wipeGen) return
         activeHint = list.any { it.active }
+        autoHint = list.any { it.active && it.live && it.auto }
         liveKeysHint = list.filter { it.active && it.live }.map { "${it.exchange}:${it.symbol}" }.distinct()
         overnightHint = list.any { it.active && it.live && it.product != "MIS" && it.exchange != "MCX" && it.gttId == null && it.note != REMOVING &&
             (it.stop != null || it.target != null) && (gttTries[it.id] ?: 0) < GTT_TRIES }
@@ -1229,7 +1234,7 @@ object Protections {
         // 26 Oct (Erase everything): first the count (a look in flight then drops its list), then every copy in memory and the
         // files, a set-aside copy included. Never takes [lock] and never reads the vault.
         wipeGen++
-        cache = null; activeHint = null; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap()
+        cache = null; activeHint = null; autoHint = false; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap()
         freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L
         runCatching { gttTries.clear() }
         filesForErase().forEach { runCatching { it.delete() } }

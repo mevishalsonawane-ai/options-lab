@@ -38,6 +38,8 @@ class ManualCoverTest : RobolectricTest() {
         kite.login()
         AutomationSupport.liveSettings()
         Alerts.forgetPosted()
+        // The banners' 20-second repeat filter is process-wide: an earlier test's identical words would hide this test's banner.
+        com.optionslab.app.testing.Background.clearAlerts()
         DayOco.resetForTest()
         ManualCover.resetForTest(on = true)
     }
@@ -501,7 +503,8 @@ class ManualCoverTest : RobolectricTest() {
         assertTrue(writes().isEmpty())
         assertEquals(1, Alerts.posted.count { it.text.contains("left alone (a hedge") })
         kite.holdings.clear()
-        later(25); look()
+        // Not a hedge any more: covered after its two looks.
+        later(25); look(); later(25); look()
         assertEquals("no stock: covered", listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
     }
 
@@ -547,8 +550,14 @@ class ManualCoverTest : RobolectricTest() {
         assertTrue(ManualCover.kick(AppSettings.load()))
         com.optionslab.app.testing.Background.await("the second look") { !ManualCover.kickRunningForTest() }
         assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        // Switched off, it still looks while one of its own protections is active (only ever to take it off) ...
         ManualCover.resetForTest(on = false)
-        assertFalse("switched off: not started", ManualCover.kick(AppSettings.load()))
+        assertTrue("switched off with its own protection: started", ManualCover.kick(AppSettings.load()))
+        com.optionslab.app.testing.Background.await("the look") { !ManualCover.kickRunningForTest() }
+        assertEquals("placed nothing more", 2, kite.placed.size)
+        // ... and not at all without one.
+        runBlocking { Protections.remove(Protections.active().single().id) }
+        assertFalse("switched off, none of its own: not started", ManualCover.kick(AppSettings.load()))
     }
 
     @Test fun theLoudNoticesUseTheAlwaysShownChannelWithOneBanner() {
