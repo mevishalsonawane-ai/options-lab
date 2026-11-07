@@ -20,7 +20,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * Once per full watch pass (NSE, 09:15 to 15:24 on a trading day, Live with real orders allowed, logged in), every live option
  * Boss bought by hand - in the Kite app or on this app's order screen - that nothing in the app follows gets a protection
- * ([Protections.protectLive]): a stop 20% under the position's average price and a target LIMIT sell 40% over it (Boss's choice,
+ * ([Protections.protectLive]): a stop 5% under the position's average price and a target LIMIT sell 10% over it (Boss's choice,
  * 7 Nov; no trail). On 6 Nov NIFTY26N0925150CE (130 qty) was bought by hand and stayed unprotected overnight, and the Zerodha sync
  * kept saying of such positions "no bot, Pine script or protection of the app follows it".
  *
@@ -50,7 +50,7 @@ object ManualCover {
 
     /** One pass at a time (the watch runs one; a test's pass could overlap). */
     private val passLock = Mutex()
-    /** Memory only, under [mem]: the two looks, today's tries, the contracts given up on and those told "already down 20%". */
+    /** Memory only, under [mem]: the two looks, today's tries, the contracts given up on and those told "already down 5%". */
     private val mem = Any()
     private val looks = ManualCoverRule.Looks()
     private val tries = HashMap<String, Int>()
@@ -102,8 +102,8 @@ object ManualCover {
         runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to on)) }
         runCatching { Diag.record("protection", "Stop and target on my manual positions: ${if (on) "on" else "off"} (by you)") }
         publish()
-        return if (on) "On: a live option you buy yourself, in Kite or here, that nothing in the app follows gets a stop 20% under its " +
-            "average price and a target sell 40% over it (in market hours)."
+        return if (on) "On: a live option you buy yourself, in Kite or here, that nothing in the app follows gets a stop 5% under its " +
+            "average price and a target sell 10% over it (in market hours)."
         else "Off: positions you buy yourself are left as they are; the app places no stop or target on them."
     }
 

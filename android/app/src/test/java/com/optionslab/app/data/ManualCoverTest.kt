@@ -19,7 +19,7 @@ import org.robolectric.annotation.ConscryptMode
 /**
  * 7 Nov (Boss: "if any manual order is placed, then stoploss and target (profit lock) order should be placed by the application"):
  * "Stop and target on my manual positions" ([ManualCover]) against the fake Kite. A live option bought by hand that nothing in the
- * app follows gets protectLive's SL at 80% of its average and a LIMIT sell at 140%, after two looks 20 s apart; an arm's or Pine's
+ * app follows gets protectLive's SL at 95% of its average and a LIMIT sell at 110%, after two looks 20 s apart; an arm's or Pine's
  * position, one with Boss's own stop working, one whose protection Boss removed today are never touched; off or in Paper nothing
  * happens; three refusals are said loudly and it stops trying.
  */
@@ -90,12 +90,12 @@ class ManualCoverTest : RobolectricTest() {
         assertEquals(listOf("SELL", "SELL"), placed.map { it.form["transaction_type"] })
         assertEquals(listOf("130", "130"), placed.map { it.form["quantity"] })
         assertEquals(listOf("NRML", "NRML"), placed.map { it.form["product"] })
-        // 125.35 x 0.8 = 100.28, down to the tick; x 1.4 = 175.49, up to the tick.
-        assertEquals(100.25, placed[0].form.getValue("trigger_price").toDouble(), 1e-9)
-        assertEquals(175.5, placed[1].form.getValue("price").toDouble(), 1e-9)
+        // 125.35 x 0.95 = 119.08, down to the tick; x 1.1 = 137.89, up to the tick.
+        assertEquals(119.05, placed[0].form.getValue("trigger_price").toDouble(), 1e-9)
+        assertEquals(137.9, placed[1].form.getValue("price").toDouble(), 1e-9)
         val p = runBlocking { Protections.active() }.single()
         assertTrue(p.live); assertEquals(sym, p.symbol); assertEquals(130, p.qty)
-        assertEquals(100.25, p.stop!!, 1e-9); assertEquals(175.5, p.target!!, 1e-9)
+        assertEquals(119.05, p.stop!!, 1e-9); assertEquals(137.9, p.target!!, 1e-9)
         assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.SUCCESS && it.text.contains("you bought 130 yourself") })
         assertTrue(Diag.lines().any { it.contains("[protection]") && it.contains("you bought 130 yourself") })
         assertEquals(1, ManualCover.tallyForTest().protectedN)
@@ -122,7 +122,7 @@ class ManualCoverTest : RobolectricTest() {
         assertTrue(said("only the stop was placed"))
     }
 
-    @Test fun alreadyDown20PercentNothingIsPlacedAndBossIsToldOnce() {
+    @Test fun alreadyDown5PercentNothingIsPlacedAndBossIsToldOnce() {
         kite.quote("NFO:$sym", 95.0, 94.95, 95.05)
         twoLooks(); later(25); look(); later(25); look()
         assertTrue(writes().isEmpty())

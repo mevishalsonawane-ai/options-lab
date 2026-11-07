@@ -124,11 +124,11 @@ class ManualCoverRuleTest {
     // ---- prices -------------------------------------------------------------------------------------------------------------------
 
     @Test fun theStopRoundsDownAndTheTargetUpToTheTick() {
-        assertEquals(ManualCoverRule.Levels(100.25, 175.5), ManualCoverRule.levels(125.35, 0.05))   // 100.28 down, 175.49 up
-        assertEquals(ManualCoverRule.Levels(80.0, 140.0), ManualCoverRule.levels(100.0, 0.05))       // exact: no tick added
-        assertEquals(ManualCoverRule.Levels(104.0, 182.0), ManualCoverRule.levels(130.0, 0.05))
-        assertEquals(ManualCoverRule.Levels(0.8, 1.4), ManualCoverRule.levels(1.0, 0.05))
-        assertEquals(ManualCoverRule.Levels(8.0, 14.1), ManualCoverRule.levels(10.03, 0.1))          // another tick size
+        assertEquals(ManualCoverRule.Levels(119.05, 137.9), ManualCoverRule.levels(125.35, 0.05))   // 119.08 down, 137.89 up
+        assertEquals(ManualCoverRule.Levels(95.0, 110.0), ManualCoverRule.levels(100.0, 0.05))       // exact: no tick added
+        assertEquals(ManualCoverRule.Levels(123.5, 143.0), ManualCoverRule.levels(130.0, 0.05))
+        assertEquals(ManualCoverRule.Levels(0.95, 1.1), ManualCoverRule.levels(1.0, 0.05))
+        assertEquals(ManualCoverRule.Levels(9.5, 11.1), ManualCoverRule.levels(10.03, 0.1))          // another tick size
         assertNull(ManualCoverRule.levels(0.0, 0.05))
         assertNull(ManualCoverRule.levels(Double.NaN, 0.05))
         assertNull(ManualCoverRule.levels(100.0, 0.0))
@@ -136,12 +136,12 @@ class ManualCoverRuleTest {
     }
 
     @Test fun thePlanFollowsTheLastPrice() {
-        assertEquals(Plan.Both(100.25, 175.5), ManualCoverRule.plan(125.35, 120.0, 0.05))
-        assertEquals(Plan.TooLow(100.25), ManualCoverRule.plan(125.35, 100.25, 0.05), "at the stop")
-        assertEquals(Plan.TooLow(100.25), ManualCoverRule.plan(125.35, 90.0, 0.05), "under it")
-        assertEquals(Plan.StopOnly(100.25, 175.5), ManualCoverRule.plan(125.35, 175.5, 0.05), "at the target")
-        assertEquals(Plan.StopOnly(100.25, 175.5), ManualCoverRule.plan(125.35, 200.0, 0.05), "over it")
-        assertEquals(Plan.Both(100.25, 175.5), ManualCoverRule.plan(125.35, 100.3, 0.05), "a tick over the stop")
+        assertEquals(Plan.Both(119.05, 137.9), ManualCoverRule.plan(125.35, 120.0, 0.05))
+        assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 119.05, 0.05), "at the stop")
+        assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 90.0, 0.05), "under it")
+        assertEquals(Plan.StopOnly(119.05, 137.9), ManualCoverRule.plan(125.35, 137.9, 0.05), "at the target")
+        assertEquals(Plan.StopOnly(119.05, 137.9), ManualCoverRule.plan(125.35, 200.0, 0.05), "over it")
+        assertEquals(Plan.Both(119.05, 137.9), ManualCoverRule.plan(125.35, 119.1, 0.05), "a tick over the stop")
         assertEquals(Plan.NoPrice, ManualCoverRule.plan(125.35, 0.0, 0.05), "no last price")
         assertEquals(Plan.NoPrice, ManualCoverRule.plan(0.0, 120.0, 0.05), "no average")
     }
@@ -156,8 +156,8 @@ class ManualCoverRuleTest {
             ManualCoverRule.line(false, true, t, d.plusDays(1)), "a new day starts at nothing")
         assertTrue(ManualCoverRule.line(true, false, t, d).contains("not read yet"))
         assertTrue(ManualCoverRule.saidProtected(sym, 130, 125.35, "Protected.").contains("you bought 130 yourself"))
-        assertTrue(ManualCoverRule.saidTooLow(sym, 90.0, 100.25).contains("no stop was placed"))
-        assertTrue(ManualCoverRule.saidStopOnly(sym, 200.0, 175.5).contains("only the stop"))
+        assertTrue(ManualCoverRule.saidTooLow(sym, 90.0, 119.05).contains("no stop was placed"))
+        assertTrue(ManualCoverRule.saidStopOnly(sym, 200.0, 137.9).contains("only the stop"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "RMS").contains("is NOT protected"))
     }
 }

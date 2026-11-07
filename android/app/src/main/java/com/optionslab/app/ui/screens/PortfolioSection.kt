@@ -348,8 +348,8 @@ internal fun ManualCoverCardFlow(view: com.optionslab.app.data.ManualCover.View,
 @Composable
 internal fun ManualCoverCardContent(view: com.optionslab.app.data.ManualCover.View, said: String?, onSwitch: (Boolean) -> Unit) {
     LedgerCard(title = "Your own buys: stop and target") {
-        Note("Any live option you buy yourself, in Kite or here, that no arm, Pine script or protection follows, gets a stop 20% " +
-            "under its average price and a target sell 40% over it.")
+        Note("Any live option you buy yourself, in Kite or here, that no arm, Pine script or protection follows, gets a stop 5% " +
+            "under its average price and a target sell 10% over it.")
         ToggleRow("Stop and target on my manual positions", if (view.on) "On: placed automatically in market hours (09:15-15:24)"
             else "Off: positions you buy yourself are left as they are", view.on, keepSub = true, onChange = onSwitch)
         Note("Never on a position with your own stop, target or GTT working, or one whose protection you removed today. It only adds " +

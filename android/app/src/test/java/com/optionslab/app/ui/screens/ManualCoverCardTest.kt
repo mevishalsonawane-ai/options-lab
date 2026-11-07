@@ -52,7 +52,7 @@ class ManualCoverCardTest {
             { offs++ }, { ons++ })
         compose.waitForIdle()
         assertTrue(shows("On: placed automatically in market hours (09:15-15:24)"))
-        assertTrue(shows("gets a stop 20% under its average price and a target sell 40% over it", sub = true))
+        assertTrue(shows("gets a stop 5% under its average price and a target sell 10% over it", sub = true))
         assertTrue(shows("today protected 1", sub = true))
         compose.onNodeWithText(toggle).performClick()
         compose.waitForIdle()
