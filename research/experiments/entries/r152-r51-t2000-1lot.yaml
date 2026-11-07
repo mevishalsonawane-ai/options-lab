@@ -1,0 +1,39 @@
+id: r152-r51-t2000-1lot
+title: 'R152 T2000 on R51 Donchian 20 + Supertrend (10, 3), 1 lot: sell at +Rs 2,000, own stop (whole position)'
+family: trade-management
+date: '2026-11-07'
+doc: research/hunt/r152_donchian_2k/results/report.md
+hypothesis: 'Boss (7 Nov): "sell at max target i.e. 2k and max loss at 2k" on R51 Donchian 20 + Supertrend (10, 3). This rule:
+  sell at +Rs 2,000, own stop, for the whole 1-lot position, net of charges; the arm''s other exits stay. Gates (R106''s):
+  net > 0 in design, walk-forward and final; above today''s rules at the same lots in walk-forward and final (or within 5%
+  with worst day and drawdown >= 20% smaller); random-exit twin BH q <= 0.10 with m = 866; >= 40 final trades.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 7 Nov 2026; R51
+  Amendment A clean stores (post: R106''s stores to 19 Oct)'
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R152 (already read by R51-R151); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars (Donchian 20, kept when Supertrend (10, 3) agrees) (unchanged); only the option''s exit
+  (rupee target / stop on the premium) differs'
+model_or_rule: R51 Donchian 20 + Supertrend (10, 3) with sell at +Rs 2,000, own stop, 1 lot
+settings: research/hunt/r152_donchian_2k/r152cfg.py RULES, LOTS; PREREG.md section 2
+prereg: research/hunt/r152_donchian_2k/PREREG.md
+variants_tried: 18
+results:
+  summary: 'Design: 4309 trades, win 48% (break-even 49%), net -Rs 101,370, -Rs 301 a session, worst day -Rs 34,770, max DD
+    Rs 203,504 (today''s rules Rs 50,425). Walk-forward: 3111 trades, win 49% (break-even 49%), net Rs 33,948, Rs 137 a session,
+    worst day -Rs 34,770, max DD Rs 118,105 (today Rs 213,748). Final: 1708 trades, win 46% (break-even 48%), net -Rs 64,922,
+    -Rs 488 a session, worst day -Rs 21,578, max DD Rs 131,033 (today Rs 134,743); exit-twin p 0.002, BH q 0.866 (R152 alone
+    0.018). Fails: not positive in design, walk-forward and final; not better than today''s rules (walk-forward and final);
+    exit-twin BH q 0.87 > 0.10.'
+  costs: dated Zerodha charges on the whole 1-lot quantity, R17 fills (slippage from the 5-minute volume per position; stops
+    -10 bps and 2x the half-spread, gaps at the open), limit targets at their price
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.
