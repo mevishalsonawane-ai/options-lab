@@ -167,6 +167,15 @@ object ExitCoordinator {
         } catch (_: Exception) { turns.none() }
     }
 
+    /**
+     * 7 Nov ([ManualCover]'s last check, inside the protections' lock): the contract's turn without waiting. Null while another
+     * sender holds it; off (shadow) as [enter], never waiting. A failure is a turn not taken (null: the caller places nothing).
+     */
+    suspend fun tryEnter(exchange: String, symbol: String, who: String): ExitTurns.Pass? = try {
+        turns.tryEnter(ExitDesk.key(exchange, symbol), who, on)
+    } catch (e: kotlinx.coroutines.CancellationException) { throw e
+    } catch (_: Exception) { null }
+
     /** Zerodha's orders for an exit sender on [exchange]:[symbol]: [Broker.orders], read again while it misses an exit sent from here. */
     suspend fun orders(exchange: String, symbol: String, who: String): List<Broker.OrderRow> {
         val key = ExitDesk.key(exchange, symbol)

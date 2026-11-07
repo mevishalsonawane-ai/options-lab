@@ -388,6 +388,22 @@ class ExitTurns(private val waitMs: Long = WAIT_MS) {
         return Pass(this, key, mine, took)
     }
 
+    /**
+     * 7 Nov ([ManualCoverRule]'s last check, inside the protections' lock): [enter] without waiting. Null when another sender
+     * holds contract [key]'s turn; the same sender's nested turn goes in; in shadow ([on] false) as [enter] (it never waits).
+     */
+    suspend fun tryEnter(key: String, who: String, on: Boolean): Pass? {
+        val job = currentCoroutineContext()[Job]
+        val again = holders[key]?.takeIf { job != null && it.job === job } ?: job?.let { guests[key to it] }
+        if (again != null) { again.depth++; return Pass(this, key, again, Took.AGAIN) }
+        if (!on) return enter(key, who, false)
+        val m = locks.getOrPut(key) { Mutex() }
+        if (!m.tryLock()) return null
+        val mine = Holder(job, who, m)
+        holders[key] = mine
+        return Pass(this, key, mine, Took.ALONE)
+    }
+
     private fun guest(key: String, job: Job?, who: String): Holder? = job?.let { j -> Holder(j, who).also { guests[key to j] = it } }
 
     internal fun release(key: String, h: Holder) {

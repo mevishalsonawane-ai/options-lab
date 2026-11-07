@@ -263,6 +263,29 @@ class ExitDeskTest {
         assertTrue(turns.busy().isEmpty())
     }
 
+    /** 7 Nov: the turn without waiting: null while another holds it, taken once free; never waits in shadow. */
+    @Test fun aTurnTriedWithoutWaiting() = runBlocking {
+        val turns = ExitTurns(waitMs = 5_000)
+        val a = turns.enter(k, "a", true)
+        val t0 = System.currentTimeMillis()
+        val inner = kotlinx.coroutines.withContext(kotlinx.coroutines.Job()) { turns.tryEnter(k, "b", true) }
+        assertEquals(null, inner, "busy: not taken")
+        assertTrue(System.currentTimeMillis() - t0 < 1_000, "never waited")
+        a.leave()
+        val b = kotlinx.coroutines.withContext(kotlinx.coroutines.Job()) { turns.tryEnter(k, "b", true)?.also { it.leave() } }
+        assertEquals(ExitTurns.Took.ALONE, b?.took)
+        assertTrue(turns.busy().isEmpty())
+        // The same sender inside its own turn goes straight in.
+        val own = turns.enter(k, "a", true)
+        assertEquals(ExitTurns.Took.AGAIN, turns.tryEnter(k, "a", true)?.also { it.leave() }?.took)
+        own.leave()
+        assertTrue(turns.busy().isEmpty())
+        // Shadow: never waits, never null.
+        val s1 = turns.enter(k, "x", false)
+        assertTrue(kotlinx.coroutines.withContext(kotlinx.coroutines.Job()) { turns.tryEnter(k, "y", false)?.also { it.leave() } } != null)
+        s1.leave()
+    }
+
     @Test fun aPassLeftTwiceFreesOnlyOnce() = runBlocking {
         val turns = ExitTurns(waitMs = 50)
         val a = turns.enter(k, "a", true)

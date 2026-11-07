@@ -78,6 +78,9 @@ object ManualCover {
     /** 7 Nov, second review: untracked app exits said ("day|order id") and automatic protections taken off ("day|EXCHANGE:SYMBOL"). */
     private val untracked = HashSet<String>()
     private val unhedged = HashSet<String>()
+    /** 7 Nov, third review: the two looks before an automatic protection is taken off, and the ones taken off (by id). */
+    private val hedgeLooks = ManualCoverRule.Looks()
+    private val unhedgedIds = HashSet<Long>()
     @Volatile private var tally = ManualCoverRule.Tally()
 
     /** [loaded]: the switch was read (until then the card shows it is reading, never "On"). */
@@ -136,12 +139,13 @@ object ManualCover {
         if (com.optionslab.app.BuildConfig.GOLD) return
         // 7 Nov, review: the start's read not landed yet (a slow vault): read here, on the watch's worker thread (never the main one).
         if (!loaded) load()
-        if (!loaded || !on) return
         if (!s.live || !s.allowRealOrders) return
         if (!Broker.loggedIn) return
         val day = Market.today()
         if (!ManualCoverRule.inHours(Market.isTradingDay(day), Market.minuteNow())) return
-        passLock.withLock { look(s, day) }
+        // 7 Nov, third review: switched off (or not read), it still takes off its OWN protections that became part of a spread or a
+        // hedge (only ever removing: it lowers risk); it places nothing.
+        passLock.withLock { look(s, day, placing = loaded && on) }
     }
 
     /** A [kick]'s look still running. */
@@ -152,7 +156,7 @@ object ManualCover {
      * pass kicks again). Never throws.
      */
     fun kick(s: AppSettings): Boolean {
-        if (com.optionslab.app.BuildConfig.GOLD || (loaded && !on) || !running.compareAndSet(false, true)) return false
+        if (com.optionslab.app.BuildConfig.GOLD || !running.compareAndSet(false, true)) return false
         return runCatching {
             scope.launch { try { runCatching { run(s) } } finally { running.set(false) } }
             true
@@ -162,7 +166,7 @@ object ManualCover {
     /** TEST ONLY: whether a [kick]'s look is still running. */
     internal fun kickRunningForTest(): Boolean = running.get()
 
-    private suspend fun look(s: AppSettings, day: java.time.LocalDate) {
+    private suspend fun look(s: AppSettings, day: java.time.LocalDate, placing: Boolean) {
         val d = day.toString()
         synchronized(mem) {
             // A new day: yesterday's tries, attempts, refusals and words are over.
@@ -186,10 +190,12 @@ object ManualCover {
         // Zerodha's orders (working sells open shorts too), and the stock held for a stock option: not read in time, nothing.
         val orders = Broker.within(8_000) { Broker.orders() } ?: return
         val equity = equityFor(candidates.map { it.symbol } + autos.map { it.symbol }) ?: return
-        val shorts = ManualCoverRule.shortUnderlyings(all, sellsOf(orders))
-        val hedges = ManualCoverRule.hedgeUnderlyings(all, equity)
-        unhedge(d, autos, shorts, hedges)
-        if (candidates.isEmpty()) { synchronized(mem) { looks.clear() }; return }
+        val names = namesFor(all.map { it.symbol } + orders.map { it.symbol })
+        val tracked = trackedIds(prot.first)
+        val shorts = ManualCoverRule.shortUnderlyings(all, sellsOf(orders, tracked), heldTodayOf(book), names)
+        val hedges = ManualCoverRule.hedgeUnderlyings(all, equity, names)
+        unhedge(d, autos, shorts, hedges, names)
+        if (!placing || candidates.isEmpty()) { synchronized(mem) { looks.clear() }; return }
         // What the app follows (arms, Pine, arms' live trades, protections). A book not read in time: nothing this look.
         val beliefs = ZerodhaSync.beliefs() ?: return
         // The Strategy Module's live runs' legs too (not in the sync's beliefs): never a manual position.
@@ -197,7 +203,9 @@ object ManualCover {
         val first = ManualCoverRule.Facts(
             followed = beliefs.map { it.symbol }.toSet() + legs,
             protectedNow = prot.first.filter { it.live }.map { it.symbol }.toSet(),
-            endedToday = prot.second.filter { it.live }
+            // 7 Nov, third review: one this switch took off as a spread's or hedge's leg never blocks (even if its cancel was
+            // confirmed only later, under the protections' own "removed").
+            endedToday = prot.second.filter { it.live && synchronized(mem) { it.id !in unhedgedIds } }
                 .map { ManualCoverRule.Ended(it.symbol, it.note, today = (it.endedAt ?: it.id) >= today0, exchange = it.exchange) },
             handsOff = candidates.filter { ArmLive.handsOffNow(it.exchange, it.symbol) }.map { it.key }.toSet(),
             expiring = expiringNow(s, day, candidates),
@@ -205,6 +213,7 @@ object ManualCover {
             hedgeUnderlyings = hedges,
             ticketLegs = ticketLegs(candidates),
             twoProducts = all.groupBy { it.key }.filterValues { rows -> rows.map { it.product }.distinct().size > 1 }.keys,
+            names = names,
         )
         val given = synchronized(mem) { gaveUp.toSet() }
         val open = ArrayList<ManualCoverRule.Pos>()
@@ -251,7 +260,7 @@ object ManualCover {
                 continue
             }
             if (ArmLive.handsOffNow(p.exchange, p.symbol)) continue
-            cover(d, p.copy(avg = row.avg, last = row.last), now)
+            cover(d, p.copy(avg = row.avg, last = row.last), now, names)
         }
     }
 
@@ -260,9 +269,29 @@ object ManualCover {
         ManualCoverRule.Pos(it.symbol, it.exchange, it.product, it.qty, it.avg, it.last, carried = it.product == "NRML" && it.overnight > 0)
     }
 
-    /** Every working SELL order, what is left of it. */
-    private fun sellsOf(orders: List<Broker.OrderRow>): List<ManualCoverRule.Sell> = orders.filter { it.working && it.side == "SELL" }
+    /**
+     * Every working SELL order, what is left of it - never the app's own protections' exits (tagged "iraprotect", or one an active
+     * protection tracks: 7 Nov, third review).
+     */
+    private fun sellsOf(orders: List<Broker.OrderRow>, tracked: Set<String>): List<ManualCoverRule.Sell> =
+        orders.filter { it.working && it.side == "SELL" && it.tag != "iraprotect" && it.id !in tracked }
         .map { ManualCoverRule.Sell(it.symbol, it.exchange, com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending)) }
+
+    /** The order ids the active protections track (their stops and targets). */
+    private fun trackedIds(active: List<Protections.Item>): Set<String> = active.flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }.toSet()
+
+    /**
+     * 7 Nov, third review: the contracts with a long today - held now, held overnight, or bought today (a row whose day's buys
+     * Zerodha did not give counts as bought). A working sell on one of them is an exit left over, never a short.
+     */
+    private fun heldTodayOf(book: Broker.Positions): Set<String> =
+        book.net.filter { it.qty > 0 || it.overnight > 0 || (it.dayBuyQty ?: 1) > 0 }.map { "${it.exchange}:${it.symbol}" }.toSet()
+
+    /** 7 Nov, third review: the contract lists' names (memory only) for [symbols], where known ([ManualCoverRule.underlying]). */
+    private fun namesFor(symbols: List<String>): Map<String, String> = runCatching {
+        val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).associateBy { it.tradingSymbol }
+        symbols.distinct().mapNotNull { s -> ins[s]?.name?.let { s to it } }.toMap()
+    }.getOrDefault(emptyMap())
 
     /**
      * 7 Nov, second review: the stock held (holdings with a quantity), read only when one of [symbols] is a stock option (an index
@@ -278,10 +307,17 @@ object ManualCover {
      * underlying, or a sell of one is working) or a hedge (its future or stock is held) is taken off - its stop and target
      * cancelled ([Protections.remove]) - so Boss's own hedge is whole again (lowers risk). Said loudly once. Never any other one.
      */
-    private suspend fun unhedge(d: String, autos: List<Protections.Item>, shorts: Set<String>, hedges: Set<String>) {
-        for (p in autos) {
-            val why = ManualCoverRule.spreadOrHedge(p.symbol, shorts, hedges) ?: continue
-            val result = runCatching { Protections.remove(p.id) }.getOrElse { "${p.symbol}: not removed yet (${it.message})." }
+    private suspend fun unhedge(d: String, autos: List<Protections.Item>, shorts: Set<String>, hedges: Set<String>, names: Map<String, String>) {
+        val flagged = autos.mapNotNull { a -> ManualCoverRule.spreadOrHedge(a.symbol, shorts, hedges, names)?.let { a to it } }
+        // 7 Nov, third review: seen in two looks at least 20 s apart first (a read caught between two fills never takes one off).
+        val now = Market.now().toInstant().toEpochMilli()
+        val due = synchronized(mem) {
+            hedgeLooks.keepOnly(flagged.map { "auto:${it.first.id}" }.toSet())
+            flagged.filter { hedgeLooks.see("auto:${it.first.id}", 0, now) }
+        }
+        for ((p, why) in due) {
+            synchronized(mem) { unhedgedIds.add(p.id) }
+            val result = runCatching { Protections.remove(p.id, ManualCoverRule.UNHEDGED) }.getOrElse { "${p.symbol}: not removed yet (${it.message})." }
             runCatching { Diag.record("protection", "Manual position ${p.symbol}: automatic stop and target taken off (${why.words}): $result") }
             if (synchronized(mem) { unhedged.add("$d|${p.exchange}:${p.symbol}") })
                 loud(NOTICE_UNHEDGED, ManualCoverRule.saidUnhedged(p.symbol, why) +
@@ -350,7 +386,7 @@ object ManualCover {
         }
     }
 
-    private suspend fun cover(d: String, p0: ManualCoverRule.Pos, now: Long) {
+    private suspend fun cover(d: String, p0: ManualCoverRule.Pos, now: Long, names: Map<String, String>) {
         val k = "$d|${p0.lookKey}"
         val key = "${p0.exchange}:${p0.symbol}"
         // 7 Nov, review: the lot and tick read with a deadline (protectLive then finds them in the day's memory); not read: next look.
@@ -376,16 +412,25 @@ object ManualCover {
             is ManualCoverRule.Plan.StopOnly -> { stop = plan.stop; target = null }
             is ManualCoverRule.Plan.Both -> { stop = plan.stop; target = plan.target }
         }
-        // 7 Nov, second review: checked again inside Protections' lock and then the contract's exit turn (the watch's own order):
-        // the contract's orders and GTTs, the underlying's shorts, working sells, futures and stock, and what is held. Anything
-        // found: nothing placed (and never counted as a refusal).
+        // 7 Nov, third review: checked again OUTSIDE the protections' lock (these reads may be slow): the underlying's shorts, working
+        // sells, futures and stock, and what is held. Anything found: nothing sent, not an attempt, never a refusal.
+        val outside = recheck(p, spec.lotSize, names)
+        if (outside != null) {
+            outside.first?.let { countLeftAlone(d, p, it) }
+            runCatching { Diag.record("protection", "Manual position ${p.symbol} (${p.qty}): stop and target not placed: ${outside.second}") }
+            return
+        }
+        // Inside the lock only the short last check ([lastCheck]); the contract's turn, when taken, is held until the orders are sent.
         var left: ManualCoverRule.Skip? = null
+        var pass: com.optionslab.ira.ExitTurns.Pass? = null
         synchronized(mem) { attempts[k] = (attempts[k] ?: 0) + 1; lastAttempt[k] = now }
-        val result = runCatching {
-            Protections.protectLive(p.symbol, p.exchange, p.product, p.qty, p.last, stop, null, target, auto = true, precheck = {
-                ExitCoordinator.turn(p.exchange, p.symbol, WHO) { recheck(p, spec.lotSize)?.let { (why, words) -> left = why; words } }
-            })
-        }.getOrElse { "Not protected: ${it.message}" }
+        val result = try {
+            runCatching {
+                Protections.protectLive(p.symbol, p.exchange, p.product, p.qty, p.last, stop, null, target, auto = true, precheck = {
+                    lastCheck(p) { pass = it }?.let { (why, words) -> left = why; words }
+                })
+            }.getOrElse { "Not protected: ${it.message}" }
+        } finally { pass?.leave() }
         left?.let { countLeftAlone(d, p, it) }
         // Zerodha's answer to a day GTT lost: the protection is kept and looked for on the next pass, so it counts as placed.
         val placed = result.startsWith("Protected ") || runCatching { Protections.forSymbol(true, p.symbol) }.getOrNull() != null
@@ -412,22 +457,37 @@ object ManualCover {
     }
 
     /**
-     * 7 Nov, second review: the check just before placing, inside Protections' lock and the contract's exit turn. Null: go; else the
-     * reason (and the rule it falls under, when it is one Boss is told of).
+     * 7 Nov, second and third review: the check just before placing, OUTSIDE the protections' lock (bounded reads). Null: go on;
+     * else the reason (and the rule it falls under, when it is one Boss is told of).
      */
-    private suspend fun recheck(p: ManualCoverRule.Pos, lot: Int): Pair<ManualCoverRule.Skip?, String>? {
+    private suspend fun recheck(p: ManualCoverRule.Pos, lot: Int, names: Map<String, String>): Pair<ManualCoverRule.Skip?, String>? {
         val again = ManualCoverRule.CHECKED_AGAIN
-        val orders = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, WHO) }.getOrNull() ?: return null to "$again: Zerodha's orders could not be read"
-        val gtts = runCatching { ExitCoordinator.gtts(p.exchange, p.symbol, WHO) }.getOrNull() ?: return null to "$again: Zerodha's GTTs could not be read"
+        val orders = Broker.within(8_000) { Broker.orders() } ?: return null to "$again: Zerodha's orders could not be read"
         val positions = Broker.within(8_000) { Broker.positionBook() } ?: return null to "$again: Zerodha's positions could not be read"
         val equity = equityFor(listOf(p.symbol)) ?: return null to "$again: the holdings could not be read"
-        val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, positions) }.getOrNull()
+        val tracked = withTimeoutOrNull(3_000) { runCatching { trackedIds(Protections.active()) }.getOrNull() }
+            ?: return null to "$again: the protections could not be read"
+        val heldNow = Broker.within(8_000) { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, positions) }
             ?: return null to "$again: what is held could not be read"
         val sendable = com.optionslab.engine.risk.ExitQty.sendable(heldNow, 0, p.qty, lot)
-        return ManualCoverRule.precheck(p, posOf(positions), sellsOf(orders), equity,
-            contractWorking = orders.any { it.working && it.exchange == p.exchange && it.symbol == p.symbol },
-            contractGtt = gtts.any { it.active && it.exchange == p.exchange && it.symbol == p.symbol },
-            sendable = sendable, qty = p.qty)
+        return ManualCoverRule.precheck(p, posOf(positions), sellsOf(orders, tracked), heldTodayOf(positions), equity, sendable, p.qty, names)
+    }
+
+    /**
+     * 7 Nov, third review: the last check, INSIDE the protections' lock, kept short so the stops' watch is never held up long: the
+     * switch still on; the contract's exit turn taken without waiting ([keep] gets it, held while the orders go; busy: nothing);
+     * its orders and GTTs, each read with a 2.5 s deadline (not read: nothing, never a refusal); nothing working or active on it.
+     */
+    private suspend fun lastCheck(p: ManualCoverRule.Pos, keep: (com.optionslab.ira.ExitTurns.Pass) -> Unit): Pair<ManualCoverRule.Skip?, String>? {
+        if (!(loaded && on)) return ManualCoverRule.precheckInLock(false, true, true, false, true, false)
+        val turn = ExitCoordinator.tryEnter(p.exchange, p.symbol, WHO) ?: return ManualCoverRule.precheckInLock(true, false, true, false, true, false)
+        val orders = Broker.within(2_500) { ExitCoordinator.orders(p.exchange, p.symbol, WHO) }
+        val gtts = if (orders == null) null else Broker.within(2_500) { ExitCoordinator.gtts(p.exchange, p.symbol, WHO) }
+        val r = ManualCoverRule.precheckInLock(true, true, orders != null,
+            orders?.any { it.working && it.exchange == p.exchange && it.symbol == p.symbol } == true, gtts != null,
+            gtts?.any { it.active && it.exchange == p.exchange && it.symbol == p.symbol } == true)
+        if (r == null) keep(turn) else turn.leave()
+        return r
     }
 
     /**
@@ -455,14 +515,14 @@ object ManualCover {
 
     private fun clearMemory() = synchronized(mem) {
         looks.clear(); tries.clear(); attempts.clear(); lastAttempt.clear(); gaveUp.clear(); toldLow.clear(); leftAlone.clear()
-        untracked.clear(); unhedged.clear()
+        untracked.clear(); unhedged.clear(); hedgeLooks.clear(); unhedgedIds.clear()
         tally = ManualCoverRule.Tally()
     }
 
     /** Whether anything is still in memory beyond the defaults (the erase's tests). Memory only. */
     internal fun holdsForErase(): Boolean = !on || synchronized(mem) {
         looks.size > 0 || tries.isNotEmpty() || attempts.isNotEmpty() || lastAttempt.isNotEmpty() || gaveUp.isNotEmpty() ||
-            toldLow.isNotEmpty() || leftAlone.isNotEmpty() || untracked.isNotEmpty() || unhedged.isNotEmpty() || tally.protectedN + tally.leftAlone + tally.failed > 0
+            toldLow.isNotEmpty() || leftAlone.isNotEmpty() || untracked.isNotEmpty() || unhedged.isNotEmpty() || hedgeLooks.size > 0 || unhedgedIds.isNotEmpty() || tally.protectedN + tally.leftAlone + tally.failed > 0
     }
 
     /** TEST ONLY: the switch as given (tests start it off, so no other test's live positions are covered), memory cleared. */

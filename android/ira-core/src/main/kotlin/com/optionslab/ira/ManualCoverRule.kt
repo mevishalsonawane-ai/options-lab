@@ -53,7 +53,11 @@ object ManualCoverRule {
      */
     // 7 Nov, review: "exit orders no longer working" too - a carried position's DAY exits that ended with their session and were
     // not placed again (Protections then says "NOT protected any more: set the protection again"); that is no choice of Boss's.
-    val NATURAL_ENDS = setOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working")
+    val NATURAL_ENDS = setOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working",
+        UNHEDGED)
+
+    /** 7 Nov, third review: the note of an automatic protection taken off because its position became a spread's or a hedge's leg. */
+    const val UNHEDGED = "unhedged"
 
     /** How far back a carried (NRML, held overnight) position's ended protections are looked at (7 Nov, review). */
     const val CARRIED_DAYS = 7L
@@ -76,7 +80,17 @@ object ManualCoverRule {
     data class Ended(val symbol: String, val note: String, val today: Boolean = true, val exchange: String = "")
 
     /** The underlying an option's Zerodha symbol starts with ("NIFTY26N0925150CE" -> "NIFTY"): the letters before its first digit. */
-    fun underlying(symbol: String): String = symbol.takeWhile { !it.isDigit() }
+    fun underlying(symbol: String, names: Map<String, String> = emptyMap()): String {
+        // 7 Nov, third review: the contract list's own name first (a stock whose name starts with a digit: 3MINDIA, 360ONE); else
+        // the name before the expiry ("26NOV", "26N09") and strike in Zerodha's F&O symbol; else the letters before the first digit.
+        // Not recognised as the index's: index ETFs (NIFTYBEES and the like) are their own names, so they never hedge an index option.
+        names[symbol]?.takeIf { it.isNotBlank() }?.let { return it }
+        FNO.matchEntire(symbol)?.let { return it.groupValues[1] }
+        return symbol.takeWhile { !it.isDigit() }.ifEmpty { symbol }
+    }
+
+    /** Zerodha's F&O symbol: the name, the year, the month ("NOV") or a weekly's month and day ("N09", "O13", "D01"), the strike. */
+    private val FNO = Regex("^(.+?)\\d{2}(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC|[1-9OND]\\d{2})(?:[\\d.]+(?:CE|PE)|FUT)$")
 
     /** A Zerodha option symbol (CE or PE). */
     fun isOption(symbol: String): Boolean = symbol.endsWith("CE") || symbol.endsWith("PE")
@@ -85,15 +99,14 @@ object ManualCoverRule {
      * 7 Nov, review: the underlyings the account is SHORT an option on (any expiry, any product). A long option on one of these may
      * be a spread's wing (Boss's Ledger ticket: a short PE and a bought wing PE): covering the wing alone could leave the short naked.
      */
-    fun shortUnderlyings(book: List<Pos>, sells: List<Sell> = emptyList()): Set<String> {
-        val held = book.groupBy { it.key }.mapValues { e -> e.value.sumOf { it.qty } }
-        // 7 Nov, second review: a working option SELL that would open a short (more than that contract's long) is a short too - the
-        // spread's short leg still filling after its wing was bought. Its largest one, not their sum: a stop and a target resting
-        // on what is held (one cancels the other) each sell no more than is held.
-        val opening = sells.filter { isOption(it.symbol) }.groupBy { it.key }
-            .filter { (k, rows) -> rows.maxOf { it.qty } > (held[k] ?: 0).coerceAtLeast(0) }.keys
-            .map { underlying(it.substringAfter(':')) }
-        return (book.filter { it.qty < 0 && isOption(it.symbol) }.map { underlying(it.symbol) } + opening).toSet()
+    fun shortUnderlyings(book: List<Pos>, sells: List<Sell> = emptyList(), heldToday: Set<String> = emptySet(),
+                         names: Map<String, String> = emptyMap()): Set<String> {
+        // 7 Nov, third review: a working option SELL opens a short (the spread's short leg still filling after its wing was bought)
+        // only on a contract with NO long today ([heldToday]: held now, held overnight, or bought today). On one Boss holds or held
+        // today it is an exit left over (an OCO's other half for a moment, Boss's own stop after his target filled, a stop larger
+        // than what is left after a part sold by hand), never a short. The app's own protections' exits never reach here.
+        val opening = sells.filter { isOption(it.symbol) && it.qty > 0 && it.key !in heldToday }.map { underlying(it.symbol, names) }
+        return (book.filter { it.qty < 0 && isOption(it.symbol) }.map { underlying(it.symbol, names) } + opening).toSet()
     }
 
     /** A working SELL order still to fill ([qty]: what is left of it). */
@@ -105,8 +118,8 @@ object ManualCoverRule {
      * 7 Nov, second review: the underlyings a long option on would be a HEDGE: a future on it held (long or short), or its stock
      * held ([equity]: cash positions' and holdings' symbols with a quantity). An option on them is left alone.
      */
-    fun hedgeUnderlyings(book: List<Pos>, equity: Set<String>): Set<String> =
-        (book.filter { it.qty != 0 && it.symbol.endsWith("FUT") }.map { underlying(it.symbol) } +
+    fun hedgeUnderlyings(book: List<Pos>, equity: Set<String>, names: Map<String, String> = emptyMap()): Set<String> =
+        (book.filter { it.qty != 0 && it.symbol.endsWith("FUT") }.map { underlying(it.symbol, names) } +
             book.filter { it.qty != 0 && it.exchange in setOf("NSE", "BSE") }.map { it.symbol } + equity).toSet()
 
     /**
@@ -143,6 +156,8 @@ object ManualCoverRule {
         val ticketLegs: Set<String> = emptySet(),
         /** 7 Nov, review: "EXCHANGE:SYMBOL" keys held in more than one product (protections are kept per symbol). */
         val twoProducts: Set<String> = emptySet(),
+        /** 7 Nov, third review: the contract lists' names by symbol, where known ([underlying]). */
+        val names: Map<String, String> = emptyMap(),
     )
 
     enum class Skip(val words: String) {
@@ -185,8 +200,8 @@ object ManualCoverRule {
         p.symbol in f.protectedNow -> Skip.PROTECTED
         p.key in f.handsOff -> Skip.HANDS_OFF
         p.key in f.expiring -> Skip.EXPIRING
-        p.key in f.ticketLegs || underlying(p.symbol) in f.shortUnderlyings -> Skip.SPREAD
-        underlying(p.symbol) in f.hedgeUnderlyings -> Skip.HEDGE
+        p.key in f.ticketLegs || underlying(p.symbol, f.names) in f.shortUnderlyings -> Skip.SPREAD
+        underlying(p.symbol, f.names) in f.hedgeUnderlyings -> Skip.HEDGE
         p.key in f.twoProducts -> Skip.TWO_PRODUCTS
         else -> ended(p, f.endedToday) ?: books(p, f)
     }
@@ -291,24 +306,39 @@ object ManualCoverRule {
     /** Index underlyings (no stock to hold): the holdings are never read for them. */
     val INDEX_UNDERLYINGS = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT", "SENSEX", "BANKEX")
 
-    /** Whether an option on [underlying] is part of a spread or a hedge now ([shorts]: [shortUnderlyings]; [hedges]: [hedgeUnderlyings]). */
-    fun spreadOrHedge(symbol: String, shorts: Set<String>, hedges: Set<String>): Skip? = when (underlying(symbol)) {
-        in shorts -> Skip.SPREAD
-        in hedges -> Skip.HEDGE
-        else -> null
-    }
+    /** Whether an option on [symbol]'s underlying is part of a spread or a hedge now ([shorts]: [shortUnderlyings]; [hedges]: [hedgeUnderlyings]). */
+    fun spreadOrHedge(symbol: String, shorts: Set<String>, hedges: Set<String>, names: Map<String, String> = emptyMap()): Skip? =
+        when (underlying(symbol, names)) {
+            in shorts -> Skip.SPREAD
+            in hedges -> Skip.HEDGE
+            else -> null
+        }
 
     /**
-     * 7 Nov, second review: the reason, or null, a contract may not be covered now, from Zerodha's books read again just before
-     * placing ([book]: positions; [sells]: working SELL orders; [equity]: stock held; [contractWorking]/[contractGtt]: anything
-     * working or active on the contract itself; [sendable]: what may be covered of [qty] given what is held).
+     * 7 Nov, second and third review: the check just before placing, from Zerodha's books read again OUTSIDE the protections' lock
+     * ([book]: positions; [sells]: working SELL orders, the app's own exits left out; [heldToday]: contracts held now, overnight or
+     * bought today; [equity]: stock held; [sendable]: what may be covered of [qty] given what is held). Null: go on.
      */
-    fun precheck(p: Pos, book: List<Pos>, sells: List<Sell>, equity: Set<String>, contractWorking: Boolean, contractGtt: Boolean,
-                 sendable: Int, qty: Int): Pair<Skip?, String>? = when {
-        contractWorking -> Skip.WORKING_ORDER to "$CHECKED_AGAIN: ${Skip.WORKING_ORDER.words}"
-        contractGtt -> Skip.GTT to "$CHECKED_AGAIN: ${Skip.GTT.words}"
-        else -> spreadOrHedge(p.symbol, shortUnderlyings(book, sells), hedgeUnderlyings(book, equity))?.let { it to "$CHECKED_AGAIN: ${it.words}" }
+    fun precheck(p: Pos, book: List<Pos>, sells: List<Sell>, heldToday: Set<String>, equity: Set<String>, sendable: Int, qty: Int,
+                 names: Map<String, String> = emptyMap()): Pair<Skip?, String>? =
+        spreadOrHedge(p.symbol, shortUnderlyings(book, sells, heldToday, names), hedgeUnderlyings(book, equity, names), names)
+            ?.let { it to "$CHECKED_AGAIN: ${it.words}" }
             ?: if (sendable < qty) null to "$CHECKED_AGAIN: Zerodha holds less than seen ($sendable of $qty can be covered)" else null
+
+    /**
+     * 7 Nov, third review: the last check, INSIDE the protections' lock, kept short so it never holds up the stops' watch: the
+     * switch still on, the contract's exit turn free (never waited for), its orders and GTTs read (each with a short deadline) and
+     * nothing working or active on it. Null: place.
+     */
+    fun precheckInLock(switchOn: Boolean, turnFree: Boolean, ordersRead: Boolean, contractWorking: Boolean, gttsRead: Boolean,
+                       contractGtt: Boolean): Pair<Skip?, String>? = when {
+        !switchOn -> null to "$CHECKED_AGAIN: switched off"
+        !turnFree -> null to "$CHECKED_AGAIN: busy (another exit is being sent on it)"
+        !ordersRead -> null to "$CHECKED_AGAIN: Zerodha's orders not read"
+        contractWorking -> Skip.WORKING_ORDER to "$CHECKED_AGAIN: ${Skip.WORKING_ORDER.words}"
+        !gttsRead -> null to "$CHECKED_AGAIN: Zerodha's GTTs not read"
+        contractGtt -> Skip.GTT to "$CHECKED_AGAIN: ${Skip.GTT.words}"
+        else -> null
     }
 
     /** An automatic protection taken off because its position became part of a spread or a hedge. */

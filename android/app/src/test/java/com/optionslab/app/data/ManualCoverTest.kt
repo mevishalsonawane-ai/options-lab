@@ -356,7 +356,10 @@ class ManualCoverTest : RobolectricTest() {
         // Boss now sells the spread's short leg: the bought PE was its wing.
         kite.position("NIFTY26N1625000PE", -65, 80.0)
         later(25); look()
-        assertTrue("taken off", runBlocking { Protections.active() }.isEmpty())
+        assertEquals("one look is never enough", 1, runBlocking { Protections.active() }.size)
+        later(25); look()
+        assertTrue("taken off after two looks 20 s apart", runBlocking { Protections.active() }.isEmpty())
+        assertEquals(com.optionslab.ira.ManualCoverRule.UNHEDGED, runBlocking { Protections.endedSince(0) }.last().note)
         assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
         assertEquals("CANCELLED", kite.order(p.targetOrderId!!).status)
         assertEquals("said once, loudly", 1, Alerts.posted.count { it.kind == Alerts.Kind.ERROR && it.text.contains("removed because it is now part of a spread/hedge") })
@@ -374,8 +377,74 @@ class ManualCoverTest : RobolectricTest() {
         assertTrue(p.symbol == sym)
         // The short leg's sell is still working (it would open a short).
         kite.orders["9201"] = FakeKite.Order("9201", "NIFTY26N1625000PE", "NFO", "SELL", 65, "NRML", "LIMIT", 85.0, 0.0, "", "OPEN")
-        later(25); look()
+        later(25); look(); later(25); look()
         assertEquals("only Boss's own is left", listOf(own), runBlocking { Protections.active() }.map { it.symbol })
+    }
+
+    // 7 Nov, third review: leftover exits are never a short; none of these may take the automatic protection off.
+
+    private fun neverUnhedged(what: String) {
+        later(25); look(); later(25); look(); later(25); look()
+        assertFalse(what, Alerts.posted.any { it.text.contains("removed because it is now part of a spread/hedge") })
+        assertFalse(what, runBlocking { Protections.endedSince(0) }.any { it.note == com.optionslab.ira.ManualCoverRule.UNHEDGED })
+    }
+
+    @Test fun anOcoTargetStillWorkingAfterTheStopFilledIsNoShort() {
+        val p = autoProtected()
+        kite.fill(p.stopOrderId!!, 119.0)                            // (a) the stop filled; the target sells on until the next tick
+        assertTrue(kite.order(p.targetOrderId!!).working)
+        neverUnhedged("the OCO's other half")
+    }
+
+    @Test fun bossesLeftoverStopAfterHisTargetFilledIsNoShort() {
+        autoProtected()
+        // (b) Boss's own contract: held this morning, his target filled, his stop still resting in Kite.
+        val b = "NIFTY26N0924900PE"
+        kite.position(b, 0, 100.0); kite.dayBought["NFO:$b:NRML"] = 65; kite.daySold["NFO:$b:NRML"] = 65
+        kite.orders["9401"] = FakeKite.Order("9401", b, "NFO", "SELL", 65, "NRML", "SL", 90.0, 91.0, "", "TRIGGER PENDING")
+        neverUnhedged("Boss's leftover stop")
+        assertEquals(1, runBlocking { Protections.active() }.size)
+    }
+
+    @Test fun aPartSoldByHandUnderTheAutomaticStopIsNoShort() {
+        autoProtected()
+        kite.position(sym, 65, 125.35)                               // (c) Boss sold 65 of 130; the app's stop and target are still 130
+        neverUnhedged("the app's own stop over a part sold")
+    }
+
+    @Test fun switchedOffItStillTakesItsOwnOffWhenTheyBecomeASpread() {
+        autoProtected()
+        assertTrue(ManualCover.setOn(false).startsWith("Off:"))
+        kite.position("NIFTY26N1625000PE", -65, 80.0)
+        val n = kite.placed.size
+        later(25); look(); later(25); look()
+        assertTrue("taken off while switched off", runBlocking { Protections.active() }.isEmpty())
+        assertEquals("never placed anything", n, kite.placed.size)
+    }
+
+    @Test fun switchedOffMidLookPlacesNothing() {
+        look(); later(25)
+        kite.afterNext("/quote") { ManualCover.setOn(false) }
+        look()
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(Diag.lines().any { it.contains("checked again before placing: switched off") })
+    }
+
+    @Test fun aHangingReadInsideTheLockNeverHoldsTheStopsLong() {
+        look(); later(25)
+        // The look's own orders read goes through; the next one (inside the protections' lock) never answers.
+        kite.afterNext("/quote") { kite.afterNext("/orders") { kite.hang += "/orders" } }
+        val t = Thread { look() }.apply { start() }
+        com.optionslab.app.testing.Background.await("the hang") { "/orders" in kite.hang }
+        Thread.sleep(300)
+        val t0 = System.nanoTime()
+        runBlocking { Protections.tick() }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        t.join(30_000)
+        kite.hang.clear()
+        assertTrue("the stops' watch waited $ms ms", ms < 3_500)
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(Diag.lines().any { it.contains("checked again before placing: Zerodha's orders not read") })
     }
 
     @Test fun aSpreadsWorkingShortSellLeavesANewWingAlone() {

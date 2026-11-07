@@ -362,7 +362,11 @@ object Protections {
     }
 
     /** Remove a protection: its resting orders are cancelled. */
-    suspend fun remove(id: Long): String = lock.withLock {
+    /**
+     * 7 Nov: [note] is what it ends with ("removed" by Boss; [com.optionslab.ira.ManualCoverRule.UNHEDGED] when "Stop and target on
+     * my manual positions" takes its own off because the position became part of a spread or a hedge).
+     */
+    suspend fun remove(id: Long, note: String = "removed"): String = lock.withLock {
         val list = load()
         val p = list.firstOrNull { it.id == id && it.active } ?: return@withLock "Nothing to remove."
         if (!cancelOrders(p)) {
@@ -372,7 +376,7 @@ object Protections {
             save(list)
             return@withLock "${p.symbol}: its stop or target could not be confirmed cancelled. The protection stays listed and is cancelled again on every pass until the broker confirms."
         }
-        list.replaceAll { if (it.id == id) it.copy(active = false, note = "removed") else it }
+        list.replaceAll { if (it.id == id) it.copy(active = false, note = note) else it }
         save(list)
         "Protection removed from ${p.symbol}."
     }

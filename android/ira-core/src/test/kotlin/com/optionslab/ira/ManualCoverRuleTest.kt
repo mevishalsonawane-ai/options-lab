@@ -83,16 +83,38 @@ class ManualCoverRuleTest {
         assertEquals("BANKNIFTY", ManualCoverRule.underlying("BANKNIFTY26NOV52000PE"))
     }
 
-    @Test fun aWorkingOptionSellThatWouldOpenAShortCountsAsAShort() {
+    @Test fun aWorkingOptionSellOpensAShortOnlyOnAContractNotHeldToday() {
         val book = listOf(pos)
-        // The spread's short leg still filling after its wing was bought.
-        assertEquals(setOf("NIFTY"), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell("NIFTY26N1625000PE", "NFO", 65))))
-        // Boss's own exit of what is held (or the app's stop on it) opens nothing: not a short.
-        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell(sym, "NFO", 130))))
-        assertEquals(setOf("NIFTY"), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell(sym, "NFO", 195))), "more than held")
-        // A stop and a target on what is held (one cancels the other): each no more than held, so no short.
-        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell(sym, "NFO", 130), ManualCoverRule.Sell(sym, "NFO", 130))))
+        val shortLeg = ManualCoverRule.Sell("NIFTY26N1625000PE", "NFO", 65)
+        // The spread's short leg still filling after its wing was bought: a contract with no long today.
+        assertEquals(setOf("NIFTY"), ManualCoverRule.shortUnderlyings(book, listOf(shortLeg), heldToday = setOf(key)))
+        // 7 Nov, third review: never on a contract held or held today - (a) an OCO's other half for a moment after the stop filled,
+        // (b) Boss's own leftover stop after his target filled, (c) a stop larger than what is left after a part sold by hand.
+        val c = "NIFTY26N1625000PE"
+        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell(c, "NFO", 130)), heldToday = setOf(key, "NFO:$c")))
+        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell(sym, "NFO", 195)), heldToday = setOf(key)), "more than held")
         assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell("NIFTY26NOVFUT", "NFO", 75))), "a future sell")
+        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(shortLeg.copy(qty = 0))), "nothing left of it")
+    }
+
+    @Test fun theUnderlyingOfAnFnoSymbol() {
+        assertEquals("NIFTY", ManualCoverRule.underlying("NIFTY26N0925150CE"))
+        assertEquals("NIFTY", ManualCoverRule.underlying("NIFTY2611725000PE"), "a January weekly")
+        assertEquals("BANKNIFTY", ManualCoverRule.underlying("BANKNIFTY26NOV52000PE"))
+        assertEquals("NIFTY", ManualCoverRule.underlying("NIFTY26NOVFUT"))
+        assertEquals("SENSEX", ManualCoverRule.underlying("SENSEX26N1382000CE"))
+        assertEquals("NIFTYNXT50", ManualCoverRule.underlying("NIFTYNXT5026NOV70000CE"))
+        assertEquals("3MINDIA", ManualCoverRule.underlying("3MINDIA26NOV30000CE"), "a name starting with a digit")
+        assertEquals("360ONE", ManualCoverRule.underlying("360ONE26NOV1100PE"))
+        assertEquals("M&M", ManualCoverRule.underlying("M&M26NOV3000CE"))
+        assertEquals("BAJAJ-AUTO", ManualCoverRule.underlying("BAJAJ-AUTO26NOV9000CE"))
+        assertEquals("X", ManualCoverRule.underlying("ODD26NOV1CE", mapOf("ODD26NOV1CE" to "X")), "the contract list's name first")
+        assertEquals("RELIANCE", ManualCoverRule.underlying("RELIANCE"), "a cash symbol is itself")
+        // Index ETFs are their own names: never the index's.
+        assertEquals("NIFTYBEES", ManualCoverRule.underlying("NIFTYBEES"))
+        val f = listOf(Pos("360ONE26NOVFUT", "NFO", "NRML", 500, 1.0, 1.0))
+        assertEquals(Skip.HEDGE, ManualCoverRule.skip(Pos("360ONE26NOV1100PE", "NFO", "NRML", 500, 10.0, 11.0),
+            Facts(hedgeUnderlyings = ManualCoverRule.hedgeUnderlyings(f, emptySet()))))
     }
 
     @Test fun aStockOptionIsAHedgeWhileItsStockOrFutureIsHeld() {
@@ -112,16 +134,29 @@ class ManualCoverRuleTest {
 
     @Test fun theCheckJustBeforePlacing() {
         fun pc(book: List<Pos> = listOf(pos), sells: List<ManualCoverRule.Sell> = emptyList(), equity: Set<String> = emptySet(),
-               w: Boolean = false, g: Boolean = false, sendable: Int = 130) = ManualCoverRule.precheck(pos, book, sells, equity, w, g, sendable, 130)
+               sendable: Int = 130) = ManualCoverRule.precheck(pos, book, sells, setOf(key), equity, sendable, 130)
         assertNull(pc(), "all clear: placed")
-        assertEquals(Skip.WORKING_ORDER, pc(w = true)!!.first)
-        assertEquals(Skip.GTT, pc(g = true)!!.first)
         assertEquals(Skip.SPREAD, pc(book = listOf(pos, Pos("NIFTY26N1625000PE", "NFO", "NRML", -65, 1.0, 1.0)))!!.first)
         assertEquals(Skip.SPREAD, pc(sells = listOf(ManualCoverRule.Sell("NIFTY26N1625000PE", "NFO", 65)))!!.first)
+        assertNull(pc(sells = listOf(ManualCoverRule.Sell(sym, "NFO", 130))), "an exit of what is held")
         assertEquals(Skip.HEDGE, pc(book = listOf(pos, Pos("NIFTY26NOVFUT", "NFO", "NRML", 75, 1.0, 1.0)))!!.first)
         val less = pc(sendable = 65)!!
         assertNull(less.first); assertTrue(less.second.contains("65 of 130"))
-        for (r in listOf(pc(w = true), pc(sendable = 0))) assertFalse(ManualCoverRule.definiteRefusal("Not protected: ${r!!.second}"))
+        assertFalse(ManualCoverRule.definiteRefusal("Not protected: ${less.second}"))
+    }
+
+    @Test fun theLastCheckInsideTheLock() {
+        fun pc(on: Boolean = true, free: Boolean = true, or: Boolean = true, w: Boolean = false, gr: Boolean = true, g: Boolean = false) =
+            ManualCoverRule.precheckInLock(on, free, or, w, gr, g)
+        assertNull(pc())
+        for ((r, words) in listOf(pc(on = false) to "switched off", pc(free = false) to "busy", pc(or = false) to "orders not read",
+                pc(gr = false) to "GTTs not read")) {
+            assertNull(r!!.first); assertTrue(r.second.contains(words), r.second)
+            assertFalse(ManualCoverRule.definiteRefusal("Not protected: ${r.second}"), "never a refusal: ${r.second}")
+        }
+        assertEquals(Skip.WORKING_ORDER, pc(w = true)!!.first)
+        assertEquals(Skip.GTT, pc(g = true)!!.first)
+        assertTrue(ManualCoverRule.UNHEDGED in ManualCoverRule.NATURAL_ENDS, "taking one off never blocks covering again")
     }
 
     @Test fun theOpenTicketsLegsAreLeftAlone() {
