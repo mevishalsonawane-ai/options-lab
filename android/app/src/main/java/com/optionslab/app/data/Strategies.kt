@@ -525,6 +525,25 @@ object Strategies {
     private fun ownerLabel(def: StrategyDef, order: Action.PlaceOrder): String =
         "${def.name} · leg ${order.legId} ${order.kind.replace('_', ' ')}"
 
+    /**
+     * 7 Nov ([ManualCover]): the Zerodha symbols of the live runs' legs not yet closed or rejected, so a strategy's own leg is never
+     * taken for a position Boss bought by hand. Null: a live run is open but today's contract list is not in memory (its legs cannot
+     * be named; nothing is read for it here).
+     */
+    internal suspend fun liveLegSymbols(): Set<String>? {
+        val legs = lock.withLock {
+            book().runs.values.filter { it.mode == RunMode.LIVE && it.status != RunStatus.CLOSED }
+                .flatMap { r -> r.legs.values.filter { it.status != "closed" && it.status != "rejected" }.map { it.symbol } }
+        }
+        if (legs.isEmpty()) return emptySet()
+        val ins = Broker.cachedInstruments() ?: return null
+        // The run's own names for the contracts, as [venue] makes them, to Zerodha's.
+        val names = ins.associate { i ->
+            (i.name + i.expiry.format(DASHED).replace("-", "").uppercase(Locale.ENGLISH) + com.optionslab.engine.fmtG(i.strike) + i.right.name) to i.tradingSymbol
+        }
+        return legs.mapNotNull { names[it] }.toSet()
+    }
+
     /** Who placed each order this phone knows of: venue id ("paper:…", "kite:…") -> strategy label. */
     suspend fun owners(): Map<String, String> = lock.withLock { HashMap(book().owners) }
 

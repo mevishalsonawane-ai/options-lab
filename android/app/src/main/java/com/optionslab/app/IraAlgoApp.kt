@@ -116,6 +116,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.ExitCoordinator.init(this)
         // 21 Oct, enhancement round 4 (idea 1): stop and target as one GTT in the day too (off by default), read in the background.
         com.optionslab.app.data.DayOco.init(this)
+        // 7 Nov (Boss's ask): a stop and target on live options bought by hand (on by default), its switch read in the background.
+        com.optionslab.app.data.ManualCover.init(this)
         // 21 Oct, enhancement round 4 (idea 3): the payout-aware drawdown (in shadow by default), read in the background.
         com.optionslab.app.data.PayoutWatch.init(this)
         com.optionslab.app.data.History.init(this)

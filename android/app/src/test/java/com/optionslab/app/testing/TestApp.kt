@@ -140,6 +140,9 @@ class TestApp : Application() {
         // 18 Oct: no paper-only period, read (a fresh phone whose start read it); the period's own tests set or unread it.
         com.optionslab.app.data.PaperOnly.resetForTest()
         com.optionslab.app.data.ZerodhaSync.resetForTest()
+        // 7 Nov: "Stop and target on my manual positions" is on in the app, but OFF for every other test (their live positions are
+        // not what they test, and a protection placed on them would change their orders); its own tests turn it on.
+        com.optionslab.app.data.ManualCover.resetForTest(on = false)
         com.optionslab.app.data.OrderReviewHost.init(this)
         com.optionslab.app.data.OrderReviewHost.resetForTest()
         Journal.init(this)

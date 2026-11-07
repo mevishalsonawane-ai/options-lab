@@ -645,6 +645,13 @@ class PersonalStoresTest {
             com.optionslab.app.data.DayOco.note(com.optionslab.ira.DayGttTally.Event.PLACED)
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("ManualCover") {
+            // 7 Nov: on by default (TestApp starts it off for the other tests): switched off by Boss, a setting to erase.
+            com.optionslab.app.data.ManualCover.resetForTest(on = true)
+            com.optionslab.app.data.ManualCover.setOn(false)
+            check(com.optionslab.app.data.ManualCover.holdsForErase())
+            com.optionslab.app.security.SecurePrefs.flush()
+        },
         s("HealthReport") {
             com.optionslab.app.data.HealthReport.write(app)             // cache/exports/health/*.zip (holds() stays false: files only)
         },

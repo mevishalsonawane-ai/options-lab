@@ -714,6 +714,8 @@ fun RiskPage(model: AppModel) {
             item { ExitCoordinatorCard() }
             // 21 Oct, enhancement round 4: a carried position's stop and target as one GTT in the day too (off until switched on).
             item { DayOcoCard(model) }
+            // 7 Nov (Boss's ask): a stop and target on live options bought by hand (on by default; on again takes the PIN).
+            item { ManualCoverCard(model) }
             item { EventCalendarCard() }
             // TODO I6 (13 Oct): "pause paper arms on event days" - OFF by default, shadow first.
             item { EventShieldSwitchCard() }

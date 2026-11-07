@@ -317,6 +317,49 @@ internal fun DayOcoCardContent(view: com.optionslab.app.data.DayOco.View, said: 
 }
 
 /**
+ * 7 Nov (Boss: "if any manual order is placed, then stoploss and target (profit lock) order should be placed by the application"):
+ * Bot settings' "Stop and target on my manual positions". On by default; off never takes the PIN; on again does (the app then
+ * places real exits at Zerodha by itself).
+ */
+@Composable
+internal fun ManualCoverCard(model: com.optionslab.app.ui.AppModel) {
+    val view by com.optionslab.app.data.ManualCover.view.collectAsState(Dispatchers.Main.immediate)
+    val scope = rememberCoroutineScope()
+    var said by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.ManualCover.refresh() } } }
+    fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
+    ManualCoverCardFlow(view, said, onOff = { save { com.optionslab.app.data.ManualCover.setOn(false) } },
+        onOnConfirmed = { save { com.optionslab.app.data.ManualCover.setOn(true, pinConfirmed = true) } }) { onOk, onCancel ->
+        Reauth(model, onOk = onOk, onCancel = onCancel,
+            why = "Enter your app PIN to have the app place a stop and target on live options you buy yourself.")
+    }
+}
+
+/** The card and its PIN step ([pin]: the PIN dialog, shown only when switching on; tests give their own). */
+@Composable
+internal fun ManualCoverCardFlow(view: com.optionslab.app.data.ManualCover.View, said: String?, onOff: () -> Unit, onOnConfirmed: () -> Unit,
+                                 pin: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit) {
+    var askPin by remember { mutableStateOf(false) }
+    ManualCoverCardContent(view, said) { on -> if (on) askPin = true else onOff() }
+    if (askPin) pin({ askPin = false; onOnConfirmed() }, { askPin = false })
+}
+
+/** The card from plain state (tests drive it). */
+@Composable
+internal fun ManualCoverCardContent(view: com.optionslab.app.data.ManualCover.View, said: String?, onSwitch: (Boolean) -> Unit) {
+    LedgerCard(title = "Your own buys: stop and target") {
+        Note("Any live option you buy yourself, in Kite or here, that no arm, Pine script or protection follows, gets a stop 20% " +
+            "under its average price and a target sell 40% over it.")
+        ToggleRow("Stop and target on my manual positions", if (view.on) "On: placed automatically in market hours (09:15-15:24)"
+            else "Off: positions you buy yourself are left as they are", view.on, keepSub = true, onChange = onSwitch)
+        Note("Never on a position with your own stop, target or GTT working, or one whose protection you removed today. It only adds " +
+            "exits: it never buys, resizes or cancels your orders. Switching it back on takes your PIN.", Modifier.padding(top = 2.dp))
+        if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
+        said?.let { Note(it, Modifier.padding(top = 4.dp)) }
+    }
+}
+
+/**
  * 21 Oct, enhancement round 4 (idea 3): Bot settings' payout-aware drawdown. Off by default (shadow: what it would say is logged).
  * On, when a drawdown from the peak stops live entries and the payouts since that peak alone explain it, the card offers to lower
  * the peak by them, with the PIN. It never clears the kill switch: Boss does that.

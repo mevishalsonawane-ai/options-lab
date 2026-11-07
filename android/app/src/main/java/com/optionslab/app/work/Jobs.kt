@@ -1002,6 +1002,10 @@ object Tasks {
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
         )), armsWait, inOrder = lanes == null)
         safely {
+            // 7 Nov (Boss: "if any manual order is placed, then stoploss and target ... should be placed by the application"): a live
+            // option bought by hand that nothing in the app follows gets a stop 20% under its average and a target 40% over it
+            // (Boss's switch, on by default). Only adds exits; the stops and targets below then watch it like any protection.
+            step("manual positions' stop and target") { com.optionslab.app.data.ManualCover.run(s) }
             // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
             step("stops and targets") { com.optionslab.app.data.Protections.tick() }
             // Expiry day, 15:05: close every option position expiring today (paper and live, all products).

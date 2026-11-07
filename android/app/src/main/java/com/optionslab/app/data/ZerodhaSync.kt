@@ -68,8 +68,11 @@ object ZerodhaSync {
         return step.confirmed
     }
 
-    /** What the app believes is open at Zerodha now; null when a book could not be read in time. */
-    private suspend fun beliefs(): List<PositionSync.Belief>? {
+    /**
+     * What the app believes is open at Zerodha now; null when a book could not be read in time. 7 Nov: also what [ManualCover]
+     * leaves alone (a contract any of these follows is never a manual position).
+     */
+    internal suspend fun beliefs(): List<PositionSync.Belief>? {
         val out = ArrayList<PositionSync.Belief>()
         val arms = withTimeoutOrNull(3_000) { runCatching { OrbArms.liveOpen() }.getOrNull() } ?: return null
         arms.forEach { (label, p) ->
