@@ -801,7 +801,7 @@ class ControlPagesTest {
     @Test fun theMuhuratSundayIsNamedOnTheHolidayCard() {
         show { SchedulePage(model) }
         compose.reveal("Diwali Muhurat trading", substring = true)
-        assertTrue(compose.has("Diwali Muhurat trading, 18:00-19:00 IST (special session: no arm trades it)", substring = true))
+        assertTrue(compose.has("Diwali Muhurat trading, 14:20-15:40 IST (special session: no arm trades it)", substring = true))
     }
 
     @Test fun expirySquareOffAndNakedShortSwitches() {

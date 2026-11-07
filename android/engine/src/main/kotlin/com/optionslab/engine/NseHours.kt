@@ -62,14 +62,14 @@ object NseHours {
     }
 
     /**
-     * 25 Oct 2026 (the arms audit's last item): NSE's special sessions. Sunday 8 Nov 2026 is Diwali's Muhurat trading, an
-     * evening hour on a Sunday (MCX's own table, [com.optionslab.engine.mcx.McxSession.BUILT_IN], has the same 18:00-19:00 from
-     * MCX's circular; NSE's circular gives the exact minutes nearer the day, so this window is the expected one). No arm trades it:
-     * every arm's clock is the 09:15-15:30 session, so the day is NOT a regular trading day, even if it is added by hand as a
-     * special session ([regular]); the screens name it.
+     * 25 Oct 2026 (the arms audit's last item): NSE's special sessions. Sunday 8 Nov 2026 is Diwali's Muhurat trading, a short
+     * session on a Sunday. 7 Nov (Boss: "tomorrow timings is different"): NSE's circular of 19 Oct puts F&O at 14:20-15:40 IST (pre-open
+     * 14:05-14:20, cash to 15:30), not the 18:00-19:00 first assumed here. MCX's own window comes from its fetched calendar
+     * ([com.optionslab.engine.mcx.McxSession]). No arm trades it: every arm's clock is the 09:15-15:30 session, so the day is NOT a
+     * regular trading day, even if it is added by hand as a special session ([regular]); the screens name it.
      */
     val SPECIAL_SESSIONS: Map<LocalDate, Special> = mapOf(
-        LocalDate.of(2026, 11, 8) to Special(LocalTime.of(18, 0), LocalTime.of(19, 0), "Diwali Muhurat trading"),
+        LocalDate.of(2026, 11, 8) to Special(LocalTime.of(14, 20), LocalTime.of(15, 40), "Diwali Muhurat trading"),
     )
 
     /** [day]'s special session, or null for an ordinary day. */

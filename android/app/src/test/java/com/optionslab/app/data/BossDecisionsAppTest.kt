@@ -76,7 +76,7 @@ class BossDecisionsAppTest : RobolectricTest() {
     @Test fun theMuhuratSundayIsASpecialSessionNeverARegularTradingDayEvenAddedByHand() {
         val muhurat = LocalDate.of(2026, 11, 8)
         assertNotNull(Market.specialSession(muhurat))
-        assertEquals("Diwali Muhurat trading, 18:00-19:00 IST", Market.specialSession(muhurat)!!.text)
+        assertEquals("Diwali Muhurat trading, 14:20-15:40 IST", Market.specialSession(muhurat)!!.text)
         assertFalse(Market.isTradingDay(muhurat))
         Holidays.addSession(muhurat)                          // Boss adds it by hand as a special session
         assertFalse("no arm's 09:15 clock runs that day", Market.isTradingDay(muhurat))
