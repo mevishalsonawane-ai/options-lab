@@ -33,7 +33,8 @@ class ManualCoverTest : RobolectricTest() {
         kite = FakeKite()
         kite.instruments += FakeKite.Ins(12_345_679, sym, "NIFTY", Market.today().plusDays(2), 25_150.0, "CE", 65)
         kite.position(sym, 130, 125.35)
-        kite.quote("NFO:$sym", 120.0, 119.95, 120.05)
+        // 7 Nov, review: comfortably over the 5% stop (119.05) and its room (1% of the average), under the 10% target (137.90).
+        kite.quote("NFO:$sym", 126.0, 125.95, 126.05)
         kite.login()
         AutomationSupport.liveSettings()
         Alerts.forgetPosted()
@@ -43,6 +44,7 @@ class ManualCoverTest : RobolectricTest() {
 
     @After fun down() {
         ManualCover.resetForTest(on = false)
+        ManualCover.attachForTest(null)
         pineHeld(emptyMap())
         Market.testClock = null
         if (::kite.isInitialized) kite.close()
@@ -196,10 +198,20 @@ class ManualCoverTest : RobolectricTest() {
         assertTrue(writes().isEmpty())
     }
 
-    @Test fun notReadYetNothingHappens() {
+    /** 7 Nov, review: the start's read not landed yet: the pass reads the switch itself, and follows what is saved. */
+    @Test fun notReadYetThePassReadsTheSwitchAndFollowsIt() {
+        com.optionslab.app.security.SecurePrefs.put("g.manualCover.on", false)
+        com.optionslab.app.security.SecurePrefs.flush()
         ManualCover.resetForTest(on = true, loaded = false)
         twoLooks()
-        assertTrue("a restart never acts before the switch is read", writes().isEmpty())
+        assertTrue("saved off: nothing", writes().isEmpty())
+        assertFalse(ManualCover.isOn())
+        assertTrue(ManualCover.view.value.loaded)
+        com.optionslab.app.security.SecurePrefs.put("g.manualCover.on", true)
+        com.optionslab.app.security.SecurePrefs.flush()
+        ManualCover.resetForTest(on = false, loaded = false)
+        later(25); look(); later(25); look()
+        assertEquals("saved on (the default): covered", listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
     }
 
     @Test fun inPaperModeNothingHappens() {
@@ -234,13 +246,100 @@ class ManualCoverTest : RobolectricTest() {
         assertEquals(1, kite.placed.size)
         assertFalse("not yet given up", said("is NOT protected"))
         later(25); look()
-        later(25); look()
+        assertEquals("a minute between attempts at least", 1, kite.placed.size)
+        later(40); look()
+        later(65); look()
         assertEquals(3, kite.placed.size)
         assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("is NOT protected") && it.text.contains("tried 3 times") })
         assertEquals(1, ManualCover.tallyForTest().failed)
-        later(25); look(); later(25); look()
+        later(65); look(); later(65); look()
         assertEquals("it stops trying for the day", 3, kite.placed.size)
         assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
+    @Test fun theGiveUpIsABannerAsWellAsANotificationWhenTheAppRuns() {
+        ManualCover.attachForTest(context)
+        repeat(3) { kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION) }
+        twoLooks(); later(65); look(); later(65); look()
+        assertEquals(3, kite.placed.size)
+        assertEquals("one banner (the notification's own is not shown twice)", 1,
+            Alerts.posted.count { it.kind == Alerts.Kind.ERROR && it.text.contains("is NOT protected") })
+    }
+
+    @Test fun aFailedPriceReadIsNoAttemptAndNoRefusal() {
+        kite.down += "/quote"
+        twoLooks(); later(65); look(); later(65); look(); later(65); look()
+        assertTrue("no price: nothing placed", writes().isEmpty())
+        assertFalse(said("is NOT protected"))
+        kite.down -= "/quote"
+        later(65); look()
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
+
+    @Test fun justOverTheStopIsTooCloseNothingIsPlaced() {
+        kite.quote("NFO:$sym", 120.0, 119.95, 120.05)                 // 0.95 over the 119.05 stop: under 1% of the average
+        twoLooks(); later(25); look()
+        assertTrue(writes().isEmpty())
+        assertEquals(1, Alerts.posted.count { it.text.contains("no stop was placed") })
+        kite.quote("NFO:$sym", 126.0, 125.95, 126.05)                 // back up: covered then
+        later(25); look()
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
+
+    // ---- 7 Nov, review: spreads, two products, a carried position, Boss's exit in between --------------------------------------
+
+    @Test fun aWingIsLeftAloneWhileTheAccountIsShortAnOptionOnTheSameIndex() {
+        kite.position("NIFTY26N1625000PE", -65, 80.0)                 // the short leg of a spread (any expiry)
+        twoLooks(); later(25); look(); later(25); look()
+        assertTrue("covering the wing alone could leave the short naked", writes().isEmpty())
+        assertEquals("said once", 1, Alerts.posted.count { it.text.contains("left alone (part of a spread)") })
+    }
+
+    @Test fun aContractHeldAsBothMisAndNrmlIsLeftAloneAndSaidOnce() {
+        kite.position(sym, 65, 125.0, product = "MIS")
+        twoLooks(); later(25); look(); later(25); look()
+        assertTrue(writes().isEmpty())
+        assertEquals(1, Alerts.posted.count { it.text.contains("held as both MIS and NRML: set the stops yourself") })
+    }
+
+    @Test fun aCarriedPositionsProtectionRemovedYesterdayIsNotAddedAgain() {
+        kite.flat()
+        kite.overnight(sym, 130, 125.35)                              // NRML, held since yesterday
+        val now = Market.now()
+        val yesterday = now.toLocalDate().minusDays(1).atTime(12, 0).atZone(com.optionslab.engine.IST).toInstant()
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), yesterday))
+        val said = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 130, 126.0, 119.0, null, 138.0) }
+        assertTrue(said, said.startsWith("Protected"))
+        val p = runBlocking { Protections.active() }.single()
+        assertTrue(runBlocking { Protections.remove(p.id) }.startsWith("Protection removed"))   // Boss removed it yesterday
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), now.toInstant()))
+        val n = kite.placed.size
+        twoLooks(); later(25); look()
+        assertEquals("the same carried position: Boss's removal still holds", n, kite.placed.size)
+    }
+
+    @Test fun anIntradayBuyTodayIsCoveredAfterAnEarlierDaysRemoval() {
+        kite.flat()
+        kite.position(sym, 130, 125.35, product = "MIS")
+        val now = Market.now()
+        val yesterday = now.toLocalDate().minusDays(1).atTime(12, 0).atZone(com.optionslab.engine.IST).toInstant()
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), yesterday))
+        runBlocking { Protections.protectLive(sym, "NFO", "MIS", 130, 126.0, 119.0, null, 138.0) }
+        runBlocking { Protections.remove(Protections.active().single().id) }
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), now.toInstant()))
+        val n = kite.placed.size
+        twoLooks()
+        assertEquals("a new day's intraday buy is covered", listOf("SL", "LIMIT"), kite.placed.drop(n).map { it.form["order_type"] })
+    }
+
+    @Test fun bossesOwnExitSentJustBeforePlacingIsRespected() {
+        look(); later(25)
+        // Boss's own stop arrives between the look's read and the placing (here: as the price is read fresh).
+        kite.afterNext("/quote") {
+            kite.orders["9101"] = FakeKite.Order("9101", sym, "NFO", "SELL", 130, "NRML", "SL", 110.0, 111.0, "", "TRIGGER PENDING")
+        }
+        look()
+        assertTrue("re-read in the exit turn: nothing placed beside Boss's stop", writes().isEmpty())
     }
 
     // ---- the switch -------------------------------------------------------------------------------------------------------------

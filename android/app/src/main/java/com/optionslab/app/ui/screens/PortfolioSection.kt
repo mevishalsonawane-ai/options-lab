@@ -350,10 +350,13 @@ internal fun ManualCoverCardContent(view: com.optionslab.app.data.ManualCover.Vi
     LedgerCard(title = "Your own buys: stop and target") {
         Note("Any live option you buy yourself, in Kite or here, that no arm, Pine script or protection follows, gets a stop 5% " +
             "under its average price and a target sell 10% over it.")
-        ToggleRow("Stop and target on my manual positions", if (view.on) "On: placed automatically in market hours (09:15-15:24)"
+        // 7 Nov, review: until the saved switch is read, the card says so (never "On" from the default); the switch is not offered.
+        if (!view.loaded) Note("Reading the switch...", Modifier.padding(top = 4.dp))
+        else ToggleRow("Stop and target on my manual positions", if (view.on) "On: placed automatically in market hours (09:15-15:24)"
             else "Off: positions you buy yourself are left as they are", view.on, keepSub = true, onChange = onSwitch)
-        Note("Never on a position with your own stop, target or GTT working, or one whose protection you removed today. It only adds " +
-            "exits: it never buys, resizes or cancels your orders. Switching it back on takes your PIN.", Modifier.padding(top = 2.dp))
+        Note("Never on a position with your own stop, target or GTT working, one whose protection you removed, a spread's leg (you are " +
+            "short an option on the same index) or a contract held as both MIS and NRML. It only adds exits: it never buys, resizes " +
+            "or cancels your orders. Switching it back on takes your PIN.", Modifier.padding(top = 2.dp))
         if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }

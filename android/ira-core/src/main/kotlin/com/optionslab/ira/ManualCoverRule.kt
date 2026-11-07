@@ -24,8 +24,18 @@ object ManualCoverRule {
     const val TARGET_FRACTION = 1.10
     /** Two looks this far apart, the same quantity both times, before acting (an arm's fill may not be recorded yet). */
     const val SETTLE_MS = 20_000L
-    /** Placing tried at most this many times a day per contract; then Boss is told loudly that it is NOT protected. */
+    /** Definite refusals (RMS and the like) at most this many a day per contract; then Boss is told loudly that it is NOT protected. */
     const val MAX_TRIES = 3
+    /**
+     * 7 Nov, review: every attempt counted (transient failures too: a read that timed out, a lost reply, a trigger the price moved
+     * through) at most this many a day per contract, [RETRY_GAP_MS] apart at least, so it never floods Zerodha.
+     */
+    const val MAX_ATTEMPTS = 10
+    const val RETRY_GAP_MS = 60_000L
+    /** 7 Nov, review (a 5% stop is tight): the last price must be at least this many ticks over the stop ... */
+    const val ROOM_TICKS = 3
+    /** ... and at least this fraction of the average over it; less is "already down", nothing is placed (looked at again later). */
+    const val ROOM_FRACTION = 0.01
     /** 09:15 IST: the session's open. */
     const val FROM_MINUTE = 9 * 60 + 15
     /** 15:24 IST: the last minute it acts (DAY orders only, never an AMO; the flat-by and the square-offs follow). */
@@ -41,15 +51,53 @@ object ManualCoverRule {
      * ended (closed, a GTT fired, its stop or target filled) or a newer protection took its place. Any other end (Boss removed it,
      * cancelled its stop in Kite, a stop was rejected, its orders stopped working) is Boss's or Zerodha's choice: not re-added today.
      */
-    val NATURAL_ENDS = setOf("position closed", "GTT fired", "replaced", "stop filled", "target filled")
+    // 7 Nov, review: "exit orders no longer working" too - a carried position's DAY exits that ended with their session and were
+    // not placed again (Protections then says "NOT protected any more: set the protection again"); that is no choice of Boss's.
+    val NATURAL_ENDS = setOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working")
 
-    /** One row of Zerodha's net positions. [qty] signed (+ bought). */
-    data class Pos(val symbol: String, val exchange: String, val product: String, val qty: Int, val avg: Double, val last: Double) {
+    /** How far back a carried (NRML, held overnight) position's ended protections are looked at (7 Nov, review). */
+    const val CARRIED_DAYS = 7L
+
+    /**
+     * One row of Zerodha's net positions. [qty] signed (+ bought). [carried]: NRML and held since an earlier day (its overnight
+     * quantity), so a protection Boss removed on an earlier day is still respected (7 Nov, review).
+     */
+    data class Pos(val symbol: String, val exchange: String, val product: String, val qty: Int, val avg: Double, val last: Double,
+                   val carried: Boolean = false) {
         val key: String get() = "$exchange:$symbol"
+        /** The two looks' key (7 Nov, review): one contract held in two products is two positions. */
+        val lookKey: String get() = "$exchange:$symbol:$product"
     }
 
-    /** A protection set today that is over, and the note it ended with. */
-    data class Ended(val symbol: String, val note: String)
+    /**
+     * A protection that is over, the note it ended with, and whether it was set today (7 Nov, review: a carried position looks at
+     * the last [CARRIED_DAYS] days; an intraday one only at today's). [exchange] empty: any.
+     */
+    data class Ended(val symbol: String, val note: String, val today: Boolean = true, val exchange: String = "")
+
+    /** The underlying an option's Zerodha symbol starts with ("NIFTY26N0925150CE" -> "NIFTY"): the letters before its first digit. */
+    fun underlying(symbol: String): String = symbol.takeWhile { !it.isDigit() }
+
+    /** A Zerodha option symbol (CE or PE). */
+    fun isOption(symbol: String): Boolean = symbol.endsWith("CE") || symbol.endsWith("PE")
+
+    /**
+     * 7 Nov, review: the underlyings the account is SHORT an option on (any expiry, any product). A long option on one of these may
+     * be a spread's wing (Boss's Ledger ticket: a short PE and a bought wing PE): covering the wing alone could leave the short naked.
+     */
+    fun shortUnderlyings(book: List<Pos>): Set<String> =
+        book.filter { it.qty < 0 && isOption(it.symbol) }.map { underlying(it.symbol) }.toSet()
+
+    /**
+     * Whether a contract is a leg of the open Expiry Put ticket (as the expiry square-off recognises them): the ticket's underlying,
+     * a PE, at its strike or its wing's. A contract whose strike is not known (null [strike]) is counted as a leg when its
+     * underlying matches and it is (or may be) a PE: the safe side.
+     */
+    fun isTicketLeg(name: String, strike: Double?, right: String?, ticketUnderlying: String, ticketStrike: Double, wingStrike: Double?): Boolean {
+        if (name != ticketUnderlying) return false
+        if (strike == null) return right == null || right == "PE"
+        return right == "PE" && (strike == ticketStrike || strike == wingStrike)
+    }
 
     /**
      * What the app knows of [Pos]'s contract. Symbols: [followed] (an arm's, Pine's, an arm's live trade, a live strategy run's leg or a protection),
@@ -66,6 +114,12 @@ object ManualCoverRule {
         val activeGtts: Set<String> = emptySet(),
         val appOrders: Set<String> = emptySet(),
         val expiring: Set<String> = emptySet(),
+        /** 7 Nov, review: underlyings the account is short an option on ([shortUnderlyings]). */
+        val shortUnderlyings: Set<String> = emptySet(),
+        /** 7 Nov, review: "EXCHANGE:SYMBOL" keys of the open ticket's legs ([isTicketLeg]). */
+        val ticketLegs: Set<String> = emptySet(),
+        /** 7 Nov, review: "EXCHANGE:SYMBOL" keys held in more than one product (protections are kept per symbol). */
+        val twoProducts: Set<String> = emptySet(),
     )
 
     enum class Skip(val words: String) {
@@ -78,6 +132,8 @@ object ManualCoverRule {
         GTT("a GTT on it is active at Zerodha"),
         APP_ORDER("the app's own order bought it"),
         EXPIRING("it expires today and the expiry square-off closes it"),
+        SPREAD("left alone (part of a spread)"),
+        TWO_PRODUCTS("held as both MIS and NRML: set the stops yourself"),
     }
 
     /**
@@ -103,7 +159,10 @@ object ManualCoverRule {
         p.symbol in f.protectedNow -> Skip.PROTECTED
         p.key in f.handsOff -> Skip.HANDS_OFF
         p.key in f.expiring -> Skip.EXPIRING
-        f.endedToday.any { it.symbol == p.symbol && it.note !in NATURAL_ENDS } -> Skip.ENDED_TODAY
+        p.key in f.ticketLegs || underlying(p.symbol) in f.shortUnderlyings -> Skip.SPREAD
+        p.key in f.twoProducts -> Skip.TWO_PRODUCTS
+        f.endedToday.any { e -> e.symbol == p.symbol && (e.exchange.isEmpty() || e.exchange == p.exchange) && (e.today || p.carried) &&
+            e.note !in NATURAL_ENDS } -> Skip.ENDED_TODAY
         p.key in f.workingOrders -> Skip.WORKING_ORDER
         p.key in f.activeGtts -> Skip.GTT
         p.key in f.appOrders -> Skip.APP_ORDER
@@ -129,17 +188,21 @@ object ManualCoverRule {
         data class Both(val stop: Double, val target: Double) : Plan()
         /** The price is already at or over the target: the stop only (a target sell under the price would fill at once). */
         data class StopOnly(val stop: Double, val target: Double) : Plan()
-        /** The price is already at or under the stop: nothing placed; Boss is told to set one by hand. */
+        /** The price is already at, under or just over the stop ([room]): nothing placed; Boss is told to set one by hand. */
         data class TooLow(val stop: Double) : Plan()
         /** No usable average price or last price: nothing this look. */
         object NoPrice : Plan()
     }
 
+    /** The room the last price needs over the stop ([ROOM_TICKS] ticks or [ROOM_FRACTION] of the average, the larger). */
+    fun room(avg: Double, tick: Double): Double = maxOf(ROOM_TICKS * tick, avg * ROOM_FRACTION)
+
     fun plan(avg: Double, last: Double, tick: Double): Plan {
         val l = levels(avg, tick) ?: return Plan.NoPrice
         if (!(last > 0) || !last.isFinite()) return Plan.NoPrice
         return when {
-            last <= l.stop -> Plan.TooLow(l.stop)
+            // 7 Nov, review: too close over the stop is "too low" too (it would trigger, or be refused, at once).
+            last < l.stop + room(avg, tick) - 1e-9 -> Plan.TooLow(l.stop)
             last >= l.target -> Plan.StopOnly(l.stop, l.target)
             else -> Plan.Both(l.stop, l.target)
         }
@@ -169,6 +232,25 @@ object ManualCoverRule {
         val size: Int get() = seen.size
     }
 
+    /**
+     * 7 Nov, review: whether a "Not protected: ..." answer counts toward [MAX_TRIES]. Transient ones never do: a read or reply that
+     * failed or was lost, the lot and tick not read, a stop on the wrong side of the price (it moved), Paper mode meanwhile. A
+     * definite refusal (Zerodha's RMS, an input refused) does.
+     */
+    fun definiteRefusal(result: String): Boolean {
+        val r = result.lowercase()
+        val transient = listOf("could not read", "could not be confirmed", "lost", "timed out", "timeout", "gateway", "network",
+            "couldn't connect", "check the order book", "try again", "the stop must be", "the target must be", "trigger",
+            "switch to live", "no matching order", "unknown", "status")
+        return transient.none { it in r }
+    }
+
+    /**
+     * 7 Nov, review: whether an attempt may be made now: under [MAX_ATTEMPTS] today and [RETRY_GAP_MS] since the last one.
+     */
+    fun mayAttempt(attempts: Int, lastAttemptMs: Long?, nowMs: Long): Boolean =
+        attempts < MAX_ATTEMPTS && (lastAttemptMs == null || nowMs - lastAttemptMs >= RETRY_GAP_MS || nowMs < lastAttemptMs)
+
     /** Today's counts for the diagnostics line (memory; a new day starts at nothing). */
     data class Tally(val day: LocalDate? = null, val protectedN: Int = 0, val leftAlone: Int = 0, val failed: Int = 0) {
         fun on(today: LocalDate): Tally = if (day == today) this else Tally(today)
@@ -192,12 +274,15 @@ object ManualCoverRule {
     fun saidStopOnly(symbol: String, last: Double, target: Double): String =
         "$symbol is already at ${f2(last)}, at or over the 10% target (${f2(target)}), so only the stop was placed."
 
-    /** The price is already 5% or more under the average: nothing placed. */
+    /** The price is already at, under or just over the 5% stop: nothing placed (looked at again on later passes). */
     fun saidTooLow(symbol: String, last: Double, stop: Double): String =
-        "$symbol is already down 5% or more (last ${f2(last)}, the stop would be ${f2(stop)}): no stop was placed. Set one yourself."
+        "$symbol is already at or close to 5% down (last ${f2(last)}, the stop would be ${f2(stop)}): no stop was placed. Set one yourself."
 
-    /** After [MAX_TRIES] refusals today. */
-    fun saidGaveUp(symbol: String, qty: Int, why: String): String =
-        "$symbol ($qty bought by you) is NOT protected: the app tried $MAX_TRIES times to place its stop and target and Zerodha " +
-            "refused ($why). Set a stop yourself."
+    /** 7 Nov, review: a contract left alone for a reason Boss should hear once a day (a spread, two products). */
+    fun saidLeftAlone(symbol: String, why: Skip): String = "$symbol: no automatic stop and target, ${why.words}."
+
+    /** After [tries] refusals or attempts today ([MAX_TRIES] / [MAX_ATTEMPTS]). */
+    fun saidGaveUp(symbol: String, qty: Int, why: String, tries: Int = MAX_TRIES): String =
+        "$symbol ($qty bought by you) is NOT protected: the app tried $tries times to place its stop and target and it was not " +
+            "placed ($why). Set a stop yourself."
 }

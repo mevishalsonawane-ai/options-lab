@@ -56,14 +56,83 @@ class ManualCoverRuleTest {
     }
 
     @Test fun aProtectionEndedTodayByBossIsNotAddedAgainButANaturalEndIs() {
-        for (note in listOf("removed", "stop cancelled", "stop rejected", "exit orders no longer working", "covered by another exit",
+        for (note in listOf("removed", "stop cancelled", "stop rejected", "covered by another exit",
                 "GTT fired, part left", "stop not placed"))
             assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, note)))), note)
-        for (note in listOf("position closed", "GTT fired", "replaced", "stop filled", "target filled"))
+        for (note in listOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working"))
             assertNull(ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, note)))), note)
         // One natural end and one removal the same day: Boss's removal wins.
         assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, "position closed"),
             ManualCoverRule.Ended(sym, "removed")))))
+    }
+
+    // ---- 7 Nov, review: spreads, two products, carried positions ------------------------------------------------------------------
+
+    @Test fun aLongOptionIsLeftAloneWhileTheAccountIsShortAnOptionOnTheSameUnderlying() {
+        val book = listOf(pos, Pos("NIFTY26N1624000PE", "NFO", "NRML", -65, 80.0, 82.0), Pos("BANKNIFTY26NOV52000CE", "NFO", "MIS", 30, 200.0, 210.0))
+        val shorts = ManualCoverRule.shortUnderlyings(book)
+        assertEquals(setOf("NIFTY"), shorts, "any expiry, any right")
+        assertEquals(Skip.SPREAD, ManualCoverRule.skip(pos, Facts(shortUnderlyings = shorts)))
+        assertNull(ManualCoverRule.skip(book[2], Facts(shortUnderlyings = shorts)), "another underlying is covered")
+        // A short future is not an option short; SENSEX is its own underlying.
+        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(listOf(Pos("NIFTY26NOVFUT", "NFO", "NRML", -75, 1.0, 1.0))))
+        assertEquals("SENSEX", ManualCoverRule.underlying("SENSEX26N1382000CE"))
+        assertEquals("BANKNIFTY", ManualCoverRule.underlying("BANKNIFTY26NOV52000PE"))
+    }
+
+    @Test fun theOpenTicketsLegsAreLeftAlone() {
+        assertTrue(ManualCoverRule.isTicketLeg("NIFTY", 24_000.0, "PE", "NIFTY", 24_000.0, 23_800.0), "the short leg")
+        assertTrue(ManualCoverRule.isTicketLeg("NIFTY", 23_800.0, "PE", "NIFTY", 24_000.0, 23_800.0), "the wing")
+        assertFalse(ManualCoverRule.isTicketLeg("NIFTY", 23_900.0, "PE", "NIFTY", 24_000.0, 23_800.0))
+        assertFalse(ManualCoverRule.isTicketLeg("NIFTY", 23_800.0, "CE", "NIFTY", 24_000.0, 23_800.0))
+        assertFalse(ManualCoverRule.isTicketLeg("BANKNIFTY", 23_800.0, "PE", "NIFTY", 24_000.0, 23_800.0))
+        assertTrue(ManualCoverRule.isTicketLeg("NIFTY", null, null, "NIFTY", 24_000.0, null), "details unknown: the safe side")
+        assertTrue(ManualCoverRule.isTicketLeg("NIFTY", null, "PE", "NIFTY", 24_000.0, null), "a PE whose strike is unknown")
+        assertFalse(ManualCoverRule.isTicketLeg("NIFTY", null, "CE", "NIFTY", 24_000.0, null), "a CE is never a ticket leg")
+        assertEquals(Skip.SPREAD, ManualCoverRule.skip(pos, Facts(ticketLegs = setOf(key))))
+    }
+
+    @Test fun oneContractHeldInTwoProductsIsLeftAlone() {
+        assertEquals(Skip.TWO_PRODUCTS, ManualCoverRule.skip(pos, Facts(twoProducts = setOf(key))))
+        assertEquals("NFO:$sym:NRML", pos.lookKey)
+        assertEquals("NFO:$sym:MIS", pos.copy(product = "MIS").lookKey)
+        assertEquals("$sym: no automatic stop and target, held as both MIS and NRML: set the stops yourself.",
+            ManualCoverRule.saidLeftAlone(sym, Skip.TWO_PRODUCTS))
+        assertTrue(ManualCoverRule.saidLeftAlone(sym, Skip.SPREAD).contains("left alone (part of a spread)"))
+    }
+
+    @Test fun aCarriedPositionsProtectionRemovedOnAnEarlierDayIsStillRespected() {
+        val earlier = ManualCoverRule.Ended(sym, "removed", today = false, exchange = "NFO")
+        assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(earlier))), "carried NRML")
+        assertNull(ManualCoverRule.skip(pos.copy(carried = false), Facts(endedToday = listOf(earlier))), "bought today: only today's count")
+        assertNull(ManualCoverRule.skip(pos.copy(product = "MIS"), Facts(endedToday = listOf(earlier))), "intraday: only today's")
+        assertNull(ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(earlier.copy(exchange = "BFO")))), "another exchange")
+        assertNull(ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(earlier.copy(note = "exit orders no longer working")))),
+            "its DAY orders ended with the session: no choice of Boss's")
+    }
+
+    // ---- 7 Nov, review: refusals and attempts -------------------------------------------------------------------------------------
+
+    @Test fun onlyDefiniteRefusalsCountTowardTheTries() {
+        assertTrue(ManualCoverRule.definiteRefusal("Not protected: Quantity exceeds the freeze limit."))
+        assertTrue(ManualCoverRule.definiteRefusal("Not protected: RMS:Margin Exceeds, Required:1,20,000.00"))
+        for (r in listOf("Could not read NIFTY26N0925150CE's lot and tick from Zerodha.",
+                "Not protected: Couldn't connect to the OMS. Please retry.",
+                "Not protected: Gateway timed out.",
+                "Not protected: The stop must be below the current price (118.00).",
+                "Not protected: Trigger price for stoploss sell orders should be less than last price.",
+                "Not protected: Order status unknown; no matching order found at Zerodha",
+                "Not protected: the previous stop or target on X could not be confirmed cancelled at Zerodha; try again in a moment.",
+                "Switch to Live with the badge at the top first."))
+            assertFalse(ManualCoverRule.definiteRefusal(r), r)
+    }
+
+    @Test fun attemptsAreCappedAndSpacedAMinuteApart() {
+        assertTrue(ManualCoverRule.mayAttempt(0, null, 1_000_000))
+        assertFalse(ManualCoverRule.mayAttempt(1, 1_000_000, 1_059_999))
+        assertTrue(ManualCoverRule.mayAttempt(1, 1_000_000, 1_060_000))
+        assertFalse(ManualCoverRule.mayAttempt(ManualCoverRule.MAX_ATTEMPTS, 0L, 10_000_000))
+        assertTrue(ManualCoverRule.mayAttempt(2, 2_000_000, 1_000_000), "a clock that went back never blocks for good")
     }
 
     // ---- hours -------------------------------------------------------------------------------------------------------------------
@@ -136,12 +205,19 @@ class ManualCoverRuleTest {
     }
 
     @Test fun thePlanFollowsTheLastPrice() {
-        assertEquals(Plan.Both(119.05, 137.9), ManualCoverRule.plan(125.35, 120.0, 0.05))
+        assertEquals(Plan.Both(119.05, 137.9), ManualCoverRule.plan(125.35, 125.0, 0.05))
         assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 119.05, 0.05), "at the stop")
         assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 90.0, 0.05), "under it")
         assertEquals(Plan.StopOnly(119.05, 137.9), ManualCoverRule.plan(125.35, 137.9, 0.05), "at the target")
         assertEquals(Plan.StopOnly(119.05, 137.9), ManualCoverRule.plan(125.35, 200.0, 0.05), "over it")
-        assertEquals(Plan.Both(119.05, 137.9), ManualCoverRule.plan(125.35, 119.1, 0.05), "a tick over the stop")
+        // 7 Nov, review: the last price needs max(3 ticks, 1% of the average) = 1.2535 over the stop, so 120.3035 at least.
+        assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 119.1, 0.05), "a tick over the stop is too close")
+        assertEquals(Plan.TooLow(119.05), ManualCoverRule.plan(125.35, 120.3, 0.05), "just short of the room")
+        assertEquals(Plan.Both(119.05, 137.9), ManualCoverRule.plan(125.35, 120.35, 0.05), "just enough room")
+        // A cheap option: three ticks is the larger room (1% of 5.00 is 0.05).
+        assertEquals(0.15, ManualCoverRule.room(5.0, 0.05), 1e-9)
+        assertEquals(Plan.TooLow(4.75), ManualCoverRule.plan(5.0, 4.85, 0.05))
+        assertEquals(Plan.Both(4.75, 5.5), ManualCoverRule.plan(5.0, 4.9, 0.05))
         assertEquals(Plan.NoPrice, ManualCoverRule.plan(125.35, 0.0, 0.05), "no last price")
         assertEquals(Plan.NoPrice, ManualCoverRule.plan(0.0, 120.0, 0.05), "no average")
     }
@@ -159,5 +235,6 @@ class ManualCoverRuleTest {
         assertTrue(ManualCoverRule.saidTooLow(sym, 90.0, 119.05).contains("no stop was placed"))
         assertTrue(ManualCoverRule.saidStopOnly(sym, 200.0, 137.9).contains("only the stop"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "RMS").contains("is NOT protected"))
+        assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "timed out", ManualCoverRule.MAX_ATTEMPTS).contains("tried 10 times"))
     }
 }

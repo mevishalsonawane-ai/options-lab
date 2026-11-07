@@ -48,7 +48,7 @@ class ManualCoverCardTest {
     @Test fun onItSaysWhatItDoesAndOffIsOneTapWithNoPin() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         var offs = 0; var ons = 0
-        show(ManualCover.View(on = true, line = "Stop and target on my manual positions: on; today protected 1, left alone 0, failed 0"),
+        show(ManualCover.View(on = true, line = "Stop and target on my manual positions: on; today protected 1, left alone 0, failed 0", loaded = true),
             { offs++ }, { ons++ })
         compose.waitForIdle()
         assertTrue(shows("On: placed automatically in market hours (09:15-15:24)"))
@@ -61,10 +61,22 @@ class ManualCoverCardTest {
         assertEquals(0, ons)
     }
 
+    /** 7 Nov, review: before the saved switch is read the card never says "On" (the default) and offers no switch. */
+    @Test fun beforeTheSwitchIsReadItSaysSoAndOffersNoSwitch() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        var taps = 0
+        show(ManualCover.View(), { taps++ }, { taps++ })
+        compose.waitForIdle()
+        assertTrue(shows("Reading the switch..."))
+        assertFalse(shows("On: placed automatically", sub = true))
+        assertFalse(shows(toggle))
+        assertEquals(0, taps)
+    }
+
     @Test fun switchingOnAsksThePinFirst() {
         org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
         var offs = 0; var ons = 0
-        show(ManualCover.View(on = false), { offs++ }, { ons++ })
+        show(ManualCover.View(on = false, loaded = true), { offs++ }, { ons++ })
         compose.waitForIdle()
         assertTrue(shows("Off: positions you buy yourself are left as they are"))
         assertTrue(shows("Switching it back on takes your PIN", sub = true))
