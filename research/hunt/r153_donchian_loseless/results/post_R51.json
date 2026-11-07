@@ -1,0 +1,323 @@
+{
+ "parity": {
+  "arm": "R51",
+  "trades": 46,
+  "net": 3412,
+  "published": null
+ },
+ "B0@1": {
+  "post": {
+   "trades": 46,
+   "win": 0.5,
+   "net": 3412,
+   "loss_sum": -20847,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -13478,
+   "max_dd": 20847,
+   "worst_month": 3412,
+   "sum_losing_trades": -35924,
+   "mix": {
+    "other": 32,
+    "stop": 12,
+    "lock": 2
+   }
+  }
+ },
+ "C1@1": {
+  "post": {
+   "trades": 47,
+   "win": 0.4255,
+   "net": -3706,
+   "loss_sum": -19868,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -12662,
+   "max_dd": 19868,
+   "worst_month": -3706,
+   "sum_losing_trades": -40248,
+   "mix": {
+    "lock": 8,
+    "other": 20,
+    "stop2k": 11,
+    "stop": 8
+   }
+  },
+  "changed": 19,
+  "removed_by_skip": 0
+ },
+ "C2@1": {
+  "post": {
+   "trades": 35,
+   "win": 0.5429,
+   "net": 5575,
+   "loss_sum": -18683,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -11747,
+   "max_dd": 18683,
+   "worst_month": 5575,
+   "sum_losing_trades": -25914,
+   "mix": {
+    "other": 24,
+    "stop": 9,
+    "lock": 2
+   }
+  },
+  "changed": 11,
+  "removed_by_skip": 11
+ },
+ "C3@1": {
+  "post": {
+   "trades": 32,
+   "win": 0.4688,
+   "net": 1045,
+   "loss_sum": -15117,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -10094,
+   "max_dd": 15117,
+   "worst_month": 1045,
+   "sum_losing_trades": -25850,
+   "mix": {
+    "other": 13,
+    "lock": 6,
+    "stop": 5,
+    "stop2k": 8
+   }
+  },
+  "changed": 29,
+  "removed_by_skip": 15
+ },
+ "C4@1": {
+  "post": {
+   "trades": 17,
+   "win": 0.3529,
+   "net": -8594,
+   "loss_sum": -15117,
+   "losing_days": 2,
+   "days": 3,
+   "worst_day": -10094,
+   "max_dd": 15117,
+   "worst_month": -8594,
+   "sum_losing_trades": -20636,
+   "mix": {
+    "stop2k": 7,
+    "other": 3,
+    "lock": 3,
+    "stop": 4
+   }
+  },
+  "changed": 38,
+  "removed_by_skip": 116
+ },
+ "B0@2": {
+  "post": {
+   "trades": 46,
+   "win": 0.5,
+   "net": 8947,
+   "loss_sum": -40466,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -26343,
+   "max_dd": 40466,
+   "worst_month": 8947,
+   "sum_losing_trades": -70785,
+   "mix": {
+    "other": 32,
+    "stop": 12,
+    "lock": 2
+   }
+  }
+ },
+ "C1@2": {
+  "post": {
+   "trades": 48,
+   "win": 0.4792,
+   "net": -5167,
+   "loss_sum": -31603,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -24800,
+   "max_dd": 31603,
+   "worst_month": -5167,
+   "sum_losing_trades": -57564,
+   "mix": {
+    "other": 8,
+    "lock": 15,
+    "stop2k": 24,
+    "stop": 1
+   }
+  },
+  "changed": 45,
+  "removed_by_skip": 0
+ },
+ "C2@2": {
+  "post": {
+   "trades": 28,
+   "win": 0.6429,
+   "net": 32165,
+   "loss_sum": -17248,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -9999,
+   "max_dd": 17248,
+   "worst_month": 32165,
+   "sum_losing_trades": -31017,
+   "mix": {
+    "other": 22,
+    "stop": 5,
+    "lock": 1
+   }
+  },
+  "changed": 18,
+  "removed_by_skip": 18
+ },
+ "C3@2": {
+  "post": {
+   "trades": 22,
+   "win": 0.4091,
+   "net": -19268,
+   "loss_sum": -30956,
+   "losing_days": 3,
+   "days": 4,
+   "worst_day": -20507,
+   "max_dd": 30956,
+   "worst_month": -19268,
+   "sum_losing_trades": -33394,
+   "mix": {
+    "lock": 7,
+    "other": 2,
+    "stop2k": 12,
+    "stop": 1
+   }
+  },
+  "changed": 45,
+  "removed_by_skip": 26
+ },
+ "C4@2": {
+  "post": {
+   "trades": 19,
+   "win": 0.2632,
+   "net": -19824,
+   "loss_sum": -28023,
+   "losing_days": 2,
+   "days": 3,
+   "worst_day": -20507,
+   "max_dd": 28023,
+   "worst_month": -19824,
+   "sum_losing_trades": -35371,
+   "mix": {
+    "stop2k": 13,
+    "other": 2,
+    "lock": 3,
+    "stop": 1
+   }
+  },
+  "changed": 47,
+  "removed_by_skip": 116
+ },
+ "B0@3": {
+  "post": {
+   "trades": 46,
+   "win": 0.5,
+   "net": 14470,
+   "loss_sum": -60086,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -39207,
+   "max_dd": 60086,
+   "worst_month": 14470,
+   "sum_losing_trades": -105653,
+   "mix": {
+    "other": 32,
+    "stop": 12,
+    "lock": 2
+   }
+  }
+ },
+ "C1@3": {
+  "post": {
+   "trades": 47,
+   "win": 0.4894,
+   "net": 8802,
+   "loss_sum": -16884,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -14339,
+   "max_dd": 16884,
+   "worst_month": 8802,
+   "sum_losing_trades": -49902,
+   "mix": {
+    "other": 8,
+    "lock": 16,
+    "stop2k": 23
+   }
+  },
+  "changed": 45,
+  "removed_by_skip": 0
+ },
+ "C2@3": {
+  "post": {
+   "trades": 27,
+   "win": 0.6667,
+   "net": 58766,
+   "loss_sum": -15790,
+   "losing_days": 2,
+   "days": 4,
+   "worst_day": -10779,
+   "max_dd": 15790,
+   "worst_month": 58766,
+   "sum_losing_trades": -36415,
+   "mix": {
+    "other": 22,
+    "stop": 4,
+    "lock": 1
+   }
+  },
+  "changed": 19,
+  "removed_by_skip": 19
+ },
+ "C3@3": {
+  "post": {
+   "trades": 21,
+   "win": 0.381,
+   "net": -15747,
+   "loss_sum": -24954,
+   "losing_days": 3,
+   "days": 4,
+   "worst_day": -13318,
+   "max_dd": 24954,
+   "worst_month": -15747,
+   "sum_losing_trades": -27581,
+   "mix": {
+    "lock": 6,
+    "stop2k": 13,
+    "other": 2
+   }
+  },
+  "changed": 46,
+  "removed_by_skip": 26
+ },
+ "C4@3": {
+  "post": {
+   "trades": 19,
+   "win": 0.1579,
+   "net": -24586,
+   "loss_sum": -24586,
+   "losing_days": 3,
+   "days": 3,
+   "worst_day": -13318,
+   "max_dd": 24586,
+   "worst_month": -24586,
+   "sum_losing_trades": -33585,
+   "mix": {
+    "stop2k": 16,
+    "other": 1,
+    "lock": 2
+   }
+  },
+  "changed": 48,
+  "removed_by_skip": 116
+ }
+}

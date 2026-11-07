@@ -1921,3 +1921,14 @@ arm's -15% stop stays (the nearer stop acts); today's rules re-priced at the sam
 - **On R151's picks (second look):** the same. Side note: with the app's rule that a skipped break holds its side, R72's
   picker makes Rs 1.70 lakh on 603 trades in Apr - Oct 2026, not R151's Rs 2.19 lakh on 652 (R51: Rs 1.43 lakh / 653
   vs Rs 1.59 lakh / 693); drawdown still about half the plain arm's. Described, not tested.
+
+## Combinations for the Donchian arms to lose less, 1-3 lots (R153, 7 Nov 2026) - 0 of 24 pass
+`hunt/r153_donchian_loseless/results/report.md`. Boss: "Can we try some combination for less loss." R140's "lose less"
+gates. C1 -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000; C2 day cap (no new entry once the day's closed trades are
+-Rs 4,000); C3 C1 + C2; C4 entries until 10:00 + C1.
+- **Losses shrink, profit shrinks more.** Apr - Oct 2026, R72 1 lot: today Rs 1.71 lakh, red days -Rs 3.90 lakh; C4
+  Rs 77k, red days -Rs 1.58 lakh. R72 3 lots: Rs 6.25 lakh / -Rs 11.2 lakh -> C4 Rs 81k / -Rs 2.68 lakh.
+- **Random does as well.** C4 takes a third of the trades; random skips of the same number cut losses as much. The stop
+  and lock never beat random exit minutes (best p 0.19). The day cap blocks afternoon recoveries.
+- **Lead:** the 10:00 cut alone beat random skips at 3 lots (p 0.025 R72, 0.033 R51), tested only with C1's exits.
+- **R151's picker (live) already cuts red days by about 40% at the same profit** (R72, 1 lot, second look).

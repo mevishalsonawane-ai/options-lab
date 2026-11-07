@@ -1,0 +1,998 @@
+{
+ "R72": {
+  "parity": {
+   "arm": "R72",
+   "trades": 1202,
+   "net": 171366,
+   "published": [
+    1202,
+    171366
+   ],
+   "reproduced": true
+  },
+  "B0@1": {
+   "final": {
+    "trades": 1202,
+    "win": 0.4584,
+    "net": 171366,
+    "loss_sum": -389644,
+    "losing_days": 62,
+    "days": 129,
+    "worst_day": -22571,
+    "max_dd": 61884,
+    "worst_month": -40908,
+    "sum_losing_trades": -792049,
+    "mix": {
+     "other": 1015,
+     "stop": 174,
+     "lock": 13
+    }
+   }
+  },
+  "C1@1": {
+   "final": {
+    "trades": 1205,
+    "win": 0.4598,
+    "net": 112960,
+    "loss_sum": -400606,
+    "losing_days": 67,
+    "days": 129,
+    "worst_day": -21633,
+    "max_dd": 62517,
+    "worst_month": -42198,
+    "sum_losing_trades": -792238,
+    "mix": {
+     "stop2k": 184,
+     "other": 805,
+     "lock": 104,
+     "stop": 112
+    }
+   },
+   "changed": 301,
+   "removed_by_skip": 0,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -302463,
+     "hits": 2000,
+     "sold_earlier": 262
+    }
+   },
+   "p": 1.0
+  },
+  "C2@1": {
+   "final": {
+    "trades": 999,
+    "win": 0.4675,
+    "net": 166394,
+    "loss_sum": -335199,
+    "losing_days": 67,
+    "days": 129,
+    "worst_day": -14064,
+    "max_dd": 58663,
+    "worst_month": -35561,
+    "sum_losing_trades": -630462,
+    "mix": {
+     "other": 841,
+     "stop": 145,
+     "lock": 13
+    }
+   },
+   "changed": 203,
+   "removed_by_skip": 203,
+   "twin": {
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -237926,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C3@1": {
+   "final": {
+    "trades": 1019,
+    "win": 0.4661,
+    "net": 105169,
+    "loss_sum": -357020,
+    "losing_days": 71,
+    "days": 129,
+    "worst_day": -14436,
+    "max_dd": 56376,
+    "worst_month": -36176,
+    "sum_losing_trades": -654826,
+    "mix": {
+     "stop2k": 151,
+     "lock": 93,
+     "stop": 99,
+     "other": 676
+    }
+   },
+   "changed": 443,
+   "removed_by_skip": 186,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -271287,
+     "hits": 2000,
+     "sold_earlier": 222
+    },
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -265383,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C4@1": {
+   "final": {
+    "trades": 369,
+    "win": 0.5068,
+    "net": 77323,
+    "loss_sum": -157539,
+    "losing_days": 45,
+    "days": 86,
+    "worst_day": -10585,
+    "max_dd": 47874,
+    "worst_month": -41285,
+    "sum_losing_trades": -247038,
+    "mix": {
+     "stop2k": 66,
+     "lock": 41,
+     "stop": 39,
+     "other": 223
+    }
+   },
+   "changed": 944,
+   "removed_by_skip": 1849,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999995483546704,
+     "twin_mean": -127707,
+     "hits": 2000,
+     "sold_earlier": 97
+    },
+    "skip": {
+     "p": 0.3843078460769615,
+     "p_mc": 0.3843078460769615,
+     "p_norm": 0.3933847485430221,
+     "twin_mean": -162179,
+     "hits": 768
+    }
+   },
+   "p": 1.0
+  },
+  "B0@2": {
+   "final": {
+    "trades": 1202,
+    "win": 0.4626,
+    "net": 398405,
+    "loss_sum": -754744,
+    "losing_days": 58,
+    "days": 129,
+    "worst_day": -44447,
+    "max_dd": 111087,
+    "worst_month": -72639,
+    "sum_losing_trades": -1554159,
+    "mix": {
+     "other": 1015,
+     "stop": 174,
+     "lock": 13
+    }
+   }
+  },
+  "C1@2": {
+   "final": {
+    "trades": 1222,
+    "win": 0.4493,
+    "net": 159864,
+    "loss_sum": -621599,
+    "losing_days": 66,
+    "days": 129,
+    "worst_day": -25462,
+    "max_dd": 111194,
+    "worst_month": -54805,
+    "sum_losing_trades": -1245863,
+    "mix": {
+     "stop2k": 543,
+     "lock": 283,
+     "other": 391,
+     "stop": 5
+    }
+   },
+   "changed": 883,
+   "removed_by_skip": 0,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.999999999999994,
+     "twin_mean": -436708,
+     "hits": 2000,
+     "sold_earlier": 781
+    }
+   },
+   "p": 1.0
+  },
+  "C2@2": {
+   "final": {
+    "trades": 943,
+    "win": 0.4634,
+    "net": 313454,
+    "loss_sum": -652128,
+    "losing_days": 69,
+    "days": 129,
+    "worst_day": -27904,
+    "max_dd": 105828,
+    "worst_month": -51882,
+    "sum_losing_trades": -1176702,
+    "mix": {
+     "other": 797,
+     "stop": 134,
+     "lock": 12
+    }
+   },
+   "changed": 259,
+   "removed_by_skip": 259,
+   "twin": {
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -446855,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C3@2": {
+   "final": {
+    "trades": 942,
+    "win": 0.4713,
+    "net": 217317,
+    "loss_sum": -487048,
+    "losing_days": 74,
+    "days": 129,
+    "worst_day": -12099,
+    "max_dd": 82029,
+    "worst_month": -44695,
+    "sum_losing_trades": -925985,
+    "mix": {
+     "stop2k": 407,
+     "lock": 230,
+     "other": 301,
+     "stop": 4
+    }
+   },
+   "changed": 955,
+   "removed_by_skip": 280,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999999998775794,
+     "twin_mean": -360985,
+     "hits": 2000,
+     "sold_earlier": 600
+    },
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999999999992337,
+     "twin_mean": -379308,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C4@2": {
+   "final": {
+    "trades": 386,
+    "win": 0.4896,
+    "net": 78349,
+    "loss_sum": -260363,
+    "losing_days": 46,
+    "days": 86,
+    "worst_day": -16749,
+    "max_dd": 85742,
+    "worst_month": -61663,
+    "sum_losing_trades": -394285,
+    "mix": {
+     "stop2k": 174,
+     "lock": 104,
+     "other": 105,
+     "stop": 3
+    }
+   },
+   "changed": 1121,
+   "removed_by_skip": 1849,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999598203775939,
+     "twin_mean": -197789,
+     "hits": 2000,
+     "sold_earlier": 268
+    },
+    "skip": {
+     "p": 0.5417291354322838,
+     "p_mc": 0.5417291354322838,
+     "p_norm": 0.5462685775659162,
+     "twin_mean": -257476,
+     "hits": 1083
+    }
+   },
+   "p": 1.0
+  },
+  "B0@3": {
+   "final": {
+    "trades": 1202,
+    "win": 0.4651,
+    "net": 625048,
+    "loss_sum": -1120275,
+    "losing_days": 58,
+    "days": 129,
+    "worst_day": -66325,
+    "max_dd": 160424,
+    "worst_month": -104488,
+    "sum_losing_trades": -2316496,
+    "mix": {
+     "other": 1015,
+     "stop": 174,
+     "lock": 13
+    }
+   }
+  },
+  "C1@3": {
+   "final": {
+    "trades": 1243,
+    "win": 0.4071,
+    "net": -25363,
+    "loss_sum": -778538,
+    "losing_days": 77,
+    "days": 129,
+    "worst_day": -27409,
+    "max_dd": 178404,
+    "worst_month": -72173,
+    "sum_losing_trades": -1462643,
+    "mix": {
+     "stop2k": 651,
+     "lock": 367,
+     "other": 225
+    }
+   },
+   "changed": 1123,
+   "removed_by_skip": 0,
+   "twin": {
+    "exit": {
+     "p": 0.9660169915042479,
+     "p_mc": 0.9660169915042479,
+     "p_norm": 0.9682586280823046,
+     "twin_mean": -708174,
+     "hits": 1932,
+     "sold_earlier": 998
+    }
+   },
+   "p": 0.9660169915042479
+  },
+  "C2@3": {
+   "final": {
+    "trades": 910,
+    "win": 0.4681,
+    "net": 503343,
+    "loss_sum": -949289,
+    "losing_days": 71,
+    "days": 129,
+    "worst_day": -41737,
+    "max_dd": 152139,
+    "worst_month": -70407,
+    "sum_losing_trades": -1689960,
+    "mix": {
+     "other": 773,
+     "stop": 125,
+     "lock": 12
+    }
+   },
+   "changed": 292,
+   "removed_by_skip": 292,
+   "twin": {
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999999999999999,
+     "twin_mean": -648234,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C3@3": {
+   "final": {
+    "trades": 962,
+    "win": 0.4179,
+    "net": 18822,
+    "loss_sum": -606786,
+    "losing_days": 86,
+    "days": 129,
+    "worst_day": -12663,
+    "max_dd": 109465,
+    "worst_month": -58952,
+    "sum_losing_trades": -1110596,
+    "mix": {
+     "stop2k": 495,
+     "lock": 291,
+     "other": 176
+    }
+   },
+   "changed": 1126,
+   "removed_by_skip": 281,
+   "twin": {
+    "exit": {
+     "p": 0.863568215892054,
+     "p_mc": 0.863568215892054,
+     "p_norm": 0.8681487161214809,
+     "twin_mean": -571294,
+     "hits": 1727,
+     "sold_earlier": 768
+    },
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999998674916404,
+     "twin_mean": -519404,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C4@3": {
+   "final": {
+    "trades": 407,
+    "win": 0.4791,
+    "net": 80827,
+    "loss_sum": -267686,
+    "losing_days": 50,
+    "days": 86,
+    "worst_day": -13024,
+    "max_dd": 71366,
+    "worst_month": -43205,
+    "sum_losing_trades": -443464,
+    "mix": {
+     "stop2k": 196,
+     "lock": 137,
+     "other": 74
+    }
+   },
+   "changed": 1183,
+   "removed_by_skip": 1849,
+   "twin": {
+    "exit": {
+     "p": 0.18940529735132433,
+     "p_mc": 0.18940529735132433,
+     "p_norm": 0.1828916755639634,
+     "twin_mean": -288936,
+     "hits": 378,
+     "sold_earlier": 325
+    },
+    "skip": {
+     "p": 0.02498750624687656,
+     "p_mc": 0.02498750624687656,
+     "p_norm": 0.02788140012746301,
+     "twin_mean": -323281,
+     "hits": 49
+    }
+   },
+   "p": 0.18940529735132433
+  }
+ },
+ "R51": {
+  "parity": {
+   "arm": "R51",
+   "trades": 1670,
+   "net": 134743,
+   "published": [
+    1670,
+    134743
+   ],
+   "reproduced": true
+  },
+  "B0@1": {
+   "final": {
+    "trades": 1670,
+    "win": 0.4485,
+    "net": 134743,
+    "loss_sum": -395932,
+    "losing_days": 72,
+    "days": 133,
+    "worst_day": -21578,
+    "max_dd": 81683,
+    "worst_month": -54587,
+    "sum_losing_trades": -1102074,
+    "mix": {
+     "other": 1437,
+     "stop": 219,
+     "lock": 14
+    }
+   }
+  },
+  "C1@1": {
+   "final": {
+    "trades": 1674,
+    "win": 0.4456,
+    "net": 33408,
+    "loss_sum": -425729,
+    "losing_days": 76,
+    "days": 133,
+    "worst_day": -22041,
+    "max_dd": 74872,
+    "worst_month": -66912,
+    "sum_losing_trades": -1106842,
+    "mix": {
+     "stop2k": 275,
+     "other": 1134,
+     "lock": 133,
+     "stop": 132
+    }
+   },
+   "changed": 440,
+   "removed_by_skip": 0,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -279130,
+     "hits": 2000,
+     "sold_earlier": 365
+    }
+   },
+   "p": 1.0
+  },
+  "C2@1": {
+   "final": {
+    "trades": 1285,
+    "win": 0.4405,
+    "net": 55073,
+    "loss_sum": -384984,
+    "losing_days": 81,
+    "days": 133,
+    "worst_day": -14064,
+    "max_dd": 100995,
+    "worst_month": -66448,
+    "sum_losing_trades": -856574,
+    "mix": {
+     "other": 1093,
+     "stop": 180,
+     "lock": 12
+    }
+   },
+   "changed": 385,
+   "removed_by_skip": 385,
+   "twin": {
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -237620,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C3@1": {
+   "final": {
+    "trades": 1313,
+    "win": 0.4486,
+    "net": 24827,
+    "loss_sum": -384324,
+    "losing_days": 83,
+    "days": 133,
+    "worst_day": -9077,
+    "max_dd": 99379,
+    "worst_month": -76548,
+    "sum_losing_trades": -859088,
+    "mix": {
+     "stop2k": 206,
+     "lock": 98,
+     "stop": 113,
+     "other": 896
+    }
+   },
+   "changed": 682,
+   "removed_by_skip": 361,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -273284,
+     "hits": 2000,
+     "sold_earlier": 269
+    },
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -261944,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C4@1": {
+   "final": {
+    "trades": 577,
+    "win": 0.4957,
+    "net": 82673,
+    "loss_sum": -222622,
+    "losing_days": 70,
+    "days": 130,
+    "worst_day": -9077,
+    "max_dd": 50581,
+    "worst_month": -30863,
+    "sum_losing_trades": -392337,
+    "mix": {
+     "stop2k": 107,
+     "lock": 60,
+     "stop": 55,
+     "other": 355
+    }
+   },
+   "changed": 1281,
+   "removed_by_skip": 3842,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999999999598104,
+     "twin_mean": -172574,
+     "hits": 2000,
+     "sold_earlier": 146
+    },
+    "skip": {
+     "p": 0.22638680659670166,
+     "p_mc": 0.22638680659670166,
+     "p_norm": 0.2292924955503365,
+     "twin_mean": -239053,
+     "hits": 452
+    }
+   },
+   "p": 1.0
+  },
+  "B0@2": {
+   "final": {
+    "trades": 1670,
+    "win": 0.4551,
+    "net": 346548,
+    "loss_sum": -751245,
+    "losing_days": 69,
+    "days": 133,
+    "worst_day": -42690,
+    "max_dd": 145608,
+    "worst_month": -96531,
+    "sum_losing_trades": -2161925,
+    "mix": {
+     "other": 1437,
+     "stop": 219,
+     "lock": 14
+    }
+   }
+  },
+  "C1@2": {
+   "final": {
+    "trades": 1701,
+    "win": 0.4539,
+    "net": 135927,
+    "loss_sum": -702038,
+    "losing_days": 80,
+    "days": 133,
+    "worst_day": -30388,
+    "max_dd": 109492,
+    "worst_month": -49367,
+    "sum_losing_trades": -1677191,
+    "mix": {
+     "stop2k": 721,
+     "lock": 414,
+     "other": 555,
+     "stop": 11
+    }
+   },
+   "changed": 1291,
+   "removed_by_skip": 0,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -365845,
+     "hits": 2000,
+     "sold_earlier": 1091
+    }
+   },
+   "p": 1.0
+  },
+  "C2@2": {
+   "final": {
+    "trades": 1170,
+    "win": 0.4444,
+    "net": 152504,
+    "loss_sum": -674595,
+    "losing_days": 83,
+    "days": 133,
+    "worst_day": -27904,
+    "max_dd": 160522,
+    "worst_month": -116416,
+    "sum_losing_trades": -1539372,
+    "mix": {
+     "other": 996,
+     "stop": 164,
+     "lock": 10
+    }
+   },
+   "changed": 500,
+   "removed_by_skip": 500,
+   "twin": {
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -399454,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C3@2": {
+   "final": {
+    "trades": 1153,
+    "win": 0.4571,
+    "net": 113354,
+    "loss_sum": -536741,
+    "losing_days": 93,
+    "days": 133,
+    "worst_day": -11217,
+    "max_dd": 116447,
+    "worst_month": -80705,
+    "sum_losing_trades": -1137759,
+    "mix": {
+     "stop2k": 491,
+     "lock": 282,
+     "other": 370,
+     "stop": 10
+    }
+   },
+   "changed": 1409,
+   "removed_by_skip": 548,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 1.0,
+     "twin_mean": -349252,
+     "hits": 2000,
+     "sold_earlier": 742
+    },
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999999999999991,
+     "twin_mean": -368423,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C4@2": {
+   "final": {
+    "trades": 622,
+    "win": 0.4839,
+    "net": 96020,
+    "loss_sum": -356712,
+    "losing_days": 73,
+    "days": 130,
+    "worst_day": -13203,
+    "max_dd": 81251,
+    "worst_month": -54289,
+    "sum_losing_trades": -623217,
+    "mix": {
+     "stop2k": 274,
+     "lock": 175,
+     "other": 168,
+     "stop": 5
+    }
+   },
+   "changed": 1598,
+   "removed_by_skip": 3842,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999911949247688,
+     "twin_mean": -273427,
+     "hits": 2000,
+     "sold_earlier": 434
+    },
+    "skip": {
+     "p": 0.12693653173413294,
+     "p_mc": 0.12693653173413294,
+     "p_norm": 0.1258758163298645,
+     "twin_mean": -394259,
+     "hits": 253
+    }
+   },
+   "p": 1.0
+  },
+  "B0@3": {
+   "final": {
+    "trades": 1670,
+    "win": 0.4599,
+    "net": 557695,
+    "loss_sum": -1107670,
+    "losing_days": 67,
+    "days": 133,
+    "worst_day": -63776,
+    "max_dd": 209599,
+    "worst_month": -138454,
+    "sum_losing_trades": -3222208,
+    "mix": {
+     "other": 1437,
+     "stop": 219,
+     "lock": 14
+    }
+   }
+  },
+  "C1@3": {
+   "final": {
+    "trades": 1736,
+    "win": 0.4124,
+    "net": -86805,
+    "loss_sum": -924022,
+    "losing_days": 85,
+    "days": 133,
+    "worst_day": -29030,
+    "max_dd": 200444,
+    "worst_month": -97009,
+    "sum_losing_trades": -2054084,
+    "mix": {
+     "stop2k": 915,
+     "other": 308,
+     "lock": 513
+    }
+   },
+   "changed": 1664,
+   "removed_by_skip": 0,
+   "twin": {
+    "exit": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999999999999788,
+     "twin_mean": -605780,
+     "hits": 2000,
+     "sold_earlier": 1405
+    }
+   },
+   "p": 1.0
+  },
+  "C2@3": {
+   "final": {
+    "trades": 1118,
+    "win": 0.4454,
+    "net": 155110,
+    "loss_sum": -985197,
+    "losing_days": 85,
+    "days": 133,
+    "worst_day": -41737,
+    "max_dd": 225223,
+    "worst_month": -164011,
+    "sum_losing_trades": -2233026,
+    "mix": {
+     "other": 950,
+     "stop": 159,
+     "lock": 9
+    }
+   },
+   "changed": 552,
+   "removed_by_skip": 552,
+   "twin": {
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999999999999999,
+     "twin_mean": -573397,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C3@3": {
+   "final": {
+    "trades": 1101,
+    "win": 0.4369,
+    "net": 92304,
+    "loss_sum": -559297,
+    "losing_days": 95,
+    "days": 133,
+    "worst_day": -11412,
+    "max_dd": 136790,
+    "worst_month": -68309,
+    "sum_losing_trades": -1245654,
+    "mix": {
+     "stop2k": 558,
+     "lock": 352,
+     "other": 191
+    }
+   },
+   "changed": 1651,
+   "removed_by_skip": 635,
+   "twin": {
+    "exit": {
+     "p": 0.992503748125937,
+     "p_mc": 0.992503748125937,
+     "p_norm": 0.9943564983221947,
+     "twin_mean": -475564,
+     "hits": 1985,
+     "sold_earlier": 894
+    },
+    "skip": {
+     "p": 1.0,
+     "p_mc": 1.0,
+     "p_norm": 0.9999997432934856,
+     "twin_mean": -434635,
+     "hits": 2000
+    }
+   },
+   "p": 1.0
+  },
+  "C4@3": {
+   "final": {
+    "trades": 661,
+    "win": 0.4463,
+    "net": -5533,
+    "loss_sum": -439283,
+    "losing_days": 79,
+    "days": 130,
+    "worst_day": -13983,
+    "max_dd": 100393,
+    "worst_month": -79373,
+    "sum_losing_trades": -759282,
+    "mix": {
+     "stop2k": 335,
+     "lock": 231,
+     "other": 95
+    }
+   },
+   "changed": 1721,
+   "removed_by_skip": 3842,
+   "twin": {
+    "exit": {
+     "p": 0.7586206896551724,
+     "p_mc": 0.7586206896551724,
+     "p_norm": 0.752224863335486,
+     "twin_mean": -419294,
+     "hits": 1517,
+     "sold_earlier": 556
+    },
+    "skip": {
+     "p": 0.03298350824587706,
+     "p_mc": 0.03298350824587706,
+     "p_norm": 0.03312696991539608,
+     "twin_mean": -514213,
+     "hits": 65
+    }
+   },
+   "p": 0.7586206896551724
+  }
+ }
+}
