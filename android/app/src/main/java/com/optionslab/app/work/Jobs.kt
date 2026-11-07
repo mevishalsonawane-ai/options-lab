@@ -1011,11 +1011,6 @@ object Tasks {
             // 22 Oct: the hard flat-by per segment (NSE index 15:25, stock 15:20, MCX ten minutes before its close): every intraday
             // arm position still open after the arms' own exits, paper and live; the kill switch never stops it.
             step("flat-by") { com.optionslab.app.data.FlatBySquareOff.maybeRun(context, s) }
-            // 7 Nov (Boss: "if any manual order is placed, then stoploss and target ... should be placed by the application"): a live
-            // option bought by hand that nothing in the app follows gets a stop 5% under its average and a target 10% over it
-            // (Boss's switch, on by default). Only adds exits. Review: after the stops and targets, the expiry square-off and the
-            // flat-by, so it never holds them up; the next pass's stops and targets watch what it placed like any protection.
-            step("manual positions' stop and target") { com.optionslab.app.data.ManualCover.run(s) }
         }
         // After the square-off (so what it closed is booked as closed), side by side as above: the MCX paper arms (9 Oct,
         // research M3/M4/M2; paper only, off by default), the Strategy Module (schedules, prices, per-leg and basket risk,
@@ -1033,6 +1028,12 @@ object Tasks {
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,
         )), armsWait, inOrder = lanes == null)
         com.optionslab.app.data.OffShadow.runLate(armsDue(lanes != null, late))
+        // 7 Nov (Boss: "if any manual order is placed, then stoploss and target ... should be placed by the application"): a live
+        // option bought by hand that nothing in the app follows gets a stop 5% under its average and a target 10% over it (Boss's
+        // switch, on by default). Second review: started in its own job, which the pass never waits on (one at a time), so its reads
+        // never hold up the stops, square-offs or arms; what it places goes through the protections' own lock and is watched by the
+        // next pass's stops and targets like any protection.
+        step("manual positions' stop and target") { com.optionslab.app.data.ManualCover.kick(s) }
         // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
         step("stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
         // Jarvis: your own stops trailed up automatically (Boss's switch).

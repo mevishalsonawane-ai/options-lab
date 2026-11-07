@@ -316,6 +316,7 @@ class ManualCoverTest : RobolectricTest() {
         val n = kite.placed.size
         twoLooks(); later(25); look()
         assertEquals("the same carried position: Boss's removal still holds", n, kite.placed.size)
+        assertTrue("said as removed earlier, not today", Diag.lines().any { it.contains("its protection was removed earlier") })
     }
 
     @Test fun anIntradayBuyTodayIsCoveredAfterAnEarlierDaysRemoval() {
@@ -340,6 +341,147 @@ class ManualCoverTest : RobolectricTest() {
         }
         look()
         assertTrue("re-read in the exit turn: nothing placed beside Boss's stop", writes().isEmpty())
+    }
+
+    // ---- 7 Nov, second review: hedges, the check in the lock, untracked exits, endedAt ----------------------------------------
+
+    private fun autoProtected(): Protections.Item {
+        twoLooks()
+        return runBlocking { Protections.active() }.single { it.symbol == sym }.also { assertTrue("set by this switch", it.auto) }
+    }
+
+    @Test fun aWingBoughtFirstLosesItsAutomaticStopWhenTheShortFills() {
+        ManualCover.attachForTest(context)
+        val p = autoProtected()
+        // Boss now sells the spread's short leg: the bought PE was its wing.
+        kite.position("NIFTY26N1625000PE", -65, 80.0)
+        later(25); look()
+        assertTrue("taken off", runBlocking { Protections.active() }.isEmpty())
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("CANCELLED", kite.order(p.targetOrderId!!).status)
+        assertEquals("said once, loudly", 1, Alerts.posted.count { it.kind == Alerts.Kind.ERROR && it.text.contains("removed because it is now part of a spread/hedge") })
+        later(25); look()
+        assertEquals(1, Alerts.posted.count { it.text.contains("removed because it is now part of a spread/hedge") })
+    }
+
+    @Test fun aWorkingOptionSellMakesItASpreadAndTakesOffOnlyAutomaticProtections() {
+        // Boss's own protection on another NIFTY long, set by hand: never touched.
+        val own = "NIFTY26N0925200CE"
+        kite.instruments += FakeKite.Ins(12_345_680, own, "NIFTY", Market.today().plusDays(2), 25_200.0, "CE", 65)
+        kite.position(own, 65, 100.0); kite.quote("NFO:$own", 101.0, 100.95, 101.05)
+        assertTrue(runBlocking { Protections.protectLive(own, "NFO", "NRML", 65, 101.0, 90.0, null, null) }.startsWith("Protected"))
+        val p = autoProtected()
+        assertTrue(p.symbol == sym)
+        // The short leg's sell is still working (it would open a short).
+        kite.orders["9201"] = FakeKite.Order("9201", "NIFTY26N1625000PE", "NFO", "SELL", 65, "NRML", "LIMIT", 85.0, 0.0, "", "OPEN")
+        later(25); look()
+        assertEquals("only Boss's own is left", listOf(own), runBlocking { Protections.active() }.map { it.symbol })
+    }
+
+    @Test fun aSpreadsWorkingShortSellLeavesANewWingAlone() {
+        kite.orders["9202"] = FakeKite.Order("9202", "NIFTY26N1625000PE", "NFO", "SELL", 65, "NRML", "LIMIT", 85.0, 0.0, "", "OPEN")
+        twoLooks(); later(25); look()
+        assertTrue(kite.placed.isEmpty())
+        assertEquals(1, Alerts.posted.count { it.text.contains("left alone (part of a spread)") })
+    }
+
+    @Test fun anIndexFutureMakesTheOptionAHedge() {
+        kite.position("NIFTY26NOVFUT", -75, 25_100.0)
+        twoLooks(); later(25); look()
+        assertTrue(writes().isEmpty())
+        assertEquals("said once", 1, Alerts.posted.count { it.text.contains("left alone (a hedge") })
+    }
+
+    @Test fun aStockOptionIsAHedgeWhileTheStockIsHeld() {
+        kite.flat()
+        val opt = "RELIANCE26NOV1400CE"
+        kite.instruments += FakeKite.Ins(12_345_681, opt, "RELIANCE", Market.today().plusDays(20), 1_400.0, "CE", 500)
+        kite.position(opt, 500, 20.0); kite.quote("NFO:$opt", 21.0, 20.95, 21.05)
+        kite.holdings += FakeKite.Holding("RELIANCE", 10, 1_400.0, 1_401.0)
+        twoLooks(); later(25); look()
+        assertTrue(writes().isEmpty())
+        assertEquals(1, Alerts.posted.count { it.text.contains("left alone (a hedge") })
+        kite.holdings.clear()
+        later(25); look()
+        assertEquals("no stock: covered", listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
+
+    @Test fun aGttBossSetJustBeforePlacingIsSeenInsideTheLock() {
+        look(); later(25)
+        kite.afterNext("/quote") {
+            kite.gtts[5_101L] = org.json.JSONObject().put("id", 5_101L).put("type", "single").put("status", "active")
+                .put("created_at", "2026-11-07 10:00:00")
+                .put("condition", org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", sym)
+                    .put("trigger_values", org.json.JSONArray().put(110.0)).put("last_price", 126.0))
+                .put("orders", org.json.JSONArray())
+        }
+        look()
+        assertTrue("checked again in the turn: nothing placed beside Boss's GTT", writes().isEmpty())
+        assertTrue(Diag.lines().any { it.contains("checked again before placing: a GTT on it is active") })
+        assertFalse("never a refusal", said("is NOT protected"))
+    }
+
+    @Test fun lessHeldWhenCheckedAgainPlacesNothingAndSaysSo() {
+        look(); later(25)
+        // Boss sold half by hand between the fresh read and the check in the lock.
+        kite.afterNext("/quote") { kite.position(sym, 65, 125.35) }
+        look()
+        assertTrue(kite.placed.isEmpty())
+        assertTrue(Diag.lines().any { it.contains("Zerodha holds less than seen (65 of 130") })
+        // The next looks start over on 65 and cover that.
+        later(25); look(); later(65); look()
+        assertEquals(listOf("65", "65"), kite.placed.map { it.form["quantity"] })
+    }
+
+    @Test fun anUntrackedAppStopIsSaidLoudlyAndNotTakenForBosss() {
+        kite.orders["9301"] = FakeKite.Order("9301", sym, "NFO", "SELL", 130, "NRML", "SL", 118.0, 118.5, "iraprotect", "TRIGGER PENDING")
+        twoLooks(); later(25); look()
+        assertTrue(writes().isEmpty())
+        assertEquals("once", 1, Alerts.posted.count { it.kind == Alerts.Kind.ERROR && it.text.contains("untracked") && it.text.contains("Check Kite's order book") })
+        assertTrue(Diag.lines().any { it.contains("may be resting at Zerodha untracked") })
+    }
+
+    @Test fun theWatchKicksItInItsOwnJob() {
+        assertTrue(ManualCover.kick(AppSettings.load()))
+        com.optionslab.app.testing.Background.await("the first look") { !ManualCover.kickRunningForTest() }
+        later(25)
+        assertTrue(ManualCover.kick(AppSettings.load()))
+        com.optionslab.app.testing.Background.await("the second look") { !ManualCover.kickRunningForTest() }
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        ManualCover.resetForTest(on = false)
+        assertFalse("switched off: not started", ManualCover.kick(AppSettings.load()))
+    }
+
+    @Test fun theLoudNoticesUseTheAlwaysShownChannelWithOneBanner() {
+        com.optionslab.app.testing.Background.grantNotifications(context)
+        com.optionslab.app.security.SecurePrefs.put("n.other", false)
+        ManualCover.attachForTest(context)
+        repeat(3) { kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION) }
+        twoLooks(); later(65); look(); later(65); look()
+        val shown = com.optionslab.app.testing.Background.notifications(context).allNotifications
+            .filter { com.optionslab.app.testing.Background.text(it)?.contains("is NOT protected") == true }
+        assertEquals("shown even with other alerts off", 1, shown.size)
+        assertEquals(1, Alerts.posted.count { it.text.contains("is NOT protected") })
+    }
+
+    @Test fun anEndedProtectionKeepsWhenItEndedAndItsOriginAcrossARestart() {
+        val p = autoProtected()
+        val t0 = Market.now().toInstant().toEpochMilli()
+        runBlocking { Protections.remove(p.id) }
+        Protections.forgetMemoryForTest()
+        val ended = runBlocking { Protections.endedSince(t0 - 1_000) }.single()
+        assertEquals("removed", ended.note)
+        assertTrue("auto kept", ended.auto)
+        assertTrue("endedAt stamped when it ended", ended.endedAt!! >= t0)
+    }
+
+    @Test fun aRecentRemovalIsKeptBeyondTheFiftyFinished() {
+        assertTrue(runBlocking { Protections.protectLive(sym, "NFO", "NRML", 130, 126.0, 119.0, null, null) }.startsWith("Protected"))
+        runBlocking { Protections.remove(Protections.active().single().id) }
+        // 55 more, each replacing the last (a natural end): the removal is older than the last 50 finished.
+        repeat(55) { runBlocking { Protections.protectLive(sym, "NFO", "NRML", 130, 126.0, 119.0, null, null) } }
+        Protections.forgetMemoryForTest()
+        assertTrue("Boss's removal of the last week is kept", runBlocking { Protections.endedSince(0) }.any { it.note == "removed" })
     }
 
     // ---- the switch -------------------------------------------------------------------------------------------------------------

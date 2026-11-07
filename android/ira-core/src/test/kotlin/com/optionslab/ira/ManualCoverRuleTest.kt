@@ -74,10 +74,54 @@ class ManualCoverRuleTest {
         assertEquals(setOf("NIFTY"), shorts, "any expiry, any right")
         assertEquals(Skip.SPREAD, ManualCoverRule.skip(pos, Facts(shortUnderlyings = shorts)))
         assertNull(ManualCoverRule.skip(book[2], Facts(shortUnderlyings = shorts)), "another underlying is covered")
-        // A short future is not an option short; SENSEX is its own underlying.
-        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(listOf(Pos("NIFTY26NOVFUT", "NFO", "NRML", -75, 1.0, 1.0))))
+        // 7 Nov, second review: a future (long or short) is not an option short, but it makes the option a HEDGE (below).
+        val fut = listOf(Pos("NIFTY26NOVFUT", "NFO", "NRML", -75, 1.0, 1.0))
+        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(fut))
+        assertEquals(setOf("NIFTY"), ManualCoverRule.hedgeUnderlyings(fut, emptySet()))
+        assertEquals(Skip.HEDGE, ManualCoverRule.skip(pos, Facts(hedgeUnderlyings = ManualCoverRule.hedgeUnderlyings(fut, emptySet()))))
         assertEquals("SENSEX", ManualCoverRule.underlying("SENSEX26N1382000CE"))
         assertEquals("BANKNIFTY", ManualCoverRule.underlying("BANKNIFTY26NOV52000PE"))
+    }
+
+    @Test fun aWorkingOptionSellThatWouldOpenAShortCountsAsAShort() {
+        val book = listOf(pos)
+        // The spread's short leg still filling after its wing was bought.
+        assertEquals(setOf("NIFTY"), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell("NIFTY26N1625000PE", "NFO", 65))))
+        // Boss's own exit of what is held (or the app's stop on it) opens nothing: not a short.
+        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell(sym, "NFO", 130))))
+        assertEquals(setOf("NIFTY"), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell(sym, "NFO", 195))), "more than held")
+        // A stop and a target on what is held (one cancels the other): each no more than held, so no short.
+        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell(sym, "NFO", 130), ManualCoverRule.Sell(sym, "NFO", 130))))
+        assertEquals(emptySet(), ManualCoverRule.shortUnderlyings(book, listOf(ManualCoverRule.Sell("NIFTY26NOVFUT", "NFO", 75))), "a future sell")
+    }
+
+    @Test fun aStockOptionIsAHedgeWhileItsStockOrFutureIsHeld() {
+        val opt = Pos("RELIANCE26NOV1400CE", "NFO", "NRML", 500, 20.0, 21.0)
+        assertEquals(Skip.HEDGE, ManualCoverRule.skip(opt, Facts(hedgeUnderlyings = ManualCoverRule.hedgeUnderlyings(emptyList(), setOf("RELIANCE")))), "a holding")
+        val cash = listOf(Pos("RELIANCE", "NSE", "MIS", 100, 1_400.0, 1_401.0))
+        assertEquals(setOf("RELIANCE"), ManualCoverRule.hedgeUnderlyings(cash, emptySet()), "an intraday cash position")
+        assertEquals(setOf("RELIANCE"), ManualCoverRule.hedgeUnderlyings(listOf(Pos("RELIANCE26NOVFUT", "NFO", "NRML", 500, 1.0, 1.0)), emptySet()))
+        assertNull(ManualCoverRule.skip(opt, Facts(hedgeUnderlyings = setOf("TCS"))))
+        assertTrue("NIFTY" in ManualCoverRule.INDEX_UNDERLYINGS)
+        assertEquals(Skip.SPREAD, ManualCoverRule.spreadOrHedge(sym, setOf("NIFTY"), setOf("NIFTY")))
+        assertEquals(Skip.HEDGE, ManualCoverRule.spreadOrHedge(sym, emptySet(), setOf("NIFTY")))
+        assertNull(ManualCoverRule.spreadOrHedge(sym, setOf("BANKNIFTY"), emptySet()))
+        assertTrue(ManualCoverRule.saidUnhedged("NIFTY 24000 PE", Skip.SPREAD).contains("removed because it is now part of a spread/hedge"))
+        assertTrue(ManualCoverRule.saidUntracked(sym, "250926000000123").contains("Check Kite's order book"))
+    }
+
+    @Test fun theCheckJustBeforePlacing() {
+        fun pc(book: List<Pos> = listOf(pos), sells: List<ManualCoverRule.Sell> = emptyList(), equity: Set<String> = emptySet(),
+               w: Boolean = false, g: Boolean = false, sendable: Int = 130) = ManualCoverRule.precheck(pos, book, sells, equity, w, g, sendable, 130)
+        assertNull(pc(), "all clear: placed")
+        assertEquals(Skip.WORKING_ORDER, pc(w = true)!!.first)
+        assertEquals(Skip.GTT, pc(g = true)!!.first)
+        assertEquals(Skip.SPREAD, pc(book = listOf(pos, Pos("NIFTY26N1625000PE", "NFO", "NRML", -65, 1.0, 1.0)))!!.first)
+        assertEquals(Skip.SPREAD, pc(sells = listOf(ManualCoverRule.Sell("NIFTY26N1625000PE", "NFO", 65)))!!.first)
+        assertEquals(Skip.HEDGE, pc(book = listOf(pos, Pos("NIFTY26NOVFUT", "NFO", "NRML", 75, 1.0, 1.0)))!!.first)
+        val less = pc(sendable = 65)!!
+        assertNull(less.first); assertTrue(less.second.contains("65 of 130"))
+        for (r in listOf(pc(w = true), pc(sendable = 0))) assertFalse(ManualCoverRule.definiteRefusal("Not protected: ${r!!.second}"))
     }
 
     @Test fun theOpenTicketsLegsAreLeftAlone() {
@@ -103,7 +147,9 @@ class ManualCoverRuleTest {
 
     @Test fun aCarriedPositionsProtectionRemovedOnAnEarlierDayIsStillRespected() {
         val earlier = ManualCoverRule.Ended(sym, "removed", today = false, exchange = "NFO")
-        assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(earlier))), "carried NRML")
+        assertEquals(Skip.ENDED_EARLIER, ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(earlier))), "carried NRML")
+        assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(earlier, earlier.copy(today = true)))))
+        assertTrue(Skip.ENDED_EARLIER.words.contains("removed earlier"))
         assertNull(ManualCoverRule.skip(pos.copy(carried = false), Facts(endedToday = listOf(earlier))), "bought today: only today's count")
         assertNull(ManualCoverRule.skip(pos.copy(product = "MIS"), Facts(endedToday = listOf(earlier))), "intraday: only today's")
         assertNull(ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(earlier.copy(exchange = "BFO")))), "another exchange")

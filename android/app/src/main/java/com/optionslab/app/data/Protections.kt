@@ -46,6 +46,16 @@ object Protections {
          * before the DAY orders are placed again at the open: never two resting exits for one position. Null: none.
          */
         val gttId: Long? = null,
+        /**
+         * 7 Nov: set by "Stop and target on my manual positions" ([ManualCover]) on a position Boss bought by hand. Only such a
+         * protection is ever taken off by it (when the position becomes part of a spread or a hedge). False for every other one.
+         */
+        val auto: Boolean = false,
+        /**
+         * 7 Nov: when it ended (epoch ms, the market's clock), stamped by [save] the first time it is saved finished. An item saved
+         * before this field: its [id] (when it was set).
+         */
+        val endedAt: Long? = null,
     ) {
         val direction: Int get() = if (qty > 0) 1 else -1
         val exitSide: String get() = if (qty > 0) "SELL" else "BUY"
@@ -95,9 +105,13 @@ object Protections {
                 val o = a.getJSONObject(i)
                 fun d(k: String) = if (o.has(k) && !o.isNull(k)) o.getDouble(k) else null
                 fun s(k: String) = o.optString(k).ifEmpty { null }
+                val active = o.optBoolean("active", true)
                 out += Item(o.getLong("id"), o.getBoolean("live"), o.getString("symbol"), o.getString("exchange"), o.getString("product"),
                     o.getInt("qty"), o.getInt("lot"), o.getDouble("tick"), d("stop"), d("trail"), d("target"), o.getDouble("best"),
-                    s("stopId"), s("targetId"), o.optBoolean("active", true), o.optString("note"), o.optLong("gtt", 0L).takeIf { it > 0L })
+                    s("stopId"), s("targetId"), active, o.optString("note"), o.optLong("gtt", 0L).takeIf { it > 0L },
+                    // 7 Nov: both new (an older file has neither): not automatic; a finished one ended no earlier than it was set.
+                    auto = o.optBoolean("auto", false),
+                    endedAt = o.optLong("endedAt", 0L).takeIf { it > 0L } ?: if (active) null else o.getLong("id"))
             }
         }
         // 26 Oct: a read refused because everything is being erased is not a damaged file: never set aside (the copy would
@@ -188,25 +202,37 @@ object Protections {
     @Volatile private var streamLook = false
 
     private fun save(list: List<Item>) {
+        // 7 Nov: every protection saved finished for the first time is stamped with when it ended (all the ways one ends go through
+        // here), in the list in hand too, so the next save keeps the same time.
+        val ended = nowMs()
+        if (list is MutableList<Item>) runCatching { list.replaceAll { if (!it.active && it.endedAt == null) it.copy(endedAt = ended) else it } }
+        val stamped = list.map { if (!it.active && it.endedAt == null) it.copy(endedAt = ended) else it }
         val a = JSONArray()
-        // Finished protections are kept a while for the record, then dropped.
-        (list.filter { it.active } + list.filter { !it.active }.takeLast(50)).forEach { p ->
+        // Finished protections are kept a while for the record, then dropped. 7 Nov: one that ended in the last week other than with its
+        // position (Boss removed it, its stop was cancelled) is kept beyond the 50 ([ManualCover] respects it on a carried position).
+        val weekAgo = ended - com.optionslab.ira.ManualCoverRule.CARRIED_DAYS * 86_400_000L
+        val finished = stamped.filter { !it.active }
+        val last50 = finished.takeLast(50).toSet()
+        (stamped.filter { it.active } + finished.filter { it in last50 ||
+            ((it.endedAt ?: it.id) >= weekAgo && it.note !in com.optionslab.ira.ManualCoverRule.NATURAL_ENDS) }).forEach { p ->
             a.put(JSONObject().put("id", p.id).put("live", p.live).put("symbol", p.symbol).put("exchange", p.exchange).put("product", p.product)
                 .put("qty", p.qty).put("lot", p.lotSize).put("tick", p.tick).put("stop", p.stop ?: JSONObject.NULL).put("trail", p.trail ?: JSONObject.NULL)
                 .put("target", p.target ?: JSONObject.NULL).put("best", p.best).put("stopId", p.stopOrderId ?: "").put("targetId", p.targetOrderId ?: "")
-                .put("active", p.active).put("note", p.note).put("gtt", p.gttId ?: 0L))
+                .put("active", p.active).put("note", p.note).put("gtt", p.gttId ?: 0L).put("auto", p.auto).put("endedAt", p.endedAt ?: 0L))
         }
         // 26 Oct: a list read before an erase is never written back over it.
         if (loadGen != wipeGen) return
         Vault.writeFile(file, a.toString().toByteArray(Charsets.UTF_8))
-        cache = list.toMutableList()
-        hint(list)
+        cache = stamped.toMutableList()
+        hint(stamped)
     }
 
     suspend fun active(): List<Item> = lock.withLock { load().filter { it.active } }
 
     /** Every protection set at or after [fromMs], active or not (the order review's read after the close, 12 Oct). */
     suspend fun since(fromMs: Long): List<Item> = lock.withLock { load().filter { it.id >= fromMs } }
+    /** 7 Nov ([ManualCover]): every finished protection that ended at or after [fromMs] ([Item.endedAt]; an older one: when set). */
+    suspend fun endedSince(fromMs: Long): List<Item> = lock.withLock { load().filter { !it.active && (it.endedAt ?: it.id) >= fromMs } }
     suspend fun forSymbol(live: Boolean, symbol: String): Item? = lock.withLock { load().lastOrNull { it.active && it.live == live && it.symbol == symbol } }
 
     // ---- setting one up -------------------------------------------------------------------
@@ -257,9 +283,14 @@ object Protections {
     /**
      * Protect a Zerodha position. Call only after the owner's PIN or fingerprint.
      * The stop goes to Zerodha as an SL order with a limit, the target as a LIMIT order.
+     *
+     * 7 Nov ([ManualCover]): [auto] marks a protection the app set by itself on a position bought by hand. [precheck] runs inside
+     * this object's lock before anything is cancelled or placed: null goes on, a reason returns "Not protected: <reason>" with
+     * nothing placed (it takes the contract's exit turn itself, in the same order as the watch: this lock, then the turn).
      */
     suspend fun protectLive(symbol: String, exchange: String, product: String, qty: Int, price: Double,
-                            stop: Double?, trail: Double?, target: Double?): String {
+                            stop: Double?, trail: Double?, target: Double?, auto: Boolean = false,
+                            precheck: (suspend () -> String?)? = null): String {
         val s = AppSettings.load()
         if (!s.live || !s.allowRealOrders) return "Switch to Live with the badge at the top first."
         // The position's own price, read only when a target is asked (12 Oct): never a long's target under the price paid.
@@ -271,6 +302,8 @@ object Protections {
             return "Not protected: that stop would be at or under zero, so nothing was changed."
         val spec = runCatching { Broker.spec(exchange, symbol) }.getOrNull() ?: return "Could not read $symbol's lot and tick from Zerodha."
         return lock.withLock {
+            precheck?.let { check -> runCatching { check() }.getOrElse { "${com.optionslab.ira.ManualCoverRule.CHECKED_AGAIN}: it failed (${it.message})" }?.let { why ->
+                return@withLock "Not protected: $why" } }
             val list = load()
             // The old exits must be confirmed gone first, or the old and the new could both fill.
             val old = list.filter { it.active && it.live && it.symbol == symbol }
@@ -287,7 +320,7 @@ object Protections {
             // 21 Oct, enhancement round 4 (idea 1): a carried position's stop and target as ONE two-leg GTT ([DayOco] on): whichever
             // fires, Zerodha cancels the other, even with the phone off. Not placed (refused, not yet held, the books not read): the
             // two DAY orders as before, said.
-            val fresh = Item(nowMs(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail, target, price, null, null)
+            val fresh = Item(nowMs(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail, target, price, null, null, auto = auto)
             if (dayOco(fresh)) when (val r = restDayGtt(fresh, qty)) {
                 is DayGtt.Placed -> {
                     list += r.item; save(list)
@@ -322,7 +355,7 @@ object Protections {
             // 21 Oct, enhancement round 5 (idea 1): the two orders in the day GTT's place, counted for the diagnostics.
             if (replaced && (stopId != null || targetId != null)) DayOco.note(DayGttTally.Event.REPLACED)
             val item = Item(nowMs(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail,
-                target.takeIf { targetId != null }, price, stopId, targetId)
+                target.takeIf { targetId != null }, price, stopId, targetId, auto = auto)
             list += item; save(list)
             "Protected $symbol at Zerodha: ${item.describe()}$partly"
         }

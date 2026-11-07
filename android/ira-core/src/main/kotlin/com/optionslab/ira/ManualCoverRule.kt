@@ -85,8 +85,29 @@ object ManualCoverRule {
      * 7 Nov, review: the underlyings the account is SHORT an option on (any expiry, any product). A long option on one of these may
      * be a spread's wing (Boss's Ledger ticket: a short PE and a bought wing PE): covering the wing alone could leave the short naked.
      */
-    fun shortUnderlyings(book: List<Pos>): Set<String> =
-        book.filter { it.qty < 0 && isOption(it.symbol) }.map { underlying(it.symbol) }.toSet()
+    fun shortUnderlyings(book: List<Pos>, sells: List<Sell> = emptyList()): Set<String> {
+        val held = book.groupBy { it.key }.mapValues { e -> e.value.sumOf { it.qty } }
+        // 7 Nov, second review: a working option SELL that would open a short (more than that contract's long) is a short too - the
+        // spread's short leg still filling after its wing was bought. Its largest one, not their sum: a stop and a target resting
+        // on what is held (one cancels the other) each sell no more than is held.
+        val opening = sells.filter { isOption(it.symbol) }.groupBy { it.key }
+            .filter { (k, rows) -> rows.maxOf { it.qty } > (held[k] ?: 0).coerceAtLeast(0) }.keys
+            .map { underlying(it.substringAfter(':')) }
+        return (book.filter { it.qty < 0 && isOption(it.symbol) }.map { underlying(it.symbol) } + opening).toSet()
+    }
+
+    /** A working SELL order still to fill ([qty]: what is left of it). */
+    data class Sell(val symbol: String, val exchange: String, val qty: Int) {
+        val key: String get() = "$exchange:$symbol"
+    }
+
+    /**
+     * 7 Nov, second review: the underlyings a long option on would be a HEDGE: a future on it held (long or short), or its stock
+     * held ([equity]: cash positions' and holdings' symbols with a quantity). An option on them is left alone.
+     */
+    fun hedgeUnderlyings(book: List<Pos>, equity: Set<String>): Set<String> =
+        (book.filter { it.qty != 0 && it.symbol.endsWith("FUT") }.map { underlying(it.symbol) } +
+            book.filter { it.qty != 0 && it.exchange in setOf("NSE", "BSE") }.map { it.symbol } + equity).toSet()
 
     /**
      * Whether a contract is a leg of the open Expiry Put ticket (as the expiry square-off recognises them): the ticket's underlying,
@@ -116,6 +137,8 @@ object ManualCoverRule {
         val expiring: Set<String> = emptySet(),
         /** 7 Nov, review: underlyings the account is short an option on ([shortUnderlyings]). */
         val shortUnderlyings: Set<String> = emptySet(),
+        /** 7 Nov, second review: underlyings with a future or the stock held ([hedgeUnderlyings]). */
+        val hedgeUnderlyings: Set<String> = emptySet(),
         /** 7 Nov, review: "EXCHANGE:SYMBOL" keys of the open ticket's legs ([isTicketLeg]). */
         val ticketLegs: Set<String> = emptySet(),
         /** 7 Nov, review: "EXCHANGE:SYMBOL" keys held in more than one product (protections are kept per symbol). */
@@ -128,11 +151,14 @@ object ManualCoverRule {
         PROTECTED("it has a protection"),
         HANDS_OFF("you are exiting it by hand"),
         ENDED_TODAY("its protection was removed or ended today"),
+        /** 7 Nov, second review: a carried position whose protection was removed on an earlier day. */
+        ENDED_EARLIER("its protection was removed earlier (it is carried from an earlier day)"),
         WORKING_ORDER("an order on it is working at Zerodha"),
         GTT("a GTT on it is active at Zerodha"),
         APP_ORDER("the app's own order bought it"),
         EXPIRING("it expires today and the expiry square-off closes it"),
         SPREAD("left alone (part of a spread)"),
+        HEDGE("left alone (a hedge: its future or stock is held)"),
         TWO_PRODUCTS("held as both MIS and NRML: set the stops yourself"),
     }
 
@@ -160,13 +186,27 @@ object ManualCoverRule {
         p.key in f.handsOff -> Skip.HANDS_OFF
         p.key in f.expiring -> Skip.EXPIRING
         p.key in f.ticketLegs || underlying(p.symbol) in f.shortUnderlyings -> Skip.SPREAD
+        underlying(p.symbol) in f.hedgeUnderlyings -> Skip.HEDGE
         p.key in f.twoProducts -> Skip.TWO_PRODUCTS
-        f.endedToday.any { e -> e.symbol == p.symbol && (e.exchange.isEmpty() || e.exchange == p.exchange) && (e.today || p.carried) &&
-            e.note !in NATURAL_ENDS } -> Skip.ENDED_TODAY
+        else -> ended(p, f.endedToday) ?: books(p, f)
+    }
+
+    /** Zerodha's books: an order working on it, an active GTT, today's fill from the app's own order. */
+    private fun books(p: Pos, f: Facts): Skip? = when {
         p.key in f.workingOrders -> Skip.WORKING_ORDER
         p.key in f.activeGtts -> Skip.GTT
         p.key in f.appOrders -> Skip.APP_ORDER
         else -> null
+    }
+
+    /** The blocking end, if any: today's for any position, an earlier one (the last week) for a carried one. */
+    private fun ended(p: Pos, list: List<Ended>): Skip? {
+        val mine = list.filter { e -> e.symbol == p.symbol && (e.exchange.isEmpty() || e.exchange == p.exchange) && e.note !in NATURAL_ENDS }
+        return when {
+            mine.any { it.today } -> Skip.ENDED_TODAY
+            p.carried && mine.isNotEmpty() -> Skip.ENDED_EARLIER
+            else -> null
+        }
     }
 
     /** The stop and target for [avg] on [tick]: the stop rounded DOWN, the target UP (never looser than 5% / tighter than 10%). */
@@ -239,11 +279,47 @@ object ManualCoverRule {
      */
     fun definiteRefusal(result: String): Boolean {
         val r = result.lowercase()
-        val transient = listOf("could not read", "could not be confirmed", "lost", "timed out", "timeout", "gateway", "network",
+        val transient = listOf(CHECKED_AGAIN, "could not read", "could not be confirmed", "lost", "timed out", "timeout", "gateway", "network",
             "couldn't connect", "check the order book", "try again", "the stop must be", "the target must be", "trigger",
             "switch to live", "no matching order", "unknown", "status")
         return transient.none { it in r }
     }
+
+    /** The words the check made just before placing starts its reason with (never a refusal: [definiteRefusal]). */
+    const val CHECKED_AGAIN = "checked again before placing"
+
+    /** Index underlyings (no stock to hold): the holdings are never read for them. */
+    val INDEX_UNDERLYINGS = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT", "SENSEX", "BANKEX")
+
+    /** Whether an option on [underlying] is part of a spread or a hedge now ([shorts]: [shortUnderlyings]; [hedges]: [hedgeUnderlyings]). */
+    fun spreadOrHedge(symbol: String, shorts: Set<String>, hedges: Set<String>): Skip? = when (underlying(symbol)) {
+        in shorts -> Skip.SPREAD
+        in hedges -> Skip.HEDGE
+        else -> null
+    }
+
+    /**
+     * 7 Nov, second review: the reason, or null, a contract may not be covered now, from Zerodha's books read again just before
+     * placing ([book]: positions; [sells]: working SELL orders; [equity]: stock held; [contractWorking]/[contractGtt]: anything
+     * working or active on the contract itself; [sendable]: what may be covered of [qty] given what is held).
+     */
+    fun precheck(p: Pos, book: List<Pos>, sells: List<Sell>, equity: Set<String>, contractWorking: Boolean, contractGtt: Boolean,
+                 sendable: Int, qty: Int): Pair<Skip?, String>? = when {
+        contractWorking -> Skip.WORKING_ORDER to "$CHECKED_AGAIN: ${Skip.WORKING_ORDER.words}"
+        contractGtt -> Skip.GTT to "$CHECKED_AGAIN: ${Skip.GTT.words}"
+        else -> spreadOrHedge(p.symbol, shortUnderlyings(book, sells), hedgeUnderlyings(book, equity))?.let { it to "$CHECKED_AGAIN: ${it.words}" }
+            ?: if (sendable < qty) null to "$CHECKED_AGAIN: Zerodha holds less than seen ($sendable of $qty can be covered)" else null
+    }
+
+    /** An automatic protection taken off because its position became part of a spread or a hedge. */
+    fun saidUnhedged(symbol: String, why: Skip): String =
+        "$symbol: its automatic stop and target were removed because it is now part of a spread/hedge (${why.words}). Your own " +
+            "orders are untouched."
+
+    /** A working stop or target with the app's protection tag that no protection tracks (a lost reply). */
+    fun saidUntracked(symbol: String, orderId: String): String =
+        "$symbol: an app stop or target may be resting at Zerodha untracked (order …${orderId.takeLast(6)}, tagged iraprotect, " +
+            "no protection follows it). Check Kite's order book."
 
     /**
      * 7 Nov, review: whether an attempt may be made now: under [MAX_ATTEMPTS] today and [RETRY_GAP_MS] since the last one.
