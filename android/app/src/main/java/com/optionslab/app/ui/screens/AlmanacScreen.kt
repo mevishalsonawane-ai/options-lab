@@ -60,8 +60,14 @@ private data class HomeOrder(val name: String, val detail: String, val value: St
  * What Home shows about the money, from the paper account or from Zerodha. [pnlToday] is before charges (Boss, 5 Oct: as
  * Zerodha shows its P&L); [charges] the small line under it ("Charges ₹180", "Charges ≈ ₹180 (estimate)"; null: none).
  */
-private data class Money(val pnlToday: Double?, val unused: Double?, val used: Double?, val charges: String? = null) {
-    val capital: Double? get() = if (unused != null && used != null) unused + used else null
+internal data class Money(val pnlToday: Double?, val unused: Double?, val used: Double?, val charges: String? = null) {
+    /**
+     * 9 Nov (Boss: "application is showing wrong funds details"): Zerodha's used margin goes NEGATIVE when an option sold today
+     * credits its premium (Kite: option premium -19,500, used margin -19,500, available 56,428). That is money received, not in
+     * use: shown as nothing in use, so Capital is what Kite shows as available (it read 56,428 - 19,500 = 36,928 before).
+     */
+    val usedShown: Double? get() = used?.coerceAtLeast(0.0)
+    val capital: Double? get() = if (unused != null && usedShown != null) unused + usedShown else null
 }
 
 /**
@@ -274,7 +280,7 @@ private fun AlmanacBody(
             Probe("money")
             val (money, _, moneyNote) = books.value
             val cap = money.capital
-            val usedShare = if (cap != null && cap > 0) ((money.used ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
+            val usedShare = if (cap != null && cap > 0) ((money.usedShown ?: 0.0) / cap).toFloat().coerceIn(0f, 1f) else 0f
             LedgerCard {
                 Text("Capital", style = Type.label.copy(color = p.inkSoft, fontSize = 13.sp))   // money-label: whose follows on the next line
                 // 12 Oct: whose money this is, always said - Zerodha's real account or the paper (practice) one, never mixed.
@@ -289,7 +295,7 @@ private fun AlmanacBody(
                 }
                 MoneyRow(Modifier.padding(top = 12.dp)) {
                     MoneyFigure("Unused", money.unused?.let { inr(it) }, null, Modifier)
-                    MoneyFigure("Used", money.used?.let { inr(it) }, null, Modifier)
+                    MoneyFigure("Used", money.usedShown?.let { inr(it) }, null, Modifier)
                     MoneyFigure("P&L today", money.pnlToday?.let { inr(it, true) }, money.pnlToday?.let { if (it >= 0) p.verdigris else p.oxblood }, Modifier,
                         sub = money.charges.takeIf { money.pnlToday != null })
                 }
