@@ -67,7 +67,7 @@ internal data class Money(val pnlToday: Double?, val unused: Double?, val used: 
      * use: shown as nothing in use, so Capital is what Kite shows as available (it read 56,428 - 19,500 = 36,928 before).
      */
     val usedShown: Double? get() = used?.coerceAtLeast(0.0)
-    val capital: Double? get() = if (unused != null && usedShown != null) unused + usedShown else null
+    val capital: Double? get() { val u = usedShown; return if (unused != null && u != null) unused + u else null }
 }
 
 /**
