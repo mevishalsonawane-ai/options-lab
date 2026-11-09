@@ -530,6 +530,55 @@ What it says:
      market agree, a sweep of the level is a break, not a turn".
    - This lead should be checked on new data with a fresh, pre-registered forward test on paper, not traded yet.
 
+## Amendment M: Boss's "XAUUSD 6:30 AM IST Breakout (2R)" (9 Nov 2026)
+
+*Pre-registered in PREREG.md Amendment M (commit a052a4a). Ported as written:
+- the range is the candle opening at 06:30 IST (06:30-07:30 on 1H; 06:30-06:45 on 15m);
+- the first close beyond it with the script's cross rule is the trade, one a day;
+- SL is the previous candle's low / high and TP is 2R;
+- the trade is closed at the next 06:30 IST if neither is hit.
+
+Code `r140s.py`, tests `test_r140s.py`. BH over 136 (the 131 before plus these 5).*
+
+**On 1-hour candles this is the most profitable rule R140 has seen, but it fails the walk-forward gate, so the holdout
+was not read. On 15-minute candles it loses.**
+
+| id | version | n | win (65% rule) | avg / 100 oz | total 1x / 2x | folds F1..F5 | twin p | q (136) | $1,000 at 5x (2.5 y) |
+|---|---|---|---|---|---|---|---|---|---|
+| S1 | 6:30 AM IST breakout, 1H, as written (SL prev candle, TP 2R) | 571 | 40% | $+272 | $+155,087 / $+136,815 | -983 / -2,442 / +29,935 / +8,210 / +120,366 | 0.002 | 0.068 | +344% (DD -31%) |
+| S2 | 6:30 breakout, 1H, + 60% lock after 1R | 571 | 54% | $+164 | $+93,439 / $+75,167 | -4,081 / -12,390 / +27,763 / +3,985 / +78,162 | 0.001 | 0.045 | +131% (DD -41%) |
+| S3 | 6:30 breakout, 15m, as written | 575 | 34% | $-78 | $-44,568 / $-62,968 | -2,459 / -5,091 / +9,910 / -17,133 / -29,795 | 0.839 | 1.000 | -50% (DD -56%) |
+| S4 | 6:30 breakout, 15m, + lock | 575 | 50% | $-44 | $-25,142 / $-43,542 | -186 / -6,380 / +2,170 / -23,973 / +3,226 | 0.707 | 1.000 | -40% (DD -45%) |
+| S5 | 6:30 breakout, 1H, R = 1, lock after 0.5R | 571 | 69% | $+102 | $+58,296 / $+40,024 | -5,081 / -10,170 / +18,020 / +8,360 / +47,168 | 0.005 | 0.106 | +77% (DD -33%) |
+
+How to read it:
+1. **The 1H script as written (S1)** made +$272 a 100-oz lot on 571 trades.
+   - It is +$240 at double costs and beats random same-time trades (p 0.002).
+   - It passes BH over 136 rules (q 0.068).
+   - It wins only 40%: the winners (2R) pay for the losers. Most entries come at 08:30-09:30 IST, right
+     after the range candle closes.
+2. **But it fails the steadiness gate.**
+   - It lost in both halves of Oct 2023 - Sep 2024 (F1 -$983, F2 -$2,442 a lot).
+   - Most of its profit came in one fold, Oct 2025 - Mar 2026 (+$120k of +$155k): gold's fastest, most trending
+     months.
+   - The same holds with the lock (S2: q 0.045, folds 3 of 5) and with R = 1 (S5: 69% win, which
+     meets Boss's 65% rule, +$102 a lot, q 0.106, folds 3 of 5).
+   - This is a rule that earns when gold trends hard and loses when it is quiet.
+3. **The stops are wide.** The previous 1H candle is about $15 an ounce away on average.
+   - A fixed 5x on $1,000 would have made +344% in 2.5 years, but with a -31% drawdown, and all of the gain came from
+     one stretch.
+   - Sized for a quiet year, it would have lost.
+4. **On 15-minute candles (S3, S4) it loses.** The 06:30-06:45 range is too small, so most days break at 06:45-07:00
+   on noise.
+5. **For Boss:**
+   - Together with H11b, the 1H breakout is worth a paper forward test, at small size (1-2x).
+   - Judge it on whether it also earns in calm months, not only in trending ones.
+   - It is not proven, and the 2023-24 losses are the warning.
+
+Note on Amendment L's BH: L's rule names L1-L8 reused Amendment B's L1-L6, so its BH step counted 125 rules, not
+131. Recomputed over 131 (entries r140-en1..en8), the q values are unchanged to two decimals (EN7 0.18). The verdict
+is the same.
+
 ## What is new compared with the earlier gold work
 
 - GOLD_15M_PATTERNS and GOLD_30M_1H_PATTERNS had unconditional hour tables (01:00 UTC green 50.8%, 02:00 UTC 50.7%).

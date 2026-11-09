@@ -1,0 +1,28 @@
+id: r140-s1
+title: 'R140 Amendment M S1: Boss''s 6:30 AM IST breakout, 1H, as written (SL prev candle, TP 2R)'
+family: mcx-crypto
+date: '2026-11-09'
+doc: research/HUNT_R140_GOLD_0600.md
+hypothesis: 'Boss''s Pine v5 ''XAUUSD 6:30 AM IST Breakout (2R)'': the first close beyond the 06:30 IST candle''s range, once
+  a day, SL at the previous candle, TP 2R, earns on XAUUSD after costs, beats same-time twins, BH q <= 0.10 over 136, >= 4
+  of 5 folds positive.'
+data_version: as r140-a1 (XAUUSD Dukascopy BID 1-min to 30 Oct 2026)
+period:
+  design: 2023-10-02..2026-03-31
+  holdout: '2026-04-01..2026-10-30 (locked; not read: nothing passed)'
+instruments:
+- XAUUSD
+features:
+- 'signal source: XAUUSD spot candles (the underlying); information only (not tradable via Zerodha)'
+model_or_rule: 6:30 AM IST breakout, 1H, as written (SL prev candle, TP 2R); time exit at the next 06:30 IST
+settings: research/hunt/r140_gold_0600/r140s.py; PREREG.md Amendment M
+prereg: research/hunt/r140_gold_0600/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Design: 571 trades, win 40% (65% rule: below), avg net $+272 a 100-oz lot (2x $+240), total $+155,087; folds -983
+    / -2,442 / +29,935 / +8,210 / +120,366; twin p 0.002, BH q 0.068 (136). Gates failed: folds. Holdout not read.'
+  costs: $0.25 spread + $7 a lot round trip ($32 a 100-oz lot); 2x also
+holdout_read: false
+verdict: rejected
+notes: 'Near miss: profitable over the whole design and beats twins, but lost in Oct 2023 - Sep 2024 (F1, F2) and made most
+  of its profit in Oct 2025 - Mar 2026 (F5). A forward-test candidate, not proven.'
