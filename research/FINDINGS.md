@@ -1907,3 +1907,28 @@ book is Night on NIFTY / BANKNIFTY / FINNIFTY (exact rule) + SENSEX (no OI), on 
 - **A feature-cache bug** (R72 read R51's features) was found and fixed, and everything was re-run; no verdict changed.
 - With R105C (60% from exits only by selling at +5%, then both arms lose): a 60% win rate is not reachable on these
   arms with profit. They earn from a few big winners at about 45-50% wins.
+
+## Donchian arms sold at +Rs 2,000 / -Rs 2,000 for the position, 1-3 lots (R152, 7 Nov 2026) - 0 of 18 pass
+`hunt/r152_donchian_2k/results/report.md`. Boss: "sell at max target i.e. 2k and max loss at 2k". R106's engine; the
+arm's -15% stop stays (the nearer stop acts); today's rules re-priced at the same lots for every comparison.
+- **+2k / -2k makes both arms lose at every lot size.** Apr - Oct 2026: R72 Rs 1.71 lakh -> -Rs 39.5k (1 lot), Rs 3.98
+  lakh -> -Rs 2.02 lakh (2), Rs 6.25 lakh -> -Rs 3.55 lakh (3); R51 Rs 1.35 lakh -> -Rs 90.9k (1), Rs 3.47 lakh ->
+  -Rs 2.07 lakh (2), Rs 5.58 lakh -> -Rs 4.67 lakh (3) (R72 1,202 trades, R51 1,670). Design and walk-forward agree.
+  - Wins 44-47%; break-even after charges is about 47% at 1 lot and 50-51% at 2-3 lots.
+- **+2k only** lifts wins to 56-64% at 2-3 lots but needs 58-67% (the -15% losers stay); every lot size loses in 2026.
+- **-2k only** stays in profit and cuts the worst day (R72 3 lots -Rs 32.5k vs -Rs 66.3k) but gives up far more profit
+  (Rs 1.71 lakh vs Rs 6.25 lakh). Fails "better than today".
+- **On R151's picks (second look):** the same. Side note: with the app's rule that a skipped break holds its side, R72's
+  picker makes Rs 1.70 lakh on 603 trades in Apr - Oct 2026, not R151's Rs 2.19 lakh on 652 (R51: Rs 1.43 lakh / 653
+  vs Rs 1.59 lakh / 693); drawdown still about half the plain arm's. Described, not tested.
+
+## Combinations for the Donchian arms to lose less, 1-3 lots (R153, 7 Nov 2026) - 0 of 24 pass
+`hunt/r153_donchian_loseless/results/report.md`. Boss: "Can we try some combination for less loss." R140's "lose less"
+gates. C1 -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000; C2 day cap (no new entry once the day's closed trades are
+-Rs 4,000); C3 C1 + C2; C4 entries until 10:00 + C1.
+- **Losses shrink, profit shrinks more.** Apr - Oct 2026, R72 1 lot: today Rs 1.71 lakh, red days -Rs 3.90 lakh; C4
+  Rs 77k, red days -Rs 1.58 lakh. R72 3 lots: Rs 6.25 lakh / -Rs 11.2 lakh -> C4 Rs 81k / -Rs 2.68 lakh.
+- **Random does as well.** C4 takes a third of the trades; random skips of the same number cut losses as much. The stop
+  and lock never beat random exit minutes (best p 0.19). The day cap blocks afternoon recoveries.
+- **Lead:** the 10:00 cut alone beat random skips at 3 lots (p 0.025 R72, 0.033 R51), tested only with C1's exits.
+- **R151's picker (live) already cuts red days by about 40% at the same profit** (R72, 1 lot, second look).

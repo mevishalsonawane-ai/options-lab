@@ -1,0 +1,41 @@
+id: r153-r72-c1-3lot
+title: 'R153 C1 on R72 Breadth Donchian, 3 lots: -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000'
+family: trade-management
+date: '2026-11-07'
+doc: research/hunt/r153_donchian_loseless/results/report.md
+hypothesis: 'Boss (7 Nov): "try some combination for less loss". -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000 (whole position,
+  net of charges) makes the arm lose less than today''s rules: smaller sum of losing days, drawdown, worst day and worst month
+  in design, walk-forward and final, still net > 0; beats random twins (p < 0.05), BH q <= 0.10 with m = 890; >= 40 final
+  trades, >= 30 differ.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 7 Nov 2026; R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R153 (read by many earlier studies); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (Donchian 20, 4 of 5) (unchanged); the option''s exit and the day''s
+  entries change'
+model_or_rule: R72 Breadth Donchian with -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000, 3 lots
+settings: research/hunt/r153_donchian_loseless/r153study.py COMBOS; r153lib.py; PREREG.md section 2
+prereg: research/hunt/r153_donchian_loseless/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design: 3279 trades, net -Rs 344,946, losing days -Rs 2,059,096, worst day -Rs 37,908, max DD Rs 418,355, worst
+    month -Rs 150,185 (today 3071 trades, net Rs 934,016, losing days -Rs 3,321,867, worst day -Rs 174,444, max DD Rs 552,158,
+    worst month -Rs 217,892). Walk-forward: 2379 trades, net -Rs 127,025, losing days -Rs 1,397,446, worst day -Rs 37,908,
+    max DD Rs 238,067, worst month -Rs 135,183 (today 2238 trades, net Rs 1,213,421, losing days -Rs 2,027,948, worst day
+    -Rs 76,355, max DD Rs 242,618, worst month -Rs 197,761). Final: 1243 trades, net -Rs 25,363, losing days -Rs 778,538,
+    worst day -Rs 27,409, max DD Rs 178,404, worst month -Rs 72,173 (today 1202 trades, net Rs 625,048, losing days -Rs 1,120,275,
+    worst day -Rs 66,325, max DD Rs 160,424, worst month -Rs 104,488); twin p 0.966, BH q 1.0. Fails: design: the arm no longer
+    makes money; wf: the arm no longer makes money; final: drawdown worse; final: the arm no longer makes money; twin p 0.966
+    >= 0.05; BH q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole 3-lot quantity, R17 fills (stop and lock sales -10 bps and 2x the half-spread,
+    gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.

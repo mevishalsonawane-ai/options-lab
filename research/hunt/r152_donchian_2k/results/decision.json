@@ -1,0 +1,199 @@
+{
+ "R72:T2000@1": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 0.87 > 0.10"
+  ],
+  "q_all": 0.866,
+  "q_r152": 0.018,
+  "twin_p": 0.002
+ },
+ "R72:T2000@2": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 0.2875,
+  "twin_p": 0.0639
+ },
+ "R72:T2000@3": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 0.9361
+ },
+ "R72:T2000S@1": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 0.9701
+ },
+ "R72:T2000S@2": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:T2000S@3": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:S2000@1": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:S2000@2": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R72:S2000@3": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:T2000@1": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 0.87 > 0.10"
+  ],
+  "q_all": 0.866,
+  "q_r152": 0.018,
+  "twin_p": 0.002
+ },
+ "R51:T2000@2": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 0.024,
+  "twin_p": 0.004
+ },
+ "R51:T2000@3": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 0.8283
+ },
+ "R51:T2000S@1": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:T2000S@2": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:T2000S@3": {
+  "passed": false,
+  "fails": [
+   "not positive in design, walk-forward and final",
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:S2000@1": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:S2000@2": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "R51:S2000@3": {
+  "passed": false,
+  "fails": [
+   "not better than today's rules (walk-forward and final)",
+   "exit-twin BH q 1.00 > 0.10"
+  ],
+  "q_all": 1.0,
+  "q_r152": 1.0,
+  "twin_p": 1.0
+ },
+ "_m": {
+  "r152": 18,
+  "prior": 848,
+  "total": 866
+ }
+}

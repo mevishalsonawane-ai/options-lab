@@ -1,0 +1,304 @@
+{
+ "R72:C1@1": {
+  "passed": false,
+  "fails": [
+   "final: losing days not smaller",
+   "final: drawdown worse",
+   "final: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C1@2": {
+  "passed": false,
+  "fails": [
+   "design: drawdown worse",
+   "design: the arm no longer makes money",
+   "final: drawdown worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C1@3": {
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "wf: the arm no longer makes money",
+   "final: drawdown worse",
+   "final: the arm no longer makes money",
+   "twin p 0.966 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.966,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C2@1": {
+  "passed": false,
+  "fails": [
+   "wf: losing days not smaller",
+   "wf: drawdown worse",
+   "wf: worst day worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C2@2": {
+  "passed": false,
+  "fails": [
+   "wf: losing days not smaller",
+   "wf: worst day worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C2@3": {
+  "passed": false,
+  "fails": [
+   "wf: losing days not smaller",
+   "wf: worst day worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C3@1": {
+  "passed": false,
+  "fails": [
+   "wf: drawdown worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C3@2": {
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "wf: the arm no longer makes money",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C3@3": {
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "wf: drawdown worse",
+   "wf: the arm no longer makes money",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C4@1": {
+  "passed": false,
+  "fails": [
+   "final: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C4@2": {
+  "passed": false,
+  "fails": [
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R72:C4@3": {
+  "passed": false,
+  "fails": [
+   "twin p 0.189 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.1894,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C1@1": {
+  "passed": false,
+  "fails": [
+   "design: drawdown worse",
+   "design: the arm no longer makes money",
+   "wf: drawdown worse",
+   "wf: worst month worse",
+   "final: losing days not smaller",
+   "final: worst day worse",
+   "final: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C1@2": {
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "wf: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C1@3": {
+  "passed": false,
+  "fails": [
+   "design: the arm no longer makes money",
+   "wf: the arm no longer makes money",
+   "final: the arm no longer makes money",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C2@1": {
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "design: the arm no longer makes money",
+   "wf: drawdown worse",
+   "wf: worst month worse",
+   "final: drawdown worse",
+   "final: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C2@2": {
+  "passed": false,
+  "fails": [
+   "wf: drawdown worse",
+   "wf: worst month worse",
+   "final: drawdown worse",
+   "final: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C2@3": {
+  "passed": false,
+  "fails": [
+   "wf: worst month worse",
+   "final: drawdown worse",
+   "final: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C3@1": {
+  "passed": false,
+  "fails": [
+   "design: worst month worse",
+   "design: the arm no longer makes money",
+   "wf: drawdown worse",
+   "wf: worst month worse",
+   "wf: the arm no longer makes money",
+   "final: drawdown worse",
+   "final: worst month worse",
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C3@2": {
+  "passed": false,
+  "fails": [
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C3@3": {
+  "passed": false,
+  "fails": [
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C4@1": {
+  "passed": false,
+  "fails": [
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C4@2": {
+  "passed": false,
+  "fails": [
+   "twin p 1 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "R51:C4@3": {
+  "passed": false,
+  "fails": [
+   "final: the arm no longer makes money",
+   "twin p 0.759 >= 0.05",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7586,
+  "q_all": 1.0,
+  "q_r153": 1.0
+ },
+ "_m": {
+  "r153": 24,
+  "prior": 866,
+  "total": 890
+ }
+}
