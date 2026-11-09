@@ -481,8 +481,8 @@ class TradeScreenTest {
 
     /**
      * 9 Nov (Boss's screenshots: a finished SELL that closed the position showed +Rs 731, then +Rs 2,145 as the price fell, while
-     * Kite showed the trade's -Rs 201): a closed contract's finished orders show Zerodha's own P&L once, on the last fill, and it
-     * never moves with the live price; an open position's opening fill keeps its live figure; a part sold shows none.
+     * Kite showed the trade's -Rs 201): each contract shows Zerodha's own P&L once, on its last fill; a closed one never moves with
+     * the live price; an open one (here partly sold) shows its position's figure, not each fill at the live price.
      */
     @Test fun aClosedTradesFinishedOrdersShowZerodhasPnlOnceAndNeverMoveWithThePrice() {
         loginConfigured()
@@ -493,7 +493,7 @@ class TradeScreenTest {
             filled = 195, avg = 100.0, at = t0.plusMinutes(10))
         kite.position(sym, 0, 0.0); kite.closedPnl["NFO:$sym:NRML"] = -201.49
         kite.quote("NFO:$sym", 96.25)
-        // An open one beside it: bought 75 at 60 (live +Rs 750 at 70), then 25 sold (none: it is in the position's figure).
+        // An open one beside it: bought 75 at 60, then 25 sold; 50 held at 70: its position's figure (+Rs 500 in the fake), once.
         val open = "NIFTY26OCT24600CE"
         kite.orders["9103"] = FakeKite.Order("9103", open, "NFO", "BUY", 75, "NRML", "LIMIT", 60.0, 0.0, "", "COMPLETE",
             filled = 75, avg = 60.0, at = t0.plusMinutes(1))
@@ -505,8 +505,8 @@ class TradeScreenTest {
         waitText(rs(-201.49, true))
         assertEquals("the closed trade's P&L once", 1, compose.onAllNodesWithText(rs(-201.49, true)).fetchSemanticsNodes().size)
         assertFalse("never priced at the live price", exists(rs((100.0 - 96.25) * 195, true)))
-        assertTrue("the open position's opening fill at the live price", exists(rs((70.0 - 60.0) * 75, true)))
-        assertFalse("a part sold shows none", exists(rs((66.0 - 70.0) * 25, true)) || exists(rs((70.0 - 66.0) * 25, true)))
+        assertEquals("the open contract's figure once", 1, compose.onAllNodesWithText(rs((70.0 - 60.0) * 50, true)).fetchSemanticsNodes().size)
+        assertFalse("never each fill at the live price", exists(rs((70.0 - 60.0) * 75, true)))
         // The price falls further: the closed trade's figure stays.
         kite.quote("NFO:$sym", 89.0)
         m.loadAccount(quiet = true)

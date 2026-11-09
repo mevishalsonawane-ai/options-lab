@@ -327,11 +327,11 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.O
         if (done.isNotEmpty()) {
             if (working.isNotEmpty()) Rule(Modifier.padding(vertical = 6.dp))
             Text("FINISHED", style = Type.label.copy(color = p.inkSoft))
-            // 9 Nov: a closed contract's P&L is Zerodha's, once, on its last filled order ([bookFillPnl]).
+            // 9 Nov: each contract's P&L is Zerodha's, once, on its last filled order ([bookFillPnl]).
             val lastFilled = done.filter { it.filled > 0 }.groupBy { "${it.exchange}:${it.symbol}:${it.product}" }.mapValues { (_, v) -> v.maxBy { it.placedAt }.id }
             done.forEach { o -> androidx.compose.runtime.key(o.id) {
                 val pos = a.positions.firstOrNull { it.symbol == o.symbol && it.product == o.product && it.exchange == o.exchange }
-                val pnl = if (o.filled > 0) bookFillPnl(o.side == "BUY", o.avg, o.filled, pos, lastFilled["${o.exchange}:${o.symbol}:${o.product}"] == o.id) else null
+                val pnl = if (o.filled > 0) bookFillPnl(pos, lastFilled["${o.exchange}:${o.symbol}:${o.product}"] == o.id) else null
                 OrderLine(o, owners, pnl) { onTap(o) }
             } }
         }
@@ -361,7 +361,7 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
     val p = LocalPalette.current
     LedgerCard(title = "Trade book") {
         if (a.trades.isEmpty()) Note("No trades today.")
-        // 9 Nov: as the order book ([bookFillPnl]): a closed contract's P&L once, on its last trade; never at the live price again.
+        // 9 Nov: as the order book ([bookFillPnl]): each contract's P&L once, on its last trade.
         val lastTrade = a.trades.groupBy { "${it.exchange}:${it.symbol}:${it.product}" }.mapValues { (_, v) -> v.maxBy { it.at }.id }
         a.trades.forEachIndexed { i, t -> androidx.compose.runtime.key(t.id) {
             if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
@@ -373,7 +373,7 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("${t.qty} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
-                    PnlFigure(bookFillPnl(t.side == "BUY", t.price, t.qty, a.positions.firstOrNull { it.symbol == t.symbol && it.product == t.product && it.exchange == t.exchange },
+                    PnlFigure(bookFillPnl(a.positions.firstOrNull { it.symbol == t.symbol && it.product == t.product && it.exchange == t.exchange },
                         lastTrade["${t.exchange}:${t.symbol}:${t.product}"] == t.id))
                 }
             }
