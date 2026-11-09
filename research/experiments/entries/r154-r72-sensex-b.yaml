@@ -1,0 +1,44 @@
+id: r154-r72-sensex-b
+title: R154 R72 Breadth Donchian (4 of 5) entries on SENSEX, 10-15 point scalp exits, reading B (index points (target / stop
+  on the index; the option sold at the next minute's open))
+family: trade-management
+date: '2026-11-09'
+doc: research/hunt/r154_scalp_10_15/results/report.md
+hypothesis: 'Boss (9 Nov): "study 10-15 pts scalping ... find out the winrate and profit/loss". R72 Breadth Donchian (4 of
+  5) entries on SENSEX with a fixed scalp exit: target 10 / 12 / 15 points on the index, stop 1:1 or 1:1.5, time stop 15 or
+  30 minutes, 15:15 square-off (15:05 expiry). Gates: net > 0 in P1, P2 and P3; random-exit twin BH q <= 0.10 with m = 1682;
+  >= 40 final trades; above the arm''s own exits in P2 and P3.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 9 Nov 2026; R51
+  Amendment A clean stores from 20 Nov 2024 (post: R106''s to 19 Oct), R154 early store (same code) Aug 2021 - 19 Nov 2024'
+period:
+  design: P1 2024-11-20..2025-03-31; P2 walk-forward 2025-04-01..2026-03-31
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R153 and SCALP17); post 14-19 Oct reported
+instruments:
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (Donchian 20, 4 of 5 break); buys the 1-ITM nearest-expiry option'
+- 'exit: index points (target / stop on the index; the option sold at the next minute''s open)'
+model_or_rule: R72 Breadth Donchian (4 of 5) entries on SENSEX; exits B10s10t15, B10s10t30, B10s15t15, B10s15t30, B12s12t15,
+  B12s12t30, B12s18t15, B12s18t30, B15s15t15, B15s15t30, B15s22.5t15, B15s22.5t30
+settings: research/hunt/r154_scalp_10_15/r154cfg.py RULES, ENTRIES; PREREG.md sections 2-3
+prereg: research/hunt/r154_scalp_10_15/PREREG.md
+variants_tried: 12
+results:
+  summary: '1 lot. B10s10t15: P1 169 tr -Rs 12,273; P2 486 tr -Rs 13,336; P3 252 tr, win 40% (break-even 51%), -Rs 15,213;
+    twin p 0.7844, q 1.0 | B10s10t30: P1 169 tr -Rs 12,273; P2 486 tr -Rs 13,336; P3 252 tr, win 40% (break-even 51%), -Rs
+    15,213; twin p 0.9561, q 1.0 | B10s15t15: P1 169 tr -Rs 13,101; P2 486 tr -Rs 11,559; P3 252 tr, win 42% (break-even 52%),
+    -Rs 14,046; twin p 0.7106, q 1.0 | B10s15t30: P1 169 tr -Rs 13,101; P2 486 tr -Rs 11,559; P3 252 tr, win 42% (break-even
+    52%), -Rs 14,046; twin p 0.9281, q 1.0 | B12s12t15: P1 169 tr -Rs 9,745; P2 486 tr -Rs 10,366; P3 252 tr, win 41% (break-even
+    52%), -Rs 16,386; twin p 0.7884, q 1.0 | B12s12t30: P1 169 tr -Rs 9,745; P2 486 tr -Rs 10,366; P3 252 tr, win 41% (break-even
+    52%), -Rs 16,386; twin p 0.9641, q 1.0 | B12s18t15: P1 169 tr -Rs 9,994; P2 485 tr -Rs 11,228; P3 252 tr, win 42% (break-even
+    51%), -Rs 14,787; twin p 0.7086, q 1.0 | B12s18t30: P1 169 tr -Rs 9,994; P2 485 tr -Rs 11,228; P3 252 tr, win 42% (break-even
+    51%), -Rs 14,787; twin p 0.9421, q 1.0 | B15s15t15: P1 169 tr -Rs 10,361; P2 486 tr -Rs 11,674; P3 252 tr, win 41% (break-even
+    51%), -Rs 15,648; twin p 0.7705, q 1.0 | B15s15t30: P1 169 tr -Rs 10,361; P2 486 tr -Rs 11,674; P3 252 tr, win 41% (break-even
+    51%), -Rs 15,648; twin p 0.9521, q 1.0 | B15s22.5t15: P1 169 tr -Rs 8,154; P2 485 tr -Rs 12,198; P3 252 tr, win 42% (break-even
+    53%), -Rs 16,916; twin p 0.8263, q 1.0 | B15s22.5t30: P1 169 tr -Rs 8,154; P2 485 tr -Rs 12,198; P3 252 tr, win 42% (break-even
+    53%), -Rs 16,916; twin p 0.9621, q 1.0. Today''s exits (B0): P2 Rs 47,252, P3 Rs 12,694. Every rule fails the gates.'
+  costs: dated Zerodha charges, R17 fills (buy +5 bps + half-spread ticks, stop sales -10 bps and 2x the ticks, gaps at the
+    open), limit targets at their price, 1 lot (2-3 lots in the report)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.

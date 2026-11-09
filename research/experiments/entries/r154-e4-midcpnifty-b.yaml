@@ -1,0 +1,46 @@
+id: r154-e4-midcpnifty-b
+title: 'R154 E4 PBB: 1-min close beyond the previous 1-min high / low, with the 5-min 21 EMA trend on MIDCPNIFTY, 10-15 point
+  scalp exits, reading B (index points (target / stop on the index; the option sold at the next minute''s open))'
+family: patterns-indicators
+date: '2026-11-09'
+doc: research/hunt/r154_scalp_10_15/results/report.md
+hypothesis: 'Boss (9 Nov): "study 10-15 pts scalping ... find out the winrate and profit/loss". E4 PBB: 1-min close beyond
+  the previous 1-min high / low, with the 5-min 21 EMA trend on MIDCPNIFTY with a fixed scalp exit: target 10 / 12 / 15 points
+  on the index, stop 1:1 or 1:1.5, time stop 15 or 30 minutes, 15:15 square-off (15:05 expiry). Gates: net > 0 in P1, P2 and
+  P3; random-exit twin BH q <= 0.10 with m = 1682; >= 40 final trades.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 9 Nov 2026; R51
+  Amendment A clean stores from 20 Nov 2024 (post: R106''s to 19 Oct), R154 early store (same code) Aug 2021 - 19 Nov 2024'
+period:
+  design: P1 first option day (2021-08 / MIDCPNIFTY 2023-01 / SENSEX 2023-05)..2025-03-31; P2 walk-forward 2025-04-01..2026-03-31
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R153 and SCALP17); post 14-19 Oct reported
+instruments:
+- MIDCPNIFTY
+features:
+- 'signal source: index 1-min bars + 5-min closes (EMA 21 trend); buys the 1-ITM nearest-expiry option'
+- 'exit: index points (target / stop on the index; the option sold at the next minute''s open)'
+model_or_rule: 'E4 PBB: 1-min close beyond the previous 1-min high / low, with the 5-min 21 EMA trend on MIDCPNIFTY; exits
+  B10s10t15, B10s10t30, B10s15t15, B10s15t30, B12s12t15, B12s12t30, B12s18t15, B12s18t30, B15s15t15, B15s15t30, B15s22.5t15,
+  B15s22.5t30'
+settings: research/hunt/r154_scalp_10_15/r154cfg.py RULES, ENTRIES; PREREG.md sections 2-3
+prereg: research/hunt/r154_scalp_10_15/PREREG.md
+variants_tried: 12
+results:
+  summary: '1 lot. B10s10t15: P1 2103 tr -Rs 2,14,097; P2 1235 tr -Rs 1,20,174; P3 665 tr, win 46% (break-even 53%), -Rs 66,260;
+    twin p 0.998, q 1.0 | B10s10t30: P1 2103 tr -Rs 2,15,894; P2 1235 tr -Rs 1,20,975; P3 665 tr, win 46% (break-even 53%),
+    -Rs 66,562; twin p 1.0, q 1.0 | B10s15t15: P1 2103 tr -Rs 2,27,256; P2 1235 tr -Rs 1,34,716; P3 665 tr, win 50% (break-even
+    56%), -Rs 61,339; twin p 0.994, q 1.0 | B10s15t30: P1 2103 tr -Rs 2,29,222; P2 1235 tr -Rs 1,35,026; P3 665 tr, win 51%
+    (break-even 57%), -Rs 62,669; twin p 0.996, q 1.0 | B12s12t15: P1 2102 tr -Rs 2,26,300; P2 1235 tr -Rs 1,10,371; P3 665
+    tr, win 48% (break-even 53%), -Rs 48,216; twin p 0.9301, q 1.0 | B12s12t30: P1 2101 tr -Rs 2,28,892; P2 1234 tr -Rs 1,13,064;
+    P3 665 tr, win 48% (break-even 54%), -Rs 63,654; twin p 0.99, q 1.0 | B12s18t15: P1 2101 tr -Rs 1,93,590; P2 1235 tr -Rs
+    1,00,867; P3 665 tr, win 50% (break-even 56%), -Rs 69,548; twin p 0.8263, q 1.0 | B12s18t30: P1 2099 tr -Rs 1,76,134;
+    P2 1234 tr -Rs 1,05,322; P3 665 tr, win 53% (break-even 59%), -Rs 77,961; twin p 0.9721, q 1.0 | B15s15t15: P1 2102 tr
+    -Rs 2,38,139; P2 1234 tr -Rs 1,20,753; P3 665 tr, win 47% (break-even 53%), -Rs 66,509; twin p 0.8862, q 1.0 | B15s15t30:
+    P1 2100 tr -Rs 2,59,329; P2 1234 tr -Rs 1,13,982; P3 665 tr, win 49% (break-even 54%), -Rs 61,236; twin p 0.9561, q 1.0
+    | B15s22.5t15: P1 2101 tr -Rs 2,17,044; P2 1234 tr -Rs 1,19,581; P3 665 tr, win 51% (break-even 57%), -Rs 76,730; twin
+    p 0.6108, q 1.0 | B15s22.5t30: P1 2099 tr -Rs 2,47,768; P2 1233 tr -Rs 1,14,512; P3 665 tr, win 55% (break-even 60%),
+    -Rs 81,596; twin p 0.8224, q 1.0. Every rule fails the gates.'
+  costs: dated Zerodha charges, R17 fills (buy +5 bps + half-spread ticks, stop sales -10 bps and 2x the ticks, gaps at the
+    open), limit targets at their price, 1 lot (2-3 lots in the report)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.

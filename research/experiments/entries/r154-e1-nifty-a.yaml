@@ -1,0 +1,44 @@
+id: r154-e1-nifty-a
+title: 'R154 E1 OR15: first-15-minute range break (1-min close) on NIFTY, 10-15 point scalp exits, reading A (premium points
+  (target / stop on the option''s premium))'
+family: orb
+date: '2026-11-09'
+doc: research/hunt/r154_scalp_10_15/results/report.md
+hypothesis: 'Boss (9 Nov): "study 10-15 pts scalping ... find out the winrate and profit/loss". E1 OR15: first-15-minute range
+  break (1-min close) on NIFTY with a fixed scalp exit: target 10 / 12 / 15 points on the option premium, stop 1:1 or 1:1.5,
+  time stop 15 or 30 minutes, 15:15 square-off (15:05 expiry). Gates: net > 0 in P1, P2 and P3; random-exit twin BH q <= 0.10
+  with m = 1682; >= 40 final trades.'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 9 Nov 2026; R51
+  Amendment A clean stores from 20 Nov 2024 (post: R106''s to 19 Oct), R154 early store (same code) Aug 2021 - 19 Nov 2024'
+period:
+  design: P1 first option day (2021-08 / MIDCPNIFTY 2023-01 / SENSEX 2023-05)..2025-03-31; P2 walk-forward 2025-04-01..2026-03-31
+  holdout: 2026-04-01..2026-10-13 read once (already read by R51-R153 and SCALP17); post 14-19 Oct reported
+instruments:
+- NIFTY
+features:
+- 'signal source: index 1-min bars (09:15-09:29 range, 1-min closes); buys the 1-ITM nearest-expiry option'
+- 'exit: premium points (target / stop on the option''s premium)'
+model_or_rule: 'E1 OR15: first-15-minute range break (1-min close) on NIFTY; exits A10s10t15, A10s10t30, A10s15t15, A10s15t30,
+  A12s12t15, A12s12t30, A12s18t15, A12s18t30, A15s15t15, A15s15t30, A15s22.5t15, A15s22.5t30'
+settings: research/hunt/r154_scalp_10_15/r154cfg.py RULES, ENTRIES; PREREG.md sections 2-3
+prereg: research/hunt/r154_scalp_10_15/PREREG.md
+variants_tried: 12
+results:
+  summary: '1 lot. A10s10t15: P1 1255 tr -Rs 77,851; P2 331 tr -Rs 27,381; P3 177 tr, win 41% (break-even 55%), -Rs 28,181;
+    twin p 0.3812, q 1.0 | A10s10t30: P1 1255 tr -Rs 84,574; P2 331 tr -Rs 29,133; P3 177 tr, win 43% (break-even 56%), -Rs
+    30,690; twin p 0.4591, q 1.0 | A10s15t15: P1 1255 tr -Rs 70,910; P2 330 tr -Rs 35,270; P3 177 tr, win 46% (break-even
+    61%), -Rs 34,450; twin p 0.7585, q 1.0 | A10s15t30: P1 1255 tr -Rs 83,317; P2 330 tr -Rs 36,116; P3 177 tr, win 50% (break-even
+    64%), -Rs 37,095; twin p 0.7565, q 1.0 | A12s12t15: P1 1255 tr -Rs 85,691; P2 330 tr -Rs 28,324; P3 177 tr, win 39% (break-even
+    54%), -Rs 34,800; twin p 0.7745, q 1.0 | A12s12t30: P1 1255 tr -Rs 93,172; P2 330 tr -Rs 33,927; P3 177 tr, win 41% (break-even
+    55%), -Rs 38,615; twin p 0.8204, q 1.0 | A12s18t15: P1 1255 tr -Rs 63,824; P2 330 tr -Rs 30,826; P3 177 tr, win 44% (break-even
+    59%), -Rs 38,082; twin p 0.9022, q 1.0 | A12s18t30: P1 1254 tr -Rs 75,027; P2 330 tr -Rs 43,465; P3 177 tr, win 49% (break-even
+    63%), -Rs 42,315; twin p 0.9182, q 1.0 | A15s15t15: P1 1255 tr -Rs 57,435; P2 330 tr -Rs 23,449; P3 177 tr, win 38% (break-even
+    53%), -Rs 40,096; twin p 0.9581, q 1.0 | A15s15t30: P1 1255 tr -Rs 69,068; P2 330 tr -Rs 24,060; P3 177 tr, win 40% (break-even
+    55%), -Rs 46,960; twin p 0.9661, q 1.0 | A15s22.5t15: P1 1253 tr -Rs 63,093; P2 330 tr -Rs 26,627; P3 177 tr, win 43%
+    (break-even 57%), -Rs 40,330; twin p 0.9501, q 1.0 | A15s22.5t30: P1 1248 tr -Rs 81,599; P2 329 tr -Rs 33,681; P3 177
+    tr, win 47% (break-even 61%), -Rs 48,403; twin p 0.98, q 1.0. Every rule fails the gates.'
+  costs: dated Zerodha charges, R17 fills (buy +5 bps + half-spread ticks, stop sales -10 bps and 2x the ticks, gaps at the
+    open), limit targets at their price, 1 lot (2-3 lots in the report)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.

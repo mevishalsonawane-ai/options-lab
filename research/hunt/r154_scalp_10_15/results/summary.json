@@ -1,0 +1,322 @@
+{
+ "headline": {
+  "A@1": {
+   "all": {
+    "trades": 908721,
+    "sessions": null,
+    "win": 0.4917,
+    "be_win": 0.5808,
+    "net": -92228214,
+    "per_trade": -101,
+    "per_session": null,
+    "days": 1286,
+    "green_days": 0.2022,
+    "worst_day": -736037,
+    "max_dd": 92265803,
+    "ex_top5": -92238457,
+    "avg_win": 477,
+    "avg_loss": 661,
+    "avg_charges": 71,
+    "largest_loss": -14862,
+    "exits": {
+     "time": 153194,
+     "stop": 350607,
+     "target": 401982,
+     "missing": 984,
+     "squareoff": 1954
+    }
+   },
+   "final": {
+    "trades": 137013,
+    "sessions": null,
+    "win": 0.5059,
+    "be_win": 0.5952,
+    "net": -16244616,
+    "per_trade": -119,
+    "per_session": null,
+    "days": 133,
+    "green_days": 0.218,
+    "worst_day": -637068,
+    "max_dd": 16273554,
+    "ex_top5": -16253336,
+    "avg_win": 538,
+    "avg_loss": 791,
+    "avg_charges": 90,
+    "largest_loss": -9000,
+    "exits": {
+     "stop": 49523,
+     "target": 61035,
+     "time": 25826,
+     "squareoff": 628,
+     "missing": 1
+    }
+   }
+  },
+  "A@3": {
+   "all": {
+    "trades": 908723,
+    "sessions": null,
+    "win": 0.4966,
+    "be_win": 0.5584,
+    "net": -191961906,
+    "per_trade": -211,
+    "per_session": null,
+    "days": 1286,
+    "green_days": 0.2737,
+    "worst_day": -2118522,
+    "max_dd": 192197080,
+    "ex_top5": -191993108,
+    "avg_win": 1511,
+    "avg_loss": 1911,
+    "avg_charges": 119,
+    "largest_loss": -44490,
+    "exits": {
+     "time": 153196,
+     "stop": 350667,
+     "target": 401918,
+     "missing": 984,
+     "squareoff": 1958
+    }
+   },
+   "final": {
+    "trades": 137015,
+    "sessions": null,
+    "win": 0.5095,
+    "be_win": 0.5756,
+    "net": -36173941,
+    "per_trade": -264,
+    "per_session": null,
+    "days": 133,
+    "green_days": 0.2632,
+    "worst_day": -1817298,
+    "max_dd": 36362200,
+    "ex_top5": -36200571,
+    "avg_win": 1695,
+    "avg_loss": 2298,
+    "avg_charges": 175,
+    "largest_loss": -26905,
+    "exits": {
+     "stop": 49536,
+     "target": 61001,
+     "time": 25845,
+     "squareoff": 632,
+     "missing": 1
+    }
+   }
+  },
+  "B@1": {
+   "all": {
+    "trades": 922452,
+    "sessions": null,
+    "win": 0.4319,
+    "be_win": 0.5149,
+    "net": -66455437,
+    "per_trade": -72,
+    "per_session": null,
+    "days": 1286,
+    "green_days": 0.2162,
+    "worst_day": -1112715,
+    "max_dd": 66455437,
+    "ex_top5": -66533404,
+    "avg_win": 421,
+    "avg_loss": 447,
+    "avg_charges": 71,
+    "largest_loss": -10049,
+    "exits": {
+     "time": 48640,
+     "target": 469541,
+     "stop": 402673,
+     "missing": 805,
+     "squareoff": 793
+    }
+   },
+   "final": {
+    "trades": 139253,
+    "sessions": null,
+    "win": 0.43,
+    "be_win": 0.5108,
+    "net": -10975820,
+    "per_trade": -79,
+    "per_session": null,
+    "days": 133,
+    "green_days": 0.2632,
+    "worst_day": -360640,
+    "max_dd": 10975820,
+    "ex_top5": -11021963,
+    "avg_win": 477,
+    "avg_loss": 498,
+    "avg_charges": 90,
+    "largest_loss": -6536,
+    "exits": {
+     "stop": 58315,
+     "target": 74896,
+     "time": 5824,
+     "squareoff": 218
+    }
+   }
+  },
+  "B@3": {
+   "all": {
+    "trades": 922452,
+    "sessions": null,
+    "win": 0.4599,
+    "be_win": 0.5073,
+    "net": -113272153,
+    "per_trade": -123,
+    "per_session": null,
+    "days": 1286,
+    "green_days": 0.3227,
+    "worst_day": -3227799,
+    "max_dd": 113292660,
+    "ex_top5": -113506526,
+    "avg_win": 1277,
+    "avg_loss": 1314,
+    "avg_charges": 119,
+    "largest_loss": -30054,
+    "exits": {
+     "time": 48640,
+     "target": 469541,
+     "stop": 402673,
+     "missing": 805,
+     "squareoff": 793
+    }
+   },
+   "final": {
+    "trades": 139253,
+    "sessions": null,
+    "win": 0.4502,
+    "be_win": 0.4998,
+    "net": -20125953,
+    "per_trade": -145,
+    "per_session": null,
+    "days": 133,
+    "green_days": 0.3534,
+    "worst_day": -990379,
+    "max_dd": 20125953,
+    "ex_top5": -20264853,
+    "avg_win": 1458,
+    "avg_loss": 1456,
+    "avg_charges": 176,
+    "largest_loss": -19532,
+    "exits": {
+     "stop": 58315,
+     "target": 74896,
+     "time": 5824,
+     "squareoff": 218
+    }
+   }
+  },
+  "size10": {
+   "trades": 614002,
+   "sessions": null,
+   "win": 0.4576,
+   "be_win": 0.5574,
+   "net": -54068399,
+   "per_trade": -88,
+   "per_session": null,
+   "days": 1286,
+   "green_days": 0.1571,
+   "worst_day": -541105,
+   "max_dd": 54073662,
+   "ex_top5": -54140400,
+   "avg_win": 390,
+   "avg_loss": 492,
+   "avg_charges": 71,
+   "largest_loss": -14862,
+   "exits": {
+    "time": 42244,
+    "stop": 270145,
+    "target": 300410,
+    "missing": 521,
+    "squareoff": 682
+   }
+  },
+  "size12": {
+   "trades": 610724,
+   "sessions": null,
+   "win": 0.4627,
+   "be_win": 0.5496,
+   "net": -52430764,
+   "per_trade": -86,
+   "per_session": null,
+   "days": 1286,
+   "green_days": 0.2014,
+   "worst_day": -651321,
+   "max_dd": 52433211,
+   "ex_top5": -52501811,
+   "avg_win": 445,
+   "avg_loss": 543,
+   "avg_charges": 71,
+   "largest_loss": -14862,
+   "exits": {
+    "time": 63084,
+    "stop": 252782,
+    "target": 293412,
+    "missing": 584,
+    "squareoff": 862
+   }
+  },
+  "size15": {
+   "trades": 606447,
+   "sessions": null,
+   "win": 0.4644,
+   "be_win": 0.5408,
+   "net": -52184487,
+   "per_trade": -86,
+   "per_session": null,
+   "days": 1286,
+   "green_days": 0.2309,
+   "worst_day": -656325,
+   "max_dd": 52246380,
+   "ex_top5": -52256252,
+   "avg_win": 517,
+   "avg_loss": 609,
+   "avg_charges": 71,
+   "largest_loss": -14862,
+   "exits": {
+    "time": 96506,
+    "stop": 230353,
+    "target": 277701,
+    "missing": 684,
+    "squareoff": 1203
+   }
+  },
+  "random": {
+   "trades": 572208,
+   "sessions": null,
+   "win": 0.4492,
+   "be_win": 0.5706,
+   "net": -59373165,
+   "per_trade": -104,
+   "per_session": null,
+   "days": 1286,
+   "green_days": 0.1851,
+   "worst_day": -366254,
+   "max_dd": 59373165,
+   "ex_top5": -59455110,
+   "avg_win": 367,
+   "avg_loss": 488,
+   "avg_charges": 68,
+   "largest_loss": -9512,
+   "exits": {
+    "time": 90468,
+    "stop": 224871,
+    "target": 256272,
+    "missing": 534,
+    "squareoff": 63
+   }
+  }
+ },
+ "passed": [],
+ "positive_all_three": 0,
+ "positive_final": 13,
+ "min_q": 1.0,
+ "min_p": 0.008,
+ "m": {
+  "r154": 792,
+  "prior": 890,
+  "total": 1682,
+  "strict_total": 1102403,
+  "passed": 0
+ }
+}
