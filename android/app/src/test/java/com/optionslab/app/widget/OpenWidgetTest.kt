@@ -69,6 +69,15 @@ class OpenWidgetTest : RobolectricTest() {
         assertNull("nothing reaches the vault", SecurePrefs.getString("ow.zerodha"))
     }
 
+    /** 9 Nov (Boss's screenshots: widget -Rs 5,336, Kite -Rs 6,571): a carried position counts from its buy price, as Kite shows it. */
+    @Test fun thePnlIsKitesFromTheBuyPriceNotTheDaysMove() {
+        allow()
+        // Bought on Friday at 101.03, closed today at 100: Kite -Rs 201; the day's move from Friday's close (96.25) +Rs 731.
+        val carried = Broker.Position("NIFTY26N0924900PE", "NRML", 0, 0.0, 98.70, -201.49, m2m = 731.25)
+        OpenWidget.fromWatch(context, true, true, Broker.Positions(listOf(carried), emptyList()), null)
+        assertEquals("−₹201", text(R.id.ow_pnl))
+    }
+
     @Test fun thePnlOnTopThenOnlyWhatIsOpen() {
         allow()
         OpenWidget.fromWatch(context, true, true, Broker.Positions(listOf(open, closed), emptyList()), null)

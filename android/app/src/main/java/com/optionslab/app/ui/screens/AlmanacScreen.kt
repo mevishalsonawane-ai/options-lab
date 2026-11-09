@@ -194,7 +194,8 @@ private fun homeBooks(live: Boolean, loggedIn: Boolean, account: Load<com.option
     val moneyNote: String?
     if (live) {
         val a = (account as? Load.Done)?.value
-        money = Money(a?.book?.m2m, a?.funds?.available, a?.funds?.used, a?.let { com.optionslab.ira.PnlCharges.line(it.charges, estimate = it.chargesEstimate) })
+        // 9 Nov: Kite's own P&L figure (the widget's too), not the day's move from yesterday's close ([Broker.Positions.pnl]).
+        money = Money(a?.book?.pnl, a?.funds?.available, a?.funds?.used, a?.let { com.optionslab.ira.PnlCharges.line(it.charges, estimate = it.chargesEstimate) })
         orders = a?.let { acc ->
             acc.positions.filter { it.qty != 0 }.map {
                 HomeOrder(it.symbol, "${if (it.qty < 0) "SELL" else "BUY"} ${abs(it.qty)} · avg ${PX.format(it.avg)} · LTP ${PX.format(it.last)}",

@@ -294,7 +294,9 @@ class OpenWidget : AppWidgetProvider() {
         fun zerodhaVenue(book: Broker.Positions, at: LocalDateTime?, charges: Double? = null, exact: Double? = null,
                          checked: Boolean = false): OpenBook.Venue {
             val shown = com.optionslab.ira.ExactCharges.widgetNext(keptZerodhaCharges(at), exact, charges, checked)
-            return OpenBook.Venue(OpenBook.ZERODHA, book.m2m,
+            // 9 Nov (Boss: "prices wrong on widget ... again again": the widget said -Rs 5,336, Kite -Rs 6,571): Kite's own P&L of the
+            // positions (each from its buy price), not the day's move (m2m, which starts a carried position at yesterday's close).
+            return OpenBook.Venue(OpenBook.ZERODHA, book.pnl,
                 book.net.filter { it.qty != 0 }.map { OpenBook.Pos(it.symbol, it.qty, it.last.takeIf { l -> l > 0 }, it.pnl) }, primary = true, at = at,
                 charges = shown?.value, estimate = shown?.estimate ?: true)
         }
