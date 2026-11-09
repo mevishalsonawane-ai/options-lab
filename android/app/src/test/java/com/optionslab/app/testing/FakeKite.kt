@@ -197,6 +197,9 @@ class FakeKite : Closeable {
         nextPlace(Scenario(reply, outcome, partialQty, message))
 
     fun quote(key: String, last: Double, bid: Double? = null, ask: Double? = null) = synchronized(lock) { quotes[key] = Triple(last, bid, ask) }
+    /** 9 Nov: a closed row's P&L as Zerodha reports it (qty 0), by "EXCHANGE:SYMBOL:PRODUCT"; 0 when not set. */
+    val closedPnl = java.util.concurrent.ConcurrentHashMap<String, Double>()
+
     fun position(symbol: String, qty: Int, avg: Double, product: String = "NRML", exchange: String = "NFO") =
         synchronized(lock) { positions["$exchange:$symbol:$product"] = qty to avg }
 
@@ -429,7 +432,7 @@ class FakeKite : Closeable {
             val (ex, sym, prod) = k.split(":")
             val last = quotes["$ex:$sym"]?.first ?: v.second
             net.put(JSONObject().put("tradingsymbol", sym).put("exchange", ex).put("product", prod).put("quantity", v.first)
-                .put("average_price", v.second).put("last_price", last).put("pnl", (last - v.second) * v.first)
+                .put("average_price", v.second).put("last_price", last).put("pnl", if (v.first == 0) closedPnl[k] ?: 0.0 else (last - v.second) * v.first)
                 .put("m2m", (last - v.second) * v.first).put("unrealised", (last - v.second) * v.first).put("realised", 0)
                 .put("multiplier", 1).put("instrument_token", instruments.firstOrNull { it.symbol == sym }?.token ?: 0)
                 .put("overnight_quantity", carry[k] ?: 0)

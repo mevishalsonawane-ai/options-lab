@@ -479,6 +479,43 @@ class TradeScreenTest {
         pump(5_000) { m.rowAction.value == null }
     }
 
+    /**
+     * 9 Nov (Boss's screenshots: a finished SELL that closed the position showed +Rs 731, then +Rs 2,145 as the price fell, while
+     * Kite showed the trade's -Rs 201): a closed contract's finished orders show Zerodha's own P&L once, on the last fill, and it
+     * never moves with the live price; an open position's opening fill keeps its live figure; a part sold shows none.
+     */
+    @Test fun aClosedTradesFinishedOrdersShowZerodhasPnlOnceAndNeverMoveWithThePrice() {
+        loginConfigured()
+        val t0 = com.optionslab.app.data.Market.now().toLocalDateTime().minusMinutes(30)
+        kite.orders["9101"] = FakeKite.Order("9101", sym, "NFO", "BUY", 195, "NRML", "LIMIT", 101.05, 0.0, "", "COMPLETE",
+            filled = 195, avg = 101.03, at = t0)
+        kite.orders["9102"] = FakeKite.Order("9102", sym, "NFO", "SELL", 195, "NRML", "LIMIT", 100.0, 0.0, "", "COMPLETE",
+            filled = 195, avg = 100.0, at = t0.plusMinutes(10))
+        kite.position(sym, 0, 0.0); kite.closedPnl["NFO:$sym:NRML"] = -201.49
+        kite.quote("NFO:$sym", 96.25)
+        // An open one beside it: bought 75 at 60 (live +Rs 750 at 70), then 25 sold (none: it is in the position's figure).
+        val open = "NIFTY26OCT24600CE"
+        kite.orders["9103"] = FakeKite.Order("9103", open, "NFO", "BUY", 75, "NRML", "LIMIT", 60.0, 0.0, "", "COMPLETE",
+            filled = 75, avg = 60.0, at = t0.plusMinutes(1))
+        kite.orders["9104"] = FakeKite.Order("9104", open, "NFO", "SELL", 25, "NRML", "LIMIT", 66.0, 0.0, "", "COMPLETE",
+            filled = 25, avg = 66.0, at = t0.plusMinutes(2))
+        kite.position(open, 50, 60.0); kite.quote("NFO:$open", 70.0)
+        val m = showAccount()
+        tab("Orders"); waitText("FINISHED")
+        waitText(rs(-201.49, true))
+        assertEquals("the closed trade's P&L once", 1, compose.onAllNodesWithText(rs(-201.49, true)).fetchSemanticsNodes().size)
+        assertFalse("never priced at the live price", exists(rs((100.0 - 96.25) * 195, true)))
+        assertTrue("the open position's opening fill at the live price", exists(rs((70.0 - 60.0) * 75, true)))
+        assertFalse("a part sold shows none", exists(rs((66.0 - 70.0) * 25, true)) || exists(rs((70.0 - 66.0) * 25, true)))
+        // The price falls further: the closed trade's figure stays.
+        kite.quote("NFO:$sym", 89.0)
+        m.loadAccount(quiet = true)
+        pump(20_000) { (m.account.value as? Load.Done<*>)?.let { (it.value as com.optionslab.app.ui.Account).positions.any { p -> p.symbol == sym && p.last == 89.0 } } == true }
+        frames()
+        assertTrue(exists(rs(-201.49, true)))
+        assertFalse(exists(rs((100.0 - 89.0) * 195, true)))
+    }
+
     @Test fun emptyBooksSayTheyAreEmpty() {
         loginConfigured()
         showAccount()

@@ -327,24 +327,30 @@ private fun OrdersCard(a: Account, owners: Map<String, String>, onTap: (Broker.O
         if (done.isNotEmpty()) {
             if (working.isNotEmpty()) Rule(Modifier.padding(vertical = 6.dp))
             Text("FINISHED", style = Type.label.copy(color = p.inkSoft))
-            done.forEach { o -> androidx.compose.runtime.key(o.id) { OrderLine(o, owners, a.positions.firstOrNull { it.symbol == o.symbol && it.product == o.product }?.last) { onTap(o) } } }
+            // 9 Nov: a closed contract's P&L is Zerodha's, once, on its last filled order ([bookFillPnl]).
+            val lastFilled = done.filter { it.filled > 0 }.groupBy { "${it.exchange}:${it.symbol}:${it.product}" }.mapValues { (_, v) -> v.maxBy { it.placedAt }.id }
+            done.forEach { o -> androidx.compose.runtime.key(o.id) {
+                val pos = a.positions.firstOrNull { it.symbol == o.symbol && it.product == o.product && it.exchange == o.exchange }
+                val pnl = if (o.filled > 0) bookFillPnl(o.side == "BUY", o.avg, o.filled, pos, lastFilled["${o.exchange}:${o.symbol}:${o.product}"] == o.id) else null
+                OrderLine(o, owners, pnl) { onTap(o) }
+            } }
         }
     }
 }
 
 @Composable
-private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>, ltp: Double?, onTap: () -> Unit) {
+private fun OrderLine(o: Broker.OrderRow, owners: Map<String, String>, pnl: Double?, onTap: () -> Unit) {
     val p = LocalPalette.current
     val tone = when (o.status) { "COMPLETE" -> p.verdigris; "REJECTED", "CANCELLED" -> p.oxblood; else -> p.amber }
     Column(Modifier.fillMaxWidth().clickable(onClick = onTap).padding(vertical = 3.dp)) {
         Text("${o.side} ${o.symbol} ×${o.qty}", style = Type.figure.copy(color = if (o.side == "SELL") p.oxblood else p.verdigris, fontSize = 13.sp))
         Text("${o.exchange} · ${o.product} · ${o.type}${if (o.price > 0) " ${px(o.price)}" else ""}${if (o.trigger > 0) " trg ${px(o.trigger)}" else ""}" +
             " · ${o.placedAt.takeLast(8)}", style = Type.figure.copy(color = p.inkSoft, fontSize = 11.sp))
-        // The status line carries the P&L (at the live price) at its end; the symbol above keeps the whole width.
+        // The status line carries the fill's P&L ([bookFillPnl]) at its end; the symbol above keeps the whole width.
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${o.status} · filled ${o.filled}${if (o.filled > 0) " @ ${px(o.avg)}" else ""}${if (o.message.isNotBlank()) " · ${o.message}" else ""}",
                 style = Type.figure.copy(color = tone, fontSize = 11.sp), modifier = Modifier.weight(1f))
-            PnlFigure(fillPnl(o.side == "BUY", o.avg, o.filled, ltp), Modifier.padding(start = 8.dp))
+            PnlFigure(pnl, Modifier.padding(start = 8.dp))
         }
         OrderSourcePill(owners, "kite:${o.id}", o.tag)
     }
@@ -355,6 +361,8 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
     val p = LocalPalette.current
     LedgerCard(title = "Trade book") {
         if (a.trades.isEmpty()) Note("No trades today.")
+        // 9 Nov: as the order book ([bookFillPnl]): a closed contract's P&L once, on its last trade; never at the live price again.
+        val lastTrade = a.trades.groupBy { "${it.exchange}:${it.symbol}:${it.product}" }.mapValues { (_, v) -> v.maxBy { it.at }.id }
         a.trades.forEachIndexed { i, t -> androidx.compose.runtime.key(t.id) {
             if (i > 0) Rule(Modifier.padding(vertical = 4.dp))
             Row(Modifier.clickable { onTap(t) }, verticalAlignment = Alignment.CenterVertically) {
@@ -365,7 +373,8 @@ private fun TradesCard(a: Account, owners: Map<String, String>, onTap: (Broker.T
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("${t.qty} @ ${px(t.price)}", style = Type.figure.copy(color = p.ink, fontSize = 13.sp))
-                    PnlFigure(fillPnl(t.side == "BUY", t.price, t.qty, a.positions.firstOrNull { it.symbol == t.symbol && it.product == t.product }?.last))
+                    PnlFigure(bookFillPnl(t.side == "BUY", t.price, t.qty, a.positions.firstOrNull { it.symbol == t.symbol && it.product == t.product && it.exchange == t.exchange },
+                        lastTrade["${t.exchange}:${t.symbol}:${t.product}"] == t.id))
                 }
             }
         } }

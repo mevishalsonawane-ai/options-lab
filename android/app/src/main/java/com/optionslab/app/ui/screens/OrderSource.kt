@@ -54,6 +54,22 @@ fun SourcePill(source: Pair<String, Boolean>) {
 fun fillPnl(buy: Boolean, price: Double, qty: Int, ltp: Double?): Double? =
     if (ltp == null || ltp <= 0 || price <= 0 || qty <= 0) null else (ltp - price) * qty * (if (buy) 1 else -1)
 
+/**
+ * 9 Nov (Boss: "can u see the price change" - a finished SELL that closed his position showed +Rs 731, then +Rs 2,145 four
+ * minutes later, priced against the live price as if still open; Kite showed the trade's -Rs 201): a fill's P&L in the live
+ * order and trade books, against its contract's position row [pos] (Zerodha's positions keep a closed row, qty 0, with its pnl).
+ *  - The contract is closed: Zerodha's own P&L of it ([Broker.Position.pnl], the figure Kite shows), on its last fill only
+ *    ([last]) so it is counted once; every other fill of it shows none. Never priced at the live price again.
+ *  - Still open, a fill on the side the position holds (it opened it): at the live price, as before.
+ *  - Still open, a fill against it (a part sold or bought back): none (what it made is in the position's own figure).
+ */
+fun bookFillPnl(buy: Boolean, price: Double, qty: Int, pos: com.optionslab.app.data.Broker.Position?, last: Boolean): Double? = when {
+    pos == null -> null
+    pos.qty == 0 -> if (last) pos.pnl.takeIf { it.isFinite() } else null
+    (pos.qty > 0) == buy -> fillPnl(buy, price, qty, pos.last)
+    else -> null
+}
+
 /** A P&L figure on a row: green for a gain, red for a loss, one line. */
 @Composable
 fun PnlFigure(v: Double?, modifier: Modifier = Modifier) {
