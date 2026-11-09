@@ -490,3 +490,34 @@ Costs, periods (design Oct 2023 - Mar 2026; **holdout 1 Apr - 30 Oct 2026, never
 clock time, a random day and side, the same $ SL / TP and exits), $1,000 sizing as Amendment F. Gates: net > 0 at 1x
 and 2x; twin p <= 0.05; **BH over 131** (123 + 8); >= 50 trades; >= 4 of 5 folds positive. Win rate against the 65%
 rule.
+
+## Amendment M (9 Nov 2026, before any Amendment M number): Boss's "XAUUSD 6:30 AM IST Breakout (2R)" (Pine v5)
+
+Boss pasted the script (9 Nov). It is ported as written onto XAUUSD (information only; not tradable via Zerodha).
+**Signal source: XAUUSD spot candles.** The port follows the script:
+- **Range:** the chart candle that OPENS at 06:30 IST (the 1-hour 06:30-07:30 candle on a 1H chart; the 06:30-06:45
+  candle on a 15m chart). It is set once per IST calendar day (dayofmonth in Asia/Kolkata); the range high / low =
+  that candle's high / low.
+- **Signal:** on any later candle (until the next day's 06:30 candle), while no trade has been taken that day
+  (onePerDay = true, the default): LONG if close > range high and (open <= range high or the previous close <= range
+  high); else SHORT if close < range low and (open >= range low or the previous close >= range low). Long is checked
+  first, as in the script.
+- **Exits:** SL = the previous candle's low (long) / high (short); TP = entry + 2R (rrRatio 2.0). If risk <= 0, the
+  day is used up with no trade (as in the script). The script has no time exit, so the trade is closed at the next
+  06:30 IST if neither SL nor TP is hit (the script's own day boundary).
+- Entry at the next minute's open after the signal candle's close. SL / TP checked on 1-minute bars (both in one
+  minute = SL). One trade at a time.
+
+| id | chart | R | lock |
+|---|---|---|---|
+| S1 | 1H | 2.0 | no (as written) |
+| S2 | 1H | 2.0 | 60% lock after 1R (house rule) |
+| S3 | 15m | 2.0 | no (as written) |
+| S4 | 15m | 2.0 | 60% lock after 1R |
+| S5 | 1H | 1.0 (the script's input) | 60% lock after 0.5R |
+
+Costs ($32 a 100-oz lot round trip; 2x also); design 2 Oct 2023 - 31 Mar 2026 (5 folds); **holdout 1 Apr - 30 Oct 2026,
+never read for these**, read once only for a rule passing every design gate. Twins: the same clock time on a random
+other weekday, a random side (same share of longs), the same $ SL / TP, the same exits and day boundary. Gates: net > 0
+at 1x and 2x; twin p <= 0.05; **BH over 136** (131 + 5); >= 100 trades; >= 4 of 5 folds positive. Win rate against the
+65% rule. $1,000 sizing (5x; risk 1% / 2% of the balance on the SL distance, capped at 20x).
