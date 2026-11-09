@@ -246,8 +246,10 @@ class OpenWidget : AppWidgetProvider() {
         private fun recordedZerodha(now: LocalDateTime, live: Boolean): OpenBook.Venue? {
             val day = DailyPnl.sessionDay(true)
             val kept = day?.let { d -> DailyPnl.all(true)[d] }
-            val figure = kept?.pnl
             val sample = PnlTracker.today().lastOrNull()?.let { it.minute to it.pnl }
+            // 9 Nov (review): Kite's own P&L first - the tracker's last sample is the positions' pnl, as the live widget shows; the
+            // day's record is the day's move (m2m), kept only for when no sample was taken today.
+            val figure = sample?.second ?: kept?.pnl
             // Zerodha's P&L is before charges; the day's charges go on the small line - Zerodha's exact figure when the
             // calendar kept it (usefulness, round 35), else the estimate the app made from the day's trades.
             return OpenBook.recorded(OpenBook.ZERODHA, figure, sample, now, !Market.isOpen(), live,

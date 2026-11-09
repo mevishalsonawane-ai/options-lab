@@ -262,7 +262,8 @@ class OpenWidgetTest : RobolectricTest() {
         alreadyOn()
         updated()
         assertEquals("Today's P&L · Zerodha", text(R.id.ow_caption))
-        assertEquals("+₹2,150", text(R.id.ow_pnl))
+        // 9 Nov: Kite's P&L as last sampled (2,100), not the day's move the calendar records (2,150).
+        assertEquals("+₹2,100", text(R.id.ow_pnl))
         assertEquals("as of 15:20", text(R.id.ow_stamp))
         assertEquals("its positions were not read: never 'nothing open'", OpenBook.SEE_POSITIONS, text(R.id.ow_note))
     }
@@ -300,7 +301,7 @@ class OpenWidgetTest : RobolectricTest() {
         Background.at(WED, 19, 0)
         alreadyOn()
         updated()
-        assertEquals("+₹2,150", text(R.id.ow_pnl))
+        assertEquals("+₹2,100", text(R.id.ow_pnl))                   // 9 Nov: Kite's P&L as last sampled
         assertEquals("Charges ₹163", text(R.id.ow_charges))
         assertEquals(true, DailyPnl.all(true)[Market.today()]?.exact)
     }
