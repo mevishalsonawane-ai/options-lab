@@ -1,0 +1,37 @@
+id: r155-f19-e1-a
+title: 'R155 F19 (STACK: at least 5 of 7 (ALLSR, EMA20, ST, TWAP, OIB, PCR, CLOC) agree) on R154''s E1 OR15: first-15-minute
+  range break (1-min close) 10-15 point scalps, reading A'
+family: ml
+date: '2026-11-09'
+doc: research/hunt/r155_scalp_filters/results/report.md
+hypothesis: 'Boss (9 Nov): use the Donchian filters, OI and candle wicks on the scalps. Taking only the scalp signals that
+  pass F19 (STACK: at least 5 of 7 (ALLSR, EMA20, ST, TWAP, OIB, PCR, CLOC) agree) makes the 10-15 point scalp profitable:
+  net > 0 in P1, P2, P3; better per trade than unfiltered in P2 and P3; beats random skips with BH q <= 0.10; >= 40 final
+  trades per exit.'
+data_version: Drive lake (index_1m, options_rolling_1m WEEK incl. OI) copied 9 Nov 2026; R154's stores (R51 Amendment A clean
+  from 20 Nov 2024, R154 early store before); R155 OI store
+period:
+  design: P1 to 2025-03-31 (plain entries from Aug 2021; arms from 2024-11-20); P2 2025-04-01..2026-03-31
+  holdout: 2026-04-01..2026-10-13, second look (read for these scalps by R154); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 1-min bars (09:15-09:29 range, 1-min closes); buys the 1-ITM option'
+- 'filter: STACK: at least 5 of 7 (ALLSR, EMA20, ST, TWAP, OIB, PCR, CLOC) agree (all)'
+model_or_rule: 'E1 OR15: first-15-minute range break (1-min close) + F19; exits A10s10t15, A10s10t30, A10s15t15, A10s15t30,
+  A12s12t15, A12s12t30, A12s18t15, A12s18t30, A15s15t15, A15s15t30, A15s22.5t15, A15s22.5t30'
+settings: research/hunt/r155_scalp_filters/r155cfg.py; PREREG.md section 2
+prereg: research/hunt/r155_scalp_filters/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Pooled over NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX and the 12 premium-point exits, 1 lot. P1 29099 trades,
+    -Rs 23,18,196; P2 12974, -Rs 8,91,171; P3 6744, win 52% (break-even 58%), -Rs 5,29,279 (-Rs 78 a trade vs -Rs 119 unfiltered).
+    Random-skip p 0.0005, BH q 0.0169 (m 1962). Fails: not positive in P1, P2 and P3.'
+  costs: dated Zerodha charges, R17 fills, limit targets at their price, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; filters on the index or the option chain as context; nothing changes live.

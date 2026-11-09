@@ -1,0 +1,38 @@
+id: r155-f5-e4-b
+title: 'R155 F5 (PIV: no floor pivot (P, R1, S1, R2, S2) within 0.25% ahead) on R154''s E4 PBB: 1-min close beyond the previous
+  1-min high / low, with the 5-min 21 EMA trend 10-15 point scalps, reading B'
+family: patterns-indicators
+date: '2026-11-09'
+doc: research/hunt/r155_scalp_filters/results/report.md
+hypothesis: 'Boss (9 Nov): use the Donchian filters, OI and candle wicks on the scalps. Taking only the scalp signals that
+  pass F5 (PIV: no floor pivot (P, R1, S1, R2, S2) within 0.25% ahead) makes the 10-15 point scalp profitable: net > 0 in
+  P1, P2, P3; better per trade than unfiltered in P2 and P3; beats random skips with BH q <= 0.10; >= 40 final trades per
+  exit.'
+data_version: Drive lake (index_1m, options_rolling_1m WEEK incl. OI) copied 9 Nov 2026; R154's stores (R51 Amendment A clean
+  from 20 Nov 2024, R154 early store before); R155 OI store
+period:
+  design: P1 to 2025-03-31 (plain entries from Aug 2021; arms from 2024-11-20); P2 2025-04-01..2026-03-31
+  holdout: 2026-04-01..2026-10-13, second look (read for these scalps by R154); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 1-min bars + 5-min closes (EMA 21 trend); buys the 1-ITM option'
+- 'filter: PIV: no floor pivot (P, R1, S1, R2, S2) within 0.25% ahead (S/R)'
+model_or_rule: 'E4 PBB: 1-min close beyond the previous 1-min high / low, with the 5-min 21 EMA trend + F5; exits B10s10t15,
+  B10s10t30, B10s15t15, B10s15t30, B12s12t15, B12s12t30, B12s18t15, B12s18t30, B15s15t15, B15s15t30, B15s22.5t15, B15s22.5t30'
+settings: research/hunt/r155_scalp_filters/r155cfg.py; PREREG.md section 2
+prereg: research/hunt/r155_scalp_filters/PREREG.md
+variants_tried: 12
+results:
+  summary: 'Pooled over NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX and the 12 index-point exits, 1 lot. P1 188796 trades,
+    -Rs 1,28,87,980; P2 70317, -Rs 47,53,118; P3 38601, win 43% (break-even 52%), -Rs 33,98,882 (-Rs 88 a trade vs -Rs 83
+    unfiltered). Random-skip p 1.0, BH q 1.0 (m 1962). Fails: not positive in P1, P2 and P3; not better per trade than the
+    unfiltered scalp in P2 and P3; random-skip BH q 1.00 > 0.1.'
+  costs: dated Zerodha charges, R17 fills, limit targets at their price, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; filters on the index or the option chain as context; nothing changes live.
