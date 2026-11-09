@@ -799,9 +799,15 @@ class ControlPagesTest {
     }
 
     @Test fun theMuhuratSundayIsNamedOnTheHolidayCard() {
-        show { SchedulePage(model) }
-        compose.reveal("Diwali Muhurat trading", substring = true)
-        assertTrue(compose.has("Diwali Muhurat trading, 14:20-15:40 IST (special session: no arm trades it)", substring = true))
+        // 9 Nov: the card lists sessions from today on, so the clock is pinned to the week before (8 Nov has passed).
+        val was = com.optionslab.app.data.Market.testClock
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
+            java.time.ZonedDateTime.of(2026, 11, 2, 12, 0, 0, 0, com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+        try {
+            show { SchedulePage(model) }
+            compose.reveal("Diwali Muhurat trading", substring = true)
+            assertTrue(compose.has("Diwali Muhurat trading, 14:20-15:40 IST (special session: no arm trades it)", substring = true))
+        } finally { com.optionslab.app.data.Market.testClock = was }
     }
 
     @Test fun expirySquareOffAndNakedShortSwitches() {
