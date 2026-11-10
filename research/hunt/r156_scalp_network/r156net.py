@@ -89,7 +89,7 @@ def _batches(n: int, bs: int, rng=None):
         yield idx[a:a + bs]
 
 
-def train(seq, tab, net, days, seed: int, epochs: int = K.EPOCHS, log=None):
+def train(seq, tab, net, days, seed: int, epochs: int = K.EPOCHS, log=None, factory=None):
     """Train one seed on the given (training) rows; early stopping on the last 10% of sessions. Returns the model (best
     epoch's weights) and its history [(epoch, fit loss, validation loss)]. `tab` is already standardised."""
     import torch
@@ -98,9 +98,9 @@ def train(seq, tab, net, days, seed: int, epochs: int = K.EPOCHS, log=None):
     fit, val = val_split(days)
     win, tv, mask = targets(net)
     T = lambda a: torch.from_numpy(np.ascontiguousarray(a))  # noqa: E731
-    seq_t, tab_t, win_t, tv_t, m_t = T(seq.astype(np.float32)), T(tab), T(win), T(tv), T(mask)
+    seq_t, tab_t, win_t, tv_t, m_t = T(seq), T(tab), T(win), T(tv), T(mask)      # seq may be float16: cast per batch
     fi, vi = np.flatnonzero(fit), np.flatnonzero(val)
-    model = make_net()
+    model = (factory or make_net)()
     opt = torch.optim.Adam(model.parameters(), lr=K.LR, weight_decay=K.WD)
     best, best_state, hist = np.inf, None, []
     for ep in range(epochs):
@@ -109,7 +109,7 @@ def train(seq, tab, net, days, seed: int, epochs: int = K.EPOCHS, log=None):
         for b in _batches(len(fi), K.BATCH, rng):
             j = torch.from_numpy(fi[b])
             opt.zero_grad()
-            lg, ev = model(seq_t[j], tab_t[j])
+            lg, ev = model(seq_t[j].float(), tab_t[j])
             ls = loss_fn(lg, ev, win_t[j], tv_t[j], m_t[j])
             ls.backward()
             opt.step()
@@ -120,7 +120,7 @@ def train(seq, tab, net, days, seed: int, epochs: int = K.EPOCHS, log=None):
         with torch.no_grad():
             for b in _batches(len(vi), 8192):
                 j = torch.from_numpy(vi[b])
-                lg, ev = model(seq_t[j], tab_t[j])
+                lg, ev = model(seq_t[j].float(), tab_t[j])
                 vt += float(loss_fn(lg, ev, win_t[j], tv_t[j], m_t[j])) * len(b)
                 vn += len(b)
         vl = vt / max(vn, 1)
