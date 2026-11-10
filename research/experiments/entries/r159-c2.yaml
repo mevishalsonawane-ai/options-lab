@@ -1,0 +1,34 @@
+id: r159-c2
+title: 'R159 C2 on top of R72 + R151''s picker: ALLSR (all lines) AND Supertrend'
+family: daily-filters
+date: '2026-11-10'
+doc: research/hunt/r159_r151_plus_filters/results/report.md
+hypothesis: 'Boss (10 Nov): add support / resistance lines, W50, Supertrend and more on R151. Keeping an R72 + R151 trade
+  only when ALLSR (all lines) AND Supertrend also holds gives a higher win rate AND net than the base in P2 and P3, with random-skip
+  BH q <= 0.10 (m 2154) and >= 40 final trades.'
+data_version: Drive lake copied 9 Nov 2026; R51 Amendment A clean stores; R151's exported picker model; R155 OI store
+period:
+  design: 2025-04-01..2026-03-31 (the picker is in-sample there; the filters are unfitted)
+  holdout: 2026-04-01..2026-10-13 read once by R159 (read many times for R72)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (Donchian 20, 4 of 5) + R151 picker features'
+- 'extra filter: ALLSR (all lines) AND Supertrend (R155''s definition; OI is option-chain context)'
+model_or_rule: R72 Breadth Donchian + R151 picker + C2
+settings: research/hunt/r159_r151_plus_filters/r159study.py
+prereg: research/hunt/r159_r151_plus_filters/PREREG.md
+variants_tried: 22
+results:
+  summary: '1 lot. P2: 316 trades, win 55.7%, Rs 1,24,973 (Rs 395 a trade) (base 1,071 trades, win 57.4%, Rs 4,81,780 (Rs
+    450 a trade)). P3: 152 trades, win 50.0%, Rs 57,089 (Rs 376 a trade) (base 652 trades, win 48.9%, Rs 2,19,057 (Rs 336
+    a trade)); random skips'' mean Rs 52,273, p 0.4108, BH q 1.0. Fails: not above R72 + R151 on win rate and net in P2 and
+    P3; random-skip BH q 1.00 > 0.1.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; a filter only removes trades; nothing changes live.
