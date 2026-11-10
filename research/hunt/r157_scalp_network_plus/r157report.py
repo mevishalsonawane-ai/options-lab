@@ -76,7 +76,7 @@ def main():
     t10_6 = {p: per6[p]["forecast"]["calibration"]["A"][-1] for p in per}
     L = ["# R157: the scalp network, enhanced for win rate and profit", "",
          "## For Boss (short)", "",
-         f"- **Verdict: {'some rules pass' if passed else 'the enhancements raise the win rate a little, not the profit'}.** "
+         f"- **Verdict: {'some rules pass' if passed else 'the enhanced network still cannot make 10-15 point scalping profitable'}.** "
          f"{len(passed)} of {len(K.TESTS)} trading rules passed the gates.",
          "- **What was added to R156's network:** (1) the other four indices' last hour of bars, (2) results at 3 lots as well "
          "as 1, (3) four 'let the winner run' exits (stop 10 or 15 points, then a trailing stop once the trade is that far "

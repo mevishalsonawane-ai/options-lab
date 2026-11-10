@@ -1,0 +1,122 @@
+{
+ "passed": [],
+ "m": {
+  "r157": 114,
+  "prior": 2013,
+  "total": 2127,
+  "passed": 0
+ },
+ "positive_final": [
+  "EV-A15s15t15@1",
+  "EV-B10s10t30@1",
+  "EV-B10s15t15@1",
+  "EV-B10s15t30@1",
+  "EV-B15s15t15@1",
+  "EV-B15s15t30@1",
+  "EV-B15s22.5t15@1",
+  "TOP99-B10s15t15@1",
+  "TOP99-B12s18t15@1",
+  "TOP99-B15s15t15@1",
+  "TOP99-B15s22.5t15@1",
+  "TOP99-R15t30@1",
+  "TOP99-R15t60@1",
+  "EV-A12s12t15@3",
+  "EV-B10s10t15@3",
+  "EV-R15t30@3",
+  "TOP99-A10s10t15@3",
+  "TOP99-A10s10t30@3",
+  "TOP99-A10s15t30@3",
+  "TOP99-A12s12t15@3",
+  "TOP99-B10s10t15@3",
+  "TOP99-B10s15t15@3",
+  "TOP99-B10s15t30@3",
+  "TOP99-B12s12t30@3",
+  "TOP99-B12s18t15@3",
+  "TOP99-B12s18t30@3",
+  "TOP99-B15s15t15@3",
+  "TOP99-B15s15t30@3",
+  "TOP99-B15s22.5t15@3",
+  "TOP99-B15s22.5t30@3",
+  "TOP99-R10t30@3",
+  "TOP99-R10t60@3",
+  "TOP99-R15t30@3",
+  "TOP99-R15t60@3"
+ ],
+ "positive_all": [],
+ "beat_twins": [],
+ "min_q": 0.709,
+ "best_win_rate": [
+  "TOP99-A10s15t30@3",
+  {
+   "trades": 278,
+   "win": 0.6403,
+   "be_win": 0.6288,
+   "net": 11199,
+   "per_trade": 40,
+   "worst_day": -13252,
+   "max_dd": 68130,
+   "days": 66
+  }
+ ],
+ "best_per_lot": [
+  "TOP99-R15t60@3",
+  {
+   "trades": 283,
+   "win": 0.4982,
+   "be_win": 0.4327,
+   "net": 143449,
+   "per_trade": 507,
+   "worst_day": -23027,
+   "max_dd": 40663,
+   "days": 82
+  }
+ ],
+ "auc_P3": {
+  "A": [
+   0.551,
+   0.549
+  ],
+  "B": [
+   0.568,
+   0.574
+  ]
+ },
+ "importance": [
+  [
+   "index and side",
+   0.00122
+  ],
+  [
+   "VIX, scale, day so far, premium",
+   0.00092
+  ],
+  [
+   "candle wicks",
+   0.0003
+  ],
+  [
+   "the other four indices' last hour",
+   0.00027
+  ],
+  [
+   "the traded index's last hour of 1-minute bars",
+   0.00025
+  ],
+  [
+   "support / resistance",
+   0.00023
+  ],
+  [
+   "time and calendar",
+   0.0001
+  ],
+  [
+   "trend (EMA, Supertrend, average price)",
+   5e-05
+  ],
+  [
+   "OI",
+   3e-05
+  ]
+ ]
+}

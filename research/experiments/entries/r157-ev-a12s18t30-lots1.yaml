@@ -1,0 +1,39 @@
+id: r157-ev-a12s18t30-lots1
+title: 'R157 enhanced scalp network, rule EV-A12s18t30@1: 1 lot(s), exit A12s18t30: the side with the higher forecast net
+  if > 0'
+family: ml
+date: '2026-11-10'
+doc: research/hunt/r157_scalp_network_plus/results/report.md
+hypothesis: 'Boss (10 Nov): enhance the scalp network for more win rate and profit. R156''s network with the other four indices''
+  1-minute bars as input, labels at 1 and 3 lots, four run exits and a top-1% rule picks profitable scalps. Rule: 1 lot(s),
+  exit A12s18t30: the side with the higher forecast net if > 0; one open position per index, 5 trades per index a day. Gates:
+  net > 0 in O1, P2, P3; beats random-entry twins with BH q <= 0.10 (m 2127); >= 40 final trades.'
+data_version: as R156 (Drive lake copied 9 Nov 2026; R154 stores; R155 OI store) plus R157's cross-index sequences and 56
+  label columns
+period:
+  design: training from Aug 2021, expanding; scored 2023 - Mar 2025 (O1) and Apr 2025 - Mar 2026 (P2) by models trained on
+    earlier sessions only
+  holdout: 2026-04-01..2026-10-13 read once by R157 (fourth look for scalps after R154-R156); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index and the other four indices (last 60 one-minute bars each), levels, trend, wicks, time; option
+  chain OI / PCR and India VIX as context; buys the 1-ITM option'
+- 'model: Conv1d x3 over 13 sequence channels + a 43-number table branch; 56 x (win logit, expected net); 3 seeds'
+model_or_rule: R157 network, rule EV-A12s18t30@1
+settings: research/hunt/r157_scalp_network_plus/r157cfg.py; PREREG.md sections 0-1
+prereg: research/hunt/r157_scalp_network_plus/PREREG.md
+variants_tried: 114
+results:
+  summary: '5 indices pooled, rupees for the position. O1: 1,049 trades, win 55% (needed 60%), -Rs 54,543 (-Rs 52 a trade).
+    P2: 485 trades, win 58% (needed 65%), -Rs 98,122 (-Rs 202 a trade). P3: 1,023 trades, win 57% (needed 61%), -Rs 98,312
+    (-Rs 96 a trade) (random-entry twins'' mean -Rs 2,34,671; p 0.001, BH q 0.709). Fails: not positive in O1, P2 and P3;
+    random-entry BH q 0.71 > 0.1.'
+  costs: dated Zerodha charges and R17 fills on the whole quantity, limit targets at their price
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.
