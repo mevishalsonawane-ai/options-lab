@@ -24,6 +24,36 @@ object ArmStatus {
             if (d != null && d.isBefore(today) && !sticky(k, text)) earlier(text, d) else text
         }
 
+    /**
+     * 10 Nov (Boss's diagnostics: R51 showed "exit from 30 Oct: exit_retry BANKNIFTY23NOV2654900PE" every day for a week after
+     * that trade had closed): the contract an arm's "<arm>|exit" line ([line]) reports a failed exit of - a sale that did not fill
+     * ("exit_retry SYMBOL"), or an exit check or closed-elsewhere check that failed on it - or null for any other line. Such a
+     * line is cleared once that contract's trade closes, or when the arm holds it no longer.
+     */
+    fun exitRetrySymbol(line: String?): String? {
+        if (line == null) return null
+        val sym = when {
+            line.startsWith("exit_retry ") -> line.removePrefix("exit_retry ").takeIf { ' ' !in it }
+            else -> EXIT_FAILED.firstOrNull { line.startsWith(it) }?.let { line.removePrefix(it).substringBefore(':', "").takeIf { s -> ' ' !in s } }
+        }
+        return sym?.takeIf { it.isNotEmpty() }
+    }
+    private val EXIT_FAILED = listOf("closed-elsewhere check failed on ", "exit check failed on ")
+
+    /**
+     * The "<arm>|exit" keys of [status] whose failed-exit line ([exitRetrySymbol]) names a contract that arm no longer holds open
+     * ([open]: arm to symbol pairs): cleared at the next look, so a line left from before this rule (or by a close that missed
+     * [exitRetryOf]) ends too. Lines of any other form, and keys of any other kind, are kept.
+     */
+    fun staleExitKeys(status: Map<String, String>, open: Set<Pair<String, String>>): List<String> = status.mapNotNull { (k, v) ->
+        if (!k.endsWith("|exit")) return@mapNotNull null
+        val sym = exitRetrySymbol(v) ?: return@mapNotNull null
+        k.takeIf { (k.removeSuffix("|exit") to sym) !in open }
+    }
+
+    /** Whether [line] reports a failed exit of [symbol] itself ([exitRetrySymbol]); a line about another contract is kept. */
+    fun exitRetryOf(line: String?, symbol: String): Boolean = symbol.isNotEmpty() && exitRetrySymbol(line) == symbol
+
     /** A kept day read back ("2026-10-20", or an older "2026-10-20|..." form); null when broken. */
     fun decodeDay(s: String?): LocalDate? = s?.substringBefore('|')?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 

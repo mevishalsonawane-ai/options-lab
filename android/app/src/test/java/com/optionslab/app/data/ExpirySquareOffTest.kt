@@ -253,6 +253,20 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals(0, kite.positions.getValue("NFO:$ce:NRML").first)
     }
 
+    /** 10 Nov (the 3 Nov refusal, for an exit): a MARKET exit Zerodha blocks (low open interest) goes once as a LIMIT at the bid. */
+    @Test fun aBlockedMarketExitGoesOnceAsALimitAtTheBid() {
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "NRML MARKET orders are blocked for this NIFTY contract due to its open interest (OI) being less than 100 lots.")
+        pass()
+        assertEquals(listOf("MARKET", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals("at the bid", "9.95", kite.placed[1].form["price"])
+        assertEquals("SELL", kite.placed[1].form["transaction_type"]); assertEquals("75", kite.placed[1].form["quantity"])
+        assertEquals("closed in the same pass", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        assertTrue("no refusal said", texts().none { it.contains("Zerodha refused the expiry exit of $ce") })
+        pass()
+        assertEquals("nothing more", 2, kite.placed.size)
+    }
+
     @Test fun anExitTheAppWillNotSendIsSaidOnce() {
         kite.position(ce, 75, 20.0, product = "CO")                   // a cover order position: not a product the app sends
         pass(); pass()
