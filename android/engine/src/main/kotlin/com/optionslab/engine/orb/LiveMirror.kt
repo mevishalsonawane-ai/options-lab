@@ -347,6 +347,34 @@ object LiveMirror {
             else maxOf(bid?.takeIf { it.isFinite() && it > 0 } ?: last * 0.995, last * 0.99)
     }
 
+    /**
+     * 10 Nov (the 3 Nov refusal, for an EXIT): the MARKET exit [o] sent again as a LIMIT when Zerodha blocks MARKET orders on its
+     * contract (low open interest), at the bid for a sale / the offer for a buy back ([blockedMarketLimit]: never more than 1%
+     * through [last]; the last ±0.5% with no book side), on the tick. null: [o] is not a MARKET order or there is no usable price
+     * (the exit then waits for the next look, as before). Same contract, side, quantity, product and tag: only the price is added.
+     */
+    fun blockedMarketExit(o: Kite.Order, last: Double?, ask: Double? = null, bid: Double? = null): Kite.Order? {
+        if (o.orderType != "MARKET" || last == null) return null
+        val buy = o.side == Kite.Side.BUY
+        val px = blockedMarketLimit(buy, last, ask, bid) ?: return null
+        val p = Kite.onTick(px, o.tickSize, o.side)
+        if (!(p.isFinite() && p > 0)) return null
+        return o.copy(orderType = "LIMIT", price = p)
+    }
+
+    /**
+     * 10 Nov (Boss's diagnostics: R51 Donchian 20 and R72 Breadth Donchian bought the SAME contract within minutes on 3, 4 and 6 Nov,
+     * twice the stake on one move): the line logged (the log adds the arm's own [label]) when its live entry would buy a contract [others] (their labels)
+     * already hold live the same way. SHADOW ONLY (CLAUDE.md: anything new that could skip a live trade starts logged only, behind a switch
+     * that is off by default): nothing is skipped or changed. null: no other arm holds it.
+     */
+    fun sameContractWords(label: String, symbol: String, others: List<String>): String? {
+        val o = others.filter { it.isNotBlank() && it != label }.distinct()
+        if (o.isEmpty()) return null
+        return "$symbol is already held live by ${o.joinToString(", ")} (the same contract, the same way): a same-contract " +
+            "guard would skip this entry. Shadow only: logged, nothing changed."
+    }
+
     /** Boss's setting, kept within 1..[MAX_ARM_LOTS]. */
     fun armLots(set: Int): Int = set.coerceIn(1, MAX_ARM_LOTS)
 

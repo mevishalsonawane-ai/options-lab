@@ -235,6 +235,24 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("nothing more", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
     }
 
+    /** 10 Nov (the 3 Nov refusal, for an exit): a MARKET exit Zerodha blocks (low open interest) goes once as a LIMIT at the bid. */
+    @Test fun aBlockedMarketExitGoesOnceAsALimitAtTheBid() {
+        val ref = "lowoi-exit"
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, ref))
+        watch()                                                    // seen open on paper
+        kite.requests.clear()
+        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "NRML MARKET orders are blocked for this BANKNIFTY contract due to its open interest (OI) being less than 100 lots.")
+        legs[ref] = legs.getValue(ref).first to 0                 // the paper trade sold
+        watch()
+        val sells = kite.placed.filter { it.form["transaction_type"] == "SELL" }
+        assertEquals(listOf("MARKET", "LIMIT"), sells.map { it.form["order_type"] })
+        assertEquals("at the bid", "199.95", sells[1].form["price"])
+        assertEquals("flat, never short", 0, held())
+        assertEquals("paper_exit", view().closed.single().why)
+        watch()
+        assertEquals("nothing more", 2, kite.placed.count { it.form["transaction_type"] == "SELL" })
+    }
+
     /** 30 Oct (Part C): the kill switch, both split day stops and the paper-only period block live ENTRIES, never an exit. */
     @Test fun theKillSwitchAndEachSplitStopNeverBlockAnExit() {
         val ref = "k"

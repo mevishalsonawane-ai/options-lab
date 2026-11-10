@@ -539,6 +539,12 @@ object Protections {
         var (gtt, why) = Kite.protect(spec, p.product, p.qty.sign() * qty, last, p.stop, p.target)
         // A target that cannot rest (too near the price) never costs the stop: the stop alone.
         if (gtt == null && p.stop != null && p.target != null) Kite.protect(spec, p.product, p.qty.sign() * qty, last, p.stop, null).let { (g2, w2) -> if (g2 != null) { gtt = g2; why = w2 } }
+        // 10 Nov (Boss's diagnostics, 6 Nov: a NIFTY call carried overnight with NO stop, its own already at or through the price):
+        // the nearest stop Zerodha takes rests in its place ([Kite.overnightFallbackStop]). Only ever adds a stop: it lowers risk.
+        var fallback: Double? = null
+        if (gtt == null) Kite.overnightFallbackStop(p.qty > 0, last, p.stop, p.tick)?.let { fb ->
+            Kite.protect(spec, p.product, p.qty.sign() * qty, last, fb, null).first?.let { gtt = it; fallback = fb }
+        }
         val g = gtt
         if (g == null) {
             if ((gttTries[p.id] ?: 0) == 0) unprotected("${p.symbol}: its stop could not rest at Zerodha overnight as a GTT (${why.joinToString("; ")}). " +
@@ -549,6 +555,12 @@ object Protections {
         val id = Broker.placeGttOnce(g, gtts.map { it.id }.toSet())
         if (id == null) { tried(); return p }
         gttTries.remove(p.id)
+        fallback?.let { fb ->
+            Alerts.post("%s: its own stop (%.2f) is through or too close to the price (%.2f) for Zerodha to take overnight, so a stop at %.2f "
+                .format(java.util.Locale.ENGLISH, p.symbol, p.stop ?: 0.0, last, fb) + "rests at Zerodha overnight as a GTT for $qty instead. " +
+                "Its own stop and target are placed again at the open.", Alerts.Kind.INFO, "Protection")
+            return p.copy(gttId = id)
+        }
         val stopOnly = g.triggers.size == 1 && p.target != null
         Alerts.post("${p.symbol}: its stop${if (p.target != null && !stopOnly) " and target" else ""} rest at Zerodha overnight as a GTT for $qty " +
             "(${p.describe()}), so they hold even with the phone off. The GTT is replaced by the day's orders at the open.", Alerts.Kind.SUCCESS, "Protection")

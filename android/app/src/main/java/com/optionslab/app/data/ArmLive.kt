@@ -845,6 +845,16 @@ object ArmLive {
                 note(a.key, "not mirrored: the live book could not be read"); return@withLock
             }
         if (shadowNow) { enterShadow(spec, a, base, o, quote, cut); return@withLock }
+        // 10 Nov (Boss's diagnostics: R51 and R72 bought the same contract within minutes on 3, 4 and 6 Nov): SHADOW only - logged
+        // when another arm already holds this contract live the same way; nothing is skipped or changed ([LiveMirror.sameContractWords]).
+        // Here, after every gate and the shadow check, so only an entry really on its way to Zerodha is counted.
+        runCatching {
+            val others = lock.withLock {
+                book().positions.filter { it.exit == null && !it.shadow && it.key != a.key && it.symbol == ins.symbol && it.exchange == ins.exchange &&
+                    it.side == (if (a.side >= 0) 1 else -1) }.map { LiveMirror.spec(it.key)?.label ?: it.key }
+            }
+            LiveMirror.sameContractWords(spec.label, ins.symbol, others)?.let { note(a.key, it) }
+        }
         val known = known()
         // (The entry door asks the switches again inside it, from memory: [doorRefusal].)
         testHeard?.add("door|${a.key}|${a.ref}")
@@ -1227,12 +1237,32 @@ object ArmLive {
             if (sendable <= 0) return closed + back(cur)
             val o = Kite.Order(p.symbol, exitSide, sendable, p.lot, p.product, "MARKET", null, p.tick, p.exchange, LiveMirror.TAG, multiplier = p.multiplier)
             try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-                val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known() + working.map { it.id }) }.getOrNull()
-                found ?: run {
-                    com.optionslab.app.work.Alerts.post("${p.label}: the live exit failed (${e.message?.take(160)}); retrying on the next look.",
-                        com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
-                    // Refused outright: the stop goes back now. A lost reply with no order found may still have gone: next look.
-                    return closed + (if (Broker.definite(e)) back(cur) else cur)
+                // 10 Nov (the 3 Nov refusal, for an exit): Zerodha blocks MARKET orders on a contract with little open interest, so
+                // the same exit goes once as a LIMIT at the bid (the offer for a buy back), never more than 1% through the last price
+                // ([LiveMirror.blockedMarketExit]); unfilled in 15 s it is cancelled below and the stop goes back, as for any exit.
+                // Its answer lost and no order found: it may still have gone, so nothing is put back this look (as for a lost reply).
+                val limit = if (Broker.definite(e) && LiveMirror.marketBlocked(e.message)) {
+                    val key = "${p.exchange}:${p.symbol}"
+                    val q = runCatching { Broker.quotes(listOf(key))[key] }.getOrNull()
+                    LiveMirror.blockedMarketExit(o, q?.last?.takeIf { it > 0 } ?: ltp, q?.ask, q?.bid)
+                } else null
+                if (limit != null) {
+                    try { Broker.placeOrder(limit, exit = true) } catch (e2: Exception) {
+                        val again = if (Broker.definite(e2)) null else runCatching { Broker.findRecentRetrying(limit, known() + working.map { it.id }) }.getOrNull()
+                        again ?: run {
+                            com.optionslab.app.work.Alerts.post("${p.label}: the live exit failed (MARKET blocked, then ${e2.message?.take(120)}); retrying on the next look.",
+                                com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
+                            return closed + (if (Broker.definite(e2)) back(cur) else cur)
+                        }
+                    }
+                } else {
+                    val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known() + working.map { it.id }) }.getOrNull()
+                    found ?: run {
+                        com.optionslab.app.work.Alerts.post("${p.label}: the live exit failed (${e.message?.take(160)}); retrying on the next look.",
+                            com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
+                        // Refused outright: the stop goes back now. A lost reply with no order found may still have gone: next look.
+                        return closed + (if (Broker.definite(e)) back(cur) else cur)
+                    }
                 }
             }
         }

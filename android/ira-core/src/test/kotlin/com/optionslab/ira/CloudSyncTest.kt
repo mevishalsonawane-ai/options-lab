@@ -285,6 +285,56 @@ class CloudSyncTest {
         assertNotNull(CloudSync.problem(status(waiting = 2), today, toDay))
     }
 
+    @Test fun aDaySentLateSendsTheReportKeptInItsOwnWindow() {
+        val d5 = LocalDate.of(2026, 11, 5); val d6 = d5.plusDays(1); val d9 = LocalDate.of(2026, 11, 9)
+        val ev = CloudSync.EVENING
+        // Kept when made in its own window: its evening, and the next morning before 08:00.
+        assertTrue(CloudSync.diagKeep(d5, d5, ev))
+        assertTrue(CloudSync.diagKeep(d5, d5, 23 * 60 + 59))
+        assertTrue(CloudSync.diagKeep(d5, d6, 7 * 60 + 59))
+        assertFalse(CloudSync.diagKeep(d5, d5, ev - 1))                  // "Upload now" during the day: partial, not kept
+        assertFalse(CloudSync.diagKeep(d5, d6, 8 * 60))                  // window over
+        assertFalse(CloudSync.diagKeep(d5, d6, 23 * 60 + 23))            // the 5 Nov file made on 6 Nov's evening
+        assertTrue(CloudSync.diagKeep(d5, d5, 23 * 60 + 56, CloudSync.EVENING_SAFE))
+        assertFalse(CloudSync.diagKeep(d5, d5, 23 * 60, CloudSync.EVENING_SAFE))
+        // The kept one is sent only once the window is over (in it, a fresh report is fuller).
+        assertTrue(CloudSync.diagFromKept(d5, d6, 23 * 60 + 23))
+        assertTrue(CloudSync.diagFromKept(d5, d6, 8 * 60))
+        assertFalse(CloudSync.diagFromKept(d5, d6, 1 * 60 + 39))         // the morning catch-up makes it fresh
+        assertFalse(CloudSync.diagFromKept(d5, d5, 23 * 60))             // its own evening
+        assertFalse(CloudSync.diagFromKept(d6, d5, 23 * 60))             // a later day: never
+        // Names round-trip; anything else is not ours.
+        assertEquals("diag-2026-11-05.json.gz", CloudSync.diagKeptName(d5))
+        assertEquals(d5, CloudSync.diagKeptDay(CloudSync.diagKeptName(d5)))
+        assertNull(CloudSync.diagKeptDay("diag-2026-11-05.json.gz.tmp"))
+        assertNull(CloudSync.diagKeptDay("diag-bad.json.gz"))
+        assertNull(CloudSync.diagKeptDay("live-2026-11-05.json.gz"))
+        // Deleted after the retry window (DIAG_RETRY_DAYS = 3).
+        assertFalse(CloudSync.diagKeptOld(LocalDate.of(2026, 11, 6), d9))
+        assertTrue(CloudSync.diagKeptOld(d5, d9))
+    }
+
+    @Test fun onlyNothingUploadedNotifies() {
+        val ok = CloudSync.Last(ms(today.minusDays(1)), true, 10, "backup")
+        val old = CloudSync.Last(ms(today.minusDays(2)), true, 10, "backup")
+        assertFalse(CloudSync.stale(status(ok), today, toDay), "one quiet day is not stale")
+        assertTrue(CloudSync.stale(status(old, waiting = 2), today, toDay), "two quiet days: a notification")
+        assertTrue(CloudSync.stale(status(waiting = 2), today, toDay), "none ever, two days waiting")
+        assertFalse(CloudSync.stale(status(waiting = 1), today, toDay))
+        assertFalse(CloudSync.stale(status(token = false), today, toDay), "no token: nothing to warn about here")
+        assertFalse(CloudSync.stale(status(old, key = false), today, toDay), "the passphrase line is its own problem")
+        val refused = CloudSync.Last(ms(today), false, 0, "backup", "the token was refused", 401)
+        assertFalse(CloudSync.stale(status(refused, lastOk = old), today, toDay), "a refused token has its own (notifying) line")
+        // Two quiet days with the last try failed: the notification carries that failure's line.
+        val failed = CloudSync.Last(ms(today), false, 0, "backup", "no network")
+        assertTrue(CloudSync.stale(status(failed, lastOk = old), today, toDay))
+        assertTrue(CloudSync.problem(status(failed, lastOk = old), today, toDay)!!.startsWith("GitHub upload failed"))
+        assertFalse(CloudSync.stale(status(failed, lastOk = ok), today, toDay), "one quiet day with a failure: the list only")
+        // Wherever stale is true, problem() has a line to say (never a notification without a Problems line).
+        for (st in listOf(status(old, waiting = 2), status(waiting = 2), status(old)))
+            if (CloudSync.stale(st, today, toDay)) assertNotNull(CloudSync.problem(st, today, toDay))
+    }
+
     @Test fun lastRoundTripsWithoutBreakingOnBars() {
         val l = CloudSync.Last(123L, false, 9L, "live|x", "a|b")
         val back = assertNotNull(CloudSync.Last.decode(l.encode()))

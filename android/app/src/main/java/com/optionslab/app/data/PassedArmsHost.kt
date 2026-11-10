@@ -2459,6 +2459,11 @@ object PassedArmsHost {
         // 22 Oct (arms audit): an unreadable stop flag is never a reason to sell what is held (entries keep "unknown is stopped").
         val stopped = runCatching { Strategies.stoppedToday() }.getOrDefault(false) || runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
         if (sharedSoldElsewhere(b, now)) changed = true
+        // 10 Nov (R51's 30 Oct "exit_retry" line stood for a week): a failed-exit line about a contract its arm no longer holds open ends.
+        runCatching {
+            val open = b.positions.filter { it.open }.map { it.arm to it.symbol }.toSet()
+            for (k in com.optionslab.ira.ArmStatus.staleExitKeys(b.status, open)) { b.status.remove(k); changed = true }
+        }
         // 26 Oct: every held option's minutes are asked for side by side first, so each look below waits on its own read at most
         // [EXIT_READ_WAIT_MS] in all, not one after another.
         if (b.positions.count { it.open } > 1) for (p in b.positions) if (p.open && !p.day.isBefore(now.toLocalDate()))
@@ -2723,6 +2728,9 @@ object PassedArmsHost {
     private fun closed(b: Book, p: Pos) {
         // 16 Oct: on every way out (closed elsewhere too), so a later trade on the same option never reads this one's lock.
         forget(b, p)
+        // 10 Nov: a failed exit's line about this contract ends with its trade (it stood for a week before).
+        val retryKey = "${p.arm}|exit"
+        if (com.optionslab.ira.ArmStatus.exitRetryOf(b.status[retryKey], p.symbol)) b.status.remove(retryKey)
         if (p.shadow != null) {
             // 19 Oct: a would-be trade closed - its record only (never live, no notice).
             b.status["${p.arm}|${p.index}"] = "would-be ${p.symbol} closed: ${p.why}"
