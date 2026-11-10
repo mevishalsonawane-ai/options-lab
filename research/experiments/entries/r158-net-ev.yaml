@@ -1,0 +1,37 @@
+id: r158-net-ev
+title: 'R158 NET-EV: network''s own entries, forecast net > 0 (network trained on Breadth Donchian''s exit at every 5-minute
+  moment)'
+family: ml
+date: '2026-11-10'
+doc: research/hunt/r158_beat_breadth_donchian/results/report.md
+hypothesis: 'Boss (10 Nov): find anything that beats Breadth Donchian on win rate and profit. A network trained walk-forward
+  on the result of R72''s exit XL at every 5-minute moment (5 indices'' last hour of bars + 43 numbers) gives rule NET-EV:
+  network''s own entries, forecast net > 0. Gates: net > 0 in P2 and P3 (standalone also O1); a higher win rate AND net than
+  R72 in P2 and P3; twins BH q <= 0.10 (m 2132); >= 40 final trades.'
+data_version: as R157 (Drive lake copied 9 Nov 2026; R154 stores; R155 OI store; R156 / R157 examples) plus R158's XL labels
+period:
+  design: training from Aug 2021, expanding; scored 2023 - Mar 2025 (O1) and Apr 2025 - Mar 2026 (P2)
+  holdout: 2026-04-01..2026-10-13 read once by R158 (R72's trades there read by R72-R153); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index and the other four indices (last 60 one-minute bars), levels, trend, wicks, time; option chain
+  OI / PCR and India VIX as context; buys the 1-ITM option; exits XL on the premium'
+model_or_rule: R158 network, rule NET-EV
+settings: research/hunt/r158_beat_breadth_donchian/r158cfg.py; PREREG.md section 2
+prereg: research/hunt/r158_beat_breadth_donchian/PREREG.md
+variants_tried: 5
+results:
+  summary: 'O1: 256 trades, win 39% (needed 56%), -Rs 32,231 (-Rs 126 a trade). P2: 34 trades, win 59% (needed 58%), Rs 838
+    (Rs 25 a trade) (R72: 2,238 trades, win 49% (needed 44%), Rs 3,35,882 (Rs 150 a trade)). P3: 26 trades, win 62% (needed
+    60%), Rs 1,253 (Rs 48 a trade) (R72: 1,202 trades, win 46% (needed 41%), Rs 1,71,366 (Rs 143 a trade)); twins'' mean -Rs
+    3,591, p 0.3303, BH q 1.0. Fails: not positive in O1, P2, P3; does not beat Breadth Donchian on win rate and net in P2
+    and P3; twin BH q 1.00 > 0.1; < 40 final trades.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.

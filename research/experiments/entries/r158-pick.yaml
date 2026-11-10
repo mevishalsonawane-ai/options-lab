@@ -1,0 +1,36 @@
+id: r158-pick
+title: 'R158 PICK: Breadth Donchian''s entries the network likes (forecast net > 0) (network trained on Breadth Donchian''s
+  exit at every 5-minute moment)'
+family: ml
+date: '2026-11-10'
+doc: research/hunt/r158_beat_breadth_donchian/results/report.md
+hypothesis: 'Boss (10 Nov): find anything that beats Breadth Donchian on win rate and profit. A network trained walk-forward
+  on the result of R72''s exit XL at every 5-minute moment (5 indices'' last hour of bars + 43 numbers) gives rule PICK: Breadth
+  Donchian''s entries the network likes (forecast net > 0). Gates: net > 0 in P2 and P3 (standalone also O1); a higher win
+  rate AND net than R72 in P2 and P3; twins BH q <= 0.10 (m 2132); >= 40 final trades.'
+data_version: as R157 (Drive lake copied 9 Nov 2026; R154 stores; R155 OI store; R156 / R157 examples) plus R158's XL labels
+period:
+  design: training from Aug 2021, expanding; scored 2023 - Mar 2025 (O1) and Apr 2025 - Mar 2026 (P2)
+  holdout: 2026-04-01..2026-10-13 read once by R158 (R72's trades there read by R72-R153); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index and the other four indices (last 60 one-minute bars), levels, trend, wicks, time; option chain
+  OI / PCR and India VIX as context; buys the 1-ITM option; exits XL on the premium'
+model_or_rule: R158 network, rule PICK
+settings: research/hunt/r158_beat_breadth_donchian/r158cfg.py; PREREG.md section 2
+prereg: research/hunt/r158_beat_breadth_donchian/PREREG.md
+variants_tried: 5
+results:
+  summary: 'P2: 273 trades, win 51% (needed 49%), Rs 12,657 (Rs 46 a trade) (R72: 2,238 trades, win 49% (needed 44%), Rs 3,35,882
+    (Rs 150 a trade)). P3: 173 trades, win 32% (needed 51%), -Rs 60,753 (-Rs 351 a trade) (R72: 1,202 trades, win 46% (needed
+    41%), Rs 1,71,366 (Rs 143 a trade)); twins'' mean Rs 24,611, p 1.0, BH q 1.0. Fails: not positive in P2, P3; does not
+    beat Breadth Donchian on win rate and net in P2 and P3; twin BH q 1.00 > 0.1.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.

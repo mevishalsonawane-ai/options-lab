@@ -1,0 +1,15 @@
+{
+ "base_loss": 2.32893,
+ "rows": 60000,
+ "groups": {
+  "the traded index's last hour of 1-minute bars": -0.00265,
+  "the other four indices' last hour": -0.00274,
+  "support / resistance": 0.00242,
+  "trend (EMA, Supertrend, average price)": -0.00013,
+  "OI": 0.00042,
+  "candle wicks": 0.00072,
+  "time and calendar": 2e-05,
+  "VIX, scale, day so far, premium": 0.00027,
+  "index and side": -0.00037
+ }
+}

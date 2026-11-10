@@ -56,6 +56,10 @@ def main():
           f"needed {pct(fq['P3']['base']['be_win'])}, {rs(fq['P3']['base']['per_trade'])} a trade (final period); its top tenth "
           f"by forecast net: win {pct(fq['P3']['tenths_by_net'][-1]['win'])}, needed {pct(fq['P3']['tenths_by_net'][-1]['be_win'])}, "
           f"{rs(fq['P3']['tenths_by_net'][-1]['per_trade'])} a trade.",
+          f"- **What this shows about Breadth Donchian:** its exit alone is not the edge. Bought at an average moment with "
+          f"the same exit, the option loses {rs(fq['P3']['base']['per_trade'])} a trade; bought on Breadth Donchian's break it "
+          f"makes {rs(b3['per_trade'])}. The edge is the entry (4 of 5 indices breaking together), and the network, which can "
+          "barely forecast this exit's result, throws that edge away when it is asked to choose.",
           "- **What it leans on:** " + "; ".join(f"{k} {100 * max(v, 0) / tot:.0f}%" for k, v in gs[:4]) + ".",
           "- Nothing changes in the app. Every rule is logged in `research/experiments/entries/r158-*.yaml`.", "",
           "Signal source: the index and the other four indices (1-minute bars), index-derived context; option-chain OI and "

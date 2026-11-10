@@ -1,0 +1,307 @@
+{
+"NET-EV": {
+"passed": false,
+"fails": [
+"not positive in O1, P2, P3",
+"does not beat Breadth Donchian on win rate and net in P2 and P3",
+"twin BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.3303,
+"q": 1.0,
+"twin_mean": -3591,
+"P2": {
+"trades": 34,
+"win": 0.5882,
+"be_win": 0.5763,
+"net": 838,
+"per_trade": 25,
+"worst_day": -8881,
+"max_dd": 8881,
+"days": 16,
+"ex_top5": -12290,
+"largest_loss": -2869
+},
+"P3": {
+"trades": 26,
+"win": 0.6154,
+"be_win": 0.5984,
+"net": 1253,
+"per_trade": 48,
+"worst_day": -5145,
+"max_dd": 6903,
+"days": 14,
+"ex_top5": -9800,
+"largest_loss": -3812
+},
+"O1": {
+"trades": 256,
+"win": 0.3906,
+"be_win": 0.5577,
+"net": -32231,
+"per_trade": -126,
+"worst_day": -2251,
+"max_dd": 32231,
+"days": 141,
+"ex_top5": -37849,
+"largest_loss": -1374
+}
+},
+"NET-TOP5": {
+"passed": false,
+"fails": [
+"not positive in O1, P2, P3",
+"does not beat Breadth Donchian on win rate and net in P2 and P3",
+"twin BH q 1.00 > 0.1"
+],
+"twin_p": 0.5067,
+"q": 1.0,
+"twin_mean": -66328,
+"P2": {
+"trades": 1404,
+"win": 0.401,
+"be_win": 0.4663,
+"net": -160847,
+"per_trade": -115,
+"worst_day": -11504,
+"max_dd": 191660,
+"days": 218,
+"ex_top5": -199107,
+"largest_loss": -5543
+},
+"P3": {
+"trades": 481,
+"win": 0.4262,
+"be_win": 0.5083,
+"net": -63048,
+"per_trade": -131,
+"worst_day": -11730,
+"max_dd": 63048,
+"days": 100,
+"ex_top5": -85977,
+"largest_loss": -6119
+},
+"O1": {
+"trades": 2077,
+"win": 0.4208,
+"be_win": 0.4753,
+"net": -119427,
+"per_trade": -57,
+"worst_day": -7662,
+"max_dd": 132990,
+"days": 429,
+"ex_top5": -146478,
+"largest_loss": -3889
+}
+},
+"NET-TOP1": {
+"passed": false,
+"fails": [
+"not positive in O1, P2, P3",
+"does not beat Breadth Donchian on win rate and net in P2 and P3",
+"twin BH q 1.00 > 0.1"
+],
+"twin_p": 0.2189,
+"q": 1.0,
+"twin_mean": -14883,
+"P2": {
+"trades": 505,
+"win": 0.4139,
+"be_win": 0.5149,
+"net": -81468,
+"per_trade": -161,
+"worst_day": -10440,
+"max_dd": 91195,
+"days": 143,
+"ex_top5": -103510,
+"largest_loss": -5131
+},
+"P3": {
+"trades": 89,
+"win": 0.4045,
+"be_win": 0.4128,
+"net": -1667,
+"per_trade": -19,
+"worst_day": -3890,
+"max_dd": 15484,
+"days": 35,
+"ex_top5": -24178,
+"largest_loss": -3812
+},
+"O1": {
+"trades": 637,
+"win": 0.4082,
+"be_win": 0.5052,
+"net": -55693,
+"per_trade": -87,
+"worst_day": -4174,
+"max_dd": 62733,
+"days": 244,
+"ex_top5": -68696,
+"largest_loss": -4174
+}
+},
+"PICK": {
+"passed": false,
+"fails": [
+"not positive in P2, P3",
+"does not beat Breadth Donchian on win rate and net in P2 and P3",
+"twin BH q 1.00 > 0.1"
+],
+"twin_p": 1.0,
+"q": 1.0,
+"twin_mean": 24611,
+"P2": {
+"trades": 273,
+"win": 0.5092,
+"be_win": 0.4864,
+"net": 12657,
+"per_trade": 46,
+"worst_day": -16650,
+"max_dd": 28790,
+"days": 70,
+"ex_top5": -7048,
+"largest_loss": -5122
+},
+"P3": {
+"trades": 173,
+"win": 0.3179,
+"be_win": 0.5051,
+"net": -60753,
+"per_trade": -351,
+"worst_day": -7762,
+"max_dd": 61273,
+"days": 43,
+"ex_top5": -75748,
+"largest_loss": -3764
+}
+},
+"PICK50": {
+"passed": false,
+"fails": [
+"does not beat Breadth Donchian on win rate and net in P2 and P3",
+"twin BH q 1.00 > 0.1"
+],
+"twin_p": 0.9225,
+"q": 1.0,
+"twin_mean": 72157,
+"P2": {
+"trades": 1163,
+"win": 0.4652,
+"be_win": 0.4613,
+"net": 9710,
+"per_trade": 8,
+"worst_day": -16650,
+"max_dd": 69621,
+"days": 213,
+"ex_top5": -22889,
+"largest_loss": -5451
+},
+"P3": {
+"trades": 505,
+"win": 0.4297,
+"be_win": 0.4111,
+"net": 21183,
+"per_trade": 42,
+"worst_day": -9411,
+"max_dd": 66586,
+"days": 105,
+"ex_top5": -14454,
+"largest_loss": -4158
+}
+},
+"_b0": {
+"P2": {
+"trades": 2238,
+"win": 0.4897,
+"be_win": 0.4393,
+"net": 335882,
+"per_trade": 150,
+"worst_day": -25837,
+"max_dd": 86529,
+"days": 236,
+"ex_top5": 279428,
+"largest_loss": -11511
+},
+"P3": {
+"trades": 1202,
+"win": 0.4584,
+"be_win": 0.4103,
+"net": 171366,
+"per_trade": 143,
+"worst_day": -22571,
+"max_dd": 61884,
+"days": 129,
+"ex_top5": 112623,
+"largest_loss": -6245,
+"by_und": {
+"NIFTY": {
+"trades": 236,
+"win": 0.4661,
+"be_win": 0.4493,
+"net": 9850,
+"per_trade": 42,
+"worst_day": -6830,
+"max_dd": 22465,
+"days": 102,
+"ex_top5": -19975,
+"largest_loss": -3373
+},
+"BANKNIFTY": {
+"trades": 264,
+"win": 0.4205,
+"be_win": 0.3588,
+"net": 55106,
+"per_trade": 209,
+"worst_day": -6817,
+"max_dd": 20031,
+"days": 122,
+"ex_top5": 18921,
+"largest_loss": -5202
+},
+"FINNIFTY": {
+"trades": 249,
+"win": 0.494,
+"be_win": 0.3979,
+"net": 69469,
+"per_trade": 279,
+"worst_day": -6478,
+"max_dd": 9460,
+"days": 119,
+"ex_top5": 26253,
+"largest_loss": -4784
+},
+"MIDCPNIFTY": {
+"trades": 218,
+"win": 0.4541,
+"be_win": 0.4245,
+"net": 24247,
+"per_trade": 111,
+"worst_day": -9768,
+"max_dd": 47505,
+"days": 110,
+"ex_top5": -23246,
+"largest_loss": -6245
+},
+"SENSEX": {
+"trades": 235,
+"win": 0.4596,
+"be_win": 0.4366,
+"net": 12694,
+"per_trade": 54,
+"worst_day": -6436,
+"max_dd": 28466,
+"days": 103,
+"ex_top5": -16610,
+"largest_loss": -2704
+}
+}
+}
+},
+"_m": {
+"r158": 5,
+"prior": 2127,
+"total": 2132,
+"passed": 0
+}
+}
