@@ -73,6 +73,8 @@ def main():
     tot_imp = sum(max(v, 0) for v in g.values()) or 1.0
     bestP3 = max(K.TESTS, key=lambda t: dec[t]["P3"]["per_trade"] if dec[t]["P3"]["trades"] >= K.MIN_FINAL else -1e9)
     ex = d["examples"]
+    fcf = pickle.loads((K.OUT / "fc_final.pkl").read_bytes())
+    share_pos = float((fcf["ev"] > 0).mean())
     hist = {}
     for name, _, _ in K.FOLDS:
         try:
@@ -101,8 +103,15 @@ def main():
          f"{PN['O1']}: {line(best['O1'])}; {PN['P2']}: {line(best['P2'])}; {PN['P3']}: {line(best['P3'])}.",
          f"- **Best single rule in the final period:** {bestP3}: {line(dec[bestP3]['P3'])}; earlier: {rs(dec[bestP3]['O1']['net'])} "
          f"and {rs(dec[bestP3]['P2']['net'])}.",
-         f"- {len(pos3)} of {len(K.TESTS)} rules made money in the final period, {len(pos_all)} in all three periods; "
-         f"{len(n_beat)} beat random entries after the multiple-testing correction (smallest q {minq}).",
+         f"- **It mostly learned to say no.** Across the final period it forecast a profit for only {pct(share_pos, 1)} of the "
+         "moment x side x exit choices. The few it did take lost less than an average scalp but still lost: the 24 "
+         f"'forecast profit' rules together made {rs(pooled(per['P3']['rules'], ev_tests)['per_trade'])} a trade.",
+         f"- {len(pos3)} of {len(K.TESTS)} rules made money in the final period; {len(pos_all)} in all three periods ("
+         + ", ".join(f"{t} with {dec[t]['P3']['trades']} final trades" for t in pos_all)
+         + f": far too few to mean anything); {len(n_beat)} beat random entries after the multiple-testing correction "
+         f"(smallest q {minq}).",
+         "- **The network is no better than plain decision trees** on the same 43 numbers (table below), so the extra "
+         "machinery found nothing the simpler model missed.",
          "- **What the network leans on:** " + "; ".join(f"{k} {100 * max(v, 0) / tot_imp:.0f}%" for k, v in gs[:4])
          + " (share of the forecast lost when that input is scrambled).",
          "- Nothing changes in the app. Every rule is logged in `research/experiments/entries/r156-*.yaml`.", "",
@@ -167,8 +176,9 @@ def main():
           "## Earlier findings, honestly", "",
           "- R154: no entry makes the scalp pay. R155: no filter does; a logistic picker loses less.",
           "- R16, B1, R41, R123, R124: the size of the next move is predictable, its direction is a coin. A scalp with a "
-          "target and a stop of similar size is a bet on direction, minus costs; R156's network, trained on the scalp itself, "
-          "finds the same thing from the other side."]
+          "target and a stop of similar size is a bet on direction, minus costs. R156's network, trained on the scalp itself, "
+          "leans on the same inputs that predict size (the last hour of bars, VIX and the day's scale) and gains only a "
+          "small edge in picking winners, well short of the win rate the costs require."]
     (K.RESULTS / "report.md").write_text("\n".join(L) + "\n")
     summ = dict(passed=passed, m=dec["_m"], auc=aucs, top_tenth=top, base=base, best=dict(O1=best["O1"], P2=best["P2"], P3=best["P3"]),
                 positive_final=pos3, positive_all=pos_all, beat_twins=n_beat, importance=gs, examples=ex)

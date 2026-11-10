@@ -1,0 +1,2620 @@
+{
+"EV-A10s10t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 1.0,
+"q": 1.0,
+"q_r156": 1.0,
+"O1": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"P2": {
+"trades": 1,
+"win": 1.0,
+"be_win": 0.0,
+"net": 590,
+"per_trade": 590,
+"worst_day": 590,
+"max_dd": 0,
+"days": 1
+},
+"P3": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": 0
+},
+"EV-A10s10t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 1.0,
+"q": 1.0,
+"q_r156": 1.0,
+"O1": {
+"trades": 6,
+"win": 0.6667,
+"be_win": 0.5654,
+"net": 619,
+"per_trade": 103,
+"worst_day": -139,
+"max_dd": 139,
+"days": 4
+},
+"P2": {
+"trades": 2,
+"win": 1.0,
+"be_win": 0.0,
+"net": 1171,
+"per_trade": 586,
+"worst_day": 581,
+"max_dd": 0,
+"days": 2
+},
+"P3": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": 0
+},
+"EV-A10s15t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0575,
+"q": 1.0,
+"q_r156": 0.102,
+"O1": {
+"trades": 85,
+"win": 0.5412,
+"be_win": 0.5474,
+"net": -473,
+"per_trade": -6,
+"worst_day": -1635,
+"max_dd": 4003,
+"days": 39
+},
+"P2": {
+"trades": 253,
+"win": 0.5375,
+"be_win": 0.626,
+"net": -58358,
+"per_trade": -231,
+"worst_day": -9602,
+"max_dd": 58358,
+"days": 54
+},
+"P3": {
+"trades": 444,
+"win": 0.527,
+"be_win": 0.6018,
+"net": -80164,
+"per_trade": -181,
+"worst_day": -9888,
+"max_dd": 92436,
+"days": 99
+},
+"P4": {
+"trades": 20,
+"win": 0.45,
+"be_win": 0.5577,
+"net": -5132,
+"per_trade": -257,
+"worst_day": -8878,
+"max_dd": 8878,
+"days": 4
+},
+"twin_mean": -119253
+},
+"EV-A10s15t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.1589,
+"q": 1.0,
+"q_r156": 0.2315,
+"O1": {
+"trades": 111,
+"win": 0.5766,
+"be_win": 0.6119,
+"net": -4332,
+"per_trade": -39,
+"worst_day": -2427,
+"max_dd": 8259,
+"days": 60
+},
+"P2": {
+"trades": 312,
+"win": 0.5994,
+"be_win": 0.6471,
+"net": -42639,
+"per_trade": -137,
+"worst_day": -10184,
+"max_dd": 57018,
+"days": 59
+},
+"P3": {
+"trades": 601,
+"win": 0.5458,
+"be_win": 0.6309,
+"net": -136296,
+"per_trade": -227,
+"worst_day": -16861,
+"max_dd": 150589,
+"days": 126
+},
+"P4": {
+"trades": 22,
+"win": 0.5455,
+"be_win": 0.6496,
+"net": -6893,
+"per_trade": -313,
+"worst_day": -4046,
+"max_dd": 6893,
+"days": 4
+},
+"twin_mean": -167994
+},
+"EV-A12s12t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 1.0,
+"q": 1.0,
+"q_r156": 1.0,
+"O1": {
+"trades": 27,
+"win": 0.4815,
+"be_win": 0.3158,
+"net": 3774,
+"per_trade": 140,
+"worst_day": -1243,
+"max_dd": 1243,
+"days": 14
+},
+"P2": {
+"trades": 6,
+"win": 0.5,
+"be_win": 0.6357,
+"net": -1608,
+"per_trade": -268,
+"worst_day": -1126,
+"max_dd": 2328,
+"days": 4
+},
+"P3": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": 0
+},
+"EV-A12s12t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.4863,
+"q": 1.0,
+"q_r156": 0.5392,
+"O1": {
+"trades": 96,
+"win": 0.5104,
+"be_win": 0.5587,
+"net": -5172,
+"per_trade": -54,
+"worst_day": -1541,
+"max_dd": 8635,
+"days": 44
+},
+"P2": {
+"trades": 18,
+"win": 0.6111,
+"be_win": 0.5759,
+"net": 1335,
+"per_trade": 74,
+"worst_day": -909,
+"max_dd": 1577,
+"days": 8
+},
+"P3": {
+"trades": 3,
+"win": 0.3333,
+"be_win": 0.3903,
+"net": -387,
+"per_trade": -129,
+"worst_day": -1079,
+"max_dd": 1770,
+"days": 3
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -443
+},
+"EV-A12s18t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.92 > 0.1"
+],
+"twin_p": 0.0055,
+"q": 0.9226,
+"q_r156": 0.0234,
+"O1": {
+"trades": 231,
+"win": 0.5584,
+"be_win": 0.5139,
+"net": 8921,
+"per_trade": 39,
+"worst_day": -2255,
+"max_dd": 2957,
+"days": 85
+},
+"P2": {
+"trades": 378,
+"win": 0.5582,
+"be_win": 0.5993,
+"net": -40282,
+"per_trade": -107,
+"worst_day": -9197,
+"max_dd": 56101,
+"days": 57
+},
+"P3": {
+"trades": 465,
+"win": 0.5247,
+"be_win": 0.5663,
+"net": -47702,
+"per_trade": -103,
+"worst_day": -8480,
+"max_dd": 54633,
+"days": 104
+},
+"P4": {
+"trades": 28,
+"win": 0.4643,
+"be_win": 0.6135,
+"net": -10425,
+"per_trade": -372,
+"worst_day": -7087,
+"max_dd": 10425,
+"days": 4
+},
+"twin_mean": -115898
+},
+"EV-A12s18t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0085,
+"q": 1.0,
+"q_r156": 0.0289,
+"O1": {
+"trades": 435,
+"win": 0.5402,
+"be_win": 0.5727,
+"net": -16003,
+"per_trade": -37,
+"worst_day": -2347,
+"max_dd": 26628,
+"days": 149
+},
+"P2": {
+"trades": 560,
+"win": 0.6018,
+"be_win": 0.63,
+"net": -41506,
+"per_trade": -74,
+"worst_day": -13626,
+"max_dd": 59072,
+"days": 60
+},
+"P3": {
+"trades": 807,
+"win": 0.5527,
+"be_win": 0.6076,
+"net": -114963,
+"per_trade": -142,
+"worst_day": -14475,
+"max_dd": 124628,
+"days": 129
+},
+"P4": {
+"trades": 41,
+"win": 0.5854,
+"be_win": 0.6773,
+"net": -10967,
+"per_trade": -267,
+"worst_day": -6608,
+"max_dd": 10967,
+"days": 4
+},
+"twin_mean": -206262
+},
+"EV-A15s15t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.8421,
+"q": 1.0,
+"q_r156": 0.8947,
+"O1": {
+"trades": 101,
+"win": 0.495,
+"be_win": 0.4845,
+"net": 909,
+"per_trade": 9,
+"worst_day": -1583,
+"max_dd": 3089,
+"days": 46
+},
+"P2": {
+"trades": 30,
+"win": 0.6667,
+"be_win": 0.5463,
+"net": 8103,
+"per_trade": 270,
+"worst_day": -1454,
+"max_dd": 1454,
+"days": 12
+},
+"P3": {
+"trades": 2,
+"win": 0.0,
+"be_win": 1.0,
+"net": -1731,
+"per_trade": -865,
+"worst_day": -1079,
+"max_dd": 1731,
+"days": 2
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -367
+},
+"EV-A15s15t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.055,
+"q": 1.0,
+"q_r156": 0.102,
+"O1": {
+"trades": 834,
+"win": 0.4892,
+"be_win": 0.5192,
+"net": -28284,
+"per_trade": -34,
+"worst_day": -3420,
+"max_dd": 32233,
+"days": 215
+},
+"P2": {
+"trades": 52,
+"win": 0.4808,
+"be_win": 0.5249,
+"net": -5649,
+"per_trade": -109,
+"worst_day": -4351,
+"max_dd": 7740,
+"days": 17
+},
+"P3": {
+"trades": 10,
+"win": 0.7,
+"be_win": 0.2904,
+"net": 5324,
+"per_trade": 532,
+"worst_day": -815,
+"max_dd": 815,
+"days": 9
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -1277
+},
+"EV-A15s22.5t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.34 > 0.1"
+],
+"twin_p": 0.0005,
+"q": 0.3355,
+"q_r156": 0.0085,
+"O1": {
+"trades": 775,
+"win": 0.5032,
+"be_win": 0.4965,
+"net": 4893,
+"per_trade": 6,
+"worst_day": -3366,
+"max_dd": 23348,
+"days": 211
+},
+"P2": {
+"trades": 516,
+"win": 0.5,
+"be_win": 0.5608,
+"net": -76049,
+"per_trade": -147,
+"worst_day": -13320,
+"max_dd": 83405,
+"days": 55
+},
+"P3": {
+"trades": 653,
+"win": 0.536,
+"be_win": 0.5548,
+"net": -28050,
+"per_trade": -43,
+"worst_day": -9527,
+"max_dd": 46993,
+"days": 111
+},
+"P4": {
+"trades": 48,
+"win": 0.4375,
+"be_win": 0.5965,
+"net": -19590,
+"per_trade": -408,
+"worst_day": -11491,
+"max_dd": 20902,
+"days": 4
+},
+"twin_mean": -129615
+},
+"EV-A15s22.5t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.92 > 0.1"
+],
+"twin_p": 0.0055,
+"q": 0.9226,
+"q_r156": 0.0234,
+"O1": {
+"trades": 2107,
+"win": 0.4988,
+"be_win": 0.5595,
+"net": -142909,
+"per_trade": -68,
+"worst_day": -8572,
+"max_dd": 153963,
+"days": 362
+},
+"P2": {
+"trades": 774,
+"win": 0.5879,
+"be_win": 0.612,
+"net": -50754,
+"per_trade": -66,
+"worst_day": -21466,
+"max_dd": 78625,
+"days": 64
+},
+"P3": {
+"trades": 1424,
+"win": 0.5316,
+"be_win": 0.5872,
+"net": -193412,
+"per_trade": -136,
+"worst_day": -17502,
+"max_dd": 198360,
+"days": 133
+},
+"P4": {
+"trades": 59,
+"win": 0.5085,
+"be_win": 0.6813,
+"net": -32021,
+"per_trade": -543,
+"worst_day": -11961,
+"max_dd": 32021,
+"days": 4
+},
+"twin_mean": -326365
+},
+"EV-B10s10t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.1574,
+"q": 1.0,
+"q_r156": 0.2315,
+"O1": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"P2": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"P3": {
+"trades": 1,
+"win": 1.0,
+"be_win": 0.0,
+"net": 127,
+"per_trade": 127,
+"worst_day": 127,
+"max_dd": 0,
+"days": 1
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -26
+},
+"EV-B10s10t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.1499,
+"q": 1.0,
+"q_r156": 0.2315,
+"O1": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"P2": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"P3": {
+"trades": 1,
+"win": 1.0,
+"be_win": 0.0,
+"net": 127,
+"per_trade": 127,
+"worst_day": 127,
+"max_dd": 0,
+"days": 1
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -29
+},
+"EV-B10s15t15": {
+"passed": false,
+"fails": [
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.2274,
+"q": 1.0,
+"q_r156": 0.2899,
+"O1": {
+"trades": 4,
+"win": 0.5,
+"be_win": 0.2093,
+"net": 405,
+"per_trade": 101,
+"worst_day": -82,
+"max_dd": 82,
+"days": 4
+},
+"P2": {
+"trades": 25,
+"win": 0.72,
+"be_win": 0.6482,
+"net": 3150,
+"per_trade": 126,
+"worst_day": -1343,
+"max_dd": 1343,
+"days": 10
+},
+"P3": {
+"trades": 9,
+"win": 0.6667,
+"be_win": 0.5815,
+"net": 1246,
+"per_trade": 138,
+"worst_day": -1191,
+"max_dd": 2375,
+"days": 6
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -907
+},
+"EV-B10s15t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.03,
+"q": 1.0,
+"q_r156": 0.0787,
+"O1": {
+"trades": 15,
+"win": 0.6667,
+"be_win": 0.6829,
+"net": -235,
+"per_trade": -16,
+"worst_day": -1652,
+"max_dd": 1978,
+"days": 11
+},
+"P2": {
+"trades": 40,
+"win": 0.65,
+"be_win": 0.6692,
+"net": -1424,
+"per_trade": -36,
+"worst_day": -2403,
+"max_dd": 5759,
+"days": 13
+},
+"P3": {
+"trades": 78,
+"win": 0.5256,
+"be_win": 0.5115,
+"net": 1400,
+"per_trade": 18,
+"worst_day": -3047,
+"max_dd": 6456,
+"days": 31
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -14454
+},
+"EV-B12s12t15": {
+"passed": false,
+"fails": [
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.2629,
+"q": 1.0,
+"q_r156": 0.327,
+"O1": {
+"trades": 2,
+"win": 1.0,
+"be_win": 0.0,
+"net": 1177,
+"per_trade": 589,
+"worst_day": 252,
+"max_dd": 0,
+"days": 2
+},
+"P2": {
+"trades": 4,
+"win": 1.0,
+"be_win": 0.0,
+"net": 1421,
+"per_trade": 355,
+"worst_day": 55,
+"max_dd": 0,
+"days": 4
+},
+"P3": {
+"trades": 2,
+"win": 0.5,
+"be_win": 0.2244,
+"net": 90,
+"per_trade": 45,
+"worst_day": -37,
+"max_dd": 37,
+"days": 2
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -75
+},
+"EV-B12s12t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.1659,
+"q": 1.0,
+"q_r156": 0.235,
+"O1": {
+"trades": 11,
+"win": 0.4545,
+"be_win": 0.3396,
+"net": 2287,
+"per_trade": 208,
+"worst_day": -1235,
+"max_dd": 2783,
+"days": 10
+},
+"P2": {
+"trades": 3,
+"win": 0.3333,
+"be_win": 0.5369,
+"net": -449,
+"per_trade": -150,
+"worst_day": -520,
+"max_dd": 520,
+"days": 2
+},
+"P3": {
+"trades": 1,
+"win": 1.0,
+"be_win": 0.0,
+"net": 127,
+"per_trade": 127,
+"worst_day": 127,
+"max_dd": 0,
+"days": 1
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -54
+},
+"EV-B12s18t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0335,
+"q": 1.0,
+"q_r156": 0.0787,
+"O1": {
+"trades": 124,
+"win": 0.4919,
+"be_win": 0.5009,
+"net": -1100,
+"per_trade": -9,
+"worst_day": -1898,
+"max_dd": 8812,
+"days": 50
+},
+"P2": {
+"trades": 83,
+"win": 0.506,
+"be_win": 0.6109,
+"net": -15190,
+"per_trade": -183,
+"worst_day": -4842,
+"max_dd": 18705,
+"days": 20
+},
+"P3": {
+"trades": 47,
+"win": 0.5957,
+"be_win": 0.5221,
+"net": 5303,
+"per_trade": 113,
+"worst_day": -1783,
+"max_dd": 3977,
+"days": 24
+},
+"P4": {
+"trades": 3,
+"win": 0.3333,
+"be_win": 0.4792,
+"net": -293,
+"per_trade": -98,
+"worst_day": -641,
+"max_dd": 641,
+"days": 2
+},
+"twin_mean": -6605
+},
+"EV-B12s18t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0445,
+"q": 1.0,
+"q_r156": 0.0946,
+"O1": {
+"trades": 68,
+"win": 0.6471,
+"be_win": 0.5085,
+"net": 10304,
+"per_trade": 152,
+"worst_day": -1927,
+"max_dd": 2287,
+"days": 37
+},
+"P2": {
+"trades": 156,
+"win": 0.5449,
+"be_win": 0.5909,
+"net": -13825,
+"per_trade": -89,
+"worst_day": -7847,
+"max_dd": 14430,
+"days": 33
+},
+"P3": {
+"trades": 322,
+"win": 0.5217,
+"be_win": 0.5904,
+"net": -40132,
+"per_trade": -125,
+"worst_day": -5990,
+"max_dd": 56474,
+"days": 89
+},
+"P4": {
+"trades": 14,
+"win": 0.5,
+"be_win": 0.715,
+"net": -8121,
+"per_trade": -580,
+"worst_day": -5021,
+"max_dd": 8925,
+"days": 4
+},
+"twin_mean": -73526
+},
+"EV-B15s15t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.7186,
+"q": 1.0,
+"q_r156": 0.7798,
+"O1": {
+"trades": 31,
+"win": 0.4516,
+"be_win": 0.4518,
+"net": -4,
+"per_trade": 0,
+"worst_day": -717,
+"max_dd": 2883,
+"days": 24
+},
+"P2": {
+"trades": 15,
+"win": 0.7333,
+"be_win": 0.6931,
+"net": 964,
+"per_trade": 64,
+"worst_day": -1280,
+"max_dd": 1280,
+"days": 7
+},
+"P3": {
+"trades": 5,
+"win": 0.4,
+"be_win": 0.6797,
+"net": -1017,
+"per_trade": -203,
+"worst_day": -1074,
+"max_dd": 1357,
+"days": 5
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -229
+},
+"EV-B15s15t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1",
+"< 40 final trades"
+],
+"twin_p": 0.058,
+"q": 1.0,
+"q_r156": 0.102,
+"O1": {
+"trades": 412,
+"win": 0.5049,
+"be_win": 0.5152,
+"net": -3490,
+"per_trade": -8,
+"worst_day": -2845,
+"max_dd": 8570,
+"days": 145
+},
+"P2": {
+"trades": 36,
+"win": 0.5833,
+"be_win": 0.5216,
+"net": 4343,
+"per_trade": 121,
+"worst_day": -3348,
+"max_dd": 4155,
+"days": 13
+},
+"P3": {
+"trades": 4,
+"win": 0.5,
+"be_win": 0.1179,
+"net": 2005,
+"per_trade": 501,
+"worst_day": -146,
+"max_dd": 146,
+"days": 3
+},
+"P4": {
+"trades": 0,
+"win": null,
+"be_win": null,
+"net": 0,
+"per_trade": null,
+"worst_day": null,
+"max_dd": 0,
+"days": 0
+},
+"twin_mean": -205
+},
+"EV-B15s22.5t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.43 > 0.1"
+],
+"twin_p": 0.0015,
+"q": 0.4314,
+"q_r156": 0.0109,
+"O1": {
+"trades": 296,
+"win": 0.5,
+"be_win": 0.5362,
+"net": -9415,
+"per_trade": -32,
+"worst_day": -3649,
+"max_dd": 12262,
+"days": 104
+},
+"P2": {
+"trades": 172,
+"win": 0.5698,
+"be_win": 0.601,
+"net": -11053,
+"per_trade": -64,
+"worst_day": -6045,
+"max_dd": 16165,
+"days": 33
+},
+"P3": {
+"trades": 213,
+"win": 0.6103,
+"be_win": 0.5761,
+"net": 14742,
+"per_trade": 69,
+"worst_day": -6547,
+"max_dd": 23518,
+"days": 62
+},
+"P4": {
+"trades": 8,
+"win": 0.375,
+"be_win": 0.6778,
+"net": -4815,
+"per_trade": -602,
+"worst_day": -2181,
+"max_dd": 5618,
+"days": 4
+},
+"twin_mean": -43811
+},
+"EV-B15s22.5t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.43 > 0.1"
+],
+"twin_p": 0.0015,
+"q": 0.4314,
+"q_r156": 0.0109,
+"O1": {
+"trades": 852,
+"win": 0.5305,
+"be_win": 0.5579,
+"net": -24150,
+"per_trade": -28,
+"worst_day": -4172,
+"max_dd": 34811,
+"days": 232
+},
+"P2": {
+"trades": 406,
+"win": 0.5296,
+"be_win": 0.6117,
+"net": -67841,
+"per_trade": -167,
+"worst_day": -13817,
+"max_dd": 75844,
+"days": 56
+},
+"P3": {
+"trades": 664,
+"win": 0.5377,
+"be_win": 0.578,
+"net": -52208,
+"per_trade": -79,
+"worst_day": -8647,
+"max_dd": 55594,
+"days": 121
+},
+"P4": {
+"trades": 37,
+"win": 0.5405,
+"be_win": 0.5446,
+"net": -298,
+"per_trade": -8,
+"worst_day": -3875,
+"max_dd": 3875,
+"days": 4
+},
+"twin_mean": -148317
+},
+"TOP-A10s10t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.67 > 0.1"
+],
+"twin_p": 0.003,
+"q": 0.671,
+"q_r156": 0.017,
+"O1": {
+"trades": 7143,
+"win": 0.4925,
+"be_win": 0.5957,
+"net": -422402,
+"per_trade": -59,
+"worst_day": -7982,
+"max_dd": 423058,
+"days": 553
+},
+"P2": {
+"trades": 4066,
+"win": 0.4725,
+"be_win": 0.5839,
+"net": -409423,
+"per_trade": -101,
+"worst_day": -8114,
+"max_dd": 409423,
+"days": 247
+},
+"P3": {
+"trades": 2061,
+"win": 0.4862,
+"be_win": 0.5938,
+"net": -216396,
+"per_trade": -105,
+"worst_day": -10035,
+"max_dd": 216396,
+"days": 133
+},
+"P4": {
+"trades": 92,
+"win": 0.4348,
+"be_win": 0.5661,
+"net": -14209,
+"per_trade": -154,
+"worst_day": -9738,
+"max_dd": 14209,
+"days": 4
+},
+"twin_mean": -297534
+},
+"TOP-A10s10t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0075,
+"q": 1.0,
+"q_r156": 0.0273,
+"O1": {
+"trades": 7398,
+"win": 0.5084,
+"be_win": 0.6001,
+"net": -420788,
+"per_trade": -57,
+"worst_day": -7431,
+"max_dd": 421947,
+"days": 554
+},
+"P2": {
+"trades": 4213,
+"win": 0.4707,
+"be_win": 0.5819,
+"net": -475728,
+"per_trade": -113,
+"worst_day": -9889,
+"max_dd": 475728,
+"days": 246
+},
+"P3": {
+"trades": 2019,
+"win": 0.5087,
+"be_win": 0.6086,
+"net": -228018,
+"per_trade": -113,
+"worst_day": -12029,
+"max_dd": 232097,
+"days": 133
+},
+"P4": {
+"trades": 93,
+"win": 0.3656,
+"be_win": 0.5423,
+"net": -20095,
+"per_trade": -216,
+"worst_day": -10271,
+"max_dd": 20095,
+"days": 4
+},
+"twin_mean": -314952
+},
+"TOP-A10s15t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.035,
+"q": 1.0,
+"q_r156": 0.0787,
+"O1": {
+"trades": 5051,
+"win": 0.5751,
+"be_win": 0.7047,
+"net": -357155,
+"per_trade": -71,
+"worst_day": -8797,
+"max_dd": 358704,
+"days": 554
+},
+"P2": {
+"trades": 2738,
+"win": 0.5303,
+"be_win": 0.6975,
+"net": -360227,
+"per_trade": -132,
+"worst_day": -11228,
+"max_dd": 360227,
+"days": 247
+},
+"P3": {
+"trades": 1607,
+"win": 0.5719,
+"be_win": 0.6931,
+"net": -168793,
+"per_trade": -105,
+"worst_day": -6818,
+"max_dd": 168793,
+"days": 133
+},
+"P4": {
+"trades": 74,
+"win": 0.4865,
+"be_win": 0.7229,
+"net": -23433,
+"per_trade": -317,
+"worst_day": -8822,
+"max_dd": 23433,
+"days": 4
+},
+"twin_mean": -211654
+},
+"TOP-A10s15t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.048,
+"q": 1.0,
+"q_r156": 0.0979,
+"O1": {
+"trades": 6045,
+"win": 0.5838,
+"be_win": 0.696,
+"net": -441106,
+"per_trade": -73,
+"worst_day": -10963,
+"max_dd": 450829,
+"days": 553
+},
+"P2": {
+"trades": 3209,
+"win": 0.5516,
+"be_win": 0.6828,
+"net": -413652,
+"per_trade": -129,
+"worst_day": -16736,
+"max_dd": 413652,
+"days": 247
+},
+"P3": {
+"trades": 1918,
+"win": 0.5845,
+"be_win": 0.6962,
+"net": -245575,
+"per_trade": -128,
+"worst_day": -14259,
+"max_dd": 245575,
+"days": 133
+},
+"P4": {
+"trades": 78,
+"win": 0.5513,
+"be_win": 0.7189,
+"net": -19062,
+"per_trade": -244,
+"worst_day": -8547,
+"max_dd": 19062,
+"days": 4
+},
+"twin_mean": -304919
+},
+"TOP-A12s12t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.34 > 0.1"
+],
+"twin_p": 0.0005,
+"q": 0.3355,
+"q_r156": 0.0085,
+"O1": {
+"trades": 6762,
+"win": 0.4929,
+"be_win": 0.5757,
+"net": -364275,
+"per_trade": -54,
+"worst_day": -8552,
+"max_dd": 366868,
+"days": 550
+},
+"P2": {
+"trades": 3616,
+"win": 0.4773,
+"be_win": 0.5789,
+"net": -363959,
+"per_trade": -101,
+"worst_day": -10574,
+"max_dd": 367303,
+"days": 247
+},
+"P3": {
+"trades": 2076,
+"win": 0.4947,
+"be_win": 0.5812,
+"net": -196982,
+"per_trade": -95,
+"worst_day": -14782,
+"max_dd": 196982,
+"days": 133
+},
+"P4": {
+"trades": 91,
+"win": 0.3626,
+"be_win": 0.5618,
+"net": -24773,
+"per_trade": -272,
+"worst_day": -17282,
+"max_dd": 24773,
+"days": 4
+},
+"twin_mean": -302333
+},
+"TOP-A12s12t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.34 > 0.1"
+],
+"twin_p": 0.0005,
+"q": 0.3355,
+"q_r156": 0.0085,
+"O1": {
+"trades": 7266,
+"win": 0.4994,
+"be_win": 0.5846,
+"net": -446921,
+"per_trade": -62,
+"worst_day": -9686,
+"max_dd": 451084,
+"days": 551
+},
+"P2": {
+"trades": 4131,
+"win": 0.4703,
+"be_win": 0.5782,
+"net": -525079,
+"per_trade": -127,
+"worst_day": -11508,
+"max_dd": 529522,
+"days": 247
+},
+"P3": {
+"trades": 2070,
+"win": 0.5082,
+"be_win": 0.5856,
+"net": -209882,
+"per_trade": -101,
+"worst_day": -9969,
+"max_dd": 214799,
+"days": 133
+},
+"P4": {
+"trades": 95,
+"win": 0.4,
+"be_win": 0.5731,
+"net": -23376,
+"per_trade": -246,
+"worst_day": -11593,
+"max_dd": 23376,
+"days": 4
+},
+"twin_mean": -334291
+},
+"TOP-A12s18t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.2029,
+"q": 1.0,
+"q_r156": 0.2653,
+"O1": {
+"trades": 4599,
+"win": 0.5834,
+"be_win": 0.7008,
+"net": -329853,
+"per_trade": -72,
+"worst_day": -9934,
+"max_dd": 330283,
+"days": 550
+},
+"P2": {
+"trades": 2595,
+"win": 0.5484,
+"be_win": 0.6843,
+"net": -312773,
+"per_trade": -121,
+"worst_day": -10868,
+"max_dd": 312901,
+"days": 247
+},
+"P3": {
+"trades": 1422,
+"win": 0.5717,
+"be_win": 0.7007,
+"net": -162987,
+"per_trade": -115,
+"worst_day": -6923,
+"max_dd": 162987,
+"days": 132
+},
+"P4": {
+"trades": 67,
+"win": 0.5672,
+"be_win": 0.7342,
+"net": -17427,
+"per_trade": -260,
+"worst_day": -6297,
+"max_dd": 17427,
+"days": 4
+},
+"twin_mean": -180088
+},
+"TOP-A12s18t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0355,
+"q": 1.0,
+"q_r156": 0.0787,
+"O1": {
+"trades": 5482,
+"win": 0.5925,
+"be_win": 0.6896,
+"net": -373493,
+"per_trade": -68,
+"worst_day": -8043,
+"max_dd": 375172,
+"days": 550
+},
+"P2": {
+"trades": 2915,
+"win": 0.553,
+"be_win": 0.6742,
+"net": -365328,
+"per_trade": -125,
+"worst_day": -17803,
+"max_dd": 365914,
+"days": 247
+},
+"P3": {
+"trades": 1804,
+"win": 0.5732,
+"be_win": 0.6734,
+"net": -219119,
+"per_trade": -121,
+"worst_day": -16744,
+"max_dd": 219119,
+"days": 133
+},
+"P4": {
+"trades": 78,
+"win": 0.5385,
+"be_win": 0.7139,
+"net": -22805,
+"per_trade": -292,
+"worst_day": -13366,
+"max_dd": 22805,
+"days": 4
+},
+"twin_mean": -282088
+},
+"TOP-A15s15t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.43 > 0.1"
+],
+"twin_p": 0.001,
+"q": 0.4314,
+"q_r156": 0.0109,
+"O1": {
+"trades": 6320,
+"win": 0.4957,
+"be_win": 0.5635,
+"net": -326844,
+"per_trade": -52,
+"worst_day": -10219,
+"max_dd": 328172,
+"days": 548
+},
+"P2": {
+"trades": 3274,
+"win": 0.4753,
+"be_win": 0.5704,
+"net": -354898,
+"per_trade": -108,
+"worst_day": -16096,
+"max_dd": 354898,
+"days": 247
+},
+"P3": {
+"trades": 1978,
+"win": 0.4788,
+"be_win": 0.5556,
+"net": -192204,
+"per_trade": -97,
+"worst_day": -10553,
+"max_dd": 192204,
+"days": 133
+},
+"P4": {
+"trades": 90,
+"win": 0.3778,
+"be_win": 0.6313,
+"net": -39703,
+"per_trade": -441,
+"worst_day": -17066,
+"max_dd": 39703,
+"days": 4
+},
+"twin_mean": -290954
+},
+"TOP-A15s15t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.63 > 0.1"
+],
+"twin_p": 0.0025,
+"q": 0.6291,
+"q_r156": 0.0159,
+"O1": {
+"trades": 7106,
+"win": 0.5039,
+"be_win": 0.568,
+"net": -392746,
+"per_trade": -55,
+"worst_day": -9687,
+"max_dd": 395056,
+"days": 552
+},
+"P2": {
+"trades": 3743,
+"win": 0.4766,
+"be_win": 0.5724,
+"net": -481642,
+"per_trade": -129,
+"worst_day": -15363,
+"max_dd": 481642,
+"days": 247
+},
+"P3": {
+"trades": 2118,
+"win": 0.5009,
+"be_win": 0.5693,
+"net": -214785,
+"per_trade": -101,
+"worst_day": -13248,
+"max_dd": 214785,
+"days": 133
+},
+"P4": {
+"trades": 97,
+"win": 0.3402,
+"be_win": 0.5572,
+"net": -40076,
+"per_trade": -413,
+"worst_day": -19430,
+"max_dd": 40076,
+"days": 4
+},
+"twin_mean": -348732
+},
+"TOP-A15s22.5t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.3693,
+"q": 1.0,
+"q_r156": 0.4185,
+"O1": {
+"trades": 4288,
+"win": 0.5833,
+"be_win": 0.6794,
+"net": -299370,
+"per_trade": -70,
+"worst_day": -13026,
+"max_dd": 301342,
+"days": 546
+},
+"P2": {
+"trades": 2453,
+"win": 0.5548,
+"be_win": 0.6643,
+"net": -282041,
+"per_trade": -115,
+"worst_day": -11770,
+"max_dd": 284743,
+"days": 247
+},
+"P3": {
+"trades": 1305,
+"win": 0.5701,
+"be_win": 0.6898,
+"net": -154643,
+"per_trade": -119,
+"worst_day": -7871,
+"max_dd": 155060,
+"days": 131
+},
+"P4": {
+"trades": 54,
+"win": 0.6111,
+"be_win": 0.7769,
+"net": -15836,
+"per_trade": -293,
+"worst_day": -11427,
+"max_dd": 15836,
+"days": 4
+},
+"twin_mean": -160095
+},
+"TOP-A15s22.5t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.3278,
+"q": 1.0,
+"q_r156": 0.3888,
+"O1": {
+"trades": 4876,
+"win": 0.5923,
+"be_win": 0.6848,
+"net": -348884,
+"per_trade": -72,
+"worst_day": -10741,
+"max_dd": 351672,
+"days": 549
+},
+"P2": {
+"trades": 2712,
+"win": 0.5697,
+"be_win": 0.6701,
+"net": -318935,
+"per_trade": -118,
+"worst_day": -11911,
+"max_dd": 323730,
+"days": 247
+},
+"P3": {
+"trades": 1519,
+"win": 0.5747,
+"be_win": 0.6807,
+"net": -199262,
+"per_trade": -131,
+"worst_day": -14675,
+"max_dd": 199491,
+"days": 132
+},
+"P4": {
+"trades": 70,
+"win": 0.5857,
+"be_win": 0.7554,
+"net": -23186,
+"per_trade": -331,
+"worst_day": -10421,
+"max_dd": 23186,
+"days": 4
+},
+"twin_mean": -211814
+},
+"TOP-B10s10t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.03,
+"q": 1.0,
+"q_r156": 0.0787,
+"O1": {
+"trades": 3305,
+"win": 0.485,
+"be_win": 0.5677,
+"net": -166262,
+"per_trade": -50,
+"worst_day": -5147,
+"max_dd": 169173,
+"days": 535
+},
+"P2": {
+"trades": 2093,
+"win": 0.4587,
+"be_win": 0.5437,
+"net": -187246,
+"per_trade": -89,
+"worst_day": -7648,
+"max_dd": 190518,
+"days": 246
+},
+"P3": {
+"trades": 1320,
+"win": 0.4379,
+"be_win": 0.5352,
+"net": -128421,
+"per_trade": -97,
+"worst_day": -5423,
+"max_dd": 128421,
+"days": 132
+},
+"P4": {
+"trades": 45,
+"win": 0.2444,
+"be_win": 0.5406,
+"net": -18315,
+"per_trade": -407,
+"worst_day": -9802,
+"max_dd": 18315,
+"days": 4
+},
+"twin_mean": -169159
+},
+"TOP-B10s10t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0115,
+"q": 1.0,
+"q_r156": 0.0367,
+"O1": {
+"trades": 3163,
+"win": 0.4869,
+"be_win": 0.5644,
+"net": -154630,
+"per_trade": -49,
+"worst_day": -4733,
+"max_dd": 157382,
+"days": 550
+},
+"P2": {
+"trades": 1993,
+"win": 0.4666,
+"be_win": 0.5555,
+"net": -192763,
+"per_trade": -97,
+"worst_day": -7423,
+"max_dd": 199293,
+"days": 246
+},
+"P3": {
+"trades": 1322,
+"win": 0.4569,
+"be_win": 0.5425,
+"net": -117127,
+"per_trade": -89,
+"worst_day": -7045,
+"max_dd": 121758,
+"days": 132
+},
+"P4": {
+"trades": 43,
+"win": 0.3256,
+"be_win": 0.5173,
+"net": -11491,
+"per_trade": -267,
+"worst_day": -6607,
+"max_dd": 11943,
+"days": 4
+},
+"twin_mean": -171193
+},
+"TOP-B10s15t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.07,
+"q": 1.0,
+"q_r156": 0.119,
+"O1": {
+"trades": 2980,
+"win": 0.552,
+"be_win": 0.5954,
+"net": -86127,
+"per_trade": -29,
+"worst_day": -4454,
+"max_dd": 97859,
+"days": 530
+},
+"P2": {
+"trades": 1863,
+"win": 0.5142,
+"be_win": 0.5903,
+"net": -159996,
+"per_trade": -86,
+"worst_day": -6640,
+"max_dd": 169225,
+"days": 246
+},
+"P3": {
+"trades": 1150,
+"win": 0.493,
+"be_win": 0.5846,
+"net": -116731,
+"per_trade": -102,
+"worst_day": -6278,
+"max_dd": 117791,
+"days": 133
+},
+"P4": {
+"trades": 42,
+"win": 0.4524,
+"be_win": 0.6367,
+"net": -13994,
+"per_trade": -333,
+"worst_day": -8818,
+"max_dd": 17139,
+"days": 4
+},
+"twin_mean": -151427
+},
+"TOP-B10s15t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0355,
+"q": 1.0,
+"q_r156": 0.0787,
+"O1": {
+"trades": 2924,
+"win": 0.5544,
+"be_win": 0.6163,
+"net": -127037,
+"per_trade": -43,
+"worst_day": -4369,
+"max_dd": 135148,
+"days": 550
+},
+"P2": {
+"trades": 1664,
+"win": 0.5349,
+"be_win": 0.6125,
+"net": -153117,
+"per_trade": -92,
+"worst_day": -8799,
+"max_dd": 162017,
+"days": 243
+},
+"P3": {
+"trades": 1216,
+"win": 0.5123,
+"be_win": 0.5984,
+"net": -124562,
+"per_trade": -102,
+"worst_day": -7211,
+"max_dd": 124562,
+"days": 133
+},
+"P4": {
+"trades": 40,
+"win": 0.5,
+"be_win": 0.6679,
+"net": -11300,
+"per_trade": -283,
+"worst_day": -6476,
+"max_dd": 12851,
+"days": 4
+},
+"twin_mean": -170468
+},
+"TOP-B12s12t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.1744,
+"q": 1.0,
+"q_r156": 0.2404,
+"O1": {
+"trades": 3622,
+"win": 0.5075,
+"be_win": 0.555,
+"net": -116580,
+"per_trade": -32,
+"worst_day": -4669,
+"max_dd": 130929,
+"days": 534
+},
+"P2": {
+"trades": 2087,
+"win": 0.4447,
+"be_win": 0.5292,
+"net": -206211,
+"per_trade": -99,
+"worst_day": -7860,
+"max_dd": 211604,
+"days": 247
+},
+"P3": {
+"trades": 1230,
+"win": 0.4455,
+"be_win": 0.5412,
+"net": -133596,
+"per_trade": -109,
+"worst_day": -7426,
+"max_dd": 134597,
+"days": 131
+},
+"P4": {
+"trades": 44,
+"win": 0.3864,
+"be_win": 0.5094,
+"net": -7642,
+"per_trade": -174,
+"worst_day": -6862,
+"max_dd": 10506,
+"days": 4
+},
+"twin_mean": -156374
+},
+"TOP-B12s12t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.023,
+"q": 1.0,
+"q_r156": 0.069,
+"O1": {
+"trades": 3209,
+"win": 0.497,
+"be_win": 0.5613,
+"net": -144870,
+"per_trade": -45,
+"worst_day": -4369,
+"max_dd": 151131,
+"days": 541
+},
+"P2": {
+"trades": 1948,
+"win": 0.4692,
+"be_win": 0.5422,
+"net": -173765,
+"per_trade": -89,
+"worst_day": -8582,
+"max_dd": 193384,
+"days": 247
+},
+"P3": {
+"trades": 1281,
+"win": 0.4614,
+"be_win": 0.5385,
+"net": -118348,
+"per_trade": -92,
+"worst_day": -6806,
+"max_dd": 122324,
+"days": 132
+},
+"P4": {
+"trades": 44,
+"win": 0.2955,
+"be_win": 0.5042,
+"net": -13757,
+"per_trade": -313,
+"worst_day": -8033,
+"max_dd": 14382,
+"days": 4
+},
+"twin_mean": -171110
+},
+"TOP-B12s18t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.3598,
+"q": 1.0,
+"q_r156": 0.417,
+"O1": {
+"trades": 3250,
+"win": 0.5502,
+"be_win": 0.5952,
+"net": -112056,
+"per_trade": -34,
+"worst_day": -6060,
+"max_dd": 124142,
+"days": 505
+},
+"P2": {
+"trades": 2029,
+"win": 0.5037,
+"be_win": 0.5832,
+"net": -210900,
+"per_trade": -104,
+"worst_day": -9364,
+"max_dd": 212753,
+"days": 246
+},
+"P3": {
+"trades": 1134,
+"win": 0.4859,
+"be_win": 0.5905,
+"net": -151920,
+"per_trade": -134,
+"worst_day": -7725,
+"max_dd": 151920,
+"days": 131
+},
+"P4": {
+"trades": 43,
+"win": 0.4884,
+"be_win": 0.5487,
+"net": -4407,
+"per_trade": -102,
+"worst_day": -3157,
+"max_dd": 4407,
+"days": 4
+},
+"twin_mean": -161409
+},
+"TOP-B12s18t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.1489,
+"q": 1.0,
+"q_r156": 0.2315,
+"O1": {
+"trades": 3013,
+"win": 0.5582,
+"be_win": 0.616,
+"net": -140999,
+"per_trade": -47,
+"worst_day": -6341,
+"max_dd": 150075,
+"days": 546
+},
+"P2": {
+"trades": 1803,
+"win": 0.5169,
+"be_win": 0.6024,
+"net": -212003,
+"per_trade": -118,
+"worst_day": -8556,
+"max_dd": 224163,
+"days": 245
+},
+"P3": {
+"trades": 1150,
+"win": 0.5174,
+"be_win": 0.6056,
+"net": -139087,
+"per_trade": -121,
+"worst_day": -7683,
+"max_dd": 140096,
+"days": 133
+},
+"P4": {
+"trades": 42,
+"win": 0.4048,
+"be_win": 0.6087,
+"net": -16818,
+"per_trade": -400,
+"worst_day": -9765,
+"max_dd": 18570,
+"days": 4
+},
+"twin_mean": -168582
+},
+"TOP-B15s15t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.1939,
+"q": 1.0,
+"q_r156": 0.2602,
+"O1": {
+"trades": 4317,
+"win": 0.4971,
+"be_win": 0.5384,
+"net": -139494,
+"per_trade": -32,
+"worst_day": -7722,
+"max_dd": 156797,
+"days": 521
+},
+"P2": {
+"trades": 2359,
+"win": 0.4481,
+"be_win": 0.5368,
+"net": -279728,
+"per_trade": -119,
+"worst_day": -11239,
+"max_dd": 292442,
+"days": 247
+},
+"P3": {
+"trades": 1350,
+"win": 0.4467,
+"be_win": 0.5364,
+"net": -152830,
+"per_trade": -113,
+"worst_day": -7787,
+"max_dd": 154885,
+"days": 131
+},
+"P4": {
+"trades": 51,
+"win": 0.4118,
+"be_win": 0.5894,
+"net": -13505,
+"per_trade": -265,
+"worst_day": -6743,
+"max_dd": 14037,
+"days": 4
+},
+"twin_mean": -176630
+},
+"TOP-B15s15t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.1514,
+"q": 1.0,
+"q_r156": 0.2315,
+"O1": {
+"trades": 3631,
+"win": 0.5015,
+"be_win": 0.5527,
+"net": -155585,
+"per_trade": -43,
+"worst_day": -4760,
+"max_dd": 173946,
+"days": 543
+},
+"P2": {
+"trades": 2111,
+"win": 0.4439,
+"be_win": 0.5459,
+"net": -301327,
+"per_trade": -143,
+"worst_day": -9290,
+"max_dd": 312174,
+"days": 247
+},
+"P3": {
+"trades": 1286,
+"win": 0.4596,
+"be_win": 0.5434,
+"net": -152678,
+"per_trade": -119,
+"worst_day": -8891,
+"max_dd": 157057,
+"days": 132
+},
+"P4": {
+"trades": 44,
+"win": 0.3636,
+"be_win": 0.5611,
+"net": -13531,
+"per_trade": -308,
+"worst_day": -7356,
+"max_dd": 13531,
+"days": 4
+},
+"twin_mean": -185195
+},
+"TOP-B15s22.5t15": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.0565,
+"q": 1.0,
+"q_r156": 0.102,
+"O1": {
+"trades": 4502,
+"win": 0.532,
+"be_win": 0.5788,
+"net": -172271,
+"per_trade": -38,
+"worst_day": -8904,
+"max_dd": 187852,
+"days": 494
+},
+"P2": {
+"trades": 2364,
+"win": 0.4759,
+"be_win": 0.5681,
+"net": -303202,
+"per_trade": -128,
+"worst_day": -11747,
+"max_dd": 311364,
+"days": 247
+},
+"P3": {
+"trades": 1257,
+"win": 0.5139,
+"be_win": 0.5892,
+"net": -129331,
+"per_trade": -103,
+"worst_day": -8830,
+"max_dd": 129331,
+"days": 129
+},
+"P4": {
+"trades": 60,
+"win": 0.45,
+"be_win": 0.5643,
+"net": -11063,
+"per_trade": -184,
+"worst_day": -8801,
+"max_dd": 11063,
+"days": 4
+},
+"twin_mean": -178380
+},
+"TOP-B15s22.5t30": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.2699,
+"q": 1.0,
+"q_r156": 0.3277,
+"O1": {
+"trades": 3338,
+"win": 0.5602,
+"be_win": 0.6,
+"net": -127727,
+"per_trade": -38,
+"worst_day": -7286,
+"max_dd": 140428,
+"days": 512
+},
+"P2": {
+"trades": 2084,
+"win": 0.5014,
+"be_win": 0.5957,
+"net": -309576,
+"per_trade": -149,
+"worst_day": -12012,
+"max_dd": 317635,
+"days": 246
+},
+"P3": {
+"trades": 1123,
+"win": 0.5156,
+"be_win": 0.6026,
+"net": -158335,
+"per_trade": -141,
+"worst_day": -9570,
+"max_dd": 160336,
+"days": 129
+},
+"P4": {
+"trades": 44,
+"win": 0.4773,
+"be_win": 0.627,
+"net": -12578,
+"per_trade": -286,
+"worst_day": -9113,
+"max_dd": 13498,
+"days": 4
+},
+"twin_mean": -179433
+},
+"BEST-A": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 1.00 > 0.1"
+],
+"twin_p": 0.007,
+"q": 1.0,
+"q_r156": 0.0273,
+"O1": {
+"trades": 2138,
+"win": 0.5019,
+"be_win": 0.5592,
+"net": -136261,
+"per_trade": -64,
+"worst_day": -8572,
+"max_dd": 147315,
+"days": 365
+},
+"P2": {
+"trades": 780,
+"win": 0.5897,
+"be_win": 0.628,
+"net": -79694,
+"per_trade": -102,
+"worst_day": -21288,
+"max_dd": 109416,
+"days": 64
+},
+"P3": {
+"trades": 1455,
+"win": 0.534,
+"be_win": 0.5937,
+"net": -207306,
+"per_trade": -142,
+"worst_day": -16372,
+"max_dd": 208001,
+"days": 133
+},
+"P4": {
+"trades": 59,
+"win": 0.5424,
+"be_win": 0.6979,
+"net": -30022,
+"per_trade": -509,
+"worst_day": -12267,
+"max_dd": 30022,
+"days": 4
+},
+"twin_mean": -336814
+},
+"BEST-B": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.43 > 0.1"
+],
+"twin_p": 0.0015,
+"q": 0.4314,
+"q_r156": 0.0109,
+"O1": {
+"trades": 1035,
+"win": 0.5188,
+"be_win": 0.5423,
+"net": -23422,
+"per_trade": -23,
+"worst_day": -2915,
+"max_dd": 32662,
+"days": 248
+},
+"P2": {
+"trades": 407,
+"win": 0.5283,
+"be_win": 0.6119,
+"net": -69103,
+"per_trade": -170,
+"worst_day": -13817,
+"max_dd": 77106,
+"days": 56
+},
+"P3": {
+"trades": 664,
+"win": 0.5377,
+"be_win": 0.578,
+"net": -52208,
+"per_trade": -79,
+"worst_day": -8647,
+"max_dd": 55594,
+"days": 121
+},
+"P4": {
+"trades": 37,
+"win": 0.5405,
+"be_win": 0.5446,
+"net": -298,
+"per_trade": -8,
+"worst_day": -3875,
+"max_dd": 3875,
+"days": 4
+},
+"twin_mean": -145883
+},
+"BEST": {
+"passed": false,
+"fails": [
+"not positive in O1, P2 and P3",
+"random-entry BH q 0.70 > 0.1"
+],
+"twin_p": 0.0035,
+"q": 0.7046,
+"q_r156": 0.0178,
+"O1": {
+"trades": 2254,
+"win": 0.4982,
+"be_win": 0.5519,
+"net": -131888,
+"per_trade": -59,
+"worst_day": -8572,
+"max_dd": 144303,
+"days": 368
+},
+"P2": {
+"trades": 783,
+"win": 0.59,
+"be_win": 0.6278,
+"net": -78680,
+"per_trade": -100,
+"worst_day": -21288,
+"max_dd": 108402,
+"days": 64
+},
+"P3": {
+"trades": 1460,
+"win": 0.5342,
+"be_win": 0.5937,
+"net": -206663,
+"per_trade": -142,
+"worst_day": -16372,
+"max_dd": 207357,
+"days": 133
+},
+"P4": {
+"trades": 60,
+"win": 0.5333,
+"be_win": 0.6917,
+"net": -30472,
+"per_trade": -508,
+"worst_day": -12267,
+"max_dd": 30472,
+"days": 4
+},
+"twin_mean": -334937
+},
+"_m": {
+"r156": 51,
+"prior": 1962,
+"total": 2013,
+"passed": 0
+}
+}

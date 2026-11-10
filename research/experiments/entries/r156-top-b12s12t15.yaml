@@ -1,0 +1,40 @@
+id: r156-top-b12s12t15
+title: 'R156 scalp network, rule TOP-B12s12t15: exit B12s12t15: take the side with the higher forecast win chance if it is
+  in the top tenth of the model''s training forecasts'
+family: ml
+date: '2026-11-10'
+doc: research/hunt/r156_scalp_network/results/report.md
+hypothesis: 'Boss (10 Nov): "create a neuro network, to understand scalping". A convolutional network trained walk-forward
+  on the after-cost result of every 5-minute scalp moment (both sides, 5 indices, 24 exits) can pick profitable 10-15 point
+  scalps. Rule: exit B12s12t15: take the side with the higher forecast win chance if it is in the top tenth of the model''s
+  training forecasts; one open position per index, 5 trades per index a day. Gates: net > 0 in O1, P2, P3; beats random-entry
+  twins with BH q <= 0.10 (m 2013); >= 40 final trades.'
+data_version: Drive lake copied 9 Nov 2026 (index_1m incl. INDIAVIX, options_rolling_1m WEEK incl. OI); R154's stores; R155's
+  OI store; R156 examples (733,260)
+period:
+  design: training from Aug 2021, expanding; scored 2023 - Mar 2025 (O1) and Apr 2025 - Mar 2026 (P2), each by models trained
+    on earlier sessions only
+  holdout: 2026-04-01..2026-10-13 read once by R156 (third look for scalps after R154 / R155); post 14-19 Oct reported
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (last 60 one-minute bars, levels, trend, wicks, time); option chain OI / PCR and India VIX as
+  context; buys the 1-ITM option'
+- 'model: Conv1d x3 over the sequence + a 43-number table branch; 24 x (win logit, expected net); 3 seeds'
+model_or_rule: R156 network, rule TOP-B12s12t15
+settings: research/hunt/r156_scalp_network/r156cfg.py; PREREG.md sections 3-4
+prereg: research/hunt/r156_scalp_network/PREREG.md
+variants_tried: 51
+results:
+  summary: '1 lot, 5 indices pooled. O1: 3,622 trades, win 51% (needed 56%), -Rs 1,16,580 (-Rs 32 a trade). P2: 2,087 trades,
+    win 44% (needed 53%), -Rs 2,06,211 (-Rs 99 a trade). P3: 1,230 trades, win 45% (needed 54%), -Rs 1,33,596 (-Rs 109 a trade)
+    (random-entry twins'' mean -Rs 1,56,374; p 0.1744, BH q 1.0). Fails: not positive in O1, P2 and P3; random-entry BH q
+    1.00 > 0.1.'
+  costs: dated Zerodha charges, R17 fills, limit targets at their price, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes live.

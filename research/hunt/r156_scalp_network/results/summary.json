@@ -1,0 +1,235 @@
+{
+ "passed": [],
+ "m": {
+  "r156": 51,
+  "prior": 1962,
+  "total": 2013,
+  "passed": 0
+ },
+ "auc": {
+  "O1": {
+   "A": [
+    0.539,
+    0.541
+   ],
+   "B": [
+    0.549,
+    0.565
+   ]
+  },
+  "P2": {
+   "A": [
+    0.529,
+    0.53
+   ],
+   "B": [
+    0.546,
+    0.551
+   ]
+  },
+  "P3": {
+   "A": [
+    0.549,
+    0.549
+   ],
+   "B": [
+    0.574,
+    0.58
+   ]
+  }
+ },
+ "top_tenth": {
+  "O1": {
+   "A": {
+    "bin": 10,
+    "n": 402065,
+    "forecast": 0.5727,
+    "win": 0.5729,
+    "be_win": 0.6909,
+    "per_trade": -74.7
+   },
+   "B": {
+    "bin": 10,
+    "n": 402065,
+    "forecast": 0.5379,
+    "win": 0.521,
+    "be_win": 0.6004,
+    "per_trade": -61.9
+   }
+  },
+  "P2": {
+   "A": {
+    "bin": 10,
+    "n": 193878,
+    "forecast": 0.5755,
+    "win": 0.5652,
+    "be_win": 0.6811,
+    "per_trade": -114.0
+   },
+   "B": {
+    "bin": 10,
+    "n": 193877,
+    "forecast": 0.5251,
+    "win": 0.5098,
+    "be_win": 0.5872,
+    "per_trade": -105.4
+   }
+  },
+  "P3": {
+   "A": {
+    "bin": 10,
+    "n": 102856,
+    "forecast": 0.5749,
+    "win": 0.5785,
+    "be_win": 0.6867,
+    "per_trade": -113.1
+   },
+   "B": {
+    "bin": 10,
+    "n": 102856,
+    "forecast": 0.5389,
+    "win": 0.5236,
+    "be_win": 0.6008,
+    "per_trade": -101.7
+   }
+  }
+ },
+ "base": {
+  "O1": {
+   "A": {
+    "n": 4020648,
+    "win": 0.4724,
+    "be_win": 0.5891,
+    "per_trade": -94.4
+   },
+   "B": {
+    "n": 4020648,
+    "win": 0.4215,
+    "be_win": 0.5409,
+    "per_trade": -74.5
+   }
+  },
+  "P2": {
+   "A": {
+    "n": 1938768,
+    "win": 0.48,
+    "be_win": 0.589,
+    "per_trade": -148.1
+   },
+   "B": {
+    "n": 1938768,
+    "win": 0.4229,
+    "be_win": 0.5374,
+    "per_trade": -112.8
+   }
+  },
+  "P3": {
+   "A": {
+    "n": 1028556,
+    "win": 0.4694,
+    "be_win": 0.61,
+    "per_trade": -174.6
+   },
+   "B": {
+    "n": 1028556,
+    "win": 0.3938,
+    "be_win": 0.5441,
+    "per_trade": -131.1
+   }
+  }
+ },
+ "best": {
+  "O1": {
+   "trades": 2254,
+   "win": 0.4982,
+   "be_win": 0.5519,
+   "net": -131888,
+   "per_trade": -59,
+   "worst_day": -8572,
+   "max_dd": 144303,
+   "days": 368
+  },
+  "P2": {
+   "trades": 783,
+   "win": 0.59,
+   "be_win": 0.6278,
+   "net": -78680,
+   "per_trade": -100,
+   "worst_day": -21288,
+   "max_dd": 108402,
+   "days": 64
+  },
+  "P3": {
+   "trades": 1460,
+   "win": 0.5342,
+   "be_win": 0.5937,
+   "net": -206663,
+   "per_trade": -142,
+   "worst_day": -16372,
+   "max_dd": 207357,
+   "days": 133
+  }
+ },
+ "positive_final": [
+  "EV-A15s15t30",
+  "EV-B10s10t15",
+  "EV-B10s10t30",
+  "EV-B10s15t15",
+  "EV-B10s15t30",
+  "EV-B12s12t15",
+  "EV-B12s12t30",
+  "EV-B12s18t15",
+  "EV-B15s15t30",
+  "EV-B15s22.5t15"
+ ],
+ "positive_all": [
+  "EV-B10s15t15",
+  "EV-B12s12t15"
+ ],
+ "beat_twins": [],
+ "importance": [
+  [
+   "the last hour of 1-minute bars",
+   0.0009
+  ],
+  [
+   "VIX, scale, day so far, premium",
+   0.00054
+  ],
+  [
+   "index and side",
+   0.00048
+  ],
+  [
+   "trend (EMA, Supertrend, average price)",
+   0.00016
+  ],
+  [
+   "candle wicks",
+   0.00014
+  ],
+  [
+   "time and calendar",
+   0.00013
+  ],
+  [
+   "OI",
+   7e-05
+  ],
+  [
+   "support / resistance",
+   2e-05
+  ]
+ ],
+ "examples": {
+  "total": 733260,
+  "by_und": {
+   "NIFTY": 169752,
+   "BANKNIFTY": 168696,
+   "FINNIFTY": 167904,
+   "MIDCPNIFTY": 115104,
+   "SENSEX": 111804
+  },
+  "labelled": 0.9302
+ }
+}
