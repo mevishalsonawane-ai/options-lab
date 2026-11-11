@@ -1,5 +1,6 @@
 package com.optionslab.engine.orb
 
+import com.optionslab.engine.Kite
 import com.optionslab.engine.mcx.McxTrendRules
 import com.optionslab.engine.orb.LiveMirror.Decision
 import com.optionslab.engine.orb.LiveMirror.Gate
@@ -462,5 +463,33 @@ class LiveMirrorTest {
         assertEquals(100.2, LiveMirror.shadowStopFill(100.0, 0.05, -1, 0.0016), 1e-9)
         assertEquals(105.0, LiveMirror.shadowStopFill(100.0, 0.05, -1, 0.3), 1e-9)
         assertTrue(LiveMirror.SHADOW_BASIS.contains("ask") && LiveMirror.SHADOW_BASIS.contains("bid") && LiveMirror.SHADOW_BASIS.contains("charges"))
+    }
+
+    @Test fun blockedMarketExitGoesAsALimitOnTheTick() {
+        val sell = Kite.Order("FINNIFTY26NOV26500PE", Kite.Side.SELL, 60, 60, "MIS", "MARKET", null, 0.05, "NFO", LiveMirror.TAG)
+        val l = LiveMirror.blockedMarketExit(sell, 391.30, ask = 392.0, bid = 389.85)!!
+        assertEquals("LIMIT", l.orderType); assertEquals(389.85, l.price!!, 1e-9)
+        assertEquals(sell.copy(orderType = "LIMIT", price = l.price), l, "only the type and the price change")
+        // No book side: the last less 0.5%, on the tick, down for a sale (391.30 x 0.995 = 389.3435 -> 389.30).
+        assertEquals(389.30, LiveMirror.blockedMarketExit(sell, 391.30)!!.price!!, 1e-9)
+        // A bid far below: never more than 1% under the last (387.387 -> 387.35).
+        assertEquals(387.35, LiveMirror.blockedMarketExit(sell, 391.30, bid = 300.0)!!.price!!, 1e-9)
+        // A buy back (a short's exit): at the offer, on the tick, up.
+        val buy = sell.copy(side = Kite.Side.BUY)
+        assertEquals(392.0, LiveMirror.blockedMarketExit(buy, 391.30, ask = 392.0, bid = 389.85)!!.price!!, 1e-9)
+        // Nothing to price, or not a MARKET order: none.
+        assertNull(LiveMirror.blockedMarketExit(sell, null))
+        assertNull(LiveMirror.blockedMarketExit(sell, 0.0))
+        assertNull(LiveMirror.blockedMarketExit(sell.copy(orderType = "LIMIT", price = 390.0), 391.30))
+        assertNull(LiveMirror.blockedMarketExit(sell.copy(tickSize = 0.05), 0.04), "a price that rounds to zero")
+    }
+
+    @Test fun sameContractIsLoggedOnlyWhenAnotherArmHoldsIt() {
+        val w = LiveMirror.sameContractWords("R72 Breadth Donchian", "NIFTY26N0923900CE", listOf("R51 Donchian 20", "R51 Donchian 20"))!!
+        assertTrue(w.startsWith("NIFTY26N0923900CE is already held live by R51 Donchian 20 (the same contract"))
+        assertTrue(w.endsWith("Shadow only: logged, nothing changed."), "never says it skipped")
+        assertNull(LiveMirror.sameContractWords("R72 Breadth Donchian", "X", emptyList()))
+        assertNull(LiveMirror.sameContractWords("R72 Breadth Donchian", "X", listOf("R72 Breadth Donchian", " ")), "its own or a blank label is not another arm")
+        assertTrue(LiveMirror.sameContractWords("A", "X", listOf("B", "C"))!!.contains("held live by B, C"))
     }
 }

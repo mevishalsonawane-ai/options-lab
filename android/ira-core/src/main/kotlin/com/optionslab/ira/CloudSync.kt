@@ -263,6 +263,27 @@ object CloudSync {
     // books), but the arms' switches, the mode and the health and workers' lines are as at its "generated_at" (a later day
     // there marks such a catch-up; MAINTENANCE.md, "Daily diagnostics").
 
+    // 10 Nov (Boss's diagnostics: the 5 Nov file was made on 6 Nov at 23:23, so its arms' lines, health and decisions were 6 Nov's):
+    // a report made inside its day's upload window (its evening to 08:00 the next morning, [eveningOf]) is also kept on the phone,
+    // and a day sent after that window sends the kept report, not one made later. Kept files are the redacted report itself
+    // (the same bytes GitHub gets: no rupees, ids or names) and are deleted after [DIAG_RETRY_DAYS] days.
+
+    /** [day]'s report made now is its own evening's: kept on the phone (replacing an earlier one of the same evening). */
+    fun diagKeep(day: LocalDate, today: LocalDate, minute: Int, eveningFrom: Int = EVENING): Boolean =
+        eveningOf(minute, today, eveningFrom) == day
+
+    /** [day]'s window is over: its kept report, when there is one, is sent instead of a report made now. */
+    fun diagFromKept(day: LocalDate, today: LocalDate, minute: Int, eveningFrom: Int = EVENING): Boolean =
+        day.isBefore(today) && eveningOf(minute, today, eveningFrom) != day
+
+    /** A kept report's file name, and its day back (null: not one of ours). */
+    fun diagKeptName(day: LocalDate): String = "diag-$day.json.gz"
+    fun diagKeptDay(name: String): LocalDate? =
+        if (name.startsWith("diag-") && name.endsWith(".json.gz")) runCatching { LocalDate.parse(name.removePrefix("diag-").removeSuffix(".json.gz")) }.getOrNull() else null
+
+    /** A kept report no run will send again (older than the retry window): deleted. */
+    fun diagKeptOld(day: LocalDate, today: LocalDate, back: Int = DIAG_RETRY_DAYS): Boolean = day.isBefore(today.minusDays(back.toLong()))
+
     const val DIAG_TRIED = 0
     const val DIAG_PARTIAL = 1
     const val DIAG_FULL = 2
@@ -469,6 +490,20 @@ object CloudSync {
         }
         expiryNote(s.expiry, today)?.let { out += "Token" to it }
         return out
+    }
+
+    /**
+     * 10 Nov (Boss's diagnostics: nothing went up for two days from 8 Nov and only the Problems list said so): whether nothing has
+     * gone up for [STALE_DAYS] days (or none ever, with that many days waiting). Then [problem]'s line - "nothing uploaded", or the
+     * last try's failure when one failed - also posts a phone notification (at most once a day: [com.optionslab.app.data.ProblemsHost]).
+     * A refused token, a missing passphrase or no token at all is not this (each has its own line).
+     */
+    fun stale(s: Status, today: LocalDate, toDay: (Long) -> LocalDate): Boolean {
+        if (!s.tokenSet || !s.keyReady) return false
+        val t = s.lastTry
+        if (t != null && authRefused(t)) return false
+        val sinceDay = s.lastOk?.atMs?.let(toDay)
+        return if (sinceDay != null) ChronoUnit.DAYS.between(sinceDay, today) >= STALE_DAYS else s.waiting >= STALE_DAYS
     }
 
     /**

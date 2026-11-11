@@ -449,6 +449,28 @@ object Kite {
     /** Kite refuses a GTT whose trigger is within 0.25% of the last price. */
     const val GTT_MIN_GAP = 0.0025
 
+    /** The gap a fallback overnight stop keeps from the last price ([overnightFallbackStop]): just outside Zerodha's 0.25%. */
+    const val GTT_FALLBACK_GAP = 0.003
+
+    /**
+     * 10 Nov (Boss's diagnostics, 6 Nov: a carried NIFTY call was left with no stop overnight because its own stop was already at
+     * or through the last price, which Zerodha refuses as a GTT): the stop to rest overnight in its place, or null when [stop]
+     * itself can rest or nothing can. When [stop] is on the wrong side of [lastPrice] or within [GTT_MIN_GAP] of it, the fallback
+     * is the nearest level Zerodha takes, [GTT_FALLBACK_GAP] away (below for a long, above for a short), on the tick, moved
+     * outward. It only ever adds a stop where none would rest (the position's own stop is placed again at the open): it lowers risk.
+     */
+    fun overnightFallbackStop(long: Boolean, lastPrice: Double, stop: Double?, tickSize: Double): Double? {
+        if (stop == null || lastPrice <= 0 || !lastPrice.isFinite() || tickSize <= 0) return null
+        val st = Math.round(stop / tickSize) * tickSize
+        val refused = (if (long) st >= lastPrice else st <= lastPrice) || kotlin.math.abs(st - lastPrice) / lastPrice < GTT_MIN_GAP
+        if (!refused) return null
+        val raw = if (long) lastPrice * (1 - GTT_FALLBACK_GAP) else lastPrice * (1 + GTT_FALLBACK_GAP)
+        // Outward on the tick: down for a long's stop, up for a short's, so the gap never shrinks below the fallback's.
+        val fb = onTick(raw, tickSize, if (long) Side.SELL else Side.BUY)
+        if (fb <= 0 || kotlin.math.abs(fb - lastPrice) / lastPrice < GTT_MIN_GAP) return null
+        return fb
+    }
+
     /**
      * Protect an open position with a GTT: a [stop], a [target], or both (an
      * OCO "two-leg" GTT - whichever triggers first closes the position and

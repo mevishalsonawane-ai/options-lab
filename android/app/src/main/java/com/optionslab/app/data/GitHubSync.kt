@@ -92,6 +92,8 @@ object GitHubSync {
     const val PROBLEM_TOKEN = "github:token"
     private const val AGENT = "GitHub sync"
     private const val OUT_DIR = "github-out"
+    /** 10 Nov: each day's diagnostics as made in its own upload window, for a later retry ([CloudSync.diagKeep]). */
+    private const val KEPT_DIR = "diag-kept"
 
     @Volatile private var app: Context? = null
     /** GitHub over HTTPS; a test gives a fake. */
@@ -113,7 +115,7 @@ object GitHubSync {
     fun wipe() { filesForErase().forEach { runCatching { it.deleteRecursively() } } }
 
     /** The upload folder (none before [init]). */
-    internal fun filesForErase(): List<File> = listOfNotNull(app?.let { File(it.noBackupFilesDir, OUT_DIR) })
+    internal fun filesForErase(): List<File> = app?.let { listOf(File(it.noBackupFilesDir, OUT_DIR), File(it.noBackupFilesDir, KEPT_DIR)) }.orEmpty()
 
     // ---- hooks ---------------------------------------------------------------------------------------------------------
 
@@ -299,6 +301,11 @@ object GitHubSync {
         val c = app ?: return false
         if (!ready()) return false
         if (!manual && authBlocked()) return false
+        // 10 Nov: the evening's diagnostics are made and kept first, before any network step, so a run that fails (no network,
+        // the relay, a rate limit) still leaves the day's own record for the retry on a later day.
+        val keptNow: ByteArray? = diagDay?.let { d ->
+            try { keepDiag(c, d, eveningFrom) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
+        }
         val (owner, name) = repo() ?: return false
         val token = workerToken(owner, name) ?: run {
             note(CloudSync.Last(System.currentTimeMillis(), false, 0, "upload", "the token needs your PIN once (Data & Harvest → GitHub sync)"))
@@ -367,7 +374,7 @@ object GitHubSync {
                 runCatching { SecurePrefs.put(K_DIAG_DAYS, CloudSync.diagEncode(CloudSync.diagMark(diagDone(), diagDay, CloudSync.DIAG_TRIED))) }
                 for (d in CloudSync.diagDays(diagDay, diagDone())) {
                     if (!goOn() || !sendNow(false) || outcomes.any { CloudSync.authRefused(it) }) break
-                    val made: ByteArray? = try { DiagDayHost.report(d) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                    val made: ByteArray? = try { if (d == diagDay && keptNow != null) keptNow else diagReport(c, d, eveningFrom) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
                         runCatching { Diag.record("github", CloudSync.redact("diagnostics $d: could not be made (${e.javaClass.simpleName})")) }
                         null
                     }
@@ -397,6 +404,38 @@ object GitHubSync {
         }
         runCatching { check() }
         return outcomes.all { o -> o.ok || (diagLasts.any { it === o } && !CloudSync.authRefused(o)) }
+    }
+
+    /**
+     * 10 Nov: [d]'s report made now and, inside its own upload window ([CloudSync.diagKeep]), kept on the phone (null: not its
+     * window, nothing made). Old kept reports are deleted here. The sync's thread: never the main thread or the order path.
+     */
+    private suspend fun keepDiag(c: Context, d: LocalDate, eveningFrom: Int): ByteArray? {
+        val t = Market.now()
+        val today = t.toLocalDate()
+        val dir = File(c.noBackupFilesDir, KEPT_DIR)
+        // Old kept reports, and a half-written one a failed rename left, are deleted.
+        runCatching { dir.listFiles()?.forEach { f -> if (f.name.endsWith(".tmp") || CloudSync.diagKeptDay(f.name)?.let { CloudSync.diagKeptOld(it, today) } == true) f.delete() } }
+        if (!CloudSync.diagKeep(d, today, t.hour * 60 + t.minute, eveningFrom)) return null
+        val made = DiagDayHost.report(d)
+        runCatching {
+            dir.mkdirs()
+            val file = File(dir, CloudSync.diagKeptName(d))
+            val tmp = File(dir, file.name + ".tmp")
+            tmp.writeBytes(made)
+            if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
+        }
+        return made
+    }
+
+    /** [d]'s report: once its window is over, the one kept in it ([CloudSync.diagFromKept]) when there is one; else made now. */
+    private suspend fun diagReport(c: Context, d: LocalDate, eveningFrom: Int): ByteArray {
+        val t = Market.now()
+        if (CloudSync.diagFromKept(d, t.toLocalDate(), t.hour * 60 + t.minute, eveningFrom)) {
+            val file = File(File(c.noBackupFilesDir, KEPT_DIR), CloudSync.diagKeptName(d))
+            runCatching { file.takeIf { it.isFile && it.length() > 0 }?.readBytes() }.getOrNull()?.let { return it }
+        }
+        return DiagDayHost.report(d)
     }
 
     /**
@@ -535,7 +574,9 @@ object GitHubSync {
         val s = status()
         val today = Market.today()
         val p = CloudSync.problem(s, today, ::toDay)
-        if (p != null) ProblemsHost.report(PROBLEM, AGENT, OpenProblems.Severity.WARN, p, "Settings → Data & Harvest → GitHub sync")
+        // 10 Nov: "nothing uploaded" also posts a phone notification (once a day), not only a Problems line.
+        if (p != null) ProblemsHost.report(PROBLEM, AGENT, OpenProblems.Severity.WARN, p, "Settings → Data & Harvest → GitHub sync",
+            notify = CloudSync.stale(s, today, ::toDay))
         else ProblemsHost.clear(PROBLEM)
         val e = when {
             !s.tokenSet -> null

@@ -113,6 +113,26 @@ class ProtectionsGttTest : RobolectricTest() {
         assertEquals(90.0, g.getJSONObject("condition").getJSONArray("trigger_values").getDouble(0), 0.0)
     }
 
+    /**
+     * 10 Nov (6 Nov: a carried call was left with no stop overnight): its own stop too close to the price for Zerodha (within 0.25%),
+     * the nearest stop Zerodha takes rests in its place (0.3% under the last, on the tick), and Boss is told.
+     */
+    @Test fun aStopTooNearThePriceRestsTheNearestStopZerodhaTakesInstead() {
+        protect()
+        theClose()
+        kite.quote("NFO:$sym", 90.10, 90.05, 90.15)         // 0.11% over its 90 stop: Zerodha refuses that GTT
+        tick()
+        val g = kite.gtts.values.single()
+        assertEquals("single", g.getString("type"))
+        assertEquals("90.10 less 0.3%, down to the tick", 89.80, g.getJSONObject("condition").getJSONArray("trigger_values").getDouble(0), 1e-9)
+        assertEquals("SELL", g.getJSONArray("orders").getJSONObject(0).getString("transaction_type"))
+        assertEquals(g.getLong("id"), one().gttId)
+        assertEquals("its own stop is kept for the open", 90.0, one().stop!!, 0.0)
+        assertTrue(com.optionslab.app.work.Alerts.queue.value.any { it.text.contains("too close to the price") && it.text.contains("89.80") })
+        tick()
+        assertEquals("one GTT, never a second", 1, gttPosts.size)
+    }
+
     /** The GTT fired overnight (the price opened through the stop) and its sell filled: the protection ends, nothing more is placed. */
     @Test fun aGttThatFiredAndFilledEndsTheProtectionWithNothingPlacedAgain() {
         protect()
@@ -208,16 +228,24 @@ class ProtectionsGttTest : RobolectricTest() {
         assertNull(one().gttId)
     }
 
-    /** At the close the price is already under the stop: Zerodha would refuse the GTT, so it is said plainly (and not retried forever). */
+    /**
+     * At the close the price is already under the stop: Zerodha would refuse that GTT. 10 Nov (6 Nov: a call held overnight with no
+     * stop): the nearest stop Zerodha takes (0.3% under the last, on the tick) rests instead - once, never retried - and it is said
+     * plainly; the protection and its own stop are kept for the open.
+     */
     @Test fun aStopAlreadyThroughThePriceIsSaidPlainly() {
         protect(target = null)
         theClose()
         kite.quote("NFO:$sym", 85.0, 84.95, 85.05)
         repeat(5) { tick() }
-        assertTrue(kite.gtts.isEmpty())
+        val g = kite.gtts.values.single()
+        assertEquals("85 less 0.3%, down to the tick", 84.70, g.getJSONObject("condition").getJSONArray("trigger_values").getDouble(0), 1e-9)
+        assertEquals("one GTT, never retried", 1, gttPosts.size)
         val said = com.optionslab.app.work.Alerts.queue.value.map { it.text }
-        assertTrue(said.toString(), said.any { it.contains("could not rest at Zerodha overnight as a GTT") })
-        assertNotNull("the protection is kept for the open", runBlocking { Protections.active() }.singleOrNull())
+        assertTrue(said.toString(), said.any { it.contains("its own stop (90.00) is through or too close to the price (85.00)") && it.contains("84.70") })
+        val p = runBlocking { Protections.active() }.singleOrNull()
+        assertNotNull("the protection is kept for the open", p)
+        assertEquals(90.0, p!!.stop!!, 0.0)
     }
 
     /** Saved and read back (a restart overnight keeps the GTT's id, so the open still deletes it first). */

@@ -254,6 +254,37 @@ class GitHubSyncTest : RobolectricTest() {
         assertEquals(listOf("diag-${thu.plusDays(1)}.json.gz"), sent())
     }
 
+    /** 10 Nov (the 5 Nov file was made on 6 Nov's evening, with 6 Nov's lines): a day sent late sends the report kept in its own evening. */
+    @Test fun aDaySentLateSendsTheReportKeptInItsOwnEvening() {
+        ready()
+        val wed = Background.WED
+        val thu = wed.plusDays(1)
+        Background.at(wed, 23, 40)
+        gh.uploadCode = 500
+        assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = wed) })
+        val kept = java.io.File(context.noBackupFilesDir, "diag-kept/diag-$wed.json.gz")
+        assertTrue("kept on the phone though the upload failed", kept.isFile && kept.length() > 0)
+        gh.uploadCode = 201
+        val bodies = LinkedHashMap<String, ByteArray>()
+        gh.onUpload = { r ->
+            Regex("name=(diag-[0-9-]+\\.json\\.gz)").find(r.url)?.let { m ->
+                bodies[m.groupValues[1]] = java.io.ByteArrayOutputStream().also { o -> r.body!!.write(o) }.toByteArray() }
+        }
+        try {
+            Background.at(thu, 23, 40)
+            assertTrue(runBlocking { GitHubSync.run(withBackup = false, withDays = false, eveningFrom = 23 * 60 + 30, diagDay = thu) })
+        } finally { gh.onUpload = null }
+        assertEquals(listOf("diag-$wed.json.gz", "diag-$thu.json.gz"), bodies.keys.toList())
+        fun madeAt(name: String): String {
+            val raw = String(java.util.zip.GZIPInputStream(bodies.getValue(name).inputStream()).readBytes(), Charsets.UTF_8)
+            return (Json.parse(raw) as Map<*, *>)["generated_at"].toString()
+        }
+        assertTrue("Wednesday's own evening report, not one made on Thursday", madeAt("diag-$wed.json.gz").startsWith("$wed"))
+        assertTrue(madeAt("diag-$thu.json.gz").startsWith("$thu"))
+        // The erase takes the kept reports too.
+        assertTrue(GitHubSync.filesForErase().any { it.name == "diag-kept" })
+    }
+
     @Test fun anUploadNowBeforeTheCloseIsPartialUntilTheEveningRun() {
         // 14 Oct review of G3: "Upload now" during the day sends the day so far; the card must not take it for the day's file.
         ready()

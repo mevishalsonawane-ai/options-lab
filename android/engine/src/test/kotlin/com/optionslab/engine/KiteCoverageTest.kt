@@ -313,6 +313,32 @@ class KiteCoverageTest {
         assertEquals(4, both.size)
     }
 
+    @Test fun `overnight fallback stop when the own stop cannot rest`() {
+        // A long whose stop is already through the price (6 Nov): the nearest level Zerodha takes, 0.30% below, on the tick, down.
+        assertEquals(99.70, Kite.overnightFallbackStop(true, 100.0, 105.0, 0.05)!!, 1e-9)
+        assertEquals(99.70, Kite.overnightFallbackStop(true, 100.0, 100.0, 0.05)!!, 1e-9)
+        assertEquals(99.70, Kite.overnightFallbackStop(true, 100.0, 99.8, 0.05)!!, 1e-9, "within 0.25%: refused, so the fallback")
+        assertEquals(100.30, Kite.overnightFallbackStop(false, 100.0, 95.0, 0.05)!!, 1e-9, "a short: above, on the tick, up")
+        assertEquals(128.40, Kite.overnightFallbackStop(true, 128.83, 140.0, 0.05)!!, 1e-9, "128.4435 down to 128.40")
+        // A stop that rests as it is: no fallback.
+        assertNull(Kite.overnightFallbackStop(true, 100.0, 90.0, 0.05))
+        assertNull(Kite.overnightFallbackStop(false, 100.0, 110.0, 0.05))
+        assertNull(Kite.overnightFallbackStop(true, 100.0, null, 0.05))
+        assertNull(Kite.overnightFallbackStop(true, 0.0, 105.0, 0.05))
+        assertNull(Kite.overnightFallbackStop(true, Double.NaN, 105.0, 0.05))
+        assertNull(Kite.overnightFallbackStop(true, 100.0, 105.0, 0.0))
+        // A tiny premium: the tick moves the stop outward (never inside the gap), and never to zero or below.
+        assertEquals(0.05, Kite.overnightFallbackStop(true, 0.10, 0.20, 0.05)!!, 1e-9)
+        assertNull(Kite.overnightFallbackStop(true, 0.05, 0.20, 0.05), "a 0.05 premium has no level below it")
+        // The fallback always passes protect's own checks (the GTT it builds is accepted).
+        for (last in listOf(3.05, 17.4, 100.0, 128.83, 873.85, 2411.55)) {
+            val fb = Kite.overnightFallbackStop(true, last, last + 1, 0.05) ?: continue
+            assertEquals(emptyList(), Kite.protect(spec, "NRML", 65, last, fb, null).second, "long at $last")
+            val fs = Kite.overnightFallbackStop(false, last, last - 1, 0.05) ?: continue
+            assertEquals(emptyList(), Kite.protect(spec, "NRML", -65, last, fs, null).second, "short at $last")
+        }
+    }
+
     @Test fun `protect builds single and two-leg GTTs with slippage on the filling side`() {
         val (long, e1) = Kite.protect(spec, "NRML", 130, 100.0, 90.02, 120.0)
         assertEquals(emptyList(), e1)

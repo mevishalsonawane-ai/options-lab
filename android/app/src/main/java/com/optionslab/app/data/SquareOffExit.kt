@@ -75,6 +75,27 @@ internal object SquareOffExit {
                     placed += Broker.placeOrder(o, exit = true).also { runCatching { Strategies.tagOwner("kite:$it", origin) } }
                 } catch (e: Exception) {
                     if (Broker.definite(e)) {
+                        // 10 Nov (the 3 Nov refusal, for an exit): MARKET blocked on a low-open-interest contract - the same slice once as a
+                        // LIMIT at the bid (never more than 1% under the last; [com.optionslab.engine.orb.LiveMirror.blockedMarketExit]). Not
+                        // filled in 10 s: cancelled, so it never sits as "cover" while the price moves away, and said as a refusal (the next
+                        // pass prices it again). A lost reply is counted by the next pass's read of the working orders, as every exit here.
+                        if (com.optionslab.engine.orb.LiveMirror.marketBlocked(e.message)) {
+                            val key = "${p.exchange}:${p.symbol}"
+                            val q = runCatching { Broker.quotes(listOf(key))[key] }.getOrNull()
+                            val limit = com.optionslab.engine.orb.LiveMirror.blockedMarketExit(o, q?.last, q?.ask, q?.bid)
+                            val sent = limit?.let { l -> runCatching { Broker.placeOrder(l, exit = true) }.getOrNull() }
+                            if (sent != null) {
+                                runCatching { Strategies.tagOwner("kite:$sent", origin) }
+                                var f = runCatching { Broker.awaitOrder(sent, 10_000) }.getOrNull()
+                                if (f?.status !in DONE) { runCatching { Broker.cancel(sent) }; f = runCatching { Broker.orderState(sent) }.getOrNull() ?: f }
+                                // Counted as placed when any of it filled or it may still be working; cancelled unfilled: said, next pass.
+                                if (f == null || f.filled > 0 || f.status !in DONE) { placed += sent; continue }
+                                tell("unfilled ${p.symbol}", "Zerodha blocks MARKET orders on ${p.symbol} (low open interest), and its $exitName exit as a LIMIT at " +
+                                    "%.2f did not fill in 10 s, so it was cancelled. Retrying every pass until the close; close it yourself if it keeps failing."
+                                        .format(java.util.Locale.ENGLISH, limit?.price ?: 0.0))
+                                break
+                            }
+                        }
                         tell("rejected ${p.symbol} ${e.message}", "Zerodha refused the $exitName exit of ${p.symbol}: ${e.message}. Retrying every pass until the close; close it yourself if it keeps failing.")
                         break
                     }

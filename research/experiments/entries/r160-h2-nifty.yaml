@@ -1,0 +1,30 @@
+id: r160-h2-nifty
+title: 'R160 H2: is the move from the late level to the next open predictable: NIFTY'
+family: market-facts
+date: '2026-11-11'
+doc: research/hunt/r160_cas_gap/results/report.md
+hypothesis: An option bought at 15:2x-15:3x is priced off the late level, so a buyer gains only if R = ln(open / late level)
+  has the sign of D (slope != 0).
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (built 13-20 Oct 2026, to 19 Oct 2026): index_1m NIFTY/BANKNIFTY/SENSEX
+  2025-2026, index_daily, fut_1m_live_index, options_rolling_1m NIFTY_WEEK/BANKNIFTY_MONTH/SENSEX_WEEK 2025-2026 (sha256 in
+  PREREG section 2); bars to 15:29 only'
+period:
+  design: 'none: POST 3 Aug - 16 Oct 2026 entry days (53 nights) is the test sample, read once 11 Nov 2026'
+  holdout: none locked; control PRE 1 Jan 2025 - 31 Jul 2026 (389-392 nights); forward log per PREREG 9
+instruments:
+- NIFTY
+features:
+- 'signal source: the index read through its derivatives (option put-call parity over ATM-2..+2, futures as a check), late
+  level 15:20-15:27 minus the 14:30-14:59 basis, vs the official close; no option chart for direction'
+model_or_rule: OLS slope of R on D, two-sided permutation p (100,000); identical to H1's slope minus 1 (NOTES A3)
+settings: research/hunt/r160_cas_gap/cfg.py (frozen in PREREG)
+prereg: research/hunt/r160_cas_gap/PREREG.md
+variants_tried: 3
+results:
+  summary: 'POST n 53, slope -0.5255, r -0.2658, rho -0.2745, perm p 0.0545, hit 0.3261 of 46; BH q 0.0908 (R160), 1.0 (m
+    = 2164). PRE n 392, slope -0.4744, r -0.0546, rho -0.1153, perm p 0.2699, hit 0.4684 of 237. Futures-implied POST n 53,
+    slope -0.5009, r -0.2929, rho -0.3123, perm p 0.0330, hit 0.3617 of 47. Negative: the open gives back about half the late
+    move, so buying toward the correction at the late price has no edge.'
+  costs: none (index measure, no trade)
+holdout_read: true
+verdict: rejected
