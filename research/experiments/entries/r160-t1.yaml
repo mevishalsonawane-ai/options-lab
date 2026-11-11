@@ -1,0 +1,33 @@
+id: r160-t1
+title: 'R160 T1: buy the ATM option toward the expected auction-gap correction at 15:28, sell 09:16'
+family: overnight
+date: '2026-11-11'
+doc: research/hunt/r160_cas_gap/results/report.md
+hypothesis: Buying the side of D (call if the late level is above the official close) pays after real costs and beats a random
+  side.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (built 13-20 Oct 2026, to 19 Oct 2026): index_1m NIFTY/BANKNIFTY/SENSEX
+  2025-2026, index_daily, fut_1m_live_index, options_rolling_1m NIFTY_WEEK/BANKNIFTY_MONTH/SENSEX_WEEK 2025-2026 (sha256 in
+  PREREG section 2); bars to 15:29 only'
+period:
+  design: 'none: POST 3 Aug - 16 Oct 2026 entry days (53 nights) is the test sample, read once 11 Nov 2026'
+  holdout: none locked; control PRE 1 Jan 2025 - 31 Jul 2026 (389-392 nights); forward log per PREREG 9
+instruments:
+- NIFTY
+features:
+- 'signal source: the index read through its derivatives (option put-call parity over ATM-2..+2, futures as a check), late
+  level 15:20-15:27 minus the 14:30-14:59 basis, vs the official close; no option chart for direction'
+model_or_rule: POST nights with |D| >= 5 bps, not expiry day; ATM weekly option at the 15:28 open (proxy for 15:3x), 1 lot
+  (65), sold at the 09:16 open next session
+settings: research/hunt/r160_cas_gap/cfg.py (frozen in PREREG)
+prereg: research/hunt/r160_cas_gap/PREREG.md
+variants_tried: 1
+results:
+  summary: '30 trades (13 calls), Rs -32 a trade, win 47%, total Rs -967, worst Rs -5,068, max DD Rs -24,363; 1.5x spread
+    Rs -44 a trade; random-side twin p 0.176 (twin mean total Rs -15,002); BH q 1.0 (m = 2164). R146''s Night (R3) NIFTY holdout:
+    Rs 480 a trade (84 trades). Gate: H1 supported, H2 > 0, net > 0 at 1.5x spread, twin p <= 0.05, >= 20 trades. Failed.'
+  costs: 'app fills (+-5 bps), dated charges (Costs(''dated''): Rs 20 an order, STT 0.15%, exchange, SEBI, stamp, GST), 0.16%
+    half-spread on both legs; stress 1.5x spread'
+holdout_read: true
+verdict: rejected
+notes: 'The entry is a proxy: the real entry would be after the official close is known (15:30-15:39), and those bars are
+  not in the lake.'

@@ -1,0 +1,158 @@
+{
+ "NIFTY": {
+  "opt_drop_3aug": {
+   "n": 52,
+   "slope": 0.531,
+   "pearson": 0.219,
+   "spearman": 0.183,
+   "p": 0.0583,
+   "hit": [
+    0.5111111111111111,
+    45
+   ]
+  },
+  "fut_drop_3aug": {
+   "n": 52,
+   "slope": 0.556,
+   "pearson": 0.276,
+   "spearman": 0.195,
+   "p": 0.0255,
+   "hit": [
+    0.5217391304347826,
+    46
+   ]
+  },
+  "opt_nonexpiry_drop3aug": {
+   "n": 41,
+   "slope": 0.598,
+   "pearson": 0.231,
+   "spearman": 0.128,
+   "p": 0.0772,
+   "hit": [
+    0.5,
+    36
+   ]
+  },
+  "expiry_opt_vs_fut": {
+   "n": 11,
+   "mean_abs_D_opt": 13.6,
+   "mean_abs_D_fut": 21.0,
+   "corr": 0.59
+  },
+  "nonexpiry_opt_vs_fut": {
+   "n": 42,
+   "mean_abs_D_opt": 12.1,
+   "mean_abs_D_fut": 12.7,
+   "corr": 0.99
+  },
+  "expiry_fut_H1": {
+   "n": 11,
+   "slope": 0.537,
+   "pearson": 0.414
+  }
+ },
+ "BANKNIFTY": {
+  "opt_drop_3aug": {
+   "n": 52,
+   "slope": 0.554,
+   "pearson": 0.315,
+   "spearman": 0.283,
+   "p": 0.0206,
+   "hit": [
+    0.58,
+    50
+   ]
+  },
+  "fut_drop_3aug": {
+   "n": 52,
+   "slope": 0.531,
+   "pearson": 0.304,
+   "spearman": 0.241,
+   "p": 0.024,
+   "hit": [
+    0.5833333333333334,
+    48
+   ]
+  },
+  "opt_nonexpiry_drop3aug": {
+   "n": 50,
+   "slope": 0.559,
+   "pearson": 0.32,
+   "spearman": 0.294,
+   "p": 0.0208,
+   "hit": [
+    0.5833333333333334,
+    48
+   ]
+  },
+  "expiry_opt_vs_fut": {
+   "n": 2,
+   "mean_abs_D_opt": 8.0,
+   "mean_abs_D_fut": 15.0,
+   "corr": NaN
+  },
+  "nonexpiry_opt_vs_fut": {
+   "n": 51,
+   "mean_abs_D_opt": 17.3,
+   "mean_abs_D_fut": 16.7,
+   "corr": 1.0
+  },
+  "expiry_fut_H1": {
+   "n": 2,
+   "slope": NaN,
+   "pearson": NaN
+  }
+ },
+ "SENSEX": {
+  "opt_drop_3aug": {
+   "n": 52,
+   "slope": 0.557,
+   "pearson": 0.217,
+   "spearman": 0.191,
+   "p": 0.0641,
+   "hit": [
+    0.5,
+    44
+   ]
+  },
+  "fut_drop_3aug": {
+   "n": 52,
+   "slope": 0.539,
+   "pearson": 0.299,
+   "spearman": 0.245,
+   "p": 0.0161,
+   "hit": [
+    0.5869565217391305,
+    46
+   ]
+  },
+  "opt_nonexpiry_drop3aug": {
+   "n": 41,
+   "slope": 0.559,
+   "pearson": 0.211,
+   "spearman": 0.131,
+   "p": 0.0893,
+   "hit": [
+    0.5151515151515151,
+    33
+   ]
+  },
+  "expiry_opt_vs_fut": {
+   "n": 11,
+   "mean_abs_D_opt": 15.7,
+   "mean_abs_D_fut": 23.5,
+   "corr": 0.77
+  },
+  "nonexpiry_opt_vs_fut": {
+   "n": 42,
+   "mean_abs_D_opt": 9.0,
+   "mean_abs_D_fut": 12.3,
+   "corr": 0.87
+  },
+  "expiry_fut_H1": {
+   "n": 11,
+   "slope": 0.997,
+   "pearson": 0.636
+  }
+ }
+}

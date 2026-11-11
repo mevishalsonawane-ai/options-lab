@@ -1,0 +1,29 @@
+id: r160-a-nifty
+title: 'R160 (a): the 15:14-15:27 late move predicting the next open: NIFTY'
+family: market-facts
+date: '2026-11-11'
+doc: research/hunt/r160_cas_gap/results/report.md
+hypothesis: The derivatives' move during the frozen print (late level vs the 15:14 print) predicts the move from the late
+  level to the next open.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (built 13-20 Oct 2026, to 19 Oct 2026): index_1m NIFTY/BANKNIFTY/SENSEX
+  2025-2026, index_daily, fut_1m_live_index, options_rolling_1m NIFTY_WEEK/BANKNIFTY_MONTH/SENSEX_WEEK 2025-2026 (sha256 in
+  PREREG section 2); bars to 15:29 only'
+period:
+  design: 'none: POST 3 Aug - 16 Oct 2026 entry days (53 nights) is the test sample, read once 11 Nov 2026'
+  holdout: none locked; control PRE 1 Jan 2025 - 31 Jul 2026 (389-392 nights); forward log per PREREG 9
+instruments:
+- NIFTY
+features:
+- 'signal source: the index read through its derivatives (option put-call parity over ATM-2..+2, futures as a check), late
+  level 15:20-15:27 minus the 14:30-14:59 basis, vs the official close; no option chart for direction'
+model_or_rule: OLS slope of R on M = ln(late level / 15:14 index), two-sided permutation p; G on M also reported
+settings: research/hunt/r160_cas_gap/cfg.py (frozen in PREREG)
+prereg: research/hunt/r160_cas_gap/PREREG.md
+variants_tried: 2
+results:
+  summary: POST R~M n 53, slope -0.5894, r -0.1724, rho -0.129, perm p 0.2132, hit 0.4419 of 43; BH q 0.2578 (R160), 1.0 (m
+    = 2164). POST G~M n 53, slope -0.6229, r -0.1834, rho -0.1624, perm p 0.1860, hit 0.4419 of 43. PRE R~M n 391, slope -0.1594,
+    r -0.0225, rho -0.0628, perm p 0.6478, hit 0.5 of 288.
+  costs: none (index measure, no trade)
+holdout_read: true
+verdict: rejected

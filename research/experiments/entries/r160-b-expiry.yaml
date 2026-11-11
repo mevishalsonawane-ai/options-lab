@@ -1,0 +1,31 @@
+id: r160-b-expiry
+title: 'R160 (b): expiry days under the closing auction, descriptive'
+family: market-facts
+date: '2026-11-11'
+doc: research/hunt/r160_cas_gap/results/report.md
+hypothesis: Describe how far the expiring options' freeze-time level is from the official close (the settlement proxy) on
+  expiry days.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (built 13-20 Oct 2026, to 19 Oct 2026): index_1m NIFTY/BANKNIFTY/SENSEX
+  2025-2026, index_daily, fut_1m_live_index, options_rolling_1m NIFTY_WEEK/BANKNIFTY_MONTH/SENSEX_WEEK 2025-2026 (sha256 in
+  PREREG section 2); bars to 15:29 only'
+period:
+  design: 'none: POST 3 Aug - 16 Oct 2026 entry days (53 nights) is the test sample, read once 11 Nov 2026'
+  holdout: none locked; control PRE 1 Jan 2025 - 31 Jul 2026 (389-392 nights); forward log per PREREG 9
+instruments:
+- NIFTY
+- BANKNIFTY
+- SENSEX
+features:
+- 'signal source: the index read through its derivatives (option put-call parity over ATM-2..+2, futures as a check), late
+  level 15:20-15:27 minus the 14:30-14:59 basis, vs the official close; no option chart for direction'
+model_or_rule: descriptive only (PREREG 5 (b)); no pass / fail
+settings: research/hunt/r160_cas_gap/cfg.py (frozen in PREREG)
+prereg: research/hunt/r160_cas_gap/PREREG.md
+variants_tried: null
+results:
+  summary: 'NIFTY 11 expiry days: mean |D| 13.55 bps vs 12.06 on 42 other days; on expiry days the expiring options'' level
+    tracked the close more than futures did (corr with futures 0.59 vs 0.99 on other days; 15 Sep: +1.6 bps vs +34.7). SENSEX
+    11 expiry days: 15.7 vs 9.05 bps.'
+  costs: none
+holdout_read: null
+verdict: not-a-test

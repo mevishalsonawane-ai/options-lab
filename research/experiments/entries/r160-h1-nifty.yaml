@@ -1,0 +1,33 @@
+id: r160-h1-nifty
+title: 'R160 H1: the next open moves back toward the late (auction-free) level: NIFTY'
+family: market-facts
+date: '2026-11-11'
+doc: research/hunt/r160_cas_gap/results/report.md
+hypothesis: Since the closing auction (3 Aug 2026), the next official open moves from the official close back toward where
+  the index's derivatives traded at 15:20-15:27 (slope of gap on dislocation > 0).
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (built 13-20 Oct 2026, to 19 Oct 2026): index_1m NIFTY/BANKNIFTY/SENSEX
+  2025-2026, index_daily, fut_1m_live_index, options_rolling_1m NIFTY_WEEK/BANKNIFTY_MONTH/SENSEX_WEEK 2025-2026 (sha256 in
+  PREREG section 2); bars to 15:29 only'
+period:
+  design: 'none: POST 3 Aug - 16 Oct 2026 entry days (53 nights) is the test sample, read once 11 Nov 2026'
+  holdout: none locked; control PRE 1 Jan 2025 - 31 Jul 2026 (389-392 nights); forward log per PREREG 9
+instruments:
+- NIFTY
+features:
+- 'signal source: the index read through its derivatives (option put-call parity over ATM-2..+2, futures as a check), late
+  level 15:20-15:27 minus the 14:30-14:59 basis, vs the official close; no option chart for direction'
+model_or_rule: OLS slope of G = ln(next open / close) on D = ln(late level / close), one-sided permutation p (100,000)
+settings: research/hunt/r160_cas_gap/cfg.py (frozen in PREREG)
+prereg: research/hunt/r160_cas_gap/PREREG.md
+variants_tried: 3
+results:
+  summary: 'POST n 53, slope 0.4745, r 0.2416, rho 0.2142, perm p 0.0455, hit 0.5217 of 46; BH q 0.0908 within R160 (10),
+    1.0 with m = 2164. PRE control n 392, slope 0.5256, r 0.0605, rho 0.0474, perm p 0.1101, hit 0.5316 of 237; slope POST
+    - PRE 95% CI [-0.91, 0.95]. Mean |D| POST 12.37 bps vs PRE 4.82 bps (53 vs 392 nights). Futures-implied: n 53, slope 0.4991,
+    r 0.2919, rho 0.2279, perm p 0.0209, hit 0.5319 of 47. 09:20 instead of the open: n 53, slope 0.7487, r 0.3308, rho 0.3357,
+    perm p 0.0099, hit 0.6304 of 46. Bar: slope >= 0.25, BH q (m incl. earlier tests) <= 0.10, hit >= 55%. Not supported.'
+  costs: none (index measure, no trade)
+holdout_read: true
+verdict: rejected
+notes: About half of the dislocation is corrected at the open, but the same was true before the auction (PRE slope similar);
+  only the size of the dislocation is new.
