@@ -1,0 +1,30 @@
+id: r161-night-frozen
+title: 'R161: does the frozen index print (15:15-15:28 since 3 Aug 2026) change Night (R3)''s 15:20 decision?'
+family: diagnosis
+date: '2026-11-11'
+doc: research/hunt/r161_night_frozen/results/report.md
+hypothesis: Since the closing auction, Night's 15:19 index close is the frozen 15:14 value; reading the live market (option-implied
+  / futures) instead would change its index condition or strike on materially more nights than measurement noise.
+data_version: R160's Drive lake files (to 19 Oct 2026; sha256 in research/hunt/r160_cas_gap/PREREG.md section 2)
+period:
+  design: 'POST 3 Aug - 16 Oct 2026 (53 nights) vs PRE 1 Jan 2025 - 31 Jul 2026 (392 nights, the noise floor)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index (A: 15:19 bar close; B: option-implied median 15:17-15:19 less the 14:30-14:59 basis, futures as a
+  check); breadth and OI not applied'
+model_or_rule: Night's index condition (loc >= 0.6 and up / loc <= 0.4 and down) and ATM strike under A vs B; flips priced on Night's
+  1-ITM contract 15:20 -> 09:16
+settings: research/hunt/r161_night_frozen/study.py (frozen in PREREG)
+prereg: research/hunt/r161_night_frozen/PREREG.md
+variants_tried: null
+results:
+  summary: 'NIFTY POST 53 nights: mean |A-B| 4.0 bps, condition differs 15.1% (PRE 392 nights: 4.8 bps, 8.2%), strike differs 22.6%
+    (PRE 24.0%); BANKNIFTY POST 4.4 bps, 5.7% (PRE 4.8 bps, 5.4%), strike 24.5% (23.2%). Futures: 17.0% / 9.4%. Priced flips (upper
+    bound, no breadth/OI): NIFTY 6 priced, live-reading trades Rs -7,851 vs frozen Rs +344; BANKNIFTY 3 priced, Rs -114 vs Rs -1,075.
+    Bar (flip rate +5 pp AND |A-B| x2): not met (NIFTY +6.9 pp but ratio 0.84; BANKNIFTY +0.3 pp, 0.93). No change.'
+  costs: 'flips priced with app fills (+-5 bps), dated charges, 0.16% half-spread both legs'
+holdout_read: null
+verdict: not-a-test
+notes: A measurement of an input, not a prediction; no significance test (PREREG 5). Breadth (also stale under CAS) not checkable.

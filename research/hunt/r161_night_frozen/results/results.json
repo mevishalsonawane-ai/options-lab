@@ -1,0 +1,189 @@
+{
+ "study": "R161",
+ "prereg_sha256": "a88cb238523a76570e422a910de961b107bdb5aa557df9e5b4c52577febf893d",
+ "run_utc": "2026-11-11T19:24:43+00:00",
+ "und": {
+  "NIFTY": {
+   "POST": {
+    "nights": 53,
+    "mean_abs_gap_bps": 4.03,
+    "p90_abs_gap_bps": 8.0,
+    "flip_rate": 0.1509,
+    "flips": {
+     "A_only": 1,
+     "B_only": 7,
+     "opposite": 0
+    },
+    "strike_rate": 0.2264,
+    "A_signals": 35
+   },
+   "POST_fut": {
+    "nights": 53,
+    "mean_abs_gap_bps": 4.53,
+    "flip_rate": 0.1698,
+    "flips": {
+     "A_only": 3,
+     "B_only": 6,
+     "opposite": 0
+    }
+   },
+   "PRE": {
+    "nights": 392,
+    "mean_abs_gap_bps": 4.78,
+    "p90_abs_gap_bps": 10.27,
+    "flip_rate": 0.0816,
+    "flips": {
+     "A_only": 19,
+     "B_only": 13,
+     "opposite": 0
+    },
+    "strike_rate": 0.2398,
+    "A_signals": 280
+   },
+   "post_flips_priced": [
+    {
+     "d": "2026-08-06",
+     "kind": "B_only",
+     "A": 0,
+     "B": 1,
+     "gap_bps": 13.4,
+     "net_A": 0,
+     "net_B": -3153
+    },
+    {
+     "d": "2026-08-07",
+     "kind": "A_only",
+     "A": -1,
+     "B": 0,
+     "gap_bps": 7.8,
+     "net_A": 344,
+     "net_B": 0
+    },
+    {
+     "d": "2026-08-28",
+     "kind": "B_only",
+     "A": 0,
+     "B": 1,
+     "gap_bps": 5.8,
+     "net_A": 0,
+     "net_B": -6961
+    },
+    {
+     "d": "2026-09-17",
+     "kind": "B_only",
+     "A": 0,
+     "B": 1,
+     "gap_bps": 4.8,
+     "net_A": 0,
+     "net_B": 652
+    },
+    {
+     "d": "2026-09-18",
+     "kind": "B_only",
+     "A": 0,
+     "B": 1,
+     "gap_bps": 5.2,
+     "net_A": 0,
+     "net_B": -766
+    },
+    {
+     "d": "2026-10-07",
+     "kind": "B_only",
+     "A": 0,
+     "B": -1,
+     "gap_bps": -16.5,
+     "net_A": 0,
+     "net_B": 2377
+    }
+   ],
+   "post_flips_net": {
+    "priced": 6,
+    "A_total": 344,
+    "B_total": -7851,
+    "not_tradable": 2
+   },
+   "bar": {
+    "flip_rate_excess_pp": 6.93,
+    "gap_ratio": 0.84
+   }
+  },
+  "BANKNIFTY": {
+   "POST": {
+    "nights": 53,
+    "mean_abs_gap_bps": 4.43,
+    "p90_abs_gap_bps": 7.71,
+    "flip_rate": 0.0566,
+    "flips": {
+     "A_only": 1,
+     "B_only": 2,
+     "opposite": 0
+    },
+    "strike_rate": 0.2453,
+    "A_signals": 31
+   },
+   "POST_fut": {
+    "nights": 53,
+    "mean_abs_gap_bps": 4.77,
+    "flip_rate": 0.0943,
+    "flips": {
+     "A_only": 3,
+     "B_only": 2,
+     "opposite": 0
+    }
+   },
+   "PRE": {
+    "nights": 392,
+    "mean_abs_gap_bps": 4.76,
+    "p90_abs_gap_bps": 10.48,
+    "flip_rate": 0.0536,
+    "flips": {
+     "A_only": 9,
+     "B_only": 12,
+     "opposite": 0
+    },
+    "strike_rate": 0.2321,
+    "A_signals": 286
+   },
+   "post_flips_priced": [
+    {
+     "d": "2026-08-07",
+     "kind": "A_only",
+     "A": -1,
+     "B": 0,
+     "gap_bps": 5.2,
+     "net_A": -1075,
+     "net_B": 0
+    },
+    {
+     "d": "2026-09-21",
+     "kind": "B_only",
+     "A": 0,
+     "B": 1,
+     "gap_bps": 4.7,
+     "net_A": 0,
+     "net_B": 837
+    },
+    {
+     "d": "2026-10-14",
+     "kind": "B_only",
+     "A": 0,
+     "B": -1,
+     "gap_bps": -7.7,
+     "net_A": 0,
+     "net_B": -951
+    }
+   ],
+   "post_flips_net": {
+    "priced": 3,
+    "A_total": -1075,
+    "B_total": -114,
+    "not_tradable": 0
+   },
+   "bar": {
+    "flip_rate_excess_pp": 0.3,
+    "gap_ratio": 0.93
+   }
+  }
+ },
+ "recommend_shadow": false
+}
