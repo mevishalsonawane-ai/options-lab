@@ -1,0 +1,40 @@
+id: r162-r72-be10-3lot
+title: 'R162 BE10 on R72 Breadth Donchian (4 of 5 indices break), 3 lots: stop to breakeven (net Rs 0) after +10%'
+family: trade-management
+date: '2026-11-12'
+doc: research/hunt/r162_donchian_exits/results/report.md
+hypothesis: 'Boss (12 Nov): raise the Donchian arms'' win rate without capping big winners. This rule (B breakeven): stop
+  to breakeven (net Rs 0) after +10%; entries and other exits as today. Gates: win rate up >= 5 points and net not lower than
+  today''s at the same lots in walk-forward and final; net > 0 in design, walk-forward and final; twin p (larger of net and
+  win) BH q <= 0.10 with m = 1349; >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 12 Nov 2026; R51
+  Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: '2026-04-01..2026-10-13 read once by R162 (already read by R51-R160: weak evidence)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (Donchian 20, 4 of 5) (unchanged); only the option''s exit on the premium
+  changes'
+model_or_rule: R72 Breadth Donchian (4 of 5 indices break) with stop to breakeven (net Rs 0) after +10%, 3 lots
+settings: research/hunt/r162_donchian_exits/r162cfg.py RULES, LOTS; PREREG.md section 2
+prereg: research/hunt/r162_donchian_exits/PREREG.md
+variants_tried: 102
+results:
+  summary: 'Design: 3088 trades, win 52.2% (break-even 48.9%), net Rs 8,45,808, worst day -Rs 1,74,444, max DD Rs 4,96,688
+    (today 47.5%, Rs 9,34,016). Walk-forward: 2250 trades, win 53.4% (break-even 47.6%), net Rs 10,60,273, worst day -Rs 74,414,
+    max DD Rs 2,29,586 (today 49.7%, Rs 12,13,421). Final: 1203 trades, win 49.9% (break-even 43.9%), net Rs 5,99,178, worst
+    day -Rs 66,325, max DD Rs 1,72,651 (today 46.5%, Rs 6,25,048); twin p net 1.0, win 0.002, BH q 1.0 (R162 alone 1.0). Fails:
+    wf: win rate not up 5 points; wf: net lower than today''s; final: win rate not up 5 points; final: net lower than today''s;
+    BH q 1 > 0.1.'
+  costs: 'dated Zerodha charges on the whole quantity (scale-out: one buy order, one sell order per part), R17 fills (slippage
+    from the 5-minute volume per position; stops -10 bps and 2x the half-spread, gaps at the open), limit targets at their
+    price'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes in the app.

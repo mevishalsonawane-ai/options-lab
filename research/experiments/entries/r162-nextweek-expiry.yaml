@@ -1,0 +1,29 @@
+id: r162-nextweek-expiry
+title: 'R162 G: next-week expiry on expiry / near-expiry days (not testable)'
+family: option-structure
+date: '2026-11-12'
+doc: research/hunt/r162_donchian_exits/results/report.md
+hypothesis: Buy the next-week expiry instead of the nearest on expiry / near-expiry days (Boss, 12 Nov).
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 12 Nov 2026; R51
+  Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (unchanged)'
+model_or_rule: next-week contract on (near-)expiry days
+settings: PREREG.md section 2 G
+prereg: research/hunt/r162_donchian_exits/PREREG.md
+variants_tried: null
+results:
+  summary: 'Not run: the lake holds only the nearest (WEEK) and monthly (MONTH) series, so there is no next-week contract,
+    and the arms never trade the index''s own expiry day.'
+  costs: none (not run)
+holdout_read: false
+verdict: not-a-test
+notes: Needs a next-week option series in the lake.

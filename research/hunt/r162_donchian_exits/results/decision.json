@@ -1,0 +1,1489 @@
+{
+ "R72:SO8@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R72:SO8@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.54 > 0.1"
+  ],
+  "p": 0.006,
+  "p_net": 0.006,
+  "p_win": 0.002,
+  "q_all": 0.5396,
+  "q_r162": 0.0408
+ },
+ "R72:SO10@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R72:SO10@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R72:SO15@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R72:SO15@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R72:BE10@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:BE10@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:BE10@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:BE15@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.2874,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:BE15@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.1836,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:BE15@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.2515,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:BE20@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.996,
+  "p_net": 0.996,
+  "p_win": 0.3313,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:BE20@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998,
+  "p_net": 0.998,
+  "p_win": 0.3473,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:BE20@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.3094,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:LF1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.9381,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:LF1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.9721,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:LF1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.9701,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:LF2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.996,
+  "p_net": 0.996,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:LF2@2": {
+  "passed": false,
+  "fails": [
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.992,
+  "p_net": 0.992,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:LF2@3": {
+  "passed": false,
+  "fails": [
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998,
+  "p_net": 0.998,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:T20@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R72:T20@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R72:T20@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R72:T40@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.992,
+  "p_net": 0.4192,
+  "p_win": 0.992,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:T40@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.3912,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:T40@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.3673,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:T45@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9681,
+  "p_net": 0.9681,
+  "p_win": 0.7206,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:T45@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.976,
+  "p_net": 0.976,
+  "p_win": 0.8583,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:T45@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.978,
+  "p_net": 0.978,
+  "p_win": 0.8782,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:NIP30@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:NIP30@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:NIP30@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:ATM@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.8603,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:ATM@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.992,
+  "p_net": 0.8862,
+  "p_win": 0.992,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:ATM@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998,
+  "p_net": 0.8842,
+  "p_win": 0.998,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:ITM2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5888,
+  "p_net": 0.5888,
+  "p_win": 0.01,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:ITM2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5749,
+  "p_net": 0.5749,
+  "p_win": 0.0359,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:ITM2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5589,
+  "p_net": 0.5589,
+  "p_win": 0.0379,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:D60@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.5569,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:D60@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.5269,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:D60@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.6068,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:D70@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.2874,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:D70@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.2754,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:D70@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.3054,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:IXR@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:IXR@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:IXR@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:IXA@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:IXA@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R72:IXA@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:SO8@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R51:SO8@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R51:SO10@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R51:SO10@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R51:SO15@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R51:SO15@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.193 > 0.1"
+  ],
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.002,
+  "q_all": 0.1927,
+  "q_r162": 0.0146
+ },
+ "R51:BE10@1": {
+  "passed": false,
+  "fails": [
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:BE10@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:BE10@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:BE15@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.3194,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:BE15@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.2455,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:BE15@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.7146,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:BE20@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998,
+  "p_net": 0.998,
+  "p_win": 0.1238,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:BE20@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.02,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:BE20@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998,
+  "p_net": 0.998,
+  "p_win": 0.0259,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:LF1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.986,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:LF1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.998,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:LF1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.996,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:LF2@1": {
+  "passed": false,
+  "fails": [
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:LF2@2": {
+  "passed": false,
+  "fails": [
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.996,
+  "p_net": 0.996,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:LF2@3": {
+  "passed": false,
+  "fails": [
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.994,
+  "p_net": 0.994,
+  "p_win": 0.002,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:T20@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "final: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.012,
+  "p_net": 0.006,
+  "p_win": 0.012,
+  "q_all": 1.0,
+  "q_r162": 0.0765
+ },
+ "R51:T20@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.0359,
+  "p_net": 0.022,
+  "p_win": 0.0359,
+  "q_all": 1.0,
+  "q_r162": 0.2034
+ },
+ "R51:T20@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.024,
+  "p_net": 0.008,
+  "p_win": 0.024,
+  "q_all": 1.0,
+  "q_r162": 0.144
+ },
+ "R51:T40@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.994,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:T40@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:T40@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.998,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:T45@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.8663,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:T45@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.9461,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:T45@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.9581,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:NIP30@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "final: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:NIP30@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:NIP30@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:ATM@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998,
+  "p_net": 0.996,
+  "p_win": 0.998,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:ATM@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.984,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:ATM@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 0.984,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:ITM2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.3014,
+  "p_net": 0.3014,
+  "p_win": 0.1437,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:ITM2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.3054,
+  "p_net": 0.3054,
+  "p_win": 0.1397,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:ITM2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.3413,
+  "p_net": 0.3413,
+  "p_win": 0.1956,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:D60@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.489,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:D60@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.4431,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:D60@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.477,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:D70@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.7345,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:D70@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.7605,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:D70@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 0.7365,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:IXR@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:IXR@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:IXR@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "final: win rate not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:IXA@1": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:IXA@2": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "R51:IXA@3": {
+  "passed": false,
+  "fails": [
+   "wf: win rate not up 5 points",
+   "wf: net lower than today's",
+   "final: win rate not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r162": 1.0
+ },
+ "_m": {
+  "r162": 102,
+  "prior": 1247,
+  "total": 1349
+ }
+}
