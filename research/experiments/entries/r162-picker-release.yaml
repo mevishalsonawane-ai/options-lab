@@ -1,0 +1,36 @@
+id: r162-picker-release
+title: 'R162 separate item: when a picker-skipped Donchian break releases its side'
+family: sizing-execution
+date: '2026-11-12'
+doc: research/hunt/r162_donchian_exits/results/report.md
+hypothesis: 'R152''s side note: in the app a picker-skipped break holds its side until its would-be exit. Compare release
+  at its exit (the app), after 10 / 5 minutes, at once (still counted in the cap), and R151''s removal before the walk. Descriptive,
+  not gated, not in BH.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 12 Nov 2026; R51
+  Amendment A clean stores
+period:
+  design: none (the pickers were trained on the design years)
+  holdout: 2026-04-01..2026-10-13 (second look)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (unchanged); R151''s app pickers'' scores'
+model_or_rule: release rules P-APP / P-N10 / P-N5 / P-IMM / P-R151, today's exits, 1 lot
+settings: r162cfg.py RELEASE; PREREG.md section 7
+prereg: research/hunt/r162_donchian_exits/PREREG.md
+variants_tried: 5
+results:
+  summary: 'R72: P-APP 603 trades, win 49.1%, net Rs 1,69,674; P-N5 607 trades, win 49.8%, net Rs 1,79,703; P-N10 603 trades,
+    win 49.8%, net Rs 1,80,006; P-IMM 613 trades, win 49.1%, net Rs 1,74,383; P-R151 652 trades, win 48.9%, net Rs 2,19,057
+    | R51: P-APP 653 trades, win 50.4%, net Rs 1,42,884; P-N5 655 trades, win 50.4%, net Rs 1,43,974; P-N10 652 trades, win
+    50.3%, net Rs 1,41,878; P-IMM 657 trades, win 50.5%, net Rs 1,47,459; P-R151 693 trades, win 49.9%, net Rs 1,59,040'
+  costs: 'dated Zerodha charges on the whole quantity (scale-out: one buy order, one sell order per part), R17 fills (slippage
+    from the 5-minute volume per position; stops -10 bps and 2x the half-spread, gaps at the open), limit targets at their
+    price'
+holdout_read: true
+verdict: inconclusive
+notes: Paper data only; descriptive. Nothing changes in the app.
