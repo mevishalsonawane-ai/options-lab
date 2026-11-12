@@ -1,0 +1,33 @@
+id: r167-r51-volp-f-3lot
+title: 'R167 VOLP-F on R51 Donchian 20 (+ Supertrend 10, 3), 3 lots: premium Chandelier (3 x the option''s ATR) (free (may
+  widen): paper / research only)'
+family: trade-management
+date: '2026-11-12'
+doc: research/hunt/r167_donchian_smart_exits/results/report.md
+hypothesis: 'Boss (12 Nov): make the stop and target follow volume, support / resistance and other data. premium Chandelier
+  (3 x the option''s ATR), re-evaluated every minute (free (may widen): paper / research only), raises the win rate >= 5 points
+  with net not lower than today''s exits in walk-forward and final, net > 0 in every period, beats random-exit twins (BH q
+  <= 0.10, m = 2664), >= 40 final trades.'
+data_version: the Drive / Dhan lake as R152 (R51 Amendment A clean stores) plus the lake's option OI and India VIX
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s unchanged Donchian entries); exit inputs: the held option''s own 1-minute ATR(14)
+  and closes (a premium stop)'
+model_or_rule: 'R51 Donchian 20 (+ Supertrend 10, 3) with VOLP-F: premium Chandelier (3 x the option''s ATR); 3 lot(s)'
+settings: research/hunt/r167_donchian_smart_exits/PREREG.md section 3 / Amendment A; r167lib.py; r167cfg.py
+prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
+variants_tried: null
+holdout_read: null
+verdict: proposed
+results:
+  summary: 'Not run: the data lake was not in the session''s container on 12 Nov 2026 (Dhan token expired, no Drive access,
+    no release). Code and tests are frozen; runs once the lake is in place.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (to be applied)
+notes: 'Free version (may widen a stop or extend a trade): paper / research only.'
