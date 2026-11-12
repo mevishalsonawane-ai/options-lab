@@ -1,0 +1,35 @@
+id: r167-r72-mom-f-3lot
+title: 'R167 MOM-F on R72 Breadth Donchian, 3 lots: 1-minute Supertrend turns against (free (may widen): paper / research
+  only)'
+family: trade-management
+date: '2026-11-12'
+doc: research/hunt/r167_donchian_smart_exits/results/report.md
+hypothesis: 'Boss (12 Nov): make the stop and target follow volume, support / resistance and other data. 1-minute Supertrend
+  turns against, re-evaluated every minute (free (may widen): paper / research only), raises the win rate >= 5 points with
+  net not lower than today''s exits in walk-forward and final, net > 0 in every period, beats random-exit twins (BH q <= 0.10,
+  m = 2664), >= 40 final trades.'
+data_version: the Drive / Dhan lake as R152 (R51 Amendment A clean stores) plus the lake's option OI and India VIX
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R167 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s unchanged Donchian entries); exit inputs: Supertrend (10, 3) on 1-minute index bars'
+model_or_rule: 'R72 Breadth Donchian with MOM-F: 1-minute Supertrend turns against; 3 lot(s)'
+settings: research/hunt/r167_donchian_smart_exits/PREREG.md section 3 / Amendment A; r167lib.py; r167cfg.py
+prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Walk-forward: 2102 trades, win 41.0% (today 49.7%), net Rs 1,427,139 (today Rs 1,213,421), worst day Rs -54,274,
+    max DD Rs 159,467. Final: 1154 trades, win 40.6% (today 46.5%), net Rs 604,873 (today Rs 625,048), worst day Rs -58,317,
+    max DD Rs 122,589. Twin p 1 (net 1, win 1), BH q 1 (m 2664). Fails: wf: win rate not up 5 points; final: win rate not
+    up 5 points; final: net lower than today''s; BH q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (stop sales -10 bps and 2x the half-spread, gaps at the open)
+notes: 'Free version (may widen a stop or extend a trade): paper / research only.'

@@ -1,0 +1,36 @@
+id: r167-r72-g2-t-3lot
+title: 'R167 G2-T on R72 Breadth Donchian, 3 lots: once +Rs 1,500, floor +Rs 500 trailing Rs 1,000 below the peak (tighten-only
+  (live-eligible after a shadow phase))'
+family: trade-management
+date: '2026-11-12'
+doc: research/hunt/r167_donchian_smart_exits/results/report.md
+hypothesis: 'Boss (12 Nov): make the stop and target follow volume, support / resistance and other data. once +Rs 1,500, floor
+  +Rs 500 trailing Rs 1,000 below the peak, re-evaluated every minute (tighten-only (live-eligible after a shadow phase)),
+  raises the win rate >= 5 points with net not lower than today''s exits in walk-forward and final, net > 0 in every period,
+  beats random-exit twins (BH q <= 0.10, m = 2664), >= 40 final trades.'
+data_version: the Drive / Dhan lake as R152 (R51 Amendment A clean stores) plus the lake's option OI and India VIX
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R167 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s unchanged Donchian entries); exit inputs: the premiums netting +Rs 1,500 / +Rs 500
+  and a Rs 1,000 trail under the peak'
+model_or_rule: 'R72 Breadth Donchian with G2-T: once +Rs 1,500, floor +Rs 500 trailing Rs 1,000 below the peak; 3 lot(s)'
+settings: research/hunt/r167_donchian_smart_exits/PREREG.md section 3 / Amendment A; r167lib.py; r167cfg.py
+prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Walk-forward: 2450 trades, win 67.0% (today 49.7%), net Rs 420,545 (today Rs 1,213,421), worst day Rs -75,335,
+    max DD Rs 187,952. Final: 1267 trades, win 61.4% (today 46.5%), net Rs 44,292 (today Rs 625,048), worst day Rs -77,357,
+    max DD Rs 194,109. Twin p 0.7665 (net 0.7665, win 0.001996), BH q 1 (m 2664). Fails: wf: net lower than today''s; final:
+    net lower than today''s; BH q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (stop sales -10 bps and 2x the half-spread, gaps at the open)
+notes: 'Tighten-only: live-eligible only after a shadow phase behind an off-by-default switch.'

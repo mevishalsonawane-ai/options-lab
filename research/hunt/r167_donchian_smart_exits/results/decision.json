@@ -1,0 +1,2042 @@
+{
+ "m_total": 2664,
+ "prior": {
+  "R160's m (through R160)": 2164,
+  "R161": 168,
+  "R162": 102,
+  "R163": 8,
+  "R164": 18,
+  "R165": 78,
+  "R166": 24
+ },
+ "tests": [
+  {
+   "arm": "R72",
+   "rule": "SR",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.2554890219560878,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "SR",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.1437125748502994,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "SR",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.17165668662674652,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "SR",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.9960079840319361,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "SR",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.9940119760479041,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "SR",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.9960079840319361,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLX",
+   "version": "T",
+   "lots": 1,
+   "p": 0.8762475049900199,
+   "p_net": 0.08582834331337326,
+   "p_win": 0.8762475049900199,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLX",
+   "version": "T",
+   "lots": 2,
+   "p": 0.9261477045908184,
+   "p_net": 0.07984031936127745,
+   "p_win": 0.9261477045908184,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLX",
+   "version": "T",
+   "lots": 3,
+   "p": 0.8942115768463074,
+   "p_net": 0.08183632734530938,
+   "p_win": 0.8942115768463074,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLX",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLX",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLX",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLP",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLP",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLP",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLP",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLP",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "VOLP",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "FLOW",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "FLOW",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "FLOW",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "FLOW",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "FLOW",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "FLOW",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "MOM",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "MOM",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "MOM",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "MOM",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "MOM",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "MOM",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "CTX",
+   "version": "T",
+   "lots": 1,
+   "p": 0.4111776447105788,
+   "p_net": 0.11177644710578842,
+   "p_win": 0.4111776447105788,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "CTX",
+   "version": "T",
+   "lots": 2,
+   "p": 0.2894211576846307,
+   "p_net": 0.09181636726546906,
+   "p_win": 0.2894211576846307,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "CTX",
+   "version": "T",
+   "lots": 3,
+   "p": 0.29740518962075846,
+   "p_net": 0.10379241516966067,
+   "p_win": 0.29740518962075846,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "CTX",
+   "version": "F",
+   "lots": 1,
+   "p": 0.9520958083832335,
+   "p_net": 0.9520958083832335,
+   "p_win": 0.9321357285429142,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "CTX",
+   "version": "F",
+   "lots": 2,
+   "p": 0.9560878243512974,
+   "p_net": 0.9560878243512974,
+   "p_win": 0.7904191616766467,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "CTX",
+   "version": "F",
+   "lots": 3,
+   "p": 0.9540918163672655,
+   "p_net": 0.9540918163672655,
+   "p_win": 0.6287425149700598,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "ML",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "ML",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "ML",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "ML",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "ML",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "ML",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G1",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G1",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G1",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G2",
+   "version": "T",
+   "lots": 1,
+   "p": 0.001996007984031936,
+   "p_net": 0.001996007984031936,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 0.0407185628742515,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G2",
+   "version": "T",
+   "lots": 2,
+   "p": 0.011976047904191617,
+   "p_net": 0.011976047904191617,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 0.2035928143712575,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: net lower than today's",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G2",
+   "version": "T",
+   "lots": 3,
+   "p": 0.7664670658682635,
+   "p_net": 0.7664670658682635,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: net lower than today's",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G3",
+   "version": "T",
+   "lots": 1,
+   "p": 0.001996007984031936,
+   "p_net": 0.001996007984031936,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 0.0407185628742515,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G3",
+   "version": "T",
+   "lots": 2,
+   "p": 0.1317365269461078,
+   "p_net": 0.1317365269461078,
+   "p_win": 0.00998003992015968,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "rule": "G3",
+   "version": "T",
+   "lots": 3,
+   "p": 0.9940119760479041,
+   "p_net": 0.8922155688622755,
+   "p_win": 0.9940119760479041,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "SR",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.9121756487025948,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "SR",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.6586826347305389,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "SR",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 0.6626746506986028,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "SR",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "SR",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "SR",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLX",
+   "version": "T",
+   "lots": 1,
+   "p": 0.998003992015968,
+   "p_net": 0.7365269461077845,
+   "p_win": 0.998003992015968,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLX",
+   "version": "T",
+   "lots": 2,
+   "p": 0.9960079840319361,
+   "p_net": 0.7504990019960079,
+   "p_win": 0.9960079840319361,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLX",
+   "version": "T",
+   "lots": 3,
+   "p": 0.998003992015968,
+   "p_net": 0.7245508982035929,
+   "p_win": 0.998003992015968,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLX",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLX",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLX",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLP",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLP",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLP",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLP",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLP",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "VOLP",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "FLOW",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "FLOW",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "FLOW",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "FLOW",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "FLOW",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "FLOW",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "MOM",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "MOM",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "MOM",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "MOM",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "MOM",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "MOM",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "final: win rate not up 5 points",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "CTX",
+   "version": "T",
+   "lots": 1,
+   "p": 0.9960079840319361,
+   "p_net": 0.9960079840319361,
+   "p_win": 0.6946107784431138,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "CTX",
+   "version": "T",
+   "lots": 2,
+   "p": 0.9940119760479041,
+   "p_net": 0.9940119760479041,
+   "p_win": 0.6427145708582834,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "CTX",
+   "version": "T",
+   "lots": 3,
+   "p": 0.9920159680638723,
+   "p_net": 0.9920159680638723,
+   "p_win": 0.5788423153692615,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "CTX",
+   "version": "F",
+   "lots": 1,
+   "p": 0.9900199600798403,
+   "p_net": 0.9900199600798403,
+   "p_win": 0.7664670658682635,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "CTX",
+   "version": "F",
+   "lots": 2,
+   "p": 0.9880239520958084,
+   "p_net": 0.9880239520958084,
+   "p_win": 0.8043912175648703,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "CTX",
+   "version": "F",
+   "lots": 3,
+   "p": 0.9920159680638723,
+   "p_net": 0.9920159680638723,
+   "p_win": 0.6526946107784432,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "ML",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "ML",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "ML",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "ML",
+   "version": "F",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "ML",
+   "version": "F",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "ML",
+   "version": "F",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": false,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G1",
+   "version": "T",
+   "lots": 1,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G1",
+   "version": "T",
+   "lots": 2,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G1",
+   "version": "T",
+   "lots": 3,
+   "p": 1.0,
+   "p_net": 1.0,
+   "p_win": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G2",
+   "version": "T",
+   "lots": 1,
+   "p": 0.001996007984031936,
+   "p_net": 0.001996007984031936,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 0.0407185628742515,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G2",
+   "version": "T",
+   "lots": 2,
+   "p": 0.001996007984031936,
+   "p_net": 0.001996007984031936,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 0.0407185628742515,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: net lower than today's",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G2",
+   "version": "T",
+   "lots": 3,
+   "p": 0.4231536926147705,
+   "p_net": 0.4231536926147705,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: net lower than today's",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G3",
+   "version": "T",
+   "lots": 1,
+   "p": 0.001996007984031936,
+   "p_net": 0.001996007984031936,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 0.0407185628742515,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G3",
+   "version": "T",
+   "lots": 2,
+   "p": 0.0499001996007984,
+   "p_net": 0.0499001996007984,
+   "p_win": 0.001996007984031936,
+   "q": 1.0,
+   "q_alone": 0.7271171941830624,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "rule": "G3",
+   "version": "T",
+   "lots": 3,
+   "p": 0.7485029940119761,
+   "p_net": 0.7485029940119761,
+   "p_win": 0.5688622754491018,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "live_eligible": true,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "BH q 1 > 0.1"
+   ]
+  }
+ ],
+ "passed": []
+}

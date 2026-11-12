@@ -1,0 +1,36 @@
+id: r167-r51-volp-f-1lot
+title: 'R167 VOLP-F on R51 Donchian 20 (+ Supertrend 10, 3), 1 lot: premium Chandelier (3 x the option''s ATR) (free (may
+  widen): paper / research only)'
+family: trade-management
+date: '2026-11-12'
+doc: research/hunt/r167_donchian_smart_exits/results/report.md
+hypothesis: 'Boss (12 Nov): make the stop and target follow volume, support / resistance and other data. premium Chandelier
+  (3 x the option''s ATR), re-evaluated every minute (free (may widen): paper / research only), raises the win rate >= 5 points
+  with net not lower than today''s exits in walk-forward and final, net > 0 in every period, beats random-exit twins (BH q
+  <= 0.10, m = 2664), >= 40 final trades.'
+data_version: the Drive / Dhan lake as R152 (R51 Amendment A clean stores) plus the lake's option OI and India VIX
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R167 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s unchanged Donchian entries); exit inputs: the held option''s own 1-minute ATR(14)
+  and closes (a premium stop)'
+model_or_rule: 'R51 Donchian 20 (+ Supertrend 10, 3) with VOLP-F: premium Chandelier (3 x the option''s ATR); 1 lot(s)'
+settings: research/hunt/r167_donchian_smart_exits/PREREG.md section 3 / Amendment A; r167lib.py; r167cfg.py
+prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Walk-forward: 2962 trades, win 38.0% (today 45.9%), net Rs 185,654 (today Rs 213,748), worst day Rs -18,576, max
+    DD Rs 93,688. Final: 1637 trades, win 36.5% (today 44.9%), net Rs 29,260 (today Rs 134,743), worst day Rs -23,019, max
+    DD Rs 79,811. Twin p 1 (net 1, win 1), BH q 1 (m 2664). Fails: wf: win rate not up 5 points; wf: net lower than today''s;
+    final: win rate not up 5 points; final: net lower than today''s; design: net not positive; BH q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (stop sales -10 bps and 2x the half-spread, gaps at the open)
+notes: 'Free version (may widen a stop or extend a trade): paper / research only.'

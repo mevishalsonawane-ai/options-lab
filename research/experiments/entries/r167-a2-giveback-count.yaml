@@ -1,0 +1,26 @@
+id: r167-a2-giveback-count
+title: 'R167 Amendment A2: how often +Rs 1,500 open profit ends at a loss (Donchian arms, today''s exits, 1-3 lots)'
+family: trade-management
+date: '2026-11-12'
+doc: research/hunt/r167_donchian_smart_exits/results/report.md
+hypothesis: 'A measurement, not a test (Boss, 12 Nov: profit reaches Rs 1.5k-2.5k and ends at a Rs 2k-3k loss).'
+data_version: as the R167 tests
+period:
+  design: 2024-11-20..2026-03-31
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'B0 trades: best open profit (sale at the best high, net of charges) and final net'
+model_or_rule: count of trades reaching >= +Rs 1,500 that end <= Rs 0 and <= -Rs 2,000
+settings: PREREG.md Amendment A2; r167lib.giveback
+prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
+variants_tried: null
+holdout_read: null
+verdict: not-a-test
+results:
+  summary: See results/report.md (giveback table).
+  costs: dated Zerodha charges, R17 fills

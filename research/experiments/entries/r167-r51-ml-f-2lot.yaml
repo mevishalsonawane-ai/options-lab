@@ -1,0 +1,38 @@
+id: r167-r51-ml-f-2lot
+title: 'R167 ML-F on R51 Donchian 20 (+ Supertrend 10, 3), 2 lots: walk-forward exit model (P favourable move < 25th pct)
+  (free (may widen): paper / research only)'
+family: trade-management
+date: '2026-11-12'
+doc: research/hunt/r167_donchian_smart_exits/results/report.md
+hypothesis: 'Boss (12 Nov): make the stop and target follow volume, support / resistance and other data. walk-forward exit
+  model (P favourable move < 25th pct), re-evaluated every minute (free (may widen): paper / research only), raises the win
+  rate >= 5 points with net not lower than today''s exits in walk-forward and final, net > 0 in every period, beats random-exit
+  twins (BH q <= 0.10, m = 2664), >= 40 final trades.'
+data_version: the Drive / Dhan lake as R152 (R51 Amendment A clean stores) plus the lake's option OI and India VIX
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R167 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s unchanged Donchian entries); exit inputs: 16 in-trade features (premium path, index
+  move in ATR, level distances, ROC, Supertrend, volume, OI, VIX, time)'
+model_or_rule: 'R51 Donchian 20 (+ Supertrend 10, 3) with ML-F: walk-forward exit model (P favourable move < 25th pct); 2
+  lot(s)'
+settings: research/hunt/r167_donchian_smart_exits/PREREG.md section 3 / Amendment A; r167lib.py; r167cfg.py
+prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Walk-forward: 2844 trades, win 42.9% (today 46.3%), net Rs 174,166 (today Rs 568,032), worst day Rs -55,353, max
+    DD Rs 494,067. Final: 1471 trades, win 37.5% (today 45.5%), net Rs -298,978 (today Rs 346,548), worst day Rs -73,338,
+    max DD Rs 504,117. Twin p 1 (net 1, win 1), BH q 1 (m 2664). Fails: wf: win rate not up 5 points; wf: net lower than today''s;
+    final: win rate not up 5 points; final: net lower than today''s; design: net not positive; final: net not positive; BH
+    q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (stop sales -10 bps and 2x the half-spread, gaps at the open)
+notes: 'Free version (may widen a stop or extend a trade): paper / research only.'

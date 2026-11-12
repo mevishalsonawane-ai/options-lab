@@ -1,0 +1,37 @@
+id: r167-r51-ctx-t-1lot
+title: 'R167 CTX-T on R51 Donchian 20 (+ Supertrend 10, 3), 1 lot: exit rule chosen by regime (VIX x trend), design-trained
+  (tighten-only (live-eligible after a shadow phase))'
+family: trade-management
+date: '2026-11-12'
+doc: research/hunt/r167_donchian_smart_exits/results/report.md
+hypothesis: 'Boss (12 Nov): make the stop and target follow volume, support / resistance and other data. exit rule chosen
+  by regime (VIX x trend), design-trained, re-evaluated every minute (tighten-only (live-eligible after a shadow phase)),
+  raises the win rate >= 5 points with net not lower than today''s exits in walk-forward and final, net > 0 in every period,
+  beats random-exit twins (BH q <= 0.10, m = 2664), >= 40 final trades.'
+data_version: the Drive / Dhan lake as R152 (R51 Amendment A clean stores) plus the lake's option OI and India VIX
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R167 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s unchanged Donchian entries); exit inputs: India VIX vs its training median, the day''s
+  efficiency ratio; the SR / VOLX / VOLP / FLOW / MOM flags'
+model_or_rule: 'R51 Donchian 20 (+ Supertrend 10, 3) with CTX-T: exit rule chosen by regime (VIX x trend), design-trained;
+  1 lot(s)'
+settings: research/hunt/r167_donchian_smart_exits/PREREG.md section 3 / Amendment A; r167lib.py; r167cfg.py
+prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'Walk-forward: 3096 trades, win 46.0% (today 45.9%), net Rs 107,010 (today Rs 213,748), worst day Rs -28,144, max
+    DD Rs 69,355. Final: 1695 trades, win 44.0% (today 44.9%), net Rs 34,918 (today Rs 134,743), worst day Rs -22,327, max
+    DD Rs 52,630. Twin p 0.996 (net 0.996, win 0.6946), BH q 1 (m 2664). Fails: wf: win rate not up 5 points; wf: net lower
+    than today''s; final: win rate not up 5 points; final: net lower than today''s; BH q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (stop sales -10 bps and 2x the half-spread, gaps at the open)
+notes: 'Tighten-only: live-eligible only after a shadow phase behind an off-by-default switch.'

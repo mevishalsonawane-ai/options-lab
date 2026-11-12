@@ -1,0 +1,3906 @@
+{
+ "parity": {
+  "arm": "R51",
+  "trades": 4208,
+  "net": 50425,
+  "published": [
+   4208,
+   50425
+  ],
+  "reproduced": true
+ },
+ "B0@1": {
+  "design": {
+   "trades": 4208,
+   "win": 0.4446,
+   "net": 50425,
+   "avg_win": 1752,
+   "avg_loss": -1381,
+   "worst_day": -49738,
+   "max_dd": 214239,
+   "mix": {
+    "time": 3130,
+    "stop": 796,
+    "squareoff": 193,
+    "lock": 73,
+    "missing": 16
+   },
+   "moved": null,
+   "giveback": {
+    "trades": 4208,
+    "reached": 1548,
+    "reached_share": 0.3679,
+    "ended_le0": 240,
+    "ended_le0_net": -340837,
+    "ended_le_m2000": 62,
+    "ended_le_m2000_net": -200052
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3044,
+   "win": 0.4589,
+   "net": 213748,
+   "avg_win": 1716,
+   "avg_loss": -1326,
+   "worst_day": -28942,
+   "max_dd": 94176,
+   "mix": {
+    "stop": 512,
+    "time": 2332,
+    "missing": 11,
+    "squareoff": 136,
+    "lock": 53
+   },
+   "moved": null,
+   "giveback": {
+    "trades": 3044,
+    "reached": 1105,
+    "reached_share": 0.363,
+    "ended_le0": 157,
+    "ended_le0_net": -211712,
+    "ended_le_m2000": 35,
+    "ended_le_m2000_net": -119687
+   },
+   "sessions": 247,
+   "wf_q": [
+    13763,
+    59076,
+    20835,
+    120074
+   ]
+  }
+ },
+ "SR-T@1": {
+  "design": {
+   "trades": 4340,
+   "win": 0.4597,
+   "net": -32100,
+   "avg_win": 1286,
+   "avg_loss": -1108,
+   "worst_day": -27123,
+   "max_dd": 173513,
+   "mix": {
+    "time": 1326,
+    "rule_exit": 2420,
+    "stop": 445,
+    "squareoff": 110,
+    "lock": 36,
+    "missing": 3
+   },
+   "moved": {
+    "same": 1993,
+    "earlier": 2347
+   },
+   "giveback": {
+    "trades": 4340,
+    "reached": 1188,
+    "reached_share": 0.2737,
+    "ended_le0": 146,
+    "ended_le0_net": -178472,
+    "ended_le_m2000": 30,
+    "ended_le_m2000_net": -92346
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3133,
+   "win": 0.4654,
+   "net": 72541,
+   "avg_win": 1277,
+   "avg_loss": -1068,
+   "worst_day": -24116,
+   "max_dd": 63138,
+   "mix": {
+    "rule_exit": 1728,
+    "stop": 296,
+    "time": 999,
+    "squareoff": 81,
+    "lock": 28,
+    "missing": 1
+   },
+   "moved": {
+    "earlier": 1682,
+    "same": 1451
+   },
+   "giveback": {
+    "trades": 3133,
+    "reached": 847,
+    "reached_share": 0.2703,
+    "ended_le0": 99,
+    "ended_le0_net": -118917,
+    "ended_le_m2000": 19,
+    "ended_le_m2000_net": -65178
+   },
+   "sessions": 247,
+   "wf_q": [
+    -28574,
+    -7204,
+    -11760,
+    120080
+   ]
+  },
+  "in_sample_design": false
+ },
+ "SR-F@1": {
+  "design": {
+   "trades": 4203,
+   "win": 0.4483,
+   "net": -23972,
+   "avg_win": 1533,
+   "avg_loss": -1256,
+   "worst_day": -30172,
+   "max_dd": 183441,
+   "mix": {
+    "lock": 118,
+    "rule_exit": 3834,
+    "squareoff": 248,
+    "missing": 3
+   },
+   "moved": {
+    "later": 1636,
+    "earlier": 2340,
+    "same": 227
+   },
+   "giveback": {
+    "trades": 4203,
+    "reached": 1349,
+    "reached_share": 0.321,
+    "ended_le0": 257,
+    "ended_le0_net": -362228,
+    "ended_le_m2000": 51,
+    "ended_le_m2000_net": -182682
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3041,
+   "win": 0.4518,
+   "net": 104123,
+   "avg_win": 1553,
+   "avg_loss": -1218,
+   "worst_day": -30172,
+   "max_dd": 69084,
+   "mix": {
+    "rule_exit": 2776,
+    "lock": 80,
+    "squareoff": 183,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1672,
+    "later": 1205,
+    "same": 164
+   },
+   "giveback": {
+    "trades": 3041,
+    "reached": 973,
+    "reached_share": 0.32,
+    "ended_le0": 178,
+    "ended_le0_net": -253483,
+    "ended_le_m2000": 34,
+    "ended_le_m2000_net": -130246
+   },
+   "sessions": 247,
+   "wf_q": [
+    42239,
+    -14981,
+    -16342,
+    93206
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLX-T@1": {
+  "design": {
+   "trades": 4212,
+   "win": 0.4416,
+   "net": 25409,
+   "avg_win": 1747,
+   "avg_loss": -1371,
+   "worst_day": -46735,
+   "max_dd": 213433,
+   "mix": {
+    "rule_exit": 327,
+    "time": 2897,
+    "stop": 714,
+    "squareoff": 187,
+    "lock": 70,
+    "missing": 17
+   },
+   "moved": {
+    "earlier": 289,
+    "same": 3923
+   },
+   "giveback": {
+    "trades": 4212,
+    "reached": 1551,
+    "reached_share": 0.3682,
+    "ended_le0": 249,
+    "ended_le0_net": -341274,
+    "ended_le_m2000": 58,
+    "ended_le_m2000_net": -178963
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3048,
+   "win": 0.4544,
+   "net": 179830,
+   "avg_win": 1715,
+   "avg_loss": -1320,
+   "worst_day": -28942,
+   "max_dd": 91289,
+   "mix": {
+    "stop": 461,
+    "time": 2161,
+    "missing": 12,
+    "squareoff": 131,
+    "rule_exit": 233,
+    "lock": 50
+   },
+   "moved": {
+    "same": 2842,
+    "earlier": 206
+   },
+   "giveback": {
+    "trades": 3048,
+    "reached": 1107,
+    "reached_share": 0.3632,
+    "ended_le0": 167,
+    "ended_le0_net": -219455,
+    "ended_le_m2000": 34,
+    "ended_le_m2000_net": -112124
+   },
+   "sessions": 247,
+   "wf_q": [
+    -11900,
+    52009,
+    14319,
+    125402
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLX-F@1": {
+  "design": {
+   "trades": 3833,
+   "win": 0.432,
+   "net": 196396,
+   "avg_win": 2774,
+   "avg_loss": -2020,
+   "worst_day": -46581,
+   "max_dd": 214265,
+   "mix": {
+    "rule_exit": 2869,
+    "lock": 308,
+    "squareoff": 654,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 216,
+    "later": 3298,
+    "same": 319
+   },
+   "giveback": {
+    "trades": 3833,
+    "reached": 2115,
+    "reached_share": 0.5518,
+    "ended_le0": 609,
+    "ended_le0_net": -1046824,
+    "ended_le_m2000": 207,
+    "ended_le_m2000_net": -646942
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2781,
+   "win": 0.4448,
+   "net": 350401,
+   "avg_win": 2717,
+   "avg_loss": -1950,
+   "worst_day": -36220,
+   "max_dd": 112669,
+   "mix": {
+    "rule_exit": 2098,
+    "squareoff": 465,
+    "lock": 216,
+    "missing": 2
+   },
+   "moved": {
+    "later": 2388,
+    "same": 240,
+    "earlier": 153
+   },
+   "giveback": {
+    "trades": 2781,
+    "reached": 1528,
+    "reached_share": 0.5494,
+    "ended_le0": 411,
+    "ended_le0_net": -671497,
+    "ended_le_m2000": 124,
+    "ended_le_m2000_net": -389524
+   },
+   "sessions": 247,
+   "wf_q": [
+    97861,
+    -19921,
+    76486,
+    195975
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLP-T@1": {
+  "design": {
+   "trades": 4223,
+   "win": 0.3959,
+   "net": 19448,
+   "avg_win": 1763,
+   "avg_loss": -1148,
+   "worst_day": -41227,
+   "max_dd": 194449,
+   "mix": {
+    "time": 1310,
+    "rule_exit": 2344,
+    "lock": 46,
+    "stop": 381,
+    "squareoff": 138,
+    "missing": 4
+   },
+   "moved": {
+    "same": 2036,
+    "earlier": 2187
+   },
+   "giveback": {
+    "trades": 4223,
+    "reached": 1489,
+    "reached_share": 0.3526,
+    "ended_le0": 251,
+    "ended_le0_net": -236975,
+    "ended_le_m2000": 26,
+    "ended_le_m2000_net": -83157
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3056,
+   "win": 0.4035,
+   "net": 174491,
+   "avg_win": 1741,
+   "avg_loss": -1082,
+   "worst_day": -17885,
+   "max_dd": 78738,
+   "mix": {
+    "rule_exit": 1748,
+    "stop": 225,
+    "squareoff": 96,
+    "time": 954,
+    "lock": 30,
+    "missing": 3
+   },
+   "moved": {
+    "same": 1414,
+    "earlier": 1642
+   },
+   "giveback": {
+    "trades": 3056,
+    "reached": 1061,
+    "reached_share": 0.3472,
+    "ended_le0": 169,
+    "ended_le0_net": -153334,
+    "ended_le_m2000": 15,
+    "ended_le_m2000_net": -50045
+   },
+   "sessions": 247,
+   "wf_q": [
+    3495,
+    22501,
+    38038,
+    110457
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLP-F@1": {
+  "design": {
+   "trades": 4087,
+   "win": 0.3714,
+   "net": -22261,
+   "avg_win": 1950,
+   "avg_loss": -1161,
+   "worst_day": -42295,
+   "max_dd": 245276,
+   "mix": {
+    "rule_exit": 3820,
+    "lock": 65,
+    "squareoff": 202
+   },
+   "moved": {
+    "later": 1707,
+    "earlier": 2040,
+    "same": 340
+   },
+   "giveback": {
+    "trades": 4087,
+    "reached": 1598,
+    "reached_share": 0.391,
+    "ended_le0": 286,
+    "ended_le0_net": -249435,
+    "ended_le_m2000": 29,
+    "ended_le_m2000_net": -89745
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2962,
+   "win": 0.3795,
+   "net": 185654,
+   "avg_win": 1927,
+   "avg_loss": -1078,
+   "worst_day": -18576,
+   "max_dd": 93688,
+   "mix": {
+    "rule_exit": 2769,
+    "squareoff": 149,
+    "lock": 44
+   },
+   "moved": {
+    "same": 234,
+    "earlier": 1541,
+    "later": 1187
+   },
+   "giveback": {
+    "trades": 2962,
+    "reached": 1148,
+    "reached_share": 0.3876,
+    "ended_le0": 187,
+    "ended_le0_net": -155680,
+    "ended_le_m2000": 18,
+    "ended_le_m2000_net": -54749
+   },
+   "sessions": 247,
+   "wf_q": [
+    51516,
+    35900,
+    34247,
+    63990
+   ]
+  },
+  "in_sample_design": false
+ },
+ "FLOW-T@1": {
+  "design": {
+   "trades": 4229,
+   "win": 0.4062,
+   "net": 44436,
+   "avg_win": 1646,
+   "avg_loss": -1109,
+   "worst_day": -37926,
+   "max_dd": 158752,
+   "mix": {
+    "rule_exit": 2072,
+    "time": 1512,
+    "squareoff": 158,
+    "stop": 424,
+    "lock": 59,
+    "missing": 4
+   },
+   "moved": {
+    "earlier": 1962,
+    "same": 2267
+   },
+   "giveback": {
+    "trades": 4229,
+    "reached": 1388,
+    "reached_share": 0.3282,
+    "ended_le0": 198,
+    "ended_le0_net": -256851,
+    "ended_le_m2000": 41,
+    "ended_le_m2000_net": -125182
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3059,
+   "win": 0.4168,
+   "net": 168533,
+   "avg_win": 1612,
+   "avg_loss": -1058,
+   "worst_day": -19562,
+   "max_dd": 66830,
+   "mix": {
+    "rule_exit": 1533,
+    "time": 1100,
+    "stop": 270,
+    "squareoff": 112,
+    "lock": 41,
+    "missing": 3
+   },
+   "moved": {
+    "earlier": 1464,
+    "same": 1595
+   },
+   "giveback": {
+    "trades": 3059,
+    "reached": 998,
+    "reached_share": 0.3263,
+    "ended_le0": 129,
+    "ended_le0_net": -163207,
+    "ended_le_m2000": 22,
+    "ended_le_m2000_net": -76776
+   },
+   "sessions": 247,
+   "wf_q": [
+    18296,
+    27479,
+    26334,
+    96424
+   ]
+  },
+  "in_sample_design": false
+ },
+ "FLOW-F@1": {
+  "design": {
+   "trades": 4179,
+   "win": 0.3972,
+   "net": 39084,
+   "avg_win": 1709,
+   "avg_loss": -1111,
+   "worst_day": -37926,
+   "max_dd": 176013,
+   "mix": {
+    "rule_exit": 3469,
+    "squareoff": 207,
+    "stop": 428,
+    "lock": 72,
+    "missing": 3
+   },
+   "moved": {
+    "earlier": 1939,
+    "later": 1504,
+    "same": 736
+   },
+   "giveback": {
+    "trades": 4179,
+    "reached": 1416,
+    "reached_share": 0.3388,
+    "ended_le0": 211,
+    "ended_le0_net": -272826,
+    "ended_le_m2000": 44,
+    "ended_le_m2000_net": -134906
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3020,
+   "win": 0.4063,
+   "net": 172805,
+   "avg_win": 1683,
+   "avg_loss": -1056,
+   "worst_day": -16026,
+   "max_dd": 62162,
+   "mix": {
+    "rule_exit": 2545,
+    "stop": 272,
+    "squareoff": 149,
+    "lock": 52,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1448,
+    "later": 1091,
+    "same": 481
+   },
+   "giveback": {
+    "trades": 3020,
+    "reached": 1018,
+    "reached_share": 0.3371,
+    "ended_le0": 136,
+    "ended_le0_net": -168724,
+    "ended_le_m2000": 23,
+    "ended_le_m2000_net": -80111
+   },
+   "sessions": 247,
+   "wf_q": [
+    8390,
+    25975,
+    35949,
+    102491
+   ]
+  },
+  "in_sample_design": false
+ },
+ "MOM-T@1": {
+  "design": {
+   "trades": 4221,
+   "win": 0.4018,
+   "net": 96585,
+   "avg_win": 1803,
+   "avg_loss": -1173,
+   "worst_day": -38854,
+   "max_dd": 188619,
+   "mix": {
+    "time": 1677,
+    "stop": 396,
+    "rule_exit": 1931,
+    "lock": 56,
+    "squareoff": 149,
+    "missing": 12
+   },
+   "moved": {
+    "same": 2422,
+    "earlier": 1799
+   },
+   "giveback": {
+    "trades": 4221,
+    "reached": 1496,
+    "reached_share": 0.3544,
+    "ended_le0": 246,
+    "ended_le0_net": -251596,
+    "ended_le_m2000": 27,
+    "ended_le_m2000_net": -87368
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3052,
+   "win": 0.4145,
+   "net": 221177,
+   "avg_win": 1761,
+   "avg_loss": -1123,
+   "worst_day": -18762,
+   "max_dd": 84682,
+   "mix": {
+    "rule_exit": 1420,
+    "missing": 8,
+    "time": 1236,
+    "stop": 244,
+    "squareoff": 105,
+    "lock": 39
+   },
+   "moved": {
+    "earlier": 1339,
+    "same": 1713
+   },
+   "giveback": {
+    "trades": 3052,
+    "reached": 1067,
+    "reached_share": 0.3496,
+    "ended_le0": 160,
+    "ended_le0_net": -154384,
+    "ended_le_m2000": 14,
+    "ended_le_m2000_net": -49945
+   },
+   "sessions": 247,
+   "wf_q": [
+    -5471,
+    27570,
+    26369,
+    172709
+   ]
+  },
+  "in_sample_design": false
+ },
+ "MOM-F@1": {
+  "design": {
+   "trades": 4031,
+   "win": 0.3533,
+   "net": 33221,
+   "avg_win": 2163,
+   "avg_loss": -1169,
+   "worst_day": -38854,
+   "max_dd": 241160,
+   "mix": {
+    "lock": 83,
+    "rule_exit": 3330,
+    "stop": 392,
+    "squareoff": 223,
+    "missing": 3
+   },
+   "moved": {
+    "later": 1615,
+    "earlier": 1711,
+    "same": 705
+   },
+   "giveback": {
+    "trades": 4031,
+    "reached": 1606,
+    "reached_share": 0.3984,
+    "ended_le0": 347,
+    "ended_le0_net": -323982,
+    "ended_le_m2000": 35,
+    "ended_le_m2000_net": -108386
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2914,
+   "win": 0.3668,
+   "net": 234040,
+   "avg_win": 2139,
+   "avg_loss": -1112,
+   "worst_day": -17687,
+   "max_dd": 95555,
+   "mix": {
+    "rule_exit": 2454,
+    "stop": 241,
+    "squareoff": 162,
+    "lock": 55,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1275,
+    "later": 1183,
+    "same": 456
+   },
+   "giveback": {
+    "trades": 2914,
+    "reached": 1163,
+    "reached_share": 0.3991,
+    "ended_le0": 217,
+    "ended_le0_net": -192418,
+    "ended_le_m2000": 17,
+    "ended_le_m2000_net": -59754
+   },
+   "sessions": 247,
+   "wf_q": [
+    54612,
+    -2503,
+    37798,
+    144132
+   ]
+  },
+  "in_sample_design": false
+ },
+ "CTX-T@1": {
+  "design": {
+   "trades": 4288,
+   "win": 0.459,
+   "net": 109243,
+   "avg_win": 1467,
+   "avg_loss": -1198,
+   "worst_day": -27123,
+   "max_dd": 183133,
+   "mix": {
+    "time": 2138,
+    "rule_exit": 1383,
+    "stop": 559,
+    "squareoff": 150,
+    "lock": 51,
+    "missing": 7
+   },
+   "moved": {
+    "same": 2955,
+    "earlier": 1333
+   },
+   "giveback": {
+    "trades": 4288,
+    "reached": 1357,
+    "reached_share": 0.3165,
+    "ended_le0": 169,
+    "ended_le0_net": -218523,
+    "ended_le_m2000": 37,
+    "ended_le_m2000_net": -110195
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3096,
+   "win": 0.4599,
+   "net": 107010,
+   "avg_win": 1423,
+   "avg_loss": -1148,
+   "worst_day": -28144,
+   "max_dd": 69355,
+   "mix": {
+    "rule_exit": 1104,
+    "stop": 355,
+    "time": 1492,
+    "squareoff": 104,
+    "lock": 37,
+    "missing": 4
+   },
+   "moved": {
+    "earlier": 1068,
+    "same": 2028
+   },
+   "giveback": {
+    "trades": 3096,
+    "reached": 944,
+    "reached_share": 0.3049,
+    "ended_le0": 118,
+    "ended_le0_net": -151385,
+    "ended_le_m2000": 26,
+    "ended_le_m2000_net": -87337
+   },
+   "sessions": 247,
+   "wf_q": [
+    -28742,
+    -11660,
+    19424,
+    127988
+   ]
+  },
+  "in_sample_design": true
+ },
+ "CTX-F@1": {
+  "design": {
+   "trades": 4206,
+   "win": 0.4465,
+   "net": 65229,
+   "avg_win": 1749,
+   "avg_loss": -1383,
+   "worst_day": -49738,
+   "max_dd": 207355,
+   "mix": {
+    "time": 2975,
+    "stop": 768,
+    "squareoff": 195,
+    "lock": 73,
+    "rule_exit": 180,
+    "missing": 15
+   },
+   "moved": {
+    "same": 4027,
+    "earlier": 100,
+    "later": 79
+   },
+   "giveback": {
+    "trades": 4206,
+    "reached": 1544,
+    "reached_share": 0.3671,
+    "ended_le0": 234,
+    "ended_le0_net": -334495,
+    "ended_le_m2000": 63,
+    "ended_le_m2000_net": -202181
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2989,
+   "win": 0.4553,
+   "net": 121014,
+   "avg_win": 1850,
+   "avg_loss": -1472,
+   "worst_day": -28942,
+   "max_dd": 118802,
+   "mix": {
+    "rule_exit": 815,
+    "lock": 101,
+    "squareoff": 220,
+    "stop": 336,
+    "time": 1508,
+    "missing": 9
+   },
+   "moved": {
+    "earlier": 179,
+    "later": 750,
+    "same": 2060
+   },
+   "giveback": {
+    "trades": 2989,
+    "reached": 1240,
+    "reached_share": 0.4149,
+    "ended_le0": 213,
+    "ended_le0_net": -295844,
+    "ended_le_m2000": 50,
+    "ended_le_m2000_net": -166176
+   },
+   "sessions": 247,
+   "wf_q": [
+    -3412,
+    -19921,
+    22967,
+    121382
+   ]
+  },
+  "in_sample_design": true
+ },
+ "ML-T@1": {
+  "design": {
+   "trades": 4374,
+   "win": 0.4417,
+   "net": 61431,
+   "avg_win": 1460,
+   "avg_loss": -1130,
+   "worst_day": -23371,
+   "max_dd": 182713,
+   "mix": {
+    "time": 2176,
+    "rule_exit": 1521,
+    "stop": 615,
+    "lock": 47,
+    "missing": 12,
+    "squareoff": 3
+   },
+   "moved": {
+    "same": 2863,
+    "earlier": 1511
+   },
+   "giveback": {
+    "trades": 4374,
+    "reached": 1280,
+    "reached_share": 0.2926,
+    "ended_le0": 192,
+    "ended_le0_net": -281443,
+    "ended_le_m2000": 53,
+    "ended_le_m2000_net": -171891
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3161,
+   "win": 0.4445,
+   "net": 123791,
+   "avg_win": 1413,
+   "avg_loss": -1060,
+   "worst_day": -23128,
+   "max_dd": 99151,
+   "mix": {
+    "stop": 380,
+    "time": 1614,
+    "missing": 6,
+    "rule_exit": 1118,
+    "lock": 41,
+    "squareoff": 2
+   },
+   "moved": {
+    "same": 2051,
+    "earlier": 1110
+   },
+   "giveback": {
+    "trades": 3161,
+    "reached": 894,
+    "reached_share": 0.2828,
+    "ended_le0": 130,
+    "ended_le0_net": -177981,
+    "ended_le_m2000": 30,
+    "ended_le_m2000_net": -105510
+   },
+   "sessions": 247,
+   "wf_q": [
+    16760,
+    4669,
+    12443,
+    89919
+   ]
+  },
+  "in_sample_design": true
+ },
+ "ML-F@1": {
+  "design": {
+   "trades": 3828,
+   "win": 0.4094,
+   "net": -165236,
+   "avg_win": 2135,
+   "avg_loss": -1553,
+   "worst_day": -30472,
+   "max_dd": 399793,
+   "mix": {
+    "lock": 338,
+    "rule_exit": 2215,
+    "stop": 1048,
+    "squareoff": 215,
+    "missing": 12
+   },
+   "moved": {
+    "later": 1623,
+    "same": 577,
+    "earlier": 1628
+   },
+   "giveback": {
+    "trades": 3828,
+    "reached": 1383,
+    "reached_share": 0.3613,
+    "ended_le0": 392,
+    "ended_le0_net": -1018395,
+    "ended_le_m2000": 239,
+    "ended_le_m2000_net": -849139
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2844,
+   "win": 0.4177,
+   "net": 21282,
+   "avg_win": 1995,
+   "avg_loss": -1418,
+   "worst_day": -28013,
+   "max_dd": 299927,
+   "mix": {
+    "stop": 646,
+    "squareoff": 145,
+    "lock": 234,
+    "rule_exit": 1810,
+    "missing": 9
+   },
+   "moved": {
+    "same": 357,
+    "later": 1259,
+    "earlier": 1228
+   },
+   "giveback": {
+    "trades": 2844,
+    "reached": 1005,
+    "reached_share": 0.3534,
+    "ended_le0": 267,
+    "ended_le0_net": -652406,
+    "ended_le_m2000": 143,
+    "ended_le_m2000_net": -528105
+   },
+   "sessions": 247,
+   "wf_q": [
+    38288,
+    -160465,
+    -18926,
+    162385
+   ]
+  },
+  "in_sample_design": true
+ },
+ "G1-T@1": {
+  "design": {
+   "trades": 4220,
+   "win": 0.387,
+   "net": -86266,
+   "avg_win": 1748,
+   "avg_loss": -1137,
+   "worst_day": -37420,
+   "max_dd": 235068,
+   "mix": {
+    "time": 2712,
+    "stop": 744,
+    "squareoff": 183,
+    "lock": 569,
+    "missing": 12
+   },
+   "moved": {
+    "same": 3743,
+    "earlier": 477
+   },
+   "giveback": {
+    "trades": 4220,
+    "reached": 1568,
+    "reached_share": 0.3716,
+    "ended_le0": 497,
+    "ended_le0_net": -52225,
+    "ended_le_m2000": 5,
+    "ended_le_m2000_net": -14396
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3049,
+   "win": 0.4037,
+   "net": 83374,
+   "avg_win": 1693,
+   "avg_loss": -1101,
+   "worst_day": -27217,
+   "max_dd": 119440,
+   "mix": {
+    "stop": 479,
+    "time": 2047,
+    "lock": 386,
+    "squareoff": 129,
+    "missing": 8
+   },
+   "moved": {
+    "same": 2729,
+    "earlier": 320
+   },
+   "giveback": {
+    "trades": 3049,
+    "reached": 1118,
+    "reached_share": 0.3667,
+    "ended_le0": 334,
+    "ended_le0_net": -39396,
+    "ended_le_m2000": 3,
+    "ended_le_m2000_net": -9383
+   },
+   "sessions": 247,
+   "wf_q": [
+    -51279,
+    44464,
+    27111,
+    63078
+   ]
+  },
+  "in_sample_design": false
+ },
+ "G2-T@1": {
+  "design": {
+   "trades": 4277,
+   "win": 0.5029,
+   "net": -159723,
+   "avg_win": 1305,
+   "avg_loss": -1395,
+   "worst_day": -37186,
+   "max_dd": 275244,
+   "mix": {
+    "lock": 1393,
+    "time": 1959,
+    "stop": 756,
+    "squareoff": 163,
+    "missing": 6
+   },
+   "moved": {
+    "earlier": 1361,
+    "same": 2916
+   },
+   "giveback": {
+    "trades": 4277,
+    "reached": 1613,
+    "reached_share": 0.3771,
+    "ended_le0": 22,
+    "ended_le0_net": -20307,
+    "ended_le_m2000": 4,
+    "ended_le_m2000_net": -11385
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3084,
+   "win": 0.5113,
+   "net": 38469,
+   "avg_win": 1300,
+   "avg_loss": -1334,
+   "worst_day": -37186,
+   "max_dd": 90494,
+   "mix": {
+    "stop": 487,
+    "time": 1518,
+    "lock": 959,
+    "squareoff": 117,
+    "missing": 3
+   },
+   "moved": {
+    "same": 2150,
+    "earlier": 934
+   },
+   "giveback": {
+    "trades": 3084,
+    "reached": 1145,
+    "reached_share": 0.3713,
+    "ended_le0": 18,
+    "ended_le0_net": -15868,
+    "ended_le_m2000": 3,
+    "ended_le_m2000_net": -9383
+   },
+   "sessions": 247,
+   "wf_q": [
+    -70125,
+    22313,
+    17850,
+    68431
+   ]
+  },
+  "in_sample_design": false
+ },
+ "G3-T@1": {
+  "design": {
+   "trades": 4229,
+   "win": 0.4769,
+   "net": -99977,
+   "avg_win": 1423,
+   "avg_loss": -1343,
+   "worst_day": -33592,
+   "max_dd": 261145,
+   "mix": {
+    "rule_exit": 1260,
+    "time": 2022,
+    "stop": 745,
+    "squareoff": 178,
+    "lock": 18,
+    "missing": 6
+   },
+   "moved": {
+    "earlier": 1222,
+    "same": 3007
+   },
+   "giveback": {
+    "trades": 4229,
+    "reached": 1557,
+    "reached_share": 0.3682,
+    "ended_le0": 116,
+    "ended_le0_net": -82932,
+    "ended_le_m2000": 6,
+    "ended_le_m2000_net": -20531
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3058,
+   "win": 0.4895,
+   "net": 110153,
+   "avg_win": 1426,
+   "avg_loss": -1297,
+   "worst_day": -22325,
+   "max_dd": 76990,
+   "mix": {
+    "stop": 486,
+    "time": 1542,
+    "rule_exit": 892,
+    "squareoff": 125,
+    "lock": 10,
+    "missing": 3
+   },
+   "moved": {
+    "same": 2192,
+    "earlier": 866
+   },
+   "giveback": {
+    "trades": 3058,
+    "reached": 1110,
+    "reached_share": 0.363,
+    "ended_le0": 73,
+    "ended_le0_net": -54293,
+    "ended_le_m2000": 4,
+    "ended_le_m2000_net": -15884
+   },
+   "sessions": 247,
+   "wf_q": [
+    -29179,
+    13629,
+    32887,
+    92816
+   ]
+  },
+  "in_sample_design": false
+ },
+ "B0@2": {
+  "design": {
+   "trades": 4208,
+   "win": 0.4491,
+   "net": 295708,
+   "avg_win": 3514,
+   "avg_loss": -2738,
+   "worst_day": -98679,
+   "max_dd": 381894,
+   "mix": {
+    "time": 3130,
+    "stop": 796,
+    "squareoff": 193,
+    "lock": 73,
+    "missing": 16
+   },
+   "moved": null,
+   "giveback": {
+    "trades": 4208,
+    "reached": 2501,
+    "reached_share": 0.5943,
+    "ended_le0": 749,
+    "ended_le0_net": -2097770,
+    "ended_le_m2000": 412,
+    "ended_le_m2000_net": -1798580
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3044,
+   "win": 0.4629,
+   "net": 568032,
+   "avg_win": 3449,
+   "avg_loss": -2625,
+   "worst_day": -57260,
+   "max_dd": 179011,
+   "mix": {
+    "stop": 512,
+    "time": 2332,
+    "missing": 11,
+    "squareoff": 136,
+    "lock": 53
+   },
+   "moved": null,
+   "giveback": {
+    "trades": 3044,
+    "reached": 1813,
+    "reached_share": 0.5956,
+    "ended_le0": 513,
+    "ended_le0_net": -1428168,
+    "ended_le_m2000": 273,
+    "ended_le_m2000_net": -1214466
+   },
+   "sessions": 247,
+   "wf_q": [
+    61532,
+    154398,
+    77427,
+    274674
+   ]
+  }
+ },
+ "SR-T@2": {
+  "design": {
+   "trades": 4340,
+   "win": 0.4659,
+   "net": 137523,
+   "avg_win": 2583,
+   "avg_loss": -2194,
+   "worst_day": -53462,
+   "max_dd": 296510,
+   "mix": {
+    "time": 1326,
+    "rule_exit": 2420,
+    "stop": 445,
+    "squareoff": 110,
+    "lock": 36,
+    "missing": 3
+   },
+   "moved": {
+    "same": 1993,
+    "earlier": 2347
+   },
+   "giveback": {
+    "trades": 4340,
+    "reached": 2204,
+    "reached_share": 0.5078,
+    "ended_le0": 588,
+    "ended_le0_net": -1323167,
+    "ended_le_m2000": 259,
+    "ended_le_m2000_net": -1022358
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3133,
+   "win": 0.4714,
+   "net": 290222,
+   "avg_win": 2566,
+   "avg_loss": -2114,
+   "worst_day": -47547,
+   "max_dd": 104335,
+   "mix": {
+    "rule_exit": 1728,
+    "stop": 296,
+    "time": 999,
+    "squareoff": 81,
+    "lock": 28,
+    "missing": 1
+   },
+   "moved": {
+    "earlier": 1682,
+    "same": 1451
+   },
+   "giveback": {
+    "trades": 3133,
+    "reached": 1598,
+    "reached_share": 0.5101,
+    "ended_le0": 421,
+    "ended_le0_net": -951455,
+    "ended_le_m2000": 180,
+    "ended_le_m2000_net": -733262
+   },
+   "sessions": 247,
+   "wf_q": [
+    -21778,
+    22683,
+    13343,
+    275974
+   ]
+  },
+  "in_sample_design": false
+ },
+ "SR-F@2": {
+  "design": {
+   "trades": 4203,
+   "win": 0.4556,
+   "net": 147439,
+   "avg_win": 3062,
+   "avg_loss": -2498,
+   "worst_day": -59648,
+   "max_dd": 313940,
+   "mix": {
+    "lock": 118,
+    "rule_exit": 3834,
+    "squareoff": 248,
+    "missing": 3
+   },
+   "moved": {
+    "later": 1636,
+    "earlier": 2340,
+    "same": 227
+   },
+   "giveback": {
+    "trades": 4203,
+    "reached": 2278,
+    "reached_share": 0.542,
+    "ended_le0": 728,
+    "ended_le0_net": -1948059,
+    "ended_le_m2000": 370,
+    "ended_le_m2000_net": -1595796
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3041,
+   "win": 0.4594,
+   "net": 349223,
+   "avg_win": 3101,
+   "avg_loss": -2423,
+   "worst_day": -59648,
+   "max_dd": 128476,
+   "mix": {
+    "rule_exit": 2776,
+    "lock": 80,
+    "squareoff": 183,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1672,
+    "later": 1205,
+    "same": 164
+   },
+   "giveback": {
+    "trades": 3041,
+    "reached": 1655,
+    "reached_share": 0.5442,
+    "ended_le0": 523,
+    "ended_le0_net": -1399315,
+    "ended_le_m2000": 259,
+    "ended_le_m2000_net": -1141517
+   },
+   "sessions": 247,
+   "wf_q": [
+    118620,
+    6747,
+    3300,
+    220556
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLX-T@2": {
+  "design": {
+   "trades": 4212,
+   "win": 0.4459,
+   "net": 245888,
+   "avg_win": 3506,
+   "avg_loss": -2716,
+   "worst_day": -92674,
+   "max_dd": 378293,
+   "mix": {
+    "rule_exit": 327,
+    "time": 2897,
+    "stop": 714,
+    "squareoff": 187,
+    "lock": 70,
+    "missing": 17
+   },
+   "moved": {
+    "earlier": 289,
+    "same": 3923
+   },
+   "giveback": {
+    "trades": 4212,
+    "reached": 2502,
+    "reached_share": 0.594,
+    "ended_le0": 759,
+    "ended_le0_net": -2071584,
+    "ended_le_m2000": 421,
+    "ended_le_m2000_net": -1766699
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3048,
+   "win": 0.4583,
+   "net": 500380,
+   "avg_win": 3446,
+   "avg_loss": -2613,
+   "worst_day": -57260,
+   "max_dd": 172950,
+   "mix": {
+    "stop": 461,
+    "time": 2161,
+    "missing": 12,
+    "squareoff": 131,
+    "rule_exit": 233,
+    "lock": 50
+   },
+   "moved": {
+    "same": 2842,
+    "earlier": 206
+   },
+   "giveback": {
+    "trades": 3048,
+    "reached": 1813,
+    "reached_share": 0.5948,
+    "ended_le0": 522,
+    "ended_le0_net": -1416502,
+    "ended_le_m2000": 282,
+    "ended_le_m2000_net": -1198987
+   },
+   "sessions": 247,
+   "wf_q": [
+    10348,
+    140304,
+    64354,
+    285373
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLX-F@2": {
+  "design": {
+   "trades": 3833,
+   "win": 0.4341,
+   "net": 570515,
+   "avg_win": 5567,
+   "avg_loss": -4008,
+   "worst_day": -92425,
+   "max_dd": 387727,
+   "mix": {
+    "rule_exit": 2869,
+    "lock": 308,
+    "squareoff": 654,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 216,
+    "later": 3298,
+    "same": 319
+   },
+   "giveback": {
+    "trades": 3833,
+    "reached": 2775,
+    "reached_share": 0.724,
+    "ended_le0": 1159,
+    "ended_le0_net": -4413743,
+    "ended_le_m2000": 839,
+    "ended_le_m2000_net": -4071855
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2781,
+   "win": 0.447,
+   "net": 829382,
+   "avg_win": 5454,
+   "avg_loss": -3868,
+   "worst_day": -71951,
+   "max_dd": 215872,
+   "mix": {
+    "rule_exit": 2098,
+    "squareoff": 465,
+    "lock": 216,
+    "missing": 2
+   },
+   "moved": {
+    "later": 2388,
+    "same": 240,
+    "earlier": 153
+   },
+   "giveback": {
+    "trades": 2781,
+    "reached": 2013,
+    "reached_share": 0.7238,
+    "ended_le0": 807,
+    "ended_le0_net": -2970725,
+    "ended_le_m2000": 570,
+    "ended_le_m2000_net": -2713573
+   },
+   "sessions": 247,
+   "wf_q": [
+    226852,
+    -6132,
+    185572,
+    423090
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLP-T@2": {
+  "design": {
+   "trades": 4223,
+   "win": 0.4004,
+   "net": 235065,
+   "avg_win": 3532,
+   "avg_loss": -2266,
+   "worst_day": -81663,
+   "max_dd": 343733,
+   "mix": {
+    "time": 1310,
+    "rule_exit": 2344,
+    "lock": 46,
+    "stop": 381,
+    "squareoff": 138,
+    "missing": 4
+   },
+   "moved": {
+    "same": 2036,
+    "earlier": 2187
+   },
+   "giveback": {
+    "trades": 4223,
+    "reached": 2405,
+    "reached_share": 0.5695,
+    "ended_le0": 818,
+    "ended_le0_net": -1632233,
+    "ended_le_m2000": 315,
+    "ended_le_m2000_net": -1168511
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3056,
+   "win": 0.4077,
+   "net": 490562,
+   "avg_win": 3492,
+   "avg_loss": -2133,
+   "worst_day": -35228,
+   "max_dd": 146937,
+   "mix": {
+    "rule_exit": 1748,
+    "stop": 225,
+    "squareoff": 96,
+    "time": 954,
+    "lock": 30,
+    "missing": 3
+   },
+   "moved": {
+    "same": 1414,
+    "earlier": 1642
+   },
+   "giveback": {
+    "trades": 3056,
+    "reached": 1734,
+    "reached_share": 0.5674,
+    "ended_le0": 569,
+    "ended_le0_net": -1089284,
+    "ended_le_m2000": 210,
+    "ended_le_m2000_net": -779162
+   },
+   "sessions": 247,
+   "wf_q": [
+    41106,
+    81546,
+    112056,
+    255854
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLP-F@2": {
+  "design": {
+   "trades": 4087,
+   "win": 0.3758,
+   "net": 144865,
+   "avg_win": 3900,
+   "avg_loss": -2292,
+   "worst_day": -83806,
+   "max_dd": 434374,
+   "mix": {
+    "rule_exit": 3820,
+    "lock": 65,
+    "squareoff": 202
+   },
+   "moved": {
+    "later": 1707,
+    "earlier": 2040,
+    "same": 340
+   },
+   "giveback": {
+    "trades": 4087,
+    "reached": 2439,
+    "reached_share": 0.5968,
+    "ended_le0": 948,
+    "ended_le0_net": -1764271,
+    "ended_le_m2000": 327,
+    "ended_le_m2000_net": -1219775
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2962,
+   "win": 0.3842,
+   "net": 508186,
+   "avg_win": 3853,
+   "avg_loss": -2125,
+   "worst_day": -36657,
+   "max_dd": 173342,
+   "mix": {
+    "rule_exit": 2769,
+    "squareoff": 149,
+    "lock": 44
+   },
+   "moved": {
+    "same": 234,
+    "earlier": 1541,
+    "later": 1187
+   },
+   "giveback": {
+    "trades": 2962,
+    "reached": 1756,
+    "reached_share": 0.5928,
+    "ended_le0": 654,
+    "ended_le0_net": -1143980,
+    "ended_le_m2000": 206,
+    "ended_le_m2000_net": -773969
+   },
+   "sessions": 247,
+   "wf_q": [
+    136049,
+    106967,
+    103501,
+    161668
+   ]
+  },
+  "in_sample_design": false
+ },
+ "FLOW-T@2": {
+  "design": {
+   "trades": 4229,
+   "win": 0.4131,
+   "net": 285374,
+   "avg_win": 3284,
+   "avg_loss": -2196,
+   "worst_day": -75062,
+   "max_dd": 287111,
+   "mix": {
+    "rule_exit": 2072,
+    "time": 1512,
+    "squareoff": 158,
+    "stop": 424,
+    "lock": 59,
+    "missing": 4
+   },
+   "moved": {
+    "earlier": 1962,
+    "same": 2267
+   },
+   "giveback": {
+    "trades": 4229,
+    "reached": 2335,
+    "reached_share": 0.5521,
+    "ended_le0": 717,
+    "ended_le0_net": -1532405,
+    "ended_le_m2000": 312,
+    "ended_le_m2000_net": -1182230
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3059,
+   "win": 0.4237,
+   "net": 478789,
+   "avg_win": 3218,
+   "avg_loss": -2094,
+   "worst_day": -38427,
+   "max_dd": 126052,
+   "mix": {
+    "rule_exit": 1533,
+    "time": 1100,
+    "stop": 270,
+    "squareoff": 112,
+    "lock": 41,
+    "missing": 3
+   },
+   "moved": {
+    "earlier": 1464,
+    "same": 1595
+   },
+   "giveback": {
+    "trades": 3059,
+    "reached": 1681,
+    "reached_share": 0.5495,
+    "ended_le0": 489,
+    "ended_le0_net": -1038477,
+    "ended_le_m2000": 207,
+    "ended_le_m2000_net": -800917
+   },
+   "sessions": 247,
+   "wf_q": [
+    70639,
+    91602,
+    88867,
+    227681
+   ]
+  },
+  "in_sample_design": false
+ },
+ "FLOW-F@2": {
+  "design": {
+   "trades": 4179,
+   "win": 0.4068,
+   "net": 272259,
+   "avg_win": 3384,
+   "avg_loss": -2210,
+   "worst_day": -75062,
+   "max_dd": 306591,
+   "mix": {
+    "rule_exit": 3469,
+    "squareoff": 207,
+    "stop": 428,
+    "lock": 72,
+    "missing": 3
+   },
+   "moved": {
+    "earlier": 1939,
+    "later": 1504,
+    "same": 736
+   },
+   "giveback": {
+    "trades": 4179,
+    "reached": 2326,
+    "reached_share": 0.5566,
+    "ended_le0": 736,
+    "ended_le0_net": -1604574,
+    "ended_le_m2000": 327,
+    "ended_le_m2000_net": -1242462
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3020,
+   "win": 0.4159,
+   "net": 485423,
+   "avg_win": 3335,
+   "avg_loss": -2099,
+   "worst_day": -31580,
+   "max_dd": 116822,
+   "mix": {
+    "rule_exit": 2545,
+    "stop": 272,
+    "squareoff": 149,
+    "lock": 52,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1448,
+    "later": 1091,
+    "same": 481
+   },
+   "giveback": {
+    "trades": 3020,
+    "reached": 1671,
+    "reached_share": 0.5533,
+    "ended_le0": 502,
+    "ended_le0_net": -1069473,
+    "ended_le_m2000": 212,
+    "ended_le_m2000_net": -822777
+   },
+   "sessions": 247,
+   "wf_q": [
+    50425,
+    88345,
+    107671,
+    238983
+   ]
+  },
+  "in_sample_design": false
+ },
+ "MOM-T@2": {
+  "design": {
+   "trades": 4221,
+   "win": 0.4063,
+   "net": 389049,
+   "avg_win": 3613,
+   "avg_loss": -2317,
+   "worst_day": -76905,
+   "max_dd": 346367,
+   "mix": {
+    "time": 1677,
+    "stop": 396,
+    "rule_exit": 1931,
+    "lock": 56,
+    "squareoff": 149,
+    "missing": 12
+   },
+   "moved": {
+    "same": 2422,
+    "earlier": 1799
+   },
+   "giveback": {
+    "trades": 4221,
+    "reached": 2416,
+    "reached_share": 0.5724,
+    "ended_le0": 803,
+    "ended_le0_net": -1703925,
+    "ended_le_m2000": 342,
+    "ended_le_m2000_net": -1272010
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3052,
+   "win": 0.4187,
+   "net": 583569,
+   "avg_win": 3533,
+   "avg_loss": -2216,
+   "worst_day": -37024,
+   "max_dd": 161751,
+   "mix": {
+    "rule_exit": 1420,
+    "missing": 8,
+    "time": 1236,
+    "stop": 244,
+    "squareoff": 105,
+    "lock": 39
+   },
+   "moved": {
+    "earlier": 1339,
+    "same": 1713
+   },
+   "giveback": {
+    "trades": 3052,
+    "reached": 1753,
+    "reached_share": 0.5744,
+    "ended_le0": 556,
+    "ended_le0_net": -1147137,
+    "ended_le_m2000": 230,
+    "ended_le_m2000_net": -853589
+   },
+   "sessions": 247,
+   "wf_q": [
+    23219,
+    91559,
+    88658,
+    380134
+   ]
+  },
+  "in_sample_design": false
+ },
+ "MOM-F@2": {
+  "design": {
+   "trades": 4031,
+   "win": 0.3572,
+   "net": 253548,
+   "avg_win": 4323,
+   "avg_loss": -2305,
+   "worst_day": -76905,
+   "max_dd": 426859,
+   "mix": {
+    "lock": 83,
+    "rule_exit": 3330,
+    "stop": 392,
+    "squareoff": 223,
+    "missing": 3
+   },
+   "moved": {
+    "later": 1615,
+    "earlier": 1711,
+    "same": 705
+   },
+   "giveback": {
+    "trades": 4031,
+    "reached": 2404,
+    "reached_share": 0.5964,
+    "ended_le0": 1008,
+    "ended_le0_net": -1995287,
+    "ended_le_m2000": 385,
+    "ended_le_m2000_net": -1405065
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2914,
+   "win": 0.371,
+   "net": 603003,
+   "avg_win": 4276,
+   "avg_loss": -2193,
+   "worst_day": -34874,
+   "max_dd": 180759,
+   "mix": {
+    "rule_exit": 2454,
+    "stop": 241,
+    "squareoff": 162,
+    "lock": 55,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1275,
+    "later": 1183,
+    "same": 456
+   },
+   "giveback": {
+    "trades": 2914,
+    "reached": 1740,
+    "reached_share": 0.5971,
+    "ended_le0": 693,
+    "ended_le0_net": -1301944,
+    "ended_le_m2000": 241,
+    "ended_le_m2000_net": -889842
+   },
+   "sessions": 247,
+   "wf_q": [
+    141825,
+    30075,
+    109988,
+    321115
+   ]
+  },
+  "in_sample_design": false
+ },
+ "CTX-T@2": {
+  "design": {
+   "trades": 4288,
+   "win": 0.4636,
+   "net": 417539,
+   "avg_win": 2952,
+   "avg_loss": -2370,
+   "worst_day": -53462,
+   "max_dd": 317699,
+   "mix": {
+    "time": 2138,
+    "rule_exit": 1383,
+    "stop": 559,
+    "squareoff": 150,
+    "lock": 51,
+    "missing": 7
+   },
+   "moved": {
+    "same": 2955,
+    "earlier": 1333
+   },
+   "giveback": {
+    "trades": 4288,
+    "reached": 2366,
+    "reached_share": 0.5518,
+    "ended_le0": 642,
+    "ended_le0_net": -1521620,
+    "ended_le_m2000": 306,
+    "ended_le_m2000_net": -1217215
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3096,
+   "win": 0.4645,
+   "net": 357245,
+   "avg_win": 2863,
+   "avg_loss": -2268,
+   "worst_day": -55614,
+   "max_dd": 126602,
+   "mix": {
+    "rule_exit": 1104,
+    "stop": 355,
+    "time": 1492,
+    "squareoff": 104,
+    "lock": 37,
+    "missing": 4
+   },
+   "moved": {
+    "earlier": 1068,
+    "same": 2028
+   },
+   "giveback": {
+    "trades": 3096,
+    "reached": 1695,
+    "reached_share": 0.5475,
+    "ended_le0": 464,
+    "ended_le0_net": -1083984,
+    "ended_le_m2000": 212,
+    "ended_le_m2000_net": -859284
+   },
+   "sessions": 247,
+   "wf_q": [
+    -22282,
+    13557,
+    74605,
+    291365
+   ]
+  },
+  "in_sample_design": true
+ },
+ "CTX-F@2": {
+  "design": {
+   "trades": 4206,
+   "win": 0.452,
+   "net": 325312,
+   "avg_win": 3503,
+   "avg_loss": -2748,
+   "worst_day": -98679,
+   "max_dd": 368209,
+   "mix": {
+    "time": 2975,
+    "stop": 768,
+    "squareoff": 195,
+    "lock": 73,
+    "rule_exit": 180,
+    "missing": 15
+   },
+   "moved": {
+    "same": 4027,
+    "earlier": 100,
+    "later": 79
+   },
+   "giveback": {
+    "trades": 4206,
+    "reached": 2492,
+    "reached_share": 0.5925,
+    "ended_le0": 739,
+    "ended_le0_net": -2080586,
+    "ended_le_m2000": 406,
+    "ended_le_m2000_net": -1784328
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2989,
+   "win": 0.46,
+   "net": 380155,
+   "avg_win": 3708,
+   "avg_loss": -2924,
+   "worst_day": -57260,
+   "max_dd": 203089,
+   "mix": {
+    "rule_exit": 815,
+    "lock": 101,
+    "squareoff": 220,
+    "stop": 336,
+    "time": 1508,
+    "missing": 9
+   },
+   "moved": {
+    "earlier": 179,
+    "later": 750,
+    "same": 2060
+   },
+   "giveback": {
+    "trades": 2989,
+    "reached": 1886,
+    "reached_share": 0.631,
+    "ended_le0": 607,
+    "ended_le0_net": -1801957,
+    "ended_le_m2000": 352,
+    "ended_le_m2000_net": -1554843
+   },
+   "sessions": 247,
+   "wf_q": [
+    27336,
+    -6132,
+    81690,
+    277261
+   ]
+  },
+  "in_sample_design": true
+ },
+ "ML-T@2": {
+  "design": {
+   "trades": 4374,
+   "win": 0.4506,
+   "net": 325943,
+   "avg_win": 2908,
+   "avg_loss": -2250,
+   "worst_day": -46084,
+   "max_dd": 316618,
+   "mix": {
+    "time": 2176,
+    "rule_exit": 1521,
+    "stop": 615,
+    "lock": 47,
+    "missing": 12,
+    "squareoff": 3
+   },
+   "moved": {
+    "same": 2863,
+    "earlier": 1511
+   },
+   "giveback": {
+    "trades": 4374,
+    "reached": 2183,
+    "reached_share": 0.4991,
+    "ended_le0": 604,
+    "ended_le0_net": -1701614,
+    "ended_le_m2000": 325,
+    "ended_le_m2000_net": -1455540
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3161,
+   "win": 0.4543,
+   "net": 393805,
+   "avg_win": 2810,
+   "avg_loss": -2111,
+   "worst_day": -45568,
+   "max_dd": 187439,
+   "mix": {
+    "stop": 380,
+    "time": 1614,
+    "missing": 6,
+    "rule_exit": 1118,
+    "lock": 41,
+    "squareoff": 2
+   },
+   "moved": {
+    "same": 2051,
+    "earlier": 1110
+   },
+   "giveback": {
+    "trades": 3161,
+    "reached": 1563,
+    "reached_share": 0.4945,
+    "ended_le0": 429,
+    "ended_le0_net": -1167639,
+    "ended_le_m2000": 211,
+    "ended_le_m2000_net": -988067
+   },
+   "sessions": 247,
+   "wf_q": [
+    68924,
+    46580,
+    62043,
+    216259
+   ]
+  },
+  "in_sample_design": true
+ },
+ "ML-F@2": {
+  "design": {
+   "trades": 3828,
+   "win": 0.4177,
+   "net": -152724,
+   "avg_win": 4231,
+   "avg_loss": -3104,
+   "worst_day": -60142,
+   "max_dd": 686662,
+   "mix": {
+    "lock": 338,
+    "rule_exit": 2215,
+    "stop": 1048,
+    "squareoff": 215,
+    "missing": 12
+   },
+   "moved": {
+    "later": 1623,
+    "same": 577,
+    "earlier": 1628
+   },
+   "giveback": {
+    "trades": 3828,
+    "reached": 1991,
+    "reached_share": 0.5201,
+    "ended_le0": 748,
+    "ended_le0_net": -3555906,
+    "ended_le_m2000": 601,
+    "ended_le_m2000_net": -3427280
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2844,
+   "win": 0.429,
+   "net": 174166,
+   "avg_win": 3931,
+   "avg_loss": -2846,
+   "worst_day": -55353,
+   "max_dd": 494067,
+   "mix": {
+    "stop": 646,
+    "squareoff": 145,
+    "lock": 234,
+    "rule_exit": 1810,
+    "missing": 9
+   },
+   "moved": {
+    "same": 357,
+    "later": 1259,
+    "earlier": 1228
+   },
+   "giveback": {
+    "trades": 2844,
+    "reached": 1467,
+    "reached_share": 0.5158,
+    "ended_le0": 536,
+    "ended_le0_net": -2373836,
+    "ended_le_m2000": 393,
+    "ended_le_m2000_net": -2246772
+   },
+   "sessions": 247,
+   "wf_q": [
+    106944,
+    -286780,
+    -2516,
+    356518
+   ]
+  },
+  "in_sample_design": true
+ },
+ "G1-T@2": {
+  "design": {
+   "trades": 4263,
+   "win": 0.2895,
+   "net": 140285,
+   "avg_win": 3804,
+   "avg_loss": -1504,
+   "worst_day": -62930,
+   "max_dd": 364951,
+   "mix": {
+    "time": 1981,
+    "stop": 588,
+    "squareoff": 152,
+    "lock": 1534,
+    "missing": 8
+   },
+   "moved": {
+    "same": 2816,
+    "earlier": 1447
+   },
+   "giveback": {
+    "trades": 4263,
+    "reached": 2571,
+    "reached_share": 0.6031,
+    "ended_le0": 1475,
+    "ended_le0_net": -257045,
+    "ended_le_m2000": 23,
+    "ended_le_m2000_net": -80109
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3079,
+   "win": 0.3063,
+   "net": 376150,
+   "avg_win": 3668,
+   "avg_loss": -1443,
+   "worst_day": -49059,
+   "max_dd": 192110,
+   "mix": {
+    "stop": 375,
+    "lock": 1066,
+    "time": 1527,
+    "squareoff": 106,
+    "missing": 5
+   },
+   "moved": {
+    "same": 2075,
+    "earlier": 1004
+   },
+   "giveback": {
+    "trades": 3079,
+    "reached": 1859,
+    "reached_share": 0.6038,
+    "ended_le0": 1026,
+    "ended_le0_net": -191546,
+    "ended_le_m2000": 16,
+    "ended_le_m2000_net": -57116
+   },
+   "sessions": 247,
+   "wf_q": [
+    43021,
+    48238,
+    77107,
+    207784
+   ]
+  },
+  "in_sample_design": false
+ },
+ "G2-T@2": {
+  "design": {
+   "trades": 4397,
+   "win": 0.6125,
+   "net": -227391,
+   "avg_win": 1641,
+   "avg_loss": -2727,
+   "worst_day": -58920,
+   "max_dd": 387337,
+   "mix": {
+    "lock": 2604,
+    "stop": 635,
+    "time": 1043,
+    "squareoff": 112,
+    "missing": 3
+   },
+   "moved": {
+    "earlier": 2575,
+    "same": 1822
+   },
+   "giveback": {
+    "trades": 4397,
+    "reached": 2686,
+    "reached_share": 0.6109,
+    "ended_le0": 124,
+    "ended_le0_net": -126363,
+    "ended_le_m2000": 15,
+    "ended_le_m2000_net": -52402
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3175,
+   "win": 0.612,
+   "net": 18470,
+   "avg_win": 1644,
+   "avg_loss": -2577,
+   "worst_day": -58920,
+   "max_dd": 149042,
+   "mix": {
+    "stop": 410,
+    "lock": 1856,
+    "time": 831,
+    "squareoff": 77,
+    "missing": 1
+   },
+   "moved": {
+    "same": 1341,
+    "earlier": 1834
+   },
+   "giveback": {
+    "trades": 3175,
+    "reached": 1930,
+    "reached_share": 0.6079,
+    "ended_le0": 94,
+    "ended_le0_net": -97755,
+    "ended_le_m2000": 10,
+    "ended_le_m2000_net": -38480
+   },
+   "sessions": 247,
+   "wf_q": [
+    -54047,
+    -44895,
+    6755,
+    110657
+   ]
+  },
+  "in_sample_design": false
+ },
+ "G3-T@2": {
+  "design": {
+   "trades": 4253,
+   "win": 0.4787,
+   "net": -14733,
+   "avg_win": 2484,
+   "avg_loss": -2287,
+   "worst_day": -66211,
+   "max_dd": 425083,
+   "mix": {
+    "rule_exit": 2239,
+    "time": 1253,
+    "stop": 596,
+    "squareoff": 148,
+    "lock": 13,
+    "missing": 4
+   },
+   "moved": {
+    "earlier": 2186,
+    "same": 2067
+   },
+   "giveback": {
+    "trades": 4253,
+    "reached": 2550,
+    "reached_share": 0.5996,
+    "ended_le0": 656,
+    "ended_le0_net": -772526,
+    "ended_le_m2000": 104,
+    "ended_le_m2000_net": -346812
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3070,
+   "win": 0.4863,
+   "net": 311450,
+   "avg_win": 2535,
+   "avg_loss": -2203,
+   "worst_day": -54950,
+   "max_dd": 127227,
+   "mix": {
+    "stop": 386,
+    "rule_exit": 1598,
+    "time": 974,
+    "squareoff": 103,
+    "lock": 7,
+    "missing": 2
+   },
+   "moved": {
+    "same": 1511,
+    "earlier": 1559
+   },
+   "giveback": {
+    "trades": 3070,
+    "reached": 1836,
+    "reached_share": 0.598,
+    "ended_le0": 456,
+    "ended_le0_net": -557854,
+    "ended_le_m2000": 77,
+    "ended_le_m2000_net": -264770
+   },
+   "sessions": 247,
+   "wf_q": [
+    11988,
+    17188,
+    36371,
+    245903
+   ]
+  },
+  "in_sample_design": false
+ },
+ "B0@3": {
+  "design": {
+   "trades": 4208,
+   "win": 0.4506,
+   "net": 538237,
+   "avg_win": 5277,
+   "avg_loss": -4095,
+   "worst_day": -147647,
+   "max_dd": 558163,
+   "mix": {
+    "time": 3130,
+    "stop": 796,
+    "squareoff": 193,
+    "lock": 73,
+    "missing": 16
+   },
+   "moved": null,
+   "giveback": {
+    "trades": 4208,
+    "reached": 2930,
+    "reached_share": 0.6963,
+    "ended_le0": 1096,
+    "ended_le0_net": -4584852,
+    "ended_le_m2000": 739,
+    "ended_le_m2000_net": -4240164
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3044,
+   "win": 0.4642,
+   "net": 920100,
+   "avg_win": 5181,
+   "avg_loss": -3924,
+   "worst_day": -85577,
+   "max_dd": 263933,
+   "mix": {
+    "stop": 512,
+    "time": 2332,
+    "missing": 11,
+    "squareoff": 136,
+    "lock": 53
+   },
+   "moved": null,
+   "giveback": {
+    "trades": 3044,
+    "reached": 2102,
+    "reached_share": 0.6905,
+    "ended_le0": 738,
+    "ended_le0_net": -3043517,
+    "ended_le_m2000": 485,
+    "ended_le_m2000_net": -2798293
+   },
+   "sessions": 247,
+   "wf_q": [
+    108905,
+    249078,
+    133537,
+    428580
+   ]
+  }
+ },
+ "SR-T@3": {
+  "design": {
+   "trades": 4340,
+   "win": 0.4684,
+   "net": 304624,
+   "avg_win": 3877,
+   "avg_loss": -3284,
+   "worst_day": -79811,
+   "max_dd": 420204,
+   "mix": {
+    "time": 1326,
+    "rule_exit": 2420,
+    "stop": 445,
+    "squareoff": 110,
+    "lock": 36,
+    "missing": 3
+   },
+   "moved": {
+    "same": 1993,
+    "earlier": 2347
+   },
+   "giveback": {
+    "trades": 4340,
+    "reached": 2710,
+    "reached_share": 0.6244,
+    "ended_le0": 898,
+    "ended_le0_net": -2980849,
+    "ended_le_m2000": 551,
+    "ended_le_m2000_net": -2660748
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3133,
+   "win": 0.4727,
+   "net": 505756,
+   "avg_win": 3862,
+   "avg_loss": -3156,
+   "worst_day": -70985,
+   "max_dd": 154791,
+   "mix": {
+    "rule_exit": 1728,
+    "stop": 296,
+    "time": 999,
+    "squareoff": 81,
+    "lock": 28,
+    "missing": 1
+   },
+   "moved": {
+    "earlier": 1682,
+    "same": 1451
+   },
+   "giveback": {
+    "trades": 3133,
+    "reached": 1931,
+    "reached_share": 0.6163,
+    "ended_le0": 619,
+    "ended_le0_net": -2047486,
+    "ended_le_m2000": 370,
+    "ended_le_m2000_net": -1816933
+   },
+   "sessions": 247,
+   "wf_q": [
+    -15236,
+    52115,
+    37753,
+    431124
+   ]
+  },
+  "in_sample_design": false
+ },
+ "SR-F@3": {
+  "design": {
+   "trades": 4203,
+   "win": 0.4575,
+   "net": 316318,
+   "avg_win": 4596,
+   "avg_loss": -3738,
+   "worst_day": -89136,
+   "max_dd": 446543,
+   "mix": {
+    "lock": 118,
+    "rule_exit": 3834,
+    "squareoff": 248,
+    "missing": 3
+   },
+   "moved": {
+    "later": 1636,
+    "earlier": 2340,
+    "same": 227
+   },
+   "giveback": {
+    "trades": 4203,
+    "reached": 2754,
+    "reached_share": 0.6552,
+    "ended_le0": 1036,
+    "ended_le0_net": -4002802,
+    "ended_le_m2000": 687,
+    "ended_le_m2000_net": -3661739
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3041,
+   "win": 0.4604,
+   "net": 592073,
+   "avg_win": 4664,
+   "avg_loss": -3618,
+   "worst_day": -89136,
+   "max_dd": 189048,
+   "mix": {
+    "rule_exit": 2776,
+    "lock": 80,
+    "squareoff": 183,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1672,
+    "later": 1205,
+    "same": 164
+   },
+   "giveback": {
+    "trades": 3041,
+    "reached": 1973,
+    "reached_share": 0.6488,
+    "ended_le0": 732,
+    "ended_le0_net": -2797253,
+    "ended_le_m2000": 469,
+    "ended_le_m2000_net": -2531757
+   },
+   "sessions": 247,
+   "wf_q": [
+    194754,
+    27848,
+    22228,
+    347244
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLX-T@3": {
+  "design": {
+   "trades": 4212,
+   "win": 0.4471,
+   "net": 463846,
+   "avg_win": 5268,
+   "avg_loss": -4060,
+   "worst_day": -138639,
+   "max_dd": 550019,
+   "mix": {
+    "rule_exit": 327,
+    "time": 2897,
+    "stop": 714,
+    "squareoff": 187,
+    "lock": 70,
+    "missing": 17
+   },
+   "moved": {
+    "earlier": 289,
+    "same": 3923
+   },
+   "giveback": {
+    "trades": 4212,
+    "reached": 2931,
+    "reached_share": 0.6959,
+    "ended_le0": 1107,
+    "ended_le0_net": -4551031,
+    "ended_le_m2000": 754,
+    "ended_le_m2000_net": -4207667
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3048,
+   "win": 0.4593,
+   "net": 818896,
+   "avg_win": 5181,
+   "avg_loss": -3904,
+   "worst_day": -85577,
+   "max_dd": 254935,
+   "mix": {
+    "stop": 461,
+    "time": 2161,
+    "missing": 12,
+    "squareoff": 131,
+    "rule_exit": 233,
+    "lock": 50
+   },
+   "moved": {
+    "same": 2842,
+    "earlier": 206
+   },
+   "giveback": {
+    "trades": 3048,
+    "reached": 2101,
+    "reached_share": 0.6893,
+    "ended_le0": 747,
+    "ended_le0_net": -3045779,
+    "ended_le_m2000": 499,
+    "ended_le_m2000_net": -2805243
+   },
+   "sessions": 247,
+   "wf_q": [
+    32284,
+    227961,
+    113979,
+    444673
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLX-F@3": {
+  "design": {
+   "trades": 3833,
+   "win": 0.4344,
+   "net": 942192,
+   "avg_win": 8368,
+   "avg_loss": -5992,
+   "worst_day": -138260,
+   "max_dd": 573459,
+   "mix": {
+    "rule_exit": 2869,
+    "lock": 308,
+    "squareoff": 654,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 216,
+    "later": 3298,
+    "same": 319
+   },
+   "giveback": {
+    "trades": 3833,
+    "reached": 3061,
+    "reached_share": 0.7986,
+    "ended_le0": 1418,
+    "ended_le0_net": -8265460,
+    "ended_le_m2000": 1175,
+    "ended_le_m2000_net": -7994963
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2781,
+   "win": 0.4473,
+   "net": 1306315,
+   "avg_win": 8196,
+   "avg_loss": -5784,
+   "worst_day": -107667,
+   "max_dd": 319198,
+   "mix": {
+    "rule_exit": 2098,
+    "squareoff": 465,
+    "lock": 216,
+    "missing": 2
+   },
+   "moved": {
+    "later": 2388,
+    "same": 240,
+    "earlier": 153
+   },
+   "giveback": {
+    "trades": 2781,
+    "reached": 2207,
+    "reached_share": 0.7936,
+    "ended_le0": 981,
+    "ended_le0_net": -5539910,
+    "ended_le_m2000": 803,
+    "ended_le_m2000_net": -5336982
+   },
+   "sessions": 247,
+   "wf_q": [
+    355484,
+    6984,
+    294056,
+    649792
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLP-T@3": {
+  "design": {
+   "trades": 4223,
+   "win": 0.4016,
+   "net": 447666,
+   "avg_win": 5305,
+   "avg_loss": -3383,
+   "worst_day": -122113,
+   "max_dd": 500568,
+   "mix": {
+    "time": 1310,
+    "rule_exit": 2344,
+    "lock": 46,
+    "stop": 381,
+    "squareoff": 138,
+    "missing": 4
+   },
+   "moved": {
+    "same": 2036,
+    "earlier": 2187
+   },
+   "giveback": {
+    "trades": 4223,
+    "reached": 2840,
+    "reached_share": 0.6725,
+    "ended_le0": 1187,
+    "ended_le0_net": -3691789,
+    "ended_le_m2000": 686,
+    "ended_le_m2000_net": -3177775
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3056,
+   "win": 0.409,
+   "net": 804138,
+   "avg_win": 5244,
+   "avg_loss": -3184,
+   "worst_day": -52614,
+   "max_dd": 215302,
+   "mix": {
+    "rule_exit": 1748,
+    "stop": 225,
+    "squareoff": 96,
+    "time": 954,
+    "lock": 30,
+    "missing": 3
+   },
+   "moved": {
+    "same": 1414,
+    "earlier": 1642
+   },
+   "giveback": {
+    "trades": 3056,
+    "reached": 2024,
+    "reached_share": 0.6623,
+    "ended_le0": 808,
+    "ended_le0_net": -2417158,
+    "ended_le_m2000": 448,
+    "ended_le_m2000_net": -2069274
+   },
+   "sessions": 247,
+   "wf_q": [
+    78394,
+    139743,
+    185410,
+    400591
+   ]
+  },
+  "in_sample_design": false
+ },
+ "VOLP-F@3": {
+  "design": {
+   "trades": 4087,
+   "win": 0.3778,
+   "net": 309218,
+   "avg_win": 5842,
+   "avg_loss": -3426,
+   "worst_day": -125317,
+   "max_dd": 626118,
+   "mix": {
+    "rule_exit": 3820,
+    "lock": 65,
+    "squareoff": 202
+   },
+   "moved": {
+    "later": 1707,
+    "earlier": 2040,
+    "same": 340
+   },
+   "giveback": {
+    "trades": 4087,
+    "reached": 2844,
+    "reached_share": 0.6959,
+    "ended_le0": 1323,
+    "ended_le0_net": -3980105,
+    "ended_le_m2000": 735,
+    "ended_le_m2000_net": -3409273
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2962,
+   "win": 0.3866,
+   "net": 828550,
+   "avg_win": 5767,
+   "avg_loss": -3178,
+   "worst_day": -54782,
+   "max_dd": 254955,
+   "mix": {
+    "rule_exit": 2769,
+    "squareoff": 149,
+    "lock": 44
+   },
+   "moved": {
+    "same": 234,
+    "earlier": 1541,
+    "later": 1187
+   },
+   "giveback": {
+    "trades": 2962,
+    "reached": 2034,
+    "reached_share": 0.6867,
+    "ended_le0": 908,
+    "ended_le0_net": -2575852,
+    "ended_le_m2000": 470,
+    "ended_le_m2000_net": -2168726
+   },
+   "sessions": 247,
+   "wf_q": [
+    220263,
+    177247,
+    172191,
+    258849
+   ]
+  },
+  "in_sample_design": false
+ },
+ "FLOW-T@3": {
+  "design": {
+   "trades": 4229,
+   "win": 0.4159,
+   "net": 523426,
+   "avg_win": 4915,
+   "avg_loss": -3288,
+   "worst_day": -112212,
+   "max_dd": 415815,
+   "mix": {
+    "rule_exit": 2072,
+    "time": 1512,
+    "squareoff": 158,
+    "stop": 424,
+    "lock": 59,
+    "missing": 4
+   },
+   "moved": {
+    "earlier": 1962,
+    "same": 2267
+   },
+   "giveback": {
+    "trades": 4229,
+    "reached": 2794,
+    "reached_share": 0.6607,
+    "ended_le0": 1094,
+    "ended_le0_net": -3479082,
+    "ended_le_m2000": 638,
+    "ended_le_m2000_net": -3033287
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3059,
+   "win": 0.4269,
+   "net": 786660,
+   "avg_win": 4813,
+   "avg_loss": -3137,
+   "worst_day": -57305,
+   "max_dd": 185399,
+   "mix": {
+    "rule_exit": 1533,
+    "time": 1100,
+    "stop": 270,
+    "squareoff": 112,
+    "lock": 41,
+    "missing": 3
+   },
+   "moved": {
+    "earlier": 1464,
+    "same": 1595
+   },
+   "giveback": {
+    "trades": 3059,
+    "reached": 2003,
+    "reached_share": 0.6548,
+    "ended_le0": 745,
+    "ended_le0_net": -2340373,
+    "ended_le_m2000": 415,
+    "ended_le_m2000_net": -2018943
+   },
+   "sessions": 247,
+   "wf_q": [
+    122737,
+    155034,
+    150644,
+    358244
+   ]
+  },
+  "in_sample_design": false
+ },
+ "FLOW-F@3": {
+  "design": {
+   "trades": 4179,
+   "win": 0.4089,
+   "net": 502640,
+   "avg_win": 5071,
+   "avg_loss": -3305,
+   "worst_day": -112212,
+   "max_dd": 445065,
+   "mix": {
+    "rule_exit": 3469,
+    "squareoff": 207,
+    "stop": 428,
+    "lock": 72,
+    "missing": 3
+   },
+   "moved": {
+    "earlier": 1939,
+    "later": 1504,
+    "same": 736
+   },
+   "giveback": {
+    "trades": 4179,
+    "reached": 2770,
+    "reached_share": 0.6628,
+    "ended_le0": 1110,
+    "ended_le0_net": -3583024,
+    "ended_le_m2000": 654,
+    "ended_le_m2000_net": -3131118
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3020,
+   "win": 0.4189,
+   "net": 795657,
+   "avg_win": 4989,
+   "avg_loss": -3143,
+   "worst_day": -47135,
+   "max_dd": 171603,
+   "mix": {
+    "rule_exit": 2545,
+    "stop": 272,
+    "squareoff": 149,
+    "lock": 52,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1448,
+    "later": 1091,
+    "same": 481
+   },
+   "giveback": {
+    "trades": 3020,
+    "reached": 1981,
+    "reached_share": 0.656,
+    "ended_le0": 754,
+    "ended_le0_net": -2392022,
+    "ended_le_m2000": 421,
+    "ended_le_m2000_net": -2063612
+   },
+   "sessions": 247,
+   "wf_q": [
+    92186,
+    150007,
+    178618,
+    374846
+   ]
+  },
+  "in_sample_design": false
+ },
+ "MOM-T@3": {
+  "design": {
+   "trades": 4221,
+   "win": 0.4077,
+   "net": 678830,
+   "avg_win": 5423,
+   "avg_loss": -3462,
+   "worst_day": -114976,
+   "max_dd": 504505,
+   "mix": {
+    "time": 1677,
+    "stop": 396,
+    "rule_exit": 1931,
+    "lock": 56,
+    "squareoff": 149,
+    "missing": 12
+   },
+   "moved": {
+    "same": 2422,
+    "earlier": 1799
+   },
+   "giveback": {
+    "trades": 4221,
+    "reached": 2844,
+    "reached_share": 0.6738,
+    "ended_le0": 1165,
+    "ended_le0_net": -3834982,
+    "ended_le_m2000": 726,
+    "ended_le_m2000_net": -3397331
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3052,
+   "win": 0.4197,
+   "net": 943864,
+   "avg_win": 5309,
+   "avg_loss": -3307,
+   "worst_day": -55276,
+   "max_dd": 238960,
+   "mix": {
+    "rule_exit": 1420,
+    "missing": 8,
+    "time": 1236,
+    "stop": 244,
+    "squareoff": 105,
+    "lock": 39
+   },
+   "moved": {
+    "earlier": 1339,
+    "same": 1713
+   },
+   "giveback": {
+    "trades": 3052,
+    "reached": 2038,
+    "reached_share": 0.6678,
+    "ended_le0": 791,
+    "ended_le0_net": -2537171,
+    "ended_le_m2000": 477,
+    "ended_le_m2000_net": -2237016
+   },
+   "sessions": 247,
+   "wf_q": [
+    51613,
+    154809,
+    150417,
+    587025
+   ]
+  },
+  "in_sample_design": false
+ },
+ "MOM-F@3": {
+  "design": {
+   "trades": 4031,
+   "win": 0.3592,
+   "net": 470999,
+   "avg_win": 6472,
+   "avg_loss": -3446,
+   "worst_day": -114976,
+   "max_dd": 613233,
+   "mix": {
+    "lock": 83,
+    "rule_exit": 3330,
+    "stop": 392,
+    "squareoff": 223,
+    "missing": 3
+   },
+   "moved": {
+    "later": 1615,
+    "earlier": 1711,
+    "same": 705
+   },
+   "giveback": {
+    "trades": 4031,
+    "reached": 2787,
+    "reached_share": 0.6914,
+    "ended_le0": 1361,
+    "ended_le0_net": -4278672,
+    "ended_le_m2000": 820,
+    "ended_le_m2000_net": -3718784
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2914,
+   "win": 0.3727,
+   "net": 969762,
+   "avg_win": 6407,
+   "avg_loss": -3276,
+   "worst_day": -52051,
+   "max_dd": 266081,
+   "mix": {
+    "rule_exit": 2454,
+    "stop": 241,
+    "squareoff": 162,
+    "lock": 55,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 1275,
+    "later": 1183,
+    "same": 456
+   },
+   "giveback": {
+    "trades": 2914,
+    "reached": 1994,
+    "reached_share": 0.6843,
+    "ended_le0": 926,
+    "ended_le0_net": -2780160,
+    "ended_le_m2000": 523,
+    "ended_le_m2000_net": -2374806
+   },
+   "sessions": 247,
+   "wf_q": [
+    228764,
+    61878,
+    181541,
+    497579
+   ]
+  },
+  "in_sample_design": false
+ },
+ "CTX-T@3": {
+  "design": {
+   "trades": 4288,
+   "win": 0.4657,
+   "net": 723286,
+   "avg_win": 4430,
+   "avg_loss": -3546,
+   "worst_day": -79811,
+   "max_dd": 452756,
+   "mix": {
+    "time": 2138,
+    "rule_exit": 1383,
+    "stop": 559,
+    "squareoff": 150,
+    "lock": 51,
+    "missing": 7
+   },
+   "moved": {
+    "same": 2955,
+    "earlier": 1333
+   },
+   "giveback": {
+    "trades": 4288,
+    "reached": 2836,
+    "reached_share": 0.6614,
+    "ended_le0": 976,
+    "ended_le0_net": -3428950,
+    "ended_le_m2000": 615,
+    "ended_le_m2000_net": -3088320
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3096,
+   "win": 0.4654,
+   "net": 605485,
+   "avg_win": 4309,
+   "avg_loss": -3386,
+   "worst_day": -83067,
+   "max_dd": 184832,
+   "mix": {
+    "rule_exit": 1104,
+    "stop": 355,
+    "time": 1492,
+    "squareoff": 104,
+    "lock": 37,
+    "missing": 4
+   },
+   "moved": {
+    "earlier": 1068,
+    "same": 2028
+   },
+   "giveback": {
+    "trades": 3096,
+    "reached": 2004,
+    "reached_share": 0.6473,
+    "ended_le0": 666,
+    "ended_le0_net": -2346543,
+    "ended_le_m2000": 410,
+    "ended_le_m2000_net": -2111028
+   },
+   "sessions": 247,
+   "wf_q": [
+    -16045,
+    38279,
+    129303,
+    453948
+   ]
+  },
+  "in_sample_design": true
+ },
+ "CTX-F@3": {
+  "design": {
+   "trades": 4206,
+   "win": 0.4532,
+   "net": 582600,
+   "avg_win": 5263,
+   "avg_loss": -4108,
+   "worst_day": -147647,
+   "max_dd": 533261,
+   "mix": {
+    "time": 2975,
+    "stop": 768,
+    "squareoff": 195,
+    "lock": 73,
+    "rule_exit": 180,
+    "missing": 15
+   },
+   "moved": {
+    "same": 4027,
+    "earlier": 100,
+    "later": 79
+   },
+   "giveback": {
+    "trades": 4206,
+    "reached": 2926,
+    "reached_share": 0.6957,
+    "ended_le0": 1088,
+    "ended_le0_net": -4536998,
+    "ended_le_m2000": 732,
+    "ended_le_m2000_net": -4191227
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2989,
+   "win": 0.4604,
+   "net": 636952,
+   "avg_win": 5581,
+   "avg_loss": -4366,
+   "worst_day": -85577,
+   "max_dd": 288216,
+   "mix": {
+    "rule_exit": 815,
+    "lock": 101,
+    "squareoff": 220,
+    "stop": 336,
+    "time": 1508,
+    "missing": 9
+   },
+   "moved": {
+    "earlier": 179,
+    "later": 750,
+    "same": 2060
+   },
+   "giveback": {
+    "trades": 2989,
+    "reached": 2143,
+    "reached_share": 0.717,
+    "ended_le0": 813,
+    "ended_le0_net": -3633641,
+    "ended_le_m2000": 578,
+    "ended_le_m2000_net": -3399713
+   },
+   "sessions": 247,
+   "wf_q": [
+    57701,
+    6984,
+    139867,
+    432400
+   ]
+  },
+  "in_sample_design": true
+ },
+ "ML-T@3": {
+  "design": {
+   "trades": 4374,
+   "win": 0.455,
+   "net": 587604,
+   "avg_win": 4343,
+   "avg_loss": -3379,
+   "worst_day": -68906,
+   "max_dd": 451021,
+   "mix": {
+    "time": 2176,
+    "rule_exit": 1521,
+    "stop": 615,
+    "lock": 47,
+    "missing": 12,
+    "squareoff": 3
+   },
+   "moved": {
+    "same": 2863,
+    "earlier": 1511
+   },
+   "giveback": {
+    "trades": 4374,
+    "reached": 2684,
+    "reached_share": 0.6136,
+    "ended_le0": 907,
+    "ended_le0_net": -3688893,
+    "ended_le_m2000": 585,
+    "ended_le_m2000_net": -3394133
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3161,
+   "win": 0.4597,
+   "net": 661627,
+   "avg_win": 4188,
+   "avg_loss": -3176,
+   "worst_day": -67998,
+   "max_dd": 275822,
+   "mix": {
+    "stop": 380,
+    "time": 1614,
+    "missing": 6,
+    "rule_exit": 1118,
+    "lock": 41,
+    "squareoff": 2
+   },
+   "moved": {
+    "same": 2051,
+    "earlier": 1110
+   },
+   "giveback": {
+    "trades": 3161,
+    "reached": 1906,
+    "reached_share": 0.603,
+    "ended_le0": 624,
+    "ended_le0_net": -2485323,
+    "ended_le_m2000": 375,
+    "ended_le_m2000_net": -2255767
+   },
+   "sessions": 247,
+   "wf_q": [
+    120768,
+    87898,
+    111007,
+    341954
+   ]
+  },
+  "in_sample_design": true
+ },
+ "ML-F@3": {
+  "design": {
+   "trades": 3828,
+   "win": 0.4216,
+   "net": -142811,
+   "avg_win": 6310,
+   "avg_loss": -4665,
+   "worst_day": -89854,
+   "max_dd": 975355,
+   "mix": {
+    "lock": 338,
+    "rule_exit": 2215,
+    "stop": 1048,
+    "squareoff": 215,
+    "missing": 12
+   },
+   "moved": {
+    "later": 1623,
+    "same": 577,
+    "earlier": 1628
+   },
+   "giveback": {
+    "trades": 3828,
+    "reached": 2398,
+    "reached_share": 0.6264,
+    "ended_le0": 990,
+    "ended_le0_net": -6514172,
+    "ended_le_m2000": 814,
+    "ended_le_m2000_net": -6368789
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 2844,
+   "win": 0.4335,
+   "net": 324682,
+   "avg_win": 5857,
+   "avg_loss": -4281,
+   "worst_day": -82676,
+   "max_dd": 703987,
+   "mix": {
+    "stop": 646,
+    "squareoff": 145,
+    "lock": 234,
+    "rule_exit": 1810,
+    "missing": 9
+   },
+   "moved": {
+    "same": 357,
+    "later": 1259,
+    "earlier": 1228
+   },
+   "giveback": {
+    "trades": 2844,
+    "reached": 1747,
+    "reached_share": 0.6143,
+    "ended_le0": 690,
+    "ended_le0_net": -4291021,
+    "ended_le_m2000": 532,
+    "ended_le_m2000_net": -4146280
+   },
+   "sessions": 247,
+   "wf_q": [
+    175164,
+    -413887,
+    13281,
+    550124
+   ]
+  },
+  "in_sample_design": true
+ },
+ "G1-T@3": {
+  "design": {
+   "trades": 4308,
+   "win": 0.2266,
+   "net": 114475,
+   "avg_win": 5933,
+   "avg_loss": -1704,
+   "worst_day": -83394,
+   "max_dd": 536680,
+   "mix": {
+    "time": 1533,
+    "lock": 2164,
+    "squareoff": 128,
+    "stop": 477,
+    "missing": 6
+   },
+   "moved": {
+    "same": 2221,
+    "earlier": 2087
+   },
+   "giveback": {
+    "trades": 4308,
+    "reached": 3031,
+    "reached_share": 0.7036,
+    "ended_le0": 2115,
+    "ended_le0_net": -616938,
+    "ended_le_m2000": 65,
+    "ended_le_m2000_net": -297763
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3107,
+   "win": 0.2462,
+   "net": 472521,
+   "avg_win": 5649,
+   "avg_loss": -1644,
+   "worst_day": -51715,
+   "max_dd": 255788,
+   "mix": {
+    "stop": 302,
+    "lock": 1495,
+    "time": 1210,
+    "squareoff": 95,
+    "missing": 5
+   },
+   "moved": {
+    "same": 1671,
+    "earlier": 1436
+   },
+   "giveback": {
+    "trades": 3107,
+    "reached": 2176,
+    "reached_share": 0.7004,
+    "ended_le0": 1460,
+    "ended_le0_net": -465990,
+    "ended_le_m2000": 47,
+    "ended_le_m2000_net": -233796
+   },
+   "sessions": 247,
+   "wf_q": [
+    83896,
+    -11736,
+    105624,
+    294736
+   ]
+  },
+  "in_sample_design": false
+ },
+ "G2-T@3": {
+  "design": {
+   "trades": 4462,
+   "win": 0.6679,
+   "net": 3333,
+   "avg_win": 1886,
+   "avg_loss": -3789,
+   "worst_day": -56033,
+   "max_dd": 478647,
+   "mix": {
+    "lock": 3142,
+    "stop": 517,
+    "squareoff": 95,
+    "time": 706,
+    "missing": 2
+   },
+   "moved": {
+    "earlier": 3121,
+    "same": 1341
+   },
+   "giveback": {
+    "trades": 4462,
+    "reached": 3182,
+    "reached_share": 0.7131,
+    "ended_le0": 264,
+    "ended_le0_net": -388090,
+    "ended_le_m2000": 53,
+    "ended_le_m2000_net": -246224
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3220,
+   "win": 0.6674,
+   "net": 313170,
+   "avg_win": 1925,
+   "avg_loss": -3571,
+   "worst_day": -51893,
+   "max_dd": 155452,
+   "mix": {
+    "stop": 331,
+    "lock": 2247,
+    "time": 571,
+    "squareoff": 70,
+    "missing": 1
+   },
+   "moved": {
+    "same": 992,
+    "earlier": 2228
+   },
+   "giveback": {
+    "trades": 3220,
+    "reached": 2284,
+    "reached_share": 0.7093,
+    "ended_le0": 185,
+    "ended_le0_net": -296247,
+    "ended_le_m2000": 37,
+    "ended_le_m2000_net": -195276
+   },
+   "sessions": 247,
+   "wf_q": [
+    84058,
+    10257,
+    131767,
+    87088
+   ]
+  },
+  "in_sample_design": false
+ },
+ "G3-T@3": {
+  "design": {
+   "trades": 4271,
+   "win": 0.4505,
+   "net": 77624,
+   "avg_win": 3658,
+   "avg_loss": -2965,
+   "worst_day": -91709,
+   "max_dd": 573095,
+   "mix": {
+    "rule_exit": 2727,
+    "squareoff": 130,
+    "lock": 14,
+    "stop": 485,
+    "time": 912,
+    "missing": 3
+   },
+   "moved": {
+    "earlier": 2670,
+    "same": 1601
+   },
+   "giveback": {
+    "trades": 4271,
+    "reached": 3000,
+    "reached_share": 0.7024,
+    "ended_le0": 1136,
+    "ended_le0_net": -1969121,
+    "ended_le_m2000": 336,
+    "ended_le_m2000_net": -1246684
+   },
+   "sessions": 337
+  },
+  "wf": {
+   "trades": 3083,
+   "win": 0.4635,
+   "net": 484697,
+   "avg_win": 3701,
+   "avg_loss": -2904,
+   "worst_day": -65953,
+   "max_dd": 169191,
+   "mix": {
+    "stop": 320,
+    "rule_exit": 1928,
+    "squareoff": 95,
+    "time": 730,
+    "lock": 8,
+    "missing": 2
+   },
+   "moved": {
+    "same": 1197,
+    "earlier": 1886
+   },
+   "giveback": {
+    "trades": 3083,
+    "reached": 2141,
+    "reached_share": 0.6945,
+    "ended_le0": 762,
+    "ended_le0_net": -1365368,
+    "ended_le_m2000": 224,
+    "ended_le_m2000_net": -880227
+   },
+   "sessions": 247,
+   "wf_q": [
+    66003,
+    44316,
+    32456,
+    341922
+   ]
+  },
+  "in_sample_design": false
+ },
+ "training": {
+  "2024-11-20..2026-03-31": {
+   "vix_med": 13.425,
+   "choice_T": {
+    "0": "B0",
+    "1": "SR",
+    "2": "SR",
+    "3": "B0"
+   },
+   "choice_F": {
+    "0": "B0",
+    "1": "SR",
+    "2": "B0",
+    "3": "B0"
+   },
+   "n_trades": 4208,
+   "n_rows": 234286,
+   "base_rate": 0.49260732608862673,
+   "theta": 0.46006272457371133,
+   "window": [
+    "2024-11-20",
+    "2026-03-31"
+   ]
+  },
+  "2024-11-20..2025-03-31": {
+   "vix_med": 14.42,
+   "choice_T": {
+    "0": "SR",
+    "1": "MOM",
+    "2": "SR",
+    "3": "VOLP"
+   },
+   "choice_F": {
+    "0": "SR",
+    "1": "VOLX",
+    "2": "B0",
+    "3": "B0"
+   },
+   "n_trades": 1164,
+   "n_rows": 64736,
+   "base_rate": 0.4796712802768166,
+   "theta": 0.4455883641396419,
+   "window": [
+    "2024-11-20",
+    "2025-03-31"
+   ]
+  },
+  "2024-11-20..2025-06-30": {
+   "vix_med": 14.71,
+   "choice_T": {
+    "0": "SR",
+    "1": "VOLX",
+    "2": "SR",
+    "3": "B0"
+   },
+   "choice_F": {
+    "0": "VOLX",
+    "1": "VOLX",
+    "2": "SR",
+    "3": "B0"
+   },
+   "n_trades": 1902,
+   "n_rows": 105905,
+   "base_rate": 0.49314952079694063,
+   "theta": 0.4586752315952012,
+   "window": [
+    "2024-11-20",
+    "2025-06-30"
+   ]
+  },
+  "2024-11-20..2025-09-30": {
+   "vix_med": 13.98,
+   "choice_T": {
+    "0": "B0",
+    "1": "VOLX",
+    "2": "SR",
+    "3": "B0"
+   },
+   "choice_F": {
+    "0": "B0",
+    "1": "SR",
+    "2": "B0",
+    "3": "B0"
+   },
+   "n_trades": 2684,
+   "n_rows": 149458,
+   "base_rate": 0.48813044467342,
+   "theta": 0.45791783203022146,
+   "window": [
+    "2024-11-20",
+    "2025-09-30"
+   ]
+  },
+  "2024-11-20..2025-12-31": {
+   "vix_med": 13.26,
+   "choice_T": {
+    "0": "B0",
+    "1": "SR",
+    "2": "SR",
+    "3": "B0"
+   },
+   "choice_F": {
+    "0": "B0",
+    "1": "SR",
+    "2": "B0",
+    "3": "B0"
+   },
+   "n_trades": 3461,
+   "n_rows": 192773,
+   "base_rate": 0.4932018488066275,
+   "theta": 0.4630700817795927,
+   "window": [
+    "2024-11-20",
+    "2025-12-31"
+   ]
+  }
+ }
+}
