@@ -1,0 +1,25 @@
+study,test,arm,rule,family,p,p_net,p_win,q_m2290,q_r166,passed
+R166,R72:D60C2,R72,D60C2,delta,0.7146,0.7146,0.5589,1.0,0.9528,False
+R166,R72:D60W,R72,D60W,delta,0.4152,0.4152,0.3034,1.0,0.852,False
+R166,R72:SR1,R72,SR1,support / resistance,0.5549,0.5549,0.2455,1.0,0.8878,False
+R166,R72:SR2,R72,SR2,support / resistance,0.992,0.992,0.998,1.0,1.0,False
+R166,R72:FT3,R72,FT3,fake breakout,1.0,1.0,1.0,1.0,1.0,False
+R166,R72:FT5,R72,FT5,fake breakout,1.0,1.0,1.0,1.0,1.0,False
+R166,R72:V1,R72,V1,fake volume,0.006,0.006,0.1856,1.0,0.072,False
+R166,R72:V2,R72,V2,fake volume,0.0798,0.0798,0.0339,1.0,0.3192,False
+R166,R72:E1,R72,E1,fake buyer / seller,0.2136,0.2136,0.5289,1.0,0.6408,False
+R166,R72:E2,R72,E2,fake buyer / seller,0.6267,0.6267,0.7026,1.0,0.9401,False
+R166,R72:F1,R72,F1,traps,0.495,0.495,0.4232,1.0,0.852,False
+R166,R72:F2,R72,F2,traps,0.002,0.002,0.004,1.0,0.048,False
+R166,R51:D60C2,R51,D60C2,delta,0.7026,0.7026,0.8124,1.0,0.9528,False
+R166,R51:D60W,R51,D60W,delta,0.4291,0.4291,0.7405,1.0,0.852,False
+R166,R51:SR1,R51,SR1,support / resistance,0.497,0.497,0.3453,1.0,0.852,False
+R166,R51:SR2,R51,SR2,support / resistance,0.978,0.978,0.9042,1.0,1.0,False
+R166,R51:FT3,R51,FT3,fake breakout,1.0,1.0,1.0,1.0,1.0,False
+R166,R51:FT5,R51,FT5,fake breakout,1.0,1.0,1.0,1.0,1.0,False
+R166,R51:V1,R51,V1,fake volume,0.0379,0.0379,0.1856,1.0,0.2011,False
+R166,R51:V2,R51,V2,fake volume,0.0419,0.0419,0.2076,1.0,0.2011,False
+R166,R51:E1,R51,E1,fake buyer / seller,0.0978,0.0978,0.0599,1.0,0.3353,False
+R166,R51:E2,R51,E2,fake buyer / seller,0.3852,0.3852,0.4631,1.0,0.852,False
+R166,R51:F1,R51,F1,traps,0.491,0.491,0.9601,1.0,0.852,False
+R166,R51:F2,R51,F2,traps,0.024,0.024,0.0259,1.0,0.192,False

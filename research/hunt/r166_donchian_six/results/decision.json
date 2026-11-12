@@ -1,0 +1,391 @@
+{
+ "R72:D60C2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.7146,
+  "p_net": 0.7146,
+  "p_win": 0.5589,
+  "q_all": 1.0,
+  "q_r166": 0.9528
+ },
+ "R72:D60W": {
+  "passed": false,
+  "fails": [
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": true
+  },
+  "p": 0.4152,
+  "p_net": 0.4152,
+  "p_win": 0.3034,
+  "q_all": 1.0,
+  "q_r166": 0.852
+ },
+ "R72:SR1": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.5549,
+  "p_net": 0.5549,
+  "p_win": 0.2455,
+  "q_all": 1.0,
+  "q_r166": 0.8878
+ },
+ "R72:SR2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.992,
+  "p_net": 0.992,
+  "p_win": 0.998,
+  "q_all": 1.0,
+  "q_r166": 1.0
+ },
+ "R72:FT3": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r166": 1.0
+ },
+ "R72:FT5": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r166": 1.0
+ },
+ "R72:V1": {
+  "passed": false,
+  "fails": [
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": true
+  },
+  "p": 0.006,
+  "p_net": 0.006,
+  "p_win": 0.1856,
+  "q_all": 1.0,
+  "q_r166": 0.072
+ },
+ "R72:V2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.0798,
+  "p_net": 0.0798,
+  "p_win": 0.0339,
+  "q_all": 1.0,
+  "q_r166": 0.3192
+ },
+ "R72:E1": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.2136,
+  "p_net": 0.2136,
+  "p_win": 0.5289,
+  "q_all": 1.0,
+  "q_r166": 0.6408
+ },
+ "R72:E2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.6267,
+  "p_net": 0.6267,
+  "p_win": 0.7026,
+  "q_all": 1.0,
+  "q_r166": 0.9401
+ },
+ "R72:F1": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.495,
+  "p_net": 0.495,
+  "p_win": 0.4232,
+  "q_all": 1.0,
+  "q_r166": 0.852
+ },
+ "R72:F2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.002,
+  "p_net": 0.002,
+  "p_win": 0.004,
+  "q_all": 1.0,
+  "q_r166": 0.048
+ },
+ "R51:D60C2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf)",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.7026,
+  "p_net": 0.7026,
+  "p_win": 0.8124,
+  "q_all": 1.0,
+  "q_r166": 0.9528
+ },
+ "R51:D60W": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.4291,
+  "p_net": 0.4291,
+  "p_win": 0.7405,
+  "q_all": 1.0,
+  "q_r166": 0.852
+ },
+ "R51:SR1": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.497,
+  "p_net": 0.497,
+  "p_win": 0.3453,
+  "q_all": 1.0,
+  "q_r166": 0.852
+ },
+ "R51:SR2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "final: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.978,
+  "p_net": 0.978,
+  "p_win": 0.9042,
+  "q_all": 1.0,
+  "q_r166": 1.0
+ },
+ "R51:FT3": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r166": 1.0
+ },
+ "R51:FT5": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "design: net not positive",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 1.0,
+  "p_net": 1.0,
+  "p_win": 1.0,
+  "q_all": 1.0,
+  "q_r166": 1.0
+ },
+ "R51:V1": {
+  "passed": false,
+  "fails": [
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": true
+  },
+  "p": 0.0379,
+  "p_net": 0.0379,
+  "p_win": 0.1856,
+  "q_all": 1.0,
+  "q_r166": 0.2011
+ },
+ "R51:V2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.0419,
+  "p_net": 0.0419,
+  "p_win": 0.2076,
+  "q_all": 1.0,
+  "q_r166": 0.2011
+ },
+ "R51:E1": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.0978,
+  "p_net": 0.0978,
+  "p_win": 0.0599,
+  "q_all": 1.0,
+  "q_r166": 0.3353
+ },
+ "R51:E2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.3852,
+  "p_net": 0.3852,
+  "p_win": 0.4631,
+  "q_all": 1.0,
+  "q_r166": 0.852
+ },
+ "R51:F1": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.491,
+  "p_net": 0.491,
+  "p_win": 0.9601,
+  "q_all": 1.0,
+  "q_r166": 0.852
+ },
+ "R51:F2": {
+  "passed": false,
+  "fails": [
+   "better by neither route (wf and final)",
+   "BH q 1 > 0.1"
+  ],
+  "routes": {
+   "win": false,
+   "profit": false
+  },
+  "p": 0.024,
+  "p_net": 0.024,
+  "p_win": 0.0259,
+  "q_all": 1.0,
+  "q_r166": 0.192
+ },
+ "_m": {
+  "r166": 24,
+  "prior": 2266,
+  "total": 2290
+ }
+}

@@ -1,0 +1,33 @@
+id: r166-r72-d60w
+title: 'R166 D60W on R72 Breadth Donchian: delta 0.60 on NIFTY / SENSEX only, 1-ITM elsewhere'
+family: option-structure
+date: '2026-11-12'
+doc: research/hunt/r166_donchian_six/results/report.md
+hypothesis: 'Boss (12 Nov): analyse delta on the Donchian arms. Rule: delta 0.60 on NIFTY / SENSEX only, 1-ITM elsewhere.
+  Gates: better than today''s (win +5 points with net not lower, or net higher with drawdown <= 1.1x) in walk-forward and
+  final (delta: walk-forward); net > 0 in every period; twin BH q <= 0.10 with m = 2290; >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK) copied 12 Nov 2026; R51 Amendment A
+  clean stores; Nov 2024 onward only
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R166 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (unchanged arm entries); option data used as context only'
+model_or_rule: 'R72 Breadth Donchian with D60W: delta 0.60 on NIFTY / SENSEX only, 1-ITM elsewhere, 1 lot'
+settings: research/hunt/r166_donchian_six/r166cfg.py, r166lib.py; PREREG.md section 1
+prereg: research/hunt/r166_donchian_six/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design: 3070 trades, win 46.9%, net Rs 2,35,180, max DD Rs 1,94,490 (today Rs 2,16,929). Walk-forward: 2237 trades,
+    win 49.0%, net Rs 3,47,752, max DD Rs 88,659 (today 49.0%, Rs 3,35,882). Final: 1202 trades, win 46.2%, net Rs 1,75,848,
+    max DD Rs 63,483 (today 45.8%, Rs 1,71,366). Twin p net 0.4152, win 0.3034; BH q 1.0. Fails: BH q 1 > 0.1.'
+  costs: dated Zerodha charges, R17 fills (slippage from the 5-minute volume; stops -10 bps and 2x the half-spread)
+holdout_read: true
+verdict: rejected
+notes: Nothing changes in the app.

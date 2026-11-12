@@ -1,0 +1,35 @@
+id: r166-r72-sr2
+title: 'R166 SR2 on R72 Breadth Donchian: calls only above the previous day''s high, puts only below its low'
+family: patterns-indicators
+date: '2026-11-12'
+doc: research/hunt/r166_donchian_six/results/report.md
+hypothesis: 'Boss (12 Nov): analyse support / resistance on the Donchian arms. Rule: calls only above the previous day''s
+  high, puts only below its low. Gates: better than today''s (win +5 points with net not lower, or net higher with drawdown
+  <= 1.1x) in walk-forward and final (delta: walk-forward); net > 0 in every period; twin BH q <= 0.10 with m = 2290; >= 40
+  final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK) copied 12 Nov 2026; R51 Amendment A
+  clean stores; Nov 2024 onward only
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R166 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (unchanged arm entries); index data only'
+model_or_rule: 'R72 Breadth Donchian with SR2: calls only above the previous day''s high, puts only below its low, 1 lot'
+settings: research/hunt/r166_donchian_six/r166cfg.py, r166lib.py; PREREG.md section 1
+prereg: research/hunt/r166_donchian_six/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design: 1389 trades, win 49.2%, net Rs 2,43,151, max DD Rs 61,051 (today Rs 2,16,929). Walk-forward: 977 trades,
+    win 51.0%, net Rs 2,33,471, max DD Rs 61,051 (today 49.0%, Rs 3,35,882). Final: 547 trades, win 42.2%, net Rs 9,247, max
+    DD Rs 87,656 (today 45.8%, Rs 1,71,366). Twin p net 0.992, win 0.998; BH q 1.0. Fails: better by neither route (wf and
+    final); BH q 1 > 0.1.'
+  costs: dated Zerodha charges, R17 fills (slippage from the 5-minute volume; stops -10 bps and 2x the half-spread)
+holdout_read: true
+verdict: rejected
+notes: Nothing changes in the app.

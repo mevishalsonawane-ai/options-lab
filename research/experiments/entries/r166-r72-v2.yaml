@@ -1,0 +1,34 @@
+id: r166-r72-v2
+title: 'R166 V2 on R72 Breadth Donchian: skip a volume climax in the option (ratio >= 3)'
+family: flow-oi
+date: '2026-11-12'
+doc: research/hunt/r166_donchian_six/results/report.md
+hypothesis: 'Boss (12 Nov): analyse fake volume on the Donchian arms. Rule: skip a volume climax in the option (ratio >= 3).
+  Gates: better than today''s (win +5 points with net not lower, or net higher with drawdown <= 1.1x) in walk-forward and
+  final (delta: walk-forward); net > 0 in every period; twin BH q <= 0.10 with m = 2290; >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK) copied 12 Nov 2026; R51 Amendment A
+  clean stores; Nov 2024 onward only
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R166 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (unchanged arm entries); option data used as context only'
+model_or_rule: 'R72 Breadth Donchian with V2: skip a volume climax in the option (ratio >= 3), 1 lot'
+settings: research/hunt/r166_donchian_six/r166cfg.py, r166lib.py; PREREG.md section 1
+prereg: research/hunt/r166_donchian_six/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design: 2444 trades, win 45.2%, net Rs 1,18,495, max DD Rs 2,15,396 (today Rs 2,16,929). Walk-forward: 1773 trades,
+    win 48.0%, net Rs 2,68,609, max DD Rs 71,095 (today 49.0%, Rs 3,35,882). Final: 932 trades, win 47.5%, net Rs 1,58,024,
+    max DD Rs 71,640 (today 45.8%, Rs 1,71,366). Twin p net 0.0798, win 0.0339; BH q 1.0. Fails: better by neither route (wf
+    and final); BH q 1 > 0.1.'
+  costs: dated Zerodha charges, R17 fills (slippage from the 5-minute volume; stops -10 bps and 2x the half-spread)
+holdout_read: true
+verdict: rejected
+notes: Nothing changes in the app.

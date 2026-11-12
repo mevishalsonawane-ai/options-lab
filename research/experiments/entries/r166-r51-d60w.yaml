@@ -1,0 +1,34 @@
+id: r166-r51-d60w
+title: 'R166 D60W on R51 Donchian 20 (+ Supertrend 10, 3): delta 0.60 on NIFTY / SENSEX only, 1-ITM elsewhere'
+family: option-structure
+date: '2026-11-12'
+doc: research/hunt/r166_donchian_six/results/report.md
+hypothesis: 'Boss (12 Nov): analyse delta on the Donchian arms. Rule: delta 0.60 on NIFTY / SENSEX only, 1-ITM elsewhere.
+  Gates: better than today''s (win +5 points with net not lower, or net higher with drawdown <= 1.1x) in walk-forward and
+  final (delta: walk-forward); net > 0 in every period; twin BH q <= 0.10 with m = 2290; >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK) copied 12 Nov 2026; R51 Amendment A
+  clean stores; Nov 2024 onward only
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R166 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (unchanged arm entries); option data used as context only'
+model_or_rule: 'R51 Donchian 20 (+ Supertrend 10, 3) with D60W: delta 0.60 on NIFTY / SENSEX only, 1-ITM elsewhere, 1 lot'
+settings: research/hunt/r166_donchian_six/r166cfg.py, r166lib.py; PREREG.md section 1
+prereg: research/hunt/r166_donchian_six/PREREG.md
+variants_tried: 24
+results:
+  summary: 'Design: 4207 trades, win 44.5%, net Rs 33,865, max DD Rs 2,36,366 (today Rs 50,425). Walk-forward: 3043 trades,
+    win 45.8%, net Rs 2,10,973, max DD Rs 97,515 (today 45.9%, Rs 2,13,748). Final: 1670 trades, win 45.4%, net Rs 1,40,277,
+    max DD Rs 82,033 (today 44.9%, Rs 1,34,743). Twin p net 0.4291, win 0.7405; BH q 1.0. Fails: better by neither route (wf);
+    BH q 1 > 0.1.'
+  costs: dated Zerodha charges, R17 fills (slippage from the 5-minute volume; stops -10 bps and 2x the half-spread)
+holdout_read: true
+verdict: rejected
+notes: Nothing changes in the app.
