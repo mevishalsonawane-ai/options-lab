@@ -1,0 +1,31 @@
+id: r164-e4
+title: 'R164 E4: order flow on R72 / R51 Donchian trades - entry filter (skip only)'
+family: flow-oi
+date: '2026-11-12'
+doc: research/hunt/r164_donchian_orderflow/results/report.md
+hypothesis: On R72 Breadth Donchian and R51 Donchian 20 (+Supertrend) trades on NIFTY / BANKNIFTY, the rule lifts the win
+  rate by >= 5 points without lowering net, beats random skips/exits of the same size, BH q <= 0.10.
+data_version: 'none read: the phone''s tick zone (ticks.jsonl.gz inside live-YYYY-MM-DD.irlive, IraAlgo releases live-2026-10/11)
+  is sealed with Boss''s passphrase; the IraAlgo repository was not attachable in this session'
+period:
+  design: 'none (no threshold fitted); planned sample: recorded sessions 12 Oct - 11 Nov 2026 (21 at most), then the forward
+    shadow log (report section 5)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index''s 5-min Donchian break (the arm''s own); the rule reads the index future''s trades signed by
+  the tick rule (underlying)'
+model_or_rule: skip when the index future's tick-rule delta / volume x direction over the last 5 min <= -0.10
+settings: research/hunt/r164_donchian_orderflow/flow.py (constants frozen by PREREG sections 3-4)
+prereg: research/hunt/r164_donchian_orderflow/PREREG.md
+variants_tried: null
+results:
+  summary: 'Not run. The recordings are sealed (.irlive, AES-256-GCM with Boss''s backup passphrase) and the private data
+    repository could not be attached, so no trade, depth or flow row was read. Even opened, about 76 (R72) and 106 (R51) trades
+    would fall inside the tick zone in 21 sessions (assumed 2 of 5 indices). A 5-point win-rate lift needs about 245 trades
+    per arm at alpha 0.05 (30% skipped), and about 650 at the family''s first BH rank. Too small: inconclusive by PREREG 6.5.'
+  costs: 'planned: Costs(''dated'') charges, best-bid early exits, 1.5x spread stress'
+holdout_read: null
+verdict: proposed
+notes: Underlying rule.

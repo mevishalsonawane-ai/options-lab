@@ -1,0 +1,84 @@
+{
+ "sessions_recorded_at_most": 21,
+ "share_covered_assumed": 0.4,
+ "expected_covered_trades": {
+  "R72": 75.9,
+  "R51": 105.5,
+  "R72 picker": 41.2,
+  "R51 picker": 43.8
+ },
+ "per_session_covered": {
+  "R72": 3.62,
+  "R51": 5.02,
+  "R72 picker": 1.96,
+  "R51 picker": 2.08
+ },
+ "trades_needed": {
+  "R72": {
+   "skip20_alpha05": 126,
+   "skip20_bh_first": 334,
+   "skip30_alpha05": 247,
+   "skip30_bh_first": 654,
+   "skip50_alpha05": 608,
+   "skip50_bh_first": 1612
+  },
+  "R51": {
+   "skip20_alpha05": 124,
+   "skip20_bh_first": 327,
+   "skip30_alpha05": 244,
+   "skip30_bh_first": 647,
+   "skip50_alpha05": 606,
+   "skip50_bh_first": 1606
+  },
+  "R72 picker": {
+   "skip20_alpha05": 133,
+   "skip20_bh_first": 351,
+   "skip30_alpha05": 253,
+   "skip30_bh_first": 670,
+   "skip50_alpha05": 612,
+   "skip50_bh_first": 1622
+  },
+  "R51 picker": {
+   "skip20_alpha05": 135,
+   "skip20_bh_first": 356,
+   "skip30_alpha05": 254,
+   "skip30_bh_first": 674,
+   "skip50_alpha05": 613,
+   "skip50_bh_first": 1623
+  }
+ },
+ "sessions_needed": {
+  "R72": {
+   "skip20_alpha05": 35,
+   "skip20_bh_first": 93,
+   "skip30_alpha05": 69,
+   "skip30_bh_first": 181,
+   "skip50_alpha05": 169,
+   "skip50_bh_first": 446
+  },
+  "R51": {
+   "skip20_alpha05": 25,
+   "skip20_bh_first": 66,
+   "skip30_alpha05": 49,
+   "skip30_bh_first": 129,
+   "skip50_alpha05": 121,
+   "skip50_bh_first": 320
+  },
+  "R72 picker": {
+   "skip20_alpha05": 68,
+   "skip20_bh_first": 179,
+   "skip30_alpha05": 130,
+   "skip30_bh_first": 342,
+   "skip50_alpha05": 313,
+   "skip50_bh_first": 828
+  },
+  "R51 picker": {
+   "skip20_alpha05": 65,
+   "skip20_bh_first": 171,
+   "skip30_alpha05": 122,
+   "skip30_bh_first": 324,
+   "skip50_alpha05": 295,
+   "skip50_bh_first": 779
+  }
+ }
+}
