@@ -1,0 +1,2651 @@
+{
+ "base:R72:E1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8981018981018981,
+  "q": 1.0,
+  "p_win": 0.8981018981018981,
+  "p_net": 0.7552447552447552,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9090909090909091,
+  "q": 1.0,
+  "p_win": 0.9090909090909091,
+  "p_net": 0.7872127872127872,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9000999000999002,
+  "q": 1.0,
+  "p_win": 0.9000999000999002,
+  "p_net": 0.7952047952047953,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.011988011988011988,
+  "q": 1.0,
+  "p_win": 0.011988011988011988,
+  "p_net": 0.008991008991008992,
+  "q_all": 1.0,
+  "q_r161": 0.5874
+ },
+ "base:R72:E2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.012987012987012988,
+  "q": 1.0,
+  "p_win": 0.001998001998001998,
+  "p_net": 0.012987012987012988,
+  "q_all": 1.0,
+  "q_r161": 0.5874
+ },
+ "base:R72:E2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.007992007992007992,
+  "q": 1.0,
+  "p_win": 0.0006381447429989941,
+  "p_net": 0.007992007992007992,
+  "q_all": 1.0,
+  "q_r161": 0.5874
+ },
+ "base:R72:E3@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.45254745254745254,
+  "q": 1.0,
+  "p_win": 0.45254745254745254,
+  "p_net": 0.030969030969030968,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E3@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.4745254745254745,
+  "q": 1.0,
+  "p_win": 0.4745254745254745,
+  "p_net": 0.03696303696303696,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E3@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.42657342657342656,
+  "q": 1.0,
+  "p_win": 0.42657342657342656,
+  "p_net": 0.025974025974025976,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E4@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5834165834165834,
+  "q": 1.0,
+  "p_win": 0.5834165834165834,
+  "p_net": 0.5614385614385614,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E4@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6373626373626373,
+  "q": 1.0,
+  "p_win": 0.6373626373626373,
+  "p_net": 0.5924075924075924,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E4@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6753246753246753,
+  "q": 1.0,
+  "p_win": 0.6753246753246753,
+  "p_net": 0.5744255744255744,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E5@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "design: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.14285714285714285,
+  "q": 1.0,
+  "p_win": 0.14285714285714285,
+  "p_net": 0.012987012987012988,
+  "q_all": 1.0,
+  "q_r161": 0.6799
+ },
+ "base:R72:E5@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "design: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.1038961038961039,
+  "q": 1.0,
+  "p_win": 0.1038961038961039,
+  "p_net": 0.013986013986013986,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "base:R72:E5@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.0999000999000999,
+  "q": 1.0,
+  "p_win": 0.0999000999000999,
+  "p_net": 0.013986013986013986,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "base:R72:E6@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E6@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E6@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E7@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.988011988011988,
+  "q": 1.0,
+  "p_win": 0.988011988011988,
+  "p_net": 0.977022977022977,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E7@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.989010989010989,
+  "q": 1.0,
+  "p_win": 0.989010989010989,
+  "p_net": 0.987012987012987,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E7@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9920079920079921,
+  "q": 1.0,
+  "p_win": 0.9920079920079921,
+  "p_net": 0.989010989010989,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E8@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.996003996003996,
+  "q": 1.0,
+  "p_win": 0.996003996003996,
+  "p_net": 0.9920079920079921,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E8@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.993006993006993,
+  "q": 1.0,
+  "p_win": 0.993006993006993,
+  "p_net": 0.9920079920079921,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E8@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.999000999000999,
+  "q": 1.0,
+  "p_win": 0.998001998001998,
+  "p_net": 0.999000999000999,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E9@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.052947052947052944,
+  "q": 1.0,
+  "p_win": 0.04895104895104895,
+  "p_net": 0.052947052947052944,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "base:R72:E9@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.1068931068931069,
+  "q": 1.0,
+  "p_win": 0.1068931068931069,
+  "p_net": 0.060939060939060936,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "base:R72:E9@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.11788211788211789,
+  "q": 1.0,
+  "p_win": 0.11788211788211789,
+  "p_net": 0.07792207792207792,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "base:R72:E10@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6523476523476524,
+  "q": 1.0,
+  "p_win": 0.35564435564435565,
+  "p_net": 0.6523476523476524,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E10@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7142857142857143,
+  "q": 1.0,
+  "p_win": 0.4015984015984016,
+  "p_net": 0.7142857142857143,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E10@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7322677322677322,
+  "q": 1.0,
+  "p_win": 0.33766233766233766,
+  "p_net": 0.7322677322677322,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E11@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.997002997002997,
+  "q": 1.0,
+  "p_win": 0.6983016983016983,
+  "p_net": 0.997002997002997,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E11@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.996003996003996,
+  "q": 1.0,
+  "p_win": 0.5684315684315684,
+  "p_net": 0.996003996003996,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E11@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.997002997002997,
+  "q": 1.0,
+  "p_win": 0.5654345654345654,
+  "p_net": 0.997002997002997,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E12@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6803196803196803,
+  "q": 1.0,
+  "p_win": 0.6803196803196803,
+  "p_net": 0.6273726273726273,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E12@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6703296703296703,
+  "q": 1.0,
+  "p_win": 0.6703296703296703,
+  "p_net": 0.6623376623376623,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E12@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6703296703296703,
+  "q": 1.0,
+  "p_win": 0.6023976023976024,
+  "p_net": 0.6703296703296703,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E13@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.978021978021978,
+  "q": 1.0,
+  "p_win": 0.2137862137862138,
+  "p_net": 0.978021978021978,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E13@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.989010989010989,
+  "q": 1.0,
+  "p_win": 0.16383616383616384,
+  "p_net": 0.989010989010989,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:E13@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.98001998001998,
+  "q": 1.0,
+  "p_win": 0.18981018981018982,
+  "p_net": 0.98001998001998,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:C1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7272727272727273,
+  "q": 1.0,
+  "p_win": 0.7272727272727273,
+  "p_net": 0.5844155844155844,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:C1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8011988011988012,
+  "q": 1.0,
+  "p_win": 0.8011988011988012,
+  "p_net": 0.6563436563436563,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R72:C1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8261738261738262,
+  "q": 1.0,
+  "p_win": 0.8261738261738262,
+  "p_net": 0.6223776223776224,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7092907092907093,
+  "q": 1.0,
+  "p_win": 0.7082917082917083,
+  "p_net": 0.7092907092907093,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6963036963036963,
+  "q": 1.0,
+  "p_win": 0.6273726273726273,
+  "p_net": 0.6963036963036963,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7052947052947053,
+  "q": 1.0,
+  "p_win": 0.5754245754245755,
+  "p_net": 0.7052947052947053,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "design: net not > 0",
+   "wf: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.15684315684315683,
+  "q": 1.0,
+  "p_win": 0.15684315684315683,
+  "p_net": 0.08291708291708291,
+  "q_all": 1.0,
+  "q_r161": 0.6799
+ },
+ "base:R51:E2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "design: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.24075924075924077,
+  "q": 1.0,
+  "p_win": 0.24075924075924077,
+  "p_net": 0.06593406593406594,
+  "q_all": 1.0,
+  "q_r161": 0.983
+ },
+ "base:R51:E2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "design: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.3086913086913087,
+  "q": 1.0,
+  "p_win": 0.3086913086913087,
+  "p_net": 0.06693306693306693,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E3@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.059940059940059943,
+  "q": 1.0,
+  "p_win": 0.059940059940059943,
+  "p_net": 0.01898101898101898,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "base:R51:E3@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.11288711288711288,
+  "q": 1.0,
+  "p_win": 0.11288711288711288,
+  "p_net": 0.015984015984015984,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "base:R51:E3@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.11188811188811189,
+  "q": 1.0,
+  "p_win": 0.11188811188811189,
+  "p_net": 0.014985014985014986,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "base:R51:E4@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5974025974025974,
+  "q": 1.0,
+  "p_win": 0.5974025974025974,
+  "p_net": 0.3176823176823177,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E4@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6513486513486514,
+  "q": 1.0,
+  "p_win": 0.6513486513486514,
+  "p_net": 0.2967032967032967,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E4@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7072927072927073,
+  "q": 1.0,
+  "p_win": 0.7072927072927073,
+  "p_net": 0.33166833166833165,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E5@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "design: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5734265734265734,
+  "q": 1.0,
+  "p_win": 0.5734265734265734,
+  "p_net": 0.022977022977022976,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E5@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "design: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5704295704295704,
+  "q": 1.0,
+  "p_win": 0.5704295704295704,
+  "p_net": 0.01898101898101898,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E5@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "design: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5464535464535465,
+  "q": 1.0,
+  "p_win": 0.5464535464535465,
+  "p_net": 0.01998001998001998,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E6@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "design: net not > 0",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E6@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E6@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E7@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "design: net not > 0",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 0.999000999000999,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E7@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998001998001998,
+  "q": 1.0,
+  "p_win": 0.997002997002997,
+  "p_net": 0.998001998001998,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E7@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.999000999000999,
+  "q": 1.0,
+  "p_win": 0.999000999000999,
+  "p_net": 0.999000999000999,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E8@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.99000999000999,
+  "q": 1.0,
+  "p_win": 0.973026973026973,
+  "p_net": 0.99000999000999,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E8@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9920079920079921,
+  "q": 1.0,
+  "p_win": 0.9560439560439561,
+  "p_net": 0.9920079920079921,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E8@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.996003996003996,
+  "q": 1.0,
+  "p_win": 0.965034965034965,
+  "p_net": 0.996003996003996,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E9@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.24575424575424576,
+  "q": 1.0,
+  "p_win": 0.025974025974025976,
+  "p_net": 0.24575424575424576,
+  "q_all": 1.0,
+  "q_r161": 0.983
+ },
+ "base:R51:E9@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.3086913086913087,
+  "q": 1.0,
+  "p_win": 0.052947052947052944,
+  "p_net": 0.3086913086913087,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E9@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.3156843156843157,
+  "q": 1.0,
+  "p_win": 0.04795204795204795,
+  "p_net": 0.3156843156843157,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E10@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.35764235764235763,
+  "q": 1.0,
+  "p_win": 0.13086913086913088,
+  "p_net": 0.35764235764235763,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E10@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.41858141858141856,
+  "q": 1.0,
+  "p_win": 0.1888111888111888,
+  "p_net": 0.41858141858141856,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E10@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.47052947052947053,
+  "q": 1.0,
+  "p_win": 0.15484515484515485,
+  "p_net": 0.47052947052947053,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E11@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 0.97002997002997,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E11@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 0.957042957042957,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E11@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "final: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 0.972027972027972,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E12@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.945054945054945,
+  "q": 1.0,
+  "p_win": 0.945054945054945,
+  "p_net": 0.7252747252747253,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E12@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.951048951048951,
+  "q": 1.0,
+  "p_win": 0.951048951048951,
+  "p_net": 0.7532467532467533,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E12@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.951048951048951,
+  "q": 1.0,
+  "p_win": 0.951048951048951,
+  "p_net": 0.7842157842157842,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E13@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "design: net not > 0",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.996003996003996,
+  "q": 1.0,
+  "p_win": 0.9340659340659341,
+  "p_net": 0.996003996003996,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E13@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998001998001998,
+  "q": 1.0,
+  "p_win": 0.929070929070929,
+  "p_net": 0.998001998001998,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:E13@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.999000999000999,
+  "q": 1.0,
+  "p_win": 0.906093906093906,
+  "p_net": 0.999000999000999,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:C1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8941058941058941,
+  "q": 1.0,
+  "p_win": 0.8941058941058941,
+  "p_net": 0.5794205794205795,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:C1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8561438561438561,
+  "q": 1.0,
+  "p_win": 0.8561438561438561,
+  "p_net": 0.6423576423576424,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "base:R51:C1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8541458541458542,
+  "q": 1.0,
+  "p_win": 0.8541458541458542,
+  "p_net": 0.6613386613386614,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5324675324675324,
+  "q": 1.0,
+  "p_win": 0.5324675324675324,
+  "p_net": 0.3126873126873127,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5374625374625375,
+  "q": 1.0,
+  "p_win": 0.5374625374625375,
+  "p_net": 0.2887112887112887,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.4915084915084915,
+  "q": 1.0,
+  "p_win": 0.4915084915084915,
+  "p_net": 0.33766233766233766,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.993006993006993,
+  "q": 1.0,
+  "p_win": 0.993006993006993,
+  "p_net": 0.8201798201798202,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.988011988011988,
+  "q": 1.0,
+  "p_win": 0.988011988011988,
+  "p_net": 0.8281718281718282,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9820179820179821,
+  "q": 1.0,
+  "p_win": 0.9820179820179821,
+  "p_net": 0.8181818181818182,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E3@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7612387612387612,
+  "q": 1.0,
+  "p_win": 0.7612387612387612,
+  "p_net": 0.16583416583416583,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E3@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7452547452547452,
+  "q": 1.0,
+  "p_win": 0.7452547452547452,
+  "p_net": 0.17182817182817184,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E3@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7172827172827173,
+  "q": 1.0,
+  "p_win": 0.7172827172827173,
+  "p_net": 0.15484515484515485,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E4@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8121878121878122,
+  "q": 1.0,
+  "p_win": 0.7862137862137862,
+  "p_net": 0.8121878121878122,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E4@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8201798201798202,
+  "q": 1.0,
+  "p_win": 0.7982017982017982,
+  "p_net": 0.8201798201798202,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E4@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8371628371628371,
+  "q": 1.0,
+  "p_win": 0.8371628371628371,
+  "p_net": 0.8111888111888111,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E5@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.0979020979020979,
+  "q": 1.0,
+  "p_win": 0.0979020979020979,
+  "p_net": 0.003996003996003996,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R72:E5@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.06293706293706294,
+  "q": 1.0,
+  "p_win": 0.06293706293706294,
+  "p_net": 0.000999000999000999,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R72:E5@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.06393606393606394,
+  "q": 1.0,
+  "p_win": 0.06393606393606394,
+  "p_net": 0.002997002997002997,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R72:E6@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E6@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E6@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 0.998001998001998,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E7@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7452547452547452,
+  "q": 1.0,
+  "p_win": 0.4255744255744256,
+  "p_net": 0.7452547452547452,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E7@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7482517482517482,
+  "q": 1.0,
+  "p_win": 0.44255744255744256,
+  "p_net": 0.7482517482517482,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E7@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.7552447552447552,
+  "q": 1.0,
+  "p_win": 0.37962037962037964,
+  "p_net": 0.7552447552447552,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E8@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9370629370629371,
+  "q": 1.0,
+  "p_win": 0.922077922077922,
+  "p_net": 0.9370629370629371,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E8@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.945054945054945,
+  "q": 1.0,
+  "p_win": 0.903096903096903,
+  "p_net": 0.945054945054945,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E8@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9430569430569431,
+  "q": 1.0,
+  "p_win": 0.9040959040959041,
+  "p_net": 0.9430569430569431,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E9@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.12787212787212787,
+  "q": 1.0,
+  "p_win": 0.12787212787212787,
+  "p_net": 0.002997002997002997,
+  "q_all": 1.0,
+  "q_r161": 0.6318
+ },
+ "picker:R72:E9@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.15484515484515485,
+  "q": 1.0,
+  "p_win": 0.15484515484515485,
+  "p_net": 0.000629488002012438,
+  "q_all": 1.0,
+  "q_r161": 0.6799
+ },
+ "picker:R72:E9@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.17182817182817184,
+  "q": 1.0,
+  "p_win": 0.17182817182817184,
+  "p_net": 0.000293691986379152,
+  "q_all": 1.0,
+  "q_r161": 0.7217
+ },
+ "picker:R72:E10@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6443556443556444,
+  "q": 1.0,
+  "p_win": 0.6443556443556444,
+  "p_net": 0.5854145854145855,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E10@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6573426573426573,
+  "q": 1.0,
+  "p_win": 0.6573426573426573,
+  "p_net": 0.6083916083916084,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E10@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.6413586413586414,
+  "q": 1.0,
+  "p_win": 0.5524475524475524,
+  "p_net": 0.6413586413586414,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E11@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8621378621378621,
+  "q": 1.0,
+  "p_win": 0.8621378621378621,
+  "p_net": 0.8491508491508492,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E11@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8621378621378621,
+  "q": 1.0,
+  "p_win": 0.7802197802197802,
+  "p_net": 0.8621378621378621,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E11@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8691308691308691,
+  "q": 1.0,
+  "p_win": 0.7962037962037962,
+  "p_net": 0.8691308691308691,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E12@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.32167832167832167,
+  "q": 1.0,
+  "p_win": 0.12087912087912088,
+  "p_net": 0.32167832167832167,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E12@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.3516483516483517,
+  "q": 1.0,
+  "p_win": 0.12487512487512488,
+  "p_net": 0.3516483516483517,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E12@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.3436563436563437,
+  "q": 1.0,
+  "p_win": 0.07892107892107893,
+  "p_net": 0.3436563436563437,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E13@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.4725274725274725,
+  "q": 1.0,
+  "p_win": 0.14285714285714285,
+  "p_net": 0.4725274725274725,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E13@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.47352647352647353,
+  "q": 1.0,
+  "p_win": 0.12187812187812187,
+  "p_net": 0.47352647352647353,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:E13@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.4885114885114885,
+  "q": 1.0,
+  "p_win": 0.17682317682317683,
+  "p_net": 0.4885114885114885,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:C1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.4325674325674326,
+  "q": 1.0,
+  "p_win": 0.4325674325674326,
+  "p_net": 0.05194805194805195,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:C1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.4745254745254745,
+  "q": 1.0,
+  "p_win": 0.4745254745254745,
+  "p_net": 0.06693306693306693,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R72:C1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5024975024975025,
+  "q": 1.0,
+  "p_win": 0.5024975024975025,
+  "p_net": 0.06893106893106893,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8011988011988012,
+  "q": 1.0,
+  "p_win": 0.11888111888111888,
+  "p_net": 0.8011988011988012,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8201798201798202,
+  "q": 1.0,
+  "p_win": 0.0999000999000999,
+  "p_net": 0.8201798201798202,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8171828171828172,
+  "q": 1.0,
+  "p_win": 0.09090909090909091,
+  "p_net": 0.8171828171828172,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 0.9270729270729271,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.998001998001998,
+  "q": 1.0,
+  "p_win": 0.998001998001998,
+  "p_net": 0.9310689310689311,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 1.0,
+  "p_net": 0.913086913086913,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E3@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.03196803196803197,
+  "q": 1.0,
+  "p_win": 0.03196803196803197,
+  "p_net": 9.820255387236828e-05,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E3@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.08091908091908091,
+  "q": 1.0,
+  "p_win": 0.08091908091908091,
+  "p_net": 6.96167603189117e-05,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E3@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.09490509490509491,
+  "q": 1.0,
+  "p_win": 0.09490509490509491,
+  "p_net": 0.00012549924654026146,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E4@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.08791208791208792,
+  "q": 1.0,
+  "p_win": 0.08791208791208792,
+  "p_net": 0.008991008991008992,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E4@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.15584415584415584,
+  "q": 1.0,
+  "p_win": 0.15584415584415584,
+  "p_net": 0.011988011988011988,
+  "q_all": 1.0,
+  "q_r161": 0.6799
+ },
+ "picker:R51:E4@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.15784215784215785,
+  "q": 1.0,
+  "p_win": 0.15784215784215785,
+  "p_net": 0.00999000999000999,
+  "q_all": 1.0,
+  "q_r161": 0.6799
+ },
+ "picker:R51:E5@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.04495504495504495,
+  "q": 1.0,
+  "p_win": 0.04495504495504495,
+  "p_net": 0.000443815767958366,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E5@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.08491508491508491,
+  "q": 1.0,
+  "p_win": 0.08491508491508491,
+  "p_net": 0.002997002997002997,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E5@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.1068931068931069,
+  "q": 1.0,
+  "p_win": 0.1068931068931069,
+  "p_net": 0.0005231797773515173,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E6@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.9790209790209791,
+  "q": 1.0,
+  "p_win": 0.977022977022977,
+  "p_net": 0.9790209790209791,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E6@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.978021978021978,
+  "q": 1.0,
+  "p_win": 0.945054945054945,
+  "p_net": 0.978021978021978,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E6@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.983016983016983,
+  "q": 1.0,
+  "p_win": 0.955044955044955,
+  "p_net": 0.983016983016983,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E7@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.33466533466533466,
+  "q": 1.0,
+  "p_win": 0.10989010989010989,
+  "p_net": 0.33466533466533466,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E7@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.33766233766233766,
+  "q": 1.0,
+  "p_win": 0.1878121878121878,
+  "p_net": 0.33766233766233766,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E7@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.36863136863136864,
+  "q": 1.0,
+  "p_win": 0.15984015984015984,
+  "p_net": 0.36863136863136864,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E8@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8281718281718282,
+  "q": 1.0,
+  "p_win": 0.5164835164835165,
+  "p_net": 0.8281718281718282,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E8@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8441558441558441,
+  "q": 1.0,
+  "p_win": 0.5464535464535465,
+  "p_net": 0.8441558441558441,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E8@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.8191808191808192,
+  "q": 1.0,
+  "p_win": 0.5054945054945055,
+  "p_net": 0.8191808191808192,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E9@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.028971028971028972,
+  "q": 1.0,
+  "p_win": 0.00999000999000999,
+  "p_net": 0.028971028971028972,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E9@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.03596403596403597,
+  "q": 1.0,
+  "p_win": 0.013986013986013986,
+  "p_net": 0.03596403596403597,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E9@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.03896103896103896,
+  "q": 1.0,
+  "p_win": 0.01998001998001998,
+  "p_net": 0.03896103896103896,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E10@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.02097902097902098,
+  "q": 1.0,
+  "p_win": 0.02097902097902098,
+  "p_net": 0.01998001998001998,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E10@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.022977022977022976,
+  "q": 1.0,
+  "p_win": 0.01998001998001998,
+  "p_net": 0.022977022977022976,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E10@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.013986013986013986,
+  "q": 1.0,
+  "p_win": 0.008991008991008992,
+  "p_net": 0.013986013986013986,
+  "q_all": 1.0,
+  "q_r161": 0.5874
+ },
+ "picker:R51:E11@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 0.986013986013986,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E11@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 0.945054945054945,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E11@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "p_win": 0.9310689310689311,
+  "p_net": 1.0,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E12@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.1008991008991009,
+  "q": 1.0,
+  "p_win": 0.1008991008991009,
+  "p_net": 0.002997002997002997,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E12@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.08191808191808192,
+  "q": 1.0,
+  "p_win": 0.08191808191808192,
+  "p_net": 0.001998001998001998,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E12@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.08491508491508491,
+  "q": 1.0,
+  "p_win": 0.08491508491508491,
+  "p_net": 0.000999000999000999,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:E13@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.43656343656343655,
+  "q": 1.0,
+  "p_win": 0.43656343656343655,
+  "p_net": 0.060939060939060936,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E13@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5694305694305695,
+  "q": 1.0,
+  "p_win": 0.5694305694305695,
+  "p_net": 0.07992007992007992,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:E13@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.5944055944055944,
+  "q": 1.0,
+  "p_win": 0.5944055944055944,
+  "p_net": 0.06993006993006994,
+  "q_all": 1.0,
+  "q_r161": 1.0
+ },
+ "picker:R51:C1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.11688311688311688,
+  "q": 1.0,
+  "p_win": 0.11688311688311688,
+  "p_net": 0.07092907092907093,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "picker:R51:C1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.12387612387612387,
+  "q": 1.0,
+  "p_win": 0.12387612387612387,
+  "p_net": 0.061938061938061936,
+  "q_all": 1.0,
+  "q_r161": 0.6306
+ },
+ "picker:R51:C1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower",
+   "final: win not up 5 points",
+   "final: net lower",
+   "BH q 1 > 0.1"
+  ],
+  "p": 0.0999000999000999,
+  "q": 1.0,
+  "p_win": 0.0999000999000999,
+  "p_net": 0.059940059940059943,
+  "q_all": 1.0,
+  "q_r161": 0.6189
+ },
+ "_m": {
+  "r161": 168,
+  "prior": 2164,
+  "total": 2332,
+  "note": "R162 and R163 run in parallel; the coordinator adds their tests for one joint BH"
+ }
+}

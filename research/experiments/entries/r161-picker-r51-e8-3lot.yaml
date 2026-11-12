@@ -1,0 +1,38 @@
+id: r161-picker-r51-e8-3lot
+title: 'R161 E8 PDR on R51 Donchian 20 + Supertrend (10, 3), on top of R151''s live picker, 3 lots: take a break only when
+  the break is beyond yesterday''s high (call) / low (put)'
+family: daily-filters
+date: '2026-11-12'
+doc: research/hunt/r161_donchian_entries/results/report.md
+hypothesis: 'Boss (12 Nov): "I want to increase my win rate [of the] Donchian family". Taking only the breaks where the break
+  is beyond yesterday''s high (call) / low (put) raises the win rate by >= 5 points with net not lower than R151''s picker
+  in the walk-forward year and the final; net > 0 in every period; random-skip twins p = max(p_win, p_net); BH q <= 0.10 with
+  m = 2,332 (R162 / R163 added by the coordinator); >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m incl. INDIAVIX, index_daily, options_rolling_1m WEEK) copied 12
+  Nov 2026; R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R161 (already read by R51-R160)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s own 5-min bars (Donchian 20, kept when Supertrend (10, 3) agrees) (unchanged); the entry filter
+  reads the index''s 5-min bars (and India VIX minutes for E10, the five indices for E11)'
+model_or_rule: R51 Donchian 20 + Supertrend (10, 3) on top of R151's live picker, filter E8 PDR, 3 lots
+settings: research/hunt/r161_donchian_entries/r161feat.py; PREREG.md section 2
+prereg: research/hunt/r161_donchian_entries/PREREG.md
+variants_tried: 168
+results:
+  summary: 'Walk-forward: 436 trades, win 51.6% (R151''s picker 50.3%), net Rs 6,25,536 (Rs 6,73,625). Final: 365 trades,
+    win 49.9% (51.1%), break-even win 43.6%, net Rs 1,94,841 (Rs 4,88,424), worst day -Rs 39,512, max DD Rs 1,21,492, without
+    5 best Rs 81,659; random-skip p_win 0.505, p_net 0.819, BH q 1.000. Fails: wf: win not up 5 points; wf: net lower; final:
+    win not up 5 points; final: net lower; BH q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole 3-lot quantity, R17 fills (slippage from the order's size; stops -10 bps and 2x
+    the half-spread, gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes in the app or live.
