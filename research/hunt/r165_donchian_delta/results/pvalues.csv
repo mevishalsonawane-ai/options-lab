@@ -1,0 +1,79 @@
+study,test,arm,rule,lots,family,p_raw,twin,final_trades,final_win,b0_final_win,q_r165_alone,q_m2242,passed
+R165,r165-r72-db1-1lot,R72,DB1,1,option delta,0.451274,random skips,790,0.457,0.4584,1.0,1.0,False
+R165,r165-r72-db1-2lot,R72,DB1,2,option delta,0.473263,random skips,790,0.4608,0.4626,1.0,1.0,False
+R165,r165-r72-db1-3lot,R72,DB1,3,option delta,0.417791,random skips,790,0.4646,0.4651,1.0,1.0,False
+R165,r165-r72-db2-1lot,R72,DB2,1,option delta,0.104948,random skips,612,0.4722,0.4584,0.430837,1.0,False
+R165,r165-r72-db2-2lot,R72,DB2,2,option delta,0.115442,random skips,612,0.4755,0.4626,0.450225,1.0,False
+R165,r165-r72-db2-3lot,R72,DB2,3,option delta,0.150925,random skips,612,0.4755,0.4651,0.560577,1.0,False
+R165,r165-r72-db3-1lot,R72,DB3,1,option delta,0.0005,random skips,100,0.57,0.4584,0.004331,0.124493,False
+R165,r165-r72-db3-2lot,R72,DB3,2,option delta,0.0005,random skips,100,0.57,0.4626,0.004331,0.124493,False
+R165,r165-r72-db3-3lot,R72,DB3,3,option delta,0.0005,random skips,100,0.57,0.4651,0.004331,0.124493,False
+R165,r165-r72-sd50-1lot,R72,SD50,1,option delta,0.230885,random strikes (delta 0.40-0.85),1226,0.4641,0.4584,0.723478,1.0,False
+R165,r165-r72-sd50-2lot,R72,SD50,2,option delta,0.262869,random strikes (delta 0.40-0.85),1226,0.4682,0.4626,0.759398,1.0,False
+R165,r165-r72-sd50-3lot,R72,SD50,3,option delta,0.231384,random strikes (delta 0.40-0.85),1226,0.4715,0.4651,0.723478,1.0,False
+R165,r165-r72-sd60-1lot,R72,SD60,1,option delta,0.852574,random strikes (delta 0.40-0.85),1220,0.4516,0.4584,1.0,1.0,False
+R165,r165-r72-sd60-2lot,R72,SD60,2,option delta,0.884058,random strikes (delta 0.40-0.85),1220,0.4557,0.4626,1.0,1.0,False
+R165,r165-r72-sd60-3lot,R72,SD60,3,option delta,0.904048,random strikes (delta 0.40-0.85),1220,0.4566,0.4651,1.0,1.0,False
+R165,r165-r72-sd70-1lot,R72,SD70,1,option delta,1.0,random strikes (delta 0.40-0.85),1165,0.4163,0.4584,1.0,1.0,False
+R165,r165-r72-sd70-2lot,R72,SD70,2,option delta,1.0,random strikes (delta 0.40-0.85),1165,0.4206,0.4626,1.0,1.0,False
+R165,r165-r72-sd70-3lot,R72,SD70,3,option delta,1.0,random strikes (delta 0.40-0.85),1165,0.4215,0.4651,1.0,1.0,False
+R165,r165-r72-sd80-1lot,R72,SD80,1,option delta,1.0,random strikes (delta 0.40-0.85),1095,0.3817,0.4584,1.0,1.0,False
+R165,r165-r72-sd80-2lot,R72,SD80,2,option delta,1.0,random strikes (delta 0.40-0.85),1095,0.3863,0.4626,1.0,1.0,False
+R165,r165-r72-sd80-3lot,R72,SD80,3,option delta,1.0,random strikes (delta 0.40-0.85),1095,0.3872,0.4651,1.0,1.0,False
+R165,r165-r72-xi1-1lot,R72,XI1,1,option delta,0.976512,random exits,1201,0.4604,0.4584,1.0,1.0,False
+R165,r165-r72-xi1-2lot,R72,XI1,2,option delta,0.992004,random exits,1201,0.4646,0.4626,1.0,1.0,False
+R165,r165-r72-xi1-3lot,R72,XI1,3,option delta,0.992004,random exits,1201,0.4671,0.4651,1.0,1.0,False
+R165,r165-r72-xi2-1lot,R72,XI2,1,option delta,1.0,random exits,1202,0.4534,0.4584,1.0,1.0,False
+R165,r165-r72-xi2-2lot,R72,XI2,2,option delta,1.0,random exits,1202,0.4576,0.4626,1.0,1.0,False
+R165,r165-r72-xi2-3lot,R72,XI2,3,option delta,0.999,random exits,1202,0.4601,0.4651,1.0,1.0,False
+R165,r165-r72-pkd-1lot,R72,PKD,1,option delta,0.0005,random skips,650,0.4969,0.4584,0.004331,0.124493,False
+R165,r165-r72-pkd-2lot,R72,PKD,2,option delta,0.003498,random skips,650,0.4985,0.4626,0.022739,0.65359,False
+R165,r165-r72-pkd-3lot,R72,PKD,3,option delta,0.003498,random skips,650,0.5015,0.4651,0.022739,0.65359,False
+R165,r165-r72-of1-1lot,R72,OF1,1,order-flow proxy,0.823088,random skips,1033,0.4501,0.4584,1.0,1.0,False
+R165,r165-r72-of1-2lot,R72,OF1,2,order-flow proxy,0.830085,random skips,1033,0.454,0.4626,1.0,1.0,False
+R165,r165-r72-of1-3lot,R72,OF1,3,order-flow proxy,0.804098,random skips,1033,0.4569,0.4651,1.0,1.0,False
+R165,r165-r72-of2-1lot,R72,OF2,1,order-flow proxy,0.55972,random skips,1086,0.4567,0.4584,1.0,1.0,False
+R165,r165-r72-of2-2lot,R72,OF2,2,order-flow proxy,0.614193,random skips,1086,0.4604,0.4626,1.0,1.0,False
+R165,r165-r72-of2-3lot,R72,OF2,3,order-flow proxy,0.572714,random skips,1086,0.4632,0.4651,1.0,1.0,False
+R165,r165-r72-of3-1lot,R72,OF3,1,order-flow proxy,1.0,random exits,1203,0.4472,0.4584,1.0,1.0,False
+R165,r165-r72-of3-2lot,R72,OF3,2,order-flow proxy,1.0,random exits,1203,0.453,0.4626,1.0,1.0,False
+R165,r165-r72-of3-3lot,R72,OF3,3,order-flow proxy,1.0,random exits,1203,0.4555,0.4651,1.0,1.0,False
+R165,r165-r51-db1-1lot,R51,DB1,1,option delta,0.008496,random skips,1072,0.4646,0.4485,0.050975,1.0,False
+R165,r165-r51-db1-2lot,R51,DB1,2,option delta,0.027986,random skips,1072,0.4701,0.4551,0.145527,1.0,False
+R165,r165-r51-db1-3lot,R51,DB1,3,option delta,0.021489,random skips,1072,0.4748,0.4599,0.119726,1.0,False
+R165,r165-r51-db2-1lot,R51,DB2,1,option delta,0.168916,random skips,949,0.4531,0.4485,0.598882,1.0,False
+R165,r165-r51-db2-2lot,R51,DB2,2,option delta,0.231884,random skips,949,0.4594,0.4551,0.723478,1.0,False
+R165,r165-r51-db2-3lot,R51,DB2,3,option delta,0.254873,random skips,949,0.4626,0.4599,0.759398,1.0,False
+R165,r165-r51-db3-1lot,R51,DB3,1,option delta,0.0005,random skips,131,0.5191,0.4485,0.004331,0.124493,False
+R165,r165-r51-db3-2lot,R51,DB3,2,option delta,0.0005,random skips,131,0.5267,0.4551,0.004331,0.124493,False
+R165,r165-r51-db3-3lot,R51,DB3,3,option delta,0.001,random skips,131,0.5267,0.4599,0.007796,0.224088,False
+R165,r165-r51-sd50-1lot,R51,SD50,1,option delta,0.081459,random strikes (delta 0.40-0.85),1689,0.4547,0.4485,0.35299,1.0,False
+R165,r165-r51-sd50-2lot,R51,SD50,2,option delta,0.03948,random strikes (delta 0.40-0.85),1689,0.463,0.4551,0.181145,1.0,False
+R165,r165-r51-sd50-3lot,R51,SD50,3,option delta,0.030985,random strikes (delta 0.40-0.85),1689,0.4665,0.4599,0.151049,1.0,False
+R165,r165-r51-sd60-1lot,R51,SD60,1,option delta,0.98001,random strikes (delta 0.40-0.85),1686,0.4342,0.4485,1.0,1.0,False
+R165,r165-r51-sd60-2lot,R51,SD60,2,option delta,0.969515,random strikes (delta 0.40-0.85),1686,0.4407,0.4551,1.0,1.0,False
+R165,r165-r51-sd60-3lot,R51,SD60,3,option delta,0.986007,random strikes (delta 0.40-0.85),1686,0.4413,0.4599,1.0,1.0,False
+R165,r165-r51-sd70-1lot,R51,SD70,1,option delta,1.0,random strikes (delta 0.40-0.85),1650,0.3939,0.4485,1.0,1.0,False
+R165,r165-r51-sd70-2lot,R51,SD70,2,option delta,1.0,random strikes (delta 0.40-0.85),1650,0.3988,0.4551,1.0,1.0,False
+R165,r165-r51-sd70-3lot,R51,SD70,3,option delta,1.0,random strikes (delta 0.40-0.85),1650,0.4006,0.4599,1.0,1.0,False
+R165,r165-r51-sd80-1lot,R51,SD80,1,option delta,1.0,random strikes (delta 0.40-0.85),1599,0.3615,0.4485,1.0,1.0,False
+R165,r165-r51-sd80-2lot,R51,SD80,2,option delta,1.0,random strikes (delta 0.40-0.85),1599,0.3677,0.4551,1.0,1.0,False
+R165,r165-r51-sd80-3lot,R51,SD80,3,option delta,1.0,random strikes (delta 0.40-0.85),1599,0.3702,0.4599,1.0,1.0,False
+R165,r165-r51-xi1-1lot,R51,XI1,1,option delta,1.0,random exits,1670,0.4479,0.4485,1.0,1.0,False
+R165,r165-r51-xi1-2lot,R51,XI1,2,option delta,1.0,random exits,1670,0.4539,0.4551,1.0,1.0,False
+R165,r165-r51-xi1-3lot,R51,XI1,3,option delta,1.0,random exits,1670,0.4587,0.4599,1.0,1.0,False
+R165,r165-r51-xi2-1lot,R51,XI2,1,option delta,1.0,random exits,1670,0.4443,0.4485,1.0,1.0,False
+R165,r165-r51-xi2-2lot,R51,XI2,2,option delta,1.0,random exits,1670,0.4503,0.4551,1.0,1.0,False
+R165,r165-r51-xi2-3lot,R51,XI2,3,option delta,1.0,random exits,1670,0.4551,0.4599,1.0,1.0,False
+R165,r165-r51-pkd-1lot,R51,PKD,1,option delta,0.0005,random skips,643,0.5148,0.4485,0.004331,0.124493,False
+R165,r165-r51-pkd-2lot,R51,PKD,2,option delta,0.0005,random skips,643,0.5241,0.4551,0.004331,0.124493,False
+R165,r165-r51-pkd-3lot,R51,PKD,3,option delta,0.0005,random skips,643,0.5272,0.4599,0.004331,0.124493,False
+R165,r165-r51-of1-1lot,R51,OF1,1,order-flow proxy,0.354323,random skips,1520,0.4493,0.4485,0.987042,1.0,False
+R165,r165-r51-of1-2lot,R51,OF1,2,order-flow proxy,0.386807,random skips,1520,0.4566,0.4551,1.0,1.0,False
+R165,r165-r51-of1-3lot,R51,OF1,3,order-flow proxy,0.384808,random skips,1520,0.4612,0.4599,1.0,1.0,False
+R165,r165-r51-of2-1lot,R51,OF2,1,order-flow proxy,0.54023,random skips,1577,0.4471,0.4485,1.0,1.0,False
+R165,r165-r51-of2-2lot,R51,OF2,2,order-flow proxy,0.62019,random skips,1577,0.4534,0.4551,1.0,1.0,False
+R165,r165-r51-of2-3lot,R51,OF2,3,order-flow proxy,0.569715,random skips,1577,0.4585,0.4599,1.0,1.0,False
+R165,r165-r51-of3-1lot,R51,OF3,1,order-flow proxy,1.0,random exits,1673,0.4381,0.4485,1.0,1.0,False
+R165,r165-r51-of3-2lot,R51,OF3,2,order-flow proxy,1.0,random exits,1673,0.4447,0.4551,1.0,1.0,False
+R165,r165-r51-of3-3lot,R51,OF3,3,order-flow proxy,1.0,random exits,1673,0.4495,0.4599,1.0,1.0,False

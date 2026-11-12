@@ -410,8 +410,12 @@ def picker_baseline(arm: str, us: list) -> dict:
     for lots in LOTS:
         tr = [t for t in R.walk(us, R.priced(us, None, None, lots)) if P.kept(t, sc, thr)]
         out[f"@{lots}"] = L.stats(tr)
-    out["published_1lot"] = list(K2.PICKER[arm][2])
-    out["reproduced"] = out["@1"]["trades"] == K2.PICKER[arm][2][0] and abs(out["@1"]["net"] - K2.PICKER[arm][2][1]) <= 1
+    # Parity with R152's app-style walk (results/picker.json B0@1: a skipped break holds its side). R151's published
+    # 652 / 693 trades are its research walk (skipped breaks removed BEFORE the walk), a different number by design.
+    ref = json.loads((K2.RESULTS / "picker.json").read_text())[arm]["B0@1"]
+    out["r152_app_walk_1lot"] = [ref["trades"], ref["net"]]
+    out["reproduced"] = out["@1"]["trades"] == ref["trades"] and abs(out["@1"]["net"] - ref["net"]) <= 1
+    out["r151_research_walk_1lot"] = list(K2.PICKER[arm][2])
     print(arm, "R151 picker", out, flush=True)
     return out
 

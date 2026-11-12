@@ -1,0 +1,54 @@
+{
+ "R72": {
+  "R151_M2": {
+   "trades": 634,
+   "win": 0.5252,
+   "net": 191363,
+   "per_trade": 301.8,
+   "worst_month": -21979,
+   "max_dd": 57084
+  },
+  "PKD": {
+   "trades": 630,
+   "win": 0.519,
+   "net": 171401,
+   "per_trade": 272.1,
+   "worst_month": -36055,
+   "max_dd": 57528
+  },
+  "B0": {
+   "trades": 2238,
+   "win": 0.4897,
+   "net": 335882,
+   "per_trade": 150.1,
+   "worst_month": -72605,
+   "max_dd": 86529
+  }
+ },
+ "R51": {
+  "R151_M2": {
+   "trades": 852,
+   "win": 0.4906,
+   "net": 249385,
+   "per_trade": 292.7,
+   "worst_month": -18430,
+   "max_dd": 40936
+  },
+  "PKD": {
+   "trades": 871,
+   "win": 0.4914,
+   "net": 198701,
+   "per_trade": 228.1,
+   "worst_month": -24606,
+   "max_dd": 51656
+  },
+  "B0": {
+   "trades": 3044,
+   "win": 0.4589,
+   "net": 213748,
+   "per_trade": 70.2,
+   "worst_month": -53654,
+   "max_dd": 94176
+  }
+ }
+}

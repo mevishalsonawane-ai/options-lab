@@ -1,0 +1,41 @@
+id: r165-r72-of3-1lot
+title: 'R165 OF3 on R72 Breadth Donchian (4 of 5 indices break), 1 lot: PROXY order flow: exit when the option''s cumulative
+  tick-rule delta since entry is below -its 5-min volume'
+family: flow-oi
+date: '2026-11-12'
+doc: research/hunt/r165_donchian_delta/results/report.md
+hypothesis: 'Boss (12 Nov): raise the Donchian arms'' win rate; "check delta study in all the sessions". PROXY order flow:
+  exit when the option''s cumulative tick-rule delta since entry is below -its 5-min volume raises R72 Breadth Donchian (4
+  of 5 indices break)''s win rate by >= 5 points with net not lower than today''s rules in the walk-forward window and the
+  final, final net not lower than R151''s app picker, >= 40 final trades, beats random twins on win rate with BH q <= 0.10
+  (m = 2242).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK, fut_1m_live_index) copied 12 Nov 2026;
+  R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: '2026-04-01..2026-10-13 read once by R165 (already read by R51 - R160: weak evidence)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (Donchian 20, 4 of 5) (unchanged)'
+- 'order-flow PROXY: the bought option''s 1-minute volume signed by the tick rule (no aggressor data exists); option data
+  used as a filter / exit around the index signal'
+model_or_rule: 'R72 Breadth Donchian (4 of 5 indices break) with PROXY order flow: exit when the option''s cumulative tick-rule
+  delta since entry is below -its 5-min volume, 1 lot'
+settings: research/hunt/r165_donchian_delta/r165lib.py, r165study.py RULES; PREREG.md section 3
+prereg: research/hunt/r165_donchian_delta/PREREG.md
+variants_tried: 78
+results:
+  summary: 'Walk-forward: 2243 trades, win 48.3%, net Rs 327,107 (today 2238 trades, win 49.0%, net Rs 335,882). Final: 1203
+    trades, win 44.7%, net Rs 161,833 (today 1202 trades, win 45.8%, net Rs 171,366; R151 picker 603 trades, win 49.1%, net
+    Rs 169,674); twin (random exits) raw p 1.0, BH q 1.0 (R165 alone 1.0). Fails: wf: win not up 5 points; wf: net lower than
+    today''s; final: win not up 5 points; final: net lower than today''s; final: net lower than R151''s picker; BH q 1 > 0.10.'
+  costs: dated Zerodha charges on the whole 1-lot quantity, R17 fills (slippage from the minute volume per position; stops
+    -10 bps and 2x the half-spread, gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: 'Weaker evidence: a proxy, not real order flow. Signal on the underlying; nothing changes in the app.'
