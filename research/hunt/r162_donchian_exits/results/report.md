@@ -41,6 +41,10 @@ Honesty notes: Apr - Oct 2026 has been read by many studies (weak evidence). The
 and the 20-minute stop) do not survive Benjamini-Hochberg once all 1,349 tests so far are counted (q 0.19). The
 next-week-expiry idea could not be tested: the data has no next-week option series.
 
+**Correction (12 Nov, later the same day):** the multiple-testing count above started from R153's chain (1,247 earlier
+tests). The repository's latest count before R162 was R160's m = 2,164, so the right m is 2,164 + 102 = 2,266. With it
+the smallest q is 0.32 instead of 0.19. Nothing passed either way; the verdict does not change.
+
 ## How it was tested
 
 Pre-registered in `research/hunt/r162_donchian_exits/PREREG.md` (committed before any number). Arms: R72 Breadth Donchian and R51 Donchian 20 (+ Supertrend 10, 3); entries unchanged (signal on the index). Engine, fills, dated Zerodha charges and R17 slippage exactly as R152. Design 20 Nov 2024 - 31 Mar 2026 (walk-forward window Apr 2025 - Mar 2026); final 1 Apr - 13 Oct 2026, read once by R162 but read by many earlier studies (weak evidence). Win = the whole position's net > 0 after charges; scale-out also shows the per-round win in brackets. Twins: 500 per test (seed 162); the test's p is the larger of the net and win p. BH: m = 1349 (R162 102 + 1247 earlier tests as p = 1). Raw p-values for a joint BH with R161 / R163: `results/raw_pvalues.csv`.

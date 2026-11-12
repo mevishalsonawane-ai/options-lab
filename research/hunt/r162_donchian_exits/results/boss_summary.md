@@ -38,3 +38,7 @@ for information only.
 Honesty notes: Apr - Oct 2026 has been read by many studies (weak evidence). The best twin p-values (0.002, scale-out
 and the 20-minute stop) do not survive Benjamini-Hochberg once all 1,349 tests so far are counted (q 0.19). The
 next-week-expiry idea could not be tested: the data has no next-week option series.
+
+**Correction (12 Nov, later the same day):** the multiple-testing count above started from R153's chain (1,247 earlier
+tests). The repository's latest count before R162 was R160's m = 2,164, so the right m is 2,164 + 102 = 2,266. With it
+the smallest q is 0.32 instead of 0.19. Nothing passed either way; the verdict does not change.
