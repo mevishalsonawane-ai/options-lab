@@ -137,7 +137,17 @@ object PassedArms {
     data class PremiumExits(val stop: Double?, val target: Double?, val tmaxMinutes: Int?, val steps: List<Pair<Double, Double>> = emptyList(),
                             val squareOff: LocalTime,
                             /** 1 Nov 2026 (R142 NP5-52, Boss: "Make the change the arms"): sold early when the trade makes no progress; null: none. */
-                            val noProgress: NoProgress? = null)
+                            val noProgress: NoProgress? = null,
+                            /** 12 Nov 2026 (R167 G2, Boss's exception; paper test twins only, [G2Lock]): a rupee lock; null: none. */
+                            val rupeeLock: RupeeLock? = null)
+
+    /**
+     * 12 Nov 2026 (R167's G2): a lock set in premium levels solved from the trade's own fill and charges ([G2Lock.levels]). Once a
+     * minute's HIGH has reached [trigger], the lock rests at the higher of [keep] and the best high so far minus [trail]; like the
+     * ladder's steps it is set by a minute's high, applies from the next minute and only rises (research/hunt/r106 `simulate`'s
+     * lk_trig / lk_keep / lk_trail, as R167 priced it).
+     */
+    data class RupeeLock(val trigger: Double, val keep: Double, val trail: Double)
 
     /**
      * R142's "no progress" exit (research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md, NP5-52; held in all six periods tested, R143 and
@@ -234,6 +244,13 @@ object PassedArms {
             for ((trig, keep) in x.steps) if (g >= trig - 1e-12) {
                 val l = if (keep.isNaN()) breakeven ?: (entry * (1 + ProfitLock.FALLBACK_COST_PCT / 100)) else entry * (1 + keep)
                 if (lock == null || l > lock) lock = l
+            }
+            // 12 Nov (R167 G2, paper test twins only): the rupee lock, after the ladder, the same way (the higher level holds).
+            x.rupeeLock?.let { r ->
+                if (peak >= r.trigger - EPS) {
+                    val l = maxOf(r.keep, peak - r.trail)
+                    if (lock == null || l > lock!!) lock = l
+                }
             }
             if (npEnd != null && npLevel != null && !b.start.isAfter(npEnd)) {
                 npSeen++

@@ -8,6 +8,7 @@ import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
+import com.optionslab.engine.orb.G2Lock
 import com.optionslab.engine.orb.HeroRules
 import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.OrbRules
@@ -145,6 +146,13 @@ object PassedArmsHost {
     /** 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20 on R51 switched on once as a SHADOW LOG ([setW20], [W20Rule]). */
     internal const val W20_ON = "r51_w20_shadow_2026-11-06"
     /**
+     * 12 Nov (Boss: "test G2 at 1 lot on paper as Boss's exception"; CLAUDE.md's fifth exception): R167's G2 giveback lock switched on
+     * once as a PAPER TEST TWIN on R51 and R72 ([setG2], [G2Lock]): each real paper trade is also walked with the lock ([g2Shadow]).
+     */
+    internal const val G2_ON = "r51_r72_g2_twin_2026-11-12"
+    /** The arms whose real paper trades carry a G2 test twin. */
+    val G2_ARMS = setOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE)
+    /**
      * 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): R51 Donchian 20 set to record only once, when it was on
      * ([Book.recordOnly]); R72 Breadth Donchian stays on. Logged as Boss's ask; one tap undoes it (back on).
      */
@@ -258,6 +266,16 @@ object PassedArmsHost {
          * 5-minute level within 0.25% ahead), false: kept; null: not labelled. A label only: never changes a trade.
          */
         val w20: Boolean? = null,
+        /**
+         * 12 Nov (R167's G2, failed gates, Boss's exception): the G2 lock's levels this trade's test twin walks with, solved once at
+         * its fill ([G2Lock.levels]); null: not under the G2 test (it was off, another arm, a would-be trade). A label only: the trade
+         * itself, and its live copy, keep today's exits.
+         */
+        val g2: PassedArms.RupeeLock? = null,
+        /** 12 Nov: what the G2 test twin did, once it sold before the real trade ([g2Shadow]): its price, why and net after charges. */
+        val g2Exit: Double? = null,
+        val g2Why: String? = null,
+        val g2Net: Double? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -310,10 +328,12 @@ object PassedArmsHost {
         var pickOn: Boolean = false,
         /** 6 Nov: R150 B's W20 labels each R51 break (shadow log only, [setW20]). */
         var w20On: Boolean = false,
+        /** 12 Nov (Boss's exception): new R51 / R72 paper trades carry R167's G2 test twin ([setG2]). */
+        var g2On: Boolean = false,
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), status.copyMap(), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On, pickOn, w20On)
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On, pickOn, w20On, g2On)
 
         /**
          * [source]'s entries run this pass. 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record
@@ -350,6 +370,8 @@ object PassedArmsHost {
         val pickOn: Boolean = false,
         /** 6 Nov: R150 B's W20 labels each R51 break (failed gates; a shadow log only). */
         val w20On: Boolean = false,
+        /** 12 Nov: new R51 / R72 paper trades carry R167's G2 test twin (failed gates, Boss's exception). */
+        val g2On: Boolean = false,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         /**
@@ -447,6 +469,7 @@ object PassedArmsHost {
             b.np5On = o.optBoolean("r52NoProgress", false)
             b.pickOn = o.optBoolean("r72PickerShadow", false)
             b.w20On = o.optBoolean("r51W20Shadow", false)
+            b.g2On = o.optBoolean("g2TwinPaper", false)
             // 19 Oct: absent in an older book (no arm record only); never beside "on" (on wins).
             o.optJSONArray("recordOnly")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { it in SOURCES && b.armed[it] != true }?.let { b.recordOnly += it } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
@@ -568,6 +591,20 @@ object PassedArmsHost {
             }
             save(b)
         }
+        // 12 Nov (Boss: "test G2 at 1 lot on paper as Boss's exception"; CLAUDE.md's fifth exception): R167's G2 lock failed its gates
+        // (more wins, less profit), so it runs only as a PAPER TEST TWIN: each new real R51 / R72 paper trade is also walked with the
+        // lock on the same minutes and what it would have done is recorded on the trade - never bought, never copied live, no cap or
+        // record changed. The trade and its live copy keep today's exits. On once, logged in the change timeline (one tap off). Never
+        // on an unreadable book, never in Gold.
+        if (G2_ON !in b.migrated) {
+            b.migrated += G2_ON
+            if (!unreadable && !testNoAutoOn && !com.optionslab.app.BuildConfig.GOLD && !b.g2On) {
+                b.g2On = true
+                note(b, "${G2Lock.LABEL}: turned on by the 12 Nov update, your ask (${G2Lock.STATUS}): ${G2Lock.RULE}")
+                runCatching { com.optionslab.app.ira.Autopilot.logPassedG2On() }
+            }
+            save(b)
+        }
         // 19 Oct (Boss's choice: "Yes, keep only breadth donchain"): only R72 Breadth Donchian buys the Donchian breaks on paper; R51
         // Donchian 20, when on, is set to record only once - its breaks still decided, each kept as a would-be trade (nothing bought),
         // so the two can still be compared. Logged as Boss's ask in the change timeline (one tap puts it back on). R72, Liquidity, the
@@ -616,7 +653,9 @@ object PassedArmsHost {
             p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
             p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false),
             p.optString("shadow").ifEmpty { null }, p.optBoolean("np5", false), d("pick"),
-            if (p.has("w20")) p.getBoolean("w20") else null)
+            if (p.has("w20")) p.getBoolean("w20") else null,
+            if (p.has("g2T")) PassedArms.RupeeLock(p.getDouble("g2T"), p.getDouble("g2K"), p.getDouble("g2R")) else null,
+            d("g2Exit"), p.optString("g2Why").ifEmpty { null }, d("g2Net"))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -634,6 +673,8 @@ object PassedArmsHost {
             if (p.np5) put("np5", true)
             p.pick?.let { put("pick", it) }
             p.w20?.let { put("w20", it) }
+            p.g2?.let { put("g2T", it.trigger); put("g2K", it.keep); put("g2R", it.trail) }
+            p.g2Exit?.let { put("g2Exit", it) }; p.g2Why?.let { put("g2Why", it) }; p.g2Net?.let { put("g2Net", it) }
         }
 
     private val written = Vault.LastWrite()
@@ -664,8 +705,9 @@ object PassedArmsHost {
         o.put("r52NoProgress", b.np5On)
         o.put("r72PickerShadow", b.pickOn)
         o.put("r51W20Shadow", b.w20On)
+        o.put("g2TwinPaper", b.g2On)
         o.put("recordOnly", JSONArray().apply { b.recordOnly.sorted().forEach { put(it) } })
-        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
+        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && (lockKey(it) == k || g2LockKey(it) == k) } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         // 19 Oct (order speed): written on this book's own writer thread ([writer]), never under [lock] on the caller's - an
         // entry booked here ([record]) used to wait for the vault write before the next index's entry, and the 15-second stop
@@ -714,7 +756,7 @@ object PassedArmsHost {
         _view.value = View(b.armed.toMap(), b.status.shown({ k, _ -> k == ST_UNJUDGED_KEY }), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
             model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet(),
-            wideOn = b.wideOn, np5On = b.np5On, pickOn = b.pickOn, w20On = b.w20On)
+            wideOn = b.wideOn, np5On = b.np5On, pickOn = b.pickOn, w20On = b.w20On, g2On = b.g2On)
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open && it.shadow == null }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
@@ -978,6 +1020,40 @@ object PassedArmsHost {
     }
 
     /**
+     * 12 Nov (Boss's exception, CLAUDE.md): R167's G2 test twin on or off for NEW R51 / R72 paper trades (a trade keeps what it
+     * entered with). It never changes a trade, paper or live, so no PIN. [log]: false for the change log's own Undo.
+     */
+    suspend fun setG2(on: Boolean, log: Boolean = false): String {
+        if (!ready()) return "The passed arms are not ready yet."
+        return lock.withLock {
+            val b = book()
+            if (b.g2On == on) return@withLock "${G2Lock.LABEL} is already ${if (on) "on" else "off"} (a paper test twin only)."
+            b.g2On = on
+            note(b, if (on) "${G2Lock.LABEL} on (${G2Lock.STATUS}): ${G2Lock.RULE}" else "${G2Lock.LABEL} off for new trades")
+            save(b)
+            if (log && on) runCatching { com.optionslab.app.ira.Autopilot.logPassedG2On() }
+            if (on) "${G2Lock.LABEL} on: each new R51 and R72 paper trade has a test twin with the lock; the real trades keep today's exits."
+            else "${G2Lock.LABEL} off: no test twin for new trades (the real trades were never changed)."
+        }
+    }
+
+    /**
+     * 12 Nov (R167's G2, failed gates, Boss's exception): the test twins in words ([closed]: an arm's closed trades, would-be ones
+     * included and counted apart) - the trades that carried one, G2's net and win rate against the same trades' own. A twin that
+     * never sold first ended as its trade did.
+     */
+    internal fun g2Words(closed: List<Pos>, m: (Double) -> String = { "%,.0f".format(Locale.ENGLISH, it) }): String {
+        val t = closed.filter { it.g2 != null && !it.open }
+        if (t.isEmpty()) return "no trade with a G2 test twin closed yet"
+        val wb = t.count { it.shadow != null }
+        val g = t.map { it.g2Net ?: it.net ?: 0.0 }
+        val r = t.map { it.net ?: 0.0 }
+        fun win(xs: List<Double>) = "%.0f%%".format(Locale.ENGLISH, 100.0 * xs.count { it > 0 } / xs.size)
+        return "${t.size} trade${if (t.size == 1) "" else "s"} with a test twin closed${if (wb > 0) " ($wb would-be)" else ""}: with G2 ${m(g.sum())} (won ${win(g)}) vs today's " +
+            "exits ${m(r.sum())} (won ${win(r)}); G2 sold ${t.count { it.g2Exit != null }} of them first"
+    }
+
+    /**
      * 1 Nov (Boss: "Make the change the arms"): R142's 09:25 no-progress exit on or off for R52 Open outside value's NEW trades (open
      * trades keep the exits they entered with). Paper only; a trade that may be copied live keeps the plain exits and the early
      * exit is only logged. [log]: false for the change log's own Undo (the switch-on is logged by the 1 Nov update).
@@ -1059,6 +1135,8 @@ object PassedArmsHost {
                     // 6 Nov: R150 B's W20 on R51 (failed gates; a shadow log only): the closed trades it would skip and keep.
                     (if (s == DonchianArm.SOURCE) " · ${w20Words(v.w20On, c) { m(it) }} · " +
                         pickerWords(v.pickOn, c, { m(it) }, R51Picker.LABEL, R51Picker::takes, R51Picker.STATUS) else "") +
+                    // 12 Nov: R167's G2 paper test twin (failed gates, Boss's exception): G2 against the same trades.
+                    (if (s in G2_ARMS && (v.g2On || c.any { it.g2 != null })) " · ${G2Lock.LABEL} ${if (v.g2On) "on" else "off"} (${G2Lock.STATUS}): ${g2Words(c) { m(it) }}" else "") +
                     (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
                         "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
                 // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)
@@ -2005,7 +2083,9 @@ object PassedArmsHost {
                 val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
                 val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
                     l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn,
-                    np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy)
+                    np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy,
+                    // 12 Nov (R167's G2, Boss's exception): its test twin's lock levels, solved once from the real fill (a label only).
+                    g2 = g2Levels(b, arm, fill.price, fill.quantity))
                 b.positions += pos
                 b.marks[c.symbol] = fill.price
                 b.decided += keys
@@ -2075,7 +2155,9 @@ object PassedArmsHost {
                                 idx: Double?, atr: Double?, keys: List<String>, breadth: Boolean?, kind: String, because: String): Pos {
         runCatching { Paper.rememberContract(c) }
         val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
-            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On)
+            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On,
+            // 12 Nov (R167's G2): a would-be R51 / R72 trade carries the test twin too (an arm that is off still collects G2's record).
+            g2 = g2Levels(b, arm, ref, c.lotSize))
         b.positions += pos
         if (c.symbol !in b.marks) b.marks[c.symbol] = ref
         b.decided += keys
@@ -2574,13 +2656,47 @@ object PassedArmsHost {
         // 1 Nov (R142 NP5-52, live in shadow): an R52 trade that kept its plain exits because it may be copied live - the 09:25 exit
         // it would have taken is logged once, nothing sold ([np5Shadow]).
         val np5Noted = why == null && np5Shadow(b, p, bars, now, known)
+        // 12 Nov (R167's G2, Boss's exception): its test twin walks the same minutes and price with the G2 lock added; what it did is
+        // recorded on the trade, which is sold (or held) by its own exits below exactly as before.
+        // Isolated: a failure in this label-only walk never holds the trade's own stop, lock or target back.
+        val cur = runCatching { g2Shadow(b, p, bars, ltp, now, overnight, walked) }.getOrNull()?.also { b.positions[i] = it } ?: p
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
         if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
-        if (why == null) return np5Noted
+        if (why == null) return np5Noted || cur !== p
         val walkPx = walked?.takeIf { it.kind.why == why }?.price
-        val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight, walkPx) else sell(b, p, c, why, ltp, walkPx)
-        if (next != p) { b.positions[i] = next; return true }
-        return false
+        val next = if (cur.shadow != null) sellWouldBe(b, cur, why, ltp, overnight, walkPx) else sell(b, cur, c, why, ltp, walkPx)
+        if (next != cur) { b.positions[i] = next; return true }
+        return cur !== p
+    }
+
+    /** 12 Nov: the book's key of [p]'s G2 test twin's earned lock (apart from the trade's own, [lockKey]). */
+    private fun g2LockKey(p: Pos): String = "g2|" + lockKey(p)
+
+    /**
+     * 12 Nov (R167's G2, Boss's exception): the levels a NEW [arm] trade's test twin walks with, from its fill [entry] and [qty]
+     * (null: the twin is off, another arm, or the levels cannot be told). Never throws: a label must not stop a fill being booked.
+     */
+    private fun g2Levels(b: Book, arm: String, entry: Double, qty: Int): PassedArms.RupeeLock? =
+        if (b.g2On && arm in G2_ARMS) runCatching { G2Lock.levels(entry, qty) }.getOrNull() else null
+
+    /**
+     * 12 Nov (R167's G2, failed gates, Boss's exception): [p]'s test twin - the same trade (a real one or a would-be one) walked on the
+     * same minutes [bars] and price [ltp] with [G2Lock]'s lock added ([Pos.g2]). Once that walk sells (before the trade's own exits
+     * can, as G2 only adds a lock), its price, why and net after charges are recorded on the trade; the trade copy returned (null:
+     * nothing new). Exactly the trade's own walk now ([real]: the same kind, minute and price) is not recorded: the twin then ends as
+     * the trade does. A recorded stop or lock is booked at its walk's price, as the trade's own would be ([PassedArms.booked]). Pure
+     * arithmetic on what is in hand: no read, no order, no live path, nothing the trade's own exits use. Not overnight or for S1.
+     */
+    private fun g2Shadow(b: Book, p: Pos, bars: List<Bar>, ltp: Double?, now: LocalDateTime, overnight: Boolean, real: PassedArms.Exit?): Pos? {
+        val lv = p.g2 ?: return null
+        if (p.g2Exit != null || overnight || p.setup == Solo2.Setup.S1.key) return null
+        val key = g2LockKey(p)
+        val known = b.locks[key]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
+        val w = PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p).copy(rupeeLock = lv), known, if (p.lock) breakeven(p) else null)
+        w.lock?.let { l -> if (known == null || l > known.second) b.locks[key] = "$now|$l" }
+        val ex = w.exit ?: return null
+        if (real != null && real.kind == ex.kind && real.at == ex.at && kotlin.math.abs(real.price - ex.price) < 1e-9) return null
+        return p.copy(g2Exit = ex.price, g2Why = ex.kind.why, g2Net = (ex.price - p.entry) * p.qty - G2Lock.charges(p.entry, ex.price, p.qty))
     }
 
     /**
@@ -2722,6 +2838,7 @@ object PassedArmsHost {
     /** [p]'s lock and (when no other open trade here holds its option) its last price, forgotten. */
     private fun forget(b: Book, p: Pos) {
         b.locks.remove(lockKey(p))
+        b.locks.remove(g2LockKey(p))
         if (b.positions.none { it.open && it.symbol == p.symbol && !same(it, p) }) b.marks.remove(p.symbol)
     }
 

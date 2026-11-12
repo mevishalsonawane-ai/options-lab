@@ -83,6 +83,16 @@ notes; match the surrounding code.
         so the Undo takes the PIN.
       - It is the one exception to "anything new that could skip live trades starts in shadow", by Boss's explicit choice.
       - R150's W20 on R51 stays a label only (shadow).
+    - A fifth exception, chosen by Boss on 12 Nov ("test G2 at 1 lot on paper as Boss's exception", after R167): R167's G2 giveback
+      lock runs as PAPER TEST TWINS on R51 and R72 although it failed the gates.
+      - The rule: once a trade has been +₹1,500 after charges, a lock keeps at least +₹500 and trails ₹1,000 under the best price.
+      - Each real R51 / R72 paper trade (1 lot) also has a test twin: the same trade walked with the lock added, its result recorded
+        beside it. The twin is never bought, never copied live, and changes no cap or record. The real trade, and so its live copy,
+        keeps today's exits.
+      - Its record (Apr - Oct 2026, 1 lot): R72 won 49.1% vs 45.8% (1,202 trades) but made ₹1.03 lakh vs ₹1.71 lakh; R51 won 48.9%
+        vs 44.9% (1,670) but made ₹75k vs ₹1.35 lakh. It beat random exits (p 0.002); it failed "no less profit".
+      - Same terms: labelled "failed gates, Boss's exception", logged in the change timeline, one tap off. It never changes a real
+        trade, paper or live, so its Undo takes no PIN.
     - No other failed idea may use these exceptions.
   - Paper changes never carry over to live by themselves.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.

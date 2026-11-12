@@ -345,7 +345,8 @@ object AutoChange {
             // on raises paper risk, off takes those entries away.
             // 6 Nov: R150's W20 label on R51 ([W20_TARGET]) is a log only - it never skips or changes a trade, on or off. (R151's pickers,
             // [PICK_TARGET], act: an entry filter like the others.)
-            Kind.PAPER_FILTER -> if (c.target == W20_TARGET) Risk.NEUTRAL_SHADOW
+            // 12 Nov: R167's G2 paper test twins ([G2_TARGET]) never change a real trade either, paper or live (a shadow walk only).
+            Kind.PAPER_FILTER -> if (c.target == W20_TARGET || c.target == G2_TARGET) Risk.NEUTRAL_SHADOW
                 else if (c.target == BOOK_PRICE_TARGET) { if (c.to == ON) Risk.RAISE else Risk.LOWER } else if (c.to == ON) Risk.LOWER else Risk.RAISE
             // 18 Oct: an arm's own live switch on lets its live entries go (adds live risk); off keeps it on paper.
             Kind.ARM_LIVE -> if (c.to == ON) Risk.RAISE else Risk.LOWER
@@ -935,6 +936,25 @@ object AutoChange {
         else "R51 Donchian 20's breaks are no longer labelled by W20 (none was ever skipped)",
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), Risk.NEUTRAL_SHADOW, Scope.SHADOW,
         what = "R51 shadow log: W20 + picker (R150 B, R151 E; failed gates; a shadow log only)")
+
+    /** 12 Nov 2026: the target of R167's G2 paper test twins on R51 and R72 ([passedG2]). */
+    const val G2_TARGET = "filter:r51_r72_g2_twin"
+
+    /**
+     * 12 Nov 2026 (Boss: "test G2 at 1 lot on paper as Boss's exception"): R167's G2 giveback lock switched [on] as PAPER TEST TWINS -
+     * each real R51 / R72 paper trade also walked with the lock added (once +₹1,500, keep +₹500, trail ₹1,000) and what it would
+     * have done recorded on it - or off again. The real trades and their live copies keep today's exits, so it never changes a real trade, paper or
+     * live: shadow either way, no PIN. Failed gates, Boss's exception (CLAUDE.md).
+     */
+    fun passedG2(on: Boolean): Change = Change(Kind.PAPER_FILTER, G2_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (12 Nov, \"test G2 at 1 lot on paper as Boss's exception\"): each R51 and R72 paper trade gets a test twin at " +
+            "the same fill (the same trade walked with a lock that, once it has been +₹1,500 after charges, keeps at least +₹500 and " +
+            "trails ₹1,000 under the best price), recorded beside it. The twin is never bought or copied live and changes no cap or " +
+            "record; the real trade keeps today's exits. Failed gates, Boss's exception: in R167 (Apr - Oct 2026, 1 lot) it won 49.1% vs 45.8% on R72 (1,202 trades) and " +
+            "48.9% vs 44.9% on R51 (1,670) and beat random exits (p 0.002), but made ₹68,404 and ₹59,644 less"
+        else "R51's and R72's G2 test twins are off: no new twins (the real trades were never changed)",
+        Evidence(0, 0.0, AgentLessons.Confidence.WEAK), Risk.NEUTRAL_SHADOW, Scope.SHADOW,
+        what = "R51 / R72 G2 test twins (R167; failed gates, Boss's exception; paper test only)")
 
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"

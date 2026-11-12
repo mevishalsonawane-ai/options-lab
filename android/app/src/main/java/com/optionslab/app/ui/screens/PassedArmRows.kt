@@ -136,6 +136,10 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     if (source == DonchianArm.SOURCE && v.w20On) "${com.optionslab.engine.orb.W20Rule.LABEL} on (${com.optionslab.engine.orb.W20Rule.STATUS}): " +
         "${com.optionslab.engine.orb.W20Rule.RULE}. ${com.optionslab.engine.orb.W20Rule.RECORD}. " +
         "${PassedArmsHost.w20Words(true, v.closedOf(source)) { rs(it) }}." else null,
+    // 12 Nov (Boss's exception, CLAUDE.md): R167's G2 test twin on R51 and R72, when on or once a trade that carried one has closed.
+    if (source in PassedArmsHost.G2_ARMS && (v.g2On || v.closedOf(source).any { it.g2 != null })) "${com.optionslab.engine.orb.G2Lock.LABEL} " +
+        "${if (v.g2On) "on" else "off"} (${com.optionslab.engine.orb.G2Lock.STATUS}): ${com.optionslab.engine.orb.G2Lock.RULE}. " +
+        "${com.optionslab.engine.orb.G2Lock.RECORD}. ${PassedArmsHost.g2Words(v.closedOf(source)) { rs(it) }}." else null,
     // 6 Nov (R151 Amendment E): R51's picker, under the same switch (a log only).
     if (source == DonchianArm.SOURCE && v.pickOn) r51PickerLine(v.closedOf(source)) else null,
     if (source == OovArm.SOURCE && v.np5On) "09:25 exit on: ${OovArm.NO_PROGRESS_RULE}; ${OovArm.NO_PROGRESS_RECORD}. " +

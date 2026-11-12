@@ -323,4 +323,32 @@ class PassedArmRowsTest {
         org.junit.Assert.assertTrue(passedExplanation(BreadthDonchianArm.SOURCE, on).none { com.optionslab.engine.orb.W20Rule.LABEL in it })
         org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, PassedArmsHost.View()).none { com.optionslab.engine.orb.W20Rule.LABEL in it })
     }
+
+    /** 12 Nov (Boss's exception): R167's G2 test twin is said in R51's and R72's dialogs, against the same trades' own results. */
+    @Test fun theDonchianDialogsSayTheG2TwinAgainstTheSameTrades() {
+        val at = java.time.LocalDateTime.of(2026, 11, 12, 9, 20)
+        val lv = com.optionslab.engine.orb.PassedArms.RupeeLock(124.0, 108.35, 1_000.0 / 65)
+        // A trade stopped at 90 (-₹650) whose twin's lock sold it at 110 (+₹650 before charges: ₹650 is booked as g2Net here).
+        val gave = PassedArmsHost.Pos(BreadthDonchianArm.SOURCE, "NIFTY", "NIFTY-25050CE", "CE", 65, 100.0, at, null, exit = 90.0,
+            exitTime = at.plusMinutes(14), why = "stop", g2 = lv, g2Exit = 110.0, g2Why = "lock", g2Net = 650.0)
+        val on = PassedArmsHost.View(g2On = true, all = listOf(gave))
+        val line = passedExplanation(BreadthDonchianArm.SOURCE, on).single { com.optionslab.engine.orb.G2Lock.LABEL in it }
+        for (w in listOf("on (failed gates, Boss's exception)", "never bought or copied live", "keeps today's exits", "49.1%",
+                "1 trade with a test twin closed: with G2 +₹650 (won 100%) vs today's exits −₹650 (won 0%); G2 sold 1 of them first"))
+            org.junit.Assert.assertTrue("$w: $line", w in line)
+        // R72's own numbers are its real trades'.
+        org.junit.Assert.assertTrue(passedNumbersLine(BreadthDonchianArm.SOURCE, on).startsWith("1 closed, −₹650"))
+        // R51's dialog says it too (nothing of its own yet); R52's never; off with no such trade closed: not said.
+        org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, on).single { com.optionslab.engine.orb.G2Lock.LABEL in it }
+            .contains("no trade with a G2 test twin closed yet"))
+        org.junit.Assert.assertTrue(passedExplanation(OovArm.SOURCE, on).none { com.optionslab.engine.orb.G2Lock.LABEL in it })
+        org.junit.Assert.assertTrue(passedExplanation(DonchianArm.SOURCE, PassedArmsHost.View()).none { com.optionslab.engine.orb.G2Lock.LABEL in it })
+        // Off after such trades closed: still said, as off, with their record.
+        val off = passedExplanation(BreadthDonchianArm.SOURCE, on.copy(g2On = false)).single { com.optionslab.engine.orb.G2Lock.LABEL in it }
+        org.junit.Assert.assertTrue(off, off.contains(" off (failed gates") && off.contains("1 trade with a test twin closed"))
+        // A twin that never sold first ends as its trade did; an open trade is not counted yet.
+        val same = gave.copy(g2Exit = null, g2Why = null, g2Net = null)
+        org.junit.Assert.assertEquals("1 trade with a test twin closed: with G2 -650 (won 0%) vs today's exits -650 (won 0%); G2 sold 0 of them first",
+            PassedArmsHost.g2Words(listOf(same, same.copy(exit = null, exitTime = null))).replace(",", ""))
+    }
 }

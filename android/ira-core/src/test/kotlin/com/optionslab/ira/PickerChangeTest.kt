@@ -51,6 +51,28 @@ class PickerChangeTest {
         assertNull(AutoChange.lastUndoable(b))
     }
 
+    /** 12 Nov (Boss: "test G2 at 1 lot on paper as Boss's exception"): R167's G2 test twins are a shadow change either way, no PIN. */
+    @Test fun g2TwinsAreABossOwnShadowChangeEitherWay() {
+        val on = AutoChange.passedG2(true)
+        assertEquals(AutoChange.Kind.PAPER_FILTER, on.kind); assertEquals(AutoChange.G2_TARGET, on.target)
+        assertEquals(AutoChange.Scope.SHADOW, on.scope)
+        assertEquals(AutoChange.Risk.NEUTRAL_SHADOW, AutoChange.riskOf(on))
+        assertEquals(AutoChange.Risk.NEUTRAL_SHADOW, AutoChange.riskOf(AutoChange.inverse(on, "undone by you")))
+        assertFalse(AutoChange.undoNeedsPin(on)); assertFalse(AutoChange.undoNeedsPin(AutoChange.passedG2(false)))
+        for (w in listOf("test G2 at 1 lot on paper", "+₹1,500", "+₹500", "₹1,000", "never bought or copied live", "keeps today's exits",
+                "Failed gates, Boss's exception", "49.1%", "48.9%", "p 0.002"))
+            assertTrue(on.reason.contains(w), "$w: ${on.reason}")
+        assertTrue(on.what.contains("failed gates, Boss's exception"))
+        assertTrue(AutoChange.passedG2(false).reason.contains("never changed"))
+        val all = listOf(AutoChange.ST_TARGET, AutoChange.LOCK_TARGET, AutoChange.L25_TARGET, AutoChange.SAME_DIR_TARGET, AutoChange.NO_TWIN_TARGET,
+            AutoChange.BOOK_PRICE_TARGET, AutoChange.WIDE_TARGET, AutoChange.NO_PROGRESS_TARGET, AutoChange.W20_TARGET, AutoChange.PICK_TARGET) +
+            AutoChange.BOSS_PAPER_RULES
+        assertFalse(AutoChange.G2_TARGET in all); assertFalse("liquidity" in AutoChange.G2_TARGET)
+        val (b, e) = AutoChange.record(AutoChange.Book(), on, AutoChange.Status.KEPT, 1_000L, day, by = "your ask")
+        assertFalse(AutoChange.undo(b, e.id)!!.needsPin)
+        assertNull(AutoChange.lastUndoable(b))
+    }
+
     @Test fun itsTargetIsItsOwnAndItsUndoIsItsOwnTap() {
         val others = listOf(AutoChange.ST_TARGET, AutoChange.LOCK_TARGET, AutoChange.L25_TARGET, AutoChange.SAME_DIR_TARGET, AutoChange.NO_TWIN_TARGET,
             AutoChange.BOOK_PRICE_TARGET, AutoChange.WIDE_TARGET, AutoChange.NO_PROGRESS_TARGET, AutoChange.W20_TARGET) + AutoChange.BOSS_PAPER_RULES

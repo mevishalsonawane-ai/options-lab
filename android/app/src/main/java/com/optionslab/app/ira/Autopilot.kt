@@ -524,6 +524,12 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
+            } else if (c.target == AutoChange.G2_TARGET) {
+                // 12 Nov (Boss's exception, CLAUDE.md): R167's G2 paper test twins ([logPassedG2On]): the Undo switches new twins off or on.
+                // Never a real trade changed, paper or live: no PIN; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setG2(c.to == AutoChange.ON, log = false) }
+                    .takeIf { !it.contains("not ready") }
             } else if (c.target == AutoChange.PICK_TARGET) {
                 // 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers ([logPassedPickerOn]): the Undo switches them off or on.
                 // Off adds live trades back: the PIN, by the change's live scope ([needsPin]); not logged again.
@@ -1381,6 +1387,13 @@ internal object Autopilot {
     fun logPassedW20On() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedW20(true), "the 6 Nov update (your ask: \"Do whatever you recommend\", on R51); a log only - failed gates, never changes a trade")
+    }
+
+    /** 12 Nov (Boss's exception, CLAUDE.md): R167's G2 lock as paper test twins of R51's and R72's trades, on by the update - logged once as Boss's. */
+    fun logPassedG2On() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.passedG2(true), "the 12 Nov update (your ask: \"test G2 at 1 lot on paper as Boss's exception\"); failed gates, " +
+            "Boss's exception - paper test twins only, never a real trade changed")
     }
 
     /** 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers, acting on paper and live, on by the update - logged once as Boss's. */

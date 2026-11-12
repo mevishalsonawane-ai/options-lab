@@ -2532,4 +2532,156 @@ class PassedArmsHostTest : RobolectricTest() {
         at(LocalTime.of(9, 27)); runBlocking { PassedArmsHost.manageOnly() }
         assertEquals(1, view().log.count { "would have been sold at" in it })
     }
+
+    // ---- 12 Nov: R167's G2 lock as a paper test twin (failed gates, Boss's exception; CLAUDE.md's fifth exception) ---------------
+
+    @Test fun theUpdateSwitchesTheG2TwinOnOnceAndItsUndoSwitchesItOff() {
+        PassedArmsHost.testNoAutoOn = false
+        PassedArmsHost.wipe(); bookFile.delete()
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        assertTrue(view().g2On)
+        assertEquals(1, view().log.count { "G2 giveback lock (paper test): turned on by the 12 Nov update" in it })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertEquals("once only", 1, view().log.count { "G2 giveback lock (paper test): turned on by the 12 Nov update" in it })
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("G2 giveback lock (paper test) on (failed gates, Boss's exception)"))
+        val g = AutoChange.passedG2(true)
+        assertTrue(Autopilot.apply(AutoChange.inverse(g, "undone by you"), false)!!.contains("no test twin for new trades"))
+        assertFalse(view().g2On)
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("its Undo stays undone after a restart", view().g2On)
+        assertTrue(Autopilot.apply(g, false)!!.contains("keep today's exits"))
+        assertTrue(view().g2On)
+        PassedArmsHost.wipe(); bookFile.writeText("not a vault"); AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertFalse("never on for an unreadable book", view().g2On)
+    }
+
+    /** R51 alone, the G2 twin [on] or off, its 09:20 NIFTY break bought on paper: the real trade. */
+    private fun g2Buy(on: Boolean = true): PassedArmsHost.Pos {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setG2(on) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        return PassedArmsHost.view.value.open.single { it.arm == DonchianArm.SOURCE && it.shadow == null }
+    }
+
+    /** The CE: 100 until 09:30, +28% (under R51's +30% target, past +Rs 1,500) 09:30 - 09:32, +10% at 09:33, then -20%. */
+    private fun giveback(until: LocalTime, entry: Double) = market(until, call = { t ->
+        when {
+            t.isBefore(LocalTime.of(9, 30)) -> 100.0
+            t.isBefore(LocalTime.of(9, 33)) -> entry * 1.28
+            t.isBefore(LocalTime.of(9, 34)) -> entry * 1.10
+            else -> entry * 0.80
+        }
+    })
+
+    @Test fun aNewR51TradeCarriesItsTwinsLevelsAndNothingMoreIsBoughtOrCopied() {
+        val p = g2Buy()
+        assertEquals(com.optionslab.engine.orb.G2Lock.levels(p.entry, p.qty), p.g2)
+        assertTrue("${p.g2}", p.g2!!.trigger > p.entry + 1_500.0 / 65 && p.g2!!.keep > p.entry + 500.0 / 65)
+        assertNull(p.g2Exit)
+        // Nothing more: one trade, the account's 65, no extra position or would-be trade of its own.
+        assertEquals(1, view().open.count { it.arm == DonchianArm.SOURCE })
+        assertEquals(65, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertEquals("kept after a restart", p.g2, view().open.single { it.arm == DonchianArm.SOURCE }.g2)
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withTheTwinOffANewTradeCarriesNone() {
+        val p = g2Buy(on = false)
+        assertNull(p.g2)
+        assertTrue(runBlocking { PassedArmsHost.setG2(false) }.contains("already off"))
+        assertEquals("no trade with a G2 test twin closed yet", PassedArmsHost.g2Words(view().closedOf(DonchianArm.SOURCE)))
+    }
+
+    /** Boss's case (12 Nov): +Rs 1,500 and more, then back to a loss. The twin keeps a profit; the trade itself is untouched. */
+    @Test fun theTwinKeepsAProfitWhereTheTradeGivesItBackAndTheTradeIsSoldOnlyByItsOwnExits() {
+        val p = g2Buy()
+        giveback(LocalTime.of(9, 34), p.entry)
+        at(LocalTime.of(9, 34)); runBlocking { PassedArmsHost.manageOnly() }
+        val held = view().open.single { it.arm == DonchianArm.SOURCE }
+        assertEquals("lock", held.g2Why)
+        assertTrue("${held.g2Exit} vs ${p.entry}", held.g2Exit!! in p.entry * 1.05..p.entry * 1.15)
+        assertTrue("${held.g2Net}", held.g2Net!! > 0)
+        assertEquals("the trade itself still holds", 65, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        // A restart keeps what the twin did.
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertEquals(held.g2Net, view().open.single { it.arm == DonchianArm.SOURCE }.g2Net)
+        // 09:34 at -20%: the trade's own -15% stop sells it at a loss, as without G2.
+        giveback(LocalTime.of(9, 35), p.entry)
+        at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
+        val sold = view().closed.single { it.arm == DonchianArm.SOURCE }
+        assertEquals("stop", sold.why); assertTrue("${sold.net}", sold.net!! < 0)
+        assertEquals("lock", sold.g2Why)
+        assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
+        // R51's record is its own trades (one); the twin is said beside it.
+        assertEquals(1, view().closedOf(DonchianArm.SOURCE).size)
+        val words = PassedArmsHost.g2Words(view().closedOf(DonchianArm.SOURCE))
+        assertTrue(words, words.startsWith("1 trade with a test twin closed: with G2 ") && words.contains("(won 100%) vs today's exits") &&
+            words.endsWith("(won 0%); G2 sold 1 of them first"))
+        assertTrue(PassedArmsHost.diagLine(), PassedArmsHost.diagLine().contains("1 trade with a test twin closed"))
+        assertTrue(PassedArmsHost.diagLine(hideNet = true).contains("with G2 ${PassedArmsHost.NET_HIDDEN}"))
+        assertNothingAtZerodha()
+    }
+
+    @Test fun whenTheTwinWouldSellJustAsTheTradeDoesNothingIsRecordedAndItEndsAsTheTradeDid() {
+        val p = g2Buy()
+        // Flat at 100: the 30-minute time stop sells the trade; the twin would sell at the same minute the same way.
+        market(LocalTime.of(9, 51))
+        at(LocalTime.of(9, 51)); runBlocking { PassedArmsHost.manageOnly() }
+        val sold = view().closed.single { it.arm == DonchianArm.SOURCE }
+        assertEquals("time", sold.why)
+        assertNull(sold.g2Exit); assertNull(sold.g2Why)
+        assertTrue(PassedArmsHost.g2Words(view().closedOf(DonchianArm.SOURCE)).endsWith("G2 sold 0 of them first"))
+        assertTrue(p.g2 != null)
+    }
+
+    /** In Live with R51's Trade live on: the twin's lock sells nothing at Zerodha; the live trade follows the trade's own exits only. */
+    @Test fun inLiveTheTwinsLockNeverSellsTheLiveTradeOnlyTheTradesOwnStopDoes() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        com.optionslab.app.data.ArmLive.testSync = true
+        runBlocking { com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, false, pinConfirmed = true, log = false) }
+        val sym = "NIFTY26OCT25050CE"
+        kite.instruments += FakeKite.Ins(26_000_001, sym, "NIFTY", day.plusDays(7), 25_050.0, "CE", 65)
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        File(context.filesDir, "kite_instruments.json").delete()
+        runBlocking { Broker.instruments() }
+        kite.requests.clear()
+        val p = g2Buy()
+        val (buy, stop) = kite.placed
+        assertEquals("BUY", buy.form["transaction_type"]); assertEquals("65", buy.form["quantity"])
+        assertEquals("85.00", stop.form["trigger_price"])
+        // 09:33: the twin's lock sells the twin; the live trade is untouched (nothing more placed, still open).
+        giveback(LocalTime.of(9, 34), p.entry)
+        kite.quote("NFO:$sym", p.entry * 1.10, p.entry * 1.10 - 0.05, p.entry * 1.10 + 0.05)
+        at(LocalTime.of(9, 34)); runBlocking { PassedArmsHost.manageOnly() }
+        assertEquals("lock", view().open.single { it.arm == DonchianArm.SOURCE }.g2Why)
+        runBlocking { com.optionslab.app.data.ArmLive.watch() }
+        assertEquals(1, com.optionslab.app.data.ArmLive.view.value.open.size)
+        assertTrue(com.optionslab.app.data.ArmLive.view.value.closed.isEmpty())
+        assertEquals("no live sale for the twin", 2, kite.placed.size)
+        // 09:34: the trade's own stop sells it, and its live trade follows it - as without G2.
+        giveback(LocalTime.of(9, 35), p.entry)
+        kite.quote("NFO:$sym", 80.0, 79.95, 80.05)
+        at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
+        runBlocking { com.optionslab.app.data.ArmLive.watch() }
+        assertEquals("stop", com.optionslab.app.data.ArmLive.view.value.closed.single().why)
+        assertEquals("flat at Zerodha, never short", 0, kite.positions["NFO:$sym:MIS"]?.first ?: 0)
+    }
+
+    /** R51 switched off (it runs in shadow): its would-be trade carries the twin too, so an arm that is off still collects G2's record. */
+    @Test fun aWouldBeR51TradeCarriesTheTwinAndItIsSaidApart() {
+        for (a in PassedArmsHost.SOURCES) runBlocking { PassedArmsHost.setArmed(a, false, log = false) }   // every arm off: shadow only
+        runBlocking { PassedArmsHost.setG2(true) }
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val wb = view().open.single { it.arm == DonchianArm.SOURCE }
+        assertEquals(PassedArmsHost.SHADOW_OFF, wb.shadow)
+        assertEquals(com.optionslab.engine.orb.G2Lock.levels(wb.entry, wb.qty), wb.g2)
+        assertEquals("nothing bought", 0, Paper.state.positions.filter { it.symbol == wb.symbol }.sumOf { it.quantity })
+        giveback(LocalTime.of(9, 35), wb.entry)
+        at(LocalTime.of(9, 35)); runBlocking { PassedArmsHost.manageOnly() }
+        val c = view().closed.single { it.arm == DonchianArm.SOURCE }
+        assertEquals("stop", c.why); assertEquals("lock", c.g2Why)
+        assertTrue(PassedArmsHost.g2Words(view().closedOf(DonchianArm.SOURCE)).startsWith("1 trade with a test twin closed (1 would-be): with G2 "))
+        assertNothingAtZerodha()
+    }
 }
