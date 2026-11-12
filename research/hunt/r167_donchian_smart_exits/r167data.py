@@ -15,6 +15,7 @@ import pandas as pd
 
 import r167cfg as K
 import r167feat as F
+import r152engine  # noqa: E402,F401  (puts R106 / R51 on the path)
 import r51cfg as K51
 
 _CTX: dict = {}
