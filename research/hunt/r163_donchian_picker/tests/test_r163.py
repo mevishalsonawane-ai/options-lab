@@ -176,6 +176,8 @@ def _data(n=600, k=8, seed=5):
 
 @pytest.mark.parametrize("method", ["P151", "G1", "G2", "N1", "E1"])
 def test_models_fit_score_and_learn_the_signal(method):
+    if method in ("G1", "G2", "E1"):
+        pytest.importorskip("lightgbm")
     X, y, net = _data()
     sc, _ = M.fit_score(method, X[:400], y[:400], net[:400], X[400:], [0, 1, 2])
     assert sc.shape == (200,) and np.isfinite(sc).all()
