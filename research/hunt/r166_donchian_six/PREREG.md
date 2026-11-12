@@ -104,3 +104,9 @@ And:
 A passing rule may act on PAPER for that arm (labelled switch, timeline, one-tap undo). Live: a skip or an earlier exit
 lowers risk but starts in shadow behind an off switch; a strike change is not risk-lowering and needs Boss. Nothing
 changes in the app from R166; every test is logged in `research/experiments/entries/r166-*.yaml`.
+
+## Amendment 1 (12 Nov 2026, before any number): count corrected
+
+Section 1 lists **12 rules** (2 delta + 2 levels + 2 follow-through + 2 volume + 2 buyer / seller + 2 traps), not 14:
+the "14 x 2 = 28" above was an arithmetic slip left from the first draft. So R166 has **24 tests** and the BH count is
+**m = 2,164 + 102 + 24 = 2,290**. Nothing else changes.
