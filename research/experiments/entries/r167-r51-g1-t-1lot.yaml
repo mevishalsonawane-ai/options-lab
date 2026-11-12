@@ -11,6 +11,7 @@ hypothesis: 'Boss (12 Nov): make the stop and target follow volume, support / re
 data_version: the Drive / Dhan lake as R152 (R51 Amendment A clean stores) plus the lake's option OI and India VIX
 period:
   design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R167 (read by many earlier studies)
 instruments:
 - NIFTY
 - BANKNIFTY
@@ -23,11 +24,13 @@ features:
 model_or_rule: 'R51 Donchian 20 (+ Supertrend 10, 3) with G1-T: once +Rs 1,500, lock breakeven (net Rs 0); 1 lot(s)'
 settings: research/hunt/r167_donchian_smart_exits/PREREG.md section 3 / Amendment A; r167lib.py; r167cfg.py
 prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
-variants_tried: null
-holdout_read: null
-verdict: proposed
+variants_tried: 1
+holdout_read: true
+verdict: rejected
 results:
-  summary: 'Not run: the data lake was not in the session''s container on 12 Nov 2026 (Dhan token expired, no Drive access,
-    no release). Code and tests are frozen; runs once the lake is in place.'
-  costs: dated Zerodha charges on the whole quantity, R17 fills (to be applied)
+  summary: 'Walk-forward: 3049 trades, win 40.4% (today 45.9%), net Rs 83,374 (today Rs 213,748), worst day Rs -27,217, max
+    DD Rs 119,440. Final: 1672 trades, win 42.3% (today 44.9%), net Rs 131,543 (today Rs 134,743), worst day Rs -21,578, max
+    DD Rs 74,479. Twin p 1 (net 1, win 1), BH q 1 (m 2664). Fails: wf: win rate not up 5 points; wf: net lower than today''s;
+    final: win rate not up 5 points; final: net lower than today''s; design: net not positive; BH q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (stop sales -10 bps and 2x the half-spread, gaps at the open)
 notes: 'Tighten-only: live-eligible only after a shadow phase behind an off-by-default switch.'

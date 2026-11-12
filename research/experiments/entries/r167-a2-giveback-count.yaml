@@ -20,7 +20,7 @@ settings: PREREG.md Amendment A2; r167lib.giveback
 prereg: research/hunt/r167_donchian_smart_exits/PREREG.md
 variants_tried: null
 holdout_read: null
-verdict: proposed
+verdict: not-a-test
 results:
-  summary: Not run yet (data unavailable on 12 Nov 2026).
+  summary: See results/report.md (giveback table).
   costs: dated Zerodha charges, R17 fills
