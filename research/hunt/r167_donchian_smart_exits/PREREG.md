@@ -275,3 +275,40 @@ expiry day, a trade at the square-off, stale (NaN) prints, ATR warm-up, OI missi
 **Look-ahead guard:** for every rule, its decision at minute m is unchanged when every array is cut after minute m. A
 synthetic day is run whole and cut at every minute; the exit rows must agree. A T version's exit row is also checked to
 be <= B0's on random synthetic days.
+
+## Amendment A, 12 Nov 2026: Boss's giveback problem (written before any R167 number)
+
+Boss, 12 Nov, while R167 was being built: *"As it happens many time, the profit goes to 1.5k to 2.5k and ends ups to
+2k-3k loss, i want to resolve that issue."* No R167 number exists yet (the lake is not in the container); this amendment
+is committed before the code's first run on data.
+
+**A1. Clarification of SR's target (section 3).** R is read above the **previous** minute's index close (at the fill
+minute: the fill minute's own close is used as the reference only when no earlier close exists). A level above close(m)
+can never be "closed through" in minute m, so the section 3 wording could not fire a breakout; this is what was meant.
+
+**A2. How often it happens (descriptive, design period only, never gated).** For B0 at 1, 2 and 3 lots, on design
+(20 Nov 2024 - 31 Mar 2026) and the walk-forward window: the number and share of trades whose open profit (the sale at
+the minute's high, net of the trade's real charges) reached **>= +Rs 1,500**, and of those, how many ended **<= Rs 0**
+and **<= -Rs 2,000**, with the rupees lost on them. Final-period counts are added only after the one final read.
+
+**A3. Three giveback rules (all tighten-only: a lock only raises the stop, a trail only adds an earlier exit; all of
+today's exits stay).** Amounts are for the whole position, net of the trade's real charges, solved from its real entry
+fill (R153's `lock_levels`), so nothing looks ahead. Lock and trail sales are stop sales (R17 stop slippage).
+- **G1 breakeven lock:** once the position has been +Rs 1,500, a lock rests at the premium whose sale nets Rs 0.
+- **G2 trailing floor:** once +Rs 1,500, a lock rests at the premium that nets +Rs 500, and it trails Rs 1,000 (premium x
+  qty) below the highest premium since the fill: the trade never gives back more than about Rs 1,000 of its peak once
+  it has been +Rs 1,500, and never ends below +Rs 500 except through a gap.
+- **G3 adaptive trail:** once +Rs 1,500 has been reached (the option's high at or above the premium that nets +Rs 1,500),
+  FLOW's index trail takes over: the lowest index low of the last 3 minutes (call; highest high for a put), raised each
+  minute, exit at the next open after a close beyond it (checked before it is raised).
+
+G1-G3 x 2 arms x 3 lots = **18 tests**, priced, twinned and gated exactly as section 6 / 7 (the same win +5 points and
+net-not-lower gates, Boss's success test). R167 now has **102 tests**, and **m = 2,562 earlier + 102 = 2,664**.
+Each is reported with the A2 counts after the rule (how many +Rs 1,500 trades still end <= Rs 0 / <= -Rs 2,000).
+
+Already known (so the reader can weigh it): R153's LOCK2K (+Rs 2,000 locks +Rs 1,000, only tested with a -Rs 2,000
+stop) failed; R162's BE10 (breakeven after +10% premium) raised the win rate 3-4 points with a little less net and failed
+the 5-point gate. G1-G3 differ by Boss's +Rs 1,500 trigger, G2's trailing floor and G3's index trail.
+
+All three are tighten-only, so a passing one would be **live-eligible after a shadow phase** (logged only, behind a switch
+that is off by default). Nothing changes in the app from R167.
