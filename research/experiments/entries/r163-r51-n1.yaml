@@ -1,0 +1,40 @@
+id: r163-r51-n1
+title: R163 N1 trade picker on R51 (skip breaks scoring under a WF-chosen threshold, app walk)
+family: ml
+date: '2026-11-12'
+doc: research/hunt/r163_donchian_picker/results/report.md
+hypothesis: A stronger picker (N1) on richer decision-minute features lifts R51's win rate >= 5 points above R151's live logistic
+  picker without lower net, in walk-forward and final.
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (built 13-20 Oct 2026, to 19 Oct 2026): index_1m (5 indices + INDIAVIX)
+  2024-2026, options_rolling_1m WEEK 2024-2026; R51 Amendment A clean stores'
+period:
+  design: train from 20 Nov 2024; WF out-of-fold quarters 1 Apr 2025 - 31 Mar 2026 (expanding window)
+  holdout: '1 Apr - 13 Oct 2026, frozen model, read once 12 Nov 2026 (a second look: read by many earlier studies of these
+    arms incl. R151 C / E)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s own Donchian break); option-chain OI / PCR / IV / skew and the bought contract''s
+  OI, volume and range as context only; no option-chart input'
+- R151's 28 features + 36 new (index 15-60 min trend and vol, breadth, VIX change and percentile, chain context, S/R counts,
+  expiry and gap context), all at the decision minute
+model_or_rule: R51 Donchian 20 + Supertrend (10, 3) on 5-min index bars; 1-ITM, R101 XL exits; MLP 32-16 (sklearn, L2 0.01,
+  early stop on the last 20% in time order), mean of 5 seeds; threshold 0.3521
+settings: research/hunt/r163_donchian_picker/models.py (frozen in PREREG)
+prereg: research/hunt/r163_donchian_picker/PREREG.md
+variants_tried: 15
+results:
+  summary: 'FINAL (app walk, 1 lot): 1536 trades, win 45.8%, Rs 165,835 (2 lots Rs 404,169, 3 lots Rs 642,503); P151 653 trades,
+    50.4%, Rs 142,884; plain 1670 trades, 44.9%, Rs 134,743. WF pick keep 75%: 2283 trades, win 46.7%, Rs 252,820 vs P151
+    720 trades, 49.4%, Rs 202,684. Exact random-skip twin p 0.0065; BH q 1 (m = 2172). Gate: win >= P151 + 5 pts and net >=
+    P151 in WF and final, q <= 0.10, >= 40 final trades, positive every period. Failed: WF: win not >= P151 + 5 pts or net
+    below P151; FINAL win 0.458 < P151 0.504 + 0.05; BH q 1 > 0.10 (m = 2172)'
+  costs: dated Zerodha charges (Rs 20 an order, STT, exchange, SEBI, stamp, GST) and R17 slippage (x1.0005 buy, x0.9995 sell,
+    x0.999 stop, one-tick half-spread); 2 / 3 lots from each trade's own fills
+holdout_read: true
+verdict: rejected
+notes: 'Random-skip twin is exact (hypergeometric): in the app walk the kept trades are a subset of the arm''s.'
