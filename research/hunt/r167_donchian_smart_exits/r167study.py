@@ -245,7 +245,7 @@ def final(arm: str) -> dict:
     return out
 
 
-def run(phase: str):
+def run(phase: str, arms=K.ARMS):
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     if phase == "final":
         if K.FINAL_FLAG.exists() and not (K.RESULTS / "final_open").exists():
@@ -254,12 +254,12 @@ def run(phase: str):
         if not K.FINAL_FLAG.exists():
             K.FINAL_FLAG.write_text(datetime.now(timezone.utc).isoformat() + "\n")
             (K.RESULTS / "final_open").write_text("arms in progress\n")
-    for arm in K.ARMS:
+    for arm in arms:
         if (K.RESULTS / f"{phase}_{arm}.json").exists():
             continue
         r = design(arm) if phase == "design" else final(arm)
         (K.RESULTS / f"{phase}_{arm}.json").write_text(json.dumps(r, indent=1, default=str))
-    if phase == "final":
+    if phase == "final" and all((K.RESULTS / f"final_{a}.json").exists() for a in K.ARMS):
         (K.RESULTS / "final_open").unlink(missing_ok=True)
 
 
@@ -336,7 +336,7 @@ def picker() -> dict:
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd in ("design", "final"):
-        run(cmd)
+        run(cmd, tuple(sys.argv[2:]) or K.ARMS)        # one arm per process is fine (python ... design R72)
     elif cmd == "decide":
         decide()
     elif cmd == "picker":

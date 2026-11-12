@@ -43,8 +43,19 @@ def exits_for(rule: str, ver: str, b0: E.Exits, item: str | None = None) -> E.Ex
                    lock_trail=b0.lock_trail, steps=b0.steps, tmax=-1, need=b0.need, sq_row=b0.sq_row)
 
 
-def fires(rule: str, ver: str, ctx, s: int, ef: int, sq: int, C: np.ndarray, oi, raw: float, extra: dict) -> np.ndarray:
-    """(375,) exit flags of a flag rule (not G1 / G2, whose lock is in the simulator)."""
+_FX: dict = {}           # exit row memo: (candidate, rule, version, training window[, qty for G3]) -> fx
+_FIRE: dict = {}         # CTX members' flags memo: (candidate, item) -> (375,) bool
+
+
+def clear_memo():
+    _FX.clear()
+    _FIRE.clear()
+
+
+def fires(rule: str, ver: str, ctx, s: int, ef: int, sq: int, C: np.ndarray, oi, raw: float, extra: dict,
+          ck: tuple | None = None) -> np.ndarray:
+    """(375,) exit flags of a flag rule (not G1 / G2, whose lock is in the simulator). ck = the candidate's memo key
+    (und, day, side, strike, fill row, square-off row): CTX's member flags are cached under it."""
     ratchet = ver == "T"
     if rule == "SR":
         return L.sr_fire(ctx, s, ef, sq, C[3], raw)
@@ -69,7 +80,17 @@ def fires(rule: str, ver: str, ctx, s: int, ef: int, sq: int, C: np.ndarray, oi,
         return L.ml_fire(mdl.proba(Xf), rows, mdl.theta)
     if rule == "CTX":
         reg = L.regimes(ctx, extra["vix_med"])
-        fs = {it: fires(it, "T", ctx, s, ef, sq, C, oi, raw, extra) for it in K.CTX_MENU_T if it != "B0"}
+        fs = {}
+        for it in K.CTX_MENU_T:
+            if it == "B0":
+                continue
+            mk = None if ck is None else ck + (it,)
+            if mk is not None and mk in _FIRE:
+                fs[it] = _FIRE[mk]
+            else:
+                fs[it] = fires(it, "T", ctx, s, ef, sq, C, oi, raw, extra)
+                if mk is not None:
+                    _FIRE[mk] = fs[it]
         return L.ctx_fire(fs, reg, extra["choice_T"])
     raise ValueError(rule)
 
@@ -150,12 +171,19 @@ def price(und: str, D, ctx, oi_of, cands: list, rule: str, ver: str, b0: E.Exits
             lktr = L.GB_TRAIL_G2 if rule == "G2" else 0.0
         elif rule == "G3":
             x_trig = X.target_price(real, qty, L.GB_TRIG, ch)
-            fx = L.exit_row(fires("G3", "T", ctx, s, ef, sq, C, None, raw, dict(x_trig=x_trig)), ef, sq)
+            mk = (und, D.d, c["side"], float(k), int(ef), int(sq), "G3", qty)
+            if mk not in _FX:
+                _FX[mk] = L.exit_row(fires("G3", "T", ctx, s, ef, sq, C, None, raw, dict(x_trig=x_trig)), ef, sq)
+            fx = _FX[mk]
         elif rule not in ("B0",):
-            oi = oi_of(c["side"], k) if oi_of is not None else None
             r_eff, v_eff = (item, "F") if item is not None else (rule, ver)
             if r_eff != "B0":
-                fx = L.exit_row(fires(r_eff, v_eff, ctx, s, ef, sq, C, oi, raw, extra), ef, sq)
+                ck = (und, D.d, c["side"], float(k), int(ef), int(sq))
+                mk = ck + (r_eff, v_eff, extra.get("window"))
+                if mk not in _FX:
+                    oi = oi_of(c["side"], k) if oi_of is not None else None
+                    _FX[mk] = L.exit_row(fires(r_eff, v_eff, ctx, s, ef, sq, C, oi, raw, extra, ck), ef, sq)
+                fx = _FX[mk]
         steps = ex.steps_arr()
         a, b, rE, rX, r0, r1, r = X.simulate(C, int(c["er"]), int(sq), int(fx), ex.stop, ex.target, lkt, lkk, lktr, steps,
                                              ex.tmax, ex.need, ex.close_stop, K51.TICK, qty, be, -1.0, -1.0, *E.SLIP)

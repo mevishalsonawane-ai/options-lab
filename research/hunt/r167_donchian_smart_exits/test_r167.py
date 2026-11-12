@@ -435,6 +435,8 @@ def _day(idx, C, strike, side="C", d=date(2025, 6, 2)):
     import engine as E
     import r51data
     E._STACKS.clear()                                       # the stack cache is keyed by (index, date)
+    import r167engine as EN
+    EN.clear_memo()                                         # so is R167's exit-row memo
     D = r51data.Day(d, idx.astype(float), atm=np.full(N, strike), con={(side, float(strike)): C.astype(np.float32)})
     return D
 
