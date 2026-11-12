@@ -312,3 +312,28 @@ the 5-point gate. G1-G3 differ by Boss's +Rs 1,500 trigger, G2's trailing floor 
 
 All three are tighten-only, so a passing one would be **live-eligible after a shadow phase** (logged only, behind a switch
 that is off by default). Nothing changes in the app from R167.
+
+## Amendment B, 12 Nov 2026: G2 with the trigger scaled per lot (written after R167's results, before any G2S number)
+
+Boss, 12 Nov, after reading R167's results: *"try G2 with the +Rs 1,500 trigger scaled per lot"*.
+
+**G2S:** as G2, with every amount per lot:
+- once the position has been +Rs 1,500 x lots (net of the trade's real charges), a lock rests at the premium that nets
+  +Rs 500 x lots;
+- the lock trails Rs 1,000 x lots (premium x qty) below the highest premium since the fill.
+
+At 1 lot G2S is G2 exactly; it is reported for reference and is not a new test. **Tests: 2 and 3 lots x 2 arms = 4.**
+It is tighten-only. **m = 2,664 + 4 = 2,668** (q is also shown within these 4 and within R167's 106).
+
+**This is a follow-up chosen after R167's results were seen**, so its evidence is weaker than R167's:
+- **The walk-forward window (Apr 2025 - Mar 2026) is the main evidence:** nothing is fitted, the amounts are Boss's G2
+  scaled by the lot count.
+- **The final period (Apr - Oct 2026) is a second look:** R167 read it once on 12 Nov, including G2 at every lot size.
+  It is computed once more for G2S only (`results/FOLLOWUP_G2S_READ`) and labelled "second look".
+- The same gates as section 7 are reported: win +5 points and net not lower in walk-forward and final, net > 0, twin p,
+  BH q, >= 40 final trades.
+- **Even if every gate holds, G2S is not adopted from R167.** The verdict can be at most `inconclusive`, and the
+  proposal would be a forward test on new days (after 13 Oct 2026) before any paper switch. Live would also need the
+  shadow phase.
+
+The second look on R151's picker trades is reported too (descriptive).
