@@ -1,0 +1,39 @@
+id: r165-r51-db3-2lot
+title: 'R165 DB3 on R51 Donchian 20 + Supertrend (10, 3), 2 lots: take the break only when the 1-ITM option''s delta is 0.65-0.80'
+family: option-structure
+date: '2026-11-12'
+doc: research/hunt/r165_donchian_delta/results/report.md
+hypothesis: 'Boss (12 Nov): raise the Donchian arms'' win rate; "check delta study in all the sessions". take the break only
+  when the 1-ITM option''s delta is 0.65-0.80 raises R51 Donchian 20 + Supertrend (10, 3)''s win rate by >= 5 points with
+  net not lower than today''s rules in the walk-forward window and the final, final net not lower than R151''s app picker,
+  >= 40 final trades, beats random twins on win rate with BH q <= 0.10 (m = 2242).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK, fut_1m_live_index) copied 12 Nov 2026;
+  R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: '2026-04-01..2026-10-13 read once by R165 (already read by R51 - R160: weak evidence)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars (Donchian 20, kept when Supertrend (10, 3) agrees) (unchanged)'
+- the bought option's Black-Scholes delta (IV solved from the option's own price at the decision minute) chooses / filters
+  / exits around the index signal
+model_or_rule: R51 Donchian 20 + Supertrend (10, 3) with take the break only when the 1-ITM option's delta is 0.65-0.80, 2
+  lots
+settings: research/hunt/r165_donchian_delta/r165lib.py, r165study.py RULES; PREREG.md section 3
+prereg: research/hunt/r165_donchian_delta/PREREG.md
+variants_tried: 78
+results:
+  summary: 'Walk-forward: 75 trades, win 42.7%, net Rs 904 (today 3044 trades, win 46.3%, net Rs 568,032). Final: 131 trades,
+    win 52.7%, net Rs 161,837 (today 1670 trades, win 45.5%, net Rs 346,548; R151 picker 653 trades, win 51.0%, net Rs 315,804);
+    twin (random skips) raw p 0.0005, BH q 0.12449 (R165 alone 0.00433). Fails: wf: win not up 5 points; wf: net lower than
+    today''s; final: net lower than today''s; final: net lower than R151''s picker; BH q 0.124 > 0.10.'
+  costs: dated Zerodha charges on the whole 2-lot quantity, R17 fills (slippage from the minute volume per position; stops
+    -10 bps and 2x the half-spread, gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes in the app.

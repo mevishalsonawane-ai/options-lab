@@ -1,0 +1,40 @@
+id: r165-r72-pkd-3lot
+title: 'R165 PKD on R72 Breadth Donchian (4 of 5 indices break), 3 lots: R151''s logistic picker + delta, gamma, theta, IV
+  features (same keep share as R151''s app picker)'
+family: ml
+date: '2026-11-12'
+doc: research/hunt/r165_donchian_delta/results/report.md
+hypothesis: 'Boss (12 Nov): raise the Donchian arms'' win rate; "check delta study in all the sessions". R151''s logistic
+  picker + delta, gamma, theta, IV features (same keep share as R151''s app picker) raises R72 Breadth Donchian (4 of 5 indices
+  break)''s win rate by >= 5 points with net not lower than today''s rules in the walk-forward window and the final, final
+  net not lower than R151''s app picker, >= 40 final trades, beats random twins on win rate with BH q <= 0.10 (m = 2242).'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK, fut_1m_live_index) copied 12 Nov 2026;
+  R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: '2026-04-01..2026-10-13 read once by R165 (already read by R51 - R160: weak evidence)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (Donchian 20, 4 of 5) (unchanged)'
+- the bought option's Black-Scholes delta (IV solved from the option's own price at the decision minute) chooses / filters
+  / exits around the index signal
+model_or_rule: R72 Breadth Donchian (4 of 5 indices break) with R151's logistic picker + delta, gamma, theta, IV features
+  (same keep share as R151's app picker), 3 lots
+settings: research/hunt/r165_donchian_delta/r165lib.py, r165study.py RULES; PREREG.md section 3
+prereg: research/hunt/r165_donchian_delta/PREREG.md
+variants_tried: 78
+results:
+  summary: 'Walk-forward: 630 trades, win 53.0%, net Rs 571,823 (today 2238 trades, win 49.7%, net Rs 1,213,421). Final: 650
+    trades, win 50.1%, net Rs 572,722 (today 1202 trades, win 46.5%, net Rs 625,048; R151 picker 603 trades, win 49.6%, net
+    Rs 564,570); twin (random skips) raw p 0.0035, BH q 0.65359 (R165 alone 0.02274). Fails: wf: win not up 5 points; wf:
+    net lower than today''s; final: win not up 5 points; final: net lower than today''s; BH q 0.654 > 0.10.'
+  costs: dated Zerodha charges on the whole 3-lot quantity, R17 fills (slippage from the minute volume per position; stops
+    -10 bps and 2x the half-spread, gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes in the app.

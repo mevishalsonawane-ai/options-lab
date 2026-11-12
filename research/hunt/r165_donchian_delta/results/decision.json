@@ -1,0 +1,1021 @@
+{
+ "R72:DB1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.45127,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:DB1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.47326,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:DB1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.41779,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:DB2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.10495,
+  "q": 1.0,
+  "q_r165": 0.43084
+ },
+ "R72:DB2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.11544,
+  "q": 1.0,
+  "q_r165": 0.45022
+ },
+ "R72:DB2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.15092,
+  "q": 1.0,
+  "q_r165": 0.56058
+ },
+ "R72:DB3@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R72:DB3@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R72:DB3@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R72:SD50@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.23088,
+  "q": 1.0,
+  "q_r165": 0.72348
+ },
+ "R72:SD50@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.26287,
+  "q": 1.0,
+  "q_r165": 0.7594
+ },
+ "R72:SD50@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.23138,
+  "q": 1.0,
+  "q_r165": 0.72348
+ },
+ "R72:SD60@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.85257,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:SD60@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.88406,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:SD60@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.90405,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:SD70@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:SD70@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:SD70@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:SD80@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:SD80@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:SD80@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:XI1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.97651,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:XI1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.992,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:XI1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.992,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:XI2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:XI2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:XI2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.999,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:PKD@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R72:PKD@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.654 > 0.10"
+  ],
+  "p": 0.0035,
+  "q": 0.65359,
+  "q_r165": 0.02274
+ },
+ "R72:PKD@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 0.654 > 0.10"
+  ],
+  "p": 0.0035,
+  "q": 0.65359,
+  "q_r165": 0.02274
+ },
+ "R72:OF1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.82309,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:OF1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.83008,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:OF1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.8041,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:OF2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.55972,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:OF2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.61419,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:OF2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.57271,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:OF3@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:OF3@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R72:OF3@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:DB1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.0085,
+  "q": 1.0,
+  "q_r165": 0.05097
+ },
+ "R51:DB1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.02799,
+  "q": 1.0,
+  "q_r165": 0.14553
+ },
+ "R51:DB1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.02149,
+  "q": 1.0,
+  "q_r165": 0.11973
+ },
+ "R51:DB2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.16892,
+  "q": 1.0,
+  "q_r165": 0.59888
+ },
+ "R51:DB2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.23188,
+  "q": 1.0,
+  "q_r165": 0.72348
+ },
+ "R51:DB2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.25487,
+  "q": 1.0,
+  "q_r165": 0.7594
+ },
+ "R51:DB3@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R51:DB3@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R51:DB3@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 0.224 > 0.10"
+  ],
+  "p": 0.001,
+  "q": 0.22409,
+  "q_r165": 0.0078
+ },
+ "R51:SD50@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.08146,
+  "q": 1.0,
+  "q_r165": 0.35299
+ },
+ "R51:SD50@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.03948,
+  "q": 1.0,
+  "q_r165": 0.18114
+ },
+ "R51:SD50@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.03098,
+  "q": 1.0,
+  "q_r165": 0.15105
+ },
+ "R51:SD60@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.98001,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:SD60@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.96952,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:SD60@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.98601,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:SD70@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:SD70@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:SD70@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:SD80@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:SD80@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:SD80@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:XI1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:XI1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:XI1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:XI2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:XI2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:XI2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:PKD@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R51:PKD@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R51:PKD@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: net lower than today's",
+   "BH q 0.124 > 0.10"
+  ],
+  "p": 0.0005,
+  "q": 0.12449,
+  "q_r165": 0.00433
+ },
+ "R51:OF1@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.35432,
+  "q": 1.0,
+  "q_r165": 0.98704
+ },
+ "R51:OF1@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.38681,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:OF1@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.38481,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:OF2@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.54023,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:OF2@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.62019,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:OF2@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "final: win not up 5 points",
+   "final: net lower than today's",
+   "final: net lower than R151's picker",
+   "BH q 1 > 0.10"
+  ],
+  "p": 0.56972,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:OF3@1": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:OF3@2": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "R51:OF3@3": {
+  "passed": false,
+  "fails": [
+   "wf: win not up 5 points",
+   "wf: net lower than today's",
+   "final: win not up 5 points",
+   "BH q 1 > 0.10"
+  ],
+  "p": 1.0,
+  "q": 1.0,
+  "q_r165": 1.0
+ },
+ "_m": {
+  "r165": 78,
+  "prior": 2164,
+  "total": 2242
+ }
+}

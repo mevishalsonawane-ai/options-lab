@@ -1,0 +1,1812 @@
+{
+ "R72": {
+  "parity": {
+   "arm": "R72",
+   "trades": 3071,
+   "net": 216929,
+   "published": [
+    3071,
+    216929
+   ],
+   "reproduced": true
+  },
+  "deltas": {
+   "candidates": 5903,
+   "unknown": 30,
+   "q": [
+    0.474,
+    0.501,
+    0.546,
+    0.572,
+    0.591
+   ]
+  },
+  "pkd": {
+   "share": 0.2202,
+   "thr": 0.474,
+   "wf_scored": 4282
+  },
+  "B0@1": {
+   "design": {
+    "trades": 3071,
+    "win": 0.4676,
+    "net": 216929,
+    "per_trade": 70.6,
+    "worst_month": -78467,
+    "max_dd": 199077
+   },
+   "wf": {
+    "trades": 2238,
+    "win": 0.4897,
+    "net": 335882,
+    "per_trade": 150.1,
+    "worst_month": -72605,
+    "max_dd": 86529
+   }
+  },
+  "buckets": {
+   "design": [
+    {
+     "band": "0.00-0.45",
+     "trades": 24,
+     "win": 0.4583,
+     "net": -90,
+     "per_trade": -3.7,
+     "worst_month": -2260,
+     "max_dd": 4253
+    },
+    {
+     "band": "0.45-0.55",
+     "trades": 1550,
+     "win": 0.4755,
+     "net": 138252,
+     "per_trade": 89.2,
+     "worst_month": -29332,
+     "max_dd": 136278
+    },
+    {
+     "band": "0.55-0.65",
+     "trades": 1459,
+     "win": 0.4592,
+     "net": 74986,
+     "per_trade": 51.4,
+     "worst_month": -62988,
+     "max_dd": 110867
+    },
+    {
+     "band": "0.65-0.80",
+     "trades": 33,
+     "win": 0.4545,
+     "net": -389,
+     "per_trade": -11.8,
+     "worst_month": -2757,
+     "max_dd": 4292
+    },
+    {
+     "band": "0.80-1.00",
+     "trades": 1,
+     "win": 0.0,
+     "net": -832,
+     "per_trade": -831.8,
+     "worst_month": -832,
+     "max_dd": 832
+    },
+    {
+     "band": "unknown",
+     "trades": 4,
+     "win": 0.75,
+     "net": 5002,
+     "per_trade": 1250.5,
+     "worst_month": 953,
+     "max_dd": 0
+    }
+   ],
+   "wf": [
+    {
+     "band": "0.00-0.45",
+     "trades": 23,
+     "win": 0.4783,
+     "net": 2171,
+     "per_trade": 94.4,
+     "worst_month": -1743,
+     "max_dd": 3977
+    },
+    {
+     "band": "0.45-0.55",
+     "trades": 1087,
+     "win": 0.5014,
+     "net": 169856,
+     "per_trade": 156.3,
+     "worst_month": -28852,
+     "max_dd": 48219
+    },
+    {
+     "band": "0.55-0.65",
+     "trades": 1096,
+     "win": 0.479,
+     "net": 161260,
+     "per_trade": 147.1,
+     "worst_month": -62988,
+     "max_dd": 70659
+    },
+    {
+     "band": "0.65-0.80",
+     "trades": 28,
+     "win": 0.4643,
+     "net": -622,
+     "per_trade": -22.2,
+     "worst_month": -2757,
+     "max_dd": 4292
+    },
+    {
+     "band": "0.80-1.00",
+     "trades": 1,
+     "win": 0.0,
+     "net": -832,
+     "per_trade": -831.8,
+     "worst_month": -832,
+     "max_dd": 832
+    },
+    {
+     "band": "unknown",
+     "trades": 3,
+     "win": 0.6667,
+     "net": 4049,
+     "per_trade": 1349.7,
+     "worst_month": 4049,
+     "max_dd": 0
+    }
+   ]
+  },
+  "DB1@1": {
+   "design": {
+    "trades": 1685,
+    "win": 0.4718,
+    "net": 146043,
+    "per_trade": 86.7,
+    "worst_month": -34363,
+    "max_dd": 140931
+   },
+   "wf": {
+    "trades": 1192,
+    "win": 0.495,
+    "net": 186179,
+    "per_trade": 156.2,
+    "worst_month": -34363,
+    "max_dd": 51535
+   }
+  },
+  "DB2@1": {
+   "design": {
+    "trades": 1608,
+    "win": 0.4633,
+    "net": 96026,
+    "per_trade": 59.7,
+    "worst_month": -68625,
+    "max_dd": 131526
+   },
+   "wf": {
+    "trades": 1200,
+    "win": 0.4867,
+    "net": 202847,
+    "per_trade": 169.0,
+    "worst_month": -68625,
+    "max_dd": 76608
+   }
+  },
+  "DB3@1": {
+   "design": {
+    "trades": 48,
+    "win": 0.5417,
+    "net": 14836,
+    "per_trade": 309.1,
+    "worst_month": -2757,
+    "max_dd": 2757
+   },
+   "wf": {
+    "trades": 39,
+    "win": 0.5385,
+    "net": 11187,
+    "per_trade": 286.8,
+    "worst_month": -2757,
+    "max_dd": 2757
+   }
+  },
+  "SD50@1": {
+   "design": {
+    "trades": 3087,
+    "win": 0.4606,
+    "net": 232172,
+    "per_trade": 75.2,
+    "worst_month": -58180,
+    "max_dd": 152482
+   },
+   "wf": {
+    "trades": 2252,
+    "win": 0.4813,
+    "net": 319579,
+    "per_trade": 141.9,
+    "worst_month": -50953,
+    "max_dd": 66295
+   }
+  },
+  "SD60@1": {
+   "design": {
+    "trades": 3058,
+    "win": 0.4624,
+    "net": 195141,
+    "per_trade": 63.8,
+    "worst_month": -88494,
+    "max_dd": 241103
+   },
+   "wf": {
+    "trades": 2226,
+    "win": 0.4834,
+    "net": 351039,
+    "per_trade": 157.7,
+    "worst_month": -66563,
+    "max_dd": 80085
+   }
+  },
+  "SD70@1": {
+   "design": {
+    "trades": 2914,
+    "win": 0.4303,
+    "net": -151347,
+    "per_trade": -51.9,
+    "worst_month": -142944,
+    "max_dd": 494239
+   },
+   "wf": {
+    "trades": 2129,
+    "win": 0.4481,
+    "net": 220716,
+    "per_trade": 103.7,
+    "worst_month": -108331,
+    "max_dd": 117769
+   }
+  },
+  "SD80@1": {
+   "design": {
+    "trades": 2674,
+    "win": 0.362,
+    "net": -747885,
+    "per_trade": -279.7,
+    "worst_month": -173829,
+    "max_dd": 837311
+   },
+   "wf": {
+    "trades": 1989,
+    "win": 0.3786,
+    "net": -165476,
+    "per_trade": -83.2,
+    "worst_month": -110532,
+    "max_dd": 254902
+   }
+  },
+  "XI1@1": {
+   "design": {
+    "trades": 3067,
+    "win": 0.4715,
+    "net": 187619,
+    "per_trade": 61.2,
+    "worst_month": -74350,
+    "max_dd": 199199
+   },
+   "wf": {
+    "trades": 2236,
+    "win": 0.4911,
+    "net": 301792,
+    "per_trade": 135.0,
+    "worst_month": -73945,
+    "max_dd": 88049
+   }
+  },
+  "XI2@1": {
+   "design": {
+    "trades": 3071,
+    "win": 0.464,
+    "net": 200814,
+    "per_trade": 65.4,
+    "worst_month": -79106,
+    "max_dd": 195089
+   },
+   "wf": {
+    "trades": 2238,
+    "win": 0.4848,
+    "net": 311588,
+    "per_trade": 139.2,
+    "worst_month": -71103,
+    "max_dd": 85082
+   }
+  },
+  "PKD@1": {
+   "design": {
+    "trades": 1463,
+    "win": 0.4559,
+    "net": 52449,
+    "per_trade": 35.9,
+    "worst_month": -78467,
+    "max_dd": 178232
+   },
+   "wf": {
+    "trades": 630,
+    "win": 0.519,
+    "net": 171401,
+    "per_trade": 272.1,
+    "worst_month": -36055,
+    "max_dd": 57528
+   }
+  },
+  "OF1@1": {
+   "design": {
+    "trades": 2676,
+    "win": 0.4664,
+    "net": 133715,
+    "per_trade": 50.0,
+    "worst_month": -92931,
+    "max_dd": 197457
+   },
+   "wf": {
+    "trades": 1943,
+    "win": 0.4889,
+    "net": 247229,
+    "per_trade": 127.2,
+    "worst_month": -73017,
+    "max_dd": 93698
+   }
+  },
+  "OF2@1": {
+   "design": {
+    "trades": 2866,
+    "win": 0.4665,
+    "net": 194410,
+    "per_trade": 67.8,
+    "worst_month": -78398,
+    "max_dd": 147011
+   },
+   "wf": {
+    "trades": 2081,
+    "win": 0.4873,
+    "net": 278692,
+    "per_trade": 133.9,
+    "worst_month": -78398,
+    "max_dd": 92536
+   }
+  },
+  "OF3@1": {
+   "design": {
+    "trades": 3077,
+    "win": 0.4602,
+    "net": 211026,
+    "per_trade": 68.6,
+    "worst_month": -83383,
+    "max_dd": 195185
+   },
+   "wf": {
+    "trades": 2243,
+    "win": 0.4828,
+    "net": 327107,
+    "per_trade": 145.8,
+    "worst_month": -59216,
+    "max_dd": 72834
+   }
+  },
+  "B0@2": {
+   "design": {
+    "trades": 3071,
+    "win": 0.4725,
+    "net": 576488,
+    "per_trade": 187.7,
+    "worst_month": -148090,
+    "max_dd": 375471
+   },
+   "wf": {
+    "trades": 2238,
+    "win": 0.4946,
+    "net": 775437,
+    "per_trade": 346.5,
+    "worst_month": -135116,
+    "max_dd": 164515
+   }
+  },
+  "DB1@2": {
+   "design": {
+    "trades": 1685,
+    "win": 0.4766,
+    "net": 370367,
+    "per_trade": 219.8,
+    "worst_month": -65139,
+    "max_dd": 268362
+   },
+   "wf": {
+    "trades": 1192,
+    "win": 0.5008,
+    "net": 427535,
+    "per_trade": 358.7,
+    "worst_month": -65139,
+    "max_dd": 101692
+   }
+  },
+  "DB2@2": {
+   "design": {
+    "trades": 1608,
+    "win": 0.4695,
+    "net": 266800,
+    "per_trade": 165.9,
+    "worst_month": -131505,
+    "max_dd": 247201
+   },
+   "wf": {
+    "trades": 1200,
+    "win": 0.4925,
+    "net": 461394,
+    "per_trade": 384.5,
+    "worst_month": -131505,
+    "max_dd": 148185
+   }
+  },
+  "DB3@2": {
+   "design": {
+    "trades": 48,
+    "win": 0.5417,
+    "net": 31937,
+    "per_trade": 665.4,
+    "worst_month": -5373,
+    "max_dd": 5373
+   },
+   "wf": {
+    "trades": 39,
+    "win": 0.5385,
+    "net": 24214,
+    "per_trade": 620.9,
+    "worst_month": -5373,
+    "max_dd": 5373
+   }
+  },
+  "SD50@2": {
+   "design": {
+    "trades": 3087,
+    "win": 0.4658,
+    "net": 607203,
+    "per_trade": 196.7,
+    "worst_month": -107526,
+    "max_dd": 282353
+   },
+   "wf": {
+    "trades": 2252,
+    "win": 0.4862,
+    "net": 743246,
+    "per_trade": 330.0,
+    "worst_month": -91804,
+    "max_dd": 124070
+   }
+  },
+  "SD60@2": {
+   "design": {
+    "trades": 3058,
+    "win": 0.4676,
+    "net": 531907,
+    "per_trade": 173.9,
+    "worst_month": -168267,
+    "max_dd": 459820
+   },
+   "wf": {
+    "trades": 2226,
+    "win": 0.4883,
+    "net": 805185,
+    "per_trade": 361.7,
+    "worst_month": -123047,
+    "max_dd": 151629
+   }
+  },
+  "SD70@2": {
+   "design": {
+    "trades": 2914,
+    "win": 0.4358,
+    "net": -167084,
+    "per_trade": -57.3,
+    "worst_month": -277955,
+    "max_dd": 944055
+   },
+   "wf": {
+    "trades": 2129,
+    "win": 0.4537,
+    "net": 540582,
+    "per_trade": 253.9,
+    "worst_month": -209543,
+    "max_dd": 226869
+   }
+  },
+  "SD80@2": {
+   "design": {
+    "trades": 2674,
+    "win": 0.3676,
+    "net": -1371086,
+    "per_trade": -512.7,
+    "worst_month": -339340,
+    "max_dd": 1616950
+   },
+   "wf": {
+    "trades": 1989,
+    "win": 0.3846,
+    "net": -238117,
+    "per_trade": -119.7,
+    "worst_month": -214589,
+    "max_dd": 483981
+   }
+  },
+  "XI1@2": {
+   "design": {
+    "trades": 3067,
+    "win": 0.476,
+    "net": 517735,
+    "per_trade": 168.8,
+    "worst_month": -139857,
+    "max_dd": 375762
+   },
+   "wf": {
+    "trades": 2236,
+    "win": 0.4955,
+    "net": 707220,
+    "per_trade": 316.3,
+    "worst_month": -137769,
+    "max_dd": 167354
+   }
+  },
+  "XI2@2": {
+   "design": {
+    "trades": 3071,
+    "win": 0.4686,
+    "net": 544284,
+    "per_trade": 177.2,
+    "worst_month": -149368,
+    "max_dd": 367488
+   },
+   "wf": {
+    "trades": 2238,
+    "win": 0.4893,
+    "net": 726870,
+    "per_trade": 324.8,
+    "worst_month": -132098,
+    "max_dd": 161607
+   }
+  },
+  "PKD@2": {
+   "design": {
+    "trades": 1463,
+    "win": 0.4614,
+    "net": 172882,
+    "per_trade": 118.2,
+    "worst_month": -148090,
+    "max_dd": 335389
+   },
+   "wf": {
+    "trades": 630,
+    "win": 0.5254,
+    "net": 371830,
+    "per_trade": 590.2,
+    "worst_month": -69582,
+    "max_dd": 110912
+   }
+  },
+  "OF1@2": {
+   "design": {
+    "trades": 2676,
+    "win": 0.4709,
+    "net": 391792,
+    "per_trade": 146.4,
+    "worst_month": -178328,
+    "max_dd": 375833
+   },
+   "wf": {
+    "trades": 1943,
+    "win": 0.4936,
+    "net": 584533,
+    "per_trade": 300.8,
+    "worst_month": -137414,
+    "max_dd": 169154
+   }
+  },
+  "OF2@2": {
+   "design": {
+    "trades": 2866,
+    "win": 0.4717,
+    "net": 522065,
+    "per_trade": 182.2,
+    "worst_month": -147226,
+    "max_dd": 272918
+   },
+   "wf": {
+    "trades": 2081,
+    "win": 0.4921,
+    "net": 653901,
+    "per_trade": 314.2,
+    "worst_month": -147226,
+    "max_dd": 176892
+   }
+  },
+  "OF3@2": {
+   "design": {
+    "trades": 3077,
+    "win": 0.4657,
+    "net": 564963,
+    "per_trade": 183.6,
+    "worst_month": -157855,
+    "max_dd": 367594
+   },
+   "wf": {
+    "trades": 2243,
+    "win": 0.4886,
+    "net": 758070,
+    "per_trade": 338.0,
+    "worst_month": -108337,
+    "max_dd": 136855
+   }
+  },
+  "B0@3": {
+   "design": {
+    "trades": 3071,
+    "win": 0.4748,
+    "net": 934016,
+    "per_trade": 304.1,
+    "worst_month": -217892,
+    "max_dd": 552158
+   },
+   "wf": {
+    "trades": 2238,
+    "win": 0.4969,
+    "net": 1213421,
+    "per_trade": 542.2,
+    "worst_month": -197761,
+    "max_dd": 242618
+   }
+  },
+  "DB1@3": {
+   "design": {
+    "trades": 1685,
+    "win": 0.4789,
+    "net": 593599,
+    "per_trade": 352.3,
+    "worst_month": -95907,
+    "max_dd": 395977
+   },
+   "wf": {
+    "trades": 1192,
+    "win": 0.5025,
+    "net": 668107,
+    "per_trade": 560.5,
+    "worst_month": -95907,
+    "max_dd": 151840
+   }
+  },
+  "DB2@3": {
+   "design": {
+    "trades": 1608,
+    "win": 0.472,
+    "net": 436557,
+    "per_trade": 271.5,
+    "worst_month": -194459,
+    "max_dd": 363071
+   },
+   "wf": {
+    "trades": 1200,
+    "win": 0.4958,
+    "net": 719152,
+    "per_trade": 599.3,
+    "worst_month": -194459,
+    "max_dd": 219854
+   }
+  },
+  "DB3@3": {
+   "design": {
+    "trades": 48,
+    "win": 0.5417,
+    "net": 49028,
+    "per_trade": 1021.4,
+    "worst_month": -7989,
+    "max_dd": 7989
+   },
+   "wf": {
+    "trades": 39,
+    "win": 0.5385,
+    "net": 37242,
+    "per_trade": 954.9,
+    "worst_month": -7989,
+    "max_dd": 7989
+   }
+  },
+  "SD50@3": {
+   "design": {
+    "trades": 3087,
+    "win": 0.4691,
+    "net": 981162,
+    "per_trade": 317.8,
+    "worst_month": -157016,
+    "max_dd": 412423
+   },
+   "wf": {
+    "trades": 2252,
+    "win": 0.4898,
+    "net": 1166226,
+    "per_trade": 517.9,
+    "worst_month": -132740,
+    "max_dd": 181890
+   }
+  },
+  "SD60@3": {
+   "design": {
+    "trades": 3058,
+    "win": 0.4699,
+    "net": 867599,
+    "per_trade": 283.7,
+    "worst_month": -248090,
+    "max_dd": 678678
+   },
+   "wf": {
+    "trades": 2226,
+    "win": 0.491,
+    "net": 1258470,
+    "per_trade": 565.4,
+    "worst_month": -179581,
+    "max_dd": 223232
+   }
+  },
+  "SD70@3": {
+   "design": {
+    "trades": 2914,
+    "win": 0.4375,
+    "net": -183555,
+    "per_trade": -63.0,
+    "worst_month": -412970,
+    "max_dd": 1394079
+   },
+   "wf": {
+    "trades": 2129,
+    "win": 0.4561,
+    "net": 859883,
+    "per_trade": 403.9,
+    "worst_month": -310796,
+    "max_dd": 336008
+   }
+  },
+  "SD80@3": {
+   "design": {
+    "trades": 2674,
+    "win": 0.3714,
+    "net": -1994904,
+    "per_trade": -746.0,
+    "worst_month": -504955,
+    "max_dd": 2396918
+   },
+   "wf": {
+    "trades": 1989,
+    "win": 0.3886,
+    "net": -311199,
+    "per_trade": -156.5,
+    "worst_month": -318662,
+    "max_dd": 713213
+   }
+  },
+  "XI1@3": {
+   "design": {
+    "trades": 3067,
+    "win": 0.4783,
+    "net": 846110,
+    "per_trade": 275.9,
+    "worst_month": -205543,
+    "max_dd": 552552
+   },
+   "wf": {
+    "trades": 2236,
+    "win": 0.4978,
+    "net": 1111301,
+    "per_trade": 497.0,
+    "worst_month": -201708,
+    "max_dd": 246843
+   }
+  },
+  "XI2@3": {
+   "design": {
+    "trades": 3071,
+    "win": 0.4709,
+    "net": 885812,
+    "per_trade": 288.4,
+    "worst_month": -219810,
+    "max_dd": 540128
+   },
+   "wf": {
+    "trades": 2238,
+    "win": 0.4915,
+    "net": 1140617,
+    "per_trade": 509.7,
+    "worst_month": -193234,
+    "max_dd": 238255
+   }
+  },
+  "PKD@3": {
+   "design": {
+    "trades": 1463,
+    "win": 0.4648,
+    "net": 292418,
+    "per_trade": 199.9,
+    "worst_month": -217892,
+    "max_dd": 492851
+   },
+   "wf": {
+    "trades": 630,
+    "win": 0.5302,
+    "net": 571823,
+    "per_trade": 907.7,
+    "worst_month": -103198,
+    "max_dd": 164409
+   }
+  },
+  "OF1@3": {
+   "design": {
+    "trades": 2676,
+    "win": 0.4731,
+    "net": 648207,
+    "per_trade": 242.2,
+    "worst_month": -263881,
+    "max_dd": 554468
+   },
+   "wf": {
+    "trades": 1943,
+    "win": 0.4956,
+    "net": 920584,
+    "per_trade": 473.8,
+    "worst_month": -201933,
+    "max_dd": 248281
+   }
+  },
+  "OF2@3": {
+   "design": {
+    "trades": 2866,
+    "win": 0.4745,
+    "net": 847984,
+    "per_trade": 295.9,
+    "worst_month": -216210,
+    "max_dd": 398989
+   },
+   "wf": {
+    "trades": 2081,
+    "win": 0.4945,
+    "net": 1027703,
+    "per_trade": 493.9,
+    "worst_month": -216210,
+    "max_dd": 261371
+   }
+  },
+  "OF3@3": {
+   "design": {
+    "trades": 3077,
+    "win": 0.468,
+    "net": 917073,
+    "per_trade": 298.0,
+    "worst_month": -232509,
+    "max_dd": 540263
+   },
+   "wf": {
+    "trades": 2243,
+    "win": 0.4909,
+    "net": 1187657,
+    "per_trade": 529.5,
+    "worst_month": -157551,
+    "max_dd": 201084
+   }
+  },
+  "iv_check": {
+   "pairs": 439,
+   "ours_median": 14.28,
+   "lake_median": 13.8,
+   "corr": 0.986,
+   "median_abs_diff": 0.88
+  }
+ },
+ "R51": {
+  "parity": {
+   "arm": "R51",
+   "trades": 4208,
+   "net": 50425,
+   "published": [
+    4208,
+    50425
+   ],
+   "reproduced": true
+  },
+  "deltas": {
+   "candidates": 12485,
+   "unknown": 47,
+   "q": [
+    0.474,
+    0.501,
+    0.549,
+    0.572,
+    0.59
+   ]
+  },
+  "pkd": {
+   "share": 0.175,
+   "thr": 0.463,
+   "wf_scored": 8965
+  },
+  "B0@1": {
+   "design": {
+    "trades": 4208,
+    "win": 0.4446,
+    "net": 50425,
+    "per_trade": 12.0,
+    "worst_month": -69428,
+    "max_dd": 214239
+   },
+   "wf": {
+    "trades": 3044,
+    "win": 0.4589,
+    "net": 213748,
+    "per_trade": 70.2,
+    "worst_month": -53654,
+    "max_dd": 94176
+   }
+  },
+  "buckets": {
+   "design": [
+    {
+     "band": "0.00-0.45",
+     "trades": 26,
+     "win": 0.4231,
+     "net": -6474,
+     "per_trade": -249.0,
+     "worst_month": -2260,
+     "max_dd": 8860
+    },
+    {
+     "band": "0.45-0.55",
+     "trades": 2110,
+     "win": 0.4512,
+     "net": 29381,
+     "per_trade": 13.9,
+     "worst_month": -68046,
+     "max_dd": 168984
+    },
+    {
+     "band": "0.55-0.65",
+     "trades": 2024,
+     "win": 0.4392,
+     "net": 22729,
+     "per_trade": 11.2,
+     "worst_month": -59489,
+     "max_dd": 118660
+    },
+    {
+     "band": "0.65-0.80",
+     "trades": 41,
+     "win": 0.3659,
+     "net": 403,
+     "per_trade": 9.8,
+     "worst_month": -4639,
+     "max_dd": 14682
+    },
+    {
+     "band": "0.80-1.00",
+     "trades": 2,
+     "win": 0.5,
+     "net": -379,
+     "per_trade": -189.4,
+     "worst_month": -832,
+     "max_dd": 832
+    },
+    {
+     "band": "unknown",
+     "trades": 5,
+     "win": 0.6,
+     "net": 4765,
+     "per_trade": 953.1,
+     "worst_month": -237,
+     "max_dd": 237
+    }
+   ],
+   "wf": [
+    {
+     "band": "0.00-0.45",
+     "trades": 24,
+     "win": 0.4167,
+     "net": -4333,
+     "per_trade": -180.5,
+     "worst_month": -2144,
+     "max_dd": 7834
+    },
+    {
+     "band": "0.45-0.55",
+     "trades": 1481,
+     "win": 0.472,
+     "net": 112833,
+     "per_trade": 76.2,
+     "worst_month": -68046,
+     "max_dd": 95461
+    },
+    {
+     "band": "0.55-0.65",
+     "trades": 1499,
+     "win": 0.449,
+     "net": 109434,
+     "per_trade": 73.0,
+     "worst_month": -59489,
+     "max_dd": 70404
+    },
+    {
+     "band": "0.65-0.80",
+     "trades": 34,
+     "win": 0.3529,
+     "net": -7620,
+     "per_trade": -224.1,
+     "worst_month": -4639,
+     "max_dd": 12703
+    },
+    {
+     "band": "0.80-1.00",
+     "trades": 2,
+     "win": 0.5,
+     "net": -379,
+     "per_trade": -189.4,
+     "worst_month": -832,
+     "max_dd": 832
+    },
+    {
+     "band": "unknown",
+     "trades": 4,
+     "win": 0.5,
+     "net": 3813,
+     "per_trade": 953.2,
+     "worst_month": -237,
+     "max_dd": 237
+    }
+   ]
+  },
+  "DB1@1": {
+   "design": {
+    "trades": 2442,
+    "win": 0.4431,
+    "net": -4919,
+    "per_trade": -2.0,
+    "worst_month": -78284,
+    "max_dd": 206110
+   },
+   "wf": {
+    "trades": 1713,
+    "win": 0.4635,
+    "net": 117801,
+    "per_trade": 68.8,
+    "worst_month": -78284,
+    "max_dd": 105859
+   }
+  },
+  "DB2@1": {
+   "design": {
+    "trades": 2364,
+    "win": 0.4399,
+    "net": 17071,
+    "per_trade": 7.2,
+    "worst_month": -65915,
+    "max_dd": 136499
+   },
+   "wf": {
+    "trades": 1737,
+    "win": 0.4519,
+    "net": 124894,
+    "per_trade": 71.9,
+    "worst_month": -65915,
+    "max_dd": 76235
+   }
+  },
+  "DB3@1": {
+   "design": {
+    "trades": 87,
+    "win": 0.4483,
+    "net": 10575,
+    "per_trade": 121.6,
+    "worst_month": -4352,
+    "max_dd": 17867
+   },
+   "wf": {
+    "trades": 75,
+    "win": 0.4267,
+    "net": -1318,
+    "per_trade": -17.6,
+    "worst_month": -4352,
+    "max_dd": 15753
+   }
+  },
+  "SD50@1": {
+   "design": {
+    "trades": 4218,
+    "win": 0.4419,
+    "net": 37778,
+    "per_trade": 9.0,
+    "worst_month": -70223,
+    "max_dd": 178759
+   },
+   "wf": {
+    "trades": 3054,
+    "win": 0.4542,
+    "net": 177371,
+    "per_trade": 58.1,
+    "worst_month": -70223,
+    "max_dd": 100399
+   }
+  },
+  "SD60@1": {
+   "design": {
+    "trades": 4199,
+    "win": 0.4389,
+    "net": -69873,
+    "per_trade": -16.6,
+    "worst_month": -85435,
+    "max_dd": 261566
+   },
+   "wf": {
+    "trades": 3036,
+    "win": 0.448,
+    "net": 137513,
+    "per_trade": 45.3,
+    "worst_month": -73880,
+    "max_dd": 134363
+   }
+  },
+  "SD70@1": {
+   "design": {
+    "trades": 4098,
+    "win": 0.4034,
+    "net": -632712,
+    "per_trade": -154.4,
+    "worst_month": -184391,
+    "max_dd": 798870
+   },
+   "wf": {
+    "trades": 2965,
+    "win": 0.4152,
+    "net": -77846,
+    "per_trade": -26.3,
+    "worst_month": -133579,
+    "max_dd": 243985
+   }
+  },
+  "SD80@1": {
+   "design": {
+    "trades": 3942,
+    "win": 0.3475,
+    "net": -1421223,
+    "per_trade": -360.5,
+    "worst_month": -260704,
+    "max_dd": 1450170
+   },
+   "wf": {
+    "trades": 2874,
+    "win": 0.3653,
+    "net": -514509,
+    "per_trade": -179.0,
+    "worst_month": -197700,
+    "max_dd": 543457
+   }
+  },
+  "XI1@1": {
+   "design": {
+    "trades": 4205,
+    "win": 0.4485,
+    "net": 50256,
+    "per_trade": 12.0,
+    "worst_month": -67272,
+    "max_dd": 201900
+   },
+   "wf": {
+    "trades": 3043,
+    "win": 0.4611,
+    "net": 204835,
+    "per_trade": 67.3,
+    "worst_month": -58246,
+    "max_dd": 103299
+   }
+  },
+  "XI2@1": {
+   "design": {
+    "trades": 4208,
+    "win": 0.4415,
+    "net": 38935,
+    "per_trade": 9.3,
+    "worst_month": -63005,
+    "max_dd": 202205
+   },
+   "wf": {
+    "trades": 3044,
+    "win": 0.4553,
+    "net": 189722,
+    "per_trade": 62.3,
+    "worst_month": -63005,
+    "max_dd": 97082
+   }
+  },
+  "PKD@1": {
+   "design": {
+    "trades": 2035,
+    "win": 0.4432,
+    "net": 35378,
+    "per_trade": 17.4,
+    "worst_month": -69428,
+    "max_dd": 171860
+   },
+   "wf": {
+    "trades": 871,
+    "win": 0.4914,
+    "net": 198701,
+    "per_trade": 228.1,
+    "worst_month": -24606,
+    "max_dd": 51656
+   }
+  },
+  "OF1@1": {
+   "design": {
+    "trades": 3854,
+    "win": 0.4491,
+    "net": 98046,
+    "per_trade": 25.4,
+    "worst_month": -54856,
+    "max_dd": 186651
+   },
+   "wf": {
+    "trades": 2774,
+    "win": 0.4629,
+    "net": 235951,
+    "per_trade": 85.1,
+    "worst_month": -42156,
+    "max_dd": 100582
+   }
+  },
+  "OF2@1": {
+   "design": {
+    "trades": 4012,
+    "win": 0.4467,
+    "net": 69080,
+    "per_trade": 17.2,
+    "worst_month": -63221,
+    "max_dd": 192951
+   },
+   "wf": {
+    "trades": 2899,
+    "win": 0.4598,
+    "net": 224606,
+    "per_trade": 77.5,
+    "worst_month": -48493,
+    "max_dd": 99500
+   }
+  },
+  "OF3@1": {
+   "design": {
+    "trades": 4219,
+    "win": 0.4304,
+    "net": 28572,
+    "per_trade": 6.8,
+    "worst_month": -64039,
+    "max_dd": 204835
+   },
+   "wf": {
+    "trades": 3053,
+    "win": 0.4425,
+    "net": 182837,
+    "per_trade": 59.9,
+    "worst_month": -54792,
+    "max_dd": 82677
+   }
+  },
+  "B0@2": {
+   "design": {
+    "trades": 4208,
+    "win": 0.4491,
+    "net": 295708,
+    "per_trade": 70.3,
+    "worst_month": -127531,
+    "max_dd": 381894
+   },
+   "wf": {
+    "trades": 3044,
+    "win": 0.4629,
+    "net": 568032,
+    "per_trade": 186.6,
+    "worst_month": -95481,
+    "max_dd": 179011
+   }
+  },
+  "DB1@2": {
+   "design": {
+    "trades": 2442,
+    "win": 0.4455,
+    "net": 103292,
+    "per_trade": 42.3,
+    "worst_month": -149563,
+    "max_dd": 372981
+   },
+   "wf": {
+    "trades": 1713,
+    "win": 0.4658,
+    "net": 314665,
+    "per_trade": 183.7,
+    "worst_month": -149563,
+    "max_dd": 204418
+   }
+  },
+  "DB2@2": {
+   "design": {
+    "trades": 2364,
+    "win": 0.4467,
+    "net": 143782,
+    "per_trade": 60.8,
+    "worst_month": -123533,
+    "max_dd": 253125
+   },
+   "wf": {
+    "trades": 1737,
+    "win": 0.4583,
+    "net": 330176,
+    "per_trade": 190.1,
+    "worst_month": -123533,
+    "max_dd": 143390
+   }
+  },
+  "DB3@2": {
+   "design": {
+    "trades": 87,
+    "win": 0.4483,
+    "net": 25257,
+    "per_trade": 290.3,
+    "worst_month": -8185,
+    "max_dd": 33846
+   },
+   "wf": {
+    "trades": 75,
+    "win": 0.4267,
+    "net": 904,
+    "per_trade": 12.1,
+    "worst_month": -8185,
+    "max_dd": 29902
+   }
+  },
+  "SD50@2": {
+   "design": {
+    "trades": 4218,
+    "win": 0.4464,
+    "net": 270415,
+    "per_trade": 64.1,
+    "worst_month": -128544,
+    "max_dd": 323168
+   },
+   "wf": {
+    "trades": 3054,
+    "win": 0.4587,
+    "net": 495662,
+    "per_trade": 162.3,
+    "worst_month": -128544,
+    "max_dd": 191426
+   }
+  },
+  "SD60@2": {
+   "design": {
+    "trades": 4199,
+    "win": 0.443,
+    "net": 54440,
+    "per_trade": 13.0,
+    "worst_month": -159455,
+    "max_dd": 476901
+   },
+   "wf": {
+    "trades": 3036,
+    "win": 0.4519,
+    "net": 415340,
+    "per_trade": 136.8,
+    "worst_month": -135976,
+    "max_dd": 256444
+   }
+  },
+  "SD70@2": {
+   "design": {
+    "trades": 4098,
+    "win": 0.4082,
+    "net": -1074935,
+    "per_trade": -262.3,
+    "worst_month": -357221,
+    "max_dd": 1503930
+   },
+   "wf": {
+    "trades": 2965,
+    "win": 0.4206,
+    "net": -17794,
+    "per_trade": -6.0,
+    "worst_month": -256753,
+    "max_dd": 445807
+   }
+  },
+  "SD80@2": {
+   "design": {
+    "trades": 3942,
+    "win": 0.3521,
+    "net": -2658839,
+    "per_trade": -674.5,
+    "worst_month": -508224,
+    "max_dd": 2801701
+   },
+   "wf": {
+    "trades": 2874,
+    "win": 0.3699,
+    "net": -895034,
+    "per_trade": -311.4,
+    "worst_month": -385615,
+    "max_dd": 1037896
+   }
+  },
+  "XI1@2": {
+   "design": {
+    "trades": 4205,
+    "win": 0.4533,
+    "net": 295289,
+    "per_trade": 70.2,
+    "worst_month": -123266,
+    "max_dd": 369093
+   },
+   "wf": {
+    "trades": 3043,
+    "win": 0.4653,
+    "net": 550214,
+    "per_trade": 180.8,
+    "worst_month": -104671,
+    "max_dd": 197225
+   }
+  },
+  "XI2@2": {
+   "design": {
+    "trades": 4208,
+    "win": 0.4461,
+    "net": 272734,
+    "per_trade": 64.8,
+    "worst_month": -114188,
+    "max_dd": 372436
+   },
+   "wf": {
+    "trades": 3044,
+    "win": 0.4593,
+    "net": 519979,
+    "per_trade": 170.8,
+    "worst_month": -114188,
+    "max_dd": 184816
+   }
+  },
+  "PKD@2": {
+   "design": {
+    "trades": 2035,
+    "win": 0.4491,
+    "net": 165049,
+    "per_trade": 81.1,
+    "worst_month": -127531,
+    "max_dd": 299822
+   },
+   "wf": {
+    "trades": 871,
+    "win": 0.4971,
+    "net": 437372,
+    "per_trade": 502.1,
+    "worst_month": -45491,
+    "max_dd": 95865
+   }
+  },
+  "OF1@2": {
+   "design": {
+    "trades": 3854,
+    "win": 0.4541,
+    "net": 374473,
+    "per_trade": 97.2,
+    "worst_month": -99220,
+    "max_dd": 344962
+   },
+   "wf": {
+    "trades": 2774,
+    "win": 0.4672,
+    "net": 599878,
+    "per_trade": 216.3,
+    "worst_month": -72849,
+    "max_dd": 194312
+   }
+  },
+  "OF2@2": {
+   "design": {
+    "trades": 4012,
+    "win": 0.4511,
+    "net": 324008,
+    "per_trade": 80.8,
+    "worst_month": -115029,
+    "max_dd": 340210
+   },
+   "wf": {
+    "trades": 2899,
+    "win": 0.4636,
+    "net": 583060,
+    "per_trade": 201.1,
+    "worst_month": -84538,
+    "max_dd": 191924
+   }
+  },
+  "OF3@2": {
+   "design": {
+    "trades": 4219,
+    "win": 0.4359,
+    "net": 252727,
+    "per_trade": 59.9,
+    "worst_month": -116023,
+    "max_dd": 366235
+   },
+   "wf": {
+    "trades": 3053,
+    "win": 0.4478,
+    "net": 506770,
+    "per_trade": 166.0,
+    "worst_month": -97697,
+    "max_dd": 155954
+   }
+  },
+  "B0@3": {
+   "design": {
+    "trades": 4208,
+    "win": 0.4506,
+    "net": 538237,
+    "per_trade": 127.9,
+    "worst_month": -185784,
+    "max_dd": 558163
+   },
+   "wf": {
+    "trades": 3044,
+    "win": 0.4642,
+    "net": 920100,
+    "per_trade": 302.3,
+    "worst_month": -137413,
+    "max_dd": 263933
+   }
+  },
+  "DB1@3": {
+   "design": {
+    "trades": 2442,
+    "win": 0.4472,
+    "net": 209877,
+    "per_trade": 85.9,
+    "worst_month": -221013,
+    "max_dd": 540471
+   },
+   "wf": {
+    "trades": 1713,
+    "win": 0.4664,
+    "net": 510215,
+    "per_trade": 297.8,
+    "worst_month": -221013,
+    "max_dd": 303140
+   }
+  },
+  "DB2@3": {
+   "design": {
+    "trades": 2364,
+    "win": 0.4484,
+    "net": 269025,
+    "per_trade": 113.8,
+    "worst_month": -181184,
+    "max_dd": 370027
+   },
+   "wf": {
+    "trades": 1737,
+    "win": 0.4606,
+    "net": 534369,
+    "per_trade": 307.6,
+    "worst_month": -181184,
+    "max_dd": 210600
+   }
+  },
+  "DB3@3": {
+   "design": {
+    "trades": 87,
+    "win": 0.4483,
+    "net": 39929,
+    "per_trade": 459.0,
+    "worst_month": -12018,
+    "max_dd": 49835
+   },
+   "wf": {
+    "trades": 75,
+    "win": 0.4267,
+    "net": 3126,
+    "per_trade": 41.7,
+    "worst_month": -12018,
+    "max_dd": 44051
+   }
+  },
+  "SD50@3": {
+   "design": {
+    "trades": 4218,
+    "win": 0.4481,
+    "net": 500771,
+    "per_trade": 118.7,
+    "worst_month": -187122,
+    "max_dd": 470107
+   },
+   "wf": {
+    "trades": 3054,
+    "win": 0.4604,
+    "net": 812339,
+    "per_trade": 266.0,
+    "worst_month": -187122,
+    "max_dd": 282478
+   }
+  },
+  "SD60@3": {
+   "design": {
+    "trades": 4199,
+    "win": 0.4432,
+    "net": 177337,
+    "per_trade": 42.2,
+    "worst_month": -233644,
+    "max_dd": 692725
+   },
+   "wf": {
+    "trades": 3036,
+    "win": 0.4522,
+    "net": 692147,
+    "per_trade": 228.0,
+    "worst_month": -198078,
+    "max_dd": 378616
+   }
+  },
+  "SD70@3": {
+   "design": {
+    "trades": 4098,
+    "win": 0.409,
+    "net": -1518115,
+    "per_trade": -370.5,
+    "worst_month": -530057,
+    "max_dd": 2209451
+   },
+   "wf": {
+    "trades": 2965,
+    "win": 0.4216,
+    "net": 41591,
+    "per_trade": 14.0,
+    "worst_month": -379976,
+    "max_dd": 647799
+   }
+  },
+  "SD80@3": {
+   "design": {
+    "trades": 3942,
+    "win": 0.3546,
+    "net": -3897421,
+    "per_trade": -988.7,
+    "worst_month": -756085,
+    "max_dd": 4153845
+   },
+   "wf": {
+    "trades": 2874,
+    "win": 0.3727,
+    "net": -1276076,
+    "per_trade": -444.0,
+    "worst_month": -573565,
+    "max_dd": 1532500
+   }
+  },
+  "XI1@3": {
+   "design": {
+    "trades": 4205,
+    "win": 0.4547,
+    "net": 537724,
+    "per_trade": 127.9,
+    "worst_month": -179363,
+    "max_dd": 539421
+   },
+   "wf": {
+    "trades": 3043,
+    "win": 0.4666,
+    "net": 893489,
+    "per_trade": 293.6,
+    "worst_month": -151159,
+    "max_dd": 291281
+   }
+  },
+  "XI2@3": {
+   "design": {
+    "trades": 4208,
+    "win": 0.4475,
+    "net": 503888,
+    "per_trade": 119.7,
+    "worst_month": -165454,
+    "max_dd": 543955
+   },
+   "wf": {
+    "trades": 3044,
+    "win": 0.4606,
+    "net": 848079,
+    "per_trade": 278.6,
+    "worst_month": -165454,
+    "max_dd": 272658
+   }
+  },
+  "PKD@3": {
+   "design": {
+    "trades": 2035,
+    "win": 0.4511,
+    "net": 293348,
+    "per_trade": 144.2,
+    "worst_month": -185784,
+    "max_dd": 436391
+   },
+   "wf": {
+    "trades": 871,
+    "win": 0.4994,
+    "net": 675212,
+    "per_trade": 775.2,
+    "worst_month": -66500,
+    "max_dd": 140125
+   }
+  },
+  "OF1@3": {
+   "design": {
+    "trades": 3854,
+    "win": 0.4559,
+    "net": 648764,
+    "per_trade": 168.3,
+    "worst_month": -143649,
+    "max_dd": 503961
+   },
+   "wf": {
+    "trades": 2774,
+    "win": 0.469,
+    "net": 962156,
+    "per_trade": 346.8,
+    "worst_month": -103635,
+    "max_dd": 288143
+   }
+  },
+  "OF2@3": {
+   "design": {
+    "trades": 4012,
+    "win": 0.4529,
+    "net": 576433,
+    "per_trade": 143.7,
+    "worst_month": -167071,
+    "max_dd": 487942
+   },
+   "wf": {
+    "trades": 2899,
+    "win": 0.465,
+    "net": 939509,
+    "per_trade": 324.1,
+    "worst_month": -120682,
+    "max_dd": 284409
+   }
+  },
+  "OF3@3": {
+   "design": {
+    "trades": 4219,
+    "win": 0.4373,
+    "net": 474458,
+    "per_trade": 112.5,
+    "worst_month": -168242,
+    "max_dd": 534449
+   },
+   "wf": {
+    "trades": 3053,
+    "win": 0.4491,
+    "net": 828827,
+    "per_trade": 271.5,
+    "worst_month": -140659,
+    "max_dd": 229314
+   }
+  },
+  "iv_check": {
+   "pairs": 421,
+   "ours_median": 14.92,
+   "lake_median": 14.59,
+   "corr": 0.988,
+   "median_abs_diff": 0.82
+  }
+ }
+}
