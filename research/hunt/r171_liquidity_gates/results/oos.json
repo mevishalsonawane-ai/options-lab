@@ -1,0 +1,5901 @@
+{
+ "written": "2026-11-13T20:18:15+00:00",
+ "m_prior": 3841,
+ "n_tests": 72,
+ "m_total": 3913,
+ "strategies": {
+  "R51": {
+   "combo": [],
+   "rows": {
+    "G1a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G1b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G1c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": -0.38,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 835,
+       "net": 37221.29,
+       "per_trade": 44.58,
+       "win": 44.31,
+       "worst_day": -12630.38,
+       "max_dd": -44171.08
+      },
+      "quoted": {
+       "n": 835,
+       "net": -65165.1,
+       "per_trade": -78.04,
+       "win": 41.32,
+       "worst_day": -13632.85,
+       "max_dd": -75252.95
+      },
+      "stress": {
+       "n": 835,
+       "net": -252873.74,
+       "per_trade": -302.84,
+       "win": 36.53,
+       "worst_day": -15470.73,
+       "max_dd": -252873.74
+      }
+     },
+     "p_norm": 0.3642215596677407,
+     "p_mc": 0.36848157592120395,
+     "gain": {
+      "roll": 21.94,
+      "quoted": 10.04,
+      "stress": -11.77
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 35.81,
+      "2025Q3": -39.15,
+      "2025Q4": 70.8,
+      "2026Jan-Feb": -66.52
+     },
+     "design_gain": -78.98,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.368 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1039,
+       "net": 25078.71,
+       "per_trade": 24.14,
+       "win": 44.18,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1039,
+       "net": -91178.23,
+       "per_trade": -87.76,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -91178.23
+      },
+      "stress": {
+       "n": 1039,
+       "net": -304316.14,
+       "per_trade": -292.89,
+       "win": 36.38,
+       "worst_day": -15470.73,
+       "max_dd": -304316.14
+      }
+     },
+     "p_norm": 0.48402566174097383,
+     "p_mc": 0.5010249487525624,
+     "gain": {
+      "roll": 1.5,
+      "quoted": 0.32,
+      "stress": -1.82
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.76,
+      "2025Q4": 1.86,
+      "2026Jan-Feb": -1.54
+     },
+     "design_gain": -37.94,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.501 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1060,
+       "net": 24751.76,
+       "per_trade": 23.35,
+       "win": 44.15,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1060,
+       "net": -92674.52,
+       "per_trade": -87.43,
+       "win": 41.23,
+       "worst_day": -13632.85,
+       "max_dd": -92674.52
+      },
+      "stress": {
+       "n": 1060,
+       "net": -307956.08,
+       "per_trade": -290.52,
+       "win": 36.51,
+       "worst_day": -15470.73,
+       "max_dd": -307956.08
+      }
+     },
+     "p_norm": 0.35148350965428155,
+     "p_mc": 0.3888805559722014,
+     "gain": {
+      "roll": 0.71,
+      "quoted": 0.65,
+      "stress": 0.55
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 2.47,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": -12.64,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.389 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain on design"
+     ]
+    },
+    "G2d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2e": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": -4.5,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2f": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 143,
+       "net": -19202.36,
+       "per_trade": -134.28,
+       "win": 39.16,
+       "worst_day": -9221.54,
+       "max_dd": -20790.09
+      },
+      "quoted": {
+       "n": 143,
+       "net": -46809.67,
+       "per_trade": -327.34,
+       "win": 34.27,
+       "worst_day": -10051.25,
+       "max_dd": -47408.25
+      },
+      "stress": {
+       "n": 143,
+       "net": -97422.96,
+       "per_trade": -681.28,
+       "win": 27.27,
+       "worst_day": -11572.33,
+       "max_dd": -97422.96
+      }
+     },
+     "p_norm": 0.9553706346284594,
+     "p_mc": 0.9566521673916304,
+     "gain": {
+      "roll": -156.92,
+      "quoted": -239.26,
+      "stress": -390.21
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -152.56,
+      "2025Q3": -248.2,
+      "2025Q4": -303.26,
+      "2026Jan-Feb": -492.55
+     },
+     "design_gain": -322.2,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.957 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 795,
+       "net": 12579.27,
+       "per_trade": 15.82,
+       "win": 44.28,
+       "worst_day": -9776.0,
+       "max_dd": -47438.52
+      },
+      "quoted": {
+       "n": 795,
+       "net": -77131.4,
+       "per_trade": -97.02,
+       "win": 41.01,
+       "worst_day": -10839.26,
+       "max_dd": -85390.7
+      },
+      "stress": {
+       "n": 795,
+       "net": -241600.96,
+       "per_trade": -303.9,
+       "win": 36.48,
+       "worst_day": -12788.52,
+       "max_dd": -241600.96
+      }
+     },
+     "p_norm": 0.6095531286924722,
+     "p_mc": 0.6151692415379231,
+     "gain": {
+      "roll": -6.82,
+      "quoted": -8.94,
+      "stress": -12.83
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -109.82,
+      "2025Q3": 14.8,
+      "2025Q4": 95.66,
+      "2026Jan-Feb": -55.01
+     },
+     "design_gain": -28.64,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.615 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 881,
+       "net": 14530.78,
+       "per_trade": 16.49,
+       "win": 44.04,
+       "worst_day": -9715.52,
+       "max_dd": -47180.77
+      },
+      "quoted": {
+       "n": 881,
+       "net": -84644.4,
+       "per_trade": -96.08,
+       "win": 41.09,
+       "worst_day": -10372.3,
+       "max_dd": -84644.4
+      },
+      "stress": {
+       "n": 881,
+       "net": -266465.66,
+       "per_trade": -302.46,
+       "win": 36.32,
+       "worst_day": -11992.88,
+       "max_dd": -266465.66
+      }
+     },
+     "p_norm": 0.6249141923661916,
+     "p_mc": 0.6293185340732963,
+     "gain": {
+      "roll": -6.15,
+      "quoted": -8.0,
+      "stress": -11.39
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -67.6,
+      "2025Q3": -10.05,
+      "2025Q4": 41.52,
+      "2026Jan-Feb": 6.28
+     },
+     "design_gain": -31.62,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.629 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G4a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 639,
+       "net": 36768.8,
+       "per_trade": 57.54,
+       "win": 44.13,
+       "worst_day": -7931.62,
+       "max_dd": -31190.4
+      },
+      "quoted": {
+       "n": 639,
+       "net": -17679.55,
+       "per_trade": -27.67,
+       "win": 41.94,
+       "worst_day": -8275.71,
+       "max_dd": -36535.7
+      },
+      "stress": {
+       "n": 639,
+       "net": -117501.35,
+       "per_trade": -183.88,
+       "win": 38.65,
+       "worst_day": -9178.52,
+       "max_dd": -117501.35
+      }
+     },
+     "p_norm": 0.09048870351726676,
+     "p_mc": 0.09209539523023849,
+     "gain": {
+      "roll": 34.9,
+      "quoted": 60.41,
+      "stress": 107.19
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 58.76,
+      "2025Q3": 92.24,
+      "2025Q4": 11.72,
+      "2026Jan-Feb": 87.98
+     },
+     "design_gain": 2.41,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.0921 > 0.01",
+      "BH q 1 > 0.10 (m 3913)"
+     ]
+    },
+    "G4b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 436,
+       "net": 14495.28,
+       "per_trade": 33.25,
+       "win": 43.58,
+       "worst_day": -7931.62,
+       "max_dd": -24700.97
+      },
+      "quoted": {
+       "n": 436,
+       "net": -20700.88,
+       "per_trade": -47.48,
+       "win": 41.97,
+       "worst_day": -8275.71,
+       "max_dd": -40415.68
+      },
+      "stress": {
+       "n": 436,
+       "net": -85226.93,
+       "per_trade": -195.47,
+       "win": 39.45,
+       "worst_day": -9178.52,
+       "max_dd": -85226.93
+      }
+     },
+     "p_norm": 0.27085518211268145,
+     "p_mc": 0.27473626318684063,
+     "gain": {
+      "roll": 10.61,
+      "quoted": 40.6,
+      "stress": 95.6
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -45.71,
+      "2025Q3": -3.14,
+      "2025Q4": 103.99,
+      "2026Jan-Feb": 184.32
+     },
+     "design_gain": -26.73,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.275 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain on design"
+     ]
+    },
+    "G4c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 436,
+       "net": 14495.28,
+       "per_trade": 33.25,
+       "win": 43.58,
+       "worst_day": -7931.62,
+       "max_dd": -24700.97
+      },
+      "quoted": {
+       "n": 436,
+       "net": -20700.88,
+       "per_trade": -47.48,
+       "win": 41.97,
+       "worst_day": -8275.71,
+       "max_dd": -40415.68
+      },
+      "stress": {
+       "n": 436,
+       "net": -85226.93,
+       "per_trade": -195.47,
+       "win": 39.45,
+       "worst_day": -9178.52,
+       "max_dd": -85226.93
+      }
+     },
+     "p_norm": 0.27085518211268145,
+     "p_mc": 0.27473626318684063,
+     "gain": {
+      "roll": 10.61,
+      "quoted": 40.6,
+      "stress": 95.6
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -45.71,
+      "2025Q3": -3.14,
+      "2025Q4": 103.99,
+      "2026Jan-Feb": 184.32
+     },
+     "design_gain": -26.73,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.275 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain on design"
+     ]
+    },
+    "G4d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 1061,
+       "net": 24021.55,
+       "per_trade": 22.64,
+       "win": 44.11,
+       "worst_day": -12630.38,
+       "max_dd": -45202.77
+      },
+      "quoted": {
+       "n": 1061,
+       "net": -93452.49,
+       "per_trade": -88.08,
+       "win": 41.19,
+       "worst_day": -13632.85,
+       "max_dd": -93452.49
+      },
+      "stress": {
+       "n": 1061,
+       "net": -308821.61,
+       "per_trade": -291.07,
+       "win": 36.48,
+       "worst_day": -15470.73,
+       "max_dd": -308821.61
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 622,
+       "net": 2399.88,
+       "per_trade": 3.86,
+       "win": 42.44,
+       "worst_day": -7931.62,
+       "max_dd": -40971.89
+      },
+      "quoted": {
+       "n": 622,
+       "net": -59262.6,
+       "per_trade": -95.28,
+       "win": 39.55,
+       "worst_day": -8275.71,
+       "max_dd": -59262.6
+      },
+      "stress": {
+       "n": 622,
+       "net": -172310.27,
+       "per_trade": -277.03,
+       "win": 35.85,
+       "worst_day": -9813.82,
+       "max_dd": -172310.27
+      }
+     },
+     "p_norm": 0.5612654985770792,
+     "p_mc": 0.5641717914104295,
+     "gain": {
+      "roll": -18.78,
+      "quoted": -7.2,
+      "stress": 14.04
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -82.02,
+      "2025Q3": 35.81,
+      "2025Q4": 32.85,
+      "2026Jan-Feb": -12.56
+     },
+     "design_gain": -42.6,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.564 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain on design"
+     ]
+    },
+    "C": null
+   },
+   "base_blocks": {
+    "2025Q2": {
+     "n": 293,
+     "net": -32643.87,
+     "per_trade": -111.41,
+     "win": 41.3,
+     "worst_day": -12507.01,
+     "max_dd": -36526.72
+    },
+    "2025Q3": {
+     "n": 298,
+     "net": -38058.86,
+     "per_trade": -127.71,
+     "win": 41.28,
+     "worst_day": -8458.77,
+     "max_dd": -45048.36
+    },
+    "2025Q4": {
+     "n": 296,
+     "net": -14419.55,
+     "per_trade": -48.71,
+     "win": 42.57,
+     "worst_day": -8245.13,
+     "max_dd": -44481.55
+    },
+    "2026Jan-Feb": {
+     "n": 174,
+     "net": -8330.21,
+     "per_trade": -47.87,
+     "win": 38.51,
+     "worst_day": -13632.85,
+     "max_dd": -54979.13
+    }
+   }
+  },
+  "R72": {
+   "combo": [],
+   "rows": {
+    "G1a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G1b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G1c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": -0.69,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 629,
+       "net": 47046.31,
+       "per_trade": 74.8,
+       "win": 46.1,
+       "worst_day": -10142.93,
+       "max_dd": -28524.53
+      },
+      "quoted": {
+       "n": 629,
+       "net": -29323.78,
+       "per_trade": -46.62,
+       "win": 42.61,
+       "worst_day": -10658.86,
+       "max_dd": -52614.06
+      },
+      "stress": {
+       "n": 629,
+       "net": -169335.75,
+       "per_trade": -269.21,
+       "win": 36.57,
+       "worst_day": -11992.88,
+       "max_dd": -169335.75
+      }
+     },
+     "p_norm": 0.6973994299048207,
+     "p_mc": 0.6980150992450378,
+     "gain": {
+      "roll": -5.9,
+      "quoted": -16.26,
+      "stress": -35.26
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 32.19,
+      "2025Q3": -67.93,
+      "2025Q4": 19.28,
+      "2026Jan-Feb": -98.05
+     },
+     "design_gain": -69.59,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.698 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 762,
+       "net": 56957.17,
+       "per_trade": 74.75,
+       "win": 46.06,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 762,
+       "net": -28574.87,
+       "per_trade": -37.5,
+       "win": 42.78,
+       "worst_day": -12200.09,
+       "max_dd": -54732.77
+      },
+      "stress": {
+       "n": 762,
+       "net": -185383.38,
+       "per_trade": -243.29,
+       "win": 37.27,
+       "worst_day": -13280.78,
+       "max_dd": -185383.38
+      }
+     },
+     "p_norm": 0.7771709226155983,
+     "p_mc": 0.7822108894555272,
+     "gain": {
+      "roll": -5.95,
+      "quoted": -7.14,
+      "stress": -9.34
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": -5.29,
+      "2025Q4": 0.38,
+      "2026Jan-Feb": -36.69
+     },
+     "design_gain": -12.6,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.782 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 774,
+       "net": 64637.81,
+       "per_trade": 83.51,
+       "win": 46.38,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 774,
+       "net": -21574.98,
+       "per_trade": -27.87,
+       "win": 43.15,
+       "worst_day": -12200.09,
+       "max_dd": -55535.02
+      },
+      "stress": {
+       "n": 774,
+       "net": -179631.52,
+       "per_trade": -232.08,
+       "win": 37.73,
+       "worst_day": -13280.78,
+       "max_dd": -179631.52
+      }
+     },
+     "p_norm": 0.2966946192964394,
+     "p_mc": 0.3060346982650867,
+     "gain": {
+      "roll": 2.81,
+      "quoted": 2.49,
+      "stress": 1.87
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 4.23,
+      "2025Q4": 3.45,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": -7.22,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.306 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain on design"
+     ]
+    },
+    "G2d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2e": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": -2.02,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2f": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 103,
+       "net": -21510.77,
+       "per_trade": -208.84,
+       "win": 37.86,
+       "worst_day": -5886.78,
+       "max_dd": -24330.09
+      },
+      "quoted": {
+       "n": 103,
+       "net": -41359.55,
+       "per_trade": -401.55,
+       "win": 35.92,
+       "worst_day": -6100.6,
+       "max_dd": -41359.55
+      },
+      "stress": {
+       "n": 103,
+       "net": -77748.85,
+       "per_trade": -754.84,
+       "win": 28.16,
+       "worst_day": -6850.03,
+       "max_dd": -77748.85
+      }
+     },
+     "p_norm": 0.9875547839982729,
+     "p_mc": 0.9904004799760012,
+     "gain": {
+      "roll": -289.54,
+      "quoted": -371.19,
+      "stress": -520.89
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -210.29,
+      "2025Q3": -429.07,
+      "2025Q4": -419.65,
+      "2026Jan-Feb": -955.0
+     },
+     "design_gain": -578.07,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.99 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 593,
+       "net": 59556.92,
+       "per_trade": 100.43,
+       "win": 47.89,
+       "worst_day": -9776.0,
+       "max_dd": -28988.68
+      },
+      "quoted": {
+       "n": 593,
+       "net": -7350.36,
+       "per_trade": -12.4,
+       "win": 44.86,
+       "worst_day": -10839.26,
+       "max_dd": -45098.73
+      },
+      "stress": {
+       "n": 593,
+       "net": -130013.57,
+       "per_trade": -219.25,
+       "win": 39.46,
+       "worst_day": -12788.52,
+       "max_dd": -130013.57
+      }
+     },
+     "p_norm": 0.3094374673662037,
+     "p_mc": 0.31158442077896104,
+     "gain": {
+      "roll": 19.73,
+      "quoted": 17.96,
+      "stress": 14.7
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -10.76,
+      "2025Q3": 52.19,
+      "2025Q4": 132.21,
+      "2026Jan-Feb": -215.71
+     },
+     "design_gain": 14.04,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.312 > 0.01",
+      "BH q 1 > 0.10 (m 3913)"
+     ]
+    },
+    "G3d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 655,
+       "net": 49101.29,
+       "per_trade": 74.96,
+       "win": 47.18,
+       "worst_day": -8339.88,
+       "max_dd": -28130.96
+      },
+      "quoted": {
+       "n": 655,
+       "net": -24515.58,
+       "per_trade": -37.43,
+       "win": 44.12,
+       "worst_day": -9629.18,
+       "max_dd": -47604.69
+      },
+      "stress": {
+       "n": 655,
+       "net": -159479.69,
+       "per_trade": -243.48,
+       "win": 38.47,
+       "worst_day": -11992.88,
+       "max_dd": -159479.69
+      }
+     },
+     "p_norm": 0.5996639559823087,
+     "p_mc": 0.5978701064946753,
+     "gain": {
+      "roll": -5.74,
+      "quoted": -7.07,
+      "stress": -9.53
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -23.96,
+      "2025Q3": 8.21,
+      "2025Q4": 98.89,
+      "2026Jan-Feb": -202.74
+     },
+     "design_gain": -2.27,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.598 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G4a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 473,
+       "net": 84708.7,
+       "per_trade": 179.09,
+       "win": 47.36,
+       "worst_day": -11610.6,
+       "max_dd": -20438.12
+      },
+      "quoted": {
+       "n": 473,
+       "net": 43608.01,
+       "per_trade": 92.19,
+       "win": 45.24,
+       "worst_day": -12200.09,
+       "max_dd": -30711.13
+      },
+      "stress": {
+       "n": 473,
+       "net": -31742.76,
+       "per_trade": -67.11,
+       "win": 41.23,
+       "worst_day": -13280.78,
+       "max_dd": -56883.04
+      }
+     },
+     "p_norm": 0.009115392015665675,
+     "p_mc": 0.008449577521123944,
+     "gain": {
+      "roll": 98.39,
+      "quoted": 122.55,
+      "stress": 166.84
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 55.91,
+      "2025Q3": 83.45,
+      "2025Q4": 126.54,
+      "2026Jan-Feb": 295.06
+     },
+     "design_gain": 10.15,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "BH q 1 > 0.10 (m 3913)"
+     ]
+    },
+    "G4b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 317,
+       "net": 47956.37,
+       "per_trade": 151.28,
+       "win": 48.58,
+       "worst_day": -11610.6,
+       "max_dd": -22803.73
+      },
+      "quoted": {
+       "n": 317,
+       "net": 21775.43,
+       "per_trade": 68.69,
+       "win": 47.32,
+       "worst_day": -12200.09,
+       "max_dd": -27773.68
+      },
+      "stress": {
+       "n": 317,
+       "net": -26222.63,
+       "per_trade": -82.72,
+       "win": 43.53,
+       "worst_day": -13280.78,
+       "max_dd": -50574.86
+      }
+     },
+     "p_norm": 0.10193651451232405,
+     "p_mc": 0.10304484775761212,
+     "gain": {
+      "roll": 70.58,
+      "quoted": 99.05,
+      "stress": 151.23
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -129.34,
+      "2025Q3": 102.45,
+      "2025Q4": 228.01,
+      "2026Jan-Feb": 331.72
+     },
+     "design_gain": -9.08,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.103 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain on design"
+     ]
+    },
+    "G4c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 317,
+       "net": 47956.37,
+       "per_trade": 151.28,
+       "win": 48.58,
+       "worst_day": -11610.6,
+       "max_dd": -22803.73
+      },
+      "quoted": {
+       "n": 317,
+       "net": 21775.43,
+       "per_trade": 68.69,
+       "win": 47.32,
+       "worst_day": -12200.09,
+       "max_dd": -27773.68
+      },
+      "stress": {
+       "n": 317,
+       "net": -26222.63,
+       "per_trade": -82.72,
+       "win": 43.53,
+       "worst_day": -13280.78,
+       "max_dd": -50574.86
+      }
+     },
+     "p_norm": 0.10193651451232405,
+     "p_mc": 0.10304484775761212,
+     "gain": {
+      "roll": 70.58,
+      "quoted": 99.05,
+      "stress": 151.23
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -129.34,
+      "2025Q3": 102.45,
+      "2025Q4": 228.01,
+      "2026Jan-Feb": 331.72
+     },
+     "design_gain": -9.08,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.103 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain on design"
+     ]
+    },
+    "G4d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 778,
+       "net": 62782.57,
+       "per_trade": 80.7,
+       "win": 46.27,
+       "worst_day": -11610.6,
+       "max_dd": -28631.56
+      },
+      "quoted": {
+       "n": 778,
+       "net": -23616.86,
+       "per_trade": -30.36,
+       "win": 43.06,
+       "worst_day": -12200.09,
+       "max_dd": -56075.25
+      },
+      "stress": {
+       "n": 778,
+       "net": -182015.57,
+       "per_trade": -233.95,
+       "win": 37.66,
+       "worst_day": -13280.78,
+       "max_dd": -182015.57
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 471,
+       "net": 24639.27,
+       "per_trade": 52.31,
+       "win": 46.07,
+       "worst_day": -8714.13,
+       "max_dd": -24184.13
+      },
+      "quoted": {
+       "n": 471,
+       "net": -21822.32,
+       "per_trade": -46.33,
+       "win": 43.74,
+       "worst_day": -9101.4,
+       "max_dd": -40702.06
+      },
+      "stress": {
+       "n": 471,
+       "net": -107001.88,
+       "per_trade": -227.18,
+       "win": 38.43,
+       "worst_day": -9813.82,
+       "max_dd": -107001.88
+      }
+     },
+     "p_norm": 0.6202434352409689,
+     "p_mc": 0.6220688965551723,
+     "gain": {
+      "roll": -28.39,
+      "quoted": -15.97,
+      "stress": 6.77
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": -112.68,
+      "2025Q3": 7.49,
+      "2025Q4": 42.52,
+      "2026Jan-Feb": 16.18
+     },
+     "design_gain": -5.58,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.622 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain on design"
+     ]
+    },
+    "C": null
+   },
+   "base_blocks": {
+    "2025Q2": {
+     "n": 212,
+     "net": -8624.21,
+     "per_trade": -40.68,
+     "win": 45.28,
+     "worst_day": -12200.09,
+     "max_dd": -24848.77
+    },
+    "2025Q3": {
+     "n": 218,
+     "net": -25672.44,
+     "per_trade": -117.76,
+     "win": 42.66,
+     "worst_day": -5055.82,
+     "max_dd": -31226.48
+    },
+    "2025Q4": {
+     "n": 226,
+     "net": -502.91,
+     "per_trade": -2.23,
+     "win": 42.48,
+     "worst_day": -7189.61,
+     "max_dd": -34632.72
+    },
+    "2026Jan-Feb": {
+     "n": 122,
+     "net": 11182.69,
+     "per_trade": 91.66,
+     "win": 40.98,
+     "worst_day": -7146.67,
+     "max_dd": -34119.99
+    }
+   }
+  },
+  "LIQ": {
+   "combo": [
+    "G3c"
+   ],
+   "rows": {
+    "G1a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G1b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G1c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 695,
+       "net": 17518.1,
+       "per_trade": 25.21,
+       "win": 45.76,
+       "worst_day": -7811.11,
+       "max_dd": -46691.33
+      },
+      "quoted": {
+       "n": 695,
+       "net": -64657.22,
+       "per_trade": -93.03,
+       "win": 40.58,
+       "worst_day": -8803.04,
+       "max_dd": -110383.9
+      },
+      "stress": {
+       "n": 695,
+       "net": -215312.11,
+       "per_trade": -309.8,
+       "win": 30.22,
+       "worst_day": -10621.59,
+       "max_dd": -233072.86
+      }
+     },
+     "p_norm": 0.5644112064897625,
+     "p_mc": 0.5613719314034298,
+     "gain": {
+      "roll": 11.37,
+      "quoted": -4.62,
+      "stress": -33.93
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 93.88,
+      "2025Q3": -25.82,
+      "2025Q4": -69.52,
+      "2026Jan-Feb": -71.73
+     },
+     "design_gain": -112.48,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.561 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 873,
+       "net": 18144.42,
+       "per_trade": 20.78,
+       "win": 45.93,
+       "worst_day": -10502.46,
+       "max_dd": -34386.81
+      },
+      "quoted": {
+       "n": 873,
+       "net": -75573.61,
+       "per_trade": -86.57,
+       "win": 41.01,
+       "worst_day": -11279.84,
+       "max_dd": -109357.44
+      },
+      "stress": {
+       "n": 873,
+       "net": -247389.83,
+       "per_trade": -283.38,
+       "win": 31.84,
+       "worst_day": -12705.04,
+       "max_dd": -250941.47
+      }
+     },
+     "p_norm": 0.4495673451215353,
+     "p_mc": 0.46132693365331734,
+     "gain": {
+      "roll": 6.94,
+      "quoted": 1.84,
+      "stress": -7.51
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 18.18,
+      "2025Q3": -2.86,
+      "2025Q4": -10.79,
+      "2026Jan-Feb": -9.81
+     },
+     "design_gain": -53.7,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.461 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 938,
+       "net": 14586.44,
+       "per_trade": 15.55,
+       "win": 45.74,
+       "worst_day": -10502.46,
+       "max_dd": -36321.22
+      },
+      "quoted": {
+       "n": 938,
+       "net": -82589.49,
+       "per_trade": -88.05,
+       "win": 40.83,
+       "worst_day": -11279.84,
+       "max_dd": -113074.68
+      },
+      "stress": {
+       "n": 938,
+       "net": -260745.09,
+       "per_trade": -277.98,
+       "win": 31.77,
+       "worst_day": -12705.04,
+       "max_dd": -261749.13
+      }
+     },
+     "p_norm": 0.4794031847031393,
+     "p_mc": 0.5010249487525624,
+     "gain": {
+      "roll": 1.71,
+      "quoted": 0.36,
+      "stress": -2.11
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 7.2,
+      "2025Q4": -5.42,
+      "2026Jan-Feb": -5.62
+     },
+     "design_gain": -16.49,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.501 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2e": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 956,
+       "net": 13336.36,
+       "per_trade": 13.95,
+       "win": 45.5,
+       "worst_day": -10502.46,
+       "max_dd": -37249.04
+      },
+      "quoted": {
+       "n": 956,
+       "net": -84667.03,
+       "per_trade": -88.56,
+       "win": 40.69,
+       "worst_day": -11279.84,
+       "max_dd": -115152.23
+      },
+      "stress": {
+       "n": 956,
+       "net": -264339.72,
+       "per_trade": -276.51,
+       "win": 31.59,
+       "worst_day": -12705.04,
+       "max_dd": -265343.76
+      }
+     },
+     "p_norm": 0.5201137280332588,
+     "p_mc": 0.5569721513924304,
+     "gain": {
+      "roll": 0.11,
+      "quoted": -0.15,
+      "stress": -0.64
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.68,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": -2.5
+     },
+     "design_gain": -1.97,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.557 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2f": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 85,
+       "net": 6384.91,
+       "per_trade": 75.12,
+       "win": 44.71,
+       "worst_day": -2375.46,
+       "max_dd": -13161.15
+      },
+      "quoted": {
+       "n": 85,
+       "net": -9571.3,
+       "per_trade": -112.6,
+       "win": 36.47,
+       "worst_day": -3265.53,
+       "max_dd": -24521.83
+      },
+      "stress": {
+       "n": 85,
+       "net": -38824.61,
+       "per_trade": -456.76,
+       "win": 25.88,
+       "worst_day": -4897.33,
+       "max_dd": -47520.12
+      }
+     },
+     "p_norm": 0.5649222735359465,
+     "p_mc": 0.5510724463776812,
+     "gain": {
+      "roll": 61.28,
+      "quoted": -24.19,
+      "stress": -180.89
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 50.62,
+      "2025Q3": 177.93,
+      "2025Q4": -388.15,
+      "2026Jan-Feb": -168.76
+     },
+     "design_gain": -601.34,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.551 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": 0.0,
+      "2026Jan-Feb": 0.0
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 950,
+       "net": 17609.07,
+       "per_trade": 18.54,
+       "win": 45.79,
+       "worst_day": -10502.46,
+       "max_dd": -34715.92
+      },
+      "quoted": {
+       "n": 950,
+       "net": -79070.14,
+       "per_trade": -83.23,
+       "win": 40.95,
+       "worst_day": -11279.84,
+       "max_dd": -110462.17
+      },
+      "stress": {
+       "n": 950,
+       "net": -256315.16,
+       "per_trade": -269.81,
+       "win": 31.79,
+       "worst_day": -12705.04,
+       "max_dd": -257356.1
+      }
+     },
+     "p_norm": 0.13676753383552093,
+     "p_mc": 0.11084445777711115,
+     "gain": {
+      "roll": 4.7,
+      "quoted": 5.18,
+      "stress": 6.06
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 11.88,
+      "2025Q3": 13.92,
+      "2025Q4": -3.27,
+      "2026Jan-Feb": -1.84
+     },
+     "design_gain": -0.1,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.111 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain on design"
+     ]
+    },
+    "G3c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 732,
+       "net": 40265.73,
+       "per_trade": 55.01,
+       "win": 46.58,
+       "worst_day": -10502.46,
+       "max_dd": -21766.82
+      },
+      "quoted": {
+       "n": 732,
+       "net": -35847.85,
+       "per_trade": -48.97,
+       "win": 42.76,
+       "worst_day": -11279.84,
+       "max_dd": -60673.74
+      },
+      "stress": {
+       "n": 732,
+       "net": -175388.89,
+       "per_trade": -239.6,
+       "win": 32.79,
+       "worst_day": -12705.04,
+       "max_dd": -180476.58
+      }
+     },
+     "p_norm": 0.06274151659943923,
+     "p_mc": 0.05719714014299285,
+     "gain": {
+      "roll": 41.17,
+      "quoted": 39.44,
+      "stress": 36.27
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 6.38,
+      "2025Q3": 67.15,
+      "2025Q4": 67.23,
+      "2026Jan-Feb": -6.56
+     },
+     "design_gain": 45.76,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.0572 > 0.01",
+      "BH q 1 > 0.10 (m 3913)"
+     ]
+    },
+    "G3d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 811,
+       "net": 15828.25,
+       "per_trade": 19.52,
+       "win": 45.87,
+       "worst_day": -10502.46,
+       "max_dd": -23548.38
+      },
+      "quoted": {
+       "n": 811,
+       "net": -68451.28,
+       "per_trade": -84.4,
+       "win": 41.55,
+       "worst_day": -11279.84,
+       "max_dd": -91082.95
+      },
+      "stress": {
+       "n": 811,
+       "net": -222963.38,
+       "per_trade": -274.92,
+       "win": 31.81,
+       "worst_day": -12705.04,
+       "max_dd": -228051.06
+      }
+     },
+     "p_norm": 0.4196381478781913,
+     "p_mc": 0.4307784610769462,
+     "gain": {
+      "roll": 5.68,
+      "quoted": 4.01,
+      "stress": 0.95
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": -33.05,
+      "2025Q3": 15.46,
+      "2025Q4": 25.73,
+      "2026Jan-Feb": 11.36
+     },
+     "design_gain": 33.38,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.431 > 0.01",
+      "BH q 1 > 0.10 (m 3913)"
+     ]
+    },
+    "G4a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 502,
+       "net": 721.38,
+       "per_trade": 1.44,
+       "win": 45.62,
+       "worst_day": -6761.0,
+       "max_dd": -22916.55
+      },
+      "quoted": {
+       "n": 502,
+       "net": -37926.88,
+       "per_trade": -75.55,
+       "win": 42.03,
+       "worst_day": -7177.91,
+       "max_dd": -46581.9
+      },
+      "stress": {
+       "n": 502,
+       "net": -108781.31,
+       "per_trade": -216.7,
+       "win": 36.06,
+       "worst_day": -7942.25,
+       "max_dd": -114640.64
+      }
+     },
+     "p_norm": 0.38516721236723506,
+     "p_mc": 0.3820808959552022,
+     "gain": {
+      "roll": -12.4,
+      "quoted": 12.86,
+      "stress": 59.17
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": -71.16,
+      "2025Q3": 95.49,
+      "2025Q4": 94.03,
+      "2026Jan-Feb": -114.9
+     },
+     "design_gain": -4.28,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.382 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain on design"
+     ]
+    },
+    "G4b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 299,
+       "net": -9515.89,
+       "per_trade": -31.83,
+       "win": 46.15,
+       "worst_day": -6761.0,
+       "max_dd": -22487.8
+      },
+      "quoted": {
+       "n": 299,
+       "net": -30015.63,
+       "per_trade": -100.39,
+       "win": 41.14,
+       "worst_day": -7177.91,
+       "max_dd": -37710.11
+      },
+      "stress": {
+       "n": 299,
+       "net": -67598.27,
+       "per_trade": -226.08,
+       "win": 36.45,
+       "worst_day": -7942.25,
+       "max_dd": -74298.03
+      }
+     },
+     "p_norm": 0.5692992365867199,
+     "p_mc": 0.5674716264186791,
+     "gain": {
+      "roll": -45.67,
+      "quoted": -11.98,
+      "stress": 49.79
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": -179.72,
+      "2025Q3": 60.59,
+      "2025Q4": 125.5,
+      "2026Jan-Feb": -91.35
+     },
+     "design_gain": 26.47,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.567 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs"
+     ]
+    },
+    "G4c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 299,
+       "net": -9515.89,
+       "per_trade": -31.83,
+       "win": 46.15,
+       "worst_day": -6761.0,
+       "max_dd": -22487.8
+      },
+      "quoted": {
+       "n": 299,
+       "net": -30015.63,
+       "per_trade": -100.39,
+       "win": 41.14,
+       "worst_day": -7177.91,
+       "max_dd": -37710.11
+      },
+      "stress": {
+       "n": 299,
+       "net": -67598.27,
+       "per_trade": -226.08,
+       "win": 36.45,
+       "worst_day": -7942.25,
+       "max_dd": -74298.03
+      }
+     },
+     "p_norm": 0.5692992365867199,
+     "p_mc": 0.5674716264186791,
+     "gain": {
+      "roll": -45.67,
+      "quoted": -11.98,
+      "stress": 49.79
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": -179.72,
+      "2025Q3": 60.59,
+      "2025Q4": 125.5,
+      "2026Jan-Feb": -91.35
+     },
+     "design_gain": 26.47,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.567 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs"
+     ]
+    },
+    "G4d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 508,
+       "net": -10251.65,
+       "per_trade": -20.18,
+       "win": 44.69,
+       "worst_day": -10079.42,
+       "max_dd": -27913.18
+      },
+      "quoted": {
+       "n": 508,
+       "net": -57088.77,
+       "per_trade": -112.38,
+       "win": 40.75,
+       "worst_day": -10707.71,
+       "max_dd": -63626.7
+      },
+      "stress": {
+       "n": 508,
+       "net": -142956.66,
+       "per_trade": -281.41,
+       "win": 32.48,
+       "worst_day": -11859.56,
+       "max_dd": -146875.12
+      }
+     },
+     "p_norm": 0.7091301207296381,
+     "p_mc": 0.711164441777911,
+     "gain": {
+      "roll": -34.02,
+      "quoted": -23.97,
+      "stress": -5.54
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": -81.27,
+      "2025Q3": -9.8,
+      "2025Q4": 39.01,
+      "2026Jan-Feb": -74.39
+     },
+     "design_gain": 11.08,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 0.711 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs"
+     ]
+    },
+    "C": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 960,
+       "net": 13283.93,
+       "per_trade": 13.84,
+       "win": 45.52,
+       "worst_day": -10502.46,
+       "max_dd": -37301.46
+      },
+      "quoted": {
+       "n": 960,
+       "net": -84876.82,
+       "per_trade": -88.41,
+       "win": 40.73,
+       "worst_day": -11279.84,
+       "max_dd": -115362.01
+      },
+      "stress": {
+       "n": 960,
+       "net": -264838.0,
+       "per_trade": -275.87,
+       "win": 31.56,
+       "worst_day": -12705.04,
+       "max_dd": -265842.05
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 732,
+       "net": 40265.73,
+       "per_trade": 55.01,
+       "win": 46.58,
+       "worst_day": -10502.46,
+       "max_dd": -21766.82
+      },
+      "quoted": {
+       "n": 732,
+       "net": -35847.85,
+       "per_trade": -48.97,
+       "win": 42.76,
+       "worst_day": -11279.84,
+       "max_dd": -60673.74
+      },
+      "stress": {
+       "n": 732,
+       "net": -175388.89,
+       "per_trade": -239.6,
+       "win": 32.79,
+       "worst_day": -12705.04,
+       "max_dd": -180476.58
+      }
+     },
+     "p_norm": 0.06274151659943923,
+     "p_mc": 0.05719714014299285,
+     "gain": {
+      "roll": 41.17,
+      "quoted": 39.44,
+      "stress": 36.27
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.6
+     },
+     "blocks": {
+      "2025Q2": 6.38,
+      "2025Q3": 67.15,
+      "2025Q4": 67.23,
+      "2026Jan-Feb": -6.56
+     },
+     "design_gain": 45.76,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "Monte-Carlo random-skip p 0.0572 > 0.01",
+      "BH q 1 > 0.10 (m 3913)"
+     ]
+    }
+   },
+   "base_blocks": {
+    "2025Q2": {
+     "n": 244,
+     "net": 13421.13,
+     "per_trade": 55.0,
+     "win": 44.67,
+     "worst_day": -7675.85,
+     "max_dd": -28653.13
+    },
+    "2025Q3": {
+     "n": 275,
+     "net": -30573.39,
+     "per_trade": -111.18,
+     "win": 38.18,
+     "worst_day": -7319.66,
+     "max_dd": -31677.06
+    },
+    "2025Q4": {
+     "n": 260,
+     "net": -41854.03,
+     "per_trade": -160.98,
+     "win": 40.77,
+     "worst_day": -11279.84,
+     "max_dd": -48604.72
+    },
+    "2026Jan-Feb": {
+     "n": 181,
+     "net": -25870.53,
+     "per_trade": -142.93,
+     "win": 39.23,
+     "worst_day": -5798.59,
+     "max_dd": -34991.73
+    }
+   }
+  },
+  "EXP": {
+   "combo": [
+    "G2b"
+   ],
+   "rows": {
+    "G1a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G1b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G1c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G2a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1,
+       "net": 3341.39,
+       "per_trade": 3341.39,
+       "win": 100.0,
+       "worst_day": 3341.39,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 1,
+       "net": 3319.36,
+       "per_trade": 3319.36,
+       "win": 100.0,
+       "worst_day": 3319.36,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 1,
+       "net": 3278.98,
+       "per_trade": 3278.98,
+       "win": 100.0,
+       "worst_day": 3278.98,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 3.5381710702975154e-06,
+     "p_mc": 0.041947902604869754,
+     "gain": {
+      "roll": 2858.27,
+      "quoted": 2849.9,
+      "stress": 2834.54
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 2686.14,
+      "2025Q3": null,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": null,
+     "q": 0.0034612158495185446,
+     "verdict": "fail",
+     "why": [
+      "1 kept OOS trades < 40",
+      "Monte-Carlo random-skip p 0.0419 > 0.01",
+      "no gain on design"
+     ]
+    },
+    "G2b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1,
+       "net": 3341.39,
+       "per_trade": 3341.39,
+       "win": 100.0,
+       "worst_day": 3341.39,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 1,
+       "net": 3319.36,
+       "per_trade": 3319.36,
+       "win": 100.0,
+       "worst_day": 3319.36,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 1,
+       "net": 3278.98,
+       "per_trade": 3278.98,
+       "win": 100.0,
+       "worst_day": 3278.98,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 3.5381710702975154e-06,
+     "p_mc": 0.041947902604869754,
+     "gain": {
+      "roll": 2858.27,
+      "quoted": 2849.9,
+      "stress": 2834.54
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 2686.14,
+      "2025Q3": null,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 1664.3,
+     "q": 0.0034612158495185446,
+     "verdict": "fail",
+     "why": [
+      "1 kept OOS trades < 40",
+      "Monte-Carlo random-skip p 0.0419 > 0.01"
+     ]
+    },
+    "G2c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1,
+       "net": 3341.39,
+       "per_trade": 3341.39,
+       "win": 100.0,
+       "worst_day": 3341.39,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 1,
+       "net": 3319.36,
+       "per_trade": 3319.36,
+       "win": 100.0,
+       "worst_day": 3319.36,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 1,
+       "net": 3278.98,
+       "per_trade": 3278.98,
+       "win": 100.0,
+       "worst_day": 3278.98,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 3.5381710702975154e-06,
+     "p_mc": 0.041947902604869754,
+     "gain": {
+      "roll": 2858.27,
+      "quoted": 2849.9,
+      "stress": 2834.54
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 2686.14,
+      "2025Q3": null,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 1664.3,
+     "q": 0.0034612158495185446,
+     "verdict": "fail",
+     "why": [
+      "1 kept OOS trades < 40",
+      "Monte-Carlo random-skip p 0.0419 > 0.01"
+     ]
+    },
+    "G2d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 2,
+       "net": 4653.41,
+       "per_trade": 2326.71,
+       "win": 100.0,
+       "worst_day": 1312.02,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 2,
+       "net": 4615.31,
+       "per_trade": 2307.65,
+       "win": 100.0,
+       "worst_day": 1295.94,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 2,
+       "net": 4545.44,
+       "per_trade": 2272.72,
+       "win": 100.0,
+       "worst_day": 1266.46,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.4010758312648107e-05,
+     "p_mc": 0.004649767511624419,
+     "gain": {
+      "roll": 1843.59,
+      "quoted": 1838.19,
+      "stress": 1828.28
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 1674.43,
+      "2025Q3": null,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 407.76,
+     "q": 0.009137349546232007,
+     "verdict": "fail",
+     "why": [
+      "2 kept OOS trades < 40"
+     ]
+    },
+    "G2e": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 2,
+       "net": 4653.41,
+       "per_trade": 2326.71,
+       "win": 100.0,
+       "worst_day": 1312.02,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 2,
+       "net": 4615.31,
+       "per_trade": 2307.65,
+       "win": 100.0,
+       "worst_day": 1295.94,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 2,
+       "net": 4545.44,
+       "per_trade": 2272.72,
+       "win": 100.0,
+       "worst_day": 1266.46,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.4010758312648107e-05,
+     "p_mc": 0.004649767511624419,
+     "gain": {
+      "roll": 1843.59,
+      "quoted": 1838.19,
+      "stress": 1828.28
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 1674.43,
+      "2025Q3": null,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 1524.36,
+     "q": 0.009137349546232007,
+     "verdict": "fail",
+     "why": [
+      "2 kept OOS trades < 40"
+     ]
+    },
+    "G2f": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 0,
+       "net": 0.0,
+       "per_trade": null,
+       "win": null,
+       "worst_day": null,
+       "max_dd": null
+      },
+      "quoted": {
+       "n": 0,
+       "net": 0.0,
+       "per_trade": null,
+       "win": null,
+       "worst_day": null,
+       "max_dd": null
+      },
+      "stress": {
+       "n": 0,
+       "net": 0.0,
+       "per_trade": null,
+       "win": null,
+       "worst_day": null,
+       "max_dd": null
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": null,
+      "quoted": null,
+      "stress": null
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": null,
+      "2025Q3": null,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": null,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "0 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G3d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G4a": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G4b": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G4c": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "G4d": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 1.0,
+     "p_mc": 1.0,
+     "gain": {
+      "roll": 0.0,
+      "quoted": 0.0,
+      "stress": 0.0
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 0.0,
+      "2025Q3": 0.0,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 0.0,
+     "q": 1.0,
+     "verdict": "fail",
+     "why": [
+      "24 kept OOS trades < 40",
+      "net per trade not above the no-gate arm's",
+      "Monte-Carlo random-skip p 1 > 0.01",
+      "BH q 1 > 0.10 (m 3913)",
+      "no gain under roll costs",
+      "no gain under stress costs",
+      "no gain on design"
+     ]
+    },
+    "C": {
+     "period": "oos",
+     "base": {
+      "roll": {
+       "n": 24,
+       "net": 11594.81,
+       "per_trade": 483.12,
+       "win": 100.0,
+       "worst_day": 145.98,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 24,
+       "net": 11267.15,
+       "per_trade": 469.46,
+       "win": 100.0,
+       "worst_day": 133.31,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 24,
+       "net": 10666.44,
+       "per_trade": 444.44,
+       "win": 100.0,
+       "worst_day": 110.1,
+       "max_dd": 0.0
+      }
+     },
+     "kept": {
+      "roll": {
+       "n": 1,
+       "net": 3341.39,
+       "per_trade": 3341.39,
+       "win": 100.0,
+       "worst_day": 3341.39,
+       "max_dd": 0.0
+      },
+      "quoted": {
+       "n": 1,
+       "net": 3319.36,
+       "per_trade": 3319.36,
+       "win": 100.0,
+       "worst_day": 3319.36,
+       "max_dd": 0.0
+      },
+      "stress": {
+       "n": 1,
+       "net": 3278.98,
+       "per_trade": 3278.98,
+       "win": 100.0,
+       "worst_day": 3278.98,
+       "max_dd": 0.0
+      }
+     },
+     "p_norm": 3.5381710702975154e-06,
+     "p_mc": 0.041947902604869754,
+     "gain": {
+      "roll": 2858.27,
+      "quoted": 2849.9,
+      "stress": 2834.54
+     },
+     "stress_share": {
+      "1": 0.0,
+      "3": 0.0
+     },
+     "blocks": {
+      "2025Q2": 2686.14,
+      "2025Q3": null,
+      "2025Q4": null,
+      "2026Jan-Feb": null
+     },
+     "design_gain": 1664.3,
+     "q": 0.0034612158495185446,
+     "verdict": "fail",
+     "why": [
+      "1 kept OOS trades < 40",
+      "Monte-Carlo random-skip p 0.0419 > 0.01"
+     ]
+    }
+   },
+   "base_blocks": {
+    "2025Q2": {
+     "n": 13,
+     "net": 8231.88,
+     "per_trade": 633.22,
+     "win": 100.0,
+     "worst_day": 163.13,
+     "max_dd": 0.0
+    },
+    "2025Q3": {
+     "n": 11,
+     "net": 3035.26,
+     "per_trade": 275.93,
+     "win": 100.0,
+     "worst_day": 133.31,
+     "max_dd": 0.0
+    },
+    "2025Q4": {
+     "n": 0,
+     "net": 0.0,
+     "per_trade": null,
+     "win": null,
+     "worst_day": null,
+     "max_dd": null
+    },
+    "2026Jan-Feb": {
+     "n": 0,
+     "net": 0.0,
+     "per_trade": null,
+     "win": null,
+     "worst_day": null,
+     "max_dd": null
+    }
+   }
+  }
+ }
+}

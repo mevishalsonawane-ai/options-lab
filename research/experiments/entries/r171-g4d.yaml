@@ -1,0 +1,35 @@
+id: r171-g4d
+title: 'R171 G4d: G4b with the MEASURED pre-entry Roll spread instead of the assumed one'
+family: sizing-execution
+date: '2026-11-13'
+doc: research/hunt/r171_liquidity_gates/results/report.md
+hypothesis: 'Boss (13 Nov): skip-only liquidity / execution-cost gate G4d (G4b with the MEASURED pre-entry Roll spread instead
+  of the assumed one) raises net per trade on R51, R72, Liquidity 15+5 and the options_lab expiry put vs no gate, beats random
+  skips of the same size (BH q <= 0.10, m = 3913), >= 40 OOS trades, gain also under roll and stress costs and on design,
+  worst day / max DD not worse.'
+data_version: GitHub release research-data (nifty_prev, nifty_year, banknifty_prev_year_wide, banknifty_year_wide, finnifty_index,
+  sensex_index) fetched 13 Nov 2026; options_lab/data/expiry_cache; nothing on or after 2026-02-24
+period:
+  design: 2024-02-13..2025-03-31
+  holdout: 2025-04-01..2026-02-23 out-of-sample for the gates, read once (the expiry put's sealed last 30 sessions not read)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index (R51 / R72 / Liquidity); the options'' parity forward (expiry put)'
+- pre-entry option volume, premium, Roll estimate from 1-minute prices, DTE (filters only)
+model_or_rule: 'G4d: G4b with the MEASURED pre-entry Roll spread instead of the assumed one'
+settings: research/hunt/r171_liquidity_gates/PREREG.md; r171arms.py; r171study.py
+prereg: research/hunt/r171_liquidity_gates/PREREG.md
+variants_tried: 4
+results:
+  summary: 'R51: kept 622 of 1061 OOS trades, -Rs 95 a trade vs -Rs 88 (gain roll -Rs 19 / stress Rs 14), worst day -Rs 8,276,
+    max DD -Rs 59,263, random-skip p 0.564, q 1, fail; R72: kept 471 of 778 OOS trades, -Rs 46 a trade vs -Rs 30 (gain roll
+    -Rs 28 / stress Rs 7), worst day -Rs 9,101, max DD -Rs 40,702, random-skip p 0.622, q 1, fail; LIQ: kept 508 of 960 OOS
+    trades, -Rs 112 a trade vs -Rs 88 (gain roll -Rs 34 / stress -Rs 6), worst day -Rs 10,708, max DD -Rs 63,627, random-skip
+    p 0.711, q 1, fail; EXP: kept 24 of 24 OOS trades, Rs 469 a trade vs Rs 469 (gain roll Rs 0 / stress Rs 0), worst day
+    Rs 133, max DD Rs 0, random-skip p 1, q 1, fail. 0 of 4 passed.'
+  costs: dated statutory charges + Rs 20 an order (obuy 'dated') and the options_lab/costs.py spread law crossed half each
+    way; primary quoted, roll and stress shown; 1 lot at the dated lot
+holdout_read: true
+verdict: rejected

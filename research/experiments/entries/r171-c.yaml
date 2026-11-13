@@ -1,0 +1,35 @@
+id: r171-c
+title: 'R171 C: pre-registered combination per strategy, chosen on design only (AND of each family''s design-best qualifying
+  variant)'
+family: sizing-execution
+date: '2026-11-13'
+doc: research/hunt/r171_liquidity_gates/results/report.md
+hypothesis: 'Boss (13 Nov): skip-only liquidity / execution-cost gate C (pre-registered combination per strategy, chosen on
+  design only (AND of each family''s design-best qualifying variant)) raises net per trade on R51, R72, Liquidity 15+5 and
+  the options_lab expiry put vs no gate, beats random skips of the same size (BH q <= 0.10, m = 3913), >= 40 OOS trades, gain
+  also under roll and stress costs and on design, worst day / max DD not worse.'
+data_version: GitHub release research-data (nifty_prev, nifty_year, banknifty_prev_year_wide, banknifty_year_wide, finnifty_index,
+  sensex_index) fetched 13 Nov 2026; options_lab/data/expiry_cache; nothing on or after 2026-02-24
+period:
+  design: 2024-02-13..2025-03-31
+  holdout: 2025-04-01..2026-02-23 out-of-sample for the gates, read once (the expiry put's sealed last 30 sessions not read)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index (R51 / R72 / Liquidity); the options'' parity forward (expiry put)'
+- pre-entry option volume, premium, Roll estimate from 1-minute prices, DTE (filters only)
+model_or_rule: 'C: pre-registered combination per strategy, chosen on design only (AND of each family''s design-best qualifying
+  variant)'
+settings: research/hunt/r171_liquidity_gates/PREREG.md; r171arms.py; r171study.py
+prereg: research/hunt/r171_liquidity_gates/PREREG.md
+variants_tried: 4
+results:
+  summary: 'R51: no combination (nothing qualified on design); R72: no combination (nothing qualified on design); LIQ (G3c):
+    kept 732 of 960 OOS trades, -Rs 49 a trade vs -Rs 88 (gain roll Rs 41 / stress Rs 36), worst day -Rs 11,280, max DD -Rs
+    60,674, random-skip p 0.0572, q 1, fail; EXP (G2b): kept 1 of 24 OOS trades, Rs 3,319 a trade vs Rs 469 (gain roll Rs
+    2,858 / stress Rs 2,835), worst day Rs 3,319, max DD Rs 0, random-skip p 0.0419, q 0.00346, fail. 2 of 4 passed.'
+  costs: dated statutory charges + Rs 20 an order (obuy 'dated') and the options_lab/costs.py spread law crossed half each
+    way; primary quoted, roll and stress shown; 1 lot at the dated lot
+holdout_read: true
+verdict: inconclusive
