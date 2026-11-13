@@ -126,8 +126,8 @@ Premium levels are solved from the real fill. Rupee levels are for the whole pos
 C1 / C2 / C3 are chosen as in R169's section 3d, from R170's singles only, before each walk-forward quarter. A strike
 change (ITM2, D70) excludes the other. The time rules (T45, NIP30) exclude each other.
 
-That is 31 filters + 19 exits + 3 strike / stop changes + 3 combinations = **56 per arm**; x 3 arms x 3 lots =
-**504 tests**.
+That is 31 filters + 19 exits + 3 strike / stop changes + 3 combinations = **56 per arm** (61 with Amendment A); x 3 arms x 3 lots =
+**504 tests** (549 with Amendment A).
 
 ## 5. Gates
 
@@ -149,3 +149,41 @@ A pass gets an APP_SPEC; nothing in the app changes.
 pytest for every new function (empty / NaN data, warm-up, expiry day, square-off, the rupee levels from the real fill).
 The look-ahead guard covers every filter and exit: a decision at minute m is unchanged when all data after m is junk.
 The skip-only and tighten-only properties are tested on synthetic days.
+
+## Amendment A, 13 Nov 2026: Boss's mid-run message (written before any R170 number)
+
+Boss: *"Multiple support and resistance at once on all directions changes, fake breakout, fake volumn, actual volume,
+delta, fake buyyer seller, and all rhe other things."*
+
+Already covered above:
+- fake breakout: FK3, FK5, and R169's X6;
+- fake volume: V1, V2;
+- delta: D1, D2, D70, and R169's S1 / S2;
+- fake buyer / seller: I1, I2;
+- order-flow proxy: O1.
+
+Five filters are added (skip only; unknown never skips).
+
+**The level map.** Each session gets its levels from earlier sessions only, plus today's swings once confirmed:
+- 5-minute swing highs / lows (3 bars each side) of the previous 50 sessions;
+- 15-minute swing highs / lows (3 bars each side) of the previous 60 sessions;
+- floor pivots (P, R1, S1, R2, S2);
+- yesterday's high / low;
+- the previous week's high / low;
+- today's 5-minute swings, each confirmed 3 bars after it, so only swings confirmed by the signal bar.
+
+The broken range edge itself is not a level. "Ahead" means the trade's way from the signal close; "behind" means the
+other way.
+
+| id | from | rule (take the break only when ...) |
+|---|---|---|
+| S1 ALLSR | R155 F6 (all lines at once) | no level of the map lies within 0.25% ahead |
+| S2 ROOM | all directions | the nearest level ahead is at least as far away as the nearest level behind |
+| S3 CLEAR | all directions | NOT (levels within 0.25% both ahead AND behind: a crowded zone) |
+| A1 BANDVOL | actual volume (R144b V1) | the stored option band's (ATM +-4) volume so far today >= its median at the same minute over the previous 20 sessions (needs 10) |
+| Q1 NOSHORT | OI-price build-up (R144b F2, R86) | NOT (the bought option is in short build-up over the 15 minutes to the signal: price down, OI up) |
+
+New count:
+- 36 filters + 19 exits + 3 strike / stop changes + 3 combinations = **61 per arm**;
+- x 3 arms x 3 lots = **549 tests**;
+- BH m = 3,265 + 549 = **3,814**.
