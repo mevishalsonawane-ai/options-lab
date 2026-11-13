@@ -368,7 +368,7 @@ def test_expiry_day_squares_off_earlier():
 
 
 def test_bh_total_counts_earlier_tests():
-    q = X.bh_total([0.001, 0.5], 1000)
-    assert q[0] == pytest.approx(0.5) and q[1] == 1.0
+    q = X.bh_total([0.0001, 0.5], 1000)
+    assert q[0] == pytest.approx(0.1) and q[1] == 1.0
     assert X.bh_total([], 10).size == 0
     assert X.bh_total([0.01, 0.02], 2) == pytest.approx([0.02, 0.02])
