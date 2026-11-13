@@ -1,0 +1,34 @@
+id: r168-r51-t2s1-3lot
+title: 'R168 R51 Donchian 20 (+ Supertrend 10, 3), 3 lots: +Rs 2,000 target / -Rs 1,000 stop (whole position, net)'
+family: trade-management
+date: '2026-11-13'
+doc: research/hunt/r168_donchian_2k1k/results/report.md
+hypothesis: 'Boss (13 Nov): "Research 2k profit and 1k loss". A +Rs 2,000 target with a -Rs 1,000 stop (2 : 1) raises the
+  win rate >= 5 points with net not lower than today''s exits in the walk-forward year and the final, net > 0, beats random-exit
+  twins (BH q <= 0.10, m = 2,674), >= 40 final trades.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 12 Nov 2026; R51 Amendment A clean stores
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward year Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-13 read once by R168 (read by many earlier studies)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars (the arm''s Donchian entries, unchanged); exits: rupee target and stop on the premium'
+model_or_rule: R51 Donchian 20 (+ Supertrend 10, 3) with +Rs 2,000 target / -Rs 1,000 stop (nearer of it and -15% acts), 3
+  lot(s)
+settings: research/hunt/r168_donchian_2k1k/PREREG.md; r168study.py (R152's engine)
+prereg: research/hunt/r168_donchian_2k1k/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Walk-forward year: 3267 trades, win 31.1% (today 46.4%), net Rs -360,301 (today Rs 920,100). Final: 1779 trades,
+    win 28.7% (today 46.0%), net Rs -415,335 (today Rs 557,695). Twin p 1, BH q 1. Fails: wf: win rate not up 5 points; wf:
+    net lower than today''s; final: win rate not up 5 points; final: net lower than today''s; design: net not positive; wf:
+    net not positive; final: net not positive; BH q 1 > 0.1.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (stop sales -10 bps and 2x the half-spread, gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes in the app.

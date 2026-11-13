@@ -1,0 +1,112 @@
+{
+ "m_total": 2674,
+ "tests": [
+  {
+   "arm": "R72",
+   "lots": 1,
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "lots": 2,
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "wf: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R72",
+   "lots": 3,
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "wf: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "lots": 1,
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "wf: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "lots": 2,
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "wf: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  },
+  {
+   "arm": "R51",
+   "lots": 3,
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "passed": false,
+   "fails": [
+    "wf: win rate not up 5 points",
+    "wf: net lower than today's",
+    "final: win rate not up 5 points",
+    "final: net lower than today's",
+    "design: net not positive",
+    "wf: net not positive",
+    "final: net not positive",
+    "BH q 1 > 0.1"
+   ]
+  }
+ ]
+}
