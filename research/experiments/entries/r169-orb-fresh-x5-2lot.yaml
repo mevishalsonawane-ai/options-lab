@@ -1,0 +1,29 @@
+id: r169-orb-fresh-x5-2lot
+title: 'R169 X5 on ORB Fresh (BANKNIFTY), 2 lot: SRT: out at yesterday''s high / low (R150 levels)'
+family: orb
+date: '2026-11-13'
+doc: research/hunt/r169_orb_enhance/results/report.md
+hypothesis: 'Boss (13 Nov): use the new knowledge to enhance ORB. SRT: out at yesterday''s high / low (R150 levels) raises
+  net (drawdown not worse) or the win rate by >= 5 points (net not lower) vs the arm''s current rules, in walk-forward AND
+  final, beats random twins (p <= 0.05, BH q <= 0.10, m = 2871), >= 40 final trades, within -Rs 40k drawdown / -Rs 13k month.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m BANKNIFTY + INDIAVIX, options_rolling_1m BANKNIFTY WEEK) copied
+  13 Nov 2026; R3 session store rebuilt; R123 N1 prediction rows (derived/r123/cleaned)
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-12 read once by R169 (read by many earlier studies)
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the index (BANKNIFTY 5-minute bars); option chain / network only as context'
+model_or_rule: ORB Fresh with X5; 2 lot(s)
+settings: research/hunt/r169_orb_enhance/PREREG.md section 3; r169lib.py; r169cfg.py
+prereg: research/hunt/r169_orb_enhance/PREREG.md
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'WF: 231 trades, win 39.0% (today 38.1%), net -Rs 40,674 (today -Rs 38,183), max DD -Rs 57,730. Final: 128 trades,
+    win 44.5% (today 44.5%), net Rs 10,679 (today Rs 10,637), worst month -Rs 6,241, max DD -Rs 13,731. Twin p 0.0005, BH
+    q 0.239. Fails: WF: neither net up with drawdown not worse, nor +5 win points with net not lower; BH q 0.239 > 0.10 (m
+    2871); outside Boss''s limits (-Rs 40k drawdown / -Rs 13k month).'
+  costs: dated Zerodha charges on the whole quantity, R17 fills sized to the order

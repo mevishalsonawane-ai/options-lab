@@ -1,0 +1,50 @@
+{
+ "window": [
+  "2026-10-13",
+  "2026-10-19"
+ ],
+ "sessions": 5,
+ "note": "extra look, never gated; 1 lot",
+ "rows": {
+  "orb|B0": {
+   "trades": 2,
+   "wins": 1,
+   "net": -973
+  },
+  "orb|X3": {
+   "trades": 2,
+   "wins": 1,
+   "net": -973
+  },
+  "orb|S2": {
+   "trades": 2,
+   "wins": 1,
+   "net": -973
+  },
+  "orb|F5": {
+   "trades": 0,
+   "wins": 0,
+   "net": 0
+  },
+  "orb_sweep|B0": {
+   "trades": 3,
+   "wins": 1,
+   "net": -966
+  },
+  "orb_sweep|X3": {
+   "trades": 3,
+   "wins": 0,
+   "net": -2021
+  },
+  "orb_sweep|S2": {
+   "trades": 3,
+   "wins": 1,
+   "net": -966
+  },
+  "orb_sweep|F5": {
+   "trades": 3,
+   "wins": 1,
+   "net": -966
+  }
+ }
+}
