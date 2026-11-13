@@ -1,0 +1,29 @@
+id: r170-orb-sweep-p14-1lot
+title: 'R170 P14 on ORB Sweep (BANKNIFTY), 1 lot: WKA: wick against < 50% (R155 F14)'
+family: orb
+date: '2026-11-13'
+doc: research/hunt/r170_orb_donchian_ideas/results/report.md
+hypothesis: 'Boss (13 Nov): try every other Donchian-study rule on ORB. WKA: wick against < 50% (R155 F14) raises net (drawdown
+  not worse) or the win rate by >= 5 points (net not lower) vs the arm''s current rules, in walk-forward AND final, beats
+  random twins (p <= 0.05, BH q <= 0.10, m = 3841), >= 40 final trades, within -Rs 40k drawdown / -Rs 13k month.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m BANKNIFTY + INDIAVIX, options_rolling_1m BANKNIFTY WEEK) copied
+  13 Nov 2026; R3 session store rebuilt; R123 N1 prediction rows (derived/r123/cleaned)
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-12 another look by R170 (read by R169 today and many earlier studies)
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the index (BANKNIFTY 5-minute bars); option chain / network only as context'
+model_or_rule: ORB Sweep with P14; 1 lot(s)
+settings: research/hunt/r170_orb_donchian_ideas/PREREG.md (+ Amendments A, B); r170lib.py; r170study.py
+prereg: research/hunt/r170_orb_donchian_ideas/PREREG.md
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'WF: 308 trades, win 25.0% (today 24.8%), net -Rs 85,543 (today -Rs 98,449), max DD -Rs 92,735. Final: 170 trades,
+    win 26.5% (today 28.4%), net -Rs 58,321 (today -Rs 54,421), worst month -Rs 16,477, max DD -Rs 58,321. Twin p 0.957, BH
+    q 1. Fails: final: neither net up with drawdown not worse, nor +5 win points with net not lower; twin p 0.957 > 0.05;
+    BH q 1 > 0.10 (m 3841); outside Boss''s limits (-Rs 40k drawdown / -Rs 13k month).'
+  costs: dated Zerodha charges on the whole quantity, R17 fills sized to the order

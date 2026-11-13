@@ -1,0 +1,28 @@
+id: r170-orb-sweep-volp-3lot
+title: 'R170 VOLP on ORB Sweep (BANKNIFTY), 3 lot: premium ATR chandelier, tighten-only (R167 VOLP)'
+family: orb
+date: '2026-11-13'
+doc: research/hunt/r170_orb_donchian_ideas/results/report.md
+hypothesis: 'Boss (13 Nov): try every other Donchian-study rule on ORB. premium ATR chandelier, tighten-only (R167 VOLP) raises
+  net (drawdown not worse) or the win rate by >= 5 points (net not lower) vs the arm''s current rules, in walk-forward AND
+  final, beats random twins (p <= 0.05, BH q <= 0.10, m = 3841), >= 40 final trades, within -Rs 40k drawdown / -Rs 13k month.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m BANKNIFTY + INDIAVIX, options_rolling_1m BANKNIFTY WEEK) copied
+  13 Nov 2026; R3 session store rebuilt; R123 N1 prediction rows (derived/r123/cleaned)
+period:
+  design: 2024-11-20..2026-03-31 (walk-forward window Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-12 another look by R170 (read by R169 today and many earlier studies)
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the index (BANKNIFTY 5-minute bars); option chain / network only as context'
+model_or_rule: ORB Sweep with VOLP; 3 lot(s)
+settings: research/hunt/r170_orb_donchian_ideas/PREREG.md (+ Amendments A, B); r170lib.py; r170study.py
+prereg: research/hunt/r170_orb_donchian_ideas/PREREG.md
+variants_tried: 1
+holdout_read: true
+verdict: rejected
+results:
+  summary: 'WF: 344 trades, win 26.5% (today 25.2%), net -Rs 239,290 (today -Rs 269,921), max DD -Rs 252,797. Final: 184 trades,
+    win 28.8% (today 28.4%), net -Rs 125,787 (today -Rs 151,371), worst month -Rs 48,847, max DD -Rs 129,408. Twin p 0.995,
+    BH q 1. Fails: twin p 0.995 > 0.05; BH q 1 > 0.10 (m 3841); outside Boss''s limits (-Rs 40k drawdown / -Rs 13k month).'
+  costs: dated Zerodha charges on the whole quantity, R17 fills sized to the order
