@@ -1,0 +1,46 @@
+id: r168-sweep-midcpnifty-a
+title: R168 ORB Sweep (the app's entry rules) on MIDCPNIFTY (same rules, not an app arm), 10-15 point exits, reading A (premium
+  points (target / stop on the option's premium))
+family: orb
+date: '2026-11-13'
+doc: research/hunt/r168_orb_10_15/results/report.md
+hypothesis: 'Boss (13 Nov): "Try ORB with 10-15 points only." The app''s own ORB Sweep entries (09:15-10:00 opening range,
+  its window, caps and cool-down) on MIDCPNIFTY with only the exits replaced: target 10 / 12 / 15 points on the option premium,
+  stop 1:1 or 1:1.5, time stop 15 or 30 minutes, 15:15 square-off (15:05 expiry). Gates: net > 0 in P1, P2 and P3; random-exit
+  twin BH q <= 0.10 with m = 3058; >= 40 final trades; above the arm''s own exits in P2 and P3.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 13 Nov 2026; R51
+  Amendment A clean stores from 20 Nov 2024, R154 early store (same code) Aug 2021 - 19 Nov 2024
+period:
+  design: P1 first option day (2021-08 / MIDCPNIFTY 2023-01 / SENSEX 2023-05)..2025-03-31; P2 walk-forward 2025-04-01..2026-03-31
+  holdout: '2026-04-01..2026-10-13 read once (already read by R14 / H20 for the ORB arms, R51-R167 and SCALP17: weak evidence)'
+instruments:
+- MIDCPNIFTY
+features:
+- 'signal source: index 5-min bars: a wick beyond the 09:15-10:00 range edge that closes back inside (PE at the high, CE at
+  the low); buys the ATM option (strike from the 09:20 bar), same-day expiry on an expiry day'
+- 'exit: premium points (target / stop on the option''s premium)'
+model_or_rule: ORB Sweep on MIDCPNIFTY; exits A10s10t15, A10s10t30, A10s15t15, A10s15t30, A12s12t15, A12s12t30, A12s18t15,
+  A12s18t30, A15s15t15, A15s15t30, A15s22.5t15, A15s22.5t30
+settings: research/hunt/r168_orb_10_15/r168cfg.py ARM_RULES, RULES; PREREG.md sections 1-3
+prereg: research/hunt/r168_orb_10_15/PREREG.md
+variants_tried: 12
+results:
+  summary: '1 lot. A10s10t15: P1 405 tr -Rs 86,649; P2 305 tr -Rs 61,349; P3 198 tr, win 47% (break-even 52%), -Rs 14,749;
+    twin p 0.6467, q 1.0 | A10s10t30: P1 393 tr -Rs 99,856; P2 300 tr -Rs 83,644; P3 193 tr, win 48% (break-even 53%), -Rs
+    17,217; twin p 0.9261, q 1.0 | A10s15t15: P1 401 tr -Rs 82,879; P2 303 tr -Rs 54,667; P3 198 tr, win 47% (break-even 51%),
+    -Rs 9,866; twin p 0.4311, q 1.0 | A10s15t30: P1 386 tr -Rs 1,03,873; P2 297 tr -Rs 1,04,467; P3 193 tr, win 49% (break-even
+    53%), -Rs 12,538; twin p 0.7605, q 1.0 | A12s12t15: P1 402 tr -Rs 71,705; P2 304 tr -Rs 64,741; P3 198 tr, win 46% (break-even
+    50%), -Rs 10,627; twin p 0.4411, q 1.0 | A12s12t30: P1 388 tr -Rs 96,969; P2 298 tr -Rs 1,02,276; P3 192 tr, win 48% (break-even
+    50%), -Rs 8,396; twin p 0.7365, q 1.0 | A12s18t15: P1 401 tr -Rs 64,325; P2 303 tr -Rs 56,184; P3 198 tr, win 46% (break-even
+    49%), -Rs 7,767; twin p 0.2335, q 1.0 | A12s18t30: P1 384 tr -Rs 81,143; P2 295 tr -Rs 1,01,925; P3 191 tr, win 49% (break-even
+    51%), -Rs 5,289; twin p 0.3293, q 1.0 | A15s15t15: P1 401 tr -Rs 70,015; P2 303 tr -Rs 58,752; P3 198 tr, win 45% (break-even
+    47%), -Rs 6,111; twin p 0.2395, q 1.0 | A15s15t30: P1 385 tr -Rs 90,557; P2 294 tr -Rs 1,07,281; P3 191 tr, win 47% (break-even
+    47%), -Rs 3,196; twin p 0.3952, q 1.0 | A15s22.5t15: P1 400 tr -Rs 52,466; P2 303 tr -Rs 51,726; P3 198 tr, win 44% (break-even
+    46%), -Rs 5,822; twin p 0.1457, q 1.0 | A15s22.5t30: P1 382 tr -Rs 76,318; P2 291 tr -Rs 97,088; P3 190 tr, win 47% (break-even
+    50%), -Rs 8,646; twin p 0.4032, q 1.0. Own exits (B0): P1 273 tr -Rs 1,42,726; P2 209 tr -Rs 82,176; P3 131 tr Rs 14,897.
+    Every rule fails the gates.'
+  costs: dated Zerodha charges, R17 fills (buy +5 bps + half-spread ticks, stop sales -10 bps and 2x the ticks, gaps at the
+    open), limit targets at their price, 1 lot (2-3 lots in the report)
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying; nothing changes in the app (the ORB family is parked since 13 Oct).
