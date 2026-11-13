@@ -115,3 +115,49 @@ random-skip p, q, under quoted (plus roll / stress net). Sample sizes with every
 Write the exact app spec (skip-only; on LIVE it starts in SHADOW behind an off-by-default switch, CLAUDE.md), and add the
 gate code + tests to `options_lab/features/gates.py` without changing any default existing tests rely on. The gate
 functions are added to `options_lab` in any case (they are needed to run this study); `android/**` does not change.
+
+---
+
+## Amendment A (13 Nov 2026, after the gate results, BEFORE any Amendment A number): measure the spread, don't assume it
+
+Boss, 13 Nov: *"think with new perspective, and enhance it"*.
+
+The gate study's main finding was not about liquidity: near-the-money NIFTY / BANKNIFTY options always trade, and
+depth never binds. What decides whether R51 / R72 / Liquidity make money is the ASSUMED spread (out of sample they are
+positive at `roll` and negative at `quoted`). So Amendment A stops guessing and measures it from the real 1-minute
+prices. **It is a MEASUREMENT, not a new gate: nothing here can pass or fail, it adds no BH test, and it changes no rule.**
+It re-reads the out-of-sample trades for costing only (a second look, disclosed).
+
+### A1. Three spread estimators from real prices (each on the traded minutes of the 30-minute pre-entry window)
+
+| id | estimator | reads | known bias |
+|---|---|---|---|
+| ROLL | Roll (1984): 2 sqrt(-cov(dp_t, dp_t-1)) (already in R171) | closes | low when prices trend (cov >= 0 -> 0) |
+| AR | Abdi-Ranaldo (2017): s^2 = 4 mean((c_t - eta_t)(c_t - eta_t+1)), eta = mid of log high / low, c = log close | close, high, low | robust to trend; noisy on few bars |
+| CS | Corwin-Schultz (2012) two-bar high-low estimator, negative pairs set to 0, averaged | high, low | high when the option moves a lot inside a minute (volatility read as spread) |
+
+Each is relative (a share of the price), needs >= 10 traded minutes (else not computed) and is turned into points at
+the trade's premium. MEASURED = the median of the estimators that exist, floored at one tick (Rs 0.05). CS is kept
+separately as the conservative (wide) bound.
+
+### A2. What is reported (design and out-of-sample, per strategy and index)
+
+1. The distribution of each estimator in points and as a share of premium, beside the costs.py law at the same premium
+   (roll / quoted / stress), and the share of trades whose MEASURED spread is below roll, between roll and quoted, between
+   quoted and stress, above stress.
+2. A refit of the spread law on DESIGN trades only: MEASURED points = a + b x premium (least squares, and a median
+   (quantile 0.5) fit), compared with costs.py's 0.162 + 0.00292 x premium (in-session) and its regime scalings, and
+   checked on the out-of-sample trades (median absolute error of each law).
+3. Every strategy re-priced with the MEASURED spread (and with CS as the wide bound): net per trade, total, win %, worst
+   day, max DD, design and out-of-sample, beside the three costs.py regimes.
+4. The R171 gates' gains re-priced the same way (sensitivity only; the gate verdicts stay as read).
+
+### A3. Honest limits written before the numbers
+
+- These are statistical estimates from trade prices, not quotes. They measure the EFFECTIVE spread paid by the
+  average 1-minute trade, which can be narrower than the quoted top of book and says nothing about a market order larger
+  than the depth at the touch (the phone's sealed depth recordings remain the only true check; still not opened).
+- A 1-minute bar mixes many trades; high-low estimators read part of the minute's real move as spread (CS biased wide),
+  Roll reads trends as zero spread (biased narrow). Showing all three brackets the truth; none of them is it.
+- Data: the same release data as R171 (nothing on or after 2026-02-24). The expiry put is left out (its cache has
+  closes only and no high / low).
