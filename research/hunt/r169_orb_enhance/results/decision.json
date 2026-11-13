@@ -1,0 +1,4315 @@
+{
+ "m_total": 2871,
+ "tests": 207,
+ "passed": [],
+ "tests_detail": {
+  "orb|1|F1": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.8 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.8000999500249875,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|F2": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.096 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "4 final trades < 40"
+   ],
+   "p": 0.095952023988006,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|F3": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.617 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.6166916541729135,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|F4": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|F5": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.296 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.2958520739630185,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|F6": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.849 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.8490754622688655,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|F7": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.374 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.37381309345327335,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|F8": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|F9": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.689 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.688655672163918,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|X1": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|X2": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.04597701149425287,
+   "q": 1.0,
+   "q_alone": 0.432601880877743,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|X3": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.009495252373813094,
+   "q": 1.0,
+   "q_alone": 0.18965517241379312,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|X4": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|X5": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "BH q 0.239 > 0.10 (m 2871)"
+   ],
+   "p": 0.0004997501249375312,
+   "q": 0.23913043478260868,
+   "q_alone": 0.017241379310344827,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|X6": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.678 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.6781609195402298,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|S1": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.07 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.06996501749125437,
+   "q": 1.0,
+   "q_alone": 0.46551724137931033,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|1|S2": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.0525 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.05247376311844078,
+   "q": 1.0,
+   "q_alone": 0.43448275862068964,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|1|S3": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.185 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.18490754622688654,
+   "q": 1.0,
+   "q_alone": 0.7394636015325672,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|1|W1": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.969 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.9690154922538731,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|1|L1": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.872 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8715642178910544,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|1|C1": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "C1",
+   "changes": [
+    "F2",
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|C2": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "C2",
+   "changes": [
+    "F2",
+    "F7",
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|1|C3": {
+   "arm": "orb",
+   "lots": 1,
+   "change": "C3",
+   "changes": [
+    "F2",
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "BH q 1 > 0.10 (m 2871)",
+    "4 final trades < 40"
+   ],
+   "p": 0.025987006496751622,
+   "q": 1.0,
+   "q_alone": 0.39162561576354676,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F1": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.787 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7871064467766117,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F2": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.109 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "4 final trades < 40"
+   ],
+   "p": 0.10944527736131934,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F3": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.588 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.5882058970514743,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F4": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F5": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.303 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.30334832583708143,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F6": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.857 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8570714642678661,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F7": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.386 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.38630684657671166,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F8": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|F9": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.699 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6991504247876063,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|X1": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|X2": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.04597701149425287,
+   "q": 1.0,
+   "q_alone": 0.432601880877743,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|X3": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.0079960019990005,
+   "q": 1.0,
+   "q_alone": 0.1839080459770115,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|X4": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|X5": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "BH q 0.239 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.0004997501249375312,
+   "q": 0.23913043478260868,
+   "q_alone": 0.017241379310344827,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|X6": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.661 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6606696651674163,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|S1": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.0735 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.0734632683658171,
+   "q": 1.0,
+   "q_alone": 0.46551724137931033,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|2|S2": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.057 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.05697151424287856,
+   "q": 1.0,
+   "q_alone": 0.4535809018567639,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|2|S3": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.187 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.1874062968515742,
+   "q": 1.0,
+   "q_alone": 0.7394636015325672,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|2|W1": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.981 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9810094952523738,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|2|L1": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.884 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8840579710144928,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|2|C1": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "C1",
+   "changes": [
+    "F7",
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|C2": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "C2",
+   "changes": [
+    "F7",
+    "F2",
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|2|C3": {
+   "arm": "orb",
+   "lots": 2,
+   "change": "C3",
+   "changes": [
+    "F7",
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.13 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.13043478260869565,
+   "q": 1.0,
+   "q_alone": 0.5625,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F1": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.804 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8040979510244878,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F2": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.111 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "4 final trades < 40"
+   ],
+   "p": 0.11094452773613193,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F3": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.642 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6416791604197901,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F4": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F5": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.36 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.36031984007996004,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F6": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.834 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8340829585207397,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F7": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.416 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.41629185407296354,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F8": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|F9": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.686 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6861569215392304,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|X1": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|X2": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.04447776111944028,
+   "q": 1.0,
+   "q_alone": 0.432601880877743,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|X3": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.0069965017491254375,
+   "q": 1.0,
+   "q_alone": 0.1810344827586207,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|X4": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|X5": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "BH q 0.239 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.0004997501249375312,
+   "q": 0.23913043478260868,
+   "q_alone": 0.017241379310344827,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|X6": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.652 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6521739130434783,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|S1": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.075 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.07496251874062969,
+   "q": 1.0,
+   "q_alone": 0.46551724137931033,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|3|S2": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.066 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.06596701649175413,
+   "q": 1.0,
+   "q_alone": 0.46551724137931033,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|3|S3": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.193 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.19290354822588707,
+   "q": 1.0,
+   "q_alone": 0.7394636015325672,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|3|W1": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.978 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9775112443778111,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|3|L1": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.875 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8745627186406797,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb|3|C1": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "C1",
+   "changes": [
+    "F7",
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|C2": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "C2",
+   "changes": [
+    "F7",
+    "F2",
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb|3|C3": {
+   "arm": "orb",
+   "lots": 3,
+   "change": "C3",
+   "changes": [
+    "F7",
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.106 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.10644677661169415,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F1": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.776 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.7756121939030485,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F2": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.112 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "4 final trades < 40"
+   ],
+   "p": 0.111944027986007,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F3": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.581 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.5807096451774113,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F4": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F5": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.304 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.30434782608695654,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F6": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.856 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.856071964017991,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F7": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.393 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.3933033483258371,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F8": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|F9": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.709 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.7086456771614192,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|X1": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|X2": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.041979010494752625,
+   "q": 1.0,
+   "q_alone": 0.432601880877743,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|X3": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.010994502748625687,
+   "q": 1.0,
+   "q_alone": 0.18965517241379312,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|X4": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|X5": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "BH q 0.239 > 0.10 (m 2871)"
+   ],
+   "p": 0.0004997501249375312,
+   "q": 0.23913043478260868,
+   "q_alone": 0.017241379310344827,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|X6": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.684 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.6836581709145427,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|S1": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.0635 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.06346826586706647,
+   "q": 1.0,
+   "q_alone": 0.46551724137931033,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|1|S2": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.049475262368815595,
+   "q": 1.0,
+   "q_alone": 0.43448275862068964,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|1|S3": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.18 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.18040979510244878,
+   "q": 1.0,
+   "q_alone": 0.7394636015325672,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|1|W1": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.979 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.9785107446276862,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|1|L1": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.886 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8860569715142429,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|1|C1": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "C1",
+   "changes": [
+    "F2",
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|C2": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "C2",
+   "changes": [
+    "F2",
+    "F7",
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|1|C3": {
+   "arm": "orb_fresh",
+   "lots": 1,
+   "change": "C3",
+   "changes": [
+    "F2",
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "BH q 1 > 0.10 (m 2871)",
+    "4 final trades < 40"
+   ],
+   "p": 0.026486756621689155,
+   "q": 1.0,
+   "q_alone": 0.39162561576354676,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F1": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.756 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7556221889055472,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F2": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.11 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "4 final trades < 40"
+   ],
+   "p": 0.10994502748625687,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F3": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.562 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.5622188905547226,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F4": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F5": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.293 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.2933533233383308,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F6": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.836 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8360819590204898,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F7": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.375 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.3748125937031484,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F8": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|F9": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.712 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.712143928035982,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|X1": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|X2": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.0525 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.05247376311844078,
+   "q": 1.0,
+   "q_alone": 0.43448275862068964,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|X3": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.006496751624187906,
+   "q": 1.0,
+   "q_alone": 0.1810344827586207,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|X4": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|X5": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "BH q 0.239 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.0004997501249375312,
+   "q": 0.23913043478260868,
+   "q_alone": 0.017241379310344827,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|X6": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.705 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7051474262868566,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|S1": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.0765 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.07646176911544228,
+   "q": 1.0,
+   "q_alone": 0.46551724137931033,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|2|S2": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.065 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.06496751624187906,
+   "q": 1.0,
+   "q_alone": 0.46551724137931033,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|2|S3": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.192 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.191904047976012,
+   "q": 1.0,
+   "q_alone": 0.7394636015325672,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|2|W1": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.971 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9710144927536232,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|2|L1": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.877 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8770614692653673,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|2|C1": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "C1",
+   "changes": [
+    "F7",
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|C2": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "C2",
+   "changes": [
+    "F7",
+    "F2",
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|2|C3": {
+   "arm": "orb_fresh",
+   "lots": 2,
+   "change": "C3",
+   "changes": [
+    "F7",
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.122 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.12243878060969515,
+   "q": 1.0,
+   "q_alone": 0.5392516507703595,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F1": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.81 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8100949525237381,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F2": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.102 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "4 final trades < 40"
+   ],
+   "p": 0.1024487756121939,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F3": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.629 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6291854072963519,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F4": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F5": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.348 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.34832583708145926,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F6": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.837 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8365817091454273,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F7": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.409 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.40879560219890054,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F8": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|F9": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.695 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6951524237881059,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|X1": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|X2": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.04047976011994003,
+   "q": 1.0,
+   "q_alone": 0.432601880877743,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|X3": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.010994502748625687,
+   "q": 1.0,
+   "q_alone": 0.18965517241379312,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|X4": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|X5": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "BH q 0.239 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.0004997501249375312,
+   "q": 0.23913043478260868,
+   "q_alone": 0.017241379310344827,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|X6": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.661 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6606696651674163,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|S1": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.088 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.0879560219890055,
+   "q": 1.0,
+   "q_alone": 0.5201970443349754,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|3|S2": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.07 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.06996501749125437,
+   "q": 1.0,
+   "q_alone": 0.46551724137931033,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|3|S3": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.188 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.18790604697651175,
+   "q": 1.0,
+   "q_alone": 0.7394636015325672,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|3|W1": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.977 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9770114942528736,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|3|L1": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.877 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8765617191404298,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_fresh|3|C1": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "C1",
+   "changes": [
+    "F7",
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|C2": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "C2",
+   "changes": [
+    "F7",
+    "F2",
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_fresh|3|C3": {
+   "arm": "orb_fresh",
+   "lots": 3,
+   "change": "C3",
+   "changes": [
+    "F7",
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.113 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.11294352823588207,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F1": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.828 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "31 final trades < 40"
+   ],
+   "p": 0.8275862068965517,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F2": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.426 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "3 final trades < 40"
+   ],
+   "p": 0.4257871064467766,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F3": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.117 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.11744127936031984,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F4": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.833 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "33 final trades < 40"
+   ],
+   "p": 0.8325837081459271,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F5": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.729 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7286356821589205,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F6": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.737 > 0.05",
+    "BH q 1 > 0.10 (m 2871)"
+   ],
+   "p": 0.7371314342828585,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F7": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.748 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "17 final trades < 40"
+   ],
+   "p": 0.7476261869065467,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F8": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.531 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.5312343828085957,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|F9": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.465 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.46476761619190404,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|X1": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.04147926036981509,
+   "q": 1.0,
+   "q_alone": 0.432601880877743,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|X2": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.989 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9890054972513743,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|X3": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.964 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9640179910044977,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|X4": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.769 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7691154422788605,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|X5": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.61 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6096951524237881,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|X6": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.976 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9760119940029985,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|S1": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.585 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.585207396301849,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|1|S2": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.671 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6711644177911045,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|1|S3": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.762 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7621189405297352,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|1|W1": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.657 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6571714142928535,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|1|L1": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.986 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9855072463768116,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|1|C1": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "C1",
+   "changes": [
+    "F2",
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.64 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "1 final trades < 40"
+   ],
+   "p": 0.63968015992004,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|C2": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "C2",
+   "changes": [
+    "F2",
+    "F1",
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|1|C3": {
+   "arm": "orb_sweep",
+   "lots": 1,
+   "change": "C3",
+   "changes": [
+    "F2",
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.642 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "3 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6421789105447276,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F1": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.844 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "31 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8435782108945528,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F2": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.413 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "3 final trades < 40"
+   ],
+   "p": 0.41329335332333833,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F3": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.106 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.10594702648675662,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F4": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.799 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "33 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7986006996501749,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F5": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.717 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7171414292853573,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F6": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.725 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7246376811594203,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F7": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.719 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "17 final trades < 40"
+   ],
+   "p": 0.7191404297851074,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F8": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.505 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.5052473763118441,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|F9": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.454 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.4542728635682159,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|X1": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.04047976011994003,
+   "q": 1.0,
+   "q_alone": 0.432601880877743,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|X2": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.993 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9930034982508745,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|X3": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.965 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9645177411294353,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|X4": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.788 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7881059470264867,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|X5": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.65 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6501749125437282,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|X6": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.98 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9800099950024987,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|S1": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.59 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.5902048975512244,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|2|S2": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.656 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.655672163918041,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|2|S3": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.811 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8110944527736131,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|2|W1": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.609 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6086956521739131,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|2|L1": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.982 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9815092453773113,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|2|C1": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "C1",
+   "changes": [
+    "F2",
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.633 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "1 final trades < 40"
+   ],
+   "p": 0.6331834082958521,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|C2": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "C2",
+   "changes": [
+    "F2",
+    "F1",
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|2|C3": {
+   "arm": "orb_sweep",
+   "lots": 2,
+   "change": "C3",
+   "changes": [
+    "F2",
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.651 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "3 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6511744127936032,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F1": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F1",
+   "changes": [
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.825 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "31 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8245877061469266,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F2": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F2",
+   "changes": [
+    "F2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.431 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "3 final trades < 40"
+   ],
+   "p": 0.4312843578210895,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F3": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F3",
+   "changes": [
+    "F3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.118 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.11794102948525736,
+   "q": 1.0,
+   "q_alone": 0.5307346326836582,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F4": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F4",
+   "changes": [
+    "F4"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.819 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "33 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8185907046476761,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F5": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F5",
+   "changes": [
+    "F5"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.713 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7126436781609196,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F6": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F6",
+   "changes": [
+    "F6"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.736 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7361319340329835,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F7": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F7",
+   "changes": [
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.728 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "17 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7276361819090454,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F8": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F8",
+   "changes": [
+    "F8"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.503 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.5032483758120939,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|F9": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "F9",
+   "changes": [
+    "F9"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.467 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.46676661669165415,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|X1": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "X1",
+   "changes": [
+    "X1"
+   ],
+   "passed": false,
+   "why": [
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.04547726136931534,
+   "q": 1.0,
+   "q_alone": 0.432601880877743,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|X2": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "X2",
+   "changes": [
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.962 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9620189905047476,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|X3": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "X3",
+   "changes": [
+    "X3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.954 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9540229885057471,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|X4": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "X4",
+   "changes": [
+    "X4"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.782 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.7816091954022989,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|X5": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "X5",
+   "changes": [
+    "X5"
+   ],
+   "passed": false,
+   "why": [
+    "WF: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.632 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.632183908045977,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": null,
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|X6": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "X6",
+   "changes": [
+    "X6"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.984 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.984007996001999,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|S1": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "S1",
+   "changes": [
+    "S1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.596 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.5957021489255372,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|3|S2": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "S2",
+   "changes": [
+    "S2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.647 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6471764117941029,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|3|S3": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "S3",
+   "changes": [
+    "S3"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.805 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.8050974512743628,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|3|W1": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "W1",
+   "changes": [
+    "W1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.611 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6111944027986007,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|3|L1": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "L1",
+   "changes": [
+    "L1"
+   ],
+   "passed": false,
+   "why": [
+    "final: neither net up with drawdown not worse, nor +5 win points with net not lower",
+    "twin p 0.986 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.9860069965017492,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": null,
+   "risk": "changes entries / size (would need Boss's explicit choice)"
+  },
+  "orb_sweep|3|C1": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "C1",
+   "changes": [
+    "F2",
+    "F1"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.604 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "1 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6036981509245377,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|C2": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "C2",
+   "changes": [
+    "F2",
+    "F1",
+    "F7"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 1 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "0 final trades < 40"
+   ],
+   "p": 1.0,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  },
+  "orb_sweep|3|C3": {
+   "arm": "orb_sweep",
+   "lots": 3,
+   "change": "C3",
+   "changes": [
+    "F2",
+    "X2"
+   ],
+   "passed": false,
+   "why": [
+    "twin p 0.642 > 0.05",
+    "BH q 1 > 0.10 (m 2871)",
+    "3 final trades < 40",
+    "outside Boss's limits (-Rs 40k drawdown / -Rs 13k month)"
+   ],
+   "p": 0.6421789105447276,
+   "q": 1.0,
+   "q_alone": 1.0,
+   "branch_wf": "net",
+   "branch_final": "net",
+   "risk": "lowers risk only (would go to shadow first)"
+  }
+ }
+}
