@@ -187,3 +187,25 @@ New count:
 - 36 filters + 19 exits + 3 strike / stop changes + 3 combinations = **61 per arm**;
 - x 3 arms x 3 lots = **549 tests**;
 - BH m = 3,265 + 549 = **3,814**.
+
+## Amendment B, 13 Nov 2026: Boss: "40 points are too big, check 20pts max" (before any R170 number)
+
+Three exit versions with at most 20 premium points. Entries are unchanged: the arm's own entry check, a premium above
+40, stays.
+
+The ProfitLock ladder sits on the target in use (25% / 50% / 75% of it). All three exit earlier than today or at the
+same time: a tighter stop or a nearer target. So they count as tighten-only (risk-lowering) exits. R168 already ran
+10-15 point exits on ORB, so these sit just above them.
+
+| id | stop | target (ORB / Fresh; Sweep) |
+|---|---|---|
+| Z1 | -20 points | +20 (Sweep +20) |
+| Z2 | -20 points | today's: +40 (Sweep +80) |
+| Z3 | -15 points | +20 (Sweep +20) |
+
+The exit time stays the 15:10 square-off. Z1-Z3 exclude each other in combinations.
+
+New count:
+- 36 filters + 22 exits + 3 strike / stop changes + 3 combinations = **64 per arm**;
+- x 3 arms x 3 lots = **576 tests**;
+- BH m = 3,265 + 576 = **3,841**.
