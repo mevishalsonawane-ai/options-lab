@@ -99,7 +99,7 @@ object PassedArmsHost {
     private fun mirrorLegs(): List<ArmLive.PaperLeg>? {
         if (cache == null) return null
         val v = _view.value
-        return (v.open + v.today.filter { !it.open }).filter { it.shadow == null }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0, fixed = it.fx) }
+        return (v.open + v.today.filter { !it.open }).filter { it.shadow == null }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0, fixed = it.fx, symbol = it.symbol) }
     }
 
     /** [p]'s own stop on the premium at its entry (-15% and the like); null for S1 (its stop is on the index). */

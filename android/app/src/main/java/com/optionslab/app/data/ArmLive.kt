@@ -240,7 +240,9 @@ object ArmLive {
     /** One paper trade: its [ref] ("family:id", as given to [entered]), its arm [key], the quantity it still holds (0: closed). */
     data class PaperLeg(val ref: String, val key: String, val qty: Int,
                         /** 14 Nov: the paper trade entered with the fixed ₹2k target / ₹1k stop (R51 / R72; a rebuilt live trade reads it). */
-                        val fixed: Boolean = false)
+                        val fixed: Boolean = false,
+                        /** 14 Nov (re-review): the paper contract's symbol, so a rebuilt live trade finds ITS paper trade (null: not given). */
+                        val symbol: String? = null)
 
     private val hosts = java.util.concurrent.ConcurrentHashMap<String, Host>()
 
@@ -1008,8 +1010,34 @@ object ArmLive {
     private fun fixedTarget(p: Pos): Double? = if (!p.fixed || p.side <= 0) null
         else com.optionslab.engine.orb.FixedRupee.targetLevel(p.entry, p.qty * p.multiplier.coerceAtLeast(1), p.tick)
 
+    /**
+     * 14 Nov (re-review): whether a live R51 / R72 trade rebuilt from Zerodha's [symbol] keeps the fixed ₹2k target / ₹1k stop: its own
+     * paper trade's flag, found by the same contract (index, expiry, strike, right) when exactly one open paper trade of the arm is on
+     * it; with no confident match, true - the side that only lowers risk. Never for another arm. Memory only.
+     */
+    internal fun rebuiltFixed(spec: LiveMirror.Spec, symbol: String): Boolean {
+        if (!com.optionslab.engine.orb.FixedRupee.covers(spec.key)) return false
+        return runCatching {
+            val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == symbol } ?: return true
+            hosts[spec.family]?.open()?.filter { leg -> leg.key == spec.key && leg.qty > 0 && leg.symbol?.let { Paper.contractOf(it) }?.let { c ->
+                c.underlying == ins.name && c.expiry == ins.expiry && c.right == ins.right && kotlin.math.abs(c.strike - ins.strike) < 1e-6 } == true }
+                ?.singleOrNull()?.fixed ?: true
+        }.getOrDefault(true)
+    }
+
+    /**
+     * 14 Nov: what a SELL decided on a stop ([LiveMirror.decide]'s [why]) is booked as. Re-review: a stop at the ₹1,000 level is "₹1k stop"
+     * whatever its kind (a rebuilt trade's safety stop moved there too), checked before the safety / disaster words.
+     */
+    internal fun sellWhy(why: String?, p: Pos): String = when {
+        why != "stop" && why != "stop_run_through" -> why ?: "exit"
+        stopWhyOf(p) == com.optionslab.engine.orb.FixedRupee.WHY_STOP -> com.optionslab.engine.orb.FixedRupee.WHY_STOP
+        p.stopKind != OWN -> p.stopWord
+        else -> why ?: "stop"
+    }
+
     /** 14 Nov: what a stop exit of [p] is booked as - "₹1k stop" when its own stop rests at the ₹1,000 level, else [Pos.stopWord]. */
-    private fun stopWhyOf(p: Pos): String =
+    internal fun stopWhyOf(p: Pos): String =
         // 14 Nov (review): any stop of its own or a safety stop at that level (a rebuilt trade's starts as a safety stop); never the disaster stop.
         if (p.fixed && p.stopKind != DISASTER && com.optionslab.engine.orb.FixedRupee.isFixedStop(p.stopTrigger, p.entry, p.qty * p.multiplier.coerceAtLeast(1), p.tick))
             com.optionslab.engine.orb.FixedRupee.WHY_STOP else p.stopWord
@@ -1634,12 +1662,7 @@ object ArmLive {
                     val next: List<Pos>? = when (d.step) {
                         LiveMirror.Step.SELL -> {
                             // 14 Nov: a stop resting at the ₹1,000 level ([stopWhyOf]) is booked as "₹1k stop", run through or not.
-                            val why = when {
-                                d.why != "stop" && d.why != "stop_run_through" -> d.why ?: "exit"
-                                p.stopKind != OWN -> p.stopWord
-                                stopWhyOf(p) == com.optionslab.engine.orb.FixedRupee.WHY_STOP -> com.optionslab.engine.orb.FixedRupee.WHY_STOP
-                                else -> d.why ?: "stop"
-                            }
+                            val why = sellWhy(d.why, p)
                             dirty += contract
                             exitLive(p, d.qty, why, ltp, g)
                         }
@@ -1923,9 +1946,7 @@ object ArmLive {
                 seen = false, heldSeen = true, stopKind = SAFETY,
                 // 14 Nov (review): an R51 / R72 trade taken back from Zerodha keeps the fixed ₹2k target / ₹1k stop its paper trade entered
                 // with, when the paper book shows exactly one open trade of that arm; else the switch now (it only lowers risk).
-                fixed = side > 0 && com.optionslab.engine.orb.FixedRupee.covers(spec.key) &&
-                    (runCatching { hosts[spec.family]?.open()?.filter { it.key == spec.key && it.qty > 0 }?.singleOrNull()?.fixed }.getOrNull()
-                        ?: FixedRupeeExits.forEntry(spec.key)))
+                fixed = side > 0 && rebuiltFixed(spec, pos.symbol))
             // A stop of this path's own still resting on it is kept as its stop; else the safety stop rests.
             val so = orders.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
                 (it.type == "SL" || it.type == "SL-M") }.singleOrNull()

@@ -2819,9 +2819,11 @@ object OrbArms {
             val own = LiquidityRules.stopTrigger(fill, pct)
             val at = firstStop(own, fill, qty, true, tick)?.let { com.optionslab.engine.Kite.onTick(it, tick, com.optionslab.engine.Kite.Side.BUY) }
             if (at != null && FIXED.fixedIsTighter(own, at)) {
-                val key = "NFO:$sym"
-                val now = runCatching { Broker.stopQuotes(listOf(key))[key]?.last }.getOrNull()?.takeIf { it > 0 } ?: fill
-                if (com.optionslab.engine.orb.LiveMirror.mayRest(at, now, tick, 1)) {
+                // 14 Nov (re-review): placed at once when it may rest at the fill (no quote read on the way); the price now is read only
+                // when it may not - and a refusal (the price fell through it meanwhile) still falls back to the -15% below.
+                val restsAtFill = com.optionslab.engine.orb.LiveMirror.mayRest(at, fill, tick, 1)
+                val now = if (restsAtFill) fill else "NFO:$sym".let { key -> runCatching { Broker.stopQuotes(listOf(key))[key]?.last }.getOrNull()?.takeIf { it > 0 } ?: fill }
+                if (restsAtFill || com.optionslab.engine.orb.LiveMirror.mayRest(at, now, tick, 1)) {
                     val (id, trig, refused) = placeStop(label, sym, qty, lot, tick, fill, known, liquidity = true, at = at, points = points, pct = pct, alert = false)
                     if (id != null || !refused) return id to trig
                 }
@@ -3134,6 +3136,8 @@ object OrbArms {
         // trigger, else (a Liquidity trade) its own -15%: one too near the price never leaves the position with no stop at Zerodha
         // (the app sells at the higher level itself).
         // Every other position as before (the lock or its trigger, only while the price is above it).
+        // 14 Nov (re-review): a fixed trade already at or under its ₹1k level is not re-rested (its trigger kept): the same look sells it.
+        if (p.fixed && fixedStopOf(p, tick)?.let { ltp <= it + 1e-9 } == true) return null
         val level = if (!p.fixed) (lockOrStop(p, tick) ?: p.stopTrigger ?: return null).takeIf { ltp > it + tick } ?: return null
             else listOfNotNull(lockOrStop(p, tick), p.stopTrigger, LiquidityRules.stopTrigger(p.entry, liqParams(p).stopPct))
                 .filter { ltp > it + tick }.maxOrNull() ?: return null

@@ -332,8 +332,12 @@ class FixedRupeePassedTest : RobolectricTest() {
         assertTrue(ons().single().change.reason.contains("Make it 2k profit and 1k loss fix"))
         assertNull(AutoChange.lastUndoable(Autopilot.book.value))
     }
-    /** Review (CLAUDE.md: nothing on the order or tick path touches the settings vault): with the rule on and a fixed live trade open, a tick read nothing. */
-    @Test fun withTheRuleOnATickAndTheEntryReadNothingFromTheSettingsVault() {
+    /**
+     * Review (CLAUDE.md: nothing on the order or tick path touches the settings vault). What this measures, exactly: with the rule on and a
+     * fixed live trade already open (the entry itself is not counted: its paper book and settings reads were there before the rule), the
+     * rule's own switch reads ([FixedRupeeExits.forEntry], [FixedRupeeExits.isOn]) and a price tick on the stream's thread read nothing.
+     */
+    @Test fun withTheRuleOnItsSwitchReadsAndAStreamTickReadNothingFromTheSettingsVault() {
         goLive()
         bought(200.0)
         assertTrue(ArmLive.view.value.open.single().fixed)
@@ -386,5 +390,32 @@ class FixedRupeePassedTest : RobolectricTest() {
         assertTrue("the paper trade's flag", rebuilt.fixed)
         assertEquals(1, marketSells.size)
         assertEquals(FixedRupee.WHY_STOP, rebuilt.why)
+    }
+    /** Re-review: a rebuilt trade whose own paper trade (the same contract) entered WITHOUT the rule stays without it. */
+    @Test fun aRebuiltLiveTradeWhosePaperTradeHadNoRuleStaysWithout() {
+        goLive()
+        bought(200.0, on = false)
+        val live = ArmLive.view.value.open.single()
+        assertFalse(live.fixed)
+        FixedRupeeExits.resetForTest(on = true)
+        assertFalse("its paper trade, matched by contract", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, sym))
+        // No confident match (a contract no paper trade holds): the side that only lowers risk.
+        assertTrue(ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, "NIFTY26OCT99999CE"))
+        assertFalse("never another arm", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(OovArm.SOURCE)!!, sym))
+    }
+
+    /** Re-review: a stop at the ₹1k level is booked "₹1k stop" whatever its kind (a rebuilt trade's safety stop), run through or not. */
+    @Test fun aStopAtTheLevelIsTheOneThousandStopWhateverItsKind() {
+        val t0 = day.atTime(10, 0)
+        val fs = FixedRupee.stopLevel(200.0, 65, 0.05)!!
+        val p = ArmLive.Pos(DonchianArm.SOURCE, "recovered:1", sym, "NFO", "MIS", 1, 65, 65, 65, 0.05, 1, 200.0, t0, 200.0, 65, null, "E1",
+            stopOrderId = "S1", stopTrigger = fs, stopKind = ArmLive.SAFETY, fixed = true)
+        for (w in listOf("stop", "stop_run_through")) assertEquals(w, FixedRupee.WHY_STOP, ArmLive.sellWhy(w, p))
+        assertEquals(FixedRupee.WHY_STOP, ArmLive.stopWhyOf(p))
+        assertEquals("safety_stop", ArmLive.sellWhy("stop", p.copy(stopTrigger = 140.0)))
+        assertEquals("disaster_stop", ArmLive.sellWhy("stop", p.copy(stopKind = ArmLive.DISASTER)))
+        assertEquals("stop_run_through", ArmLive.sellWhy("stop_run_through", p.copy(stopKind = ArmLive.OWN, fixed = false)))
+        assertEquals(FixedRupee.WHY_TARGET, ArmLive.sellWhy(FixedRupee.WHY_TARGET, p))
+        assertEquals("exit", ArmLive.sellWhy(null, p))
     }
 }

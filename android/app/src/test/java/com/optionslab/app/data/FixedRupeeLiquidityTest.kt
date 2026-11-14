@@ -345,15 +345,20 @@ class FixedRupeeLiquidityLiveTest : RobolectricTest() {
         runBlocking { OrbArms.priceCheckOnly() }
         assertTrue(marketSells.isEmpty())
     }
-    /** Review: the price fell under the ₹1k level before the stop went - the 15% rests at once and the app sells at the level. */
+    /**
+     * Review: the price fell under the ₹1k level before the stop went (Zerodha refuses an SL sell triggered above the price) - the 15%
+     * rests at once and the app sells at the level on its next look.
+     */
     @Test fun aPriceUnderTheLevelBeforeTheStopRestsTheFifteenPercentAndTheAppSellsAtTheLevel() {
         FixedRupeeExits.resetForTest(on = true)
         state(2)
         kite.afterNext("/orders/regular") { kite.quote("NFO:$sym", 182.0, 181.95, 182.05) }
+        kite.nextPlace()                                           // the buy
+        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "Trigger price for stoploss sell orders should be lower than the last traded price.")
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
         val p = row().open!!
         assertTrue(p.fixed)
-        assertEquals("170.00", kite.placed.last().form["trigger_price"])
+        assertEquals(listOf("183.35", "170.00"), kite.placed.filter { it.form["order_type"] == "SL" }.map { it.form["trigger_price"] })
         assertEquals("a stop rests at Zerodha", "TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
         assertEquals(170.0, p.stopTrigger!!, 1e-9)
         runBlocking { OrbArms.priceCheckOnly() }
@@ -386,15 +391,15 @@ class FixedRupeeLiquidityLiveTest : RobolectricTest() {
         assertEquals(183.35, row().open!!.stopTrigger!!, 1e-9)
     }
 
-    @Test fun underTheLevelAMissingStopIsRestedAtTheFifteenPercentAndTheAppSells() {
+    /** Re-review: at or under the level a missing stop is not re-rested (no -15% put back): the same look sells at the level. */
+    @Test fun underTheLevelAMissingStopIsNotRestedAndTheSameLookSells() {
         val p = approved(2)
         AppSettings.save(AppSettings.load().copy(exchangeStops = true))
         kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
         kite.quote("NFO:$sym", 182.0, 181.95, 182.05)
+        val sls = kite.placed.count { it.form["order_type"] == "SL" }
         runBlocking { OrbArms.priceCheckOnly() }
-        assertEquals("170.00", kite.placed.last().form["trigger_price"])
-        assertTrue(marketSells.isEmpty())
-        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("no stop re-rested", sls, kite.placed.count { it.form["order_type"] == "SL" })
         assertEquals(1, marketSells.size)
         assertEquals(FixedRupee.WHY_STOP, row().today.single().why)
     }
