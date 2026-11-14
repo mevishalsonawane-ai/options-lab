@@ -1,0 +1,103 @@
+{
+  "date": "2026-11-14",
+  "stage": "blocked_before_training",
+  "reason": "execution_environment_unavailable",
+  "training_started": false,
+  "new_model_created": false,
+  "baseline_reproduced": false,
+  "baseline_metrics_source_verified": true,
+  "final_test_is_untouched": false,
+  "paper_trading_suitable": "not_established",
+  "persistent_runner_configured": false,
+  "monitoring_dashboard_deployed": false,
+  "inventory": [
+    {
+      "name": "index_1m_NIFTY_2026.parquet",
+      "bytes": 2041832,
+      "modified_at": "2026-10-19T23:45:51.918Z"
+    },
+    {
+      "name": "index_1m_INDIAVIX_2026.parquet",
+      "bytes": 1038063,
+      "modified_at": "2026-10-19T23:45:48.670Z"
+    },
+    {
+      "name": "index_1m_BANKNIFTY_2026.parquet",
+      "bytes": 2263840,
+      "modified_at": "2026-10-19T23:45:46.178Z"
+    },
+    {
+      "name": "index_1m_NIFTY_2025.parquet",
+      "bytes": 1691389,
+      "modified_at": "2026-10-13T18:47:23.877Z"
+    },
+    {
+      "name": "index_1m_INDIAVIX_2025.parquet",
+      "bytes": 899371,
+      "modified_at": "2026-10-13T18:47:17.373Z"
+    },
+    {
+      "name": "index_1m_BANKNIFTY_2025.parquet",
+      "bytes": 1983035,
+      "modified_at": "2026-10-13T18:47:13.429Z"
+    },
+    {
+      "name": "opt_NIFTY_WEEK_2026.parquet",
+      "bytes": 58916689,
+      "modified_at": "2026-10-19T23:59:45.558Z"
+    },
+    {
+      "name": "opt_NIFTY_WEEK_2025.parquet",
+      "bytes": 75530233,
+      "modified_at": "2026-10-14T15:52:45.381Z"
+    }
+  ],
+  "baseline_metrics": {
+    "rows": [
+      56445,
+      12210,
+      12540
+    ],
+    "split_dates": [
+      "2026-07-03",
+      "2026-08-25"
+    ],
+    "epochs": [
+      {
+        "epoch": 1,
+        "validation_loss": 0.6925718784332275
+      },
+      {
+        "epoch": 2,
+        "validation_loss": 0.6947159171104431
+      },
+      {
+        "epoch": 3,
+        "validation_loss": 0.6940518617630005
+      },
+      {
+        "epoch": 4,
+        "validation_loss": 0.6959971189498901
+      },
+      {
+        "epoch": 5,
+        "validation_loss": 0.6985165476799011
+      },
+      {
+        "epoch": 6,
+        "validation_loss": 0.6979243159294128
+      },
+      {
+        "epoch": 7,
+        "validation_loss": 0.7014874815940857
+      },
+      {
+        "epoch": 8,
+        "validation_loss": 0.6992622017860413
+      }
+    ],
+    "test_accuracy": 0.525598086124402,
+    "test_balanced_accuracy": 0.5102541205765299,
+    "test_majority_baseline": 0.5240829288959503
+  }
+}
