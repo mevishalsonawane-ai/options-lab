@@ -329,11 +329,16 @@ def test_the_shared_section_is_capped_ordered_and_keeps_what_the_agents_cite(bui
     assert by_id["exp:r14"]["g"] == "pass" and by_id["open:s7-order-flow"]["g"] == "open"
     # Every passed or open entry is in; the fact index keeps every entry (the rejected cells of a sweep are one item here).
     exp_facts = {f["exp"]: f for f in built["facts"] if f["kind"] == "experiment"}
-    kept = {it["id"].split(":", 1)[1] for it in items if it["k"] == "experiment"}
+    # App-origin experiment entries retain kind="app" in the shared schema.
+    # They still carry exp: IDs and must obey the same always-retained invariant.
+    kept = {it["id"].split(":", 1)[1] for it in items
+            if it["id"].startswith("exp:") and it["k"] in ("experiment", "app")}
     assert kept <= set(exp_facts)
     always = {e["id"] for e in (yaml.safe_load(p.read_text(encoding="utf-8")) for p in bp.EXPERIMENTS.glob("*.yaml"))
               if e.get("verdict") in bp.EXP_ALWAYS}
     assert always and always <= kept
+    assert by_id["exp:app-s5-trail-paper"]["k"] == "app"
+    assert by_id["exp:app-irathinker-flow-paper"]["k"] == "app"
     assert len(exp_facts) == built["experiments"] > len(kept)
     # The first open item on order flow is the S7 question, so the flow verdict cites it (SharedKnowledge.flowVerdict).
     flow = [it for it in items if ("order-flow" in it["t"] or "traps" in it["t"]) and it["k"] != "app" and it["g"] == "open"]

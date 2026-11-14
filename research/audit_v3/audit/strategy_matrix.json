@@ -1,0 +1,324 @@
+[
+  {
+    "id": "liquidity-15-5",
+    "name": "Liquidity 15+5 (BANKNIFTY)",
+    "instruments": [
+      "BANKNIFTY"
+    ],
+    "knowledge_verdict": "weak",
+    "source_docs": [
+      "research/FINDINGS.md",
+      "research/HUNT_FINAL.md"
+    ],
+    "proposal": "Preserve rare runners; retest exits separately. Avoid transferring Donchian profit locks blindly.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "orb",
+    "name": "ORB (opening range breakout)",
+    "instruments": [
+      "BANKNIFTY"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "android/app/src/main/assets/study/pages.txt",
+      "research/FINDINGS.md",
+      "research/HUNT_R49_ORB_RECENT.md"
+    ],
+    "proposal": "Re-entry caps and plain-rule parity first; generic filters failed R169/R170; no new edge established.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "orb-fresh",
+    "name": "ORB Fresh",
+    "instruments": [
+      "BANKNIFTY"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "research/FINDINGS.md",
+      "research/HUNT_R49_ORB_RECENT.md"
+    ],
+    "proposal": "Re-entry caps and plain-rule parity first; generic filters failed R169/R170; no new edge established.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "orb-sweep",
+    "name": "ORB Sweep",
+    "instruments": [
+      "BANKNIFTY"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "research/FINDINGS.md",
+      "research/HUNT_R49_ORB_RECENT.md"
+    ],
+    "proposal": "Re-entry caps and plain-rule parity first; generic filters failed R169/R170; no new edge established.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "range-fade",
+    "name": "Range Fade",
+    "instruments": [
+      "BANKNIFTY"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "research/FINDINGS.md",
+      "research/HUNT_R49_ORB_RECENT.md"
+    ],
+    "proposal": "Re-entry caps and plain-rule parity first; generic filters failed R169/R170; no new edge established.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "big-candle-pullback",
+    "name": "Big-candle pullback (Solo)",
+    "instruments": [
+      "BANKNIFTY",
+      "NIFTY"
+    ],
+    "knowledge_verdict": "weak",
+    "source_docs": [
+      "android/app/src/main/assets/study/pages.txt",
+      "research/FINDINGS.md"
+    ],
+    "proposal": "Preserve rare runners; retest exits separately. Avoid transferring Donchian profit locks blindly.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "expiry-hero",
+    "name": "Expiry Hero (zero to hero)",
+    "instruments": [
+      "NIFTY"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "android/app/src/main/assets/study/pages.txt"
+    ],
+    "proposal": "Validate cheap-premium costs and exercise tax; tiny targets can inflate win rate while losing.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "ft3-near-atm",
+    "name": "FT3 near-ATM morning (forward test)",
+    "instruments": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+    ],
+    "knowledge_verdict": "weak",
+    "source_docs": [
+      "research/hunt/r98/results/ft3_app.md",
+      "research/hunt/r98/results/search_e.md"
+    ],
+    "proposal": "Reproduce original ledger first; evaluate remove-only calibrated gate only on matching instrument/horizon.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "night-r3",
+    "name": "Night (R3)",
+    "instruments": [
+      "NIFTY",
+      "BANKNIFTY"
+    ],
+    "knowledge_verdict": "weak",
+    "source_docs": [
+      "android/app/src/main/assets/study/pages.txt",
+      "research/HUNT_R27_NIGHT_EXIT.md"
+    ],
+    "proposal": "Separate overnight gap/expiry risk; this intraday direction model is not eligible.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "vix-divergence",
+    "name": "VIX divergence",
+    "instruments": [
+      "NIFTY",
+      "BANKNIFTY",
+      "INDIAVIX"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "android/app/src/main/assets/study/pages.txt"
+    ],
+    "proposal": "Reproduce original ledger first; evaluate remove-only calibrated gate only on matching instrument/horizon.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "short-straddle",
+    "name": "ATM short straddle (selling)",
+    "instruments": [
+      "BANKNIFTY"
+    ],
+    "knowledge_verdict": "weak",
+    "source_docs": [
+      "research/FINDINGS.md"
+    ],
+    "proposal": "Use magnitude/IV and both-leg liquidity, not binary direction alone; reprice stale wings.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "long-straddle",
+    "name": "Buying the straddle / strangle",
+    "instruments": [
+      "BANKNIFTY",
+      "NIFTY"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "research/FINDINGS.md"
+    ],
+    "proposal": "Use magnitude/IV and both-leg liquidity, not binary direction alone; reprice stale wings.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "supertrend-ema",
+    "name": "Supertrend + EMA (owner's Pine)",
+    "instruments": [
+      "BANKNIFTY"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "research/FINDINGS.md"
+    ],
+    "proposal": "Reproduce original ledger first; evaluate remove-only calibrated gate only on matching instrument/horizon.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "majority-rule-14",
+    "name": "Majority Rule 14 (weekly NIFTY)",
+    "instruments": [
+      "NIFTY"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "research/FINDINGS.md"
+    ],
+    "proposal": "Reproduce original ledger first; evaluate remove-only calibrated gate only on matching instrument/horizon.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "mcx-bots",
+    "name": "MCX bots",
+    "instruments": [
+      "CRUDE",
+      "NATURALGAS",
+      "SILVER",
+      "GOLD"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "android/app/src/main/assets/study/pages.txt"
+    ],
+    "proposal": "Validate actual futures/options expiries and data holes; separate model needed.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "crypto-expected-range",
+    "name": "Crypto expected range (BTC, ETH)",
+    "instruments": [
+      "CRYPTO"
+    ],
+    "knowledge_verdict": "context",
+    "source_docs": [
+      "research/CRYPTO_C1_PREDICTABILITY.md"
+    ],
+    "proposal": "Separate crypto features, costs and horizon; Indian-index model is ineligible.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "crypto-direction",
+    "name": "Crypto direction (BTC, ETH)",
+    "instruments": [
+      "CRYPTO"
+    ],
+    "knowledge_verdict": "negative",
+    "source_docs": [
+      "research/CRYPTO_C1_PREDICTABILITY.md"
+    ],
+    "proposal": "Separate crypto features, costs and horizon; Indian-index model is ineligible.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "crypto-window",
+    "name": "Crypto in Boss's window (00:00-09:00 IST)",
+    "instruments": [
+      "CRYPTO"
+    ],
+    "knowledge_verdict": "context",
+    "source_docs": [
+      "research/CRYPTO_C2_WINDOW.md"
+    ],
+    "proposal": "Separate crypto features, costs and horizon; Indian-index model is ineligible.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "ntfy-alerts",
+    "name": "ntfy alerts (external messages)",
+    "instruments": [
+      "NIFTY",
+      "BANKNIFTY",
+      "FINNIFTY",
+      "MIDCPNIFTY",
+      "SENSEX"
+    ],
+    "knowledge_verdict": "context",
+    "source_docs": [
+      "research/NTFY_ALERTS.md"
+    ],
+    "proposal": "Reproduce original ledger first; evaluate remove-only calibrated gate only on matching instrument/horizon.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "r51",
+    "name": "R51 Donchian",
+    "source_docs": [
+      "research/hunt/r163_donchian_picker/results/report.md"
+    ],
+    "knowledge_verdict": "missing_from_strategy_cards",
+    "proposal": "R151/R163 calibration and occupied-side parity; do not repeat failed 60% target search.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "r72",
+    "name": "R72 Breadth Donchian",
+    "source_docs": [
+      "research/hunt/r163_donchian_picker/results/report.md"
+    ],
+    "knowledge_verdict": "missing_from_strategy_cards",
+    "proposal": "Keep breadth/entry semantics; compare net and drawdown, not only selected win rate.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "r52",
+    "name": "R52 Open outside value",
+    "source_docs": [
+      "research/HUNT_R106_SMALL_TARGETS.md"
+    ],
+    "knowledge_verdict": "missing_from_strategy_cards",
+    "proposal": "Existing high-win target result needs current costs and genuinely fresh replication.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "cisd",
+    "name": "CISD neural-filtered entry",
+    "source_docs": [
+      "research/HUNT_R133_ICT_NN_EXITS.md"
+    ],
+    "knowledge_verdict": "missing_from_strategy_cards",
+    "proposal": "Design win rate is not holdout win rate; only 35 later trades in cited variant.",
+    "new_win_rate_improvement_verified": false
+  },
+  {
+    "id": "confirmed-breakout",
+    "name": "Latest confirmed breakout",
+    "source_docs": [
+      "research/neural_v2/strategy_results/REPORT.md"
+    ],
+    "knowledge_verdict": "missing_from_strategy_cards",
+    "proposal": "Explicitly test runner-preserving exits and calibrated remove-only direction gate.",
+    "new_win_rate_improvement_verified": false
+  }
+]

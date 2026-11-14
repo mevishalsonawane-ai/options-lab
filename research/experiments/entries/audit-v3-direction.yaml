@@ -1,0 +1,33 @@
+family: ml
+date: '2026-11-14'
+hypothesis: Causal sequence networks may predict underlying return sign beyond a fitted
+  majority baseline
+data_version: Six index files fingerprinted in direction_results/data_audit.json
+period:
+  design: 2025-10-20 through 2026-10-19; reused historical chronological folds
+  holdout: none
+instruments:
+- NIFTY
+- BANKNIFTY
+- INDIAVIX context
+features:
+- 26 causal features
+- 30-step sequence
+model_or_rule: MLP and CNN-GRU attention with 5/15/30-minute heads; logistic and fitted-prior
+  baselines
+settings: research/audit_v3/PREREG.md
+prereg: research/audit_v3/PREREG.md
+variants_tried: 18
+results:
+  summary: NIFTY GRU 15-minute accuracy 51.06% on 6808 scored forecasts, balanced
+    accuracy 50.48%, AUC 0.505, BH q0.467. BANKNIFTY accuracy 50.70% on6819, AUC0.491.
+    No 15-minute GRU forecasts cross55%; no demonstrated edge.
+  costs: Direction forecast test, not an option-profit backtest
+holdout_read: false
+verdict: rejected
+notes: 18 specified predictor/market/horizon endpoints; pooled fitting, separate chronological
+  calibration, masked ties/missing outcomes without conditioning forecast coverage
+  on future labels. Historical program-wide reuse remains.
+id: audit-v3-direction
+title: Calibrated exact-time underlying direction forecasts
+doc: research/audit_v3/direction_results/REPORT.md

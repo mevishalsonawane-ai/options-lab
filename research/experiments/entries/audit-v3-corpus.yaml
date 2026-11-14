@@ -1,0 +1,31 @@
+family: diagnosis
+date: '2026-11-14'
+hypothesis: Audit research claims and data/validation assumptions before further trading
+  promotion
+data_version: Source inventory and SHA256 provenance in research/audit_v3/audit/
+period:
+  design: Entire tracked research corpus; no new holdout
+instruments:
+- Indian indices
+- MCX
+- CRYPTO
+- stocks
+features:
+- source metadata
+- evidence provenance
+model_or_rule: Read-only corpus audit and regression-tested evidence/tax guards
+settings: research/audit_v3/PREREG.md
+prereg: research/audit_v3/PREREG.md
+variants_tried: null
+results:
+  summary: 9149 research files inventoried; 919 Markdown studies, 4630 experiment
+    entries and 19 strategy cards consolidated. No claim that every study was independently
+    re-executed.
+  costs: No new trades; static exercise-STT defect and dated-cost protections audited
+holdout_read: null
+verdict: not-a-test
+notes: Production and app knowledge assets unchanged. Knowledge test invariant corrected
+  to retain app-origin exp entries as designed, without disabling checks.
+id: audit-v3-corpus
+title: Repository research and knowledge integrity audit
+doc: research/audit_v3/AUDIT_REPORT.md

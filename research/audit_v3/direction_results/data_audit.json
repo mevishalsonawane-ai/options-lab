@@ -1,0 +1,54 @@
+{
+  "files": {
+    "index_1m_NIFTY_2025.parquet": "658f6bce39cfd8ebde1413645b43d50234c432c4d0df0d9ac8b09c22cd877048",
+    "index_1m_NIFTY_2026.parquet": "b2240c709b4c82debeb96b18ca9e0306f8832cac5a5c8693db466bc1e814112d",
+    "index_1m_BANKNIFTY_2025.parquet": "a40331f17e40b6d083589b4eed4ab159d54d1103c088ba74a5af97fa2e42069d",
+    "index_1m_BANKNIFTY_2026.parquet": "268598438087af76a48d2d36fa829f59c32dd66b021d20e17b990d79034d6116",
+    "index_1m_INDIAVIX_2025.parquet": "8969f6fb1434b1568e884fcb0676cfd96c7dd214e3795d086230a66fe9ba5827",
+    "index_1m_INDIAVIX_2026.parquet": "025b96ec49788f236b8d60990a3e56e19929cfcbf9c86adca546c67a6ed2727c"
+  },
+  "start": "2025-10-20 00:00:00+05:30",
+  "end": "2026-10-19 00:00:00+05:30",
+  "samples": 27062,
+  "features": [
+    "self_ret1",
+    "self_ret5",
+    "self_ret15",
+    "self_ret30",
+    "self_vol15",
+    "other_ret1",
+    "other_ret5",
+    "other_ret15",
+    "other_ret30",
+    "other_vol15",
+    "vix_ret1",
+    "vix_ret5",
+    "vix_ret15",
+    "vix_ret30",
+    "vix_vol15",
+    "range",
+    "atr14",
+    "ema_gap",
+    "from_open",
+    "gap",
+    "from_previous_high",
+    "from_previous_low",
+    "from_session_high",
+    "from_session_low",
+    "time",
+    "nifty"
+  ],
+  "horizons": [
+    5,
+    15,
+    30
+  ],
+  "masked_targets": [
+    45,
+    26,
+    17
+  ],
+  "missing_previous_session_context": 0,
+  "fingerprint": "d7d92fa48c1ff1d3e460503000a1466e91747dd0e17c1050771f913464a0bc56",
+  "labels": "Underlying future close at exact elapsed timestamp; ties/missing outcomes masked per head. Forecast coverage does not depend on future labels."
+}

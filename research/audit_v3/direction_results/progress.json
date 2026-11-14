@@ -1,0 +1,12 @@
+{
+  "stage": "direction_completed",
+  "errors": [],
+  "updated_at": "2026-11-14T12:53:10.303826+00:00",
+  "fold": 3,
+  "architecture": "gru",
+  "epochs_completed": 5,
+  "validation_loss": 0.6992287635803223,
+  "last_successful_checkpoint": "fold3_gru.pt",
+  "fresh_test": false,
+  "approved_for_trading": false
+}

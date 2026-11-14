@@ -1,0 +1,92 @@
+{
+  "date": "2026-11-14",
+  "production_changed": false,
+  "orders_placed": false,
+  "coverage": {
+    "tracked_research_files": 9149,
+    "text_files_read": 8977,
+    "text_bytes_read": 125032511,
+    "read_by_type": {
+      ".md": 919,
+      ".py": 2057,
+      ".csv": 277,
+      ".json": 927,
+      ".txt": 7,
+      ".yaml": 4635,
+      "marker": 115,
+      ".sh": 12,
+      ".c": 1,
+      ".log": 1,
+      ".java": 1,
+      ".pine": 1,
+      ".lock": 14,
+      ".flag": 4,
+      ".jsonl": 3,
+      ".patch": 1,
+      ".html": 2
+    },
+    "missing_text_files": [],
+    "structured_parse_issues": [],
+    "experiment_entries": 4630,
+    "sum_logged_variant_counts_not_unique": 9394942,
+    "entries_with_unknown_variant_count": 204,
+    "verdicts": {
+      "rejected": 4255,
+      "paper-only": 51,
+      "not-a-test": 133,
+      "inconclusive": 124,
+      "proposed": 39,
+      "adopted": 7,
+      "superseded": 19,
+      "shadow": 2
+    },
+    "families": {
+      "patterns-indicators": 1147,
+      "orb": 996,
+      "ml": 216,
+      "diagnosis": 16,
+      "sizing-execution": 83,
+      "flow-oi": 168,
+      "trade-management": 706,
+      "daily-filters": 305,
+      "option-structure": 171,
+      "calendar-events": 120,
+      "outside-strategies": 78,
+      "mcx-crypto": 387,
+      "overnight": 85,
+      "liquidity": 49,
+      "stocks": 63,
+      "market-facts": 40
+    },
+    "topic_file_hits": {
+      "costs": 3772,
+      "holdout_reuse": 1084,
+      "leakage": 572,
+      "bugs": 76,
+      "win_profit_tradeoff": 1905
+    },
+    "strategy_cards": 19,
+    "strategy_matrix_rows": 24,
+    "limits": "File coverage and parsing are not independent reproduction or a manual line-by-line proof of every study."
+  },
+  "direction": {
+    "samples": 27062,
+    "features": 26,
+    "neural_checkpoints": 6,
+    "fresh_test": false,
+    "proven_edge": false
+  },
+  "strategies": {
+    "matrix_families": 24,
+    "all_win_rates_improved": false,
+    "runner_net": -14866.215198264264,
+    "runner_win_rate": 0.3969849246231156,
+    "baseline_net": -38542.147228803624
+  },
+  "key_reports": [
+    "AUDIT_REPORT.md",
+    "audit/STRATEGY_MATRIX.md",
+    "direction_results/REPORT.md",
+    "improvement_results/REPORT.md"
+  ]
+}

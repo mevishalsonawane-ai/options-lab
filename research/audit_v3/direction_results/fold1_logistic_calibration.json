@@ -1,0 +1,17 @@
+[
+  {
+    "log_temperature": 3.0,
+    "intercept": 0.1077091023150902,
+    "samples": 2747
+  },
+  {
+    "log_temperature": 3.0,
+    "intercept": 0.13388382429882853,
+    "samples": 2750
+  },
+  {
+    "log_temperature": 3.0,
+    "intercept": 0.08385910373957088,
+    "samples": 2749
+  }
+]

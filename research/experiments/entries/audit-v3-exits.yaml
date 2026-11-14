@@ -1,0 +1,35 @@
+family: trade-management
+date: '2026-11-14'
+hypothesis: Preserving rare runners or calibrated remove-only direction gating may
+  improve cost-adjusted performance
+data_version: Same NIFTY index/option lake and outer-fold forecasts
+period:
+  design: 2025-10-20 through 2026-10-19; common direction period begins2026-04-22
+  holdout: none
+instruments:
+- NIFTY
+- BANKNIFTY confirmation
+- INDIAVIX
+features:
+- original entry signals
+- fixed-contract OHLC
+- calibrated prior OOF probability
+model_or_rule: Original baseline, no hard target, runner composite, remove-only55%
+  GRU gate
+settings: research/audit_v3/PREREG.md
+prereg: research/audit_v3/PREREG.md
+variants_tried: 10
+results:
+  summary: Runner composite net loss Rs14866 on199 trades at39.70% wins vs baseline
+    lossRs38542 on179 at44.13%; stress still losesRs36757. No-target ablation not
+    robust; direction gate retains zero trades. No universal improvement.
+  costs: Corrected inclusive exchange/IPFT, dated STT, brokerage, GST, SEBI, stamp
+    and modeled spread/slippage; full base/stress accounts replayed
+holdout_read: false
+verdict: rejected
+notes: Ten reported overlapping account outputs counted conservatively, not ten independent
+  strategies. Diagnostic gate preserves existing exits/time slots and never promotes
+  entries; incomplete changed-path intrabar equity parity is disclosed.
+id: audit-v3-exits
+title: Runner-preserving exits and remove-only calibrated direction gate
+doc: research/audit_v3/improvement_results/REPORT.md

@@ -1,0 +1,713 @@
+{
+  "folds": [
+    {
+      "fold": 1,
+      "fit_end": "2026-02-03",
+      "validation_start": "2026-02-04",
+      "calibration_start": "2026-03-12",
+      "evaluation_start": "2026-04-22",
+      "evaluation_end": "2026-06-15",
+      "training_label_cutoff": "2026-04-21 15:15:00+05:30",
+      "mlp_epochs": 8,
+      "gru_epochs": 5
+    },
+    {
+      "fold": 2,
+      "fit_end": "2026-03-09",
+      "validation_start": "2026-03-10",
+      "calibration_start": "2026-04-29",
+      "evaluation_start": "2026-06-16",
+      "evaluation_end": "2026-08-06",
+      "training_label_cutoff": "2026-06-15 15:15:00+05:30",
+      "mlp_epochs": 6,
+      "gru_epochs": 5
+    },
+    {
+      "fold": 3,
+      "fit_end": "2026-04-13",
+      "validation_start": "2026-04-15",
+      "calibration_start": "2026-06-11",
+      "evaluation_start": "2026-08-07",
+      "evaluation_end": "2026-10-19",
+      "training_label_cutoff": "2026-08-06 15:15:00+05:30",
+      "mlp_epochs": 5,
+      "gru_epochs": 5
+    }
+  ],
+  "metrics": [
+    {
+      "samples": 6813,
+      "accuracy": 0.5006605019815059,
+      "balanced_accuracy": 0.4980632039181353,
+      "majority_accuracy": 0.49478937325700867,
+      "auc": 0.4996553645436076,
+      "log_loss": 0.6955479224976263,
+      "baseline_log_loss": 0.693246309393466,
+      "brier": 0.2511878352647031,
+      "ece": 0.022300428749798942,
+      "confident_samples": 522,
+      "confident_coverage": 0.07661822985468957,
+      "confident_accuracy": 0.47701149425287354,
+      "day_clustered_accuracy_gain": 0.005854241338112305,
+      "p_value": 0.15542228885557222,
+      "calibration_bins": [
+        {
+          "lower": 0.30000000000000004,
+          "samples": 76,
+          "predicted_up": 0.38112429147754795,
+          "observed_up": 0.5263157894736842
+        },
+        {
+          "lower": 0.4,
+          "samples": 4079,
+          "predicted_up": 0.4799648999337734,
+          "observed_up": 0.48909046334886
+        },
+        {
+          "lower": 0.5,
+          "samples": 2658,
+          "predicted_up": 0.5247084627744678,
+          "observed_up": 0.4857035364936042
+        }
+      ],
+      "model": "gru",
+      "instrument": "BANKNIFTY",
+      "horizon": 5,
+      "bh_q": 0.46664167916041976
+    },
+    {
+      "samples": 6819,
+      "accuracy": 0.5069658307669747,
+      "balanced_accuracy": 0.4996587690119022,
+      "majority_accuracy": 0.5013931661533949,
+      "auc": 0.49123635442129066,
+      "log_loss": 0.6942971918502244,
+      "baseline_log_loss": 0.6930080077990828,
+      "brier": 0.2505736915230206,
+      "ece": 0.02153480534799528,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": 0.005555555555555555,
+      "p_value": 0.34332833583208394,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4785,
+          "predicted_up": 0.49083053468731414,
+          "observed_up": 0.48213166144200625
+        },
+        {
+          "lower": 0.5,
+          "samples": 2034,
+          "predicted_up": 0.533049031066461,
+          "observed_up": 0.48131760078662733
+        }
+      ],
+      "model": "gru",
+      "instrument": "BANKNIFTY",
+      "horizon": 15,
+      "bh_q": 0.5149925037481259
+    },
+    {
+      "samples": 6817,
+      "accuracy": 0.5140090949097844,
+      "balanced_accuracy": 0.5013324348716105,
+      "majority_accuracy": 0.5327856828516943,
+      "auc": 0.4933453032178646,
+      "log_loss": 0.6931126321920814,
+      "baseline_log_loss": 0.6927943947486473,
+      "brier": 0.24998243992139588,
+      "ece": 0.026330022307669017,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": -0.018841642228739,
+      "p_value": 0.8980509745127436,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4727,
+          "predicted_up": 0.4808979351214736,
+          "observed_up": 0.4662576687116564
+        },
+        {
+          "lower": 0.5,
+          "samples": 2090,
+          "predicted_up": 0.5221469965321406,
+          "observed_up": 0.469377990430622
+        }
+      ],
+      "model": "gru",
+      "instrument": "BANKNIFTY",
+      "horizon": 30,
+      "bh_q": 0.9215392303848076
+    },
+    {
+      "samples": 6799,
+      "accuracy": 0.5072804824238859,
+      "balanced_accuracy": 0.5041273190790214,
+      "majority_accuracy": 0.5000735402265039,
+      "auc": 0.5075962186834069,
+      "log_loss": 0.6939087851093503,
+      "baseline_log_loss": 0.6932047154741067,
+      "brier": 0.250376521060199,
+      "ece": 0.014204629355176286,
+      "confident_samples": 386,
+      "confident_coverage": 0.05677305486100897,
+      "confident_accuracy": 0.538860103626943,
+      "day_clustered_accuracy_gain": 0.007288240489701232,
+      "p_value": 0.12743628185907047,
+      "calibration_bins": [
+        {
+          "lower": 0.30000000000000004,
+          "samples": 43,
+          "predicted_up": 0.3856154900453904,
+          "observed_up": 0.5348837209302325
+        },
+        {
+          "lower": 0.4,
+          "samples": 4230,
+          "predicted_up": 0.4809944592089384,
+          "observed_up": 0.48392434988179667
+        },
+        {
+          "lower": 0.5,
+          "samples": 2526,
+          "predicted_up": 0.5240559396324643,
+          "observed_up": 0.4932699920823436
+        }
+      ],
+      "model": "gru",
+      "instrument": "NIFTY",
+      "horizon": 5,
+      "bh_q": 0.46664167916041976
+    },
+    {
+      "samples": 6808,
+      "accuracy": 0.5105757931844889,
+      "balanced_accuracy": 0.5048328236945046,
+      "majority_accuracy": 0.49809048178613397,
+      "auc": 0.5045721093813362,
+      "log_loss": 0.6937621974817914,
+      "baseline_log_loss": 0.6930757699472536,
+      "brier": 0.25030655358146514,
+      "ece": 0.01790935948576585,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": 0.01258998997891268,
+      "p_value": 0.20689655172413793,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4777,
+          "predicted_up": 0.4910753166507941,
+          "observed_up": 0.48231107389575045
+        },
+        {
+          "lower": 0.5,
+          "samples": 2031,
+          "predicted_up": 0.533264466636263,
+          "observed_up": 0.4938453963564746
+        }
+      ],
+      "model": "gru",
+      "instrument": "NIFTY",
+      "horizon": 15,
+      "bh_q": 0.46664167916041976
+    },
+    {
+      "samples": 6817,
+      "accuracy": 0.5107818688572686,
+      "balanced_accuracy": 0.49991628396479143,
+      "majority_accuracy": 0.528238227959513,
+      "auc": 0.502667342266728,
+      "log_loss": 0.6931317513420774,
+      "baseline_log_loss": 0.6928343314016961,
+      "brier": 0.24999212549016014,
+      "ece": 0.021256340086926055,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": -0.01743238840013033,
+      "p_value": 0.8935532233883059,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4720,
+          "predicted_up": 0.4803465288736029,
+          "observed_up": 0.47182203389830507
+        },
+        {
+          "lower": 0.5,
+          "samples": 2097,
+          "predicted_up": 0.5215397492079967,
+          "observed_up": 0.4716261325703386
+        }
+      ],
+      "model": "gru",
+      "instrument": "NIFTY",
+      "horizon": 30,
+      "bh_q": 0.9215392303848076
+    },
+    {
+      "samples": 6813,
+      "accuracy": 0.5047702920886541,
+      "balanced_accuracy": 0.5021544673877598,
+      "majority_accuracy": 0.49478937325700867,
+      "auc": 0.5084455087110772,
+      "log_loss": 0.6938284134164499,
+      "baseline_log_loss": 0.693246309393466,
+      "brier": 0.2503394900750143,
+      "ece": 0.016124430075720588,
+      "confident_samples": 289,
+      "confident_coverage": 0.04241890503449288,
+      "confident_accuracy": 0.532871972318339,
+      "day_clustered_accuracy_gain": 0.009965243836211576,
+      "p_value": 0.05547226386806597,
+      "calibration_bins": [
+        {
+          "lower": 0.30000000000000004,
+          "samples": 6,
+          "predicted_up": 0.3872755932466094,
+          "observed_up": 0.3333333333333333
+        },
+        {
+          "lower": 0.4,
+          "samples": 4155,
+          "predicted_up": 0.4818478483585554,
+          "observed_up": 0.4866425992779783
+        },
+        {
+          "lower": 0.5,
+          "samples": 2652,
+          "predicted_up": 0.5247397807225499,
+          "observed_up": 0.49095022624434387
+        }
+      ],
+      "model": "logistic",
+      "instrument": "BANKNIFTY",
+      "horizon": 5,
+      "bh_q": 0.46664167916041976
+    },
+    {
+      "samples": 6819,
+      "accuracy": 0.5072591289045315,
+      "balanced_accuracy": 0.5000056419613077,
+      "majority_accuracy": 0.5013931661533949,
+      "auc": 0.49442143538731165,
+      "log_loss": 0.6943299505586888,
+      "baseline_log_loss": 0.6930080077990828,
+      "brier": 0.2505899785546044,
+      "ece": 0.021525030554192984,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": 0.005848810687520364,
+      "p_value": 0.33933033483258374,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4775,
+          "predicted_up": 0.4907501751519713,
+          "observed_up": 0.4818848167539267
+        },
+        {
+          "lower": 0.5,
+          "samples": 2044,
+          "predicted_up": 0.5329976012712226,
+          "observed_up": 0.48189823874755383
+        }
+      ],
+      "model": "logistic",
+      "instrument": "BANKNIFTY",
+      "horizon": 15,
+      "bh_q": 0.5149925037481259
+    },
+    {
+      "samples": 6817,
+      "accuracy": 0.51532932374945,
+      "balanced_accuracy": 0.5021077255029426,
+      "majority_accuracy": 0.5327856828516943,
+      "auc": 0.4967556829576968,
+      "log_loss": 0.6930303269523116,
+      "baseline_log_loss": 0.6927943947486473,
+      "brier": 0.24994137256247587,
+      "ece": 0.026081445479655838,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": -0.017519278809601385,
+      "p_value": 0.8830584707646177,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4784,
+          "predicted_up": 0.481196473368841,
+          "observed_up": 0.4657190635451505
+        },
+        {
+          "lower": 0.5,
+          "samples": 2033,
+          "predicted_up": 0.521767479212139,
+          "observed_up": 0.47073290703394
+        }
+      ],
+      "model": "logistic",
+      "instrument": "BANKNIFTY",
+      "horizon": 30,
+      "bh_q": 0.9215392303848076
+    },
+    {
+      "samples": 6799,
+      "accuracy": 0.5125753787321665,
+      "balanced_accuracy": 0.5093892634464071,
+      "majority_accuracy": 0.5000735402265039,
+      "auc": 0.5122536414159833,
+      "log_loss": 0.6932132278800208,
+      "baseline_log_loss": 0.6932047154741067,
+      "brier": 0.2500331478445003,
+      "ece": 0.009310351765705587,
+      "confident_samples": 318,
+      "confident_coverage": 0.046771584056478896,
+      "confident_accuracy": 0.5220125786163522,
+      "day_clustered_accuracy_gain": 0.01257236598076525,
+      "p_value": 0.028985507246376812,
+      "calibration_bins": [
+        {
+          "lower": 0.30000000000000004,
+          "samples": 5,
+          "predicted_up": 0.37569359009004194,
+          "observed_up": 0.4
+        },
+        {
+          "lower": 0.4,
+          "samples": 4278,
+          "predicted_up": 0.4805944641226337,
+          "observed_up": 0.4803646563814867
+        },
+        {
+          "lower": 0.5,
+          "samples": 2516,
+          "predicted_up": 0.5251178187952527,
+          "observed_up": 0.5003974562798092
+        }
+      ],
+      "model": "logistic",
+      "instrument": "NIFTY",
+      "horizon": 5,
+      "bh_q": 0.46664167916041976
+    },
+    {
+      "samples": 6808,
+      "accuracy": 0.5105757931844889,
+      "balanced_accuracy": 0.5048495798902158,
+      "majority_accuracy": 0.49809048178613397,
+      "auc": 0.5050136869616154,
+      "log_loss": 0.6937705298047233,
+      "baseline_log_loss": 0.6930757699472536,
+      "brier": 0.2503106401454274,
+      "ece": 0.017664951766038748,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": 0.01258998997891268,
+      "p_value": 0.20739630184907545,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4773,
+          "predicted_up": 0.4907593563219944,
+          "observed_up": 0.4822962497381102
+        },
+        {
+          "lower": 0.5,
+          "samples": 2035,
+          "predicted_up": 0.5331049552325859,
+          "observed_up": 0.49385749385749383
+        }
+      ],
+      "model": "logistic",
+      "instrument": "NIFTY",
+      "horizon": 15,
+      "bh_q": 0.46664167916041976
+    },
+    {
+      "samples": 6817,
+      "accuracy": 0.5099017162974916,
+      "balanced_accuracy": 0.4985180232550107,
+      "majority_accuracy": 0.528238227959513,
+      "auc": 0.4983788707117011,
+      "log_loss": 0.6933090451983657,
+      "baseline_log_loss": 0.6928343314016961,
+      "brier": 0.2500806999370121,
+      "ece": 0.021345117935905107,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": -0.018328445747800584,
+      "p_value": 0.9045477261369316,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4782,
+          "predicted_up": 0.4809899865387135,
+          "observed_up": 0.472814721873693
+        },
+        {
+          "lower": 0.5,
+          "samples": 2035,
+          "predicted_up": 0.521580124491861,
+          "observed_up": 0.4692874692874693
+        }
+      ],
+      "model": "logistic",
+      "instrument": "NIFTY",
+      "horizon": 30,
+      "bh_q": 0.9215392303848076
+    },
+    {
+      "samples": 6813,
+      "accuracy": 0.5005137237633935,
+      "balanced_accuracy": 0.49816274898553703,
+      "majority_accuracy": 0.49478937325700867,
+      "auc": 0.5034502346228522,
+      "log_loss": 0.6952189459571403,
+      "baseline_log_loss": 0.693246309393466,
+      "brier": 0.2510276718890735,
+      "ece": 0.025917746110430302,
+      "confident_samples": 781,
+      "confident_coverage": 0.11463378834580948,
+      "confident_accuracy": 0.5096030729833547,
+      "day_clustered_accuracy_gain": 0.005704898446833929,
+      "p_value": 0.1874062968515742,
+      "calibration_bins": [
+        {
+          "lower": 0.2,
+          "samples": 4,
+          "predicted_up": 0.25858056494781234,
+          "observed_up": 0.0
+        },
+        {
+          "lower": 0.30000000000000004,
+          "samples": 137,
+          "predicted_up": 0.3762012560695947,
+          "observed_up": 0.46715328467153283
+        },
+        {
+          "lower": 0.4,
+          "samples": 3943,
+          "predicted_up": 0.47653704761297494,
+          "observed_up": 0.4909967030180066
+        },
+        {
+          "lower": 0.5,
+          "samples": 2729,
+          "predicted_up": 0.5247594110700129,
+          "observed_up": 0.48589226823012094
+        }
+      ],
+      "model": "mlp",
+      "instrument": "BANKNIFTY",
+      "horizon": 5,
+      "bh_q": 0.46664167916041976
+    },
+    {
+      "samples": 6819,
+      "accuracy": 0.508872268661094,
+      "balanced_accuracy": 0.5030729739027849,
+      "majority_accuracy": 0.5013931661533949,
+      "auc": 0.5032610105674366,
+      "log_loss": 0.6946168027981247,
+      "baseline_log_loss": 0.6930080077990828,
+      "brier": 0.25072996661610775,
+      "ece": 0.022177810003843886,
+      "confident_samples": 14,
+      "confident_coverage": 0.002053086962897786,
+      "confident_accuracy": 0.14285714285714285,
+      "day_clustered_accuracy_gain": 0.0074617139133268135,
+      "p_value": 0.303848075962019,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4502,
+          "predicted_up": 0.4904448589273177,
+          "observed_up": 0.4795646379386939
+        },
+        {
+          "lower": 0.5,
+          "samples": 2312,
+          "predicted_up": 0.5303117401913884,
+          "observed_up": 0.4874567474048443
+        },
+        {
+          "lower": 0.6000000000000001,
+          "samples": 5,
+          "predicted_up": 0.6333976405874457,
+          "observed_up": 0.0
+        }
+      ],
+      "model": "mlp",
+      "instrument": "BANKNIFTY",
+      "horizon": 15,
+      "bh_q": 0.5149925037481259
+    },
+    {
+      "samples": 6817,
+      "accuracy": 0.5131289423500074,
+      "balanced_accuracy": 0.500390519643981,
+      "majority_accuracy": 0.5327856828516943,
+      "auc": 0.5030821444131702,
+      "log_loss": 0.6931018797975517,
+      "baseline_log_loss": 0.6927943947486473,
+      "brier": 0.2499769902897206,
+      "ece": 0.026567022009169612,
+      "confident_samples": 2,
+      "confident_coverage": 0.00029338418659234265,
+      "confident_accuracy": 0.0,
+      "day_clustered_accuracy_gain": -0.01971597697404149,
+      "p_value": 0.9065467266366817,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4733,
+          "predicted_up": 0.4810982100513912,
+          "observed_up": 0.46693429114726387
+        },
+        {
+          "lower": 0.5,
+          "samples": 2084,
+          "predicted_up": 0.5225861616426462,
+          "observed_up": 0.4678502879078695
+        }
+      ],
+      "model": "mlp",
+      "instrument": "BANKNIFTY",
+      "horizon": 30,
+      "bh_q": 0.9215392303848076
+    },
+    {
+      "samples": 6799,
+      "accuracy": 0.5062509192528313,
+      "balanced_accuracy": 0.5045539129052468,
+      "majority_accuracy": 0.5000735402265039,
+      "auc": 0.5078542356515725,
+      "log_loss": 0.6943826136516372,
+      "baseline_log_loss": 0.6932047154741067,
+      "brier": 0.2506061398733095,
+      "ece": 0.01668000103229231,
+      "confident_samples": 493,
+      "confident_coverage": 0.07251066333284306,
+      "confident_accuracy": 0.5192697768762677,
+      "day_clustered_accuracy_gain": 0.006264562853120369,
+      "p_value": 0.11794102948525736,
+      "calibration_bins": [
+        {
+          "lower": 0.2,
+          "samples": 5,
+          "predicted_up": 0.2764742343344315,
+          "observed_up": 0.4
+        },
+        {
+          "lower": 0.30000000000000004,
+          "samples": 73,
+          "predicted_up": 0.374667283156917,
+          "observed_up": 0.4520547945205479
+        },
+        {
+          "lower": 0.4,
+          "samples": 3792,
+          "predicted_up": 0.4799763027565614,
+          "observed_up": 0.4844409282700422
+        },
+        {
+          "lower": 0.5,
+          "samples": 2929,
+          "predicted_up": 0.5238001194651974,
+          "observed_up": 0.4930010242403551
+        }
+      ],
+      "model": "mlp",
+      "instrument": "NIFTY",
+      "horizon": 5,
+      "bh_q": 0.46664167916041976
+    },
+    {
+      "samples": 6808,
+      "accuracy": 0.5080787309048178,
+      "balanced_accuracy": 0.5028154727402175,
+      "majority_accuracy": 0.49809048178613397,
+      "auc": 0.5032820118697781,
+      "log_loss": 0.6942016136005413,
+      "baseline_log_loss": 0.6930757699472536,
+      "brier": 0.2505234824522827,
+      "ece": 0.01658761248636813,
+      "confident_samples": 11,
+      "confident_coverage": 0.0016157461809635722,
+      "confident_accuracy": 0.09090909090909091,
+      "day_clustered_accuracy_gain": 0.0100973213572118,
+      "p_value": 0.2563718140929535,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4662,
+          "predicted_up": 0.4887187168589098,
+          "observed_up": 0.4836979836979837
+        },
+        {
+          "lower": 0.5,
+          "samples": 2141,
+          "predicted_up": 0.5317157225533888,
+          "observed_up": 0.491359177954227
+        },
+        {
+          "lower": 0.6000000000000001,
+          "samples": 5,
+          "predicted_up": 0.6236891648303045,
+          "observed_up": 0.0
+        }
+      ],
+      "model": "mlp",
+      "instrument": "NIFTY",
+      "horizon": 15,
+      "bh_q": 0.512743628185907
+    },
+    {
+      "samples": 6817,
+      "accuracy": 0.5082881032712336,
+      "balanced_accuracy": 0.49704053669447823,
+      "majority_accuracy": 0.528238227959513,
+      "auc": 0.5041580835063781,
+      "log_loss": 0.6935241650491968,
+      "baseline_log_loss": 0.6928343314016961,
+      "brier": 0.25018812896191384,
+      "ece": 0.021116473399594715,
+      "confident_samples": 0,
+      "confident_coverage": 0.0,
+      "confident_accuracy": null,
+      "day_clustered_accuracy_gain": -0.019941348973607036,
+      "p_value": 0.9215392303848076,
+      "calibration_bins": [
+        {
+          "lower": 0.4,
+          "samples": 4765,
+          "predicted_up": 0.48003781278065927,
+          "observed_up": 0.4738719832109129
+        },
+        {
+          "lower": 0.5,
+          "samples": 2052,
+          "predicted_up": 0.5226953320005827,
+          "observed_up": 0.4668615984405458
+        }
+      ],
+      "model": "mlp",
+      "instrument": "NIFTY",
+      "horizon": 30,
+      "bh_q": 0.9215392303848076
+    }
+  ],
+  "fresh_test": false,
+  "approved_for_trading": false
+}
