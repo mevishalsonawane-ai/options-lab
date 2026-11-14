@@ -1,0 +1,82 @@
+{
+  "base": {
+    "trades": 179,
+    "sessions": 247,
+    "net": -38542.147228803624,
+    "expectancy": -215.3192582614728,
+    "win_rate": 0.441340782122905,
+    "profit_factor": 0.6115863769873915,
+    "max_drawdown": 38661.737030638564,
+    "worst_month": -9158.652550863377,
+    "daily_sharpe": -2.6193549917536894,
+    "fixed_capital": 100000,
+    "p_value": 0.9985007496251874,
+    "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+    "starting_capital": 100000,
+    "ending_capital": 61457.85277119635,
+    "return_pct": -38.54214722880366,
+    "wins": 79,
+    "losses": 100,
+    "gross_profit": -3077.8124999999936,
+    "fees": 12010.086773803636,
+    "execution_friction": 23454.247955000003,
+    "close_mark_liquidation_drawdown": 39568.268201083934,
+    "rejections": {
+      "risk_budget": 549,
+      "daily_trade_cap": 245
+    },
+    "missing_holding_minutes": 4,
+    "fresh_out_of_sample": false,
+    "stress_multiplier": 1.0,
+    "average_net_win": 768.1962168189388,
+    "average_net_loss": -992.2964835749979,
+    "last_trade_day": "2026-09-07",
+    "exit_counts": {
+      "time_stop": 107,
+      "stop_or_profit_lock": 58,
+      "target": 9,
+      "gap_stop": 4,
+      "maximum_hold": 1
+    }
+  },
+  "double_friction": {
+    "trades": 129,
+    "sessions": 247,
+    "net": -39689.64823323725,
+    "expectancy": -307.6716917305212,
+    "win_rate": 0.3488372093023256,
+    "profit_factor": 0.47435163470486863,
+    "max_drawdown": 39694.8685841846,
+    "worst_month": -12186.569493619052,
+    "daily_sharpe": -3.279995712322892,
+    "fixed_capital": 100000,
+    "p_value": 0.9995002498750625,
+    "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+    "starting_capital": 100000,
+    "ending_capital": 60310.35176676277,
+    "return_pct": -39.68964823323723,
+    "wins": 45,
+    "losses": 84,
+    "gross_profit": 1159.1124999999995,
+    "fees": 8360.201315237251,
+    "execution_friction": 32488.559417999997,
+    "close_mark_liquidation_drawdown": 39807.72542992196,
+    "rejections": {
+      "risk_budget": 692,
+      "daily_trade_cap": 173
+    },
+    "missing_holding_minutes": 4,
+    "fresh_out_of_sample": false,
+    "stress_multiplier": 2.0,
+    "average_net_win": 795.9207360028278,
+    "average_net_loss": -898.8819208733869,
+    "last_trade_day": "2026-04-27",
+    "exit_counts": {
+      "time_stop": 76,
+      "stop_or_profit_lock": 43,
+      "target": 7,
+      "gap_stop": 2,
+      "maximum_hold": 1
+    }
+  }
+}

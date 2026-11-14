@@ -1,0 +1,15 @@
+{
+  "start": "2025-10-20",
+  "end": "2026-10-19",
+  "sessions": 247,
+  "files": {
+    "index_1m_NIFTY_2025.parquet": "658f6bce39cfd8ebde1413645b43d50234c432c4d0df0d9ac8b09c22cd877048",
+    "index_1m_NIFTY_2026.parquet": "b2240c709b4c82debeb96b18ca9e0306f8832cac5a5c8693db466bc1e814112d",
+    "index_1m_BANKNIFTY_2025.parquet": "a40331f17e40b6d083589b4eed4ab159d54d1103c088ba74a5af97fa2e42069d",
+    "index_1m_BANKNIFTY_2026.parquet": "268598438087af76a48d2d36fa829f59c32dd66b021d20e17b990d79034d6116",
+    "index_1m_INDIAVIX_2025.parquet": "8969f6fb1434b1568e884fcb0676cfd96c7dd214e3795d086230a66fe9ba5827",
+    "index_1m_INDIAVIX_2026.parquet": "025b96ec49788f236b8d60990a3e56e19929cfcbf9c86adca546c67a6ed2727c",
+    "opt_NIFTY_WEEK_2025.parquet": "abc852a2ac5efed056b683d010ec66e8e5f9a6ecef6146f5a3dde542a35f6cd7",
+    "opt_NIFTY_WEEK_2026.parquet": "532013be4ec6a1859e7f57ebe69f88323c675f45803ff52d949de32663512e8c"
+  }
+}

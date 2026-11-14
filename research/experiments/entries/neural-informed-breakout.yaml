@@ -1,0 +1,23 @@
+id: neural-informed-breakout
+title: Fixed NIFTY confirmed breakout with explicit cost and account risk replay
+family: ml
+date: '2026-11-14'
+doc: research/neural_v2/strategy_results/REPORT.md
+hypothesis: Underlying breakout confirmation and constrained fixed-contract buying may overcome costs without relying on in-sample neural scores
+data_version: Eight-file SHA256 audit in strategy_results/audit.json
+period:
+  design: 2025-10-20 through 2026-10-19; already viewed historical period
+  holdout: none
+instruments: [NIFTY, BANKNIFTY confirmation, INDIAVIX filter]
+features: [20-minute high/low, BANKNIFTY EMA20 and 15-minute return, VIX 15-minute return]
+model_or_rule: Fixed-rule confirmed breakout, one-lot 1-ITM weekly options, no neural weights in historical signals
+settings: STRATEGY_PREREG.md, no parameter search; normal and doubled friction accounts
+prereg: research/neural_v2/STRATEGY_PREREG.md
+variants_tried: 4
+results:
+  summary: Corrected base 179 trades, 79 wins, 44.13% win rate, net loss Rs38542.15; double friction 129 trades, 34.88% wins, net loss Rs39689.65
+  costs: Brokerage, inclusive exchange/IPFT, dated STT, SEBI, GST, stamp, assumed spread and slippage
+holdout_read: false
+verdict: rejected
+notes: >-
+  One fixed strategy. Four account outputs counted conservatively: initial and corrected fees, each normal and double friction. Initial fee omission corrected without signal/risk changes. Full historical selection bias remains; no fresh edge or trading approval.

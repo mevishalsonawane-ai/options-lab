@@ -1,0 +1,158 @@
+[
+  {
+    "scenario": "base",
+    "month": "2025-10",
+    "trades": 11,
+    "net": -5872.454873446934
+  },
+  {
+    "scenario": "base",
+    "month": "2025-11",
+    "trades": 29,
+    "net": 2416.743699288714
+  },
+  {
+    "scenario": "base",
+    "month": "2025-12",
+    "trades": 29,
+    "net": -9158.652550863377
+  },
+  {
+    "scenario": "base",
+    "month": "2026-01",
+    "trades": 30,
+    "net": -3324.3889366379517
+  },
+  {
+    "scenario": "base",
+    "month": "2026-02",
+    "trades": 33,
+    "net": -4496.6503924310955
+  },
+  {
+    "scenario": "base",
+    "month": "2026-03",
+    "trades": 5,
+    "net": -2652.5725432089703
+  },
+  {
+    "scenario": "base",
+    "month": "2026-04",
+    "trades": 17,
+    "net": -7686.046778200249
+  },
+  {
+    "scenario": "base",
+    "month": "2026-05",
+    "trades": 20,
+    "net": -6941.178900874816
+  },
+  {
+    "scenario": "base",
+    "month": "2026-06",
+    "trades": 2,
+    "net": -566.0123393988202
+  },
+  {
+    "scenario": "base",
+    "month": "2026-07",
+    "trades": 0,
+    "net": 0.0
+  },
+  {
+    "scenario": "base",
+    "month": "2026-08",
+    "trades": 2,
+    "net": -14.144711515118502
+  },
+  {
+    "scenario": "base",
+    "month": "2026-09",
+    "trades": 1,
+    "net": -246.78890151501355
+  },
+  {
+    "scenario": "base",
+    "month": "2026-10",
+    "trades": 0,
+    "net": 0.0
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2025-10",
+    "trades": 12,
+    "net": -7157.2562055975595
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2025-11",
+    "trades": 27,
+    "net": -3461.412827044711
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2025-12",
+    "trades": 27,
+    "net": -12186.569493619052
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-01",
+    "trades": 28,
+    "net": -5032.304946132934
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-02",
+    "trades": 30,
+    "net": -8200.748505772919
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-03",
+    "trades": 2,
+    "net": -1437.3049713455107
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-04",
+    "trades": 3,
+    "net": -2214.0512837245587
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-05",
+    "trades": 0,
+    "net": 0.0
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-06",
+    "trades": 0,
+    "net": 0.0
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-07",
+    "trades": 0,
+    "net": 0.0
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-08",
+    "trades": 0,
+    "net": 0.0
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-09",
+    "trades": 0,
+    "net": 0.0
+  },
+  {
+    "scenario": "double_friction",
+    "month": "2026-10",
+    "trades": 0,
+    "net": 0.0
+  }
+]

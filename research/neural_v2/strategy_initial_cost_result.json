@@ -1,0 +1,62 @@
+{
+  "base": {
+    "trades": 179,
+    "sessions": 247,
+    "net": -38806.08387295871,
+    "expectancy": -216.79376465340067,
+    "win_rate": 0.44692737430167595,
+    "profit_factor": 0.6078121941879181,
+    "max_drawdown": 38925.76794088902,
+    "worst_month": -9155.654915222616,
+    "daily_sharpe": -2.633148789155811,
+    "fixed_capital": 100000,
+    "p_value": 0.9980009995002499,
+    "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+    "starting_capital": 100000,
+    "ending_capital": 61193.916127041164,
+    "return_pct": -38.806083872958844,
+    "wins": 80,
+    "losses": 99,
+    "gross_profit": -3323.349999999994,
+    "fees": 12001.453340958718,
+    "execution_friction": 23481.280532000004,
+    "close_mark_liquidation_drawdown": 39672.06339959533,
+    "rejections": {
+      "risk_budget": 549,
+      "daily_trade_cap": 244
+    },
+    "missing_holding_minutes": 4,
+    "fresh_out_of_sample": false,
+    "stress_multiplier": 1.0
+  },
+  "double_friction": {
+    "trades": 129,
+    "sessions": 247,
+    "net": -39675.93751632018,
+    "expectancy": -307.5654071032572,
+    "win_rate": 0.3488372093023256,
+    "profit_factor": 0.4744738483679671,
+    "max_drawdown": 39681.25212483328,
+    "worst_month": -12183.83083512514,
+    "daily_sharpe": -3.2789360799117993,
+    "fixed_capital": 100000,
+    "p_value": 0.9995002498750625,
+    "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+    "starting_capital": 100000,
+    "ending_capital": 60324.06248367986,
+    "return_pct": -39.67593751632014,
+    "wins": 45,
+    "losses": 84,
+    "gross_profit": 1159.1124999999995,
+    "fees": 8346.490598320175,
+    "execution_friction": 32488.559417999997,
+    "close_mark_liquidation_drawdown": 39794.1976027719,
+    "rejections": {
+      "risk_budget": 692,
+      "daily_trade_cap": 173
+    },
+    "missing_holding_minutes": 4,
+    "fresh_out_of_sample": false,
+    "stress_multiplier": 2.0
+  }
+}
