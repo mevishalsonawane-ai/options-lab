@@ -1,0 +1,34 @@
+id: mtf-20261114-one-minute
+title: One-minute candle-colour baseline
+family: patterns-indicators
+date: '2026-11-14'
+hypothesis: Completed underlying candle direction alignment improves cost-adjusted
+  option entries
+data_version: Previously inspected NIFTY one-minute index and fixed-strike weekly
+  options, 2025/2026 lake
+period:
+  design: 2025-10-20 through 2026-10-19
+  holdout: none
+instruments:
+- NIFTY
+features:
+- completed underlying OHLC candle colour
+model_or_rule: one_minute; close>open bullish CE, close<open bearish PE; doji/missing
+  skip
+settings: research/mtf_alignment/PREREG.md
+prereg: research/mtf_alignment/PREREG.md
+variants_tried: 8
+results:
+  summary: 'Full account: 210 trades, 93 net wins, 44.29% win rate, net Rs-31107.77.
+    Double friction: 178 trades, net Rs-32445.20. All three chronological window restarts
+    also lost. Exact ten-second confirmation NOT tested.'
+  costs: Shared audited fixed-strike engine, dated fees, inclusive exchange/IPFT,
+    modeled spread/slippage; independent cash/risk replay
+holdout_read: false
+verdict: rejected
+notes: 'Eight overlapping account outputs per rule: two friction scenarios on full
+  period plus six chronological restarts, not eight independent rule searches. Four
+  full-period p-values BH adjusted. Prior history reuse, candle-open fills and spread
+  assumptions prevent a fresh edge claim. Three-timeframe test remains blocked by
+  unreadable sub-minute data.'
+doc: research/mtf_alignment/results/REPORT.md

@@ -1,0 +1,1058 @@
+{
+  "audit": {
+    "one_minute": {
+      "start": "2025-10-20",
+      "end": "2026-10-19",
+      "sessions": 247,
+      "files": {
+        "index_1m_NIFTY_2025.parquet": "658f6bce39cfd8ebde1413645b43d50234c432c4d0df0d9ac8b09c22cd877048",
+        "index_1m_NIFTY_2026.parquet": "b2240c709b4c82debeb96b18ca9e0306f8832cac5a5c8693db466bc1e814112d",
+        "index_1m_BANKNIFTY_2025.parquet": "a40331f17e40b6d083589b4eed4ab159d54d1103c088ba74a5af97fa2e42069d",
+        "index_1m_BANKNIFTY_2026.parquet": "268598438087af76a48d2d36fa829f59c32dd66b021d20e17b990d79034d6116",
+        "index_1m_INDIAVIX_2025.parquet": "8969f6fb1434b1568e884fcb0676cfd96c7dd214e3795d086230a66fe9ba5827",
+        "index_1m_INDIAVIX_2026.parquet": "025b96ec49788f236b8d60990a3e56e19929cfcbf9c86adca546c67a6ed2727c",
+        "opt_NIFTY_WEEK_2025.parquet": "abc852a2ac5efed056b683d010ec66e8e5f9a6ecef6146f5a3dde542a35f6cd7",
+        "opt_NIFTY_WEEK_2026.parquet": "532013be4ec6a1859e7f57ebe69f88323c675f45803ff52d949de32663512e8c"
+      },
+      "signal_candidates": 50619
+    },
+    "one_plus_five": {
+      "start": "2025-10-20",
+      "end": "2026-10-19",
+      "sessions": 247,
+      "files": {
+        "index_1m_NIFTY_2025.parquet": "658f6bce39cfd8ebde1413645b43d50234c432c4d0df0d9ac8b09c22cd877048",
+        "index_1m_NIFTY_2026.parquet": "b2240c709b4c82debeb96b18ca9e0306f8832cac5a5c8693db466bc1e814112d",
+        "index_1m_BANKNIFTY_2025.parquet": "a40331f17e40b6d083589b4eed4ab159d54d1103c088ba74a5af97fa2e42069d",
+        "index_1m_BANKNIFTY_2026.parquet": "268598438087af76a48d2d36fa829f59c32dd66b021d20e17b990d79034d6116",
+        "index_1m_INDIAVIX_2025.parquet": "8969f6fb1434b1568e884fcb0676cfd96c7dd214e3795d086230a66fe9ba5827",
+        "index_1m_INDIAVIX_2026.parquet": "025b96ec49788f236b8d60990a3e56e19929cfcbf9c86adca546c67a6ed2727c",
+        "opt_NIFTY_WEEK_2025.parquet": "abc852a2ac5efed056b683d010ec66e8e5f9a6ecef6146f5a3dde542a35f6cd7",
+        "opt_NIFTY_WEEK_2026.parquet": "532013be4ec6a1859e7f57ebe69f88323c675f45803ff52d949de32663512e8c"
+      },
+      "signal_candidates": 26851
+    }
+  },
+  "results": {
+    "one_minute_base": {
+      "trades": 210,
+      "sessions": 247,
+      "net": -31107.772472529206,
+      "expectancy": -148.1322498691867,
+      "win_rate": 0.44285714285714284,
+      "profit_factor": 0.7864490143400412,
+      "max_drawdown": 39404.828251774044,
+      "worst_month": -12961.256398973117,
+      "daily_sharpe": -1.4622557757557568,
+      "fixed_capital": 100000,
+      "p_value": 0.9325337331334332,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 68892.22752747085,
+      "return_pct": -31.10777247252915,
+      "wins": 93,
+      "losses": 117,
+      "gross_profit": 12159.300000000003,
+      "fees": 14537.051208529196,
+      "execution_friction": 28730.021264000014,
+      "close_mark_liquidation_drawdown": 39404.828251774,
+      "rejections": {
+        "risk_budget": 26785,
+        "daily_trade_cap": 20415,
+        "unfilled_entry": 1
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 1.0,
+      "average_net_win": 1231.8418582365039,
+      "average_net_loss": -1245.0347460557612,
+      "last_trade_day": "2026-06-25",
+      "exit_counts": {
+        "stop_or_profit_lock": 109,
+        "time_stop": 76,
+        "target": 17,
+        "gap_stop": 5,
+        "maximum_hold": 2,
+        "gap_target": 1
+      },
+      "bh_q_four_primary_replays": 0.9995002498750625
+    },
+    "one_minute_double_friction": {
+      "trades": 178,
+      "sessions": 247,
+      "net": -32445.1977471627,
+      "expectancy": -182.27639183799266,
+      "win_rate": 0.48314606741573035,
+      "profit_factor": 0.7453759438425456,
+      "max_drawdown": 39463.651305857595,
+      "worst_month": -12996.752538209405,
+      "daily_sharpe": -1.7367668236312481,
+      "fixed_capital": 100000,
+      "p_value": 0.9550224887556222,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 67554.80225283728,
+      "return_pct": -32.445197747162716,
+      "wins": 86,
+      "losses": 92,
+      "gross_profit": 27674.862499999996,
+      "fees": 12190.244789162676,
+      "execution_friction": 47929.81545800001,
+      "close_mark_liquidation_drawdown": 39463.65130585758,
+      "rejections": {
+        "risk_budget": 31073,
+        "daily_trade_cap": 16783,
+        "unfilled_entry": 1
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 2.0,
+      "average_net_win": 1104.4038560544925,
+      "average_net_loss": -1385.0427105200984,
+      "last_trade_day": "2026-06-17",
+      "exit_counts": {
+        "stop_or_profit_lock": 102,
+        "time_stop": 55,
+        "target": 15,
+        "gap_stop": 4,
+        "maximum_hold": 1,
+        "gap_target": 1
+      },
+      "bh_q_four_primary_replays": 0.9995002498750625
+    },
+    "one_plus_five_base": {
+      "trades": 144,
+      "sessions": 247,
+      "net": -38326.278990876104,
+      "expectancy": -266.15471521441737,
+      "win_rate": 0.3888888888888889,
+      "profit_factor": 0.6322275271414123,
+      "max_drawdown": 39296.06469356234,
+      "worst_month": -12997.972609251778,
+      "daily_sharpe": -2.299521306469035,
+      "fixed_capital": 100000,
+      "p_value": 0.9920039980009995,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 61673.72100912396,
+      "return_pct": -38.32627899087604,
+      "wins": 56,
+      "losses": 88,
+      "gross_profit": -9373.025000000007,
+      "fees": 9710.782112876108,
+      "execution_friction": 19242.47187799999,
+      "close_mark_liquidation_drawdown": 39378.04547962399,
+      "rejections": {
+        "risk_budget": 18380,
+        "daily_trade_cap": 7230,
+        "unfilled_entry": 1
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 1.0,
+      "average_net_win": 1176.5294722748372,
+      "average_net_loss": -1184.2264708893977,
+      "last_trade_day": "2026-04-29",
+      "exit_counts": {
+        "stop_or_profit_lock": 79,
+        "time_stop": 51,
+        "target": 9,
+        "gap_stop": 5
+      },
+      "bh_q_four_primary_replays": 0.9995002498750625
+    },
+    "one_plus_five_double_friction": {
+      "trades": 78,
+      "sessions": 247,
+      "net": -39440.522734874365,
+      "expectancy": -505.64772737018427,
+      "win_rate": 0.32051282051282054,
+      "profit_factor": 0.39716784900358065,
+      "max_drawdown": 39440.522734874365,
+      "worst_month": -11993.799208871114,
+      "daily_sharpe": -3.360388609937784,
+      "fixed_capital": 100000,
+      "p_value": 0.9995002498750625,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 60559.47726512562,
+      "return_pct": -39.440522734874385,
+      "wins": 25,
+      "losses": 53,
+      "gross_profit": -15757.337500000009,
+      "fees": 4941.454688874365,
+      "execution_friction": 18741.730545999988,
+      "close_mark_liquidation_drawdown": 39440.52273487438,
+      "rejections": {
+        "risk_budget": 22121,
+        "daily_trade_cap": 4183,
+        "unfilled_entry": 1
+      },
+      "missing_holding_minutes": 2,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 2.0,
+      "average_net_win": 1039.394302529821,
+      "average_net_loss": -1234.4411377003755,
+      "last_trade_day": "2026-01-22",
+      "exit_counts": {
+        "stop_or_profit_lock": 46,
+        "time_stop": 24,
+        "target": 6,
+        "gap_stop": 2
+      },
+      "bh_q_four_primary_replays": 0.9995002498750625
+    }
+  },
+  "window_restarts": {
+    "one_minute_base_first": {
+      "trades": 134,
+      "sessions": 110,
+      "net": -21699.70160998333,
+      "expectancy": -161.9380717162935,
+      "win_rate": 0.4626865671641791,
+      "profit_factor": 0.763143926984117,
+      "max_drawdown": 31496.899401467654,
+      "worst_month": -10324.878484361147,
+      "daily_sharpe": -2.1238195768298502,
+      "fixed_capital": 100000,
+      "p_value": 0.9195402298850575,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 78300.2983900167,
+      "return_pct": -21.6997016099833,
+      "wins": 62,
+      "losses": 72,
+      "gross_profit": 4511.887499999999,
+      "fees": 8789.019858983338,
+      "execution_friction": 17422.56925099999,
+      "close_mark_liquidation_drawdown": 31614.908997590945,
+      "rejections": {
+        "risk_budget": 6443,
+        "daily_trade_cap": 13524,
+        "unfilled_entry": 1
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 1.0,
+      "average_net_win": 1127.6751245113503,
+      "average_net_loss": -1272.438324023431,
+      "last_trade_day": "2026-03-19",
+      "exit_counts": {
+        "stop_or_profit_lock": 75,
+        "time_stop": 40,
+        "target": 13,
+        "gap_stop": 5,
+        "maximum_hold": 1
+      }
+    },
+    "one_minute_base_middle": {
+      "trades": 76,
+      "sessions": 60,
+      "net": -9408.070862545876,
+      "expectancy": -123.79040608612995,
+      "win_rate": 0.40789473684210525,
+      "profit_factor": 0.8259489242065012,
+      "max_drawdown": 23854.11858663817,
+      "worst_month": -12961.256398973117,
+      "daily_sharpe": -1.2859734096646187,
+      "fixed_capital": 100000,
+      "p_value": 0.7001499250374813,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 90591.92913745414,
+      "return_pct": -9.40807086254587,
+      "wins": 31,
+      "losses": 45,
+      "gross_profit": 7647.412500000006,
+      "fees": 5748.031349545858,
+      "execution_friction": 11307.452013000022,
+      "close_mark_liquidation_drawdown": 24519.717556249874,
+      "rejections": {
+        "risk_budget": 4190,
+        "daily_trade_cap": 6891
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 1.0,
+      "average_net_win": 1440.175325686811,
+      "average_net_loss": -1201.1890213074894,
+      "last_trade_day": "2026-06-25",
+      "exit_counts": {
+        "time_stop": 36,
+        "stop_or_profit_lock": 34,
+        "target": 4,
+        "maximum_hold": 1,
+        "gap_target": 1
+      }
+    },
+    "one_minute_base_last": {
+      "trades": 116,
+      "sessions": 77,
+      "net": -26019.758035028448,
+      "expectancy": -224.308258922659,
+      "win_rate": 0.39655172413793105,
+      "profit_factor": 0.5976445593431035,
+      "max_drawdown": 27111.66579302122,
+      "worst_month": -12772.728714339903,
+      "daily_sharpe": -4.199467124081965,
+      "fixed_capital": 100000,
+      "p_value": 0.991504247876062,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 73980.24196497153,
+      "return_pct": -26.019758035028474,
+      "wins": 46,
+      "losses": 70,
+      "gross_profit": -4179.50000000001,
+      "fees": 7946.752435028446,
+      "execution_friction": 13893.505599999991,
+      "close_mark_liquidation_drawdown": 28527.305597469473,
+      "rejections": {
+        "risk_budget": 1745,
+        "daily_trade_cap": 12375
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 1.0,
+      "average_net_win": 840.1919456906965,
+      "average_net_loss": -923.8369648114355,
+      "last_trade_day": "2026-10-16",
+      "exit_counts": {
+        "time_stop": 56,
+        "stop_or_profit_lock": 52,
+        "target": 5,
+        "gap_stop": 3
+      }
+    },
+    "one_minute_double_friction_first": {
+      "trades": 120,
+      "sessions": 110,
+      "net": -19518.14650778643,
+      "expectancy": -162.6512208982203,
+      "win_rate": 0.5,
+      "profit_factor": 0.7723348717653911,
+      "max_drawdown": 37860.97146288658,
+      "worst_month": -12996.752538209405,
+      "daily_sharpe": -1.9463755169083796,
+      "fixed_capital": 100000,
+      "p_value": 0.8970514742628686,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 80481.85349221357,
+      "return_pct": -19.518146507786426,
+      "wins": 60,
+      "losses": 60,
+      "gross_profit": 19526.624999999993,
+      "fees": 7869.198047786389,
+      "execution_friction": 31175.57346000003,
+      "close_mark_liquidation_drawdown": 38693.79304755811,
+      "rejections": {
+        "risk_budget": 8731,
+        "daily_trade_cap": 11533,
+        "unfilled_entry": 1
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 2.0,
+      "average_net_win": 1103.561277118019,
+      "average_net_loss": -1428.8637189144597,
+      "last_trade_day": "2026-03-16",
+      "exit_counts": {
+        "stop_or_profit_lock": 74,
+        "time_stop": 28,
+        "target": 13,
+        "gap_stop": 4,
+        "maximum_hold": 1
+      }
+    },
+    "one_minute_double_friction_middle": {
+      "trades": 67,
+      "sessions": 60,
+      "net": -16457.739230808293,
+      "expectancy": -245.637898967288,
+      "win_rate": 0.417910447761194,
+      "profit_factor": 0.6463666966511309,
+      "max_drawdown": 26832.522195688547,
+      "worst_month": -12679.20226419485,
+      "daily_sharpe": -2.9734583168171316,
+      "fixed_capital": 100000,
+      "p_value": 0.9305347326336831,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 83542.2607691917,
+      "return_pct": -16.45773923080831,
+      "wins": 28,
+      "losses": 39,
+      "gross_profit": 7355.237500000005,
+      "fees": 4932.853052808306,
+      "execution_friction": 18880.12367799999,
+      "close_mark_liquidation_drawdown": 27511.560031186455,
+      "rejections": {
+        "risk_budget": 5122,
+        "daily_trade_cap": 6162
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 2.0,
+      "average_net_win": 1074.330633316761,
+      "average_net_loss": -1193.307614453272,
+      "last_trade_day": "2026-06-29",
+      "exit_counts": {
+        "time_stop": 33,
+        "stop_or_profit_lock": 31,
+        "target": 2,
+        "gap_target": 1
+      }
+    },
+    "one_minute_double_friction_last": {
+      "trades": 108,
+      "sessions": 77,
+      "net": -33280.33218081122,
+      "expectancy": -308.15122389640027,
+      "win_rate": 0.3888888888888889,
+      "profit_factor": 0.4651712631380318,
+      "max_drawdown": 35002.00390989221,
+      "worst_month": -12352.182868598382,
+      "daily_sharpe": -5.998862295870024,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 66719.66781918878,
+      "return_pct": -33.28033218081122,
+      "wins": 42,
+      "losses": 66,
+      "gross_profit": -247.32500000000914,
+      "fees": 7367.129072811219,
+      "execution_friction": 25665.878108,
+      "close_mark_liquidation_drawdown": 36867.017855826176,
+      "rejections": {
+        "risk_budget": 3064,
+        "daily_trade_cap": 11150
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 2.0,
+      "average_net_win": 689.1860929891466,
+      "average_net_loss": -942.8204255508392,
+      "last_trade_day": "2026-10-16",
+      "exit_counts": {
+        "time_stop": 56,
+        "stop_or_profit_lock": 47,
+        "target": 3,
+        "gap_stop": 2
+      }
+    },
+    "one_plus_five_base_first": {
+      "trades": 121,
+      "sessions": 110,
+      "net": -35556.3186647657,
+      "expectancy": -293.8538732625264,
+      "win_rate": 0.3884297520661157,
+      "profit_factor": 0.5914768676907536,
+      "max_drawdown": 37701.7091937819,
+      "worst_month": -12997.972609251778,
+      "daily_sharpe": -3.8313475931025165,
+      "fixed_capital": 100000,
+      "p_value": 0.9965017491254373,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 64443.68133523437,
+      "return_pct": -35.55631866476563,
+      "wins": 47,
+      "losses": 74,
+      "gross_profit": -12136.82500000001,
+      "fees": 7898.4102107656945,
+      "execution_friction": 15521.083453999992,
+      "close_mark_liquidation_drawdown": 39315.88784933784,
+      "rejections": {
+        "risk_budget": 4216,
+        "daily_trade_cap": 6376,
+        "unfilled_entry": 1
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 1.0,
+      "average_net_win": 1095.317541650426,
+      "average_net_loss": -1176.1654475991313,
+      "last_trade_day": "2026-03-19",
+      "exit_counts": {
+        "stop_or_profit_lock": 66,
+        "time_stop": 42,
+        "target": 8,
+        "gap_stop": 5
+      }
+    },
+    "one_plus_five_base_middle": {
+      "trades": 80,
+      "sessions": 60,
+      "net": -18749.854369564768,
+      "expectancy": -234.3731796195596,
+      "win_rate": 0.4,
+      "profit_factor": 0.6614005768538018,
+      "max_drawdown": 27725.178376244603,
+      "worst_month": -9281.346589552719,
+      "daily_sharpe": -3.052724733590544,
+      "fixed_capital": 100000,
+      "p_value": 0.9330334832583708,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 81250.1456304352,
+      "return_pct": -18.7498543695648,
+      "wins": 32,
+      "losses": 48,
+      "gross_profit": -932.9125000000022,
+      "fees": 6018.732082564769,
+      "execution_friction": 11798.209786999994,
+      "close_mark_liquidation_drawdown": 27934.72245649778,
+      "rejections": {
+        "risk_budget": 2202,
+        "daily_trade_cap": 3629
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 1.0,
+      "average_net_win": 1144.5276158408078,
+      "average_net_loss": -1153.640376593138,
+      "last_trade_day": "2026-06-29",
+      "exit_counts": {
+        "time_stop": 39,
+        "stop_or_profit_lock": 38,
+        "gap_stop": 2,
+        "target": 1
+      }
+    },
+    "one_plus_five_base_last": {
+      "trades": 118,
+      "sessions": 77,
+      "net": -24803.52279419594,
+      "expectancy": -210.19934571352496,
+      "win_rate": 0.3983050847457627,
+      "profit_factor": 0.5817995340386707,
+      "max_drawdown": 34709.57020406624,
+      "worst_month": -12599.803930654107,
+      "daily_sharpe": -3.9926507032391525,
+      "fixed_capital": 100000,
+      "p_value": 0.9905047476261869,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 75196.47720580401,
+      "return_pct": -24.803522794195988,
+      "wins": 47,
+      "losses": 71,
+      "gross_profit": -2321.3125000000045,
+      "fees": 8136.641459195928,
+      "execution_friction": 14345.568835000005,
+      "close_mark_liquidation_drawdown": 35466.303875530706,
+      "rejections": {
+        "daily_trade_cap": 6795,
+        "risk_budget": 602
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 1.0,
+      "average_net_win": 734.1830705779341,
+      "average_net_loss": -835.3539029768853,
+      "last_trade_day": "2026-10-16",
+      "exit_counts": {
+        "time_stop": 66,
+        "stop_or_profit_lock": 47,
+        "gap_stop": 2,
+        "target": 2,
+        "maximum_hold": 1
+      }
+    },
+    "one_plus_five_double_friction_first": {
+      "trades": 78,
+      "sessions": 110,
+      "net": -39440.522734874365,
+      "expectancy": -505.64772737018427,
+      "win_rate": 0.32051282051282054,
+      "profit_factor": 0.39716784900358065,
+      "max_drawdown": 39440.522734874365,
+      "worst_month": -11993.799208871114,
+      "daily_sharpe": -5.169657644066578,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 60559.47726512562,
+      "return_pct": -39.440522734874385,
+      "wins": 25,
+      "losses": 53,
+      "gross_profit": -15757.337500000009,
+      "fees": 4941.454688874365,
+      "execution_friction": 18741.730545999988,
+      "close_mark_liquidation_drawdown": 39440.52273487438,
+      "rejections": {
+        "risk_budget": 6862,
+        "daily_trade_cap": 4183,
+        "unfilled_entry": 1
+      },
+      "missing_holding_minutes": 2,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 2.0,
+      "average_net_win": 1039.394302529821,
+      "average_net_loss": -1234.4411377003755,
+      "last_trade_day": "2026-01-22",
+      "exit_counts": {
+        "stop_or_profit_lock": 46,
+        "time_stop": 24,
+        "target": 6,
+        "gap_stop": 2
+      }
+    },
+    "one_plus_five_double_friction_middle": {
+      "trades": 62,
+      "sessions": 60,
+      "net": -27248.752401814694,
+      "expectancy": -439.49600648088204,
+      "win_rate": 0.3709677419354839,
+      "profit_factor": 0.4390478597099751,
+      "max_drawdown": 30861.934302743644,
+      "worst_month": -12958.880992601287,
+      "daily_sharpe": -5.875226560883257,
+      "fixed_capital": 100000,
+      "p_value": 0.9985007496251874,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 72751.2475981853,
+      "return_pct": -27.24875240181469,
+      "wins": 23,
+      "losses": 39,
+      "gross_profit": -4748.575000000001,
+      "fees": 4607.283733814695,
+      "execution_friction": 17892.893667999993,
+      "close_mark_liquidation_drawdown": 31740.122307592872,
+      "rejections": {
+        "risk_budget": 3191,
+        "daily_trade_cap": 2792
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 2.0,
+      "average_net_win": 927.2670799546347,
+      "average_net_loss": -1245.5357754043919,
+      "last_trade_day": "2026-06-24",
+      "exit_counts": {
+        "time_stop": 32,
+        "stop_or_profit_lock": 29,
+        "gap_stop": 1
+      }
+    },
+    "one_plus_five_double_friction_last": {
+      "trades": 85,
+      "sessions": 77,
+      "net": -38381.5750057975,
+      "expectancy": -451.5479412446764,
+      "win_rate": 0.2823529411764706,
+      "profit_factor": 0.267315589834745,
+      "max_drawdown": 39243.62883861818,
+      "worst_month": -12212.347847742307,
+      "daily_sharpe": -8.12810869142613,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000,
+      "ending_capital": 61618.424994202476,
+      "return_pct": -38.38157500579752,
+      "wins": 24,
+      "losses": 61,
+      "gross_profit": -12879.425000000003,
+      "fees": 5736.581273797493,
+      "execution_friction": 19765.568732000003,
+      "close_mark_liquidation_drawdown": 39962.49670798637,
+      "rejections": {
+        "risk_budget": 3364,
+        "daily_trade_cap": 4327
+      },
+      "missing_holding_minutes": 0,
+      "fresh_out_of_sample": false,
+      "stress_multiplier": 2.0,
+      "average_net_win": 583.4704785076538,
+      "average_net_loss": -858.7683031144456,
+      "last_trade_day": "2026-10-05",
+      "exit_counts": {
+        "time_stop": 50,
+        "stop_or_profit_lock": 32,
+        "maximum_hold": 1,
+        "gap_stop": 1,
+        "target": 1
+      }
+    }
+  },
+  "monthly": [
+    {
+      "arm": "one_minute_base",
+      "month": "2025-10",
+      "trades": 12,
+      "wins": 7,
+      "net": 6923.346974397939
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2025-11",
+      "trades": 27,
+      "wins": 13,
+      "net": -10324.878484361148
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2025-12",
+      "trades": 27,
+      "wins": 13,
+      "net": -6101.910610447529
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-01",
+      "trades": 29,
+      "wins": 11,
+      "net": -9264.07489626301
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-02",
+      "trades": 32,
+      "wins": 18,
+      "net": 5303.65527871911
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-03",
+      "trades": 7,
+      "wins": 0,
+      "net": -8235.839872028699
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-04",
+      "trades": 24,
+      "wins": 14,
+      "net": 12885.737039911503
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-05",
+      "trades": 25,
+      "wins": 8,
+      "net": -9332.551503484261
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-06",
+      "trades": 27,
+      "wins": 9,
+      "net": -12961.256398973117
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-07",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-08",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-09",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_minute_base",
+      "month": "2026-10",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2025-10",
+      "trades": 12,
+      "wins": 7,
+      "net": 5535.858534034434
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2025-11",
+      "trades": 25,
+      "wins": 11,
+      "net": -10299.927834039574
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2025-12",
+      "trades": 17,
+      "wins": 7,
+      "net": -12996.752538209403
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-01",
+      "trades": 30,
+      "wins": 14,
+      "net": -6840.152403890808
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-02",
+      "trades": 32,
+      "wins": 18,
+      "net": 2496.9367588123514
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-03",
+      "trades": 4,
+      "wins": 3,
+      "net": 2585.8909755065724
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-04",
+      "trades": 19,
+      "wins": 11,
+      "net": 8765.641057689974
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-05",
+      "trades": 22,
+      "wins": 8,
+      "net": -12679.20226419485
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-06",
+      "trades": 17,
+      "wins": 7,
+      "net": -9013.490032871397
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-07",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-08",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-09",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_minute_double_friction",
+      "month": "2026-10",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2025-10",
+      "trades": 11,
+      "wins": 4,
+      "net": -4256.516672876831
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2025-11",
+      "trades": 10,
+      "wins": 1,
+      "net": -12997.972609251778
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2025-12",
+      "trades": 28,
+      "wins": 9,
+      "net": -8255.648410056428
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-01",
+      "trades": 30,
+      "wins": 13,
+      "net": -10575.046776645913
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-02",
+      "trades": 33,
+      "wins": 18,
+      "net": 3124.6184160381117
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-03",
+      "trades": 9,
+      "wins": 2,
+      "net": -2595.7526119728636
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-04",
+      "trades": 23,
+      "wins": 9,
+      "net": -2769.9603261104035
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-05",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-06",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-07",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-08",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-09",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_base",
+      "month": "2026-10",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2025-10",
+      "trades": 11,
+      "wins": 4,
+      "net": -4902.032918365486
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2025-11",
+      "trades": 17,
+      "wins": 4,
+      "net": -11993.799208871114
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2025-12",
+      "trades": 27,
+      "wins": 9,
+      "net": -11795.734737406596
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-01",
+      "trades": 23,
+      "wins": 8,
+      "net": -10748.955870231175
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-02",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-03",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-04",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-05",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-06",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-07",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-08",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-09",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    },
+    {
+      "arm": "one_plus_five_double_friction",
+      "month": "2026-10",
+      "trades": 0,
+      "wins": 0,
+      "net": 0.0
+    }
+  ],
+  "exact_three_timeframe": {
+    "status": "blocked",
+    "win_rate": null,
+    "net": null,
+    "reason": "No readable genuine sub-minute underlying/option history in current environment. Minute OHLC cannot reconstruct ten-second bars."
+  },
+  "fresh_out_of_sample": false,
+  "approved_for_trading": false
+}
