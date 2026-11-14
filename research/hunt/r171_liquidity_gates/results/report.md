@@ -1,6 +1,6 @@
 # R171: four liquidity / execution-cost gates on the arms
 
-13 Nov 2026. Pre-registered in `PREREG.md` before any number (written first; this session could not commit or push, so the pre-registration is not in its own earlier commit). Research only: nothing in the app changes.
+13 Nov 2026. Pre-registered in `PREREG.md` before any number (written first; this session could not commit at first, so the gate pre-registration is not in its own earlier commit; Amendment A is, commit b684d4f). Research only: nothing in the app changes.
 
 ## For Boss (short)
 
@@ -12,6 +12,11 @@
   - 4a (spread vs theta, effectively 'on BANKNIFTY monthly, only the last week before expiry') on R72: 473 of 778 out-of-sample trades kept, +Rs 92 a trade vs -Rs 30, better in all 4 quarters, but only +Rs 10 a trade better in design, p 0.00845 -> q 1. Same direction on R51 (+Rs 60 a trade, p 0.092).
   - 3c (skip a strike whose Roll spread just doubled) on Liquidity 15+5: +Rs 39 a trade out-of-sample (732 of 960 kept) and +Rs 46 in design, but p 0.057 -> q 1.
 - **The big caveat:** the spread is an assumption. At the 'roll' spread these arms make +Rs 23 (R51) / +Rs 81 (R72) / +Rs 14 (Liquidity) a trade out-of-sample; at 'quoted' it is -Rs 88 / -Rs 30 / -Rs 88. Which one is true decides whether the arms make money at all, and only the phone's recorded depth (sealed, private IraAlgo repo, not opened here) can tell.
+- **New angle (Amendment A): measure the spread from real prices instead of assuming it.** Three estimators (Roll, Abdi-Ranaldo, Corwin-Schultz) on each trade's 30 minutes before entry.
+  - The market looks CHEAPER than costs.py's 'quoted': on 81.2% of out-of-sample trades the measured spread is below it (43.5% even below 'roll'). The median-fit law is 0.71 + 0.00297 x premium points: the same slope as costs.py (0.00292) but a bigger fixed part (0.162), i.e. about 'roll + half a point'. 'quoted' overstates it by a median 1.6 points a trade.
+  - Re-priced with the measured spread, out-of-sample net per trade: R72 +Rs 45, R51 -Rs 22, Liquidity -Rs 31 (with the wide Corwin-Schultz bound: +Rs 19 / -Rs 44 / -Rs 49). In design all three lose under every cost (-Rs 148 / -Rs 165 / -Rs 114 measured). So only R72 is positive out-of-sample at realistic costs, and not in design.
+  - NIFTY options cost about twice BANKNIFTY's as a share of premium (median measured 0.69% vs 0.33% on R51's trades). R51 on NIFTY loses at every cost, even 'roll' (-Rs 39 a trade).
+  - Honest limit: these are effective-spread estimates from trade prices, not quotes; the two covariance estimators are unstable right before breakouts (trending minutes push them to 0), so the trustworthy bracket is 'roll' (low) to Corwin-Schultz (high). Only the phone's sealed depth recordings can settle it.
 - These numbers are on the public release data (2024-02 to 2026-02-23, NIFTY + BANKNIFTY), not the app's own data, so the arms' rupee totals do not match their published records. Only 'gate vs no gate vs random skip on the same trades' is the result.
 
 ## What was run
@@ -147,6 +152,93 @@ No gate: 24 trades, +Rs 469 a trade, total +Rs 11,267, win 100.0%, worst day +Rs
 
 - No free bid / ask history exists; every spread here is the costs.py law. Results that depend on it (G2, G4a-c) are shown under roll / quoted / stress above; G4d and G3c/d use the Roll estimate measured from real 1-minute prices instead.
 - The arms' sign flips between the roll and quoted regimes. Validating the regime needs the phone's recorded market depth (sealed recordings in the private IraAlgo repo); they were NOT opened (encrypted, and this session may not read that repo).
+
+## Amendment A: the spread MEASURED from real prices (a measurement, not a test)
+
+Pre-registered as Amendment A in PREREG.md before any of these numbers. It re-reads the out-of-sample trades for costing only (a second look). The pooled table at the end was added AFTER the first look (disclosed).
+
+### Where the measured spread sits against costs.py (share of trades with an estimate)
+
+| strategy | period | trades (measured) | below roll | roll-quoted | quoted-stress | above stress | median measured (pts / % of premium) | law at the same premiums: roll / quoted (median pts) |
+|---|---|---|---|---|---|---|---|---|
+| R51 | design | 1186 (942) | 43.5% | 27.9% | 23.7% | 4.9% | 1.36 / 0.56% | 1.00 / 3.01 |
+| R51 | oos | 1061 (863) | 43.6% | 36.7% | 17.0% | 2.7% | 1.42 / 0.42% | 1.04 / 3.13 |
+| R72 | design | 754 (592) | 49.0% | 26.4% | 20.3% | 4.4% | 1.12 / 0.38% | 1.02 / 3.06 |
+| R72 | oos | 778 (647) | 48.4% | 37.2% | 12.1% | 2.3% | 1.14 / 0.35% | 1.08 / 3.25 |
+| LIQ | design | 1032 (920) | 42.3% | 26.6% | 25.4% | 5.7% | 1.31 / 0.63% | 0.89 / 2.67 |
+| LIQ | oos | 960 (851) | 39.8% | 39.0% | 18.8% | 2.4% | 1.34 / 0.50% | 0.85 / 2.55 |
+
+Estimator medians (share of premium, out-of-sample): R51 Roll 0.47%, AR 0.00%, CS 0.71%; R72 Roll 0.41%, AR 0.00%, CS 0.65%; LIQ Roll 0.63%, AR 0.00%, CS 0.77%. AR is 0 on most single 30-minute windows, so MEASURED (the median of the three) often falls to Roll or CS.
+
+### The spread law, refitted on design trades and checked out-of-sample
+
+- costs.py (in-session, 'roll'): 0.162 + 0.00292 x premium; 'quoted' is that x 3.
+- Refit, least squares: 0.912 + 0.00409 x premium; median fit: 0.708 + 0.00297 x premium (2454 design trades).
+- Out-of-sample median absolute error / median bias (points, + = the law is wider than measured), 2361 trades: costs.py roll 1.00 / -0.31; costs.py quoted 1.83 / +1.61; refit OLS 1.34 / +0.85; refit median 1.07 / +0.25.
+
+### The strategies re-priced (net per trade; total; max DD)
+
+| strategy | period | roll | quoted | stress | MEASURED | CS (wide bound) |
+|---|---|---|---|---|---|---|
+| R51 | design (n 1186) | -Rs 129; -Rs 153,525; DD -Rs 155,494 | -Rs 196; -Rs 232,253; DD -Rs 232,253 | -Rs 318; -Rs 376,586; DD -Rs 376,586 | -Rs 165; -Rs 195,625; DD -Rs 196,020 | -Rs 189; -Rs 223,668; DD -Rs 223,668 |
+| R51 | oos (n 1061) | +Rs 23; +Rs 24,022; DD -Rs 45,203 | -Rs 88; -Rs 93,452; DD -Rs 93,452 | -Rs 291; -Rs 308,822; DD -Rs 308,822 | -Rs 22; -Rs 23,188; DD -Rs 51,485 | -Rs 44; -Rs 47,153; DD -Rs 56,629 |
+| R72 | design (n 754) | -Rs 115; -Rs 87,082; DD -Rs 89,038 | -Rs 186; -Rs 140,241; DD -Rs 141,062 | -Rs 315; -Rs 237,699; DD -Rs 238,356 | -Rs 148; -Rs 111,479; DD -Rs 112,306 | -Rs 175; -Rs 131,735; DD -Rs 132,561 |
+| R72 | oos (n 778) | +Rs 81; +Rs 62,783; DD -Rs 28,632 | -Rs 30; -Rs 23,617; DD -Rs 56,075 | -Rs 234; -Rs 182,016; DD -Rs 182,016 | +Rs 45; +Rs 35,330; DD -Rs 32,591 | +Rs 19; +Rs 14,663; DD -Rs 39,348 |
+| LIQ | design (n 1032) | -Rs 80; -Rs 82,845; DD -Rs 118,211 | -Rs 141; -Rs 145,866; DD -Rs 167,700 | -Rs 253; -Rs 261,405; DD -Rs 266,033 | -Rs 114; -Rs 117,307; DD -Rs 144,907 | -Rs 137; -Rs 141,382; DD -Rs 159,966 |
+| LIQ | oos (n 960) | +Rs 14; +Rs 13,284; DD -Rs 37,301 | -Rs 88; -Rs 84,877; DD -Rs 115,362 | -Rs 276; -Rs 264,838; DD -Rs 265,842 | -Rs 31; -Rs 29,539; DD -Rs 58,778 | -Rs 49; -Rs 47,046; DD -Rs 78,395 |
+
+Trades with no estimate (fewer than 10 traded minutes before the fill, all of them entries before 09:30; out-of-sample R51 198 of 1061, R72 131 of 778, LIQ 109 of 960) are costed at 'quoted' in the MEASURED and CS columns, which pulls those columns toward 'quoted' (the cautious side).
+
+By index, out-of-sample net per trade (roll / quoted / MEASURED / CS):
+
+- R51: NIFTY (n 489) -Rs 39 / -Rs 125 / -Rs 97 / -Rs 120; BANKNIFTY (n 572) +Rs 75 / -Rs 57 / +Rs 43 / +Rs 20
+- R72: NIFTY (n 353) +Rs 105 / +Rs 18 / +Rs 58 / +Rs 30; BANKNIFTY (n 425) +Rs 60 / -Rs 70 / +Rs 35 / +Rs 9
+- LIQ: NIFTY (n 456) +Rs 10 / -Rs 69 / -Rs 45 / -Rs 60; BANKNIFTY (n 504) +Rs 17 / -Rs 106 / -Rs 18 / -Rs 39
+
+### The R171 gates re-priced (out-of-sample gain per trade: quoted / MEASURED / CS; verdicts unchanged)
+
+| gate | R51 | R72 | LIQ |
+|---|---|---|---|
+| G1a | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 |
+| G1b | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 |
+| G1c | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 |
+| G2a | +Rs 10 / +Rs 20 / +Rs 20 | -Rs 16 / -Rs 6 / -Rs 6 | -Rs 5 / +Rs 9 / +Rs 9 |
+| G2b | +Rs 0 / +Rs 1 / +Rs 1 | -Rs 7 / -Rs 6 / -Rs 6 | +Rs 2 / +Rs 5 / +Rs 5 |
+| G2c | +Rs 1 / +Rs 1 / +Rs 1 | +Rs 2 / +Rs 3 / +Rs 3 | +Rs 0 / +Rs 1 / +Rs 1 |
+| G2d | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 |
+| G2e | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 | -Rs 0 / -Rs 0 / -Rs 0 |
+| G2f | -Rs 239 / -Rs 142 / -Rs 149 | -Rs 371 / -Rs 285 / -Rs 285 | -Rs 24 / +Rs 53 / +Rs 59 |
+| G3a | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 |
+| G3b | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 0 / +Rs 0 / +Rs 0 | +Rs 5 / +Rs 4 / +Rs 4 |
+| G3c | -Rs 9 / +Rs 13 / -Rs 3 | +Rs 18 / +Rs 37 / +Rs 23 | +Rs 39 / +Rs 60 / +Rs 46 |
+| G3d | -Rs 8 / +Rs 10 / -Rs 2 | -Rs 7 / +Rs 8 / -Rs 2 | +Rs 4 / +Rs 19 / +Rs 10 |
+| G4a | +Rs 60 / +Rs 23 / +Rs 23 | +Rs 123 / +Rs 91 / +Rs 87 | +Rs 13 / -Rs 24 / -Rs 24 |
+| G4b | +Rs 41 / -Rs 4 / -Rs 7 | +Rs 99 / +Rs 59 / +Rs 54 | -Rs 12 / -Rs 57 / -Rs 57 |
+| G4c | +Rs 41 / -Rs 4 / -Rs 7 | +Rs 99 / +Rs 59 / +Rs 54 | -Rs 12 / -Rs 57 / -Rs 57 |
+| G4d | -Rs 7 / +Rs 13 / -Rs 13 | -Rs 16 / +Rs 3 / -Rs 23 | -Rs 24 / +Rs 10 / -Rs 24 |
+
+G4a's out-of-sample gain shrinks with real costs (R51 and Liquidity most), so part of it came from the assumed spread; G3c's gain on Liquidity grows. Neither changes a verdict.
+
+### Pooled check (POST-HOC, added after the first look)
+
+Single 30-minute windows often give 0, so the moment terms were averaged over all trades of each index and premium tercile before the square root. Points at the group's median premium:
+
+| period | group | n | premium | Roll pooled | AR pooled | CS median | law roll / quoted / stress |
+|---|---|---|---|---|---|---|---|
+| design | NIFTY low | 384 | 108.6 | 1.06 | 0.0 | 1.39 | 0.48 / 1.44 / 3.19 |
+| design | NIFTY mid | 378 | 146.2 | 0.29 | 0.0 | 1.57 | 0.59 / 1.77 / 3.93 |
+| design | NIFTY high | 380 | 195.8 | 2.24 | 0.6 | 1.92 | 0.73 / 2.2 / 4.89 |
+| design | BANKNIFTY low | 438 | 307.8 | 0.0 | 0.0 | 4.1 | 1.06 / 3.18 / 7.07 |
+| design | BANKNIFTY mid | 437 | 445.4 | 0.0 | 0.0 | 4.15 | 1.46 / 4.39 / 9.75 |
+| design | BANKNIFTY high | 437 | 769.5 | 6.76 | 0.0 | 4.63 | 2.41 / 7.23 / 16.06 |
+| oos | NIFTY low | 359 | 90.0 | 0.47 | 0.0 | 1.08 | 0.42 / 1.27 / 2.83 |
+| oos | NIFTY mid | 358 | 130.0 | 0.34 | 0.0 | 1.34 | 0.54 / 1.62 / 3.61 |
+| oos | NIFTY high | 359 | 185.2 | 3.57 | 0.6 | 1.77 | 0.7 / 2.11 / 4.69 |
+| oos | BANKNIFTY low | 431 | 372.9 | 0.0 | 0.0 | 2.64 | 1.25 / 3.75 / 8.34 |
+| oos | BANKNIFTY mid | 426 | 585.0 | 1.65 | 0.0 | 2.47 | 1.87 / 5.61 / 12.47 |
+| oos | BANKNIFTY high | 428 | 858.0 | 4.49 | 0.0 | 3.1 | 2.67 / 8.0 / 17.78 |
+
+Reading: the covariance estimators (Roll, AR) swing from 0 to 2-3x the law between groups. The minutes before a breakout entry trend, which pushes them toward 0, so they cannot pin the spread here. Corwin-Schultz is stable and sits between costs.py's 'roll' and 'quoted' in 11 of the 12 groups (the exception: design-period BANKNIFTY low-premium trades, above 'quoted'); it reads some of each minute's real move as spread, so it is an upper bound. Best estimate from real prices: the effective spread on these near-the-money options is between 'roll' and 'quoted', closer to 'roll' on BANKNIFTY. 'quoted' (the costs.py default) is likely too pessimistic for them; 'stress' is far too wide for a 1-3 lot order.
 
 ## App change
 

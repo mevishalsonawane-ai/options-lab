@@ -1,0 +1,1453 @@
+{
+ "window_minutes": 30,
+ "strategies": {
+  "R51": {
+   "design": {
+    "describe": {
+     "n": 1186,
+     "n_measured": 942,
+     "roll_share_q": [
+      0.0,
+      0.0046,
+      0.0197
+     ],
+     "roll_n": 922,
+     "ar_share_q": [
+      0.0,
+      0.0,
+      0.007
+     ],
+     "ar_n": 942,
+     "cs_share_q": [
+      0.0073,
+      0.0102,
+      0.0137
+     ],
+     "cs_n": 942,
+     "measured_pts_q": [
+      0.05,
+      1.3552,
+      3.5515
+     ],
+     "measured_share_q": [
+      0.0003,
+      0.0056,
+      0.0119
+     ],
+     "premium_q": [
+      157.1125,
+      288.175,
+      474.5125
+     ],
+     "law_roll_pts_q": [
+      0.6208,
+      1.0035,
+      1.5476
+     ],
+     "law_quoted_pts_q": [
+      1.8623,
+      3.0104,
+      4.6427
+     ],
+     "law_stress_pts_q": [
+      4.1385,
+      6.6898,
+      10.3172
+     ],
+     "bands_pct": {
+      "below roll": 43.5,
+      "roll-quoted": 27.9,
+      "quoted-stress": 23.7,
+      "above stress": 4.9
+     }
+    },
+    "priced": {
+     "roll": {
+      "n": 1186,
+      "net": -153525.33,
+      "per_trade": -129.45,
+      "win": 37.27,
+      "worst_day": -15333.87,
+      "max_dd": -155494.44
+     },
+     "quoted": {
+      "n": 1186,
+      "net": -232252.91,
+      "per_trade": -195.83,
+      "win": 35.92,
+      "worst_day": -16448.0,
+      "max_dd": -232252.91
+     },
+     "stress": {
+      "n": 1186,
+      "net": -376585.96,
+      "per_trade": -317.53,
+      "win": 33.14,
+      "worst_day": -18490.52,
+      "max_dd": -376585.96
+     },
+     "measured": {
+      "n": 1186,
+      "net": -195624.51,
+      "per_trade": -164.94,
+      "win": 36.59,
+      "worst_day": -15553.67,
+      "max_dd": -196019.6
+     },
+     "cs_wide": {
+      "n": 1186,
+      "net": -223668.18,
+      "per_trade": -188.59,
+      "win": 36.26,
+      "worst_day": -16161.91,
+      "max_dd": -223668.18
+     }
+    }
+   },
+   "oos": {
+    "describe": {
+     "n": 1061,
+     "n_measured": 863,
+     "roll_share_q": [
+      0.0,
+      0.0047,
+      0.0139
+     ],
+     "roll_n": 843,
+     "ar_share_q": [
+      0.0,
+      0.0,
+      0.006
+     ],
+     "ar_n": 863,
+     "cs_share_q": [
+      0.0042,
+      0.0071,
+      0.0115
+     ],
+     "cs_n": 863,
+     "measured_pts_q": [
+      0.05,
+      1.4158,
+      2.6875
+     ],
+     "measured_share_q": [
+      0.0004,
+      0.0042,
+      0.0092
+     ],
+     "premium_q": [
+      140.15,
+      301.75,
+      633.35
+     ],
+     "law_roll_pts_q": [
+      0.5712,
+      1.0431,
+      2.0114
+     ],
+     "law_quoted_pts_q": [
+      1.7137,
+      3.1293,
+      6.0341
+     ],
+     "law_stress_pts_q": [
+      3.8083,
+      6.9541,
+      13.4092
+     ],
+     "bands_pct": {
+      "below roll": 43.6,
+      "roll-quoted": 36.7,
+      "quoted-stress": 17.0,
+      "above stress": 2.7
+     }
+    },
+    "priced": {
+     "roll": {
+      "n": 1061,
+      "net": 24021.55,
+      "per_trade": 22.64,
+      "win": 44.11,
+      "worst_day": -12630.38,
+      "max_dd": -45202.77
+     },
+     "quoted": {
+      "n": 1061,
+      "net": -93452.49,
+      "per_trade": -88.08,
+      "win": 41.19,
+      "worst_day": -13632.85,
+      "max_dd": -93452.49
+     },
+     "stress": {
+      "n": 1061,
+      "net": -308821.61,
+      "per_trade": -291.07,
+      "win": 36.48,
+      "worst_day": -15470.73,
+      "max_dd": -308821.61
+     },
+     "measured": {
+      "n": 1061,
+      "net": -23187.62,
+      "per_trade": -21.85,
+      "win": 42.88,
+      "worst_day": -13305.72,
+      "max_dd": -51485.03
+     },
+     "cs_wide": {
+      "n": 1061,
+      "net": -47152.64,
+      "per_trade": -44.44,
+      "win": 42.6,
+      "worst_day": -13286.39,
+      "max_dd": -56628.63
+     }
+    }
+   },
+   "by_index": {
+    "NIFTY": {
+     "describe": {
+      "n": 489,
+      "n_measured": 388,
+      "roll_share_q": [
+       0.0,
+       0.0082,
+       0.0229
+      ],
+      "roll_n": 380,
+      "ar_share_q": [
+       0.0,
+       0.0,
+       0.0113
+      ],
+      "ar_n": 388,
+      "cs_share_q": [
+       0.0078,
+       0.0108,
+       0.014
+      ],
+      "cs_n": 388,
+      "measured_pts_q": [
+       0.05,
+       0.9249,
+       1.89
+      ],
+      "measured_share_q": [
+       0.0004,
+       0.0069,
+       0.0135
+      ],
+      "premium_q": [
+       109.7,
+       136.2,
+       169.6
+      ],
+      "law_roll_pts_q": [
+       0.4823,
+       0.5597,
+       0.6572
+      ],
+      "law_quoted_pts_q": [
+       1.447,
+       1.6791,
+       1.9717
+      ],
+      "law_stress_pts_q": [
+       3.2155,
+       3.7314,
+       4.3815
+      ],
+      "bands_pct": {
+       "below roll": 38.4,
+       "roll-quoted": 31.4,
+       "quoted-stress": 26.0,
+       "above stress": 4.1
+      }
+     },
+     "priced": {
+      "roll": -39.07,
+      "quoted": -124.69,
+      "stress": -281.66,
+      "measured": -97.36,
+      "cs_wide": -120.23
+     }
+    },
+    "BANKNIFTY": {
+     "describe": {
+      "n": 572,
+      "n_measured": 475,
+      "roll_share_q": [
+       0.0,
+       0.004,
+       0.0097
+      ],
+      "roll_n": 463,
+      "ar_share_q": [
+       0.0,
+       0.0,
+       0.0046
+      ],
+      "ar_n": 475,
+      "cs_share_q": [
+       0.0032,
+       0.0045,
+       0.007
+      ],
+      "cs_n": 475,
+      "measured_pts_q": [
+       0.05,
+       1.9812,
+       3.2545
+      ],
+      "measured_share_q": [
+       0.0001,
+       0.0033,
+       0.0058
+      ],
+      "premium_q": [
+       452.5125,
+       595.725,
+       796.3625
+      ],
+      "law_roll_pts_q": [
+       1.4833,
+       1.9015,
+       2.4874
+      ],
+      "law_quoted_pts_q": [
+       4.45,
+       5.7046,
+       7.4621
+      ],
+      "law_stress_pts_q": [
+       9.8889,
+       12.6768,
+       16.5825
+      ],
+      "bands_pct": {
+       "below roll": 47.8,
+       "roll-quoted": 41.1,
+       "quoted-stress": 9.7,
+       "above stress": 1.5
+      }
+     },
+     "priced": {
+      "roll": 75.4,
+      "quoted": -56.78,
+      "stress": -299.11,
+      "measured": 42.69,
+      "cs_wide": 20.35
+     }
+    }
+   },
+   "gates": {
+    "G1a": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G1b": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G1c": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G2a": {
+     "quoted": 10.04,
+     "measured": 20.34,
+     "cs_wide": 20.35
+    },
+    "G2b": {
+     "quoted": 0.32,
+     "measured": 1.28,
+     "cs_wide": 1.1
+    },
+    "G2c": {
+     "quoted": 0.65,
+     "measured": 0.64,
+     "cs_wide": 0.65
+    },
+    "G2d": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G2e": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G2f": {
+     "quoted": -239.26,
+     "measured": -141.79,
+     "cs_wide": -149.06
+    },
+    "G3a": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G3b": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G3c": {
+     "quoted": -8.94,
+     "measured": 13.35,
+     "cs_wide": -2.91
+    },
+    "G3d": {
+     "quoted": -8.0,
+     "measured": 9.65,
+     "cs_wide": -1.66
+    },
+    "G4a": {
+     "quoted": 60.41,
+     "measured": 23.36,
+     "cs_wide": 22.58
+    },
+    "G4b": {
+     "quoted": 40.6,
+     "measured": -4.07,
+     "cs_wide": -7.18
+    },
+    "G4c": {
+     "quoted": 40.6,
+     "measured": -4.07,
+     "cs_wide": -7.18
+    },
+    "G4d": {
+     "quoted": -7.2,
+     "measured": 13.26,
+     "cs_wide": -12.66
+    }
+   }
+  },
+  "R72": {
+   "design": {
+    "describe": {
+     "n": 754,
+     "n_measured": 592,
+     "roll_share_q": [
+      0.0,
+      0.0,
+      0.0182
+     ],
+     "roll_n": 584,
+     "ar_share_q": [
+      0.0,
+      0.0,
+      0.006
+     ],
+     "ar_n": 592,
+     "cs_share_q": [
+      0.0069,
+      0.0099,
+      0.0135
+     ],
+     "cs_n": 592,
+     "measured_pts_q": [
+      0.05,
+      1.1241,
+      3.0852
+     ],
+     "measured_share_q": [
+      0.0002,
+      0.0038,
+      0.0108
+     ],
+     "premium_q": [
+      164.8875,
+      293.8,
+      481.9
+     ],
+     "law_roll_pts_q": [
+      0.6435,
+      1.0199,
+      1.5691
+     ],
+     "law_quoted_pts_q": [
+      1.9304,
+      3.0597,
+      4.7074
+     ],
+     "law_stress_pts_q": [
+      4.2898,
+      6.7993,
+      10.461
+     ],
+     "bands_pct": {
+      "below roll": 49.0,
+      "roll-quoted": 26.4,
+      "quoted-stress": 20.3,
+      "above stress": 4.4
+     }
+    },
+    "priced": {
+     "roll": {
+      "n": 754,
+      "net": -87082.06,
+      "per_trade": -115.49,
+      "win": 38.73,
+      "worst_day": -20644.89,
+      "max_dd": -89038.18
+     },
+     "quoted": {
+      "n": 754,
+      "net": -140241.05,
+      "per_trade": -186.0,
+      "win": 37.27,
+      "worst_day": -21551.07,
+      "max_dd": -141061.91
+     },
+     "stress": {
+      "n": 754,
+      "net": -237699.22,
+      "per_trade": -315.25,
+      "win": 34.88,
+      "worst_day": -23212.38,
+      "max_dd": -238356.3
+     },
+     "measured": {
+      "n": 754,
+      "net": -111479.48,
+      "per_trade": -147.85,
+      "win": 37.53,
+      "worst_day": -20967.13,
+      "max_dd": -112306.05
+     },
+     "cs_wide": {
+      "n": 754,
+      "net": -131734.6,
+      "per_trade": -174.71,
+      "win": 37.27,
+      "worst_day": -21268.63,
+      "max_dd": -132561.18
+     }
+    }
+   },
+   "oos": {
+    "describe": {
+     "n": 778,
+     "n_measured": 647,
+     "roll_share_q": [
+      0.0,
+      0.0041,
+      0.0129
+     ],
+     "roll_n": 634,
+     "ar_share_q": [
+      0.0,
+      0.0,
+      0.0058
+     ],
+     "ar_n": 647,
+     "cs_share_q": [
+      0.0042,
+      0.0065,
+      0.0104
+     ],
+     "cs_n": 647,
+     "measured_pts_q": [
+      0.05,
+      1.141,
+      2.5366
+     ],
+     "measured_share_q": [
+      0.0003,
+      0.0035,
+      0.0084
+     ],
+     "premium_q": [
+      146.2375,
+      315.525,
+      611.475
+     ],
+     "law_roll_pts_q": [
+      0.589,
+      1.0833,
+      1.9475
+     ],
+     "law_quoted_pts_q": [
+      1.767,
+      3.25,
+      5.8425
+     ],
+     "law_stress_pts_q": [
+      3.9268,
+      7.2222,
+      12.9834
+     ],
+     "bands_pct": {
+      "below roll": 48.4,
+      "roll-quoted": 37.2,
+      "quoted-stress": 12.1,
+      "above stress": 2.3
+     }
+    },
+    "priced": {
+     "roll": {
+      "n": 778,
+      "net": 62782.57,
+      "per_trade": 80.7,
+      "win": 46.27,
+      "worst_day": -11610.6,
+      "max_dd": -28631.56
+     },
+     "quoted": {
+      "n": 778,
+      "net": -23616.86,
+      "per_trade": -30.36,
+      "win": 43.06,
+      "worst_day": -12200.09,
+      "max_dd": -56075.25
+     },
+     "stress": {
+      "n": 778,
+      "net": -182015.57,
+      "per_trade": -233.95,
+      "win": 37.66,
+      "worst_day": -13280.78,
+      "max_dd": -182015.57
+     },
+     "measured": {
+      "n": 778,
+      "net": 35329.72,
+      "per_trade": 45.41,
+      "win": 45.24,
+      "worst_day": -12806.02,
+      "max_dd": -32590.9
+     },
+     "cs_wide": {
+      "n": 778,
+      "net": 14662.73,
+      "per_trade": 18.85,
+      "win": 44.73,
+      "worst_day": -12353.81,
+      "max_dd": -39348.15
+     }
+    }
+   },
+   "by_index": {
+    "NIFTY": {
+     "describe": {
+      "n": 353,
+      "n_measured": 292,
+      "roll_share_q": [
+       0.0,
+       0.0051,
+       0.021
+      ],
+      "roll_n": 286,
+      "ar_share_q": [
+       0.0,
+       0.0,
+       0.0086
+      ],
+      "ar_n": 292,
+      "cs_share_q": [
+       0.0074,
+       0.0099,
+       0.0131
+      ],
+      "cs_n": 292,
+      "measured_pts_q": [
+       0.05,
+       0.7992,
+       1.6878
+      ],
+      "measured_share_q": [
+       0.0004,
+       0.0062,
+       0.0114
+      ],
+      "premium_q": [
+       112.6,
+       140.0,
+       171.4
+      ],
+      "law_roll_pts_q": [
+       0.4908,
+       0.5708,
+       0.6625
+      ],
+      "law_quoted_pts_q": [
+       1.4724,
+       1.7124,
+       1.9875
+      ],
+      "law_stress_pts_q": [
+       3.2719,
+       3.8053,
+       4.4166
+      ],
+      "bands_pct": {
+       "below roll": 44.5,
+       "roll-quoted": 32.9,
+       "quoted-stress": 18.5,
+       "above stress": 4.1
+      }
+     },
+     "priced": {
+      "roll": 105.35,
+      "quoted": 17.84,
+      "stress": -142.61,
+      "measured": 58.21,
+      "cs_wide": 30.19
+     }
+    },
+    "BANKNIFTY": {
+     "describe": {
+      "n": 425,
+      "n_measured": 355,
+      "roll_share_q": [
+       0.0,
+       0.0039,
+       0.0104
+      ],
+      "roll_n": 348,
+      "ar_share_q": [
+       0.0,
+       0.0,
+       0.004
+      ],
+      "ar_n": 355,
+      "cs_share_q": [
+       0.0032,
+       0.0045,
+       0.0061
+      ],
+      "cs_n": 355,
+      "measured_pts_q": [
+       0.05,
+       1.8846,
+       3.1509
+      ],
+      "measured_share_q": [
+       0.0001,
+       0.003,
+       0.0057
+      ],
+      "premium_q": [
+       444.0,
+       582.0,
+       790.55
+      ],
+      "law_roll_pts_q": [
+       1.4585,
+       1.8614,
+       2.4704
+      ],
+      "law_quoted_pts_q": [
+       4.3754,
+       5.5843,
+       7.4112
+      ],
+      "law_stress_pts_q": [
+       9.7232,
+       12.4096,
+       16.4694
+      ],
+      "bands_pct": {
+       "below roll": 51.5,
+       "roll-quoted": 40.8,
+       "quoted-stress": 6.8,
+       "above stress": 0.8
+      }
+     },
+     "priced": {
+      "roll": 60.22,
+      "quoted": -70.38,
+      "stress": -309.82,
+      "measured": 34.78,
+      "cs_wide": 9.42
+     }
+    }
+   },
+   "gates": {
+    "G1a": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G1b": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G1c": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G2a": {
+     "quoted": -16.26,
+     "measured": -6.0,
+     "cs_wide": -5.84
+    },
+    "G2b": {
+     "quoted": -7.14,
+     "measured": -6.06,
+     "cs_wide": -6.29
+    },
+    "G2c": {
+     "quoted": 2.49,
+     "measured": 2.65,
+     "cs_wide": 2.57
+    },
+    "G2d": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G2e": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G2f": {
+     "quoted": -371.19,
+     "measured": -284.77,
+     "cs_wide": -285.28
+    },
+    "G3a": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G3b": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G3c": {
+     "quoted": 17.96,
+     "measured": 37.35,
+     "cs_wide": 22.53
+    },
+    "G3d": {
+     "quoted": -7.07,
+     "measured": 7.65,
+     "cs_wide": -2.14
+    },
+    "G4a": {
+     "quoted": 122.55,
+     "measured": 90.83,
+     "cs_wide": 87.34
+    },
+    "G4b": {
+     "quoted": 99.05,
+     "measured": 59.05,
+     "cs_wide": 54.08
+    },
+    "G4c": {
+     "quoted": 99.05,
+     "measured": 59.05,
+     "cs_wide": 54.08
+    },
+    "G4d": {
+     "quoted": -15.97,
+     "measured": 3.02,
+     "cs_wide": -22.51
+    }
+   }
+  },
+  "LIQ": {
+   "design": {
+    "describe": {
+     "n": 1032,
+     "n_measured": 920,
+     "roll_share_q": [
+      0.0,
+      0.007,
+      0.0227
+     ],
+     "roll_n": 898,
+     "ar_share_q": [
+      0.0,
+      0.0,
+      0.0087
+     ],
+     "ar_n": 920,
+     "cs_share_q": [
+      0.0071,
+      0.0103,
+      0.0148
+     ],
+     "cs_n": 920,
+     "measured_pts_q": [
+      0.05,
+      1.306,
+      3.451
+     ],
+     "measured_share_q": [
+      0.0003,
+      0.0063,
+      0.013
+     ],
+     "premium_q": [
+      138.9875,
+      249.6,
+      432.2625
+     ],
+     "law_roll_pts_q": [
+      0.5678,
+      0.8908,
+      1.4242
+     ],
+     "law_quoted_pts_q": [
+      1.7035,
+      2.6725,
+      4.2726
+     ],
+     "law_stress_pts_q": [
+      3.7856,
+      5.9389,
+      9.4947
+     ],
+     "bands_pct": {
+      "below roll": 42.3,
+      "roll-quoted": 26.6,
+      "quoted-stress": 25.4,
+      "above stress": 5.7
+     }
+    },
+    "priced": {
+     "roll": {
+      "n": 1032,
+      "net": -82844.66,
+      "per_trade": -80.28,
+      "win": 40.6,
+      "worst_day": -15540.24,
+      "max_dd": -118211.38
+     },
+     "quoted": {
+      "n": 1032,
+      "net": -145866.03,
+      "per_trade": -141.34,
+      "win": 36.72,
+      "worst_day": -15993.41,
+      "max_dd": -167699.66
+     },
+     "stress": {
+      "n": 1032,
+      "net": -261404.82,
+      "per_trade": -253.3,
+      "win": 31.3,
+      "worst_day": -16824.22,
+      "max_dd": -266033.42
+     },
+     "measured": {
+      "n": 1032,
+      "net": -117306.85,
+      "per_trade": -113.67,
+      "win": 38.18,
+      "worst_day": -16123.82,
+      "max_dd": -144906.84
+     },
+     "cs_wide": {
+      "n": 1032,
+      "net": -141381.56,
+      "per_trade": -137.0,
+      "win": 36.82,
+      "worst_day": -16334.62,
+      "max_dd": -159966.29
+     }
+    }
+   },
+   "oos": {
+    "describe": {
+     "n": 960,
+     "n_measured": 851,
+     "roll_share_q": [
+      0.0,
+      0.0063,
+      0.017
+     ],
+     "roll_n": 823,
+     "ar_share_q": [
+      0.0,
+      0.0,
+      0.0071
+     ],
+     "ar_n": 851,
+     "cs_share_q": [
+      0.0046,
+      0.0077,
+      0.0121
+     ],
+     "cs_n": 851,
+     "measured_pts_q": [
+      0.05,
+      1.3433,
+      2.7846
+     ],
+     "measured_share_q": [
+      0.0004,
+      0.005,
+      0.0105
+     ],
+     "premium_q": [
+      127.4875,
+      235.175,
+      587.6
+     ],
+     "law_roll_pts_q": [
+      0.5343,
+      0.8487,
+      1.8778
+     ],
+     "law_quoted_pts_q": [
+      1.6028,
+      2.5461,
+      5.6334
+     ],
+     "law_stress_pts_q": [
+      3.5618,
+      5.6581,
+      12.5186
+     ],
+     "bands_pct": {
+      "below roll": 39.8,
+      "roll-quoted": 39.0,
+      "quoted-stress": 18.8,
+      "above stress": 2.4
+     }
+    },
+    "priced": {
+     "roll": {
+      "n": 960,
+      "net": 13283.93,
+      "per_trade": 13.84,
+      "win": 45.52,
+      "worst_day": -10502.46,
+      "max_dd": -37301.46
+     },
+     "quoted": {
+      "n": 960,
+      "net": -84876.82,
+      "per_trade": -88.41,
+      "win": 40.73,
+      "worst_day": -11279.84,
+      "max_dd": -115362.01
+     },
+     "stress": {
+      "n": 960,
+      "net": -264838.0,
+      "per_trade": -275.87,
+      "win": 31.56,
+      "worst_day": -12705.04,
+      "max_dd": -265842.05
+     },
+     "measured": {
+      "n": 960,
+      "net": -29539.04,
+      "per_trade": -30.77,
+      "win": 43.75,
+      "worst_day": -10449.14,
+      "max_dd": -58777.91
+     },
+     "cs_wide": {
+      "n": 960,
+      "net": -47046.43,
+      "per_trade": -49.01,
+      "win": 42.92,
+      "worst_day": -11028.65,
+      "max_dd": -78394.9
+     }
+    }
+   },
+   "by_index": {
+    "NIFTY": {
+     "describe": {
+      "n": 456,
+      "n_measured": 396,
+      "roll_share_q": [
+       0.0,
+       0.0113,
+       0.025
+      ],
+      "roll_n": 383,
+      "ar_share_q": [
+       0.0,
+       0.0,
+       0.0117
+      ],
+      "ar_n": 396,
+      "cs_share_q": [
+       0.0078,
+       0.0109,
+       0.0154
+      ],
+      "cs_n": 396,
+      "measured_pts_q": [
+       0.05,
+       0.9071,
+       1.6905
+      ],
+      "measured_share_q": [
+       0.0006,
+       0.0082,
+       0.0143
+      ],
+      "premium_q": [
+       90.1875,
+       125.525,
+       161.925
+      ],
+      "law_roll_pts_q": [
+       0.4253,
+       0.5285,
+       0.6348
+      ],
+      "law_quoted_pts_q": [
+       1.276,
+       1.5856,
+       1.9045
+      ],
+      "law_stress_pts_q": [
+       2.8356,
+       3.5236,
+       4.2321
+      ],
+      "bands_pct": {
+       "below roll": 35.9,
+       "roll-quoted": 35.4,
+       "quoted-stress": 25.3,
+       "above stress": 3.5
+      }
+     },
+     "priced": {
+      "roll": 10.48,
+      "quoted": -69.41,
+      "stress": -215.88,
+      "measured": -44.82,
+      "cs_wide": -60.39
+     }
+    },
+    "BANKNIFTY": {
+     "describe": {
+      "n": 504,
+      "n_measured": 455,
+      "roll_share_q": [
+       0.0,
+       0.0051,
+       0.012
+      ],
+      "roll_n": 440,
+      "ar_share_q": [
+       0.0,
+       0.0,
+       0.0049
+      ],
+      "ar_n": 455,
+      "cs_share_q": [
+       0.0036,
+       0.0052,
+       0.008
+      ],
+      "cs_n": 455,
+      "measured_pts_q": [
+       0.05,
+       2.2568,
+       3.5086
+      ],
+      "measured_share_q": [
+       0.0001,
+       0.004,
+       0.007
+      ],
+      "premium_q": [
+       432.55,
+       580.65,
+       743.1875
+      ],
+      "law_roll_pts_q": [
+       1.425,
+       1.8575,
+       2.3321
+      ],
+      "law_quoted_pts_q": [
+       4.2751,
+       5.5725,
+       6.9963
+      ],
+      "law_stress_pts_q": [
+       9.5003,
+       12.3833,
+       15.5474
+      ],
+      "bands_pct": {
+       "below roll": 43.3,
+       "roll-quoted": 42.2,
+       "quoted-stress": 13.2,
+       "above stress": 1.3
+      }
+     },
+     "priced": {
+      "roll": 16.87,
+      "quoted": -105.61,
+      "stress": -330.15,
+      "measured": -18.05,
+      "cs_wide": -38.71
+     }
+    }
+   },
+   "gates": {
+    "G1a": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G1b": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G1c": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G2a": {
+     "quoted": -4.62,
+     "measured": 9.19,
+     "cs_wide": 9.21
+    },
+    "G2b": {
+     "quoted": 1.84,
+     "measured": 4.76,
+     "cs_wide": 4.98
+    },
+    "G2c": {
+     "quoted": 0.36,
+     "measured": 1.21,
+     "cs_wide": 0.97
+    },
+    "G2d": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G2e": {
+     "quoted": -0.15,
+     "measured": -0.02,
+     "cs_wide": -0.06
+    },
+    "G2f": {
+     "quoted": -24.19,
+     "measured": 53.27,
+     "cs_wide": 58.58
+    },
+    "G3a": {
+     "quoted": 0.0,
+     "measured": 0.0,
+     "cs_wide": 0.0
+    },
+    "G3b": {
+     "quoted": 5.18,
+     "measured": 4.06,
+     "cs_wide": 3.9
+    },
+    "G3c": {
+     "quoted": 39.44,
+     "measured": 59.54,
+     "cs_wide": 45.66
+    },
+    "G3d": {
+     "quoted": 4.01,
+     "measured": 19.31,
+     "cs_wide": 10.43
+    },
+    "G4a": {
+     "quoted": 12.86,
+     "measured": -23.92,
+     "cs_wide": -24.48
+    },
+    "G4b": {
+     "quoted": -11.98,
+     "measured": -57.17,
+     "cs_wide": -57.11
+    },
+    "G4c": {
+     "quoted": -11.98,
+     "measured": -57.17,
+     "cs_wide": -57.11
+    },
+    "G4d": {
+     "quoted": -23.97,
+     "measured": 10.16,
+     "cs_wide": -23.61
+    }
+   }
+  }
+ },
+ "refit": {
+  "n_design": 2454,
+  "n_oos": 2361,
+  "ols": {
+   "a": 0.912,
+   "b": 0.004089
+  },
+  "median": {
+   "a": 0.7081,
+   "b": 0.00297
+  },
+  "costs_law": {
+   "a": 0.162,
+   "b": 0.00292,
+   "quoted_scale": 2.9999999999999996
+  },
+  "oos_median_abs_error_pts": {
+   "costs.py roll": 1.004,
+   "costs.py quoted": 1.829,
+   "refit OLS": 1.338,
+   "refit median": 1.073
+  },
+  "oos_median_bias_pts": {
+   "costs.py roll": -0.312,
+   "costs.py quoted": 1.615,
+   "refit OLS": 0.847,
+   "refit median": 0.25
+  }
+ },
+ "pooled_posthoc": {
+  "design": {
+   "NIFTY low": {
+    "n": 384,
+    "premium": 108.6,
+    "roll_pts": 1.06,
+    "ar_pts": 0.0,
+    "cs_pts_median": 1.39,
+    "law_roll_pts": 0.48,
+    "law_quoted_pts": 1.44,
+    "law_stress_pts": 3.19
+   },
+   "NIFTY mid": {
+    "n": 378,
+    "premium": 146.2,
+    "roll_pts": 0.29,
+    "ar_pts": 0.0,
+    "cs_pts_median": 1.57,
+    "law_roll_pts": 0.59,
+    "law_quoted_pts": 1.77,
+    "law_stress_pts": 3.93
+   },
+   "NIFTY high": {
+    "n": 380,
+    "premium": 195.8,
+    "roll_pts": 2.24,
+    "ar_pts": 0.6,
+    "cs_pts_median": 1.92,
+    "law_roll_pts": 0.73,
+    "law_quoted_pts": 2.2,
+    "law_stress_pts": 4.89
+   },
+   "BANKNIFTY low": {
+    "n": 438,
+    "premium": 307.8,
+    "roll_pts": 0.0,
+    "ar_pts": 0.0,
+    "cs_pts_median": 4.1,
+    "law_roll_pts": 1.06,
+    "law_quoted_pts": 3.18,
+    "law_stress_pts": 7.07
+   },
+   "BANKNIFTY mid": {
+    "n": 437,
+    "premium": 445.4,
+    "roll_pts": 0.0,
+    "ar_pts": 0.0,
+    "cs_pts_median": 4.15,
+    "law_roll_pts": 1.46,
+    "law_quoted_pts": 4.39,
+    "law_stress_pts": 9.75
+   },
+   "BANKNIFTY high": {
+    "n": 437,
+    "premium": 769.5,
+    "roll_pts": 6.76,
+    "ar_pts": 0.0,
+    "cs_pts_median": 4.63,
+    "law_roll_pts": 2.41,
+    "law_quoted_pts": 7.23,
+    "law_stress_pts": 16.06
+   }
+  },
+  "oos": {
+   "NIFTY low": {
+    "n": 359,
+    "premium": 90.0,
+    "roll_pts": 0.47,
+    "ar_pts": 0.0,
+    "cs_pts_median": 1.08,
+    "law_roll_pts": 0.42,
+    "law_quoted_pts": 1.27,
+    "law_stress_pts": 2.83
+   },
+   "NIFTY mid": {
+    "n": 358,
+    "premium": 130.0,
+    "roll_pts": 0.34,
+    "ar_pts": 0.0,
+    "cs_pts_median": 1.34,
+    "law_roll_pts": 0.54,
+    "law_quoted_pts": 1.62,
+    "law_stress_pts": 3.61
+   },
+   "NIFTY high": {
+    "n": 359,
+    "premium": 185.2,
+    "roll_pts": 3.57,
+    "ar_pts": 0.6,
+    "cs_pts_median": 1.77,
+    "law_roll_pts": 0.7,
+    "law_quoted_pts": 2.11,
+    "law_stress_pts": 4.69
+   },
+   "BANKNIFTY low": {
+    "n": 431,
+    "premium": 372.9,
+    "roll_pts": 0.0,
+    "ar_pts": 0.0,
+    "cs_pts_median": 2.64,
+    "law_roll_pts": 1.25,
+    "law_quoted_pts": 3.75,
+    "law_stress_pts": 8.34
+   },
+   "BANKNIFTY mid": {
+    "n": 426,
+    "premium": 585.0,
+    "roll_pts": 1.65,
+    "ar_pts": 0.0,
+    "cs_pts_median": 2.47,
+    "law_roll_pts": 1.87,
+    "law_quoted_pts": 5.61,
+    "law_stress_pts": 12.47
+   },
+   "BANKNIFTY high": {
+    "n": 428,
+    "premium": 858.0,
+    "roll_pts": 4.49,
+    "ar_pts": 0.0,
+    "cs_pts_median": 3.1,
+    "law_roll_pts": 2.67,
+    "law_quoted_pts": 8.0,
+    "law_stress_pts": 17.78
+   }
+  }
+ },
+ "all_oos_bands_pct": {
+  "below roll": 43.5,
+  "roll-quoted": 37.7,
+  "quoted-stress": 16.3,
+  "above stress": 2.5
+ }
+}

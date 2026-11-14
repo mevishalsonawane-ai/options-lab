@@ -187,3 +187,41 @@ def test_dte_caps_match_spread_in_theta_minutes():
     m = gates.spread_in_theta_minutes(spread_pts=2.0, premium=150.0, dte=5)
     assert m == pytest.approx(2.0 / 150.0 * 2 * 5 * 375, rel=1e-9)
     assert math.isfinite(m)
+
+
+# ------------------------------------------------------------------------------------------------ Amendment A estimators
+def _bounce_bars(spread=1.0, mid=100.0, n=4000, seed=0, drift=0.0):
+    """Minute bars from trades at bid / ask at random around a mid that may drift: high / low / close of 5 trades each."""
+    rng = np.random.default_rng(seed)
+    q = rng.choice([-1.0, 1.0], (n, 5))
+    m = mid + drift * np.arange(n)[:, None] + np.zeros((n, 5))
+    px = m + q * spread / 2
+    return px.max(axis=1), px.min(axis=1), px[:, -1]
+
+
+def test_abdi_ranaldo_recovers_a_bounce_spread_and_ignores_a_trend():
+    h, lo, c = _bounce_bars()
+    assert gates.abdi_ranaldo_spread(h, lo, c) == pytest.approx(0.01, rel=0.15)
+    h2, lo2, c2 = _bounce_bars(drift=0.005)                       # mid 100 -> 120: a steady trend
+    assert gates.abdi_ranaldo_spread(h2, lo2, c2) == pytest.approx(0.01, rel=0.25)
+
+
+def test_corwin_schultz_is_positive_on_a_bounce_and_zero_on_a_still_price():
+    h, lo, _ = _bounce_bars()
+    assert gates.corwin_schultz_spread(h, lo) > 0
+    flat = np.full(30, 100.0)
+    assert gates.corwin_schultz_spread(flat, flat) == 0.0
+
+
+def test_spread_estimators_need_enough_good_bars():
+    assert gates.abdi_ranaldo_spread([1.0] * 5, [1.0] * 5, [1.0] * 5) is None
+    assert gates.corwin_schultz_spread([np.nan] * 30, [1.0] * 30) is None
+    bad = np.r_[np.full(20, 101.0)], np.r_[np.full(20, 102.0)]          # low above high: refused bar by bar
+    assert gates.corwin_schultz_spread(*bad) is None
+
+
+def test_measured_spread_takes_the_median_and_floors_at_a_tick():
+    assert gates.measured_spread_pts([0.01, None, 0.03, 0.02], 200.0) == pytest.approx(4.0)
+    assert gates.measured_spread_pts([0.0], 200.0) == 0.05
+    assert gates.measured_spread_pts([None], 200.0) is None
+    assert gates.measured_spread_pts([0.01], 0.0) is None

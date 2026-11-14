@@ -263,3 +263,56 @@ def dte_spread_ok(*, spread_pts: float, premium: float, days: int, caps: dict) -
     if not premium > 0:
         return False
     return spread_in_theta_minutes(spread_pts=spread_pts, premium=premium, dte=days) <= cap
+
+
+# R171 Amendment A (13 Nov 2026): two more effective-spread estimators from 1-minute bars, so a spread can be MEASURED
+# from real prices instead of assumed (costs.py's regimes). Both return a share of the price, or None when fewer than
+# SPREAD_MIN_BARS usable bars exist. They read trade prices, not quotes: an estimate of the effective spread, not the book.
+SPREAD_MIN_BARS = 10
+
+
+def _hlc(high, low, close=None):
+    h = np.asarray(high, dtype=float)
+    lo = np.asarray(low, dtype=float)
+    ok = np.isfinite(h) & np.isfinite(lo) & (h > 0) & (lo > 0) & (h >= lo)
+    if close is not None:
+        c = np.asarray(close, dtype=float)
+        ok &= np.isfinite(c) & (c > 0)
+        return h[ok], lo[ok], c[ok]
+    return h[ok], lo[ok], None
+
+
+def abdi_ranaldo_spread(high, low, close) -> float | None:
+    """Abdi & Ranaldo (2017) close-high-low estimator: s^2 = 4 E[(c_t - eta_t)(c_t - eta_t+1)], with c the log close and
+    eta the mid of the log high and low. Negative s^2 -> 0. Robust to a trending price, unlike Roll."""
+    h, lo, c = _hlc(high, low, close)
+    if c.size < SPREAD_MIN_BARS:
+        return None
+    lc = np.log(c)
+    eta = (np.log(h) + np.log(lo)) / 2.0
+    s2 = 4.0 * float(np.mean((lc[:-1] - eta[:-1]) * (lc[:-1] - eta[1:])))
+    return math.sqrt(s2) if s2 > 0 else 0.0
+
+
+def corwin_schultz_spread(high, low) -> float | None:
+    """Corwin & Schultz (2012) high-low estimator, one estimate per pair of consecutive bars (negative ones set to 0),
+    averaged. Reads part of a bar's real move as spread, so it is the WIDE bound on 1-minute option bars."""
+    h, lo, _ = _hlc(high, low)
+    if h.size < SPREAD_MIN_BARS:
+        return None
+    k = 3.0 - 2.0 * math.sqrt(2.0)
+    r = np.log(h / lo) ** 2
+    beta = r[:-1] + r[1:]
+    gamma = np.log(np.maximum(h[:-1], h[1:]) / np.minimum(lo[:-1], lo[1:])) ** 2
+    alpha = (np.sqrt(2.0 * beta) - np.sqrt(beta)) / k - np.sqrt(gamma / k)
+    s = 2.0 * (np.exp(alpha) - 1.0) / (1.0 + np.exp(alpha))
+    return float(np.mean(np.maximum(s, 0.0)))
+
+
+def measured_spread_pts(estimates, premium: float, tick: float = 0.05) -> float | None:
+    """The median of the relative estimates that exist (None dropped) times the premium, floored at one tick. None when no
+    estimate exists or the premium is not positive."""
+    vals = [float(x) for x in estimates if x is not None and np.isfinite(x)]
+    if not vals or not premium > 0:
+        return None
+    return max(float(np.median(vals)) * premium, tick)

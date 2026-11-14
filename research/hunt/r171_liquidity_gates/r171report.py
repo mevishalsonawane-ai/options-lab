@@ -33,6 +33,113 @@ def row(g: str, r: dict | None, combo) -> str:
             f"{r['p_mc']:.3g} | {r['q']:.3g} |")
 
 
+def amendment_a() -> tuple[list, list]:
+    """(Boss bullets, report section) for Amendment A, from results/measure.json; empty when it was not run."""
+    path = RESULTS / "measure.json"
+    if not path.exists():
+        return [], []
+    m = json.loads(path.read_text())
+    S = m["strategies"]
+    rf = m["refit"]
+    bands = m["all_oos_bands_pct"]
+    below_q = round(bands["below roll"] + bands["roll-quoted"], 1)
+
+    def pt(s, k, per="oos"):
+        return rs(S[s][per]["priced"][k]["per_trade"])
+    boss = [
+        "- **New angle (Amendment A): measure the spread from real prices instead of assuming it.** Three estimators "
+        "(Roll, Abdi-Ranaldo, Corwin-Schultz) on each trade's 30 minutes before entry.",
+        f"  - The market looks CHEAPER than costs.py's 'quoted': on {below_q}% of out-of-sample trades the measured spread is "
+        f"below it ({bands['below roll']}% even below 'roll'). The median-fit law is {rf['median']['a']:.2f} + "
+        f"{rf['median']['b']:.5f} x premium points: the same slope as costs.py ({rf['costs_law']['b']}) but a bigger fixed "
+        f"part ({rf['costs_law']['a']}), i.e. about 'roll + half a point'. 'quoted' overstates it by a median "
+        f"{rf['oos_median_bias_pts']['costs.py quoted']:.1f} points a trade.",
+        f"  - Re-priced with the measured spread, out-of-sample net per trade: R72 {pt('R72', 'measured')}, R51 "
+        f"{pt('R51', 'measured')}, Liquidity {pt('LIQ', 'measured')} (with the wide Corwin-Schultz bound: "
+        f"{pt('R72', 'cs_wide')} / {pt('R51', 'cs_wide')} / {pt('LIQ', 'cs_wide')}). In design all three lose under every "
+        f"cost ({pt('R72', 'measured', 'design')} / {pt('R51', 'measured', 'design')} / {pt('LIQ', 'measured', 'design')} "
+        "measured). So only R72 is positive out-of-sample at realistic costs, and not in design.",
+        f"  - NIFTY options cost about twice BANKNIFTY's as a share of premium (median measured "
+        f"{S['R51']['by_index']['NIFTY']['describe']['measured_share_q'][1] * 100:.2f}% vs "
+        f"{S['R51']['by_index']['BANKNIFTY']['describe']['measured_share_q'][1] * 100:.2f}% on R51's trades). R51 on NIFTY "
+        f"loses at every cost, even 'roll' ({rs(S['R51']['by_index']['NIFTY']['priced']['roll'])} a trade).",
+        "  - Honest limit: these are effective-spread estimates from trade prices, not quotes; the two covariance "
+        "estimators are unstable right before breakouts (trending minutes push them to 0), so the trustworthy bracket is "
+        "'roll' (low) to Corwin-Schultz (high). Only the phone's sealed depth recordings can settle it.",
+    ]
+    L = ["## Amendment A: the spread MEASURED from real prices (a measurement, not a test)", "",
+         "Pre-registered as Amendment A in PREREG.md before any of these numbers. It re-reads the out-of-sample trades for "
+         "costing only (a second look). The pooled table at the end was added AFTER the first look (disclosed).", "",
+         "### Where the measured spread sits against costs.py (share of trades with an estimate)", "",
+         "| strategy | period | trades (measured) | below roll | roll-quoted | quoted-stress | above stress | "
+         "median measured (pts / % of premium) | law at the same premiums: roll / quoted (median pts) |",
+         "|---|---|---|---|---|---|---|---|---|"]
+    for s in ("R51", "R72", "LIQ"):
+        for per in ("design", "oos"):
+            d = S[s][per]["describe"]
+            b = d["bands_pct"]
+            L.append(f"| {s} | {per} | {d['n']} ({d['n_measured']}) | {b['below roll']}% | {b['roll-quoted']}% | "
+                     f"{b['quoted-stress']}% | {b['above stress']}% | {d['measured_pts_q'][1]:.2f} / "
+                     f"{d['measured_share_q'][1] * 100:.2f}% | {d['law_roll_pts_q'][1]:.2f} / {d['law_quoted_pts_q'][1]:.2f} |")
+    L += ["", "Estimator medians (share of premium, out-of-sample): " + "; ".join(
+        f"{s} Roll {S[s]['oos']['describe']['roll_share_q'][1] * 100:.2f}%, AR {S[s]['oos']['describe']['ar_share_q'][1] * 100:.2f}%, "
+        f"CS {S[s]['oos']['describe']['cs_share_q'][1] * 100:.2f}%" for s in ("R51", "R72", "LIQ")) +
+        ". AR is 0 on most single 30-minute windows, so MEASURED (the median of the three) often falls to Roll or CS.", "",
+        "### The spread law, refitted on design trades and checked out-of-sample", "",
+        f"- costs.py (in-session, 'roll'): {rf['costs_law']['a']} + {rf['costs_law']['b']} x premium; 'quoted' is that x "
+        f"{rf['costs_law']['quoted_scale']:.0f}.",
+        f"- Refit, least squares: {rf['ols']['a']:.3f} + {rf['ols']['b']:.5f} x premium; median fit: {rf['median']['a']:.3f} + "
+        f"{rf['median']['b']:.5f} x premium ({rf['n_design']} design trades).",
+        "- Out-of-sample median absolute error / median bias (points, + = the law is wider than measured), "
+        f"{rf['n_oos']} trades: " + "; ".join(f"{k} {rf['oos_median_abs_error_pts'][k]:.2f} / {rf['oos_median_bias_pts'][k]:+.2f}"
+                                              for k in rf["oos_median_abs_error_pts"]) + ".",
+        "", "### The strategies re-priced (net per trade; total; max DD)", "",
+        "| strategy | period | roll | quoted | stress | MEASURED | CS (wide bound) |", "|---|---|---|---|---|---|---|"]
+    for s in ("R51", "R72", "LIQ"):
+        for per in ("design", "oos"):
+            pr = S[s][per]["priced"]
+            L.append(f"| {s} | {per} (n {pr['quoted']['n']}) | " + " | ".join(
+                f"{rs(pr[k]['per_trade'])}; {rs(pr[k]['net'])}; DD {rs(pr[k]['max_dd'])}"
+                for k in ("roll", "quoted", "stress", "measured", "cs_wide")) + " |")
+    miss = ", ".join(f"{s} {S[s]['oos']['describe']['n'] - S[s]['oos']['describe']['n_measured']} of "
+                     f"{S[s]['oos']['describe']['n']}" for s in ("R51", "R72", "LIQ"))
+    L += ["", f"Trades with no estimate (fewer than 10 traded minutes before the fill, all of them entries before 09:30; "
+          f"out-of-sample {miss}) are costed at 'quoted' in the MEASURED and CS columns, which pulls those columns toward "
+          "'quoted' (the cautious side)."]
+    L += ["", "By index, out-of-sample net per trade (roll / quoted / MEASURED / CS):", ""]
+    for s in ("R51", "R72", "LIQ"):
+        L.append(f"- {s}: " + "; ".join(
+            f"{u} (n {S[s]['by_index'][u]['describe']['n']}) {rs(v['roll'])} / {rs(v['quoted'])} / {rs(v['measured'])} / "
+            f"{rs(v['cs_wide'])}" for u, v in ((u, S[s]['by_index'][u]['priced']) for u in ("NIFTY", "BANKNIFTY"))))
+    L += ["", "### The R171 gates re-priced (out-of-sample gain per trade: quoted / MEASURED / CS; verdicts unchanged)", "",
+          "| gate | R51 | R72 | LIQ |", "|---|---|---|---|"]
+    for g in GATES[:-1]:
+        cells = []
+        for s in ("R51", "R72", "LIQ"):
+            v = S[s]["gates"][g]
+            cells.append("-" if v["quoted"] is None else f"{rs(v['quoted'])} / {rs(v['measured'])} / {rs(v['cs_wide'])}")
+        L.append(f"| {g} | " + " | ".join(cells) + " |")
+    L += ["", "G4a's out-of-sample gain shrinks with real costs (R51 and Liquidity most), so part of it came from the "
+          "assumed spread; G3c's gain on Liquidity grows. Neither changes a verdict.", "",
+          "### Pooled check (POST-HOC, added after the first look)", "",
+          "Single 30-minute windows often give 0, so the moment terms were averaged over all trades of each index and "
+          "premium tercile before the square root. Points at the group's median premium:", "",
+          "| period | group | n | premium | Roll pooled | AR pooled | CS median | law roll / quoted / stress |",
+          "|---|---|---|---|---|---|---|---|"]
+    for per in ("design", "oos"):
+        for k, r in m["pooled_posthoc"][per].items():
+            L.append(f"| {per} | {k} | {r['n']} | {r['premium']} | {r['roll_pts']} | {r['ar_pts']} | {r['cs_pts_median']} | "
+                     f"{r['law_roll_pts']} / {r['law_quoted_pts']} / {r['law_stress_pts']} |")
+    L += ["", "Reading: the covariance estimators (Roll, AR) swing from 0 to 2-3x the law between groups. The minutes "
+          "before a breakout entry trend, which pushes them toward 0, so they cannot pin the spread here. Corwin-Schultz is "
+          "stable and sits between costs.py's 'roll' and 'quoted' in 11 of the 12 groups (the exception: design-period "
+          "BANKNIFTY low-premium trades, above 'quoted'); it reads some of each minute's real move as spread, so it is an "
+          "upper bound. Best estimate from real prices: the effective spread on these "
+          "near-the-money options is between 'roll' and 'quoted', closer to 'roll' on BANKNIFTY. 'quoted' (the costs.py "
+          "default) is likely too pessimistic for them; 'stress' is far too wide for a 1-3 lot order.", ""]
+    return boss, L
+
+
 def main():
     des = json.loads((RESULTS / "design.json").read_text())
     oos = json.loads((RESULTS / "oos.json").read_text())
@@ -42,12 +149,14 @@ def main():
     r72 = S["R72"]["rows"]["G4a"]
     r51 = S["R51"]["rows"]["G4a"]
     liq = S["LIQ"]["rows"]["G3c"]
+    amend_boss, amend_sec = amendment_a()
     L = []
     L += [
         "# R171: four liquidity / execution-cost gates on the arms",
         "",
-        "13 Nov 2026. Pre-registered in `PREREG.md` before any number (written first; this session could not commit or push, "
-        "so the pre-registration is not in its own earlier commit). Research only: nothing in the app changes.",
+        "13 Nov 2026. Pre-registered in `PREREG.md` before any number (written first; this session could not commit at "
+        "first, so the gate pre-registration is not in its own earlier commit; Amendment A is, commit b684d4f). Research "
+        "only: nothing in the app changes.",
         "",
         "## For Boss (short)",
         "",
@@ -78,6 +187,7 @@ def main():
         f"{rs(b['R51']['quoted']['per_trade'])} / {rs(b['R72']['quoted']['per_trade'])} / "
         f"{rs(b['LIQ']['quoted']['per_trade'])}. Which one is true decides whether the arms make money at all, and only the "
         "phone's recorded depth (sealed, private IraAlgo repo, not opened here) can tell.",
+        *amend_boss,
         "- These numbers are on the public release data (2024-02 to 2026-02-23, NIFTY + BANKNIFTY), not the app's own data, "
         "so the arms' rupee totals do not match their published records. Only 'gate vs no gate vs random skip on the same "
         "trades' is the result.",
@@ -154,6 +264,7 @@ def main():
           "market depth (sealed recordings in the private IraAlgo repo); they were NOT opened (encrypted, and this session "
           "may not read that repo).",
           "",
+          *amend_sec,
           "## App change",
           "",
           "None: no gate passed, so there is no app spec. Nothing in `android/**` changed. The gate functions are in "

@@ -1,0 +1,33 @@
+id: r171a-measured-spread
+title: 'R171 Amendment A: the option spread measured from real 1-minute prices (Roll, Abdi-Ranaldo, Corwin-Schultz)'
+family: sizing-execution
+date: '2026-11-14'
+doc: research/hunt/r171_liquidity_gates/results/report.md
+hypothesis: 'Measurement, not a test: where does the effective spread measured from real prices sit against costs.py''s roll
+  / quoted / stress law, and what do R51 / R72 / Liquidity 15+5 make at it?'
+data_version: GitHub release research-data (as R171) fetched 13 Nov 2026; nothing on or after 2026-02-24
+period:
+  design: 2024-02-13..2025-03-31
+  holdout: 2025-04-01..2026-02-23 re-read for costing only (second look)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: unchanged (the index); the spread estimators read the bought option''s own 1-minute prices for COSTING only'
+model_or_rule: Roll, Abdi-Ranaldo and Corwin-Schultz relative spreads on the 30 traded minutes before each fill; MEASURED
+  = their median, floored at one tick
+settings: research/hunt/r171_liquidity_gates/PREREG.md Amendment A; r171measure.py
+prereg: research/hunt/r171_liquidity_gates/PREREG.md
+variants_tried: null
+results:
+  summary: 'Out-of-sample: the measured spread is below costs.py ''quoted'' on 81.2% of 2,361 measured trades (43.5% below
+    ''roll''). Median-fit law 0.708 + 0.00297 x premium (costs.py 0.162 + 0.00292); ''quoted'' overstates by a median 1.61
+    pts. Re-priced OOS net per trade (measured / CS wide): R72 +45 / +19 (n 778), R51 -22 / -44 (n 1061), LIQ -31 / -49 (n
+    960); design all negative (measured R72 -148, R51 -165, LIQ -114). Roll / AR unstable before breakouts (post-hoc pooled
+    check); Corwin-Schultz between roll and quoted in 11 of 12 index x premium groups.'
+  costs: dated statutory charges + Rs 20 an order; spread measured per trade (and Corwin-Schultz as the wide bound), half
+    each way
+holdout_read: true
+verdict: not-a-test
+notes: The pooled index x premium-tercile check was added after the first look and is labelled post-hoc. Effective spreads
+  from trade prices, not quotes; the phone's sealed depth recordings would be needed to validate.

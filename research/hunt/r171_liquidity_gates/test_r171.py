@@ -324,3 +324,55 @@ def test_verdict_needs_every_rule():
     assert S.verdict(few)[0] == "fail"
     roll_flip = dict(good, gain=dict(good["gain"], roll=-1.0))
     assert S.verdict(roll_flip)[0] == "fail"
+
+
+# ------------------------------------------------------------------------------------------------ Amendment A (measure)
+import r171measure as M  # noqa: E402
+
+
+def bars_with_spread(seed=0, spread=1.0, mid=200.0):
+    rng = np.random.default_rng(seed)
+    a = contract(mid)
+    q = rng.choice([-1.0, 1.0], (N, 4))
+    px = mid + q * spread / 2
+    a[:, D.O], a[:, D.H], a[:, D.L], a[:, D.C] = px[:, 0], px.max(axis=1), px.min(axis=1), px[:, 3]
+    return a
+
+
+def test_measure_estimates_and_raw_terms_read_only_rows_before_the_fill():
+    a = bars_with_spread()
+    e = 200
+    m1, r1 = M.estimates(a, e), M.raw_terms(a, e)
+    b = a.copy()
+    b[e:, :4] = 999.0
+    b[e:, D.V] = 0.0
+    assert M.estimates(b, e) == m1 and M.raw_terms(b, e) == r1
+
+
+def test_measure_estimates_see_a_real_bounce():
+    est = M.estimates(bars_with_spread(spread=2.0), 200)
+    assert est["cs"] > 0 and est["roll"] is not None and est["ar"] is not None
+
+
+def test_measure_estimates_none_without_enough_traded_minutes():
+    a = bars_with_spread()
+    a[:, D.V] = 0.0
+    assert M.estimates(a, 200) == dict(roll=None, ar=None, cs=None)
+    assert M.raw_terms(a, 200) == dict(roll=None, ar=None)
+
+
+def test_rel_net_is_monotone_in_the_spread_and_floored_at_a_tick():
+    d = date(2025, 5, 6)
+    assert M.rel_net(100.0, 100.0, 75, d, 0.0) < 0                       # charges + one tick
+    assert M.rel_net(100.0, 110.0, 75, d, 0.002) > M.rel_net(100.0, 110.0, 75, d, 0.02)
+    assert M.rel_net(100.0, 100.0, 75, d, 0.0) == pytest.approx(M.rel_net(100.0, 100.0, 75, d, 1e-6))
+
+
+def test_band_against_the_costs_law():
+    from options_lab import costs as OC
+    p = 200.0
+    law = {g: OC.spread_per_unit(premium=p, regime=g) for g in A.REGIMES}
+    assert M.band(law["roll"] * 0.9, p) == "below roll"
+    assert M.band((law["roll"] + law["quoted"]) / 2, p) == "roll-quoted"
+    assert M.band((law["quoted"] + law["stress"]) / 2, p) == "quoted-stress"
+    assert M.band(law["stress"] * 1.1, p) == "above stress"
