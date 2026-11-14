@@ -169,8 +169,8 @@ internal object IraBots {
         com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
             p.charges, p.live, p.level, p.target, p.ladder, p.peak, trough = p.low, lot = p.lot,
             // 22 Oct: Boss's own rules (the ₹500 trail, the breakeven at +10%) keep a trade out of the plain-rules record, labelled.
-            trail = com.optionslab.engine.orb.LiquidityBreakeven.ownRules(p.trail, p.be),
-            rules = if (com.optionslab.engine.orb.LiquidityBreakeven.ownRules(p.trail, p.be)) com.optionslab.engine.orb.LiquidityBreakeven.label(p.trail, p.be) else null)
+            // 14 Nov: the fixed ₹2k target / ₹1k stop too (failed gates, Boss's exception; [com.optionslab.app.data.OrbArms.Position.ownExits]).
+            trail = p.ownExits, rules = p.ownExitsLabel, fixed = p.fixed)
 
     /**
      * "Explain my bots' trades today" ([com.optionslab.ira.BotTrades]): today's arm trades from the arms' own book, their
@@ -275,8 +275,8 @@ internal object IraBots {
             val out = p.exitTime ?: return@mapNotNull null
             val gross = p.grossPnl ?: return@mapNotNull null
             // Boss's opt-in Liquidity paper trail (13 Oct): its trades as a group of their own, never mixed into the book's.
-            val name = com.optionslab.ira.BotTrades.label(p.arm) +
-                if (com.optionslab.engine.orb.LiquidityBreakeven.ownRules(p.trail, p.be)) " (${com.optionslab.engine.orb.LiquidityBreakeven.label(p.trail, p.be)})" else ""
+            // 14 Nov: the fixed ₹2k target / ₹1k stop's trades a group of their own too ([OrbArms.Position.ownExitsLabel]).
+            val name = com.optionslab.ira.BotTrades.label(p.arm) + (p.ownExitsLabel?.let { " ($it)" } ?: "")
             com.optionslab.ira.WeakLink.Trade(name, p.entryTime, out, p.why, gross - p.charges)
         }
         return com.optionslab.ira.WeakLink.answer(closed, bankNifty)
@@ -406,8 +406,8 @@ internal object IraBots {
             val back = com.optionslab.engine.orb.RetiredArms.of(a.arm.source)?.let { com.optionslab.engine.orb.RetiredArms.UNRETIRED_ON }
             // Liquidity on its plain rules only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) or breakeven at +10%
             // (22 Oct) are not the rules' record.
-            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since) &&
-                    !com.optionslab.engine.orb.LiquidityBreakeven.ownRules(it.trail, it.be)
+            // 14 Nov: nor the fixed ₹2k target / ₹1k stop's ([OrbArms.Position.ownExits]).
+            val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since) && !it.ownExits
                     else it.arm == a.arm.source && (back == null || !it.day.isBefore(back)) }
                 .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }
             val src = a.arm.source; val auto = a.automatic

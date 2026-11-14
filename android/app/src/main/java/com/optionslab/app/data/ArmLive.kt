@@ -238,7 +238,9 @@ object ArmLive {
     fun interface Host { fun open(): List<PaperLeg>? }
 
     /** One paper trade: its [ref] ("family:id", as given to [entered]), its arm [key], the quantity it still holds (0: closed). */
-    data class PaperLeg(val ref: String, val key: String, val qty: Int)
+    data class PaperLeg(val ref: String, val key: String, val qty: Int,
+                        /** 14 Nov: the paper trade entered with the fixed ₹2k target / ₹1k stop (R51 / R72; a rebuilt live trade reads it). */
+                        val fixed: Boolean = false)
 
     private val hosts = java.util.concurrent.ConcurrentHashMap<String, Host>()
 
@@ -1008,7 +1010,8 @@ object ArmLive {
 
     /** 14 Nov: what a stop exit of [p] is booked as - "₹1k stop" when its own stop rests at the ₹1,000 level, else [Pos.stopWord]. */
     private fun stopWhyOf(p: Pos): String =
-        if (p.fixed && p.stopKind == OWN && com.optionslab.engine.orb.FixedRupee.isFixedStop(p.stopTrigger, p.entry, p.qty * p.multiplier.coerceAtLeast(1), p.tick))
+        // 14 Nov (review): any stop of its own or a safety stop at that level (a rebuilt trade's starts as a safety stop); never the disaster stop.
+        if (p.fixed && p.stopKind != DISASTER && com.optionslab.engine.orb.FixedRupee.isFixedStop(p.stopTrigger, p.entry, p.qty * p.multiplier.coerceAtLeast(1), p.tick))
             com.optionslab.engine.orb.FixedRupee.WHY_STOP else p.stopWord
 
     // ---- the stop at Zerodha -------------------------------------------------------------------------------------------------
@@ -1408,6 +1411,10 @@ object ArmLive {
      * may simply be newer than it: R51's MIDCPNIFTY entry at 11:30:03 was sold 16 s later as "paper_exit" while its paper trade was
      * open. So only a fresh read of the paper book may call a missing trade gone; a stream look still acts on a leg it does see.
      */
+    // 14 Nov (review, R51 / R72 with the fixed ₹2k target / ₹1k stop): the paper trade's own ₹1k / ₹2k exit (on the PAPER fill and lots)
+    // still sells its live copy, as every paper exit does. Kept on purpose: the live trade's own levels (its fill and lots) are at least
+    // as near (it holds as many lots or more), so the paper's comes after it or at about the same price - and a live trade that stopped
+    // following its paper trade would lose the arm's other exits (its time stop) and could be held to the square-off. An earlier exit only.
     private fun paperSide(p: Pos, legs: List<PaperLeg>?, fresh: Boolean = true): Triple<Pos, Int, String?> {
         val leg = legs?.firstOrNull { it.ref == p.ref }
         var q = p
@@ -1620,8 +1627,9 @@ object ArmLive {
                         stopResting = p.stopOrderId != null, wanted = wanted(p), paperSell = paperSell, paperReason = paperWhy,
                         squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = if (p.exchange == "MCX") mcxStopped else stopped,
                         heldSeen = true, stopQty = stopQty, otherWorking = others, lot = p.lot, stopLimit = stopLimit,
-                        // 14 Nov (Boss's exception): its own ₹2,000 target, sold at market by [exitLive] (its stop taken out first: one exit).
-                        target = fixedTarget(p))
+                        // 14 Nov (Boss's exception): its own ₹2,000 target, sold at market by [exitLive] (its stop taken out first: one exit),
+                        // and its ₹1,000 level, sold by the app while the resting stop is lower (it could not rest there yet).
+                        target = fixedTarget(p), fixedStop = fixedStop(p))
                     val d = LiveMirror.decide(look)
                     val next: List<Pos>? = when (d.step) {
                         LiveMirror.Step.SELL -> {
@@ -1731,7 +1739,8 @@ object ArmLive {
             val atStop = LiveMirror.shadowStopReached(ltp, extreme, p.stopTrigger, p.side)
             val d0 = LiveMirror.decide(LiveMirror.Look(side = p.side, qty = p.qty, held = p.qty * p.side, ltp = ltp, tick = p.tick,
                 stopTrigger = p.stopTrigger, stopResting = false, wanted = wanted(p), paperSell = paperSell, paperReason = paperWhy,
-                squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = false, target = fixedTarget(p)))
+                squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = false, target = fixedTarget(p),
+                fixedStop = fixedStop(p)))
             val d = if (atStop) LiveMirror.Decision(LiveMirror.Step.SELL, "stop", p.qty) else d0
             if (d.step == LiveMirror.Step.SELL && ltp == null && !atStop) { if (p != p0) updates[p0] = listOf(p); continue }
             when (d.step) {
@@ -1912,8 +1921,11 @@ object ArmLive {
                 runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == pos.symbol }?.expiry }.getOrNull(),
                 entry.id,
                 seen = false, heldSeen = true, stopKind = SAFETY,
-                // 14 Nov: an R51 / R72 trade taken back from Zerodha gets the fixed ₹2k target / ₹1k stop while the switch is on (lowers risk only).
-                fixed = side > 0 && FixedRupeeExits.forEntry(spec.key))
+                // 14 Nov (review): an R51 / R72 trade taken back from Zerodha keeps the fixed ₹2k target / ₹1k stop its paper trade entered
+                // with, when the paper book shows exactly one open trade of that arm; else the switch now (it only lowers risk).
+                fixed = side > 0 && com.optionslab.engine.orb.FixedRupee.covers(spec.key) &&
+                    (runCatching { hosts[spec.family]?.open()?.filter { it.key == spec.key && it.qty > 0 }?.singleOrNull()?.fixed }.getOrNull()
+                        ?: FixedRupeeExits.forEntry(spec.key)))
             // A stop of this path's own still resting on it is kept as its stop; else the safety stop rests.
             val so = orders.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
                 (it.type == "SL" || it.type == "SL-M") }.singleOrNull()

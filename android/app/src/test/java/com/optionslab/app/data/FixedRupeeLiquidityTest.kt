@@ -175,6 +175,56 @@ class FixedRupeeLiquidityTest : RobolectricTest() {
         tick(LocalTime.of(13, 15))
         assertEquals(FixedRupee.WHY_TARGET, row().today.single().why)
     }
+    /** Review: a fixed trade is kept out of the plain-rules records and named as the rule on the 26 Oct decision card, never "plain rules". */
+    @Test fun aFixedTradeIsKeptOutOfThePlainRulesRecordsAndLabelled() {
+        val p = entered()
+        upstox.price(ceKey, FixedRupee.targetLevel(p.entry, p.qty)!! + 1.0)
+        at(LocalTime.of(13, 15)); runBlocking { Paper.tick() }
+        tick(LocalTime.of(13, 15))
+        val closed = row().today.single()
+        assertEquals(FixedRupee.WHY_TARGET, closed.why)
+        assertTrue(closed.ownExits); assertEquals(FixedRupee.LABEL, closed.ownExitsLabel)
+        val book = runBlocking { OrbArms.closedPaper() }
+        assertTrue("not in the forward check", ForwardRecords.liquidity(book).isEmpty())
+        assertTrue("not in the record chart", ForwardRecords.liquidityEquityTrades(book).isEmpty())
+        val view = row().test
+        if (!com.optionslab.app.BuildConfig.GOLD) {
+            val t = view!!
+            assertTrue(t.paperTest, t.paperTest.contains("0 trades since 13 Oct"))
+            assertTrue(t.paperTest, t.paperTest.contains("Kept apart, ${FixedRupee.LABEL} (your 14 Nov choice; R152"))
+            assertFalse(t.paperTest, t.paperTest.contains("plain rules ("))
+        }
+        // Explain-my-bots and the weekly / cut-off readers see it as the rule's own.
+        val bt = com.optionslab.app.ira.IraBots.tradeOf(closed)
+        assertTrue(bt.trail); assertTrue(bt.fixed); assertEquals(FixedRupee.LABEL, bt.rules)
+    }
+
+    /** Review: with Boss's breakeven at +10% too, the breakeven raises the stop above the ₹1k level and is the exit; both are named. */
+    @Test fun withBosssBreakevenTooTheHigherStopWinsAndBothAreNamed() {
+        val before = LiquidityTest.state.value
+        LiquidityTest.setStateForTest(before.copy(breakeven = true))
+        try {
+            val p = entered()
+            assertTrue(p.fixed); assertTrue(p.be != null)
+            assertEquals("the ₹1k level first", FixedRupee.stopLevel(p.entry, p.qty)!!, p.stopTrigger!!, 1e-9)
+            upstox.price(ceKey, p.entry * 1.12)                  // +12%: the breakeven is earned (under the ₹2k target, +22%)
+            tick(LocalTime.of(13, 6))
+            val raised = row().today.single()
+            assertTrue(raised.open)
+            assertTrue("raised to the breakeven: ${raised.stopTrigger}", raised.stopTrigger!! > p.entry)
+            upstox.price(ceKey, p.entry - 1.0)
+            at(LocalTime.of(13, 7)); runBlocking { Paper.tick() }
+            tick(LocalTime.of(13, 7))
+            val closed = row().today.single()
+            assertEquals(com.optionslab.engine.orb.LiquidityBreakeven.WHY, closed.why)
+            val label = closed.ownExitsLabel!!
+            assertTrue(label, label.contains("breakeven at +10%") && label.contains(FixedRupee.LABEL))
+            if (!com.optionslab.app.BuildConfig.GOLD) {
+                val t = row().test!!
+                assertTrue(t.paperTest, t.paperTest.contains("Kept apart, $label (your own choices, kept apart from the plain rules): 1 trade"))
+            }
+        } finally { LiquidityTest.setStateForTest(before) }
+    }
 }
 
 /**
@@ -295,4 +345,58 @@ class FixedRupeeLiquidityLiveTest : RobolectricTest() {
         runBlocking { OrbArms.priceCheckOnly() }
         assertTrue(marketSells.isEmpty())
     }
+    /** Review: the price fell under the ₹1k level before the stop went - the 15% rests at once and the app sells at the level. */
+    @Test fun aPriceUnderTheLevelBeforeTheStopRestsTheFifteenPercentAndTheAppSellsAtTheLevel() {
+        FixedRupeeExits.resetForTest(on = true)
+        state(2)
+        kite.afterNext("/orders/regular") { kite.quote("NFO:$sym", 182.0, 181.95, 182.05) }
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        val p = row().open!!
+        assertTrue(p.fixed)
+        assertEquals("170.00", kite.placed.last().form["trigger_price"])
+        assertEquals("a stop rests at Zerodha", "TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        assertEquals(170.0, p.stopTrigger!!, 1e-9)
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals(1, marketSells.size)
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals(FixedRupee.WHY_STOP, row().today.single().why)
+    }
+
+    /** Review: Zerodha refuses the stop at the ₹1k level - the 15% rests straight away (never no stop). */
+    @Test fun aRefusedStopAtTheLevelRestsTheFifteenPercentAtOnce() {
+        FixedRupeeExits.resetForTest(on = true)
+        state(2)
+        kite.nextPlace()                                           // the buy
+        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "Trigger price for stoploss sell orders should be lower than the last traded price.")
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        val p = row().open!!
+        val sls = kite.placed.filter { it.form["order_type"] == "SL" }
+        assertEquals(listOf("183.35", "170.00"), sls.map { it.form["trigger_price"] })
+        assertEquals("TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        assertEquals(170.0, p.stopTrigger!!, 1e-9)
+    }
+
+    /** Review: "keep a stop at the exchange" rests a missing stop at the ₹1k level ([lockOrStop] includes it). */
+    @Test fun aMissingStopIsRestedAgainAtTheLevel() {
+        val p = approved(2)
+        AppSettings.save(AppSettings.load().copy(exchangeStops = true))
+        kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("183.35", kite.placed.last().form["trigger_price"])
+        assertEquals(183.35, row().open!!.stopTrigger!!, 1e-9)
+    }
+
+    @Test fun underTheLevelAMissingStopIsRestedAtTheFifteenPercentAndTheAppSells() {
+        val p = approved(2)
+        AppSettings.save(AppSettings.load().copy(exchangeStops = true))
+        kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        kite.quote("NFO:$sym", 182.0, 181.95, 182.05)
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("170.00", kite.placed.last().form["trigger_price"])
+        assertTrue(marketSells.isEmpty())
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals(1, marketSells.size)
+        assertEquals(FixedRupee.WHY_STOP, row().today.single().why)
+    }
 }
+

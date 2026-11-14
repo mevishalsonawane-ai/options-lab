@@ -218,4 +218,18 @@ class FixedRupeeTest {
         assertEquals(Step.PLACE_STOP, p.step); assertEquals(186.7, p.to)
         assertNotNull(LiveMirror.stopLimit(186.7, 0.05, 1))
     }
+
+    /** 14 Nov review: the ₹1k level reached while the resting (or watched) stop is lower: the app sells; never with no price or a short. */
+    @Test fun theAppSellsAtTheOneThousandLevelWhileTheStopIsLower() {
+        val lower = live.copy(stopTrigger = 170.0, fixedStop = 186.7)
+        val d = LiveMirror.decide(lower.copy(ltp = 186.0))
+        assertEquals(Step.SELL, d.step); assertEquals(FixedRupee.WHY_STOP, d.why); assertEquals(75, d.qty)
+        assertEquals(Step.SELL, LiveMirror.decide(lower.copy(ltp = 186.0, stopTrigger = null, stopResting = false)).step)
+        // Above it: held (the stop moves up when it may rest).
+        assertEquals(Step.MOVE_STOP, LiveMirror.decide(lower.copy(ltp = 190.0, wanted = 186.7)).step)
+        // The stop already at the level: Zerodha's stop does it (no app sale beside it).
+        assertEquals(Step.HOLD, LiveMirror.decide(lower.copy(ltp = 186.0, stopTrigger = 186.7)).step)
+        assertEquals(Step.HOLD, LiveMirror.decide(lower.copy(ltp = null)).step)
+        assertEquals(Step.HOLD, LiveMirror.decide(lower.copy(side = -1, held = -75, ltp = 100.0, stopTrigger = 260.0)).step)
+    }
 }

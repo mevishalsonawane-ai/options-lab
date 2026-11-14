@@ -1,6 +1,7 @@
 package com.optionslab.ira
 
 import com.optionslab.engine.orb.Arm
+import com.optionslab.engine.orb.FixedRupee
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.ProfitLock
@@ -50,6 +51,11 @@ object BotTrades {
          * [com.optionslab.engine.orb.LiquidityBreakeven.label]); null: plain rules, or a trailed trade from before the label (the trail).
          */
         val rules: String? = null,
+        /**
+         * 14 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.FixedRupee]): a Liquidity trade on the fixed ₹2,000 target /
+         * ₹1,000 stop for its whole quantity - its open line names that stop and target, labelled.
+         */
+        val fixed: Boolean = false,
     )
 
     /** An arm's switch as the app shows it ([label] "ORB", "Liquidity 15+5"...). */
@@ -184,18 +190,26 @@ object BotTrades {
         val name = label(t.source)
         val bought = "Bought at ${n(t.entry)} at ${hm(t.entryTime)}"
         val target = arm?.let { ProfitLock.targetOf(it) }
+        // 14 Nov (Boss's exception): a fixed Liquidity trade's ₹1,000 stop where it is tighter than the 15%, and its ₹2,000 target.
+        val fx = t.fixed && arm?.liquidity == true
+        val fixedStop = if (fx) FixedRupee.stopLevel(t.entry, t.qty) else null
+        val ownLiq = if (arm?.liquidity == true) LiquidityRules.stopTrigger(t.entry) else null
+        val fixedOn = fx && FixedRupee.fixedIsTighter(ownLiq, fixedStop)
         val stopLevel: Double? = when {
             arm == null -> null
-            arm.liquidity -> LiquidityRules.stopTrigger(t.entry)
+            arm.liquidity -> FixedRupee.tighterStop(ownLiq, fixedStop.takeIf { fx })
             else -> (t.entry - OrbRules.STOP_POINTS).takeIf { it > 0 }
         }
         val stopWords = when {
             arm == null || stopLevel == null -> "its stop"
+            fixedOn -> "its ₹1,000 stop for the whole position (${n(stopLevel)}; ${FixedRupee.STATUS})"
             arm.liquidity -> "its stop 15% under the price paid (${n(stopLevel)})"
             else -> "its ${OrbRules.STOP_POINTS.toInt()}-point stop (${n(stopLevel)})"
         }
+        val fixedTarget = if (fx) FixedRupee.targetLevel(t.entry, t.qty) else null
         val px = t.exit ?: return "$bought; still open, with $stopWords" +
-            (target?.let { "and its +${it.toInt()} target (${n(t.entry + it)})" }?.let { " $it" } ?: "") + "."
+            (target?.let { "and its +${it.toInt()} target (${n(t.entry + it)})" }?.let { " $it" } ?: "") +
+            (fixedTarget?.let { " and its ₹2,000 target for the whole position (${n(it)}; ${FixedRupee.STATUS})" } ?: "") + "."
         val at = t.exitTime?.let { " at ${hm(it)}" } ?: ""
         val sold = "sold at ${n(px)}$at"
         val why = when (t.why) {
@@ -240,6 +254,9 @@ object BotTrades {
             "operator_stop" -> "out when you stopped it for today, $sold"
             "closed_by_you" -> "closed by you, $sold"
             "backstop_square_off" -> "out at the app's backstop square-off, $sold"
+            // 14 Nov (Boss's exception, failed gates): the fixed ₹1,000 stop / ₹2,000 target for the whole position.
+            FixedRupee.WHY_STOP -> "out at its ₹1,000 stop for the whole position (${FixedRupee.STATUS}), $sold"
+            FixedRupee.WHY_TARGET -> "out at its ₹2,000 target for the whole position (${FixedRupee.STATUS}), $sold"
             null -> sold
             else -> "out (${t.why.replace('_', ' ')}), $sold"
         }

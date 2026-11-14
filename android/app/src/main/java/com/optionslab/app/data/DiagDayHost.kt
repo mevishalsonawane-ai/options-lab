@@ -38,7 +38,7 @@ object DiagDayHost {
     private fun trade(p: OrbArms.Position, label: String): DiagDay.Trade = DiagDay.Trade(
         arm = p.arm, live = p.live, right = p.right, entryAt = p.entryTime, entry = p.entry, exitAt = p.exitTime, exit = p.exit,
         why = p.why?.let(::r), lots = p.lots, source = Origins.display(label).first, unconfirmed = p.unconfirmed,
-        trail = p.ownRules)
+        trail = p.ownExits)   // 14 Nov: the fixed ₹2k target / ₹1k stop's trades marked too
 
     /** What [DiagDay] reads for [day]. Each part on its own ([runCatching]): a part that fails is left out. */
     internal suspend fun input(day: LocalDate): DiagDay.Input {

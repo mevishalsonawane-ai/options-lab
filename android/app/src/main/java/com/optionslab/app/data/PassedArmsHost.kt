@@ -99,7 +99,7 @@ object PassedArmsHost {
     private fun mirrorLegs(): List<ArmLive.PaperLeg>? {
         if (cache == null) return null
         val v = _view.value
-        return (v.open + v.today.filter { !it.open }).filter { it.shadow == null }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0) }
+        return (v.open + v.today.filter { !it.open }).filter { it.shadow == null }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0, fixed = it.fx) }
     }
 
     /** [p]'s own stop on the premium at its entry (-15% and the like); null for S1 (its stop is on the index). */
@@ -1069,6 +1069,10 @@ object PassedArmsHost {
                         pickerWords(v.pickOn, c, { m(it) }, R51Picker.LABEL, R51Picker::takes, R51Picker.STATUS) else "") +
                     (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
                         "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
+                    // 14 Nov (Boss's exception, failed gates): the fixed ₹2k target / ₹1k stop - its closed trades apart from the arm's own exits.
+                    (if (FixedRupee.covers(s)) " · ${FixedRupee.LABEL} ${if (FixedRupeeExits.isOn()) "on" else "off"} for new trades, " +
+                        "${c.count { it.fx }} closed on it ${m(c.filter { it.fx }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.fx }} on the arm's own exits " +
+                        m(c.filter { !it.fx }.sumOf { it.net ?: 0.0 }) else "") +
                 // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)
                 v.status.filterKeys { it.startsWith("$s|") && it != ST_UNJUDGED_KEY }.toSortedMap().entries.joinToString("") { (k, x) -> "\n${label(s)} · ${k.substringAfter('|')} ${rupees(x)}" } +
                 if (s == BreadthDonchianArm.SOURCE) "\n${label(s)} · ${rupees(v.comparison())}" else ""
@@ -1857,6 +1861,10 @@ object PassedArmsHost {
             // would-be trade (the cap, a twin, record only) was never bought and books no entry spread, so it could neither
             // switch the arm off nor pass it. They stay in the record, labelled.
             val c = b.positions.filter { it.arm == s && !it.open && it.shadow == null }
+            // 14 Nov (review): the fixed ₹2k target / ₹1k stop's trades COUNT here, unlike Liquidity's plain-rules records: this bar is a
+            // safety cut-off that switches the arm off on what it really trades (as the 30-60-100 lock's trades count). Leaving them
+            // out would keep the bar from ever judging an arm while the switch is on - less protection, not more. Its own-exits record
+            // is split out in the diagnostics ([diagLine]).
             val nets = c.map { it.net ?: 0.0 }
             val (fail, key, why) = if (s == Solo2.SOURCE) {
                 val base = soloBase(b)

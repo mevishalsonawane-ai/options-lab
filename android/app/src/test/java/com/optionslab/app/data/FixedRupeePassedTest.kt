@@ -332,4 +332,59 @@ class FixedRupeePassedTest : RobolectricTest() {
         assertTrue(ons().single().change.reason.contains("Make it 2k profit and 1k loss fix"))
         assertNull(AutoChange.lastUndoable(Autopilot.book.value))
     }
+    /** Review (CLAUDE.md: nothing on the order or tick path touches the settings vault): with the rule on and a fixed live trade open, a tick read nothing. */
+    @Test fun withTheRuleOnATickAndTheEntryReadNothingFromTheSettingsVault() {
+        goLive()
+        bought(200.0)
+        assertTrue(ArmLive.view.value.open.single().fixed)
+        SecurePrefs.readsForTest.set(0)
+        SecurePrefs.countedThread = Thread.currentThread()
+        try {
+            repeat(50) { FixedRupeeExits.forEntry(DonchianArm.SOURCE); FixedRupeeExits.isOn() }
+            KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(26_000_001, 230.0, bid = 229.95, ask = 230.05,
+                exchangeTime = System.currentTimeMillis() / 1000, bidQty = 750, askQty = 750)))
+        } finally { SecurePrefs.countedThread = null }
+        assertEquals("settings reads on the tick path with the rule on", 0L, SecurePrefs.readsForTest.get())
+        KiteStream.stop()
+    }
+
+    /** Review: a live trade's stop that Zerodha cancelled: the app sells at the ₹1k level itself, booked as the ₹1k stop. */
+    @Test fun liveAStopGoneAtZerodhaIsSoldByTheAppAtTheLevelAsTheOneThousandStop() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val fs = FixedRupee.stopLevel(live.entry, live.qty, live.tick)!!
+        kite.reject(live.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        kite.quote("NFO:$sym", fs - 0.5, fs - 0.55, fs - 0.45)
+        runBlocking { ArmLive.watch() }
+        runBlocking { ArmLive.watch() }
+        assertEquals(1, marketSells.size)
+        assertEquals(FixedRupee.WHY_STOP, ArmLive.view.value.closed.single().why)
+    }
+
+    /**
+     * Review: a live book damaged and rebuilt from Zerodha keeps the paper trade's ₹2k / ₹1k (its flag read from the paper book); its
+     * safety stop is lower than the ₹1k level, so the app sells at that level itself, booked as the ₹1k stop.
+     */
+    @Test fun aRebuiltLiveTradeKeepsTheRuleAndTheAppSellsAtTheLevelOverItsSafetyStop() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val fs = FixedRupee.stopLevel(live.entry, live.qty, live.tick)!!
+        // Boss switches the rule off meanwhile (new trades only): the rebuilt trade still keeps what its paper trade entered with.
+        assertTrue(FixedRupeeExits.set(false, pinConfirmed = true, log = false).startsWith("Off"))
+        // Its stop gone at Zerodha and the book damaged: rebuilt from Zerodha's position with a safety stop (-30%).
+        kite.reject(live.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        val f = File(context.noBackupFilesDir, "arm_live.vault")
+        val bytes = f.readBytes(); bytes[bytes.size / 2] = (bytes[bytes.size / 2].toInt() xor 0x5A).toByte(); f.writeBytes(bytes)
+        ArmLive.forgetMemoryForTest()
+        kite.quote("NFO:$sym", fs - 0.5, fs - 0.55, fs - 0.45)
+        runBlocking { ArmLive.watch() }
+        runBlocking { ArmLive.watch() }
+        val all = ArmLive.view.value.closed + ArmLive.view.value.open
+        val rebuilt = all.single { it.ref.startsWith("recovered:") }
+        assertTrue("the paper trade's flag", rebuilt.fixed)
+        assertEquals(1, marketSells.size)
+        assertEquals(FixedRupee.WHY_STOP, rebuilt.why)
+    }
 }

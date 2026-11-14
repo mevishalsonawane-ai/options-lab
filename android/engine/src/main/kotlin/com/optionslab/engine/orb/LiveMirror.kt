@@ -560,6 +560,11 @@ object LiveMirror {
          * at the price now once reached ([FixedRupee.WHY_TARGET]). An earlier exit only (it lowers risk).
          */
         val target: Double? = null,
+        /**
+         * 14 Nov (review): the live trade's own ₹1,000 level ([FixedRupee]; null: none). When the resting stop is lower (it could not rest
+         * at this level yet: the price too near, or Zerodha refused it) and the price now is at or under it, the app sells.
+         */
+        val fixedStop: Double? = null,
     )
 
     /**
@@ -579,6 +584,10 @@ object LiveMirror {
         if (l.paperSell > 0) return Decision(Step.SELL, l.paperReason ?: "paper_exit", minOf(l.paperSell, qty))
         // 14 Nov ([FixedRupee]): the ₹2,000 target reached on the price now - the whole position sold (the exit takes its stop out first).
         if (l.side >= 0 && FixedRupee.targetHit(l.ltp, l.target)) return Decision(Step.SELL, FixedRupee.WHY_TARGET, qty)
+        // 14 Nov (review): the ₹1,000 level reached while the stop (resting or watched) is lower: sold by the app (its stop out first).
+        val fs = l.fixedStop
+        if (l.side >= 0 && fs != null && (l.stopTrigger == null || fs > l.stopTrigger + EPS) && FixedRupee.stopHit(l.ltp, fs))
+            return Decision(Step.SELL, FixedRupee.WHY_STOP, qty)
         // A resting stop for more than is held less the other working exits: shrunk (whole lots; 0 takes it out).
         if (l.stopResting && l.stopQty != null) {
             val room = (heldMine - l.otherWorking.coerceAtLeast(0)).coerceAtLeast(0)
