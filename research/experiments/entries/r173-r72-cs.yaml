@@ -1,0 +1,25 @@
+id: r173-r72-cs
+title: 'R173 R72-CS: R72 breadth Donchian (fresh + session TWAP) traded as a short OTM credit spread (Boss''s files, re-tested on real option prices)'
+family: option-structure
+date: '2026-11-14'
+doc: research/hunt/r173_credit_spread_check/results/report.md
+hypothesis: 'Boss''s files (14 Nov, from another tool) claim R72 4-of-5 breadth Donchian breaks, fresh only and on the TWAP side, traded as a SHORT credit spread in the break direction (sell ATM -/+ 2 steps, buy a wing 3 steps further; index target +3.2x / catastrophe -4.5x IDX_STOP_EXT; 15:10) make +Rs 2,36,036 at 62.9% wins (5 indices, Nov 2024 - Oct 2026). On real 1-minute option prices (NIFTY, BANKNIFTY), R17 fills on 4 orders, dated charges, a Rs 56k margin account: positive in design / walk-forward / final, beats random entries of the same spread (BH q <= 0.10, m = 3915), >= 40 final trades, DD > -40k, no month < -13k.'
+data_version: 'GitHub release research-data (nifty_prev, nifty_year, banknifty_prev_year_wide, banknifty_year_wide, finnifty_index, sensex_index, extra_series) fetched 14 Nov 2026; nothing on or after 2026-02-24; the Drive lake (Apr - Oct 2026, FINNIFTY / MIDCPNIFTY / SENSEX options) not reachable'
+period:
+  design: 2024-11-01..2025-03-31 (walk-forward 2025-04-01..2025-09-30)
+  holdout: '2025-10-01..2026-02-23 read once (FINAL_READ); not a clean holdout for their rules (chosen on Nov 2024 - Oct 2026) and read before by R171'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index (entries, target and stop on the index); the two option legs are only traded'
+- real 1-minute option prices of both legs; R17 fills on 4 orders; dated Zerodha charges; margin = capped max loss + 2% exposure
+model_or_rule: 'R72 4-of-5 (MIDCPNIFTY no data: 4 of 4) 5-min Donchian 20 break, fresh, 09:20 - 14:30, entry open on the break side of the session TWAP of earlier closes, not on the index''s own expiry day; sell the OTM option ATM -/+ 2 steps, buy 3 steps further; exits on the index +3.2x / -4.5x IDX_STOP_EXT, 15:10; 1 entry a side a day'
+settings: research/hunt/r173_credit_spread_check/PREREG.md; r173real.py; r173study.py
+prereg: research/hunt/r173_credit_spread_check/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Their script on our data reproduces their picture (+Rs 1,73,927, 62.9% wins, 1,219 trades, 4 indices, Nov 2024 - Feb 2026) but its fixed 22%-a-day theta is +Rs 2,52,375 of it (without: -Rs 79,975) and random entries under their model are positive 200/200. Real prices (NIFTY + BANKNIFTY): all trades -Rs 77,605 on 666 (50.6% wins; design -31,799 / WF -27,607 / final -18,199); Rs 56k account (one spread fits, margin ~Rs 35-47k): 271 not taken, 395 taken -Rs 50,919, max DD -Rs 51,374; final random-entry p 0.409 (MC 0.391), q 1. Fail.'
+  costs: R17 liquidity fills (5 bps + 1/2/4 ticks by 5-min volume, x2 on the catastrophe exit) on each of 4 orders + obuy 'dated' charges (Rs 20 an order, STT on the 2 sell orders); options_lab quoted / roll / stress spread law as sensitivity; 1 lot at the dated lot
+holdout_read: true
+verdict: rejected
