@@ -1,0 +1,16 @@
+{
+  "qualified_point65": 0,
+  "healthy_neighbours": 0,
+  "total_neighbours": 8,
+  "highest_sampled_win_rule": "range_fade__plain__t0.10__l20__s0.15__x1.0",
+  "status": "completed_no_qualifying_strategy",
+  "unique_settings": 40,
+  "friction_endpoints": 80,
+  "negative_net_endpoints": 68,
+  "zero_trade_endpoints": 12,
+  "positive_net_endpoints": 0,
+  "demonstrated_65pct_strategy": false,
+  "production_changed": false,
+  "orders_placed": false,
+  "fresh_holdout": false
+}

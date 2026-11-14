@@ -1,0 +1,39 @@
+id: confluence65-20261114-breakout
+title: '65 percent target: breakout confluence and robustness'
+family: patterns-indicators
+date: '2026-11-14'
+hypothesis: Causal underlying entries with volume/OI/Greek context can reach65% net
+  wins with positive stressed profitability
+data_version: Last12months of prior-inspected NIFTY lake, plus57sessions of observed
+  futures volume
+period:
+  design: 2025-10-20 through2026-03-30
+  holdout: "Apr\u2013Oct2026 chronological reused research windows, not pristine"
+instruments:
+- NIFTY
+features:
+- underlying causal support/resistance
+- option volume and fixed-strike OI change
+- reported IV modeled delta
+- signed-volume PROXY
+- observed futures volume VWAP approximate profile
+model_or_rule: breakout; four fixed contexts x two targets; registered sensitivity
+  only on first-window leader
+settings: research/confluence65/PREREG.md
+prereg: research/confluence65/PREREG.md
+variants_tried: 8
+results:
+  summary: 8 normal-friction settings including any leader neighbors; 8 nonempty.
+    Every nonempty full normal/stress replay lost; no65% point-win arm. Sensitivity
+    leader sweep-chain lostRs27714 on92trades at36.96%; no WF rule qualified. No fresh
+    proof.
+  costs: Dated charges, fixed contract, assumed spread/slippage and independently
+    cash/risk-replayed doubled friction
+holdout_read: false
+verdict: rejected
+notes: Whole batch40unique settings,80joint-BH full friction endpoints. Window accounts
+  and WF training overlap. MonteCarlo uses1000trade permutations and1000five-day blocks,
+  not re-executed shuffled cash gates. True aggressor delta/order-book liquidity unavailable.
+  A zero-trade gate is not profitable evidence. No new neural model or production
+  change.
+doc: research/confluence65/results/REPORT.md
