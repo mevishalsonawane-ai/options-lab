@@ -1,7 +1,7 @@
 {
   "date": "2026-11-14",
-  "stage": "completed_development_only",
-  "reason": "bounded NIFTY experiment completed; broader stages remain incomplete",
+  "stage": "all_data_training_completed",
+  "reason": "NIFTY duration selection and all-data refits completed; wider project and fresh testing remain incomplete",
   "training_started": true,
   "new_model_created": true,
   "baseline_reproduced": true,
@@ -106,5 +106,15 @@
   "valid_samples": 13460,
   "evaluated_samples": 6753,
   "evaluation_sessions": 123,
-  "local_dashboard_created": true
+  "local_dashboard_created": true,
+  "final_training_completed": true,
+  "final_models": 3,
+  "final_refit_epochs": {
+    "mlp": 20,
+    "lstm": 6,
+    "gru": 15
+  },
+  "final_training_report": "research/neural_v2/final_training/TRAINING_REPORT.md",
+  "total_saved_checkpoints": 21,
+  "epochs_per_checkpoint_scope": "original development-fold checkpoints; final refit epochs are recorded separately"
 }

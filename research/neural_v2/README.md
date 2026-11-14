@@ -33,8 +33,7 @@ Checkpoint fields: model (last epoch), best_model (inner-validation selected),
 optimizer, epoch, rng, mean, scale, config, fingerprint and history. Only load
 trusted checkpoints; torch.load with weights_only=False accepts Python objects.
 Use best_model for reproducing evaluation. Each checkpoint belongs to its own
-fold; the last fold is not fitted on the later evaluation days. No final model
-has been fitted on the whole dataset or approved for deployment.
+fold; the last fold is not fitted on the later evaluation days. Final all-data models are now in final_training/; those models are not approved for deployment. See final_training/TRAINING_REPORT.md.
 
 The baseline/original folder preserves the four prior artifacts unchanged.
 baseline/reproduced preserves the rerun outputs. To rerun the original script,
@@ -48,3 +47,26 @@ Scope limits: only NIFTY options plus two context indices are covered. Full-lake
 validation, verified Greeks, alternate strikes/expiries, multi-instrument models,
 adaptive learning and a fresh final test remain future work. Do not treat this
 completed bounded experiment as completion of those wider project stages.
+
+## Completed final fitting
+
+`finish_training.py` completes duration selection with chronological 80/20
+validation and early stopping, then resets and refits each architecture on all
+available valid samples for its selected duration. This is a separately
+registered stage, not an extension of the original six-epoch experiment.
+
+```bash
+python -m pytest research/neural_v2/test_finish_training.py -q
+python -m research.neural_v2.finish_training --lake /absolute/path/to/lake
+```
+
+The three `final_training/*_final.pt` files retain both phase histories,
+optimizer/RNG state, feature order, scaler, and code/data fingerprints. They
+resume after interruption and completed reruns do not perform more training.
+`finish_training.predict(checkpoints, sequences, feature_names)` provides
+strict-schema, equal-weight offline ensemble inference; it sends no orders.
+Use the recorded dependency versions in requirements-final-lock.txt to reproduce
+this fitting run. Load only trusted PyTorch checkpoints.
+
+Full-data models have no historical holdout left. Their prospective performance
+is unknown. Earlier walk-forward reports and fold models remain unchanged.

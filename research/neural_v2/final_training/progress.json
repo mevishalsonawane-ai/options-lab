@@ -1,0 +1,18 @@
+{
+  "stage": "all_data_training_completed",
+  "errors": [],
+  "approved_for_trading": false,
+  "updated_at": "2026-11-14T12:06:47.580295+00:00",
+  "architecture": "gru",
+  "epochs_completed": 15,
+  "validation_loss": "not applicable: all-data fitting",
+  "training_loss": 1.154760179335437,
+  "last_successful_checkpoint": "gru_final.pt",
+  "selected_epochs": 15,
+  "training_completed": true,
+  "samples": 13460,
+  "models_completed": 3,
+  "blockers": [
+    "fresh prospective validation unavailable"
+  ]
+}

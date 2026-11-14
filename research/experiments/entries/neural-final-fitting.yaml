@@ -1,0 +1,22 @@
+id: neural-final-fitting
+title: Complete NIFTY duration selection and all-data research fitting
+family: ml
+date: '2026-11-14'
+doc: research/neural_v2/final_training/TRAINING_REPORT.md
+hypothesis: Complete training duration selection and final all-data model fitting without claiming a new edge
+data_version: Eight input SHA256 fingerprints in final_training/data_audit.json
+period:
+  design: 2025-10-20 through 2026-10-19, previously seen history
+  holdout: none
+instruments: [NIFTY, BANKNIFTY context, INDIAVIX context]
+features: [25 existing features and 30-minute sequences]
+model_or_rule: Existing MLP, CNN-LSTM, CNN-GRU-attention; fixed equal-weight ensemble
+settings: Fixed lr 0.001; up to 50 epochs, patience 6; reset and all-data refit at selected duration
+prereg: research/neural_v2/FINAL_TRAINING_PREREG.md
+variants_tried: 3
+results:
+  summary: 13460 valid samples, 246 sessions. Selected refit epochs MLP 20, LSTM 6, GRU 15; all completed. No new strategy-performance test.
+  costs: Existing dated cost-adjusted fixed-contract targets unchanged
+holdout_read: false
+verdict: inconclusive
+notes: New fitting stage after prior six-epoch experiment. Historical validation reused only for duration selection. Final weights trained on all history, so future data is required for performance evaluation. No trading approval.
