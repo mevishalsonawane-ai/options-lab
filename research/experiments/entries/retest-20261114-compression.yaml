@@ -1,0 +1,36 @@
+id: retest-20261114-compression
+title: 'Frozen breakout/retest comparison: compression'
+family: patterns-indicators
+date: '2026-11-14'
+hypothesis: Waiting for a clean later retest and applying trend/cost context improves
+  executable option entry quality
+data_version: Previously studied NIFTY minute index/weekly option lake2025/2026
+period:
+  design: 2025-10-20 through2026-03-30
+  holdout: "Apr\u2013Oct2026reused chronological windows, not pristine"
+instruments:
+- NIFTY
+features:
+- frozen underlying support/resistance
+- strict later clean retest
+- completed5minute EMA trend
+- reported-IV modeled delta
+- prior realized-move/estimated-cost proxy
+model_or_rule: compression x immediate/retest x3contexts x quick/runner;8additional
+  central range/retest sensitivity settings
+settings: research/retest/PREREG.md
+prereg: research/retest/PREREG.md
+variants_tried: 12
+results:
+  summary: 24normal/stress outputs, 0positive. No65%-win profitable qualifying rule.
+    Whole batch56unique rules+fixed latency pair,114endpoints; WF selectsNO_TRADE
+    both later windows;0/8healthy center neighbors.
+  costs: Corrected dated statutory charges, inclusive exchange/IPFT, modeled friction;
+    normal/double accounts independently cash/risk replayed
+holdout_read: false
+verdict: rejected
+notes: Delay keeps original selected strike and is counted as2extra full endpoints,
+  not another signal rule. Pending levels/tolerance are frozen, no same-bar confirmation,
+  gaps invalidate. All114ledgers saved. MonteCarlo doesnotreplay shuffled cash gates.
+  Reused history, no new neural training or real orders.
+doc: research/retest/results/REPORT.md

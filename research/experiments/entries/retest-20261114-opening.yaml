@@ -1,0 +1,37 @@
+id: retest-20261114-opening
+title: 'Frozen breakout/retest comparison: opening'
+family: patterns-indicators
+date: '2026-11-14'
+hypothesis: Waiting for a clean later retest and applying trend/cost context improves
+  executable option entry quality
+data_version: Previously studied NIFTY minute index/weekly option lake2025/2026
+period:
+  design: 2025-10-20 through2026-03-30
+  holdout: "Apr\u2013Oct2026reused chronological windows, not pristine"
+instruments:
+- NIFTY
+features:
+- frozen underlying support/resistance
+- strict later clean retest
+- completed5minute EMA trend
+- reported-IV modeled delta
+- prior realized-move/estimated-cost proxy
+model_or_rule: opening x immediate/retest x3contexts x quick/runner;8additional central
+  range/retest sensitivity settings
+settings: research/retest/PREREG.md
+prereg: research/retest/PREREG.md
+variants_tried: 12
+results:
+  summary: 24normal/stress outputs, 0positive. No65%-win profitable qualifying rule.
+    Whole batch56unique rules+fixed latency pair,114endpoints; WF selectsNO_TRADE
+    both later windows;0/8healthy center neighbors. OR retest trend/cost quick:55trades,33wins,60%,net-Rs1500.43;
+    stress net-Rs8433.76 vs immediate127trades42.52%,net-Rs38876.35.
+  costs: Corrected dated statutory charges, inclusive exchange/IPFT, modeled friction;
+    normal/double accounts independently cash/risk replayed
+holdout_read: false
+verdict: rejected
+notes: Delay keeps original selected strike and is counted as2extra full endpoints,
+  not another signal rule. Pending levels/tolerance are frozen, no same-bar confirmation,
+  gaps invalidate. All114ledgers saved. MonteCarlo doesnotreplay shuffled cash gates.
+  Reused history, no new neural training or real orders.
+doc: research/retest/results/REPORT.md

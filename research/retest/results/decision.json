@@ -1,0 +1,13 @@
+{
+  "unique_rules": 56,
+  "account_endpoints": 114,
+  "positive_net_endpoints": 2,
+  "negative_net_endpoints": 112,
+  "empty_endpoints": 0,
+  "qualifying_historical_rules": [],
+  "demonstrated_65pct_strategy": false,
+  "approved_for_trading": false,
+  "fresh_holdout": false,
+  "production_changed": false,
+  "orders_placed": false
+}

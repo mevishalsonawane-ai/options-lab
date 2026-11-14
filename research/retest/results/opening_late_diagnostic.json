@@ -1,0 +1,48 @@
+{
+  "exploratory": true,
+  "period_start": "2026-04-01",
+  "basis": "Later subset of the full account, not a new restart or a passing WF strategy",
+  "selection": "This example was chosen after reviewing family results; no independent validation claim",
+  "rows": {
+    "immediate__x1.0": {
+      "trades": 48,
+      "wins": 19,
+      "win_rate": 0.3958333333333333,
+      "net": -13005.211261827502,
+      "wilson95": [
+        0.2702082786059137,
+        0.5368959150745274
+      ]
+    },
+    "immediate__x2.0": {
+      "trades": 3,
+      "wins": 0,
+      "win_rate": 0.0,
+      "net": -2254.332066591923,
+      "wilson95": [
+        5.551115123125783e-17,
+        0.5614970317550454
+      ]
+    },
+    "retest__x1.0": {
+      "trades": 28,
+      "wins": 19,
+      "win_rate": 0.6785714285714286,
+      "net": 2534.8090708304217,
+      "wilson95": [
+        0.49338843180857617,
+        0.8206675307750504
+      ]
+    },
+    "retest__x2.0": {
+      "trades": 27,
+      "wins": 15,
+      "win_rate": 0.5555555555555556,
+      "net": -1956.9948191681376,
+      "wilson95": [
+        0.3731302451322448,
+        0.72414141822977
+      ]
+    }
+  }
+}
