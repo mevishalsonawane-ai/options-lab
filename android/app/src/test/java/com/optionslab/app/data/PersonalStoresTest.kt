@@ -652,6 +652,13 @@ class PersonalStoresTest {
             check(com.optionslab.app.data.ManualCover.holdsForErase())
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("FixedRupeeExits") {
+            // 14 Nov: on by default (TestApp starts it off for the other tests): switched off by Boss, a setting to erase.
+            com.optionslab.app.data.FixedRupeeExits.resetForTest(on = true)
+            com.optionslab.app.data.FixedRupeeExits.set(false, pinConfirmed = true, log = false)
+            check(com.optionslab.app.data.FixedRupeeExits.holdsForErase())
+            com.optionslab.app.security.SecurePrefs.flush()
+        },
         s("HealthReport") {
             com.optionslab.app.data.HealthReport.write(app)             // cache/exports/health/*.zip (holds() stays false: files only)
         },

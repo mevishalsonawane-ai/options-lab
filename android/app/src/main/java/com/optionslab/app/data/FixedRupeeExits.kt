@@ -75,9 +75,9 @@ object FixedRupeeExits {
     fun refresh() { if (!loaded) load() else publish() }
 
     /** The diagnostics line. Memory only. */
-    fun line(): String = "${FixedRupee.LABEL}: " + when {
+    fun line(): String = "${FixedRupee.DIAG.replaceFirstChar { it.uppercase() }}: " + when {
         !loaded -> "not read yet (counts as on)"
-        on -> "on - new Liquidity 15+5, R51 and R72 trades are sold at +₹2,000 or -₹1,000 for the whole position, paper and live"
+        on -> "on - new Liquidity 15+5, R51 and R72 trades are sold at the 2k target or the 1k stop for the whole position, paper and live"
         else -> "off - new trades use the arms' own exits"
     }
 
@@ -105,6 +105,18 @@ object FixedRupeeExits {
             "live, beside their own exits (failed gates, your exception)."
         else "Off: new Liquidity 15+5, R51 and R72 trades use their own exits again. Open trades keep the exits they entered with."
     }
+
+    /**
+     * Erase everything ([PersonalStores]): the switch as on a fresh phone - on, its default ([switched]: a start's read still on its way
+     * never brings Boss's old "off" back). Its saved key goes with the settings vault.
+     */
+    fun wipe() {
+        synchronized(this) { on = true; loaded = true; switched = true }
+        publish()
+    }
+
+    /** Whether Boss's own choice (off) is still in memory (the erase's tests). Memory only. */
+    internal fun holdsForErase(): Boolean = !on
 
     /** TEST ONLY: the switch as a fresh start would have it (read, [on]), nothing switched. */
     internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) {

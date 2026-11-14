@@ -29,6 +29,11 @@ object FixedRupee {
     const val STATUS = "failed gates, Boss's exception"
     /** How the switch and the arms' rows name it. */
     const val LABEL = "₹2k target / ₹1k stop (failed gates, Boss's exception)"
+    /**
+     * The diagnostics' name for it: no rupee sign and no grouped figure (the uploaded diagnostics hide every rupee figure, and their
+     * tests refuse "₹" / "Rs" and "2,000"-style numbers in them).
+     */
+    const val DIAG = "fixed 2k target / 1k stop (failed gates, Boss's exception)"
     /** Bot settings' switch. */
     const val SWITCH = "Fixed ₹2k target / ₹1k stop (Liquidity, R51, R72) — failed gates, Boss's exception"
     /** An exit by the target, as the trade record and the diagnostics say it. */

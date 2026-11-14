@@ -1070,7 +1070,7 @@ object PassedArmsHost {
                     (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
                         "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
                     // 14 Nov (Boss's exception, failed gates): the fixed ₹2k target / ₹1k stop - its closed trades apart from the arm's own exits.
-                    (if (FixedRupee.covers(s)) " · ${FixedRupee.LABEL} ${if (FixedRupeeExits.isOn()) "on" else "off"} for new trades, " +
+                    (if (FixedRupee.covers(s)) " · ${FixedRupee.DIAG} ${if (FixedRupeeExits.isOn()) "on" else "off"} for new trades, " +
                         "${c.count { it.fx }} closed on it ${m(c.filter { it.fx }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.fx }} on the arm's own exits " +
                         m(c.filter { !it.fx }.sumOf { it.net ?: 0.0 }) else "") +
                 // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)

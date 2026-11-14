@@ -257,6 +257,9 @@ class FixedRupeeLiquidityLiveTest : RobolectricTest() {
         val t = AutomationSupport.earlierToday()
         OrbArms.testNow = t
         now = t.toLocalDateTime().withNano(0)
+        // The price checks run Liquidity's index exits too: no index minutes here (nothing reaches Upstox), so only the price exits act.
+        OrbArms.testIndexBars = { emptyList() }
+        OrbArms.testHistoryBars = { emptyList() }
     }
 
     @After fun down() {
