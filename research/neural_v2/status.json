@@ -1,13 +1,13 @@
 {
   "date": "2026-11-14",
-  "stage": "blocked_before_training",
-  "reason": "execution_environment_unavailable",
-  "training_started": false,
-  "new_model_created": false,
-  "baseline_reproduced": false,
+  "stage": "completed_development_only",
+  "reason": "bounded NIFTY experiment completed; broader stages remain incomplete",
+  "training_started": true,
+  "new_model_created": true,
+  "baseline_reproduced": true,
   "baseline_metrics_source_verified": true,
   "final_test_is_untouched": false,
-  "paper_trading_suitable": "not_established",
+  "paper_trading_suitable": false,
   "persistent_runner_configured": false,
   "monitoring_dashboard_deployed": false,
   "inventory": [
@@ -99,5 +99,12 @@
     "test_accuracy": 0.525598086124402,
     "test_balanced_accuracy": 0.5102541205765299,
     "test_majority_baseline": 0.5240829288959503
-  }
+  },
+  "training_completed": true,
+  "checkpoints": 18,
+  "epochs_per_checkpoint": 6,
+  "valid_samples": 13460,
+  "evaluated_samples": 6753,
+  "evaluation_sessions": 123,
+  "local_dashboard_created": true
 }

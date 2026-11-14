@@ -1,0 +1,92 @@
+{
+  "stage": "completed_development_only",
+  "errors": [],
+  "backtesting_progress": "complete",
+  "updated_at": "2026-11-14T10:38:20.867764+00:00",
+  "ingestion_progress": "complete",
+  "valid_samples": 13460,
+  "input_sessions": 247,
+  "fold": 3,
+  "architecture": "gru",
+  "learning_rate": 0.0003,
+  "epochs_completed": 6,
+  "validation_loss": 1.1925090551376343,
+  "last_successful_checkpoint": "fold3_gru_0.0003.pt",
+  "model_performance": {
+    "trades": 0,
+    "sessions": 123,
+    "net": 0.0,
+    "expectancy": 0.0,
+    "stress_net": 0.0,
+    "win_rate": 0.0,
+    "profit_factor": null,
+    "max_drawdown": 0.0,
+    "worst_month": 0.0,
+    "daily_sharpe": null,
+    "fixed_capital": 100000,
+    "p_value": 1.0,
+    "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+    "balanced_accuracy": 0.3686463037894106,
+    "raw_class_distribution": [
+      4606,
+      732,
+      1415
+    ],
+    "max_directional_confidence": 0.4597444534301758,
+    "max_predicted_net": 57.30391311645508,
+    "fold_performance": [
+      {
+        "trades": 0,
+        "sessions": 36,
+        "net": 0.0,
+        "expectancy": 0.0,
+        "stress_net": 0.0,
+        "win_rate": 0.0,
+        "profit_factor": null,
+        "max_drawdown": 0.0,
+        "worst_month": 0.0,
+        "daily_sharpe": null,
+        "fixed_capital": 100000,
+        "p_value": 1.0,
+        "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market"
+      },
+      {
+        "trades": 0,
+        "sessions": 37,
+        "net": 0.0,
+        "expectancy": 0.0,
+        "stress_net": 0.0,
+        "win_rate": 0.0,
+        "profit_factor": null,
+        "max_drawdown": 0.0,
+        "worst_month": 0.0,
+        "daily_sharpe": null,
+        "fixed_capital": 100000,
+        "p_value": 1.0,
+        "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market"
+      },
+      {
+        "trades": 0,
+        "sessions": 50,
+        "net": 0.0,
+        "expectancy": 0.0,
+        "stress_net": 0.0,
+        "win_rate": 0.0,
+        "profit_factor": null,
+        "max_drawdown": 0.0,
+        "worst_month": 0.0,
+        "daily_sharpe": null,
+        "fixed_capital": 100000,
+        "p_value": 1.0,
+        "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market"
+      }
+    ],
+    "bh_q": 1.0,
+    "paper_trading_suitable": false
+  },
+  "blockers": [
+    "untouched final test unavailable",
+    "expanded market ingestion deferred"
+  ],
+  "paper_trading_suitable": false
+}

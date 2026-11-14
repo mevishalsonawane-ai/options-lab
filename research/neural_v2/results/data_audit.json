@@ -1,0 +1,54 @@
+{
+  "files": {
+    "index_1m_BANKNIFTY_2025.parquet": "a40331f17e40b6d083589b4eed4ab159d54d1103c088ba74a5af97fa2e42069d",
+    "index_1m_BANKNIFTY_2026.parquet": "268598438087af76a48d2d36fa829f59c32dd66b021d20e17b990d79034d6116",
+    "index_1m_INDIAVIX_2025.parquet": "8969f6fb1434b1568e884fcb0676cfd96c7dd214e3795d086230a66fe9ba5827",
+    "index_1m_INDIAVIX_2026.parquet": "025b96ec49788f236b8d60990a3e56e19929cfcbf9c86adca546c67a6ed2727c",
+    "index_1m_NIFTY_2025.parquet": "658f6bce39cfd8ebde1413645b43d50234c432c4d0df0d9ac8b09c22cd877048",
+    "index_1m_NIFTY_2026.parquet": "b2240c709b4c82debeb96b18ca9e0306f8832cac5a5c8693db466bc1e814112d",
+    "opt_NIFTY_WEEK_2025.parquet": "abc852a2ac5efed056b683d010ec66e8e5f9a6ecef6146f5a3dde542a35f6cd7",
+    "opt_NIFTY_WEEK_2026.parquet": "532013be4ec6a1859e7f57ebe69f88323c675f45803ff52d949de32663512e8c"
+  },
+  "rejections": {
+    "incomplete_fixed_contract_path": 64
+  },
+  "expiry_sources": {
+    "observed": 118,
+    "published_schedule_reconstructed": 129
+  },
+  "start": "2025-10-20 00:00:00+05:30",
+  "end": "2026-10-19 00:00:00+05:30",
+  "index_rows": 92310,
+  "sessions": 247,
+  "option_rows": 3878421,
+  "identical_contract_duplicates": 0,
+  "samples": 13460,
+  "features": [
+    "NIFTY_ret1",
+    "NIFTY_ret5",
+    "NIFTY_ret15",
+    "NIFTY_ret30",
+    "NIFTY_vol15",
+    "BANKNIFTY_ret1",
+    "BANKNIFTY_ret5",
+    "BANKNIFTY_ret15",
+    "BANKNIFTY_ret30",
+    "BANKNIFTY_vol15",
+    "INDIAVIX_ret1",
+    "INDIAVIX_ret5",
+    "INDIAVIX_ret15",
+    "INDIAVIX_ret30",
+    "INDIAVIX_vol15",
+    "time",
+    "C_logoi",
+    "C_logvolume",
+    "C_iv",
+    "C_iv_missing",
+    "P_logoi",
+    "P_logvolume",
+    "P_iv",
+    "P_iv_missing",
+    "dte"
+  ],
+  "iv_note": "zero IV retained as missing, Greeks not fabricated"
+}

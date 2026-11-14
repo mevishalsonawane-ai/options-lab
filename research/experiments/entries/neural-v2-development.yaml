@@ -1,0 +1,37 @@
+id: neural-v2-development
+title: CNN recurrent attention development comparison after dated option costs
+family: ml
+date: '2026-11-14'
+doc: research/neural_v2/results/REPORT.md
+hypothesis: Sequential underlying features and option-chain context can identify positive
+  net fixed-contract option buys
+data_version: Eight-file SHA256 manifest in research/neural_v2/results/data_audit.json
+period:
+  design: 2025-10-20 through 2026-10-19, retrospective expanding development folds
+  holdout: none; previously seen historical data
+instruments:
+- NIFTY
+- BANKNIFTY context
+- INDIAVIX context
+features:
+- underlying returns and volatility
+- time
+- ATM OI and volume
+- IV and missingness
+- DTE
+model_or_rule: MLP, CNN-LSTM, CNN-GRU-attention and equal-weight ensemble
+settings: research/neural_v2/PREREG.md
+prereg: research/neural_v2/PREREG.md
+variants_tried: 24
+results:
+  summary: 13460 samples; 6753 outer evaluation samples, 123 sessions. All neural
+    models abstained at fixed entry gates. Momentum 830 trades lost Rs175409; contrarian
+    814 trades lost Rs90241. No paper candidate.
+  costs: dated STT and exchange/IPFT, brokerage, SEBI, GST, stamp, assumed spread/slippage
+    and doubled friction stress
+holdout_read: false
+verdict: rejected
+notes: Initial costing attempt and corrected rerun counted conservatively. Initial
+  positive minimum sell fill floor removed; corrected models retrained. Daily versus
+  closed-trade drawdown corrected. Fresh final validation, all-market ingestion and
+  hosted persistence remain incomplete.

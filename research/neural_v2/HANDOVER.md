@@ -1,4 +1,7 @@
-# IraAlgo neural research: intake audit and recovery checkpoint
+# IraAlgo neural research: historical intake snapshot
+
+Superseded after workspace recovery by [README.md](README.md) and [results/REPORT.md](results/REPORT.md).
+The text below records the earlier outage; it is not the current completion status.
 
 14 November 2026. Research only. Status: **blocked before new training**.
 

@@ -1,0 +1,7 @@
+{
+  "test_metrics_match": true,
+  "selected_weight_max_abs_difference": 1.043081283569336e-07,
+  "scaler_exact_match": true,
+  "reader_check": "NIFTY 2026 ts/close equal between flat_parquet and pyarrow",
+  "note": "Later validation epochs vary slightly with numerical kernels; epoch-one selected state and reported test scores reproduce."
+}

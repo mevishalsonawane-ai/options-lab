@@ -1,0 +1,85 @@
+{
+  "index_1m_BANKNIFTY_2025.parquet": {
+    "rows": 18435,
+    "first": "2025-10-20 09:15:00+05:30",
+    "last": "2025-12-31 15:29:00+05:30",
+    "duplicates": 0,
+    "invalid_ohlc_rows": 0,
+    "nonminute_timestamps": 0,
+    "sessions_with_nonstandard_bar_counts": {
+      "2025-10-21": 60
+    }
+  },
+  "index_1m_BANKNIFTY_2026.parquet": {
+    "rows": 73875,
+    "first": "2026-01-01 09:15:00+05:30",
+    "last": "2026-10-19 15:29:00+05:30",
+    "duplicates": 0,
+    "invalid_ohlc_rows": 0,
+    "nonminute_timestamps": 0,
+    "sessions_with_nonstandard_bar_counts": {}
+  },
+  "index_1m_INDIAVIX_2025.parquet": {
+    "rows": 18435,
+    "first": "2025-10-20 09:15:00+05:30",
+    "last": "2025-12-31 15:29:00+05:30",
+    "duplicates": 0,
+    "invalid_ohlc_rows": 0,
+    "nonminute_timestamps": 0,
+    "sessions_with_nonstandard_bar_counts": {
+      "2025-10-21": 60
+    }
+  },
+  "index_1m_INDIAVIX_2026.parquet": {
+    "rows": 73875,
+    "first": "2026-01-01 09:15:00+05:30",
+    "last": "2026-10-19 15:29:00+05:30",
+    "duplicates": 0,
+    "invalid_ohlc_rows": 0,
+    "nonminute_timestamps": 0,
+    "sessions_with_nonstandard_bar_counts": {}
+  },
+  "index_1m_NIFTY_2025.parquet": {
+    "rows": 18435,
+    "first": "2025-10-20 09:15:00+05:30",
+    "last": "2025-12-31 15:29:00+05:30",
+    "duplicates": 0,
+    "invalid_ohlc_rows": 0,
+    "nonminute_timestamps": 0,
+    "sessions_with_nonstandard_bar_counts": {
+      "2025-10-21": 60
+    }
+  },
+  "index_1m_NIFTY_2026.parquet": {
+    "rows": 73875,
+    "first": "2026-01-01 09:15:00+05:30",
+    "last": "2026-10-19 15:29:00+05:30",
+    "duplicates": 0,
+    "invalid_ohlc_rows": 0,
+    "nonminute_timestamps": 0,
+    "sessions_with_nonstandard_bar_counts": {}
+  },
+  "opt_NIFTY_WEEK_2025.parquet": {
+    "rows": 776136,
+    "first": "2025-10-20 09:15:00+05:30",
+    "last": "2025-12-31 15:29:00+05:30",
+    "duplicates": 0,
+    "invalid_ohlc_rows": 0,
+    "nonminute_timestamps": 0,
+    "iv_missing_or_zero": 69448,
+    "negative_oi": 0,
+    "zero_volume": 18183
+  },
+  "opt_NIFTY_WEEK_2026.parquet": {
+    "rows": 3102285,
+    "first": "2026-01-01 09:15:00+05:30",
+    "last": "2026-10-19 15:29:00+05:30",
+    "duplicates": 0,
+    "invalid_ohlc_rows": 0,
+    "nonminute_timestamps": 0,
+    "iv_missing_or_zero": 221411,
+    "negative_oi": 0,
+    "zero_volume": 36835
+  },
+  "calendar_overlap_mismatches": []
+}
