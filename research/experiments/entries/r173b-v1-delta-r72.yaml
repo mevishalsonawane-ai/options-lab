@@ -1,0 +1,25 @@
+id: r173b-v1-delta-r72
+title: 'R173 Amendment B V1-delta/R72: R72-CS entries, credit spread selling the real ~0.28-delta strike'
+family: option-structure
+date: '2026-11-14'
+doc: research/hunt/r173_credit_spread_check/results/report.md
+hypothesis: 'Boss (14 Nov): enhance the arms from the credit-spread files. R72-CS entries, credit spread selling the real ~0.28-delta strike beats its baseline on real NIFTY / BANKNIFTY option prices (R17 fills, dated charges) in design, walk-forward and final, beats random controls (BH q <= 0.10, m = 3925), >= 40 final trades, within account limits.'
+data_version: 'GitHub release research-data (as R173), fetched 14 Nov 2026; nothing on or after 2026-02-24'
+period:
+  design: 2024-11-01..2025-03-31 (walk-forward 2025-04-01..2025-09-30)
+  holdout: '2025-10-01..2026-02-23, second look (read by R173 and R171)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index'
+- 'real 1-minute prices of both legs; implied delta from the last close before entry (V1)'
+model_or_rule: 'R72-CS entries, credit spread selling the real ~0.28-delta strike'
+settings: research/hunt/r173_credit_spread_check/PREREG.md (Amendment B); r173b.py
+prereg: research/hunt/r173_credit_spread_check/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Rs 56k account: design -14928 / WF -14829 / final -9270; all three 357 trades, 52.9% won, net -39028, max DD -39365; final random-entry p 0.502 (MC 0.490), q 1.00. Fail.'
+  costs: R17 fills on every order + obuy dated charges; quoted spread law as sensitivity; 1 lot at the dated lot
+holdout_read: true
+verdict: rejected

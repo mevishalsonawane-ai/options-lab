@@ -314,13 +314,18 @@ def charges(sell: bool, px: float, qty: int, dn: int) -> float:
     return float(COSTS.charge(not sell, np.array([px]), np.array([qty]), np.array([dn]))[0])
 
 
-def simulate(ent: dict, B: Book, strat: str) -> Spread | str:
-    """One spread on real prices, or the reason it could not be traded ('no_strike' / 'no_fill')."""
+def simulate(ent: dict, B: Book, strat: str, pick=None) -> Spread | str:
+    """One spread on real prices, or the reason it could not be traded ('no_strike' / 'no_fill').
+    pick(spot, sg, step, day, e) -> (short strike, long strike, right) or None; default: R173's ATM -/+ 2 / +3 steps.
+    (Amendment B: the short and the long leg are general, so a debit spread is a short further OTM than the long.)"""
     u, sg, e = ent["und"], ent["side"], ent["e"]
     d = B.raw[ent["k"]]
     I = B.I[ent["k"]]
     spot = float(I["close"][e - 1])
-    ks, kw, right = strikes(spot, sg, STEP[u])
+    got = strikes(spot, sg, STEP[u]) if pick is None else pick(spot, sg, STEP[u], d, e)
+    if got is None:
+        return "no_strike"
+    ks, kw, right = got
     As, Aw = d.opts.get((ks, right)), d.opts.get((kw, right))
     if As is None or Aw is None:
         return "no_strike"
@@ -366,7 +371,8 @@ def simulate(ent: dict, B: Book, strat: str) -> Spread | str:
         net_reg[g] = ((a - c_) - (b_ - d_)) * lot - chg
     width = abs(ks - kw)
     credit = fs_in - fw_in
-    margin = max(width - credit, 0.0) * lot + EXPOSURE * spot * lot
+    max_loss = (width - credit) if credit > 0 else -credit          # credit spread / debit spread
+    margin = max(max_loss, 0.0) * lot + EXPOSURE * spot * lot
     exp = d.exp
     dte = (exp - d.day).days if exp else -1
     idx_pts = sg * (float(I["open"][min(xr, N - 1)]) - float(I["open"][f]))

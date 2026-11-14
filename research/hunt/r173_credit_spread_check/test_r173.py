@@ -280,3 +280,67 @@ def test_summary_helpers():
     s2 = S.summ(t2)
     assert s2["max_dd"] == -150 and s2["worst_month"] == -50 and s2["worst_day"] == -150
     assert S.bh_q(0.00001) == pytest.approx(0.03915)
+
+
+# ------------------------------------------------------------------------------------------------ Amendment B
+def test_twap_side_uses_only_closes_before_the_fill_minute():
+    import r173b as B
+    ix = np.full((375, 4), 100.0)
+    ix[:10, 3] = 90.0                           # closes before minute 10 average 90
+    ix[10, 0] = 95.0
+    assert B.twap_side(ix, 10, 1) is True and B.twap_side(ix, 10, -1) is False
+    ix2 = ix.copy()
+    ix2[10:, 3] = 1e6                           # closes at / after the fill minute must not matter
+    assert B.twap_side(ix2, 10, 1) is True
+    ix3 = ix.copy()
+    ix3[10, 0] = np.nan
+    assert B.twap_side(ix3, 10, 1) is None and B.twap_side(ix, 0, 1) is None
+
+
+def test_variant_strike_pickers():
+    import r173b as B
+    assert B.pick_wide(25012.0, 1, 50.0, None, 50) == (24900.0, 24600.0, "P")
+    assert B.pick_debit(25012.0, 1, 50.0, None, 50) == (25150.0, 25000.0, "C")     # short further OTM, long ATM
+    assert B.pick_debit(25012.0, -1, 50.0, None, 50) == (24850.0, 25000.0, "P")
+
+
+def test_pick_delta_chooses_strike_nearest_028_from_prices_before_entry():
+    import r173b as B
+    from scipy.stats import norm
+    d = D.Day(day=date(2025, 1, 6), und="NIFTY", ix=flat_ix(25000.0), exp=date(2025, 1, 9), lot=75)
+    S0, sig = 25000.0, 0.15
+    t = 3 / 365 + (375 - 50) / 375 * 6.25 / 24 / 365
+    for k in np.arange(24500.0, 25000.0, 50.0):
+        sd = sig * math.sqrt(t)
+        d1 = (math.log(S0 / k) + 0.5 * sd * sd) / sd
+        p = k * norm.cdf(-(d1 - sd)) - S0 * norm.cdf(-d1)
+        d.opts[(k, "P")] = leg(p)
+        d.opts[(k, "P")][50:, :4] = 999.0      # prices from the entry minute on are ignored
+    ks, kw, r = B.pick_delta(S0, 1, 50.0, d, 50)
+    want = min(np.arange(24500.0, 25000.0, 50.0), key=lambda k: abs(abs(R.bs_delta(
+        float(d.opts[(k, "P")][49, 3]), S0, k, "P", t)) - 0.28))
+    assert (ks, kw, r) == (want, want - 150.0, "P")
+
+
+def test_debit_spread_margin_is_debit_plus_exposure():
+    import r173b as B
+    bk = make_book()
+    d = bk.raw[0]
+    d.opts[(25150.0, "C")] = leg(30.0)
+    d.opts[(25000.0, "C")] = leg(90.0)
+    ent = dict(und="NIFTY", day=d.day, k=0, e=50, side=1, ix0=25000.0, target=25048.0, stop=24932.5, newlvl=())
+    t = R.simulate(ent, bk, "x", B.pick_debit)
+    debit = t.w_in * (1 + 5e-4) + 0.05 - (t.s_in * (1 - 5e-4) - 0.05)
+    assert t.ks == 25150.0 and t.kw == 25000.0
+    assert t.margin == pytest.approx(debit * 75 + 0.02 * 25000 * 75, abs=1.0)
+
+
+def test_random_skip_p_is_small_for_a_clearly_better_subset_and_large_for_a_worse_one():
+    import r173b as B
+    rng = np.random.default_rng(0)
+    x = np.r_[np.full(50, 100.0), np.full(50, -100.0)]
+    keep = x > 0
+    p_n, p_mc = B.random_skip_p(x, keep, rng)
+    assert p_n < 1e-6 and p_mc < 0.01
+    p_n2, p_mc2 = B.random_skip_p(x, ~keep, rng)
+    assert p_n2 > 0.99 and p_mc2 > 0.99

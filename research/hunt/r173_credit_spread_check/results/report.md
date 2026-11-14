@@ -212,3 +212,48 @@ real-price spread, costs, margin, account); `../r173study.py` (`design` -> `desi
 `../test_r173.py` (engine, costs, margin walk, ports vs their code and `indicator/liquidity.py`, look-ahead guard);
 `trades/` (per-trade results, derived); `../inputs/` (Boss's files, unchanged). Data: the `research-data` release
 (R171's store, `R171_DATA`), nothing on or after 2026-02-24.
+
+---
+
+## Amendment B (14 Nov 2026): can anything from the files be made to work? (pre-registered in PREREG.md before any number)
+
+Boss: *"On the basis of the file, could we make some changes and enhance it"*; all three options chosen. 10 new tests;
+BH m = 3,925. The final block is a second look (read by R173 and R171). `r173b.py` -> `amendment_b.json`.
+
+**In short: no. All 4 filters and all 6 spread variants fail.** The honest explorer page is `results/explorer.html`
+(every number generated from the JSON by `r173page.py`).
+
+### B1. The files' entry filters, skip-only, on the arms' current bought options (R17 fills + dated charges)
+
+| filter | final: kept / arm trades | arm final | filtered final | gain a trade design / WF / final | random-skip p (MC) | verdict |
+|---|---|---|---|---|---|---|
+| R72 + fresh | 344 / 348 | +Rs 58,408 | +Rs 56,196 | 0.0 / +7.9 / -4.5 | 0.70 | fail |
+| R72 + TWAP side | 315 / 348 | +Rs 58,408 | +Rs 42,996 | -6.5 / +7.8 / -31.3 | 0.84 | fail |
+| R72 + fresh + TWAP | 311 / 348 | +Rs 58,408 | +Rs 40,783 | -6.5 / +16.7 / -36.7 | 0.87 | fail |
+| Liquidity 15+5 + TWAP side | 409 / 441 | -Rs 10,204 | -Rs 11,937 | +23.6 / -23.7 / -6.0 | 0.66 | fail |
+
+"Fresh" changes almost nothing on the arm (design: 365 of 365 kept): the arm's own one-position-a-side cap and 30-minute
+hold already stop it re-entering on the next bar. The TWAP filter removes winners as often as losers.
+
+### B2. Spread variants on real prices (R173's entries, Rs 56k account)
+
+| variant | design | walk-forward | final | all three: trades / win / net / max DD | random p (MC) | verdict |
+|---|---|---|---|---|---|---|
+| R72, sell the ~0.28-delta strike | -Rs 14,928 | -Rs 14,829 | -Rs 9,270 | 357 / 52.9% / -Rs 39,028 / -Rs 39,365 | 0.49 | fail |
+| LIQ, sell the ~0.28-delta strike | -Rs 12,912 | -Rs 3,957 | +Rs 40 | 166 / 48.8% / -Rs 16,830 / -Rs 17,638 | 0.52 | fail |
+| R72, wing 6 steps | -Rs 9,948 | -Rs 9,981 | -Rs 3,279 | 339 / 59.9% / -Rs 23,208 / -Rs 26,912 | 0.016 | fail |
+| LIQ, wing 6 steps | -Rs 27,433 | +Rs 4,356 | -Rs 832 | 179 / 47.5% / -Rs 23,909 / -Rs 29,168 | 0.80 | fail |
+| R72, debit spread (buy ATM, sell 3 steps out) | -Rs 19,720 | -Rs 29,843 | -Rs 15,419 | 394 / 41.9% / -Rs 64,983 / -Rs 66,056 | 0.47 | fail |
+| LIQ, debit spread | -Rs 25,833 | -Rs 9,803 | -Rs 2,514 | 215 / 35.3% / -Rs 38,150 / -Rs 40,766 | 0.85 | fail |
+
+- The 0.28-delta short needs a strike the 20-strike release often lacks at the right distance (BANKNIFTY's monthly
+  0.28-delta strike is far out): 130 / 141 / 68 R72 entries (design / WF / final) had no such strike and were not traded.
+- The wide wing (6 steps) is the least bad and beats random timing at p 0.016, but still loses in every period and is
+  nowhere near the BH bar (q = 1; it would need p of about 0.000025).
+- Every variant is negative under the quoted spread law in every period. Margin per spread: Rs 35-55k (the debit
+  spread's is overstated by the 2% exposure rule, but it loses money before any margin question).
+
+### What this leaves
+
+Nothing from the files improves the arms on real prices. The arms' bought-option rules stay as they are. Logged as
+`r173b-*` entries (10, all rejected).
