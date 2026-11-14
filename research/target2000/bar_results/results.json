@@ -1,0 +1,1933 @@
+{
+  "audit": {
+    "start": "2025-10-20",
+    "end": "2026-10-19",
+    "sessions": 247,
+    "files": {
+      "index_1m_NIFTY_2025.parquet": "658f6bce39cfd8ebde1413645b43d50234c432c4d0df0d9ac8b09c22cd877048",
+      "index_1m_NIFTY_2026.parquet": "b2240c709b4c82debeb96b18ca9e0306f8832cac5a5c8693db466bc1e814112d",
+      "index_1m_BANKNIFTY_2025.parquet": "a40331f17e40b6d083589b4eed4ab159d54d1103c088ba74a5af97fa2e42069d",
+      "index_1m_BANKNIFTY_2026.parquet": "268598438087af76a48d2d36fa829f59c32dd66b021d20e17b990d79034d6116",
+      "index_1m_INDIAVIX_2025.parquet": "8969f6fb1434b1568e884fcb0676cfd96c7dd214e3795d086230a66fe9ba5827",
+      "index_1m_INDIAVIX_2026.parquet": "025b96ec49788f236b8d60990a3e56e19929cfcbf9c86adca546c67a6ed2727c",
+      "opt_NIFTY_WEEK_2025.parquet": "abc852a2ac5efed056b683d010ec66e8e5f9a6ecef6146f5a3dde542a35f6cd7",
+      "opt_NIFTY_WEEK_2026.parquet": "532013be4ec6a1859e7f57ebe69f88323c675f45803ff52d949de32663512e8c"
+    }
+  },
+  "accounts": {
+    "bars_only_1m_2bars_x1.0": {
+      "trades": 127,
+      "sessions": 137,
+      "net": -35862.15713524302,
+      "expectancy": -282.37919004128366,
+      "win_rate": 0.33070866141732286,
+      "profit_factor": 0.5365826439421238,
+      "max_drawdown": 38808.79341566672,
+      "worst_month": -12532.721832974647,
+      "daily_sharpe": -4.568552964277083,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 64137.84286475705,
+      "wins": 42,
+      "target_2000_reaches": 12,
+      "gross_profit": -8872.499999999969,
+      "fees": 9297.969615243046,
+      "execution_friction": 17691.687520000007,
+      "average_net_win": 988.6702014906703,
+      "average_net_loss": -910.4271246806018,
+      "close_mark_liquidation_drawdown": 39044.43223614023,
+      "rejections": {
+        "daily_trade_cap": 719,
+        "risk_budget": 1182
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 82,
+        "initial_stop": 33,
+        "target": 12
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.25491278243759585,
+        0.4164452077012375
+      ],
+      "block_p_value": 0.999000999000999,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -35862.157135243026,
+        "actual_drawdown": 38808.79341566672,
+        "shuffled_dd95": 43772.71294339774,
+        "shuffled_dd99": 46214.85521550023,
+        "shuffled_ending_net_constant": -35862.157135243026,
+        "day_block_net_95_interval": [
+          -59303.0009613298,
+          -17249.307432192112
+        ],
+        "day_block_dd95": 57168.84593161391,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "bars_only_1m_2bars_x2.0": {
+      "trades": 71,
+      "sessions": 137,
+      "net": -36227.60085233873,
+      "expectancy": -510.24789932871437,
+      "win_rate": 0.29577464788732394,
+      "profit_factor": 0.4220193617715816,
+      "max_drawdown": 38692.66490602812,
+      "worst_month": -12237.055096772938,
+      "daily_sharpe": -5.260104075801483,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 63772.39914766129,
+      "wins": 21,
+      "target_2000_reaches": 0,
+      "gross_profit": -8729.499999999973,
+      "fees": 5460.502932338766,
+      "execution_friction": 22037.59792,
+      "average_net_win": 1259.619471739489,
+      "average_net_loss": -1253.59219517736,
+      "close_mark_liquidation_drawdown": 38695.87700553377,
+      "rejections": {
+        "daily_trade_cap": 379,
+        "risk_budget": 1735
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 33,
+        "initial_stop": 28,
+        "target": 10
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.2023288520131663,
+        0.4101853819827467
+      ],
+      "block_p_value": 0.998001998001998,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -36227.60085233872,
+        "actual_drawdown": 38692.66490602812,
+        "shuffled_dd95": 41933.80989321883,
+        "shuffled_dd99": 44158.95968351225,
+        "shuffled_ending_net_constant": -36227.60085233872,
+        "day_block_net_95_interval": [
+          -58680.92143648584,
+          -17700.240337348685
+        ],
+        "day_block_dd95": 57030.65905935773,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "linear_1m_2bars_x1.0": {
+      "trades": 196,
+      "sessions": 137,
+      "net": -17636.70952590962,
+      "expectancy": -89.9832118668858,
+      "win_rate": 0.3877551020408163,
+      "profit_factor": 0.8091714767451322,
+      "max_drawdown": 25183.506609201177,
+      "worst_month": -10073.556433292859,
+      "daily_sharpe": -1.7447951703943057,
+      "fixed_capital": 100000,
+      "p_value": 0.8960519740129935,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 82363.2904740905,
+      "wins": 76,
+      "target_2000_reaches": 19,
+      "gross_profit": 21879.000000000022,
+      "fees": 13953.74400590963,
+      "execution_friction": 25561.965520000012,
+      "average_net_win": 984.013928798329,
+      "average_net_loss": -770.1814009548551,
+      "close_mark_liquidation_drawdown": 25954.66496443104,
+      "rejections": {
+        "daily_trade_cap": 444,
+        "risk_budget": 139
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 143,
+        "initial_stop": 34,
+        "target": 19
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.3223249734457353,
+        0.45750049290317396
+      ],
+      "block_p_value": 0.9300699300699301,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -17636.709525909617,
+        "actual_drawdown": 25183.506609201177,
+        "shuffled_dd95": 32780.69863660342,
+        "shuffled_dd99": 37526.680151192406,
+        "shuffled_ending_net_constant": -17636.709525909617,
+        "day_block_net_95_interval": [
+          -40948.35780919286,
+          7459.327793778966
+        ],
+        "day_block_dd95": 41440.137286052275,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "linear_1m_2bars_x2.0": {
+      "trades": 117,
+      "sessions": 137,
+      "net": -37769.48688873007,
+      "expectancy": -322.8161272541032,
+      "win_rate": 0.3162393162393162,
+      "profit_factor": 0.5048135628936606,
+      "max_drawdown": 38553.66077393709,
+      "worst_month": -11589.010572211237,
+      "daily_sharpe": -4.786998176895118,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 62230.513111270004,
+      "wins": 37,
+      "target_2000_reaches": 0,
+      "gross_profit": 4777.500000000016,
+      "fees": 8712.627368730075,
+      "execution_friction": 33834.35952000001,
+      "average_net_win": 1040.6426815061488,
+      "average_net_loss": -953.4158263057197,
+      "close_mark_liquidation_drawdown": 39112.53931427153,
+      "rejections": {
+        "daily_trade_cap": 227,
+        "risk_budget": 543
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 78,
+        "initial_stop": 26,
+        "target": 13
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.23896668928415254,
+        0.4051951702329204
+      ],
+      "block_p_value": 1.0,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -37769.486888730076,
+        "actual_drawdown": 38553.66077393709,
+        "shuffled_dd95": 44800.831332453155,
+        "shuffled_dd99": 47103.460966796105,
+        "shuffled_ending_net_constant": -37769.486888730076,
+        "day_block_net_95_interval": [
+          -60136.6740758132,
+          -17487.52656540105
+        ],
+        "day_block_dd95": 57306.640111341025,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "dense_1m_2bars_x1.0": {
+      "trades": 104,
+      "sessions": 137,
+      "net": -37599.33348261696,
+      "expectancy": -361.5320527174708,
+      "win_rate": 0.2980769230769231,
+      "profit_factor": 0.48128348868371185,
+      "max_drawdown": 38543.26518800513,
+      "worst_month": -12115.86660419513,
+      "daily_sharpe": -4.7558455539708495,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 62400.666517383055,
+      "wins": 31,
+      "target_2000_reaches": 10,
+      "gross_profit": -14702.999999999973,
+      "fees": 7764.631962616979,
+      "execution_friction": 15131.70152000001,
+      "average_net_win": 1125.3544765823685,
+      "average_net_loss": -992.9496199543887,
+      "close_mark_liquidation_drawdown": 38746.794856836,
+      "rejections": {
+        "daily_trade_cap": 300,
+        "risk_budget": 779
+      },
+      "missing_holding_minutes": 1,
+      "exit_counts": {
+        "time_exit": 59,
+        "initial_stop": 34,
+        "target": 10,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.21864009635527715,
+        0.39189929675667456
+      ],
+      "block_p_value": 1.0,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -37599.33348261696,
+        "actual_drawdown": 38543.26518800513,
+        "shuffled_dd95": 44217.465080791204,
+        "shuffled_dd99": 46525.74083178415,
+        "shuffled_ending_net_constant": -37599.33348261696,
+        "day_block_net_95_interval": [
+          -59641.13597551943,
+          -15291.533931866476
+        ],
+        "day_block_dd95": 57163.91280101699,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "dense_1m_2bars_x2.0": {
+      "trades": 57,
+      "sessions": 137,
+      "net": -37979.20456380425,
+      "expectancy": -666.3018344527061,
+      "win_rate": 0.24561403508771928,
+      "profit_factor": 0.3030509584522137,
+      "max_drawdown": 38679.71628514459,
+      "worst_month": -11668.901130718556,
+      "daily_sharpe": -6.233559614672624,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 62020.795436195775,
+      "wins": 14,
+      "target_2000_reaches": 0,
+      "gross_profit": -16048.499999999976,
+      "fees": 4362.303843804279,
+      "execution_friction": 17568.400719999998,
+      "average_net_win": 1179.593757749894,
+      "average_net_loss": -1267.2910970302967,
+      "close_mark_liquidation_drawdown": 38679.716285144554,
+      "rejections": {
+        "daily_trade_cap": 152,
+        "risk_budget": 1044
+      },
+      "missing_holding_minutes": 1,
+      "exit_counts": {
+        "time_exit": 27,
+        "initial_stop": 24,
+        "target": 5,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.15232837470290395,
+        0.37102296232755894
+      ],
+      "block_p_value": 1.0,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -37979.20456380425,
+        "actual_drawdown": 38679.71628514459,
+        "shuffled_dd95": 41703.66906528985,
+        "shuffled_dd99": 43458.09992596623,
+        "shuffled_ending_net_constant": -37979.20456380425,
+        "day_block_net_95_interval": [
+          -58192.285883240314,
+          -17260.128410406644
+        ],
+        "day_block_dd95": 54951.21594348644,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "hybrid_1m_2bars_x1.0": {
+      "trades": 195,
+      "sessions": 137,
+      "net": -14546.135785809729,
+      "expectancy": -74.59556813235761,
+      "win_rate": 0.4205128205128205,
+      "profit_factor": 0.8417291024851212,
+      "max_drawdown": 30332.719098317357,
+      "worst_month": -11702.242697713726,
+      "daily_sharpe": -1.2557914839412607,
+      "fixed_capital": 100000,
+      "p_value": 0.8220889555222389,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 85453.86421419027,
+      "wins": 82,
+      "target_2000_reaches": 18,
+      "gross_profit": 24456.250000000022,
+      "fees": 13823.356845809718,
+      "execution_friction": 25179.028940000033,
+      "average_net_win": 943.4199652240582,
+      "average_net_loss": -813.332503842323,
+      "close_mark_liquidation_drawdown": 31951.117776193874,
+      "rejections": {
+        "daily_trade_cap": 599,
+        "risk_budget": 208
+      },
+      "missing_holding_minutes": 1,
+      "exit_counts": {
+        "time_exit": 141,
+        "initial_stop": 35,
+        "target": 18,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.353418306976961,
+        0.4906785922116818
+      ],
+      "block_p_value": 0.7442557442557443,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -14546.135785809734,
+        "actual_drawdown": 30332.719098317357,
+        "shuffled_dd95": 31491.08482247639,
+        "shuffled_dd99": 34688.12414040436,
+        "shuffled_ending_net_constant": -14546.135785809734,
+        "day_block_net_95_interval": [
+          -49862.32227690378,
+          16264.37967074005
+        ],
+        "day_block_dd95": 48893.857583863304,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "hybrid_1m_2bars_x2.0": {
+      "trades": 113,
+      "sessions": 137,
+      "net": -35509.28965842028,
+      "expectancy": -314.2415014019494,
+      "win_rate": 0.336283185840708,
+      "profit_factor": 0.519614879495998,
+      "max_drawdown": 38883.944061376336,
+      "worst_month": -12238.341417975438,
+      "daily_sharpe": -3.82710465832934,
+      "fixed_capital": 100000,
+      "p_value": 0.9980009995002499,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 64490.710341579776,
+      "wins": 38,
+      "target_2000_reaches": 0,
+      "gross_profit": 5128.500000000018,
+      "fees": 8366.122698420297,
+      "execution_friction": 32271.666960000002,
+      "average_net_win": 1010.7655229604495,
+      "average_net_loss": -985.578393745565,
+      "close_mark_liquidation_drawdown": 39426.788877833926,
+      "rejections": {
+        "daily_trade_cap": 325,
+        "risk_budget": 687
+      },
+      "missing_holding_minutes": 1,
+      "exit_counts": {
+        "time_exit": 73,
+        "initial_stop": 27,
+        "target": 12,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.2558337886920407,
+        0.42749779263663384
+      ],
+      "block_p_value": 0.99000999000999,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -35509.28965842028,
+        "actual_drawdown": 38883.944061376336,
+        "shuffled_dd95": 42559.41560063226,
+        "shuffled_dd99": 45261.873115385635,
+        "shuffled_ending_net_constant": -35509.28965842028,
+        "day_block_net_95_interval": [
+          -65966.59353037774,
+          -12859.149450933804
+        ],
+        "day_block_dd95": 62621.20298377157,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "bars_only_1m_3bars_x1.0": {
+      "trades": 190,
+      "sessions": 137,
+      "net": -19075.68522925747,
+      "expectancy": -100.39834331188142,
+      "win_rate": 0.42105263157894735,
+      "profit_factor": 0.7950111456896439,
+      "max_drawdown": 22874.565673393452,
+      "worst_month": -9432.738336361348,
+      "daily_sharpe": -1.7525823693333547,
+      "fixed_capital": 100000,
+      "p_value": 0.9015492253873063,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 80924.3147707426,
+      "wins": 80,
+      "target_2000_reaches": 20,
+      "gross_profit": 19841.250000000047,
+      "fees": 13644.88764925752,
+      "execution_friction": 25272.04757999999,
+      "average_net_win": 924.7687160814123,
+      "average_net_loss": -845.9743865070043,
+      "close_mark_liquidation_drawdown": 25184.058654051638,
+      "rejections": {
+        "daily_trade_cap": 458,
+        "risk_budget": 256
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 132,
+        "initial_stop": 38,
+        "target": 19,
+        "gap_target": 1
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.3530951358786198,
+        0.49213921087817797
+      ],
+      "block_p_value": 0.922077922077922,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -19075.68522925747,
+        "actual_drawdown": 22874.565673393452,
+        "shuffled_dd95": 34385.96441605544,
+        "shuffled_dd99": 38508.08248054355,
+        "shuffled_ending_net_constant": -19075.68522925747,
+        "day_block_net_95_interval": [
+          -44903.93655570719,
+          5596.4916110461245
+        ],
+        "day_block_dd95": 44829.378911621534,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "bars_only_1m_3bars_x2.0": {
+      "trades": 157,
+      "sessions": 137,
+      "net": -36503.08129460397,
+      "expectancy": -232.50370251340107,
+      "win_rate": 0.35668789808917195,
+      "profit_factor": 0.5870061730172106,
+      "max_drawdown": 38267.633626953066,
+      "worst_month": -12363.731882657461,
+      "daily_sharpe": -3.6886275392257333,
+      "fixed_capital": 100000,
+      "p_value": 0.9965017491254373,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 63496.91870539599,
+      "wins": 56,
+      "target_2000_reaches": 0,
+      "gross_profit": 17325.750000000036,
+      "fees": 11346.739174603996,
+      "execution_friction": 42482.092120000016,
+      "average_net_win": 926.4897237700696,
+      "average_net_loss": -875.1139190666124,
+      "close_mark_liquidation_drawdown": 39474.80388587751,
+      "rejections": {
+        "daily_trade_cap": 376,
+        "risk_budget": 406
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 112,
+        "initial_stop": 29,
+        "target": 15,
+        "gap_target": 1
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.2860022246831987,
+        0.4342191639441828
+      ],
+      "block_p_value": 0.998001998001998,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -36503.081294603966,
+        "actual_drawdown": 38267.633626953066,
+        "shuffled_dd95": 44716.02613624411,
+        "shuffled_dd99": 47532.00164435767,
+        "shuffled_ending_net_constant": -36503.081294603966,
+        "day_block_net_95_interval": [
+          -60503.366917853,
+          -15076.857282276213
+        ],
+        "day_block_dd95": 59030.19750587258,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "linear_1m_3bars_x1.0": {
+      "trades": 168,
+      "sessions": 137,
+      "net": -13663.566101804347,
+      "expectancy": -81.33075060597828,
+      "win_rate": 0.43452380952380953,
+      "profit_factor": 0.8352764199213473,
+      "max_drawdown": 24321.805748412142,
+      "worst_month": -11862.618969486066,
+      "daily_sharpe": -1.354888629237893,
+      "fixed_capital": 100000,
+      "p_value": 0.8335832083958021,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 86336.43389819573,
+      "wins": 73,
+      "target_2000_reaches": 17,
+      "gross_profit": 20085.000000000015,
+      "fees": 11937.339781804378,
+      "execution_friction": 21811.226319999987,
+      "average_net_win": 949.1080365127805,
+      "average_net_loss": -873.1416080761825,
+      "close_mark_liquidation_drawdown": 25678.276602702215,
+      "rejections": {
+        "daily_trade_cap": 132,
+        "risk_budget": 67
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 117,
+        "initial_stop": 32,
+        "target": 17,
+        "gap_stop": 2
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.36185942903783375,
+        0.5101155870556014
+      ],
+      "block_p_value": 0.8271728271728271,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -13663.56610180435,
+        "actual_drawdown": 24321.805748412142,
+        "shuffled_dd95": 29620.766822336307,
+        "shuffled_dd99": 33082.31952266593,
+        "shuffled_ending_net_constant": -13663.56610180435,
+        "day_block_net_95_interval": [
+          -37954.42043367392,
+          9982.455530119427
+        ],
+        "day_block_dd95": 38599.668371252046,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "linear_1m_3bars_x2.0": {
+      "trades": 146,
+      "sessions": 137,
+      "net": -35854.277029309276,
+      "expectancy": -245.5772399267758,
+      "win_rate": 0.3767123287671233,
+      "profit_factor": 0.5711667440847821,
+      "max_drawdown": 37633.982819868164,
+      "worst_month": -11982.989869802805,
+      "daily_sharpe": -3.921083161361654,
+      "fixed_capital": 100000,
+      "p_value": 0.9985007496251874,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 64145.72297069081,
+      "wins": 55,
+      "target_2000_reaches": 0,
+      "gross_profit": 12619.750000000011,
+      "fees": 10378.932589309261,
+      "execution_friction": 38095.09444000002,
+      "average_net_win": 868.2658814719565,
+      "average_net_loss": -918.7791264864492,
+      "close_mark_liquidation_drawdown": 39412.14918616066,
+      "rejections": {
+        "daily_trade_cap": 118,
+        "risk_budget": 111
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 104,
+        "initial_stop": 28,
+        "target": 12,
+        "gap_stop": 2
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.3022230507316628,
+        0.457523014987846
+      ],
+      "block_p_value": 1.0,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -35854.27702930927,
+        "actual_drawdown": 37633.982819868164,
+        "shuffled_dd95": 44281.9810783966,
+        "shuffled_dd99": 46397.64915751165,
+        "shuffled_ending_net_constant": -35854.27702930927,
+        "day_block_net_95_interval": [
+          -59351.30804369272,
+          -16496.14602582379
+        ],
+        "day_block_dd95": 56877.176834658014,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "dense_1m_3bars_x1.0": {
+      "trades": 179,
+      "sessions": 137,
+      "net": -10511.288972793394,
+      "expectancy": -58.722284764208915,
+      "win_rate": 0.45251396648044695,
+      "profit_factor": 0.8824352725290434,
+      "max_drawdown": 20560.391735924106,
+      "worst_month": -11509.835862523776,
+      "daily_sharpe": -0.9675019719260234,
+      "fixed_capital": 100000,
+      "p_value": 0.7606196901549226,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 89488.71102720672,
+      "wins": 81,
+      "target_2000_reaches": 21,
+      "gross_profit": 25798.500000000044,
+      "fees": 12790.062612793441,
+      "execution_friction": 23519.72636,
+      "average_net_win": 974.0399612010766,
+      "average_net_loss": -912.3318962253124,
+      "close_mark_liquidation_drawdown": 21331.578314196027,
+      "rejections": {
+        "risk_budget": 128,
+        "daily_trade_cap": 209
+      },
+      "missing_holding_minutes": 1,
+      "exit_counts": {
+        "time_exit": 118,
+        "initial_stop": 40,
+        "target": 20,
+        "gap_target": 1
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.38135857183990834,
+        0.5256647033535407
+      ],
+      "block_p_value": 0.7822177822177823,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -10511.288972793396,
+        "actual_drawdown": 20560.391735924106,
+        "shuffled_dd95": 30215.0026229506,
+        "shuffled_dd99": 33461.09347080494,
+        "shuffled_ending_net_constant": -10511.288972793396,
+        "day_block_net_95_interval": [
+          -34828.91386565876,
+          15152.907497680262
+        ],
+        "day_block_dd95": 35401.27704949596,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "dense_1m_3bars_x2.0": {
+      "trades": 173,
+      "sessions": 137,
+      "net": -32454.741538436167,
+      "expectancy": -187.59966207188535,
+      "win_rate": 0.3930635838150289,
+      "profit_factor": 0.6694495380537206,
+      "max_drawdown": 34299.635178998964,
+      "worst_month": -12770.340339019376,
+      "daily_sharpe": -3.0471074147154718,
+      "fixed_capital": 100000,
+      "p_value": 0.9875062468765617,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 67545.25846156383,
+      "wins": 68,
+      "target_2000_reaches": 0,
+      "gross_profit": 25597.00000000004,
+      "fees": 12371.263058436205,
+      "execution_friction": 45680.478480000005,
+      "average_net_win": 966.6056290855512,
+      "average_net_loss": -935.08499348813,
+      "close_mark_liquidation_drawdown": 34379.65265059531,
+      "rejections": {
+        "risk_budget": 154,
+        "daily_trade_cap": 200
+      },
+      "missing_holding_minutes": 1,
+      "exit_counts": {
+        "time_exit": 114,
+        "initial_stop": 39,
+        "target": 19,
+        "gap_target": 1
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.32336122871843453,
+        0.4674118159807973
+      ],
+      "block_p_value": 0.995004995004995,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -32454.741538436163,
+        "actual_drawdown": 34299.635178998964,
+        "shuffled_dd95": 43525.27101343533,
+        "shuffled_dd99": 47074.58919164791,
+        "shuffled_ending_net_constant": -32454.741538436163,
+        "day_block_net_95_interval": [
+          -55383.37998926403,
+          -7145.079546517593
+        ],
+        "day_block_dd95": 53963.92664205049,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "hybrid_1m_3bars_x1.0": {
+      "trades": 191,
+      "sessions": 137,
+      "net": -7689.576968075472,
+      "expectancy": -40.259565277882054,
+      "win_rate": 0.44502617801047123,
+      "profit_factor": 0.9164684770104142,
+      "max_drawdown": 19641.90861742314,
+      "worst_month": -8094.762634206225,
+      "daily_sharpe": -0.6410425199248433,
+      "fixed_capital": 100000,
+      "p_value": 0.6771614192903548,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 92310.42303192454,
+      "wins": 85,
+      "target_2000_reaches": 23,
+      "gross_profit": 30309.500000000022,
+      "fees": 13503.902888075503,
+      "execution_friction": 24495.174079999997,
+      "average_net_win": 992.546024833551,
+      "average_net_loss": -868.4527271596916,
+      "close_mark_liquidation_drawdown": 21301.96774729318,
+      "rejections": {
+        "daily_trade_cap": 216,
+        "risk_budget": 97
+      },
+      "missing_holding_minutes": 1,
+      "exit_counts": {
+        "time_exit": 130,
+        "initial_stop": 35,
+        "target": 23,
+        "gap_stop": 3
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.3763207365147416,
+        0.5158993272894122
+      ],
+      "block_p_value": 0.6983016983016983,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -7689.576968075473,
+        "actual_drawdown": 19641.90861742314,
+        "shuffled_dd95": 28813.859380545437,
+        "shuffled_dd99": 32941.937423680305,
+        "shuffled_ending_net_constant": -7689.576968075473,
+        "day_block_net_95_interval": [
+          -37778.59771176637,
+          23676.69560388752
+        ],
+        "day_block_dd95": 38134.995435505,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "hybrid_1m_3bars_x2.0": {
+      "trades": 174,
+      "sessions": 137,
+      "net": -31046.716065804478,
+      "expectancy": -178.4294026770373,
+      "win_rate": 0.3793103448275862,
+      "profit_factor": 0.6791547097151248,
+      "max_drawdown": 36695.39543952417,
+      "worst_month": -11810.351735362634,
+      "daily_sharpe": -2.847017373540395,
+      "fixed_capital": 100000,
+      "p_value": 0.9865067466266867,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 68953.28393419547,
+      "wins": 66,
+      "target_2000_reaches": 0,
+      "gross_profit": 24878.750000000025,
+      "fees": 12177.027305804495,
+      "execution_friction": 43748.438760000005,
+      "average_net_win": 995.7373148719287,
+      "average_net_loss": -895.9757300680722,
+      "close_mark_liquidation_drawdown": 38484.20931445301,
+      "rejections": {
+        "daily_trade_cap": 199,
+        "risk_budget": 139
+      },
+      "missing_holding_minutes": 1,
+      "exit_counts": {
+        "time_exit": 120,
+        "initial_stop": 33,
+        "target": 19,
+        "gap_stop": 2
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.3105570775693035,
+        0.45327751826391083
+      ],
+      "block_p_value": 0.9820179820179821,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -31046.71606580449,
+        "actual_drawdown": 36695.39543952417,
+        "shuffled_dd95": 42672.1452465461,
+        "shuffled_dd99": 45770.14252403942,
+        "shuffled_ending_net_constant": -31046.71606580449,
+        "day_block_net_95_interval": [
+          -59324.28024086704,
+          -2176.9018250602203
+        ],
+        "day_block_dd95": 57933.15827535065,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "bars_only_5m_2bars_x1.0": {
+      "trades": 90,
+      "sessions": 137,
+      "net": -35331.613870730434,
+      "expectancy": -392.57348745256036,
+      "win_rate": 0.3111111111111111,
+      "profit_factor": 0.46572828111494347,
+      "max_drawdown": 38727.021773614935,
+      "worst_month": -12406.044889125358,
+      "daily_sharpe": -4.424907101810976,
+      "fixed_capital": 100000,
+      "p_value": 0.999000499750125,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 64668.386129269544,
+      "wins": 28,
+      "target_2000_reaches": 12,
+      "gross_profit": -15193.749999999987,
+      "fees": 6781.058850730447,
+      "execution_friction": 13356.805019999998,
+      "average_net_win": 1099.957409002824,
+      "average_net_loss": -1066.619698754992,
+      "close_mark_liquidation_drawdown": 39717.375233280414,
+      "rejections": {
+        "daily_trade_cap": 458,
+        "risk_budget": 1539
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 46,
+        "initial_stop": 29,
+        "target": 12,
+        "gap_stop": 3
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.22485854647009124,
+        0.41282824540976554
+      ],
+      "block_p_value": 0.997002997002997,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -35331.613870730434,
+        "actual_drawdown": 38727.021773614935,
+        "shuffled_dd95": 42233.10154915519,
+        "shuffled_dd99": 44717.628301857025,
+        "shuffled_ending_net_constant": -35331.613870730434,
+        "day_block_net_95_interval": [
+          -61577.54809983397,
+          -16345.140228689068
+        ],
+        "day_block_dd95": 58948.60168979125,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "bars_only_5m_2bars_x2.0": {
+      "trades": 70,
+      "sessions": 137,
+      "net": -36554.53517464366,
+      "expectancy": -522.207645352052,
+      "win_rate": 0.2714285714285714,
+      "profit_factor": 0.38842748979645897,
+      "max_drawdown": 38740.79506056026,
+      "worst_month": -12817.734830936817,
+      "daily_sharpe": -4.835195065302065,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 63445.464825356365,
+      "wins": 19,
+      "target_2000_reaches": 0,
+      "gross_profit": -9535.499999999989,
+      "fees": 5373.109574643653,
+      "execution_friction": 21645.925600000017,
+      "average_net_win": 1221.939396664821,
+      "average_net_loss": -1171.9879159073578,
+      "close_mark_liquidation_drawdown": 38962.42992645122,
+      "rejections": {
+        "daily_trade_cap": 359,
+        "risk_budget": 1694
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 32,
+        "initial_stop": 25,
+        "target": 11,
+        "gap_stop": 2
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.1811959968818828,
+        0.38544311736281056
+      ],
+      "block_p_value": 0.996003996003996,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -36554.53517464364,
+        "actual_drawdown": 38740.79506056026,
+        "shuffled_dd95": 42081.55691235738,
+        "shuffled_dd99": 44082.83416599034,
+        "shuffled_ending_net_constant": -36554.53517464364,
+        "day_block_net_95_interval": [
+          -63432.639628448786,
+          -15968.94155076621
+        ],
+        "day_block_dd95": 60407.134612559705,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "linear_5m_2bars_x1.0": {
+      "trades": 195,
+      "sessions": 137,
+      "net": -26954.101189442525,
+      "expectancy": -138.2261599458591,
+      "win_rate": 0.358974358974359,
+      "profit_factor": 0.7292553238966889,
+      "max_drawdown": 32427.785387268916,
+      "worst_month": -11885.28008592317,
+      "daily_sharpe": -2.692449229246119,
+      "fixed_capital": 100000,
+      "p_value": 0.9845077461269365,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 73045.89881055751,
+      "wins": 70,
+      "target_2000_reaches": 24,
+      "gross_profit": 12051.000000000018,
+      "fees": 13816.603829442545,
+      "execution_friction": 25188.49736,
+      "average_net_win": 1037.1617631023034,
+      "average_net_loss": -796.4433968528303,
+      "close_mark_liquidation_drawdown": 34161.812642281046,
+      "rejections": {
+        "daily_trade_cap": 426,
+        "risk_budget": 163
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 138,
+        "initial_stop": 32,
+        "target": 24,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.2949680653230661,
+        0.42842965904388086
+      ],
+      "block_p_value": 0.978021978021978,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -26954.101189442525,
+        "actual_drawdown": 32427.785387268916,
+        "shuffled_dd95": 39826.69623771908,
+        "shuffled_dd99": 42871.90180641016,
+        "shuffled_ending_net_constant": -26954.101189442525,
+        "day_block_net_95_interval": [
+          -54354.77960415232,
+          3432.8290654972666
+        ],
+        "day_block_dd95": 53718.268443857865,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "linear_5m_2bars_x2.0": {
+      "trades": 94,
+      "sessions": 137,
+      "net": -38165.71556082915,
+      "expectancy": -406.0182506471188,
+      "win_rate": 0.2553191489361702,
+      "profit_factor": 0.4189541547237936,
+      "max_drawdown": 38866.22728216949,
+      "worst_month": -11930.151792127963,
+      "daily_sharpe": -5.501259257594995,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 61834.28443917091,
+      "wins": 24,
+      "target_2000_reaches": 0,
+      "gross_profit": -3038.7499999999914,
+      "fees": 7097.127360829159,
+      "execution_friction": 28029.83820000001,
+      "average_net_win": 1146.6167165213853,
+      "average_net_loss": -938.3502393906059,
+      "close_mark_liquidation_drawdown": 38917.62087426009,
+      "rejections": {
+        "daily_trade_cap": 177,
+        "risk_budget": 646
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 64,
+        "initial_stop": 17,
+        "target": 12,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.17799345615469594,
+        0.3518581982007408
+      ],
+      "block_p_value": 1.0,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -38165.715560829165,
+        "actual_drawdown": 38866.22728216949,
+        "shuffled_dd95": 43404.47698198087,
+        "shuffled_dd99": 45427.035838016556,
+        "shuffled_ending_net_constant": -38165.715560829165,
+        "day_block_net_95_interval": [
+          -60423.02584852133,
+          -20558.796598153862
+        ],
+        "day_block_dd95": 57458.877381734,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "dense_5m_2bars_x1.0": {
+      "trades": 182,
+      "sessions": 137,
+      "net": -23418.484729216558,
+      "expectancy": -128.67299301767338,
+      "win_rate": 0.38461538461538464,
+      "profit_factor": 0.7515419472699512,
+      "max_drawdown": 31898.716041958036,
+      "worst_month": -11622.058807745918,
+      "daily_sharpe": -2.163400057676477,
+      "fixed_capital": 100000,
+      "p_value": 0.9465267366316842,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 76581.51527078352,
+      "wins": 70,
+      "target_2000_reaches": 22,
+      "gross_profit": 13689.000000000036,
+      "fees": 13033.936529216595,
+      "execution_friction": 24073.548200000005,
+      "average_net_win": 1011.9542987017663,
+      "average_net_loss": -841.565050342323,
+      "close_mark_liquidation_drawdown": 33075.579403754455,
+      "rejections": {
+        "daily_trade_cap": 494,
+        "risk_budget": 311
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 119,
+        "initial_stop": 41,
+        "target": 22
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.3170137161838059,
+        0.4569871969250233
+      ],
+      "block_p_value": 0.9300699300699301,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -23418.484729216554,
+        "actual_drawdown": 31898.716041958036,
+        "shuffled_dd95": 37536.96523245756,
+        "shuffled_dd99": 41664.477921599,
+        "shuffled_ending_net_constant": -23418.484729216554,
+        "day_block_net_95_interval": [
+          -53055.53408084648,
+          181.27173136935357
+        ],
+        "day_block_dd95": 50858.06020035728,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "dense_5m_2bars_x2.0": {
+      "trades": 105,
+      "sessions": 137,
+      "net": -36622.621860461775,
+      "expectancy": -348.7868748615408,
+      "win_rate": 0.3047619047619048,
+      "profit_factor": 0.49666117849420377,
+      "max_drawdown": 39978.48993158634,
+      "worst_month": -12074.843564886613,
+      "daily_sharpe": -4.449049161956353,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 63377.37813953823,
+      "wins": 32,
+      "target_2000_reaches": 0,
+      "gross_profit": 2414.7500000000264,
+      "fees": 7909.827100461805,
+      "execution_friction": 31127.544759999997,
+      "average_net_win": 1129.2737711914124,
+      "average_net_loss": -996.7038703916023,
+      "close_mark_liquidation_drawdown": 39978.48993158631,
+      "rejections": {
+        "daily_trade_cap": 263,
+        "risk_budget": 748
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 61,
+        "initial_stop": 29,
+        "target": 15
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.22490206198147927,
+        0.39840324424798274
+      ],
+      "block_p_value": 0.999000999000999,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -36622.62186046178,
+        "actual_drawdown": 39978.48993158634,
+        "shuffled_dd95": 43948.44922136755,
+        "shuffled_dd99": 45985.03243456808,
+        "shuffled_ending_net_constant": -36622.62186046178,
+        "day_block_net_95_interval": [
+          -60477.929358548856,
+          -19068.853505632487
+        ],
+        "day_block_dd95": 59417.8645716124,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "hybrid_5m_2bars_x1.0": {
+      "trades": 88,
+      "sessions": 137,
+      "net": -32583.52591725885,
+      "expectancy": -370.26733996885065,
+      "win_rate": 0.3068181818181818,
+      "profit_factor": 0.4777123753562329,
+      "max_drawdown": 38455.464287380055,
+      "worst_month": -11528.50713039761,
+      "daily_sharpe": -4.6307263764174,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 67416.47408274117,
+      "wins": 27,
+      "target_2000_reaches": 11,
+      "gross_profit": -12863.49999999998,
+      "fees": 6637.323037258864,
+      "execution_friction": 13082.702880000008,
+      "average_net_win": 1103.8017303653319,
+      "average_net_loss": -1022.7241415921773,
+      "close_mark_liquidation_drawdown": 39623.450742489396,
+      "rejections": {
+        "daily_trade_cap": 223,
+        "risk_budget": 791
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 50,
+        "initial_stop": 24,
+        "target": 11,
+        "gap_stop": 3
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.2202353054644818,
+        0.4095615157469539
+      ],
+      "block_p_value": 0.998001998001998,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -32583.525917258856,
+        "actual_drawdown": 38455.464287380055,
+        "shuffled_dd95": 39434.52148988678,
+        "shuffled_dd99": 42650.158017409136,
+        "shuffled_ending_net_constant": -32583.525917258856,
+        "day_block_net_95_interval": [
+          -56962.03444418856,
+          -19156.084805635557
+        ],
+        "day_block_dd95": 54349.59745592794,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "hybrid_5m_2bars_x2.0": {
+      "trades": 74,
+      "sessions": 137,
+      "net": -33080.001611034255,
+      "expectancy": -447.0270487977602,
+      "win_rate": 0.2972972972972973,
+      "profit_factor": 0.43391579251229706,
+      "max_drawdown": 37786.59119881414,
+      "worst_month": -11710.232088272549,
+      "daily_sharpe": -4.922803535301716,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 66919.99838896575,
+      "wins": 22,
+      "target_2000_reaches": 0,
+      "gross_profit": -4579.249999999982,
+      "fees": 5676.99221103427,
+      "execution_friction": 22823.759400000006,
+      "average_net_win": 1152.5698606720096,
+      "average_net_loss": -1123.7795874195856,
+      "close_mark_liquidation_drawdown": 38717.21520444374,
+      "rejections": {
+        "daily_trade_cap": 196,
+        "risk_budget": 848
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 40,
+        "initial_stop": 20,
+        "target": 11,
+        "gap_stop": 3
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.20527216059760808,
+        0.4093291013198457
+      ],
+      "block_p_value": 0.997002997002997,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -33080.001611034255,
+        "actual_drawdown": 37786.59119881414,
+        "shuffled_dd95": 38926.60043054438,
+        "shuffled_dd99": 41216.09518705222,
+        "shuffled_ending_net_constant": -33080.001611034255,
+        "day_block_net_95_interval": [
+          -56849.85014524446,
+          -18782.093838550914
+        ],
+        "day_block_dd95": 53457.765556676975,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "bars_only_5m_3bars_x1.0": {
+      "trades": 87,
+      "sessions": 137,
+      "net": -38080.53847366257,
+      "expectancy": -437.7073387777307,
+      "win_rate": 0.28735632183908044,
+      "profit_factor": 0.42316644431185396,
+      "max_drawdown": 39024.47017905072,
+      "worst_month": -11925.530606384547,
+      "daily_sharpe": -4.913091059793265,
+      "fixed_capital": 100000,
+      "p_value": 0.9995002498750625,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 61919.46152633742,
+      "wins": 25,
+      "target_2000_reaches": 9,
+      "gross_profit": -18346.249999999975,
+      "fees": 6605.065093662591,
+      "execution_friction": 13129.223380000003,
+      "average_net_win": 1117.4388802091455,
+      "average_net_loss": -1064.7824270788904,
+      "close_mark_liquidation_drawdown": 39409.360916044905,
+      "rejections": {
+        "daily_trade_cap": 163,
+        "risk_budget": 680
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 46,
+        "initial_stop": 31,
+        "target": 9,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.2028572763917612,
+        0.38983970932010603
+      ],
+      "block_p_value": 0.999000999000999,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -38080.53847366257,
+        "actual_drawdown": 39024.47017905072,
+        "shuffled_dd95": 43645.43420400492,
+        "shuffled_dd99": 46145.00188940347,
+        "shuffled_ending_net_constant": -38080.53847366257,
+        "day_block_net_95_interval": [
+          -59426.48302363442,
+          -15731.503945828541
+        ],
+        "day_block_dd95": 56819.80347150325,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "bars_only_5m_3bars_x2.0": {
+      "trades": 72,
+      "sessions": 137,
+      "net": -38823.10617068888,
+      "expectancy": -539.2098079262344,
+      "win_rate": 0.3055555555555556,
+      "profit_factor": 0.3683625930728846,
+      "max_drawdown": 39523.61789202921,
+      "worst_month": -12853.806925044575,
+      "daily_sharpe": -5.321544853006759,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 61176.8938293111,
+      "wins": 22,
+      "target_2000_reaches": 0,
+      "gross_profit": -11062.99999999998,
+      "fees": 5522.488170688898,
+      "execution_friction": 22237.618000000002,
+      "average_net_win": 1029.1419429263742,
+      "average_net_loss": -1229.2845783013825,
+      "close_mark_liquidation_drawdown": 39651.66195877506,
+      "rejections": {
+        "daily_trade_cap": 121,
+        "risk_budget": 755
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 36,
+        "initial_stop": 26,
+        "target": 9,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.21126630975195265,
+        0.4195424795911143
+      ],
+      "block_p_value": 0.999000999000999,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -38823.10617068887,
+        "actual_drawdown": 39523.61789202921,
+        "shuffled_dd95": 43762.11726989032,
+        "shuffled_dd99": 45925.31953578296,
+        "shuffled_ending_net_constant": -38823.10617068887,
+        "day_block_net_95_interval": [
+          -59881.64226380914,
+          -17562.935975306107
+        ],
+        "day_block_dd95": 57424.01578445188,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "linear_5m_3bars_x1.0": {
+      "trades": 147,
+      "sessions": 137,
+      "net": -37422.469886574196,
+      "expectancy": -254.57462507873603,
+      "win_rate": 0.3333333333333333,
+      "profit_factor": 0.5644029463479766,
+      "max_drawdown": 39368.09774599351,
+      "worst_month": -10767.614588316948,
+      "daily_sharpe": -4.152086443757597,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 62577.53011342584,
+      "wins": 49,
+      "target_2000_reaches": 15,
+      "gross_profit": -7871.499999999984,
+      "fees": 10434.323766574209,
+      "execution_friction": 19116.646120000005,
+      "average_net_win": 989.5567515108879,
+      "average_net_loss": -876.6403133735479,
+      "close_mark_liquidation_drawdown": 39752.866404302076,
+      "rejections": {
+        "daily_trade_cap": 72,
+        "risk_budget": 131
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 100,
+        "initial_stop": 32,
+        "target": 15
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.2622298274704409,
+        0.4129257936493038
+      ],
+      "block_p_value": 0.997002997002997,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -37422.469886574196,
+        "actual_drawdown": 39368.09774599351,
+        "shuffled_dd95": 45318.34999605363,
+        "shuffled_dd99": 48095.72621326299,
+        "shuffled_ending_net_constant": -37422.469886574196,
+        "day_block_net_95_interval": [
+          -64269.69605504722,
+          -14416.036201501742
+        ],
+        "day_block_dd95": 62552.281683404726,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "linear_5m_3bars_x2.0": {
+      "trades": 69,
+      "sessions": 137,
+      "net": -37347.457462404745,
+      "expectancy": -541.2674994551413,
+      "win_rate": 0.2898550724637681,
+      "profit_factor": 0.34442391380310977,
+      "max_drawdown": 38106.873388588414,
+      "worst_month": -12609.765666744614,
+      "daily_sharpe": -5.237065430062549,
+      "fixed_capital": 100000,
+      "p_value": 1.0,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 62652.54253759525,
+      "wins": 20,
+      "target_2000_reaches": 0,
+      "gross_profit": -11036.999999999989,
+      "fees": 5260.544422404765,
+      "execution_friction": 21049.91304,
+      "average_net_win": 981.0728106648272,
+      "average_net_loss": -1162.6308913408427,
+      "close_mark_liquidation_drawdown": 38672.70694245907,
+      "rejections": {
+        "daily_trade_cap": 23,
+        "risk_budget": 305
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 39,
+        "initial_stop": 22,
+        "target": 8
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.19616057979260038,
+        0.4057144997361315
+      ],
+      "block_p_value": 0.998001998001998,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -37347.45746240475,
+        "actual_drawdown": 38106.873388588414,
+        "shuffled_dd95": 42025.266150679076,
+        "shuffled_dd99": 43742.15530445953,
+        "shuffled_ending_net_constant": -37347.45746240475,
+        "day_block_net_95_interval": [
+          -62770.75618077922,
+          -16806.302785567044
+        ],
+        "day_block_dd95": 59604.451263629424,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "dense_5m_3bars_x1.0": {
+      "trades": 152,
+      "sessions": 137,
+      "net": -38418.096654577195,
+      "expectancy": -252.75063588537623,
+      "win_rate": 0.35526315789473684,
+      "profit_factor": 0.5754487246561256,
+      "max_drawdown": 39362.02835996535,
+      "worst_month": -12038.053581790804,
+      "daily_sharpe": -3.700657126217812,
+      "fixed_capital": 100000,
+      "p_value": 0.9960019990004998,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 61581.903345422834,
+      "wins": 54,
+      "target_2000_reaches": 14,
+      "gross_profit": -7907.249999999971,
+      "fees": 10780.545154577223,
+      "execution_friction": 19730.301499999994,
+      "average_net_win": 964.3142112411924,
+      "average_net_loss": -923.3782047102202,
+      "close_mark_liquidation_drawdown": 39746.91909695949,
+      "rejections": {
+        "daily_trade_cap": 122,
+        "risk_budget": 215
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 101,
+        "initial_stop": 37,
+        "target": 14
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.28360593939809664,
+        0.4340558411514238
+      ],
+      "block_p_value": 0.997002997002997,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -38418.09665457719,
+        "actual_drawdown": 39362.02835996535,
+        "shuffled_dd95": 46622.08769362219,
+        "shuffled_dd99": 50215.41270013494,
+        "shuffled_ending_net_constant": -38418.09665457719,
+        "day_block_net_95_interval": [
+          -65503.76223711577,
+          -9015.28410356461
+        ],
+        "day_block_dd95": 64096.71246896935,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "dense_5m_3bars_x2.0": {
+      "trades": 100,
+      "sessions": 137,
+      "net": -38405.65122819543,
+      "expectancy": -384.05651228195444,
+      "win_rate": 0.34,
+      "profit_factor": 0.4650066140676454,
+      "max_drawdown": 39106.16294953576,
+      "worst_month": -11797.580445200812,
+      "daily_sharpe": -4.279079059899875,
+      "fixed_capital": 100000,
+      "p_value": 0.9995002498750625,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 61594.34877180458,
+      "wins": 34,
+      "target_2000_reaches": 0,
+      "gross_profit": -3561.9999999999754,
+      "fees": 7277.882348195462,
+      "execution_friction": 27565.76887999999,
+      "average_net_win": 981.8088304665599,
+      "average_net_loss": -1087.6841130917949,
+      "close_mark_liquidation_drawdown": 39468.69028019523,
+      "rejections": {
+        "daily_trade_cap": 71,
+        "risk_budget": 364
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 60,
+        "initial_stop": 28,
+        "target": 12
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.25461520797348164,
+        0.43722271145275377
+      ],
+      "block_p_value": 0.998001998001998,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -38405.65122819544,
+        "actual_drawdown": 39106.16294953576,
+        "shuffled_dd95": 44511.38119274833,
+        "shuffled_dd99": 47411.21350425818,
+        "shuffled_ending_net_constant": -38405.65122819544,
+        "day_block_net_95_interval": [
+          -62786.658743574255,
+          -11991.26149378785
+        ],
+        "day_block_dd95": 60350.60824532741,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "hybrid_5m_3bars_x1.0": {
+      "trades": 150,
+      "sessions": 137,
+      "net": -37559.19546729079,
+      "expectancy": -250.3946364486053,
+      "win_rate": 0.37333333333333335,
+      "profit_factor": 0.586401326529359,
+      "max_drawdown": 38503.12717267894,
+      "worst_month": -11727.90987494665,
+      "daily_sharpe": -3.868742007039404,
+      "fixed_capital": 100000,
+      "p_value": 0.9995002498750625,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 62440.804532709175,
+      "wins": 56,
+      "target_2000_reaches": 15,
+      "gross_profit": -7751.249999999973,
+      "fees": 10579.955647290826,
+      "execution_friction": 19227.989819999995,
+      "average_net_win": 950.9201732657659,
+      "average_net_loss": -966.0715443635498,
+      "close_mark_liquidation_drawdown": 38503.12717267899,
+      "rejections": {
+        "daily_trade_cap": 96,
+        "risk_budget": 165
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 97,
+        "initial_stop": 37,
+        "target": 15,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 1.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.2999983138911522,
+        0.4529941480154272
+      ],
+      "block_p_value": 1.0,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -37559.195467290796,
+        "actual_drawdown": 38503.12717267894,
+        "shuffled_dd95": 46524.93411510094,
+        "shuffled_dd99": 49426.60887162446,
+        "shuffled_ending_net_constant": -37559.195467290796,
+        "day_block_net_95_interval": [
+          -62871.150567485034,
+          -12776.800623339472
+        ],
+        "day_block_dd95": 61257.99333678808,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    },
+    "hybrid_5m_3bars_x2.0": {
+      "trades": 79,
+      "sessions": 137,
+      "net": -38806.85601478897,
+      "expectancy": -491.2260255036577,
+      "win_rate": 0.35443037974683544,
+      "profit_factor": 0.4062275028093537,
+      "max_drawdown": 39507.367736129294,
+      "worst_month": -12230.269983252809,
+      "daily_sharpe": -4.912355622423224,
+      "fixed_capital": 100000,
+      "p_value": 0.999000499750125,
+      "drawdown_basis": "realized closed-trade equity; not intratrade mark-to-market",
+      "starting_capital": 100000.0,
+      "ending_capital": 61193.143985211,
+      "wins": 28,
+      "target_2000_reaches": 0,
+      "gross_profit": -10325.24999999997,
+      "fees": 5847.563414789008,
+      "execution_friction": 22634.04259999999,
+      "average_net_win": 948.1993936685128,
+      "average_net_loss": -1281.4988046570063,
+      "close_mark_liquidation_drawdown": 39507.36773612933,
+      "rejections": {
+        "daily_trade_cap": 34,
+        "risk_budget": 359
+      },
+      "missing_holding_minutes": 0,
+      "exit_counts": {
+        "time_exit": 40,
+        "initial_stop": 28,
+        "target": 10,
+        "gap_stop": 1
+      },
+      "stress_multiplier": 2.0,
+      "fresh_out_of_sample": false,
+      "wilson95": [
+        0.25795398126893665,
+        0.4644072575670155
+      ],
+      "block_p_value": 1.0,
+      "monte_carlo": {
+        "repetitions": 1000,
+        "actual_net": -38806.85601478896,
+        "actual_drawdown": 39507.367736129294,
+        "shuffled_dd95": 44204.020148012554,
+        "shuffled_dd99": 46684.428396448144,
+        "shuffled_ending_net_constant": -38806.85601478896,
+        "day_block_net_95_interval": [
+          -60936.22928405726,
+          -15429.693741371015
+        ],
+        "day_block_dd95": 58251.51142980264,
+        "note": "Fixed-rupee closed-trade sequence diagnostics; no margin/cash gates replayed. Day-block bootstrap uses five consecutive sessions including zero-trade days. Permutations preserve total P&L and do not establish an edge."
+      },
+      "batch_bh_q": 1.0,
+      "joint_bh_q": 1.0
+    }
+  },
+  "original_joint_bh": {
+    "linear_p0.55_net0_x1.0": 1.0,
+    "linear_p0.55_net0_x2.0": 1.0,
+    "linear_p0.55_net250_x1.0": 1.0,
+    "linear_p0.55_net250_x2.0": 1.0,
+    "linear_p0.55_net500_x1.0": 1.0,
+    "linear_p0.55_net500_x2.0": 1.0,
+    "linear_p0.60_net0_x1.0": 1.0,
+    "linear_p0.60_net0_x2.0": 1.0,
+    "linear_p0.60_net250_x1.0": 1.0,
+    "linear_p0.60_net250_x2.0": 1.0,
+    "linear_p0.60_net500_x1.0": 1.0,
+    "linear_p0.60_net500_x2.0": 1.0,
+    "linear_p0.65_net0_x1.0": 1.0,
+    "linear_p0.65_net0_x2.0": 1.0,
+    "linear_p0.65_net250_x1.0": 1.0,
+    "linear_p0.65_net250_x2.0": 1.0,
+    "linear_p0.65_net500_x1.0": 1.0,
+    "linear_p0.65_net500_x2.0": 1.0,
+    "dense_p0.55_net0_x1.0": 1.0,
+    "dense_p0.55_net0_x2.0": 1.0,
+    "dense_p0.55_net250_x1.0": 1.0,
+    "dense_p0.55_net250_x2.0": 1.0,
+    "dense_p0.55_net500_x1.0": 1.0,
+    "dense_p0.55_net500_x2.0": 1.0,
+    "dense_p0.60_net0_x1.0": 1.0,
+    "dense_p0.60_net0_x2.0": 1.0,
+    "dense_p0.60_net250_x1.0": 1.0,
+    "dense_p0.60_net250_x2.0": 1.0,
+    "dense_p0.60_net500_x1.0": 1.0,
+    "dense_p0.60_net500_x2.0": 1.0,
+    "dense_p0.65_net0_x1.0": 1.0,
+    "dense_p0.65_net0_x2.0": 1.0,
+    "dense_p0.65_net250_x1.0": 1.0,
+    "dense_p0.65_net250_x2.0": 1.0,
+    "dense_p0.65_net500_x1.0": 1.0,
+    "dense_p0.65_net500_x2.0": 1.0,
+    "hybrid_p0.55_net0_x1.0": 1.0,
+    "hybrid_p0.55_net0_x2.0": 1.0,
+    "hybrid_p0.55_net250_x1.0": 1.0,
+    "hybrid_p0.55_net250_x2.0": 1.0,
+    "hybrid_p0.55_net500_x1.0": 1.0,
+    "hybrid_p0.55_net500_x2.0": 1.0,
+    "hybrid_p0.60_net0_x1.0": 1.0,
+    "hybrid_p0.60_net0_x2.0": 1.0,
+    "hybrid_p0.60_net250_x1.0": 1.0,
+    "hybrid_p0.60_net250_x2.0": 1.0,
+    "hybrid_p0.60_net500_x1.0": 1.0,
+    "hybrid_p0.60_net500_x2.0": 1.0,
+    "hybrid_p0.65_net0_x1.0": 1.0,
+    "hybrid_p0.65_net0_x2.0": 1.0,
+    "hybrid_p0.65_net250_x1.0": 1.0,
+    "hybrid_p0.65_net250_x2.0": 1.0,
+    "hybrid_p0.65_net500_x1.0": 1.0,
+    "hybrid_p0.65_net500_x2.0": 1.0,
+    "linear_ungated_x1.0": 1.0,
+    "linear_ungated_x2.0": 1.0,
+    "dense_ungated_x1.0": 1.0,
+    "dense_ungated_x2.0": 1.0,
+    "hybrid_ungated_x1.0": 1.0,
+    "hybrid_ungated_x2.0": 1.0,
+    "momentum_x1.0": 1.0,
+    "momentum_x2.0": 1.0
+  },
+  "qualifying_historical": [],
+  "original_ledger_parity": true,
+  "fresh_holdout": false,
+  "approved_for_trading": false
+}

@@ -1,0 +1,34 @@
+id: target2000-neural-20261115
+title: Whole-lot Rs2000 target neural forecasts
+family: ml
+date: '2026-11-15'
+doc: research/target2000/results/REPORT.md
+hypothesis: Causal sequence networks can select positive-expectancy whole-lot Rs2000
+  target opportunities
+data_version: Existing NIFTY minute/weekly option lake,16808eligible sequence rows;
+  hashes in data_audit.json
+period:
+  design: Earlier complete sessions before each evaluation;70/15/15fit/validation/calibration
+  holdout: Apr-Jun andJul-Oct2026,reused development walk-forward data
+instruments:
+- NIFTY
+features:
+- 30underlying/option context features
+- six5minute same-side/session snapshots
+- reportedIV/modeleddelta/fixed-strikeOI/volumeproxies
+model_or_rule: Linear+dense+CNN-GRU-attention;3heads target/win/net. Hybrid mean of2seeds,2chronological
+  folds.27gated policies+3ungated+momentum.
+settings: research/target2000/PREREG.md
+prereg: research/target2000/PREREG.md
+variants_tried: 31
+results:
+  summary: 62normal/stress endpoints; no qualifying policy. Neural gated accounts
+    all empty. Ungated dense191trades,41.88%wins,net-22773.28; hybrid186trades,41.40%wins,net-27976.05.
+    Highest filtered baseline6trades,+325.81,stress-404.79. Six neural checkpoints,84epochs.
+  costs: One whole lot; dated costs; +2000/-1500normal-cost price barriers held fixed
+    under double friction;cash/risk gates independently replayed
+holdout_read: false
+verdict: rejected
+notes: No Rs2000-per-trade or65%edge claim.16808eligible rows,16804observed labels.23tests
+  passed; all outer predictions reconstructed from saved checkpoints;62ledgers verified.
+  All dates previously inspected; no real orders or paid resources.

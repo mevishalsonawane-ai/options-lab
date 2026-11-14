@@ -1,0 +1,32 @@
+id: target2000-bars-20261115
+title: Consecutive completed bars on whole-lot Rs2000 model choices
+family: patterns-indicators
+date: '2026-11-15'
+doc: research/target2000/bar_results/REPORT.md
+hypothesis: Two or three consecutive directional candles improve target2000 direction
+  choices
+data_version: Same existing NIFTY minute/weekly option lake and frozen neural forecasts
+period:
+  design: Registered after target2000 neural results
+  holdout: Apr-Oct2026 reused history; not pristine
+instruments:
+- NIFTY
+features:
+- 2or3completed1m/5m candles
+- same-body direction and rising/falling closes
+- frozen earlier-trained neural direction
+model_or_rule: 4confirmation variants x bars-only/linear/dense/hybrid; neural remove-only
+  candidate filter
+settings: research/target2000/BAR_CONFIRMATION_PREREG.md
+prereg: research/target2000/BAR_CONFIRMATION_PREREG.md
+variants_tried: 16
+results:
+  summary: 32endpoints,all negative. Bestnormal hybrid3x1min:191trades,44.50%wins,23target2000reaches,net-7689.58,stress-31046.72.
+    No qualifying policy. JointBH over94original+extension endpoints.
+  costs: One whole lot per trade,identicalnormal-net2000/-1500barriers under normal/doubled
+    friction; same cash/risk controls
+holdout_read: false
+verdict: rejected
+notes: Standalone bar entries and neural direction chosen before filtering; no partial5mbar
+  or intradayfuture use. Full account paths can differ and take more trades despite
+  remove-only signal filtering. No model retraining or real orders in this extension.

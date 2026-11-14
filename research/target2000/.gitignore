@@ -1,0 +1,4 @@
+results/models/
+results/partial_results.json
+results/fold*_forecasts.npz
+__pycache__/

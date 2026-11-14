@@ -1,0 +1,66 @@
+{
+  "passed": true,
+  "real_input_rebuild": true,
+  "checks": [
+    {
+      "fold": 1,
+      "model": "linear",
+      "rows": 4136,
+      "max_absolute_error": {
+        "p_target": 0.0,
+        "p_win": 0.0,
+        "predicted_net": 0.0
+      }
+    },
+    {
+      "fold": 1,
+      "model": "dense",
+      "rows": 4136,
+      "max_absolute_error": {
+        "p_target": 0.0,
+        "p_win": 0.0,
+        "predicted_net": 0.0
+      }
+    },
+    {
+      "fold": 1,
+      "model": "hybrid",
+      "rows": 4136,
+      "max_absolute_error": {
+        "p_target": 0.0,
+        "p_win": 0.0,
+        "predicted_net": 0.0
+      }
+    },
+    {
+      "fold": 2,
+      "model": "linear",
+      "rows": 5368,
+      "max_absolute_error": {
+        "p_target": 0.0,
+        "p_win": 0.0,
+        "predicted_net": 0.0
+      }
+    },
+    {
+      "fold": 2,
+      "model": "dense",
+      "rows": 5368,
+      "max_absolute_error": {
+        "p_target": 0.0,
+        "p_win": 0.0,
+        "predicted_net": 0.0
+      }
+    },
+    {
+      "fold": 2,
+      "model": "hybrid",
+      "rows": 5368,
+      "max_absolute_error": {
+        "p_target": 0.0,
+        "p_win": 0.0,
+        "predicted_net": 0.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "dense": {
+    "rows": 9504,
+    "target_exceeds_win": 0,
+    "maximum_win_probability": 0.47514053971772224,
+    "maximum_predicted_net": 270.99603271484375,
+    "weakest_frozen_gate_rows": 0
+  },
+  "hybrid": {
+    "rows": 9504,
+    "target_exceeds_win": 0,
+    "maximum_win_probability": 0.5795757436292072,
+    "maximum_predicted_net": 1.892469882965088,
+    "weakest_frozen_gate_rows": 0
+  },
+  "linear": {
+    "rows": 9504,
+    "target_exceeds_win": 6,
+    "maximum_win_probability": 0.7156972191260819,
+    "maximum_predicted_net": 544.2083477973938,
+    "weakest_frozen_gate_rows": 7
+  }
+}

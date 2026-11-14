@@ -1,0 +1,13 @@
+{
+  "stage": "completed",
+  "errors": [],
+  "updated_at": "2026-11-14T20:07:13.948866+00:00",
+  "architecture": "hybrid",
+  "seed": 73,
+  "epochs_completed": 13,
+  "validation_loss": 1.1965628862380981,
+  "last_successful_checkpoint": "models/fold2_hybrid_73.pt",
+  "completed_policies": 31,
+  "total_policies": 31,
+  "approved_for_trading": false
+}
