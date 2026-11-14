@@ -118,6 +118,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.DayOco.init(this)
         // 7 Nov (Boss's ask): a stop and target on live options bought by hand (on by default), its switch read in the background.
         com.optionslab.app.data.ManualCover.init(this)
+        // 14 Nov (Boss's exception): the fixed ₹2k target / ₹1k stop on Liquidity, R51 and R72 (on by default), read in the background.
+        com.optionslab.app.data.FixedRupeeExits.init(this)
         // 21 Oct, enhancement round 4 (idea 3): the payout-aware drawdown (in shadow by default), read in the background.
         com.optionslab.app.data.PayoutWatch.init(this)
         com.optionslab.app.data.History.init(this)

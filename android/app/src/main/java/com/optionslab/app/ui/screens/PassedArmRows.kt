@@ -116,6 +116,11 @@ private fun r51PickerLine(closed: List<PassedArmsHost.Pos>): String {
         "trade); one it cannot score yet is taken. ${p.RECORD}. $words."
 }
 
+/** 14 Nov (Boss's exception): the fixed ₹2k target / ₹1k stop on [source]'s new trades in words, when it is [on] and covers it; else null. */
+internal fun fixedRupeeLine(source: String, on: Boolean): String? = if (!on || !com.optionslab.engine.orb.FixedRupee.covers(source)) null
+    else "${com.optionslab.engine.orb.FixedRupee.LABEL} on: ${com.optionslab.engine.orb.FixedRupee.RULE}. ${com.optionslab.engine.orb.FixedRupee.RECORD}. " +
+        "Live trades take their own on their live fill and lots; switch it off in Bot settings (PIN)."
+
 /** What the name's dialog says: the label, settings, research id and result, new trades' exits, the forward-test bar, the signal source. */
 internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<String> = listOfNotNull(
     PassedArms.PASSED,
@@ -143,6 +148,8 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     if (source == BreadthDonchianArm.SOURCE) v.comparison() + "." else null,
     // 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock and R66's +5% once +25%, Boss's choices; paper only).
     com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On) + ".",
+    // 14 Nov (Boss's exception, CLAUDE.md): R51 / R72's fixed ₹2k target / ₹1k stop, when on (Bot settings), with R152's record.
+    fixedRupeeLine(source, com.optionslab.app.data.FixedRupeeExits.isOn()),
     PassedArms.SIGNAL_INDEX + ".",
     (if (source == Solo2.SOURCE) Solo2.bar() else PassedArms.ForwardBar.BAR) + ".",
     v.forwardLine(source) + ".",

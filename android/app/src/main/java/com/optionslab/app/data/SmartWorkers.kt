@@ -554,7 +554,8 @@ object SmartWorkers {
         for (p in closed) {
             val id = "${p.arm}|${p.symbol}|${p.entryTime}"
             if (!synchronized(closedSeen) { closedSeen.add(id) }) continue
-            val kind = when (p.why) { "stop", "index_stop" -> Findings.Kind.STOP_HIT; "target" -> Findings.Kind.TARGET_HIT; else -> null } ?: continue
+            val kind = when (p.why) { "stop", "index_stop", com.optionslab.engine.orb.FixedRupee.WHY_STOP -> Findings.Kind.STOP_HIT
+                "target", com.optionslab.engine.orb.FixedRupee.WHY_TARGET -> Findings.Kind.TARGET_HIT; else -> null } ?: continue
             val who = if (p.arm in liq) "Liquidity 15+5" else p.arm
             val dir = if (p.right == "CE") 1 else -1
             found(who, kind, underlyingOf(p.symbol), if (kind == Findings.Kind.STOP_HIT) -dir else dir, p.exit, 60,

@@ -137,7 +137,13 @@ object PassedArms {
     data class PremiumExits(val stop: Double?, val target: Double?, val tmaxMinutes: Int?, val steps: List<Pair<Double, Double>> = emptyList(),
                             val squareOff: LocalTime,
                             /** 1 Nov 2026 (R142 NP5-52, Boss: "Make the change the arms"): sold early when the trade makes no progress; null: none. */
-                            val noProgress: NoProgress? = null)
+                            val noProgress: NoProgress? = null,
+                            /**
+                             * 14 Nov 2026 ([FixedRupee], Boss's exception, failed gates): the ₹1,000 stop and the ₹2,000 target as premium
+                             * LEVELS (not fractions) for the trade's own quantity; null: none. The stop acts only where it is tighter than
+                             * [stop] ([effectiveStop]); the target is an earlier exit beside [target] and the lock ([effectiveTarget]).
+                             */
+                            val fixedStop: Double? = null, val fixedTarget: Double? = null)
 
     /**
      * R142's "no progress" exit (research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md, NP5-52; held in all six periods tested, R143 and
@@ -173,7 +179,11 @@ object PassedArms {
 
     enum class ExitKind(val why: String) { STOP("stop"), LOCK("lock"), TARGET("target"), TIME("time"), SQUARE_OFF("squareoff"),
         /** 1 Nov: [NoProgress]'s early exit. */
-        NO_PROGRESS("no_progress") }
+        NO_PROGRESS("no_progress"),
+        /** 14 Nov ([FixedRupee]): the ₹1,000 stop, where it was the tighter one. */
+        FIXED_STOP(FixedRupee.WHY_STOP),
+        /** 14 Nov ([FixedRupee]): the ₹2,000 target, where it came before the arm's own. */
+        FIXED_TARGET(FixedRupee.WHY_TARGET) }
 
     /** An exit decided: why, and the price the research would have booked it at (a stop's level or a gap's open; the target). */
     data class Exit(val kind: ExitKind, val at: LocalDateTime, val price: Double)
@@ -187,6 +197,16 @@ object PassedArms {
     fun stopLevel(entry: Double, x: PremiumExits): Double? = x.stop?.let { entry * (1 - it) }
     /** The target's level for a fill at [entry] (null: none). */
     fun targetLevel(entry: Double, x: PremiumExits): Double? = x.target?.let { entry * (1 + it) }
+
+    /** 14 Nov ([FixedRupee]): the stop that applies - the tighter of the arm's own ([stopLevel]) and the ₹1,000 one ([PremiumExits.fixedStop]). */
+    fun effectiveStop(entry: Double, x: PremiumExits): Double? = FixedRupee.tighterStop(stopLevel(entry, x), x.fixedStop)
+
+    /** 14 Nov ([FixedRupee]): the nearest target - the arm's own ([targetLevel]) or the ₹2,000 one ([PremiumExits.fixedTarget]), the lower. */
+    fun effectiveTarget(entry: Double, x: PremiumExits): Double? = listOfNotNull(targetLevel(entry, x), x.fixedTarget).minOrNull()
+
+    /** The level a target exit of [kind] is booked at most at: the ₹2,000 one for [ExitKind.FIXED_TARGET], else the arm's own. */
+    fun bookedTarget(kind: ExitKind?, entry: Double, x: PremiumExits): Double? =
+        if (kind == ExitKind.FIXED_TARGET) x.fixedTarget else targetLevel(entry, x)
 
     /** The minute the time stop sells at: [tmaxMinutes] after the entry minute (the close of its last allowed minute). */
     fun timeExitAt(entryMinute: LocalDateTime, x: PremiumExits): LocalDateTime? = x.tmaxMinutes?.let { entryMinute.plusMinutes(it.toLong()) }
@@ -205,8 +225,17 @@ object PassedArms {
         // 16 Oct: a lock seen before this trade's entry minute belongs to an earlier trade on the same option (a re-entry):
         // never this one's.
         val known = known?.takeIf { !it.first.isBefore(entryMinute) }
-        val stop = stopLevel(entry, x)
-        val tgt = targetLevel(entry, x)
+        // 14 Nov ([FixedRupee]): the ₹1,000 stop where it is tighter than the arm's own, the ₹2,000 target where it comes first - judged
+        // from the minute AFTER the entry minute on (and on the price now): the entry minute's low or high may come from before the fill,
+        // and these levels sit close to it (review). The arm's own levels keep the research's rule (from the entry minute).
+        val own = stopLevel(entry, x)
+        val fixedStop = FixedRupee.fixedIsTighter(own, x.fixedStop)
+        val stop = FixedRupee.tighterStop(own, x.fixedStop)
+        val ownTgt = targetLevel(entry, x)
+        val fixedTgt = x.fixedTarget != null && (ownTgt == null || x.fixedTarget < ownTgt - EPS)
+        val tgt = if (fixedTgt) x.fixedTarget else ownTgt
+        val stopKind = if (fixedStop) ExitKind.FIXED_STOP else ExitKind.STOP
+        val tgtKind = if (fixedTgt) ExitKind.FIXED_TARGET else ExitKind.TARGET
         val tend = x.tmaxMinutes?.let { entryMinute.plusMinutes((it - 1).toLong()) }
         // 1 Nov (NP5-52): the last minute the no-progress exit judges, and the level the highs must reach by then.
         val npEnd = x.noProgress?.let { entryMinute.plusMinutes((it.minutes - 1).toLong()) }
@@ -222,13 +251,16 @@ object PassedArms {
         for (b in done) {
             if (!b.low.isFinite() || !b.high.isFinite()) continue
             known?.let { (at, lv) -> if (!b.start.isBefore(at) && (lock == null || lv > lock!!)) lock = lv }
-            val lv = maxOf(stop ?: -1.0, lock ?: -1.0)
+            val first = b.start == entryMinute
+            val stopB = if (first) own else stop
+            val tgtB = if (first) ownTgt else tgt
+            val lv = maxOf(stopB ?: -1.0, lock ?: -1.0)
             if (lv > 0 && b.low <= lv + EPS) {
                 val px = if (b.open.isFinite() && b.open < lv) b.open else lv
-                val kind = if (lock != null && lock >= (stop ?: -1.0)) ExitKind.LOCK else ExitKind.STOP
+                val kind = if (lock != null && lock >= (stopB ?: -1.0)) ExitKind.LOCK else if (first) ExitKind.STOP else stopKind
                 return Walk(Exit(kind, b.start, px), peak, lock)
             }
-            if (tgt != null && b.high >= tgt - EPS) return Walk(Exit(ExitKind.TARGET, b.start, tgt), peak, lock)
+            if (tgtB != null && b.high >= tgtB - EPS) return Walk(Exit(if (first) ExitKind.TARGET else tgtKind, b.start, tgtB), peak, lock)
             if (b.high > peak) peak = b.high
             val g = peak / entry - 1
             for ((trig, keep) in x.steps) if (g >= trig - 1e-12) {
@@ -248,9 +280,9 @@ object PassedArms {
         known?.let { (_, lv) -> if (lock == null || lv > lock!!) lock = lv }
         val lv = maxOf(stop ?: -1.0, lock ?: -1.0)
         if (ltp != null && ltp > 0) {
-            if (lv > 0 && ltp <= lv + EPS) return Walk(Exit(if (lock != null && lock >= (stop ?: -1.0)) ExitKind.LOCK else ExitKind.STOP, now,
+            if (lv > 0 && ltp <= lv + EPS) return Walk(Exit(if (lock != null && lock >= (stop ?: -1.0)) ExitKind.LOCK else stopKind, now,
                 restingPx(lv, ltp, done.lastOrNull(), entry, entryMinute, now)), peak, lock)
-            if (tgt != null && ltp >= tgt - EPS) return Walk(Exit(ExitKind.TARGET, now, tgt), peak, lock)
+            if (tgt != null && ltp >= tgt - EPS) return Walk(Exit(tgtKind, now, tgt), peak, lock)
         }
         val last = ltp ?: done.lastOrNull()?.close ?: entry
         tend?.let { if (!now.isBefore(it.plusMinutes(1))) return Walk(Exit(ExitKind.TIME, now, last), peak, lock) }
@@ -278,7 +310,8 @@ object PassedArms {
     }
 
     /** A target is booked at the target at most (a gap through it never counts as better: the research's limit fill). */
-    fun booked(kind: ExitKind, fill: Double, target: Double?): Double = if (kind == ExitKind.TARGET && target != null) minOf(fill, target) else fill
+    fun booked(kind: ExitKind, fill: Double, target: Double?): Double =
+        if ((kind == ExitKind.TARGET || kind == ExitKind.FIXED_TARGET) && target != null) minOf(fill, target) else fill
 
     /**
      * 20 Oct, review: a STOP or LOCK the walk found on a closed minute (a wick through the stop that recovered by the next look)
@@ -290,8 +323,8 @@ object PassedArms {
      * research's fill; [restingPx] between minutes). The paper account's own fill is kept beside it by the caller.
      */
     fun booked(kind: ExitKind, fill: Double, target: Double?, walk: Double?): Double = when {
-        kind == ExitKind.TARGET -> booked(kind, fill, target)
-        (kind == ExitKind.STOP || kind == ExitKind.LOCK) && walk != null && walk.isFinite() && walk > 0 -> walk
+        kind == ExitKind.TARGET || kind == ExitKind.FIXED_TARGET -> booked(kind, fill, target)
+        (kind == ExitKind.STOP || kind == ExitKind.LOCK || kind == ExitKind.FIXED_STOP) && walk != null && walk.isFinite() && walk > 0 -> walk
         else -> fill
     }
 

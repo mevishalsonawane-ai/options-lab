@@ -693,6 +693,8 @@ fun RiskPage(model: AppModel) {
         item { com.optionslab.app.ui.SettingSpot("risk.guards") { GuardCard(model) } }
         // 3 Nov (Boss): the lots every arm's live trade buys, − / +.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.armlots") { ArmLotsCard(model) } }
+        // 14 Nov (Boss's exception): the fixed ₹2k target / ₹1k stop on Liquidity, R51 and R72 (on by default; off takes the PIN).
+        if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.fixedrupee") { FixedRupeeCard(model) } }
         // 3 Nov (Boss): the indices the arms trade live.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.indices") { LiveIndicesCard(model) } }
         // Autopilot learning (11 Oct): OFF / SAFE / SHADOW-ONLY; SAFE asks for the PIN while live. Never from a backup.

@@ -322,7 +322,8 @@ object VariantRunner {
             for (p in closed) {
                 // Boss's opt-in Liquidity give-back trail (R19b) or breakeven at +10% (R100 A4, 22 Oct) is not the rules' own
                 // result: left out of the baseline.
-                if (p.day != d || p.exit == null || p.ownRules) continue
+                // 14 Nov: the fixed ₹2k target / ₹1k stop's trades too ([OrbArms.Position.ownExits]).
+                if (p.day != d || p.exit == null || p.ownExits) continue
                 val key = lab(p.arm)
                 val run = runs[key] ?: continue
                 if (run == VariantLab.Run.OFF || p.live != (run == VariantLab.Run.LIVE)) continue

@@ -555,11 +555,17 @@ object LiveMirror {
          * the SL limit the arms use ([stopLimit]).
          */
         val heldSeen: Boolean = true, val stopQty: Int? = null, val otherWorking: Int = 0, val lot: Int = 1, val stopLimit: Double? = null,
+        /**
+         * 14 Nov ([FixedRupee], Boss's exception): the live trade's own ₹2,000 target on its own quantity and fill (null: none) - sold
+         * at the price now once reached ([FixedRupee.WHY_TARGET]). An earlier exit only (it lowers risk).
+         */
+        val target: Double? = null,
     )
 
     /**
      * The watch's decision for one live position, in order: its stop filled; gone at Zerodha; Boss's stop; the mirror's square-off;
-     * its paper trade sold (all or part); the stop reached with nothing resting, or the price through the resting stop's limit;
+     * its paper trade sold (all or part); 14 Nov: the ₹2,000 target ([Look.target]) reached; the stop reached with nothing resting, or
+     * the price through the resting stop's limit;
      * the stop placed or moved up to the paper trade's level; else held.
      */
     fun decide(l: Look): Decision {
@@ -571,6 +577,8 @@ object LiveMirror {
         if (l.operatorStop) return Decision(Step.SELL, "operator_stop", qty)
         if (l.squareOff) return Decision(Step.SELL, "square_off", qty)
         if (l.paperSell > 0) return Decision(Step.SELL, l.paperReason ?: "paper_exit", minOf(l.paperSell, qty))
+        // 14 Nov ([FixedRupee]): the ₹2,000 target reached on the price now - the whole position sold (the exit takes its stop out first).
+        if (l.side >= 0 && FixedRupee.targetHit(l.ltp, l.target)) return Decision(Step.SELL, FixedRupee.WHY_TARGET, qty)
         // A resting stop for more than is held less the other working exits: shrunk (whole lots; 0 takes it out).
         if (l.stopResting && l.stopQty != null) {
             val room = (heldMine - l.otherWorking.coerceAtLeast(0)).coerceAtLeast(0)

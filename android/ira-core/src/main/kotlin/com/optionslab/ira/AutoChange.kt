@@ -936,6 +936,29 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), Risk.NEUTRAL_SHADOW, Scope.SHADOW,
         what = "R51 shadow log: W20 + picker (R150 B, R151 E; failed gates; a shadow log only)")
 
+    /**
+     * 14 Nov 2026: the target of the fixed ₹2,000 target / ₹1,000 stop on Liquidity 15+5, R51 and R72 ([fixedRupee]; no "liquidity" in it,
+     * as [TRAIL_TARGET], so the paper-test freeze never holds its Undo).
+     */
+    const val FIXED_RUPEE_TARGET = "exit:fixed_2k_target_1k_stop"
+
+    /**
+     * 14 Nov 2026 (Boss: "Okay, now just make a change in liquidity, r51, r72. Make it 2k profit and 1k loss fix, dont break any thing";
+     * CLAUDE.md's fifth exception): every new trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian is sold at +₹2,000 or
+     * -₹1,000 open P&L for the whole position, on paper and live, beside the arms' own exits (the first one wins; the stop only where it
+     * is tighter) - switched [on], or off again. It failed the gates (R152). On only adds earlier exits (risk down); off puts the arms'
+     * own wider exits back (risk up, live scope: its Undo takes the PIN).
+     */
+    fun fixedRupee(on: Boolean): Change = Change(Kind.PAPER_FILTER, FIXED_RUPEE_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (14 Nov, \"Make it 2k profit and 1k loss fix, dont break any thing\"): each new trade of Liquidity 15+5, R51 Donchian 20 " +
+            "and R72 Breadth Donchian is sold at +₹2,000 or -₹1,000 open P&L for the whole position ((price - fill) x quantity, before " +
+            "charges), on paper and live; the arms' own exits stay and the first one wins; the ₹1,000 stop only where it is tighter than " +
+            "the arm's own. Failed gates, Boss's exception: R152 (Apr - Oct 2026, 1 lot) found a +₹2k / -₹2k pair cut R72 from ₹1.71 lakh " +
+            "to -₹40k and R51 from ₹1.35 lakh to -₹91k; R105C, R106 and R153 found small fixed targets and stops hurt these arms"
+        else "Liquidity 15+5, R51 and R72's new trades are back on their own exits (no ₹2,000 target, no ₹1,000 stop; their own wider stops, live too)",
+        Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
+        what = "₹2k target / ₹1k stop on Liquidity, R51 and R72, paper and live (failed gates, Boss's exception)")
+
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"
 

@@ -524,6 +524,13 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
+            } else if (c.target == AutoChange.FIXED_RUPEE_TARGET) {
+                // 14 Nov (Boss's exception, CLAUDE.md): the fixed ₹2k target / ₹1k stop on Liquidity, R51 and R72 ([logFixedRupeeOn],
+                // [logFixedRupee]): the Undo switches it off or on for new trades. Off puts the wider exits back, live too: the PIN, by the
+                // change's live scope ([needsPin]), asked before this runs; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                com.optionslab.app.data.FixedRupeeExits.set(c.to == AutoChange.ON, pinConfirmed = true, log = false)
+                    .takeIf { !it.contains("Nothing changed") }
             } else if (c.target == AutoChange.PICK_TARGET) {
                 // 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers ([logPassedPickerOn]): the Undo switches them off or on.
                 // Off adds live trades back: the PIN, by the change's live scope ([needsPin]); not logged again.
@@ -1381,6 +1388,33 @@ internal object Autopilot {
     fun logPassedW20On() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedW20(true), "the 6 Nov update (your ask: \"Do whatever you recommend\", on R51); a log only - failed gates, never changes a trade")
+    }
+
+    /**
+     * 14 Nov (Boss's exception, CLAUDE.md: "Make it 2k profit and 1k loss fix"): the fixed ₹2k target / ₹1k stop on Liquidity 15+5, R51 and
+     * R72, paper and live, on by the update - logged once as Boss's ([com.optionslab.app.data.FixedRupeeExits]).
+     */
+    fun logFixedRupeeOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.fixedRupee(true), "the 14 Nov update (your ask: \"Make it 2k profit and 1k loss fix, dont break any thing\"); " +
+            "failed gates, Boss's exception - paper and live, new trades")
+    }
+
+    /** 14 Nov: Boss flipping the fixed ₹2k target / ₹1k stop in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
+    fun logFixedRupee(on: Boolean) {
+        if (!enabled()) return
+        val c = AutoChange.fixedRupee(on)
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
+                        note = if (on) "your choice; paper and live, new trades" else "your choice (with your PIN); new trades use the arms' own exits").first
+                    save()
+                }
+            }
+        }
     }
 
     /** 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers, acting on paper and live, on by the update - logged once as Boss's. */

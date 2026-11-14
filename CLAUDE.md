@@ -83,6 +83,19 @@ notes; match the surrounding code.
         so the Undo takes the PIN.
       - It is the one exception to "anything new that could skip live trades starts in shadow", by Boss's explicit choice.
       - R150's W20 on R51 stays a label only (shadow).
+    - A fifth exception, chosen by Boss on 14 Nov ("Okay, now just make a change in liquidity, r51, r72. Make it 2k profit and 1k loss
+      fix, dont break any thing"): a fixed ₹2,000 target and ₹1,000 stop act on Liquidity 15+5 (every book and index), R51 and R72, on
+      PAPER AND LIVE, although they failed the gates.
+      - The rule: each new trade is sold once its open P&L reaches +₹2,000 or -₹1,000 for the whole position (all its lots;
+        (price - fill) x quantity, before charges, as Kite shows it). The arms' own exits all stay and the first one wins; the ₹1,000
+        stop applies only where it is tighter than the arm's own stop (it never loosens one). A live trade takes its own levels on its
+        live fill and lots, its ₹1,000 stop resting at Zerodha; the target is sold by the app (the resting stop taken out first).
+      - Its record: R152 found a +₹2k / -₹2k pair cut R72 from ₹1.71 lakh to -₹40k and R51 from ₹1.35 lakh to -₹91k at 1 lot
+        (Apr - Oct 2026); R105C, R106 and R153 found small fixed targets and stops hurt these arms.
+      - It only lowers risk (an earlier exit, a tighter stop), so it acts on live through every existing live gate.
+      - It is labelled "failed gates, Boss's exception" wherever it is shown, logged in the Autopilot change timeline, and one tap off
+        (Bot settings). Off restores the arms' own exits for new trades (open trades keep the exits they entered with); it adds live
+        risk, so off and the Undo take the PIN.
     - No other failed idea may use these exceptions.
   - Paper changes never carry over to live by themselves.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.

@@ -369,6 +369,8 @@ internal fun orbExplanation(a: OrbArms.ArmView, view: OrbArms.View): List<String
     when {
         a.arm.liquidity -> {
             out += LIQ_DESCRIPTION + "."
+            // 14 Nov (Boss's exception, CLAUDE.md): the fixed ₹2k target / ₹1k stop on its new trades, when on (Bot settings).
+            fixedRupeeLine(src, com.optionslab.app.data.FixedRupeeExits.isOn())?.let { out += it }
             if (a.armed && a.status.isNotBlank()) out += a.status
             a.lots?.let { out += com.optionslab.engine.orb.LiquidityLots.line(it, a.lotSizes) }
             a.parked.forEach { idx -> out += "$idx parked on your OK (${com.optionslab.engine.orb.ParkedArms.record(idx)}): its books stay off with the switch." }

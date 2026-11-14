@@ -221,6 +221,9 @@ object SettingsIndex {
             listOf("Bot settings", "Indices the arms trade live"), listOf("index", "indices", "bank nifty", "banknifty", "nifty", "sensex", "which index"), guarded = true),
         Entry("risk", "risk.armlots", "Live lots per arm trade", "How many lots each arm's live trade buys (− / +, default 1); raising it asks for the PIN.",
             listOf("Bot settings", "Live lots per arm trade"), listOf("lots", "lot size", "quantity", "size", "increase"), guarded = true),
+        // 14 Nov (Boss's exception, failed gates): the fixed ₹2k target / ₹1k stop on Liquidity, R51 and R72.
+        Entry("risk", "risk.fixedrupee", "₹2k target / ₹1k stop", "Liquidity 15+5, R51 and R72's trades sold at +₹2,000 or -₹1,000 for the whole position, paper and live (failed gates, your exception); off takes the PIN.",
+            listOf("Bot settings", "₹2k target / ₹1k stop"), listOf("2k", "1k", "fixed target", "fixed stop", "profit target", "liquidity", "r51", "r72"), guarded = true),
         Entry("risk", "risk.guards", "Kill switch", "Stops all new entries at once; exits and square-offs still go through. Asks you to confirm both ways.",
             GUARD, listOf("kill", "emergency", "stop all", "block"), guarded = true),
         Entry("risk", "risk.guards", "Daily loss limit", "New entries refused once the day's loss reaches it.", GUARD, listOf("loss", "max loss", "limit")),

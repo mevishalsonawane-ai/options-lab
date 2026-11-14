@@ -30,7 +30,8 @@ object ForwardRecords {
      */
     fun liquidity(closed: List<OrbArms.Position>): List<ForwardCheck.Trade> {
         val books = LiquidityRules.BOOKS.map { it.source }.toSet()
-        return closed.filter { it.arm in books && !it.open && !it.live && !it.ownRules }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
+        // 14 Nov: the fixed ₹2k target / ₹1k stop's trades left out too ([OrbArms.Position.ownExits]: not the rules' own exits).
+        return closed.filter { it.arm in books && !it.open && !it.live && !it.ownExits }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
     }
 
     /** Liquidity 15+5's closed LIVE (Zerodha) trades, per lot - the self-review judges them apart from paper. */
@@ -45,7 +46,7 @@ object ForwardRecords {
      */
     fun liquidityEquityTrades(closed: List<OrbArms.Position>): List<LiquidityEquity.Trade> {
         val books = LiquidityRules.BOOKS.associateBy { it.source }
-        return closed.filter { it.arm in books && !it.open && !it.live && !it.ownRules }.map { p ->
+        return closed.filter { it.arm in books && !it.open && !it.live && !it.ownExits }.map { p ->
             LiquidityEquity.Trade(p.day, net(p, perLot = true), books[p.arm]?.let { LiquidityRules.underlyingOf(it) } ?: "", p.entryTime.toLocalTime())
         }
     }

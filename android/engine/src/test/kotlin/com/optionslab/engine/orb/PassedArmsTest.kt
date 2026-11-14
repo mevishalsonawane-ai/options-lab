@@ -117,7 +117,8 @@ class PassedArmsTest {
         assertEquals(130.0, PassedArms.booked(PassedArms.ExitKind.TARGET, 133.0, 130.0, 131.0), 1e-9)
         assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.TIME, 97.0, 130.0, 90.0), 1e-9)
         assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.SQUARE_OFF, 97.0, 130.0, 90.0), 1e-9)
-        assertEquals(6, k.size)
+        // 14 Nov: the two [FixedRupee] kinds (Boss's exception) make eight.
+        assertEquals(8, k.size)
         assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.NO_PROGRESS, 97.0, 130.0, 90.0), 1e-9)
     }
 

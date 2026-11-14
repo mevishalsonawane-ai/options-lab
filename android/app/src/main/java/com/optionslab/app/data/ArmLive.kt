@@ -110,6 +110,12 @@ object ArmLive {
         val stopBooked: Int = 0,
         /** 2 Nov: the paper contract this live trade copies (the paper book's own name for it): its paper notices stay down while open. */
         val paperSymbol: String? = null,
+        /**
+         * 14 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.FixedRupee]): an R51 / R72 live (or shadow) trade whose paper
+         * trade entered with the fixed ₹2,000 target / ₹1,000 stop: this trade has its OWN, on its own fill and quantity (Kite's P&L), its
+         * ₹1,000 stop resting at Zerodha where it is tighter ([fixedStop]) and its target sold by the watch ([fixedTarget]). Persisted.
+         */
+        val fixed: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -283,7 +289,9 @@ object ArmLive {
      * [paperEntry], its stop [stop] (null: none on the premium) and, for a LIMIT entry, the [limit] it paid at most.
      */
     data class Ask(val key: String, val ref: String, val contract: Paper.Contract, val side: Int, val paperQty: Int, val paperEntry: Double,
-                   val stop: Double? = null, val limit: Double? = null)
+                   val stop: Double? = null, val limit: Double? = null,
+                   /** 14 Nov: the paper trade entered with the fixed ₹2k target / ₹1k stop ([Pos.fixed]; only R51 / R72 ever set it). */
+                   val fixed: Boolean = false)
 
     /** The paper trade [ref]'s stop or lock is at [paperLevel] now: the live stop follows on the next look (memory only). */
     fun level(ref: String, paperLevel: Double?) {
@@ -470,7 +478,7 @@ object ArmLive {
             p.optBoolean("unconfirmed"), d("exit"), s("exitTime")?.let { LocalDateTime.parse(it) }, s("why"), p.optDouble("charges", 0.0),
             p.optBoolean("shadow"), s("stopKind") ?: OWN, if (p.has("stopQty")) p.getInt("stopQty") else null,
             p.optBoolean("heldSeen", !p.has("heldSeen")), if (p.has("zeroSince")) p.getLong("zeroSince") else null, p.optInt("stopBooked", 0),
-            s("paperSymbol"))
+            s("paperSymbol"), p.optBoolean("fixed", false))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("key", p.key).put("ref", p.ref).put("symbol", p.symbol).put("exchange", p.exchange)
@@ -481,7 +489,7 @@ object ArmLive {
         .put("seen", p.seen).put("unconfirmed", p.unconfirmed).put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "")
         .put("charges", p.charges).put("shadow", p.shadow).put("stopKind", p.stopKind).put("heldSeen", p.heldSeen)
         .apply { p.stopQty?.let { put("stopQty", it) }; p.zeroSinceMs?.let { put("zeroSince", it) }; p.paperSymbol?.let { put("paperSymbol", it) } }
-        .put("stopBooked", p.stopBooked)
+        .put("stopBooked", p.stopBooked).apply { if (p.fixed) put("fixed", true) }
 
     private fun save(b: Book) {
         // 26 Oct: a book read before an erase is never written back over it.
@@ -834,7 +842,8 @@ object ArmLive {
         // (25 Oct: dated by the market clock, the one the door reads back; in the app the arms' clock is the same one.)
         val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), "arm:${a.key}", stop = a.stop), "arm live gate")
         val base = Pos(a.key, a.ref, ins.symbol, ins.exchange, spec.product, if (a.side >= 0) 1 else -1, qty, qty, ins.lot, ins.tick, ins.multiplier,
-            last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol)
+            last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol,
+            fixed = a.fixed && a.side > 0 && com.optionslab.engine.orb.FixedRupee.covers(a.key))
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
         // 3 Nov (Boss): an index not selected in Bot settings → Indices stays in shadow (recorded, never sent).
         // (Read again here, just before anything is sent: a change made while this entry was on its way counts.)
@@ -942,7 +951,9 @@ object ArmLive {
         if (closedRefs.containsKey(a.ref)) nudge()
     }
 
-    private fun stopWords(p: Pos): String = when (p.stopKind) { SAFETY -> "safety stop"; DISASTER -> "disaster stop"; else -> "stop" }
+    private fun stopWords(p: Pos): String = when (p.stopKind) { SAFETY -> "safety stop"; DISASTER -> "disaster stop"
+        // 14 Nov: the fixed ₹1,000 stop (Boss's exception), named as such on the entry line and the fill's card.
+        else -> if (stopWhyOf(p) == com.optionslab.engine.orb.FixedRupee.WHY_STOP) com.optionslab.engine.orb.FixedRupee.WHY_STOP else "stop" }
 
     /**
      * A shadow entry: what would have been sent, priced as the live mirror fills it (a LIMIT that would not fill: noted, not booked).
@@ -975,13 +986,30 @@ object ArmLive {
     /** Whether [ref] is open in its paper book now (null: that book not read). */
     private fun paperOpen(spec: LiveMirror.Spec, ref: String): Boolean? = hosts[spec.family]?.open()?.any { it.ref == ref && it.qty > 0 }
 
-    /** The paper trade's stop or lock as the live level on [p]'s fill (null: none; never for a close-judged arm). */
+    /**
+     * The paper trade's stop or lock as the live level on [p]'s fill (null: none; never for a close-judged arm). 14 Nov: with the
+     * fixed ₹1,000 stop ([Pos.fixed]) the tighter of that and the live trade's own ₹1,000 level ([fixedStop]) - so its resting SL at
+     * Zerodha sits at about -₹1,000 for the live position, a dead phone or not.
+     */
     private fun wanted(p: Pos): Double? {
         val spec = LiveMirror.spec(p.key) ?: return null
         if (spec.closeStop) return null
-        val lv = levelOf(p.ref) ?: return null
-        return LiveMirror.level(p.paperEntry, lv, p.entry, spec.scale, p.side, p.tick)
+        val scaled = levelOf(p.ref)?.let { LiveMirror.level(p.paperEntry, it, p.entry, spec.scale, p.side, p.tick) }
+        return com.optionslab.engine.orb.FixedRupee.tighterStop(scaled, fixedStop(p))
     }
+
+    /** 14 Nov: [p]'s own ₹1,000 stop on its live fill and quantity (Kite's P&L), on its tick (null: not a fixed trade, or no level). */
+    private fun fixedStop(p: Pos): Double? = if (!p.fixed || p.side <= 0) null
+        else com.optionslab.engine.orb.FixedRupee.stopLevel(p.entry, p.qty * p.multiplier.coerceAtLeast(1), p.tick)
+
+    /** 14 Nov: [p]'s own ₹2,000 target on its live fill and quantity (null: not a fixed trade, or no level). */
+    private fun fixedTarget(p: Pos): Double? = if (!p.fixed || p.side <= 0) null
+        else com.optionslab.engine.orb.FixedRupee.targetLevel(p.entry, p.qty * p.multiplier.coerceAtLeast(1), p.tick)
+
+    /** 14 Nov: what a stop exit of [p] is booked as - "₹1k stop" when its own stop rests at the ₹1,000 level, else [Pos.stopWord]. */
+    private fun stopWhyOf(p: Pos): String =
+        if (p.fixed && p.stopKind == OWN && com.optionslab.engine.orb.FixedRupee.isFixedStop(p.stopTrigger, p.entry, p.qty * p.multiplier.coerceAtLeast(1), p.tick))
+            com.optionslab.engine.orb.FixedRupee.WHY_STOP else p.stopWord
 
     // ---- the stop at Zerodha -------------------------------------------------------------------------------------------------
 
@@ -1200,7 +1228,7 @@ object ArmLive {
                 val sold = minOf(((f?.filled?.takeIf { it > 0 } ?: p.qty) - p.stopBooked).coerceAtLeast(0), p.qty)
                 if (sold > 0) {
                     runCatching { Notifier.orderFilled(app, exitSide.name, sold, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", f?.orderId) }
-                    val (done, rest) = closePart(cur, sold, px, p.stopWord, exitSide.name)
+                    val (done, rest) = closePart(cur, sold, px, stopWhyOf(p), exitSide.name)
                     closed += done
                     val left = rest ?: return closed
                     cur = left
@@ -1467,7 +1495,7 @@ object ArmLive {
                     val side = if (p.side > 0) "SELL" else "BUY"
                     val sold = minOf(newFill, p.qty)
                     runCatching { Notifier.orderFilled(app, side, sold, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", p.slId) }
-                    val (done, rest) = closePart(p, sold, px, p.stopWord, side)
+                    val (done, rest) = closePart(p, sold, px, stopWhyOf(p), side)
                     // The rest keeps a working stop's id (what is new of its fill is booked once); a stop that is done (filled for less
                     // than the trade) is gone, so the next look rests a new one for the rest.
                     val after = if (so.working) rest?.copy(stopBooked = p.stopBooked + sold, stopQty = rest.stopQty?.let { (it - sold).coerceAtLeast(0) })
@@ -1495,7 +1523,7 @@ object ArmLive {
                         val sold = minOf(((st.sumOf { it.filled }.takeIf { it > 0 } ?: p.qty) - p.stopBooked).coerceAtLeast(0), p.qty)
                         if (sold > 0) {
                             runCatching { Notifier.orderFilled(app, side, sold, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", st.first().id) }
-                            val (done, rest) = closePart(p, sold, px, p.stopWord, side)
+                            val (done, rest) = closePart(p, sold, px, stopWhyOf(p), side)
                             set(p0, listOfNotNull(done, rest?.copy(stopOrderId = null, stopQty = null, stopBooked = 0))); continue
                         }
                         p = p.copy(stopOrderId = null, stopQty = null, stopBooked = 0)
@@ -1549,7 +1577,7 @@ object ArmLive {
                     val filled = out.first == "COMPLETE" && (out.second?.filled ?: p.qty) - p.stopBooked > 0
                     val px = (if (filled) out.second?.avgPrice?.takeIf { it > 0 } ?: p.stopTrigger else outsideAt(p, p.qty)) ?: ltpOf(p) ?: p.entry
                     if (filled) runCatching { Notifier.orderFilled(app, side, p.qty, p.symbol, px, "Live", "${p.label} · live ${stopWords(p)}", p.slId) }
-                    set(p0, listOf(closePart(p, p.qty, px, if (filled) p.stopWord else "closed_at_zerodha", side).first))
+                    set(p0, listOf(closePart(p, p.qty, px, if (filled) stopWhyOf(p) else "closed_at_zerodha", side).first))
                 } else {
                     val (done, rest) = closePart(p, take, outsideAt(p, take) ?: ltpOf(p) ?: p.entry, "closed_at_zerodha", if (p.side > 0) "SELL" else "BUY")
                     set(p0, listOfNotNull(done, rest))
@@ -1591,11 +1619,19 @@ object ArmLive {
                     val look = LiveMirror.Look(side = p.side, qty = p.qty, held = heldOf(p) * p.side, ltp = ltp, tick = p.tick, stopTrigger = p.stopTrigger,
                         stopResting = p.stopOrderId != null, wanted = wanted(p), paperSell = paperSell, paperReason = paperWhy,
                         squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = if (p.exchange == "MCX") mcxStopped else stopped,
-                        heldSeen = true, stopQty = stopQty, otherWorking = others, lot = p.lot, stopLimit = stopLimit)
+                        heldSeen = true, stopQty = stopQty, otherWorking = others, lot = p.lot, stopLimit = stopLimit,
+                        // 14 Nov (Boss's exception): its own ₹2,000 target, sold at market by [exitLive] (its stop taken out first: one exit).
+                        target = fixedTarget(p))
                     val d = LiveMirror.decide(look)
                     val next: List<Pos>? = when (d.step) {
                         LiveMirror.Step.SELL -> {
-                            val why = if (d.why == "stop" || d.why == "stop_run_through") (if (p.stopKind == OWN) d.why!! else p.stopWord) else d.why ?: "exit"
+                            // 14 Nov: a stop resting at the ₹1,000 level ([stopWhyOf]) is booked as "₹1k stop", run through or not.
+                            val why = when {
+                                d.why != "stop" && d.why != "stop_run_through" -> d.why ?: "exit"
+                                p.stopKind != OWN -> p.stopWord
+                                stopWhyOf(p) == com.optionslab.engine.orb.FixedRupee.WHY_STOP -> com.optionslab.engine.orb.FixedRupee.WHY_STOP
+                                else -> d.why ?: "stop"
+                            }
                             dirty += contract
                             exitLive(p, d.qty, why, ltp, g)
                         }
@@ -1695,7 +1731,7 @@ object ArmLive {
             val atStop = LiveMirror.shadowStopReached(ltp, extreme, p.stopTrigger, p.side)
             val d0 = LiveMirror.decide(LiveMirror.Look(side = p.side, qty = p.qty, held = p.qty * p.side, ltp = ltp, tick = p.tick,
                 stopTrigger = p.stopTrigger, stopResting = false, wanted = wanted(p), paperSell = paperSell, paperReason = paperWhy,
-                squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = false))
+                squareOff = LiveMirror.squareOffDue(t, p.exchange, p.product, p.expiry, p.day), operatorStop = false, target = fixedTarget(p)))
             val d = if (atStop) LiveMirror.Decision(LiveMirror.Step.SELL, "stop", p.qty) else d0
             if (d.step == LiveMirror.Step.SELL && ltp == null && !atStop) { if (p != p0) updates[p0] = listOf(p); continue }
             when (d.step) {
@@ -1708,7 +1744,7 @@ object ArmLive {
                         (if (LiveMirror.runThrough(extreme, trig, p.tick, p.side)) LiveMirror.stopLimit(trig, p.tick, p.side)
                         else LiveMirror.shadowStopFill(trig, p.tick, p.side, maxOf(hs, stopSlip)))
                     else LiveMirror.shadowFill(p.side < 0, ltp ?: trig ?: p.entry, quote?.bid, quote?.ask, p.tick, hs, exitSlip)
-                    val (done, rest) = closePart(p, d.qty, px, if (stopExit) p.stopWord else d.why ?: "exit", if (p.side > 0) "SELL" else "BUY")
+                    val (done, rest) = closePart(p, d.qty, px, if (stopExit) stopWhyOf(p) else d.why ?: "exit", if (p.side > 0) "SELL" else "BUY")
                     updates[p0] = listOfNotNull(done, rest)
                     if (rest == null) { shadowMarks.remove(p.ref); shadowSeen.remove(p.ref) }
                 }
@@ -1875,7 +1911,9 @@ object ArmLive {
                 // Its contract's expiry from the day's lists, so the 15:05 expiry square-off applies to it too (review).
                 runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == pos.symbol }?.expiry }.getOrNull(),
                 entry.id,
-                seen = false, heldSeen = true, stopKind = SAFETY)
+                seen = false, heldSeen = true, stopKind = SAFETY,
+                // 14 Nov: an R51 / R72 trade taken back from Zerodha gets the fixed ₹2k target / ₹1k stop while the switch is on (lowers risk only).
+                fixed = side > 0 && FixedRupeeExits.forEntry(spec.key))
             // A stop of this path's own still resting on it is kept as its stop; else the safety stop rests.
             val so = orders.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
                 (it.type == "SL" || it.type == "SL-M") }.singleOrNull()
@@ -1950,7 +1988,10 @@ object ArmLive {
         val (skipped, why) = v.notMirroredToday(key, runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() })
         return "${spec.label} in shadow: ${LiveMirror.recordWords(sr)}" + (v.shadowSince[key]?.let { " since ${it.toLocalDate()}" } ?: "") +
             ". Live (real orders): " + (if (n == 0) "no live trade yet" else "$n trade${if (n == 1) "" else "s"}, ${LiveMirror.rs(net)} after charges") +
-            ". Now: ${stateOf(key)}." + (if (skipped > 0) " Not mirrored today: $skipped (last: $why)." else "")
+            ". Now: ${stateOf(key)}." + (if (skipped > 0) " Not mirrored today: $skipped (last: $why)." else "") +
+            // 14 Nov (Boss's exception): R51 / R72's live trades carry their own ₹2k target / ₹1k stop while the switch is on.
+            (if (com.optionslab.engine.orb.FixedRupee.covers(key) && FixedRupeeExits.isOn())
+                " New live trades: ${com.optionslab.engine.orb.FixedRupee.LABEL}, on their own fill and lots." else "")
     }
 
     /** The diagnostics' line. Memory only. */

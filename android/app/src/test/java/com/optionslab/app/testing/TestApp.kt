@@ -143,6 +143,9 @@ class TestApp : Application() {
         // 7 Nov: "Stop and target on my manual positions" is on in the app, but OFF for every other test (their live positions are
         // not what they test, and a protection placed on them would change their orders); its own tests turn it on.
         com.optionslab.app.data.ManualCover.resetForTest(on = false)
+        // 14 Nov: the fixed ₹2k target / ₹1k stop on Liquidity, R51 and R72 is on in the app, but OFF for every other test (their arms'
+        // own exits are what they test, and stay covered); its own tests turn it on.
+        com.optionslab.app.data.FixedRupeeExits.resetForTest(on = false)
         com.optionslab.app.data.OrderReviewHost.init(this)
         com.optionslab.app.data.OrderReviewHost.resetForTest()
         Journal.init(this)

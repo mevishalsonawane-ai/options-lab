@@ -8,6 +8,7 @@ import com.optionslab.engine.Upstox
 import com.optionslab.engine.orb.Bar
 import com.optionslab.engine.orb.BreadthDonchianArm
 import com.optionslab.engine.orb.DonchianArm
+import com.optionslab.engine.orb.FixedRupee
 import com.optionslab.engine.orb.HeroRules
 import com.optionslab.engine.orb.OovArm
 import com.optionslab.engine.orb.OrbRules
@@ -258,6 +259,11 @@ object PassedArmsHost {
          * 5-minute level within 0.25% ahead), false: kept; null: not labelled. A label only: never changes a trade.
          */
         val w20: Boolean? = null,
+        /**
+         * 14 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.FixedRupee]): an R51 / R72 trade that entered with the fixed
+         * ₹2,000 target / ₹1,000 stop for its whole quantity ([FixedRupeeExits]). A trade keeps the exits it entered with (persisted).
+         */
+        val fx: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -616,7 +622,7 @@ object PassedArmsHost {
             p.optString("why").ifEmpty { null }, p.optDouble("charges", 0.0), d("exitRef"), d("paperFill"), p.optString("adopted").ifEmpty { null }, p.optBoolean("lock", false),
             p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false),
             p.optString("shadow").ifEmpty { null }, p.optBoolean("np5", false), d("pick"),
-            if (p.has("w20")) p.getBoolean("w20") else null)
+            if (p.has("w20")) p.getBoolean("w20") else null, p.optBoolean("fx", false))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -634,6 +640,7 @@ object PassedArmsHost {
             if (p.np5) put("np5", true)
             p.pick?.let { put("pick", it) }
             p.w20?.let { put("w20", it) }
+            if (p.fx) put("fx", true)
         }
 
     private val written = Vault.LastWrite()
@@ -735,14 +742,15 @@ object PassedArmsHost {
         }
         val x = exitsOf(p)
         val held = lock?.split('|')?.getOrNull(1)?.toDoubleOrNull()
-        val stop = listOfNotNull(PassedArms.stopLevel(p.entry, x), held).maxOrNull()
+        // 14 Nov: the stop that applies (the ₹1,000 one where it is tighter) and the nearest target (the ₹2,000 one where it comes first).
+        val stop = listOfNotNull(PassedArms.effectiveStop(p.entry, x), held).maxOrNull()
         val sq = x.squareOff
         val at = PassedArms.timeExitAt(p.entryMinute, x)?.takeIf { it.toLocalDate() == p.day && it.toLocalTime().isBefore(sq) }?.toLocalTime() ?: sq
         // R66's L25 first: "+5% locked once +25%" before it is earned, "lock held" after.
         val step = if (held == null) firstStepWords(x) else "lock held"
         // 1 Nov (R142 NP5-52): an R52 trade that entered with the 09:25 exit says it beside its ladder.
-        return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, stop, PassedArms.targetLevel(p.entry, x), at,
-            listOfNotNull(step?.takeIf { x.steps.isNotEmpty() }, noProgressWords(x)).joinToString("; ").ifEmpty { null })
+        return com.optionslab.ira.ArmExits.Entry("passed", label(p.arm), false, p.symbol, stop, PassedArms.effectiveTarget(p.entry, x), at,
+            listOfNotNull(step?.takeIf { x.steps.isNotEmpty() }, noProgressWords(x), fixedWords(p)).joinToString("; ").ifEmpty { null })
     }
 
     /** The ladder's first step in words. R64's keeps breakeven (NaN: the fill plus the charges) there: worded so, never "+NaN%". */
@@ -2005,7 +2013,7 @@ object PassedArmsHost {
                 val charges = Paper.state.trades.filter { it.orderId == r.orderId }.sumOf { it.charges.toDouble() }
                 val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
                     l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn,
-                    np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy)
+                    np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy, fx = FixedRupeeExits.forEntry(arm))
                 b.positions += pos
                 b.marks[c.symbol] = fill.price
                 b.decided += keys
@@ -2019,7 +2027,8 @@ object PassedArmsHost {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys + marks) }
                 // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
                 // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
-                runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos))) }
+                // 14 Nov: [Pos.fx] goes with it - the live trade takes its own ₹2,000 target / ₹1,000 stop on ITS quantity and fill.
+                runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos), fixed = pos.fx)) }
                 // 22 Oct: the time machine's reality check (shadow only; background): the arm's premium stop and target, out by its square-off.
                 runCatching {
                     val x = exitsOf(pos)
@@ -2075,7 +2084,8 @@ object PassedArmsHost {
                                 idx: Double?, atr: Double?, keys: List<String>, breadth: Boolean?, kind: String, because: String): Pos {
         runCatching { Paper.rememberContract(c) }
         val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
-            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On)
+            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On,
+            fx = FixedRupeeExits.forEntry(arm))
         b.positions += pos
         if (c.symbol !in b.marks) b.marks[c.symbol] = ref
         b.decided += keys
@@ -2104,7 +2114,16 @@ object PassedArmsHost {
         save(r)
     }
 
-    private fun exitWords(p: Pos): String = when {
+    /** 14 Nov: the fixed ₹2,000 target / ₹1,000 stop a trade entered with, at its own levels and labelled (null: none). */
+    private fun fixedWords(p: Pos): String? {
+        if (!p.fx || !FixedRupee.covers(p.arm)) return null
+        val s = FixedRupee.stopLevel(p.entry, p.qty); val g = FixedRupee.targetLevel(p.entry, p.qty)
+        return FixedRupee.LABEL + listOfNotNull(g?.let { "target ${px(it)}" }, s?.let { "stop ${px(it)} where tighter" }).joinToString(", ", " (", ")").takeIf { g != null || s != null }.orEmpty()
+    }
+
+    private fun exitWords(p: Pos): String = listOfNotNull(exitWordsOwn(p), fixedWords(p)).joinToString("; ")
+
+    private fun exitWordsOwn(p: Pos): String = when {
         p.setup == Solo2.Setup.S1.key -> "Out on SoloMidday's index stop, at breakeven or at 14:30" +
             if (p.lock) "; on the premium, ${com.optionslab.ira.PassedArmsTalk.ladderWords(p.l25)}" else ""
         p.lock -> exitsOf(p).let { x ->
@@ -2133,6 +2152,9 @@ object PassedArmsHost {
     }.let { if (p.lock) PassedArms.withLock(it, p.l25) else it }
         // 1 Nov (R142 NP5-52): the 09:25 no-progress exit, on the trades that entered with it.
         .let { if (p.np5 && p.arm == OovArm.SOURCE) it.copy(noProgress = OovArm.NO_PROGRESS) else it }
+        // 14 Nov (Boss's exception, failed gates): the fixed ₹1,000 stop and ₹2,000 target for the whole quantity, on the R51 / R72 trades
+        // that entered with them ([Pos.fx]); the walk takes the stop only where it is tighter, the target beside the arm's own.
+        .let { if (p.fx && FixedRupee.covers(p.arm)) it.copy(fixedStop = FixedRupee.stopLevel(p.entry, p.qty), fixedTarget = FixedRupee.targetLevel(p.entry, p.qty)) else it }
 
     /** The lock's breakeven for [p]: its fill plus the round-trip charges per unit (R64: the fill + charges(entry, entry) / qty). */
     private fun breakeven(p: Pos): Double = p.entry + ProfitLock.roundTripPerUnit(p.entry, p.qty)
@@ -2676,7 +2698,8 @@ object PassedArmsHost {
         }
         r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", "${label(p.arm)} · exit") } }
         runCatching { Notifier.orderFilled(app, "SELL", fill.quantity, fill.symbol, fill.price, "Paper", "${label(p.arm)} · exit", r.orderId) }
-        val target = PassedArms.targetLevel(p.entry, exitsOf(p))
+        // 14 Nov: a ₹2,000-target exit is booked at that target at most; the arm's own target at its own.
+        val target = PassedArms.bookedTarget(kindOf(why), p.entry, exitsOf(p))
         val booked = kindOf(why)?.let { PassedArms.booked(it, fill.price, target, walkPx) } ?: fill.price
         val done = p.copy(exit = booked, exitTime = now0(), why = why, charges = p.charges + chargesOf(r.orderId), exitRef = ltp,
             paperFill = fill.price.takeIf { kotlin.math.abs(it - booked) > 1e-9 }, soldBy = r.orderId?.let { SharedSales.write(mapOf(it to p.qty)) })
@@ -2694,7 +2717,7 @@ object PassedArmsHost {
         // A seller gets the bid: the stream's fresh bid when it has one, else the price seen.
         val bid = runCatching { Paper.contractOf(p.symbol)?.let { Paper.bookNow(it) }?.takeIf { it.ageMs <= FRESH_MS }?.bid }.getOrNull()?.takeIf { it > 0 }
         val at = (if (ltp != null) bid?.let { minOf(it, ltp) } ?: ltp else null) ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
-        val target = PassedArms.targetLevel(p.entry, exitsOf(p))
+        val target = PassedArms.bookedTarget(kindOf(why), p.entry, exitsOf(p))
         val booked = kindOf(why)?.let { PassedArms.booked(it, at, target, walkPx) } ?: at
         val charges = runCatching {
             com.optionslab.engine.sandbox.SandboxCosts.charge("BUY", java.math.BigDecimal(p.entry), p.qty).toDouble() +
@@ -2773,7 +2796,8 @@ object PassedArmsHost {
             if (b.positions.any { it.open && it.shadow == null && it.symbol == o.symbol }) return@withLock null
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
-                adopted = ADOPT_FILL, lock = b.lockOn, l25 = b.lockOn && b.l25On, st = arm == DonchianArm.SOURCE && b.stOn)
+                adopted = ADOPT_FILL, lock = b.lockOn, l25 = b.lockOn && b.l25On, st = arm == DonchianArm.SOURCE && b.stOn,
+                fx = FixedRupeeExits.forEntry(arm))
             b.positions += p
             b.marks[p.symbol] = p.entry
             val words = "${label(arm)}: ${p.symbol} ${p.qty} was held on paper with no record here, so its exits were not running; " +
@@ -2818,7 +2842,7 @@ object PassedArmsHost {
 
     /** The ladder a trade entered with, labelled so each record stays separable (the research exits, A4, A4 + L25). */
     private fun lockTag(p: Pos): String = (if (!p.lock) "" else if (p.l25) " · 30-60-100 lock + L25" else " · 30-60-100 lock") +
-        (if (p.st) " · Supertrend filter" else "") + (if (p.shadow != null) " · ${shadowWords(p)}" else "")
+        (if (p.st) " · Supertrend filter" else "") + (if (p.fx) " · ${FixedRupee.LABEL}" else "") + (if (p.shadow != null) " · ${shadowWords(p)}" else "")
 
     /** Bumped by [wipe] (under [writeLock]): a read, a save or a pass's entries under way when the erase came are not kept. */
     @Volatile private var wipes = 0

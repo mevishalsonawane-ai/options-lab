@@ -414,6 +414,8 @@ object Diag {
     // 7 Nov: the manual positions' stop and target ([ManualCover]) rides beside it (the report's own function is near the compiler's limit).
     private fun round4Lines(): String = (runCatching { DayOco.line() }.getOrElse { "Stop and target as one GTT in the day: could not read" }) + "\n" +
         (runCatching { ManualCover.line() }.getOrElse { "Stop and target on my manual positions: could not read" }) + "\n" +
+        // 14 Nov (Boss's exception): the fixed ₹2k target / ₹1k stop on Liquidity, R51 and R72 ([FixedRupeeExits]), in this chain too.
+        (runCatching { FixedRupeeExits.line() }.getOrElse { "Fixed ₹2k target / ₹1k stop: could not read" }) + "\n" +
         (runCatching { PayoutWatch.line() }.getOrElse { "Payout-aware drawdown: could not read" }) + "\n"
 
     /** The MCX paper arms' line and NR7 crude's record-only line (21 Oct). Its own function: the report's one is near the compiler's limit. */
