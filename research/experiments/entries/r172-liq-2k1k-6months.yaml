@@ -1,0 +1,36 @@
+id: r172-liq-2k1k-6months
+title: 'R172 Liquidity 15+5: the last 6 months with Boss''s +Rs 2,000 / -Rs 1,000 (whole position, 1-3 lots)'
+family: trade-management
+date: '2026-11-14'
+doc: research/hunt/r172_2k1k_6months/results/report.md
+hypothesis: Not a hypothesis test. Boss (14 Nov) chose, as a 'failed gates, Boss's exception', a fixed +Rs 2,000 target and
+  -Rs 1,000 stop for the whole position, before charges (the Rs 1,000 stop only when tighter than the arm's own; every existing
+  exit stays), and asked for the last 6 months' results.
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 14 Nov 2026, ending
+  19 Oct 2026; R51 Amendment A clean stores built to 19 Oct (R106 clean_post)
+period:
+  design: none (a reporting window, nothing fitted)
+  holdout: 2026-04-20..2026-10-19 (overlaps the final 1 Apr - 13 Oct read by R51-R171)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the index''s liquidity levels (15+5 books; FINNIFTY 30+5) (unchanged); only the option''s exit (rupee target
+  / stop on the premium) differs'
+model_or_rule: 'Liquidity 15+5: A today''s rules; B + R151 picker (R72 / R51 only); each with +Rs 2,000 / -Rs 1,000; 1, 2,
+  3 lots'
+settings: research/hunt/r172_2k1k_6months/r172cfg.py; PREREG.md section 2
+prereg: research/hunt/r172_2k1k_6months/PREREG.md
+variants_tried: null
+results:
+  summary: '1 lot: A 346 trades, win 38%, net Rs 28,392, max DD Rs 38,009; A+2k1k 347 trades, win 37%, net -Rs 37,713, max
+    DD Rs 47,088 | 2 lots: A 346 trades, win 39%, net Rs 72,613, max DD Rs 73,050; A+2k1k 347 trades, win 35%, net -Rs 61,740,
+    max DD Rs 61,740 | 3 lots: A 346 trades, win 40%, net Rs 116,365, max DD Rs 108,209; A+2k1k 347 trades, win 33%, net -Rs
+    112,310, max DD Rs 112,310. The new rule lost money at every lot size.'
+  costs: dated Zerodha charges on the whole quantity, R17 fills (slippage from the 5-minute volume per position; stops -10
+    bps and 2x the half-spread, gaps at the open), limits at their price
+holdout_read: true
+verdict: not-a-test
+notes: 'A reporting backtest of Boss''s chosen rule: no gate, twin or BH; not counted as a test. Signal on the underlying;
+  nothing in the app changes from it.'

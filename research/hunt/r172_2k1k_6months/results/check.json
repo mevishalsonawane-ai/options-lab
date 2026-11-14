@@ -1,0 +1,74 @@
+{
+ "LIQ": {
+  "trades": 357,
+  "net": 11155,
+  "published": [
+   357,
+   11155
+  ],
+  "reproduced": true,
+  "engine_equals_r101": true
+ },
+ "R72": {
+  "trades": 1200,
+  "net": 170336,
+  "published": [
+   1202,
+   171366
+  ],
+  "reproduced": false,
+  "engine_equals_r101": true,
+  "picker": {
+   "trades": 651,
+   "net": 220118,
+   "published": [
+    652,
+    219057
+   ],
+   "reproduced": false
+  }
+ },
+ "R51": {
+  "trades": 1668,
+  "net": 131546,
+  "published": [
+   1670,
+   134743
+  ],
+  "reproduced": false,
+  "engine_equals_r101": true,
+  "picker": {
+   "trades": 692,
+   "net": 160101,
+   "published": [
+    693,
+    159040
+   ],
+   "reproduced": false
+  }
+ },
+ "_stores_13oct": {
+  "LIQ": [
+   357,
+   11155
+  ],
+  "R72": [
+   1202,
+   171366
+  ],
+  "R72_picker": [
+   652,
+   219057
+  ],
+  "R51": [
+   1670,
+   134743
+  ],
+  "R51_picker": [
+   693,
+   159040
+  ],
+  "note": "run on R51's clean stores built to 13 Oct: every published figure reproduced exactly"
+ },
+ "_difference": "The only difference between the stores is NIFTY on Tue 13 Oct 2026, NIFTY's weekly expiry. The stores built to 13 Oct cannot see it is an expiry day (found from the next day's contract roll), so the published finals took 2 NIFTY trades that day (R72 -1,061 and +2,091 = +1,030; R51 -1,061 and +4,258 = +3,197; the pickers 1 trade each). The arms never trade an index on its own expiry day, so the stores built to 19 Oct (expiry known) are the correct ones and are used for R172."
+}
