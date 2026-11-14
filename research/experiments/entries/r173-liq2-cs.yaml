@@ -1,0 +1,25 @@
+id: r173-liq2-cs
+title: 'R173 LIQ2-CS: Liquidity 15-min ''both'' break traded as a short OTM credit spread (Boss''s files, re-tested on real option prices)'
+family: option-structure
+date: '2026-11-14'
+doc: research/hunt/r173_credit_spread_check/results/report.md
+hypothesis: 'Boss''s files claim Liquidity LIQ-2 (15-min pool break with an overlapping swing zone) traded as a SHORT credit spread (sell ATM -/+ 2 steps, wing 3 steps further; target the next zone >= 0.8x IDX_STOP_EXT ahead, catastrophe -4.5x past the broken level, new level, 15:10) makes +Rs 1,11,157 at 64.8% wins. Same real-price gates as r173-r72-cs.'
+data_version: 'GitHub release research-data (nifty_prev, nifty_year, banknifty_prev_year_wide, banknifty_year_wide, finnifty_index, sensex_index, extra_series) fetched 14 Nov 2026; nothing on or after 2026-02-24; the Drive lake (Apr - Oct 2026, FINNIFTY / MIDCPNIFTY / SENSEX options) not reachable'
+period:
+  design: 2024-11-01..2025-03-31 (walk-forward 2025-04-01..2025-09-30)
+  holdout: '2025-10-01..2026-02-23 read once (FINAL_READ); not a clean holdout (see r173-r72-cs)'
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index (entries, target and stop on the index); the two option legs are only traded'
+- real 1-minute option prices of both legs; R17 fills on 4 orders; dated Zerodha charges; margin = capped max loss + 2% exposure
+model_or_rule: '15-min Liquidity ''both'' (indicator/liquidity.py zones), entry next minute 09:20 - 14:30, one position at a time per index; the same spread; exits on the index (zone target with 0.8x floor else 2x, -4.5x beyond the level, a new same-side level confirmed at a bar close, 15:10)'
+settings: research/hunt/r173_credit_spread_check/PREREG.md; r173real.py; r173study.py
+prereg: research/hunt/r173_credit_spread_check/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Their script on our data: +Rs 43,521 (473 trades, 64.7% wins) of which theta +Rs 89,721 (without: -Rs 46,736). Real prices (NIFTY + BANKNIFTY): all trades -Rs 39,372 on 255 (38.0% wins; design -25,249 / WF -8,647 / final -5,476); Rs 56k account: 34 not taken, 221 taken -Rs 34,137 (DD -Rs 35,745); final random-entry p 0.809 (MC 0.837), q 1. Fail.'
+  costs: R17 liquidity fills (5 bps + 1/2/4 ticks by 5-min volume, x2 on the catastrophe exit) on each of 4 orders + obuy 'dated' charges (Rs 20 an order, STT on the 2 sell orders); options_lab quoted / roll / stress spread law as sensitivity; 1 lot at the dated lot
+holdout_read: true
+verdict: rejected

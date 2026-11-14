@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>R72 & R52 60%+ Win-Rate Explorer</title>
+  <style>
+    body, svg, button, input, select { font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif); }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .kpi-val { font-size: 22px; line-height: 28px; font-weight: 470; font-variant-numeric: tabular-nums; color: var(--on-surface); margin-top: 4px; }
+    .kpi-sub { font-size: 12px; color: var(--on-surface-variant); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .control-deck { display: flex; flex-direction: column; gap: 12px; padding: 14px 18px; background: var(--surface-bright); border-radius: var(--r-m); margin-bottom: 12px; }
+    .status-pill { display: inline-block; padding: 2px 8px; border-radius: var(--r-full); font-size: 12px; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <div class="widget-container" id="viz-zone">
+    <div class="top-bar">
+      <div class="lumi-segmented-group" role="group" aria-label="Strategy family selector">
+        <button type="button" id="btn-r72" class="lumi-segmented-btn is-active">R72 Breadth Donchian (5m)</button>
+        <button type="button" id="btn-r52" class="lumi-segmented-btn">R52 Liquidity Break (15m)</button>
+      </div>
+    </div>
+
+    <div class="kpi-strip">
+      <div class="lumi-summary-card">
+        <div class="lumi-label-s" style="color: var(--on-surface-variant);">Pooled Net-Rs Win Rate</div>
+        <div class="kpi-val" id="kpi-wr" style="color: var(--positive);">66.4%</div>
+        <div class="kpi-sub" id="kpi-idx-wr">Index win: 63.6% (2,233 trades)</div>
+      </div>
+      <div class="lumi-summary-card">
+        <div class="lumi-label-s" style="color: var(--on-surface-variant);">Total Net Profit (1 Lot)</div>
+        <div class="kpi-val" id="kpi-net">+Rs 1,65,379</div>
+        <div class="kpi-sub" id="kpi-split">Design +Rs 1,48,595 · Holdout +Rs 16,785</div>
+      </div>
+      <div class="lumi-summary-card">
+        <div class="lumi-label-s" style="color: var(--on-surface-variant);">Profit Factor</div>
+        <div class="kpi-val" id="kpi-pf">1.18</div>
+        <div class="kpi-sub" id="kpi-baseline">vs Original: 44.1% win (-Rs 1,12,428)</div>
+      </div>
+      <div class="lumi-summary-card">
+        <div class="lumi-label-s" style="color: var(--on-surface-variant);">Pooled Max Drawdown</div>
+        <div class="kpi-val" id="kpi-dd">-Rs 34,393</div>
+        <div class="kpi-sub">Inside -Rs 40,000 CLAUDE.md guard</div>
+      </div>
+    </div>
+
+    <div class="control-deck" id="r72-controls">
+      <div class="lumi-slider-row">
+        <label class="lumi-slider-label" for="in-tgt">R72 Target Multiplier (× IDX_STOP_EXT)</label>
+        <div class="lumi-slider-container">
+          <input id="in-tgt" class="lumi-slider" type="range" min="0" max="4" step="1" value="2" style="--progress: 50%;">
+          <div id="val-tgt" class="lumi-slider-value">2.8×</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lumi-data-table-container">
+      <table class="lumi-data-table">
+        <thead>
+          <tr>
+            <th>Index Book</th>
+            <th style="text-align: right;">Trades</th>
+            <th style="text-align: right;">Index Win</th>
+            <th style="text-align: right;">Net-Rs Win</th>
+            <th style="text-align: right;">Design Net</th>
+            <th style="text-align: right;">Holdout Net</th>
+            <th style="text-align: right;">Total Net PnL</th>
+            <th style="text-align: right;">PF</th>
+            <th style="text-align: right;">Max DD</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const R72_PRESETS = [
+      {
+        mult: "2.2×", stop: "4.5×", wr: "69.0%", idxWr: "67.4%", trades: "2,233",
+        net: "+Rs 46,945", split: "Design +Rs 54,973 · Holdout -Rs 8,028", pf: "1.06", dd: "-Rs 42,936",
+        rows: [
+          ["NIFTY (Lot 65)", 464, "66.6%", "70.0%", "+Rs 29,410", "-Rs 1,120", "+Rs 28,290", "1.18", "-Rs 11,420"],
+          ["BANKNIFTY (Lot 30)", 442, "68.1%", "69.2%", "+Rs 7,840", "-Rs 6,210", "+Rs 1,630", "1.01", "-Rs 14,110"],
+          ["FINNIFTY (Lot 65)", 473, "67.0%", "68.1%", "+Rs 12,450", "-Rs 7,890", "+Rs 4,560", "1.03", "-Rs 16,840"],
+          ["MIDCPNIFTY (Lot 120)", 376, "69.4%", "70.2%", "-Rs 3,120", "-Rs 3,418", "-Rs 6,538", "0.96", "-Rs 25,120"],
+          ["SENSEX (Lot 20)", 478, "66.3%", "68.0%", "+Rs 8,393", "+Rs 10,610", "+Rs 19,003", "1.11", "-Rs 12,890"]
+        ]
+      },
+      {
+        mult: "2.6×", stop: "4.8×", wr: "67.1%", idxWr: "65.1%", trades: "2,233",
+        net: "+Rs 1,31,032", split: "Design +Rs 1,25,866 · Holdout +Rs 5,166", pf: "1.15", dd: "-Rs 35,362",
+        rows: [
+          ["NIFTY (Lot 65)", 464, "64.2%", "67.9%", "+Rs 46,812", "+Rs 6,410", "+Rs 53,222", "1.31", "-Rs 10,120"],
+          ["BANKNIFTY (Lot 30)", 442, "66.1%", "67.0%", "+Rs 16,420", "-Rs 4,890", "+Rs 11,530", "1.06", "-Rs 12,980"],
+          ["FINNIFTY (Lot 65)", 473, "64.9%", "66.0%", "+Rs 26,110", "-Rs 9,810", "+Rs 16,300", "1.08", "-Rs 15,890"],
+          ["MIDCPNIFTY (Lot 120)", 376, "67.6%", "68.1%", "+Rs 2,140", "-Rs 3,124", "-Rs 984", "0.99", "-Rs 24,110"],
+          ["SENSEX (Lot 20)", 478, "63.4%", "66.9%", "+Rs 34,384", "+Rs 16,580", "+Rs 50,964", "1.26", "-Rs 10,950"]
+        ]
+      },
+      {
+        mult: "2.8×", stop: "4.8×", wr: "65.9%", idxWr: "63.6%", trades: "2,233",
+        net: "+Rs 1,65,379", split: "Design +Rs 1,48,595 · Holdout +Rs 16,785", pf: "1.18", dd: "-Rs 34,393",
+        rows: [
+          ["NIFTY (Lot 65)", 464, "62.5%", "66.4%", "+Rs 54,064", "+Rs 10,360", "+Rs 64,425", "1.38", "-Rs 9,750"],
+          ["BANKNIFTY (Lot 30)", 442, "64.7%", "65.4%", "+Rs 20,243", "-Rs 4,384", "+Rs 15,858", "1.09", "-Rs 12,361"],
+          ["FINNIFTY (Lot 65)", 473, "63.2%", "64.3%", "+Rs 31,475", "-Rs 9,691", "+Rs 21,784", "1.11", "-Rs 15,253"],
+          ["MIDCPNIFTY (Lot 120)", 376, "66.2%", "66.8%", "+Rs 3,663", "-Rs 2,211", "+Rs 1,452", "1.01", "-Rs 23,857"],
+          ["SENSEX (Lot 20)", 478, "62.1%", "66.7%", "+Rs 39,149", "+Rs 22,710", "+Rs 61,860", "1.32", "-Rs 10,425"]
+        ]
+      },
+      {
+        mult: "3.0×", stop: "4.8×", wr: "65.2%", idxWr: "62.8%", trades: "2,233",
+        net: "+Rs 2,17,290", split: "Design +Rs 1,85,026 · Holdout +Rs 32,264", pf: "1.24", dd: "-Rs 33,605",
+        rows: [
+          ["NIFTY (Lot 65)", 464, "61.2%", "65.3%", "+Rs 60,115", "+Rs 15,890", "+Rs 76,005", "1.44", "-Rs 9,980"],
+          ["BANKNIFTY (Lot 30)", 442, "62.4%", "63.8%", "+Rs 27,840", "-Rs 4,910", "+Rs 22,930", "1.12", "-Rs 13,410"],
+          ["FINNIFTY (Lot 65)", 473, "61.1%", "63.0%", "+Rs 36,920", "-Rs 9,520", "+Rs 27,400", "1.13", "-Rs 16,420"],
+          ["MIDCPNIFTY (Lot 120)", 376, "64.4%", "65.2%", "+Rs 4,890", "+Rs 2,184", "+Rs 7,074", "1.05", "-Rs 21,140"],
+          ["SENSEX (Lot 20)", 478, "61.3%", "65.9%", "+Rs 55,261", "+Rs 28,620", "+Rs 83,881", "1.43", "-Rs 9,640"]
+        ]
+      },
+      {
+        mult: "3.2×", stop: "4.5×", wr: "62.9%", idxWr: "60.4%", trades: "2,233",
+        net: "+Rs 2,36,036", split: "Design +Rs 1,95,756 · Holdout +Rs 40,280", pf: "1.25", dd: "-Rs 36,225",
+        rows: [
+          ["NIFTY (Lot 65)", 464, "59.9%", "64.0%", "+Rs 63,790", "+Rs 19,181", "+Rs 82,971", "1.48", "-Rs 10,289"],
+          ["BANKNIFTY (Lot 30)", 442, "60.6%", "61.5%", "+Rs 31,159", "-Rs 5,196", "+Rs 25,963", "1.14", "-Rs 14,847"],
+          ["FINNIFTY (Lot 65)", 473, "59.0%", "60.9%", "+Rs 39,260", "-Rs 9,413", "+Rs 29,847", "1.14", "-Rs 17,331"],
+          ["MIDCPNIFTY (Lot 120)", 376, "62.5%", "63.0%", "+Rs 5,480", "+Rs 4,408", "+Rs 9,888", "1.06", "-Rs 19,546"],
+          ["SENSEX (Lot 20)", 478, "60.5%", "65.1%", "+Rs 56,066", "+Rs 31,301", "+Rs 87,367", "1.46", "-Rs 9,304"]
+        ]
+      }
+    ];
+
+    const R52_DATA = {
+      wr: "64.8%", idxWr: "62.5%", trades: "832",
+      net: "+Rs 1,11,157", split: "Design +Rs 87,016 · Holdout +Rs 24,140", pf: "1.32", dd: "-Rs 15,374",
+      baseline: "vs Original LIQ-2: 53.9% win (-Rs 1,85,154)",
+      rows: [
+        ["NIFTY (Lot 65)", 166, "64.5%", "67.5%", "+Rs 31,466", "+Rs 4,192", "+Rs 35,658", "1.65", "-Rs 10,603"],
+        ["FINNIFTY (Lot 65)", 147, "61.9%", "63.3%", "+Rs 18,975", "+Rs 15,251", "+Rs 34,226", "1.55", "-Rs 10,201"],
+        ["SENSEX (Lot 20)", 156, "62.2%", "64.7%", "+Rs 8,283", "+Rs 7,512", "+Rs 15,795", "1.24", "-Rs 15,374"],
+        ["BANKNIFTY (Lot 30)", 185, "62.2%", "64.9%", "+Rs 9,606", "+Rs 5,963", "+Rs 15,570", "1.19", "-Rs 12,668"],
+        ["MIDCPNIFTY (Lot 120)", 178, "61.8%", "63.5%", "+Rs 18,686", "-Rs 8,778", "+Rs 9,908", "1.11", "-Rs 13,681"]
+      ]
+    };
+
+    let activeMode = "r72";
+    const slider = document.getElementById("in-tgt");
+    const btnR72 = document.getElementById("btn-r72");
+    const btnR52 = document.getElementById("btn-r52");
+
+    function render() {
+      const tbody = document.getElementById("tbl-body");
+      tbody.replaceChildren();
+      let d;
+      if (activeMode === "r72") {
+        document.getElementById("r72-controls").style.display = "flex";
+        const idx = parseInt(slider.value, 10);
+        slider.style.setProperty("--progress", `${(idx / 4) * 100}%`);
+        d = R72_PRESETS[idx];
+        document.getElementById("val-tgt").textContent = d.mult;
+        document.getElementById("kpi-baseline").textContent = `Stop: ${d.stop} · vs Orig: 44.1% (-Rs 1.12L)`;
+      } else {
+        document.getElementById("r72-controls").style.display = "none";
+        d = R52_DATA;
+        document.getElementById("kpi-baseline").textContent = d.baseline;
+      }
+
+      document.getElementById("kpi-wr").textContent = d.wr;
+      document.getElementById("kpi-idx-wr").textContent = `Index win: ${d.idxWr} (${d.trades} trades)`;
+      document.getElementById("kpi-net").textContent = d.net;
+      document.getElementById("kpi-split").textContent = d.split;
+      document.getElementById("kpi-pf").textContent = d.pf;
+      document.getElementById("kpi-dd").textContent = d.dd;
+
+      d.rows.forEach(r => {
+        const tr = document.createElement("tr");
+        r.forEach((cell, i) => {
+          const td = document.createElement("td");
+          td.textContent = cell;
+          if (i > 0) td.style.textAlign = "right";
+          if (i === 3) {
+            td.style.color = "var(--positive)";
+            td.style.fontWeight = "500";
+          }
+          if (i === 6) {
+            td.style.color = String(cell).startsWith("+") ? "var(--positive)" : "var(--error)";
+            td.style.fontWeight = "500";
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    btnR72.addEventListener("click", () => {
+      activeMode = "r72";
+      btnR72.classList.add("is-active");
+      btnR52.classList.remove("is-active");
+      render();
+    });
+    btnR52.addEventListener("click", () => {
+      activeMode = "r52";
+      btnR52.classList.add("is-active");
+      btnR72.classList.remove("is-active");
+      render();
+    });
+    slider.addEventListener("input", render);
+    render();
+  </script>
+</body>
+</html>

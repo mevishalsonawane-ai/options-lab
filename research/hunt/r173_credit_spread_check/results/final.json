@@ -1,0 +1,547 @@
+{
+ "R72-CS": {
+  "signals": 377,
+  "skipped": {
+   "no_strike": 0,
+   "no_fill": 0
+  },
+  "all": {
+   "pooled": {
+    "n": 199,
+    "win": 54.8,
+    "net": -18199,
+    "per_trade": -91,
+    "worst_day": -3430,
+    "max_dd": -20653,
+    "worst_month": -9639,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   },
+   "BANKNIFTY": {
+    "n": 109,
+    "win": 49.5,
+    "net": -11983,
+    "per_trade": -110,
+    "worst_day": -1177,
+    "max_dd": -12003,
+    "worst_month": -5989,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   },
+   "NIFTY": {
+    "n": 90,
+    "win": 61.1,
+    "net": -6217,
+    "per_trade": -69,
+    "worst_day": -2276,
+    "max_dd": -10642,
+    "worst_month": -3649,
+    "worst_month_name": "2025-12",
+    "sessions": 68
+   },
+   "pooled_roll": {
+    "n": 199,
+    "win": 51.3,
+    "net": -24897,
+    "per_trade": -125,
+    "worst_day": -3575,
+    "max_dd": -26339,
+    "worst_month": -11277,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   },
+   "pooled_quoted": {
+    "n": 199,
+    "win": 39.7,
+    "net": -50682,
+    "per_trade": -255,
+    "worst_day": -4260,
+    "max_dd": -50771,
+    "worst_month": -17893,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   },
+   "pooled_stress": {
+    "n": 199,
+    "win": 29.1,
+    "net": -97954,
+    "per_trade": -492,
+    "worst_day": -5516,
+    "max_dd": -97557,
+    "worst_month": -30023,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   }
+  },
+  "account": {
+   "pooled": {
+    "n": 110,
+    "win": 50.0,
+    "net": -11679,
+    "per_trade": -106,
+    "worst_day": -1177,
+    "max_dd": -11699,
+    "worst_month": -6259,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   },
+   "BANKNIFTY": {
+    "n": 103,
+    "win": 49.5,
+    "net": -10936,
+    "per_trade": -106,
+    "worst_day": -1177,
+    "max_dd": -10956,
+    "worst_month": -6195,
+    "worst_month_name": "2025-12",
+    "sessions": 80
+   },
+   "NIFTY": {
+    "n": 7,
+    "win": 57.1,
+    "net": -743,
+    "per_trade": -106,
+    "worst_day": -1279,
+    "max_dd": -1454,
+    "worst_month": -445,
+    "worst_month_name": "2025-10",
+    "sessions": 7
+   },
+   "pooled_roll": {
+    "n": 110,
+    "win": 43.6,
+    "net": -16482,
+    "per_trade": -150,
+    "worst_day": -1267,
+    "max_dd": -16361,
+    "worst_month": -7474,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   },
+   "pooled_quoted": {
+    "n": 110,
+    "win": 24.5,
+    "net": -33989,
+    "per_trade": -309,
+    "worst_day": -1748,
+    "max_dd": -33614,
+    "worst_month": -12143,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   },
+   "pooled_stress": {
+    "n": 110,
+    "win": 13.6,
+    "net": -66084,
+    "per_trade": -601,
+    "worst_day": -2640,
+    "max_dd": -65375,
+    "worst_month": -20702,
+    "worst_month_name": "2025-12",
+    "sessions": 82
+   }
+  },
+  "not_taken_margin": 89,
+  "not_taken_margin_r103": 89,
+  "describe": {
+   "exit_mix": {
+    "target": 116,
+    "catastrophe": 56,
+    "sq": 27
+   },
+   "stale_exit": 0,
+   "BANKNIFTY": {
+    "n": 109,
+    "dte_median": 14.0,
+    "dte_q10_q90": [
+     4.0,
+     27.0
+    ],
+    "short_premium_median": 403.9,
+    "credit_median": 97.9,
+    "credit_rs_median": 3311,
+    "short_delta_median": 0.436,
+    "margin_median": 46605,
+    "margin_r103_median": 50559,
+    "max_loss_rs_median": 6312,
+    "raw_gross_rs": 7291,
+    "index_pts_mean": 10.9,
+    "index_win": 60.6
+   },
+   "NIFTY": {
+    "n": 90,
+    "dte_median": 4.0,
+    "dte_q10_q90": [
+     1.0,
+     6.0
+    ],
+    "short_premium_median": 64.6,
+    "credit_median": 33.8,
+    "credit_rs_median": 2469,
+    "short_delta_median": 0.349,
+    "margin_median": 46824,
+    "margin_r103_median": 48222,
+    "max_loss_rs_median": 8328,
+    "raw_gross_rs": 5673,
+    "index_pts_mean": 6.6,
+    "index_win": 61.1
+   }
+  },
+  "max_concurrent": 3,
+  "random": {
+   "actual": -11679,
+   "random_mean": -12574,
+   "random_sd": 3874,
+   "p_normal": 0.40864821454554723,
+   "p_mc": 0.391304347826087,
+   "random_share_positive": 0.001,
+   "twins_per_trade": 62.845454545454544,
+   "q": 1.0
+  }
+ },
+ "LIQ2-CS": {
+  "signals": 81,
+  "skipped": {
+   "no_strike": 0,
+   "no_fill": 0
+  },
+  "all": {
+   "pooled": {
+    "n": 81,
+    "win": 39.5,
+    "net": -5476,
+    "per_trade": -68,
+    "worst_day": -2476,
+    "max_dd": -7447,
+    "worst_month": -1860,
+    "worst_month_name": "2026-01",
+    "sessions": 47
+   },
+   "BANKNIFTY": {
+    "n": 43,
+    "win": 20.9,
+    "net": -7703,
+    "per_trade": -179,
+    "worst_day": -1249,
+    "max_dd": -8753,
+    "worst_month": -2146,
+    "worst_month_name": "2026-01",
+    "sessions": 34
+   },
+   "NIFTY": {
+    "n": 38,
+    "win": 60.5,
+    "net": 2228,
+    "per_trade": 59,
+    "worst_day": -1424,
+    "max_dd": -1525,
+    "worst_month": -207,
+    "worst_month_name": "2026-02",
+    "sessions": 26
+   },
+   "pooled_roll": {
+    "n": 81,
+    "win": 32.1,
+    "net": -8624,
+    "per_trade": -106,
+    "worst_day": -2567,
+    "max_dd": -9842,
+    "worst_month": -2438,
+    "worst_month_name": "2026-01",
+    "sessions": 47
+   },
+   "pooled_quoted": {
+    "n": 81,
+    "win": 23.5,
+    "net": -20098,
+    "per_trade": -248,
+    "worst_day": -2978,
+    "max_dd": -20938,
+    "worst_month": -4648,
+    "worst_month_name": "2026-01",
+    "sessions": 47
+   },
+   "pooled_stress": {
+    "n": 81,
+    "win": 18.5,
+    "net": -41135,
+    "per_trade": -508,
+    "worst_day": -3731,
+    "max_dd": -41283,
+    "worst_month": -9667,
+    "worst_month_name": "2025-10",
+    "sessions": 47
+   }
+  },
+  "account": {
+   "pooled": {
+    "n": 65,
+    "win": 36.9,
+    "net": -3084,
+    "per_trade": -47,
+    "worst_day": -1424,
+    "max_dd": -5011,
+    "worst_month": -1328,
+    "worst_month_name": "2025-11",
+    "sessions": 47
+   },
+   "BANKNIFTY": {
+    "n": 39,
+    "win": 15.4,
+    "net": -7573,
+    "per_trade": -194,
+    "worst_day": -1249,
+    "max_dd": -8622,
+    "worst_month": -2378,
+    "worst_month_name": "2026-01",
+    "sessions": 30
+   },
+   "NIFTY": {
+    "n": 26,
+    "win": 69.2,
+    "net": 4489,
+    "per_trade": 173,
+    "worst_day": -1424,
+    "max_dd": -1424,
+    "worst_month": -207,
+    "worst_month_name": "2026-02",
+    "sessions": 19
+   },
+   "pooled_roll": {
+    "n": 65,
+    "win": 30.8,
+    "net": -5777,
+    "per_trade": -89,
+    "worst_day": -1435,
+    "max_dd": -7002,
+    "worst_month": -1965,
+    "worst_month_name": "2025-11",
+    "sessions": 47
+   },
+   "pooled_quoted": {
+    "n": 65,
+    "win": 24.6,
+    "net": -15457,
+    "per_trade": -238,
+    "worst_day": -1588,
+    "max_dd": -16297,
+    "worst_month": -4140,
+    "worst_month_name": "2025-11",
+    "sessions": 47
+   },
+   "pooled_stress": {
+    "n": 65,
+    "win": 20.0,
+    "net": -33203,
+    "per_trade": -511,
+    "worst_day": -2086,
+    "max_dd": -33351,
+    "worst_month": -8126,
+    "worst_month_name": "2025-11",
+    "sessions": 47
+   }
+  },
+  "not_taken_margin": 16,
+  "not_taken_margin_r103": 16,
+  "describe": {
+   "exit_mix": {
+    "target": 39,
+    "sq": 25,
+    "catastrophe": 13,
+    "new_level": 4
+   },
+   "stale_exit": 0,
+   "BANKNIFTY": {
+    "n": 43,
+    "dte_median": 19.0,
+    "dte_q10_q90": [
+     8.600000000000001,
+     27.0
+    ],
+    "short_premium_median": 417.9,
+    "credit_median": 99.7,
+    "credit_rs_median": 3243,
+    "short_delta_median": 0.442,
+    "margin_median": 45820,
+    "margin_r103_median": 48972,
+    "max_loss_rs_median": 6266,
+    "raw_gross_rs": 266,
+    "index_pts_mean": 0.1,
+    "index_win": 62.8
+   },
+   "NIFTY": {
+    "n": 38,
+    "dte_median": 5.0,
+    "dte_q10_q90": [
+     4.0,
+     7.0
+    ],
+    "short_premium_median": 80.2,
+    "credit_median": 34.5,
+    "credit_rs_median": 2493,
+    "short_delta_median": 0.371,
+    "margin_median": 47044,
+    "margin_r103_median": 47590,
+    "max_loss_rs_median": 8503,
+    "raw_gross_rs": 7316,
+    "index_pts_mean": 15.9,
+    "index_win": 71.1
+   }
+  },
+  "max_concurrent": 2,
+  "random": {
+   "actual": -3084,
+   "random_mean": -385,
+   "random_sd": 3084,
+   "p_normal": 0.8092587643128245,
+   "p_mc": 0.8370814592703648,
+   "random_share_positive": 0.456,
+   "twins_per_trade": 63.0,
+   "q": 1.0
+  }
+ },
+ "gates": {
+  "R72-CS": {
+   "gates": {
+    "1 net > 0 design / WF / final": false,
+    "2 beats random entries (Monte-Carlo p <= 0.01)": false,
+    "3 BH q <= 0.10 (m = 3915)": false,
+    "4 >= 40 final trades": true,
+    "5 max DD > -40k and no month < -13k (all periods)": false,
+    "6 sign holds under quoted spread": false
+   },
+   "passed": false,
+   "whole": {
+    "n": 395,
+    "win": 46.1,
+    "net": -50919,
+    "per_trade": -129,
+    "worst_day": -1500,
+    "max_dd": -51374,
+    "worst_month": -6259,
+    "worst_month_name": "2025-12",
+    "sessions": 277
+   }
+  },
+  "LIQ2-CS": {
+   "gates": {
+    "1 net > 0 design / WF / final": false,
+    "2 beats random entries (Monte-Carlo p <= 0.01)": false,
+    "3 BH q <= 0.10 (m = 3915)": false,
+    "4 >= 40 final trades": true,
+    "5 max DD > -40k and no month < -13k (all periods)": true,
+    "6 sign holds under quoted spread": false
+   },
+   "passed": false,
+   "whole": {
+    "n": 221,
+    "win": 37.6,
+    "net": -34137,
+    "per_trade": -154,
+    "worst_day": -2362,
+    "max_dd": -35745,
+    "worst_month": -7218,
+    "worst_month_name": "2025-03",
+    "sessions": 152
+   }
+  }
+ },
+ "arms_final": {
+  "R72-arm (1-ITM, XL)": {
+   "r17": {
+    "n": 348,
+    "win": 47.7,
+    "net": 58408,
+    "per_trade": 168,
+    "worst_day": -6495,
+    "max_dd": -25874,
+    "worst_month": -17049,
+    "worst_month_name": "2025-12",
+    "sessions": 89
+   },
+   "quoted": {
+    "n": 348,
+    "win": 42.0,
+    "net": 10680,
+    "per_trade": 31,
+    "worst_day": -7190,
+    "max_dd": -34633,
+    "worst_month": -28269,
+    "worst_month_name": "2025-12",
+    "sessions": 89
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 191,
+     "win": 47.6,
+     "net": 30031,
+     "per_trade": 157,
+     "worst_day": -4697,
+     "max_dd": -17996,
+     "worst_month": -10620,
+     "worst_month_name": "2025-12",
+     "sessions": 89
+    },
+    "NIFTY": {
+     "n": 157,
+     "win": 47.8,
+     "net": 28377,
+     "per_trade": 181,
+     "worst_day": -3713,
+     "max_dd": -12086,
+     "worst_month": -6429,
+     "worst_month_name": "2025-12",
+     "sessions": 73
+    }
+   }
+  },
+  "LIQ-arm 15+5 (ATM)": {
+   "r17": {
+    "n": 441,
+    "win": 47.4,
+    "net": -10204,
+    "per_trade": -23,
+    "worst_day": -10262,
+    "max_dd": -24618,
+    "worst_month": -14876,
+    "worst_month_name": "2026-02",
+    "sessions": 95
+   },
+   "quoted": {
+    "n": 441,
+    "win": 40.1,
+    "net": -67725,
+    "per_trade": -154,
+    "worst_day": -11280,
+    "max_dd": -68072,
+    "worst_month": -25807,
+    "worst_month_name": "2026-02",
+    "sessions": 95
+   },
+   "by_und": {
+    "BANKNIFTY": {
+     "n": 237,
+     "win": 49.4,
+     "net": 274,
+     "per_trade": 1,
+     "worst_day": -7496,
+     "max_dd": -13114,
+     "worst_month": -6785,
+     "worst_month_name": "2026-02",
+     "sessions": 87
+    },
+    "NIFTY": {
+     "n": 204,
+     "win": 45.1,
+     "net": -10478,
+     "per_trade": -51,
+     "worst_day": -4434,
+     "max_dd": -18425,
+     "worst_month": -8091,
+     "worst_month_name": "2026-02",
+     "sessions": 79
+    }
+   }
+  }
+ }
+}
