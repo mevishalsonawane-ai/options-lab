@@ -1,0 +1,2 @@
+day,entry_minute,exit_minute,side,strike,expiry,entry,exit,reason,net,gross,fees,friction,equity
+2026-07-15,780,800,C,24000.0,2026-07-21,178.1,193.05,twenty_minute_exit,596.8306464530783,971.7500000000011,76.28179354692247,298.63756000000035,100596.83064645308

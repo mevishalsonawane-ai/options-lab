@@ -1,0 +1,12 @@
+{
+  "status": "completed_no_qualifying_strategy",
+  "qualifying_historical_policies": [],
+  "demonstrated_65pct_strategy": false,
+  "fresh_holdout": false,
+  "production_changed": false,
+  "orders_placed": false,
+  "models": 3,
+  "outer_folds": 2,
+  "policies": 30,
+  "account_endpoints": 60
+}

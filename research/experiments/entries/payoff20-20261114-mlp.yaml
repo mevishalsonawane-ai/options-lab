@@ -1,0 +1,59 @@
+id: payoff20-20261114-mlp
+title: 'Cost-aware20minute payoff learner: mlp'
+family: ml
+date: '2026-11-14'
+hypothesis: Forecast net option payoff and reject uncertain/cost-negative actions
+  to target65%realized wins
+data_version: NIFTY/INDIAVIX and fixed-strike weekly option lake,2025/2026
+period:
+  design: Earlier sessions with70/15/15fit/validation/calibration
+  holdout: "Apr\u2013Oct2026 chronological reused windows, no pristine holdout"
+instruments:
+- NIFTY
+features:
+- return1
+- return5
+- return15
+- return30
+- vol15
+- atr14
+- ema_gap
+- range
+- body
+- from_open
+- from_session_high
+- from_session_low
+- from_previous_high
+- from_previous_low
+- from_previous_close
+- vix
+- vix_return15
+- time
+- side_sign
+- premium
+- iv
+- delta_abs
+- relative_volume
+- signed_volume_proxy
+- pcr
+- oi_change_balance
+- moneyness
+- dte
+- estimated_cost_fraction
+- expected_move_over_cost
+model_or_rule: mlp;20minute exit/15%initial stop,9fixed confidence/expected-net gates
+settings: research/payoff20/PREREG.md
+prereg: research/payoff20/PREREG.md
+variants_tried: 9
+results:
+  summary: mlp has no forecast reaching60%confidence; all9gate policies take0trades.
+    Candidate AUC 0.5167260039033827. No edge established.
+  costs: Corrected dated fees and assumed spread/slippage; independent double-friction
+    cash/risk replay
+holdout_read: false
+verdict: rejected
+notes: Whole batch30policies,60friction endpoints with jointBH. Missing outcomes mask
+  labels, never forecast rows. Hindsight opportunity diagnostics usefuturedata and
+  are NOT strategies. Save actual executed ledgers, six fitted systems and all31752outer
+  forecasts. No true buyer/seller delta, no production changes or fresh65%proof.
+doc: research/payoff20/results/REPORT.md

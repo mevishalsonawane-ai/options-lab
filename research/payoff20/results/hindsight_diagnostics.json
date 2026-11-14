@@ -1,0 +1,11 @@
+{
+  "nontradable": true,
+  "paired_observed_decisions": 9354,
+  "missing_one_or_both": 5,
+  "actual_best_option_positive_share": 0.7510156082959162,
+  "best_option_mean_net": 608.4476496633739,
+  "either_option_gross_positive_share": 0.9243104554201411,
+  "perfect_endpoint_direction_win_rate": 0.7455070603337612,
+  "perfect_endpoint_direction_mean_net": 587.5029055645062,
+  "note": "Both diagnostics use future outcomes and cannot be traded. Observed paired-quote cohort only; no cash/risk admission or day caps. A selective strategy may exceed this always-on opportunity fraction, so it is not a universal ceiling."
+}

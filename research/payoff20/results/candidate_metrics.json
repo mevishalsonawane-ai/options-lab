@@ -1,0 +1,95 @@
+{
+  "linear": {
+    "samples": 10582,
+    "observed_win_rate": 0.3693063693063693,
+    "auc": 0.5264586002480179,
+    "brier": 0.23320220409432407,
+    "log_loss": 0.6592918870334702,
+    "net_mae": 784.585104023934,
+    "calibration_bins": [
+      {
+        "lower": 0,
+        "upper": 0.4,
+        "samples": 9243,
+        "predicted": 0.36158585341761557,
+        "observed": 0.3667640376501136
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.5,
+        "samples": 1250,
+        "predicted": 0.4304442356985839,
+        "observed": 0.3832
+      },
+      {
+        "lower": 0.5,
+        "upper": 0.6,
+        "samples": 80,
+        "predicted": 0.5287280528626186,
+        "observed": 0.425
+      },
+      {
+        "lower": 0.6,
+        "upper": 0.65,
+        "samples": 6,
+        "predicted": 0.6229729058344019,
+        "observed": 0.5
+      },
+      {
+        "lower": 0.65,
+        "upper": 0.7,
+        "samples": 3,
+        "predicted": 0.6713221587338284,
+        "observed": 0.6666666666666666
+      }
+    ]
+  },
+  "mlp": {
+    "samples": 10582,
+    "observed_win_rate": 0.3693063693063693,
+    "auc": 0.5167260039033827,
+    "brier": 0.23316461625772303,
+    "log_loss": 0.6591015067647389,
+    "net_mae": 774.6203240347428,
+    "calibration_bins": [
+      {
+        "lower": 0,
+        "upper": 0.4,
+        "samples": 8037,
+        "predicted": 0.38104499124287644,
+        "observed": 0.36157770312305587
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.5,
+        "samples": 2545,
+        "predicted": 0.4072914534439636,
+        "observed": 0.393713163064833
+      }
+    ]
+  },
+  "trees": {
+    "samples": 10582,
+    "observed_win_rate": 0.3693063693063693,
+    "auc": 0.5258534125767694,
+    "brier": 0.2330463409727209,
+    "log_loss": 0.6588525645784182,
+    "net_mae": 785.4434505648999,
+    "calibration_bins": [
+      {
+        "lower": 0,
+        "upper": 0.4,
+        "samples": 10395,
+        "predicted": 0.38703678655794305,
+        "observed": 0.37037037037037035
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.5,
+        "samples": 187,
+        "predicted": 0.4099633511380942,
+        "observed": 0.31016042780748665
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "stage": "completed",
+  "errors": [],
+  "updated_at": "2026-11-14T17:46:30.420919+00:00",
+  "architecture": "mlp",
+  "epochs_completed": 19,
+  "validation_loss": 0.8206438422203064,
+  "last_successful_checkpoint": "fold2_mlp.pt",
+  "completed_policies": 30,
+  "total_policies": 30,
+  "demonstrated_65pct_strategy": false
+}

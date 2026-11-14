@@ -1,0 +1,28 @@
+[
+  {
+    "fold": 1,
+    "fit_last_day": "2026-02-09",
+    "validation_start": "2026-02-11",
+    "calibration_start": "2026-03-05",
+    "training_label_cutoff": "2026-03-27 15:30:00+05:30",
+    "evaluation_start": "2026-04-01",
+    "evaluation_last_day": "2026-06-29",
+    "fit_rows": 5679,
+    "validation_rows": 1176,
+    "calibration_rows": 1274,
+    "evaluation_rows": 4606
+  },
+  {
+    "fold": 2,
+    "fit_last_day": "2026-04-16",
+    "validation_start": "2026-04-17",
+    "calibration_start": "2026-05-22",
+    "training_label_cutoff": "2026-06-29 15:30:00+05:30",
+    "evaluation_start": "2026-07-01",
+    "evaluation_last_day": "2026-10-16",
+    "fit_rows": 8913,
+    "validation_rows": 1862,
+    "calibration_rows": 1958,
+    "evaluation_rows": 5978
+  }
+]
