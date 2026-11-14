@@ -1,0 +1,27 @@
+{"stage": "ingestion", "errors": [], "updated_at": "2026-11-14T19:45:41.816465+00:00"}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:07.632173+00:00", "completed": 1, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:07.898896+00:00", "completed": 2, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:08.172995+00:00", "completed": 3, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:08.436181+00:00", "completed": 4, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:08.698255+00:00", "completed": 5, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:08.969299+00:00", "completed": 6, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:09.228745+00:00", "completed": 7, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:09.498967+00:00", "completed": 8, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:09.754254+00:00", "completed": 9, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:10.005811+00:00", "completed": 10, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:10.272244+00:00", "completed": 11, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:46:10.536790+00:00", "completed": 12, "total": 12}
+{"stage": "ingestion", "errors": [], "updated_at": "2026-11-14T19:46:58.926562+00:00", "completed": 12, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:25.440496+00:00", "completed": 1, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:25.702720+00:00", "completed": 2, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:25.970945+00:00", "completed": 3, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:26.247385+00:00", "completed": 4, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:26.523284+00:00", "completed": 5, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:26.795856+00:00", "completed": 6, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:27.051612+00:00", "completed": 7, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:27.311604+00:00", "completed": 8, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:27.569882+00:00", "completed": 9, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:27.830652+00:00", "completed": 10, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:28.093051+00:00", "completed": 11, "total": 12}
+{"stage": "replaying", "errors": [], "updated_at": "2026-11-14T19:47:28.368829+00:00", "completed": 12, "total": 12}
+{"stage": "completed", "errors": [], "updated_at": "2026-11-14T19:47:28.706533+00:00", "completed": 12, "total": 12, "approved_for_trading": false}

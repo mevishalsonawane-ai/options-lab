@@ -1,0 +1,32 @@
+id: exit-economics-20261115
+title: 'Frozen opening retest: exit economics'
+family: trade-management
+date: '2026-11-15'
+doc: research/exit_economics/results/REPORT.md
+hypothesis: Changing exit geometry can retain positive gross edge after costs
+data_version: Previously inspected NIFTY minute index and weekly options lake; audit.json
+  hashes
+period:
+  design: 2025-10-20 through 2026-03-30
+  holdout: Apr-Oct2026 reused chronological windows, not independent
+instruments:
+- NIFTY
+features:
+- opening-range retest
+- completed five-minute trend
+- prior move/cost filter
+model_or_rule: Frozen entries; 3stops x3targets +2holding periods; separate center
+  latency arm
+settings: research/exit_economics/PREREG.md
+prereg: research/exit_economics/PREREG.md
+variants_tried: 11
+results:
+  summary: 24full endpoints:3positive normal,0positive doubled friction.20%stop/10%target:45trades,66.67%wins,net3855.39;stress-3056.36.
+    Both WF selectors NO_TRADE. No qualified historical policy.
+  costs: Unchanged dated fees and modeled friction; independent normal/doubled cash
+    and risk replay
+holdout_read: false
+verdict: rejected
+notes: All history reused. One extra1minute latency arm for original15%stop center,
+  not best20%variant. Post-result matched-entry diagnosis shows trade eligibility
+  explains most improvement.74ledgers preserved; no neural retraining or real orders.

@@ -1,0 +1,22 @@
+{
+  "exploratory": true,
+  "basis": "Post-result matched-entry diagnostic; risk eligibility and subsequent account paths may differ",
+  "groups": {
+    "left_only": {
+      "entries": 11,
+      "original_net": -3970.525631544297,
+      "wider_stop_net": 0.0
+    },
+    "right_only": {
+      "entries": 1,
+      "original_net": 0.0,
+      "wider_stop_net": 289.6382312389676
+    },
+    "both": {
+      "entries": 44,
+      "original_net": 2470.093431383998,
+      "wider_stop_net": 3565.7490916308216
+    }
+  },
+  "net_difference": 5355.819523030086
+}

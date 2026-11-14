@@ -70,6 +70,17 @@ def attribution(ledger):
     return groups
 
 
+def matched_entries(original, wider):
+    keys = ['day', 'entry_minute', 'side', 'strike', 'expiry']
+    joined = original.merge(wider, on=keys, how='outer', suffixes=('_original', '_wider'), indicator=True,
+                            validate='one_to_one')
+    return dict(exploratory=True,
+        basis='Post-result matched-entry diagnostic; risk eligibility and subsequent account paths may differ',
+        groups={str(k):dict(entries=len(g), original_net=float(g.net_original.sum()),
+            wider_stop_net=float(g.net_wider.sum())) for k, g in joined.groupby('_merge', observed=True)},
+        net_difference=float(wider.net.sum()-original.net.sum()))
+
+
 def verify(ledger, summary):
     assert len(ledger) == summary['trades']
     assert int((ledger.net > 0).sum()) == summary['wins']
@@ -92,11 +103,21 @@ def write_report(out, result):
     for policy, delay in [(p, 0) for p in POLICIES]+[(CENTER, 1)]:
         a, b = [rows[name(policy, delay)+f'_x{x}'] for x in (1., 2.)]
         lines.append(f'| {policy[0]:.0%} | {policy[1]:.0%} | {policy[2]} | {delay} | {a["trades"]} | {a["win_rate"]*100:.2f} | {a["gross_profit"]:.2f} | {a["fees"]+a["execution_friction"]:.2f} | {a["net"]:.2f} | {b["net"]:.2f} | {a["profit_factor"] or 0:.2f} | {a["bh_q"]:.3f} |')
-    lines += ['', '## Chronological selection', '',
+    lead = rows[name((.20,.10,20))+'_x1.0']
+    lead_stress = rows[name((.20,.10,20))+'_x2.0']
+    groups = result['matched_entries']['groups']
+    both = groups.get('both', dict(entries=0, original_net=0., wider_stop_net=0.))
+    lines += ['', '## Interpretation', '',
+        f'The 20%stop/10%target policy wins {lead["wins"]} of {lead["trades"]} trades ({lead["win_rate"]:.2%}), net Rs{lead["net"]:.2f}; doubled-friction net Rs{lead_stress["net"]:.2f}. Its Wilson95%win interval is {lead["wilson95"]}, assuming independent trades. This is exploratory history, not evidence that the future win rate is at least65%.',
+        f'Profitable doubled-friction endpoints: {sum(s["net"]>0 for k,s in rows.items() if k.endswith("_x2.0"))} of12. Read all target neighbors above rather than interpreting only the best point.',
+        f'The20%stop also changes risk-budget admission. A post-result comparison against the15%stop/10%target center has {both["entries"]} matching entries: their net changes by Rs{both["wider_stop_net"]-both["original_net"]:.2f}, compared with the whole-account change of Rs{result["matched_entries"]["net_difference"]:.2f}. Differing executed trades contribute to that gap; it cannot be attributed solely to allowing the same positions more room. Full decomposition is below.',
+        'The latency arm tests the original15%center only, not the retrospectively interesting20%stop policy. The profitable boundary of this small grid is not a demonstrated robustness plateau.', '',
+        '## Chronological selection', '',
         'The strict selector uses only preceding dates and retains the original 100-trade and 65%-win thresholds. Historical dates were previously reviewed in other research.', '',
         '```json', json.dumps(result['walk_forward']['decisions'], indent=2), '```', '',
         '## Cost and exit diagnosis for the original center', '',
         '```json', json.dumps(result['center_attribution'], indent=2), '```', '',
+        'Post-result matched-entry diagnostic:', '```json', json.dumps(result['matched_entries'], indent=2), '```', '',
         '## Validation and limitations', '',
         f'Baseline numeric ledger parity: {result["baseline_parity"]}.',
         f'Profitable normal/stress center-grid neighbors: {result["healthy_neighbors"]}/8.',
@@ -171,10 +192,14 @@ def run(lake, out):
         wf_accounts[str(stress)] = P.summarize(d.assign(stress_net=d.net), wf_days)
     qualified = [name(p) for p in POLICIES if R.qualifies(*(accounts[name(p)+f'_x{x}'] for x in (1.,2.)))]
     healthy = sum(all(accounts[name(p)+f'_x{x}']['net'] > 0 for x in (1.,2.)) for p in POLICIES[:9] if p != CENTER)
+    from io import BytesIO
+    wider = pd.read_csv(BytesIO(payloads[name((.20,.10,20))+'_x1.0.csv']))
+    matched = matched_entries(center_ledger, wider)
+    P.dump(out/'matched_entries.json', matched)
     result = dict(audit=audit, accounts=accounts, chronological=folds, training=training,
         walk_forward=dict(decisions=decisions, accounts=wf_accounts), baseline_parity=True,
         center_attribution=attribution(center_ledger), healthy_neighbors=healthy,
-        qualifying_historical=qualified, approved_for_trading=False, fresh_holdout=False)
+        qualifying_historical=qualified, matched_entries=matched, approved_for_trading=False, fresh_holdout=False)
     with zipfile.ZipFile(out/'ledgers.zip', 'w', zipfile.ZIP_DEFLATED) as z:
         for filename, data in sorted(payloads.items()):
             info = zipfile.ZipInfo(filename, (2026,11,15,0,0,0))
