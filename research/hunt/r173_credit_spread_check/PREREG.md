@@ -138,3 +138,53 @@ For every rule, index and period: trades (and not taken: no strike / no fill / m
 day, max drawdown, worst month, exit mix, the real short-leg premium, days to expiry and implied delta (descriptive), the
 margin per spread and the Rs 56k concurrency; the same for the bought-option arms; the parity table; the model
 diagnostics. Sample sizes beside every number.
+
+---
+
+## Amendment B (14 Nov 2026, after R173's results, BEFORE any Amendment B number): enhancements from the files
+
+Boss, 14 Nov: *"On the basis of the file, could we make some changes and enhance it"*. Boss chose all three of: the files'
+entry filters on the arms' BOUGHT options, spread variants on real prices, and an honest explorer page.
+
+Same data, periods (design / walk-forward / final), R17 fills + dated charges, Rs 56k account (for spreads) and pass
+rules as above, unless stated. The final block is a SECOND look (read by R173 and R171): disclosed, weak evidence.
+**New tests: 4 (B1) + 6 (B2) = 10; BH m = 3,915 + 10 = 3,925.** Signal source: the index, for every rule.
+
+### B1. The files' entry filters as SKIP-ONLY filters on the arms' current bought options (4 tests)
+
+Arms as R171 rebuilt them on this release (R72: 1-ITM, XL exits, 1 open / 2 entries a side a day; Liquidity 15+5 ATM),
+re-costed with R17 fills + dated charges. A skipped break still holds its side and counts in the caps (the app's
+convention), so every filtered set is a subset of the arm's trades and the random-skip control is exact.
+
+| id | arm | take the trade only when |
+|---|---|---|
+| B1-F | R72 | FRESH: the same index had no same-side breadth candidate on the 5-minute bar before |
+| B1-T | R72 | TWAP: sign x (index open of the fill minute - mean of the index's 1-minute closes 09:15 .. the minute before) >= 0 |
+| B1-FT | R72 | both |
+| B1-LT | Liquidity 15+5 | the TWAP rule above at the trade's entry minute |
+
+A value that cannot be computed never skips. Pass (on FINAL, all needed): >= 40 kept trades; net a trade above the arm's;
+random-skip p (keep the same number of the arm's final trades at random; finite-population normal approximation, 20,000
+Monte-Carlo draws beside it, Monte-Carlo p > 0.01 fails) with BH q <= 0.10 (m = 3,925); the gain a trade > 0 in DESIGN
+and WALK-FORWARD too and under the quoted spread law; max drawdown and worst month no worse than the arm's. If one
+passed: paper only after Boss's choice; on LIVE it would start in SHADOW behind an off-by-default switch (CLAUDE.md).
+
+### B2. Spread variants on real prices (3 structures x 2 entry rules = 6 tests)
+
+Entries exactly R173's R72-CS and LIQ2-CS entries (and caps, exits, account); only the structure changes:
+
+| id | structure (break up: puts below / calls for the debit; break down: mirrored) |
+|---|---|
+| V1 delta | SELL the OTM strike whose real implied |delta| at the last close before the entry minute is closest to 0.28 (the files' stated delta; Black-76, r = 0, the contract's own expiry); BUY the wing 3 steps further out |
+| V2 wide | SELL ATM -/+ 2 steps (as R173), BUY the wing 6 steps further out (half the cost per unit of protection) |
+| V3 debit | BUY the ATM option in the break direction (call on an up break), SELL the option 3 steps further OTM: a debit spread that profits from the index move, not from decay |
+
+Margin (same approximation): maximum loss x qty + 2% of the short leg's notional (maximum loss = width - credit for a
+credit spread, the debit for a debit spread). Gates exactly R173 section 5 (account trades; random twins of the SAME
+variant; m = 3,925).
+
+### B3. Honest explorer page (no test)
+
+`results/explorer.html`: one self-contained page (no network) with the files' claim, their model on our data, the same
+rules on real prices, the theta share, margin, the arms, B1 and B2. Numbers are copied from the results JSON by a script
+(`r173page.py`), never typed.
