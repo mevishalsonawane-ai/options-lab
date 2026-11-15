@@ -1,0 +1,41 @@
+id: r180-manual-book1-r72x1
+title: 'R180 outside build manual, Book 1 "R72-X1 Breakout": rebuilt exactly as written on real option prices'
+family: patterns-indicators
+date: '2026-11-15'
+doc: research/hunt/r180_dual_book_check/results/report.md
+hypothesis: An outside PDF build manual sent to Boss claims Book 1 "R72-X1 Breakout" made 361 trades, 67.9% wins, Rs 78,504
+  at 1 lot (design 264 / 68.6% / Rs 53,688; holdout 97 / 66.0% / Rs 24,816) on our real 1-minute option prices. Does it reproduce,
+  and does it pass the repo's gates?
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), ending 19 Oct 2026; R51 Amendment A
+  clean stores rebuilt for R180 from 1 Nov 2024 (clean_r180)
+period:
+  design: 2024-11-04..2026-03-31 (the manual's design)
+  holdout: 2026-04-01..2026-10-19 (the manual's holdout; read by R51-R176 before, not clean)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s 5-minute / 1-minute bars (underlying); ATM straddle vs 09:20 as an option-chain filter; no
+  option-chart signal'
+model_or_rule: 5-min Donchian 20 (prior bars) breaks on >= 4 of 5 indices on one bar, initial break of that index only, |C
+  - edge| / ATR14 >= 0.5, ATM straddle above its 09:20 value; ATM option at the next minute's close; -30% premium stop, after
+  +20% keep 50% of the peak gain, out at 60 min or 15:20; one position at a time
+settings: research/hunt/r180_dual_book_check/r180cfg.py; PREREG.md section 2 (every ambiguity and choice)
+prereg: research/hunt/r180_dual_book_check/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Ours: 123 / 51.2% / Rs 23,280 (manual 361 / 67.9% / Rs 78,504); design 93 / 54.8% / Rs 19,655; holdout 30 / 40.0%
+    / Rs 3,625; 2x slippage Rs 20,305; avg win Rs 2,195 / loss -Rs 1,917; worst month -Rs 7,463; max DD -Rs 16,657. Repo fill
+    (next-minute open): 123 / 52.0% / Rs 40,356. Random-entry twin p 0.896 (twin mean Rs 59,723), BH q 1.00 (m = 4,051). Does
+    not reproduce; fails: twin_p, bh_q, hold_n. Post-hoc (not gated): without the undefined initial-breakout lock 350 / 50.9%
+    / Rs 59,503 (design 257 / 51.0% / Rs 12,727, holdout 93 / 50.5% / Rs 46,777), twin p 1.00: the count matches the manual''s
+    361, the win rate does not.'
+  costs: Costs('dated') on both orders, R17 liq fills (stop sales x0.999 - 2x half-spread, gaps at the open), 2x slippage
+    = SLIP2; 1 lot by the lot size in force
+holdout_read: true
+verdict: rejected
+notes: An outside document's claim, rebuilt as written; not reproduced. The manual reuses repo study names (R72 X1, R132 S3-V1-E3)
+  for different rules, and its Book 2 per-index rows add to 425 trades, not 271. Nothing in the app changes.
