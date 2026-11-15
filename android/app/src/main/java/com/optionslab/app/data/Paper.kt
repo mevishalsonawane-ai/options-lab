@@ -331,6 +331,9 @@ object Paper {
             volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = System.currentTimeMillis() to it }
     }
 
+    /** 15 Nov: the start (epoch seconds) of the newest candle [quote] last read for [symbol]; null: none. Memory only ([com.optionslab.ira.PriceNow]). */
+    fun lastCandleSec(symbol: String): Long? = candleBars[symbol]?.second?.lastOrNull()?.epochSecond
+
     /** Today's 1-minute candles per symbol as [quote] last read them (when, bars): the minutes' highs and lows. */
     private val candleBars = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<Upstox.Bar>>>()
 
@@ -549,14 +552,16 @@ object Paper {
      * the order path. Null when the stream has never had the contract.
      */
     data class BookNow(val last: Double?, val bid: Double?, val ask: Double?, val bidQty: Long?, val askQty: Long?,
-                       val bid5: Long?, val ask5: Long?, val ageMs: Long)
+                       val bid5: Long?, val ask5: Long?, val ageMs: Long,
+                       /** 15 Nov: when [last] traded (epoch seconds; null: the packet carries none) - [com.optionslab.ira.PriceNow]. */
+                       val lastTradeSec: Long? = null)
 
     fun bookNow(c: Contract, nowMs: Long = System.currentTimeMillis()): BookNow? = runCatching {
         val token = kiteTokens[c.symbol]?.takeIf { it > 0 } ?: return null
         val seen = KiteStream.seen(token) ?: return null
         val t = seen.tick
         BookNow(t.last.takeIf { it > 0 }, t.bid?.takeIf { it > 0 }, t.ask?.takeIf { it > 0 }, t.bidQty, t.askQty,
-            t.depth?.bidQty, t.depth?.askQty, (nowMs - seen.at).coerceAtLeast(0L))
+            t.depth?.bidQty, t.depth?.askQty, (nowMs - seen.at).coerceAtLeast(0L), t.lastTradeTime?.takeIf { it > 0 })
     }.getOrNull()
 
     /** A paper fill's quote may be this old at most when a newer one can be had ([place], 16 Oct). */
