@@ -1,6 +1,40 @@
 # R177: does the volume-profile "trap" idea (Boss's PDF, Cases 1, 2, 5) help?
 
-## Update: a Rs 1,000 gap under each step (Amendment B, Boss 15 Nov)
+## Update: Rs 1,500 initial stop, up Rs 500 for every Rs 1,000 gain (Amendment C, Boss 15 Nov)
+
+The rule: stop at -Rs 1,500 a lot at entry (where tighter than -15%); for every Rs 1,000 a lot of best profit the stop
+rises Rs 500 a lot: -Rs 1,000 at +Rs 1,000, -Rs 500 at +Rs 2,000, cost at +Rs 3,000, +Rs 500 at +Rs 4,000, ...
+
+**By far the best stop rule tested today, but still below today's rules; it failed the gates.**
+
+Net over the year (today's rules / Rs 1,000 gap rule from Amendment B / **this rule**):
+
+| | 1 lot | 2 lots | 3 lots |
+|---|---|---|---|
+| Liquidity | Rs 1.18 L / Rs 9k / **Rs 78k** | Rs 2.67 L / Rs 52k / **Rs 1.86 L** | Rs 4.16 L / Rs 92k / **Rs 2.94 L** |
+| R72 | Rs 2.98 L / Rs 32k / **Rs 1.79 L** | Rs 7.02 L / Rs 1.72 L / **Rs 4.63 L** | Rs 11.05 L / Rs 3.11 L / **Rs 7.46 L** |
+| R51 | Rs 2.21 L / -Rs 8k / **Rs 1.00 L** | Rs 5.85 L / Rs 1.28 L / **Rs 3.43 L** | Rs 9.47 L / Rs 2.63 L / **Rs 5.83 L** |
+| **All three** | **Rs 6.37 L / Rs 33k / Rs 3.57 L** | **Rs 15.54 L / Rs 3.52 L / Rs 9.92 L** | **Rs 24.67 L / Rs 6.67 L / Rs 16.23 L** |
+
+- **With K1 on top:** Liquidity improves (Rs 78k -> Rs 1.04 L at 1 lot; K1 beat random skips, p 0.02), but R72 and R51
+  get slightly worse; all three together the same (Rs 3.56 L).
+- **With the R151 picker** (R72 + R51), all three at 1 lot: today Rs 7.83 L -> this rule Rs 4.60 L (with K1 Rs 4.70 L).
+- **Liquidity in the most recent months:** this rule beat today's rules in the final period (Rs 11k -> Rs 17k; with K1
+  Rs 27k) and in the last 6 months (Rs 28k -> Rs 29k; with K1 Rs 37k), but lost much more in the early part (Rs 1.14 L ->
+  Rs 67k), so over the year it is behind.
+- **Why it is closer:** the wide first stop rarely triggers (only 20% of trades end on it; about 1 in 5 trades keep the
+  -15% stop because it is tighter), and the slow trail leaves room for big winners: average win Rs 1,721 at 1 lot vs
+  Rs 1,744 today. But the win rate is 41% vs 45% today: the trail still closes some trades that today's rules let recover.
+- **Risk:** worst day, all three at 1 lot, -Rs 54k today -> -Rs 42k. Max drawdown Rs 1.59 L -> Rs 1.93 L; worst month
+  -Rs 1.29 L -> -Rs 99k. Still far past the account stop rule (as today's rules are).
+- Gates: net below today's rules in the early part, final and year on every arm; random-exit twins p = 1.0; BH q = 1.0
+  with 4,012 tests.
+
+**Summary of every rule tested today (all three arms, 1 lot, the year):** today's rules Rs 6.37 L; Rs 500 stop + Rs 500
+gap -Rs 3.23 L; Rs 1,000 stop + Rs 500 gap -Rs 95k; Rs 1,000 stop + Rs 1,000 gap Rs 33k; **Rs 1,500 stop + Rs 500 per
+Rs 1,000 Rs 3.57 L**. The wider and slower the stop, the closer to today's rules; none beat them.
+
+## Earlier update: a Rs 1,000 gap under each step (Amendment B)
 
 You asked to test a Rs 1,000 gap. Same Rs 1,000 a lot entry stop and the same steps (every Rs 500 a lot from +Rs 1,000),
 but the stop sits Rs 1,000 a lot under each step: **cost at +Rs 1,000, +Rs 500 at +Rs 1,500, +Rs 1,000 at +Rs 2,000**.
@@ -606,4 +640,148 @@ In the tables below 'S1k' = SG (Rs 1,000 a lot entry stop; from +Rs 1,000 a lot 
 | All three | B | 3111 | 50% | **Rs 2,632,895** | Rs 5,720 / -Rs 3,932 | -Rs 130,335 | Apr 26 -Rs 61,992 | -Rs 199,852 |
 | All three | B+S1k | 3189 | 41% | **Rs 1,055,221** | Rs 4,416 / -Rs 2,488 | -Rs 68,026 | Apr 26 -Rs 114,573 | -Rs 391,912 |
 | All three | B+K1S | 2974 | 41% | **Rs 1,151,448** | Rs 4,497 / -Rs 2,475 | -Rs 68,026 | Apr 26 -Rs 135,648 | -Rs 410,526 |
+
+
+## Amendment C: Rs 1,500 initial stop, up Rs 500 per Rs 1,000 gain (SC alone, K1SC with K1)
+
+In the tables below 'S1k' = SC (entry stop -Rs 1,500 a lot where tighter than -15%; for every Rs 1,000 a lot of best profit the stop rises Rs 500 a lot: -1,000 at +1,000, -500 at +2,000, cost at +3,000, ...) and 'K1S' = K1SC (K1 + SC). The 'entry stop' exit column is SC's -Rs 1,500 stop. BH m = 4,012.
+
+| arm : rule | passed | passes except account stop | twin p | BH q | q within the 6 | failed gates |
+|---|---|---|---|---|---|---|
+| LIQ:SC | **no** | no | 1.0 | 1.0 | 1.0 | net not above today's rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, six, year |
+| R72:SC | **no** | no | 1.0 | 1.0 | 1.0 | net not above today's rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year |
+| R51:SC | **no** | no | 1.0 | 1.0 | 1.0 | net not above today's rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year |
+| LIQ:K1SC | **no** | no | 0.02 | 1.0 | 0.12 | net not above today's rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, year |
+| R72:K1SC | **no** | no | 0.4351 | 1.0 | 1.0 | net not above today's rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year |
+| R51:K1SC | **no** | no | 0.8523 | 1.0 | 1.0 | net not above today's rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year |
+
+### whole year (20 Oct 2025 - 19 Oct 2026), 1 lot (247 sessions)
+
+| arm | variant | trades | win | net | avg win / avg loss | worst day | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | A | 688 | 39% | **Rs 117,923** | Rs 1,935 / -Rs 968 | -Rs 11,405 | Apr 26 -Rs 37,821 | -Rs 61,062 |
+| Liquidity 15+5 | S1k | 688 | 37% | **Rs 77,921** | Rs 1,796 / -Rs 890 | -Rs 7,926 | Apr 26 -Rs 27,066 | -Rs 75,202 |
+| Liquidity 15+5 | K1S | 592 | 38% | **Rs 103,686** | Rs 1,906 / -Rs 886 | -Rs 7,926 | Apr 26 -Rs 25,303 | -Rs 63,635 |
+| R72 Breadth Donchian | A | 2281 | 46% | **Rs 298,253** | Rs 1,763 / -Rs 1,279 | -Rs 25,837 | Dec 25 -Rs 72,605 | -Rs 86,529 |
+| R72 Breadth Donchian | S1k | 2283 | 42% | **Rs 178,703** | Rs 1,757 / -Rs 1,122 | -Rs 20,909 | Dec 25 -Rs 63,000 | -Rs 71,862 |
+| R72 Breadth Donchian | K1S | 2187 | 42% | **Rs 175,098** | Rs 1,765 / -Rs 1,127 | -Rs 20,909 | Dec 25 -Rs 61,498 | -Rs 81,526 |
+| R72 Breadth Donchian | B | 1062 | 52% | **Rs 371,717** | Rs 2,019 / -Rs 1,449 | -Rs 25,837 | May 26 -Rs 20,632 | -Rs 34,940 |
+| R72 Breadth Donchian | B+S1k | 1063 | 44% | **Rs 242,940** | Rs 2,029 / -Rs 1,198 | -Rs 22,377 | Mar 26 -Rs 17,422 | -Rs 66,516 |
+| R72 Breadth Donchian | B+K1S | 1026 | 44% | **Rs 225,432** | Rs 2,004 / -Rs 1,202 | -Rs 22,377 | Mar 26 -Rs 28,572 | -Rs 80,272 |
+| R51 Donchian 20 + Supertrend | A | 3084 | 45% | **Rs 221,238** | Rs 1,692 / -Rs 1,259 | -Rs 28,942 | Jun 26 -Rs 54,587 | -Rs 94,176 |
+| R51 Donchian 20 + Supertrend | S1k | 3098 | 41% | **Rs 100,137** | Rs 1,678 / -Rs 1,100 | -Rs 20,872 | Feb 26 -Rs 46,350 | -Rs 124,370 |
+| R51 Donchian 20 + Supertrend | K1S | 2999 | 41% | **Rs 77,488** | Rs 1,671 / -Rs 1,096 | -Rs 20,872 | Feb 26 -Rs 57,187 | -Rs 147,022 |
+| R51 Donchian 20 + Supertrend | B | 1361 | 51% | **Rs 293,395** | Rs 1,814 / -Rs 1,438 | -Rs 24,757 | Jun 26 -Rs 22,978 | -Rs 38,799 |
+| R51 Donchian 20 + Supertrend | B+S1k | 1374 | 43% | **Rs 139,546** | Rs 1,777 / -Rs 1,186 | -Rs 15,963 | Mar 26 -Rs 22,906 | -Rs 74,854 |
+| R51 Donchian 20 + Supertrend | B+K1S | 1289 | 43% | **Rs 140,591** | Rs 1,782 / -Rs 1,172 | -Rs 15,963 | Mar 26 -Rs 31,918 | -Rs 83,865 |
+| All three | A | 6053 | 45% | **Rs 637,414** | Rs 1,744 / -Rs 1,230 | -Rs 53,710 | Dec 25 -Rs 129,283 | -Rs 159,077 |
+| All three | S1k | 6069 | 41% | **Rs 356,760** | Rs 1,721 / -Rs 1,083 | -Rs 41,828 | Dec 25 -Rs 99,226 | -Rs 193,355 |
+| All three | K1S | 5778 | 41% | **Rs 356,272** | Rs 1,730 / -Rs 1,085 | -Rs 41,828 | Apr 26 -Rs 97,885 | -Rs 223,089 |
+| All three | B | 3111 | 49% | **Rs 783,034** | Rs 1,910 / -Rs 1,318 | -Rs 43,996 | Apr 26 -Rs 29,430 | -Rs 76,847 |
+| All three | B+S1k | 3125 | 42% | **Rs 460,407** | Rs 1,870 / -Rs 1,119 | -Rs 38,388 | Apr 26 -Rs 53,305 | -Rs 172,332 |
+| All three | B+K1S | 2907 | 43% | **Rs 469,708** | Rs 1,886 / -Rs 1,120 | -Rs 38,388 | Mar 26 -Rs 69,844 | -Rs 187,036 |
+
+### early (20 Oct 2025 - 31 Mar 2026), 1 lot (110 sessions)
+
+| arm | variant | trades | win | net | avg win / avg loss | worst day | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | A | 316 | 42% | **Rs 113,873** | Rs 2,142 / -Rs 935 | -Rs 5,535 | Dec 25 -Rs 4,980 | -Rs 16,913 |
+| Liquidity 15+5 | S1k | 316 | 39% | **Rs 66,452** | Rs 1,892 / -Rs 876 | -Rs 6,918 | Mar 26 -Rs 11,191 | -Rs 25,803 |
+| Liquidity 15+5 | K1S | 278 | 41% | **Rs 82,014** | Rs 2,016 / -Rs 884 | -Rs 5,562 | Mar 26 -Rs 9,354 | -Rs 21,868 |
+| R72 Breadth Donchian | A | 1056 | 47% | **Rs 128,541** | Rs 1,792 / -Rs 1,341 | -Rs 25,837 | Dec 25 -Rs 72,605 | -Rs 86,529 |
+| R72 Breadth Donchian | S1k | 1056 | 41% | **Rs 75,123** | Rs 1,756 / -Rs 1,081 | -Rs 15,720 | Dec 25 -Rs 63,000 | -Rs 71,543 |
+| R72 Breadth Donchian | K1S | 1011 | 41% | **Rs 76,424** | Rs 1,746 / -Rs 1,092 | -Rs 15,720 | Dec 25 -Rs 61,498 | -Rs 66,084 |
+| R72 Breadth Donchian | B | 452 | 55% | **Rs 200,162** | Rs 2,153 / -Rs 1,673 | -Rs 25,837 | Dec 25 -Rs 1,721 | -Rs 34,940 |
+| R72 Breadth Donchian | B+S1k | 451 | 43% | **Rs 114,346** | Rs 2,143 / -Rs 1,199 | -Rs 15,720 | Mar 26 -Rs 17,422 | -Rs 33,779 |
+| R72 Breadth Donchian | B+K1S | 439 | 43% | **Rs 98,148** | Rs 2,094 / -Rs 1,204 | -Rs 15,720 | Mar 26 -Rs 28,572 | -Rs 46,027 |
+| R51 Donchian 20 + Supertrend | A | 1370 | 45% | **Rs 86,280** | Rs 1,744 / -Rs 1,326 | -Rs 28,942 | Dec 25 -Rs 51,699 | -Rs 94,176 |
+| R51 Donchian 20 + Supertrend | S1k | 1377 | 40% | **Rs 35,380** | Rs 1,689 / -Rs 1,091 | -Rs 18,679 | Feb 26 -Rs 46,350 | -Rs 98,375 |
+| R51 Donchian 20 + Supertrend | K1S | 1333 | 40% | **Rs 33,007** | Rs 1,706 / -Rs 1,081 | -Rs 18,679 | Feb 26 -Rs 57,187 | -Rs 107,093 |
+| R51 Donchian 20 + Supertrend | B | 691 | 51% | **Rs 156,237** | Rs 1,905 / -Rs 1,537 | -Rs 24,757 | Dec 25 -Rs 904 | -Rs 29,931 |
+| R51 Donchian 20 + Supertrend | B+S1k | 695 | 43% | **Rs 75,374** | Rs 1,802 / -Rs 1,178 | -Rs 13,692 | Mar 26 -Rs 22,906 | -Rs 34,024 |
+| R51 Donchian 20 + Supertrend | B+K1S | 652 | 42% | **Rs 60,744** | Rs 1,804 / -Rs 1,171 | -Rs 13,692 | Mar 26 -Rs 31,918 | -Rs 43,036 |
+| All three | A | 2742 | 45% | **Rs 328,694** | Rs 1,805 / -Rs 1,284 | -Rs 51,650 | Dec 25 -Rs 129,283 | -Rs 159,077 |
+| All three | S1k | 2749 | 40% | **Rs 176,955** | Rs 1,738 / -Rs 1,062 | -Rs 32,665 | Dec 25 -Rs 99,226 | -Rs 123,159 |
+| All three | K1S | 2622 | 40% | **Rs 191,446** | Rs 1,755 / -Rs 1,065 | -Rs 32,665 | Dec 25 -Rs 78,879 | -Rs 122,285 |
+| All three | B | 1459 | 51% | **Rs 470,271** | Rs 2,032 / -Rs 1,423 | -Rs 43,996 | Dec 25 -Rs 7,604 | -Rs 60,566 |
+| All three | B+S1k | 1462 | 42% | **Rs 256,172** | Rs 1,928 / -Rs 1,115 | -Rs 22,353 | Mar 26 -Rs 51,520 | -Rs 75,837 |
+| All three | B+K1S | 1369 | 42% | **Rs 240,906** | Rs 1,940 / -Rs 1,121 | -Rs 22,894 | Mar 26 -Rs 69,844 | -Rs 94,162 |
+
+### final (1 Apr - 13 Oct 2026), 1 lot (133 sessions)
+
+| arm | variant | trades | win | net | avg win / avg loss | worst day | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | A | 357 | 37% | **Rs 11,155** | Rs 1,762 / -Rs 997 | -Rs 11,405 | Apr 26 -Rs 37,821 | -Rs 61,062 |
+| Liquidity 15+5 | S1k | 357 | 36% | **Rs 17,022** | Rs 1,734 / -Rs 907 | -Rs 7,926 | Apr 26 -Rs 27,066 | -Rs 53,006 |
+| Liquidity 15+5 | K1S | 305 | 37% | **Rs 27,105** | Rs 1,795 / -Rs 901 | -Rs 7,926 | Apr 26 -Rs 25,303 | -Rs 45,375 |
+| R72 Breadth Donchian | A | 1200 | 46% | **Rs 170,336** | Rs 1,748 / -Rs 1,217 | -Rs 22,571 | Jun 26 -Rs 40,908 | -Rs 61,884 |
+| R72 Breadth Donchian | S1k | 1202 | 43% | **Rs 110,694** | Rs 1,766 / -Rs 1,150 | -Rs 20,909 | Jun 26 -Rs 39,230 | -Rs 62,180 |
+| R72 Breadth Donchian | K1S | 1155 | 42% | **Rs 111,013** | Rs 1,791 / -Rs 1,148 | -Rs 20,909 | Jun 26 -Rs 43,141 | -Rs 61,146 |
+| R72 Breadth Donchian | B | 602 | 49% | **Rs 170,735** | Rs 1,920 / -Rs 1,299 | -Rs 21,301 | May 26 -Rs 20,632 | -Rs 31,620 |
+| R72 Breadth Donchian | B+S1k | 604 | 45% | **Rs 136,322** | Rs 1,952 / -Rs 1,189 | -Rs 22,377 | May 26 -Rs 15,304 | -Rs 36,395 |
+| R72 Breadth Donchian | B+K1S | 579 | 45% | **Rs 135,011** | Rs 1,945 / -Rs 1,191 | -Rs 22,377 | May 26 -Rs 18,078 | -Rs 39,001 |
+| R51 Donchian 20 + Supertrend | A | 1668 | 45% | **Rs 131,546** | Rs 1,648 / -Rs 1,197 | -Rs 21,578 | Jun 26 -Rs 54,587 | -Rs 81,683 |
+| R51 Donchian 20 + Supertrend | S1k | 1675 | 41% | **Rs 68,417** | Rs 1,665 / -Rs 1,102 | -Rs 20,872 | Jun 26 -Rs 42,227 | -Rs 65,146 |
+| R51 Donchian 20 + Supertrend | K1S | 1621 | 41% | **Rs 55,392** | Rs 1,642 / -Rs 1,102 | -Rs 20,872 | Jun 26 -Rs 43,371 | -Rs 67,226 |
+| R51 Donchian 20 + Supertrend | B | 652 | 50% | **Rs 143,945** | Rs 1,733 / -Rs 1,320 | -Rs 14,642 | Jun 26 -Rs 22,978 | -Rs 38,799 |
+| R51 Donchian 20 + Supertrend | B+S1k | 661 | 44% | **Rs 79,153** | Rs 1,762 / -Rs 1,180 | -Rs 15,963 | Apr 26 -Rs 18,216 | -Rs 40,830 |
+| R51 Donchian 20 + Supertrend | B+K1S | 620 | 45% | **Rs 93,233** | Rs 1,773 / -Rs 1,160 | -Rs 15,963 | Apr 26 -Rs 20,511 | -Rs 40,830 |
+| All three | A | 3225 | 44% | **Rs 313,037** | Rs 1,697 / -Rs 1,179 | -Rs 53,710 | Jun 26 -Rs 96,444 | -Rs 139,134 |
+| All three | S1k | 3234 | 41% | **Rs 196,133** | Rs 1,710 / -Rs 1,096 | -Rs 41,828 | Jun 26 -Rs 82,824 | -Rs 134,767 |
+| All three | K1S | 3081 | 41% | **Rs 193,510** | Rs 1,713 / -Rs 1,097 | -Rs 41,828 | Apr 26 -Rs 97,885 | -Rs 139,737 |
+| All three | B | 1611 | 47% | **Rs 325,835** | Rs 1,811 / -Rs 1,228 | -Rs 39,870 | Apr 26 -Rs 29,430 | -Rs 68,921 |
+| All three | B+S1k | 1622 | 43% | **Rs 232,497** | Rs 1,832 / -Rs 1,116 | -Rs 38,388 | Apr 26 -Rs 53,305 | -Rs 96,495 |
+| All three | B+K1S | 1504 | 43% | **Rs 255,348** | Rs 1,846 / -Rs 1,113 | -Rs 38,388 | Apr 26 -Rs 61,346 | -Rs 92,874 |
+
+### last 6 months (20 Apr - 19 Oct 2026), 1 lot (126 sessions)
+
+| arm | variant | trades | win | net | avg win / avg loss | worst day | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | A | 346 | 38% | **Rs 28,392** | Rs 1,750 / -Rs 934 | -Rs 11,405 | Oct 26 -Rs 15,384 | -Rs 38,009 |
+| Liquidity 15+5 | S1k | 346 | 37% | **Rs 28,975** | Rs 1,712 / -Rs 872 | -Rs 7,926 | May 26 -Rs 13,794 | -Rs 37,533 |
+| Liquidity 15+5 | K1S | 291 | 37% | **Rs 37,215** | Rs 1,795 / -Rs 856 | -Rs 7,926 | Apr 26 -Rs 9,760 | -Rs 31,865 |
+| R72 Breadth Donchian | A | 1116 | 47% | **Rs 189,980** | Rs 1,717 / -Rs 1,179 | -Rs 22,571 | Jun 26 -Rs 40,908 | -Rs 61,884 |
+| R72 Breadth Donchian | S1k | 1117 | 44% | **Rs 145,124** | Rs 1,731 / -Rs 1,117 | -Rs 19,181 | Jun 26 -Rs 39,230 | -Rs 62,180 |
+| R72 Breadth Donchian | K1S | 1067 | 43% | **Rs 144,028** | Rs 1,758 / -Rs 1,114 | -Rs 15,691 | Jun 26 -Rs 43,141 | -Rs 59,117 |
+| R72 Breadth Donchian | B | 537 | 50% | **Rs 181,614** | Rs 1,862 / -Rs 1,214 | -Rs 17,394 | May 26 -Rs 20,632 | -Rs 31,620 |
+| R72 Breadth Donchian | B+S1k | 537 | 47% | **Rs 148,820** | Rs 1,882 / -Rs 1,142 | -Rs 13,937 | May 26 -Rs 15,304 | -Rs 25,172 |
+| R72 Breadth Donchian | B+K1S | 514 | 47% | **Rs 150,176** | Rs 1,880 / -Rs 1,143 | -Rs 12,849 | May 26 -Rs 18,078 | -Rs 28,827 |
+| R51 Donchian 20 + Supertrend | A | 1584 | 45% | **Rs 148,408** | Rs 1,609 / -Rs 1,166 | -Rs 21,578 | Jun 26 -Rs 54,587 | -Rs 81,683 |
+| R51 Donchian 20 + Supertrend | S1k | 1591 | 42% | **Rs 115,514** | Rs 1,634 / -Rs 1,075 | -Rs 15,977 | Jun 26 -Rs 42,227 | -Rs 65,146 |
+| R51 Donchian 20 + Supertrend | K1S | 1537 | 42% | **Rs 100,215** | Rs 1,609 / -Rs 1,072 | -Rs 15,853 | Jun 26 -Rs 43,371 | -Rs 67,226 |
+| R51 Donchian 20 + Supertrend | B | 598 | 51% | **Rs 147,723** | Rs 1,662 / -Rs 1,236 | -Rs 14,642 | Jun 26 -Rs 22,978 | -Rs 38,799 |
+| R51 Donchian 20 + Supertrend | B+S1k | 607 | 46% | **Rs 101,356** | Rs 1,690 / -Rs 1,128 | -Rs 10,045 | Sep 26 -Rs 14,128 | -Rs 37,043 |
+| R51 Donchian 20 + Supertrend | B+K1S | 565 | 47% | **Rs 117,031** | Rs 1,697 / -Rs 1,099 | -Rs 10,045 | Sep 26 -Rs 11,517 | -Rs 34,728 |
+| All three | A | 3046 | 45% | **Rs 366,780** | Rs 1,664 / -Rs 1,141 | -Rs 53,710 | Jun 26 -Rs 96,444 | -Rs 139,134 |
+| All three | S1k | 3054 | 42% | **Rs 289,613** | Rs 1,678 / -Rs 1,065 | -Rs 39,471 | Jun 26 -Rs 82,824 | -Rs 118,161 |
+| All three | K1S | 2895 | 42% | **Rs 281,459** | Rs 1,682 / -Rs 1,064 | -Rs 39,471 | Jun 26 -Rs 94,046 | -Rs 117,362 |
+| All three | B | 1481 | 48% | **Rs 357,730** | Rs 1,755 / -Rs 1,145 | -Rs 39,870 | Jun 26 -Rs 21,248 | -Rs 59,893 |
+| All three | B+S1k | 1490 | 44% | **Rs 279,150** | Rs 1,768 / -Rs 1,066 | -Rs 26,624 | Jun 26 -Rs 11,358 | -Rs 71,187 |
+| All three | B+K1S | 1370 | 45% | **Rs 304,422** | Rs 1,787 / -Rs 1,056 | -Rs 26,624 | Jun 26 -Rs 19,209 | -Rs 61,752 |
+
+### whole year (20 Oct 2025 - 19 Oct 2026), 3 lots (247 sessions)
+
+| arm | variant | trades | win | net | avg win / avg loss | worst day | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | A | 688 | 41% | **Rs 415,755** | Rs 5,645 / -Rs 2,897 | -Rs 33,486 | Apr 26 -Rs 108,688 | -Rs 175,017 |
+| Liquidity 15+5 | S1k | 688 | 39% | **Rs 294,249** | Rs 5,273 / -Rs 2,645 | -Rs 23,023 | Apr 26 -Rs 76,396 | -Rs 207,153 |
+| Liquidity 15+5 | K1S | 592 | 39% | **Rs 362,887** | Rs 5,610 / -Rs 2,630 | -Rs 23,023 | Apr 26 -Rs 72,093 | -Rs 178,652 |
+| R72 Breadth Donchian | A | 2281 | 47% | **Rs 1,104,831** | Rs 5,312 / -Rs 3,788 | -Rs 76,355 | Dec 25 -Rs 197,761 | -Rs 242,618 |
+| R72 Breadth Donchian | S1k | 2283 | 42% | **Rs 745,984** | Rs 5,286 / -Rs 3,311 | -Rs 61,184 | Dec 25 -Rs 169,025 | -Rs 204,486 |
+| R72 Breadth Donchian | K1S | 2187 | 42% | **Rs 726,204** | Rs 5,311 / -Rs 3,324 | -Rs 61,184 | Dec 25 -Rs 166,302 | -Rs 214,629 |
+| R72 Breadth Donchian | B | 1062 | 53% | **Rs 1,212,701** | Rs 6,072 / -Rs 4,316 | -Rs 76,355 | May 26 -Rs 48,023 | -Rs 100,468 |
+| R72 Breadth Donchian | B+S1k | 1063 | 45% | **Rs 826,492** | Rs 6,075 / -Rs 3,551 | -Rs 65,854 | Mar 26 -Rs 36,970 | -Rs 180,799 |
+| R72 Breadth Donchian | B+K1S | 1026 | 45% | **Rs 770,530** | Rs 6,012 / -Rs 3,559 | -Rs 65,854 | Mar 26 -Rs 70,911 | -Rs 211,380 |
+| R51 Donchian 20 + Supertrend | A | 3084 | 46% | **Rs 946,603** | Rs 5,069 / -Rs 3,746 | -Rs 85,577 | Jun 26 -Rs 138,454 | -Rs 263,933 |
+| R51 Donchian 20 + Supertrend | S1k | 3098 | 42% | **Rs 583,206** | Rs 5,024 / -Rs 3,257 | -Rs 61,113 | Feb 26 -Rs 114,785 | -Rs 314,291 |
+| R51 Donchian 20 + Supertrend | K1S | 2999 | 41% | **Rs 506,263** | Rs 4,998 / -Rs 3,245 | -Rs 61,113 | Feb 26 -Rs 148,128 | -Rs 383,603 |
+| R51 Donchian 20 + Supertrend | B | 1361 | 51% | **Rs 1,004,440** | Rs 5,470 / -Rs 4,274 | -Rs 73,545 | Jun 26 -Rs 62,761 | -Rs 108,826 |
+| R51 Donchian 20 + Supertrend | B+S1k | 1374 | 44% | **Rs 544,131** | Rs 5,342 / -Rs 3,507 | -Rs 46,672 | Mar 26 -Rs 55,283 | -Rs 206,548 |
+| R51 Donchian 20 + Supertrend | B+K1S | 1289 | 44% | **Rs 539,581** | Rs 5,335 / -Rs 3,479 | -Rs 46,672 | Mar 26 -Rs 82,687 | -Rs 233,952 |
+| All three | A | 6053 | 46% | **Rs 2,467,188** | Rs 5,221 / -Rs 3,657 | -Rs 158,555 | Dec 25 -Rs 336,310 | -Rs 432,666 |
+| All three | S1k | 6069 | 42% | **Rs 1,623,439** | Rs 5,151 / -Rs 3,205 | -Rs 122,364 | Dec 25 -Rs 246,133 | -Rs 498,717 |
+| All three | K1S | 5778 | 42% | **Rs 1,595,355** | Rs 5,178 / -Rs 3,209 | -Rs 122,364 | Apr 26 -Rs 250,131 | -Rs 540,085 |
+| All three | B | 3111 | 50% | **Rs 2,632,895** | Rs 5,720 / -Rs 3,932 | -Rs 130,335 | Apr 26 -Rs 61,992 | -Rs 199,852 |
+| All three | B+S1k | 3125 | 43% | **Rs 1,664,872** | Rs 5,588 / -Rs 3,317 | -Rs 112,592 | Apr 26 -Rs 133,396 | -Rs 474,983 |
+| All three | B+K1S | 2907 | 44% | **Rs 1,672,998** | Rs 5,633 / -Rs 3,321 | -Rs 112,592 | Mar 26 -Rs 177,815 | -Rs 520,425 |
 

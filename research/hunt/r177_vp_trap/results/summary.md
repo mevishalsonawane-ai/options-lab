@@ -1,6 +1,40 @@
 # R177: does the volume-profile "trap" idea (Boss's PDF, Cases 1, 2, 5) help?
 
-## Update: a Rs 1,000 gap under each step (Amendment B, Boss 15 Nov)
+## Update: Rs 1,500 initial stop, up Rs 500 for every Rs 1,000 gain (Amendment C, Boss 15 Nov)
+
+The rule: stop at -Rs 1,500 a lot at entry (where tighter than -15%); for every Rs 1,000 a lot of best profit the stop
+rises Rs 500 a lot: -Rs 1,000 at +Rs 1,000, -Rs 500 at +Rs 2,000, cost at +Rs 3,000, +Rs 500 at +Rs 4,000, ...
+
+**By far the best stop rule tested today, but still below today's rules; it failed the gates.**
+
+Net over the year (today's rules / Rs 1,000 gap rule from Amendment B / **this rule**):
+
+| | 1 lot | 2 lots | 3 lots |
+|---|---|---|---|
+| Liquidity | Rs 1.18 L / Rs 9k / **Rs 78k** | Rs 2.67 L / Rs 52k / **Rs 1.86 L** | Rs 4.16 L / Rs 92k / **Rs 2.94 L** |
+| R72 | Rs 2.98 L / Rs 32k / **Rs 1.79 L** | Rs 7.02 L / Rs 1.72 L / **Rs 4.63 L** | Rs 11.05 L / Rs 3.11 L / **Rs 7.46 L** |
+| R51 | Rs 2.21 L / -Rs 8k / **Rs 1.00 L** | Rs 5.85 L / Rs 1.28 L / **Rs 3.43 L** | Rs 9.47 L / Rs 2.63 L / **Rs 5.83 L** |
+| **All three** | **Rs 6.37 L / Rs 33k / Rs 3.57 L** | **Rs 15.54 L / Rs 3.52 L / Rs 9.92 L** | **Rs 24.67 L / Rs 6.67 L / Rs 16.23 L** |
+
+- **With K1 on top:** Liquidity improves (Rs 78k -> Rs 1.04 L at 1 lot; K1 beat random skips, p 0.02), but R72 and R51
+  get slightly worse; all three together the same (Rs 3.56 L).
+- **With the R151 picker** (R72 + R51), all three at 1 lot: today Rs 7.83 L -> this rule Rs 4.60 L (with K1 Rs 4.70 L).
+- **Liquidity in the most recent months:** this rule beat today's rules in the final period (Rs 11k -> Rs 17k; with K1
+  Rs 27k) and in the last 6 months (Rs 28k -> Rs 29k; with K1 Rs 37k), but lost much more in the early part (Rs 1.14 L ->
+  Rs 67k), so over the year it is behind.
+- **Why it is closer:** the wide first stop rarely triggers (only 20% of trades end on it; about 1 in 5 trades keep the
+  -15% stop because it is tighter), and the slow trail leaves room for big winners: average win Rs 1,721 at 1 lot vs
+  Rs 1,744 today. But the win rate is 41% vs 45% today: the trail still closes some trades that today's rules let recover.
+- **Risk:** worst day, all three at 1 lot, -Rs 54k today -> -Rs 42k. Max drawdown Rs 1.59 L -> Rs 1.93 L; worst month
+  -Rs 1.29 L -> -Rs 99k. Still far past the account stop rule (as today's rules are).
+- Gates: net below today's rules in the early part, final and year on every arm; random-exit twins p = 1.0; BH q = 1.0
+  with 4,012 tests.
+
+**Summary of every rule tested today (all three arms, 1 lot, the year):** today's rules Rs 6.37 L; Rs 500 stop + Rs 500
+gap -Rs 3.23 L; Rs 1,000 stop + Rs 500 gap -Rs 95k; Rs 1,000 stop + Rs 1,000 gap Rs 33k; **Rs 1,500 stop + Rs 500 per
+Rs 1,000 Rs 3.57 L**. The wider and slower the stop, the closer to today's rules; none beat them.
+
+## Earlier update: a Rs 1,000 gap under each step (Amendment B)
 
 You asked to test a Rs 1,000 gap. Same Rs 1,000 a lot entry stop and the same steps (every Rs 500 a lot from +Rs 1,000),
 but the stop sits Rs 1,000 a lot under each step: **cost at +Rs 1,000, +Rs 500 at +Rs 1,500, +Rs 1,000 at +Rs 2,000**.

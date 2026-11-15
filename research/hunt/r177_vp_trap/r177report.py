@@ -113,6 +113,25 @@ def build() -> str:
         for per in ("year", "early", "final", "six"):
             out += table(rb, per, 1, va)
         out += table(rb, "year", 3, va)
+    yc = RESULTS / "year_c.json"
+    if yc.exists():
+        rc = json.loads(yc.read_text())
+        dc = json.loads((RESULTS / "decision_c.json").read_text())
+        out.append("\n## Amendment C: Rs 1,500 initial stop, up Rs 500 per Rs 1,000 gain (SC alone, K1SC with K1)\n")
+        out.append("In the tables below 'S1k' = SC (entry stop -Rs 1,500 a lot where tighter than -15%; for every Rs 1,000 a "
+                   "lot of best profit the stop rises Rs 500 a lot: -1,000 at +1,000, -500 at +2,000, cost at +3,000, ...) and "
+                   f"'K1S' = K1SC (K1 + SC). The 'entry stop' exit column is SC's -Rs 1,500 stop. BH m = {dc['_m']['total']:,}.\n")
+        out.append("| arm : rule | passed | passes except account stop | twin p | BH q | q within the 6 | failed gates |"
+                   "\n|---|---|---|---|---|---|---|")
+        for k, g in dc.items():
+            if k == "_m":
+                continue
+            out.append(f"| {k} | {'yes' if g['passed'] else '**no**'} | {'yes' if g['passed_except_account_stop'] else 'no'} | "
+                       f"{g['twin_p']} | {g['q_all']} | {g['q_own']} | {'; '.join(g['fails'])} |")
+        out.append("")
+        for per in ("year", "early", "final", "six"):
+            out += table(rc, per, 1, va)
+        out += table(rc, "year", 3, va)
     return "\n".join(out) + "\n"
 
 

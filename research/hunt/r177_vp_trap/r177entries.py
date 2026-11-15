@@ -106,12 +106,17 @@ def main_a():
 
 
 
-def main_b():
-    """Amendment B's entries: SG (Rs 1,000 gap under each step) and K1SG (K1 + SG)."""
-    r = json.loads((RESULTS / "year_b.json").read_text())
-    d = json.loads((RESULTS / "decision_b.json").read_text())
-    for key, name, title in (("S1k", "SG", "Rs 1,000 a lot stop + Rs 1,000 gap under each Rs 500 step"),
-                             ("K1S", "K1SG", "K1 skip + Rs 1,000 a lot stop + Rs 1,000 gap under each Rs 500 step")):
+def main_b(c: bool = False):
+    """Amendment B's entries: SG (Rs 1,000 gap under each step) and K1SG (K1 + SG); c=True: Amendment C's SC / K1SC
+    (Rs 1,500 initial stop, up Rs 500 per Rs 1,000 gain)."""
+    tag = "c" if c else "b"
+    r = json.loads((RESULTS / f"year_{tag}.json").read_text())
+    d = json.loads((RESULTS / f"decision_{tag}.json").read_text())
+    rules = ((("S1k", "SC", "Rs 1,500 a lot initial stop, up Rs 500 a lot per Rs 1,000 a lot of gain"),
+              ("K1S", "K1SC", "K1 skip + Rs 1,500 a lot initial stop, up Rs 500 a lot per Rs 1,000 a lot of gain")) if c else
+             (("S1k", "SG", "Rs 1,000 a lot stop + Rs 1,000 gap under each Rs 500 step"),
+              ("K1S", "K1SG", "K1 skip + Rs 1,000 a lot stop + Rs 1,000 gap under each Rs 500 step")))
+    for key, name, title in rules:
         parts = []
         for a in ("LIQ", "R72", "R51"):
             A, S = r["year"]["A@1"][a], r["year"][f"{key}@1"][a]
@@ -119,23 +124,25 @@ def main_b():
             parts.append(f"{NAME[a]}: today {rs(A['net'])} -> {S['trades']} trades {rs(S['net'])} (win "
                          f"{100 * S['win']:.0f}%); twin p {g['twin_p']}, BH q {g['q_all']}; failed: {'; '.join(g['fails'])}")
         e = dict(
-            id=f"r177b-{name.lower()}",
-            title=f"R177 Amendment B {name}: {title}, on Liquidity 15+5, R72, R51 (last year)",
+            id=f"r177{tag}-{name.lower()}",
+            title=f"R177 Amendment {tag.upper()} {name}: {title}, on Liquidity 15+5, R72, R51 (last year)",
             family="trade-management",
             date="2026-11-15",
             doc="research/hunt/r177_vp_trap/results/report.md",
-            hypothesis=("Boss (15 Nov): 'Test with 1000 gap on every step' - the step trail with the stop Rs 1,000 a lot "
-                        "under each step (cost at +Rs 1,000 a lot, +Rs 500 at +Rs 1,500, ...)" +
-                        (", on the trades K1 keeps." if name == "K1SG" else ".")),
+            hypothesis=(("Boss (15 Nov): 'initial stoploss at 1500 and increase it by 500 on every 1000 gain' - -Rs 1,000 at "
+                         "+Rs 1,000 a lot, -Rs 500 at +Rs 2,000, cost at +Rs 3,000, ..." if c else
+                         "Boss (15 Nov): 'Test with 1000 gap on every step' - the step trail with the stop Rs 1,000 a lot "
+                         "under each step (cost at +Rs 1,000 a lot, +Rs 500 at +Rs 1,500, ...)") +
+                        (", on the trades K1 keeps." if name.startswith("K1") else ".")),
             data_version=("Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean "
                           "stores built to 19 Oct (R106 clean_post)"),
             period=dict(design="none fitted; early part 2025-10-20..2026-03-31",
                         holdout="2026-04-01..2026-10-13 final (read again, data-led); whole year 2025-10-20..2026-10-19"),
             instruments=["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"],
             features=["signal source: the traded index (entries unchanged" + ("; K1 reads yesterday's TPO value area" if
-                      name == "K1SG" else "") + "); stops on the premium"],
-            model_or_rule=f"{title}; PREREG.md Amendment B",
-            settings="research/hunt/r177_vp_trap/r177study.py run_a(b=True); PREREG.md Amendment B",
+                      name.startswith("K1") else "") + "); stops on the premium"],
+            model_or_rule=f"{title}; PREREG.md Amendment {tag.upper()}",
+            settings=f"research/hunt/r177_vp_trap/r177study.py run_a({'c' if c else 'b'}=True); PREREG.md Amendment {tag.upper()}",
             prereg="research/hunt/r177_vp_trap/PREREG.md",
             variants_tried=2,
             results=dict(summary=" | ".join(parts) + ".",
@@ -145,7 +152,7 @@ def main_b():
             notes=f"BH m = {d['_m']['total']}. Chosen after seeing R176 / R177 on the same year. Nothing in the app changes.",
         )
         (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
-    print("2 entries (Amendment B)")
+    print(f"2 entries (Amendment {tag.upper()})")
 
 
 if __name__ == "__main__":
@@ -154,3 +161,5 @@ if __name__ == "__main__":
         main_a()
     if (RESULTS / "decision_b.json").exists():
         main_b()
+    if (RESULTS / "decision_c.json").exists():
+        main_b(c=True)
