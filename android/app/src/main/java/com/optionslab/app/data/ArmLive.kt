@@ -1835,6 +1835,9 @@ object ArmLive {
         val tok = runCatching { Broker.tokenOf("${p.exchange}:${p.symbol}") }.getOrNull() ?: return true to null
         val long = p.side > 0
         (if (long) KiteStream.lowSince(tok, since.first) else KiteStream.highSince(tok, since.first))?.let { return true to it }
+        // 15 Nov (review): the stream follows the contract and its path holds no trade since the last look - none traded (the path
+        // keeps new trades only, [com.optionslab.ira.PriceNow.newTrade]); no candle read for it.
+        if (KiteStream.freshTick(tok) != null) return true to null
         // The minutes that began after the last look (a minute that began before it may hold prices from before the stop moved).
         val from = since.second - Math.floorMod(since.second, 60_000L) + 60_000L
         if (from > ms) return true to null
@@ -1880,7 +1883,7 @@ object ArmLive {
             // 20 Oct, review: memory only (never the instruments file on a stream look); unknown goes to Zerodha's quote below.
             val tok = runCatching { Broker.tokenKnown(k) }.getOrNull() ?: continue
             val tk = KiteStream.freshTick(tok) ?: continue
-            if (tk.last > 0) out[k] = Broker.Quote(tk.last, tk.bid, tk.ask, tk.open, tk.oi, tk.volume)
+            if (tk.last > 0) out[k] = Broker.stopGuard(Broker.Quote(tk.last, tk.bid, tk.ask, tk.open, tk.oi, tk.volume))   // 15 Nov: [com.optionslab.ira.PriceNow.stopLast]
         }
         val rest = keys.filter { it !in out }
         if (rest.isNotEmpty()) out.putAll(Broker.stopQuotes(rest))

@@ -3116,7 +3116,7 @@ object OrbArms {
         for (k in keys) {
             val tok = runCatching { Broker.tokenOf(k) }.getOrNull() ?: continue
             val tk = KiteStream.freshTick(tok) ?: continue
-            if (tk.last > 0) out[k] = Broker.Quote(tk.last, tk.bid, tk.ask, tk.open, tk.oi, tk.volume)
+            if (tk.last > 0) out[k] = Broker.stopGuard(Broker.Quote(tk.last, tk.bid, tk.ask, tk.open, tk.oi, tk.volume))   // 15 Nov: [com.optionslab.ira.PriceNow.stopLast]
         }
         val rest = keys.filter { it !in out }
         if (rest.isNotEmpty()) out.putAll(Broker.stopQuotes(rest))

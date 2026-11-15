@@ -13,8 +13,10 @@ package com.optionslab.ira
  * So, for a position entered in the minute starting [entryMinuteSec] (epoch seconds):
  *  - a last price counts only when its trade is from that minute or later ([lastCounts]; a packet with no trade time is taken as
  *    before, since nothing can be told);
- *  - a quote with no last price gives its bid only on a sane book ([BookPrice.judge]: both sides, not crossed, tight) ([bookBid]);
+ *  - a quote with no last price gives its bid only on a real two-sided book (both sides, not crossed, no stray bid) ([bookBid]);
  *  - a candle close counts only from a minute at or after the entry minute ([candleCounts]).
+ * The same test guards the stream's price path ([newTrade]: a resting paper stop fills on new trades only), the resting paper stops
+ * themselves ([com.optionslab.app.data.Paper]: held while the only price is not one) and the live stops' quotes ([stopLast]).
  * With none of them there is no price now: the stop is judged again on the next look. The clock's exits (time stop, square-off) and
  * the minutes' own walk are not affected, and a live trade's stop rests at Zerodha as before. Pure: no clock, disk or network.
  */
@@ -40,17 +42,60 @@ object PriceNow {
     fun farFromBook(last: Double?, lastTradeSec: Long?, bid: Double?, ask: Double?): Boolean {
         if (lastTradeSec != null && lastTradeSec > 0) return false
         val l = last?.takeIf { it.isFinite() && it > 0 } ?: return false
-        val v = BookPrice.judge(bid, ask)
-        if (!v.ok) return false
-        val b = v.bid ?: return false; val a = v.ask ?: return false
+        val b = bookBid(bid, ask) ?: return false
+        val a = ask ?: return false
         return l < b * (1 - FAR) || l > a * (1 + FAR)
     }
 
     /** [farFromBook]: a last price this share outside the book is not the price now. */
     const val FAR = 0.10
 
-    /** What a held long is worth on a book with no last price: its [bid], only when the book is sane; null otherwise. */
-    fun bookBid(bid: Double?, ask: Double?): Double? = BookPrice.judge(bid, ask).takeIf { it.ok }?.bid
+    /**
+     * What a held long is worth on a book with no last price: its [bid], when the book is a real two-sided one - both sides there,
+     * not crossed, and the bid within [STRAY] of the ask. Review: wider than an ENTRY's test ([BookPrice.judge], 0.5%) on purpose - a
+     * stop must still act on a wide but real book (95 / 96, or 60 / 66 after a fall); only a stray bid far under the ask (68.70 under
+     * 460.75) is no price. Null otherwise.
+     */
+    fun bookBid(bid: Double?, ask: Double?): Double? {
+        val b = bid?.takeIf { it.isFinite() && it > 0 } ?: return null
+        val a = ask?.takeIf { it.isFinite() && it > 0 } ?: return null
+        return b.takeIf { a >= b && b >= a * (1 - STRAY) }
+    }
+
+    /** [bookBid]: a bid more than this share under the ask is a stray order, not what the option is worth. */
+    const val STRAY = 0.15
+
+    /**
+     * The price a stop, target or lock of a LIVE position is judged on, from a quote's [last], [bid] and [ask] (no trade time is
+     * known there): the last price, unless it lies far outside a sane book ([farFromBook]) - then the book's bid. So an old last
+     * price of a thin option neither sells a live trade nor moves its stop.
+     */
+    fun stopLast(last: Double, bid: Double?, ask: Double?): Double =
+        if (farFromBook(last, null, bid, ask)) bookBid(bid, ask) ?: last else last
+
+    /**
+     * Whether a stream packet's [last] price, traded at [tradeSec] (epoch seconds; null or 0: the packet carries none), is a NEW
+     * trade for the price path a resting stop is filled from - not the same old trade sent again with a changed book. [prevLast] /
+     * [prevTradeSec]: the packet before it ([hadPrev] false: none; or it had no trade time - then only a trade of the last
+     * [RECENT_SEC] before [nowSec] counts, so the first packet of a contract that last traded another day adds nothing). No trade time: taken as before.
+     */
+    fun newTrade(last: Double, tradeSec: Long?, hadPrev: Boolean, prevLast: Double?, prevTradeSec: Long?, nowSec: Long): Boolean {
+        if (!(last.isFinite() && last > 0)) return false
+        if (tradeSec == null || tradeSec <= 0) return true
+        val pt = prevTradeSec?.takeIf { it > 0 }
+        // Nothing to compare with (no packet before, or one with no trade - the option had no last price yet): only a recent trade.
+        if (!hadPrev || pt == null) return tradeSec >= nowSec - RECENT_SEC
+        return tradeSec != pt || prevLast == null || kotlin.math.abs(last - prevLast) > 1e-9
+    }
+
+    /** [newTrade]: how old a contract's first packet's trade may be to count. */
+    const val RECENT_SEC = 120L
+
+    /** A last price traded more than this long before its packet's own stamp is another session's: never a candle ([anotherSession]). */
+    const val SESSION_SEC = 6 * 3600L
+
+    /** Whether a packet stamped [stampSec] carries a last price of another session (its trade at [tradeSec]; null or 0: not known, false). */
+    fun anotherSession(tradeSec: Long?, stampSec: Long): Boolean = tradeSec != null && tradeSec > 0 && tradeSec < stampSec - SESSION_SEC
 
     /** Whether a candle that started at [candleSec] (epoch seconds; null: none known) is from the entry minute or later. */
     fun candleCounts(candleSec: Long?, entryMinuteSec: Long): Boolean = candleSec != null && candleSec >= entryMinuteSec

@@ -238,6 +238,44 @@ class PaperBookPriceTest : RobolectricTest() {
         assertEquals(0, held(c))
     }
 
+    /**
+     * 15 Nov (Boss: "Yes fix those too"; [com.optionslab.ira.PriceNow]): a resting stop waits while its only price is a stray bid of a
+     * wide book or a last price that traded before it rested - and fills on a real trade under it.
+     */
+    @Test fun aRestingStopWaitsOnAStrayBidAndOnAnOldLastPriceAndFillsOnARealTrade() {
+        val (c, token) = fin(24_450, Right.CE, token = 61_000_000L + 24_450 + 100_000)
+        tick(token, 100.0, 99.95, 100.05)
+        assertTrue(buy(c, runBlocking { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) }).ok)
+        assertTrue(runBlocking { Paper.place(c, "SELL", 1, "SL-M", "NRML", null, 90.0) }.ok)
+        // No last price and a stray bid at 20 under an ask of 100: not a price - the stop waits (the mark still reads the bid).
+        tick(token, 0.0, 20.0, 100.0)
+        runBlocking { Paper.tick() }
+        assertEquals(65, held(c))
+        // A last price of 20 that traded yesterday, the book sane at 100: the stop waits.
+        val nowSec = System.currentTimeMillis() / 1000
+        KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 20.0, bid = 99.95, ask = 100.05, exchangeTime = nowSec, lastTradeTime = nowSec - 86_400)))
+        runBlocking { Paper.tick() }
+        assertEquals(65, held(c))
+        assertEquals("the old trade is not in the stream's price path", null, KiteStream.lowSince(token, 0L)?.takeIf { it < 50.0 })
+        // A trade at 88 now: the stop fills.
+        KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 88.0, bid = 87.95, ask = 88.05, exchangeTime = nowSec + 1, lastTradeTime = nowSec + 1)))
+        val events = runBlocking { Paper.tick() }
+        assertEquals("SELL", events.filterIsInstance<SandboxEvent.Fill>().single { it.symbol == c.symbol }.action)
+        assertEquals(0, held(c))
+    }
+
+    /** Review: a wide but real book under the stop still fires it (never held like a stray bid). */
+    @Test fun aRestingStopStillFiresOnAWideButRealBookUnderIt() {
+        val (c, token) = fin(24_400, Right.CE, token = 61_000_000L + 24_400 + 100_000)
+        tick(token, 100.0, 99.95, 100.05)
+        assertTrue(buy(c, runBlocking { Paper.recentQuote(c, Paper.PLACE_REUSE_MS) }).ok)
+        assertTrue(runBlocking { Paper.place(c, "SELL", 1, "SL-M", "NRML", null, 90.0) }.ok)
+        tick(token, 0.0, 60.0, 66.0)
+        val f = runBlocking { Paper.tick() }.filterIsInstance<SandboxEvent.Fill>().single { it.symbol == c.symbol }
+        assertEquals(60.0, f.price, 1e-9)
+        assertEquals(0, held(c))
+    }
+
     @Test fun aMarketExitOfAPositionWithNoLastPriceSellsAtTheBid() {
         val (c, token) = fin(24_250, Right.CE, token = 61_000_000L + 24_250 + 100_000)
         tick(token, 100.0, 99.95, 100.05)

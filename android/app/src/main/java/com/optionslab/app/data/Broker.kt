@@ -1019,15 +1019,21 @@ object Broker {
             tokens[k]?.let { KiteStream.freshTick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) }
         }.toMap()
         val rest = keys.filter { it !in streamed }
-        if (rest.isEmpty()) return streamed
+        if (rest.isEmpty()) return streamed.mapValues { stopGuard(it.value) }
         val read = try { quotesRest(rest) } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             val older = rest.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
             if (streamed.isEmpty() && older.isEmpty()) throw e
             older
         }
-        return streamed + read
+        return (streamed + read).mapValues { stopGuard(it.value) }
     }
+
+    /**
+     * 15 Nov ([com.optionslab.ira.PriceNow.stopLast]): [q] as a stop, target or lock may be judged on it - its last price, or its
+     * book's bid when the last price lies far outside a real two-sided book (an old trade of a thin option). Pure, memory only.
+     */
+    fun stopGuard(q: Quote): Quote = runCatching { q.copy(last = com.optionslab.ira.PriceNow.stopLast(q.last, q.bid, q.ask)) }.getOrDefault(q)
 
     /** Zerodha's quote call itself, never the stream's memory (a paper fill's re-read when no stream tick is 2 s fresh, 16 Oct). */
     suspend fun quotesFresh(keys: List<String>): Map<String, Quote> = if (keys.isEmpty()) emptyMap() else quotesRest(keys)
