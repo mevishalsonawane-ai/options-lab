@@ -209,8 +209,7 @@ object SecurePrefs {
         val gen = generation
         writer.execute {
             val snap = synchronized(this) { if (pending && gen == generation) copyOut(gen) else null } ?: return@execute
-            testAfterCopyOut?.invoke()
-            runCatching { write(snap) }
+            runCatching { testAfterCopyOut?.invoke(); write(snap) }
         }
     }
 
@@ -354,7 +353,8 @@ object SecurePrefs {
         val until = System.currentTimeMillis() + FLUSH_WAIT_MS
         var written = synchronized(ioLock) { writtenSeq >= want }
         while (!written && !writeFailed && System.currentTimeMillis() < until) {
-            Thread.sleep(5)
+            // Interrupted: "not written", so the caller writes it itself (as on a failed write); the interrupt is kept.
+            try { Thread.sleep(5) } catch (_: InterruptedException) { Thread.currentThread().interrupt(); return false }
             written = synchronized(ioLock) { writtenSeq >= want }
         }
         return written && !writeFailed && synchronized(this) { !pending && !lazyDirty } && !SecureBlobs.anyDirty()

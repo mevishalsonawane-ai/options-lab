@@ -18,6 +18,9 @@ import java.util.concurrent.atomic.AtomicReference
 class FlushWaitsForCopiedWriteTest : RobolectricTest() {
     @After fun down() { SecurePrefs.testAfterCopyOut = null }
 
+    // A failed write left by an earlier test would make flush answer "not written" at once: one good write first.
+    @org.junit.Before fun up() { assertTrue(SecurePrefs.writeNow()) }
+
     @Test fun flushWaitsForAWriteAlreadyCopiedOutAndSaysWritten() {
         val copied = CountDownLatch(1)
         val release = CountDownLatch(1)
