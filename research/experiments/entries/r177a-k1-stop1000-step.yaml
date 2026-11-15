@@ -1,0 +1,38 @@
+id: r177a-k1-stop1000-step
+title: 'R177 Amendment A: K1 skip + Rs 1,000 a lot stop + Rs 500 step trail on Liquidity 15+5, R72, R51 (last year)'
+family: trade-management
+date: '2026-11-15'
+doc: research/hunt/r177_vp_trap/results/report.md
+hypothesis: 'Boss (15 Nov): K1''s skip after a failed value-area break, with R176 Amendment B''s stop rule on top (Rs 1,000
+  a lot entry stop; from +Rs 1,000 a lot the stop Rs 500 a lot under each Rs 500 step).'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted; early part 2025-10-20..2026-03-31
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); whole year 2025-10-20..2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the traded index (yesterday''s TPO value area, today''s index closes); stops on the premium'
+model_or_rule: K1 + Rs 1,000 a lot entry stop + Rs 500 step trail; PREREG.md Amendment A
+settings: research/hunt/r177_vp_trap/r177study.py run_a; PREREG.md Amendment A
+prereg: research/hunt/r177_vp_trap/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Liquidity 15+5: today Rs 117,923, stop rule -Rs 3,176, K1 + stop rule 596 trades Rs 16,285; twin p 0.0639, BH
+    q 1.0; failed: not positive in every period; net not above today''s rules (early, final, year); exit-twin BH q 1.00 >
+    0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, year | R72: today Rs 298,253, stop rule
+    -Rs 31,372, K1 + stop rule 2287 trades -Rs 15,498; twin p 0.0958, BH q 1.0; failed: not positive in every period; net
+    not above today''s rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown
+    / -Rs 13k month) in early, final, six, year | R51: today Rs 221,238, stop rule -Rs 60,516, K1 + stop rule 3109 trades
+    -Rs 38,632; twin p 0.0459, BH q 1.0; failed: not positive in every period; net not above today''s rules (early, final,
+    year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six,
+    year.'
+  costs: dated Zerodha charges on the whole quantity; R17 fills (stops sold as stops, gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4000. Chosen after seeing R176 / R177 on the same year. Nothing in the app changes.

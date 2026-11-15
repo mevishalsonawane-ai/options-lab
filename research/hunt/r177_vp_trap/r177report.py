@@ -21,12 +21,12 @@ PER = {"early": "early (20 Oct 2025 - 31 Mar 2026)", "final": "final (1 Apr - 13
        "six": "last 6 months (20 Apr - 19 Oct 2026)", "year": "whole year (20 Oct 2025 - 19 Oct 2026)"}
 
 
-def table(r: dict, per: str, lots: int) -> list:
+def table(r: dict, per: str, lots: int, vars_: tuple = VARS) -> list:
     out = [f"### {PER[per]}, {lots} lot{'s' if lots > 1 else ''} ({r[per]['sessions']} sessions)\n",
            "| arm | variant | trades | win | net | avg win / avg loss | worst day | worst month | max drawdown |",
            "|---|---|---|---|---|---|---|---|---|"]
     for a in ARMS:
-        for v in VARS:
+        for v in vars_:
             if a == "LIQ" and v.startswith("B"):
                 continue
             s = r[per][f"{v}@{lots}"][a]
@@ -75,6 +75,25 @@ def build() -> str:
         for v in ("A", "X1", "X2", "K1"):
             s = r["year"][f"{v}@1"][a]
             out.append(f"| {NAME[a]} | {v} | " + " | ".join(RP.rs(s["months"][m]) for m in months) + f" | {RP.rs(s['net'])} |")
+    ya = RESULTS / "year_a.json"
+    if ya.exists():
+        ra = json.loads(ya.read_text())
+        da = json.loads((RESULTS / "decision_a.json").read_text())
+        va = ("A", "S1k", "K1S", "B", "B+S1k", "B+K1S")
+        out.append("\n## Amendment A: K1 + Rs 1,000 a lot stop + Rs 500 step trail (K1S)\n")
+        out.append("S1k = R176 Amendment B's stop rule alone (reproduced exactly here: " + "; ".join(
+            f"{k} {v['trades']} / {RP.rs(v['net'])}" for k, v in ra["check_s1k"].items() if k.endswith("@1")) + "). "
+            f"K1S = K1's skip plus that stop rule. BH m = {da['_m']['total']:,}.\n")
+        out.append("| arm | passed | passes except account stop | twin p (K1 on top of S1k vs random skips) | BH q | q within "
+                   "the 3 | failed gates |\n|---|---|---|---|---|---|---|")
+        for a in ("LIQ", "R72", "R51"):
+            g = da[a]
+            out.append(f"| {NAME[a]} | {'yes' if g['passed'] else '**no**'} | {'yes' if g['passed_except_account_stop'] else 'no'} | "
+                       f"{g['twin_p']} | {g['q_all']} | {g['q_own']} | {'; '.join(g['fails'])} |")
+        out.append("")
+        for per in ("year", "early", "final", "six"):
+            out += table(ra, per, 1, va)
+        out += table(ra, "year", 3, va)
     return "\n".join(out) + "\n"
 
 

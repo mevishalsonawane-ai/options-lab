@@ -65,5 +65,47 @@ def main():
     print("3 entries")
 
 
+
+
+def main_a():
+    """Amendment A's entry: K1 + the Rs 1,000 stop rule (one entry for the three arms)."""
+    r = json.loads((RESULTS / "year_a.json").read_text())
+    d = json.loads((RESULTS / "decision_a.json").read_text())
+    parts = []
+    for a in ("LIQ", "R72", "R51"):
+        A, S1, K = (r["year"][f"{v}@1"][a] for v in ("A", "S1k", "K1S"))
+        g = d[a]
+        parts.append(f"{NAME[a]}: today {rs(A['net'])}, stop rule {rs(S1['net'])}, K1 + stop rule {K['trades']} trades "
+                     f"{rs(K['net'])}; twin p {g['twin_p']}, BH q {g['q_all']}; failed: {'; '.join(g['fails'])}")
+    e = dict(
+        id="r177a-k1-stop1000-step",
+        title="R177 Amendment A: K1 skip + Rs 1,000 a lot stop + Rs 500 step trail on Liquidity 15+5, R72, R51 (last year)",
+        family="trade-management",
+        date="2026-11-15",
+        doc="research/hunt/r177_vp_trap/results/report.md",
+        hypothesis=("Boss (15 Nov): K1's skip after a failed value-area break, with R176 Amendment B's stop rule on top "
+                    "(Rs 1,000 a lot entry stop; from +Rs 1,000 a lot the stop Rs 500 a lot under each Rs 500 step)."),
+        data_version=("Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean "
+                      "stores built to 19 Oct (R106 clean_post)"),
+        period=dict(design="none fitted; early part 2025-10-20..2026-03-31",
+                    holdout="2026-04-01..2026-10-13 final (read again, data-led); whole year 2025-10-20..2026-10-19"),
+        instruments=["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"],
+        features=["signal source: the traded index (yesterday's TPO value area, today's index closes); stops on the premium"],
+        model_or_rule="K1 + Rs 1,000 a lot entry stop + Rs 500 step trail; PREREG.md Amendment A",
+        settings="research/hunt/r177_vp_trap/r177study.py run_a; PREREG.md Amendment A",
+        prereg="research/hunt/r177_vp_trap/PREREG.md",
+        variants_tried=1,
+        results=dict(summary=" | ".join(parts) + ".",
+                     costs="dated Zerodha charges on the whole quantity; R17 fills (stops sold as stops, gaps at the open)"),
+        holdout_read=True,
+        verdict="rejected",
+        notes=f"BH m = {d['_m']['total']}. Chosen after seeing R176 / R177 on the same year. Nothing in the app changes.",
+    )
+    (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
+    print("1 entry (Amendment A)")
+
+
 if __name__ == "__main__":
     main()
+    if (RESULTS / "decision_a.json").exists():
+        main_a()
