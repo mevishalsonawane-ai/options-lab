@@ -1,6 +1,34 @@
 # R179: a win rate above 55% with profit kept
 
-## Update: a Rs 1,000 maximum loss instead of -15% (Amendment A, Boss 15 Nov)
+## Update: a Rs 1,500 maximum loss a lot (Amendment B, Boss 15 Nov)
+
+Same as the Rs 1,000 test, with the cap at **Rs 1,500 a lot** after charges (used where -15% would lose more).
+
+**In between: about 49% win rate and roughly half to three quarters of today's profit; it failed the gates.** But at 1 lot
+it keeps R72 and R51 inside your -Rs 13k monthly limit for the whole year.
+
+1 lot, whole year (today's rules / picker + breakeven, -15% stop / Rs 1,000 cap / **Rs 1,500 cap**):
+
+| | win rate | net profit | average loss | biggest loss | worst month |
+|---|---|---|---|---|---|
+| R51 | 45.1% / 55.5% / 41.8% / **49.2%** | Rs 2.21 L / Rs 2.50 L / Rs 75k / **Rs 1.30 L** | Rs 1,259 / Rs 1,450 / Rs 972 / **Rs 1,257** | Rs 8,269 / 8,269 / 8,269 / **8,269** | -Rs 55k / -21k / -24k / **-Rs 12k** |
+| R72 | 46.3% / 56.6% / 41.0% / **49.4%** | Rs 2.98 L / Rs 3.25 L / Rs 1.59 L / **Rs 2.29 L** | Rs 1,279 / Rs 1,484 / Rs 958 / **Rs 1,263** | Rs 8,269 / 6,315 / 3,781 / **4,066** | -Rs 73k / -18k / -26k / **-Rs 8k** |
+| Liquidity (no picker) | 39.2% / 41.3% / 36.1% / **39.8%** | Rs 1.18 L / Rs 1.00 L / Rs 78k / **Rs 89k** | Rs 968 / 960 / 782 / **892** | Rs 4,757 / 4,757 / 2,565 / **2,715** | -Rs 38k / -38k / -21k / **-Rs 27k** |
+
+- 3 lots, whole year: R51 Rs 5.23 L (today Rs 9.47 L), R72 Rs 7.93 L (Rs 11.05 L), Liquidity Rs 3.16 L (Rs 4.16 L).
+- Apr - Oct 2026 at 1 lot: R72 49.0% win, Rs 1.37 L (today Rs 1.70 L); R51 49.3%, Rs 82k (Rs 1.32 L).
+- The cap ended about a third of R72 / R51 trades (R51 443 of 1,381); 9% still lost a bit more than Rs 1,500 (stop
+  slippage), and one jumped to -Rs 8,269.
+- Max drawdown at 1 lot: R72 Rs 43k, R51 Rs 59k: still above the Rs 40k limit.
+
+**Choosing between them (R51 at 1 lot, the year):**
+- -15% stop: 55.5% win, Rs 2.50 L, average loss Rs 1,450, worst month -Rs 21k.
+- Rs 1,500 cap: 49.2% win, Rs 1.30 L, average loss Rs 1,257, worst month -Rs 12k.
+- Rs 1,000 cap: 41.8% win, Rs 75k, average loss Rs 972, worst month -Rs 24k.
+The -15% stop is the only one with both 55% and the most money; Rs 1,500 trades about half the profit for smaller
+monthly swings.
+
+## Earlier: Rs 1,000 maximum loss (Amendment A)
 
 You asked for a Rs 1,000 maximum loss on the picker + breakeven rule (and on Liquidity). The stop was set where a trade
 nets -Rs 1,000 after charges and slippage (used wherever -15% would lose more). Same year, same everything else.
@@ -209,12 +237,12 @@ Parity: today's rules on the final = R172's check (LIQ 357 / Rs 11,155; R72 1200
 | R51 Donchian 20 + Supertrend | Rs 1,500 + breakeven | 3104 | 46% | **Rs 473,172** | Rs 4,271 / -Rs 3,338 | -Rs 150,524 | -Rs 367,825 |
 | R51 Donchian 20 + Supertrend | Rs 1,500 + picker + breakeven | 1378 | 49% | **Rs 499,862** | Rs 4,468 / -Rs 3,626 | -Rs 58,259 | -Rs 221,069 |
 
-## Amendment A: Rs 1,000 maximum loss (BH m = 4,040)
+## Amendment A: Rs 1,000 maximum loss a lot (BH m = 4,040)
 
 - R72: win 41% / final 40%, net Rs 158,839 (today Rs 298,253), twin p 1.0; failed: win rate below 55% (year or final); net below its base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in early, final, six, year
 - R51: win 42% / final 41%, net Rs 75,184 (today Rs 221,238), twin p 1.0; failed: win rate below 55% (year or final); net below its base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in early, final, six, year
 
-Cap exits and losses over Rs 1,000: LIQ@1 M1 246 cap exits, 58 trades over Rs 1,000 (worst -Rs 2,565); LIQ@2 M1 240 cap exits, 319 trades over Rs 1,000 (worst -Rs 5,083), M2 454 / 89; LIQ@3 M1 238 cap exits, 355 trades over Rs 1,000 (worst -Rs 7,601), M2 536 / 91; R72@1 M1 546 cap exits, 116 trades over Rs 1,000 (worst -Rs 3,781); R72@2 M1 535 cap exits, 560 trades over Rs 1,000 (worst -Rs 7,516), M2 803 / 122; R72@3 M1 528 cap exits, 566 trades over Rs 1,000 (worst -Rs 11,250), M2 899 / 104; R51@1 M1 688 cap exits, 165 trades over Rs 1,000 (worst -Rs 8,269); R51@2 M1 675 cap exits, 720 trades over Rs 1,000 (worst -Rs 16,492), M2 1038 / 182; R51@3 M1 666 cap exits, 730 trades over Rs 1,000 (worst -Rs 24,714), M2 1169 / 168.
+Cap exits and trades losing more than Rs 1,000 (at 1 lot; at 2-3 lots the count compares with Rs 1,000 for the whole trade): LIQ@1 M1 246 cap exits, 58 over (worst -Rs 2,565); LIQ@2 M1 240 cap exits, 319 over (worst -Rs 5,083), M2 454 / 89; LIQ@3 M1 238 cap exits, 355 over (worst -Rs 7,601), M2 536 / 91; R72@1 M1 546 cap exits, 116 over (worst -Rs 3,781); R72@2 M1 535 cap exits, 560 over (worst -Rs 7,516), M2 803 / 122; R72@3 M1 528 cap exits, 566 over (worst -Rs 11,250), M2 899 / 104; R51@1 M1 688 cap exits, 165 over (worst -Rs 8,269); R51@2 M1 675 cap exits, 720 over (worst -Rs 16,492), M2 1038 / 182; R51@3 M1 666 cap exits, 730 over (worst -Rs 24,714), M2 1169 / 168.
 
 ### Amendment A, year, 1 lot
 
@@ -311,5 +339,96 @@ Cap exits and losses over Rs 1,000: LIQ@1 M1 246 cap exits, 58 trades over Rs 1,
 | R51 Donchian 20 + Supertrend | picker + breakeven (-15%) | 655 | 55% | **Rs 488,815** | Rs 4,622 / -Rs 4,012 | -Rs 17,861 | -Rs 57,548 | -Rs 101,336 |
 | R51 Donchian 20 + Supertrend | + Rs 1,000 a lot cap | 670 | 42% | **Rs 194,540** | Rs 4,652 / -Rs 2,880 | -Rs 12,558 | -Rs 56,079 | -Rs 108,918 |
 | R51 Donchian 20 + Supertrend | + Rs 1,000 a trade cap | 709 | 19% | **Rs 39,590** | Rs 5,070 / -Rs 1,113 | -Rs 11,250 | -Rs 45,647 | -Rs 105,552 |
+
+## Amendment B: Rs 1,500 maximum loss a lot (BH m = 4,042)
+
+- R72: win 49% / final 49%, net Rs 228,612 (today Rs 298,253), twin p 1.0; failed: win rate below 55% (year or final); net below its base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in early, year
+- R51: win 49% / final 49%, net Rs 129,991 (today Rs 221,238), twin p 1.0; failed: win rate below 55% (year or final); net below its base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in early, year
+
+Cap exits and trades losing more than Rs 1,500 (at 1 lot; at 2-3 lots the count compares with Rs 1,500 for the whole trade): LIQ@1 M1 117 cap exits, 29 over (worst -Rs 2,715); LIQ@2 M1 116 cap exits, 221 over (worst -Rs 5,383); LIQ@3 M1 116 cap exits, 281 over (worst -Rs 8,051); R72@1 M1 355 cap exits, 98 over (worst -Rs 4,066); R72@2 M1 348 cap exits, 432 over (worst -Rs 8,084); R72@3 M1 346 cap exits, 455 over (worst -Rs 12,103); R51@1 M1 443 cap exits, 126 over (worst -Rs 8,269); R51@2 M1 434 cap exits, 550 over (worst -Rs 16,492); R51@3 M1 430 cap exits, 595 over (worst -Rs 24,714).
+
+### Amendment B, year, 1 lot
+
+| arm | variant | trades | win | net | avg win / avg loss | biggest loss | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | today's rules | 688 | 39% | **Rs 117,923** | Rs 1,935 / -Rs 968 | -Rs 4,757 | -Rs 37,821 | -Rs 61,062 |
+| Liquidity 15+5 | breakeven (-15%) | 688 | 41% | **Rs 100,222** | Rs 1,718 / -Rs 960 | -Rs 4,757 | -Rs 37,773 | -Rs 67,497 |
+| Liquidity 15+5 | + Rs 1,500 a lot cap | 689 | 40% | **Rs 88,911** | Rs 1,676 / -Rs 892 | -Rs 2,715 | -Rs 27,456 | -Rs 70,490 |
+| R72 Breadth Donchian | today's rules | 2281 | 46% | **Rs 298,253** | Rs 1,763 / -Rs 1,279 | -Rs 8,269 | -Rs 72,605 | -Rs 86,529 |
+| R72 Breadth Donchian | picker + breakeven (-15%) | 1069 | 57% | **Rs 324,629** | Rs 1,675 / -Rs 1,484 | -Rs 6,315 | -Rs 18,110 | -Rs 39,246 |
+| R72 Breadth Donchian | + Rs 1,500 a lot cap | 1068 | 49% | **Rs 228,612** | Rs 1,724 / -Rs 1,263 | -Rs 4,066 | -Rs 8,093 | -Rs 43,414 |
+| R51 Donchian 20 + Supertrend | today's rules | 3084 | 45% | **Rs 221,238** | Rs 1,692 / -Rs 1,259 | -Rs 8,269 | -Rs 54,587 | -Rs 94,176 |
+| R51 Donchian 20 + Supertrend | picker + breakeven (-15%) | 1367 | 55% | **Rs 249,903** | Rs 1,494 / -Rs 1,450 | -Rs 8,269 | -Rs 20,990 | -Rs 36,021 |
+| R51 Donchian 20 + Supertrend | + Rs 1,500 a lot cap | 1381 | 49% | **Rs 129,991** | Rs 1,487 / -Rs 1,257 | -Rs 8,269 | -Rs 12,198 | -Rs 58,810 |
+
+### Amendment B, final, 1 lot
+
+| arm | variant | trades | win | net | avg win / avg loss | biggest loss | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | today's rules | 357 | 37% | **Rs 11,155** | Rs 1,762 / -Rs 997 | -Rs 4,639 | -Rs 37,821 | -Rs 61,062 |
+| Liquidity 15+5 | breakeven (-15%) | 357 | 41% | **Rs 6,432** | Rs 1,442 / -Rs 979 | -Rs 4,639 | -Rs 37,773 | -Rs 67,497 |
+| Liquidity 15+5 | + Rs 1,500 a lot cap | 357 | 40% | **Rs 16,127** | Rs 1,470 / -Rs 896 | -Rs 2,715 | -Rs 27,456 | -Rs 56,901 |
+| R72 Breadth Donchian | today's rules | 1200 | 46% | **Rs 170,336** | Rs 1,748 / -Rs 1,217 | -Rs 6,245 | -Rs 40,908 | -Rs 61,884 |
+| R72 Breadth Donchian | picker + breakeven (-15%) | 604 | 53% | **Rs 167,233** | Rs 1,686 / -Rs 1,343 | -Rs 6,245 | -Rs 18,110 | -Rs 28,832 |
+| R72 Breadth Donchian | + Rs 1,500 a lot cap | 606 | 49% | **Rs 136,680** | Rs 1,728 / -Rs 1,218 | -Rs 3,781 | -Rs 8,093 | -Rs 26,214 |
+| R51 Donchian 20 + Supertrend | today's rules | 1668 | 45% | **Rs 131,546** | Rs 1,648 / -Rs 1,197 | -Rs 5,985 | -Rs 54,587 | -Rs 81,683 |
+| R51 Donchian 20 + Supertrend | picker + breakeven (-15%) | 655 | 55% | **Rs 144,802** | Rs 1,514 / -Rs 1,367 | -Rs 5,985 | -Rs 20,990 | -Rs 36,021 |
+| R51 Donchian 20 + Supertrend | + Rs 1,500 a lot cap | 665 | 49% | **Rs 82,133** | Rs 1,522 / -Rs 1,237 | -Rs 4,218 | -Rs 12,198 | -Rs 36,176 |
+
+### Amendment B, year, 2 lots
+
+| arm | variant | trades | win | net | avg win / avg loss | biggest loss | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | today's rules | 688 | 40% | **Rs 267,232** | Rs 3,817 / -Rs 1,922 | -Rs 9,466 | -Rs 73,218 | -Rs 117,966 |
+| Liquidity 15+5 | breakeven (-15%) | 688 | 42% | **Rs 229,355** | Rs 3,429 / -Rs 1,896 | -Rs 9,466 | -Rs 73,166 | -Rs 129,762 |
+| Liquidity 15+5 | + Rs 1,500 a lot cap | 689 | 40% | **Rs 203,999** | Rs 3,344 / -Rs 1,766 | -Rs 5,383 | -Rs 53,926 | -Rs 134,344 |
+| R72 Breadth Donchian | today's rules | 2281 | 47% | **Rs 702,143** | Rs 3,542 / -Rs 2,530 | -Rs 16,492 | -Rs 135,116 | -Rs 164,515 |
+| R72 Breadth Donchian | picker + breakeven (-15%) | 1069 | 56% | **Rs 705,964** | Rs 3,415 / -Rs 2,918 | -Rs 12,607 | -Rs 29,768 | -Rs 76,475 |
+| R72 Breadth Donchian | + Rs 1,500 a lot cap | 1068 | 50% | **Rs 514,699** | Rs 3,504 / -Rs 2,496 | -Rs 8,084 | -Rs 11,577 | -Rs 80,745 |
+| R51 Donchian 20 + Supertrend | today's rules | 3084 | 46% | **Rs 584,762** | Rs 3,386 / -Rs 2,499 | -Rs 16,492 | -Rs 96,531 | -Rs 179,011 |
+| R51 Donchian 20 + Supertrend | picker + breakeven (-15%) | 1366 | 55% | **Rs 573,818** | Rs 3,068 / -Rs 2,842 | -Rs 16,492 | -Rs 39,356 | -Rs 68,758 |
+| R51 Donchian 20 + Supertrend | + Rs 1,500 a lot cap | 1380 | 49% | **Rs 333,688** | Rs 3,052 / -Rs 2,472 | -Rs 16,492 | -Rs 22,746 | -Rs 103,292 |
+
+### Amendment B, final, 2 lots
+
+| arm | variant | trades | win | net | avg win / avg loss | biggest loss | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | today's rules | 357 | 38% | **Rs 38,639** | Rs 3,467 / -Rs 1,983 | -Rs 9,231 | -Rs 73,218 | -Rs 117,966 |
+| Liquidity 15+5 | breakeven (-15%) | 357 | 41% | **Rs 27,139** | Rs 2,902 / -Rs 1,925 | -Rs 9,231 | -Rs 73,166 | -Rs 129,762 |
+| Liquidity 15+5 | + Rs 1,500 a lot cap | 357 | 40% | **Rs 43,424** | Rs 2,958 / -Rs 1,774 | -Rs 5,383 | -Rs 53,926 | -Rs 110,634 |
+| R72 Breadth Donchian | today's rules | 1200 | 46% | **Rs 396,251** | Rs 3,511 / -Rs 2,406 | -Rs 12,468 | -Rs 72,639 | -Rs 111,087 |
+| R72 Breadth Donchian | picker + breakeven (-15%) | 604 | 53% | **Rs 360,278** | Rs 3,424 / -Rs 2,632 | -Rs 12,468 | -Rs 29,768 | -Rs 55,485 |
+| R72 Breadth Donchian | + Rs 1,500 a lot cap | 605 | 49% | **Rs 300,003** | Rs 3,500 / -Rs 2,401 | -Rs 7,516 | -Rs 11,577 | -Rs 51,913 |
+| R51 Donchian 20 + Supertrend | today's rules | 1668 | 46% | **Rs 340,059** | Rs 3,294 / -Rs 2,376 | -Rs 11,923 | -Rs 96,531 | -Rs 145,608 |
+| R51 Donchian 20 + Supertrend | picker + breakeven (-15%) | 655 | 55% | **Rs 316,989** | Rs 3,077 / -Rs 2,681 | -Rs 11,923 | -Rs 39,356 | -Rs 68,758 |
+| R51 Donchian 20 + Supertrend | + Rs 1,500 a lot cap | 665 | 49% | **Rs 186,764** | Rs 3,093 / -Rs 2,439 | -Rs 8,388 | -Rs 22,746 | -Rs 70,849 |
+
+### Amendment B, year, 3 lots
+
+| arm | variant | trades | win | net | avg win / avg loss | biggest loss | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | today's rules | 688 | 41% | **Rs 415,755** | Rs 5,645 / -Rs 2,897 | -Rs 14,175 | -Rs 108,688 | -Rs 175,017 |
+| Liquidity 15+5 | breakeven (-15%) | 688 | 42% | **Rs 358,180** | Rs 5,092 / -Rs 2,850 | -Rs 14,175 | -Rs 108,636 | -Rs 192,193 |
+| Liquidity 15+5 | + Rs 1,500 a lot cap | 689 | 41% | **Rs 316,137** | Rs 4,964 / -Rs 2,663 | -Rs 8,051 | -Rs 82,070 | -Rs 200,520 |
+| R72 Breadth Donchian | today's rules | 2281 | 47% | **Rs 1,104,831** | Rs 5,312 / -Rs 3,788 | -Rs 24,714 | -Rs 197,761 | -Rs 242,618 |
+| R72 Breadth Donchian | picker + breakeven (-15%) | 1069 | 57% | **Rs 1,080,773** | Rs 5,116 / -Rs 4,383 | -Rs 18,887 | -Rs 41,504 | -Rs 113,728 |
+| R72 Breadth Donchian | + Rs 1,500 a lot cap | 1068 | 50% | **Rs 792,556** | Rs 5,233 / -Rs 3,766 | -Rs 12,103 | -Rs 15,140 | -Rs 120,707 |
+| R51 Donchian 20 + Supertrend | today's rules | 3084 | 46% | **Rs 946,603** | Rs 5,069 / -Rs 3,746 | -Rs 24,714 | -Rs 138,454 | -Rs 263,933 |
+| R51 Donchian 20 + Supertrend | picker + breakeven (-15%) | 1366 | 56% | **Rs 887,796** | Rs 4,590 / -Rs 4,276 | -Rs 24,714 | -Rs 57,548 | -Rs 101,336 |
+| R51 Donchian 20 + Supertrend | + Rs 1,500 a lot cap | 1380 | 50% | **Rs 523,165** | Rs 4,555 / -Rs 3,736 | -Rs 24,714 | -Rs 35,752 | -Rs 157,020 |
+
+### Amendment B, final, 3 lots
+
+| arm | variant | trades | win | net | avg win / avg loss | biggest loss | worst month | max drawdown |
+|---|---|---|---|---|---|---|---|---|
+| Liquidity 15+5 | today's rules | 357 | 39% | **Rs 65,610** | Rs 5,147 / -Rs 2,981 | -Rs 13,824 | -Rs 108,688 | -Rs 175,017 |
+| Liquidity 15+5 | breakeven (-15%) | 357 | 42% | **Rs 47,831** | Rs 4,314 / -Rs 2,895 | -Rs 13,824 | -Rs 108,636 | -Rs 192,193 |
+| Liquidity 15+5 | + Rs 1,500 a lot cap | 357 | 41% | **Rs 69,270** | Rs 4,395 / -Rs 2,679 | -Rs 8,051 | -Rs 82,070 | -Rs 166,061 |
+| R72 Breadth Donchian | today's rules | 1200 | 46% | **Rs 621,770** | Rs 5,260 / -Rs 3,603 | -Rs 18,678 | -Rs 104,488 | -Rs 160,424 |
+| R72 Breadth Donchian | picker + breakeven (-15%) | 604 | 54% | **Rs 553,161** | Rs 5,124 / -Rs 3,953 | -Rs 18,678 | -Rs 41,504 | -Rs 82,019 |
+| R72 Breadth Donchian | + Rs 1,500 a lot cap | 605 | 50% | **Rs 464,717** | Rs 5,229 / -Rs 3,620 | -Rs 11,250 | -Rs 15,140 | -Rs 78,876 |
+| R51 Donchian 20 + Supertrend | today's rules | 1668 | 46% | **Rs 547,916** | Rs 4,911 / -Rs 3,573 | -Rs 17,861 | -Rs 138,454 | -Rs 209,599 |
+| R51 Donchian 20 + Supertrend | picker + breakeven (-15%) | 655 | 55% | **Rs 488,815** | Rs 4,622 / -Rs 4,012 | -Rs 17,861 | -Rs 57,548 | -Rs 101,336 |
+| R51 Donchian 20 + Supertrend | + Rs 1,500 a lot cap | 665 | 49% | **Rs 294,034** | Rs 4,641 / -Rs 3,669 | -Rs 12,558 | -Rs 35,752 | -Rs 108,527 |
 
 Signal source: the index (entries; the picker's features). Costs: dated Zerodha charges, R17 slippage.

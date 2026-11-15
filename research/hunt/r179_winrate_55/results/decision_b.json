@@ -1,0 +1,41 @@
+{
+ "R72": {
+  "passed": false,
+  "fails": [
+   "win rate below 55% (year or final)",
+   "net below its base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in early, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "win_year": 0.4944,
+  "win_final": 0.4901,
+  "net_year": 228612,
+  "base_net_year": 298253
+ },
+ "R51": {
+  "passed": false,
+  "fails": [
+   "win rate below 55% (year or final)",
+   "net below its base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in early, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "win_year": 0.4924,
+  "win_final": 0.4932,
+  "net_year": 129991,
+  "base_net_year": 221238
+ },
+ "_m": {
+  "tests": 2,
+  "prior": 4040,
+  "total": 4042
+ }
+}

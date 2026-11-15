@@ -17,7 +17,7 @@ instruments:
 - SENSEX
 features:
 - 'signal source: the index (entries; R151 picker features); stop on the premium'
-model_or_rule: Rs 1,000 net stop (a lot, and per trade at 2-3 lots) where tighter than -15%, on R151 picker + R162 BE10
+model_or_rule: Rs 1,000 net stop a lot (and per trade at 2-3 lots) where tighter than -15%, on R151 picker + R162 BE10
 settings: research/hunt/r179_winrate_55/r179study.py run_a; PREREG.md Amendment A
 prereg: research/hunt/r179_winrate_55/PREREG.md
 variants_tried: 2

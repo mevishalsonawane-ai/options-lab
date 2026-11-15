@@ -1,6 +1,34 @@
 # R179: a win rate above 55% with profit kept
 
-## Update: a Rs 1,000 maximum loss instead of -15% (Amendment A, Boss 15 Nov)
+## Update: a Rs 1,500 maximum loss a lot (Amendment B, Boss 15 Nov)
+
+Same as the Rs 1,000 test, with the cap at **Rs 1,500 a lot** after charges (used where -15% would lose more).
+
+**In between: about 49% win rate and roughly half to three quarters of today's profit; it failed the gates.** But at 1 lot
+it keeps R72 and R51 inside your -Rs 13k monthly limit for the whole year.
+
+1 lot, whole year (today's rules / picker + breakeven, -15% stop / Rs 1,000 cap / **Rs 1,500 cap**):
+
+| | win rate | net profit | average loss | biggest loss | worst month |
+|---|---|---|---|---|---|
+| R51 | 45.1% / 55.5% / 41.8% / **49.2%** | Rs 2.21 L / Rs 2.50 L / Rs 75k / **Rs 1.30 L** | Rs 1,259 / Rs 1,450 / Rs 972 / **Rs 1,257** | Rs 8,269 / 8,269 / 8,269 / **8,269** | -Rs 55k / -21k / -24k / **-Rs 12k** |
+| R72 | 46.3% / 56.6% / 41.0% / **49.4%** | Rs 2.98 L / Rs 3.25 L / Rs 1.59 L / **Rs 2.29 L** | Rs 1,279 / Rs 1,484 / Rs 958 / **Rs 1,263** | Rs 8,269 / 6,315 / 3,781 / **4,066** | -Rs 73k / -18k / -26k / **-Rs 8k** |
+| Liquidity (no picker) | 39.2% / 41.3% / 36.1% / **39.8%** | Rs 1.18 L / Rs 1.00 L / Rs 78k / **Rs 89k** | Rs 968 / 960 / 782 / **892** | Rs 4,757 / 4,757 / 2,565 / **2,715** | -Rs 38k / -38k / -21k / **-Rs 27k** |
+
+- 3 lots, whole year: R51 Rs 5.23 L (today Rs 9.47 L), R72 Rs 7.93 L (Rs 11.05 L), Liquidity Rs 3.16 L (Rs 4.16 L).
+- Apr - Oct 2026 at 1 lot: R72 49.0% win, Rs 1.37 L (today Rs 1.70 L); R51 49.3%, Rs 82k (Rs 1.32 L).
+- The cap ended about a third of R72 / R51 trades (R51 443 of 1,381); 9% still lost a bit more than Rs 1,500 (stop
+  slippage), and one jumped to -Rs 8,269.
+- Max drawdown at 1 lot: R72 Rs 43k, R51 Rs 59k: still above the Rs 40k limit.
+
+**Choosing between them (R51 at 1 lot, the year):**
+- -15% stop: 55.5% win, Rs 2.50 L, average loss Rs 1,450, worst month -Rs 21k.
+- Rs 1,500 cap: 49.2% win, Rs 1.30 L, average loss Rs 1,257, worst month -Rs 12k.
+- Rs 1,000 cap: 41.8% win, Rs 75k, average loss Rs 972, worst month -Rs 24k.
+The -15% stop is the only one with both 55% and the most money; Rs 1,500 trades about half the profit for smaller
+monthly swings.
+
+## Earlier: Rs 1,000 maximum loss (Amendment A)
 
 You asked for a Rs 1,000 maximum loss on the picker + breakeven rule (and on Liquidity). The stop was set where a trade
 nets -Rs 1,000 after charges and slippage (used wherever -15% would lose more). Same year, same everything else.
