@@ -344,7 +344,7 @@ object Protections {
                 }
                 // Review: Zerodha's answer lost - the GTT may exist. Nothing else is placed beside it: the watch's next look finds it
                 // (and keeps it) or rests it then.
-                DayGtt.Unknown -> {
+                DayGtt.Unknown, DayGtt.Wait -> {
                     val item = fresh.copy(note = DAY_GTT)
                     list += item; save(list)
                     return@withLock "$symbol: Zerodha's answer to the GTT was lost. The app looks for it and rests the stop and target on " +
@@ -557,11 +557,26 @@ object Protections {
      * put back, on what is held less every exit fill the positions do not show yet. Only when Kite's positions do not give the
      * day's quantity (that guard cannot work) does the put-back wait, for [EXIT_DONE_MS] (the market's clock).
      */
-    fun exitFilledFor(ids: Collection<String>) {
+    fun exitFilledFor(ids: Collection<String>, exits: Map<String, Int> = emptyMap()) {
         val now = nowMs()
         exitFilled.entries.removeIf { now - it.value > EXIT_DONE_MS }
-        ids.forEach { exitFilled[it] = now }
+        exitOrders.keys.retainAll(exitFilled.keys)
+        ids.forEach { exitFilled[it] = now; exitOrders[it] = exits }
     }
+
+    /** 15 Nov, review (F1): Boss's exit orders (id to quantity filled) for each taken-over id said filled ([exitFilledFor]). */
+    private val exitOrders = java.util.concurrent.ConcurrentHashMap<String, Map<String, Int>>()
+
+    /**
+     * 15 Nov, review (F1): Boss's exit orders the order book must show COMPLETE, with their quantity filled, before a stop taken
+     * over by [ids] is put back - only within [EXIT_DONE_MS] of the fill (after that, as before: the lag guard alone). Null: none.
+     */
+    private fun mustShowFor(ids: Collection<String>): Map<String, Int>? =
+        ids.filter { exitDone(it) }.flatMap { exitOrders[it].orEmpty().entries }.associate { it.key to it.value }.takeIf { it.isNotEmpty() }
+
+    /** 15 Nov, review (F1): whether the order book [book] shows every one of [must] COMPLETE with its quantity filled. */
+    private fun bookShows(book: Collection<Broker.OrderRow>, must: Map<String, Int>?): Boolean =
+        must.isNullOrEmpty() || must.all { (id, q) -> book.any { it.id == id && it.status == "COMPLETE" && it.filled >= q } }
 
     private val exitFilled = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private const val EXIT_DONE_MS = 120_000L
@@ -828,21 +843,27 @@ object Protections {
      * exit sent from here. [p] as a day GTT under a new id; null when it was not placed (the books or the price not read, nothing
      * left to cover, Zerodha refused it): the caller places the two DAY orders instead.
      */
-    private suspend fun restDayGtt(p: Item, net0: Int, lagSafe: Boolean = false): DayGtt =
-        ExitCoordinator.turn(p.exchange, p.symbol, "protection") { restDayGttInTurn(p, net0, lagSafe) }
+    private suspend fun restDayGtt(p: Item, net0: Int, lagSafe: Boolean = false, mustShow: Map<String, Int>? = null): DayGtt =
+        ExitCoordinator.turn(p.exchange, p.symbol, "protection") { restDayGttInTurn(p, net0, lagSafe, mustShow) }
 
     /**
      * [restDayGtt]'s outcome. [Refused]: nothing was sent, or Zerodha said no (the caller may rest the two DAY orders). [Unknown]:
      * the books not read, or the GTT's answer lost and not found in the list (it may exist): the caller places NOTHING else this look.
      */
-    private sealed class DayGtt { class Placed(val item: Item) : DayGtt(); object Refused : DayGtt(); object Unknown : DayGtt() }
+    private sealed class DayGtt { class Placed(val item: Item) : DayGtt(); object Refused : DayGtt(); object Unknown : DayGtt()
+        /** 15 Nov, review (F2): nothing sent, nothing known to be wrong - asked again next look, no try used up. */
+        object Wait : DayGtt() }
 
-    private suspend fun restDayGttInTurn(p: Item, net0: Int, lagSafe: Boolean = false): DayGtt {
+    private suspend fun restDayGttInTurn(p: Item, net0: Int, lagSafe: Boolean = false, mustShow: Map<String, Int>? = null): DayGtt {
         val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
         val gtts = runCatching { ExitCoordinator.gtts(p.exchange, p.symbol, "protection") }.getOrNull() ?: return DayGtt.Unknown
         val orders = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, "protection") }.getOrNull() ?: return DayGtt.Unknown
+        // Review (F1): Boss's exit said filled in full but the order book just read does not show it yet: asked again next look.
+        if (!bookShows(orders, mustShow)) return DayGtt.Wait
         val net = heldAgain(p, orders, lagSafe) ?: return DayGtt.Unknown
-        if (net == 0 || net.sign() != net0.sign()) return DayGtt.Refused
+        // Review (F2): put back after Boss's exit, nothing left held once the fills the positions trail are counted: asked again
+        // next look (never a refusal, which would give up the one-GTT route for good).
+        if (net == 0 || net.sign() != net0.sign()) return if (lagSafe) DayGtt.Wait else DayGtt.Refused
         // Review: a two-leg GTT of this protection's own that went through but was never recorded (a lost reply) is adopted, as
         // [restOvernightInTurn] does - never one another protection already records.
         val recorded = cache.orEmpty().mapNotNull { it.gttId }.toSet()
@@ -859,7 +880,8 @@ object Protections {
         // 15 Nov: a sibling slice's orders and GTT are not "another exit": its units come off what is held instead ([othersBusy]).
         val busy = othersBusy(p, side, orders, gtts, emptyList())
         // Review (R3): a sibling set seconds ago that the books do not show yet: nothing this look (its answer is asked again).
-        if (siblingCoverKnown(p, orders, gtts) == null) return DayGtt.Unknown
+        // (F3: it waits even when there is room - so, if that sibling was refused, this one can then cover all of it.)
+        if (siblingCoverKnown(p, orders, gtts) == null) return DayGtt.Wait
         val qty = com.optionslab.engine.risk.ExitQty.sendable((abs(net) - siblingCover(p, orders, gtts)).coerceAtLeast(0), busy, abs(p.qty), p.lotSize)
         if (qty <= 0) return DayGtt.Refused
         val last = lastPrice(p, stream = false) ?: return DayGtt.Refused
@@ -926,7 +948,7 @@ object Protections {
             // marked until it is placed, so every try is made the same careful way.
             if (!closed && takenOver.containsKey("gtt:$gid")) {
                 if (ArmLive.handsOffNow(p.exchange, p.symbol) || (exitDone("gtt:$gid") && !dayQtyKnown(p))) return p
-                val next = placeDayExits(p.copy(gttId = null), net, lagSafe = true)
+                val next = placeDayExits(p.copy(gttId = null), net, lagSafe = true, mustShow = mustShowFor(listOf("gtt:$gid")))
                 if (next.active && next.gttId == null && next.stopOrderId == null && next.targetOrderId == null) return p
                 takenOver.remove("gtt:$gid")
                 runCatching { Diag.record("protection", "${p.symbol}: its GTT was deleted for your exit and the position is still held ($net): placed again") }
@@ -1039,21 +1061,24 @@ object Protections {
      * looked for and tried again on the next, at most [GTT_TRIES] looks, then the two orders. Off: the two orders ([restAgain]) in
      * market hours. Out of hours with nothing placed: kept, and tried again on the next look.
      */
-    private suspend fun placeDayExits(p: Item, net: Int, ordersNow: Boolean = false, lagSafe: Boolean = false): Item {
+    private suspend fun placeDayExits(p: Item, net: Int, ordersNow: Boolean = false, lagSafe: Boolean = false,
+                                      mustShow: Map<String, Int>? = null): Item {
         if (net == 0 || net.sign() != p.qty.sign()) return p.copy(active = false, note = "position closed")
         val cover = p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)))
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (asked again next look,
         // without using up a GTT try).
         if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p.copy(qty = cover.qty)
         if (!ordersNow && dayOco(cover) && (gttTries[p.id] ?: 0) < GTT_TRIES) {
-            when (val r = restDayGtt(cover, net, lagSafe)) {
+            when (val r = restDayGtt(cover, net, lagSafe, mustShow)) {
                 is DayGtt.Placed -> return r.item
                 DayGtt.Unknown -> { gttTries[p.id] = (gttTries[p.id] ?: 0) + 1; return p.copy(qty = cover.qty) }
+                DayGtt.Wait -> return p.copy(qty = cover.qty)
                 DayGtt.Refused -> gttTries[p.id] = GTT_TRIES
             }
         }
         if (!marketOpen(p.exchange)) return p.copy(qty = cover.qty)
-        val next = restAgain(cover.copy(note = ""), net, said = "its stop and target rest at Zerodha as two orders again", lagSafe = lagSafe)
+        val next = restAgain(cover.copy(note = ""), net, said = "its stop and target rest at Zerodha as two orders again", lagSafe = lagSafe,
+            mustShow = mustShow)
             ?: run {
                 unprotected("${p.symbol}: its stop could not be placed at Zerodha. The position is NOT protected: set the protection again.")
                 return p.copy(active = false, note = "stop not placed")
@@ -1068,12 +1093,14 @@ object Protections {
      * [p]'s stop and target placed again at their levels (an earlier day's DAY orders ended): the protection carried on under
      * a new id (today's: [cancelOrders] knows its orders are today's). Null when the stop could not be placed (the caller says so).
      */
-    private suspend fun restAgain(p0: Item, net0: Int = p0.qty, said: String? = null, lagSafe: Boolean = false): Item? =
+    private suspend fun restAgain(p0: Item, net0: Int = p0.qty, said: String? = null, lagSafe: Boolean = false,
+                                  mustShow: Map<String, Int>? = null): Item? =
         // 20 Oct, enhancement round 2: read and placed in the contract's one exit turn ([ExitCoordinator]), as [restOvernight].
-        ExitCoordinator.turn(p0.exchange, p0.symbol, "protection") { restAgainInTurn(p0, net0, said, lagSafe) }
+        ExitCoordinator.turn(p0.exchange, p0.symbol, "protection") { restAgainInTurn(p0, net0, said, lagSafe, mustShow) }
 
     /** [said]: what the owner is told once they are placed (21 Oct, round 4: the day GTT switched off); null: the next session's words. */
-    private suspend fun restAgainInTurn(p00: Item, net0: Int, said: String? = null, lagSafe: Boolean = false): Item? {
+    private suspend fun restAgainInTurn(p00: Item, net0: Int, said: String? = null, lagSafe: Boolean = false,
+                                        mustShow: Map<String, Int>? = null): Item? {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (asked again next look).
         if (ArmLive.handsOffNow(p00.exchange, p00.symbol)) return p00
         val side = if (p00.qty > 0) Kite.Side.SELL else Kite.Side.BUY
@@ -1091,6 +1118,9 @@ object Protections {
         }.getOrNull() ?: return p00                                       // the books not read: asked again next look
         // 20 Oct, enhancement round 2: what is held read again AFTER the books (an exit that filled since the caller's read shows
         // here, not as still held with nothing on its way out); never more than the caller saw.
+        // Review (F1): Boss's exit said filled in full but the order book just read does not show it yet (the app learns a fill
+        // from Zerodha's stream before its order book shows it): asked again next look, so the lag guard has the fill to count.
+        if (!bookShows(book, mustShow)) return p00
         val again = heldAgain(p00, book, lagSafe) ?: return p00
         if (again == 0 || again.sign() != net0.sign()) return p00         // closed meanwhile: the next look ends it
         val net = if (abs(again) < abs(net0)) again else net0
@@ -1098,6 +1128,7 @@ object Protections {
         // 15 Nov: a position protected in slices ([protectSliced]): what the other slices cover is not this one's to cover again.
         // Review (R3): a sibling set seconds ago that the books do not show yet: nothing placed or ended this look; the next look,
         // with books that show it (or show it refused), decides. Never two slices for the same units, never one ended for nothing.
+        // (F3: it waits even when there is room - so, if that sibling was refused, this one can then cover all of it.)
         if (siblingCoverKnown(p00, book, gttBook) == null) return p00
         val sib = siblingCover(p00, book, gttBook)
         val room = (abs(net) - sib).coerceAtLeast(0)
@@ -1387,7 +1418,7 @@ object Protections {
             }
             val back = restAgain(p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty))), net,
                 said = "its stop${if (p.target != null) " and target" else ""} rest at Zerodha again (the app had cancelled them for your exit, " +
-                    "and the position is still held)", lagSafe = true)
+                    "and the position is still held)", lagSafe = true, mustShow = mustShowFor(listOfNotNull(p.stopOrderId, p.targetOrderId)))
             if (back == null) {
                 unprotected("${p.symbol}: its stop was cancelled for your exit, which did not close the position, and it could not be placed " +
                     "again. The position is NOT protected: set a stop yourself.")
@@ -1463,7 +1494,7 @@ object Protections {
                 if (dayOco(again)) when (val r = restDayGtt(again, net)) {
                     is DayGtt.Placed -> return r.item
                     // Review: its answer lost (it may exist): nothing else placed; the next look finds it or rests it.
-                    DayGtt.Unknown -> return again.copy(stopOrderId = null, targetOrderId = null, note = DAY_GTT)
+                    DayGtt.Unknown, DayGtt.Wait -> return again.copy(stopOrderId = null, targetOrderId = null, note = DAY_GTT)
                     DayGtt.Refused -> refused = true
                 }
                 restAgain(again, net)?.let {
@@ -1602,7 +1633,7 @@ object Protections {
         // files, a set-aside copy included. Never takes [lock] and never reads the vault.
         wipeGen++
         cache = null; activeHint = null; autoHint = false; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap()
-        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L; takenOver.clear(); exitFilled.clear()
+        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L; takenOver.clear(); exitFilled.clear(); exitOrders.clear()
         runCatching { gttTries.clear() }
         filesForErase().forEach { runCatching { it.delete() } }
     }
@@ -1619,5 +1650,8 @@ object Protections {
     }
 
     /** TEST ONLY: memory forgotten (the file kept), as after a restart: the next look reads the file. */
+    /** TEST ONLY: the one-GTT tries used by protection [id] ([GTT_TRIES]). */
+    internal fun gttTriesForTest(id: Long): Int = gttTries[id] ?: 0
+
     internal fun forgetMemoryForTest() { cache = null; gttTries.clear(); synchronized(this) { lastId = 0L } }
 }

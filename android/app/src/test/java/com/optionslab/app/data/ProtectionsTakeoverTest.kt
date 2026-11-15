@@ -319,4 +319,62 @@ class ProtectionsTakeoverTest : RobolectricTest() {
         assertTrue("never a stop on a flat account", kite.placed.isEmpty())
         assertFalse(Alerts.posted.any { it.text.contains("cancelled by you") })
     }
+
+    // ---- 15 Nov, fourth review: the order book trails Boss's fill too (the app heard it from Zerodha's stream first) ---------------
+
+    private fun bossSells(qty: Int, bookTrails: Int, positionsTrail: Int): String = runBlocking {
+        kite.trailReads = bookTrails                                        // his order missing from the next order-book reads
+        kite.positionsTrailReads = positionsTrail
+        Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, 75, "NRML", "LIMIT", 99.95,
+            0.05, "NFO", "manual"), exit = true)
+    }
+
+    /** F1: the book and the positions both trail his sale of all of it: nothing placed; the book catching up, the lag guard: still nothing. */
+    @Test fun aSaleTheOrderBookDoesNotShowYetGetsNoStop() {
+        val p = protect()
+        takeOver(p)
+        later()
+        val boss = bossSells(150, bookTrails = 2, positionsTrail = 1_000)
+        Protections.exitFilledFor(listOfNotNull(p.stopOrderId, p.targetOrderId), mapOf(boss to 150))
+        kite.requests.clear()
+        tick()
+        assertTrue("the book does not show his fill yet: nothing", kite.placed.isEmpty())
+        repeat(3) { tick() }
+        assertTrue("the book shows it, the positions still trail: the lag guard counts it sold", kite.placed.isEmpty())
+        assertEquals(p.id, runBlocking { Protections.active() }.single().id)
+    }
+
+    /** F1: part of it still held: its stop comes back once the order book shows his fill, for what is left only. */
+    @Test fun aPartStillHeldGetsItsStopOnceTheBookShowsTheFill() {
+        val p = protect()
+        takeOver(p)
+        later()
+        val boss = bossSells(75, bookTrails = 2, positionsTrail = 0)
+        Protections.exitFilledFor(listOfNotNull(p.stopOrderId, p.targetOrderId), mapOf(boss to 75))
+        kite.requests.clear()
+        tick()
+        assertTrue("waits a look for the book", kite.placed.isEmpty())
+        repeat(3) { tick() }
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals(listOf("75", "75"), kite.placed.map { it.form["quantity"] })
+    }
+
+    /** F2: a day GTT deleted for an exit, nothing held once the trailing fill is counted: asked again, no one-GTT try used up. */
+    @Test fun aDayGttPutBackWithNothingHeldUsesNoTry() {
+        DayOco.resetForTest(on = true)
+        try {
+            runBlocking { Protections.protectLive(sym, "NFO", "NRML", 150, 100.0, 90.0, null, 130.0) }
+            val p = runBlocking { Protections.active() }.single()
+            val gid = p.gttId!!
+            Protections.noteTakenOver(listOf("gtt:$gid"))
+            runBlocking { Broker.deleteGtt(gid) }
+            later()
+            bossSells(150, bookTrails = 0, positionsTrail = 1_000)
+            kite.requests.clear()
+            tick()
+            assertTrue(kite.placed.isEmpty() && kite.gtts.isEmpty())
+            assertEquals("the one-GTT route kept", 0, Protections.gttTriesForTest(p.id))
+            assertTrue("still marked", Protections.takenOverForTest("gtt:$gid"))
+        } finally { DayOco.resetForTest() }
+    }
 }
