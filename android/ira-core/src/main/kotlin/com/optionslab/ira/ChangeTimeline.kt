@@ -15,6 +15,9 @@ import java.util.Locale
  * back only through its own PIN flow) is listed and left. Pure: the app reads the agents' books and does the undos.
  */
 object ChangeTimeline {
+    /** Who a forward-test bar's switch-off is said to be by ([AutoChange.byForwardBar]). */
+    const val FORWARD_BAR_AGENT = "Forward-test bar (automatic)"
+
     enum class Source(val agent: String) {
         AUTOPILOT("Autopilot"), SPECIALISTS("Specialists' tuning"), LAB("Strategy lab"), HEALTH("Health tuner"), FINDING("Agent"),
     }
@@ -82,7 +85,10 @@ object ChangeTimeline {
             Item("ap:${e.id}", if (tuning) Source.SPECIALISTS else Source.AUTOPILOT, e.atMs,
                 // Boss's own changes (13 Oct: the park, the Liquidity paper trail), logged here so each can be undone in one tap:
                 // said as Boss's, not Autopilot's.
-                if (tuning) Source.SPECIALISTS.agent else if (AutoChange.bossOwn(c.kind)) "You (logged by Autopilot)" else "Autopilot · ${c.kind.agent}",
+                // 15 Nov (Boss's diagnostics: R51 on 2 Nov and R72 on 4 Nov read "You"): an arm its own forward-test bar switched off
+                // is said as that, not as Boss's (its undo rules stay Boss's: [own]).
+                if (tuning) Source.SPECIALISTS.agent else if (AutoChange.byForwardBar(c)) FORWARD_BAR_AGENT
+                    else if (AutoChange.bossOwn(c.kind)) "You (logged by Autopilot)" else "Autopilot · ${c.kind.agent}",
                 "${c.what}: ${c.from} → ${c.to}", c.reason, state, c.scope.words, e.id, own = AutoChange.bossOwn(c.kind))
         }
 

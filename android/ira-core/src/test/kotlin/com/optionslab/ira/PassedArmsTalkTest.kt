@@ -162,6 +162,15 @@ class PassedArmsTalkTest {
         assertEquals("Solo 2.0's switch (paper)", off.what)
         // Its undo is the arm back on: a paper raise, Boss's tap, no PIN.
         assertEquals(AutoChange.ON, AutoChange.inverse(off, "").to)
+        // 15 Nov: the timeline says who switched it off - its forward-test bar, not Boss; Boss's own flips stay "You".
+        assertTrue(AutoChange.byForwardBar(off)); assertFalse(AutoChange.byForwardBar(on))
+        val day = java.time.LocalDate.of(2026, 11, 2)
+        val (b1, e1) = AutoChange.record(AutoChange.Book(), off, AutoChange.Status.KEPT, 1_000L, day)
+        val (b2, e2) = AutoChange.record(b1, on, AutoChange.Status.KEPT, 2_000L, day, by = "your choice")
+        val items = ChangeTimeline.fromAutopilot(b2, day)
+        assertEquals(ChangeTimeline.FORWARD_BAR_AGENT, items.single { it.key == e1.id }.agent)
+        assertEquals("You (logged by Autopilot)", items.single { it.key == e2.id }.agent)
+        assertTrue(items.single { it.key == e1.id }.own, "its undo rules stay Boss's")
     }
 
     /** 19 Oct (Boss: "Yes, keep only breadth donchain"): record only is said by Jarvis, and its change-log entry is paper, Boss's, no PIN. */

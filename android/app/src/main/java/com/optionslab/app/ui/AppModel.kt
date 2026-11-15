@@ -1098,7 +1098,19 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
         for (r in rest) runCatching { b.cancel(r.id, r.variety) }
         // The cancels confirmed (or the check that follows sees what still works and says so).
-        repeat(10) { if (resting(runCatching { b.orders() }.getOrDefault(emptyList())).none { r -> rest.any { it.id == r.id } }) return Took.Cleared; kotlinx.coroutines.delay(300) }
+        // 15 Nov (Boss's diagnostics, 6 Nov: a stop cancelled and about 11 minutes with none at Zerodha): a FAILED read of the order
+        // book is not a confirmation - only a book that was read and no longer shows them is. Not confirmed after the tries: the check
+        // that follows reads the book again and refuses the leg with what still works.
+        // (Review: bounded - two failed reads in a row end the wait, so a dead connection never holds the exit for long.)
+        var failed = 0
+        for (k in 0 until 10) {
+            val rows = runCatching { b.orders() }.getOrNull()
+            if (rows != null && resting(rows).none { r -> rest.any { it.id == r.id } }) return Took.Cleared
+            failed = if (rows == null) failed + 1 else 0
+            if (failed >= 2) break
+            kotlinx.coroutines.delay(300)
+        }
+        runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: the cancel of its resting exits could not be confirmed (the order book did not answer); checked again before the leg goes") }
         return Took.Cleared
     }
 
