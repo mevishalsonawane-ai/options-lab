@@ -53,7 +53,7 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
  * The built-in arms on Home's Strategies card: ORB, ORB Fresh, ORB Sweep, Range Fade (un-retired by Boss on 07 Oct, on
  * paper), the Hero arm and Liquidity 15+5, each with its switch, what the arm is doing now, a waiting approval, and a tap
  * for the day's detail (with the four's 2021–2026 record, as information). New entries follow the Paper/Live switch; in
- * Live arming takes the PIN and each entry not cleared for Zerodha is approved with it. An open position shows the account
+ * Live arming takes the PIN (15 Nov: not Liquidity 15+5's - its switch clears it) and each entry not cleared for Zerodha is approved with it. An open position shows the account
  * it is in. Under the rows, the research shadows (no orders) and the tap for their records.
  */
 @Composable
@@ -74,6 +74,7 @@ fun OrbRows(model: AppModel) {
             override fun lots(n: Int) { model.liquidityLots(n) }
             override fun unpark(index: String) { model.unparkLiquidity(index) }
             override fun reenableLiquidityLive(pinConfirmed: Boolean) { model.reenableLiquidityLive(pinConfirmed) }
+            override fun liftLiquidityPark(pinConfirmed: Boolean) { model.liftLiquidityPark(pinConfirmed) }
             override fun firstLiveWatched(on: Boolean) { model.liquidityWatched(on) }
         },
         reauth = { why, onOk, onCancel -> if (why == null) Reauth(model, onOk = onOk, onCancel = onCancel) else Reauth(model, onOk = onOk, onCancel = onCancel, why = why) },
@@ -102,9 +103,19 @@ internal interface OrbActions {
     fun unpark(index: String) {}
     /** Liquidity BANKNIFTY's live entries re-enabled after its stop rule ([OrbArms.reenableLiquidityLive]): only after the PIN. */
     fun reenableLiquidityLive(pinConfirmed: Boolean) {}
+    /** 15 Nov: Liquidity's self-review park to paper lifted ([OrbArms.liftLiquidityPark]): only after the PIN. */
+    fun liftLiquidityPark(pinConfirmed: Boolean) {}
     /** Boss's "first live trade watched" tick on the go-live checklist. */
     fun firstLiveWatched(on: Boolean) {}
 }
+
+/** 15 Nov: Liquidity's badges in Live when its entries go to paper: parked to paper, or not switched on by Boss himself on Home. */
+internal const val LIQ_PARKED_BADGE = "ARMED · PARKED TO PAPER"
+internal const val LIQ_PAUSED_BADGE = "ARMED · PAUSED BY ITS REVIEW"
+internal const val LIQ_PAPER_BADGE = "ARMED · PAPER UNTIL YOU SWITCH IT ON"
+
+/** 15 Nov: the button that lifts Liquidity's self-review park to paper (its PIN asked first). */
+internal const val LIFT_PARK = "Lift its review's park or pause (PIN)"
 
 /** The ORB rows from the arms' [view] and callbacks; [reauth] is the PIN prompt ([Reauth] in the app), with its reason or the default. */
 @Composable
@@ -138,6 +149,8 @@ internal fun OrbRowsContent(
     var lotsConfirm by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     // Liquidity BANKNIFTY's live entries re-enabled after its stop rule: the PIN first, always.
     var reenableAuth by remember { mutableStateOf(false) }
+    // 15 Nov: Liquidity's self-review park to paper lifted: the PIN first, always.
+    var liftAuth by remember { mutableStateOf(false) }
 
     // Switching an arm on, by its switch or by the parked arm's tap (13 Oct): the same flow either way - the Hero arm's own
     // confirmation, a paper-only arm at once, any other the automatic / approve choice (and the PIN in Live).
@@ -171,7 +184,13 @@ internal fun OrbRowsContent(
                         // 30 Oct (Boss: "dont keep any in paper only"): these trade live through their own Trade live switch (the mirror).
                         a.armed && a.arm.hero -> "ARMED · PAPER + ITS LIVE SWITCH" to p.amber
                         a.armed && a.arm.paperOnly -> "ARMED · AUTO · PAPER + ITS LIVE SWITCH" to p.verdigris
+                        // 15 Nov: Liquidity in Live but on paper - its live entries parked to paper, or not switched on by Boss himself on
+                        // Home; cleared but its park not read yet (the first moments after a start): said neutrally, never "switch it on".
+                        a.armed && a.arm.liquidity && live && a.reviewPaused -> LIQ_PAUSED_BADGE to p.amber
+                        a.armed && a.arm.liquidity && live && a.reviewParked -> LIQ_PARKED_BADGE to p.amber
                         a.armed && live && a.liveOk -> "ARMED · LIVE · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.oxblood
+                        a.armed && a.arm.liquidity && live && !a.cleared -> LIQ_PAPER_BADGE to p.amber
+                        a.armed && a.arm.liquidity && live -> "ARMED · LIVE · CHECKING ITS PARK" to p.amber
                         a.armed && live -> "ARMED · LIVE · APPROVE (re-arm for auto)" to p.oxblood
                         a.armed -> "ARMED · PAPER · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.verdigris
                         // 30 Oct (Boss): off never buys; it runs in shadow (would-be trades recorded).
@@ -185,6 +204,15 @@ internal fun OrbRowsContent(
                 if (a.test?.stopped == true) RowBadge("LIVE ENTRIES STOPPED · PAPER", p.oxblood, Modifier.padding(top = 2.dp))
                 Text(orbStatusLine(a, view), style = Type.bodySmall.copy(color = if (!a.armed && a.bossParked && a.open == null) p.amber else p.inkSoft, fontSize = 12.sp),
                     maxLines = 2, modifier = Modifier.testTag("orb-line:${a.arm.source}"))
+                // 15 Nov: Liquidity's books on paper until Boss switches it on himself on Home, and its review's park (lifted with the PIN).
+                if (a.armed && a.paperUntilSwitch.isNotEmpty())
+                    Text("On paper until you switch it on yourself on Home (off, then on): ${a.paperUntilSwitch.joinToString(", ")}",
+                        style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp), modifier = Modifier.testTag("orb-paper-until:${a.arm.source}"))
+                if (a.reviewPaused) Text("Paused by its self-review: no new entries, paper or live. In Paper your switch on Home lifts it; " +
+                    "in Live lifting it takes your PIN.", style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
+                if (a.reviewParked) Text("Parked to paper (by its self-review or the change timeline's Undo): its next entries go to the " +
+                    "paper account. Lifting the park takes your PIN.", style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
+                if (a.reviewParked || a.reviewPaused) BrassButton(LIFT_PARK, Modifier.padding(top = 2.dp), tone = p.oxblood) { liftAuth = true }
                 // 30 Oct (Boss): an arm that is off runs in shadow - its would-be trades' record, under its line.
                 a.offShadow?.let { Text(it, style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), maxLines = 2,
                     modifier = Modifier.testTag("orb-shadow:${a.arm.source}")) }
@@ -237,21 +265,27 @@ internal fun OrbRowsContent(
 
     choosing?.let { src ->
         val label = view.arms.first { it.arm.source == src }.arm.label
+        // 15 Nov (Boss: "no extra pin based approval needed"): Liquidity 15+5 is switched on in Live with no PIN of its own (going Live
+        // took it); its live entries still pass every other gate. ORB and the others still take the PIN here.
+        val liq = view.arms.first { it.arm.source == src }.arm.liquidity
         AlertDialog(
             onDismissRequest = { choosing = null },
             properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Arm $label" + if (live) " (LIVE)" else " (paper)", style = Type.title) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(if (live) "The app is in LIVE: entries go to Zerodha, ${view.arms.first { it.arm.source == src }.lots?.let { com.optionslab.engine.orb.LiquidityLots.words(it) } ?: "1 lot"} MIS. Arming takes your PIN or fingerprint once. " +
+                    Text(if (live) "The app is in LIVE: entries go to Zerodha, ${view.arms.first { it.arm.source == src }.lots?.let { com.optionslab.engine.orb.LiquidityLots.words(it) } ?: "1 lot"} MIS. " +
+                        (if (liq) "No PIN of its own: it trades on Zerodha while this switch is on, through every live gate (AI trades go live, the guard, the kill switch, the day lock). "
+                            else "Arming takes your PIN or fingerprint once. ") +
                         "An open position always exits in the account it entered."
+                        else if (liq) "The app is in Paper: entries go to the paper account. When you switch the app to Live (with your PIN), it trades on Zerodha while this switch is on."
                         else "The app is in Paper: entries go to the paper account. To trade automatically on Zerodha, switch to Live and arm it again (PIN once).",
                         style = Type.bodySmall.copy(color = p.inkSoft))
                     OrbChoice("Automatic", "Buys on the breakout and sells on the stop, target or 15:10 by itself, every trading day, until you switch it off.") {
-                        if (live) armAuth = src to true else actions.arm(src, true, true, false); choosing = null
+                        if (live && !liq) armAuth = src to true else actions.arm(src, true, true, false); choosing = null
                     }
                     OrbChoice("Ask me to approve", "You get a notification on a breakout; the entry goes only if you approve before the next bar closes.") {
-                        if (live) armAuth = src to false else actions.arm(src, true, false, false); choosing = null
+                        if (live && !liq) armAuth = src to false else actions.arm(src, true, false, false); choosing = null
                     }
                     Note(if (view.arms.first { it.arm.source == src }.arm.liquidity)
                         "Either way the stop 15% below the price paid rests as an order (paper book, or an SL order at Zerodha), and the exits at the next liquidity, on a failed break, on new liquidity and at 15:10 run by themselves."
@@ -266,13 +300,12 @@ internal fun OrbRowsContent(
             dismissButton = { TextButton({ choosing = null }) { Text("Cancel") } },
         )
     }
-    // The ORB arms keep their own words; Liquidity 15+5 names itself (and says when each entry still waits for approval).
-    armAuth?.let { (src, auto) -> reauth(if (view.arms.firstOrNull { it.arm.source == src }?.arm?.liquidity == true)
-            "Enter your app PIN to arm Liquidity 15+5 on Zerodha. " +
-                (if (auto) "It then trades real money by itself until you switch it off." else "Each entry still waits for your approval with the PIN.")
-        else "Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
+    // The ORB arms' own words (15 Nov: Liquidity 15+5 never asks here - its switch needs no PIN of its own).
+    armAuth?.let { (src, auto) -> reauth("Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
         { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
     reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
+    if (liftAuth) reauth("Enter your app PIN to lift Liquidity's park to paper and its pause. Its books cleared by your switch then trade on Zerodha again while the app is in Live.",
+        { liftAuth = false; actions.liftLiquidityPark(true) }, { liftAuth = false })
     if (reenableAuth) reauth("Enter your app PIN to let Liquidity BANKNIFTY take live entries again after its stop rule. Its stop rule then counts from now.",
         { reenableAuth = false; actions.reenableLiquidityLive(true) }, { reenableAuth = false })
     heroConfirm?.let { src ->

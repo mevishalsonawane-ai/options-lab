@@ -538,7 +538,10 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals("and BANKNIFTY's own time stop too", "time_stop", after.single { it.arm == "liquidity5" }.why)
     }
 
-    /** Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once; never cleared for Zerodha. */
+    /**
+     * Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once. 15 Nov (Boss): the update's
+     * one-time change then clears every book that is on for Zerodha (in Live they trade there with the others).
+     */
     @Test fun theMidcpniftyBooksJoinAnArmedSwitchOnPaperOnce() {
         val books = listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin")
         fun flags(v: Boolean) = org.json.JSONObject().apply { books.forEach { put(it, v) } }
@@ -549,7 +552,9 @@ class LiquidityArmTest : RobolectricTest() {
             .put("positions", org.json.JSONArray()))
         val r = row()
         assertTrue(r.armed); assertTrue(r.automatic)
-        assertFalse("the MIDCPNIFTY books are never cleared for Zerodha by this change", r.liveOk)
+        assertFalse("in Paper it never trades live now", r.liveOk)
+        // 15 Nov: the update's one-time change clears the books on now (what Boss's switch shows), the joined ones too.
+        assertTrue(runBlocking { OrbArms.liquidityLiveCleared() }.let { c -> c.getValue("liquidity15_mid") && c.getValue("liquidity5_mid") })
         val joined = com.optionslab.engine.orb.LiquidityRules.MIDCP_JOINED
         assertTrue(r.status, r.status.contains("MIDCPNIFTY 15-min: $joined") && r.status.contains("MIDCPNIFTY 5-min: $joined"))
         val states = runBlocking { OrbArms.liquidityDay(day) }.first

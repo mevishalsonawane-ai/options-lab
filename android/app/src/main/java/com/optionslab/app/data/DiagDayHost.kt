@@ -58,7 +58,7 @@ object DiagDayHost {
                 val sources = if (liquidity) LiquidityRules.BOOKS.map { it.source }.toSet() else setOf(v.arm.source)
                 val owner = if (v.arm.hero) HeroRules.OWNER else v.arm.label
                 arms += DiagDay.Arm(
-                    key = v.arm.source, label = v.arm.label, armed = v.armed, automatic = v.automatic, liveCleared = v.liveOk,
+                    key = v.arm.source, label = v.arm.label, armed = v.armed, automatic = v.automatic, liveCleared = v.cleared,
                     parked = v.bossParked, parkedIndices = v.parked, status = r(v.status), pending = v.pending != null,
                     // The day's trades from the book, not the row's "today": a catch-up run the next morning reads the evening's day.
                     today = (closed + v.today + listOfNotNull(v.open)).filter { it.arm in sources && it.day == day }

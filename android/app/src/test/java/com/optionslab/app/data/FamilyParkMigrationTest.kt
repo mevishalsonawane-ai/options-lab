@@ -84,7 +84,9 @@ class FamilyParkMigrationTest : RobolectricTest() {
         }
         // Liquidity 15+5: its switch, its books (FINNIFTY stays parked from 9 Oct) and their Live clearance as they were.
         val liq = arm("liquidity")
-        assertTrue(liq.armed); assertTrue(liq.liveOk); assertFalse(liq.bossParked)
+        // (15 Nov: the row's liveOk is "would trade live now" - false in Paper; the books' clearance is kept.)
+        assertTrue(liq.armed); assertFalse(liq.liveOk); assertFalse(liq.bossParked)
+        assertTrue(runBlocking { OrbArms.liquidityLiveCleared() }.filterKeys { it in liqArmed().filterValues { v -> v }.keys }.values.all { it })
         assertEquals(listOf("FINNIFTY"), liq.parked)
         for (b in listOf("liquidity15", "liquidity5", "liquidity15_mid", "liquidity5_mid")) assertTrue(b, liqArmed().getValue(b))
         // The Hero arm too.

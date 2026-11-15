@@ -451,6 +451,7 @@ internal object Autopilot {
                 if (!c.target.startsWith(AutoChange.LIQ_INDEX) || index !in com.optionslab.engine.orb.ArmsCleanup.LIQ_INDICES) return null
                 when (c.to) {
                     AutoChange.PARKED, AutoChange.SWITCHED_OFF -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.OrbArms.parkLiquidity(index) }
+                    // (15 Nov: an unpark never clears its books for Zerodha - they stay on paper until Boss's own switch on Home.)
                     AutoChange.ON -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
                     else -> null
                 }
@@ -1643,6 +1644,49 @@ internal object Autopilot {
     fun logLiqIndexOn(index: String, parked: Boolean) {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.liqIndexOn(index, parked), "your choice, 15 Oct; paper only - never cleared for Zerodha by this change")
+    }
+
+    /**
+     * 15 Nov (review): Boss lifted [key]'s self-review pause ([paused]) or park to paper ([parked]) himself - his switch in Paper, or his
+     * PIN ([com.optionslab.app.data.OrbArms.liftLiquidityPark]). The Autopilot entries that set them ("paper:[key]" paused, "live:[key]"
+     * parked) still kept are closed as lifted by Boss ([AutoChange.liftedByOwner]: no 30-day rest, not counted as his Undo), so the change
+     * timeline never shows a pause or park that no longer holds.
+     */
+    fun ownerLifted(key: String, paused: Boolean, parked: Boolean) {
+        if (!enabled() || (!paused && !parked)) return
+        scope.launch(trailLane) {
+            runCatching {
+                if (appContext == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val ids = _book.value.entries.filter { e -> e.applied &&
+                        ((paused && e.change.kind == AutoChange.Kind.PAPER_ENTRIES && e.change.target == "paper:$key" && e.change.to == AutoChange.PAUSED) ||
+                            (parked && e.change.kind == AutoChange.Kind.LIVE_ENTRIES && e.change.target == "live:$key" && e.change.to == AutoChange.PARKED))
+                    }.map { it.id }
+                    if (ids.isEmpty()) return@synchronized
+                    // (Closed as lifted by Boss, with no rest: if it keeps drifting, Autopilot may set it again - AutoChange.liftedByOwner.)
+                    for (id in ids) _book.value = AutoChange.liftedByOwner(_book.value, id, today)
+                    save()
+                }
+                runCatching { Diag.record("autopilot", "$key: its ${listOfNotNull("pause".takeIf { paused }, "park to paper".takeIf { parked }).joinToString(" and ")} lifted by you") }
+            }
+        }
+    }
+
+    /**
+     * 15 Nov (Boss: "Liquidity should be always working if i have swtich on it on dashboard, no extra pin based approval needed"): the
+     * Liquidity books on at the update ([books]) cleared for Zerodha by Boss's own switch ([com.optionslab.app.data.OrbArms]). Logged once
+     * as Boss's (kept) so the change timeline shows it; its Undo parks Liquidity's live entries to paper (lower risk), and putting them back
+     * takes the PIN (a live raise).
+     */
+    fun logLiqSwitchCleared(books: String) {
+        if (!enabled()) return
+        val c = AutoChange.Change(AutoChange.Kind.LIVE_ENTRIES, "live:liquidity", AutoChange.PARKED, AutoChange.LIVE,
+            "your choice (15 Nov): Liquidity 15+5 trades live whenever its switch on Home is on and the app is in Live - cleared now: $books",
+            AutoChange.Evidence(0, 0.0, com.optionslab.ira.AgentLessons.Confidence.STRONG), AutoChange.Risk.RAISE, AutoChange.Scope.LIVE,
+            what = "Liquidity 15+5's live entries (cleared by your switch)")
+        logBossOwnOnce(c, "your choice, 15 Nov; every live gate still applies; Undo parks its live entries to paper", sameReason = true)
     }
 
     /**
