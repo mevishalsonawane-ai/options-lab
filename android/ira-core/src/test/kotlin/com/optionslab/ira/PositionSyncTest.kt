@@ -80,4 +80,17 @@ class PositionSyncTest {
         assertFalse(PositionSync.asked("what are my positions"))
         assertFalse(PositionSync.asked("sync my watchlist"))
     }
+
+    /** 15 Nov: a manual position about to get its automatic stop and target is said as pending, not as followed by nothing. */
+    @Test fun aManualPositionAboutToBeCoveredIsSaidAsPending() {
+        val m = PositionSync.check(emptyList(), mapOf(pe to 65, ce to 75), null, pending = setOf(pe))
+        val p = m.single { it.symbol == pe }
+        assertTrue(p.pending)
+        assertEquals("$pe: Zerodha holds 65; stop and target pending (the app places them on positions you bought yourself)", PositionSync.say(p))
+        val other = m.single { it.symbol == ce }
+        assertFalse(other.pending)
+        assertTrue(PositionSync.say(other).endsWith("no bot, Pine script or protection of the app follows it"))
+        // The same mismatch key either way (the debounce is unchanged).
+        assertEquals(p.key, PositionSync.check(emptyList(), mapOf(pe to 65), null).single().key)
+    }
 }

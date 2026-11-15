@@ -59,7 +59,8 @@ class ManualCoverRuleTest {
         for (note in listOf("removed", "stop cancelled", "stop rejected", "covered by another exit",
                 "GTT fired, part left", "stop not placed"))
             assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, note)))), note)
-        for (note in listOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working"))
+        for (note in listOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working",
+                ManualCoverRule.SLICE_DONE, ManualCoverRule.STOP_BY_EXCHANGE))
             assertNull(ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, note)))), note)
         // One natural end and one removal the same day: Boss's removal wins.
         assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, "position closed"),
@@ -317,5 +318,30 @@ class ManualCoverRuleTest {
         assertTrue(ManualCoverRule.saidStopOnly(sym, 200.0, 137.9).contains("only the stop"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "RMS").contains("is NOT protected"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "timed out", ManualCoverRule.MAX_ATTEMPTS).contains("tried 10 times"))
+    }
+
+    // ---- 15 Nov: the follow-up look, the exchange's refusals, slices -----------------------------------------------------------
+
+    /** A stop the exchange refused or cancelled is covered again; one cancelled with no reason (Boss, in Kite) is respected. */
+    @Test fun aStopEndedByTheExchangeIsCoveredAgainButBosssCancelIsRespected() {
+        assertNull(ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, ManualCoverRule.STOP_BY_EXCHANGE)))))
+        assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, "stop cancelled")))))
+        // A carried position: the exchange's end on an earlier day never blocks either.
+        assertNull(ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(ManualCoverRule.Ended(sym, ManualCoverRule.STOP_BY_EXCHANGE, today = false)))))
+        assertTrue(ManualCoverRule.SLICE_DONE in ManualCoverRule.NATURAL_ENDS && ManualCoverRule.STOP_BY_EXCHANGE in ManualCoverRule.NATURAL_ENDS)
+    }
+
+    @Test fun theFollowUpLookComesJustAfterTheSettleOrSoonAfterAFailedRead() {
+        assertNull(ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.NONE))
+        assertEquals(21_000L, ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.SIGHTED))
+        assertTrue(ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.SIGHTED)!! > ManualCoverRule.SETTLE_MS, "due when it comes")
+        assertEquals(10_000L, ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.READ_FAILED))
+        // The second look 21 s after the first is due (the settle rule is unchanged: one sighting is never enough).
+        val l = ManualCoverRule.Looks()
+        assertFalse(l.see("k", 130, 0L))
+        assertEquals(setOf("k"), l.keys)
+        assertTrue(l.see("k", 130, ManualCoverRule.FOLLOW_UP_MS))
+        l.clear()
+        assertTrue(l.keys.isEmpty())
     }
 }

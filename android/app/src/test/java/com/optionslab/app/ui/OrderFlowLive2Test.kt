@@ -236,6 +236,35 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertEquals("only the resting target was ever placed: no second sell", listOf(target), kite.orders.keys.toList())
     }
 
+    /**
+     * 15 Nov (Boss's diagnostics, 6 Nov: a stop cancelled for his exit and none at Zerodha for minutes): a protection's stop and
+     * target cancelled by the exit takeover, the sale then refused by Zerodha, are placed again once the exit is done - the position
+     * is never left with no stop. The arms and protections get the contract back on every path ([AppModel.sendPlan]'s finally).
+     */
+    @Test fun aProtectionsStopCancelledForAnExitThatWasRefusedIsPlacedAgain() {
+        kite.position(ce, 75, 90.0)
+        val said = runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 85.0, null, 130.0) }
+        assertTrue(said, said.startsWith("Protected"))
+        val p = runBlocking { Protections.active() }.single()
+        val m = model()
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "Price exceeds the circuit limit")
+        m.sendPlan()
+        assertTrue(refused(m).contains("rejected"))
+        assertEquals("taken over for the exit", "CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("the position is still held", 75, kite.positions.getValue("NFO:$ce:NRML").first)
+        BrokerArea.await("the contract handed back") { (!com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce)).takeIf { it } }
+        com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)
+        runBlocking { Protections.tick() }
+        val back = runBlocking { Protections.active() }.single()
+        val stop = back.stopOrderId!!
+        assertTrue("a new stop", stop != p.stopOrderId)
+        assertEquals("TRIGGER PENDING", kite.order(stop).status)
+        assertEquals(75, kite.order(stop).qty); assertEquals(85.0, kite.order(stop).trigger, 1e-9)
+        assertEquals("OPEN", kite.order(back.targetOrderId!!).status)
+    }
+
     /** A protection resting as one GTT is deleted first, then the square-off goes as reviewed. */
     @Test fun aProtectionsDayGttIsDeletedAndTheSquareOffGoes() {
         kite.position(ce, 75, 90.0)

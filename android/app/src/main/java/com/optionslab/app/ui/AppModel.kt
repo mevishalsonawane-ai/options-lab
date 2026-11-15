@@ -1075,6 +1075,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val key = "${o.exchange}:${o.tradingSymbol}"
         com.optionslab.app.data.ArmLive.handsOff(o.exchange, o.tradingSymbol)
         com.optionslab.app.data.Protections.dayGttHint[key].orEmpty().forEach { id ->
+            // 15 Nov: told to the protections first, so a GTT deleted for an exit that then does not go is placed again ([Protections.noteTakenOver]).
+            runCatching { com.optionslab.app.data.Protections.noteTakenOver(listOf("gtt:$id")) }
             if (runCatching { b.deleteGtt(id) }.isSuccess) runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: its protection's GTT $id deleted first (you, the exit)") }
         }
         fun resting(rows: List<com.optionslab.app.data.Broker.OrderRow>) = rows.filter { it.working && it.symbol == o.tradingSymbol && it.exchange == o.exchange &&
@@ -1096,6 +1098,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (m.isSuccess) return Took.Exit(r.id, px)
             }
         }
+        // 15 Nov (Boss's diagnostics, 6 Nov: a protection's stop cancelled for his exit stayed gone when the sale did not go): the
+        // protections are told these are the app's own cancels for this exit, so a stop of theirs found cancelled while the position
+        // is still held (the exit refused, failed or part filled) is placed again once the exit is done ([Protections.noteTakenOver]),
+        // never ended as his choice. The arms' own stops are rested again by their watch as before, once the contract is handed back.
+        runCatching { com.optionslab.app.data.Protections.noteTakenOver(rest.map { it.id }) }
         for (r in rest) runCatching { b.cancel(r.id, r.variety) }
         // The cancels confirmed (or the check that follows sees what still works and says so).
         // 15 Nov (Boss's diagnostics, 6 Nov: a stop cancelled and about 11 minutes with none at Zerodha): a FAILED read of the order

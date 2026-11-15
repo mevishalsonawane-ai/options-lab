@@ -618,4 +618,110 @@ class ManualCoverTest : RobolectricTest() {
         assertFalse(ManualCover.holdsForErase())
         assertTrue(ManualCover.isOn())
     }
+
+    // ---- 15 Nov: covered sooner, a failed read tried again, the exchange's cancel, the sync's words ------------------------------
+
+    /**
+     * 15 Nov (Boss's diagnostics: a new manual position was covered only 60-125 s after it appeared): after a first sighting the
+     * second look comes by itself just after the 20 s settle, not a whole pass later. One sighting alone still places nothing.
+     */
+    @Test fun aFirstSightingIsLookedAtAgainSoonAndCoveredWithoutWaitingForThePass() {
+        ManualCover.followUpsForTest(400)
+        look()
+        assertTrue("one look is never enough", writes().isEmpty())
+        assertTrue("a follow-up look is waiting", ManualCover.followUpPendingForTest())
+        later(25)                                                     // the settle has passed by the time it looks again
+        com.optionslab.app.testing.Background.await("covered by the follow-up look") { kite.placed.size == 2 }
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        com.optionslab.app.testing.Background.await("the follow-up done") { !ManualCover.followUpPendingForTest() }
+        Thread.sleep(800)
+        assertEquals("a follow-up never asks for another", 2, kite.placed.size)
+        assertFalse(ManualCover.followUpPendingForTest())
+    }
+
+    /** The settle is kept: a follow-up that comes before the 20 s places nothing (the next pass covers it). */
+    @Test fun aFollowUpBeforeTheSettlePlacesNothing() {
+        ManualCover.followUpsForTest(200)
+        look()
+        com.optionslab.app.testing.Background.await("the follow-up done") { !ManualCover.followUpPendingForTest() }
+        Thread.sleep(300)
+        assertTrue("never on a single sighting or under 20 s", writes().isEmpty())
+    }
+
+    /** A failed read (the price) is tried again once, soon - never in a loop. */
+    @Test fun aFailedReadIsTriedAgainOnceSoon() {
+        look(); later(25)
+        ManualCover.followUpsForTest(400)
+        kite.down += "/quote"
+        val quotes = { kite.requests.count { it.path.startsWith("/quote") } }
+        look()
+        assertTrue(writes().isEmpty())
+        assertTrue("a retry is waiting", ManualCover.followUpPendingForTest())
+        val before = quotes()
+        com.optionslab.app.testing.Background.await("the retry done") { !ManualCover.followUpPendingForTest() }
+        Thread.sleep(800)
+        assertTrue("tried again once", quotes() > before)
+        val after = quotes()
+        Thread.sleep(800)
+        assertEquals("only once: no loop", after, quotes())
+        assertTrue(writes().isEmpty())
+        // The read works again: the retry covers it.
+        kite.down -= "/quote"
+        later(65)
+        look()
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
+
+    @Test fun aRetryCoversItOnceTheReadWorksAgain() {
+        look(); later(25)
+        ManualCover.followUpsForTest(500)
+        kite.down += "/quote"
+        look()
+        kite.down -= "/quote"
+        com.optionslab.app.testing.Background.await("covered by the retry") { kite.placed.size == 2 }
+    }
+
+    /** A stop the exchange rejected is no choice of Boss's: the position is covered again (stop and target afresh). */
+    @Test fun aStopTheExchangeRejectedIsCoveredAgain() {
+        val p = autoProtected()
+        kite.reject(p.stopOrderId!!)
+        later(65)
+        runBlocking { Protections.tick() }
+        assertEquals("its target taken out too, so it is covered afresh", "CANCELLED", kite.order(p.targetOrderId!!).status)
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertTrue(Alerts.posted.any { it.text.contains("was rejected") && it.text.contains("places its stop and target again") })
+        later(65); look(); later(25); look()
+        assertEquals(listOf("SL", "LIMIT", "SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals(1, runBlocking { Protections.active() }.size)
+    }
+
+    /** A stop Boss cancelled himself in Kite (no reason given) is respected: never put back, and said loudly that it has no stop. */
+    @Test fun aStopBossCancelledInKiteIsRespectedAndSaidLoudly() {
+        val p = autoProtected()
+        runBlocking { Broker.cancel(p.stopOrderId!!) }
+        later(65)
+        runBlocking { Protections.tick() }
+        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("cancelled with no reason given") })
+        val n = kite.placed.size
+        later(65); look(); later(25); look(); later(65); look()
+        assertEquals("respected: nothing placed again", n, kite.placed.size)
+    }
+
+    /** The Zerodha sync says "stop and target pending" for a manual position seen and not yet covered. */
+    @Test fun aSeenPositionIsPendingUntilItIsCovered() {
+        look()
+        assertEquals(setOf(sym), ManualCover.pendingSymbols())
+        later(25); look()
+        assertEquals(2, kite.placed.size)
+        later(25); look()
+        assertTrue("covered: no longer pending", ManualCover.pendingSymbols().isEmpty())
+        ManualCover.resetForTest(on = false)
+        assertTrue(ManualCover.pendingSymbols().isEmpty())
+    }
+
+    @Test fun nothingIsPendingWhileSwitchedOffOrTooLow() {
+        kite.quote("NFO:$sym", 95.0, 94.95, 95.05)
+        twoLooks()
+        assertTrue("too low: Boss is told to set one; not pending", ManualCover.pendingSymbols().isEmpty())
+    }
 }

@@ -47,7 +47,9 @@ object ZerodhaSync {
         val beliefs = beliefs() ?: run { why = "the app's books were busy"; return null }
         val positions = book.net.filter { it.exchange in com.optionslab.engine.Kite.DERIVATIVE_EXCHANGES && it.qty != 0 }
             .groupBy { it.symbol }.mapValues { (_, v) -> v.sumOf { it.qty } }
-        val found = PositionSync.check(beliefs, positions, orders?.map { PositionSync.Order(it.id, it.symbol, it.status, it.working) })
+        // 15 Nov: a manual position seen and about to get its automatic stop and target is said as pending ([ManualCover]).
+        val pending = runCatching { ManualCover.pendingSymbols() }.getOrDefault(emptySet())
+        val found = PositionSync.check(beliefs, positions, orders?.map { PositionSync.Order(it.id, it.symbol, it.status, it.working) }, pending)
         if (read == lastRead) return confirmed                  // the same read: not a second look
         lastRead = read
         val day = runCatching { Market.today().toString() }.getOrDefault("")
