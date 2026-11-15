@@ -1649,6 +1649,21 @@ internal object Autopilot {
     }
 
     /**
+     * 15 Nov (Boss: "Liquidity should be always working if i have swtich on it on dashboard, no extra pin based approval needed"): the
+     * Liquidity books on at the update ([books]) cleared for Zerodha by Boss's own switch ([com.optionslab.app.data.OrbArms]). Logged once
+     * as Boss's (kept) so the change timeline shows it; its Undo parks Liquidity's live entries to paper (lower risk), and putting them back
+     * takes the PIN (a live raise).
+     */
+    fun logLiqSwitchCleared(books: String) {
+        if (!enabled()) return
+        val c = AutoChange.Change(AutoChange.Kind.LIVE_ENTRIES, "live:liquidity", AutoChange.PARKED, AutoChange.LIVE,
+            "your choice (15 Nov): Liquidity 15+5 trades live whenever its switch on Home is on and the app is in Live - cleared now: $books",
+            AutoChange.Evidence(0, 0.0, com.optionslab.ira.AgentLessons.Confidence.STRONG), AutoChange.Risk.RAISE, AutoChange.Scope.LIVE,
+            what = "Liquidity 15+5's live entries (cleared by your switch)")
+        logBossOwnOnce(c, "your choice, 15 Nov; every live gate still applies; Undo parks its live entries to paper", sameReason = true)
+    }
+
+    /**
      * 16 Oct (research R63): [label]'s trend-turn exit on PAPER ([source], a [com.optionslab.engine.trend.TrendWatch.Source] key)
      * switched on once by the update - its rule passed every gate, so the PAPER rule lets it act at once. Logged as Boss's ask
      * (kept), undone in one tap (the exit off). Once: never logged twice.

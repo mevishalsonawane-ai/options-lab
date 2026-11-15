@@ -18,7 +18,7 @@ import java.time.LocalDate
  * Before, the free-cash fit ([LiveMirror.lotsThatFit], 4 Nov) only cut a buy of more than one lot; when not even one lot fitted, the
  * order went anyway and Zerodha refused it, and every later signal of the day went again.
  *
- *  - It asks only an index option BUY on its way to Zerodha: an arm's live copy ([ArmLive]) and the ORB family's own live entry
+ *  - It asks only an option BUY (index or stock options) on its way to Zerodha: an arm's live copy ([ArmLive]) and the ORB family's own live entry
  *    ([OrbArms], Liquidity 15+5 among them). A sale, a future and an MCX order (their own margin) are never asked.
  *  - Its figure is the free cash the entry's own path already holds (the fit's read, or the margins its account guard just read:
  *    [Broker.keptFreeCash]): nothing new is read. Unknown (not read, older than the margin check trusts): it says nothing.
@@ -47,6 +47,13 @@ object FundsCheck {
     @Volatile private var switched = false
     private val lock = Any()
     private var recs: List<Rec> = emptyList()
+    /**
+     * 15 Nov (review): bumped by [wipe] ("Erase everything"): a save of the record queued before the erase never writes it back after.
+     * [PersonalStores] wipes this store before the settings vault, so a save that passed this check is dropped by the vault's own
+     * wipe; one that runs after this store's wipe is skipped here. Saves take [writeLock] (never the order path's [lock]).
+     */
+    @Volatile private var wipeGen = 0
+    private val writeLock = Any()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
@@ -105,11 +112,11 @@ object FundsCheck {
     fun check(owner: String, symbol: String, lots: Int, perLot: Double, free: Double?, price: Double?): String? = runCatching {
         if (!LiveMirror.shortOfOneLot(perLot, free)) return@runCatching null
         val applied = on
-        record(Rec(System.currentTimeMillis(), marketDay(), owner, symbol, lots, price, applied))
+        record(Rec(System.currentTimeMillis(), marketDay(), owner, symbol, lots, price, applied), wipeGen)
         if (applied) "refused: $WORDS (funds check on; kept as a would-be entry)" else null
     }.getOrNull()
 
-    private fun record(r: Rec) {
+    private fun record(r: Rec, gen: Int) {
         synchronized(lock) { recs = (recs + r).takeLast(KEPT) }
         // No rupee figure in the diagnostics (they hide rupees): the arm, the contract, the lots wanted and what happened.
         val lotWords = "${r.lots} lot${if (r.lots == 1) "" else "s"} wanted"
@@ -118,10 +125,23 @@ object FundsCheck {
                 if (r.applied) " (funds check on: not sent, kept as a would-be entry)" else " (shadow: logged only, sent as before)")
         }
         scope.launch {
-            runCatching { SecurePrefs.putAllLazy(mapOf(K_LOG to synchronized(lock) { recs }.joinToString("\n") { it.encode() })) }
+            persist(gen)
             publish()
         }
     }
+
+    /**
+     * Writes the record (a worker thread), unless an erase came since [gen] was read: true when it was written. The check and the write
+     * are one step under [writeLock], which [wipe] takes too, so no save can slip between them.
+     */
+    internal fun persist(gen: Int): Boolean = synchronized(writeLock) {
+        if (gen != wipeGen) return@synchronized false
+        val text = synchronized(lock) { recs }.joinToString("\n") { it.encode() }
+        runCatching { SecurePrefs.putAllLazy(mapOf(K_LOG to text)) }.isSuccess
+    }
+
+    /** TEST ONLY: the erase generation now (for [persist]). */
+    internal fun genForTest(): Int = wipeGen
 
     /** Today's records (the card, the diagnostics, the tests). Memory only. */
     fun recsOf(day: LocalDate = marketDay()): List<Rec> = synchronized(lock) { recs.filter { it.day == day } }
@@ -168,7 +188,10 @@ object FundsCheck {
 
     /** Erase everything ([PersonalStores]): as on a fresh phone - off, no record ([switched]: a late start read never brings Boss's old "on" back). */
     fun wipe() {
-        synchronized(lock) { on = false; loaded = true; switched = true; recs = emptyList() }
+        synchronized(writeLock) {
+            wipeGen++
+            synchronized(lock) { on = false; loaded = true; switched = true; recs = emptyList() }
+        }
         publish()
     }
 

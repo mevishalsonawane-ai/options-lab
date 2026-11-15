@@ -572,8 +572,8 @@ class OrbArmsDayTest : RobolectricTest() {
         // ... and the retirement switched Liquidity 15+5 back on, on paper only (the 13 Oct park leaves it alone).
         val liq = v.arms.single { it.arm.source == "liquidity" }
         assertTrue("both liquidity books back on", liq.armed)
-        // 15 Nov (Boss): its switch alone clears it for Zerodha (it trades there only while the app is in Live).
-        assertTrue("cleared by its switch", liq.liveOk)
+        // (In Paper: it would not trade live now - 15 Nov, the row's liveOk is "would trade live now".)
+        assertTrue("paper only: never cleared for Zerodha", !liq.liveOk)
         assertNull("Liquidity has no record line", liq.record)
         assertTrue(liq.status, liq.status.contains("switched back on, paper only (Boss's choice 06 Oct)"))
         assertNotNull("Range Fade's open put is kept, managed to its exit", v.arms.single { it.arm.source == "range_fade" }.open)
@@ -623,7 +623,7 @@ class OrbArmsDayTest : RobolectricTest() {
         }
         assertNotNull("ORB's open call is kept, managed to its exit", v.arms.single { it.arm.source == "orb" }.open)
         val liq = v.arms.single { it.arm.source == "liquidity" }
-        assertTrue(liq.armed); assertTrue("automatic", liq.automatic); assertTrue("15 Nov: cleared by its switch", liq.liveOk)
+        assertTrue(liq.armed); assertTrue("automatic", liq.automatic); assertTrue("paper only", !liq.liveOk)
         assertNull("Liquidity has no record line", liq.record)
         assertTrue(liq.status, liq.status.contains("BANKNIFTY 5-min: switched back on, paper only (Boss's choice 06 Oct)"))
         val log = Diag.lines()

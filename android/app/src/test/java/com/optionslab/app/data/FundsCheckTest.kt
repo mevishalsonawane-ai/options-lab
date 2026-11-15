@@ -80,6 +80,16 @@ class FundsCheckTest : RobolectricTest() {
         assertFalse(FundsCheck.isOn()); assertFalse(FundsCheck.holdsForErase())
     }
 
+    /** 15 Nov (review): a save of the record queued before "Erase everything" never writes it back after the erase. */
+    @Test fun aSaveQueuedBeforeAnEraseNeverWritesAfterIt() {
+        val before = FundsCheck.genForTest()
+        FundsCheck.wipe()
+        assertFalse("from before the erase: skipped", FundsCheck.persist(before))
+        SecurePrefs.flush()
+        assertTrue(SecurePrefs.getString("fundsCheck.log").isNullOrEmpty())
+        assertTrue("a save after the erase is written", FundsCheck.persist(FundsCheck.genForTest()))
+    }
+
     @Test fun theKeptFreeCashIsOnlyAFreshReadFromMemory() {
         Broker.resetForTest()
         assertNull("nothing kept: unknown", Broker.keptFreeCash())

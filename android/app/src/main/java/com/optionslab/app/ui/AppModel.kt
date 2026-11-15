@@ -1973,6 +1973,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun unparkLiquidity(index: String) = strategyDo { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
     /** Liquidity BANKNIFTY's live entries re-enabled after its stop rule (12 Oct): only with Boss's PIN, asked on the row first. */
     fun reenableLiquidityLive(pinConfirmed: Boolean) = strategyDo { com.optionslab.app.data.OrbArms.reenableLiquidityLive(pinConfirmed) }
+    /** 15 Nov: Liquidity's self-review park to paper lifted from its row: only with Boss's PIN, asked on the row first. */
+    fun liftLiquidityPark(pinConfirmed: Boolean) = strategyDo { com.optionslab.app.data.OrbArms.liftLiquidityPark(pinConfirmed) }
     /** Boss's tick on the go-live checklist: he watched the first live trade. */
     fun liquidityWatched(on: Boolean) = strategyDo { com.optionslab.app.data.OrbArms.setFirstLiveWatched(on); null }
     /** Liquidity BANKNIFTY unfrozen (or frozen again) for its paper test, from the Strategy lab card. */

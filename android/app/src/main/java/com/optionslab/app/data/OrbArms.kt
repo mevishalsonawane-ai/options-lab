@@ -396,7 +396,7 @@ object OrbArms {
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
             return Book().also { it.gen = gen; it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
-                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION); cache = it; hints(it); wipedSince(it) }
+                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR); cache = it; hints(it); wipedSince(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -407,7 +407,7 @@ object OrbArms {
         if (wipedSince(b)) return b
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
         if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN, LiquidityLots.ONE_LOT_MIGRATION,
-            ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION)
+            ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR)
         val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone, then
         // the 07 Oct un-retirement (ORB, ORB Fresh, ORB Sweep and Range Fade back on, on paper); then the MIDCPNIFTY books
@@ -418,8 +418,9 @@ object OrbArms {
         // Then (13 Oct, Boss's choice) ORB, ORB Fresh, ORB Sweep and Range Fade are parked: switched off once, paper and live.
         // (15 Oct, Boss's cleanup: Liquidity's FINNIFTY and MIDCPNIFTY books are kept on by [keepLiquidityFour], run once by the
         // cleanup's worker after the start's positions step - never on this load.)
+        // Then (15 Nov, Boss: Liquidity live by its own switch) the Liquidity books on now are cleared for Zerodha once ([clearBySwitch]).
         if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b) or oneLot(b) or park(b) or
-            parkFamily(b)) save(b)
+            parkFamily(b) or clearBySwitch(b, restoring)) save(b)
         return b
     }
 
@@ -598,6 +599,43 @@ object OrbArms {
         }
         return refusal
     }
+
+    /** 15 Nov: the one-time clearance of the Liquidity books on at this update ([clearBySwitch]): its key in [Book.migrated]. */
+    internal const val LIQ_SWITCH_CLEAR = "liq_switch_clear_2026_11_15"
+    /** 15 Nov: what [clearBySwitch] adds to a book's "paper only" status. */
+    const val LIQ_SWITCH_CLEARED = "since 15 Nov cleared for Zerodha by your switch on Home: it trades live while the app is in Live"
+    /** The statuses earlier one-time changes left on Liquidity books they switched on, each saying "paper only" or "never cleared". */
+    private val PAPER_ONLY_STATUS = setOf(RetiredArms.BACK_ON, LiquidityRules.MIDCP_JOINED, ArmsCleanup.LIQ_ON, "switched back on by you (paper)")
+
+    /**
+     * Once, on this update (Boss, 15 Nov: "Liquidity should be always working if i have swtich on it on dashboard, no extra pin based
+     * approval needed"): every Liquidity book that is ON now - what Boss's dashboard switch shows - is cleared for Zerodha ([liveCleared]),
+     * whoever switched it on before; from now on only Boss's own switch on Home or his PIN clears a book. Said once - a notice, a diary
+     * line and the change timeline (its Undo parks Liquidity's live entries to paper) - naming the books; a "paper only" status left by an
+     * earlier one-time change says so too. A restore not yet disarmed (nothing is on) and IraGoldAlgo clear nothing. True when [b] changed.
+     */
+    private fun clearBySwitch(b: Book, restoring: Boolean): Boolean {
+        if (LIQ_SWITCH_CLEAR in b.migrated) return false
+        b.migrated += LIQ_SWITCH_CLEAR
+        if (restoring || com.optionslab.app.BuildConfig.GOLD) return true
+        val on = LiquidityRules.BOOKS.filter { b.armed[it.source] == true }
+        for (a in on) {
+            b.liveOk[a.source] = true
+            b.status[a.source]?.takeIf { it in PAPER_ONLY_STATUS }?.let { b.status[a.source] = "$it · $LIQ_SWITCH_CLEARED" }
+        }
+        if (on.isEmpty()) return true
+        val names = on.joinToString(", ") { "${LiquidityRules.underlyingOf(it)} ${LiquidityRules.minutesOf(it)}-min" }
+        val words = "Liquidity 15+5: your switch on Home is on, so these books are now cleared for live by it: $names. Whenever the app is " +
+            "in Live they trade on Zerodha (AI trades go live, the guard, the kill switch and the day lock still apply). Switch Liquidity " +
+            "off on Home to stop them; from now on only your own switch on Home clears a book."
+        runCatching { Diag.record("orb", words) }
+        runCatching { Notifier.post(app, LIQ_SWITCH_NOTICE, Notifier.SCHEDULE, "Liquidity: live by your switch", words, "almanac") }
+        runCatching { com.optionslab.app.ira.Autopilot.logLiqSwitchCleared(names) }
+        return true
+    }
+
+    /** 15 Nov: [clearBySwitch]'s notice. */
+    private const val LIQ_SWITCH_NOTICE = 6948
 
     /** The one-time switch-off on this update (Boss's choice, 06 Oct): its key in [Book.migrated]. */
     internal const val OFF_LOSERS = "off_losers_2026_10_06"
@@ -893,8 +931,8 @@ object OrbArms {
         save(b)
         runCatching { Diag.record("orb", "Liquidity 15+5 $index: switched back on by you" + if (on) ", on paper" else "; it comes on with the switch") }
         if (!on) "Liquidity 15+5 $index is no longer parked: it comes on with Liquidity's switch."
-        // 15 Nov (Boss): cleared for Zerodha by Liquidity's switch alone ([liveCleared]): in Live its entries go there with the others'.
-        else "Liquidity 15+5 $index is back on" + (if (liveNow()) ": in Live it trades on Zerodha with Liquidity's switch, through every live gate." else ", on paper.")
+        // 15 Nov: not cleared for Zerodha here ([liveCleared]): on paper until Boss switches Liquidity on himself on Home.
+        else "Liquidity 15+5 $index is back on, on paper" + (if (liveNow()) " until you switch Liquidity on yourself on Home (off, then on): that clears it for Zerodha." else ".")
     }
 
     /** Liquidity 15+5's size in [b]: lots a new entry buys. */
@@ -1245,14 +1283,22 @@ object OrbArms {
      * Whether book [source]'s new entries are cleared for Zerodha while the app is in Live (memory only: the book [b]).
      *
      * 15 Nov (Boss: "Liquidity should be always working if i have swtich on it on dashboard, no extra pin based approval needed"):
-     * a Liquidity 15+5 book is cleared by its own switch alone - on is cleared, with no PIN of its own. Its live entry still
-     * passes every other gate: the app in Live (which takes Boss's PIN), "AI trades go live" (the order door), the guard, the
-     * kill switch, the day stop and the day lock, its live stop rule and its self-review's park to paper. Its stored liveOk
-     * flag is still read from and written to the book (older books stay readable) but is never asked for Liquidity.
-     * Every other arm: its own liveOk, set only when Boss armed it in Live with his PIN, exactly as before.
+     * a Liquidity 15+5 book is cleared when it is on AND its stored liveOk is set - which only Boss's own switch on Home (in Paper
+     * or Live, [setArmed]'s bySwitch) or his PIN sets; every switch-off clears it. A book switched on any other way (Jarvis by
+     * voice, the day plan, the change timeline, an unpark, a one-time change, a restore) trades on paper until Boss switches it
+     * on himself on Home. Its live entry still passes every other gate: the app in Live (which takes Boss's PIN), "AI trades go
+     * live" (the order door), the guard, the kill switch, the day stop and the day lock, its live stop rule and its self-review's
+     * park to paper. Every other arm: its own liveOk, set only when Boss armed it in Live with his PIN, exactly as before.
      */
     private fun liveCleared(b: Book, source: String): Boolean =
-        if (LiquidityRules.BOOKS.any { it.source == source }) b.armed[source] == true else b.liveOk[source] == true
+        if (LiquidityRules.BOOKS.any { it.source == source }) b.armed[source] == true && b.liveOk[source] == true else b.liveOk[source] == true
+
+    /**
+     * Liquidity's "to paper" for [arm]'s new entries ([ArmAccount]'s parked): its self-review's park to paper (memory), or - 15 Nov -
+     * a book not cleared for Zerodha by Boss's own switch ([liveCleared]). Memory only.
+     */
+    private fun liqToPaper(b: Book, arm: Arm): Boolean =
+        SmartWorkers.parkedToPaperNow("liquidity") || (arm.liquidity && !liveCleared(b, arm.source))
 
     /** 15 Nov: each Liquidity book's Zerodha clearance as its live entry reads it ([liveCleared]). Reads the book only. */
     internal suspend fun liquidityLiveCleared(): Map<String, Boolean> = lock.withLock {
@@ -1308,6 +1354,13 @@ object OrbArms {
          * ..." - its would-be trades' record ([OffShadow]); null while it is on. Liquidity's row: its books together.
          */
         val offShadow: String? = null,
+        /** 15 Nov, Liquidity 15+5 only: parked to paper by its self-review (lifted only with Boss's PIN, [liftLiquidityPark]). */
+        val reviewParked: Boolean = false,
+        /**
+         * 15 Nov, Liquidity 15+5 only: its books that are on but not cleared for Zerodha ([liveCleared]: switched on by Jarvis, the day
+         * plan, the change timeline or an unpark) - on paper until Boss switches Liquidity on himself on Home. Empty: none.
+         */
+        val paperUntilSwitch: List<String> = emptyList(),
     ) {
         /** The charges line for the row's details, or null when nothing was paid this month. */
         val chargesLine: String? get() = com.optionslab.engine.orb.ReentryCap.chargesWords(chargesToday, chargesMonth, ordersMonth)
@@ -1378,6 +1431,18 @@ object OrbArms {
             x.state.watched)
     }
 
+    /**
+     * 15 Nov: Boss lifts Liquidity's self-review park to paper (its row; the park is an automatic risk-lowering step, so lifting it
+     * takes his PIN [pinConfirmed], as [reenableLiquidityLive]). Off the order path (Boss's own action).
+     */
+    fun liftLiquidityPark(pinConfirmed: Boolean): String {
+        if (!pinConfirmed) return "Lifting Liquidity's park to paper takes your PIN."
+        if (!SmartWorkers.reviewParked("liquidity")) return "Liquidity is not parked to paper by its review."
+        SmartWorkers.ownerRearmed("liquidity")
+        runCatching { Diag.record("orb", "Liquidity 15+5: its review's park to paper lifted by Boss with his PIN") }
+        return "Liquidity's park to paper is lifted: its books cleared by your switch trade on Zerodha again while the app is in Live."
+    }
+
     /** Boss's tick on the checklist: he watched the first live trade with the app open (or took it back). */
     fun setFirstLiveWatched(watched: Boolean) { LiquidityTest.setWatched(watched) }
 
@@ -1411,11 +1476,13 @@ object OrbArms {
         // Liquidity BANKNIFTY's paper test reads its fill records and the order review before the lock (never under it).
         val extra = if (com.optionslab.app.BuildConfig.GOLD) null else runCatching { liqExtra() }.getOrNull()
         // 30 Oct: each switched-off arm's shadow line (memory only: the shadow's own view, never its lock or file).
-        return viewLocked(extra).let { v -> v.copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows,
+        // 15 Nov: the app's Live switch for Liquidity's row ("would trade live now"), read before the lock (never under it).
+        val appLive = runCatching { liveNow() }.getOrDefault(false)
+        return viewLocked(extra, appLive).let { v -> v.copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows,
             arms = v.arms.map { a -> offLine(a)?.let { a.copy(offShadow = it) } ?: a }) }
     }
 
-    private suspend fun viewLocked(extra: LiqExtra? = null): View = lock.withLock {
+    private suspend fun viewLocked(extra: LiqExtra? = null, appLive: Boolean = false): View = lock.withLock {
         val b = book()
         val day = today()
         val arms = ALL_ARMS.filter { it !in LiquidityRules.BOOKS }.map { a ->
@@ -1425,7 +1492,7 @@ object OrbArms {
                 b.pending[a.source], b.positions.filter { it.arm == a.source && it.day == day }, b.liveOk[a.source] == true,
                 record = RetiredArms.of(a.source), chargesToday = cToday, chargesMonth = cMonth, ordersMonth = orders,
                 bossParked = a.source in b.famParked && b.armed[a.source] != true)
-        } + liquidityView(b, day, extra)
+        } + liquidityView(b, day, extra, appLive)
         val lastReplay = b.replays.entries.lastOrNull()
         View(arms, b.legs?.takeIf { it.day == day }, b.range?.takeIf { b.rangeDay == day }, forward(b), lastReplay?.value, lastReplay?.key)
     }
@@ -1443,17 +1510,21 @@ object OrbArms {
     }
 
     /** Liquidity 15+5 as one row: armed when its books are, both books' trades, each book's state. */
-    private fun liquidityView(b: Book, day: LocalDate, extra: LiqExtra? = null): ArmView {
+    private fun liquidityView(b: Book, day: LocalDate, extra: LiqExtra? = null, appLive: Boolean = false): ArmView {
         val books = LiquidityRules.BOOKS.map { it.source }
         val open = b.positions.lastOrNull { it.arm in books && it.open }
         val status = LiquidityRules.BOOKS.joinToString("  ") { a ->
             "${LiquidityRules.underlyingOf(a)} ${LiquidityRules.minutesOf(a)}-min: ${describe(b.status[a.source] ?: "")}" }
         return ArmView(LiquidityRules.ARM, books.any { b.armed[it] == true }, books.all { b.auto[it] != false }, status, open,
             open?.let { marks[it.symbol] }, books.firstNotNullOfOrNull { b.pending[it] }, b.positions.filter { it.arm in books && it.day == day },
-            // 15 Nov (Boss: no PIN of its own): cleared for Zerodha by its switch - any book on ([liveCleared]); in Live it trades there.
-            // (A parked index's books are off: they never count.)
-            books.any { liveCleared(b, it) }, shadow = shadowOf(b), lots = lotsOf(b), lotsAsk = b.liqLotsAsk,
-            lotSizes = lotSizes(), parked = b.parked.sorted()).let { v ->
+            // 15 Nov: "would trade live now" - the app in Live, not parked to paper by its review, and a book cleared by Boss's own
+            // switch ([liveCleared]); in Paper it is false, as before. (A parked index's books are off: they never count.)
+            appLive && !SmartWorkers.parkedToPaperNow("liquidity") && books.any { liveCleared(b, it) },
+            shadow = shadowOf(b), lots = lotsOf(b), lotsAsk = b.liqLotsAsk,
+            lotSizes = lotSizes(), parked = b.parked.sorted(),
+            reviewParked = runCatching { SmartWorkers.reviewParked("liquidity") }.getOrDefault(false),
+            paperUntilSwitch = LiquidityRules.BOOKS.filter { b.armed[it.source] == true && !liveCleared(b, it.source) }
+                .map { "${LiquidityRules.underlyingOf(it)} ${LiquidityRules.minutesOf(it)}-min" }).let { v ->
                 // Its books' charges together (R14's charges line).
                 val c = books.map { chargesOf(b.positions, it, day) }
                 v.copy(chargesToday = c.sumOf { it.first }, chargesMonth = c.sumOf { it.second }, ordersMonth = c.sumOf { it.third },
@@ -1670,12 +1741,14 @@ object OrbArms {
             if (on && live && !pinConfirmed && !bySwitch) return@withLock LIQUIDITY_SWITCH_ONLY
             // A parked index's books stay off when the switch comes on (9 Oct, Boss's OK): only "switch it back on" brings them back.
             for (a in if (on) ParkedArms.armable(b.parked) else LiquidityRules.BOOKS) {
-                // (liveOk is kept for older saved books only: since 15 Nov the switch itself clears a Liquidity book, [liveCleared].)
-                b.armed[a.source] = on; b.auto[a.source] = automatic; b.liveOk[a.source] = on && live
+                // 15 Nov: cleared for Zerodha ([liveCleared]) only by Boss's own switch on Home or his PIN - in Paper or Live; any other
+                // way of switching it on leaves it on paper. Every switch-off clears it.
+                b.armed[a.source] = on; b.auto[a.source] = automatic; b.liveOk[a.source] = on && (bySwitch || pinConfirmed)
                 if (!on) b.pending.remove(a.source)
             }
-            // Boss himself switched it on again (his switch in Live, or on paper): no longer parked or paused by its review.
-            if (on) runCatching { SmartWorkers.ownerRearmed("liquidity") }
+            // Its self-review's park to paper (an automatic risk-lowering step) is lifted only with Boss's PIN ([liftLiquidityPark]),
+            // never by a no-PIN tap.
+            if (on && pinConfirmed) runCatching { SmartWorkers.ownerRearmed("liquidity") }
             save(b)
             // 25 Oct (app audit): every flip of an arm's switch is written down with when (the diary) - Liquidity's BANKNIFTY book included.
             switchNote(LiquidityRules.ARM.label, on, live, automatic, pin = pinConfirmed)
@@ -1765,9 +1838,13 @@ object OrbArms {
     suspend fun resetPaper() = lock.withLock {
         val b = book()
         b.positions.removeAll { !it.live }
-        // (15 Nov: a Liquidity book is cleared for Zerodha by its switch alone ([liveCleared]), so an armed one is kept like any cleared arm.)
-        val live = b.positions.filter { it.open }.map { it.arm }.toSet() + (b.liveOk.keys + b.armed.keys).filter { liveCleared(b, it) }
-        if (!liveNow()) b.pending.clear()
+        // (15 Nov: a Liquidity book counts as armed for Zerodha only while it is cleared by Boss's own switch and the app is in Live,
+        // so in Paper a reset switches it off exactly as before; every other arm by its own liveOk.)
+        val appLive = liveNow()
+        val liq = LiquidityRules.BOOKS.map { it.source }.toSet()
+        val live = b.positions.filter { it.open }.map { it.arm }.toSet() + b.liveOk.filterValues { it }.keys.filter { it !in liq } +
+            liq.filter { appLive && liveCleared(b, it) }
+        if (!appLive) b.pending.clear()
         for (k in b.armed.keys.toList()) if (k !in live) { b.armed.remove(k); b.auto.remove(k) }
         b.decided.keys.removeAll { it.substringBefore('|') !in live }
         b.watched.keys.removeAll { it.substringBefore('|') !in live }
@@ -1823,7 +1900,7 @@ object OrbArms {
         val b = book()
         val key = (if (source == LiquidityRules.ARM.source) liquidityBook(b) else source) ?: return "Nothing is waiting for approval."
         val waiting = b.pending[key] ?: return "Nothing is waiting for approval."
-        val live = ArmAccount.approval(armOf(waiting.arm), liveNow(), SmartWorkers.parkedToPaperNow("liquidity"), waiting.live)
+        val live = ArmAccount.approval(armOf(waiting.arm), liveNow(), liqToPaper(b, armOf(waiting.arm)), waiting.live)
         // A live entry is sent only after the owner's PIN or fingerprint (the UI asks first); the signal keeps waiting for it.
         if (live == true && !pinConfirmed) return "The app is in Live: approve with your PIN on Home → Strategies."
         val p = b.pending.remove(key) ?: return "Nothing is waiting for approval."
@@ -1911,7 +1988,8 @@ object OrbArms {
             // key (Liquidity's books are one strategy), live when any of its armed arms enters live (review G2-2). Memory only.
             runCatching {
                 val parked = SmartWorkers.parkedToPaperNow("liquidity")
-                ArmAccount.byKey(ALL_ARMS.filter { b.armed[it.source] == true }, VariantRunner::lab) { ArmAccount.entry(it, appLive == true, parked) }
+                ArmAccount.byKey(ALL_ARMS.filter { b.armed[it.source] == true }, VariantRunner::lab) {
+                    ArmAccount.entry(it, appLive == true, parked || (it.liquidity && !liveCleared(b, it.source))) }
                     .forEach { (k, live) -> VariantRunner.saw(k, live) }
             }
             for (arm in ALL_ARMS) {
@@ -3508,7 +3586,7 @@ object OrbArms {
             HeroRules.isExpiryDay(day, Market.cachedContracts()?.takeIf { it.first == day }?.second.orEmpty().filter { it.underlying == und }.map { it.expiry }.distinct())
         }.getOrDefault(false)
         if (expiryToday) {
-            val goesLive = ArmAccount.entry(arm, appLive ?: liveNow(), SmartWorkers.parkedToPaperNow("liquidity"))
+            val goesLive = ArmAccount.entry(arm, appLive ?: liveNow(), liqToPaper(b, arm))
             if (!goesLive && BossRiskHost.expirySkipPaper()) {
                 runCatching { BossRiskHost.expiryNote(arm.label, und, LiquidityRules.EXPIRY_DAY_WORDS) }
                 return kept("refused: ${LiquidityRules.EXPIRY_DAY_WORDS}", s)
@@ -3544,9 +3622,9 @@ object OrbArms {
         // Self-review (10 Oct): parked to paper by its own review, its entries go to the paper account until Boss re-arms it
         // in Live with his PIN ([SmartWorkers.ownerRearmed]); open live positions keep their exits. Memory only under the lock
         // (review G2-5: the parks were read off it; not read yet counts as parked). The approval decides it again the same way.
-        val live = ArmAccount.entry(arm, appLive ?: liveNow(), SmartWorkers.parkedToPaperNow("liquidity"))
-        // As the ORB: automatic unless the owner chose approvals, or it was armed in Paper and now finds the app in Live.
-        // 15 Nov (Boss): a Liquidity book is cleared for Zerodha by its own switch ([liveCleared]): no PIN of its own, no approval for it.
+        // 15 Nov (Boss): a book not cleared for Zerodha by Boss's own switch on Home ([liveCleared]) enters on paper ([liqToPaper]).
+        val live = ArmAccount.entry(arm, appLive ?: liveNow(), liqToPaper(b, arm))
+        // Automatic unless the owner chose approvals (a book that is not cleared already went to paper above).
         if (b.auto[arm.source] == false || (live && !liveCleared(b, arm.source))) {
             val right = if (s.side > 0) "CE" else "PE"
             // 22 Oct (arms audit): until the next bar completes, but never more than [APPROVAL_MINUTES] after the signal bar's close
@@ -3670,7 +3748,7 @@ object OrbArms {
     private suspend fun capStep(b: Book, arm: Arm, w: CapWait, t: LocalDateTime, appLive: Boolean?): String {
         // 25 Oct (review): the wait ends too if the account changed (the app went Live: never bought on paper by an old paper
         // signal), the entry hours ended, the switch went off or the bot stopped for today.
-        val goesLive = runCatching { ArmAccount.entry(arm, appLive ?: liveNow(), SmartWorkers.parkedToPaperNow("liquidity")) }.getOrDefault(true)
+        val goesLive = runCatching { ArmAccount.entry(arm, appLive ?: liveNow(), liqToPaper(b, arm)) }.getOrDefault(true)
         val hours = LiquidityRules.mayEnterAt(w.signalBar.plusMinutes(LiquidityRules.minutesOf(arm).toLong()))
         if (t.isAfter(w.until) || !BossRiskHost.cappedPaper() || Strategies.stoppedToday() || goesLive || !hours) {
             capWaits.remove(arm.source)

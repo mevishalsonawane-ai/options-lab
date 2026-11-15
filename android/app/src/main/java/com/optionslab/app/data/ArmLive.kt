@@ -878,7 +878,7 @@ object ArmLive {
             LiveMirror.sameContractWords(spec.label, ins.symbol, others)?.let { note(a.key, it) }
         }
         // 15 Nov (Boss: "Yes" to it in shadow; 25 arm live buys of 2-6 Nov refused by Zerodha, "Insufficient funds"): the funds check -
-        // an index option buy the free cash cannot pay for even one lot. Its figure is what this path already read: the fit's read
+        // an option buy (index or stock) the free cash cannot pay for even one lot. Its figure is what this path already read: the fit's read
         // above, else the margins the account guard's read just used ([Broker.keptFreeCash], memory). Unknown: it says nothing. In
         // SHADOW (its switch off, the default) the order goes exactly as before and the would-skip is logged; on, it is not sent.
         if (optionBuy) {

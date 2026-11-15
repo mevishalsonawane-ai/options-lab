@@ -61,7 +61,11 @@ class ParkedArmsMigrationTest : RobolectricTest() {
         for (b in listOf("liquidity15", "liquidity5", "liquidity15_mid", "liquidity5_mid")) assertTrue(b, a.getValue(b))
         val r = row()
         assertTrue("Liquidity's switch stays on", r.armed)
-        assertTrue("the other books' Live clearance is untouched", r.liveOk)
+        // (15 Nov: the row's liveOk is "would trade live now", false in Paper; each book's clearance is kept.)
+        assertFalse(r.liveOk)
+        val cleared = runBlocking { OrbArms.liquidityLiveCleared() }
+        assertTrue("the other books' Live clearance is untouched", listOf("liquidity15", "liquidity5", "liquidity15_mid", "liquidity5_mid").all { cleared.getValue(it) })
+        assertFalse("a parked book is never cleared", cleared.getValue("liquidity30_fin"))
         assertEquals(listOf("FINNIFTY"), r.parked)
         assertTrue(r.status, r.status.contains("FINNIFTY 30-min: ${ParkedArms.PARKED}") && r.status.contains("FINNIFTY 5-min: ${ParkedArms.PARKED}"))
         val sweep = arm("orb_sweep")

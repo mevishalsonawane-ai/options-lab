@@ -54,7 +54,7 @@ internal fun FundsCheckCardFlow(view: FundsCheck.View, said: String?, onOn: () -
 @Composable
 internal fun FundsCheckCardContent(view: FundsCheck.View, said: String?, onSwitch: (Boolean) -> Unit) {
     LedgerCard(title = FundsCheck.LABEL) {
-        Note("An arm's live index option buy (the arms' live copies, ORB and Liquidity 15+5) that the free cash cannot pay for even one " +
+        Note("An arm's live option buy (index or stock options: the arms' live copies, ORB and Liquidity 15+5) that the free cash cannot pay for even one " +
             "lot: Zerodha refuses it (\"Insufficient funds\"), as it did 25 times on 2-6 Nov. The check reads the free cash the entry " +
             "already read; when it is not known it says nothing. A sale, a future and MCX are never asked.")
         if (!view.loaded) Note("Reading the switch...", Modifier.padding(top = 4.dp))
