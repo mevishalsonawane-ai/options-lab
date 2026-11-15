@@ -91,5 +91,8 @@ class LiquiditySwitchTimelineTest : RobolectricTest() {
         val deadline = System.currentTimeMillis() + 10_000
         while (status() != AutoChange.Status.UNDONE && System.currentTimeMillis() < deadline) Thread.sleep(20)
         assertEquals(AutoChange.Status.UNDONE, status())
+        // Lifted by Boss himself: no 30-day rest - Autopilot may pause it again if it keeps drifting.
+        assertEquals(AutoChange.LIFTED_BY_OWNER, Autopilot.book.value.entries.first { it.id == e.id }.note)
+        assertFalse(Autopilot.book.value.rest.containsKey(pause.key))
     }
 }

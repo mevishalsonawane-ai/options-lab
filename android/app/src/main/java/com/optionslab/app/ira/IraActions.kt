@@ -94,14 +94,22 @@ internal object IraActions {
     }
 
     /**
-     * 15 Nov (review): " (Liquidity 15+5's FINNIFTY 30-min, ... stay on paper until you switch it on yourself on Home)" when some of its
+     * 15 Nov (review): in Live, " (Liquidity 15+5's FINNIFTY 30-min, ... stay on paper until you switch it on yourself on Home)" when some of its
      * books are on but not cleared for Zerodha by Boss's own switch; "" otherwise. Reads the arms' view only.
      */
-    internal suspend fun liquidityPaperNote(): String = runCatching {
-        val v = com.optionslab.app.data.OrbArms.view().arms.firstOrNull { it.arm.liquidity && it.armed && it.paperUntilSwitch.isNotEmpty() }
-            ?: return@runCatching ""
-        " (Liquidity 15+5's ${v.paperUntilSwitch.joinToString(", ")} stay on paper until you switch it on yourself on Home)"
-    }.getOrDefault("")
+    internal suspend fun liquidityPaperNote(): String {
+        // Only in Live: in Paper everything is on paper anyway.
+        if (!runCatching { com.optionslab.app.data.OrbArms.liveNow() }.getOrDefault(false)) return ""
+        val arms = try {
+            com.optionslab.app.data.OrbArms.view().arms
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return ""
+        }
+        val v = arms.firstOrNull { it.arm.liquidity && it.armed && it.paperUntilSwitch.isNotEmpty() } ?: return ""
+        return " (Liquidity 15+5's ${v.paperUntilSwitch.joinToString(", ")} stay on paper until you switch it on yourself on Home)"
+    }
 
     /** [items] as (name, (start, stop)). */
     suspend fun arms(): List<Pair<String, Pair<suspend () -> String, suspend () -> String>>> = items().map { it.name to (it.start to it.stop) }

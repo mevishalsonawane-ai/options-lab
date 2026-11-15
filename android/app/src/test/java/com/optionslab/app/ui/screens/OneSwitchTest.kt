@@ -159,6 +159,31 @@ class OneSwitchTest {
         }
     }
 
+    /** 15 Nov (review): beside the Live switch, a cleared Liquidity parked to paper or paused by its review is not listed as live. */
+    @Test fun theLivePreviewNeverListsAParkedOrPausedLiquidityAsLive() {
+        val books = listOf("liquidity15", "liquidity5")
+        fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
+        AutomationSupport.liveSettings(live = true)
+        AutomationSupport.orbState(app, JSONObject().put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(true)))
+        val m = holder.model
+        var phase by androidx.compose.runtime.mutableStateOf(0)
+        compose.setContent { IraAlgoTheme("light") { androidx.compose.runtime.key(phase) { LiveScopeNote(m, live = true) } } }
+        compose.waitForIdle()
+        pump { exists("trade live when armed: Liquidity 15+5", substring = true) }
+        com.optionslab.app.data.SmartWorkers.parkByAutopilot("liquidity")
+        phase++
+        pump { exists("On paper: Liquidity 15+5", substring = true) }
+        assertFalse(exists("trade live when armed: Liquidity 15+5", substring = true))
+        // Unparked: live again (so the next check never reads the line left from the park).
+        com.optionslab.app.data.SmartWorkers.resetForTest()
+        phase++
+        pump { exists("trade live when armed: Liquidity 15+5", substring = true) }
+        com.optionslab.app.data.SmartWorkers.pausePaperByAutopilot("liquidity")
+        phase++
+        pump { exists("On paper: Liquidity 15+5", substring = true) }
+        assertFalse(exists("trade live when armed: Liquidity 15+5", substring = true))
+    }
+
     @Test fun aiTradesGoLiveCanBeTurnedOffOnItsOwnBesideTheLiveSwitchWithoutAPin() {
         IraNewsTrades.paperFirst = false
         AutomationSupport.liveSettings(live = true)

@@ -284,15 +284,22 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertFalse(row().reviewPaused)
     }
 
-    /** 15 Nov (review): "start all" says which Liquidity books stay on paper until Boss switches it on himself on Home. */
+    /**
+     * 15 Nov (review): in Live, "start all" says which Liquidity books stay on paper until Boss switches it on himself on Home; in Paper
+     * (everything is on paper) it says nothing of it.
+     */
     @Test fun startAllSaysWhichLiquidityBooksStayOnPaper() {
+        fun said() = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Commands.parse("start all")!!) }.first
+        val note = "stay on paper until you switch it on yourself on Home"
         AutomationSupport.liveSettings(live = false)
         runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }                  // Jarvis / the day plan: not cleared
-        val said = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Commands.parse("start all")!!) }.first
-        assertTrue(said, said.contains("stay on paper until you switch it on yourself on Home") && said.contains("BANKNIFTY 15-min"))
+        assertFalse("in Paper: nothing to say", said().contains(note))
+        AutomationSupport.liveSettings()
+        said().let { assertTrue(it, it.contains(note) && it.contains("BANKNIFTY 15-min")) }
+        AutomationSupport.liveSettings(live = false)
         runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, bySwitch = true) }  // Boss's own switch
-        val again = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Commands.parse("start all")!!) }.first
-        assertFalse(again, again.contains("stay on paper until you switch it on yourself on Home"))
+        AutomationSupport.liveSettings()
+        assertFalse(said().contains(note))
     }
 
     /**

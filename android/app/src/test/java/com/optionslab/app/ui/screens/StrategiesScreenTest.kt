@@ -720,6 +720,17 @@ class OrbRowsTest {
         assertEquals(listOf("orb lift pin=true"), rec.calls)
     }
 
+    /** 15 Nov (review): paused by its review (not parked): its badge, the pause line, and the Lift button with its PIN. */
+    @Test fun aPausedLiquidityShowsItsBadgeLineAndLiftButton() {
+        rows(StrategyFakes.orbView(armed = true).liq { it.copy(liveOk = false, cleared = true, reviewPaused = true) }, live = true)
+        assertTrue(shown(LIQ_PAUSED_BADGE))
+        assertTrue(shown("Paused by its self-review: no new entries, paper or live"))
+        assertTrue("not parked", !shown("Parked to paper"))
+        tap(LIFT_PARK)
+        tap("PIN OK")
+        assertEquals(listOf("orb lift pin=true"), rec.calls)
+    }
+
     @Test fun anArmedArmSaysWhatItWaitsForAndDisarms() {
         rows(StrategyFakes.orbView(armed = true), live = false)
         assertTrue(shown("ARMED · PAPER · AUTO"))

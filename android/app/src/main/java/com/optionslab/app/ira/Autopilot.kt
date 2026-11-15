@@ -1649,7 +1649,8 @@ internal object Autopilot {
     /**
      * 15 Nov (review): Boss lifted [key]'s self-review pause ([paused]) or park to paper ([parked]) himself - his switch in Paper, or his
      * PIN ([com.optionslab.app.data.OrbArms.liftLiquidityPark]). The Autopilot entries that set them ("paper:[key]" paused, "live:[key]"
-     * parked) still kept are closed as undone by Boss, so the change timeline never shows a pause or park that no longer holds.
+     * parked) still kept are closed as lifted by Boss ([AutoChange.liftedByOwner]: no 30-day rest, not counted as his Undo), so the change
+     * timeline never shows a pause or park that no longer holds.
      */
     fun ownerLifted(key: String, paused: Boolean, parked: Boolean) {
         if (!enabled() || (!paused && !parked)) return
@@ -1664,7 +1665,8 @@ internal object Autopilot {
                             (parked && e.change.kind == AutoChange.Kind.LIVE_ENTRIES && e.change.target == "live:$key" && e.change.to == AutoChange.PARKED))
                     }.map { it.id }
                     if (ids.isEmpty()) return@synchronized
-                    for (id in ids) _book.value = AutoChange.undone(_book.value, id, today)
+                    // (Closed as lifted by Boss, with no rest: if it keeps drifting, Autopilot may set it again - AutoChange.liftedByOwner.)
+                    for (id in ids) _book.value = AutoChange.liftedByOwner(_book.value, id, today)
                     save()
                 }
                 runCatching { Diag.record("autopilot", "$key: its ${listOfNotNull("pause".takeIf { paused }, "park to paper".takeIf { parked }).joinToString(" and ")} lifted by you") }

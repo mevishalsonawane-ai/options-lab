@@ -44,6 +44,30 @@ class AutoChangeTest {
         assertTrue(AutoChange.blocked(made, c.key, day.plusDays(1))?.contains("no flip-flop") == true)
     }
 
+    /**
+     * 15 Nov (review): a pause Boss lifted himself (his switch or PIN, [AutoChange.liftedByOwner]) is closed with no 30-day rest: Autopilot
+     * may set it again from the next day if the strategy keeps drifting; it is not counted as "undone by you". The timeline's Undo
+     * ([AutoChange.undone]) still rests it.
+     */
+    @Test fun aPauseBossLiftedHimselfMayBeSetAgainTheNextDay() {
+        val day = LocalDate.of(2026, 11, 10)
+        val c = AutoChange.Change(AutoChange.Kind.PAPER_ENTRIES, "paper:liquidity", AutoChange.ON, AutoChange.PAUSED, "drifting",
+            AutoChange.Evidence(30, -3_000.0, AgentLessons.Confidence.STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER)
+        val (b, e) = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.KEPT, 1L, day)
+        val lifted = AutoChange.liftedByOwner(b, e.id, day.plusDays(5))
+        val le = lifted.entries.single()
+        assertEquals(AutoChange.Status.UNDONE, le.status); assertEquals(AutoChange.LIFTED_BY_OWNER, le.note)
+        assertTrue(lifted.rest.isEmpty(), "no rest after Boss's own lift")
+        assertFalse(AutoChange.undoneByBoss(le))
+        assertNotNull(AutoChange.blocked(lifted, c.key, day.plusDays(5)), "not again the same day")
+        assertNull(AutoChange.blocked(lifted, c.key, day.plusDays(6)), "the next day it may be planned again")
+        // The timeline's Undo still rests it for its days, and counts as undone by Boss.
+        val undone = AutoChange.undone(b, e.id, day.plusDays(5))
+        assertTrue(AutoChange.undoneByBoss(undone.entries.single()))
+        assertNotNull(AutoChange.blocked(undone, c.key, day.plusDays(6)))
+        assertNull(AutoChange.liftedByOwner(b, "no-such-id", day).entries.firstOrNull { it.status == AutoChange.Status.UNDONE })
+    }
+
     @Test fun theTrapGuardsShadowKnobsAreNotCountedAsTrials() {
         // Review G5-6: no agent acts on the trap guard's learned thresholds (a shadow record): they never raise the bar.
         val day = LocalDate.of(2026, 10, 12)
