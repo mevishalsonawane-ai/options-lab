@@ -524,6 +524,14 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
+            } else if (c.target == AutoChange.STEP_TRAIL_TARGET) {
+                // 15 Nov (Boss's exception, CLAUDE.md): the ₹500 step trail on Liquidity, R51 and R72 ([logStepTrailOn],
+                // [logStepTrail]): the Undo switches it off or on for new trades. Off puts the wider exits back, live too: the PIN, by the
+                // change's live scope ([needsPin]), asked before this runs; not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                // (review: the PIN as this call was given it - never assumed - so no automatic path can switch it off without it.)
+                com.optionslab.app.data.StepTrailExits.set(c.to == AutoChange.ON, pinConfirmed = pinConfirmed, log = false)
+                    .takeIf { !it.contains("Nothing changed") }
             } else if (c.target == AutoChange.PICK_TARGET) {
                 // 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers ([logPassedPickerOn]): the Undo switches them off or on.
                 // Off adds live trades back: the PIN, by the change's live scope ([needsPin]); not logged again.
@@ -1381,6 +1389,33 @@ internal object Autopilot {
     fun logPassedW20On() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.passedW20(true), "the 6 Nov update (your ask: \"Do whatever you recommend\", on R51); a log only - failed gates, never changes a trade")
+    }
+
+    /**
+     * 15 Nov (Boss's exception, CLAUDE.md: "keep a 500 rs gap on every 500 rs gain"): the ₹500 step trail on Liquidity 15+5, R51 and
+     * R72, paper and live, on by the update - logged once as Boss's ([com.optionslab.app.data.StepTrailExits]).
+     */
+    fun logStepTrailOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"keep a 500 rs gap on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs\"); " +
+            "not tested, Boss's exception - paper and live, new trades")
+    }
+
+    /** 15 Nov: Boss flipping the ₹500 step trail in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
+    fun logStepTrail(on: Boolean) {
+        if (!enabled()) return
+        val c = AutoChange.stepTrail(on)
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
+                        note = if (on) "your choice; paper and live, new trades" else "your choice (with your PIN); new trades use the arms' own exits").first
+                    save()
+                }
+            }
+        }
     }
 
     /** 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers, acting on paper and live, on by the update - logged once as Boss's. */

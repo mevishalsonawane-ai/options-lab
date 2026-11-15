@@ -555,11 +555,18 @@ object LiveMirror {
          * the SL limit the arms use ([stopLimit]).
          */
         val heldSeen: Boolean = true, val stopQty: Int? = null, val otherWorking: Int = 0, val lot: Int = 1, val stopLimit: Double? = null,
+        /**
+         * 15 Nov ([StepTrail], Boss's exception): the live trade's own ₹500-a-lot step-trail stop now (null: none). When the stop resting
+         * (or watched) is lower - it could not rest there yet, the price too near, or Zerodha refused it - and the price now is at or under
+         * it, the app sells ([ruleWhy] the reason). An earlier exit only.
+         */
+        val ruleStop: Double? = null, val ruleWhy: String = StepTrail.WHY_STOP,
     )
 
     /**
      * The watch's decision for one live position, in order: its stop filled; gone at Zerodha; Boss's stop; the mirror's square-off;
-     * its paper trade sold (all or part); the stop reached with nothing resting, or the price through the resting stop's limit;
+     * its paper trade sold (all or part); 15 Nov: the step trail's stop ([Look.ruleStop]) reached while a lower stop rests; the stop reached
+     * with nothing resting, or the price through the resting stop's limit;
      * the stop placed or moved up to the paper trade's level; else held.
      */
     fun decide(l: Look): Decision {
@@ -571,6 +578,10 @@ object LiveMirror {
         if (l.operatorStop) return Decision(Step.SELL, "operator_stop", qty)
         if (l.squareOff) return Decision(Step.SELL, "square_off", qty)
         if (l.paperSell > 0) return Decision(Step.SELL, l.paperReason ?: "paper_exit", minOf(l.paperSell, qty))
+        // 15 Nov ([StepTrail]): the rule's stop reached while the stop (resting or watched) is lower: sold by the app (its stop out first).
+        val rs = l.ruleStop
+        if (l.side >= 0 && rs != null && (l.stopTrigger == null || rs > l.stopTrigger + EPS) && StepTrail.stopHit(l.ltp, rs))
+            return Decision(Step.SELL, l.ruleWhy, qty)
         // A resting stop for more than is held less the other working exits: shrunk (whole lots; 0 takes it out).
         if (l.stopResting && l.stopQty != null) {
             val room = (heldMine - l.otherWorking.coerceAtLeast(0)).coerceAtLeast(0)

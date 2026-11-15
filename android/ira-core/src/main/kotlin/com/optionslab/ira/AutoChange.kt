@@ -936,6 +936,29 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), Risk.NEUTRAL_SHADOW, Scope.SHADOW,
         what = "R51 shadow log: W20 + picker (R150 B, R151 E; failed gates; a shadow log only)")
 
+    /**
+     * 15 Nov 2026: the target of the ₹500 step trail on Liquidity 15+5, R51 and R72 ([stepTrail]; no "liquidity" in it, as [TRAIL_TARGET],
+     * so the paper-test freeze never holds its Undo).
+     */
+    const val STEP_TRAIL_TARGET = "exit:step_trail_500"
+
+    /**
+     * 15 Nov 2026 (Boss: "if the profit moves to 1k, make stop loss 500 ... keep a 500 rs gap on every 500 rs gain. And when a trade is bought
+     * the stop loss should be only 500 rs"; per lot; CLAUDE.md's fifth exception): every new trade of Liquidity 15+5, R51 Donchian 20 and R72
+     * Breadth Donchian starts with its stop at -₹500 a lot (where tighter than the arm's own) and trails it from +₹1,000 a lot, on paper and
+     * live - switched [on], or off again. Not tested. On only tightens stops (risk down); off puts the arms' own wider exits back (risk up,
+     * live scope: its Undo takes the PIN).
+     */
+    fun stepTrail(on: Boolean): Change = Change(Kind.PAPER_FILTER, STEP_TRAIL_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (15 Nov, \"when a trade is bought the stop loss should be only 500 rs ... keep a 500 rs gap on every 500 rs gain\"): " +
+            "each new trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian starts with its stop at -₹500 a lot (only where tighter " +
+            "than the arm's own stop); once its best open P&L reaches +₹1,000 a lot the stop moves to +₹500 a lot and rises ₹500 a lot for " +
+            "every further ₹500 a lot, never down; paper and live; the arms' own exits stay and the first one wins. Not tested, Boss's " +
+            "exception: no research is behind these levels; R152, R167 and R172 found tight rupee stops and early profit locks hurt these arms"
+        else "Liquidity 15+5, R51 and R72's new trades are back on their own exits (no ₹500 stop or step trail; their own wider stops, live too)",
+        Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
+        what = "₹500 step trail per lot on Liquidity, R51 and R72, paper and live (not tested, Boss's exception)")
+
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"
 

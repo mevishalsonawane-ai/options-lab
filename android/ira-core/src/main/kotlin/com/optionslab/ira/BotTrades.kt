@@ -1,6 +1,7 @@
 package com.optionslab.ira
 
 import com.optionslab.engine.orb.Arm
+import com.optionslab.engine.orb.StepTrail
 import com.optionslab.engine.orb.LiquidityRules
 import com.optionslab.engine.orb.OrbRules
 import com.optionslab.engine.orb.ProfitLock
@@ -50,6 +51,11 @@ object BotTrades {
          * [com.optionslab.engine.orb.LiquidityBreakeven.label]); null: plain rules, or a trailed trade from before the label (the trail).
          */
         val rules: String? = null,
+        /**
+         * 15 Nov (Boss's exception, not tested; [com.optionslab.engine.orb.StepTrail]): a Liquidity trade on the ₹500 step trail per lot -
+         * its open line names its stop at -₹500 a lot or its trail's step (from [peak]), labelled.
+         */
+        val fixed: Boolean = false,
     )
 
     /** An arm's switch as the app shows it ([label] "ORB", "Liquidity 15+5"...). */
@@ -184,13 +190,23 @@ object BotTrades {
         val name = label(t.source)
         val bought = "Bought at ${n(t.entry)} at ${hm(t.entryTime)}"
         val target = arm?.let { ProfitLock.targetOf(it) }
+        // 15 Nov (Boss's exception): a step-trail Liquidity trade's stop - its trail's step once earned, else its -₹500 a lot where tighter
+        // than the 15% (per lot: its contract's lot size, the quantity when not known).
+        val fx = t.fixed && arm?.liquidity == true
+        val lotSize = t.lot?.takeIf { it > 0 } ?: t.qty
+        val ruleEntry = if (fx) StepTrail.stopLevel(t.entry, lotSize) else null
+        val ruleTrail = if (fx) StepTrail.trailLevel(t.entry, lotSize, t.peak) else null
+        val ownLiq = if (arm?.liquidity == true) LiquidityRules.stopTrigger(t.entry) else null
+        val ruleOn = fx && StepTrail.isTighter(ownLiq, listOfNotNull(ruleEntry, ruleTrail).maxOrNull())
         val stopLevel: Double? = when {
             arm == null -> null
-            arm.liquidity -> LiquidityRules.stopTrigger(t.entry)
+            arm.liquidity -> StepTrail.tighterStop(ownLiq, listOfNotNull(ruleEntry, ruleTrail).maxOrNull().takeIf { fx })
             else -> (t.entry - OrbRules.STOP_POINTS).takeIf { it > 0 }
         }
         val stopWords = when {
             arm == null || stopLevel == null -> "its stop"
+            ruleOn && ruleTrail != null -> "its ₹500 step trail's stop (${n(stopLevel)}; ${StepTrail.STATUS})"
+            ruleOn -> "its ₹500-a-lot stop (${n(stopLevel)}; ${StepTrail.STATUS})"
             arm.liquidity -> "its stop 15% under the price paid (${n(stopLevel)})"
             else -> "its ${OrbRules.STOP_POINTS.toInt()}-point stop (${n(stopLevel)})"
         }
@@ -240,6 +256,9 @@ object BotTrades {
             "operator_stop" -> "out when you stopped it for today, $sold"
             "closed_by_you" -> "closed by you, $sold"
             "backstop_square_off" -> "out at the app's backstop square-off, $sold"
+            // 15 Nov (Boss's exception, not tested): the ₹500 step trail per lot.
+            StepTrail.WHY_STOP -> "out at its ₹500-a-lot stop (${StepTrail.STATUS}), $sold"
+            StepTrail.WHY_TRAIL -> "out at its ₹500 step trail (${StepTrail.STATUS}), $sold"
             null -> sold
             else -> "out (${t.why.replace('_', ' ')}), $sold"
         }
