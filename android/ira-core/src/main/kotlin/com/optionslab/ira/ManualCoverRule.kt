@@ -64,6 +64,20 @@ object ManualCoverRule {
     const val STOP_BY_EXCHANGE = "stop rejected or cancelled by the exchange"
 
     /**
+     * 15 Nov, review: whether a stop that ended [status] with Zerodha's words [message] was ended by the exchange (REJECTED, or
+     * CANCELLED giving a reason that does not read as a user's cancel) rather than by Boss. A cancel with no words, or with words
+     * naming a user ("user", "cancelled by"), is Boss's: respected. ASSUMPTION, NOT VERIFIED against live Kite: a cancel Boss makes
+     * in Kite comes back with no status message, and the exchange's own cancels (market protection, circuit, IOC) give one. When
+     * unsure it is read as Boss's (the app then never puts the stop back by itself and says so loudly).
+     */
+    fun endedByExchange(status: String, message: String): Boolean {
+        if (status.equals("REJECTED", ignoreCase = true)) return true
+        if (!status.equals("CANCELLED", ignoreCase = true) || message.isBlank()) return false
+        val m = message.lowercase()
+        return "user" !in m && "cancelled by" !in m && "canceled by" !in m
+    }
+
+    /**
      * 15 Nov: the note of one slice of a protection rested in slices (a quantity above the exchange's freeze quantity) that ended
      * because part of the position was sold and the other slices cover all that is left: the position's own end, never Boss's choice.
      */
@@ -301,8 +315,11 @@ object ManualCoverRule {
 
         val size: Int get() = seen.size
 
-        /** 15 Nov: the keys seen uncovered and not yet acted on (the sync's "stop and target pending"). */
+        /** 15 Nov: the keys seen uncovered and not yet acted on. */
         val keys: Set<String> get() = seen.keys.toSet()
+
+        /** 15 Nov, review: the keys first seen (with their quantity) at or after [fromMs] (the sync's "stop and target pending"). */
+        fun keysSince(fromMs: Long): Set<String> = seen.filterValues { it.since >= fromMs }.keys.toSet()
     }
 
     /**
@@ -314,6 +331,11 @@ object ManualCoverRule {
 
     /** 15 Nov: the second look this long after a first sighting: just over [SETTLE_MS], so it is due then. */
     const val FOLLOW_UP_MS = SETTLE_MS + 1_000L
+    /**
+     * 15 Nov, review: a manual position is said "stop and target pending" only this long after it was first seen (it is covered
+     * about 21 s after; one still waiting after this is not about to be covered, and is said as followed by nothing).
+     */
+    const val PENDING_MS = 120_000L
     /** 15 Nov: a failed read is tried again this soon (once: a follow-up never asks for another). */
     const val RETRY_READ_MS = 10_000L
 

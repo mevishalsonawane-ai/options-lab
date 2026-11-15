@@ -265,6 +265,29 @@ class OrderFlowLive2Test : RobolectricTest() {
         assertEquals("OPEN", kite.order(back.targetOrderId!!).status)
     }
 
+    /**
+     * 15 Nov, review: the square-off filled in full while Zerodha's positions still trail it: the stops taken over for it are never
+     * put back (a stop on a flat account would be a naked short if it triggered).
+     */
+    @Test fun aSquareOffThatFilledNeverPutsTheProtectionsStopBack() {
+        kite.position(ce, 75, 90.0)
+        runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 85.0, null, 130.0) }
+        val p = runBlocking { Protections.active() }.single()
+        val m = model()
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.positionsTrailReads = 100_000                                   // the positions never catch up in this test
+        m.sendPlan()
+        assertEquals("COMPLETE", sent(m).single().status)
+        assertEquals("sold at Zerodha", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        assertFalse("not to be put back", Protections.takenOverForTest(p.stopOrderId!!))
+        BrokerArea.await("the contract handed back") { (!com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce)).takeIf { it } }
+        com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)
+        val before = kite.placed.size
+        runBlocking { Protections.tick() }
+        assertEquals("no stop placed again", before, kite.placed.size)
+    }
+
     /** A protection resting as one GTT is deleted first, then the square-off goes as reviewed. */
     @Test fun aProtectionsDayGttIsDeletedAndTheSquareOffGoes() {
         kite.position(ce, 75, 90.0)

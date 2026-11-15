@@ -123,9 +123,17 @@ object ManualCover {
      */
     fun pendingSymbols(): Set<String> {
         if (!(loaded && on)) return emptySet()
+        // 15 Nov, review: never stale - only in its hours, only sightings of the last [ManualCoverRule.PENDING_MS], never one left
+        // alone today (a spread, Boss's working order, a removal) nor one given up on or found already too low.
+        val day = runCatching { Market.today() }.getOrNull() ?: return emptySet()
+        if (!ManualCoverRule.inHours(Market.isTradingDay(day), Market.minuteNow())) return emptySet()
+        val now = Market.now().toInstant().toEpochMilli()
+        val d = day.toString()
         return synchronized(mem) {
             val done = (gaveUp + toldLow).map { it.substringAfter('|') }.toSet()
-            looks.keys.filter { it !in done }.mapNotNull { it.split(':').getOrNull(1) }.toSet()
+            val alone = leftAlone.filter { it.startsWith("$d|") }.map { it.substringAfter('|') }.toSet()
+            looks.keysSince(now - ManualCoverRule.PENDING_MS).filter { it !in done && it.substringBeforeLast(':') !in alone }
+                .mapNotNull { it.split(':').getOrNull(1) }.toSet()
         }
     }
 
@@ -181,13 +189,16 @@ object ManualCover {
         if (!followUpsOn) return
         val delayMs = followMsForTest ?: ManualCoverRule.followUpMs(next) ?: return
         if (ManualCoverRule.followUpMs(next) == null) return
+        val gate = followGate
         synchronized(mem) {
             if (followJob?.isActive == true) return
             val gen = memGen
             followJob = scope.launch {
                 kotlinx.coroutines.delay(delayMs)
-                if (synchronized(mem) { gen != memGen }) return@launch
-                runCatching { runLook(AppSettings.load(), mayFollow = false) }
+                gate?.await()
+                // Review: from here the look runs to its end (an erase meanwhile never cuts it between a stop sent and its record).
+                if (synchronized(mem) { (gen != memGen).also { if (!it) followLooking = true } }) return@launch
+                try { runCatching { runLook(AppSettings.load(), mayFollow = false) } } finally { followLooking = false }
             }
         }
     }
@@ -195,12 +206,22 @@ object ManualCover {
     /** The follow-up look waiting ([followUp]); [memGen] counts erases and test resets (a follow-up from before one does nothing). */
     private var followJob: kotlinx.coroutines.Job? = null
     private var memGen = 0
+    /** True while a follow-up's look runs (past its wait): [clearMemory] lets it finish. */
+    @Volatile private var followLooking = false
+    /** TEST ONLY: a follow-up waits for this after its delay ([followUpsForTest] with a gate). Null in the app. */
+    @Volatile private var followGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
     /** TEST ONLY: follow-ups off unless a test asks for them ([followUpsForTest]); always on in the app. */
     @Volatile private var followUpsOn = true
     @Volatile private var followMsForTest: Long? = null
 
     /** TEST ONLY: follow-up looks on, each [ms] after the look that asked for it (the app's own waits are 21 s and 10 s). */
-    internal fun followUpsForTest(ms: Long) { followMsForTest = ms; followUpsOn = true }
+    internal fun followUpsForTest(ms: Long, gated: Boolean = false) {
+        followMsForTest = ms; followUpsOn = true
+        followGate = if (gated) kotlinx.coroutines.CompletableDeferred() else null
+    }
+
+    /** TEST ONLY: lets a gated follow-up look go ([followUpsForTest]). */
+    internal fun releaseFollowUpForTest() { followGate?.complete(Unit) }
 
     /** TEST ONLY: whether a follow-up look is waiting or running. */
     internal fun followUpPendingForTest(): Boolean = synchronized(mem) { followJob?.isActive == true }
@@ -593,8 +614,10 @@ object ManualCover {
     }
 
     private fun clearMemory() = synchronized(mem) {
-        // 15 Nov: a follow-up look waiting is dropped (and one already running finds the count moved: [followUp]).
-        followJob?.cancel(); followJob = null; memGen++
+        // 15 Nov: a follow-up look still waiting is dropped (cancelled, and the count moved, so it never looks: [followUp]).
+        // Review: one already looking is not cut short (between a stop sent and its record); it finishes that one look.
+        if (!followLooking) followJob?.cancel()
+        followJob = null; memGen++
         looks.clear(); tries.clear(); attempts.clear(); lastAttempt.clear(); gaveUp.clear(); toldLow.clear(); leftAlone.clear()
         untracked.clear(); unhedged.clear(); hedgeLooks.clear(); unhedgedIds.clear()
         tally = ManualCoverRule.Tally()
@@ -609,7 +632,7 @@ object ManualCover {
     /** TEST ONLY: the switch as given (tests start it off, so no other test's live positions are covered), memory cleared. */
     internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) {
         this.on = on; this.loaded = loaded; switched = false
-        followUpsOn = false; followMsForTest = null
+        followUpsOn = false; followMsForTest = null; followGate = null
         clearMemory()
         publish()
     }

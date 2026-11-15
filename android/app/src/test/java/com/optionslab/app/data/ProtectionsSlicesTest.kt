@@ -231,8 +231,121 @@ class ProtectionsSlicesTest : RobolectricTest() {
         kite.reject(b.stopOrderId!!)
         minutesLater()
         tick()
-        assertTrue(Alerts.posted.any { it.text.contains("450 of the position (one slice of its stops) is not protected by a stop") })
+        assertTrue(Alerts.posted.any { it.text.contains("450 of the position (one slice of its stops) is not protected by a stop") &&
+            it.text.contains("set a stop for these 450 yourself") })
         assertEquals(2, active().size)
+    }
+
+    // ---- 15 Nov, review: a sibling counts only for what it really has resting -----------------------------------------------------
+
+    /** H1: the second slice's stop fills first: the first slice keeps its whole stop, and nothing is said bare. */
+    @Test fun aSiblingsStopFilledFirstNeverMakesTheOtherGiveUpItsStop() {
+        kite.position(sym, 3600, 100.0)
+        kite.login()
+        protect(3600)
+        val (a, b) = active()
+        kite.fill(b.stopOrderId!!, 89.0)                                    // 1,800 held now, covered by A alone
+        minutesLater()
+        tick()
+        assertEquals("TRIGGER PENDING", kite.order(a.stopOrderId!!).status)
+        assertEquals(1800, kite.order(a.stopOrderId!!).qty)
+        assertEquals("OPEN", kite.order(a.targetOrderId!!).status)
+        assertEquals("CANCELLED", kite.order(b.targetOrderId!!).status)
+        assertEquals(listOf(a.id), active().map { it.id })
+        assertEquals(1800, active().single().qty)
+        assertFalse(Alerts.posted.any { it.text.contains("no longer protected") })
+        // And it stays so on later looks.
+        tick()
+        assertEquals("TRIGGER PENDING", kite.order(a.stopOrderId!!).status)
+        assertEquals(1800, kite.order(a.stopOrderId!!).qty)
+    }
+
+    /** H1, part filled: a sibling's stop half filled counts nothing; the slices come to what is held together, never less. */
+    @Test fun aSiblingsStopPartFilledNeverShrinksTheOther() {
+        kite.position(sym, 3600, 100.0)
+        kite.login()
+        protect(3600)
+        val (a, b) = active()
+        kite.fillPart(b.stopOrderId!!, 900, 89.0)                           // 2,700 held
+        minutesLater()
+        tick()
+        assertEquals(1800, kite.order(a.stopOrderId!!).qty)
+        assertEquals("TRIGGER PENDING", kite.order(a.stopOrderId!!).status)
+        assertEquals("its target down to what it still covers", 900, kite.order(b.targetOrderId!!).qty)
+        assertEquals(2, active().size)
+    }
+
+    /** H1, 2,250: the small slice's target fills: the big slice keeps all 1,800 (nothing left bare). */
+    @Test fun aSiblingsTargetFilledNeverShrinksTheOther() {
+        kite.position(sym, 2250, 100.0)
+        kite.login()
+        protect(2250)
+        val (a, b) = active()
+        kite.fill(b.targetOrderId!!, 130.0)                                 // 1,800 held
+        minutesLater()
+        tick()
+        assertEquals(1800, kite.order(a.stopOrderId!!).qty)
+        assertEquals(1800, kite.order(a.targetOrderId!!).qty)
+        assertEquals("CANCELLED", kite.order(b.stopOrderId!!).status)
+        assertEquals(listOf(a.id), active().map { it.id })
+        tick()
+        assertEquals(1800, kite.order(a.stopOrderId!!).qty)
+    }
+
+    /** M2: a sibling left with a target only covers nothing: the slice with the stop keeps it, and the target-only one ends. */
+    @Test fun aSiblingWithOnlyATargetNeverTakesTheStopsPlace() {
+        kite.position(sym, 2250, 100.0)
+        kite.login()
+        protect(2250)
+        val (a, b) = active()
+        kite.reject(b.stopOrderId!!)
+        minutesLater()
+        tick()                                                               // B: its stop gone, its target kept
+        kite.position(sym, 1800, 100.0)
+        tick()
+        assertEquals("A keeps its whole stop", 1800, kite.order(a.stopOrderId!!).qty)
+        kite.position(sym, 450, 100.0)
+        tick()
+        assertEquals("A comes down to what is held", 450, kite.order(a.stopOrderId!!).qty)
+        assertEquals("TRIGGER PENDING", kite.order(a.stopOrderId!!).status)
+        assertTrue(a.id in active().map { it.id })
+        // B (a target only) has nothing left to cover beside A's stop: taken out, never A.
+        tick()
+        assertEquals(listOf(a.id), active().map { it.id })
+        assertEquals("CANCELLED", kite.order(b.targetOrderId!!).status)
+    }
+
+    /** L3: a reduce Zerodha refuses leaves the protection with the quantity its orders really have; it is tried again. */
+    @Test fun aRefusedReduceKeepsTheQuantityTheOrdersHave() {
+        kite.position(sym, 150, 100.0)
+        kite.login()
+        protect(150)
+        val p = active().single()
+        kite.position(sym, 75, 100.0)
+        kite.down += "/orders/regular/${p.stopOrderId}"
+        kite.down += "/orders/regular/${p.targetOrderId}"
+        minutesLater()
+        tick()
+        assertEquals(150, active().single().qty)
+        assertEquals(150, kite.order(p.stopOrderId!!).qty)
+        kite.down.clear()
+        tick()
+        assertEquals(75, kite.order(p.stopOrderId!!).qty)
+        assertEquals(75, active().single().qty)
+    }
+
+    /** L4: an automatic protection in slices whose one stop the exchange refused: no promise that the app puts it back. */
+    @Test fun anAutomaticSlicesRefusedStopIsSaidForBossToSet() {
+        kite.position(sym, 2250, 100.0)
+        kite.login()
+        runBlocking { Protections.protectLive(sym, "NFO", "NRML", 2250, 100.0, 90.0, null, 130.0, auto = true) }
+        val (_, b) = active()
+        kite.reject(b.stopOrderId!!)
+        minutesLater()
+        tick()
+        assertFalse(Alerts.posted.any { it.text.contains("places its stop and target again") })
+        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("set a stop for these 450 yourself") })
+        assertEquals("its target kept (the others keep the position covered)", "OPEN", kite.order(b.targetOrderId!!).status)
     }
 
     /** Removing the position's protection from Trade (Boss's square-off) removes every slice. */

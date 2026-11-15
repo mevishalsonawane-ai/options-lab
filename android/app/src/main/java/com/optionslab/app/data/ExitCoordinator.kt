@@ -147,6 +147,16 @@ object ExitCoordinator {
     private val PLACED = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     private fun placedMs(s: String): Long? = if (s.isBlank()) null else runCatching { java.time.LocalDateTime.parse(s, PLACED).atZone(IST).toInstant().toEpochMilli() }.getOrNull()
 
+    /**
+     * 15 Nov, review: whether [orders] (a read of the order book) show an [exitSide] fill on [exchange]:[symbol] [product] that the
+     * exchange changed within [ExitDesk.RECENT_FILL_MS] (its update time): the positions may not show it yet. Memory only.
+     */
+    fun exitFilledRecently(exchange: String, symbol: String, product: String, exitSide: String, orders: Collection<Broker.OrderRow>): Boolean {
+        val now = nowMs()
+        return orders.any { it.symbol == symbol && it.exchange == exchange && it.product == product && it.side == exitSide && it.filled > 0 &&
+            ExitDesk.filledRecently(ExitDesk.Fill(it.id, it.side, it.filled, placedMs(it.updatedAt)), now) }
+    }
+
     // ---- for the exit senders -------------------------------------------------------------------------------------------------
 
     /**
@@ -215,7 +225,10 @@ object ExitCoordinator {
      * so a contract with no exit of ours just filled costs no read at all.
      */
     suspend fun held(exchange: String, symbol: String, product: String, who: String, orders: List<Broker.OrderRow>,
-                     first: Broker.Positions? = null): Int {
+                     first: Broker.Positions? = null, forceLag: Boolean = false): Int {
+        // 15 Nov, review: [forceLag] - the guard acts (reads again, then counts a trailing fill as sold) whatever its switch says, for a
+        // caller putting a stop back after Boss's exit (Protections): it only ever lowers what is held, so what is placed.
+        val guard = lagOn || forceLag
         val key = ExitDesk.key(exchange, symbol)
         val mine = runCatching { registry.recentIds(ExitRegistry.Kind.ORDER, key) }.getOrDefault(emptySet())
         // 21 Oct, enhancement round 4 (idea 2): each order's exchange update time too, so a stop or target resting since the morning
@@ -249,14 +262,14 @@ object ExitCoordinator {
         }.getOrDefault(0)
         if (mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
         var given = first
-        var (book, left) = ExitDesk.settleHeld(lagOn, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
+        var (book, left) = ExitDesk.settleHeld(guard, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
         if (converted) {
             // Review (round 5): the other product's row may show a fill that came AFTER the orders were read (Boss's MIS sell, an MIS
             // stop): that is not a conversion, and taking it as one would hide a real lag. On, the orders are read again (they lead
             // the positions, so any fill the positions show is in them now) and the lag judged on both fresh reads; that read failing,
             // this product's own lag stands, as before this round. Off (shadow): logged only, nothing read.
             val words = rowsWords(book, symbol, exchange)
-            if (lagOn) {
+            if (guard) {
                 val fresh = runCatching { Broker.orders(fresh = true) }.getOrNull()
                 val again = runCatching {
                     if (fresh == null) lags(book, fills, allFills).first

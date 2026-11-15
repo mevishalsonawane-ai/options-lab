@@ -142,7 +142,7 @@ class ProtectionsTakeoverTest : RobolectricTest() {
         kite.requests.clear()
         tick()
         assertTrue(kite.placed.isEmpty())
-        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("cancelled with no reason given") })
+        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("It was cancelled by you") })
         val now = runBlocking { Protections.active() }.single()
         assertEquals("its target stays (Boss's protection, not the app's own)", p.targetOrderId, now.targetOrderId)
         assertEquals(null, now.stopOrderId)
@@ -156,7 +156,7 @@ class ProtectionsTakeoverTest : RobolectricTest() {
         later()
         tick()
         assertEquals(com.optionslab.ira.ManualCoverRule.STOP_BY_EXCHANGE, runBlocking { Protections.active() }.single().note)
-        assertFalse(Alerts.posted.any { it.text.contains("no reason given") })
+        assertFalse(Alerts.posted.any { it.text.contains("cancelled by you") })
         assertTrue(Alerts.posted.any { it.text.contains("was cancelled (Your order has been cancelled because of market protection.)") })
         assertEquals("not the app's own: its target stays", "OPEN", kite.order(p.targetOrderId!!).status)
     }
@@ -191,5 +191,45 @@ class ProtectionsTakeoverTest : RobolectricTest() {
             assertTrue(runBlocking { Protections.active() }.isEmpty())
             assertTrue(Alerts.posted.any { it.text.contains("no longer at Zerodha") })
         } finally { DayOco.resetForTest() }
+    }
+
+    // ---- 15 Nov, review: Boss's exit filled but Zerodha's positions still trail it -----------------------------------------------
+
+    /** Boss's sale of all of it, filled a moment ago (the takeover's ids still noted): the positions trail it, so nothing is put back. */
+    private fun bossSoldAllWithThePositionsTrailing() = runBlocking {
+        kite.positionsTrailReads = 1_000                                    // every positions read shows the old 150
+        Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 150, 75, "NRML", "LIMIT", 99.95,
+            0.05, "NFO", "manual"), exit = true)
+        assertEquals("sold at Zerodha", 0, kite.positions.getValue("NFO:$sym:NRML").first)
+    }
+
+    @Test fun aRecentExitFillWithThePositionsTrailingPlacesNoStop() {
+        val p = protect()
+        takeOver(p)
+        later()                                                              // the fill is stamped now, within the minute
+        bossSoldAllWithThePositionsTrailing()
+        kite.requests.clear()
+        tick(); tick()
+        assertTrue("never a stop on a flat account", kite.placed.isEmpty())
+        assertEquals(p.id, runBlocking { Protections.active() }.single().id)
+        assertFalse(Alerts.posted.any { it.text.contains("rest at Zerodha again") })
+    }
+
+    /** The exit filled in full (AppModel then forgets the takeover): nothing is put back or said while the positions trail. */
+    @Test fun aTakeoverForgottenAfterItsExitFilledPutsNothingBack() {
+        val p = protect()
+        takeOver(p)
+        val ids = listOfNotNull(p.stopOrderId, p.targetOrderId)
+        Protections.forgetTakenOver(ids)
+        assertFalse(Protections.takenOverForTest(ids.first()))
+        kite.positionsTrailReads = 1_000
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 150, 75, "NRML", "LIMIT", 99.95,
+            0.05, "NFO", "manual"), exit = true) }
+        Market.testClock = MarketClockRule.clockAt(12, 10)                 // past the minute: the positions trail all the same
+        kite.requests.clear()
+        tick(); tick()
+        assertTrue(kite.placed.isEmpty())
+        assertFalse("never said as Boss's own cancel", Alerts.posted.any { it.text.contains("cancelled by you") })
+        assertEquals("kept until the positions show it closed", p.id, runBlocking { Protections.active() }.single().id)
     }
 }

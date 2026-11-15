@@ -626,11 +626,12 @@ class ManualCoverTest : RobolectricTest() {
      * second look comes by itself just after the 20 s settle, not a whole pass later. One sighting alone still places nothing.
      */
     @Test fun aFirstSightingIsLookedAtAgainSoonAndCoveredWithoutWaitingForThePass() {
-        ManualCover.followUpsForTest(400)
+        ManualCover.followUpsForTest(0, gated = true)                 // it looks only once released (no real-time race)
         look()
         assertTrue("one look is never enough", writes().isEmpty())
         assertTrue("a follow-up look is waiting", ManualCover.followUpPendingForTest())
         later(25)                                                     // the settle has passed by the time it looks again
+        ManualCover.releaseFollowUpForTest()
         com.optionslab.app.testing.Background.await("covered by the follow-up look") { kite.placed.size == 2 }
         assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
         com.optionslab.app.testing.Background.await("the follow-up done") { !ManualCover.followUpPendingForTest() }
@@ -641,28 +642,30 @@ class ManualCoverTest : RobolectricTest() {
 
     /** The settle is kept: a follow-up that comes before the 20 s places nothing (the next pass covers it). */
     @Test fun aFollowUpBeforeTheSettlePlacesNothing() {
-        ManualCover.followUpsForTest(200)
+        ManualCover.followUpsForTest(0, gated = true)
         look()
+        later(5)                                                      // only 5 s on: under the 20 s settle
+        ManualCover.releaseFollowUpForTest()
         com.optionslab.app.testing.Background.await("the follow-up done") { !ManualCover.followUpPendingForTest() }
-        Thread.sleep(300)
         assertTrue("never on a single sighting or under 20 s", writes().isEmpty())
     }
 
     /** A failed read (the price) is tried again once, soon - never in a loop. */
     @Test fun aFailedReadIsTriedAgainOnceSoon() {
         look(); later(25)
-        ManualCover.followUpsForTest(400)
+        ManualCover.followUpsForTest(0, gated = true)
         kite.down += "/quote"
         val quotes = { kite.requests.count { it.path.startsWith("/quote") } }
         look()
         assertTrue(writes().isEmpty())
         assertTrue("a retry is waiting", ManualCover.followUpPendingForTest())
-        val before = quotes()
+        val before = quotes()                                         // read while the retry is held: nothing of it counted yet
+        ManualCover.releaseFollowUpForTest()
         com.optionslab.app.testing.Background.await("the retry done") { !ManualCover.followUpPendingForTest() }
-        Thread.sleep(800)
         assertTrue("tried again once", quotes() > before)
         val after = quotes()
-        Thread.sleep(800)
+        Thread.sleep(500)
+        assertFalse("only once: no further follow-up", ManualCover.followUpPendingForTest())
         assertEquals("only once: no loop", after, quotes())
         assertTrue(writes().isEmpty())
         // The read works again: the retry covers it.
@@ -674,10 +677,11 @@ class ManualCoverTest : RobolectricTest() {
 
     @Test fun aRetryCoversItOnceTheReadWorksAgain() {
         look(); later(25)
-        ManualCover.followUpsForTest(500)
+        ManualCover.followUpsForTest(0, gated = true)
         kite.down += "/quote"
         look()
         kite.down -= "/quote"
+        ManualCover.releaseFollowUpForTest()
         com.optionslab.app.testing.Background.await("covered by the retry") { kite.placed.size == 2 }
     }
 
@@ -701,7 +705,7 @@ class ManualCoverTest : RobolectricTest() {
         runBlocking { Broker.cancel(p.stopOrderId!!) }
         later(65)
         runBlocking { Protections.tick() }
-        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("cancelled with no reason given") })
+        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("It was cancelled by you") })
         val n = kite.placed.size
         later(65); look(); later(25); look(); later(65); look()
         assertEquals("respected: nothing placed again", n, kite.placed.size)
@@ -717,6 +721,35 @@ class ManualCoverTest : RobolectricTest() {
         assertTrue("covered: no longer pending", ManualCover.pendingSymbols().isEmpty())
         ManualCover.resetForTest(on = false)
         assertTrue(ManualCover.pendingSymbols().isEmpty())
+    }
+
+    /** L6: never stale - not after two minutes since it was seen, not outside the hours, not once left alone today. */
+    @Test fun pendingIsNeverStale() {
+        look()
+        assertEquals(setOf(sym), ManualCover.pendingSymbols())
+        later(125)
+        assertTrue("two minutes after it was seen: no longer said pending", ManualCover.pendingSymbols().isEmpty())
+        ManualCover.resetForTest(on = true)
+        at(15, 23); look()
+        assertEquals(setOf(sym), ManualCover.pendingSymbols())
+        at(15, 26)
+        assertTrue("outside its hours", ManualCover.pendingSymbols().isEmpty())
+    }
+
+    /** L6: a sighting the last check before placing left alone (Boss's GTT found in the turn) is no longer said pending. */
+    @Test fun aPositionLeftAloneTodayIsNotPending() {
+        look(); later(25)
+        assertEquals(setOf(sym), ManualCover.pendingSymbols())
+        kite.afterNext("/quote") {
+            kite.gtts[5_102L] = org.json.JSONObject().put("id", 5_102L).put("type", "single").put("status", "active")
+                .put("created_at", "2026-11-07 10:00:00")
+                .put("condition", org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", sym)
+                    .put("trigger_values", org.json.JSONArray().put(110.0)).put("last_price", 126.0))
+                .put("orders", org.json.JSONArray())
+        }
+        look()
+        assertTrue(writes().isEmpty())
+        assertTrue("left alone today: not pending", ManualCover.pendingSymbols().isEmpty())
     }
 
     @Test fun nothingIsPendingWhileSwitchedOffOrTooLow() {

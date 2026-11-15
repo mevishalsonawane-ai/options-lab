@@ -344,4 +344,30 @@ class ManualCoverRuleTest {
         l.clear()
         assertTrue(l.keys.isEmpty())
     }
+
+    /** 15 Nov, review: Boss's cancel (no words, or words naming a user) is never read as the exchange's. */
+    @Test fun onlyTheExchangesRefusalOrReasonedCancelIsTheExchanges() {
+        assertTrue(ManualCoverRule.endedByExchange("REJECTED", ""))
+        assertTrue(ManualCoverRule.endedByExchange("REJECTED", "RMS:Trigger price is outside the circuit limit"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Your order has been cancelled because of market protection."))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", ""), "no words: Boss's")
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "   "))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by user"))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Order CANCELLED BY the client"))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "USER cancel"))
+        assertFalse(ManualCoverRule.endedByExchange("COMPLETE", "anything"))
+        assertFalse(ManualCoverRule.endedByExchange("OPEN", ""))
+    }
+
+    /** 15 Nov, review: "pending" only for sightings of the last two minutes. */
+    @Test fun recentSightingsOnlyArePending() {
+        val l = ManualCoverRule.Looks()
+        l.see("old", 130, 0L)
+        l.see("new", 65, 100_000L)
+        assertEquals(setOf("old", "new"), l.keysSince(0L))
+        assertEquals(setOf("new"), l.keysSince(150_000L - ManualCoverRule.PENDING_MS))
+        // A new quantity is a new sighting.
+        l.see("old", 195, 200_000L)
+        assertEquals(setOf("old"), l.keysSince(100_001L))
+    }
 }
