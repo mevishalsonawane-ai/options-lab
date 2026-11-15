@@ -82,3 +82,21 @@ pytest on synthetic data: the TPO profile (POC, 70% value area, ties, too few mi
 close back inside within 10 rows; none; NaN minutes; a put mirror), K1 (a failed break in the window; one only before it;
 one after the signal: ignored), the earlier-of forced rows, the selection twin. Look-ahead guard: levels and decisions are
 unchanged when every bar after the decision row (and every bar of the trade day for the levels) is replaced by noise.
+
+## Amendment A (15 Nov 2026, before any number for it was computed): K1 + Rs 1,000 stop + step trail
+
+Boss, 15 Nov 2026, after reading R177: *"On the top of this add 1k stoploss and as we discussed earlier, on every 1000 add
+stoploss of 500, and on 1500 make it 1000"*.
+
+- **Rule K1S**: K1 (section 2, unchanged) AND R176 Amendment B's stop rule on every trade K1 keeps: a -Rs 1,000-a-lot stop
+  at entry (rounded up to the tick; only where tighter than -15%); once the best open P&L reaches +Rs 1,000 a lot, the stop
+  = entry + (floor(best / 500 L) - 1) x 500 L (so +Rs 500 a lot at +Rs 1,000, +Rs 1,000 at +Rs 1,500, ...); no target;
+  every other exit stays. Before charges, per lot; every stop is sold as a stop (R17).
+- Also reported (not tested again): **S1k** = the stop rule alone on today's trades (it must reproduce R176 Amendment B's
+  year numbers on these stores: an engine check).
+- Window, periods, costs, pickers (descriptive), lots 1-3 reported, gates at 1 lot: as R177 section 5.
+- **Twin** (500, seed 177): does K1 add to the stop rule beyond chance? From S1k's year trades, drop as many trades as
+  K1S has fewer (at least 0), at random; p = (1 + twins with net >= K1S's) / 501.
+- **Tests: 3 more** (3 arms); BH **m = 3,997 + 3 = 4,000**.
+- Honesty: chosen after seeing R176's and R177's results on the same year (data-led); the final period is read again
+  (`results/FINAL_READ_A`). Weaker evidence than a fresh test on new days.

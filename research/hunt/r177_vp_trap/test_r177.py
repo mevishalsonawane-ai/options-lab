@@ -139,3 +139,8 @@ def test_look_ahead_guard(seed):
     e = c.copy()
     e[er - 1:] = rng.normal(0, 100, N - er + 1) if not k else e[er - 1:]
     assert L.failed_break(e, er - 1, "C", level) == k
+
+
+def test_amendment_a_counts():
+    import r177study as R
+    assert R.M_TOTAL == 3997 and R.M_TOTAL_A == 4000
