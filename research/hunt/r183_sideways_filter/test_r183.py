@@ -169,3 +169,13 @@ def test_post_walk_mask_is_a_subset(monkeypatch):
     S._FEAT.clear()
     assert [t["day"] for t in kept] == [0, 2, 4]
     assert all(t in trades for t in kept)
+
+
+def test_recent_minute_bars_from_seconds():
+    R = pytest.importorskip("r183recent")
+    t0 = 1_000_000
+    ep = np.array([t0 + 1, t0 + 30, t0 + 59, t0 + 61, t0 + 3 * 60, t0 - 5, t0 + 375 * 60])
+    px = np.array([10.0, 12.0, 11.0, 20.0, np.nan, 99.0, 99.0])
+    a = R.minute_bars(ep, px, t0)
+    assert list(a[:, 0]) == [10.0, 12.0, 10.0, 11.0] and list(a[:, 1]) == [20.0] * 4
+    assert np.isnan(a[:, 2]).all() and np.isnan(a[:, 3]).all()

@@ -1932,3 +1932,13 @@ gates. C1 -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000; C2 day cap (no new ent
   and lock never beat random exit minutes (best p 0.19). The day cap blocks afternoon recoveries.
 - **Lead:** the 10:00 cut alone beat random skips at 3 lots (p 0.025 R72, 0.033 R51), tested only with C1's exits.
 - **R151's picker (live) already cuts red days by about 40% at the same profit** (R72, 1 lot, second look).
+
+## Skipping "sideways" markets on R51 / R72 (R183, 15 Nov 2026) - no filter helps; keep picker + breakeven
+`hunt/r183_sideways_filter/results/report.md`. Boss: "How could we ignore sideways markets" (after 58 paper trades on
+9 - 13 Nov won 41%). Signal source: the arm's own index, bars strictly before the signal bar. 16 filters (ADX, efficiency
+ratio, TWAP crossings, range so far, Choppiness) on today's live rules (R179 V4), selected on 20 Nov 2024 - 19 Oct 2025.
+- **R72: none beat today's rules** on the selection year (each cut Rs 32k - Rs 1.62 L off Rs 2.99 L, 1,043 trades).
+- **R51: 7+ TWAP crossings chosen** (+Rs 24.9k there), then **failed** on 20 Oct 2025 - 19 Oct 2026: Rs 2.19 L on 1,232
+  trades vs Rs 2.50 L on 1,367; random skips of 135 trades averaged Rs 2.25 L (p 0.60, BH q 1.00, m = 4,376).
+- Quiet-day filters (low range, ADX, efficiency) remove the big breakout winners these arms live on; on 9 - 13 Nov the
+  chosen filter would have skipped none of R51's 23 checkable paper trades (descriptive).
