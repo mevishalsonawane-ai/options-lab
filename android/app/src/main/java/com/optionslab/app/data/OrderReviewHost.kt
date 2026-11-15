@@ -348,7 +348,8 @@ object OrderReviewHost {
         runCatching { AppState.orders.value?.value }.getOrNull()?.forEach { o ->
             val at = kiteMs(o.placedAt) ?: return@forEach
             if (at !in from..to) return@forEach
-            val label = owners["kite:${o.id}"]
+            // 15 Nov: else the arm noted before the order was sent (a rejected order whose id never reached the phone: [ArmOrderLabels]).
+            val label = owners["kite:${o.id}"] ?: ArmOrderLabels.labelOf(o)
             val strategy = if (label != null) nameOf(label) else com.optionslab.ira.Slippage.strategyOf(o.tag, null, null)
             orders += OrderReview.Order("kite:${o.id}", OrderReview.Venue.LIVE, strategy, o.symbol, o.side, o.qty, o.filled, o.status, o.message, at, o.avg, o.type,
                 manual = strategy == "Manual")

@@ -2893,6 +2893,10 @@ object OrbArms {
         val liveStop = if (liquidity == null) OrbRules.stopTrigger(last, lp.stopPoints) else LiquidityRules.stopTrigger(last, lq.stopPct)
         // (25 Oct: dated by the market clock, the one the door ([Broker.placeOrder]) reads back; in the app both clocks are the same.)
         val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), armKey, stop = liveStop), "ORB live checks")
+        // 15 Nov (audit: rejected live orders shown with no arm): the arm's label noted before the order goes, memory only
+        // ([ArmOrderLabels]), so an order Zerodha refuses but still keeps as REJECTED is shown with its arm. Nothing else changes.
+        val owner = "${arm.label} · entry"
+        val sent = ArmOrderLabels.sending(o, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis()))
         val id: String? = try {
             // The arm's key as its entry check asked the portfolio guard (the door refuses only this arm's blocked entry).
             // [last]: the price this entry decided on (its slippage is measured from it once it fills; nothing else changes).
@@ -2900,12 +2904,14 @@ object OrbArms {
         } catch (e: Broker.NotLoggedIn) {
             return "refused: not logged in to Zerodha today"
         } catch (e: Exception) {
+            if (ArmOrderLabels.zerodhaRefused(e)) ArmOrderLabels.refused(sent)
             if (Broker.definite(e)) return "order_refused: " + (e.message ?: "Zerodha refused the order")
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
             try { Broker.findRecentRetrying(o, known) ?: return "order_refused: ${e.message}; no matching order found at Zerodha" }
             catch (_: Exception) { null }                                          // the order book could not be read either
         }
-        id?.let { Strategies.tagOwner("kite:$it", "${arm.label} · entry") }
+        id?.let { ArmOrderLabels.answered(it, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis())) }
+        id?.let { Strategies.tagOwner("kite:$it", owner) }
         var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
         if (id != null && f?.status !in DONE) {
             // Not finished in 15 s: the unfilled rest is cancelled so it can never fill later untracked; only what filled is booked.
