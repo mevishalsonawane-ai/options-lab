@@ -1,0 +1,40 @@
+id: r176-r72-step-trail-500
+title: 'R176 R72 Breadth Donchian: Boss''s step trail per lot with a Rs 500 entry stop, last year of data (1-3 lots)'
+family: trade-management
+date: '2026-11-15'
+doc: research/hunt/r176_step_trail_500/results/report.md
+hypothesis: 'Boss''s chosen rule (15 Nov, being built anyway): a -Rs 500-a-lot stop at entry (only where tighter than -15%);
+  from +Rs 1,000 a lot, the stop Rs 500 a lot under each Rs 500-a-lot step of the best open P&L; every existing exit stays.
+  Does it beat today''s exits?'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 15 Nov 2026, ending
+  19 Oct 2026; R51 Amendment A clean stores built to 19 Oct (R106 clean_post)
+period:
+  design: 'none read (Amendment A: Boss asked for the last year only); early part 2025-10-20..2026-03-31'
+  holdout: 2026-04-01..2026-10-13 final (read by R51-R173 too); whole year 2025-10-20..2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: index 5-min bars of all five indices (Donchian 20, 4 of 5) (unchanged); only the option''s stop on the premium
+  differs'
+model_or_rule: 'R72 Breadth Donchian: today''s rules vs + step trail per lot with a Rs 500 entry stop; 1, 2, 3 lots; with
+  / without R151 picker'
+settings: research/hunt/r176_step_trail_500/r176cfg.py; PREREG.md section 2 and Amendment A
+prereg: research/hunt/r176_step_trail_500/PREREG.md
+variants_tried: 3
+results:
+  summary: '1 lot: today 2281 trades, win 46%, Rs 298,253; step trail 2403 trades, win 34%, -Rs 132,155, max DD Rs 168,817;
+    picker Rs 371,717 -> Rs 12,516 | 2 lots: today 2281 trades, win 47%, Rs 702,143; step trail 2403 trades, win 34%, -Rs
+    153,139, max DD Rs 266,960; picker Rs 792,484 -> Rs 76,356 | 3 lots: today 2281 trades, win 47%, Rs 1,104,831; step trail
+    2403 trades, win 35%, -Rs 179,688, max DD Rs 370,085; picker Rs 1,212,701 -> Rs 139,321. Failed every gate at every lot
+    size: 1 lot: not positive in every period, net not above today''s rules (early, final, year), exit-twin BH q 1.00 > 0.10,
+    outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year.'
+  costs: 'dated Zerodha charges on the whole quantity, R17 fills (slippage from the 5-minute volume per position; every stop
+    sold as a stop: x0.999 minus 2x the half-spread, gaps at the open)'
+holdout_read: true
+verdict: rejected
+notes: Twins p = 1.0, BH q = 1.0 (m = 3979). Boss's chosen rule, being built anyway; reported honestly as failing. Signal
+  on the underlying; nothing in the app changes from this study.
