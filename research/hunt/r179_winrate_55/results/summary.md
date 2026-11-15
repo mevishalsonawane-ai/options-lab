@@ -1,6 +1,25 @@
 # R179: a win rate above 55% with profit kept
 
-## Update: a Rs 1,500 maximum loss a lot (Amendment B, Boss 15 Nov)
+## Update: Rs 1,500 cap with the breakeven at +5% (Amendment C, Boss 15 Nov) - the rule built into the app
+
+You chose the Rs 1,500 cap for the app, then asked: *"Instead 10% breakeven, make it 5% breakeven"*. Same year, picker on
+R72 / R51, 1 lot, after charges.
+
+**The win rate reaches about 55%, but profit falls well below the +10% version, and far below today's rules.**
+
+| 1 lot, whole year | today's rules | Rs 1,500 + breakeven +10% | **Rs 1,500 + breakeven +5%** |
+|---|---|---|---|
+| R72 | 46.3%, Rs 2.98 L | 49.4%, Rs 2.29 L | **55.9%, Rs 1.70 L** |
+| R51 | 45.1%, Rs 2.21 L | 49.2%, Rs 1.30 L | **54.5%, Rs 47k** |
+| Liquidity | 39.2%, Rs 1.18 L | 39.8%, Rs 89k | **43.4%, Rs 64k** |
+
+- Apr - Oct 2026: R72 54.4%, Rs 1.20 L (today Rs 1.70 L); R51 53.5%, Rs 24k (today Rs 1.32 L).
+- Why: at +5% the stop goes to breakeven very early, so many trades that wobble after a small gain are closed at about
+  Rs 0 (wins become ties), and the average win shrinks to about Rs 1,000-1,330 a lot while the average loss stays about
+  Rs 860-1,140.
+- Worst month at 1 lot: R72 -Rs 19k, R51 -Rs 31k, Liquidity -Rs 22k. It failed the gates.
+
+## Earlier: Rs 1,500 maximum loss with the breakeven at +10% (Amendment B)
 
 Same as the Rs 1,000 test, with the cap at **Rs 1,500 a lot** after charges (used where -15% would lose more).
 

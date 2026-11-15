@@ -52,8 +52,9 @@ def main():
 
 
 
-def main_a(b: bool = False):
-    tag = "b" if b else "a"
+def main_a(b: bool = False, c: bool = False):
+    tag = "c" if c else ("b" if b else "a")
+    b = b or c
     cap = "Rs 1,500" if b else "Rs 1,000"
     r = json.loads((RESULTS / f"year_{tag}.json").read_text())
     d = json.loads((RESULTS / f"decision_{tag}.json").read_text())
@@ -64,10 +65,12 @@ def main_a(b: bool = False):
                      f"{rs(s['net'])}, avg loss {rs(-s['avg_loss'])}, biggest {rs(s['largest_loss'])}"
                      + (f"; failed: {'; '.join(d[a]['fails'])}" if a in d else ""))
     e = dict(
-        id=f"r179{tag}-max-loss-{'1500' if b else '1000'}",
-        title=f"R179 Amendment {tag.upper()}: {cap} maximum loss (after charges) on picker + breakeven, R72 / R51 / Liquidity",
+        id=f"r179{tag}-max-loss-{'1500' if b else '1000'}" + ("-be5" if c else ""),
+        title=(f"R179 Amendment {tag.upper()}: {cap} maximum loss (after charges) on picker + breakeven"
+               + (" at +5%" if c else "") + ", R72 / R51 / Liquidity"),
         family="trade-management", date="2026-11-15", doc="research/hunt/r179_winrate_55/results/report.md",
-        hypothesis=("Boss: 'What about 1.5k' (a Rs 1,500 a lot cap)." if b else
+        hypothesis=("Boss: 'Instead 10% breakeven, make it 5% breakeven' (the rule built into the app)." if c else
+                    "Boss: 'What about 1.5k' (a Rs 1,500 a lot cap)." if b else
                     "Boss: '15% is too much for the stoploss, i want 1k max loss for all the above strategies'."),
         data_version=("Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean "
                       "stores built to 19 Oct (R106 clean_post)"),
@@ -81,8 +84,9 @@ def main_a(b: bool = False):
         prereg="research/hunt/r179_winrate_55/PREREG.md", variants_tried=1 if b else 2,
         results=dict(summary=" | ".join(parts) + ".", costs="dated Zerodha charges; R17 fills (stops sold as stops)"),
         holdout_read=True, verdict="rejected",
-        notes=(f"BH m = {d['_m']['total']}. " + ("Win rate about 49%, profit about half of today's; worst month at 1 lot "
-               "within -Rs 13k on R72 / R51. " if b else "Win rate falls to about 41% and profit by half or more. ")
+        notes=(f"BH m = {d['_m']['total']}. " + ("Win rate about 55%, but profit well under the +10% breakeven's (R51 Rs 47k vs "
+               "Rs 1.30 L, R72 Rs 1.70 L vs Rs 2.29 L at 1 lot); this is the rule built into the app (Boss's exception). " if c else
+               "Win rate about 49%, profit about half of today's; worst month at 1 lot within -Rs 13k on R72 / R51. " if b else "Win rate falls to about 41% and profit by half or more. ")
                + "Nothing in the app changes."),
     )
     (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
@@ -95,3 +99,5 @@ if __name__ == "__main__":
         main_a()
     if (RESULTS / "decision_b.json").exists():
         main_a(True)
+    if (RESULTS / "decision_c.json").exists():
+        main_a(c=True)

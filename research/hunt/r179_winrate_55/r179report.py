@@ -52,7 +52,7 @@ def build() -> str:
                                f"{RP.rs(s['avg_win'])} / {RP.rs(-s['avg_loss'] if s['avg_loss'] else 0)} | "
                                f"{RP.rs(s['worst_month']['net'])} | {RP.rs(-s['max_dd'] if s['max_dd'] else 0)} |")
             out.append("")
-    for tag, cap in (("a", "Rs 1,000"), ("b", "Rs 1,500")):
+    for tag, cap in (("a", "Rs 1,000"), ("b", "Rs 1,500"), ("c", "Rs 1,500 (breakeven at +5%)")):
       ya = RESULTS / f"year_{tag}.json"
       if ya.exists():
         ra = json.loads(ya.read_text())
@@ -65,9 +65,10 @@ def build() -> str:
         out.append(f"\nCap exits and trades losing more than {cap} (at 1 lot; at 2-3 lots the count compares with {cap} for the "
                    "whole trade): " + "; ".join(
             f"{k} M1 {v['M1']['cap_exits']} cap exits, {v['M1']['over_1000']} over (worst {RP.rs(v['M1']['worst'])})"
-            + ("" if (k.endswith("@1") or tag == "b") else f", M2 {v['M2']['cap_exits']} / {v['M2']['over_1000']}")
+            + ("" if (k.endswith("@1") or tag in ("b", "c")) else f", M2 {v['M2']['cap_exits']} / {v['M2']['over_1000']}")
             for k, v in ra["loss"].items()) + ".\n")
-        lab = {"A": "today's rules", "V4": "picker + breakeven (-15%)", "M1": f"+ {cap} a lot cap", "M2": f"+ {cap} a trade cap"}
+        bel = "+5%" if tag == "c" else "+10%"
+        lab = {"A": "today's rules", "V4": f"picker + breakeven at {bel} (-15%)", "M1": f"+ {cap} a lot cap", "M2": f"+ {cap} a trade cap"}
         for lots in (1, 2, 3):
             for per in ("year", "final"):
                 out += [f"### Amendment {tag.upper()}, {per}, {lots} lot{'s' if lots > 1 else ''}\n",
@@ -75,7 +76,7 @@ def build() -> str:
                         "|---|---|---|---|---|---|---|---|---|"]
                 for a_ in ("LIQ", "R72", "R51"):
                     for v in ("A", "V4", "M1", "M2"):
-                        if v == "M2" and (lots == 1 or tag == "b"):
+                        if v == "M2" and (lots == 1 or tag in ("b", "c")):
                             continue
                         s_ = ra[per][f"{v}@{lots}"][a_]
                         out.append(f"| {NAME[a_]} | {lab[v] if not (a_ == 'LIQ' and v == 'V4') else 'breakeven (-15%)'} | "
