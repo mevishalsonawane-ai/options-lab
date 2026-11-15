@@ -137,3 +137,30 @@ a gap through the stop, an entry stop below the -15% stop (it never loosens), Na
 worth less than Rs 500 L. Engine tests on synthetic contracts: with the rule off the simulator equals R106's exactly; the
 rule never exits later than A; stops fill with stop slippage. **Look-ahead guard:** on synthetic days the exit row and
 price are unchanged when every minute after the exit row is replaced by noise.
+
+## Amendment A (15 Nov 2026, before any R176 number was computed): last year of data only
+
+Boss, 15 Nov 2026, while the data was being copied: *"Test on only last year of data."* No R176 trade or P&L number
+existed when this was written. Sections 1, 2 (the rule), 4, 6 and 8 are unchanged. What changes:
+
+- **Window: the last 12 months the lake covers, 20 Oct 2025 - 19 Oct 2026**, all on the stores built to 19 Oct
+  (`R176_POST=1`). The design period before 20 Oct 2025 is not read.
+- **Periods inside it** (replacing section 3):
+  - **early**: 20 Oct 2025 - 31 Mar 2026 (out-of-time with respect to the final; inside the years R51's design used, so
+    not unseen by earlier studies);
+  - **final**: 1 Apr - 13 Oct 2026, read once by R176 (honesty note of section 3 unchanged: read by many studies);
+  - **last 6 months**: 20 Apr - 19 Oct 2026, month by month;
+  - **the whole year**: month by month (Oct 2025 and Oct 2026 are part months).
+- **Parity**: today's rules at 1 lot on 1 Apr - 13 Oct 2026 must give R172's check (LIQ 357 / Rs 11,155; R72 1,200 /
+  Rs 1,70,336; R51 1,668 / Rs 1,31,546; pickers R72 651 / Rs 2,20,118, R51 692 / Rs 1,60,101); the rule-off engine must
+  equal R101 candidate by candidate. The design parity of section 1 is not run (design is not read).
+- **Twins** (section 6) are drawn over the whole year (500 a test, seed 176).
+- **Gates** (replacing section 7), per arm and lots, vs A at the same lots:
+  1. net > 0 in early, final, the last 6 months and the whole year;
+  2. net above A's in early, final and the whole year;
+  3. twin BH q <= 0.10, m = 3,979 (unchanged);
+  4. at least 40 final trades;
+  5. max drawdown <= Rs 40,000 and worst calendar month >= -Rs 13,000 in early, final, the last 6 months and the year.
+- The pickers were fitted on trades up to 31 Mar 2026 (R151), so picker numbers in "early" are in-sample (labelled).
+- One year is a short sample: every number comes with its trade count, and passing here is weaker evidence than the
+  full design / walk-forward / final split would give.

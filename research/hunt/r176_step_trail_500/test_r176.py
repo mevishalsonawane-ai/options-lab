@@ -244,7 +244,7 @@ def test_gates_pass_and_each_failure():
     bad["six"]["S"] = _p(-1)
     assert "not positive in every period" in S.gates(bad, 0.05)["fails"]
     bad = {p: dict(S=_p(10), A=_p(50)) for p in K.PERIODS}
-    assert "net not above today's rules (design, walk-forward, final)" in S.gates(bad, 0.05)["fails"]
+    assert "net not above today's rules (design, wf, final)" in S.gates(bad, 0.05)["fails"]
     assert any("BH" in f for f in S.gates(good, 0.2)["fails"])
     few = {p: dict(S=_p(10, trades=39), A=_p(5)) for p in K.PERIODS}
     assert "< 40 final trades" in S.gates(few, 0.05)["fails"]
@@ -259,3 +259,16 @@ def test_bh_count():
     assert K.M_TOTAL == 3979 and len(K.TESTS) == 9
     q = S.bh_q([0.002] * 9)
     assert len(q) == 9 and all(abs(x - min(1.0, 0.002 * 3979 / 9)) < 1e-9 for x in q)
+
+
+def test_year_gates_use_the_amended_periods():
+    per = {p: dict(S=_p(10), A=_p(5)) for p in K.YEAR_PERIODS}
+    assert S.gates(per, 0.05, K.YEAR_PERIODS, K.YEAR_BETTER)["passed"]
+    per["six"]["A"] = _p(50)                                       # six is not a "better than A" period
+    assert S.gates(per, 0.05, K.YEAR_PERIODS, K.YEAR_BETTER)["passed"]
+    per["early"]["S"] = _p(1, wm=-14000)
+    f = S.gates(per, 0.05, K.YEAR_PERIODS, K.YEAR_BETTER)["fails"]
+    assert any("early" in x for x in f)
+    assert K.span_of("year") == (date(2025, 10, 20), date(2026, 10, 19))
+    assert K.span_of("early") == (date(2025, 10, 20), date(2026, 3, 31))
+    assert len(K.months_between(*K.span_of("year"))) == 13

@@ -5,6 +5,8 @@
     R51_CLEAN=1 python research/hunt/r106_small_targets/r106study.py post-build   # stores to 19 Oct (clean_post), once
     R176_POST=1 python research/hunt/r176_step_trail_500/r176study.py final    # read ONCE; twins
     R176_POST=1 python research/hunt/r176_step_trail_500/r176study.py six      # 20 Apr - 19 Oct, month by month
+    R176_POST=1 python research/hunt/r176_step_trail_500/r176study.py year     # Amendment A: 20 Oct 2025 - 19 Oct 2026
+    python research/hunt/r176_step_trail_500/r176study.py decide-year          # Amendment A's gates
     python research/hunt/r176_step_trail_500/r176study.py decide               # BH + gates -> results/decision.json
     python research/hunt/r176_step_trail_500/r176report.py                     # results/report.md
 
@@ -74,19 +76,19 @@ def in_span(trades: list, period: str) -> list:
     return [t for t in trades if lo <= t["day"] <= hi]
 
 
-def gates(per: dict, q_all: float) -> dict:
-    """PREREG section 7. per: {period: {'S': stats, 'A': stats}} for design, wf, final, six (stats: net, max_dd,
-    worst_month {net}, trades)."""
+def gates(per: dict, q_all: float, periods: tuple = K.PERIODS, better: tuple = ("design", "wf", "final")) -> dict:
+    """PREREG section 7 (Amendment A: periods = K.YEAR_PERIODS, better = K.YEAR_BETTER). per: {period: {'S': stats,
+    'A': stats}} (stats: net, max_dd, worst_month {net}, trades)."""
     fails = []
-    if not all(per[p]["S"]["net"] > 0 for p in K.PERIODS):
+    if not all(per[p]["S"]["net"] > 0 for p in periods):
         fails.append("not positive in every period")
-    if not all(per[p]["S"]["net"] > per[p]["A"]["net"] for p in ("design", "wf", "final")):
-        fails.append("net not above today's rules (design, walk-forward, final)")
+    if not all(per[p]["S"]["net"] > per[p]["A"]["net"] for p in better):
+        fails.append("net not above today's rules (" + ", ".join(better) + ")")
     if not q_all <= K.GATE_Q:
         fails.append(f"exit-twin BH q {q_all:.2f} > 0.10")
     if per["final"]["S"]["trades"] < K.MIN_FINAL:
         fails.append("< 40 final trades")
-    risk = [p for p in K.PERIODS if per[p]["S"]["max_dd"] > K.MAX_DD or per[p]["S"]["worst_month"]["net"] < K.WORST_MONTH]
+    risk = [p for p in periods if per[p]["S"]["max_dd"] > K.MAX_DD or per[p]["S"]["worst_month"]["net"] < K.WORST_MONTH]
     if risk:
         fails.append("outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in " + ", ".join(risk))
     return dict(passed=not fails, fails=fails, q_all=round(float(q_all), 4))
@@ -185,7 +187,7 @@ def evaluate(phase: str) -> dict:
     assert K.POST == K.STORES_OF[phase], f"{phase} needs R176_POST={int(K.STORES_OF[phase])}"
     M = mods()
     lo, hi = (K.START, K.DESIGN_END) if phase == "design" else K.span_of(phase)
-    periods = ("design", "wf") if phase == "design" else (phase,)
+    periods = ("design", "wf") if phase == "design" else K.YEAR_PERIODS if phase == "year" else (phase,)
     out = {"_meta": dict(span=f"{lo} .. {hi}", stores="19 Oct" if K.POST else "13 Oct"), "parity": {}}
     trades = {}                                         # trades[(variant, lots)][arm]
     rng = np.random.default_rng(K.SEED)
@@ -204,12 +206,15 @@ def evaluate(phase: str) -> dict:
                 assert same, ("engine parity", arm, phase)
             a = walk(arm, us, pr0)
             s = walk(arm, us, priced(arm, us, True, lots))
-            if lots == 1 and phase in ("design", "final"):
-                pub = K.PARITY[(arm, phase)]
-                n0, net0 = len(a), round(sum(t["net"] for t in a))
+            if lots == 1 and phase in ("design", "final", "year"):
+                pp_ph = "final" if phase == "year" else phase      # Amendment A: parity on the year's final part
+                a_p = in_span(a, "final") if phase == "year" else a
+                pub = K.PARITY[(arm, pp_ph)]
+                n0, net0 = len(a_p), round(sum(t["net"] for t in a_p))
                 r = dict(trades=n0, net=net0, published=list(pub), reproduced=(n0 == pub[0] and abs(net0 - pub[1]) <= 1))
-                if P is not None and phase == "final":
-                    par = P.T.kept_walk(arm, us, sc, thr)
+                if P is not None and pp_ph == "final":
+                    us_f = [u for u in us if K.FINAL_START <= _d(u[0][1]) <= K.FINAL_END]
+                    par = P.T.kept_walk(arm, us_f, sc, thr)
                     pp = K.PICKER_PARITY_FINAL[arm]
                     r["picker"] = dict(trades=len(par), net=round(sum(t["net"] for t in par)), published=list(pp))
                     r["picker"]["reproduced"] = r["picker"]["trades"] == pp[0] and abs(r["picker"]["net"] - pp[1]) <= 1
@@ -221,7 +226,7 @@ def evaluate(phase: str) -> dict:
                 trades.setdefault((v, lots), {})[arm] = tr
                 b = "B" if v == "A" else "B+S"
                 trades.setdefault((b, lots), {})[arm] = tr if P is None else [t for t in tr if P.kept(t, sc, thr)]
-            if phase == "final":
+            if phase in ("final", "year"):
                 plain = {(t["und"], _d(t["day"]), c["er"], c["side"]): t
                          for (key, cands, _, _), row in zip(us, pr0) for c, t in zip(cands, row) if t is not None}
                 tw, ch = exit_twins(arm, trades[("S", lots)][arm], plain, lots, K.TWINS, rng)
@@ -253,8 +258,8 @@ def evaluate(phase: str) -> dict:
 def run(phase: str) -> dict:
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     M = mods()
-    if phase in ("final", "six"):
-        if phase == "final":
+    if phase in ("final", "six", "year"):
+        if phase in ("final", "year"):
             if K.FINAL_FLAG.exists():
                 raise SystemExit("R176 final already read once: " + K.FINAL_FLAG.read_text())
             K.FINAL_FLAG.write_text(datetime.now(timezone.utc).isoformat() + "\n")
@@ -263,6 +268,22 @@ def run(phase: str) -> dict:
         M["C"].open_final()
     out = evaluate(phase)
     (K.RESULTS / f"{phase}.json").write_text(json.dumps(out, indent=1, default=str))
+    return out
+
+
+def decide_year() -> dict:
+    """Amendment A: the gates on the last year (early, final, last 6 months, whole year) -> results/decision.json."""
+    r = json.loads((K.RESULTS / "year.json").read_text())
+    ps = [r["twins"][f"{a}@{n}"]["p"] for a, n in K.TESTS]
+    q_all, q_own = bh_q(ps), bh_q(ps, len(K.TESTS))
+    out = {}
+    for (a, n), qa, qo in zip(K.TESTS, q_all, q_own):
+        per = {p: dict(S=r[p][f"S@{n}"][a], A=r[p][f"A@{n}"][a]) for p in K.YEAR_PERIODS}
+        g = gates(per, qa, K.YEAR_PERIODS, K.YEAR_BETTER)
+        g.update(q_r176=round(qo, 4), twin_p=r["twins"][f"{a}@{n}"]["p"])
+        out[f"{a}@{n}"] = g
+    out["_m"] = dict(r176=len(K.TESTS), prior=K.N_PRIOR, total=K.M_TOTAL)
+    (K.RESULTS / "decision.json").write_text(json.dumps(out, indent=1))
     return out
 
 
@@ -286,8 +307,10 @@ def decide() -> dict:
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-    if cmd in ("design", "final", "six"):
+    if cmd in ("design", "final", "six", "year"):
         run(cmd)
+    elif cmd == "decide-year":
+        print(json.dumps(decide_year(), indent=1))
     elif cmd == "decide":
         print(json.dumps(decide(), indent=1))
     else:

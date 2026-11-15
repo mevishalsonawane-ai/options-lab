@@ -43,7 +43,12 @@ W6_START, W6_END = date(2026, 4, 20), date(2026, 10, 19)
 PERIODS = ("design", "wf", "final", "six")
 PERIOD_NAME = {"design": "design (Nov 2024 - Mar 2026)", "wf": "walk-forward (Apr 2025 - Mar 2026)",
                "final": "final (1 Apr - 13 Oct 2026)", "six": "last 6 months (20 Apr - 19 Oct 2026)"}
-STORES_OF = {"design": False, "final": True, "six": True}          # phase -> needs R176_POST=1
+STORES_OF = {"design": False, "final": True, "six": True, "year": True}   # phase -> needs R176_POST=1
+# Amendment A (Boss, 15 Nov: "Test on only last year of data"): the last 12 months the lake covers
+Y_START, Y_END = date(2025, 10, 20), date(2026, 10, 19)
+YEAR_PERIODS = ("early", "final", "six", "year")
+YEAR_BETTER = ("early", "final", "year")
+PERIOD_NAME.update(early="early (20 Oct 2025 - 31 Mar 2026)", year="whole year (20 Oct 2025 - 19 Oct 2026)")
 
 ARMS = ("LIQ", "R72", "R51")
 ARM_NAME = {"LIQ": "Liquidity 15+5", "R72": "R72 Breadth Donchian", "R51": "R51 Donchian 20 + Supertrend"}
@@ -115,4 +120,4 @@ W6_MONTHS = months_between(W6_START, W6_END)
 
 def span_of(period: str) -> tuple:
     return {"design": (START, DESIGN_END), "wf": (WF_START, DESIGN_END), "final": (FINAL_START, FINAL_END),
-            "six": (W6_START, W6_END)}[period]
+            "six": (W6_START, W6_END), "early": (Y_START, DESIGN_END), "year": (Y_START, Y_END)}[period]
