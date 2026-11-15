@@ -3,6 +3,7 @@ package com.optionslab.ira
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -22,10 +23,11 @@ class StepTrailBotTradesTest {
     private fun two(x: Double) = String.format(java.util.Locale.ENGLISH, "%.2f", x)
 
     @Test fun anOpenRuleTradeNamesItsStop() {
-        // A lot of 30 at 500: the 15% stop is 425; ₹1,500 a lot after charges is about 450 (tighter).
+        // A lot of 30 at 500: the 15% stop is 425; ₹1,500 a lot after charges is about 453 (tighter).
         val open = BotTrades.Trade("liquidity5", "BANKNIFTY14OCT2654300CE", "CE", 30, 500.0, at(12, 0), at(11, 55), lot = 30, fixed = true)
         val s = com.optionslab.engine.orb.StepTrail.stopLevel(500.0, 30)!!
-        assertTrue(s > 425.0 && s < 452.0, "$s")
+        assertTrue(s > 425.0, "$s")
+        assertEquals(500.0 - 50.0 + com.optionslab.engine.orb.StepTrail.chargesPerUnit(500.0, 30), s, 0.05 + 1e-9)
         val e = chain(open).exit
         assertTrue(e.contains("its ₹1,500-a-lot stop (${two(s)}; failed gates, Boss's exception)"), e)
         // Its best so far 530 (+6%): the breakeven, the fill plus the charges.

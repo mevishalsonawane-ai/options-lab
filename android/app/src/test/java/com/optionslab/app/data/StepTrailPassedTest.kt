@@ -156,7 +156,8 @@ class StepTrailPassedTest : RobolectricTest() {
         val p = bought(200.0)
         val e = p.entry
         val b = be(e)
-        assertTrue("just over the fill: $b", b > e && b < e + 2.0)
+        assertTrue("over the fill: $b", b > e)
+        assertEquals("the fill plus the charges", e + StepTrail.chargesPerUnit(e, 65), b, 0.05 + 1e-9)
         // 09:23 trades at +7% (the breakeven from 09:24); from 09:24 at +11% (no further step).
         val up = { t: LocalTime -> when { t.isBefore(LocalTime.of(9, 23)) -> 200.0; t.isBefore(LocalTime.of(9, 24)) -> e + 14.5; else -> e + 22.5 } }
         market(LocalTime.of(9, 24), up)
