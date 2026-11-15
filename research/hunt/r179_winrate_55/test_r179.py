@@ -83,7 +83,7 @@ def test_counts():
 
 
 def test_amendment_a_cap_and_loss_stats():
-    assert T.M_TOTAL_A == 4040 and T.M_TOTAL_B == 4042
+    assert T.M_TOTAL_A == 4040 and T.M_TOTAL_B == 4042 and T.M_TOTAL_C == 4044
     tr = [dict(why="stop500", net=-1200.0), dict(why="stop500", net=-990.0), dict(why="time", net=-1500.0),
           dict(why="time", net=300.0)]
     s = T.loss_stats(tr)

@@ -72,7 +72,7 @@ def priced(arm: str, us: list, rule: str, be: bool, lots: int, stop_net: float =
     out = []
     for key, cands, _, _ in us:
         D = M["r51data"].load(key[0])[key[1]]
-        out.append(M["Z"].price(key[0], D, cands, ex, rule == "SC", lots, be_x=BE_X if be else -1.0, stop_net=stop_net,
+        out.append(M["Z"].price(key[0], D, cands, ex, rule == "SC", lots, be_x=BEX["v"] if be else -1.0, stop_net=stop_net,
                                 **kw))
     return out
 
@@ -159,6 +159,9 @@ MAX_LOSS = 1000.0
 FINAL_FLAG_B = RESULTS / "FINAL_READ_B"
 M_TOTAL_B = M_TOTAL_A + 2                                            # 4,042
 CAP = {"v": MAX_LOSS}                                                # Amendment B: Rs 1,500
+FINAL_FLAG_C = RESULTS / "FINAL_READ_C"
+M_TOTAL_C = M_TOTAL_B + 2                                            # 4,044
+BEX = {"v": BE_X}                                                    # Amendment C: +5%
 
 
 def loss_stats(tr: list) -> dict:
@@ -170,15 +173,18 @@ def loss_stats(tr: list) -> dict:
                 worst=round(min((t["net"] for t in tr), default=0.0)))
 
 
-def run_a(b: bool = False) -> dict:
+def run_a(b: bool = False, c: bool = False) -> dict:
     """V4 (Liquidity: A + BE) with a Rs 1,000 maximum loss after charges: M1 per lot, M2 per position. b=True (Amendment
     B): Rs 1,500 a lot (M2 = M1 at every lot size)."""
     assert K6.POST, "R179 reads the stores built to 19 Oct (R176_POST=1)"
-    flag = FINAL_FLAG_B if b else FINAL_FLAG_A
+    tag = "c" if c else ("b" if b else "a")
+    b = b or c
+    flag = {"a": FINAL_FLAG_A, "b": FINAL_FLAG_B, "c": FINAL_FLAG_C}[tag]
     if flag.exists():
         raise SystemExit("R179 amendment already read once: " + flag.read_text())
     flag.write_text(datetime.now(timezone.utc).isoformat() + "\n")
     CAP["v"] = 1500.0 if b else MAX_LOSS
+    BEX["v"] = 0.05 if c else BE_X
     M = R7.mods()
     M["C"].open_final()
     lo, hi = K6.Y_START, K6.Y_END
@@ -225,14 +231,17 @@ def run_a(b: bool = False) -> dict:
                                   for a_, tr in by_arm.items()}
         out[per] = res
     out["cap_a_lot"] = CAP["v"]
-    (RESULTS / ("year_b.json" if b else "year_a.json")).write_text(json.dumps(out, indent=1, default=str))
+    out["be_at"] = BEX["v"]
+    (RESULTS / f"year_{tag}.json").write_text(json.dumps(out, indent=1, default=str))
     return out
 
 
-def decide_a(b: bool = False) -> dict:
-    r = json.loads((RESULTS / ("year_b.json" if b else "year_a.json")).read_text())
+def decide_a(b: bool = False, c: bool = False) -> dict:
+    tag = "c" if c else ("b" if b else "a")
+    r = json.loads((RESULTS / f"year_{tag}.json").read_text())
     ps = [r["twins"][a]["p"] for a in TEST_ARMS]
-    q_all, q_own = S6.bh_q(ps, M_TOTAL_B if b else M_TOTAL_A), S6.bh_q(ps, len(ps))
+    m = {"a": M_TOTAL_A, "b": M_TOTAL_B, "c": M_TOTAL_C}[tag]
+    q_all, q_own = S6.bh_q(ps, m), S6.bh_q(ps, len(ps))
     out = {}
     for a, qa, qo in zip(TEST_ARMS, q_all, q_own):
         per = {p: r[p]["M1@1"][a] for p in K6.YEAR_PERIODS}
@@ -241,8 +250,8 @@ def decide_a(b: bool = False) -> dict:
         g.update(q_own=round(qo, 4), twin_p=r["twins"][a]["p"], win_year=per["year"]["win"],
                  win_final=per["final"]["win"], net_year=per["year"]["net"], base_net_year=base["year"]["net"])
         out[a] = g
-    out["_m"] = dict(tests=len(TEST_ARMS), prior=M_TOTAL_A if b else M_TOTAL, total=M_TOTAL_B if b else M_TOTAL_A)
-    (RESULTS / ("decision_b.json" if b else "decision_a.json")).write_text(json.dumps(out, indent=1))
+    out["_m"] = dict(tests=len(TEST_ARMS), prior={"a": M_TOTAL, "b": M_TOTAL_A, "c": M_TOTAL_B}[tag], total=m)
+    (RESULTS / f"decision_{tag}.json").write_text(json.dumps(out, indent=1))
     return out
 
 
@@ -277,5 +286,9 @@ if __name__ == "__main__":
         run_a(True)
     elif cmd == "decide-b":
         print(json.dumps(decide_a(True), indent=1))
+    elif cmd == "run-c":
+        run_a(c=True)
+    elif cmd == "decide-c":
+        print(json.dumps(decide_a(c=True), indent=1))
     else:
         raise SystemExit(__doc__)

@@ -87,3 +87,14 @@ Boss, 15 Nov 2026, while Amendment A was being written up: *"What about 1.5k"*.
   repeats M1 at every lot size and is not reported).
 - **Tests: 2** (R72, R51 at 1 lot); BH **m = 4,040 + 2 = 4,042**. Gates, window, twins: as Amendment A.
 - Honesty: data-led; the final is read again (`results/FINAL_READ_B`).
+
+## Amendment C (15 Nov 2026, before any number for it was computed): Rs 1,500 cap with the breakeven lock at +5%
+
+Boss, 15 Nov 2026, choosing Amendment B's rule for the app: *"Instead 10% breakeven, make it 5% breakeven"*.
+
+- **Rule M15-BE5**: Amendment B's M15 (Rs 1,500 a lot after charges, where tighter than -15%) with the breakeven lock
+  moved from +10% to **+5%** (once the premium is up 5% on the raw fill, the stop moves to the premium whose stop sale nets
+  Rs 0 after charges); picker on R72 / R51; Liquidity without the picker. Every other exit stays.
+- **Tests: 2** (R72, R51 at 1 lot); BH **m = 4,042 + 2 = 4,044**. Gates, window, twins: as Amendment A.
+- Honesty: data-led; the final is read again (`results/FINAL_READ_C`). This is the rule being built into the app, so the
+  result is reported whatever it shows.
