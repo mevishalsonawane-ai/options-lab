@@ -345,22 +345,25 @@ class ManualCoverRuleTest {
         assertTrue(l.keys.isEmpty())
     }
 
-    /** 15 Nov, review: Boss's cancel (no words, or words naming a user) is never read as the exchange's. */
-    @Test fun onlyTheExchangesRefusalOrReasonedCancelIsTheExchanges() {
+    /**
+     * 15 Nov, review (R5): only REJECTED, or a cancel whose words clearly name the exchange or the broker's risk system, is the
+     * exchange's; any other cancel - blank (as every cancel in Boss's diagnostics was) or unknown wording - is Boss's.
+     */
+    @Test fun onlyTheExchangesRefusalOrClearlyWordedCancelIsTheExchanges() {
         assertTrue(ManualCoverRule.endedByExchange("REJECTED", ""))
-        assertTrue(ManualCoverRule.endedByExchange("REJECTED", "RMS:Trigger price is outside the circuit limit"))
-        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Your order has been cancelled because of market protection."))
-        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", ""), "no words: Boss's")
-        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "   "))
-        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by user"))
-        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Order cancelled by the client"))
-        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "USER cancel"))
-        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by you"))
-        // Review (N6): the exchange's and the broker's own words are the exchange's.
+        assertTrue(ManualCoverRule.endedByExchange("REJECTED", "Insufficient funds. Margin required: 57675.75."))
         assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by exchange"))
         assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Order cancelled by RMS"))
-        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by system: circuit limit breached"))
-        assertFalse(ManualCoverRule.endedByExchange("COMPLETE", "anything"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Trigger price is outside the CIRCUIT limit"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Quantity exceeds the freeze limit"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Order validity expired"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Margin shortfall"))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", ""), "blank: Boss's (every cancel in the diagnostics)")
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "   "))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by user"))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Your order has been cancelled."), "unknown words: Boss's")
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by system"), "unknown words: Boss's")
+        assertFalse(ManualCoverRule.endedByExchange("COMPLETE", "exchange"))
         assertFalse(ManualCoverRule.endedByExchange("OPEN", ""))
     }
 

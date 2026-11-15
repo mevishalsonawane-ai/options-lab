@@ -266,10 +266,10 @@ class OrderFlowLive2Test : RobolectricTest() {
     }
 
     /**
-     * 15 Nov, review: the square-off filled in full while Zerodha's positions still trail it: the stops taken over for it are not
-     * put back while the positions may trail (a stop on a flat account would be a naked short if it triggered).
+     * 15 Nov, review: the square-off filled in full while Zerodha's positions still trail it: the stop taken over for it is not put
+     * back on that stale read (the lag guard counts the fill as sold; a stop on a flat account would be a naked short if it triggered).
      */
-    @Test fun aSquareOffThatFilledNeverPutsTheProtectionsStopBack() {
+    @Test fun aSquareOffThatFilledGetsNoStopOnAStalePositionsRead() {
         kite.position(ce, 75, 90.0)
         runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 85.0, null, 130.0) }
         val p = runBlocking { Protections.active() }.single()
@@ -280,15 +280,16 @@ class OrderFlowLive2Test : RobolectricTest() {
         m.sendPlan()
         assertEquals("COMPLETE", sent(m).single().status)
         assertEquals("sold at Zerodha", 0, kite.positions.getValue("NFO:$ce:NRML").first)
-        assertTrue("said filled in full: it waits while the positions may trail", Protections.exitDoneForTest(p.stopOrderId!!))
+        assertTrue("AppModel said the exit filled in full", Protections.exitDoneForTest(p.stopOrderId!!))
+        assertTrue("still marked: put back only if the position is really still held", Protections.takenOverForTest(p.stopOrderId!!))
         BrokerArea.await("the contract handed back") { (!com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce)).takeIf { it } }
-        // Past the protection's first minute, within the wait after the fill.
+        // Past the protection's first minute; the positions still trail the fill.
         val at = com.optionslab.app.testing.MarketClockRule.pinnedDay().atTime(12, 1, 40).atZone(com.optionslab.engine.IST).toInstant()
         com.optionslab.app.data.Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST),
             java.time.Duration.between(java.time.Instant.now(), at))
         val before = kite.placed.size
         runBlocking { Protections.tick() }
-        assertEquals("no stop placed again", before, kite.placed.size)
+        assertEquals("no stop on the stale read (the order book's fill counted as sold)", before, kite.placed.size)
     }
 
     /** A protection resting as one GTT is deleted first, then the square-off goes as reviewed. */

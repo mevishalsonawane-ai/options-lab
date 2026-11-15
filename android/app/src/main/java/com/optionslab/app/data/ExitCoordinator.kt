@@ -241,8 +241,8 @@ object ExitCoordinator {
                 return if (list.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }
             }
             val every = b.net.filter { it.symbol == symbol && it.exchange == exchange }
-            return ExitDesk.positionsLag(net, exitDay(rs), own, mine, now) to
-                ExitDesk.positionsLagAcross(net, exitDay(rs), own, mine, now, exitDay(every), all)
+            return ExitDesk.positionsLag(net, exitDay(rs), own, mine, now, anyAge = forceLag) to
+                ExitDesk.positionsLagAcross(net, exitDay(rs), own, mine, now, exitDay(every), all, anyAge = forceLag)
         }
         var converted = false
         fun lag(b: Broker.Positions): Int = runCatching {
@@ -250,7 +250,8 @@ object ExitCoordinator {
             if (l < one) converted = true
             l
         }.getOrDefault(0)
-        if (mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
+        // 15 Nov, review: forced ([forceLag]), today's exit fills of any age are compared ([ExitDesk.positionsLag] anyAge), never skipped.
+        if (!forceLag && mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
         var given = first
         var (book, left) = ExitDesk.settleHeld(guard, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
         if (converted) {

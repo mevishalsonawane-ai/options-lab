@@ -123,7 +123,9 @@ object Protections {
         }
         loadGen = gen
         // 15 Nov, review: a new id is never one already on the list (a clock moved back after a restart included).
-        out.maxOfOrNull { it.id }?.let { top -> synchronized(this) { if (top > lastId) lastId = top } }
+        // Review (R2): never an id from a clock that was once ahead (more than [ID_SLACK_MS] past now): it would carry on to every new one.
+        val seedMax = nowMs() + ID_SLACK_MS
+        out.filter { it.id <= seedMax }.maxOfOrNull { it.id }?.let { top -> synchronized(this) { if (top > lastId) lastId = top } }
         if (gen == wipeGen) { cache = out; hint(out) }
         return out
     }
@@ -464,26 +466,46 @@ object Protections {
      * filled, a target alone, nothing working, a book not read. So a slice never shrinks or ends its own stop on the strength of
      * a sibling that is not really resting (it may then cover more for a pass, never less).
      */
-    private fun restingCover(s: Item, orders: Map<String, Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int {
+    private fun restingCover(s: Item, orders: Map<String, Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int =
+        restingCoverKnown(s, orders, gtts) ?: abs(s.qty)
+
+    /**
+     * [restingCover], or null when it cannot be told: a sibling placed in the last [FRESH_SLICE_MS] whose stop (or GTT) a trailing
+     * read of the books does not show yet. Review (N3, R3): the placing paths count such a one whole ([restingCover]: two slices
+     * never cover the same units in one pass); the watch's shrink and end decisions are skipped for that pass instead (a sibling
+     * refused within a second must never make this slice give up its stop). Never an older one (yesterday's ended ids count 0).
+     */
+    private fun restingCoverKnown(s: Item, orders: Map<String, Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int? {
         if (s.stop == null) return 0
-        // Review (N3): one placed in the last [FRESH_SLICE_MS] whose stop (or GTT) a trailing read of the books does not show yet is
-        // counted whole, so two slices never both cover the same units in one pass. Never an older one (yesterday's ended ids).
         val fresh = nowMs() - s.id in 0 until FRESH_SLICE_MS
         val gid = s.gttId
         if (gid != null) {
             val g = gtts?.firstOrNull { it.id == gid }
             if (g != null && g.active) return minOf(g.legQtys.firstOrNull() ?: abs(s.qty), abs(s.qty))
-            if (g == null && gtts != null && fresh && s.stopOrderId == null) return abs(s.qty)
+            if (g == null && gtts != null && fresh && s.stopOrderId == null) return null
         }
         val sid = s.stopOrderId ?: return 0
-        val so = orders[sid] ?: return if (fresh) abs(s.qty) else 0
+        val so = orders[sid] ?: return if (fresh) null else 0
         val to = s.targetOrderId?.let { orders[it] }
         if (!so.working || so.filled > 0 || (to != null && (to.filled > 0 || to.status == "COMPLETE"))) return 0
         return minOf(com.optionslab.engine.risk.ExitQty.remaining(so.qty, so.filled, so.pending), abs(s.qty))
     }
 
+    /** 15 Nov, review (R2): how far ahead of now a saved id may be and still seed [newId]. */
+    private const val ID_SLACK_MS = 5_000L
+
     /** 15 Nov, review (N3): a slice set this recently is counted whole while a trailing read does not show its stop yet. */
     private const val FRESH_SLICE_MS = 60_000L
+
+    /** 15 Nov, review (R3): [siblingCover] for the watch's shrink and end decisions; null when one sibling cannot be told yet. */
+    private fun siblingCoverKnown(p: Item, orders: Collection<Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int? {
+        val sib = siblings(p)
+        if (sib.isEmpty()) return 0
+        val byId = orders.associateBy { it.id }
+        var sum = 0
+        for (x in sib) sum += restingCoverKnown(x, byId, gtts) ?: return null
+        return sum
+    }
 
     /** 15 Nov: the units [p]'s sibling slices really have resting ([restingCover]); 0 for a protection that is not sliced. */
     private fun siblingCover(p: Item, orders: Collection<Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int {
@@ -532,8 +554,8 @@ object Protections {
     /**
      * 15 Nov, review: Boss's exit for which [ids] were taken over ([noteTakenOver]) filled in full (AppModel, once every leg of it
      * did). That does not mean the position is closed (lots added between the review and the send stay held), so they stay to be
-     * put back: for [EXIT_DONE_MS] (the market's clock) the look waits, as Zerodha's positions can trail the fill; after that a
-     * position still held gets its stop again (what is held read with the lag guard on), and a closed one ends as closed.
+     * put back, on what is held less every exit fill the positions do not show yet. Only when Kite's positions do not give the
+     * day's quantity (that guard cannot work) does the put-back wait, for [EXIT_DONE_MS] (the market's clock).
      */
     fun exitFilledFor(ids: Collection<String>) {
         val now = nowMs()
@@ -546,6 +568,15 @@ object Protections {
 
     /** 15 Nov, review: [id] was cancelled for Boss's exit that filled in full, within [EXIT_DONE_MS] ([exitFilledFor]). */
     private fun exitDone(id: String): Boolean = exitFilled[id]?.let { at -> nowMs() - at in 0..EXIT_DONE_MS } == true
+
+    /**
+     * 15 Nov, review (R1): whether Zerodha's positions give [p]'s day quantity on its exit side (the lag guard compares the order
+     * book's fills with it). Not read, or not given: false.
+     */
+    private suspend fun dayQtyKnown(p: Item): Boolean = runCatching {
+        val rs = Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }
+        rs.isNotEmpty() && rs.all { (if (p.qty > 0) it.daySellQty else it.dayBuyQty) != null }
+    }.getOrDefault(false)
 
     /** TEST ONLY: whether [id]'s exit was said filled in full within [EXIT_DONE_MS] ([exitFilledFor]). */
     internal fun exitDoneForTest(id: String): Boolean = exitDone(id)
@@ -713,6 +744,8 @@ object Protections {
         val busy = othersBusy(p, side, orders, gtts, emptyList())
         // Review: what is held less every other exit, at most what this protection covers (an arm's own lots and GTT beside it
         // never take this protection's place).
+        // Review (R3): a sibling set seconds ago that the books do not show yet: nothing this look (never two GTTs for the same units).
+        if (siblingCoverKnown(p, orders, gtts) == null) return p
         val qty = com.optionslab.engine.risk.ExitQty.sendable((abs(net) - siblingCover(p, orders, gtts)).coerceAtLeast(0), busy, abs(p.qty), p.lotSize)
         fun tried() {
             val n = (gttTries[p.id] ?: 0) + 1
@@ -825,6 +858,8 @@ object Protections {
         }
         // 15 Nov: a sibling slice's orders and GTT are not "another exit": its units come off what is held instead ([othersBusy]).
         val busy = othersBusy(p, side, orders, gtts, emptyList())
+        // Review (R3): a sibling set seconds ago that the books do not show yet: nothing this look (its answer is asked again).
+        if (siblingCoverKnown(p, orders, gtts) == null) return DayGtt.Unknown
         val qty = com.optionslab.engine.risk.ExitQty.sendable((abs(net) - siblingCover(p, orders, gtts)).coerceAtLeast(0), busy, abs(p.qty), p.lotSize)
         if (qty <= 0) return DayGtt.Refused
         val last = lastPrice(p, stream = false) ?: return DayGtt.Refused
@@ -876,7 +911,8 @@ object Protections {
         suspend fun netNow(): Int? = runCatching {
             Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
         }.getOrNull()
-        val net = if (nowMs() - p.id < 60_000) null else netNow()
+        // Review (R2): an id ahead of now (a clock once ahead) is never "its first minute" for ever.
+        val net = if (nowMs() - p.id in 0L until 60_000L) null else netNow()
         val closed = net != null && (net == 0 || net.sign() != p.qty.sign())
         if (gid == null) return placeDayExits(p, net ?: return p)
         val allGtts = runCatching { Broker.gtts() }.getOrElse { return p }
@@ -889,7 +925,7 @@ object Protections {
             // what is held less any exit fill the positions do not show yet (review: never a naked stop on a flat account). Kept
             // marked until it is placed, so every try is made the same careful way.
             if (!closed && takenOver.containsKey("gtt:$gid")) {
-                if (ArmLive.handsOffNow(p.exchange, p.symbol) || exitDone("gtt:$gid")) return p
+                if (ArmLive.handsOffNow(p.exchange, p.symbol) || (exitDone("gtt:$gid") && !dayQtyKnown(p))) return p
                 val next = placeDayExits(p.copy(gttId = null), net, lagSafe = true)
                 if (next.active && next.gttId == null && next.stopOrderId == null && next.targetOrderId == null) return p
                 takenOver.remove("gtt:$gid")
@@ -942,8 +978,9 @@ object Protections {
         // 15 Nov, review: only what the other slices really have resting ([restingCover]); their orders read only when one has any.
         // Review (N5): their orders not read: no shrink or end decision this pass (the next look reads them again).
         val sibOrders = if (siblings(p).any { it.stopOrderId != null }) runCatching { Broker.orders() }.getOrNull() else emptyList()
-        val sibCover = if (sibOrders == null) 0 else siblingCover(p, sibOrders, allGtts)
-        if (sibOrders != null && sibCover > 0 && abs(net) <= sibCover) return when (gttState(p, cancelFired = false)) {
+        val sibKnownCover = if (sibOrders == null) null else siblingCoverKnown(p, sibOrders, allGtts)
+        val sibCover = sibKnownCover ?: 0
+        if (sibKnownCover != null && sibCover > 0 && abs(net) <= sibCover) return when (gttState(p, cancelFired = false)) {
             GttState.GONE -> p.copy(active = false, gttId = null, note = com.optionslab.ira.ManualCoverRule.SLICE_DONE)
             GttState.HELD, GttState.FIRED -> p
         }
@@ -961,7 +998,7 @@ object Protections {
         val last = lastPrice(p, stream = false)
         // 15 Nov: a slice covers what is held less what the other slices cover (not sliced: what is held, as before).
         val mine = abs(net) - sibCover
-        if (sibOrders != null && mine < covers && last != null) {
+        if (sibKnownCover != null && mine < covers && last != null) {
             val n = (mine / p.lotSize.coerceAtLeast(1)) * p.lotSize.coerceAtLeast(1)
             if (n > 0) {
                 val (gtt, why) = Kite.protect(Kite.Spec(p.exchange, p.symbol, 0L, p.lotSize, p.tick), p.product, p.qty.sign() * n, last, p.stop, p.target)
@@ -1059,6 +1096,9 @@ object Protections {
         val net = if (abs(again) < abs(net0)) again else net0
         val p0 = if (abs(p00.qty) > abs(net)) p00.copy(qty = net.sign() * abs(net)) else p00
         // 15 Nov: a position protected in slices ([protectSliced]): what the other slices cover is not this one's to cover again.
+        // Review (R3): a sibling set seconds ago that the books do not show yet: nothing placed or ended this look; the next look,
+        // with books that show it (or show it refused), decides. Never two slices for the same units, never one ended for nothing.
+        if (siblingCoverKnown(p00, book, gttBook) == null) return p00
         val sib = siblingCover(p00, book, gttBook)
         val room = (abs(net) - sib).coerceAtLeast(0)
         if (sib > 0 && room <= 0) return p0.copy(active = false, note = com.optionslab.ira.ManualCoverRule.SLICE_DONE)
@@ -1261,11 +1301,12 @@ object Protections {
         // ([restingCover]); a sibling's GTT list is read only when one has a GTT (never in a stream look: none counted then).
         val gttSibling = siblings(p).any { it.gttId != null }
         val sibGtts = if (!stream && gttSibling) runCatching { Broker.gtts() }.getOrNull() else null
-        val sibCover = siblingCover(p, rows.values, sibGtts)
+        val sibKnownCover = siblingCoverKnown(p, rows.values, sibGtts)
+        val sibCover = sibKnownCover ?: siblingCover(p, rows.values, sibGtts)
         // Review (N5): a sibling resting as a GTT whose list was not read (a stream look, a failed read) is not known: this pass makes
         // no shrink or end decision on the slices (no change is safer than a wrong one; any over-cover lasts until the next regular
         // look, which reads the GTTs).
-        val sibKnown = !(gttSibling && sibGtts == null)
+        val sibKnown = !(gttSibling && sibGtts == null) && sibKnownCover != null
         if (stopDone || targetDone) {
             // One-cancels-other: finished only once the other exit is confirmed gone, or it
             // would still rest at Zerodha and could open a naked position when it fills.
@@ -1287,7 +1328,8 @@ object Protections {
         }
         // The position closed by hand (or flipped): the resting exits would now open a new position.
         // (Not in its first minute: the position book can trail a fresh fill.)
-        val net = if (nowMs() - p.id < 60_000) null else netNow()
+        // Review (R2): an id ahead of now (a clock once ahead) is never "its first minute" for ever.
+        val net = if (nowMs() - p.id in 0L until 60_000L) null else netNow()
         if (net != null && (net == 0 || net.sign() != p.qty.sign())) {
             listOfNotNull(so, to).filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
             val still = runCatching { Broker.orders().filter { it.id == p.stopOrderId || it.id == p.targetOrderId }.any { it.working } }.getOrElse { true }
@@ -1331,10 +1373,11 @@ object Protections {
             if (net == null || net == 0 || net.sign() != p.qty.sign()) return p     // not read (or its first minute): next pass
             if (stream) return p                                                     // the regular look places (never a stream look)
             if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p                  // Boss's exit is still going
-            // Review: Boss's exit filled in full a moment ago ([exitFilledFor]): the positions may trail it; asked again next pass.
-            // After that, a position still held (lots added since the review) gets its stop back. Always on what is held less any
-            // exit fill the positions do not show yet (the lag guard on, [restAgain]): never a naked stop on a flat account.
-            if (listOfNotNull(so, to).any { exitDone(it.id) }) return p
+            // Review (R1): always on what is held less every exit fill of today the positions do not show yet (the lag guard forced,
+            // any age: [restAgain]) - never a naked stop on a flat account, and a part still held gets its stop at once. Only when
+            // Kite's positions do not give the day's quantity (the guard cannot work) does it wait, for [EXIT_DONE_MS] after Boss's
+            // exit filled in full ([exitFilledFor]).
+            if (listOfNotNull(so, to).any { exitDone(it.id) } && !dayQtyKnown(p)) return p
             // Its other exit still working is taken out first (confirmed), so the two put back never rest beside an old one.
             val working = listOfNotNull(so, to).filter { it.working }
             if (working.isNotEmpty()) {
@@ -1385,6 +1428,9 @@ object Protections {
             }
             return p.copy(stopOrderId = null, note = note)
         }
+        // 15 Nov, review: an order placed seconds ago that a trailing read of the order book does not show yet is not "gone": asked
+        // again next pass (ended now, the order would rest at Zerodha untracked and another could be placed beside it).
+        if (((p.stopOrderId != null && so == null) || (p.targetOrderId != null && to == null)) && nowMs() - p.id in 0 until FRESH_SLICE_MS) return p
         // Both exits gone some other way (a DAY order that ended with its day, cancelled at Zerodha): say so.
         if ((so == null || !so.working) && (to == null || !to.working) && (p.stopOrderId != null || p.targetOrderId != null)) {
             // 20 Oct, review: a carried (NRML) position's stop and target are DAY orders and end with their day; the next session
@@ -1573,5 +1619,5 @@ object Protections {
     }
 
     /** TEST ONLY: memory forgotten (the file kept), as after a restart: the next look reads the file. */
-    internal fun forgetMemoryForTest() { cache = null; gttTries.clear() }
+    internal fun forgetMemoryForTest() { cache = null; gttTries.clear(); synchronized(this) { lastId = 0L } }
 }

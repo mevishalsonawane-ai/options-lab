@@ -384,7 +384,37 @@ class ProtectionsSlicesTest : RobolectricTest() {
         kite.trailReads = 10                                                // the next order placed trails the order book's reads
         tick()
         assertEquals("never more than is held", 1800, kite.placed.filter { it.form["order_type"] == "SL" }.sumOf { it.form.getValue("quantity").toInt() })
+        // Later looks, the book catching up: still never more than is held, and the second slice ends as not needed.
+        repeat(8) { tick() }
+        assertEquals("never more than is held", 1800, kite.placed.filter { it.form["order_type"] == "SL" }.sumOf { it.form.getValue("quantity").toInt() })
         assertEquals(1800, active().sumOf { it.qty })
+        assertEquals(1, active().size)
+    }
+
+    /**
+     * R3: the first slice's new stop is refused within a second, while the order book does not show it yet: the second slice never
+     * ends on its account, and covers the position once the book shows the refusal.
+     */
+    @Test fun aSiblingRefusedBeforeTheBookShowsItNeverEndsTheOther() {
+        kite.position(sym, 3600, 100.0)
+        kite.login()
+        protect(3600, target = null)
+        kite.orders.clear()
+        kite.position(sym, 1800, 100.0)
+        nextSession(9, 20)
+        kite.requests.clear()
+        kite.trailReads = 4
+        tick()
+        val first = kite.placed.single()
+        assertEquals("1800", first.form["quantity"])
+        assertEquals("the second waits a look; never ended", 2, active().size)
+        val aStop = kite.orders.keys.last()
+        kite.reject(aStop)                                                  // refused at the exchange a moment later
+        repeat(8) { tick() }
+        val sls = kite.placed.filter { it.form["order_type"] == "SL" }
+        assertEquals("the second slice covers it once the refusal shows", 2, sls.size)
+        assertEquals("1800", sls.last().form["quantity"])
+        assertTrue(kite.orders.values.any { it.working && it.qty == 1800 && it.type == "SL" })
     }
 
     /**
@@ -407,5 +437,27 @@ class ProtectionsSlicesTest : RobolectricTest() {
         val now = active().first { it.id != b.id }
         assertEquals(1200, now.qty)
         assertEquals("TRIGGER PENDING", kite.order(now.stopOrderId!!).status)
+    }
+
+    /** R2: an id from a clock once ahead is neither carried on to new protections nor "its first minute" for ever. */
+    @Test fun aFutureIdIsNotCarriedOnAndNeverBlocksTheWatch() {
+        kite.position(sym, 75, 100.0)
+        kite.login()
+        val ahead = MarketClockRule.pinnedDay().plusDays(1).atTime(12, 0).atZone(com.optionslab.engine.IST).toInstant()
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), ahead))
+        protect(75)                                                          // set while the phone's clock was a day ahead
+        val future = active().single().id
+        Market.testClock = MarketClockRule.clockAt(12, 5)                   // the clock right again; the app restarted
+        Protections.forgetMemoryForTest()
+        // Its position closed: the watch reads it at once (never "its first minute" for a day) and ends it.
+        kite.flat()
+        tick()
+        assertTrue(active().isEmpty())
+        // A new protection's id is today's, not a day ahead.
+        kite.position(sym, 75, 100.0)
+        protect(75)
+        val id = active().single().id
+        assertTrue("not carried on from the future id", id < future)
+        assertTrue(id <= Market.now().toInstant().toEpochMilli() + 5_000)
     }
 }

@@ -149,16 +149,28 @@ class ProtectionsTakeoverTest : RobolectricTest() {
         assertEquals("stop cancelled", now.note)
     }
 
-    /** The exchange's cancel, with its reason, is ended as the exchange's (so an automatic cover may come back). */
+    /** The exchange's cancel, its words naming the exchange, is ended as the exchange's (so an automatic cover may come back). */
     @Test fun aStopTheExchangeCancelledIsNotedAsTheExchanges() {
         val p = protect()
-        kite.reject(p.stopOrderId!!, message = "Your order has been cancelled because of market protection.", status = "CANCELLED")
+        kite.reject(p.stopOrderId!!, message = "Cancelled by exchange: circuit limit breached.", status = "CANCELLED")
         later()
         tick()
         assertEquals(com.optionslab.ira.ManualCoverRule.STOP_BY_EXCHANGE, runBlocking { Protections.active() }.single().note)
         assertFalse(Alerts.posted.any { it.text.contains("cancelled by you") })
-        assertTrue(Alerts.posted.any { it.text.contains("was cancelled (Your order has been cancelled because of market protection.)") })
+        assertTrue(Alerts.posted.any { it.text.contains("was cancelled (Cancelled by exchange: circuit limit breached.)") })
         assertEquals("not the app's own: its target stays", "OPEN", kite.order(p.targetOrderId!!).status)
+    }
+
+    /** R5: a cancel in words the app does not recognise is taken as Boss's: respected, and said loudly. */
+    @Test fun aCancelInUnknownWordsIsTakenAsBosss() {
+        val p = protect()
+        kite.reject(p.stopOrderId!!, message = "Your order has been cancelled.", status = "CANCELLED")
+        later()
+        kite.requests.clear()
+        tick()
+        assertEquals("stop cancelled", runBlocking { Protections.active() }.single().note)
+        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("It was cancelled by you") })
+        assertTrue("never put back", kite.placed.isEmpty())
     }
 
     /** A protection resting as one GTT ("one GTT" on): its GTT deleted for an exit that did not go is placed again, never ended as gone. */
@@ -215,8 +227,8 @@ class ProtectionsTakeoverTest : RobolectricTest() {
         assertFalse(Alerts.posted.any { it.text.contains("rest at Zerodha again") })
     }
 
-    /** The exit filled in full (AppModel says so): while the positions may trail it, nothing is put back or said. */
-    @Test fun anExitFilledInFullWaitsWhileThePositionsMayTrail() {
+    /** The exit filled in full (AppModel says so) and the positions trail it: the lag guard sees the fill, nothing is put back or said. */
+    @Test fun anExitFilledInFullWithThePositionsTrailingGetsNoStop() {
         val p = protect()
         takeOver(p)
         later()
@@ -235,10 +247,10 @@ class ProtectionsTakeoverTest : RobolectricTest() {
     }
 
     /**
-     * N1: every leg "filled in full" but lots were added between the review and the send, so part is still held: after the wait the
-     * stop comes back for what is held (never ended as Boss's cancel).
+     * N1, R1: every leg "filled in full" but lots were added between the review and the send, so part is still held: the stop comes
+     * back for what is held on the first regular look (never ended as Boss's cancel, no two-minute wait).
      */
-    @Test fun anExitFilledInFullThatLeftPartHeldGetsItsStopBackAfterTheWait() {
+    @Test fun anExitFilledInFullThatLeftPartHeldGetsItsStopBackAtOnce() {
         val p = protect()
         takeOver(p)
         later()                                                              // 12:05
@@ -247,9 +259,6 @@ class ProtectionsTakeoverTest : RobolectricTest() {
         val ids = listOfNotNull(p.stopOrderId, p.targetOrderId)
         Protections.exitFilledFor(ids)
         kite.requests.clear()
-        tick()
-        assertTrue("waits while the positions may trail", kite.placed.isEmpty())
-        Market.testClock = MarketClockRule.clockAt(12, 8)                  // past the wait
         tick()
         assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
         assertEquals(listOf("75", "75"), kite.placed.map { it.form["quantity"] })
@@ -288,5 +297,26 @@ class ProtectionsTakeoverTest : RobolectricTest() {
             assertFalse("placed now: no longer marked", Protections.takenOverForTest("gtt:$gid"))
             assertTrue(kite.gtts.isNotEmpty())
         } finally { DayOco.resetForTest() }
+    }
+
+    /**
+     * R1: minutes after Boss's sale of all of it, the exit registry long expired and the fill no longer "recent", Zerodha's positions
+     * still show the old quantity: the forced lag guard compares today's fills with Kite's day quantity, so no stop rests on a flat
+     * account.
+     */
+    @Test fun aStalePositionsReadMinutesAfterTheFillNeverGetsAStop() {
+        val p = protect()
+        takeOver(p)
+        later()                                                              // 12:05
+        kite.positionsTrailReads = 1_000
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 150, 75, "NRML", "LIMIT", 99.95,
+            0.05, "NFO", "manual"), exit = true) }
+        Protections.exitFilledFor(listOfNotNull(p.stopOrderId, p.targetOrderId))
+        Market.testClock = MarketClockRule.clockAt(12, 9)                  // four minutes on: past every wait and every "recent"
+        ExitCoordinator.resetForTest()                                       // the exit registry's entries gone
+        kite.requests.clear()
+        tick(); tick()
+        assertTrue("never a stop on a flat account", kite.placed.isEmpty())
+        assertFalse(Alerts.posted.any { it.text.contains("cancelled by you") })
     }
 }

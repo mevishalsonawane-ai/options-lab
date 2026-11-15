@@ -64,21 +64,22 @@ object ManualCoverRule {
     const val STOP_BY_EXCHANGE = "stop rejected or cancelled by the exchange"
 
     /**
-     * 15 Nov, review: whether a stop that ended [status] with Zerodha's words [message] was ended by the exchange (REJECTED, or
-     * CANCELLED with words of the exchange's or the broker's own: market protection, RMS, "cancelled by exchange", a circuit)
-     * rather than by Boss. Boss's: CANCELLED with no words, or words naming the user ("user", "by you", "client"). ASSUMPTION, NOT
-     * VERIFIED against live Kite: a cancel Boss makes in Kite comes back with no status message (or one naming the user). Read
-     * as Boss's, the app never puts the stop back by itself and says so loudly.
+     * 15 Nov, review: whether a stop that ended [status] with Zerodha's words [message] was ended by the exchange or the broker's
+     * risk system rather than by Boss: REJECTED, or CANCELLED with words that clearly name them ([EXCHANGE_WORDS]: the exchange,
+     * RMS, a circuit, the freeze quantity, risk, validity, expiry, margin). Everything else - a blank message included - is Boss's:
+     * respected, never put back by itself, and said loudly. Boss's diagnostics show every CANCELLED live order (the app's own and
+     * his own alike) with an empty message, and no wording of an exchange's cancel at all: those words are an UNVERIFIED
+     * assumption, and anything not recognised defaults to Boss's.
      */
     fun endedByExchange(status: String, message: String): Boolean {
         if (status.equals("REJECTED", ignoreCase = true)) return true
         if (!status.equals("CANCELLED", ignoreCase = true) || message.isBlank()) return false
         val m = message.lowercase()
-        return USER_WORDS.none { it in m }
+        return EXCHANGE_WORDS.any { it in m }
     }
 
-    /** The words that make a cancel's message Boss's own ([endedByExchange]). */
-    private val USER_WORDS = listOf("user", "by you", "client")
+    /** The words that make a cancel's message the exchange's or the broker's ([endedByExchange]). */
+    private val EXCHANGE_WORDS = listOf("exchange", "rms", "circuit", "freeze", "risk", "validity", "expired", "margin")
 
     /**
      * 15 Nov: the note of one slice of a protection rested in slices (a quantity above the exchange's freeze quantity) that ended
