@@ -77,3 +77,13 @@ Boss, 15 Nov 2026, after reading R179: *"15% is too much for the stoploss, i wan
   pass apart from it).
 - Window and periods as R179. Honesty: data-led follow-up on the same year; the final is read again
   (`results/FINAL_READ_A`).
+
+## Amendment B (15 Nov 2026, before any number for it was computed): a Rs 1,500 maximum loss
+
+Boss, 15 Nov 2026, while Amendment A was being written up: *"What about 1.5k"*.
+
+- **Rule M15**: as Amendment A's M1 with **Rs 1,500 a lot** (after charges and expected stop slippage; only where tighter
+  than -15%). Amendment A showed the per-trade version collapses at 2-3 lots, so only the per-lot version is run (M2's slot
+  repeats M1 at every lot size and is not reported).
+- **Tests: 2** (R72, R51 at 1 lot); BH **m = 4,040 + 2 = 4,042**. Gates, window, twins: as Amendment A.
+- Honesty: data-led; the final is read again (`results/FINAL_READ_B`).
