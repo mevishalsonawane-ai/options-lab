@@ -1514,6 +1514,7 @@ object Paper {
             var s = b.state
             for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }) {
                 val fq = fill.quotes[Sandbox.key(o.symbol, o.exchange)] ?: continue
+                if (o.orderId in fill.hold) continue                                // 15 Nov: no price now for it ([stopMustWait])
                 val px = fq.ltp
                 val trig = o.triggerPrice?.toDouble() ?: continue
                 if (!com.optionslab.engine.risk.MissedLock.missed(px, trig)) continue

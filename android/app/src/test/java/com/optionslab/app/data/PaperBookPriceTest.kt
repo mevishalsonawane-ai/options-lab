@@ -252,7 +252,8 @@ class PaperBookPriceTest : RobolectricTest() {
         runBlocking { Paper.tick() }
         assertEquals(65, held(c))
         // A last price of 20 that traded yesterday, the book sane at 100: the stop waits.
-        val nowSec = System.currentTimeMillis() / 1000
+        // (Trade times on the market's clock, as the stop's own resting time is: the test clock need not be the real one.)
+        val nowSec = Market.now().toEpochSecond()
         KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 20.0, bid = 99.95, ask = 100.05, exchangeTime = nowSec, lastTradeTime = nowSec - 86_400)))
         runBlocking { Paper.tick() }
         assertEquals(65, held(c))
