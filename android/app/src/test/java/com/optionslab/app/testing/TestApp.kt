@@ -178,6 +178,7 @@ class TestApp : Application() {
         com.optionslab.app.data.AppState.resetForTest()
         // 15 Nov: no arm's order label (or a test's label keeper) left from an earlier test.
         com.optionslab.app.data.ArmOrderLabels.resetForTest()
+        com.optionslab.app.security.SecurePrefs.testAfterCopyOut = null
         com.optionslab.app.work.WatchWorkers.resetForTest()
         com.optionslab.app.work.TradingBusy.resetForTest()
         com.optionslab.app.data.OrderFlowLive.init(this)
