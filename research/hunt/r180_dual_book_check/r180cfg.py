@@ -6,8 +6,8 @@
     trades    $R180_OUT (default ~/.cache/iraalgo/r180): priced trades (never in git)
     results   research/hunt/r180_dual_book_check/results (small JSON / markdown only)
 
-Importing this module points R51's config at the R180 stores before r51data is imported. Pure otherwise: periods, the
-manual's parameters, gates. Plain-English notes, 15 Nov 2026.
+`use_stores()` points R51's config at the R180 stores (the study and the builder call it first). Pure otherwise:
+periods, the manual's parameters, gates. Plain-English notes, 15 Nov 2026.
 """
 from __future__ import annotations
 
@@ -30,9 +30,15 @@ DESIGN_END = date(2026, 3, 31)       # manual: design Nov 2024 - Mar 2026
 HOLD_START = date(2026, 4, 1)        # manual: holdout Apr - Oct 2026 (read by many earlier studies: not clean)
 END = date(2026, 10, 19)             # the lake's last session; nothing after it exists (no fresh stretch)
 
-K51.START = START                    # R51's store builder reads options from START ...
-K51.END = END                        # ... to END,
-K51.OUT = K51.OUT.parent / "clean_r180"   # ... in R180's own folder (R51's / R106's stores stay untouched)
+
+def use_stores():
+    """Point R51's store code at R180's window and folder (call before building or loading; idempotent). Kept out of
+    import time so importing this module (tests) never changes r51cfg for anything else in the same process."""
+    K51.START = START                            # R51's store builder reads options from START ...
+    K51.END = END                                # ... to END,
+    if K51.OUT.name != "clean_r180":
+        K51.OUT = K51.OUT.parent / "clean_r180"  # ... in R180's own folder (R51's / R106's stores stay untouched)
+
 
 CACHE_ROOT = Path(os.environ.get("IRAALGO_CACHE", Path.home() / ".cache" / "iraalgo")).expanduser()
 OUT = Path(os.environ.get("R180_OUT", CACHE_ROOT / "r180")).expanduser()

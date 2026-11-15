@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import sys
 
-import r180cfg as K  # noqa: F401  (points r51cfg at the R180 window and folder first)
+import r180cfg as K
 import r51data
+
+K.use_stores()
 
 if __name__ == "__main__":
     for u in sys.argv[1:] or K.UNDS:

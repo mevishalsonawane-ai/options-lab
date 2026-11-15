@@ -1,0 +1,40 @@
+id: r180-manual-dual-book-combined
+title: 'R180 outside build manual, the manual''s combined one-position account: rebuilt exactly as written on real option
+  prices'
+family: patterns-indicators
+date: '2026-11-15'
+doc: research/hunt/r180_dual_book_check/results/report.md
+hypothesis: An outside PDF build manual sent to Boss claims the manual's combined one-position account made 440 trades, 63.9%
+  wins, Rs 81,447 at 1 lot (design 326 / 64.7% / Rs 61,887; holdout 114 / 61.4% / Rs 19,561) on our real 1-minute option prices.
+  Does it reproduce, and does it pass the repo's gates?
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), ending 19 Oct 2026; R51 Amendment A
+  clean stores rebuilt for R180 from 1 Nov 2024 (clean_r180)
+period:
+  design: 2024-11-04..2026-03-31 (the manual's design)
+  holdout: 2026-04-01..2026-10-19 (the manual's holdout; read by R51-R176 before, not clean)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s 5-minute / 1-minute bars (underlying); ATM straddle vs 09:20 as an option-chain filter; no
+  option-chart signal'
+model_or_rule: Book 1 + Book 2 sharing one position (Book 1 first at the same minute), paused for the rest of a month at -Rs
+  11,000
+settings: research/hunt/r180_dual_book_check/r180cfg.py; PREREG.md section 2 (every ambiguity and choice)
+prereg: research/hunt/r180_dual_book_check/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Ours: 874 / 37.0% / -Rs 22,934 (manual 440 / 63.9% / Rs 81,447); design 659 / 36.4% / -Rs 1,584; holdout 215 /
+    38.6% / -Rs 21,350; 2x slippage -Rs 38,663; avg win Rs 1,348 / loss -Rs 832; worst month -Rs 11,554; max DD -Rs 57,354.
+    Repo fill (next-minute open): 877 / 36.6% / -Rs 20,713. Random-entry twin p 0.689 (twin mean -Rs 4,518), BH q 1.00 (m
+    = 4,051). Does not reproduce; fails: design_pos, hold_pos, slip2_pos, acct_dd, twin_p, bh_q. Without the month pause:
+    972 / 35.7% / -Rs 35,994 (manual 458 / 62.7% / Rs 74,907).'
+  costs: Costs('dated') on both orders, R17 liq fills (stop sales x0.999 - 2x half-spread, gaps at the open), 2x slippage
+    = SLIP2; 1 lot by the lot size in force
+holdout_read: true
+verdict: rejected
+notes: An outside document's claim, rebuilt as written; not reproduced. The manual reuses repo study names (R72 X1, R132 S3-V1-E3)
+  for different rules, and its Book 2 per-index rows add to 425 trades, not 271. Nothing in the app changes.
