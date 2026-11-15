@@ -83,6 +83,10 @@ MAX_DD = 40000.0
 WORST_MONTH = -13000.0
 N_PRIOR = 3925 + 45      # R173 Amendment B's count of every earlier test + R175's 45 (pre-registered, never run)
 M_TOTAL = N_PRIOR + len(TESTS)       # 3,979
+# Amendment B (Boss, 15 Nov: "What about 1000 as initial stoploss"): entry stop Rs 1,000 a lot, step trail unchanged
+ENTRY_B = 1000.0
+M_TOTAL_B = M_TOTAL + len(TESTS)     # 3,988
+FINAL_FLAG_B = RESULTS / "FINAL_READ_B"
 
 
 def ceil_tick(x: float, tick: float = TICK) -> float:
@@ -92,6 +96,11 @@ def ceil_tick(x: float, tick: float = TICK) -> float:
 
 def step_amount(lots: int) -> float:
     return STEP * lots
+
+
+def entry_amount(lots: int, per_lot: float = STEP) -> float:
+    """Rupees (whole position) of the entry stop: Rs 500 a lot (section 2) or Rs 1,000 a lot (Amendment B)."""
+    return per_lot * lots
 
 
 def step_locked(best: float, lots: int) -> float | None:

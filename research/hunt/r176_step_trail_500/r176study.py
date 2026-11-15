@@ -125,10 +125,14 @@ def exits(arm: str):
     return mods()["S"].arm_exits(arm)
 
 
+ENTRY = {"v": K.STEP}                                   # the entry stop a lot (Amendment B sets Rs 1,000)
+
+
 def priced(arm: str, us: list, on: bool, lots: int) -> list:
     M = mods()
     ex = exits(arm)
-    return [M["Z"].price(key[0], M["r51data"].load(key[0])[key[1]], cands, ex, on, lots) for key, cands, _, _ in us]
+    return [M["Z"].price(key[0], M["r51data"].load(key[0])[key[1]], cands, ex, on, lots, ENTRY["v"])
+            for key, cands, _, _ in us]
 
 
 def walk(arm: str, us: list, pr: list) -> list:
@@ -258,6 +262,16 @@ def evaluate(phase: str) -> dict:
 def run(phase: str) -> dict:
     K.RESULTS.mkdir(parents=True, exist_ok=True)
     M = mods()
+    if phase == "yearb":                                # Amendment B: the year again with a Rs 1,000 entry stop
+        if K.FINAL_FLAG_B.exists():
+            raise SystemExit("R176 Amendment B already read once: " + K.FINAL_FLAG_B.read_text())
+        K.FINAL_FLAG_B.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+        M["C"].open_final()
+        ENTRY["v"] = K.ENTRY_B
+        out = evaluate("year")
+        out["_meta"]["entry_stop_a_lot"] = K.ENTRY_B
+        (K.RESULTS / "yearb.json").write_text(json.dumps(out, indent=1, default=str))
+        return out
     if phase in ("final", "six", "year"):
         if phase in ("final", "year"):
             if K.FINAL_FLAG.exists():
@@ -271,19 +285,20 @@ def run(phase: str) -> dict:
     return out
 
 
-def decide_year() -> dict:
-    """Amendment A: the gates on the last year (early, final, last 6 months, whole year) -> results/decision.json."""
-    r = json.loads((K.RESULTS / "year.json").read_text())
+def decide_year(b: bool = False) -> dict:
+    """Amendment A (b=False) / B (b=True): the gates on the last year (early, final, last 6 months, whole year) ->
+    results/decision.json / decision_b.json. Amendment B's BH counts m = 3,988."""
+    r = json.loads((K.RESULTS / ("yearb.json" if b else "year.json")).read_text())
     ps = [r["twins"][f"{a}@{n}"]["p"] for a, n in K.TESTS]
-    q_all, q_own = bh_q(ps), bh_q(ps, len(K.TESTS))
+    q_all, q_own = bh_q(ps, K.M_TOTAL_B if b else K.M_TOTAL), bh_q(ps, len(K.TESTS))
     out = {}
     for (a, n), qa, qo in zip(K.TESTS, q_all, q_own):
         per = {p: dict(S=r[p][f"S@{n}"][a], A=r[p][f"A@{n}"][a]) for p in K.YEAR_PERIODS}
         g = gates(per, qa, K.YEAR_PERIODS, K.YEAR_BETTER)
         g.update(q_r176=round(qo, 4), twin_p=r["twins"][f"{a}@{n}"]["p"])
         out[f"{a}@{n}"] = g
-    out["_m"] = dict(r176=len(K.TESTS), prior=K.N_PRIOR, total=K.M_TOTAL)
-    (K.RESULTS / "decision.json").write_text(json.dumps(out, indent=1))
+    out["_m"] = dict(r176=len(K.TESTS) * (2 if b else 1), prior=K.N_PRIOR, total=K.M_TOTAL_B if b else K.M_TOTAL)
+    (K.RESULTS / ("decision_b.json" if b else "decision.json")).write_text(json.dumps(out, indent=1))
     return out
 
 
@@ -307,10 +322,12 @@ def decide() -> dict:
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
-    if cmd in ("design", "final", "six", "year"):
+    if cmd in ("design", "final", "six", "year", "yearb"):
         run(cmd)
     elif cmd == "decide-year":
         print(json.dumps(decide_year(), indent=1))
+    elif cmd == "decide-year-b":
+        print(json.dumps(decide_year(True), indent=1))
     elif cmd == "decide":
         print(json.dumps(decide(), indent=1))
     else:

@@ -164,3 +164,16 @@ existed when this was written. Sections 1, 2 (the rule), 4, 6 and 8 are unchange
 - The pickers were fitted on trades up to 31 Mar 2026 (R151), so picker numbers in "early" are in-sample (labelled).
 - One year is a short sample: every number comes with its trade count, and passing here is weaker evidence than the
   full design / walk-forward / final split would give.
+
+## Amendment B (15 Nov 2026, before any number for it was computed): Rs 1,000 a lot as the initial stop
+
+Boss, 15 Nov 2026, after reading R176's results: *"What about 1000 as initial stoploss"*.
+
+- **Rule S1k**: identical to section 2 except the entry stop is `real - 1,000 x L / qty` (rounded UP to the tick; only
+  where tighter than the arm's own -15%; not used if <= 0). The step trail is unchanged: once best >= +Rs 1,000 x L, the
+  stop = real + (floor(best / 500 L) - 1) x 500 L / qty. Every other exit stays.
+- Window, periods, parity, costs, twins (500 a test, seed 176), pickers (descriptive) and gates: exactly Amendment A's.
+- **Tests: 9 more** (3 arms x 3 lots); BH **m = 3,979 + 9 = 3,988**.
+- **Honesty**: this follows R176's own results (Amendment A) on the same year, which showed the Rs 500 entry stop was the
+  main exit. Choosing to test a wider stop after seeing that is a data-led follow-up; the final period is read a second
+  time by R176 (`results/FINAL_READ_B`). It is weaker evidence than a fresh pre-registration would be.

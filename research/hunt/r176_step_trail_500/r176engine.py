@@ -135,10 +135,10 @@ def simulate_step(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps
 
 
 # ------------------------------------------------------------------------------------------------ levels (pure)
-def entry_stop_px(real: float, qty: float, lots: int) -> float:
-    """The entry stop premium: real - 500 L / qty rounded UP to the tick (planned loss <= Rs 500 a lot before charges);
-    -1 when the level is <= 0 (the whole position is worth less than Rs 500 a lot)."""
-    s = K.ceil_tick(real - K.step_amount(lots) / qty)
+def entry_stop_px(real: float, qty: float, lots: int, per_lot: float = K.STEP) -> float:
+    """The entry stop premium: real - per_lot x L / qty rounded UP to the tick (planned loss <= per_lot a lot before
+    charges; Rs 500, or Rs 1,000 in Amendment B); -1 when the level is <= 0."""
+    s = K.ceil_tick(real - K.entry_amount(lots, per_lot) / qty)
     return s if s > 0 else -1.0
 
 
@@ -148,12 +148,12 @@ def step_px(real: float, qty: float, best: float, lots: int) -> float:
     return -1.0 if locked is None else K.ceil_tick(real + locked / qty)
 
 
-def levels(raw: float, real: float, qty: float, ex: E.Exits, on: bool, lots: int) -> tuple:
+def levels(raw: float, real: float, qty: float, ex: E.Exits, on: bool, lots: int, per_lot: float = K.STEP) -> tuple:
     """(stop_abs, stop_f, step_amt, kind) for simulate_step. on=False: the arm's own exits only. The entry stop replaces
     the arm's fractional stop only when it is the higher (tighter) premium; the step trail is on whenever on=True."""
     if not on:
         return -1.0, ex.stop, -1.0, "own"
-    s = entry_stop_px(real, qty, lots)
+    s = entry_stop_px(real, qty, lots, per_lot)
     own = raw * (1.0 - ex.stop) if ex.stop >= 0 else -1.0
     if s > 0 and s > own:
         return s, -1.0, K.step_amount(lots), "rupee"
@@ -161,14 +161,15 @@ def levels(raw: float, real: float, qty: float, ex: E.Exits, on: bool, lots: int
 
 
 def label(code: int, kind: str) -> str:
-    """Exit reason name: 'stop500' = the rule's entry stop, 'step' = the step trail, else the arm's own reason."""
+    """Exit reason name: 'stop500' = the rule's entry stop (Rs 500 or, in Amendment B, Rs 1,000 a lot), 'step' = the
+    step trail, else the arm's own reason."""
     why = REASONS[int(code)]
     if why == "stop" and kind == "rupee":
         return "stop500"
     return why
 
 
-def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1) -> list:
+def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lot: float = K.STEP) -> list:
     """Price one day's candidates (dicts with side, strike, er[, fx]) for `lots` lots, with (on=True) or without Boss's
     step trail. Trade dicts (None = no fill) as r152engine.price plus 'stop_kind'."""
     st = E.stack(und, D)
@@ -189,7 +190,7 @@ def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1) -> lis
             out.append(None)
             continue
         be = real + ch(real, real) / qty if G.needs_be(ex) else 0.0
-        stop_abs, stop_f, step_amt, kind = levels(raw, real, qty, ex, on, lots)
+        stop_abs, stop_f, step_amt, kind = levels(raw, real, qty, ex, on, lots, per_lot)
         a, b, rE, rX, r0, r1, r = simulate_step(C, int(c["er"]), int(sq), int(fx if fx is not None else -1), stop_f,
                                                 ex.target, ex.lock_trig, ex.lock_keep, ex.lock_trail, stp, ex.tmax,
                                                 ex.need, ex.close_stop, K51.TICK, qty, be, stop_abs, step_amt, *E.SLIP)

@@ -272,3 +272,29 @@ def test_year_gates_use_the_amended_periods():
     assert K.span_of("year") == (date(2025, 10, 20), date(2026, 10, 19))
     assert K.span_of("early") == (date(2025, 10, 20), date(2026, 3, 31))
     assert len(K.months_between(*K.span_of("year"))) == 13
+
+
+def test_amendment_b_entry_stop_is_1000_a_lot():
+    s = Z.entry_stop_px(100.2, 65.0, 1, 1000.0)                    # 100.2 - 15.385 = 84.815 -> 84.85
+    assert s == pytest.approx(84.85) and (100.2 - s) * 65 <= 1000.0
+    s3 = Z.entry_stop_px(100.2, 195.0, 3, 1000.0)
+    assert s3 == pytest.approx(84.85) and (100.2 - s3) * 195 <= 3000.0
+    assert Z.entry_stop_px(10.0, 65.0, 1, 1000.0) == -1.0
+    # at Rs 100 the -15% stop (85.0) is tighter than 84.85: the arm's own stop stays, the trail stays on
+    assert Z.levels(100.0, 100.2, 65.0, XL, True, 1, 1000.0) == (-1.0, 0.15, 500.0, "own")
+    # at Rs 200 (lot 65): -15% = 170; Rs 1,000 / 65 = 15.4 -> 184.85 is tighter and acts
+    s, f, st, k = Z.levels(200.0, 200.2, 65.0, XL, True, 1, 1000.0)
+    assert (f, st, k) == (-1.0, 500.0, "rupee") and s == pytest.approx(184.85)
+    assert K.M_TOTAL_B == 3988 and K.entry_amount(3, K.ENTRY_B) == 3000.0
+
+
+def test_amendment_b_wider_stop_survives_a_dip_the_500_stop_does_not():
+    C = _flat(px=200.0)
+    C[2, 20] = 189.0                                               # dips 11 points: below the Rs 500 stop (192.55)
+    _, r5 = _run(C, 10, 65.0, NOTIME, True, 1)
+    raw, real, ef, _ = X.entry_info(C, 10, 360, 65.0)
+    s, f, st, kind = Z.levels(raw, real, 65.0, NOTIME, True, 1, 1000.0)
+    r10 = Z.simulate_step(C, 10, 360, -1, f, NOTIME.target, NOTIME.lock_trig, NOTIME.lock_keep, NOTIME.lock_trail,
+                          NOTIME.steps_arr(), NOTIME.tmax, NOTIME.need, NOTIME.close_stop, 0.05, 65.0, 0.0, s, st, *E.SLIP)
+    assert r5[6] == E.R_STOP and r5[5] == 20
+    assert r10[5] != 20                                            # the Rs 1,000 stop (184.85) holds
