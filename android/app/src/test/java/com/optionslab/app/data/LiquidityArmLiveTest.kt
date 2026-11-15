@@ -192,15 +192,21 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertTrue("the load sends nothing", kite.placed.isEmpty())
         assertTrue(OrbArms.liquidityBnLiveHint)
         val end = System.currentTimeMillis() + 10_000
-        fun said() = Diag.lines().count { it.contains("now cleared for live by it") }
+        // The arms' own diary line ("[orb]"). The notice's banner is kept in the diary too, as every banner is (Alerts.post, area
+        // "info", "Liquidity: live by your switch: ..."): one event, two lines of different kinds - each counted once on its own.
+        fun said() = Diag.lines().count { it.contains("[orb] ") && it.contains("now cleared for live by it") }
+        fun noticed() = Diag.lines().count { it.contains("Liquidity: live by your switch: ") }
         while (said() < 1 && System.currentTimeMillis() < end) Thread.sleep(20)
+        Thread.sleep(200)
         assertEquals(1, said())
-        assertTrue(Diag.lines().first { it.contains("now cleared for live by it") }.contains("MIDCPNIFTY 15-min"))
+        // (At most one: the banner shows the same words once in 20 s, so it may be held back if another test just posted them.)
+        assertTrue("one notice at most: ${noticed()}", noticed() <= 1)
+        assertTrue(Diag.lines().first { it.contains("[orb] ") && it.contains("now cleared for live by it") }.contains("MIDCPNIFTY 15-min"))
         // Once: a restart neither clears nor says it again.
         AutomationSupport.reloadFromDisk(OrbArms)
         runBlocking { OrbArms.view() }
         Thread.sleep(200)
-        assertEquals(1, said())
+        assertEquals(1, said()); assertTrue(noticed() <= 1)
         // Switched off: nothing is cleared, and the yield goes.
         runBlocking { OrbArms.setArmed("liquidity", false, automatic = true) }
         assertTrue(runBlocking { OrbArms.liquidityLiveCleared() }.values.none { it })
