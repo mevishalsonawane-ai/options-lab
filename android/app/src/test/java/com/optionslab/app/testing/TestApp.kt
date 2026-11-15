@@ -220,7 +220,8 @@ class TestApp : Application() {
         com.optionslab.app.data.StockOptions.wipe()
         com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
-        com.optionslab.app.work.PositionCards.forgetPostedForTest()
+        // 15 Nov (CI): every card and the "open" flag, not only the posted words (BatteryAuditTest saw an earlier test's card).
+        com.optionslab.app.work.PositionCards.resetForTest()
         com.optionslab.app.widget.IraWidget.forgetDrawnForTest()
         // The event-driven checks and the order-speed figures of an earlier test (in memory only).
         com.optionslab.app.data.FastPath.resetForTest()
