@@ -752,7 +752,7 @@ object HeroTicketArm {
             val bars = if (p.day == now.toLocalDate()) runCatching { closes(c.feedKey, now) }.getOrNull().orEmpty() else emptyMap()
             // The stream's last price when it has one (memory only), else the minute bars just read: one read a ticket a pass.
             // 22 Oct (arms audit): the stream's tick only while fresh (a tick left from a stream that stopped is not the price now).
-            val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs <= FRESH_TICK_MS }?.last }.getOrNull()?.takeIf { it > 0 } ?: bars.maxByOrNull { it.key }?.value?.close
+            val ltp = Paper.heldPriceNow(c, p.entryTime, FRESH_TICK_MS) ?: bars.maxByOrNull { it.key }?.value?.close   // 15 Nov: [com.optionslab.ira.PriceNow]
             ltp?.let { b.marks[p.symbol] = it }
             val trail = HeroTicketRules.trail(p.entry, p.entryTime.toLocalTime(), bars.mapValues { it.value.close }, HeroTicketRules.TrailStart.of(p.trailStart))
             // 18 Oct: the trail's level once armed, told to its live path ([ArmLive]; memory only) - which, the ticket being close-judged,

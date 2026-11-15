@@ -2590,10 +2590,33 @@ object PassedArmsHost {
         // the price now); else the last closed minute, else a quote.
         // 26 Oct (review): a closed minute stands in for the price now only when it is the one just ended (or the one before: the
         // feed's own lag); minutes kept from an earlier, slow read are older, so a quote is read instead, as before.
-        val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs <= FRESH_MS }?.last }.getOrNull()?.takeIf { it > 0 }
-            ?: bars.lastOrNull()?.takeIf { !it.start.isBefore(now.withSecond(0).withNano(0).minusMinutes(2)) }?.close
-            ?: if (!overnight) runCatching { Paper.quote(c)?.ltp }.getOrNull()?.takeIf { it > 0 } else null
+        // 15 Nov (Boss: "Yes fix it"; [com.optionslab.ira.PriceNow]): only a price the option traded at since the entry, or a sane
+        // book's bid, is the price now. A last price from before the entry minute (an untraded monthly option's is from another day)
+        // and the bid of an empty or wide book are not: five FINNIFTY trades were "stopped" seconds after their entry on them.
+        val entrySec = p.entryTime.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        val seen = runCatching { Paper.bookNow(c) }.getOrNull()?.takeIf { it.ageMs <= FRESH_MS }
+        val streamCounts = seen != null && com.optionslab.ira.PriceNow.lastCounts(seen.last, seen.lastTradeSec, entrySec) &&
+            !com.optionslab.ira.PriceNow.farFromBook(seen.last, seen.lastTradeSec, seen.bid, seen.ask)
+        val entryMin = p.entryTime.withSecond(0).withNano(0)
+        val recentBar = bars.lastOrNull()?.takeIf { !it.start.isBefore(now.withSecond(0).withNano(0).minusMinutes(2)) && !it.start.isBefore(entryMin) }?.close
+        // Review: with a fresh packet everything is decided from memory - its last price when it counts, else its own book when sane
+        // (what a seller gets now), else the minute just closed - and nothing is read from the network (a quote read here would hold
+        // every other position's exit look behind it). Only with no fresh packet is a quote read, as before.
+        val ltp = if (seen != null) (if (streamCounts) seen.last else null) ?: com.optionslab.ira.PriceNow.bookBid(seen.bid, seen.ask) ?: recentBar
+            else recentBar ?: if (!overnight) runCatching { Paper.quote(c) }.getOrNull()?.let { q ->
+                com.optionslab.ira.PriceNow.ofQuote(q.ltp, q.noLast, q.bid, q.ask, null, Paper.lastCandleSec(c.symbol), entrySec)
+            } else null
         ltp?.let { b.marks[p.symbol] = it }
+        // Said once per trade (the arm's notes), so a stop that waits for a real price is never silent.
+        var waitNoted = false
+        if (ltp == null && !overnight && p.shadow == null && !now.isBefore(entryMin.plusMinutes(2))) {
+            val k = "${p.day}|noprice|${p.symbol}|${p.entryTime}"
+            if (k !in b.decided) {
+                b.decided += k
+                note(b, "${p.symbol}: no trade since its entry and no sane book just now - its stop is judged on the next real price (its time exit and square-off still act)")
+                waitNoted = true
+            }
+        }
         val known = b.locks[lockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
         // 20 Oct, review: the walk's own exit (its kind and price), so a stop or lock is never booked better than it ([sell]).
         var walked: PassedArms.Exit? = null
@@ -2621,7 +2644,7 @@ object PassedArmsHost {
         val np5Noted = why == null && np5Shadow(b, p, bars, now, known)
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
         if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
-        if (why == null) return np5Noted
+        if (why == null) return np5Noted || waitNoted
         val walkPx = walked?.takeIf { it.kind.why == why }?.price
         val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight, walkPx) else sell(b, p, c, why, ltp, walkPx)
         if (next != p) { b.positions[i] = next; return true }
@@ -2738,7 +2761,9 @@ object PassedArmsHost {
     private fun sellWouldBe(b: Book, p: Pos, why: String, ltp: Double?, overnight: Boolean, walkPx: Double? = null): Pos {
         // A seller gets the bid: the stream's fresh bid when it has one, else the price seen.
         val bid = runCatching { Paper.contractOf(p.symbol)?.let { Paper.bookNow(it) }?.takeIf { it.ageMs <= FRESH_MS }?.bid }.getOrNull()?.takeIf { it > 0 }
-        val at = (if (ltp != null) bid?.let { minOf(it, ltp) } ?: ltp else null) ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
+        // 15 Nov (review): with no price now ([com.optionslab.ira.PriceNow]) a clock exit books at the walk's own price (the last minute's
+        // close, else the entry), so a would-be trade on an untraded option still closes on time.
+        val at = (if (ltp != null) bid?.let { minOf(it, ltp) } ?: ltp else null) ?: walkPx?.takeIf { it.isFinite() && it > 0 } ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
         val target = PassedArms.targetLevel(p.entry, exitsOf(p))
         val booked = kindOf(why)?.let { PassedArms.booked(it, at, target, walkPx) } ?: at
         val charges = runCatching {

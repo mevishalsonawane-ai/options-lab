@@ -591,11 +591,17 @@ object KiteStream {
     private fun record(got: List<KiteTicks.Tick>, now: Long) {
         var stamp: Long? = null
         for (t in got) {
+            // 15 Nov ([com.optionslab.ira.PriceNow.newTrade]): the price path a resting stop fills from takes NEW trades only - a
+            // thin option's packets repeat its last trade (of another day, before it trades) with every change of its book.
+            val prev = ticks[t.token]?.tick
+            val tt = t.lastTradeTime?.takeIf { it > 0 }
             ticks[t.token] = Seen(t, now)
-            if (t.last > 0) paths.getOrPut(t.token) { com.optionslab.engine.TickPath() }.record(t.last, now)
-            // The local candles by the exchange's own stamp (a tick without one - an index's quote packet - is not used).
+            if (t.last > 0 && com.optionslab.ira.PriceNow.newTrade(t.last, tt, prev != null, prev?.last, prev?.lastTradeTime, now / 1000))
+                paths.getOrPut(t.token) { com.optionslab.engine.TickPath() }.record(t.last, now)
+            // The local candles by the exchange's own stamp (a tick without one - an index's quote packet - is not used); never from
+            // a last price of another session.
             val ex = t.exchangeTime
-            if (t.last > 0 && ex != null && ex > 0) {
+            if (t.last > 0 && ex != null && ex > 0 && !com.optionslab.ira.PriceNow.anotherSession(tt, ex)) {
                 candles.record(t.token, t.last, ex)
                 // 28 Oct: IraThinker's flow's own Zerodha-only record of its four instruments (memory only).
                 if (t.token in SESSION_TOKENS) sessionCandles.record(t.token, t.last, ex)

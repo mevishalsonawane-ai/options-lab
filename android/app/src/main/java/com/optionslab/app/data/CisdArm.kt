@@ -792,7 +792,7 @@ object CisdArm {
         // (later, never earlier) for any tick of the new minute; the new minute's own high counts from the next minute on.
         val otok = optionToken(p.symbol)
         // A price at most 5 s old only: a stale last price must never be judged against a level that already holds its minute's high.
-        val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs in 0..5_000 }?.last }.getOrNull()?.takeIf { it > 0 } ?: optionQuote(c)?.ltp
+        val ltp = Paper.heldPriceNow(c, p.entryTime, 5_000L, lookup = true)          // 15 Nov: and only one traded since the entry, or a sane book's bid
         val ohi = listOfNotNull(otok?.let { KiteStream.highSince(it, since) }, ltp).maxOrNull()
         val olo = listOfNotNull(otok?.let { KiteStream.lowSince(it, since) }, ltp).minOrNull()
         val judge = CisdNet.lockLevel(p.entry, p.qty, p.peak ?: Double.NEGATIVE_INFINITY)
