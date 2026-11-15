@@ -16,27 +16,32 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * 15 Nov (audit: ANRs in AlarmReceiver): [AlarmReceiver.finishWithin] - the alarm's broadcast is let go once, when its work ends
- * or after the bound, whichever is first; slow work is never cut short; a throw still lets it go; quick work never waits for the
- * bound.
+ * or after the bound, whichever is first; slow work is never cut short, and the processor is held for it from the bound to its
+ * end (taken once, let go once); a throw still lets it go; quick work never waits for the bound and takes no hold.
  */
 class AlarmReceiverBoundTest : RobolectricTest() {
     private fun scope() = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Test fun quickWorkLetsTheAlarmGoAtOnceAndOnce() = runBlocking {
-        val finished = AtomicInteger(); val late = AtomicInteger()
+        val finished = AtomicInteger(); val late = AtomicInteger(); val settled = AtomicInteger()
         val ran = AtomicInteger()
         val t0 = System.nanoTime()
-        val job = AlarmReceiver.finishWithin(5_000, scope(), finish = { finished.incrementAndGet() }, late = { late.incrementAndGet() }) { ran.incrementAndGet() }
+        val job = AlarmReceiver.finishWithin(5_000, scope(), finish = { finished.incrementAndGet() }, late = { late.incrementAndGet() },
+            settle = { settled.incrementAndGet() }) { ran.incrementAndGet() }
         withTimeout(5_000) { job.join() }
         assertTrue("never waits for the bound", (System.nanoTime() - t0) / 1_000_000 < 4_000)
         Thread.sleep(200)
         assertEquals(1, ran.get()); assertEquals(1, finished.get()); assertEquals("not late", 0, late.get())
+        assertEquals("no hold taken, none let go", 0, settled.get())
     }
 
     @Test fun slowWorkLetsTheAlarmGoAfterTheBoundAndStillFinishes() = runBlocking {
         val finished = CountDownLatch(1); val count = AtomicInteger(); val late = AtomicInteger()
-        val release = CountDownLatch(1); val done = AtomicInteger()
-        val job = AlarmReceiver.finishWithin(150, scope(), finish = { count.incrementAndGet(); finished.countDown() }, late = { late.incrementAndGet() }) {
+        val release = CountDownLatch(1); val done = AtomicInteger(); val settled = AtomicInteger()
+        // The hold is taken before the broadcast is let go (the processor never sleeps in between).
+        val order = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val job = AlarmReceiver.finishWithin(150, scope(), finish = { order += "finish"; count.incrementAndGet(); finished.countDown() },
+            late = { order += "hold"; late.incrementAndGet() }, settle = { order += "release"; settled.incrementAndGet() }) {
             release.await(10, TimeUnit.SECONDS)
             done.incrementAndGet()
         }
@@ -44,10 +49,13 @@ class AlarmReceiverBoundTest : RobolectricTest() {
         assertEquals(1, late.get())
         assertFalse("the work is not cut short", job.isCompleted)
         assertEquals(0, done.get())
+        assertEquals("held while it runs", 0, settled.get())
         release.countDown()
         withTimeout(5_000) { job.join() }
         assertEquals("the work finished", 1, done.get())
         assertEquals("let go once only", 1, count.get())
+        assertEquals("the hold let go once, when the work ended", 1, settled.get())
+        assertEquals(listOf("hold", "finish", "release"), order.toList())
     }
 
     @Test fun workThatThrowsStillLetsTheAlarmGo() = runBlocking {
@@ -67,7 +75,20 @@ class AlarmReceiverBoundTest : RobolectricTest() {
         assertEquals(1, done.get())
     }
 
-    @Test fun theBoundIsUnderAndroidsForegroundBroadcastLimit() {
-        assertTrue(AlarmReceiver.FINISH_MS in 1_000L..9_000L)
+    @Test fun aSlowWorkThatThrowsStillLetsTheHoldGo() = runBlocking {
+        val settled = CountDownLatch(1); val late = AtomicInteger()
+        val failing = CoroutineScope(SupervisorJob() + Dispatchers.IO + kotlinx.coroutines.CoroutineExceptionHandler { _, _ -> })
+        val job = AlarmReceiver.finishWithin(50, failing, finish = {}, late = { late.incrementAndGet() }, settle = { settled.countDown() }) {
+            Thread.sleep(400); throw IllegalStateException("a job failed late")
+        }
+        withTimeout(5_000) { job.join() }
+        assertTrue(settled.await(3, TimeUnit.SECONDS))
+        assertEquals(1, late.get())
+    }
+
+    /** These alarms are background broadcasts (no FLAG_RECEIVER_FOREGROUND): Android allows 60 s; the bound is well inside it. */
+    @Test fun theBoundIsWellUnderAndroidsBackgroundBroadcastLimitAndTheHoldOutlastsIt() {
+        assertTrue(AlarmReceiver.FINISH_MS in 20_000L..50_000L)
+        assertTrue(AlarmReceiver.LATE_HOLD_MS in 30_000L..120_000L)
     }
 }
