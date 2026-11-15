@@ -1,0 +1,34 @@
+id: r181-c4-double-poc-cvd
+title: R181 Case 4 double bottom (top) at the prior-day POC with a CVD higher low (lower high); ATM CE (PE); target session
+  high (low)
+family: flow-oi
+date: '2026-11-15'
+doc: research/hunt/r181_orderflow_cases/results/report.md
+hypothesis: The guide's order-flow condition picks better option trades than the same setup without it (selection twin) and
+  than random entries (random-entry twin); exploratory, ~19 days cannot pass the gates.
+data_version: 'phone recordings exported 15 Nov 2026: 1-second order flow + footprint 15 Oct - 13 Nov 2026 (20 days); first
+  export market chain 13-28 Oct; outside git'
+period:
+  design: none (rules fixed in PREREG before the one run; no split of the tiny sample)
+  holdout: none
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index near futures'' 1-minute price and tick-rule order flow; levels = prior day''s futures volume profile
+  (POC, 70% VA, PDH/PDL); trades the ATM option, stops/targets on the futures'
+- CVD at the second extreme above (below) the first
+model_or_rule: Case 4 double bottom (top) at the prior-day POC with a CVD higher low (lower high); ATM CE (PE); target session
+  high (low)
+settings: research/hunt/r181_orderflow_cases/PREREG.md (with Amendments 1-2); r181lib.py
+prereg: research/hunt/r181_orderflow_cases/PREREG.md
+variants_tried: 2
+results:
+  summary: '19 signal days (16 Oct - 13 Nov 2026), NIFTY + BANKNIFTY, 1 lot. Price-only twin 8 trades, win 12%, Rs -4,297
+    (2x slippage Rs -4,516); order-flow version 3 trades, win 0%, Rs -2,214 (2x Rs -2,305), mean Rs -738 vs random-entry twins
+    Rs -736 a trade. T1 p 0.5242, BH q 1.0; T2 p 0.3682, BH q 1.0. Verdict by the pre-registered bar: too few trades.'
+  costs: Costs('dated') charges; Fills('liq') with the option's recorded volume; 2x slippage; bid/ask sensitivity
+holdout_read: null
+verdict: inconclusive
+notes: 'BH m = 4066 (4,051 after R180 + 15). Exploratory: no setup could pass the gates with this sample. Re-run monthly as
+  recording continues.'

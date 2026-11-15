@@ -1,0 +1,35 @@
+id: r181-c1-absorption-val
+title: R181 Case 1 failed breakdown below VAL + absorption (heavy selling, no new low) + buyers on the reclaim, long ATM CE;
+  target POC
+family: flow-oi
+date: '2026-11-15'
+doc: research/hunt/r181_orderflow_cases/results/report.md
+hypothesis: The guide's order-flow condition picks better option trades than the same setup without it (selection twin) and
+  than random entries (random-entry twin); exploratory, ~19 days cannot pass the gates.
+data_version: 'phone recordings exported 15 Nov 2026: 1-second order flow + footprint 15 Oct - 13 Nov 2026 (20 days); first
+  export market chain 13-28 Oct; outside git'
+period:
+  design: none (rules fixed in PREREG before the one run; no split of the tiny sample)
+  holdout: none
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index near futures'' 1-minute price and tick-rule order flow; levels = prior day''s futures volume profile
+  (POC, 70% VA, PDH/PDL); trades the ATM option, stops/targets on the futures'
+- 'absorption bar (D<0, |D|>=1.5x mean |D| of last 30 bars, low not below previous low) below VAL within the break, D>0 on
+  the reclaim; variant: the app absorb formula from the footprint'
+model_or_rule: Case 1 failed breakdown below VAL + absorption (heavy selling, no new low) + buyers on the reclaim, long ATM
+  CE; target POC
+settings: research/hunt/r181_orderflow_cases/PREREG.md (with Amendments 1-2); r181lib.py
+prereg: research/hunt/r181_orderflow_cases/PREREG.md
+variants_tried: 3
+results:
+  summary: '19 signal days (16 Oct - 13 Nov 2026), NIFTY + BANKNIFTY, 1 lot. Price-only twin 16 trades, win 19%, Rs 1,508
+    (2x slippage Rs 1,093); order-flow version 0 trades. T1 p 1.0, BH q 1.0; T2 p 1.0, BH q 1.0; T1v p 1.0, BH q 1.0. Verdict
+    by the pre-registered bar: too few trades.'
+  costs: Costs('dated') charges; Fills('liq') with the option's recorded volume; 2x slippage; bid/ask sensitivity
+holdout_read: null
+verdict: inconclusive
+notes: 'BH m = 4066 (4,051 after R180 + 15). Exploratory: no setup could pass the gates with this sample. Re-run monthly as
+  recording continues.'
