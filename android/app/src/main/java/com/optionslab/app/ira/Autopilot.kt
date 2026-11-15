@@ -1647,6 +1647,32 @@ internal object Autopilot {
     }
 
     /**
+     * 15 Nov (review): Boss lifted [key]'s self-review pause ([paused]) or park to paper ([parked]) himself - his switch in Paper, or his
+     * PIN ([com.optionslab.app.data.OrbArms.liftLiquidityPark]). The Autopilot entries that set them ("paper:[key]" paused, "live:[key]"
+     * parked) still kept are closed as undone by Boss, so the change timeline never shows a pause or park that no longer holds.
+     */
+    fun ownerLifted(key: String, paused: Boolean, parked: Boolean) {
+        if (!enabled() || (!paused && !parked)) return
+        scope.launch(trailLane) {
+            runCatching {
+                if (appContext == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    val ids = _book.value.entries.filter { e -> e.applied &&
+                        ((paused && e.change.kind == AutoChange.Kind.PAPER_ENTRIES && e.change.target == "paper:$key" && e.change.to == AutoChange.PAUSED) ||
+                            (parked && e.change.kind == AutoChange.Kind.LIVE_ENTRIES && e.change.target == "live:$key" && e.change.to == AutoChange.PARKED))
+                    }.map { it.id }
+                    if (ids.isEmpty()) return@synchronized
+                    for (id in ids) _book.value = AutoChange.undone(_book.value, id, today)
+                    save()
+                }
+                runCatching { Diag.record("autopilot", "$key: its ${listOfNotNull("pause".takeIf { paused }, "park to paper".takeIf { parked }).joinToString(" and ")} lifted by you") }
+            }
+        }
+    }
+
+    /**
      * 15 Nov (Boss: "Liquidity should be always working if i have swtich on it on dashboard, no extra pin based approval needed"): the
      * Liquidity books on at the update ([books]) cleared for Zerodha by Boss's own switch ([com.optionslab.app.data.OrbArms]). Logged once
      * as Boss's (kept) so the change timeline shows it; its Undo parks Liquidity's live entries to paper (lower risk), and putting them back

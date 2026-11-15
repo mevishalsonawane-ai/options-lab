@@ -334,9 +334,11 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
             // live through its mirror ([com.optionslab.app.data.ArmLive]): listed as live when its Trade live is on and Shadow off.
             val mirror = com.optionslab.app.data.ArmLive.view.value
             fun mirrored(a: com.optionslab.app.data.OrbArms.ArmView) = a.arm.paperOnly && mirror.loaded && mirror.on(a.arm.source) && !mirror.shadowOn(a.arm.source)
-            // 15 Nov: [cleared] - armed and cleared whatever the mode (Liquidity's liveOk is "live now", false in Paper).
-            (orb.filter { (it.cleared && !it.arm.paperOnly) || mirrored(it) }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }) to
-                orb.filter { !((it.cleared && !it.arm.paperOnly) || mirrored(it)) }.map { it.arm.label }
+            // 15 Nov: [cleared] - armed and cleared whatever the mode (Liquidity's liveOk is "live now", false in Paper); a Liquidity
+            // parked to paper or paused by its review is not trading live.
+            fun goesLive(a: com.optionslab.app.data.OrbArms.ArmView) = (a.cleared && !a.reviewParked && !a.reviewPaused && !a.arm.paperOnly) || mirrored(a)
+            (orb.filter { goesLive(it) }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }) to
+                orb.filter { !goesLive(it) }.map { it.arm.label }
         }
         // Set on the main thread (never from a worker's continuation: the compose tests' unconfined dispatcher would run the frame there).
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { aiLive = ai; liveArms = on; paperArms = off }

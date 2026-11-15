@@ -111,10 +111,11 @@ internal interface OrbActions {
 
 /** 15 Nov: Liquidity's badges in Live when its entries go to paper: parked to paper, or not switched on by Boss himself on Home. */
 internal const val LIQ_PARKED_BADGE = "ARMED · PARKED TO PAPER"
+internal const val LIQ_PAUSED_BADGE = "ARMED · PAUSED BY ITS REVIEW"
 internal const val LIQ_PAPER_BADGE = "ARMED · PAPER UNTIL YOU SWITCH IT ON"
 
 /** 15 Nov: the button that lifts Liquidity's self-review park to paper (its PIN asked first). */
-internal const val LIFT_PARK = "Lift the park to paper (PIN)"
+internal const val LIFT_PARK = "Lift its review's park or pause (PIN)"
 
 /** The ORB rows from the arms' [view] and callbacks; [reauth] is the PIN prompt ([Reauth] in the app), with its reason or the default. */
 @Composable
@@ -185,6 +186,7 @@ internal fun OrbRowsContent(
                         a.armed && a.arm.paperOnly -> "ARMED · AUTO · PAPER + ITS LIVE SWITCH" to p.verdigris
                         // 15 Nov: Liquidity in Live but on paper - its live entries parked to paper, or not switched on by Boss himself on
                         // Home; cleared but its park not read yet (the first moments after a start): said neutrally, never "switch it on".
+                        a.armed && a.arm.liquidity && live && a.reviewPaused -> LIQ_PAUSED_BADGE to p.amber
                         a.armed && a.arm.liquidity && live && a.reviewParked -> LIQ_PARKED_BADGE to p.amber
                         a.armed && live && a.liveOk -> "ARMED · LIVE · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.oxblood
                         a.armed && a.arm.liquidity && live && !a.cleared -> LIQ_PAPER_BADGE to p.amber
@@ -206,12 +208,11 @@ internal fun OrbRowsContent(
                 if (a.armed && a.paperUntilSwitch.isNotEmpty())
                     Text("On paper until you switch it on yourself on Home (off, then on): ${a.paperUntilSwitch.joinToString(", ")}",
                         style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp), modifier = Modifier.testTag("orb-paper-until:${a.arm.source}"))
-                if (a.reviewParked) {
-                    Text("Parked to paper (by its self-review or the change timeline's Undo): its next entries go to the paper account. " +
-                        "Lifting the park takes your PIN.",
-                        style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
-                    BrassButton(LIFT_PARK, Modifier.padding(top = 2.dp), tone = p.oxblood) { liftAuth = true }
-                }
+                if (a.reviewPaused) Text("Paused by its self-review: no new entries, paper or live. In Paper your switch on Home lifts it; " +
+                    "in Live lifting it takes your PIN.", style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
+                if (a.reviewParked) Text("Parked to paper (by its self-review or the change timeline's Undo): its next entries go to the " +
+                    "paper account. Lifting the park takes your PIN.", style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
+                if (a.reviewParked || a.reviewPaused) BrassButton(LIFT_PARK, Modifier.padding(top = 2.dp), tone = p.oxblood) { liftAuth = true }
                 // 30 Oct (Boss): an arm that is off runs in shadow - its would-be trades' record, under its line.
                 a.offShadow?.let { Text(it, style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), maxLines = 2,
                     modifier = Modifier.testTag("orb-shadow:${a.arm.source}")) }
@@ -303,7 +304,7 @@ internal fun OrbRowsContent(
     armAuth?.let { (src, auto) -> reauth("Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
         { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
     reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
-    if (liftAuth) reauth("Enter your app PIN to lift Liquidity's park to paper. Its books cleared by your switch then trade on Zerodha again while the app is in Live.",
+    if (liftAuth) reauth("Enter your app PIN to lift Liquidity's park to paper and its pause. Its books cleared by your switch then trade on Zerodha again while the app is in Live.",
         { liftAuth = false; actions.liftLiquidityPark(true) }, { liftAuth = false })
     if (reenableAuth) reauth("Enter your app PIN to let Liquidity BANKNIFTY take live entries again after its stop rule. Its stop rule then counts from now.",
         { reenableAuth = false; actions.reenableLiquidityLive(true) }, { reenableAuth = false })

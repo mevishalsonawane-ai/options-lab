@@ -52,7 +52,8 @@ notes; match the surrounding code.
     plan, the change timeline, an unpark, a restore), it stays on paper until he switches it on himself on Home; every switch-off
     clears it. Every other gate still applies: the app in Live
     (which takes Boss's PIN), "AI trades go live", the switch itself (and each index's parking), every guard, the kill switch, the
-    day stop and the day lock, its own live stop rule and its self-review's park to paper (lifted only with the PIN). Off stays one
+    day stop and the day lock, its own live stop rule and its self-review's park to paper and pause (in Live lifted only with the
+    PIN; his switch lifts the pause only in Paper). Off stays one
     tap. Every other arm is unchanged (armed in Live with its own PIN).
   - Jarvis's own trades still stay on paper (the rule above).
 - PAPER (Boss, 13 Oct): an idea that has PASSED the research gates (below) may act on paper arms straight away, with no

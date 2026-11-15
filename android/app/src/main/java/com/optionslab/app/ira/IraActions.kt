@@ -93,6 +93,16 @@ internal object IraActions {
         return out
     }
 
+    /**
+     * 15 Nov (review): " (Liquidity 15+5's FINNIFTY 30-min, ... stay on paper until you switch it on yourself on Home)" when some of its
+     * books are on but not cleared for Zerodha by Boss's own switch; "" otherwise. Reads the arms' view only.
+     */
+    internal suspend fun liquidityPaperNote(): String = runCatching {
+        val v = com.optionslab.app.data.OrbArms.view().arms.firstOrNull { it.arm.liquidity && it.armed && it.paperUntilSwitch.isNotEmpty() }
+            ?: return@runCatching ""
+        " (Liquidity 15+5's ${v.paperUntilSwitch.joinToString(", ")} stay on paper until you switch it on yourself on Home)"
+    }.getOrDefault("")
+
     /** [items] as (name, (start, stop)). */
     suspend fun arms(): List<Pair<String, Pair<suspend () -> String, suspend () -> String>>> = items().map { it.name to (it.start to it.stop) }
 
@@ -299,9 +309,11 @@ internal object IraActions {
                     items().map { com.optionslab.ira.DayStop.Arm(it.name, it.on, it.needsPin) })
                 // "Start all" (no side) also lifts the commodity side's own stop when it may be lifted.
                 val mcxToo = c.side == null && mcxKept != null && !mcxLoss
-                if (!st.lift && !mcxToo) st.say to null
+                // 15 Nov: Liquidity's books on but not cleared by Boss's own switch stay on paper - said, so it never sounds like they go live.
+                val liqNote = liquidityPaperNote()
+                if (!st.lift && !mcxToo) st.say + liqNote to null
                 else (if (st.lift) st.say else "start the commodity bots again (the index bots stay stopped: ${st.say})") +
-                    (if (st.lift && mcxToo) "; and start the commodity bots again" else "") to suspend {
+                    (if (st.lift && mcxToo) "; and start the commodity bots again" else "") + liqNote to suspend {
                     val r = listOfNotNull(if (st.lift) com.optionslab.app.data.Strategies.startAgain() else null,
                         if (mcxToo) com.optionslab.app.data.Strategies.startCommoditiesAgain() else null).joinToString(" ")
                     ctx()?.let { runCatching { com.optionslab.app.work.Jobs.ensureWatch(it) } }

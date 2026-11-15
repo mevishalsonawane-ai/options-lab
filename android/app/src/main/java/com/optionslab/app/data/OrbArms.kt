@@ -1364,6 +1364,8 @@ object OrbArms {
          * not tell them apart), lifted only with Boss's PIN ([liftLiquidityPark]). False while that is not read yet.
          */
         val reviewParked: Boolean = false,
+        /** 15 Nov, Liquidity 15+5 only: its new entries (paper and live) paused by its self-review; in Live lifted only with the PIN. */
+        val reviewPaused: Boolean = false,
         /**
          * 15 Nov, Liquidity 15+5 only: its books that are on but not cleared for Zerodha ([liveCleared]: switched on by Jarvis, the day
          * plan, the change timeline or an unpark) - on paper until Boss switches Liquidity on himself on Home. Empty: none.
@@ -1444,11 +1446,12 @@ object OrbArms {
      * takes his PIN [pinConfirmed], as [reenableLiquidityLive]). Off the order path (Boss's own action).
      */
     fun liftLiquidityPark(pinConfirmed: Boolean): String {
-        if (!pinConfirmed) return "Lifting Liquidity's park to paper takes your PIN."
-        if (!SmartWorkers.reviewParked("liquidity")) return "Liquidity is not parked to paper by its review."
-        SmartWorkers.ownerRearmed("liquidity")
-        runCatching { Diag.record("orb", "Liquidity 15+5: its review's park to paper lifted by Boss with his PIN") }
-        return "Liquidity's park to paper is lifted: its books cleared by your switch trade on Zerodha again while the app is in Live."
+        if (!pinConfirmed) return "Lifting Liquidity's park to paper or pause takes your PIN."
+        runCatching { SmartWorkers.ensureLoaded() }
+        if (!SmartWorkers.reviewParked("liquidity") && !SmartWorkers.reviewPaused("liquidity")) return "Liquidity is not parked to paper or paused by its review."
+        liftReview(LiftReview.PAUSE_AND_PARK)
+        runCatching { Diag.record("orb", "Liquidity 15+5: its review's park to paper and pause lifted by Boss with his PIN") }
+        return "Liquidity's park to paper and pause are lifted: its books cleared by your switch trade on Zerodha again while the app is in Live."
     }
 
     /** Boss's tick on the checklist: he watched the first live trade with the app open (or took it back). */
@@ -1532,6 +1535,7 @@ object OrbArms {
             shadow = shadowOf(b), lots = lotsOf(b), lotsAsk = b.liqLotsAsk,
             lotSizes = lotSizes(), parked = b.parked.sorted(),
             reviewParked = runCatching { SmartWorkers.reviewParked("liquidity") }.getOrDefault(false),
+            reviewPaused = runCatching { SmartWorkers.reviewPaused("liquidity") }.getOrDefault(false),
             paperUntilSwitch = LiquidityRules.BOOKS.filter { b.armed[it.source] == true && !liveCleared(b, it.source) }
                 .map { "${LiquidityRules.underlyingOf(it)} ${LiquidityRules.minutesOf(it)}-min" }).let { v ->
                 // Its books' charges together (R14's charges line).
@@ -1739,7 +1743,34 @@ object OrbArms {
      * [bySwitch]: Boss's own switch on Home's row ([com.optionslab.app.ui.AppModel.armOrb]) - 15 Nov: enough to switch Liquidity
      * 15+5 on in Live without a PIN of its own ([liveCleared]); every other arm ignores it.
      */
-    suspend fun setArmed(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false, bySwitch: Boolean = false): String = lock.withLock {
+    suspend fun setArmed(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false, bySwitch: Boolean = false): String {
+        // 15 Nov (review): what Liquidity's switch-on lifts of its self-review, done after the arms' lock (it may read the settings vault).
+        var lift = LiftReview.NONE
+        val said = setArmedLocked(source, on, automatic, pinConfirmed, bySwitch) { lift = it }
+        if (lift != LiftReview.NONE) liftReview(lift)
+        return said
+    }
+
+    /** 15 Nov: what Boss's own action lifts of Liquidity's self-review: nothing, its pause (Paper, his switch), or pause and park (his PIN). */
+    private enum class LiftReview { NONE, PAUSE, PAUSE_AND_PARK }
+
+    /**
+     * Lifts Liquidity's self-review [what] (Boss's own action; off the arms' lock), and closes in the change timeline the Autopilot
+     * entries that set what was lifted, so they no longer read as kept ([com.optionslab.app.ira.Autopilot.ownerLifted]).
+     */
+    private fun liftReview(what: LiftReview) {
+        runCatching {
+            SmartWorkers.ensureLoaded()
+            val s = SmartWorkers.settings.value
+            val paused = "liquidity" in s.paused
+            val parked = what == LiftReview.PAUSE_AND_PARK && "liquidity" in s.parked
+            if (what == LiftReview.PAUSE_AND_PARK) SmartWorkers.ownerRearmed("liquidity") else SmartWorkers.ownerResumedPaper("liquidity")
+            if (paused || parked) runCatching { com.optionslab.app.ira.Autopilot.ownerLifted("liquidity", paused = paused, parked = parked) }
+        }
+    }
+
+    private suspend fun setArmedLocked(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean, bySwitch: Boolean,
+                                       lifts: (LiftReview) -> Unit): String = lock.withLock {
         val b = book()
         if (source == LiquidityRules.ARM.source) {
             // Both books follow the one switch: the Paper / Live switch, automatic or approve.
@@ -1755,10 +1786,10 @@ object OrbArms {
                 b.armed[a.source] = on; b.auto[a.source] = automatic; b.liveOk[a.source] = on && (bySwitch || pinConfirmed)
                 if (!on) b.pending.remove(a.source)
             }
-            // Boss's own switch (or his PIN) lifts its self-review's PAUSE of paper entries ("switch it back on yourself"); its park to
-            // paper (live entries to paper, an automatic risk-lowering step) is lifted only with his PIN ([liftLiquidityPark]).
-            if (on && (bySwitch || pinConfirmed)) runCatching { SmartWorkers.ownerResumedPaper("liquidity") }
-            if (on && pinConfirmed) runCatching { SmartWorkers.ownerRearmed("liquidity") }
+            // Its self-review's PAUSE (new entries, paper and live) and park to paper are automatic risk-lowering steps: Boss's own
+            // switch lifts the pause only in Paper ("switch it back on yourself"); in Live only his PIN lifts either ([liftLiquidityPark]).
+            // Done by [setArmed] after this lock.
+            if (on && pinConfirmed) lifts(LiftReview.PAUSE_AND_PARK) else if (on && bySwitch && !live) lifts(LiftReview.PAUSE)
             save(b)
             // 25 Oct (app audit): every flip of an arm's switch is written down with when (the diary) - Liquidity's BANKNIFTY book included.
             switchNote(LiquidityRules.ARM.label, on, live, automatic, pin = pinConfirmed)

@@ -213,12 +213,12 @@ class LiquidityArmLiveTest : RobolectricTest() {
         runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, bySwitch = true) }
         assertTrue("still parked to paper", SmartWorkers.reviewParked("liquidity"))
         assertTrue(row().reviewParked); assertFalse("parked: not live now", row().liveOk)
-        assertEquals("Lifting Liquidity's park to paper takes your PIN.", OrbArms.liftLiquidityPark(false))
+        assertEquals("Lifting Liquidity's park to paper or pause takes your PIN.", OrbArms.liftLiquidityPark(false))
         assertTrue(SmartWorkers.reviewParked("liquidity"))
-        assertTrue(OrbArms.liftLiquidityPark(true).startsWith("Liquidity's park to paper is lifted"))
+        assertTrue(OrbArms.liftLiquidityPark(true).startsWith("Liquidity's park to paper and pause are lifted"))
         assertFalse(SmartWorkers.reviewParked("liquidity"))
         assertTrue(row().liveOk)
-        assertEquals("Liquidity is not parked to paper by its review.", OrbArms.liftLiquidityPark(true))
+        assertEquals("Liquidity is not parked to paper or paused by its review.", OrbArms.liftLiquidityPark(true))
     }
 
     /**
@@ -264,25 +264,63 @@ class LiquidityArmLiveTest : RobolectricTest() {
         runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, bySwitch = true) }  // Boss's own switch
         assertFalse("the paper pause is lifted", "liquidity" in SmartWorkers.settings.value.paused)
         assertTrue("the park to paper stays", SmartWorkers.reviewParked("liquidity"))
-        assertTrue(OrbArms.liftLiquidityPark(true).startsWith("Liquidity's park to paper is lifted"))
+        assertTrue(OrbArms.liftLiquidityPark(true).startsWith("Liquidity's park to paper and pause are lifted"))
         assertFalse(SmartWorkers.reviewParked("liquidity"))
     }
 
-    /** 15 Nov (review): the update's one-time clearance during a restore not yet disarmed clears nothing, then or after. */
+    /**
+     * 15 Nov (review): the self-review's pause blocks live entries too, so in LIVE Boss's no-PIN switch never lifts it; the row's Lift
+     * button (the PIN) lifts the pause and the park together.
+     */
+    @Test fun inLiveTheSwitchNeverLiftsThePauseThePinDoes() {
+        assertNotNull(SmartWorkers.pausePaperByAutopilot("liquidity"))
+        runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, bySwitch = true) }
+        assertTrue("still paused", SmartWorkers.reviewPaused("liquidity"))
+        assertTrue(row().reviewPaused)
+        assertEquals("Lifting Liquidity's park to paper or pause takes your PIN.", OrbArms.liftLiquidityPark(false))
+        assertTrue(SmartWorkers.reviewPaused("liquidity"))
+        assertTrue(OrbArms.liftLiquidityPark(true).startsWith("Liquidity's park to paper and pause are lifted"))
+        assertFalse(SmartWorkers.reviewPaused("liquidity"))
+        assertFalse(row().reviewPaused)
+    }
+
+    /** 15 Nov (review): "start all" says which Liquidity books stay on paper until Boss switches it on himself on Home. */
+    @Test fun startAllSaysWhichLiquidityBooksStayOnPaper() {
+        AutomationSupport.liveSettings(live = false)
+        runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }                  // Jarvis / the day plan: not cleared
+        val said = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Commands.parse("start all")!!) }.first
+        assertTrue(said, said.contains("stay on paper until you switch it on yourself on Home") && said.contains("BANKNIFTY 15-min"))
+        runBlocking { OrbArms.setArmed("liquidity", true, automatic = true, bySwitch = true) }  // Boss's own switch
+        val again = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Commands.parse("start all")!!) }.first
+        assertFalse(again, again.contains("stay on paper until you switch it on yourself on Home"))
+    }
+
+    /**
+     * 15 Nov (review): the update's one-time clearance during a restore not yet disarmed: the restored book's switches are off, the
+     * change is marked done (saved) and clears nothing; books switched on after the restore (not by Boss's switch) are never cleared by
+     * it later, and nothing is said.
+     */
     @Test fun theUpdateDuringARestoreClearsNothing() {
+        val books = listOf("liquidity15", "liquidity5")
+        fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
+        val before = JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)
+            .put(com.optionslab.engine.orb.ParkedArms.MIGRATION).put(com.optionslab.engine.orb.FamilyPark.MIGRATION)
         SecurePrefs.put(Backup.DISARM, true)
         try {
-            val books = listOf("liquidity15", "liquidity5")
-            fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
             AutomationSupport.orbState(context, JSONObject().put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false))
-                .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)
-                    .put(com.optionslab.engine.orb.ParkedArms.MIGRATION).put(com.optionslab.engine.orb.FamilyPark.MIGRATION))
-                .put("positions", JSONArray()))
+                .put("migrated", before).put("positions", JSONArray()))
             assertTrue(runBlocking { OrbArms.liquidityLiveCleared() }.values.none { it })
+            val saved = JSONObject(String(com.optionslab.app.security.Vault.readFile(java.io.File(context.filesDir, "orb.vault"))!!, Charsets.UTF_8))
+            val done = saved.getJSONArray("migrated").let { m -> (0 until m.length()).map { m.getString(it) } }
+            assertTrue("marked done while restoring: $done", OrbArms.LIQ_SWITCH_CLEAR in done)
+            assertTrue("no clearance stored", books.none { saved.optJSONObject("liveOk")?.optBoolean(it, false) == true })
         } finally { SecurePrefs.put(Backup.DISARM, false) }
-        // The restore done: read again, the change is marked done - nothing is cleared and nothing is said.
-        AutomationSupport.reloadFromDisk(OrbArms)
+        // After the restore, the books switched on again without Boss's switch (the book as saved, its change marked done): never cleared.
+        AutomationSupport.orbState(context, JSONObject().put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false))
+            .put("migrated", JSONArray(before.toString()).put(OrbArms.LIQ_SWITCH_CLEAR)).put("positions", JSONArray()))
+        assertTrue(row().armed)
         assertTrue(runBlocking { OrbArms.liquidityLiveCleared() }.values.none { it })
+        assertFalse("in Live, on paper until Boss's switch", row().liveOk)
         Thread.sleep(200)
         assertTrue(Diag.lines().none { it.contains("now cleared for live by it") })
     }

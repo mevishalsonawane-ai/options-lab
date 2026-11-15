@@ -38,7 +38,12 @@ class LiquiditySwitchTimelineTest : RobolectricTest() {
         if (Autopilot.enabled()) Autopilot.resetForTest()
     }
 
-    private fun entries() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.LIVE_ENTRIES && it.change.target == "live:liquidity" }
+    /**
+     * This test's own entry: the LIVE_ENTRIES clearance naming exactly its two books. (Matched by its words, so an entry another test's
+     * one-time change still had on its way - [Autopilot]'s log waits for the timeline's start - is never counted here.)
+     */
+    private fun entries() = Autopilot.book.value.entries.filter { it.change.kind == AutoChange.Kind.LIVE_ENTRIES && it.change.target == "live:liquidity" &&
+        it.change.reason.endsWith("cleared now: BANKNIFTY 15-min, BANKNIFTY 5-min") }
 
     @Test fun theClearanceIsLoggedOnceItsUndoParksAndPuttingItBackTakesThePin() {
         org.junit.Assume.assumeTrue("the change timeline is in IraAlgo with Jarvis only", Autopilot.enabled())
@@ -69,5 +74,22 @@ class LiquiditySwitchTimelineTest : RobolectricTest() {
         assertTrue(SmartWorkers.reviewParked("liquidity"))
         assertTrue(Autopilot.apply(e.change, pinConfirmed = true, byBoss = true) != null)
         assertFalse(SmartWorkers.reviewParked("liquidity"))
+    }
+
+    /** 15 Nov (review): Boss lifting Liquidity's pause himself (his PIN) closes Autopilot's kept pause entry in the timeline. */
+    @Test fun bossLiftingThePauseClosesAutopilotsPauseEntry() {
+        org.junit.Assume.assumeTrue("the change timeline is in IraAlgo with Jarvis only", Autopilot.enabled())
+        val day = Market.today()
+        val pause = AutoChange.Change(AutoChange.Kind.PAPER_ENTRIES, "paper:liquidity", "on", AutoChange.PAUSED, "test: its record loses",
+            AutoChange.Evidence(0, 0.0, com.optionslab.ira.AgentLessons.Confidence.STRONG), AutoChange.Risk.LOWER, AutoChange.Scope.PAPER)
+        val (book, e) = AutoChange.record(AutoChange.Book(), pause, AutoChange.Status.KEPT, System.currentTimeMillis(), day)
+        Autopilot.setForTest(book)
+        assertTrue(SmartWorkers.pausePaperByAutopilot("liquidity") != null)
+        assertTrue(OrbArms.liftLiquidityPark(true).startsWith("Liquidity's park to paper and pause are lifted"))
+        assertFalse(SmartWorkers.reviewPaused("liquidity"))
+        fun status() = Autopilot.book.value.entries.first { it.id == e.id }.status
+        val deadline = System.currentTimeMillis() + 10_000
+        while (status() != AutoChange.Status.UNDONE && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(AutoChange.Status.UNDONE, status())
     }
 }
