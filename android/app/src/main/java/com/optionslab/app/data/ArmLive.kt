@@ -598,6 +598,8 @@ object ArmLive {
 
     private fun now(): LocalDateTime = (testNow ?: Market.now()).toLocalDateTime().withNano(0)
     private fun nowMs(): Long = (testNow ?: Market.now()).toInstant().toEpochMilli()
+    /** 15 Nov: the phone's clock for [ArmOrderLabels] - the market clock, the one Zerodha's order times are compared with ([Broker.findRecent]). */
+    private fun labelMs(): Long = runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis())
 
     // ---- the Live switch in memory (final review F2, F7) ------------------------------------------------------------------------
 
@@ -873,11 +875,20 @@ object ArmLive {
         val known = known()
         // (The entry door asks the switches again inside it, from memory: [doorRefusal].)
         testHeard?.add("door|${a.key}|${a.ref}")
+        // 15 Nov (audit: 27 live orders Zerodha rejected, "Insufficient funds", were shown with no arm): this arm's label is noted
+        // BEFORE the order goes (memory only: [ArmOrderLabels]), so an order Zerodha answers with a refusal but still shows as
+        // REJECTED in its order book is shown with its arm. Before, the label was written only once Zerodha gave the order's id.
+        // Nothing about the entry itself changes.
+        val owner = "${spec.label} · live entry"
+        val sent = ArmOrderLabels.sending(o, owner, labelMs())
         val id: String? = try {
             Broker.placeOrder(o, arm = "arm:${a.key}", intended = last, verdict = verdict, stop = a.stop)
         } catch (e: Broker.NotLoggedIn) {
             notMirrored(a, "not logged in to Zerodha today"); return@withLock
         } catch (e: Exception) {
+            // 15 Nov: Zerodha's own refusal (no id): its try may name the REJECTED order in Zerodha's book. A lost reply, or the app's
+            // own refusal at the door (nothing was sent), is left alone.
+            if (ArmOrderLabels.zerodhaRefused(e)) ArmOrderLabels.refused(sent)
             // 3 Nov (live): Zerodha blocks MIS MARKET orders on a contract with little open interest ("MIS MARKET orders are blocked for
             // this FINNIFTY contract due to its open interest (OI) being less than 100 lots"): the same entry goes once as a LIMIT at
             // the offer, never more than 1% over the last price ([LiveMirror.blockedMarketLimit]); unfilled in 15 s it is cancelled below.
@@ -888,9 +899,11 @@ object ArmLive {
                 note(a.key, "${spec.label}: Zerodha blocks MARKET orders on ${ins.symbol} (low open interest): sent as a LIMIT at %.2f instead"
                     .format(Locale.ENGLISH, retry.price ?: 0.0))
                 val v2 = OrderVerdicts.cleared(OrderVerdicts.liveFields(retry, Market.today(), "arm:${a.key}", stop = a.stop), "arm live gate (LIMIT, MARKET blocked)")
+                val sent2 = ArmOrderLabels.sending(retry, owner, labelMs())               // 15 Nov: the LIMIT's own try, as above
                 try { Broker.placeOrder(retry, arm = "arm:${a.key}", intended = last, verdict = v2, stop = a.stop) }
                 catch (e2: Broker.NotLoggedIn) { notMirrored(a, "not logged in to Zerodha today"); return@withLock }
                 catch (e2: Exception) {
+                    if (ArmOrderLabels.zerodhaRefused(e2)) ArmOrderLabels.refused(sent2)
                     if (Broker.definite(e2)) { notMirrored(a, e2.message ?: "Zerodha refused the order"); return@withLock }
                     try { Broker.findRecentRetrying(retry, known) } catch (_: Exception) { null }
                 }
@@ -903,7 +916,9 @@ object ArmLive {
             try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }
             }
         }
-        id?.let { runCatching { Strategies.tagOwner("kite:$it", "${spec.label} · live entry") } }
+        // 15 Nov: by its id in memory at once too (the order review reads it even if the labels' book could not be read just now).
+        id?.let { ArmOrderLabels.answered(it, owner, labelMs()) }
+        id?.let { runCatching { Strategies.tagOwner("kite:$it", owner) } }
         var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
         if (id != null && f?.status !in DONE) {
             // Not finished in 15 s: the rest is cancelled so it can never fill later untracked; only what filled is booked.

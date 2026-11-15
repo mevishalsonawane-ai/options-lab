@@ -292,11 +292,17 @@ class PersonalStoresTest {
         },
         s("OrderReviewHost") {
             // The review's own file as its pass writes it (the pass needs a day's orders), then read into memory as at a start.
+            // 15 Nov: the plain file kept before that day, moved to the sealed review.vault (and deleted) by this read.
             java.io.File(app.noBackupFilesDir, "orderreview/review.txt").apply { parentFile?.mkdirs()
                 writeText(com.optionslab.ira.OrderReview.encode(com.optionslab.ira.OrderReview.Book(proposals = listOf("Boss: stop moved too early on NIFTY"), lastRun = java.time.LocalDate.of(2026, 10, 23), cutoffMs = 1L))) }
             com.optionslab.app.data.OrderReviewHost.reloadForTest()
             com.optionslab.app.data.OrderReviewHost.ensureLoaded()
             check(com.optionslab.app.data.OrderReviewHost.holdsForErase())
+            // 15 Nov: and a day's live orders, kept in their sealed file (and in memory) as its watcher keeps them.
+            val today = com.optionslab.app.data.Market.today()
+            check(com.optionslab.app.data.OrderReviewHost.snapshotOrders(listOf(com.optionslab.app.data.Broker.OrderRow(id = "1", symbol = "NIFTY26OCT25000CE",
+                side = "BUY", qty = 75, filled = 75, price = 100.0, avg = 100.5, status = "COMPLETE", message = "", placedAt = "$today 10:00:00"))) == 1)
+            check(java.io.File(app.noBackupFilesDir, "orderreview/orders-$today.vault").isFile)
         },
         s("LiveSelfTest") {
             com.optionslab.app.data.LiveSelfTest.setAuto(true)    // its switch: a SecurePrefs key

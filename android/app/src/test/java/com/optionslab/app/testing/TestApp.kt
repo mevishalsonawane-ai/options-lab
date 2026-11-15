@@ -176,6 +176,9 @@ class TestApp : Application() {
         // The watch's workers (10 Oct): no claim, timing, shared state or busy mark left from an earlier test.
         com.optionslab.app.data.AutoExposure.resetForTest()
         com.optionslab.app.data.AppState.resetForTest()
+        // 15 Nov: no arm's order label (or a test's label keeper) left from an earlier test.
+        com.optionslab.app.data.ArmOrderLabels.resetForTest()
+        com.optionslab.app.security.SecurePrefs.testAfterCopyOut = null
         com.optionslab.app.work.WatchWorkers.resetForTest()
         com.optionslab.app.work.TradingBusy.resetForTest()
         com.optionslab.app.data.OrderFlowLive.init(this)
@@ -217,7 +220,8 @@ class TestApp : Application() {
         com.optionslab.app.data.StockOptions.wipe()
         com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
-        com.optionslab.app.work.PositionCards.forgetPostedForTest()
+        // 15 Nov (CI): every card and the "open" flag, not only the posted words (BatteryAuditTest saw an earlier test's card).
+        com.optionslab.app.work.PositionCards.resetForTest()
         com.optionslab.app.widget.IraWidget.forgetDrawnForTest()
         // The event-driven checks and the order-speed figures of an earlier test (in memory only).
         com.optionslab.app.data.FastPath.resetForTest()

@@ -72,6 +72,33 @@ class AutoChangeTest {
     private fun mute(scope: AutoChange.Scope, conf: AgentLessons.Confidence = STRONG, fam: String = "solo", id: String = "oi") =
         ch(AutoChange.Kind.SPECIALIST_MUTE, scope, A.COUNTS, A.MUTED, conf, target = "spec:$fam:$id")
     private fun unmute(scope: AutoChange.Scope) = ch(AutoChange.Kind.SPECIALIST_MUTE, scope, A.MUTED, A.COUNTS, risk = AutoChange.Risk.RAISE, target = "spec:solo:oi")
+    /** 15 Nov: the self-review's threshold steps again only on new evidence (it stepped four times on the same 32 trades). */
+    @Test fun theDriftThresholdNeverStepsTwiceOnTheSameEvidence() {
+        val day = java.time.LocalDate.of(2026, 11, 2)
+        fun step(n: Int, from: Double, lesson: String? = "drift:liquidity:paper") = AutoChange.Change(AutoChange.Kind.DRIFT_THRESHOLD, "knob:drift.z_crit",
+            A.fmt(from), A.fmt(from - 0.1), "lost", AutoChange.Evidence(n, -100.0 * n, STRONG, -1), AutoChange.Risk.LOWER, AutoChange.Scope.LIVE, lesson)
+        assertNull(A.staleDrift(AutoChange.Book(), step(32, 3.2), day), "the first step")
+        val (b, _) = A.record(AutoChange.Book(), step(32, 3.2), AutoChange.Status.KEPT, 1_000L, day)
+        assertTrue(A.staleDrift(b, step(32, 3.1), day.plusDays(30))!!.contains("no new evidence"))
+        assertTrue(A.staleDrift(b, step(31, 3.1), day) != null)
+        assertNull(A.staleDrift(b, step(33, 3.1), day), "one more trade: new evidence")
+        assertNull(A.staleDrift(b, step(32, 3.1, "drift:r51:paper"), day), "another strategy's review")
+        assertNull(A.staleDrift(b, step(32, 3.1, null), day))
+        // A reverted step does not count as the last one.
+        val (r, _) = A.record(AutoChange.Book(), step(32, 3.2), AutoChange.Status.REVERTED, 1_000L, day)
+        assertNull(A.staleDrift(r, step(32, 3.2), day))
+        // One asked to be reverted is still applied: it counts.
+        val (ra, _) = A.record(AutoChange.Book(), step(32, 3.2), AutoChange.Status.REVERT_ASKED, 1_000L, day)
+        assertTrue(A.staleDrift(ra, step(32, 3.1), day) != null)
+        // At the review window's cap (50) the count cannot grow: held for 14 days, then a step may follow (never frozen for good).
+        val (full, _) = A.record(AutoChange.Book(), step(50, 3.2), AutoChange.Status.KEPT, 1_000L, day)
+        assertTrue(A.staleDrift(full, step(50, 3.1), day.plusDays(13)) != null)
+        assertNull(A.staleDrift(full, step(50, 3.1), day.plusDays(14)))
+        // And the plan holds it with the reason.
+        val p = A.plan(b, listOf(step(32, 3.1)), day.plusDays(4), AutoChange.Mode.SAFE)
+        assertTrue(p.auto.isEmpty()); assertTrue(p.held.single().second.contains("no new evidence"))
+    }
+
     private fun knob(key: String, from: Double, to: Double, conf: AgentLessons.Confidence = BUILDING): AutoChange.Change {
         val k = A.knob(key)!!
         return AutoChange.Change(k.kind, "knob:$key", A.fmt(from), A.fmt(to), "why", ev(conf), AutoChange.Risk.NEUTRAL_SHADOW, k.scope, null, -1, 0, k.min, k.max)

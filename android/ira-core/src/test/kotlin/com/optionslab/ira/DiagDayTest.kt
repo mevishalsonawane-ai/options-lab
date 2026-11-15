@@ -612,4 +612,15 @@ class DiagDayTest {
         for (k in listOf("decisions", "orders", "timeline")) assertEquals(first(made, k).keys, first(sample, k).keys, k)
         assertEquals((made["health"] as Map<*, *>).keys, (sample["health"] as Map<*, *>).keys)
     }
+
+    /** 15 Nov (diagnostics audit): the new health lines pass by their own names (no list of allowed names), scrubbed as the rest. */
+    @Test fun theMainWritesAndManualCoverLinesPassByName() {
+        val r = json(input(health = mapOf(
+            "main_writes" to "Vault writes on the screen's thread: 2 (last: SecurePrefs.put jarvis.auto.guard from AutomationsCard.invoke)",
+            "manual_cover" to "Stop and target on my manual positions: on; today protected 1, left alone 0, failed 0",
+        )))
+        val lines = (r["health"] as Map<String, Any?>)["lines"] as Map<String, Any?>
+        assertEquals("Vault writes on the screen's thread: 2 (last: SecurePrefs.put jarvis.auto.guard from AutomationsCard.invoke)", lines["main_writes"])
+        assertEquals("Stop and target on my manual positions: on; today protected 1, left alone 0, failed 0", lines["manual_cover"])
+    }
 }

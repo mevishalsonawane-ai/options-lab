@@ -99,12 +99,14 @@ object ExitDesk {
      * 21 Oct, enhancement round 4 (idea 2): or, with [now] given, when an exit order filled at the exchange a moment ago
      * ([filledRecently], by its exchange update time): a stop or target resting since the morning fills the same way, and the
      * positions trail it just the same. At most |[net]| (it never turns the position round).
+     * 15 Nov, review: [anyAge] - every exit fill of today counts, however old (a stop put back after Boss's exit, minutes on): the
+     * order book's fills less Kite's own day quantity. It falls to 0 once the positions show the fills, and only ever lowers.
      */
-    fun positionsLag(net: Int, dayExitQty: Int?, fills: List<Fill>, mine: Set<String>, now: Long? = null): Int {
+    fun positionsLag(net: Int, dayExitQty: Int?, fills: List<Fill>, mine: Set<String>, now: Long? = null, anyAge: Boolean = false): Int {
         if (net == 0 || dayExitQty == null) return 0
         val exitSide = if (net > 0) "SELL" else "BUY"
         val exits = fills.filter { it.side.equals(exitSide, ignoreCase = true) && it.filled > 0 }
-        if (exits.none { it.id in mine || (now != null && filledRecently(it, now)) }) return 0
+        if (!anyAge && exits.none { it.id in mine || (now != null && filledRecently(it, now)) }) return 0
         val lag = exits.sumOf { it.filled } - dayExitQty.coerceAtLeast(0)
         return lag.coerceIn(0, kotlin.math.abs(net))
     }
@@ -122,10 +124,10 @@ object ExitDesk {
      * product's alone, as before this round.
      */
     fun positionsLagAcross(net: Int, dayExitQty: Int?, fills: List<Fill>, mine: Set<String>, now: Long?,
-                           allDayExitQty: Int?, allFills: List<Fill>): Int {
-        val one = positionsLag(net, dayExitQty, fills, mine, now)
+                           allDayExitQty: Int?, allFills: List<Fill>, anyAge: Boolean = false): Int {
+        val one = positionsLag(net, dayExitQty, fills, mine, now, anyAge)
         if (one <= 0 || allDayExitQty == null) return one
-        return minOf(one, positionsLag(net, allDayExitQty, allFills, mine, now))
+        return minOf(one, positionsLag(net, allDayExitQty, allFills, mine, now, anyAge))
     }
 
     /** [net] less [lag] toward zero: what is held once the fills the positions trail are counted. */

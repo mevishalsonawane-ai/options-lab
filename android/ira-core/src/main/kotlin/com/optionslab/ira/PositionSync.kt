@@ -34,15 +34,20 @@ object PositionSync {
     /** A Zerodha order as the order book says it: [working] still at the exchange. */
     data class Order(val id: String, val symbol: String, val status: String, val working: Boolean)
 
-    data class Mismatch(val kind: Kind, val symbol: String, val who: String?, val appQty: Int?, val brokerQty: Int?) {
+    /**
+     * 15 Nov: [pending] - an [Kind.UNTRACKED] position that "Stop and target on my manual positions" has seen and is about to cover
+     * (within its two looks): said as "stop and target pending", not as followed by nothing. Not part of [key].
+     */
+    data class Mismatch(val kind: Kind, val symbol: String, val who: String?, val appQty: Int?, val brokerQty: Int?, val pending: Boolean = false) {
         val key: String get() = "${kind.name}:$symbol"
     }
 
     /**
      * The mismatches between [beliefs] and Zerodha's [positions] (tradingsymbol -> net units, all products together) and its
-     * [orders] (null: the order book was not read fresh, so no stop is judged). Sorted by symbol.
+     * [orders] (null: the order book was not read fresh, so no stop is judged). Sorted by symbol. 15 Nov: [pending] the symbols of
+     * manual positions waiting for their automatic stop and target ([Mismatch.pending]).
      */
-    fun check(beliefs: List<Belief>, positions: Map<String, Int>, orders: List<Order>?): List<Mismatch> {
+    fun check(beliefs: List<Belief>, positions: Map<String, Int>, orders: List<Order>?, pending: Set<String> = emptySet()): List<Mismatch> {
         val out = ArrayList<Mismatch>()
         val bySym = beliefs.groupBy { it.symbol }
         for ((sym, bs) in bySym) {
@@ -69,13 +74,14 @@ object PositionSync {
                     out += Mismatch(Kind.STOP_MISSING, sym, b.who, b.qty, at)
             }
         }
-        for ((sym, q) in positions) if (q != 0 && sym !in bySym) out += Mismatch(Kind.UNTRACKED, sym, null, null, q)
+        for ((sym, q) in positions) if (q != 0 && sym !in bySym) out += Mismatch(Kind.UNTRACKED, sym, null, null, q, pending = sym in pending)
         return out.distinctBy { it.key }.sortedWith(compareBy({ it.symbol }, { it.kind.ordinal }))
     }
 
     /** Plain words, no rupees: "NIFTY..CE: flat at Zerodha (the app holds 75 for ORB)". */
     fun say(m: Mismatch): String = "${m.symbol}: " + when (m.kind) {
-        Kind.UNTRACKED -> "Zerodha holds ${m.brokerQty}; no bot, Pine script or protection of the app follows it"
+        Kind.UNTRACKED -> if (m.pending) "Zerodha holds ${m.brokerQty}; stop and target pending (the app places them on positions you bought yourself)"
+            else "Zerodha holds ${m.brokerQty}; no bot, Pine script or protection of the app follows it"
         Kind.FLAT_AT_BROKER -> "flat at Zerodha, but the app ${if (m.who?.contains("Protection") == true && m.appQty != null) "protects" else "holds"} ${m.appQty}" +
             (m.who?.let { " ($it)" } ?: "")
         Kind.QTY_DIFFERS -> "the app holds ${m.appQty}" + (m.who?.let { " ($it)" } ?: "") + ", Zerodha ${m.brokerQty}"

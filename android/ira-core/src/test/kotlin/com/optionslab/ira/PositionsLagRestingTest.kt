@@ -71,4 +71,22 @@ class PositionsLagRestingTest {
     @Test fun aMorningSellShownAndARestingStopJustFilledCountOnlyTheStop() {
         assertEquals(75, ExitDesk.positionsLag(75, 75, listOf(sell("am", 75, 4 * 3_600_000L), sell("stop", 75, 1_500)), emptySet(), now))
     }
+
+    /**
+     * 15 Nov, review (R1): [anyAge] - a stop put back after Boss's exit, minutes on: every exit fill of today counts against Kite's
+     * own day quantity however old it is, falls to 0 once the positions show it, and never turns the position round.
+     */
+    @Test fun anyAgeCountsEveryFillOfTodayAgainstTheDayQuantity() {
+        val old = 10 * 60_000L
+        val boss = listOf(sell("boss", 150, old))
+        assertEquals(0, ExitDesk.positionsLag(150, 0, boss, emptySet(), now), "not recent, not this phone's: not judged")
+        assertEquals(150, ExitDesk.positionsLag(150, 0, boss, emptySet(), now, anyAge = true), "any age: the positions still trail all of it")
+        assertEquals(0, ExitDesk.positionsLag(150, 150, boss, emptySet(), now, anyAge = true), "shown in the positions: nothing trails")
+        assertEquals(75, ExitDesk.positionsLag(150, 75, boss, emptySet(), now, anyAge = true), "part shown")
+        assertEquals(0, ExitDesk.positionsLag(150, null, boss, emptySet(), now, anyAge = true), "no day quantity: never guessed")
+        assertEquals(75, ExitDesk.positionsLag(75, 0, boss, emptySet(), now, anyAge = true), "at most what is held")
+        assertEquals(50, ExitDesk.positionsLag(-50, 0, listOf(buy("b", 50, old), sell("s", 50, old)), emptySet(), now, anyAge = true),
+            "a short's exits are buys")
+        assertEquals(0, ExitDesk.positionsLagAcross(150, 0, boss, emptySet(), now, 150, boss, anyAge = true), "across products: the smaller")
+    }
 }

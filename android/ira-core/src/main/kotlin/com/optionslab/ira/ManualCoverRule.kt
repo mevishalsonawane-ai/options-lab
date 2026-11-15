@@ -54,7 +54,38 @@ object ManualCoverRule {
     // 7 Nov, review: "exit orders no longer working" too - a carried position's DAY exits that ended with their session and were
     // not placed again (Protections then says "NOT protected any more: set the protection again"); that is no choice of Boss's.
     val NATURAL_ENDS = setOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working",
-        UNHEDGED)
+        UNHEDGED, SLICE_DONE, STOP_BY_EXCHANGE)
+
+    /**
+     * 15 Nov (Boss's diagnostics: a manual position's stop cancelled at the exchange was not covered again that day): a stop the
+     * exchange refused (REJECTED) or cancelled giving its reason is no choice of Boss's, so the position may be covered again. A
+     * stop cancelled with no reason given (Boss in Kite) still ends as "stop cancelled" and is respected for the day.
+     */
+    const val STOP_BY_EXCHANGE = "stop rejected or cancelled by the exchange"
+
+    /**
+     * 15 Nov, review: whether a stop that ended [status] with Zerodha's words [message] was ended by the exchange or the broker's
+     * risk system rather than by Boss: REJECTED, or CANCELLED with words that clearly name them ([EXCHANGE_WORDS]: the exchange,
+     * RMS, a circuit, the freeze quantity, risk, validity, expiry, margin). Everything else - a blank message included - is Boss's:
+     * respected, never put back by itself, and said loudly. Boss's diagnostics show every CANCELLED live order (the app's own and
+     * his own alike) with an empty message, and no wording of an exchange's cancel at all: those words are an UNVERIFIED
+     * assumption, and anything not recognised defaults to Boss's.
+     */
+    fun endedByExchange(status: String, message: String): Boolean {
+        if (status.equals("REJECTED", ignoreCase = true)) return true
+        if (!status.equals("CANCELLED", ignoreCase = true) || message.isBlank()) return false
+        val m = message.lowercase()
+        return EXCHANGE_WORDS.any { it in m }
+    }
+
+    /** The words that make a cancel's message the exchange's or the broker's ([endedByExchange]). */
+    private val EXCHANGE_WORDS = listOf("exchange", "rms", "circuit", "freeze", "risk", "validity", "expired", "margin")
+
+    /**
+     * 15 Nov: the note of one slice of a protection rested in slices (a quantity above the exchange's freeze quantity) that ended
+     * because part of the position was sold and the other slices cover all that is left: the position's own end, never Boss's choice.
+     */
+    const val SLICE_DONE = "slice no longer needed (part of the position closed)"
 
     /** 7 Nov, third review: the note of an automatic protection taken off because its position became a spread's or a hedge's leg. */
     const val UNHEDGED = "unhedged"
@@ -287,6 +318,36 @@ object ManualCoverRule {
         fun clear() = seen.clear()
 
         val size: Int get() = seen.size
+
+        /** 15 Nov: the keys seen uncovered and not yet acted on. */
+        val keys: Set<String> get() = seen.keys.toSet()
+
+        /** 15 Nov, review: the keys first seen (with their quantity) at or after [fromMs] (the sync's "stop and target pending"). */
+        fun keysSince(fromMs: Long): Set<String> = seen.filterValues { it.since >= fromMs }.keys.toSet()
+    }
+
+    /**
+     * 15 Nov (Boss's diagnostics: a new manual position was covered only 60-125 s after it appeared): what a look asks for next.
+     * [SIGHTED]: one was seen uncovered but is not due yet (its first look, or under [SETTLE_MS] since); [READ_FAILED]: a read it
+     * needed failed, so nothing was decided. [NONE]: nothing.
+     */
+    enum class FollowUp { NONE, SIGHTED, READ_FAILED }
+
+    /** 15 Nov: the second look this long after a first sighting: just over [SETTLE_MS], so it is due then. */
+    const val FOLLOW_UP_MS = SETTLE_MS + 1_000L
+    /**
+     * 15 Nov, review: a manual position is said "stop and target pending" only this long after it was first seen (it is covered
+     * about 21 s after; one still waiting after this is not about to be covered, and is said as followed by nothing).
+     */
+    const val PENDING_MS = 120_000L
+    /** 15 Nov: a failed read is tried again this soon (once: a follow-up never asks for another). */
+    const val RETRY_READ_MS = 10_000L
+
+    /** 15 Nov: how long after a look the follow-up look comes, or null for none. */
+    fun followUpMs(next: FollowUp): Long? = when (next) {
+        FollowUp.NONE -> null
+        FollowUp.SIGHTED -> FOLLOW_UP_MS
+        FollowUp.READ_FAILED -> RETRY_READ_MS
     }
 
     /**

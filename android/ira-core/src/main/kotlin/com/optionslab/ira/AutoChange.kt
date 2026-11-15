@@ -689,8 +689,14 @@ object AutoChange {
      * lowering risk, logged so the timeline shows it; its Undo switches it back on (Boss's choice; paper only, no PIN).
      */
     fun passedArmOff(source: String, label: String, why: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, ON, SWITCHED_OFF,
-        "its forward-test bar, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
+        "$FORWARD_BAR_WORDS, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
+
+    /** How [passedArmOff]'s reason starts ([byForwardBar]). */
+    const val FORWARD_BAR_WORDS = "its forward-test bar"
+
+    /** Whether [c] is an arm switched off by its own forward-test bar ([passedArmOff]), not by Boss. */
+    fun byForwardBar(c: Change): Boolean = c.kind == Kind.PAPER_ARM_ON && c.to == SWITCHED_OFF && c.reason.startsWith(FORWARD_BAR_WORDS)
 
     /**
      * 25 Oct (app audit; 23 Oct: R51, R52 and Solo 2.0 were switched off between 09:49 and 10:36 and the change timeline showed only
@@ -1449,6 +1455,10 @@ object AutoChange {
             if (healthOnly && riskOf(c) != Risk.LOWER) { held += c to "the mid-day pass only lowers risk"; continue }
             val why = blocked(book, c.key, day)
             if (why != null) { held += c to why; continue }
+            // 15 Nov (Boss's diagnostics: drift.z_crit stepped 3.2 -> 2.8 on 2, 5, 9 and 12 Nov on the same 32 trades): the self-review's
+            // threshold steps again only on NEW evidence - more trades than its last step for the same review had.
+            val stale = staleDrift(book, c, day)
+            if (stale != null) { held += c to stale; continue }
             if (d == Decision.AUTO) {
                 when {
                     autos >= MAX_AUTO_DAY -> held += c to "today's $MAX_AUTO_DAY changes are made"
@@ -1460,6 +1470,20 @@ object AutoChange {
             }
         }
         return Plan(auto, ask, held, never)
+    }
+
+    /** [staleDrift]: at the review window's cap, a step may follow the last one after this many days. */
+    const val DRIFT_FULL_WINDOW_DAYS = 14L
+
+    /** Why [c], a step of the self-review's threshold, has no new evidence since its last step for the same review; null: it has (or is not one). */
+    internal fun staleDrift(book: Book, c: Change, day: LocalDate): String? {
+        if (c.kind != Kind.DRIFT_THRESHOLD || c.lessonId?.startsWith("drift:") != true) return null
+        val last = book.entries.lastOrNull { it.change.kind == Kind.DRIFT_THRESHOLD && it.change.lessonId == c.lessonId &&
+            (it.status == Status.PROBATION || it.status == Status.KEPT || it.status == Status.REVERT_ASKED) } ?: return null
+        // Review: the review's window is capped ([DriftReview.WINDOWS]: 50 trades), so at the cap the count cannot grow - there a
+        // step counts as new evidence again once [DRIFT_FULL_WINDOW_DAYS] have passed (the window has moved on).
+        if (c.evidence.n >= DriftReview.WINDOWS.max() && java.time.temporal.ChronoUnit.DAYS.between(last.day, day) >= DRIFT_FULL_WINDOW_DAYS) return null
+        return if (last.change.evidence.n >= c.evidence.n) "no new evidence since the last step (${last.change.evidence.n} trades then, ${c.evidence.n} now)" else null
     }
 
     private fun nextId(book: Book, day: LocalDate, k: Int = 0): String = "$day#${book.entries.size + k + 1}"
