@@ -211,3 +211,23 @@ For each case (C1, C2, C3, C4, C5, A+), the OF version vs:
 
 Every run of `r181.py` on the recordings appends to `results/results.json` ("runs": time, PREREG sha256). Only the first
 full run counts; a rerun after a bug fix is disclosed in the report's FINAL READ with what changed.
+
+## Amendment 1 (15 Nov 2026, before any run): the guide's own definitions from its Bonus Module
+
+Boss sent the full PDF. Where the text above left a definition to R181, the guide's own wording now replaces it. Written
+and committed before the study code's first run on the recordings; no signal, trade or P&L had been computed.
+
+- **Absorption (guide Pattern 1), used in Case 1 and the A+ long:** heavy aggressive selling, yet price makes no new low.
+  The bar condition becomes: a non-thin bar j in b..r with L[j] < VAL, D[j] < 0 and big (|D| >= 1.5 x ref, R181's
+  threshold), and **L[j] >= L[j-1]** (its low not below the previous bar's low; previous bar present). This replaces
+  "C[j] >= (H[j] + L[j]) / 2". The reclaim condition D[r] > 0 stays.
+- **Exhaustion (guide Pattern 2), used in Case 2 and the A+ short:** price keeps pushing higher while positive delta
+  shrinks on every candle (the guide's example: +1,295, +904, +622, +162, +12). The bar condition becomes: **5
+  consecutive non-thin bars j-4..j, each with D > 0, strictly falling D and strictly rising highs**, with j in b..r and
+  H[j] > VAH (no size threshold). This replaces "D[j] > 0 and big, C[j] <= mid". The reclaim condition D[r] < 0 stays.
+- **A+ targets:** T1 = the prior day's POC, T2 = VAH (long) / VAL (short). With one lot (it cannot be split), R181's
+  translation: the 2:1 check uses T1; when the futures touch T1 the index stop moves to the entry level E (the signal
+  close) and the trade runs on to T2, that stop, or the time exit. The A+ price-only twin and random twins use the same
+  two-stage exit.
+- "Price magnets" (single prints, imbalances, naked POCs) are context only in the guide; nothing is added for them.
+- No other change: same cases, twins, tests (15) and BH m = 4,066.
