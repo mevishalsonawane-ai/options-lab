@@ -460,4 +460,25 @@ class ProtectionsSlicesTest : RobolectricTest() {
         assertTrue("not carried on from the future id", id < future)
         assertTrue(id <= Market.now().toInstant().toEpochMilli() + 5_000)
     }
+
+    /**
+     * CI (15 Nov): an id given while the clock was ahead (here: a look on the next day, then the clock back) is never carried on to
+     * new protections, so a carried position's stops are placed again at the next open.
+     */
+    @Test fun aClockMovedBackNeverGivesFutureIdsAndTheOpenStillRestsTheStops() {
+        kite.position(sym, 75, 100.0)
+        kite.login()
+        val ahead = MarketClockRule.pinnedDay().plusDays(3).atTime(12, 0).atZone(com.optionslab.engine.IST).toInstant()
+        Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), ahead))
+        protect(75)                                                          // an id three days ahead (no restart since)
+        Market.testClock = null                                              // the clock back: noon on the pinned day
+        protect(75)                                                          // replaces it
+        val id = active().single().id
+        assertTrue("today's id, not one after the future one", id <= Market.now().toInstant().toEpochMilli() + 5_000)
+        kite.orders.clear()                                                  // the DAY orders end with the day
+        nextSession(9, 20)
+        kite.requests.clear()
+        tick()
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+    }
 }

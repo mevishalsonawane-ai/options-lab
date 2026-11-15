@@ -601,7 +601,15 @@ object Protections {
 
     /** 15 Nov: a fresh protection id, never the same as one just given (slices set, or placed again, in the same millisecond). */
     @Volatile private var lastId = 0L
-    @Synchronized private fun newId(): Long = maxOf(nowMs(), lastId + 1).also { lastId = it }
+    @Synchronized private fun newId(): Long {
+        // 15 Nov, CI: the last id given is followed only while it is not ahead of the clock (a clock moved back, or once ahead):
+        // carried on, every new protection's id would be in the future, and the watch reads a carried one's id against today
+        // (an earlier day's orders ended with their day; "its first minute") - its stops would not be placed again at the open.
+        val now = nowMs()
+        val next = if (lastId > now + ID_SLACK_MS) now else maxOf(now, lastId + 1)
+        lastId = next
+        return next
+    }
 
     /** Remove a protection: its resting orders are cancelled. */
     /**
@@ -1632,6 +1640,7 @@ object Protections {
         // 26 Oct (Erase everything): first the count (a look in flight then drops its list), then every copy in memory and the
         // files, a set-aside copy included. Never takes [lock] and never reads the vault.
         wipeGen++
+        synchronized(this) { lastId = 0L }
         cache = null; activeHint = null; autoHint = false; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap()
         freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L; takenOver.clear(); exitFilled.clear(); exitOrders.clear()
         runCatching { gttTries.clear() }
