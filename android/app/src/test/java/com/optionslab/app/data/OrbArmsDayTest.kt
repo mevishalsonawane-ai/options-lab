@@ -572,7 +572,10 @@ class OrbArmsDayTest : RobolectricTest() {
         // ... and the retirement switched Liquidity 15+5 back on, on paper only (the 13 Oct park leaves it alone).
         val liq = v.arms.single { it.arm.source == "liquidity" }
         assertTrue("both liquidity books back on", liq.armed)
-        assertTrue("paper only: never cleared for Zerodha", !liq.liveOk)
+        // In Paper it would not trade live now (15 Nov: the row's liveOk is "would trade live now"); the 15 Nov update then cleared the
+        // books that were on for Zerodha, once, by Boss's request (they trade live only when the app is in Live).
+        assertTrue("in Paper: not live now", !liq.liveOk)
+        assertTrue(runBlocking { OrbArms.liquidityLiveCleared() }.let { c -> c.getValue("liquidity15") && c.getValue("liquidity5") })
         assertNull("Liquidity has no record line", liq.record)
         assertTrue(liq.status, liq.status.contains("switched back on, paper only (Boss's choice 06 Oct)"))
         assertNotNull("Range Fade's open put is kept, managed to its exit", v.arms.single { it.arm.source == "range_fade" }.open)

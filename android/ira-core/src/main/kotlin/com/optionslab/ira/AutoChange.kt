@@ -1420,7 +1420,11 @@ object AutoChange {
         book.blacklist[key]?.let { if (!day.isAfter(it)) return "blacklisted after two reverts, until ${AgentLessons.day(it)}" }
         book.rest[key]?.let { if (!day.isAfter(it)) return "resting after your undo or no, until ${AgentLessons.day(it)}" }
         val last = book.entries.lastOrNull { it.change.key == key && it.status != Status.OFFERED && it.status != Status.DECLINED }
-        if (last != null) {
+        // 15 Nov: lifted by Boss himself ([liftedByOwner]): no flip-flop wait, only not again the same day.
+        if (last != null && last.note == LIFTED_BY_OWNER) {
+            val on = last.closedOn ?: last.day
+            if (!day.isAfter(on)) return "lifted by you on ${AgentLessons.day(on)}: not set again the same day"
+        } else if (last != null) {
             val since = listOfNotNull(last.day, last.closedOn).max()
             // A skipped change (pre-flight failed, learning frozen, regime-only) changed nothing: it waits the same days before
             // it is tried again (SmarterLearningTest), said as what it is - never "changed on" (review G5-8).
@@ -1563,6 +1567,22 @@ object AutoChange {
 
     /** The newest change that can be undone ("undo the last change"). */
     fun lastUndoable(book: Book): Entry? = book.entries.lastOrNull { it.applied && !bossOwn(it.change.kind) }
+
+    /** 15 Nov: the note of an entry closed by [liftedByOwner] (never counted as "undone by you"). */
+    const val LIFTED_BY_OWNER = "lifted by you"
+
+    /**
+     * 15 Nov (review): [id] - a pause or park that Boss lifted himself (his own switch or his PIN, not the timeline's Undo) - closed as
+     * undone with [LIFTED_BY_OWNER], WITHOUT the [REST_DAYS] rest an Undo sets: if the strategy keeps drifting, Autopilot may set it
+     * again (from the next day, [blocked]).
+     */
+    fun liftedByOwner(book: Book, id: String, day: LocalDate): Book {
+        entry(book, id) ?: return book
+        return update(book, id) { it.copy(status = Status.UNDONE, closedOn = day, note = LIFTED_BY_OWNER) }
+    }
+
+    /** Undone by Boss through the timeline's Undo (not a pause or park he lifted himself, [liftedByOwner]). */
+    fun undoneByBoss(e: Entry): Boolean = e.status == Status.UNDONE && e.note != LIFTED_BY_OWNER
 
     /** [id] undone by Boss: its target rests [REST_DAYS] days (Autopilot does not redo what he undid). */
     fun undone(book: Book, id: String, day: LocalDate): Book {
@@ -1741,7 +1761,7 @@ object AutoChange {
         val kept = book.entries.count { it.status == Status.KEPT }
         val rev = book.entries.count { it.status == Status.REVERTED }
         val prob = book.entries.count { it.status == Status.PROBATION }
-        val undone = book.entries.count { it.status == Status.UNDONE }
+        val undone = book.entries.count { undoneByBoss(it) }
         val eff = book.entries.filter { it.applied || it.status == Status.REVERTED }.sumOf { it.effect }
         return "Autopilot learning is ${mode.words}: $kept kept, $rev reverted by its own check, $prob on probation" +
             (if (undone > 0) ", $undone undone by you" else "") +

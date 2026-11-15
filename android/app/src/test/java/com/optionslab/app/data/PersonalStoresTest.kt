@@ -665,6 +665,13 @@ class PersonalStoresTest {
             check(com.optionslab.app.data.StepTrailExits.holdsForErase())
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("FundsCheck") {
+            // 15 Nov: off by default: switched on by Boss, a setting to erase.
+            com.optionslab.app.data.FundsCheck.resetForTest(on = false)
+            com.optionslab.app.data.FundsCheck.set(true)
+            check(com.optionslab.app.data.FundsCheck.holdsForErase())
+            com.optionslab.app.security.SecurePrefs.flush()
+        },
         s("HealthReport") {
             com.optionslab.app.data.HealthReport.write(app)             // cache/exports/health/*.zip (holds() stays false: files only)
         },

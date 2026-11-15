@@ -332,6 +332,14 @@ class OrbArmsLiveTest : RobolectricTest() {
 
     // ---- arming ---------------------------------------------------------------------------------
 
+    /** 15 Nov: Liquidity's no-PIN switch (Boss's choice) is Liquidity's alone - ORB's own switch in Live still takes the PIN. */
+    @Test fun theOrbsSwitchInLiveStillTakesThePin() = runBlocking {
+        state(armed = false, positions = listOf(position("orb", 30, 200.0, "E1")))
+        assertEquals("The app is in Live: arm it with your PIN or fingerprint.", OrbArms.setArmed("orb", true, automatic = true, bySwitch = true))
+        assertFalse(arm().armed); assertFalse(arm().liveOk)
+        assertTrue("nothing sent", kite.placed.isEmpty())
+    }
+
     @Test fun armingInLiveTakesThePinAndDisarmingKeepsThePositionManaged() = runBlocking {
         state(armed = false, positions = listOf(position("orb", 30, 200.0, "E1")))
         // Un-retired by Boss on 07 Oct: ORB arms like any arm - in Live only with the PIN or fingerprint, exactly as before.

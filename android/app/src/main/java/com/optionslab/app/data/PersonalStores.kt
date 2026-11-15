@@ -151,6 +151,8 @@ object PersonalStores {
         Entry("ManualCover", holds = { com.optionslab.app.data.ManualCover.holdsForErase() }) { com.optionslab.app.data.ManualCover.wipe() },
         // 15 Nov: the breakeven rule's switch (a settings key; on by default, so Boss's "off" is what is erased).
         Entry("StepTrailExits", holds = { com.optionslab.app.data.StepTrailExits.holdsForErase() }) { com.optionslab.app.data.StepTrailExits.wipe() },
+        // 15 Nov: the funds check's switch (a settings key; off by default) and its would-be entries (the arms, contracts and prices).
+        Entry("FundsCheck", holds = { com.optionslab.app.data.FundsCheck.holdsForErase() }) { com.optionslab.app.data.FundsCheck.wipe() },
         Entry("HealthReport", files = { com.optionslab.app.data.HealthReport.filesForErase() }) { com.optionslab.app.data.HealthReport.wipe() },
         Entry("GlanceSource", holds = { com.optionslab.app.data.GlanceSource.holdsForErase() }) { com.optionslab.app.data.GlanceSource.wipe() },
         Entry("PassedArmsHost", files = { com.optionslab.app.data.PassedArmsHost.filesForErase() }, holds = { com.optionslab.app.data.PassedArmsHost.holdsForErase() }) { com.optionslab.app.data.PassedArmsHost.wipeForErase() },

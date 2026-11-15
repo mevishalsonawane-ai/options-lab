@@ -780,6 +780,18 @@ object Broker {
      */
     suspend fun freeCash(): Double? = runCatching { funds().let { f -> minOf(f.net, f.available) } }.getOrNull()
 
+    /**
+     * 15 Nov: [freeCash] as the margins last read show it ([fundsKept] - a live entry's own account read, [accountNow], has just
+     * read them or found them fresh), while that read is at most [com.optionslab.ira.MarginCache.MAX_AGE_MS] old (the most the
+     * entry's own margin check trusts); null when none is kept, it is older or from the future, or it is not a number. Memory only:
+     * no read, no lock, never throws (the order path: the funds check, [FundsCheck]).
+     */
+    fun keptFreeCash(nowMs: Long = System.currentTimeMillis()): Double? = runCatching {
+        val (at, f) = fundsKept ?: return@runCatching null
+        val age = nowMs - at
+        if (age < 0 || age > com.optionslab.ira.MarginCache.MAX_AGE_MS) null else minOf(f.net, f.available).takeIf { it.isFinite() }
+    }.getOrNull()
+
     /** The kept margins as the pure check sees them (the free margin the guard compares with: equity net). */
     private fun marginSnap(): com.optionslab.ira.MarginCache.Snapshot? =
         fundsKept?.let { (at, f) -> com.optionslab.ira.MarginCache.Snapshot(f.net, at) }

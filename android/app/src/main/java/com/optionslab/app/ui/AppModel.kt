@@ -1955,7 +1955,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * [Jobs.ensureWatch] decides off the main thread itself. Likewise every start of the watch from this model.
      */
     fun armOrb(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false) = strategyDo {
-        val msg = com.optionslab.app.data.OrbArms.setArmed(source, on, automatic, pinConfirmed)
+        // 15 Nov: Boss's own switch on Home (Liquidity 15+5 needs no PIN of its own in Live; every other arm as before).
+        val msg = com.optionslab.app.data.OrbArms.setArmed(source, on, automatic, pinConfirmed, bySwitch = true)
         if (on) Jobs.ensureWatch(ctx)
         msg
     }
@@ -1972,6 +1973,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun unparkLiquidity(index: String) = strategyDo { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
     /** Liquidity BANKNIFTY's live entries re-enabled after its stop rule (12 Oct): only with Boss's PIN, asked on the row first. */
     fun reenableLiquidityLive(pinConfirmed: Boolean) = strategyDo { com.optionslab.app.data.OrbArms.reenableLiquidityLive(pinConfirmed) }
+    /** 15 Nov: Liquidity's self-review park to paper lifted from its row: only with Boss's PIN, asked on the row first. */
+    fun liftLiquidityPark(pinConfirmed: Boolean) = strategyDo { com.optionslab.app.data.OrbArms.liftLiquidityPark(pinConfirmed) }
     /** Boss's tick on the go-live checklist: he watched the first live trade. */
     fun liquidityWatched(on: Boolean) = strategyDo { com.optionslab.app.data.OrbArms.setFirstLiveWatched(on); null }
     /** Liquidity BANKNIFTY unfrozen (or frozen again) for its paper test, from the Strategy lab card. */

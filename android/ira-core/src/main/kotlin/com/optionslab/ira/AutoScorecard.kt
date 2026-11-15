@@ -40,7 +40,7 @@ object AutoScorecard {
                 val money = xs.filter { it.change.effect != 0 }
                 // (A revert only asked of Boss has not happened - it is still in force, awaiting him: counted as on probation, G5-9.)
                 System(name, xs.size, xs.count { it.status == AutoChange.Status.KEPT }, xs.count { it.status == AutoChange.Status.REVERTED },
-                    xs.count { it.status == AutoChange.Status.UNDONE }, xs.count { it.status == AutoChange.Status.PROBATION || it.status == AutoChange.Status.REVERT_ASKED },
+                    xs.count { AutoChange.undoneByBoss(it) }, xs.count { it.status == AutoChange.Status.PROBATION || it.status == AutoChange.Status.REVERT_ASKED },
                     if (money.isEmpty()) null else money.sumOf { it.effect })
             }.sortedWith(compareByDescending<System> { it.changes }.thenBy { it.name })
         val lab = promotions.filter { YearMonth.from(it.day) == month }
