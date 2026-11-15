@@ -1,5 +1,9 @@
 # R177: does the volume-profile "trap" idea (Boss's PDF, Cases 1, 2, 5) help?
 
+> **Later check (R178, 15 Nov 2026):** the K1 "lead" did not hold. On the year before (20 Nov 2024 - 19 Oct 2025), K1 cut
+> Liquidity's net from Rs 1.43 L to Rs 88k, and no K1 variant beat today's rules there on any arm. See
+> research/hunt/r178_k1_enhance/results/report.md.
+
 ## Update: Rs 1,500 initial stop, up Rs 500 for every Rs 1,000 gain (Amendment C, Boss 15 Nov)
 
 The rule: stop at -Rs 1,500 a lot at entry (where tighter than -15%); for every Rs 1,000 a lot of best profit the stop
