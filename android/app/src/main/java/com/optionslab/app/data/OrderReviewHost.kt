@@ -9,6 +9,7 @@ import com.optionslab.ira.VariantLab
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -38,6 +39,10 @@ import java.time.ZoneId
  *    strategy's own nets ([OrderReview.beforeAfter]).
  *  - One small file (noBackupFilesDir/orderreview/review.txt: 60 days of counts, the latest day in full, the lab requests),
  *    and memory. One evening notification only when something serious happened (no rupees; deduped per day).
+ *  - 15 Nov (Boss's diagnostics: the day's live orders were gone after a restart): each day's live orders as last read are also
+ *    kept in a small sealed file a day (orderreview/orders-<day>.vault, the vault's encryption; [snapshotOrders]), written by
+ *    this host's own background watcher, a few days kept. A day missed (the app not running that evening) is reviewed at the
+ *    next run ([due]), and a review that did not complete says so in the diary ([failed]).
  *
  * It NEVER places, modifies or cancels an order, and touches nothing on the order or tick path. Not in IraGoldAlgo.
  */
@@ -54,6 +59,20 @@ object OrderReviewHost {
     /** A lab request for one pattern is not asked again within this many days of its last answer. */
     const val REASK_DAYS = 30L
     private const val RETRY_MS = 10 * 60_000L
+    /**
+     * 15 Nov: a missed day is caught up only when it is at most this many calendar days back (a Friday missed, read on the
+     * Tuesday after a Monday holiday); an older one is left (its orders are no longer kept).
+     */
+    const val CATCH_UP_DAYS = 4L
+    /**
+     * 15 Nov: the days of live-order snapshots kept: the catch-up's [CATCH_UP_DAYS], the review window's four days before it,
+     * and one to spare. Older files are deleted ([pruneIfDue]).
+     */
+    const val SNAP_KEEP_DAYS = 9L
+    private const val SNAP_PREFIX = "orders-"
+    private const val SNAP_EXT = ".vault"
+    /** After a snapshot was written, the next is not before this (the order book is read every few seconds while trading). */
+    private const val SNAP_GAP_MS = 30_000L
     private val IST: ZoneId = com.optionslab.engine.IST
 
     @Volatile private var appContext: Context? = null
@@ -77,9 +96,13 @@ object OrderReviewHost {
     fun init(context: Context) {
         appContext = context.applicationContext
         if (enabled()) scope.launch { com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() } }
+        // 15 Nov: the day's live orders kept as they are read (the diagnostics read them too, so not only in the Jarvis builds).
+        if (!com.optionslab.app.BuildConfig.GOLD) watchOrders()
     }
 
-    private fun file(): File? = appContext?.let { File(File(it.noBackupFilesDir, DIR), FILE) }
+    private fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, DIR) }
+
+    private fun file(): File? = dir()?.let { File(it, FILE) }
 
     /** The kept file read once (a worker thread; small). A file there that cannot be read is never taken as empty. */
     fun ensureLoaded() {
@@ -119,6 +142,7 @@ object OrderReviewHost {
     internal fun due(now: java.time.ZonedDateTime, b: OrderReview.Book): Pair<LocalDate, Boolean>? {
         val today = now.toLocalDate()
         val minute = now.hour * 60 + now.minute
+        missedDay(today, b)?.let { return it to false }
         if (Market.isTradingDay(today) && minute >= FROM && b.lastRun != today) return today to false
         if (minute in MORNING_FROM until MORNING_UNTIL) {
             val prev = prevTradingDay(today)
@@ -127,6 +151,19 @@ object OrderReviewHost {
             if (b.lastRun == prev && b.cutoffMs in 1 until mcxClose) return prev to true
         }
         return null
+    }
+
+    /**
+     * 15 Nov (Boss's diagnostics: no review after 5 Nov): a day missed, because the app was not running that evening, was never
+     * reviewed - the next evening reviewed only its own day. Now the most recent trading day before [today] is reviewed at the
+     * next run, whatever the hour and however many evenings were missed, and before today's own review (so today's never
+     * takes its place): only that one day (its window still reaches back up to four days, see [run]), and only when it is at
+     * most [CATCH_UP_DAYS] back. A review that never ran has missed nothing: its first is the evening's.
+     */
+    private fun missedDay(today: LocalDate, b: OrderReview.Book): LocalDate? {
+        val last = b.lastRun ?: return null
+        val missed = prevTradingDay(today)
+        return missed.takeIf { last.isBefore(it) && !it.isBefore(today.minusDays(CATCH_UP_DAYS)) }
     }
 
     /** Once a trading day after the close (and the next morning for MCX): the review. Cheap when not due. True when it ran. */
@@ -139,7 +176,7 @@ object OrderReviewHost {
             withContext(Dispatchers.IO) { ensureLoaded() }
             if (!loaded) return false
             // Memory checks first: the battery / heat budget is asked only when a review is due.
-            val (day, morning) = due(now, _book.value) ?: return false
+            if (due(now, _book.value) == null) return false
             val nowMs = now.toInstant().toEpochMilli()
             if (nowMs < retryAtMs) return false
             // 22 Oct: at a start in the background the shared knowledge's first build waits for the app's use; the review cites
@@ -147,12 +184,39 @@ object OrderReviewHost {
             SharedKnowledgeHost.awaitFirstBuild("the order review")
             asked = true
             if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.ORDER_REVIEW)) return false
-            if (run(day, morning, nowMs) == null) { retryAtMs = nowMs + RETRY_MS; return false }
-            return true
+            // 15 Nov: a missed day first, then (the same call: the evening job runs once) today's own review - two at most.
+            var ran = false
+            var pass = 0
+            while (pass < 2) {
+                pass++
+                val (day, morning) = due(now, _book.value) ?: break
+                // 15 Nov: a review that throws is said in the diary (it used to fail without a word), and is tried again later.
+                val done = try { run(day, morning, nowMs) } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                } catch (t: Throwable) { failed(day, "the review itself failed", t); null }
+                if (done == null) { retryAtMs = nowMs + RETRY_MS; break }
+                ran = true
+            }
+            return ran
         } finally {
             if (asked) runCatching { com.optionslab.app.work.BackgroundBudget.done(com.optionslab.ira.BudgetRule.Job.ORDER_REVIEW) }
             running.set(false)
         }
+    }
+
+    /** The last "did not complete" line said (memory only): the retries every ten minutes say the same line once. */
+    @Volatile private var lastFailed: String? = null
+
+    /**
+     * 15 Nov (Boss's diagnostics): the review of [day] did not complete - one diary line, so the day's diagnostics show it.
+     * Only [what] (fixed words) and the failure's class name: never its message (it can carry an order's or the account's
+     * details), no rupees. The same line is said once, not at every retry.
+     */
+    private fun failed(day: LocalDate, what: String, t: Throwable?) {
+        val why = t?.javaClass?.simpleName?.takeIf { it.isNotEmpty() } ?: "no reason given"
+        val line = "the review of $day did not complete: $what ($why); it is tried again later"
+        if (line == lastFailed) return
+        lastFailed = line
+        runCatching { Diag.record("orders", line) }
     }
 
     // ---- the pass -------------------------------------------------------------------------------------------------------
@@ -163,14 +227,22 @@ object OrderReviewHost {
         val b0 = _book.value
         val dayStart = ms(day.atStartOfDay())
         val from = if (b0.cutoffMs > 0) maxOf(b0.cutoffMs, dayStart - 4 * 86_400_000L) else dayStart
-        val inputs = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(day, from, nowMs) ?: gather(day, from, nowMs) }.getOrNull() } ?: return null
+        // 15 Nov: a missed day caught up on a later day ([due]) is read to its own end only, so the later day's orders are left
+        // for that day's own review. The evening's review and MCX's morning catch-up read up to now, as before.
+        val dayEnd = ms(day.plusDays(1).atStartOfDay()) - 1
+        val late = !morning && nowMs > dayEnd
+        val to = if (late) dayEnd else nowMs
+        // 15 Nov: records that cannot be read are said in the diary ([failed]); it used to return without a word.
+        val got = withContext(Dispatchers.IO) { runCatching { testInputs?.invoke(day, from, to) ?: gather(day, from, to) } }
+        val inputs = got.getOrNull()
+        if (inputs == null) { failed(day, "its records could not be read", got.exceptionOrNull()); return null }
         val reviewed = withContext(Dispatchers.Default) { cited(OrderReview.review(inputs)) }
         val before = b0.last
         val dayResult = if (morning && before != null && before.day == day) OrderReview.merge(before, reviewed) else reviewed
         val logs = OrderReview.keep(b0.logs, OrderReview.log(dayResult))
         val patterns = OrderReview.patterns(logs)
         val improvements = patterns.map { OrderReview.improvement(it) }
-        var b = b0.copy(logs = logs, last = dayResult, lastRun = day, cutoffMs = nowMs)
+        var b = b0.copy(logs = logs, last = dayResult, lastRun = day, cutoffMs = to)
         b = withContext(Dispatchers.IO) { labRequests(b, improvements, day) }
         b = b.copy(proposals = (b.proposals + improvements.filter { it.route == OrderReview.Route.PROPOSAL }.map { it.words })
             .distinctBy { it.substringBefore(" - ") }.takeLast(OrderReview.MAX_PROPOSALS))
@@ -180,7 +252,8 @@ object OrderReviewHost {
         b = coach(b, dayResult, day)
         val kept = b
         withContext(Dispatchers.IO) { synchronized(lock) { if (gen == wipeGen) { _book.value = kept; save(kept) } } }
-        runCatching { Diag.record("orders", "reviewed $day${if (morning) " (MCX catch-up)" else ""}: ${reviewed.orders} orders, ${reviewed.trades} trades, " +
+        lastFailed = null
+        runCatching { Diag.record("orders", "reviewed $day${if (morning) " (MCX catch-up)" else if (late) " (a missed day, caught up)" else ""}: ${reviewed.orders} orders, ${reviewed.trades} trades, " +
             "${reviewed.flaws.size} flaws, ${patterns.size} recurring") }
         return dayResult
     }
@@ -316,7 +389,9 @@ object OrderReviewHost {
 
     // ---- what the stores already keep ----------------------------------------------------------------------------------
 
-    private fun kiteMs(s: String): Long? = runCatching { ms(LocalDateTime.parse(s.trim().replace(' ', 'T').take(19))) }.getOrNull()
+    private fun kiteAt(s: String): LocalDateTime? = runCatching { LocalDateTime.parse(s.trim().replace(' ', 'T').take(19)) }.getOrNull()
+
+    private fun kiteMs(s: String): Long? = kiteAt(s)?.let { ms(it) }
 
     private fun nameOf(label: String?): String = com.optionslab.ira.Charges.owner(label)
 
@@ -341,11 +416,18 @@ object OrderReviewHost {
 
     /**
      * The orders placed in [from]..[to] with who placed each ([owners]' labels): Zerodha's order book as the app's regular
-     * passes last read it (never read for this) and the paper book. Memory only. Also the day's diagnostics' orders (G3).
+     * passes last read it (never read for this) and the paper book. Also the day's diagnostics' orders (G3).
+     *
+     * 15 Nov (Boss's diagnostics: after a restart the day's earlier live orders were missing from the review and the day's
+     * file): memory, and the live orders kept for those days ([snapshotOrders]) - one order once by its id, memory's (the
+     * newest read) over the kept one. A worker thread: the kept days are read from their sealed files the first time.
      */
     internal fun ordersIn(owners: Map<String, String>, from: Long, to: Long): List<OrderReview.Order> {
         val orders = ArrayList<OrderReview.Order>()
-        runCatching { AppState.orders.value?.value }.getOrNull()?.forEach { o ->
+        val live = LinkedHashMap<String, Broker.OrderRow>()
+        runCatching { keptOrders(from, to) }.getOrNull()?.forEach { live[it.id] = it }
+        runCatching { AppState.orders.value?.value }.getOrNull()?.forEach { live[it.id] = it }
+        live.values.forEach { o ->
             val at = kiteMs(o.placedAt) ?: return@forEach
             if (at !in from..to) return@forEach
             // 15 Nov: else the arm noted before the order was sent (a rejected order whose id never reached the phone: [ArmOrderLabels]).
@@ -362,6 +444,168 @@ object OrderReviewHost {
                 o.rejectionReason.orEmpty(), at, o.averagePrice?.toDouble() ?: 0.0, o.priceType, manual = strategy == "Manual")
         }
         return orders
+    }
+
+    // ---- the day's live orders, kept (15 Nov) --------------------------------------------------------------------------
+
+    private val snapLock = Any()
+    /** The kept live orders by day and order id, as read from or written to their files (guarded by [snapLock]). */
+    private val snaps = HashMap<LocalDate, Map<String, Broker.OrderRow>>()
+    /** The day the old files were last deleted on (guarded by [snapLock]). */
+    private var snapPruned: LocalDate? = null
+    /** Erase everything: an order book read before this moment is never kept after it (guarded by [snapLock]). */
+    private var erasedAt = Long.MIN_VALUE
+    private val watching = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** TEST ONLY: off for every other test ([resetForTest]: their orders are not what they test); the snapshot's own tests turn it on. */
+    @Volatile internal var snapshotsOn = true
+
+    private fun snapFile(day: LocalDate): File? = dir()?.let { File(it, "$SNAP_PREFIX$day$SNAP_EXT") }
+
+    /** Every snapshot file there is (the vault's temporary files of one too). */
+    private fun snapFiles(): List<File> = runCatching { dir()?.listFiles { f -> f.name.startsWith(SNAP_PREFIX) }?.toList() }.getOrNull().orEmpty()
+
+    private fun dayOf(atMs: Long): LocalDate = java.time.Instant.ofEpochMilli(atMs).atZone(IST).toLocalDate()
+
+    /** What is kept of one order: what [ordersIn] reads, nothing more. */
+    private fun keptRow(o: Broker.OrderRow) = Broker.OrderRow(id = o.id, symbol = o.symbol, side = o.side, qty = o.qty, filled = o.filled, price = 0.0,
+        avg = if (o.avg.isFinite()) o.avg else 0.0, status = o.status, message = o.message, placedAt = o.placedAt, type = o.type, tag = o.tag)
+
+    private fun encodeRows(rows: Collection<Broker.OrderRow>): ByteArray {
+        val a = org.json.JSONArray()
+        for (o in rows) a.put(org.json.JSONObject().put("id", o.id).put("symbol", o.symbol).put("side", o.side).put("qty", o.qty).put("filled", o.filled)
+            .put("avg", o.avg).put("status", o.status).put("message", o.message).put("placedAt", o.placedAt).put("type", o.type).put("tag", o.tag))
+        return a.toString().toByteArray(Charsets.UTF_8)
+    }
+
+    private fun decodeRows(plain: ByteArray): Map<String, Broker.OrderRow> {
+        val a = org.json.JSONArray(String(plain, Charsets.UTF_8))
+        val out = LinkedHashMap<String, Broker.OrderRow>()
+        for (i in 0 until a.length()) {
+            val j = a.optJSONObject(i) ?: continue
+            val id = j.optString("id")
+            if (id.isEmpty()) continue
+            out[id] = Broker.OrderRow(id = id, symbol = j.optString("symbol"), side = j.optString("side"), qty = j.optInt("qty"), filled = j.optInt("filled"),
+                price = 0.0, avg = j.optDouble("avg", 0.0).let { if (it.isFinite()) it else 0.0 }, status = j.optString("status"),
+                message = j.optString("message"), placedAt = j.optString("placedAt"), type = j.optString("type", "LIMIT"), tag = j.optString("tag"))
+        }
+        return out
+    }
+
+    /**
+     * [day]'s kept live orders (under [snapLock]; a worker thread): from memory, else its sealed file read once. No file: none.
+     * Null: the file could not be read just now (the Keystore busy, an erase running) - it is read again next time and is
+     * never written over. A file that can never be opened again (its key is gone, or it is damaged) is deleted: it is only
+     * a copy for the review, and a new one starts.
+     */
+    private fun snapOf(day: LocalDate): Map<String, Broker.OrderRow>? {
+        snaps[day]?.let { return it }
+        val f = snapFile(day) ?: return null
+        val plain = try {
+            if (f.isFile) com.optionslab.app.security.Vault.readFileSteady(f) else null
+        } catch (_: com.optionslab.app.security.Vault.Tampered) {
+            runCatching { f.delete() }; null
+        } catch (_: Throwable) {
+            return null
+        }
+        val rows = if (plain == null) emptyMap() else runCatching { decodeRows(plain) }.getOrElse { runCatching { f.delete() }; emptyMap() }
+        snaps[day] = rows
+        return rows
+    }
+
+    /** Once a day (under [snapLock]): the snapshots older than [SNAP_KEEP_DAYS] deleted, from memory and the disk. */
+    private fun pruneIfDue(today: LocalDate) {
+        if (snapPruned == today) return
+        snapPruned = today
+        val oldest = today.minusDays(SNAP_KEEP_DAYS)
+        snaps.keys.removeAll { it.isBefore(oldest) }
+        for (f in snapFiles()) {
+            val d = runCatching { LocalDate.parse(f.name.removePrefix(SNAP_PREFIX).take(10)) }.getOrNull()
+            if (d == null || d.isBefore(oldest)) runCatching { f.delete() }
+        }
+    }
+
+    /**
+     * 15 Nov (Boss's diagnostics: the evening's review and the day's file missed the live orders placed before a restart or a
+     * low-memory kill - they were only in memory): the live orders in [list] (Zerodha's order book as just read) kept by the
+     * day each was placed, in one small file a day, sealed with the vault's key as the app's other private files are (an
+     * order's symbol, quantity, price and Zerodha's message are account data: never in plain text). Orders already kept stay;
+     * one read again takes its newest state. A day whose orders did not change is not written again. Returns the files written.
+     *
+     * A worker thread only (a Keystore encryption and a disk sync): called from this host's own watcher ([watchOrders]),
+     * never from the code that places an order or handles a tick, and nothing on those paths waits for it.
+     */
+    internal fun snapshotOrders(list: List<Broker.OrderRow>, today: LocalDate = Market.today()): Int {
+        if (appContext == null) return 0
+        val gen = wipeGen
+        val oldest = today.minusDays(SNAP_KEEP_DAYS)
+        val byDay = LinkedHashMap<LocalDate, LinkedHashMap<String, Broker.OrderRow>>()
+        for (o in list) {
+            if (o.id.isEmpty()) continue
+            val d = kiteAt(o.placedAt)?.toLocalDate() ?: continue
+            if (d.isBefore(oldest) || d.isAfter(today.plusDays(1))) continue
+            byDay.getOrPut(d) { LinkedHashMap() }[o.id] = keptRow(o)
+        }
+        var wrote = 0
+        synchronized(snapLock) {
+            // An erase since this began: nothing is kept ([wipe] deletes, under this lock, whatever was written before it).
+            if (gen != wipeGen) return 0
+            pruneIfDue(today)
+            for ((d, rows) in byDay) {
+                val before = snapOf(d) ?: continue
+                val merged = LinkedHashMap(before)
+                merged.putAll(rows)
+                if (merged == before) continue
+                val f = snapFile(d) ?: continue
+                // False when an erase dropped the write: then it is not taken as kept.
+                val written = runCatching { com.optionslab.app.security.Vault.writeFileWritten(f, encodeRows(merged.values)) }.getOrDefault(false)
+                if (written) { snaps[d] = merged; wrote++ }
+            }
+        }
+        return wrote
+    }
+
+    /** The order book in memory now, kept ([snapshotOrders]); never one read before an erase. Returns the files written. */
+    private fun snapshotLatest(): Int {
+        synchronized(snapLock) {
+            val v = AppState.orders.value ?: return 0
+            if (v.at <= erasedAt) return 0
+            return snapshotOrders(v.value)
+        }
+    }
+
+    /**
+     * This host's own watcher (its background scope, a worker thread; started once, after the open positions are restored):
+     * whenever the app's regular passes have read Zerodha's order book into memory, the day's live orders are kept
+     * ([snapshotOrders]), and after a write not again for [SNAP_GAP_MS] (the newest book is taken then). It only reads what
+     * is already in memory; the read that published the book never waits for it.
+     */
+    private fun watchOrders() {
+        if (!watching.compareAndSet(false, true)) return
+        scope.launch {
+            com.optionslab.app.data.PositionsFirst.awaitPositions()
+            AppState.orders.collect {
+                val wrote = if (snapshotsOn) runCatching { snapshotLatest() }.getOrDefault(0) else 0
+                if (wrote > 0) delay(SNAP_GAP_MS)
+            }
+        }
+    }
+
+    /** The kept live orders of the days [from]..[to] (at most the days kept; a worker thread). */
+    private fun keptOrders(from: Long, to: Long): List<Broker.OrderRow> {
+        if (appContext == null || to < from) return emptyList()
+        val lastDay = dayOf(to)
+        var d = dayOf(from)
+        val oldest = lastDay.minusDays(SNAP_KEEP_DAYS)
+        if (d.isBefore(oldest)) d = oldest
+        val out = ArrayList<Broker.OrderRow>()
+        synchronized(snapLock) {
+            runCatching { pruneIfDue(Market.today()) }
+            while (!d.isAfter(lastDay)) {
+                snapOf(d)?.let { out += it.values }
+                d = d.plusDays(1)
+            }
+        }
+        return out
     }
 
     /** Every order and trade in [from]..[to] for [day], from memory and the app's own files (no network). A worker thread. */
@@ -538,28 +782,40 @@ object OrderReviewHost {
      * 26 Oct (Erase everything): the kept review (Boss's orders and trades, their flaws, the lab requests) forgotten and its file
      * deleted, under the same lock as its saves; a review in flight sees [wipeGen] changed and keeps nothing. Never the vault.
      * The file counts as read (it is gone), so the next review starts a new one.
+     * 15 Nov: the kept live orders too ([snapshotOrders]): forgotten and every day's file deleted, under their own lock (a
+     * snapshot in flight ends first and its file is deleted here; one that begins later sees [wipeGen] changed, and the order
+     * book read before this erase is never kept again).
      */
     fun wipe() {
         synchronized(lock) {
             wipeGen++
             _book.value = OrderReview.Book()
-            loaded = true; retryAtMs = 0L
-            filesForErase().forEach { runCatching { it.delete() } }
+            loaded = true; retryAtMs = 0L; lastFailed = null
+            synchronized(snapLock) {
+                snaps.clear(); snapPruned = null
+                erasedAt = System.currentTimeMillis()
+                filesForErase().forEach { runCatching { it.delete() } }
+            }
         }
     }
 
-    /** 26 Oct: a review kept in memory (memory only, for the erase's tests). */
-    internal fun holdsForErase(): Boolean = _book.value != OrderReview.Book()
+    /** 26 Oct: a review kept in memory (memory only, for the erase's tests). 15 Nov: or a day's live orders. */
+    internal fun holdsForErase(): Boolean = _book.value != OrderReview.Book() || synchronized(snapLock) { snaps.values.any { it.isNotEmpty() } }
 
-    /** 26 Oct: the review's file and its temporary file (none before [init]). */
-    internal fun filesForErase(): List<File> = file()?.let { listOf(it, File(it.parentFile, it.name + ".tmp")) }.orEmpty()
+    /** 26 Oct: the review's file and its temporary file (none before [init]). 15 Nov: and every day's kept live orders. */
+    internal fun filesForErase(): List<File> = file()?.let { listOf(it, File(it.parentFile, it.name + ".tmp")) + snapFiles() }.orEmpty()
 
-    /** TEST ONLY: nothing kept, the file read (as empty). */
+    /** TEST ONLY: nothing kept, the file read (as empty); the live orders' snapshots forgotten (memory only) and their watcher off. */
     internal fun resetForTest() {
         synchronized(lock) { _book.value = OrderReview.Book() }
-        loaded = true; retryAtMs = 0L; running.set(false); testInputs = null
+        loaded = true; retryAtMs = 0L; running.set(false); testInputs = null; lastFailed = null
+        synchronized(snapLock) { snaps.clear(); snapPruned = null; erasedAt = Long.MIN_VALUE }
+        snapshotsOn = false
     }
 
-    /** TEST ONLY: nothing in memory and the file not read yet (a new process). */
-    internal fun reloadForTest() { synchronized(lock) { _book.value = OrderReview.Book() }; loaded = false }
+    /** TEST ONLY: nothing in memory and the files not read yet (a new process). */
+    internal fun reloadForTest() {
+        synchronized(lock) { _book.value = OrderReview.Book() }; loaded = false
+        synchronized(snapLock) { snaps.clear(); snapPruned = null }
+    }
 }

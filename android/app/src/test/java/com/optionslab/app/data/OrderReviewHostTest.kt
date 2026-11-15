@@ -41,6 +41,7 @@ class OrderReviewHostTest : RobolectricTest() {
 
     @After fun down() {
         OrderReviewHost.resetForTest()
+        AppState.resetForTest()
         VariantRunner.resetForTest()
         com.optionslab.app.work.BackgroundBudget.resetForTest()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -146,5 +147,157 @@ class OrderReviewHostTest : RobolectricTest() {
         } finally { km.setKeyguardLocked(false) }
         val a = ask("review my orders")
         assertTrue(a, a.startsWith("I have not reviewed any orders yet"))
+    }
+    // ---- 15 Nov: a missed day is reviewed, a failed review is said, the day's live orders survive a restart ---------------
+
+    @Test fun aMissedDayIsCaughtUpTheMostRecentOneFirst() {
+        // Last reviewed Thursday 8 Oct; the app then did not run on Friday 9 or Monday 12 evening (two evenings missed).
+        val ran = OrderReview.Book(lastRun = LocalDate.of(2026, 10, 8), cutoffMs = ms(LocalDate.of(2026, 10, 8), 15, 50))
+        val tue = LocalDate.of(2026, 10, 13)
+        // Any hour of the next day: the most recent missed trading day (Monday), not the older one.
+        assertEquals(day to false, OrderReviewHost.due(at(tue, 10, 0), ran))
+        // In the evening too, before the day's own review (which would otherwise take its place).
+        assertEquals(day to false, OrderReviewHost.due(at(tue, 16, 0), ran))
+        // Once it is reviewed, the day's own review is next; then nothing.
+        val caught = ran.copy(lastRun = day, cutoffMs = ms(day.plusDays(1), 0, 0) - 1)
+        assertNull(OrderReviewHost.due(at(tue, 10, 0), caught))
+        assertEquals(tue to false, OrderReviewHost.due(at(tue, 16, 0), caught))
+        // A caught-up day is never taken for MCX's morning catch-up (it was read to its end).
+        assertNull(OrderReviewHost.due(at(tue, 7, 30), caught))
+        // A weekend: Friday missed is reviewed on Saturday.
+        val thu = OrderReview.Book(lastRun = LocalDate.of(2026, 10, 15), cutoffMs = ms(LocalDate.of(2026, 10, 15), 15, 50))
+        assertEquals(LocalDate.of(2026, 10, 16) to false, OrderReviewHost.due(at(LocalDate.of(2026, 10, 17), 12, 0), thu))
+        // A review that never ran has missed nothing.
+        assertNull(OrderReviewHost.due(at(tue, 10, 0), OrderReview.Book()))
+    }
+
+    @Test fun oneEveningRunReviewsTheMissedDayThenTodayEachToItsOwnEnd() = runBlocking {
+        val calls = ArrayList<Triple<LocalDate, Long, Long>>()
+        val base = inputs(withFlaw = true)
+        OrderReviewHost.testInputs = { d, from, to -> calls += Triple(d, from, to); base(d, from, to) }
+        val thu = LocalDate.of(2026, 10, 8)
+        assertTrue(OrderReviewHost.runIfDue(context, at(thu, 15, 50)))
+        calls.clear()
+        // Friday 9 Oct missed; Monday 12 Oct's evening run reviews Friday (to its own end), then Monday (to now).
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        val fri = LocalDate.of(2026, 10, 9)
+        val friEnd = ms(day.minusDays(2), 0, 0) - 1
+        assertEquals(listOf(fri, day), calls.map { it.first })
+        assertEquals(friEnd, calls[0].third)
+        assertEquals("Monday's window starts where Friday's ended", friEnd, calls[1].second)
+        assertEquals(ms(day, 15, 50), calls[1].third)
+        val b = OrderReviewHost.book.value
+        assertEquals(day, b.lastRun)
+        assertTrue(b.logs.map { it.day }.toString(), b.logs.map { it.day }.containsAll(listOf(thu, fri, day)))
+        assertTrue(Diag.lines().any { it.contains("reviewed $fri (a missed day, caught up)") })
+        // Nothing more that evening.
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 16, 30)))
+    }
+
+    @Test fun aReviewThatDoesNotCompleteSaysSoOnceWithTheClassOnly() = runBlocking {
+        OrderReviewHost.testInputs = { _, _, _ -> throw IllegalStateException("order 251012000123456 for AB1234 at Rs 4,000") }
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        val said = Diag.lines().filter { it.contains("did not complete") }
+        assertEquals(said.toString(), 1, said.size)
+        assertTrue(said.single(), said.single().contains("the review of $day did not complete: its records could not be read (IllegalStateException)"))
+        for (part in listOf("251012000123456", "AB1234", "4,000")) assertFalse(said.single(), said.single().contains(part))
+        // Tried again after ten minutes, failing the same way: not said again.
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 15, 55)))
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 16, 5)))
+        assertEquals(1, Diag.lines().count { it.contains("did not complete") })
+        assertNull(OrderReviewHost.book.value.lastRun)
+        // Once the records read again, the day is reviewed.
+        OrderReviewHost.testInputs = inputs(withFlaw = false)
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 16, 20)))
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+    }
+
+    private val td: LocalDate get() = Market.today()
+
+    private fun row(id: String, d: LocalDate, status: String, filled: Int = 0) = Broker.OrderRow(id = id, symbol = "BANKNIFTY26OCT55000CE", side = "BUY",
+        qty = 30, filled = filled, price = 100.0, avg = if (filled > 0) 100.5 else 0.0, status = status, message = "", placedAt = "$d 10:0$id:00")
+
+    private fun liveIn(d: LocalDate): List<OrderReview.Order> =
+        OrderReviewHost.ordersIn(emptyMap(), ms(d, 0, 0), ms(d.plusDays(1), 0, 0) - 1).filter { it.venue == OrderReview.Venue.LIVE }
+
+    private fun snapFile(d: LocalDate) = java.io.File(context.noBackupFilesDir, "orderreview/orders-$d.vault")
+
+    @Test fun theDaysLiveOrdersAreKeptSealedAndReadAfterARestart() {
+        // Empty: nothing kept, no file.
+        assertEquals(0, OrderReviewHost.snapshotOrders(emptyList()))
+        assertTrue(liveIn(td).isEmpty())
+        assertFalse(snapFile(td).exists())
+        assertEquals(1, OrderReviewHost.snapshotOrders(listOf(row("1", td, "OPEN"), row("2", td, "COMPLETE", 30))))
+        // Sealed with the vault's key: no symbol or status in plain text.
+        val raw = String(snapFile(td).readBytes(), Charsets.ISO_8859_1)
+        assertFalse(raw.contains("BANKNIFTY") || raw.contains("COMPLETE"))
+        // The same book again writes nothing.
+        assertEquals(0, OrderReviewHost.snapshotOrders(listOf(row("1", td, "OPEN"), row("2", td, "COMPLETE", 30))))
+        // A restart (a low-memory kill): nothing in memory, the broker's book not read yet.
+        OrderReviewHost.reloadForTest()
+        AppState.resetForTest()
+        val got = liveIn(td)
+        assertEquals(listOf("kite:1", "kite:2"), got.map { it.id }.sorted())
+        assertEquals("COMPLETE", got.first { it.id == "kite:2" }.status)
+        // Another day reads none of them.
+        assertTrue(liveIn(td.minusDays(1)).isEmpty())
+    }
+
+    @Test fun memoryAndTheKeptOrdersMergeByIdTheNewestStateWins() {
+        assertEquals(1, OrderReviewHost.snapshotOrders(listOf(row("1", td, "OPEN"), row("2", td, "OPEN"))))
+        OrderReviewHost.reloadForTest()
+        // After the restart the broker's book shows order 1 filled and a new order 3 (order 2 is not in this read).
+        AppState.publishOrders(listOf(row("1", td, "COMPLETE", 30), row("3", td, "OPEN")), System.currentTimeMillis())
+        val got = liveIn(td)
+        assertEquals(listOf("kite:1", "kite:2", "kite:3"), got.map { it.id }.sorted())
+        assertEquals("COMPLETE", got.single { it.id == "kite:1" }.status)
+        // Kept: order 1's newest state, order 2 still there.
+        assertEquals(1, OrderReviewHost.snapshotOrders(listOf(row("1", td, "COMPLETE", 30), row("3", td, "OPEN"))))
+        OrderReviewHost.reloadForTest()
+        AppState.resetForTest()
+        val kept = liveIn(td)
+        assertEquals(listOf("kite:1", "kite:2", "kite:3"), kept.map { it.id }.sorted())
+        assertEquals("COMPLETE", kept.single { it.id == "kite:1" }.status)
+    }
+
+    @Test fun oldDaysArePrunedAndADamagedFileIsNeverAnError() {
+        val old = td.minusDays(OrderReviewHost.SNAP_KEEP_DAYS + 3)
+        assertEquals(1, OrderReviewHost.snapshotOrders(listOf(row("1", old, "COMPLETE", 30)), today = old))
+        assertTrue(snapFile(old).exists())
+        val junk = java.io.File(context.noBackupFilesDir, "orderreview/orders-junk.vault").apply { writeText("x") }
+        // A damaged day: garbage where the sealed file should be.
+        val bad = td.minusDays(1)
+        snapFile(bad).writeBytes(ByteArray(64) { it.toByte() })
+        assertEquals(1, OrderReviewHost.snapshotOrders(listOf(row("2", td, "OPEN"))))
+        assertFalse("older than the days kept: deleted", snapFile(old).exists())
+        assertFalse(junk.exists())
+        assertTrue(snapFile(td).exists())
+        // The damaged day reads as no orders, never an error.
+        assertTrue(liveIn(bad).isEmpty())
+    }
+
+    @Test fun eraseEverythingDeletesTheKeptOrders() {
+        assertEquals(1, OrderReviewHost.snapshotOrders(listOf(row("1", td, "OPEN"))))
+        liveIn(td)
+        assertTrue(OrderReviewHost.holdsForErase())
+        assertTrue(OrderReviewHost.filesForErase().any { it.name == "orders-$td.vault" && it.exists() })
+        OrderReviewHost.wipe()
+        assertFalse(snapFile(td).exists())
+        assertFalse(OrderReviewHost.holdsForErase())
+        assertTrue(OrderReviewHost.filesForErase().none { it.exists() })
+        assertTrue(liveIn(td).isEmpty())
+    }
+
+    @Test fun theWatcherKeepsTheBookTheBrokerReadsOffTheCallersThread() {
+        OrderReviewHost.snapshotsOn = true
+        // As the broker's read does: published into memory; the watcher (its own thread) writes the day's file.
+        AppState.publishOrders(listOf(row("1", td, "OPEN")), System.currentTimeMillis())
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end && !snapFile(td).exists()) Thread.sleep(20)
+        assertTrue("the watcher kept the day's live orders", snapFile(td).exists())
+        OrderReviewHost.snapshotsOn = false
+        OrderReviewHost.reloadForTest()
+        AppState.resetForTest()
+        assertEquals(listOf("kite:1"), liveIn(td).map { it.id })
     }
 }

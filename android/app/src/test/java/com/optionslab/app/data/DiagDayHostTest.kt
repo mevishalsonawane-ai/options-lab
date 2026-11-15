@@ -108,4 +108,12 @@ class DiagDayHostTest : RobolectricTest() {
         assertEquals(today.minusDays(2).toString(), r["day"])
         assertEquals(emptyList<Any?>(), r["decisions"])
     }
+
+    /** 15 Nov (diagnostics audit): the screen's-thread vault writes and the manual positions' stop and target are in the day's file. */
+    @Test fun theVaultWritesOnTheScreensThreadAndTheManualCoverAreHealthLines() {
+        val lines = (report()["health"] as Map<*, *>)["lines"] as Map<*, *>
+        assertTrue(lines.keys.toString(), "main_writes" in lines.keys && "manual_cover" in lines.keys)
+        assertTrue(lines["main_writes"].toString(), lines["main_writes"].toString().startsWith("Vault writes on the screen's thread: "))
+        assertTrue(lines["manual_cover"].toString(), lines["manual_cover"].toString().startsWith("Stop and target on my manual positions: "))
+    }
 }

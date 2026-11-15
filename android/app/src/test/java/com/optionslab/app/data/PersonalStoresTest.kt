@@ -297,6 +297,11 @@ class PersonalStoresTest {
             com.optionslab.app.data.OrderReviewHost.reloadForTest()
             com.optionslab.app.data.OrderReviewHost.ensureLoaded()
             check(com.optionslab.app.data.OrderReviewHost.holdsForErase())
+            // 15 Nov: and a day's live orders, kept in their sealed file (and in memory) as its watcher keeps them.
+            val today = com.optionslab.app.data.Market.today()
+            check(com.optionslab.app.data.OrderReviewHost.snapshotOrders(listOf(com.optionslab.app.data.Broker.OrderRow(id = "1", symbol = "NIFTY26OCT25000CE",
+                side = "BUY", qty = 75, filled = 75, price = 100.0, avg = 100.5, status = "COMPLETE", message = "", placedAt = "$today 10:00:00"))) == 1)
+            check(java.io.File(app.noBackupFilesDir, "orderreview/orders-$today.vault").isFile)
         },
         s("LiveSelfTest") {
             com.optionslab.app.data.LiveSelfTest.setAuto(true)    // its switch: a SecurePrefs key
