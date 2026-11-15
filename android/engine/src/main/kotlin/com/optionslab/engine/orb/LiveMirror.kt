@@ -556,7 +556,7 @@ object LiveMirror {
          */
         val heldSeen: Boolean = true, val stopQty: Int? = null, val otherWorking: Int = 0, val lot: Int = 1, val stopLimit: Double? = null,
         /**
-         * 15 Nov ([StepTrail], Boss's exception): the live trade's own ₹1,500-a-lot stop-rule stop now (null: none). When the stop resting
+         * 15 Nov ([StepTrail], Boss's exception): the live trade's own breakeven-rule stop now (null: none). When the stop resting
          * (or watched) is lower - it could not rest there yet, the price too near, or Zerodha refused it - and the price now is at or under
          * it, the app sells ([ruleWhy] the reason). An earlier exit only.
          */

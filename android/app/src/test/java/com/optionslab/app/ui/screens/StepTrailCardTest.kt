@@ -23,7 +23,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * 15 Nov 2026 (Boss's exception, second version): Bot settings' "₹1,500 stop a lot + breakeven at +5%" card ([StepTrailCardFlow]): labelled "failed gates, Boss's
+ * 15 Nov 2026 (Boss's exception, third version): Bot settings' "Breakeven at +10%" card ([StepTrailCardFlow]): labelled "failed gates, Boss's
  * exception" with its honest record; on, switching it off asks the PIN first (where a PIN is asked) and goes off only once it is given;
  * off, on again is one tap; before the switch is read it offers none. Also the arms' rows' line ([stepTrailLine]).
  */
@@ -49,13 +49,13 @@ class StepTrailCardTest {
         var ons = 0; var offs = 0
         show(StepTrailExits.View(on = true, loaded = true), pinAsked = true, { ons++ }, { offs++ })
         compose.waitForIdle()
-        assertTrue(shows("₹1,500 stop a lot + breakeven at +5%"))
+        assertTrue(shows("Breakeven at +10%"))
         assertTrue(shows(StepTrail.SWITCH))
-        assertTrue(shows("On: new trades of the three arms get the ₹1,500 stop and the breakeven at +5%"))
+        assertTrue(shows("On: new trades of the three arms get the breakeven at +10%"))
         assertTrue(shows("Failed gates, Boss's exception", sub = true))
         assertTrue(shows("R179", sub = true))
-        assertTrue(shows("loses ₹1,500 a lot after charges", sub = true))
-        assertTrue(shows("5% above the fill, the stop moves to breakeven", sub = true))
+        assertTrue(shows("keeps its arm's own stop", sub = true))
+        assertTrue(shows("10% above the fill, the stop moves to breakeven", sub = true))
         compose.onNodeWithText(StepTrail.SWITCH).performClick()
         compose.waitForIdle()
         assertTrue(shows("PIN asked"))

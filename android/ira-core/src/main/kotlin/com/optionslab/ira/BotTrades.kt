@@ -52,8 +52,8 @@ object BotTrades {
          */
         val rules: String? = null,
         /**
-         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): a Liquidity trade on Boss's stop rule (₹1,500 a lot
-         * after charges, breakeven at +5%) - its open line names its stop at ₹1,500 a lot or its breakeven (from [peak]), labelled.
+         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): a Liquidity trade on Boss's rule (its own stop, then
+         * breakeven at +10%) - its open line names its own stop or its breakeven (from [peak]), labelled.
          */
         val fixed: Boolean = false,
     )
@@ -190,8 +190,8 @@ object BotTrades {
         val name = label(t.source)
         val bought = "Bought at ${n(t.entry)} at ${hm(t.entryTime)}"
         val target = arm?.let { ProfitLock.targetOf(it) }
-        // 15 Nov (Boss's exception): a rule Liquidity trade's stop - its breakeven once the option is 5% up, else its ₹1,500 a lot (after
-        // charges) where tighter than the 15% (per lot: its contract's lot size, the quantity when not known).
+        // 15 Nov (Boss's exception): a rule Liquidity trade's stop - its breakeven once the option is 10% up (per lot, after charges),
+        // else its own 15% (the rule sets no entry stop since V4; per lot: its contract's lot size, the quantity when not known).
         val fx = t.fixed && arm?.liquidity == true
         val lotSize = t.lot?.takeIf { it > 0 } ?: t.qty
         val ruleEntry = if (fx) StepTrail.stopLevel(t.entry, lotSize) else null
@@ -205,8 +205,8 @@ object BotTrades {
         }
         val stopWords = when {
             arm == null || stopLevel == null -> "its stop"
-            ruleOn && ruleTrail != null -> "its breakeven stop, moved there at +5% (${n(stopLevel)}; ${StepTrail.STATUS})"
-            ruleOn -> "its ₹1,500-a-lot stop (${n(stopLevel)}; ${StepTrail.STATUS})"
+            ruleOn && ruleTrail != null -> "its breakeven stop, moved there at +10% (${n(stopLevel)}; ${StepTrail.STATUS})"
+            ruleOn -> "its stop (${n(stopLevel)}; ${StepTrail.STATUS})"
             arm.liquidity -> "its stop 15% under the price paid (${n(stopLevel)})"
             else -> "its ${OrbRules.STOP_POINTS.toInt()}-point stop (${n(stopLevel)})"
         }
@@ -256,11 +256,9 @@ object BotTrades {
             "operator_stop" -> "out when you stopped it for today, $sold"
             "closed_by_you" -> "closed by you, $sold"
             "backstop_square_off" -> "out at the app's backstop square-off, $sold"
-            // 15 Nov (Boss's exception, failed gates): the ₹1,500 stop a lot and the breakeven at +5% (and the morning's ₹500 step trail,
-            // still on older records).
-            StepTrail.WHY_STOP -> "out at its ₹1,500-a-lot stop (${StepTrail.STATUS}), $sold"
-            StepTrail.WHY_TRAIL -> "out at its breakeven stop (moved there at +5%; ${StepTrail.STATUS}), $sold"
-            StepTrail.OLD_WHY_STOP -> "out at its ₹500-a-lot stop (${StepTrail.STATUS}), $sold"
+            // 15 Nov (Boss's exception, failed gates): the breakeven at +10% (and the morning's ₹500 step trail, still on older records).
+            StepTrail.WHY_TRAIL -> "out at its breakeven stop (moved there at +10%; ${StepTrail.STATUS}), $sold"
+            StepTrail.WHY_STOP -> "out at its ₹500-a-lot stop (${StepTrail.STATUS}), $sold"
             StepTrail.OLD_WHY_TRAIL -> "out at its ₹500 step trail (${StepTrail.STATUS}), $sold"
             null -> sold
             else -> "out (${t.why.replace('_', ' ')}), $sold"

@@ -693,7 +693,7 @@ fun RiskPage(model: AppModel) {
         item { com.optionslab.app.ui.SettingSpot("risk.guards") { GuardCard(model) } }
         // 3 Nov (Boss): the lots every arm's live trade buys, − / +.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.armlots") { ArmLotsCard(model) } }
-        // 15 Nov (Boss's exception): the ₹1,500 stop rule on Liquidity, R51 and R72 (on by default; off takes the PIN).
+        // 15 Nov (Boss's exception): the breakeven rule on Liquidity, R51 and R72 (on by default; off takes the PIN).
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.steptrail") { StepTrailCard(model) } }
         // 3 Nov (Boss): the indices the arms trade live.
         if (!com.optionslab.app.BuildConfig.GOLD) item { com.optionslab.app.ui.SettingSpot("risk.indices") { LiveIndicesCard(model) } }

@@ -4,55 +4,53 @@ import kotlin.math.abs
 import kotlin.math.ceil
 
 /**
- * Boss's stop rule on three arms' trades - Liquidity 15+5 (every book and index), R51 Donchian 20 and R72 Breadth Donchian - on paper
+ * Boss's exit rule on three arms' trades - Liquidity 15+5 (every book and index), R51 Donchian 20 and R72 Breadth Donchian - on paper
  * and live. (The object keeps its first name, StepTrail, so every caller, the persisted flag and the switch carry over.)
  *
- * 15 Nov 2026, second version (Boss, after R179: "Make it 1.5k stoploss" and "Instead 10% breakeven, make it 5% breakeven"), replacing the
- * ₹500 step trail of the morning:
- *  - at the entry the stop is where the trade loses ₹1,500 a lot AFTER the round trip's charges ([ProfitLock.roundTripPerUnit] for one
- *    lot), only where that is tighter than the arm's own stop (it never loosens one: a cheap option keeps its -15%);
- *  - once the option has traded 5% above the fill, the stop moves to breakeven: the fill plus the round trip's charges, so a sale there
- *    nets about ₹0. It only ever moves up. No fixed target.
- * Per unit the distances depend only on the fill and the lot size, so the levels are the same whatever the lots (₹1,500 a lot). Levels are
- * rounded UP to the tick (the safe side: a little less is lost, a little more is kept). Every exit the arm already has stays (its -15% stop,
- * ladders and locks, L25, time stops, index exits, square-offs): whichever comes first wins. A stop order fills at the market, so a fast move
- * can lose more than ₹1,500 a lot. It only lowers risk (a tighter stop, an earlier exit), so it acts on live through every existing live
- * gate (CLAUDE.md's LIVE rule).
+ * 15 Nov 2026, third version (Boss, after the whole R176 - R179 table: "Switch to + picker + breakeven at +10% (V4)"), replacing the
+ * ₹500 step trail of the morning (and the ₹1,500 stop a lot + breakeven at +5% that never left its branch):
+ *  - no rupee stop at the entry: each arm keeps its own stop (Liquidity and R51 / R72's -15%) - [stopLevel] is always null;
+ *  - once the option has traded 10% above the fill, the stop moves to breakeven: the fill plus the round trip's charges
+ *    ([ProfitLock.roundTripPerUnit] for one lot), so a sale there nets about ₹0. It only ever moves up. No fixed target.
+ *  - R72 / R51's R151 picker (CLAUDE.md's fourth exception) stays as it is: V4 is the picker plus this breakeven.
+ * Per unit the distance depends only on the fill and the lot size, so the level is the same whatever the lots. Levels are rounded UP to
+ * the tick (the safe side). Every exit the arm already has stays (its -15% stop, ladders and locks, L25, time stops, index exits,
+ * square-offs): whichever comes first wins. A stop order fills at the market, so a fast fall can sell under breakeven. It only lowers risk
+ * (a higher stop, an earlier exit), so it acts on live through every existing live gate (CLAUDE.md's LIVE rule).
  *
- * FAILED GATES, Boss's exception (CLAUDE.md, the fifth): R179 Amendment C replayed exactly this rule on one year ([RECORD]): about 55% wins
- * but far less profit than the arms' own rules (and than the +10% breakeven of Amendment B); it failed the gates. Labelled [STATUS] wherever it is
- * shown, logged in the Autopilot change timeline, one tap off. Signal source: the arms' entries stay on the index; only the stop is on the
- * premium (CLAUDE.md allows stops and locks on the option premium). Pure: no I/O, no clock.
+ * FAILED GATES, Boss's exception (CLAUDE.md, the fifth): R179's V4 replayed it on one year ([RECORD]) and it failed the gates (its twin
+ * q 1.00; R72's final win rate 53.5%). Labelled [STATUS] wherever it is shown, logged in the Autopilot change timeline, one tap off.
+ * Signal source: the arms' entries stay on the index; only the stop is on the premium (CLAUDE.md allows stops and locks on the option
+ * premium). Pure: no I/O, no clock.
  */
 object StepTrail {
-    /** The most a trade may lose at its entry stop, rupees a lot, after the round trip's charges. */
-    const val STOP_RS = 1_500.0
     /** The gain above the fill, percent, at which the stop moves to breakeven. */
-    const val BREAKEVEN_PCT = 5.0
+    const val BREAKEVEN_PCT = 10.0
 
     const val STATUS = "failed gates, Boss's exception"
     /** How the arms' rows and the trades name it. */
-    const val LABEL = "₹1,500 stop a lot + breakeven at +5% (failed gates, Boss's exception)"
+    const val LABEL = "breakeven at +10 percent (failed gates, Boss's exception)"
     /** Bot settings' switch. */
-    const val SWITCH = "₹1,500 stop a lot + breakeven at +5% (Liquidity, R51, R72) — failed gates, Boss's exception"
+    const val SWITCH = "Breakeven at +10 percent (Liquidity, R51, R72) — failed gates, Boss's exception"
     /** The diagnostics' name: no rupee sign and no grouped figure (the uploaded diagnostics hide every rupee figure). */
-    const val DIAG = "1500 stop a lot and breakeven at 5 percent (failed gates, Boss's exception)"
-    /** An exit by the stop set at the entry, as the trade record and the diagnostics say it. */
-    const val WHY_STOP = "₹1,500 stop"
-    /** An exit by the breakeven stop. */
+    const val DIAG = "breakeven at 10 percent (failed gates, Boss's exception)"
+    /** An exit by the breakeven stop, as the trade record and the diagnostics say it. */
     const val WHY_TRAIL = "breakeven lock"
-    /** The first version's two exit words (15 Nov morning): older trade records still carry them. */
-    const val OLD_WHY_STOP = "₹500 stop"
+    /**
+     * The entry's rupee stop: this version has none (each arm's own stop applies), so nothing new is booked with it; the morning's first
+     * version (₹500 a lot) wrote it, and its older trade records still carry it.
+     */
+    const val WHY_STOP = "₹500 stop"
+    /** The first version's trail word (15 Nov morning): older trade records still carry it. */
     const val OLD_WHY_TRAIL = "step trail"
     /** The rule in one line. */
-    const val RULE = "each trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian starts with its stop where it loses ₹1,500 a lot " +
-        "after charges (only where that is tighter than the arm's own stop); once the option is 5% above the fill the stop moves to breakeven " +
-        "(the fill plus the charges), never down; the arm's own exits stay and the first one wins; paper and live"
+    const val RULE = "each trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian keeps its arm's own stop; once the option is 10% " +
+        "above the fill the stop moves to breakeven (the fill plus the charges), never down; R72 / R51 keep the R151 picker; the arm's own " +
+        "exits stay and the first one wins; paper and live"
     /** The honest record. */
-    const val RECORD = "R179 Amendment C replayed this rule (₹1,500 a lot, breakeven at +5%, with the R151 picker) on one year (20 Oct " +
-        "2025 - 19 Oct 2026, 1 lot): R51 won 54.5% and made ₹47k (its own rules 45.1%, ₹2.21 L), R72 55.9% and ₹1.70 L (46.3%, ₹2.98 L), " +
-        "Liquidity 43.4% and ₹64k (39.2%, ₹1.18 L); it failed the gates. With the breakeven at +10% (Amendment B) it made more: R51 ₹1.30 L, " +
-        "R72 ₹2.29 L"
+    const val RECORD = "R179's V4 (the R151 picker plus a breakeven at +10%) on one year (20 Oct 2025 - 19 Oct 2026, 1 lot): R72 won 56.6% and " +
+        "made ₹3.25 L (the picker alone 51.9%, ₹3.72 L), R51 55.5% and ₹2.50 L (50.8%, ₹2.93 L), Liquidity 41.3% and ₹1.00 L (its own rules " +
+        "39.2%, ₹1.18 L); it failed the gates (twin q 1.00; R72's final win rate 53.5%)"
 
     private const val EPS = 1e-9
 
@@ -69,14 +67,11 @@ object StepTrail {
     fun chargesPerUnit(entry: Double, lot: Int): Double = ProfitLock.roundTripPerUnit(entry, lot).takeIf { it.isFinite() && it >= 0 } ?: 0.0
 
     /**
-     * The premium a long position filled at [entry] is stopped at on its entry: where one lot of [lot] units loses ₹1,500 after the round
-     * trip's charges, entry - 1,500 / lot + charges a unit, rounded UP to the [tick]. Null when nothing can be told (no fill, no lot size,
-     * no tick) or the level would be one tick or less.
+     * The rule's own stop at the entry for a long position filled at [entry]: none in this version (each arm keeps its own stop), so always
+     * null. Kept so the callers (and [tighterStop]) carry over unchanged: with null, the arm's own stop is the one that applies.
      */
-    fun stopLevel(entry: Double, lot: Int, tick: Double = TICK): Double? {
-        if (!usable(entry, lot, tick)) return null
-        return up(entry - STOP_RS / lot + chargesPerUnit(entry, lot), tick).takeIf { it > tick + EPS }
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun stopLevel(entry: Double, lot: Int, tick: Double = TICK): Double? = null
 
     /** The price at which the stop moves to breakeven: [BREAKEVEN_PCT] above the fill. */
     fun breakevenTrigger(entry: Double): Double = entry * (1 + BREAKEVEN_PCT / 100)
@@ -94,7 +89,7 @@ object StepTrail {
         return breakevenLevel(entry, lot, tick)?.takeIf { it < best - EPS }
     }
 
-    /** The rule's stop now: the higher of the entry's ₹1,500 a lot and the breakeven (null: neither). */
+    /** The rule's stop now: the breakeven once earned (null: not yet; the rule sets no entry stop, [stopLevel]). */
     fun levelOf(entry: Double, lot: Int, best: Double?, tick: Double = TICK): Double? =
         listOfNotNull(stopLevel(entry, lot, tick), trailLevel(entry, lot, best, tick)).maxOrNull()
 
@@ -112,23 +107,22 @@ object StepTrail {
     fun stopHit(ltp: Double?, stop: Double?): Boolean = stop != null && ltp != null && ltp.isFinite() && ltp > 0 && ltp <= stop + EPS
 
     /**
-     * What a stop resting at [trigger] is, for a position filled at [entry]: [WHY_STOP] at the entry's ₹1,500 a lot, [WHY_TRAIL] at the
-     * breakeven, within half a [tick]; null: neither (the arm's own stop or lock).
+     * What a stop resting at [trigger] is, for a position filled at [entry]: [WHY_TRAIL] at the breakeven, within half a [tick]; null: not
+     * the rule's (the arm's own stop or lock).
      */
     fun whyAt(trigger: Double?, entry: Double, lot: Int, tick: Double = TICK): String? {
         if (trigger == null || !usable(entry, lot, tick)) return null
-        stopLevel(entry, lot, tick)?.let { if (abs(trigger - it) < tick / 2) return WHY_STOP }
         breakevenLevel(entry, lot, tick)?.let { if (abs(trigger - it) < tick / 2) return WHY_TRAIL }
         return null
     }
 
-    /** Whether [why] is one of the rule's exit words, either version's. */
-    fun isRuleWhy(why: String?): Boolean = why == WHY_STOP || why == WHY_TRAIL || why == OLD_WHY_STOP || why == OLD_WHY_TRAIL
+    /** Whether [why] is one of the rule's exit words, this version's or the first's (older records). */
+    fun isRuleWhy(why: String?): Boolean = why == WHY_STOP || why == WHY_TRAIL || why == OLD_WHY_TRAIL
 
-    /** Whether [why] is the rule's entry stop, either version's (a stop hit, for the findings). */
-    fun isRuleStop(why: String?): Boolean = why == WHY_STOP || why == OLD_WHY_STOP
+    /** Whether [why] is the rule's entry stop (the first version's ₹500, on older records: a stop hit, for the findings). */
+    fun isRuleStop(why: String?): Boolean = why == WHY_STOP
 
-    /** An exit reason as a fill card or a line shows it: the rule's own words (either version) with [STATUS] after them; any other as it is. */
+    /** An exit reason as a fill card or a line shows it: the rule's own words (this version's or the first's) with [STATUS] after them; any other as it is. */
     fun words(why: String): String = if (isRuleWhy(why)) "$why ($STATUS)" else why
 
     private fun usable(entry: Double, lot: Int, tick: Double): Boolean = entry.isFinite() && entry > 0 && lot > 0 && tick.isFinite() && tick > 0

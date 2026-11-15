@@ -169,7 +169,7 @@ internal object IraBots {
         com.optionslab.ira.BotTrades.Trade(p.arm, p.symbol, p.right, p.qty, p.entry, p.entryTime, p.signalBar, p.exit, p.exitTime, p.why,
             p.charges, p.live, p.level, p.target, p.ladder, p.peak, trough = p.low, lot = p.lot,
             // 22 Oct: Boss's own rules (the ₹500 trail, the breakeven at +10%) keep a trade out of the plain-rules record, labelled.
-            // 15 Nov: the ₹1,500 stop rule too (failed gates, Boss's exception; [com.optionslab.app.data.OrbArms.Position.ownExits]).
+            // 15 Nov: the breakeven rule too (failed gates, Boss's exception; [com.optionslab.app.data.OrbArms.Position.ownExits]).
             trail = p.ownExits, rules = p.ownExitsLabel, fixed = p.fixed)
 
     /**
@@ -275,7 +275,7 @@ internal object IraBots {
             val out = p.exitTime ?: return@mapNotNull null
             val gross = p.grossPnl ?: return@mapNotNull null
             // Boss's opt-in Liquidity paper trail (13 Oct): its trades as a group of their own, never mixed into the book's.
-            // 15 Nov: the ₹1,500 stop rule's trades a group of their own too ([OrbArms.Position.ownExitsLabel]).
+            // 15 Nov: the breakeven rule's trades a group of their own too ([OrbArms.Position.ownExitsLabel]).
             val name = com.optionslab.ira.BotTrades.label(p.arm) + (p.ownExitsLabel?.let { " ($it)" } ?: "")
             com.optionslab.ira.WeakLink.Trade(name, p.entryTime, out, p.why, gross - p.charges)
         }
@@ -406,7 +406,7 @@ internal object IraBots {
             val back = com.optionslab.engine.orb.RetiredArms.of(a.arm.source)?.let { com.optionslab.engine.orb.RetiredArms.UNRETIRED_ON }
             // Liquidity on its plain rules only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) or breakeven at +10%
             // (22 Oct) are not the rules' record.
-            // 15 Nov: nor the ₹1,500 stop rule's ([OrbArms.Position.ownExits]).
+            // 15 Nov: nor the breakeven rule's ([OrbArms.Position.ownExits]).
             val mine = closed.filter { if (a.arm.liquidity) it.arm in liquidity && !it.day.isBefore(since) && !it.ownExits
                     else it.arm == a.arm.source && (back == null || !it.day.isBefore(back)) }
                 .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }

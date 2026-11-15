@@ -30,7 +30,7 @@ object ForwardRecords {
      */
     fun liquidity(closed: List<OrbArms.Position>): List<ForwardCheck.Trade> {
         val books = LiquidityRules.BOOKS.map { it.source }.toSet()
-        // 15 Nov: the ₹1,500 stop rule's trades left out too ([OrbArms.Position.ownExits]: not the rules' own exits).
+        // 15 Nov: the breakeven rule's trades left out too ([OrbArms.Position.ownExits]: not the rules' own exits).
         return closed.filter { it.arm in books && !it.open && !it.live && !it.ownExits }.map { ForwardCheck.Trade(it.day, net(it, perLot = true)) }
     }
 

@@ -12,12 +12,12 @@ import kotlinx.coroutines.launch
 
 /**
  * 15 Nov 2026 (Boss's stop rule on Liquidity, R51 and R72; per lot; CLAUDE.md's fifth exception, FAILED GATES): Boss's switch, ON by
- * default. Its second version (Boss: "Make it 1.5k stoploss", "Instead 10% breakeven, make it 5% breakeven") replaced the morning's ₹500
- * step trail under the same switch, so Boss's on / off carries over.
+ * default. Its third version (Boss: "Switch to + picker + breakeven at +10% (V4)") replaced the morning's ₹500 step trail under the same
+ * switch, so Boss's on / off carries over.
  *
  * On, every NEW trade of Liquidity 15+5 (every book and index), R51 Donchian 20 and R72 Breadth Donchian - paper and its live copy -
- * enters with [StepTrail]'s stop beside its own exits: where it loses ₹1,500 a lot after charges at the entry (only where tighter than the
- * arm's own stop), then breakeven (the fill plus the charges) once the option is 5% above the fill, never down. A trade keeps the rule it
+ * enters with [StepTrail]'s breakeven beside its own exits (its own stop stays): the stop moves to breakeven (the fill plus the charges)
+ * once the option is 10% above the fill, never down. A trade keeps the rule it
  * entered with (the flag is written on the trade, and its best price or step with it), so a restart applies it to the positions already
  * open without reading this switch, and a change of the switch never moves a stop already resting at Zerodha.
  *
@@ -77,7 +77,7 @@ object StepTrailExits {
     /** The diagnostics line. Memory only. */
     fun line(): String = "${StepTrail.DIAG.replaceFirstChar { it.uppercase() }}: " + when {
         !loaded -> "not read yet (counts as on)"
-        on -> "on - new Liquidity 15+5, R51 and R72 trades start with a stop where they lose 1500 a lot after charges and move it to breakeven at 5 percent up, paper and live"
+        on -> "on - new Liquidity 15+5, R51 and R72 trades keep their own stop and move it to breakeven at 10 percent up, paper and live"
         else -> "off - new trades use the arms' own exits"
     }
 
@@ -87,12 +87,12 @@ object StepTrailExits {
      * What to say.
      */
     fun set(on: Boolean, pinConfirmed: Boolean = false, log: Boolean = true): String {
-        if (!on && !pinConfirmed) return "Turning the ₹1,500 stop and breakeven off puts the arms' own wider exits back, live too: it takes your PIN. Nothing changed."
+        if (!on && !pinConfirmed) return "Turning the breakeven at +10% off puts the arms' own exits back alone, live too: it takes your PIN. Nothing changed."
         // Review: the saved switch is read first (a worker thread: the card and the Undo both call this off the main thread), so a
         // flip before the start's read never records a change that did not happen.
         if (!loaded) load()
         synchronized(this) {
-            if (this.on == on) return "The ₹1,500 stop and breakeven are already ${if (on) "on" else "off"}."
+            if (this.on == on) return "The breakeven at +10% is already ${if (on) "on" else "off"}."
             this.on = on
             loaded = true
             switched = true
@@ -101,8 +101,8 @@ object StepTrailExits {
         runCatching { Diag.record("step-trail", "${StepTrail.LABEL}: ${if (on) "off → on" else "on → off"} (by you; new trades of Liquidity 15+5, R51 and R72)") }
         publish()
         if (log) runCatching { com.optionslab.app.ira.Autopilot.logStepTrail(on) }
-        return if (on) "On: new Liquidity 15+5, R51 and R72 trades start with a stop where they lose ₹1,500 a lot after charges, moved to " +
-            "breakeven once the option is 5% up, paper and live, beside their own exits (failed gates, your exception)."
+        return if (on) "On: new Liquidity 15+5, R51 and R72 trades keep their own stop and move it to breakeven once the option is 10% up, " +
+            "paper and live, beside their own exits (failed gates, your exception)."
         else "Off: new Liquidity 15+5, R51 and R72 trades use their own exits again. Open trades keep the exits they entered with."
     }
 

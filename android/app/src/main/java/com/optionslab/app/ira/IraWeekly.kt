@@ -200,7 +200,7 @@ internal object IraWeekly {
             if (exit.isBefore(from)) return@forEach
             // Liquidity's plain-rules record only: trades under Boss's opt-in Rs 500 paper trail (13 Oct) or breakeven at +10%
             // (22 Oct) are left out of it.
-            // 15 Nov: the ₹1,500 stop rule's trades too ([com.optionslab.app.data.OrbArms.Position.ownExits]).
+            // 15 Nov: the breakeven rule's trades too ([com.optionslab.app.data.OrbArms.Position.ownExits]).
             if (p.ownExits && !whole) return@forEach
             val net = (p.grossPnl ?: 0.0) - p.charges
             val book = books[p.arm]

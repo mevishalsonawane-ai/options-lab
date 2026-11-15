@@ -143,7 +143,7 @@ class TestApp : Application() {
         // 7 Nov: "Stop and target on my manual positions" is on in the app, but OFF for every other test (their live positions are
         // not what they test, and a protection placed on them would change their orders); its own tests turn it on.
         com.optionslab.app.data.ManualCover.resetForTest(on = false)
-        // 15 Nov: Boss's stop rule (₹1,500 a lot + breakeven at +5%) on Liquidity, R51 and R72 is on in the app, but OFF for every other test (their arms'
+        // 15 Nov: Boss's rule (breakeven at +10%) on Liquidity, R51 and R72 is on in the app, but OFF for every other test (their arms'
         // own exits are what they test, and stay covered); its own tests turn it on.
         com.optionslab.app.data.StepTrailExits.resetForTest(on = false)
         com.optionslab.app.data.OrderReviewHost.init(this)
