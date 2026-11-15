@@ -992,8 +992,9 @@ object OrbArms {
                 val check = if (p.timed) null else lp.timeStopMinutes.let { mins ->
                     p.entryTime.plusMinutes(mins).let { "%d-minute check at %02d:%02d".format(java.util.Locale.ENGLISH, mins, it.hour, it.minute) } }
                 TradeManagerHost.exitsOf("orb", m, listOfNotNull(p.target?.takeIf { lp.nextLevelTarget }?.let { "target on the index at %.2f".format(java.util.Locale.ENGLISH, it) }, check,
-                    // 15 Nov (Boss's exception): the ₹1,500 stop rule it entered with, labelled, at its stop now.
-                    fixedStopOf(p)?.let { "${FIXED.LABEL}: stop %.2f".format(java.util.Locale.ENGLISH, it) })
+                    // 15 Nov (Boss's exception): the ₹1,500 stop rule it entered with, labelled, at its stop now. The label holds a "%"
+                    // ("+5%"), so it is joined after the number is formatted, never put into the format pattern.
+                    fixedStopOf(p)?.let { FIXED.LABEL + ": stop " + "%.2f".format(java.util.Locale.ENGLISH, it) })
                     .joinToString(" · ").ifEmpty { null })
             }
             else -> TradeManagerHost.exitsOf("orb", m)
