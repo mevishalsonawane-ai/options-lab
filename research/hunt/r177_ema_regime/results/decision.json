@@ -1,0 +1,5234 @@
+{
+ "study": "R177-EMA",
+ "prereg": "research/hunt/r177_ema_regime/PREREG.md",
+ "m_total": 4950,
+ "tests": 270,
+ "passed": [],
+ "verdict": "rejected",
+ "headline_all_three": {
+  "1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.901 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9005,
+   "p_norm": 0.896,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6892,
+   "final_trades": 8,
+   "design_net": -19291,
+   "full_net": -26183
+  },
+  "2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.901 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9005,
+   "p_norm": 0.896,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -13406,
+   "final_trades": 8,
+   "design_net": -37071,
+   "full_net": -50477
+  },
+  "3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.901 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9005,
+   "p_norm": 0.896,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -19921,
+   "final_trades": 8,
+   "design_net": -54851,
+   "full_net": -74772
+  }
+ },
+ "nofill": {
+  "PLAIN": {
+   "NIFTY": 1,
+   "BANKNIFTY": 1
+  },
+  "ADX": {
+   "NIFTY": 1,
+   "BANKNIFTY": 1
+  },
+  "TREND": {
+   "NIFTY": 0,
+   "BANKNIFTY": 0
+  },
+  "ATR": {
+   "NIFTY": 1,
+   "BANKNIFTY": 1
+  },
+  "ALL": {
+   "NIFTY": 0,
+   "BANKNIFTY": 0
+  },
+  "ALL-H1B": {
+   "NIFTY": 0,
+   "BANKNIFTY": 0
+  },
+  "ALL-TWAP": {
+   "NIFTY": 0,
+   "BANKNIFTY": 0
+  },
+  "ALL-OR": {
+   "NIFTY": 0,
+   "BANKNIFTY": 0
+  },
+  "ALL-2R": {
+   "NIFTY": 0,
+   "BANKNIFTY": 0
+  },
+  "ALL-ITM": {
+   "NIFTY": 0,
+   "BANKNIFTY": 0
+  }
+ },
+ "cells": {
+  "PLAIN|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.931 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9305,
+   "p_norm": 0.931,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 4388,
+   "final_trades": 45,
+   "design_net": 5533,
+   "full_net": 9921
+  },
+  "PLAIN|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.931 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9305,
+   "p_norm": 0.931,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 10900,
+   "final_trades": 45,
+   "design_net": 16824,
+   "full_net": 27725
+  },
+  "PLAIN|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.931 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9305,
+   "p_norm": 0.931,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 17413,
+   "final_trades": 45,
+   "design_net": 28116,
+   "full_net": 45528
+  },
+  "PLAIN|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.999 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9985,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -9854,
+   "final_trades": 43,
+   "design_net": -49075,
+   "full_net": -58930
+  },
+  "PLAIN|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.999 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9985,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -17679,
+   "final_trades": 43,
+   "design_net": -93005,
+   "full_net": -110685
+  },
+  "PLAIN|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.999 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9985,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -25504,
+   "final_trades": 43,
+   "design_net": -136936,
+   "full_net": -162440
+  },
+  "PLAIN|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -5466,
+   "final_trades": 88,
+   "design_net": -43542,
+   "full_net": -49008
+  },
+  "PLAIN|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6779,
+   "final_trades": 88,
+   "design_net": -76181,
+   "full_net": -82960
+  },
+  "PLAIN|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -8091,
+   "final_trades": 88,
+   "design_net": -108820,
+   "full_net": -116911
+  },
+  "PLAIN|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.988 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9875,
+   "p_norm": 0.988,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -9877,
+   "final_trades": 41,
+   "design_net": -22425,
+   "full_net": -32302
+  },
+  "PLAIN|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.988 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9875,
+   "p_norm": 0.988,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -17819,
+   "final_trades": 41,
+   "design_net": -38761,
+   "full_net": -56580
+  },
+  "PLAIN|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.988 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9875,
+   "p_norm": 0.988,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -25761,
+   "final_trades": 41,
+   "design_net": -55097,
+   "full_net": -80858
+  },
+  "PLAIN|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.951 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9505,
+   "p_norm": 0.953,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 11640,
+   "final_trades": 45,
+   "design_net": -35870,
+   "full_net": -24230
+  },
+  "PLAIN|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.951 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9505,
+   "p_norm": 0.953,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 25404,
+   "final_trades": 45,
+   "design_net": -65793,
+   "full_net": -40389
+  },
+  "PLAIN|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.951 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9505,
+   "p_norm": 0.953,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 39169,
+   "final_trades": 45,
+   "design_net": -95716,
+   "full_net": -56547
+  },
+  "PLAIN|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9995,
+   "p_norm": 0.998,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 1763,
+   "final_trades": 86,
+   "design_net": -58295,
+   "full_net": -56532
+  },
+  "PLAIN|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9995,
+   "p_norm": 0.998,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 7586,
+   "final_trades": 86,
+   "design_net": -104554,
+   "full_net": -96969
+  },
+  "PLAIN|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9995,
+   "p_norm": 0.998,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 13408,
+   "final_trades": 86,
+   "design_net": -150813,
+   "full_net": -137405
+  },
+  "PLAIN|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.996 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.996,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -5489,
+   "final_trades": 86,
+   "design_net": -16892,
+   "full_net": -22381
+  },
+  "PLAIN|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.996 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.996,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6919,
+   "final_trades": 86,
+   "design_net": -21937,
+   "full_net": -28855
+  },
+  "PLAIN|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.996 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.996,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -8348,
+   "final_trades": 86,
+   "design_net": -26981,
+   "full_net": -35330
+  },
+  "PLAIN|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 1786,
+   "final_trades": 88,
+   "design_net": -84945,
+   "full_net": -83159
+  },
+  "PLAIN|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 7725,
+   "final_trades": 88,
+   "design_net": -158798,
+   "full_net": -151073
+  },
+  "PLAIN|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 13665,
+   "final_trades": 88,
+   "design_net": -232652,
+   "full_net": -218987
+  },
+  "PLAIN|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3703,
+   "final_trades": 174,
+   "design_net": -101837,
+   "full_net": -105540
+  },
+  "PLAIN|both|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 807,
+   "final_trades": 174,
+   "design_net": -180735,
+   "full_net": -179928
+  },
+  "PLAIN|both|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 5316,
+   "final_trades": 174,
+   "design_net": -259633,
+   "full_net": -254316
+  },
+  "ADX|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.979 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.9785,
+   "p_norm": 0.973,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2215,
+   "final_trades": 11,
+   "design_net": 23527,
+   "full_net": 21312
+  },
+  "ADX|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.979 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9785,
+   "p_norm": 0.973,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3911,
+   "final_trades": 11,
+   "design_net": 48612,
+   "full_net": 44702
+  },
+  "ADX|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.979 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9785,
+   "p_norm": 0.973,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -5606,
+   "final_trades": 11,
+   "design_net": 73697,
+   "full_net": 68091
+  },
+  "ADX|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "10 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -12274,
+   "final_trades": 10,
+   "design_net": -12212,
+   "full_net": -24486
+  },
+  "ADX|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "10 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -24076,
+   "final_trades": 10,
+   "design_net": -23291,
+   "full_net": -47368
+  },
+  "ADX|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "10 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -35878,
+   "final_trades": 10,
+   "design_net": -34371,
+   "full_net": -70249
+  },
+  "ADX|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "21 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -14489,
+   "final_trades": 21,
+   "design_net": 11315,
+   "full_net": -3174
+  },
+  "ADX|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "21 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -27987,
+   "final_trades": 21,
+   "design_net": 25321,
+   "full_net": -2666
+  },
+  "ADX|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "21 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -41485,
+   "final_trades": 21,
+   "design_net": 39327,
+   "full_net": -2158
+  },
+  "ADX|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.974 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.974,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2456,
+   "final_trades": 11,
+   "design_net": 18859,
+   "full_net": 16402
+  },
+  "ADX|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.974 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in final"
+   ],
+   "p_emp": 0.974,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -4393,
+   "final_trades": 11,
+   "design_net": 39181,
+   "full_net": 34787
+  },
+  "ADX|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.974 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.974,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6330,
+   "final_trades": 11,
+   "design_net": 59502,
+   "full_net": 53172
+  },
+  "ADX|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.704 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "15 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7041,
+   "p_norm": 0.712,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 13686,
+   "final_trades": 15,
+   "design_net": -13477,
+   "full_net": 210
+  },
+  "ADX|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.704 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "15 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7041,
+   "p_norm": 0.712,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 28080,
+   "final_trades": 15,
+   "design_net": -25632,
+   "full_net": 2449
+  },
+  "ADX|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.704 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "15 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7041,
+   "p_norm": 0.712,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 42475,
+   "final_trades": 15,
+   "design_net": -37787,
+   "full_net": 4688
+  },
+  "ADX|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.963 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "26 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.9625,
+   "p_norm": 0.965,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 11230,
+   "final_trades": 26,
+   "design_net": 5382,
+   "full_net": 16612
+  },
+  "ADX|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.963 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "26 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9625,
+   "p_norm": 0.965,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 23687,
+   "final_trades": 26,
+   "design_net": 13549,
+   "full_net": 37236
+  },
+  "ADX|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.963 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "26 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9625,
+   "p_norm": 0.965,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 36144,
+   "final_trades": 26,
+   "design_net": 21716,
+   "full_net": 57860
+  },
+  "ADX|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.999 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "22 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.999,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -4671,
+   "final_trades": 22,
+   "design_net": 42386,
+   "full_net": 37715
+  },
+  "ADX|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.999 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "22 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.999,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -8304,
+   "final_trades": 22,
+   "design_net": 87793,
+   "full_net": 79489
+  },
+  "ADX|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.999 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "22 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.999,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -11937,
+   "final_trades": 22,
+   "design_net": 133200,
+   "full_net": 121263
+  },
+  "ADX|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.990 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "25 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.99,
+   "p_norm": 0.984,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 1412,
+   "final_trades": 25,
+   "design_net": -25689,
+   "full_net": -24277
+  },
+  "ADX|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.990 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "25 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.99,
+   "p_norm": 0.984,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 4004,
+   "final_trades": 25,
+   "design_net": -48923,
+   "full_net": -44919
+  },
+  "ADX|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.990 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "25 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.99,
+   "p_norm": 0.984,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 6596,
+   "final_trades": 25,
+   "design_net": -72157,
+   "full_net": -65561
+  },
+  "ADX|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3259,
+   "final_trades": 47,
+   "design_net": 16697,
+   "full_net": 13438
+  },
+  "ADX|both|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -4300,
+   "final_trades": 47,
+   "design_net": 38870,
+   "full_net": 34570
+  },
+  "ADX|both|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -5340,
+   "final_trades": 47,
+   "design_net": 61042,
+   "full_net": 55702
+  },
+  "TREND|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.907 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "20 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9065,
+   "p_norm": 0.913,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3240,
+   "final_trades": 20,
+   "design_net": -22949,
+   "full_net": -26189
+  },
+  "TREND|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.907 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "20 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9065,
+   "p_norm": 0.913,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -5536,
+   "final_trades": 20,
+   "design_net": -44057,
+   "full_net": -49593
+  },
+  "TREND|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.907 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "20 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9065,
+   "p_norm": 0.913,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7832,
+   "final_trades": 20,
+   "design_net": -65165,
+   "full_net": -72997
+  },
+  "TREND|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.795 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "10 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7951,
+   "p_norm": 0.802,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 8708,
+   "final_trades": 10,
+   "design_net": -22297,
+   "full_net": -13590
+  },
+  "TREND|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.795 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "10 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7951,
+   "p_norm": 0.802,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 17887,
+   "final_trades": 10,
+   "design_net": -42707,
+   "full_net": -24820
+  },
+  "TREND|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.795 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "10 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7951,
+   "p_norm": 0.802,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 27067,
+   "final_trades": 10,
+   "design_net": -63117,
+   "full_net": -36050
+  },
+  "TREND|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.937 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "30 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9365,
+   "p_norm": 0.943,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 5467,
+   "final_trades": 30,
+   "design_net": -45246,
+   "full_net": -39779
+  },
+  "TREND|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.937 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "30 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9365,
+   "p_norm": 0.943,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 12351,
+   "final_trades": 30,
+   "design_net": -86764,
+   "full_net": -74413
+  },
+  "TREND|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.937 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "30 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9365,
+   "p_norm": 0.943,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 19234,
+   "final_trades": 30,
+   "design_net": -128282,
+   "full_net": -109047
+  },
+  "TREND|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.993 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "17 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.993,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -8778,
+   "final_trades": 17,
+   "design_net": -40908,
+   "full_net": -49685
+  },
+  "TREND|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.993 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "17 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.993,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -16753,
+   "final_trades": 17,
+   "design_net": -79691,
+   "full_net": -96444
+  },
+  "TREND|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.993 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "17 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.993,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -24728,
+   "final_trades": 17,
+   "design_net": -118475,
+   "full_net": -143203
+  },
+  "TREND|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.957 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.9565,
+   "p_norm": 0.95,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7500,
+   "final_trades": 11,
+   "design_net": -669,
+   "full_net": -8169
+  },
+  "TREND|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.957 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in final"
+   ],
+   "p_emp": 0.9565,
+   "p_norm": 0.95,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -14481,
+   "final_trades": 11,
+   "design_net": 1117,
+   "full_net": -13364
+  },
+  "TREND|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.957 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "11 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9565,
+   "p_norm": 0.95,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -21462,
+   "final_trades": 11,
+   "design_net": 2903,
+   "full_net": -18559
+  },
+  "TREND|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.997 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "28 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.997,
+   "p_norm": 0.997,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -16278,
+   "final_trades": 28,
+   "design_net": -41576,
+   "full_net": -57854
+  },
+  "TREND|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.997 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "28 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.997,
+   "p_norm": 0.997,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -31234,
+   "final_trades": 28,
+   "design_net": -78574,
+   "full_net": -109808
+  },
+  "TREND|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.997 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "28 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.997,
+   "p_norm": 0.997,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -46190,
+   "final_trades": 28,
+   "design_net": -115572,
+   "full_net": -161762
+  },
+  "TREND|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.996 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "37 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.996,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -12018,
+   "final_trades": 37,
+   "design_net": -63857,
+   "full_net": -75874
+  },
+  "TREND|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.996 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "37 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.996,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -22289,
+   "final_trades": 37,
+   "design_net": -123748,
+   "full_net": -146037
+  },
+  "TREND|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.996 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "37 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.996,
+   "p_norm": 0.996,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -32561,
+   "final_trades": 37,
+   "design_net": -183640,
+   "full_net": -216201
+  },
+  "TREND|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.955 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "21 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9545,
+   "p_norm": 0.956,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 1207,
+   "final_trades": 21,
+   "design_net": -22966,
+   "full_net": -21759
+  },
+  "TREND|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.955 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "21 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9545,
+   "p_norm": 0.956,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 3406,
+   "final_trades": 21,
+   "design_net": -41590,
+   "full_net": -38184
+  },
+  "TREND|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.955 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "21 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9545,
+   "p_norm": 0.956,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 5605,
+   "final_trades": 21,
+   "design_net": -60213,
+   "full_net": -54609
+  },
+  "TREND|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9995,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -10810,
+   "final_trades": 58,
+   "design_net": -86823,
+   "full_net": -97633
+  },
+  "TREND|both|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9995,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -18883,
+   "final_trades": 58,
+   "design_net": -165338,
+   "full_net": -184221
+  },
+  "TREND|both|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9995,
+   "p_norm": 0.999,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -26956,
+   "final_trades": 58,
+   "design_net": -243853,
+   "full_net": -270809
+  },
+  "ATR|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.917 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9165,
+   "p_norm": 0.918,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 4460,
+   "final_trades": 45,
+   "design_net": -206,
+   "full_net": 4254
+  },
+  "ATR|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.917 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9165,
+   "p_norm": 0.918,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 11044,
+   "final_trades": 45,
+   "design_net": 5346,
+   "full_net": 16390
+  },
+  "ATR|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.917 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9165,
+   "p_norm": 0.918,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 17627,
+   "final_trades": 45,
+   "design_net": 10898,
+   "full_net": 28525
+  },
+  "ATR|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.997 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.997,
+   "p_norm": 0.995,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -8447,
+   "final_trades": 43,
+   "design_net": -63233,
+   "full_net": -71680
+  },
+  "ATR|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.997 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.997,
+   "p_norm": 0.995,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -14864,
+   "final_trades": 43,
+   "design_net": -121321,
+   "full_net": -136185
+  },
+  "ATR|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.997 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.997,
+   "p_norm": 0.995,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -21282,
+   "final_trades": 43,
+   "design_net": -179408,
+   "full_net": -200690
+  },
+  "ATR|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.998 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9975,
+   "p_norm": 0.997,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3987,
+   "final_trades": 88,
+   "design_net": -63439,
+   "full_net": -67426
+  },
+  "ATR|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.998 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9975,
+   "p_norm": 0.997,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3821,
+   "final_trades": 88,
+   "design_net": -115975,
+   "full_net": -119795
+  },
+  "ATR|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.998 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9975,
+   "p_norm": 0.997,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3654,
+   "final_trades": 88,
+   "design_net": -168510,
+   "full_net": -172165
+  },
+  "ATR|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.961 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.961,
+   "p_norm": 0.962,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7927,
+   "final_trades": 41,
+   "design_net": -12706,
+   "full_net": -20634
+  },
+  "ATR|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.961 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.961,
+   "p_norm": 0.962,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -13919,
+   "final_trades": 41,
+   "design_net": -19324,
+   "full_net": -33243
+  },
+  "ATR|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.961 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.961,
+   "p_norm": 0.962,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -19911,
+   "final_trades": 41,
+   "design_net": -25942,
+   "full_net": -45853
+  },
+  "ATR|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.934 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9335,
+   "p_norm": 0.935,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 10069,
+   "final_trades": 45,
+   "design_net": -36941,
+   "full_net": -26872
+  },
+  "ATR|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.934 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9335,
+   "p_norm": 0.935,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 22262,
+   "final_trades": 45,
+   "design_net": -67934,
+   "full_net": -45673
+  },
+  "ATR|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.934 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9335,
+   "p_norm": 0.935,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 34455,
+   "final_trades": 45,
+   "design_net": -98928,
+   "full_net": -64473
+  },
+  "ATR|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.990 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9895,
+   "p_norm": 0.991,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2142,
+   "final_trades": 86,
+   "design_net": -49647,
+   "full_net": -47505
+  },
+  "ATR|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.990 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9895,
+   "p_norm": 0.991,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 8343,
+   "final_trades": 86,
+   "design_net": -87258,
+   "full_net": -78916
+  },
+  "ATR|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.990 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9895,
+   "p_norm": 0.991,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 14544,
+   "final_trades": 86,
+   "design_net": -124870,
+   "full_net": -110326
+  },
+  "ATR|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.984 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.984,
+   "p_norm": 0.989,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3467,
+   "final_trades": 86,
+   "design_net": -12913,
+   "full_net": -16380
+  },
+  "ATR|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.984 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.984,
+   "p_norm": 0.989,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2875,
+   "final_trades": 86,
+   "design_net": -13978,
+   "full_net": -16854
+  },
+  "ATR|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.984 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.984,
+   "p_norm": 0.989,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2284,
+   "final_trades": 86,
+   "design_net": -15044,
+   "full_net": -17327
+  },
+  "ATR|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.998,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 1622,
+   "final_trades": 88,
+   "design_net": -100173,
+   "full_net": -98552
+  },
+  "ATR|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.998,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 7397,
+   "final_trades": 88,
+   "design_net": -189255,
+   "full_net": -181858
+  },
+  "ATR|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.998,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 13173,
+   "final_trades": 88,
+   "design_net": -278336,
+   "full_net": -265164
+  },
+  "ATR|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1845,
+   "final_trades": 174,
+   "design_net": -113086,
+   "full_net": -114932
+  },
+  "ATR|both|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 4522,
+   "final_trades": 174,
+   "design_net": -203233,
+   "full_net": -198711
+  },
+  "ATR|both|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 10889,
+   "final_trades": 174,
+   "design_net": -293380,
+   "full_net": -282491
+  },
+  "ALL|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.981 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.981,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6459,
+   "final_trades": 4,
+   "design_net": -6167,
+   "full_net": -12625
+  },
+  "ALL|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.981 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.981,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -12729,
+   "final_trades": 4,
+   "design_net": -11955,
+   "full_net": -24684
+  },
+  "ALL|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.981 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.981,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -18999,
+   "final_trades": 4,
+   "design_net": -17744,
+   "full_net": -36743
+  },
+  "ALL|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.777 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7771,
+   "p_norm": 0.72,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -432,
+   "final_trades": 1,
+   "design_net": -6282,
+   "full_net": -6714
+  },
+  "ALL|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.777 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7771,
+   "p_norm": 0.72,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -816,
+   "final_trades": 1,
+   "design_net": -12187,
+   "full_net": -13004
+  },
+  "ALL|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.777 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7771,
+   "p_norm": 0.72,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1201,
+   "final_trades": 1,
+   "design_net": -18092,
+   "full_net": -19293
+  },
+  "ALL|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.9795,
+   "p_norm": 0.983,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6891,
+   "final_trades": 5,
+   "design_net": -12449,
+   "full_net": -19340
+  },
+  "ALL|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9795,
+   "p_norm": 0.983,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -13545,
+   "final_trades": 5,
+   "design_net": -24143,
+   "full_net": -37688
+  },
+  "ALL|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9795,
+   "p_norm": 0.983,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -20200,
+   "final_trades": 5,
+   "design_net": -35836,
+   "full_net": -56036
+  },
+  "ALL|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.934 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.934,
+   "p_norm": 0.909,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2503,
+   "final_trades": 2,
+   "design_net": -7040,
+   "full_net": -9544
+  },
+  "ALL|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.934 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.934,
+   "p_norm": 0.909,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -4912,
+   "final_trades": 2,
+   "design_net": -13798,
+   "full_net": -18710
+  },
+  "ALL|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.934 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.934,
+   "p_norm": 0.909,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7321,
+   "final_trades": 2,
+   "design_net": -20555,
+   "full_net": -27876
+  },
+  "ALL|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.294 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.2944,
+   "p_norm": 0.158,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2502,
+   "final_trades": 1,
+   "design_net": 199,
+   "full_net": 2701
+  },
+  "ALL|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.294 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.2944,
+   "p_norm": 0.158,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 5051,
+   "final_trades": 1,
+   "design_net": 870,
+   "full_net": 5921
+  },
+  "ALL|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.294 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.2944,
+   "p_norm": 0.158,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 7600,
+   "final_trades": 1,
+   "design_net": 1540,
+   "full_net": 9140
+  },
+  "ALL|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.301 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.3008,
+   "p_norm": 0.33,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1,
+   "final_trades": 3,
+   "design_net": -6842,
+   "full_net": -6843
+  },
+  "ALL|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.301 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3008,
+   "p_norm": 0.33,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 139,
+   "final_trades": 3,
+   "design_net": -12928,
+   "full_net": -12789
+  },
+  "ALL|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.301 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3008,
+   "p_norm": 0.33,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 279,
+   "final_trades": 3,
+   "design_net": -19015,
+   "full_net": -18736
+  },
+  "ALL|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.995 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9945,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -8962,
+   "final_trades": 6,
+   "design_net": -13207,
+   "full_net": -22169
+  },
+  "ALL|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.995 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9945,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -17641,
+   "final_trades": 6,
+   "design_net": -25753,
+   "full_net": -43394
+  },
+  "ALL|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.995 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9945,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -26320,
+   "final_trades": 6,
+   "design_net": -38299,
+   "full_net": -64619
+  },
+  "ALL|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.265 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2649,
+   "p_norm": 0.268,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2070,
+   "final_trades": 2,
+   "design_net": -6084,
+   "full_net": -4013
+  },
+  "ALL|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.265 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2649,
+   "p_norm": 0.268,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 4235,
+   "final_trades": 2,
+   "design_net": -11318,
+   "full_net": -7083
+  },
+  "ALL|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.265 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2649,
+   "p_norm": 0.268,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 6399,
+   "final_trades": 2,
+   "design_net": -16552,
+   "full_net": -10153
+  },
+  "ALL|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.901 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9005,
+   "p_norm": 0.896,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6892,
+   "final_trades": 8,
+   "design_net": -19291,
+   "full_net": -26183
+  },
+  "ALL|both|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.901 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9005,
+   "p_norm": 0.896,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -13406,
+   "final_trades": 8,
+   "design_net": -37071,
+   "full_net": -50477
+  },
+  "ALL|both|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.901 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9005,
+   "p_norm": 0.896,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -19921,
+   "final_trades": 8,
+   "design_net": -54851,
+   "full_net": -74772
+  },
+  "ALL-H1B|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.946 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.946,
+   "p_norm": 0.955,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7265,
+   "final_trades": 5,
+   "design_net": -8812,
+   "full_net": -16077
+  },
+  "ALL-H1B|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.946 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.946,
+   "p_norm": 0.955,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -14294,
+   "final_trades": 5,
+   "design_net": -17389,
+   "full_net": -31682
+  },
+  "ALL-H1B|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.946 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in final"
+   ],
+   "p_emp": 0.946,
+   "p_norm": 0.955,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -21323,
+   "final_trades": 5,
+   "design_net": -25965,
+   "full_net": -47288
+  },
+  "ALL-H1B|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.788 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7881,
+   "p_norm": 0.739,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -432,
+   "final_trades": 1,
+   "design_net": -1010,
+   "full_net": -1442
+  },
+  "ALL-H1B|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.788 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7881,
+   "p_norm": 0.739,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -816,
+   "final_trades": 1,
+   "design_net": -1737,
+   "full_net": -2553
+  },
+  "ALL-H1B|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.788 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7881,
+   "p_norm": 0.739,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1201,
+   "final_trades": 1,
+   "design_net": -2464,
+   "full_net": -3664
+  },
+  "ALL-H1B|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.964 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.9635,
+   "p_norm": 0.966,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7697,
+   "final_trades": 6,
+   "design_net": -9822,
+   "full_net": -17519
+  },
+  "ALL-H1B|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.964 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9635,
+   "p_norm": 0.966,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -15110,
+   "final_trades": 6,
+   "design_net": -19125,
+   "full_net": -34236
+  },
+  "ALL-H1B|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.964 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9635,
+   "p_norm": 0.966,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -22524,
+   "final_trades": 6,
+   "design_net": -28429,
+   "full_net": -50952
+  },
+  "ALL-H1B|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.930 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.93,
+   "p_norm": 0.915,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2503,
+   "final_trades": 2,
+   "design_net": -6766,
+   "full_net": -9269
+  },
+  "ALL-H1B|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.930 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.93,
+   "p_norm": 0.915,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -4912,
+   "final_trades": 2,
+   "design_net": -13343,
+   "full_net": -18255
+  },
+  "ALL-H1B|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.930 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.93,
+   "p_norm": 0.915,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7321,
+   "final_trades": 2,
+   "design_net": -19920,
+   "full_net": -27242
+  },
+  "ALL-H1B|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.303 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3028,
+   "p_norm": 0.163,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2502,
+   "final_trades": 1,
+   "design_net": 710,
+   "full_net": 3212
+  },
+  "ALL-H1B|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.303 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3028,
+   "p_norm": 0.163,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 5051,
+   "final_trades": 1,
+   "design_net": 1703,
+   "full_net": 6754
+  },
+  "ALL-H1B|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.303 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3028,
+   "p_norm": 0.163,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 7600,
+   "final_trades": 1,
+   "design_net": 2697,
+   "full_net": 10297
+  },
+  "ALL-H1B|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.309 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.3093,
+   "p_norm": 0.343,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1,
+   "final_trades": 3,
+   "design_net": -6056,
+   "full_net": -6057
+  },
+  "ALL-H1B|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.309 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.3093,
+   "p_norm": 0.343,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 139,
+   "final_trades": 3,
+   "design_net": -11640,
+   "full_net": -11501
+  },
+  "ALL-H1B|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.309 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3093,
+   "p_norm": 0.343,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 279,
+   "final_trades": 3,
+   "design_net": -17224,
+   "full_net": -16945
+  },
+  "ALL-H1B|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.974 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "7 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.9735,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -9768,
+   "final_trades": 7,
+   "design_net": -15578,
+   "full_net": -25347
+  },
+  "ALL-H1B|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.974 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "7 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9735,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -19206,
+   "final_trades": 7,
+   "design_net": -30732,
+   "full_net": -49938
+  },
+  "ALL-H1B|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.974 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "7 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9735,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -28644,
+   "final_trades": 7,
+   "design_net": -45886,
+   "full_net": -74529
+  },
+  "ALL-H1B|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.280 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2799,
+   "p_norm": 0.276,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2070,
+   "final_trades": 2,
+   "design_net": -300,
+   "full_net": 1770
+  },
+  "ALL-H1B|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.280 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2799,
+   "p_norm": 0.276,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 4235,
+   "final_trades": 2,
+   "design_net": -33,
+   "full_net": 4201
+  },
+  "ALL-H1B|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.280 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.2799,
+   "p_norm": 0.276,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 6399,
+   "final_trades": 2,
+   "design_net": 233,
+   "full_net": 6632
+  },
+  "ALL-H1B|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.882 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "9 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.8816,
+   "p_norm": 0.88,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7698,
+   "final_trades": 9,
+   "design_net": -15878,
+   "full_net": -23576
+  },
+  "ALL-H1B|both|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.882 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "9 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.8816,
+   "p_norm": 0.88,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -14971,
+   "final_trades": 9,
+   "design_net": -30765,
+   "full_net": -45737
+  },
+  "ALL-H1B|both|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.882 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "9 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.8816,
+   "p_norm": 0.88,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -22245,
+   "final_trades": 9,
+   "design_net": -45652,
+   "full_net": -67897
+  },
+  "ALL-TWAP|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.977 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.9765,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6459,
+   "final_trades": 4,
+   "design_net": -5351,
+   "full_net": -11810
+  },
+  "ALL-TWAP|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.977 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9765,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -12729,
+   "final_trades": 4,
+   "design_net": -10371,
+   "full_net": -23100
+  },
+  "ALL-TWAP|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.977 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9765,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -18999,
+   "final_trades": 4,
+   "design_net": -15392,
+   "full_net": -34391
+  },
+  "ALL-TWAP|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.772 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7721,
+   "p_norm": 0.716,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -432,
+   "final_trades": 1,
+   "design_net": -6282,
+   "full_net": -6714
+  },
+  "ALL-TWAP|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.772 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7721,
+   "p_norm": 0.716,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -816,
+   "final_trades": 1,
+   "design_net": -12187,
+   "full_net": -13004
+  },
+  "ALL-TWAP|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.772 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7721,
+   "p_norm": 0.716,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1201,
+   "final_trades": 1,
+   "design_net": -18092,
+   "full_net": -19293
+  },
+  "ALL-TWAP|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.976 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.9755,
+   "p_norm": 0.983,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6891,
+   "final_trades": 5,
+   "design_net": -11633,
+   "full_net": -18524
+  },
+  "ALL-TWAP|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.976 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9755,
+   "p_norm": 0.983,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -13545,
+   "final_trades": 5,
+   "design_net": -22559,
+   "full_net": -36104
+  },
+  "ALL-TWAP|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.976 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9755,
+   "p_norm": 0.983,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -20200,
+   "final_trades": 5,
+   "design_net": -33484,
+   "full_net": -53684
+  },
+  "ALL-TWAP|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.931 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.9305,
+   "p_norm": 0.909,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2503,
+   "final_trades": 2,
+   "design_net": -8641,
+   "full_net": -11145
+  },
+  "ALL-TWAP|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.931 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9305,
+   "p_norm": 0.909,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -4912,
+   "final_trades": 2,
+   "design_net": -16952,
+   "full_net": -21864
+  },
+  "ALL-TWAP|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.931 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9305,
+   "p_norm": 0.909,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7321,
+   "final_trades": 2,
+   "design_net": -25263,
+   "full_net": -32584
+  },
+  "ALL-TWAP|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.303 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3033,
+   "p_norm": 0.169,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2502,
+   "final_trades": 1,
+   "design_net": 199,
+   "full_net": 2701
+  },
+  "ALL-TWAP|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.303 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3033,
+   "p_norm": 0.169,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 5051,
+   "final_trades": 1,
+   "design_net": 870,
+   "full_net": 5921
+  },
+  "ALL-TWAP|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.303 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3033,
+   "p_norm": 0.169,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 7600,
+   "final_trades": 1,
+   "design_net": 1540,
+   "full_net": 9140
+  },
+  "ALL-TWAP|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.308 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.3083,
+   "p_norm": 0.344,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1,
+   "final_trades": 3,
+   "design_net": -8442,
+   "full_net": -8444
+  },
+  "ALL-TWAP|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.308 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3083,
+   "p_norm": 0.344,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 139,
+   "final_trades": 3,
+   "design_net": -16083,
+   "full_net": -15944
+  },
+  "ALL-TWAP|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.308 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3083,
+   "p_norm": 0.344,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 279,
+   "final_trades": 3,
+   "design_net": -23723,
+   "full_net": -23444
+  },
+  "ALL-TWAP|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.994 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.994,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -8962,
+   "final_trades": 6,
+   "design_net": -13992,
+   "full_net": -22954
+  },
+  "ALL-TWAP|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.994 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.994,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -17641,
+   "final_trades": 6,
+   "design_net": -27323,
+   "full_net": -44964
+  },
+  "ALL-TWAP|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.994 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.994,
+   "p_norm": 0.992,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -26320,
+   "final_trades": 6,
+   "design_net": -40655,
+   "full_net": -66975
+  },
+  "ALL-TWAP|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.282 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2819,
+   "p_norm": 0.278,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2070,
+   "final_trades": 2,
+   "design_net": -6084,
+   "full_net": -4013
+  },
+  "ALL-TWAP|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.282 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2819,
+   "p_norm": 0.278,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 4235,
+   "final_trades": 2,
+   "design_net": -11318,
+   "full_net": -7083
+  },
+  "ALL-TWAP|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.282 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2819,
+   "p_norm": 0.278,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 6399,
+   "final_trades": 2,
+   "design_net": -16552,
+   "full_net": -10153
+  },
+  "ALL-TWAP|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.902 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9015,
+   "p_norm": 0.898,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6892,
+   "final_trades": 8,
+   "design_net": -20076,
+   "full_net": -26968
+  },
+  "ALL-TWAP|both|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.902 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9015,
+   "p_norm": 0.898,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -13406,
+   "final_trades": 8,
+   "design_net": -38641,
+   "full_net": -52048
+  },
+  "ALL-TWAP|both|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.902 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9015,
+   "p_norm": 0.898,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -19921,
+   "final_trades": 8,
+   "design_net": -57206,
+   "full_net": -77127
+  },
+  "ALL-OR|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1169,
+   "final_trades": 1,
+   "design_net": 3487,
+   "full_net": 2318
+  },
+  "ALL-OR|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2291,
+   "final_trades": 1,
+   "design_net": 7068,
+   "full_net": 4777
+  },
+  "ALL-OR|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3413,
+   "final_trades": 1,
+   "design_net": 10650,
+   "full_net": 7236
+  },
+  "ALL-OR|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -4865,
+   "full_net": -4865
+  },
+  "ALL-OR|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -9541,
+   "full_net": -9541
+  },
+  "ALL-OR|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -14217,
+   "full_net": -14217
+  },
+  "ALL-OR|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1169,
+   "final_trades": 1,
+   "design_net": -1378,
+   "full_net": -2547
+  },
+  "ALL-OR|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2291,
+   "final_trades": 1,
+   "design_net": -2473,
+   "full_net": -4764
+  },
+  "ALL-OR|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 0.978,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3413,
+   "final_trades": 1,
+   "design_net": -3568,
+   "full_net": -6981
+  },
+  "ALL-OR|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.712 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7121,
+   "p_norm": 0.741,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -772,
+   "final_trades": 1,
+   "design_net": -6394,
+   "full_net": -7165
+  },
+  "ALL-OR|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.712 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7121,
+   "p_norm": 0.741,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1496,
+   "final_trades": 1,
+   "design_net": -12552,
+   "full_net": -14048
+  },
+  "ALL-OR|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.712 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7121,
+   "p_norm": 0.741,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2221,
+   "final_trades": 1,
+   "design_net": -18709,
+   "full_net": -20930
+  },
+  "ALL-OR|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -3041,
+   "full_net": -3041
+  },
+  "ALL-OR|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -5892,
+   "full_net": -5892
+  },
+  "ALL-OR|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -8744,
+   "full_net": -8744
+  },
+  "ALL-OR|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.712 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7121,
+   "p_norm": 0.741,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -772,
+   "final_trades": 1,
+   "design_net": -9434,
+   "full_net": -10206
+  },
+  "ALL-OR|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.712 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7121,
+   "p_norm": 0.741,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1496,
+   "final_trades": 1,
+   "design_net": -18444,
+   "full_net": -19940
+  },
+  "ALL-OR|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.712 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7121,
+   "p_norm": 0.741,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2221,
+   "final_trades": 1,
+   "design_net": -27453,
+   "full_net": -29674
+  },
+  "ALL-OR|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.965 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.965,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1941,
+   "final_trades": 2,
+   "design_net": -2907,
+   "full_net": -4848
+  },
+  "ALL-OR|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.965 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.965,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3787,
+   "final_trades": 2,
+   "design_net": -5483,
+   "full_net": -9271
+  },
+  "ALL-OR|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.965 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.965,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -5634,
+   "final_trades": 2,
+   "design_net": -8060,
+   "full_net": -13694
+  },
+  "ALL-OR|both|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -7905,
+   "full_net": -7905
+  },
+  "ALL-OR|both|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -15433,
+   "full_net": -15433
+  },
+  "ALL-OR|both|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 1.000 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "0 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 1.0,
+   "p_norm": 1.0,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 0,
+   "final_trades": 0,
+   "design_net": -22961,
+   "full_net": -22961
+  },
+  "ALL-OR|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.965 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.965,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1941,
+   "final_trades": 2,
+   "design_net": -10812,
+   "full_net": -12753
+  },
+  "ALL-OR|both|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.965 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.965,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -3787,
+   "final_trades": 2,
+   "design_net": -20917,
+   "full_net": -24704
+  },
+  "ALL-OR|both|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.965 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.965,
+   "p_norm": 0.97,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -5634,
+   "final_trades": 2,
+   "design_net": -31021,
+   "full_net": -36655
+  },
+  "ALL-2R|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.98,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6459,
+   "final_trades": 4,
+   "design_net": -6167,
+   "full_net": -12625
+  },
+  "ALL-2R|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.98,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -12729,
+   "final_trades": 4,
+   "design_net": -11955,
+   "full_net": -24684
+  },
+  "ALL-2R|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.98,
+   "p_norm": 0.982,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -18999,
+   "final_trades": 4,
+   "design_net": -17744,
+   "full_net": -36743
+  },
+  "ALL-2R|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.786 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7861,
+   "p_norm": 0.725,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -432,
+   "final_trades": 1,
+   "design_net": -3737,
+   "full_net": -4169
+  },
+  "ALL-2R|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.786 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7861,
+   "p_norm": 0.725,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -816,
+   "final_trades": 1,
+   "design_net": -7096,
+   "full_net": -7912
+  },
+  "ALL-2R|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.786 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7861,
+   "p_norm": 0.725,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1201,
+   "final_trades": 1,
+   "design_net": -10455,
+   "full_net": -11656
+  },
+  "ALL-2R|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.983 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.983,
+   "p_norm": 0.985,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6891,
+   "final_trades": 5,
+   "design_net": -9903,
+   "full_net": -16794
+  },
+  "ALL-2R|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.983 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.983,
+   "p_norm": 0.985,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -13545,
+   "final_trades": 5,
+   "design_net": -19051,
+   "full_net": -32597
+  },
+  "ALL-2R|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.983 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.983,
+   "p_norm": 0.985,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -20200,
+   "final_trades": 5,
+   "design_net": -28199,
+   "full_net": -48399
+  },
+  "ALL-2R|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.933 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.933,
+   "p_norm": 0.914,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2503,
+   "final_trades": 2,
+   "design_net": -6399,
+   "full_net": -8902
+  },
+  "ALL-2R|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.933 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.933,
+   "p_norm": 0.914,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -4912,
+   "final_trades": 2,
+   "design_net": -12515,
+   "full_net": -17427
+  },
+  "ALL-2R|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.933 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.933,
+   "p_norm": 0.914,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7321,
+   "final_trades": 2,
+   "design_net": -18630,
+   "full_net": -25951
+  },
+  "ALL-2R|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.307 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3073,
+   "p_norm": 0.171,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2502,
+   "final_trades": 1,
+   "design_net": 6255,
+   "full_net": 8757
+  },
+  "ALL-2R|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.307 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3073,
+   "p_norm": 0.171,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 5051,
+   "final_trades": 1,
+   "design_net": 12982,
+   "full_net": 18033
+  },
+  "ALL-2R|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.307 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3073,
+   "p_norm": 0.171,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 7600,
+   "final_trades": 1,
+   "design_net": 19710,
+   "full_net": 27310
+  },
+  "ALL-2R|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.312 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.3123,
+   "p_norm": 0.349,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1,
+   "final_trades": 3,
+   "design_net": -144,
+   "full_net": -145
+  },
+  "ALL-2R|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.312 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3123,
+   "p_norm": 0.349,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 139,
+   "final_trades": 3,
+   "design_net": 468,
+   "full_net": 606
+  },
+  "ALL-2R|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.312 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3123,
+   "p_norm": 0.349,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 279,
+   "final_trades": 3,
+   "design_net": 1079,
+   "full_net": 1358
+  },
+  "ALL-2R|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.994 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9935,
+   "p_norm": 0.993,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -8962,
+   "final_trades": 6,
+   "design_net": -12565,
+   "full_net": -21528
+  },
+  "ALL-2R|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.994 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9935,
+   "p_norm": 0.993,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -17641,
+   "final_trades": 6,
+   "design_net": -24470,
+   "full_net": -42111
+  },
+  "ALL-2R|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.994 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9935,
+   "p_norm": 0.993,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -26320,
+   "final_trades": 6,
+   "design_net": -36375,
+   "full_net": -62695
+  },
+  "ALL-2R|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.273 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.2734,
+   "p_norm": 0.28,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2070,
+   "final_trades": 2,
+   "design_net": 2518,
+   "full_net": 4589
+  },
+  "ALL-2R|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.273 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.2734,
+   "p_norm": 0.28,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 4235,
+   "final_trades": 2,
+   "design_net": 5886,
+   "full_net": 10121
+  },
+  "ALL-2R|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.273 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.2734,
+   "p_norm": 0.28,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 6399,
+   "final_trades": 2,
+   "design_net": 9255,
+   "full_net": 15654
+  },
+  "ALL-2R|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.913 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9125,
+   "p_norm": 0.908,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -6892,
+   "final_trades": 8,
+   "design_net": -10047,
+   "full_net": -16939
+  },
+  "ALL-2R|both|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.913 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9125,
+   "p_norm": 0.908,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -13406,
+   "final_trades": 8,
+   "design_net": -18584,
+   "full_net": -31990
+  },
+  "ALL-2R|both|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.913 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9125,
+   "p_norm": 0.908,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -19921,
+   "final_trades": 8,
+   "design_net": -27120,
+   "full_net": -47041
+  },
+  "ALL-ITM|NIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.98,
+   "p_norm": 0.984,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7476,
+   "final_trades": 4,
+   "design_net": -6779,
+   "full_net": -14255
+  },
+  "ALL-ITM|NIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.98,
+   "p_norm": 0.984,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -14764,
+   "final_trades": 4,
+   "design_net": -13180,
+   "full_net": -27945
+  },
+  "ALL-ITM|NIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.980 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "4 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.98,
+   "p_norm": 0.984,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -22052,
+   "final_trades": 4,
+   "design_net": -19582,
+   "full_net": -41634
+  },
+  "ALL-ITM|NIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.786 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7861,
+   "p_norm": 0.705,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -410,
+   "final_trades": 1,
+   "design_net": -6990,
+   "full_net": -7400
+  },
+  "ALL-ITM|NIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.786 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.7861,
+   "p_norm": 0.705,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -772,
+   "final_trades": 1,
+   "design_net": -13602,
+   "full_net": -14375
+  },
+  "ALL-ITM|NIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.786 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.7861,
+   "p_norm": 0.705,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -1135,
+   "final_trades": 1,
+   "design_net": -20215,
+   "full_net": -21350
+  },
+  "ALL-ITM|NIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.984 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9835,
+   "p_norm": 0.985,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7886,
+   "final_trades": 5,
+   "design_net": -13769,
+   "full_net": -21655
+  },
+  "ALL-ITM|NIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.984 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9835,
+   "p_norm": 0.985,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -15537,
+   "final_trades": 5,
+   "design_net": -26783,
+   "full_net": -42319
+  },
+  "ALL-ITM|NIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.984 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "5 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9835,
+   "p_norm": 0.985,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -23187,
+   "final_trades": 5,
+   "design_net": -39797,
+   "full_net": -62984
+  },
+  "ALL-ITM|BANKNIFTY|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.932 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.932,
+   "p_norm": 0.916,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -2690,
+   "final_trades": 2,
+   "design_net": -7511,
+   "full_net": -10201
+  },
+  "ALL-ITM|BANKNIFTY|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.932 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.932,
+   "p_norm": 0.916,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -5285,
+   "final_trades": 2,
+   "design_net": -14739,
+   "full_net": -20024
+  },
+  "ALL-ITM|BANKNIFTY|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.932 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.932,
+   "p_norm": 0.916,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7880,
+   "final_trades": 2,
+   "design_net": -21966,
+   "full_net": -29847
+  },
+  "ALL-ITM|BANKNIFTY|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.314 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3143,
+   "p_norm": 0.174,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2982,
+   "final_trades": 1,
+   "design_net": 1155,
+   "full_net": 4137
+  },
+  "ALL-ITM|BANKNIFTY|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.314 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3143,
+   "p_norm": 0.174,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 6010,
+   "final_trades": 1,
+   "design_net": 2782,
+   "full_net": 8793
+  },
+  "ALL-ITM|BANKNIFTY|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.314 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "1 final trades < 40",
+    "final net without the top 5 <= 0"
+   ],
+   "p_emp": 0.3143,
+   "p_norm": 0.174,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 9039,
+   "final_trades": 1,
+   "design_net": 4410,
+   "full_net": 13449
+  },
+  "ALL-ITM|BANKNIFTY|both|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.311 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.3113,
+   "p_norm": 0.336,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 292,
+   "final_trades": 3,
+   "design_net": -6356,
+   "full_net": -6064
+  },
+  "ALL-ITM|BANKNIFTY|both|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.311 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3113,
+   "p_norm": 0.336,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 725,
+   "final_trades": 3,
+   "design_net": -11956,
+   "full_net": -11231
+  },
+  "ALL-ITM|BANKNIFTY|both|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.311 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "3 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.3113,
+   "p_norm": 0.336,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 1159,
+   "final_trades": 3,
+   "design_net": -17557,
+   "full_net": -16398
+  },
+  "ALL-ITM|both|C|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.993 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9925,
+   "p_norm": 0.993,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -10166,
+   "final_trades": 6,
+   "design_net": -14290,
+   "full_net": -24456
+  },
+  "ALL-ITM|both|C|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.993 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.9925,
+   "p_norm": 0.993,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -20049,
+   "final_trades": 6,
+   "design_net": -27919,
+   "full_net": -47968
+  },
+  "ALL-ITM|both|C|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.993 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "6 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.9925,
+   "p_norm": 0.993,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -29932,
+   "final_trades": 6,
+   "design_net": -41548,
+   "full_net": -71480
+  },
+  "ALL-ITM|both|P|1": {
+   "passed": false,
+   "fails": [
+    "twin p 0.280 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2804,
+   "p_norm": 0.282,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 2572,
+   "final_trades": 2,
+   "design_net": -5835,
+   "full_net": -3263
+  },
+  "ALL-ITM|both|P|2": {
+   "passed": false,
+   "fails": [
+    "twin p 0.280 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0"
+   ],
+   "p_emp": 0.2804,
+   "p_norm": 0.282,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 5238,
+   "final_trades": 2,
+   "design_net": -10820,
+   "full_net": -5582
+  },
+  "ALL-ITM|both|P|3": {
+   "passed": false,
+   "fails": [
+    "twin p 0.280 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "2 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.2804,
+   "p_norm": 0.282,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": 7904,
+   "final_trades": 2,
+   "design_net": -15805,
+   "full_net": -7901
+  },
+  "ALL-ITM|both|both|1": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.910 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.91,
+   "p_norm": 0.908,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -7594,
+   "final_trades": 8,
+   "design_net": -20125,
+   "full_net": -27719
+  },
+  "ALL-ITM|both|both|2": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.910 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design"
+   ],
+   "p_emp": 0.91,
+   "p_norm": 0.908,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -14811,
+   "final_trades": 8,
+   "design_net": -38739,
+   "full_net": -53550
+  },
+  "ALL-ITM|both|both|3": {
+   "passed": false,
+   "fails": [
+    "final net <= 0",
+    "twin p 0.910 >= 0.05",
+    "BH q 1.00 > 0.10",
+    "8 final trades < 40",
+    "final net without the top 5 <= 0",
+    "design walk-forward net <= 0",
+    "outside the account stop rule (Rs 40k drawdown / -Rs 13k month) in design, final"
+   ],
+   "p_emp": 0.91,
+   "p_norm": 0.908,
+   "q_all": 1.0,
+   "q_r177": 1.0,
+   "final_net": -22028,
+   "final_trades": 8,
+   "design_net": -57353,
+   "full_net": -79381
+  }
+ }
+}

@@ -55,7 +55,7 @@ def write(cells: dict, nofill: dict, trades: dict) -> None:
     a("- The repo's `research-data` release (R171's loader): NIFTY and BANKNIFTY index minutes and real 1-minute option "
       "prices (one expiry a day, 20 strikes). The Drive lake is not reachable from this session, so **nothing after 23 Feb "
       "2026 is used** (R171's data-hole rule), and FINNIFTY / SENSEX / MIDCPNIFTY (no options here) are not traded.")
-    a(f"- Full period {K.PERIOD_NAME['full']}; design {K.PERIOD_NAME['design']}; {K.PERIOD_NAME['final']}, read once.")
+    a(f"- Periods: {K.PERIOD_NAME['full']}; {K.PERIOD_NAME['design']}; {K.PERIOD_NAME['final']}, read once.")
     a("- The index's own expiry days are skipped. Lots: the lot in force on the trade date (NIFTY 25 -> 75 from 28 Nov "
       "2024 -> 65 from 31 Dec 2025; BANKNIFTY 15 -> 30 -> 35 -> 30).")
     nf = ", ".join(f"{r} {sum(v.values())}" for r, v in nofill.items())
@@ -159,6 +159,13 @@ def write(cells: dict, nofill: dict, trades: dict) -> None:
     a("- Crossovers are computed on the continuous 15-minute series (R44's convention), so a cross can come from the "
       "overnight gap and fire on the 09:15 bar (entry 09:30).")
     a("- Twins do not stop overlapping random entries (R44's design). Apr - Oct 2026 could not be read here.")
+    a("- The twins enter on the same days as the rule, and a crossover day is a day that moved, so random entries on those "
+      "days do well (the plain crossover's twins average about +Rs 1 L over the last 6 months at 1 lot, while random "
+      "entries on every final day lost about Rs 100-175 a trade). This makes the twin bar harder to clear for the "
+      "unfiltered rules. It does not change the verdict: the 29 cells in profit in both design and final had 1-3 final "
+      "trades (the ALL family's BANKNIFTY puts) or under 40 (ADX on BANKNIFTY, 26), or lost once their best 5 trades "
+      "are removed (the plain and ATR-stop NIFTY calls, 45 final trades), and the headline cells lose on their own.")
+    a("- Lots: Zerodha's flat Rs 20 an order is the same at any size, so 2 and 3 lots lose less per lot than 1 lot.")
     (K.RESULTS / "report.md").write_text("\n".join(L) + "\n")
     write_summary(C, passed)
 
@@ -186,6 +193,27 @@ def write_summary(C: dict, passed: list) -> None:
         c = C[(r, "both", "both", 1)]["per"]
         a(f"| {K.RULE_NAME[r]} | {short(c['full'])} | {short(c['final'])} | {rs(c['full']['max_dd'])} | "
           f"{rs(c['full']['worst_month'])} |")
+    a("")
+    adx = C[("ADX", "both", "both", 1)]["per"]
+    pf, af = plb["full"], allb["full"]
+    lowp = min(c["p_emp"] for c in C.values())
+    a("In plain words:")
+    a("")
+    a(f"- **Stacking the filters cut the trades, not the losing.** Trades fell from {pf['trades']} to {af['trades']} and the "
+      f"total loss from {rs(pf['net'])} to {rs(af['net'])}, but the loss per trade got worse "
+      f"({rs(pf['net'] / max(pf['trades'], 1))} -> {rs(af['net'] / max(af['trades'], 1))}) and the win rate fell "
+      f"({pf['win']:.0f}% -> {af['win']:.0f}%). In the last 6 months all three together gave only "
+      f"{allb['final']['trades']} trades ({allb['final']['win']:.0f}% won).")
+    a(f"- The only version in profit over the whole period was **ADX alone**: {short(adx['full'])}, all of it in the design "
+      f"months; in the last 6 months its net was {rs(adx['final']['net'])} on {adx['final']['trades']} trades.")
+    a("- The PDF's other choices (1-hour trend as EMA 9 > 21, a plain TWAP, clearing the opening range, a 2R target, a "
+      "1-ITM strike) did not change the picture: every one lost over the full period.")
+    a(f"- **No version beat random entries** on the same days: the lowest twin p of all {len(C)} tests is {lowp:.2f} (the "
+      "bar is 0.05), and the multiple-testing q is 1.00 everywhere.")
+    a("- This matches every earlier test here: EMA 8/21 + ADX (R44 / R51: -Rs 50,947 on 3,129 design trades, -Rs 32,749 "
+      "on 1,262 final), ADX + EMA + ATR (book-porwal-08: -Rs 1.23 L on 1,115 trades), VWAP filters (H46, 2,400 variants), "
+      "ATR stops (R17 / R20) and ADX (rejected in 77 of 91 tests).")
+    a("- **Nothing in the app changes.** It should not be added as an arm.")
     a("")
     a("All three together, per index and lots (net (trades, win %)):")
     a("")

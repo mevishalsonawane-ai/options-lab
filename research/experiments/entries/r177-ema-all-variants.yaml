@@ -1,0 +1,50 @@
+id: r177-ema-all-variants
+title: 'R177-EMA: all three with: H1 EMA 9 > 21; TWAP; clearing the opening range; a 2R target; a 1-ITM strike (15-minute
+  index bars, NIFTY + BANKNIFTY options, 1-3 lots)'
+family: patterns-indicators
+date: '2026-11-15'
+doc: research/hunt/r177_ema_regime/results/report.md
+hypothesis: 'Boss''s PDF: a 9/21 EMA crossover bot fails in chop and three regime filters (ADX(14) > 25; 1-hour trend up +
+  price above VWAP; a stop at 2 x ATR(14)) fix it. Boss: ''What if all 3 are together''. This group: all three with: H1 EMA
+  9 > 21; TWAP; clearing the opening range; a 2R target; a 1-ITM strike. Does it make money after costs and beat random entries?'
+data_version: repo research-data release (nifty_prev, nifty_year, banknifty_prev_year_wide, banknifty_year_wide) via R171's
+  loader; sessions before 24 Feb 2026 only; the Drive lake was not reachable
+period:
+  design: 2024-05-06..2025-08-22 (4 folds)
+  holdout: 2025-08-25..2026-02-23 final = last 6 months, read once (results/FINAL_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index spot (15-minute EMA 9/21 crossover; ADX(14), ATR(14) on 15-minute bars; 1-hour bars completed
+  by the signal bar; session VWAP weighted by option-chain volume, the index has no volume)'
+- ATM option of the nearest expiry (1-ITM variant)
+model_or_rule: 'all three with: H1 EMA 9 > 21; TWAP; clearing the opening range; a 2R target; a 1-ITM strike; exits: opposite
+  crossover, the index stop where used, 2R where used, 15:10 square-off; one position a side; expiry days skipped; 1, 2, 3
+  lots'
+settings: research/hunt/r177_ema_regime/r177cfg.py; PREREG.md section 2
+prereg: research/hunt/r177_ema_regime/PREREG.md
+variants_tried: 135
+results:
+  summary: 'ALL-H1B 1 lot: full 30 trades, win 27%, -Rs 23,576, max DD Rs 23,576; last 6 months 9 trades, win 11%, -Rs 7,698
+    | ALL-H1B 2 lots: full 30 trades, win 27%, -Rs 45,737, max DD Rs 45,737; last 6 months 9 trades, win 11%, -Rs 14,971 |
+    ALL-H1B 3 lots: full 30 trades, win 27%, -Rs 67,897, max DD Rs 67,897; last 6 months 9 trades, win 11%, -Rs 22,245 | ALL-TWAP
+    1 lot: full 40 trades, win 30%, -Rs 26,968, max DD Rs 35,472; last 6 months 8 trades, win 12%, -Rs 6,892 | ALL-TWAP 2
+    lots: full 40 trades, win 30%, -Rs 52,048, max DD Rs 69,670; last 6 months 8 trades, win 12%, -Rs 13,406 | ALL-TWAP 3
+    lots: full 40 trades, win 30%, -Rs 77,127, max DD Rs 1.04 L; last 6 months 8 trades, win 12%, -Rs 19,921 | ALL-OR 1 lot:
+    full 17 trades, win 35%, -Rs 12,753, max DD Rs 23,221; last 6 months 2 trades, win 0%, -Rs 1,941 | ALL-OR 2 lots: full
+    17 trades, win 35%, -Rs 24,704, max DD Rs 45,971; last 6 months 2 trades, win 0%, -Rs 3,787 | ALL-OR 3 lots: full 17 trades,
+    win 35%, -Rs 36,655, max DD Rs 68,720; last 6 months 2 trades, win 0%, -Rs 5,634 | ALL-2R 1 lot: full 40 trades, win 32%,
+    -Rs 16,939, max DD Rs 33,772; last 6 months 8 trades, win 12%, -Rs 6,892 | ALL-2R 2 lots: full 40 trades, win 32%, -Rs
+    31,990, max DD Rs 66,365; last 6 months 8 trades, win 12%, -Rs 13,406 | ALL-2R 3 lots: full 40 trades, win 32%, -Rs 47,041,
+    max DD Rs 98,958; last 6 months 8 trades, win 12%, -Rs 19,921 | ALL-ITM 1 lot: full 40 trades, win 30%, -Rs 27,719, max
+    DD Rs 38,253; last 6 months 8 trades, win 12%, -Rs 7,594 | ALL-ITM 2 lots: full 40 trades, win 30%, -Rs 53,550, max DD
+    Rs 75,232; last 6 months 8 trades, win 12%, -Rs 14,811 | ALL-ITM 3 lots: full 40 trades, win 30%, -Rs 79,381, max DD Rs
+    1.12 L; last 6 months 8 trades, win 12%, -Rs 22,028. Both indices, calls + puts shown; 0 of 135 cells (index x side x
+    lots) passed the gates; lowest twin p 0.27.'
+  costs: 'dated Zerodha charges on the whole quantity; R17 fills (slippage from the 5-minute volume per position; index stops
+    sold as stop orders: x0.999 minus 2x the half-spread)'
+holdout_read: true
+verdict: rejected
+notes: BH q = 1.00 on every cell (m = 4,950). Signal on the underlying; nothing in the app changes. Folder r177_ema_regime
+  (origin/main already had an R177, r177_vp_trap).

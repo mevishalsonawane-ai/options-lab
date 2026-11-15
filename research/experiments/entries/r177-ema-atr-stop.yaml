@@ -1,0 +1,36 @@
+id: r177-ema-atr-stop
+title: 'R177-EMA: 9/21 crossover + a 2 x ATR(14) index stop only (15-minute index bars, NIFTY + BANKNIFTY options, 1-3 lots)'
+family: patterns-indicators
+date: '2026-11-15'
+doc: research/hunt/r177_ema_regime/results/report.md
+hypothesis: 'Boss''s PDF: a 9/21 EMA crossover bot fails in chop and three regime filters (ADX(14) > 25; 1-hour trend up +
+  price above VWAP; a stop at 2 x ATR(14)) fix it. Boss: ''What if all 3 are together''. This group: 9/21 crossover + a 2
+  x ATR(14) index stop only. Does it make money after costs and beat random entries?'
+data_version: repo research-data release (nifty_prev, nifty_year, banknifty_prev_year_wide, banknifty_year_wide) via R171's
+  loader; sessions before 24 Feb 2026 only; the Drive lake was not reachable
+period:
+  design: 2024-05-06..2025-08-22 (4 folds)
+  holdout: 2025-08-25..2026-02-23 final = last 6 months, read once (results/FINAL_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+features:
+- 'signal source: the index spot (15-minute EMA 9/21 crossover; ADX(14), ATR(14) on 15-minute bars; 1-hour bars completed
+  by the signal bar; session VWAP weighted by option-chain volume, the index has no volume)'
+- ATM option of the nearest expiry (1-ITM variant)
+model_or_rule: '9/21 crossover + a 2 x ATR(14) index stop only; exits: opposite crossover, the index stop where used, 2R where
+  used, 15:10 square-off; one position a side; expiry days skipped; 1, 2, 3 lots'
+settings: research/hunt/r177_ema_regime/r177cfg.py; PREREG.md section 2
+prereg: research/hunt/r177_ema_regime/PREREG.md
+variants_tried: 27
+results:
+  summary: 'ATR 1 lot: full 660 trades, win 36%, -Rs 1.15 L, max DD Rs 1.64 L; last 6 months 174 trades, win 40%, -Rs 1,845
+    | ATR 2 lots: full 660 trades, win 36%, -Rs 1.99 L, max DD Rs 3.09 L; last 6 months 174 trades, win 40%, Rs 4,522 | ATR
+    3 lots: full 660 trades, win 36%, -Rs 2.82 L, max DD Rs 4.54 L; last 6 months 174 trades, win 40%, Rs 10,889. Both indices,
+    calls + puts shown; 0 of 27 cells (index x side x lots) passed the gates; lowest twin p 0.92.'
+  costs: 'dated Zerodha charges on the whole quantity; R17 fills (slippage from the 5-minute volume per position; index stops
+    sold as stop orders: x0.999 minus 2x the half-spread)'
+holdout_read: true
+verdict: rejected
+notes: BH q = 1.00 on every cell (m = 4,950). Signal on the underlying; nothing in the app changes. Folder r177_ema_regime
+  (origin/main already had an R177, r177_vp_trap).

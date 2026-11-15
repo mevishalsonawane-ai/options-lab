@@ -418,3 +418,29 @@ def test_gate():
     assert len(f) == 7
     assert S.gate(good, dict(good, worst_month=-13000.0), 0.01, 0.10) == []
     assert S.gate(good, dict(good, worst_month=-13000.01), 0.01, 0.10) != []
+
+
+# ------------------------------------------------------------------------------------------------ report
+def test_rs_format():
+    import r177report as REP
+    assert REP.rs(0) == "Rs 0"
+    assert REP.rs(-1234.4) == "-Rs 1,234"
+    assert REP.rs(123456) == "Rs 1.23 L"
+    assert REP.rs(-100000) == "-Rs 1.00 L"
+
+
+def test_report_writes_on_synthetic_cells(tmp_path, monkeypatch):
+    import r177report as REP
+    monkeypatch.setattr(K, "RESULTS", tmp_path)
+    tr = [_t(date(2024, 6, 3), 500.0), _t(date(2025, 9, 1), -800.0, side="P", reason="stop")]
+    cells = {}
+    for k in K.TESTS:
+        li = K.LOTS.index(k[3])
+        per = {p: S.stats(S.select(tr, k[1], k[2], p), li) for p in K.PERIODS}
+        cells[k] = dict(per=per, p_emp=1.0, p_norm=1.0, twin_mean=0.0, folds=[0, 0, 0, 0], q_all=1.0, q_own=1.0,
+                        fails=S.gate(per["final"], per["design"], 1.0, 1.0))
+    REP.write(cells, {r: {"NIFTY": 0, "BANKNIFTY": 0} for r in K.RULES}, {})
+    rep = (tmp_path / "report.md").read_text()
+    summ = (tmp_path / "summary.md").read_text()
+    assert "0 of 270" in rep and "It does not work" in summ
+    assert "| plain 9/21 crossover (no filter) |" in summ
