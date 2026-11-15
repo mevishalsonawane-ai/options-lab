@@ -105,7 +105,52 @@ def main_a():
     print("1 entry (Amendment A)")
 
 
+
+def main_b():
+    """Amendment B's entries: SG (Rs 1,000 gap under each step) and K1SG (K1 + SG)."""
+    r = json.loads((RESULTS / "year_b.json").read_text())
+    d = json.loads((RESULTS / "decision_b.json").read_text())
+    for key, name, title in (("S1k", "SG", "Rs 1,000 a lot stop + Rs 1,000 gap under each Rs 500 step"),
+                             ("K1S", "K1SG", "K1 skip + Rs 1,000 a lot stop + Rs 1,000 gap under each Rs 500 step")):
+        parts = []
+        for a in ("LIQ", "R72", "R51"):
+            A, S = r["year"]["A@1"][a], r["year"][f"{key}@1"][a]
+            g = d[f"{a}:{name}"]
+            parts.append(f"{NAME[a]}: today {rs(A['net'])} -> {S['trades']} trades {rs(S['net'])} (win "
+                         f"{100 * S['win']:.0f}%); twin p {g['twin_p']}, BH q {g['q_all']}; failed: {'; '.join(g['fails'])}")
+        e = dict(
+            id=f"r177b-{name.lower()}",
+            title=f"R177 Amendment B {name}: {title}, on Liquidity 15+5, R72, R51 (last year)",
+            family="trade-management",
+            date="2026-11-15",
+            doc="research/hunt/r177_vp_trap/results/report.md",
+            hypothesis=("Boss (15 Nov): 'Test with 1000 gap on every step' - the step trail with the stop Rs 1,000 a lot "
+                        "under each step (cost at +Rs 1,000 a lot, +Rs 500 at +Rs 1,500, ...)" +
+                        (", on the trades K1 keeps." if name == "K1SG" else ".")),
+            data_version=("Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean "
+                          "stores built to 19 Oct (R106 clean_post)"),
+            period=dict(design="none fitted; early part 2025-10-20..2026-03-31",
+                        holdout="2026-04-01..2026-10-13 final (read again, data-led); whole year 2025-10-20..2026-10-19"),
+            instruments=["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"],
+            features=["signal source: the traded index (entries unchanged" + ("; K1 reads yesterday's TPO value area" if
+                      name == "K1SG" else "") + "); stops on the premium"],
+            model_or_rule=f"{title}; PREREG.md Amendment B",
+            settings="research/hunt/r177_vp_trap/r177study.py run_a(b=True); PREREG.md Amendment B",
+            prereg="research/hunt/r177_vp_trap/PREREG.md",
+            variants_tried=2,
+            results=dict(summary=" | ".join(parts) + ".",
+                         costs="dated Zerodha charges on the whole quantity; R17 fills (stops sold as stops, gaps at the open)"),
+            holdout_read=True,
+            verdict="rejected",
+            notes=f"BH m = {d['_m']['total']}. Chosen after seeing R176 / R177 on the same year. Nothing in the app changes.",
+        )
+        (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
+    print("2 entries (Amendment B)")
+
+
 if __name__ == "__main__":
     main()
     if (RESULTS / "decision_a.json").exists():
         main_a()
+    if (RESULTS / "decision_b.json").exists():
+        main_b()

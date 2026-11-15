@@ -1,6 +1,40 @@
 # R177: does the volume-profile "trap" idea (Boss's PDF, Cases 1, 2, 5) help?
 
-## Update: K1 skip + Rs 1,000 stop + Rs 500 step trail (Amendment A, Boss 15 Nov)
+## Update: a Rs 1,000 gap under each step (Amendment B, Boss 15 Nov)
+
+You asked to test a Rs 1,000 gap. Same Rs 1,000 a lot entry stop and the same steps (every Rs 500 a lot from +Rs 1,000),
+but the stop sits Rs 1,000 a lot under each step: **cost at +Rs 1,000, +Rs 500 at +Rs 1,500, +Rs 1,000 at +Rs 2,000**.
+
+**Better than the Rs 500 gap at every lot size, but still far below today's rules; it failed every gate.**
+
+Net over the year, all three arms together (today's rules / Rs 500 gap / **Rs 1,000 gap**):
+
+| | 1 lot | 2 lots | 3 lots |
+|---|---|---|---|
+| stop rule alone | Rs 6.37 L / -Rs 95k / **Rs 33k** | Rs 15.54 L / Rs 1.00 L / **Rs 3.52 L** | Rs 24.67 L / Rs 2.89 L / **Rs 6.67 L** |
+| with K1 skip | Rs 6.37 L / -Rs 38k / **Rs 81k** | Rs 15.54 L / Rs 2.01 L / **Rs 4.35 L** | Rs 24.67 L / Rs 4.34 L / **Rs 7.84 L** |
+
+Per arm, 1 lot (today's rules / **Rs 1,000 gap** / **Rs 1,000 gap + K1**):
+- Liquidity: Rs 1.18 L / Rs 9k / Rs 32k
+- R72: Rs 2.98 L / Rs 32k / Rs 45k
+- R51: Rs 2.21 L / -Rs 8k / Rs 5k
+
+With the R151 picker (R72 + R51), all three at 1 lot: today Rs 7.83 L -> Rs 1,000 gap Rs 2.54 L, with K1 Rs 2.93 L.
+
+- Winners grow (average win Rs 1,376 at 1 lot vs Rs 1,026 with the Rs 500 gap), but the win rate falls to 38% (48%
+  with the Rs 500 gap): the stop at cost catches many trades that touched +Rs 1,000 and came back. Today's rules: average
+  win Rs 1,744, win rate 45%.
+- The wider gap is still the main cost compared with today's rules: today's ladder lets the big trades run much further.
+- Worst day, all three at 1 lot: -Rs 54k today -> -Rs 34k (-Rs 30k with K1). Max drawdown Rs 1.59 L -> Rs 2.29 L
+  (Rs 2.39 L with K1). Worst month -Rs 1.46 L (-Rs 1.26 L with K1).
+- Twins: the Rs 1,000 gap alone lost to random exits (p = 1.0); K1 on top beat random skips on Liquidity (p 0.028), not
+  on R72 / R51 (p 0.18-0.19). BH q = 1.0 with 4,006 tests.
+
+**The pattern across today's tests:** every step trail we tried (Rs 500 or Rs 1,000 gap, with or without K1) earns much
+less than today's exits, because it sells the big winners early. The wider the gap, the less it hurts. The only rule that
+beat today's rules was **K1 alone on Liquidity** (Rs 1.18 L -> Rs 1.40 L), and even that is not proven.
+
+## Earlier update: K1 + Rs 1,000 stop + Rs 500 gap (Amendment A)
 
 You asked to put the Rs 1,000 a lot stop and the step trail (+Rs 500 locked at +Rs 1,000, +Rs 1,000 at +Rs 1,500, ...)
 on top of the K1 skip. Same year, same costs.

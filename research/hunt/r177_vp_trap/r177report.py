@@ -94,6 +94,25 @@ def build() -> str:
         for per in ("year", "early", "final", "six"):
             out += table(ra, per, 1, va)
         out += table(ra, "year", 3, va)
+    yb = RESULTS / "year_b.json"
+    if yb.exists():
+        rb = json.loads(yb.read_text())
+        db = json.loads((RESULTS / "decision_b.json").read_text())
+        out.append("\n## Amendment B: a Rs 1,000 gap under each step (SG alone, K1SG with K1)\n")
+        out.append("In the tables below 'S1k' = SG (Rs 1,000 a lot entry stop; from +Rs 1,000 a lot the stop sits Rs 1,000 a lot "
+                   "under each Rs 500 step: cost at +1,000, +500 at +1,500, ...) and 'K1S' = K1SG (K1 + SG). "
+                   f"BH m = {db['_m']['total']:,}.\n")
+        out.append("| arm : rule | passed | passes except account stop | twin p | BH q | q within the 6 | failed gates |"
+                   "\n|---|---|---|---|---|---|---|")
+        for k, g in db.items():
+            if k == "_m":
+                continue
+            out.append(f"| {k} | {'yes' if g['passed'] else '**no**'} | {'yes' if g['passed_except_account_stop'] else 'no'} | "
+                       f"{g['twin_p']} | {g['q_all']} | {g['q_own']} | {'; '.join(g['fails'])} |")
+        out.append("")
+        for per in ("year", "early", "final", "six"):
+            out += table(rb, per, 1, va)
+        out += table(rb, "year", 3, va)
     return "\n".join(out) + "\n"
 
 

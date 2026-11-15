@@ -1,0 +1,83 @@
+{
+ "LIQ:SG": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "R72:SG": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "R51:SG": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "LIQ:K1SG": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 0.1674,
+  "twin_p": 0.0279,
+  "passed_except_account_stop": false
+ },
+ "R72:K1SG": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 0.3752,
+  "twin_p": 0.1876,
+  "passed_except_account_stop": false
+ },
+ "R51:K1SG": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 0.3752,
+  "twin_p": 0.1796,
+  "passed_except_account_stop": false
+ },
+ "_m": {
+  "tests": 6,
+  "prior": 4000,
+  "total": 4006
+ }
+}
