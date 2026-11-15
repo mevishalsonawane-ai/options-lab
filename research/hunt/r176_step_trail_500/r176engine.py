@@ -176,10 +176,13 @@ def label(code: int, kind: str) -> str:
 
 def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lot: float = K.STEP,
           gap_per_lot: float = K.STEP, step_per_lot: float = K.STEP, inc_per_lot: float = -1.0,
-          trig_per_lot: float = -1.0, be_x: float = -1.0) -> list:
+          trig_per_lot: float = -1.0, be_x: float = -1.0, stop_net: float = -1.0) -> list:
     """(R177 Amendment C adds step_per_lot / inc_per_lot / trig_per_lot; the defaults are R176's rule.)
     be_x > 0 (R179): R162's breakeven lock - once the premium is up be_x (fraction of the raw fill), the stop moves to the
-    premium whose stop sale nets Rs 0 after charges (r106engine.stop_price with T = 0), exactly as r162engine 'be'."""
+    premium whose stop sale nets Rs 0 after charges (r106engine.stop_price with T = 0), exactly as r162engine 'be'.
+    stop_net > 0 (R179 Amendment A): a stop at the premium whose stop sale nets -stop_net rupees for the whole position after
+    charges and the expected stop slippage (r106engine.stop_price, as R152), used only where tighter than the arm's own
+    -15%; with on=False there is no step trail."""
     """Price one day's candidates (dicts with side, strike, er[, fx]) for `lots` lots, with (on=True) or without Boss's
     step trail. Trade dicts (None = no fill) as r152engine.price plus 'stop_kind'."""
     st = E.stack(und, D)
@@ -205,6 +208,11 @@ def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lo
             s0 = X.stop_price(real, qty, 0.0, ch, tks, E.SLIP[2], E.SLIP[3])
             lkt, lkk = be_x * raw * qty * (1 - 1e-12), (s0 - raw) * qty
         stop_abs, stop_f, step_amt, kind = levels(raw, real, qty, ex, on, lots, per_lot)
+        if stop_net > 0:
+            s_n = X.stop_price(real, qty, stop_net, ch, tks, E.SLIP[2], E.SLIP[3])
+            own = raw * (1.0 - ex.stop) if ex.stop >= 0 else -1.0
+            if s_n > 0 and s_n > own and s_n > stop_abs:
+                stop_abs, stop_f, kind = s_n, -1.0, "rupee"
         if step_amt > 0:
             step_amt = step_per_lot * lots
         a, b, rE, rX, r0, r1, r = simulate_step(C, int(c["er"]), int(sq), int(fx if fx is not None else -1), stop_f,

@@ -59,3 +59,21 @@ R51 1,673 / Rs 1,27,044, on the 13 Oct stores; the only expected gap is NIFTY's 
 
 pytest (synthetic): the BE lock in the simulator (moves to the net-zero premium after +10%, never lowers the stop, off by
 default), the gates (55% boundary, both periods, base nets), the BH count; look-ahead guard as R176.
+
+## Amendment A (15 Nov 2026, before any number for it was computed): a Rs 1,000 maximum loss
+
+Boss, 15 Nov 2026, after reading R179: *"15% is too much for the stoploss, i want 1k max loss for all the above strategies"*.
+
+- **Rule M**: on top of V4 (today's rules + R151 picker + BE lock) on R72 and R51, and of today's rules + BE lock on
+  Liquidity 15+5 (no picker): the stop is set at the premium whose stop sale nets **-Rs 1,000 after charges and the expected
+  stop slippage** (r106engine.stop_price, as R152), used only where it is tighter than the -15% stop (where -15% loses less,
+  -15% stays). A gap can still fill below it; how often is reported. Every other exit stays (BE lock, ladder / L25,
+  30-minute time stop, square-off).
+- **M1** = Rs 1,000 a lot (Rs 2,000 / 3,000 at 2 / 3 lots); **M2** = Rs 1,000 for the whole position at every lot size.
+  At 1 lot M1 = M2.
+- **Tests: 2** (M at 1 lot on R72 and R51); Liquidity and 2-3 lots reported. BH **m = 4,038 + 2 = 4,040**.
+- Gates (1 lot): win >= 55% in the year and the final; net >= today's rules (A) in the year and the final; net > 0 in every
+  period; random-exit twin vs V4 (500, seed 179) BH q <= 0.10; >= 40 final trades; the account stop rule (reported which
+  pass apart from it).
+- Window and periods as R179. Honesty: data-led follow-up on the same year; the final is read again
+  (`results/FINAL_READ_A`).

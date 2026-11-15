@@ -80,3 +80,28 @@ def test_gates():
 
 def test_counts():
     assert len(T.TESTS) == 8 and T.M_TOTAL == 4038
+
+
+def test_amendment_a_cap_and_loss_stats():
+    assert T.M_TOTAL_A == 4040
+    tr = [dict(why="stop500", net=-1200.0), dict(why="stop500", net=-990.0), dict(why="time", net=-1500.0),
+          dict(why="time", net=300.0)]
+    s = T.loss_stats(tr)
+    assert s == dict(cap_exits=2, over_1000=2, over_1000_cap=1, worst=-1500)
+    assert T.loss_stats([]) == dict(cap_exits=0, over_1000=0, over_1000_cap=0, worst=0)
+
+
+def test_cap_stop_nets_about_minus_1000():
+    import datetime
+    C = _flat(px=200.0)
+    C[2, 20] = 150.0                                               # deep dip: the cap (about -15.4 / unit) acts
+    qty = 65.0
+    raw, real, ef, tks = RX.entry_info(C, 10, 360, qty)
+    d = datetime.date(2026, 5, 4)
+    ch = lambda a, b: float(E.charges("NIFTY", np.array([a]), np.array([b]), qty, d)[0])  # noqa: E731
+    s = RX.stop_price(real, qty, 1000.0, ch, tks, E.SLIP[2], E.SLIP[3])
+    assert s > 200.0 * 0.85                                        # tighter than -15% at a Rs 200 premium
+    r = Z.simulate_step(C, 10, 360, -1, -1.0, -1.0, -1.0, 0.0, 0.0, NOTIME.steps_arr(), 0, -1.0, -1.0, 0.05, qty, 0.0,
+                        s, -1.0, *E.SLIP)
+    net = (r[3] - r[2]) * qty - ch(r[2], r[3])
+    assert r[5] == 20 and -1000.0 - 15.0 <= net <= -950.0           # about -Rs 1,000 after charges and stop slippage
