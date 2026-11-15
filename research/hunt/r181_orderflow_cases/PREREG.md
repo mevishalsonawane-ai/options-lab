@@ -231,3 +231,15 @@ and committed before the study code's first run on the recordings; no signal, tr
   two-stage exit.
 - "Price magnets" (single prints, imbalances, naked POCs) are context only in the guide; nothing is added for them.
 - No other change: same cases, twins, tests (15) and BH m = 4,066.
+
+## Amendment 2 (15 Nov 2026, AFTER the one run; post hoc, descriptive only, no new test)
+
+The run's level table showed the pre-registered contract shift (today's first-minute basis minus the prior day's
+last-minute basis) moving the levels by 100-160 BANKNIFTY points on ordinary days. The recorded basis (futures minus the
+index row) is noisy at the open and the close (for example 15 Oct: about 136 at midday, 260 at 15:27, 70 at 15:29), so the
+rule mostly added noise. The primary result stays as pre-registered. One sensitivity is added and labelled post hoc:
+- **No shift on the same contract** (the true day-on-day basis change is a few points); on the roll day (28 Oct) shift by
+  (the median basis of today's bars 0-9, before the first signal bar) minus (the prior day's median basis over bars
+  45-344, 10:00-15:00).
+- Reported as counts and rupees only, with no p value and no BH entry; it cannot change any verdict to "worth a forward
+  test" on its own.
