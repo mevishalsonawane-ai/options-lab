@@ -64,6 +64,8 @@ object OrderReviewHost {
      * Tuesday after a Monday holiday); an older one is left (its orders are no longer kept).
      */
     const val CATCH_UP_DAYS = 4L
+    /** 15 Nov (review): on a trading day the missed day's catch-up runs before 09:00 (or from [FROM]), never in market hours. */
+    const val CATCH_UP_BEFORE = 9 * 60
     /**
      * 15 Nov: the days of live-order snapshots kept: the catch-up's [CATCH_UP_DAYS], the review window's four days before it,
      * and one to spare. Older files are deleted ([pruneIfDue]).
@@ -138,11 +140,17 @@ object OrderReviewHost {
 
     private fun ms(t: LocalDateTime): Long = t.atZone(IST).toInstant().toEpochMilli()
 
-    /** The day to review now and whether it is the morning catch-up; null: not due. Memory only. */
-    internal fun due(now: java.time.ZonedDateTime, b: OrderReview.Book): Pair<LocalDate, Boolean>? {
+    /**
+     * The day to review now and whether it is the morning catch-up; null: not due. Memory only. [skipMissed]: a missed day's
+     * review failed in this call, so today's own is asked for (15 Nov).
+     */
+    internal fun due(now: java.time.ZonedDateTime, b: OrderReview.Book, skipMissed: Boolean = false): Pair<LocalDate, Boolean>? {
         val today = now.toLocalDate()
         val minute = now.hour * 60 + now.minute
-        missedDay(today, b)?.let { return it to false }
+        // 15 Nov (review): a missed day is caught up only outside NSE's hours (before 09:00 or from 15:45; any hour on a day with
+        // no session), so no new work runs while the market trades.
+        val quiet = !Market.isTradingDay(today) || minute < CATCH_UP_BEFORE || minute >= FROM
+        if (!skipMissed && quiet) missedDay(today, b)?.let { return it to false }
         if (Market.isTradingDay(today) && minute >= FROM && b.lastRun != today) return today to false
         if (minute in MORNING_FROM until MORNING_UNTIL) {
             val prev = prevTradingDay(today)
@@ -156,8 +164,8 @@ object OrderReviewHost {
     /**
      * 15 Nov (Boss's diagnostics: no review after 5 Nov): a day missed, because the app was not running that evening, was never
      * reviewed - the next evening reviewed only its own day. Now the most recent trading day before [today] is reviewed at the
-     * next run, whatever the hour and however many evenings were missed, and before today's own review (so today's never
-     * takes its place): only that one day (its window still reaches back up to four days, see [run]), and only when it is at
+     * next run outside market hours ([due]), however many evenings were missed, and before today's own review (so today's
+     * never takes its place; one that fails never holds today's up, [runIfDue]): only that one day (its window still reaches back up to four days, see [run]), and only when it is at
      * most [CATCH_UP_DAYS] back. A review that never ran has missed nothing: its first is the evening's.
      */
     private fun missedDay(today: LocalDate, b: OrderReview.Book): LocalDate? {
@@ -185,15 +193,25 @@ object OrderReviewHost {
             asked = true
             if (!com.optionslab.app.work.BackgroundBudget.allow(com.optionslab.ira.BudgetRule.Job.ORDER_REVIEW)) return false
             // 15 Nov: a missed day first, then (the same call: the evening job runs once) today's own review - two at most.
+            // Review: an Erase everything during the first stops the second (it would review the orders still in memory and
+            // save them after the erase); a missed day whose review fails never holds up today's own.
+            val gen = wipeGen
             var ran = false
+            var skipMissed = false
             var pass = 0
             while (pass < 2) {
                 pass++
-                val (day, morning) = due(now, _book.value) ?: break
+                if (gen != wipeGen) break
+                val (day, morning) = due(now, _book.value, skipMissed) ?: break
+                val catchUp = !skipMissed && !morning && day == missedDay(now.toLocalDate(), _book.value)
                 // 15 Nov: a review that throws is said in the diary (it used to fail without a word), and is tried again later.
                 val done = try { run(day, morning, nowMs) } catch (e: kotlinx.coroutines.CancellationException) { throw e
                 } catch (t: Throwable) { failed(day, "the review itself failed", t); null }
-                if (done == null) { retryAtMs = nowMs + RETRY_MS; break }
+                if (done == null) {
+                    retryAtMs = nowMs + RETRY_MS
+                    if (catchUp) { skipMissed = true; continue }
+                    break
+                }
                 ran = true
             }
             return ran
