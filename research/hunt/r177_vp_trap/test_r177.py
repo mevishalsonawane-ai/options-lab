@@ -143,4 +143,4 @@ def test_look_ahead_guard(seed):
 
 def test_amendment_a_counts():
     import r177study as R
-    assert R.M_TOTAL == 3997 and R.M_TOTAL_A == 4000 and R.M_TOTAL_B == 4006
+    assert R.M_TOTAL == 3997 and R.M_TOTAL_A == 4000 and R.M_TOTAL_B == 4006 and R.M_TOTAL_C == 4012

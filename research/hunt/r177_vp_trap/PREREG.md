@@ -115,3 +115,18 @@ Boss, 15 Nov 2026, after Amendment A: *"Test with 1000 gap on every step"*.
   selection twin against SG.
 - **Tests: 6 more** (2 variants x 3 arms); BH **m = 4,000 + 6 = 4,006**.
 - Honesty: chosen after seeing R176 / R177 on the same year; the final period is read again (`results/FINAL_READ_B`).
+
+## Amendment C (15 Nov 2026, before any number for it was computed): Rs 1,500 initial stop, up Rs 500 per Rs 1,000 gain
+
+Boss, 15 Nov 2026: *"I am asking about initial stoploss at 1500 and increase it by 500 on every 1000 gain"*.
+
+- **Stop rule C**: entry stop -Rs 1,500 a lot (rounded up to the tick; only where tighter than -15%, else the arm's own
+  -15% stays). For every Rs 1,000 a lot of best open P&L, the stop rises Rs 500 a lot: stop = entry +
+  (floor(best / 1,000 L) x 500 L - 1,500 L), rounded UP to the tick: -Rs 1,000 at +Rs 1,000, -Rs 500 at +Rs 2,000, cost at
+  +Rs 3,000, +Rs 500 at +Rs 4,000, ... It only moves up (the highest of it, the -15% stop and the ladder locks acts); no
+  target; every other exit stays; stops sold as stops (R17). Before charges, per lot.
+- Variants: **SC** = rule C alone; **K1SC** = K1 + rule C. Both tested; twins as Amendment B (SC: R176's random-exit twin;
+  K1SC: the selection twin against SC).
+- Window, periods, costs, pickers (descriptive), lots, gates: as Amendment A.
+- **Tests: 6 more**; BH **m = 4,006 + 6 = 4,012**.
+- Honesty: chosen after seeing R176 / R177 on the same year; the final period is read again (`results/FINAL_READ_C`).

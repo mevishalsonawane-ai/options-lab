@@ -326,3 +326,44 @@ def test_gap_1000_in_the_simulator():
     r5 = Z.simulate_step(C, 10, 360, -1, f, NOTIME.target, NOTIME.lock_trig, NOTIME.lock_keep, NOTIME.lock_trail,
                          NOTIME.steps_arr(), NOTIME.tmax, NOTIME.need, NOTIME.close_stop, 0.05, 65.0, 0.0, s, st, *E.SLIP)
     assert r5[5] == 17 and r5[1] > r[1]
+
+
+def _sim_c(C, qty, lots):
+    """R177 Amendment C: entry stop Rs 1,500 a lot; stop up Rs 500 a lot for every Rs 1,000 a lot of best profit."""
+    raw, real, ef, _ = X.entry_info(C, 10, 360, qty)
+    s, f, st, kind = Z.levels(raw, real, qty, NOTIME, True, lots, 1500.0)
+    r = Z.simulate_step(C, 10, 360, -1, f, NOTIME.target, NOTIME.lock_trig, NOTIME.lock_keep, NOTIME.lock_trail,
+                        NOTIME.steps_arr(), NOTIME.tmax, NOTIME.need, NOTIME.close_stop, 0.05, qty, 0.0, s,
+                        1000.0 * lots, *E.SLIP, 1500.0 * lots, 500.0 * lots, 1000.0 * lots)
+    return real, s, kind, r
+
+
+def test_amendment_c_levels_in_the_simulator():
+    # premium 300, lot 65: -15% = 255; Rs 1,500 / 65 = 23.1 -> entry stop ~277 (tighter, acts)
+    C = _flat(px=300.0)
+    C[1, 15] = 300.0 + 2100.0 / 65                                  # best ~ +2,0xx -> 2 steps: stop at -Rs 500 (~292.4)
+    C[2, 17], C[0, 17], C[3, 17] = 290.0, 296.0, 291.0              # falls through -500 but not through -1,000
+    real, s, kind, r = _sim_c(C, 65.0, 1)
+    assert kind == "rupee" and (real - s) * 65 <= 1500.0 and (real - s) * 65 > 1400.0
+    best = (C[1, 15] - real) * 65
+    k = np.floor(best / 1000.0 + 1e-9)
+    lv = K.ceil_tick(real + (k * 500.0 - 1500.0) / 65)
+    assert k == 2 and r[6] == Z.R_STEP and r[5] == 17 and r[1] == pytest.approx(lv)
+    assert (lv - real) * 65 >= -500.0 - 1e-6
+
+
+def test_amendment_c_below_1000_keeps_the_entry_stop():
+    C = _flat(px=300.0)
+    C[1, 15] = 300.0 + 900.0 / 65                                   # best < +1,000: no step
+    C[2, 17], C[0, 17], C[3, 17] = 290.0, 296.0, 291.0              # -Rs 650ish: above the -1,500 stop
+    real, s, kind, r = _sim_c(C, 65.0, 1)
+    assert r[5] != 17
+
+
+def test_defaults_unchanged_by_the_general_form():
+    C = _flat()
+    C[1, 15] = 125.0
+    C[0, 16], C[1, 16], C[2, 16], C[3, 16] = 118.0, 119.0, 117.0, 118.0
+    C[2, 17], C[0, 17], C[3, 17] = 113.0, 116.0, 114.0
+    (raw, real, s, kind), r = _run(C, 10, 65.0, NOTIME, True, 1)
+    assert r[6] == Z.R_STEP and r[1] == pytest.approx(Z.step_px(real, 65.0, (125.0 - real) * 65.0, 1))

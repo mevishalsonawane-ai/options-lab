@@ -36,9 +36,12 @@ def _ceil_tick(x, tick):
 
 @njit(cache=True)
 def simulate_step(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tmax, need, cstop, tick, qty, be,
-                  stop_abs, step_amt, fb=1.0005, fs=0.9995, fst=0.999, tk=1.0, gap_amt=-1.0):
+                  stop_abs, step_amt, fb=1.0005, fs=0.9995, fst=0.999, tk=1.0, gap_amt=-1.0, inc_amt=-1.0,
+                  trig_amt=-1.0):
     """r106engine.simulate (no rupee target) plus the step trail: step_amt = Rs 500 x lots for the whole position
-    (<= 0: off); gap_amt = the gap under each step (<= 0: = step_amt, R176's rule; R177 Amendment B: Rs 1,000 x lots). Same returns; reason 9 = a step-trail stop."""
+    (<= 0: off); gap_amt = the gap under each step (<= 0: = step_amt, R176's rule; R177 Amendment B: Rs 1,000 x lots).
+    General form: once best >= trig_amt (<= 0: 2 x step_amt), stop = real + (floor(best / step_amt) x inc_amt - gap_amt)
+    / qty, inc_amt <= 0 meaning step_amt. R177 Amendment C: step Rs 1,000, inc Rs 500, gap Rs 1,500, trig Rs 1,000 (x lots). Same returns; reason 9 = a step-trail stop."""
     o, h, l, c, v = C[0], C[1], C[2], C[3], C[4]
     nan = np.nan
     n = o.shape[0]
@@ -91,9 +94,11 @@ def simulate_step(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps
             peak = h[m]
         if step_amt > 0:
             best = (peak - real_e) * qty
-            if best >= 2.0 * step_amt - 1e-9:
+            trig = trig_amt if trig_amt > 0 else 2.0 * step_amt
+            if best >= trig - 1e-9:
                 g = gap_amt if gap_amt > 0 else step_amt
-                lv = _ceil_tick(real_e + (np.floor(best / step_amt + 1e-9) * step_amt - g) / qty, tick)
+                inc = inc_amt if inc_amt > 0 else step_amt
+                lv = _ceil_tick(real_e + (np.floor(best / step_amt + 1e-9) * inc - g) / qty, tick)
                 if lv > trail:
                     trail = lv
         if lk_trig > 0 and (peak - E_) * qty >= lk_trig:
@@ -170,7 +175,9 @@ def label(code: int, kind: str) -> str:
 
 
 def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lot: float = K.STEP,
-          gap_per_lot: float = K.STEP) -> list:
+          gap_per_lot: float = K.STEP, step_per_lot: float = K.STEP, inc_per_lot: float = -1.0,
+          trig_per_lot: float = -1.0) -> list:
+    """(R177 Amendment C adds step_per_lot / inc_per_lot / trig_per_lot; the defaults are R176's rule.)"""
     """Price one day's candidates (dicts with side, strike, er[, fx]) for `lots` lots, with (on=True) or without Boss's
     step trail. Trade dicts (None = no fill) as r152engine.price plus 'stop_kind'."""
     st = E.stack(und, D)
@@ -192,10 +199,13 @@ def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lo
             continue
         be = real + ch(real, real) / qty if G.needs_be(ex) else 0.0
         stop_abs, stop_f, step_amt, kind = levels(raw, real, qty, ex, on, lots, per_lot)
+        if step_amt > 0:
+            step_amt = step_per_lot * lots
         a, b, rE, rX, r0, r1, r = simulate_step(C, int(c["er"]), int(sq), int(fx if fx is not None else -1), stop_f,
                                                 ex.target, ex.lock_trig, ex.lock_keep, ex.lock_trail, stp, ex.tmax,
                                                 ex.need, ex.close_stop, K51.TICK, qty, be, stop_abs, step_amt, *E.SLIP,
-                                                gap_per_lot * lots)
+                                                gap_per_lot * lots, inc_per_lot * lots if inc_per_lot > 0 else -1.0,
+                                                trig_per_lot * lots if trig_per_lot > 0 else -1.0)
         if r == E.R_NOFILL:
             out.append(None)
             continue

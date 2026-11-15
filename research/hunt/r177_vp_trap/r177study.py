@@ -196,28 +196,39 @@ M_TOTAL_A = M_TOTAL + len(K6.ARMS)                                  # 4,000
 GAP = {"v": K6.STEP}                                                # Amendment B sets Rs 1,000
 FINAL_FLAG_B = RESULTS / "FINAL_READ_B"
 M_TOTAL_B = M_TOTAL_A + 2 * len(K6.ARMS)                            # 4,006
+FINAL_FLAG_C = RESULTS / "FINAL_READ_C"
+M_TOTAL_C = M_TOTAL_B + 2 * len(K6.ARMS)                            # 4,012
+MODE = {"v": "a"}                                                   # a / b / c: which amendment's stop rule
 
 
 def _priced_stop(arm: str, us: list, lots: int) -> list:
     """Price with the Rs 1,000 a lot entry stop + the step trail (gap GAP['v'] a lot: Rs 500, or Rs 1,000 in B)."""
-    old, oldg = S6.ENTRY["v"], S6.GAP["v"]
-    S6.ENTRY["v"], S6.GAP["v"] = K6.ENTRY_B, GAP["v"]
+    old, oldg, olds = S6.ENTRY["v"], S6.GAP["v"], dict(S6.STEPCFG)
+    if MODE["v"] == "c":                    # Amendment C: -1,500 entry; +500 per +1,000 of best (all a lot)
+        S6.ENTRY["v"], S6.GAP["v"] = 1500.0, 1500.0
+        S6.STEPCFG.update(step=1000.0, inc=500.0, trig=1000.0)
+    else:
+        S6.ENTRY["v"], S6.GAP["v"] = K6.ENTRY_B, GAP["v"]
     try:
         return S6.priced(arm, us, True, lots)
     finally:
         S6.ENTRY["v"], S6.GAP["v"] = old, oldg
+        S6.STEPCFG.clear()
+        S6.STEPCFG.update(olds)
 
 
-def run_a(b: bool = False) -> dict:
+def run_a(b: bool = False, c: bool = False) -> dict:
     """Amendment A (b=False): A, S1k (the stop rule alone) and K1S (K1 + the stop rule), 1-3 lots, with / without the
     picker. Amendment B (b=True): the same with a Rs 1,000 gap under each step (SG / K1SG stored under the same keys),
     plus R176's exit twins for SG."""
     assert K6.POST, "R177 reads the stores built to 19 Oct (R176_POST=1)"
-    flag = FINAL_FLAG_B if b else FINAL_FLAG_A
+    MODE["v"] = "c" if c else ("b" if b else "a")
+    b = b or c                                                      # C uses B's twins and checks
+    flag = FINAL_FLAG_C if c else (FINAL_FLAG_B if b else FINAL_FLAG_A)
     if flag.exists():
         raise SystemExit("R177 amendment already read once: " + flag.read_text())
     flag.write_text(datetime.now(timezone.utc).isoformat() + "\n")
-    GAP["v"] = 1000.0 if b else K6.STEP
+    GAP["v"] = 1000.0 if b else K6.STEP                             # (C sets its own in _priced_stop)
     M = mods()
     M["C"].open_final()
     lo, hi = K6.Y_START, K6.Y_END
@@ -281,29 +292,34 @@ def run_a(b: bool = False) -> dict:
             res[f"{v}@{lots}"] = {a_: S6.describe(sub[a_], n_sess, months) for a_ in K6.ARMS}
             res[f"{v}@{lots}"]["ALL"] = S6.describe(S6.together(sub), n_sess, months)
         out[per] = res
-    (RESULTS / ("year_b.json" if b else "year_a.json")).write_text(json.dumps(out, indent=1, default=str))
+    out["_meta"]["mode"] = MODE["v"]
+    (RESULTS / {"a": "year_a.json", "b": "year_b.json", "c": "year_c.json"}[MODE["v"]]).write_text(
+        json.dumps(out, indent=1, default=str))
     return out
 
 
-def decide_a(b: bool = False) -> dict:
+def decide_a(b: bool = False, c: bool = False) -> dict:
     """Amendment A: K1S (3 tests, m 4,000). Amendment B: SG and K1SG (6 tests, m 4,006); keys 'S1k' / 'K1S' in
     year_b.json hold SG / K1SG."""
-    r = json.loads((RESULTS / ("year_b.json" if b else "year_a.json")).read_text())
+    r = json.loads((RESULTS / ("year_c.json" if c else ("year_b.json" if b else "year_a.json"))).read_text())
+    b = b or c
     tests = [(a, "K1S", r["twins"][a]["p"]) for a in K6.ARMS]
     if b:
         tests = [(a, "S1k", r["twins_sg"][a]["p"]) for a in K6.ARMS] + tests
     ps = [t[2] for t in tests]
-    q_all, q_own = S6.bh_q(ps, M_TOTAL_B if b else M_TOTAL_A), S6.bh_q(ps, len(ps))
+    m = M_TOTAL_C if c else (M_TOTAL_B if b else M_TOTAL_A)
+    q_all, q_own = S6.bh_q(ps, m), S6.bh_q(ps, len(ps))
     out = {}
     for (a, v, p_), qa, qo in zip(tests, q_all, q_own):
         per = {p: dict(S=r[p][f"{v}@1"][a], A=r[p]["A@1"][a]) for p in K6.YEAR_PERIODS}
         g = S6.gates(per, qa, K6.YEAR_PERIODS, K6.YEAR_BETTER)
         g.update(q_own=round(qo, 4), twin_p=p_,
                  passed_except_account_stop=not [f for f in g["fails"] if "account stop" not in f])
-        name = ({"S1k": "SG", "K1S": "K1SG"}[v] if b else v)
+        name = ({"S1k": "SC", "K1S": "K1SC"}[v] if c else {"S1k": "SG", "K1S": "K1SG"}[v]) if b else v
         out[a if not b else f"{a}:{name}"] = g
-    out["_m"] = dict(tests=len(tests), prior=M_TOTAL_A if b else M_TOTAL, total=M_TOTAL_B if b else M_TOTAL_A)
-    (RESULTS / ("decision_b.json" if b else "decision_a.json")).write_text(json.dumps(out, indent=1))
+    out["_m"] = dict(tests=len(tests), prior=(M_TOTAL_B if c else (M_TOTAL_A if b else M_TOTAL)), total=m)
+    (RESULTS / ("decision_c.json" if c else ("decision_b.json" if b else "decision_a.json"))).write_text(
+        json.dumps(out, indent=1))
     return out
 
 
@@ -335,6 +351,10 @@ if __name__ == "__main__":
         run_a(True)
     elif cmd == "decide-b":
         print(json.dumps(decide_a(True), indent=1))
+    elif cmd == "year-c":
+        run_a(c=True)
+    elif cmd == "decide-c":
+        print(json.dumps(decide_a(c=True), indent=1))
     elif cmd == "decide":
         print(json.dumps(decide(), indent=1))
     else:
