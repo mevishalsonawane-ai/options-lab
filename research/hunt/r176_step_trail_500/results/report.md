@@ -1,5 +1,45 @@
 # R176: the Rs 500 step trail (per lot), last year of data
 
+## Update: Rs 1,000 a lot as the initial stop (Amendment B, Boss 15 Nov)
+
+You asked: *"What about 1000 as initial stoploss"*. Same year, same costs, same step trail; only the entry stop is
+-Rs 1,000 a lot (used where it is tighter than -15%, which was 95% of trades).
+
+**Much better than Rs 500, but still well below today's rules, and it failed every gate.**
+
+Net over the year (today's rules / Rs 500 stop / **Rs 1,000 stop**):
+
+| | 1 lot | 2 lots | 3 lots |
+|---|---|---|---|
+| Liquidity 15+5 | Rs 1.18 L / -Rs 15k / **-Rs 3k** | Rs 2.67 L / Rs 2k / **Rs 27k** | Rs 4.16 L / Rs 18k / **Rs 55k** |
+| R72 Breadth Donchian | Rs 2.98 L / -Rs 1.32 L / **-Rs 31k** | Rs 7.02 L / -Rs 1.53 L / **Rs 47k** | Rs 11.05 L / -Rs 1.80 L / **Rs 1.23 L** |
+| R51 Donchian 20 | Rs 2.21 L / -Rs 1.76 L / **-Rs 61k** | Rs 5.85 L / -Rs 2.03 L / **Rs 26k** | Rs 9.47 L / -Rs 2.35 L / **Rs 1.11 L** |
+| **All three** | **Rs 6.37 L / -Rs 3.23 L / -Rs 95k** | **Rs 15.54 L / -Rs 3.54 L / Rs 1.00 L** | **Rs 24.67 L / -Rs 3.97 L / Rs 2.89 L** |
+
+With the R151 picker (R72 + R51; Liquidity has none), today's / **Rs 1,000 stop**:
+
+| | 1 lot | 2 lots | 3 lots |
+|---|---|---|---|
+| R72 + picker | Rs 3.72 L / **Rs 1.26 L** | Rs 7.92 L / **Rs 3.03 L** | Rs 12.13 L / **Rs 4.77 L** |
+| R51 + picker | Rs 2.93 L / **Rs 24k** | Rs 6.49 L / **Rs 1.16 L** | Rs 10.04 L / **Rs 2.05 L** |
+| **All three** | **Rs 7.83 L / Rs 1.48 L** | **Rs 17.09 L / Rs 4.45 L** | **Rs 26.33 L / Rs 7.38 L** |
+
+- Win rate goes back up to 48% (Rs 500 stop: 35%; today: 45%), 6,281 trades at 1 lot.
+- The entry stop now closes 37% of trades (Rs 500: 60%); the step trail closes 39%.
+- But wins stay small (average Rs 1,026 at 1 lot vs Rs 1,744 today): the step trail still sells winners on the first
+  Rs 500 a lot pull-back. That is probably where most of the gap to today's rules comes from now (not tested
+  separately).
+- Worst day, all three arms at 1 lot: -Rs 54k today -> -Rs 34k. Max drawdown: Rs 1.59 L today -> Rs 2.52 L.
+- Why 1 lot loses but 3 lots make money with the same per-lot rule: Zerodha's brokerage is a flat Rs 20 an order, so
+  about Rs 2.5 L of the year's costs (6,281 trades x 2 orders) is the same at any lot size. Today's rules show the same
+  effect (Rs 6.37 L at 1 lot, but Rs 24.67 L, not Rs 19 L, at 3 lots).
+- Gates: failed on every arm and lot (net below today's rules in every period; random-exit twins p = 1.0; BH q = 1.0 with
+  3,988 tests; drawdown and month limits broken). This test was chosen after seeing the Rs 500 results, so it is weaker
+  evidence, and the year's final months were read a second time.
+- My guess from these numbers: a wider gap under each step might hurt less. That is a new idea to pre-register and
+  test, not something this study shows.
+
+## The first test: Rs 500 a lot initial stop (Amendment A)
 **Boss, in short (15 Nov 2026).** I replayed the last year the data covers, **20 Oct 2025 - 19 Oct 2026** (247 trading
 days), on Liquidity 15+5, R72 Breadth Donchian and R51 Donchian 20 + Supertrend. I ran each at 1, 2 and 3 lots, with
 and without your new stop rule, and with and without the R151 picker. All money is after real Zerodha charges and
@@ -84,7 +124,7 @@ Twins changed (trades the rule closed earlier than A): LIQ@1 497 (twin mean Rs 2
 
 ### early (20 Oct 2025 - 31 Mar 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 316 | 42% | **Rs 113,873** | Rs 2,142 / -Rs 935 | 0 / 0 / 316 (6) | -Rs 5,535 | Dec 25 -Rs 4,980 | -Rs 16,913 |
 | Liquidity 15+5 | S | 319 | 39% | **Rs 34,035** | Rs 1,220 / -Rs 611 | 157 / 71 / 91 (0) | -Rs 4,191 | Mar 26 -Rs 7,921 | -Rs 16,292 |
@@ -103,7 +143,7 @@ Twins changed (trades the rule closed earlier than A): LIQ@1 497 (twin mean Rs 2
 
 ### final (1 Apr - 13 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 357 | 37% | **Rs 11,155** | Rs 1,762 / -Rs 997 | 0 / 0 / 357 (12) | -Rs 11,405 | Apr 26 -Rs 37,821 | -Rs 61,062 |
 | Liquidity 15+5 | S | 358 | 32% | **-Rs 44,706** | Rs 864 / -Rs 599 | 199 / 70 / 89 (0) | -Rs 4,550 | Apr 26 -Rs 18,018 | -Rs 48,135 |
@@ -122,7 +162,7 @@ Twins changed (trades the rule closed earlier than A): LIQ@1 497 (twin mean Rs 2
 
 ### last 6 months (20 Apr - 19 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 346 | 38% | **Rs 28,392** | Rs 1,750 / -Rs 934 | 0 / 0 / 346 (13) | -Rs 11,405 | Oct 26 -Rs 15,384 | -Rs 38,009 |
 | Liquidity 15+5 | S | 347 | 34% | **-Rs 40,776** | Rs 823 / -Rs 596 | 190 / 72 / 85 (0) | -Rs 4,550 | Oct 26 -Rs 13,820 | -Rs 40,776 |
@@ -141,7 +181,7 @@ Twins changed (trades the rule closed earlier than A): LIQ@1 497 (twin mean Rs 2
 
 ### whole year (20 Oct 2025 - 19 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 688 | 39% | **Rs 117,923** | Rs 1,935 / -Rs 968 | 0 / 0 / 688 (20) | -Rs 11,405 | Apr 26 -Rs 37,821 | -Rs 61,062 |
 | Liquidity 15+5 | S | 692 | 36% | **-Rs 14,723** | Rs 1,034 / -Rs 603 | 365 / 146 / 181 (0) | -Rs 4,550 | Apr 26 -Rs 18,018 | -Rs 64,009 |
@@ -183,7 +223,7 @@ Share of trades where the Rs 500 entry stop was tighter than -15% (so it replace
 
 ### early (20 Oct 2025 - 31 Mar 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 316 | 43% | **Rs 242,161** | Rs 4,236 / -Rs 1,855 | 0 / 0 / 316 (6) | -Rs 10,759 | Dec 25 -Rs 7,052 | -Rs 31,338 |
 | Liquidity 15+5 | S | 319 | 40% | **Rs 82,659** | Rs 2,467 / -Rs 1,182 | 157 / 71 / 91 (0) | -Rs 8,123 | Mar 26 -Rs 13,809 | -Rs 28,217 |
@@ -202,7 +242,7 @@ Share of trades where the Rs 500 entry stop was tighter than -15% (so it replace
 
 ### final (1 Apr - 13 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 357 | 38% | **Rs 38,639** | Rs 3,467 / -Rs 1,983 | 0 / 0 / 357 (12) | -Rs 22,450 | Apr 26 -Rs 73,218 | -Rs 117,966 |
 | Liquidity 15+5 | S | 358 | 33% | **-Rs 73,095** | Rs 1,744 / -Rs 1,162 | 199 / 70 / 89 (0) | -Rs 8,787 | Apr 26 -Rs 33,571 | -Rs 82,919 |
@@ -221,7 +261,7 @@ Share of trades where the Rs 500 entry stop was tighter than -15% (so it replace
 
 ### last 6 months (20 Apr - 19 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 346 | 39% | **Rs 72,613** | Rs 3,442 / -Rs 1,858 | 0 / 0 / 346 (13) | -Rs 22,450 | Oct 26 -Rs 28,488 | -Rs 73,050 |
 | Liquidity 15+5 | S | 347 | 34% | **-Rs 65,742** | Rs 1,663 / -Rs 1,157 | 190 / 72 / 85 (0) | -Rs 8,787 | Oct 26 -Rs 25,347 | -Rs 68,120 |
@@ -240,7 +280,7 @@ Share of trades where the Rs 500 entry stop was tighter than -15% (so it replace
 
 ### whole year (20 Oct 2025 - 19 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 688 | 40% | **Rs 267,232** | Rs 3,817 / -Rs 1,922 | 0 / 0 / 688 (20) | -Rs 22,450 | Apr 26 -Rs 73,218 | -Rs 117,966 |
 | Liquidity 15+5 | S | 692 | 36% | **Rs 2,118** | Rs 2,089 / -Rs 1,169 | 365 / 146 / 181 (0) | -Rs 8,787 | Apr 26 -Rs 33,571 | -Rs 108,959 |
@@ -282,7 +322,7 @@ Share of trades where the Rs 500 entry stop was tighter than -15% (so it replace
 
 ### early (20 Oct 2025 - 31 Mar 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 316 | 44% | **Rs 370,179** | Rs 6,282 / -Rs 2,791 | 0 / 0 / 316 (6) | -Rs 15,991 | Dec 25 -Rs 9,170 | -Rs 45,836 |
 | Liquidity 15+5 | S | 319 | 40% | **Rs 131,022** | Rs 3,692 / -Rs 1,760 | 157 / 71 / 91 (0) | -Rs 12,043 | Mar 26 -Rs 19,741 | -Rs 40,190 |
@@ -301,7 +341,7 @@ Share of trades where the Rs 500 entry stop was tighter than -15% (so it replace
 
 ### final (1 Apr - 13 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 357 | 39% | **Rs 65,610** | Rs 5,147 / -Rs 2,981 | 0 / 0 / 357 (12) | -Rs 33,486 | Apr 26 -Rs 108,688 | -Rs 175,017 |
 | Liquidity 15+5 | S | 358 | 33% | **-Rs 101,976** | Rs 2,615 / -Rs 1,729 | 199 / 70 / 89 (0) | -Rs 13,015 | Apr 26 -Rs 49,171 | -Rs 118,129 |
@@ -320,7 +360,7 @@ Share of trades where the Rs 500 entry stop was tighter than -15% (so it replace
 
 ### last 6 months (20 Apr - 19 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 346 | 40% | **Rs 116,365** | Rs 5,109 / -Rs 2,792 | 0 / 0 / 346 (13) | -Rs 33,486 | Oct 26 -Rs 41,618 | -Rs 108,209 |
 | Liquidity 15+5 | S | 347 | 35% | **-Rs 91,242** | Rs 2,495 / -Rs 1,721 | 190 / 72 / 85 (0) | -Rs 13,015 | Oct 26 -Rs 36,943 | -Rs 96,508 |
@@ -339,7 +379,7 @@ Share of trades where the Rs 500 entry stop was tighter than -15% (so it replace
 
 ### whole year (20 Oct 2025 - 19 Oct 2026)
 
-| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | worst day | worst month | max drawdown |
+| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | worst day | worst month | max drawdown |
 |---|---|---|---|---|---|---|---|---|---|
 | Liquidity 15+5 | A | 688 | 41% | **Rs 415,755** | Rs 5,645 / -Rs 2,897 | 0 / 0 / 688 (20) | -Rs 33,486 | Apr 26 -Rs 108,688 | -Rs 175,017 |
 | Liquidity 15+5 | S | 692 | 36% | **Rs 18,159** | Rs 3,130 / -Rs 1,740 | 365 / 146 / 181 (0) | -Rs 13,015 | Apr 26 -Rs 49,171 | -Rs 155,005 |

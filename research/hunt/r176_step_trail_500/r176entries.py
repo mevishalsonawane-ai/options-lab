@@ -23,8 +23,16 @@ SRC = {
 
 
 def main():
-    r = json.loads((K.RESULTS / "year.json").read_text())
-    d = json.loads((K.RESULTS / "decision.json").read_text())
+    write(False)
+    if (K.RESULTS / "decision_b.json").exists():
+        write(True)
+
+
+def write(b: bool):
+    """b=False: Amendment A (Rs 500 entry stop); b=True: Amendment B (Rs 1,000 entry stop)."""
+    r = json.loads((K.RESULTS / ("yearb.json" if b else "year.json")).read_text())
+    d = json.loads((K.RESULTS / ("decision_b.json" if b else "decision.json")).read_text())
+    stop = "Rs 1,000" if b else "Rs 500"
     for arm in K.ARMS:
         unds, src = SRC[arm]
         parts = []
@@ -33,16 +41,17 @@ def main():
             t = (f"{n} lot{'s' if n > 1 else ''}: today {a['trades']} trades, win {100 * a['win']:.0f}%, {rs(a['net'])}; "
                  f"step trail {s['trades']} trades, win {100 * s['win']:.0f}%, {rs(s['net'])}, max DD {rs(s['max_dd'])}")
             if arm in K.PICKER_ARMS:
-                b, bs = r["year"][f"B@{n}"][arm], r["year"][f"B+S@{n}"][arm]
-                t += f"; picker {rs(b['net'])} -> {rs(bs['net'])}"
+                pb, pbs = r["year"][f"B@{n}"][arm], r["year"][f"B+S@{n}"][arm]
+                t += f"; picker {rs(pb['net'])} -> {rs(pbs['net'])}"
             parts.append(t)
         e = dict(
-            id=f"r176-{arm.lower()}-step-trail-500",
-            title=f"R176 {K.ARM_NAME[arm]}: Boss's Rs 500 step trail per lot, last year of data (1-3 lots)",
+            id=f"r176{'b' if b else ''}-{arm.lower()}-step-trail-{'1000' if b else '500'}",
+            title=(f"R176{' Amendment B' if b else ''} {K.ARM_NAME[arm]}: Boss's step trail per lot with a {stop} entry "
+                   "stop, last year of data (1-3 lots)"),
             family="trade-management",
             date="2026-11-15",
             doc=DOC,
-            hypothesis=("Boss's chosen rule (15 Nov, being built anyway): a -Rs 500-a-lot stop at entry (only where tighter "
+            hypothesis=(f"Boss's chosen rule (15 Nov, being built anyway): a -{stop}-a-lot stop at entry (only where tighter "
                         "than -15%); from +Rs 1,000 a lot, the stop Rs 500 a lot under each Rs 500-a-lot step of the best "
                         "open P&L; every existing exit stays. Does it beat today's exits?"),
             data_version=("Drive lake gdrive:IraAlgo-data-lake (index_1m, index_daily, options_rolling_1m WEEK) copied 15 Nov "
@@ -51,8 +60,10 @@ def main():
                         holdout="2026-04-01..2026-10-13 final (read by R51-R173 too); whole year 2025-10-20..2026-10-19"),
             instruments=unds,
             features=[f"signal source: {src} (unchanged); only the option's stop on the premium differs"],
-            model_or_rule=f"{K.ARM_NAME[arm]}: today's rules vs + Rs 500 step trail per lot; 1, 2, 3 lots; with / without R151 picker",
-            settings="research/hunt/r176_step_trail_500/r176cfg.py; PREREG.md section 2 and Amendment A",
+            model_or_rule=(f"{K.ARM_NAME[arm]}: today's rules vs + step trail per lot with a {stop} entry stop; 1, 2, 3 "
+                           "lots; with / without R151 picker"),
+            settings=("research/hunt/r176_step_trail_500/r176cfg.py; PREREG.md section 2 and Amendment "
+                      + ("B (chosen after seeing Amendment A's results)" if b else "A")),
             prereg=PREREG,
             variants_tried=3,
             results=dict(summary=" | ".join(parts) + ". Failed every gate at every lot size: "
@@ -61,7 +72,7 @@ def main():
                                 "per position; every stop sold as a stop: x0.999 minus 2x the half-spread, gaps at the open)")),
             holdout_read=True,
             verdict="rejected",
-            notes=(f"Twins p = 1.0, BH q = 1.0 (m = {K.M_TOTAL}). Boss's chosen rule, being built anyway; reported honestly as "
+            notes=(f"Twins p = 1.0, BH q = 1.0 (m = {K.M_TOTAL_B if b else K.M_TOTAL}). Boss's chosen rule, being built anyway; reported honestly as "
                    "failing. Signal on the underlying; nothing in the app changes from this study."),
         )
         (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))

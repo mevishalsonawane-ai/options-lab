@@ -34,7 +34,7 @@ def variants(arm: str) -> tuple:
     return ("A", "S") if arm == "LIQ" else K.VARIANTS
 
 
-HEAD = ("| arm | variant | trades | win | net | avg win / avg loss | exits: Rs 500 stop / step trail / other (-15%) | "
+HEAD = ("| arm | variant | trades | win | net | avg win / avg loss | exits: entry stop / step trail / other (-15%) | "
         "worst day | worst month | max drawdown |\n|---|---|---|---|---|---|---|---|---|---|")
 
 
@@ -55,11 +55,19 @@ def month_table(per: dict, lots: int, months: tuple) -> list:
     return out
 
 
-def build() -> str:
-    r = json.loads((K.RESULTS / "year.json").read_text())
-    dec = json.loads((K.RESULTS / "decision.json").read_text()) if (K.RESULTS / "decision.json").exists() else {}
+def build(b: bool = False) -> str:
+    """b=False: Amendment A (Rs 500 entry stop) -> report.md with the summary on top; b=True: Amendment B (Rs 1,000
+    entry stop) -> report_b.md."""
+    r = json.loads((K.RESULTS / ("yearb.json" if b else "year.json")).read_text())
+    dfile = K.RESULTS / ("decision_b.json" if b else "decision.json")
+    dec = json.loads(dfile.read_text()) if dfile.exists() else {}
     summ = K.RESULTS / "summary.md"
-    out = [summ.read_text().rstrip() + "\n" if summ.exists() else "# R176 report\n"]
+    if b:
+        out = ["# R176 Amendment B: Rs 1,000 a lot initial stop, step trail unchanged (tables)\n",
+               "The plain-English summary for both rules is at the top of report.md. 'S' below = the Rs 1,000 entry "
+               "stop + the step trail; the entry-stop exit column is this rule's Rs 1,000 stop.\n"]
+    else:
+        out = [summ.read_text().rstrip() + "\n" if summ.exists() else "# R176 report\n"]
     out.append("## Window, data and checks\n")
     out.append(f"- Window (Amendment A, Boss 15 Nov: \"Test on only last year of data\"): **20 Oct 2025 - 19 Oct 2026**, "
                f"{r['year']['sessions']} sessions; early part {r['early']['sessions']}, final {r['final']['sessions']}, "
@@ -88,7 +96,8 @@ def build() -> str:
     if dec:
         out.append("## Gates (Amendment A; S vs A at the same lots)\n")
         out.append(f"BH counts m = {dec['_m']['total']} tests ({dec['_m']['prior']} earlier + {dec['_m']['r176']} R176).\n")
-        out.append("| arm @ lots | passed | twin p | BH q (m = 3,979) | q within R176 | failed gates |\n|---|---|---|---|---|---|")
+        out.append(f"| arm @ lots | passed | twin p | BH q (m = {dec['_m']['total']:,}) | q within R176 | failed gates |"
+                   "\n|---|---|---|---|---|---|")
         for a, n in K.TESTS:
             g = dec[f"{a}@{n}"]
             out.append(f"| {K.ARM_NAME[a]} @ {n} | {'yes' if g['passed'] else '**no**'} | {g['twin_p']} | {g['q_all']} | "
@@ -116,5 +125,7 @@ def build() -> str:
 
 
 if __name__ == "__main__":
+    if (K.RESULTS / "yearb.json").exists():
+        (K.RESULTS / "report_b.md").write_text(build(True))
     (K.RESULTS / "report.md").write_text(build())
     print((K.RESULTS / "report.md").read_text()[:3000])
