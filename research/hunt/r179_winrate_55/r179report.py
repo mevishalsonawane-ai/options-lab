@@ -52,6 +52,35 @@ def build() -> str:
                                f"{RP.rs(s['avg_win'])} / {RP.rs(-s['avg_loss'] if s['avg_loss'] else 0)} | "
                                f"{RP.rs(s['worst_month']['net'])} | {RP.rs(-s['max_dd'] if s['max_dd'] else 0)} |")
             out.append("")
+    ya = RESULTS / "year_a.json"
+    if ya.exists():
+        ra = json.loads(ya.read_text())
+        da = json.loads((RESULTS / "decision_a.json").read_text())
+        out.append(f"## Amendment A: Rs 1,000 maximum loss (BH m = {da['_m']['total']:,})\n")
+        for k, g in da.items():
+            if k != "_m":
+                out.append(f"- {k}: win {RP.pct(g['win_year'])} / final {RP.pct(g['win_final'])}, net {RP.rs(g['net_year'])} "
+                           f"(today {RP.rs(g['base_net_year'])}), twin p {g['twin_p']}; failed: {'; '.join(g['fails'])}")
+        out.append("\nCap exits and losses over Rs 1,000: " + "; ".join(
+            f"{k} M1 {v['M1']['cap_exits']} cap exits, {v['M1']['over_1000']} trades over Rs 1,000 (worst {RP.rs(v['M1']['worst'])})"
+            + ("" if k.endswith("@1") else f", M2 {v['M2']['cap_exits']} / {v['M2']['over_1000']}")
+            for k, v in ra["loss"].items()) + ".\n")
+        lab = {"A": "today's rules", "V4": "picker + breakeven (-15%)", "M1": "+ Rs 1,000 a lot cap", "M2": "+ Rs 1,000 a trade cap"}
+        for lots in (1, 2, 3):
+            for per in ("year", "final"):
+                out += [f"### Amendment A, {per}, {lots} lot{'s' if lots > 1 else ''}\n",
+                        "| arm | variant | trades | win | net | avg win / avg loss | biggest loss | worst month | max drawdown |",
+                        "|---|---|---|---|---|---|---|---|---|"]
+                for a_ in ("LIQ", "R72", "R51"):
+                    for v in ("A", "V4", "M1", "M2"):
+                        if v == "M2" and lots == 1:
+                            continue
+                        s_ = ra[per][f"{v}@{lots}"][a_]
+                        out.append(f"| {NAME[a_]} | {lab[v] if not (a_ == 'LIQ' and v == 'V4') else 'breakeven (-15%)'} | "
+                                   f"{s_['trades']} | {RP.pct(s_['win'])} | **{RP.rs(s_['net'])}** | {RP.rs(s_['avg_win'])} / "
+                                   f"{RP.rs(-s_['avg_loss'] if s_['avg_loss'] else 0)} | {RP.rs(s_['largest_loss'])} | "
+                                   f"{RP.rs(s_['worst_month']['net'])} | {RP.rs(-s_['max_dd'] if s_['max_dd'] else 0)} |")
+                out.append("")
     out.append("Signal source: the index (entries; the picker's features). Costs: dated Zerodha charges, R17 slippage.")
     return "\n".join(out) + "\n"
 

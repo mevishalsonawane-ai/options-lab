@@ -50,5 +50,39 @@ def main():
     print("4 entries")
 
 
+
+
+def main_a():
+    r = json.loads((RESULTS / "year_a.json").read_text())
+    d = json.loads((RESULTS / "decision_a.json").read_text())
+    parts = []
+    for a in ("LIQ", "R72", "R51"):
+        s, b = r["year"]["M1@1"][a], r["year"]["A@1"][a]
+        parts.append(f"{a}: today {100 * b['win']:.1f}% {rs(b['net'])} -> cap {s['trades']} trades {100 * s['win']:.1f}% "
+                     f"{rs(s['net'])}, avg loss {rs(-s['avg_loss'])}, biggest {rs(s['largest_loss'])}"
+                     + (f"; failed: {'; '.join(d[a]['fails'])}" if a in d else ""))
+    e = dict(
+        id="r179a-max-loss-1000", title="R179 Amendment A: Rs 1,000 maximum loss (after charges) on picker + breakeven, R72 / R51 / Liquidity",
+        family="trade-management", date="2026-11-15", doc="research/hunt/r179_winrate_55/results/report.md",
+        hypothesis="Boss: '15% is too much for the stoploss, i want 1k max loss for all the above strategies'.",
+        data_version=("Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean "
+                      "stores built to 19 Oct (R106 clean_post)"),
+        period=dict(design="none fitted; early part 2025-10-20..2026-03-31 (picker in-sample)",
+                    holdout="2026-04-01..2026-10-13 final (read again, data-led); year to 2026-10-19"),
+        instruments=["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX"],
+        features=["signal source: the index (entries; R151 picker features); stop on the premium"],
+        model_or_rule="Rs 1,000 net stop (a lot, and per trade at 2-3 lots) where tighter than -15%, on R151 picker + R162 BE10",
+        settings="research/hunt/r179_winrate_55/r179study.py run_a; PREREG.md Amendment A",
+        prereg="research/hunt/r179_winrate_55/PREREG.md", variants_tried=2,
+        results=dict(summary=" | ".join(parts) + ".", costs="dated Zerodha charges; R17 fills (stops sold as stops)"),
+        holdout_read=True, verdict="rejected",
+        notes=f"BH m = {d['_m']['total']}. Win rate falls to about 41% and profit by half or more. Nothing in the app changes.",
+    )
+    (ENTRIES / f"{e['id']}.yaml").write_text(yaml.safe_dump(e, sort_keys=False, allow_unicode=True, width=120))
+    print("1 entry (Amendment A)")
+
+
 if __name__ == "__main__":
     main()
+    if (RESULTS / "decision_a.json").exists():
+        main_a()
