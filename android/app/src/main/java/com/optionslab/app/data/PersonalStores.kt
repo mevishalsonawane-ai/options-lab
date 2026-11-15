@@ -149,7 +149,7 @@ object PersonalStores {
         Entry("DayOco", holds = { com.optionslab.app.data.DayOco.holdsForErase() }) { com.optionslab.app.data.DayOco.wipe() },
         // 7 Nov: "Stop and target on my manual positions": its switch (a settings key) and today's looks and counts (memory).
         Entry("ManualCover", holds = { com.optionslab.app.data.ManualCover.holdsForErase() }) { com.optionslab.app.data.ManualCover.wipe() },
-        // 15 Nov: the ₹500 step trail's switch (a settings key; on by default, so Boss's "off" is what is erased).
+        // 15 Nov: the breakeven rule's switch (a settings key; on by default, so Boss's "off" is what is erased).
         Entry("StepTrailExits", holds = { com.optionslab.app.data.StepTrailExits.holdsForErase() }) { com.optionslab.app.data.StepTrailExits.wipe() },
         Entry("HealthReport", files = { com.optionslab.app.data.HealthReport.filesForErase() }) { com.optionslab.app.data.HealthReport.wipe() },
         Entry("GlanceSource", holds = { com.optionslab.app.data.GlanceSource.holdsForErase() }) { com.optionslab.app.data.GlanceSource.wipe() },

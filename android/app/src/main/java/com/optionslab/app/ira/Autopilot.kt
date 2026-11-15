@@ -524,9 +524,10 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
-            } else if (c.target == AutoChange.STEP_TRAIL_TARGET) {
-                // 15 Nov (Boss's exception, CLAUDE.md): the ₹500 step trail on Liquidity, R51 and R72 ([logStepTrailOn],
-                // [logStepTrail]): the Undo switches it off or on for new trades. Off puts the wider exits back, live too: the PIN, by the
+            } else if (c.target == AutoChange.STEP_TRAIL_TARGET || c.target == AutoChange.BE10_TARGET) {
+                // 15 Nov (Boss's exception, CLAUDE.md): Boss's stop rule on Liquidity, R51 and R72 - the morning's ₹500 step trail's
+                // entries and the breakeven at +10% that replaced it under the same switch ([logStepTrailOn],
+                // [logStepTrail]): the Undo switches it off or on for new trades. Off puts the arms' own exits back alone, live too: the PIN, by the
                 // change's live scope ([needsPin]), asked before this runs; not logged again.
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 // (review: the PIN as this call was given it - never assumed - so no automatic path can switch it off without it.)
@@ -1392,16 +1393,17 @@ internal object Autopilot {
     }
 
     /**
-     * 15 Nov (Boss's exception, CLAUDE.md: "keep a 500 rs gap on every 500 rs gain"): the ₹500 step trail on Liquidity 15+5, R51 and
-     * R72, paper and live, on by the update - logged once as Boss's ([com.optionslab.app.data.StepTrailExits]).
+     * 15 Nov (Boss's exception, CLAUDE.md: "Switch to + picker + breakeven at +10% (V4)"): the breakeven at +10% on Liquidity 15+5, R51
+     * and R72 (it replaced the morning's ₹500 step trail), paper and live, on by the update - logged once as Boss's under its own target
+     * ([AutoChange.BE10_TARGET], [com.optionslab.app.data.StepTrailExits]).
      */
     fun logStepTrailOn() {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"keep a 500 rs gap on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs\"); " +
-            "failed gates, Boss's exception - paper and live, new trades")
+        logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"Switch to + picker + breakeven at +10% " +
+            "(V4)\"; it replaced the ₹500 step trail); failed gates, Boss's exception - paper and live, new trades")
     }
 
-    /** 15 Nov: Boss flipping the ₹500 step trail in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
+    /** 15 Nov: Boss flipping the breakeven at +10% in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
     fun logStepTrail(on: Boolean) {
         if (!enabled()) return
         val c = AutoChange.stepTrail(on)

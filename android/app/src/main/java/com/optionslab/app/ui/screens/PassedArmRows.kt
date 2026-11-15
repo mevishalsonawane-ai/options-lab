@@ -116,7 +116,7 @@ private fun r51PickerLine(closed: List<PassedArmsHost.Pos>): String {
         "trade); one it cannot score yet is taken. ${p.RECORD}. $words."
 }
 
-/** 15 Nov (Boss's exception): the ₹500 step trail on [source]'s new trades in words, when it is [on] and covers it; else null. */
+/** 15 Nov (Boss's exception): the breakeven at +10% on [source]'s new trades in words, when it is [on] and covers it; else null. */
 internal fun stepTrailLine(source: String, on: Boolean): String? = if (!on || !com.optionslab.engine.orb.StepTrail.covers(source)) null
     else "${com.optionslab.engine.orb.StepTrail.LABEL} on: ${com.optionslab.engine.orb.StepTrail.RULE}. ${com.optionslab.engine.orb.StepTrail.RECORD}. " +
         "Live trades take their own on their live fill and lots; switch it off in Bot settings (PIN)."
@@ -148,7 +148,7 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     if (source == BreadthDonchianArm.SOURCE) v.comparison() + "." else null,
     // 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock and R66's +5% once +25%, Boss's choices; paper only).
     com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On) + ".",
-    // 15 Nov (Boss's exception, CLAUDE.md): R51 / R72's ₹500 step trail, when on (Bot settings), with R152's record.
+    // 15 Nov (Boss's exception, CLAUDE.md): R51 / R72's breakeven rule, when on (Bot settings), with R152's record.
     stepTrailLine(source, com.optionslab.app.data.StepTrailExits.isOn()),
     PassedArms.SIGNAL_INDEX + ".",
     (if (source == Solo2.SOURCE) Solo2.bar() else PassedArms.ForwardBar.BAR) + ".",

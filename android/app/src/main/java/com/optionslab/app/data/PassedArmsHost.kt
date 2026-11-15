@@ -260,11 +260,11 @@ object PassedArmsHost {
          */
         val w20: Boolean? = null,
         /**
-         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): an R51 / R72 trade that entered with the ₹500 step
-         * trail per lot ([StepTrailExits]). A trade keeps the rule it entered with (persisted); its step is kept with its lock ([Book.locks]).
+         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): an R51 / R72 trade that entered with the breakeven
+         * rule ([StepTrailExits]). A trade keeps the rule it entered with (persisted); its breakeven is kept with its lock ([Book.locks]).
          */
         val fx: Boolean = false,
-        /** 15 Nov: the contract's lot size at the entry, for the ₹500 step trail's per-lot levels (null: an older trade). */
+        /** 15 Nov: the contract's lot size at the entry, for the breakeven rule's per-lot levels (null: an older trade). */
         val lot: Int? = null,
     ) {
         val open: Boolean get() = exit == null
@@ -746,7 +746,7 @@ object PassedArmsHost {
         }
         val x = exitsOf(p)
         val held = lock?.split('|')?.getOrNull(1)?.toDoubleOrNull()
-        // 15 Nov: the stop that applies - the entry's -₹500 a lot where it is tighter, raised to the lock or the step trail held ([held]).
+        // 15 Nov: the stop that applies - the arm's own stop (the rule has no entry stop since V4), raised to the lock or the stop rule held ([held]).
         val stop = listOfNotNull(PassedArms.effectiveStop(p.entry, x), held).maxOrNull()
         val sq = x.squareOff
         val at = PassedArms.timeExitAt(p.entryMinute, x)?.takeIf { it.toLocalDate() == p.day && it.toLocalTime().isBefore(sq) }?.toLocalTime() ?: sq
@@ -1073,7 +1073,7 @@ object PassedArmsHost {
                         pickerWords(v.pickOn, c, { m(it) }, R51Picker.LABEL, R51Picker::takes, R51Picker.STATUS) else "") +
                     (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
                         "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
-                    // 15 Nov (Boss's exception, failed gates): the ₹500 step trail - its closed trades apart from the arm's own exits.
+                    // 15 Nov (Boss's exception, failed gates): the breakeven rule - its closed trades apart from the arm's own exits.
                     (if (StepTrail.covers(s)) " · ${StepTrail.DIAG} ${if (StepTrailExits.isOn()) "on" else "off"} for new trades, " +
                         "${c.count { it.fx }} closed on it ${m(c.filter { it.fx }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.fx }} on the arm's own exits " +
                         m(c.filter { !it.fx }.sumOf { it.net ?: 0.0 }) else "") +
@@ -1865,7 +1865,7 @@ object PassedArmsHost {
             // would-be trade (the cap, a twin, record only) was never bought and books no entry spread, so it could neither
             // switch the arm off nor pass it. They stay in the record, labelled.
             val c = b.positions.filter { it.arm == s && !it.open && it.shadow == null }
-            // 15 Nov: the ₹500 step trail's trades COUNT here, unlike Liquidity's plain-rules records: this bar is a
+            // 15 Nov: the breakeven rule's trades COUNT here, unlike Liquidity's plain-rules records: this bar is a
             // safety cut-off that switches the arm off on what it really trades (as the 30-60-100 lock's trades count). Leaving them
             // out would keep the bar from ever judging an arm while the switch is on - less protection, not more. Its own-exits record
             // is split out in the diagnostics ([diagLine]).
@@ -2039,7 +2039,7 @@ object PassedArmsHost {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys + marks) }
                 // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
                 // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
-                // 15 Nov: [Pos.fx] goes with it - the live trade takes its own ₹500 step trail on ITS fill, lots and best price.
+                // 15 Nov: [Pos.fx] goes with it - the live trade takes its own breakeven rule on ITS fill, lots and best price.
                 runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos), fixed = pos.fx)) }
                 // 22 Oct: the time machine's reality check (shadow only; background): the arm's premium stop and target, out by its square-off.
                 runCatching {
@@ -2126,14 +2126,15 @@ object PassedArmsHost {
         save(r)
     }
 
-    /** 15 Nov: the ₹500 step trail a trade entered with, at its own levels and labelled (null: none). */
+    /** 15 Nov: Boss's stop rule a trade entered with (breakeven at +10%), at its own levels and labelled (null: none). */
     private fun fixedWords(p: Pos): String? {
         if (!p.fx || !StepTrail.covers(p.arm)) return null
         val lot = lotOf(p)
         val s = StepTrail.stopLevel(p.entry, lot)
-        val first = StepTrail.trailLevel(p.entry, lot, p.entry + StepTrail.START_RS / lot)
-        return StepTrail.LABEL + listOfNotNull(s?.let { "stop ${px(it)} where tighter" }, first?.let { "trailed from ${px(p.entry + StepTrail.START_RS / lot)}" })
-            .joinToString(", ", " (", ")").takeIf { s != null || first != null }.orEmpty()
+        val be = StepTrail.breakevenLevel(p.entry, lot)
+        return StepTrail.LABEL + listOfNotNull(s?.let { "stop ${px(it)} where tighter" },
+            be?.let { "breakeven ${px(it)} from ${px(StepTrail.breakevenTrigger(p.entry))}" })
+            .joinToString(", ", " (", ")").takeIf { s != null || be != null }.orEmpty()
     }
 
     private fun exitWords(p: Pos): String = listOfNotNull(exitWordsOwn(p), fixedWords(p)).joinToString("; ")
@@ -2167,12 +2168,12 @@ object PassedArmsHost {
     }.let { if (p.lock) PassedArms.withLock(it, p.l25) else it }
         // 1 Nov (R142 NP5-52): the 09:25 no-progress exit, on the trades that entered with it.
         .let { if (p.np5 && p.arm == OovArm.SOURCE) it.copy(noProgress = OovArm.NO_PROGRESS) else it }
-        // 15 Nov (Boss's exception, failed gates): the ₹500 step trail per lot on the R51 / R72 trades that entered with it ([Pos.fx]); the
-        // walk takes its -₹500 a lot only where tighter than the arm's own stop, and its steps as a lock (up only), beside the arm's own exits.
+        // 15 Nov (Boss's exception, failed gates): the breakeven rule on the R51 / R72 trades that entered with it ([Pos.fx]); the
+        // walk keeps the arm's own stop and takes the breakeven as a lock (up only), beside the arm's own exits.
         .let { if (p.fx && StepTrail.covers(p.arm)) it.copy(stepTrail = PassedArms.StepTrailOn(lotOf(p))) else it }
 
     /**
-     * 15 Nov: [p]'s lot size (the ₹500 step trail is per lot): the one kept at its entry; else its paper contract's (the paper book,
+     * 15 Nov: [p]'s lot size (the breakeven rule is per lot): the one kept at its entry; else its paper contract's (the paper book,
      * read already on this worker); else its quantity (a tighter stop, never a looser one).
      */
     private fun lotOf(p: Pos): Int = p.lot?.takeIf { it > 0 } ?: runCatching { Paper.contractOf(p.symbol)?.lotSize }.getOrNull()?.takeIf { it > 0 }
@@ -2818,8 +2819,8 @@ object PassedArmsHost {
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
                 adopted = ADOPT_FILL, lock = b.lockOn, l25 = b.lockOn && b.l25On, st = arm == DonchianArm.SOURCE && b.stOn,
-                // 15 Nov (review): a position taken back was bought before this record - not a new trade, so no ₹500 step trail (its
-                // -₹500 a lot from an old fill could sell it at once).
+                // 15 Nov (review): a position taken back was bought before this record - not a new trade, so no breakeven rule (a
+                // breakeven judged from an old fill could sell it at once).
                 lot = c.lotSize.takeIf { it > 0 })
             b.positions += p
             b.marks[p.symbol] = p.entry

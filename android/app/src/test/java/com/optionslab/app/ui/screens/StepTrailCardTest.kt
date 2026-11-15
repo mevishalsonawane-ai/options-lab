@@ -23,7 +23,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * 15 Nov 2026 (Boss's exception): Bot settings' "₹500 step trail per lot" card ([StepTrailCardFlow]): labelled "failed gates, Boss's
+ * 15 Nov 2026 (Boss's exception, third version): Bot settings' "Breakeven at +10%" card ([StepTrailCardFlow]): labelled "failed gates, Boss's
  * exception" with its honest record; on, switching it off asks the PIN first (where a PIN is asked) and goes off only once it is given;
  * off, on again is one tap; before the switch is read it offers none. Also the arms' rows' line ([stepTrailLine]).
  */
@@ -49,13 +49,13 @@ class StepTrailCardTest {
         var ons = 0; var offs = 0
         show(StepTrailExits.View(on = true, loaded = true), pinAsked = true, { ons++ }, { offs++ })
         compose.waitForIdle()
-        assertTrue(shows("₹500 step trail per lot"))
+        assertTrue(shows("Breakeven at +10%"))
         assertTrue(shows(StepTrail.SWITCH))
-        assertTrue(shows("On: new trades of the three arms get the ₹500 step trail"))
+        assertTrue(shows("On: new trades of the three arms get the breakeven at +10%"))
         assertTrue(shows("Failed gates, Boss's exception", sub = true))
-        assertTrue(shows("R172", sub = true))
-        assertTrue(shows("stop at -₹500 a lot", sub = true))
-        assertTrue(shows("+₹1,000 a lot, the stop moves to +₹500 a lot", sub = true))
+        assertTrue(shows("R179", sub = true))
+        assertTrue(shows("keeps its arm's own stop", sub = true))
+        assertTrue(shows("10% above the fill, the stop moves to breakeven", sub = true))
         compose.onNodeWithText(StepTrail.SWITCH).performClick()
         compose.waitForIdle()
         assertTrue(shows("PIN asked"))
@@ -106,7 +106,7 @@ class StepTrailCardTest {
     @Test fun theArmsRowsSayItWhenOnAndOnlyForTheThree() {
         for (src in listOf(com.optionslab.engine.orb.DonchianArm.SOURCE, com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "liquidity")) {
             val line = stepTrailLine(src, true)!!
-            assertTrue(line, line.contains("failed gates, Boss's exception") && line.contains("R152"))
+            assertTrue(line, line.contains("failed gates, Boss's exception") && line.contains("R179"))
             assertNull(stepTrailLine(src, false))
         }
         for (other in listOf(com.optionslab.engine.orb.OovArm.SOURCE, com.optionslab.engine.orb.Solo2.SOURCE, "orb")) assertNull(stepTrailLine(other, true))
