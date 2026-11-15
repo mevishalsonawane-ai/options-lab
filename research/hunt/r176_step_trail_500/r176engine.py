@@ -176,8 +176,10 @@ def label(code: int, kind: str) -> str:
 
 def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lot: float = K.STEP,
           gap_per_lot: float = K.STEP, step_per_lot: float = K.STEP, inc_per_lot: float = -1.0,
-          trig_per_lot: float = -1.0) -> list:
-    """(R177 Amendment C adds step_per_lot / inc_per_lot / trig_per_lot; the defaults are R176's rule.)"""
+          trig_per_lot: float = -1.0, be_x: float = -1.0) -> list:
+    """(R177 Amendment C adds step_per_lot / inc_per_lot / trig_per_lot; the defaults are R176's rule.)
+    be_x > 0 (R179): R162's breakeven lock - once the premium is up be_x (fraction of the raw fill), the stop moves to the
+    premium whose stop sale nets Rs 0 after charges (r106engine.stop_price with T = 0), exactly as r162engine 'be'."""
     """Price one day's candidates (dicts with side, strike, er[, fx]) for `lots` lots, with (on=True) or without Boss's
     step trail. Trade dicts (None = no fill) as r152engine.price plus 'stop_kind'."""
     st = E.stack(und, D)
@@ -193,16 +195,20 @@ def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lo
             out.append(None)
             continue
         C = st.S[ci]
-        raw, real, ef, _ = X.entry_info(C, c["er"], sq, qty)
+        raw, real, ef, tks = X.entry_info(C, c["er"], sq, qty)
         if ef < 0:
             out.append(None)
             continue
         be = real + ch(real, real) / qty if G.needs_be(ex) else 0.0
+        lkt, lkk = ex.lock_trig, ex.lock_keep
+        if be_x > 0:
+            s0 = X.stop_price(real, qty, 0.0, ch, tks, E.SLIP[2], E.SLIP[3])
+            lkt, lkk = be_x * raw * qty * (1 - 1e-12), (s0 - raw) * qty
         stop_abs, stop_f, step_amt, kind = levels(raw, real, qty, ex, on, lots, per_lot)
         if step_amt > 0:
             step_amt = step_per_lot * lots
         a, b, rE, rX, r0, r1, r = simulate_step(C, int(c["er"]), int(sq), int(fx if fx is not None else -1), stop_f,
-                                                ex.target, ex.lock_trig, ex.lock_keep, ex.lock_trail, stp, ex.tmax,
+                                                ex.target, lkt, lkk, ex.lock_trail, stp, ex.tmax,
                                                 ex.need, ex.close_stop, K51.TICK, qty, be, stop_abs, step_amt, *E.SLIP,
                                                 gap_per_lot * lots, inc_per_lot * lots if inc_per_lot > 0 else -1.0,
                                                 trig_per_lot * lots if trig_per_lot > 0 else -1.0)
