@@ -1398,7 +1398,7 @@ internal object Autopilot {
     fun logStepTrailOn() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"keep a 500 rs gap on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs\"); " +
-            "not tested, Boss's exception - paper and live, new trades")
+            "failed gates, Boss's exception - paper and live, new trades")
     }
 
     /** 15 Nov: Boss flipping the ₹500 step trail in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */

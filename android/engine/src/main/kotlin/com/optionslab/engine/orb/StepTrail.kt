@@ -20,8 +20,8 @@ import kotlin.math.roundToLong
  * ladders and locks, L25, time stops, index exits, square-offs): whichever comes first wins. It only lowers risk (a tighter stop, an
  * earlier exit), so it acts on live through every existing live gate (CLAUDE.md's LIVE rule).
  *
- * NOT TESTED, Boss's exception (CLAUDE.md, the fifth): no research is behind these levels, and earlier studies point the other way -
- * R152, R167 and R172 found tight rupee stops and early profit locks hurt these arms. Labelled [STATUS] wherever it is shown, logged in
+ * FAILED GATES, Boss's exception (CLAUDE.md, the fifth): R176 replayed it on one year and it failed every gate ([RECORD]); R152,
+ * R167 and R172 also found tight rupee stops and early profit locks hurt these arms. Labelled [STATUS] wherever it is shown, logged in
  * the Autopilot change timeline, one tap off. Signal source: the arms' entries stay on the index; only the stop is on the premium
  * (CLAUDE.md allows stops and locks on the option premium). Pure: no I/O, no clock.
  */
@@ -31,13 +31,13 @@ object StepTrail {
     /** The best P&L a lot at which the trail starts (its first stop: +[STEP_RS] a lot). */
     const val START_RS = 1_000.0
 
-    const val STATUS = "not tested, Boss's exception"
+    const val STATUS = "failed gates, Boss's exception"
     /** How the arms' rows and the trades name it. */
-    const val LABEL = "₹500 step trail per lot (not tested, Boss's exception)"
+    const val LABEL = "₹500 step trail per lot (failed gates, Boss's exception)"
     /** Bot settings' switch. */
-    const val SWITCH = "₹500 step trail per lot (Liquidity, R51, R72) — not tested, Boss's exception"
+    const val SWITCH = "₹500 step trail per lot (Liquidity, R51, R72) — failed gates, Boss's exception"
     /** The diagnostics' name: no rupee sign and no grouped figure (the uploaded diagnostics hide every rupee figure). */
-    const val DIAG = "500 step trail per lot (not tested, Boss's exception)"
+    const val DIAG = "500 step trail per lot (failed gates, Boss's exception)"
     /** An exit by the stop set at the entry, as the trade record and the diagnostics say it. */
     const val WHY_STOP = "₹500 stop"
     /** An exit by a stop the trail raised. */
@@ -47,7 +47,8 @@ object StepTrail {
         "that is tighter than the arm's own stop); once its best open P&L reaches +₹1,000 a lot the stop moves to +₹500 a lot, and up ₹500 a " +
         "lot for every further ₹500 a lot of best P&L, never down; the arm's own exits stay and the first one wins; paper and live"
     /** The honest record. */
-    const val RECORD = "no research is behind these levels; R152, R167 and R172 found tight rupee stops and early profit locks hurt these arms"
+    const val RECORD = "R176 replayed it on one year (20 Oct 2025 - 19 Oct 2026, about 6,300 trades at 1 lot): all three arms went from ₹6.37 L on " +
+        "their own rules to -₹3.23 L with it, and it failed every gate; R152, R167 and R172 also found tight rupee stops and early profit locks hurt these arms"
 
     private const val EPS = 1e-9
 

@@ -52,7 +52,7 @@ object BotTrades {
          */
         val rules: String? = null,
         /**
-         * 15 Nov (Boss's exception, not tested; [com.optionslab.engine.orb.StepTrail]): a Liquidity trade on the ₹500 step trail per lot -
+         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): a Liquidity trade on the ₹500 step trail per lot -
          * its open line names its stop at -₹500 a lot or its trail's step (from [peak]), labelled.
          */
         val fixed: Boolean = false,
@@ -256,7 +256,7 @@ object BotTrades {
             "operator_stop" -> "out when you stopped it for today, $sold"
             "closed_by_you" -> "closed by you, $sold"
             "backstop_square_off" -> "out at the app's backstop square-off, $sold"
-            // 15 Nov (Boss's exception, not tested): the ₹500 step trail per lot.
+            // 15 Nov (Boss's exception, failed gates): the ₹500 step trail per lot.
             StepTrail.WHY_STOP -> "out at its ₹500-a-lot stop (${StepTrail.STATUS}), $sold"
             StepTrail.WHY_TRAIL -> "out at its ₹500 step trail (${StepTrail.STATUS}), $sold"
             null -> sold

@@ -139,7 +139,7 @@ object PassedArms {
                             /** 1 Nov 2026 (R142 NP5-52, Boss: "Make the change the arms"): sold early when the trade makes no progress; null: none. */
                             val noProgress: NoProgress? = null,
                             /**
-                             * 15 Nov 2026 ([StepTrail], Boss's exception, not tested): the ₹500-a-lot step trail for a contract of this lot
+                             * 15 Nov 2026 ([StepTrail], Boss's exception, failed gates): the ₹500-a-lot step trail for a contract of this lot
                              * size - the entry's -₹500 a lot (only where tighter than [stop]) and the trail's steps from +₹1,000 a lot; null: none.
                              */
                             val stepTrail: StepTrailOn? = null)

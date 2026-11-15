@@ -127,7 +127,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
         assertEquals(fs, stop.triggerPrice!!.toDouble(), 1e-9)
         // The position popup carries the label and the stop.
         val exits = com.optionslab.ira.ArmExits.line(false, p.symbol)!!
-        assertTrue(exits, exits.contains("not tested, Boss's exception"))
+        assertTrue(exits, exits.contains("failed gates, Boss's exception"))
         // The option falls under it: the book fills the resting stop; booked as the ₹500 stop.
         priced(fs - 0.5, LocalTime.of(13, 15))
         val closed = row().today.single()
@@ -229,7 +229,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
         if (!com.optionslab.app.BuildConfig.GOLD) {
             val t = view!!
             assertTrue(t.paperTest, t.paperTest.contains("0 trades since 13 Oct"))
-            assertTrue(t.paperTest, t.paperTest.contains("Kept apart, ${StepTrail.LABEL} (your 15 Nov choice; no research"))
+            assertTrue(t.paperTest, t.paperTest.contains("Kept apart, ${StepTrail.LABEL} (your 15 Nov choice; R176"))
             assertFalse(t.paperTest, t.paperTest.contains("plain rules ("))
         }
         // Explain-my-bots and the weekly / cut-off readers see it as the rule's own.

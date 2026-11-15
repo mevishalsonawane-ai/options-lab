@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
  * 15 Nov 2026 (Boss: "when a trade is bought the stop loss should be only 500 rs ... keep a 500 rs gap on every 500 rs gain"; per lot;
  * CLAUDE.md's fifth exception): Bot settings' switch for the ₹500 step trail on Liquidity 15+5, R51 and R72, next to
  * the arms' live lots. On by default. Off puts the arms' own wider exits back for new trades, live too, so it takes the PIN where one
- * is asked ([com.optionslab.app.security.GuardPin]); on again is at once. Labelled "not tested, Boss's exception".
+ * is asked ([com.optionslab.app.security.GuardPin]); on again is at once. Labelled "failed gates, Boss's exception".
  */
 @Composable
 internal fun StepTrailCard(model: AppModel) {
@@ -63,7 +63,7 @@ internal fun StepTrailCardContent(view: StepTrailExits.View, said: String?, onSw
         if (!view.loaded) Note("Reading the switch...", Modifier.padding(top = 4.dp))
         else ToggleRow(StepTrail.SWITCH, if (view.on) "On: new trades of the three arms get the ₹500 step trail"
             else "Off: new trades use the arms' own exits", view.on, keepSub = true, onChange = onSwitch)
-        Note("Not tested, Boss's exception: ${StepTrail.RECORD}. A trade keeps the rule it entered with. Switching it off takes " +
+        Note("Failed gates, Boss's exception: ${StepTrail.RECORD}. A trade keeps the rule it entered with. Switching it off takes " +
             "your PIN (the wider exits come back, live too); on again is at once. Every change is in the change timeline.",
             Modifier.padding(top = 2.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }

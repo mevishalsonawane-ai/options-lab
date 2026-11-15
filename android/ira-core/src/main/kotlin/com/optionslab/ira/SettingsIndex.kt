@@ -221,8 +221,8 @@ object SettingsIndex {
             listOf("Bot settings", "Indices the arms trade live"), listOf("index", "indices", "bank nifty", "banknifty", "nifty", "sensex", "which index"), guarded = true),
         Entry("risk", "risk.armlots", "Live lots per arm trade", "How many lots each arm's live trade buys (− / +, default 1); raising it asks for the PIN.",
             listOf("Bot settings", "Live lots per arm trade"), listOf("lots", "lot size", "quantity", "size", "increase"), guarded = true),
-        // 15 Nov (Boss's exception, not tested): the ₹500 step trail per lot on Liquidity, R51 and R72.
-        Entry("risk", "risk.steptrail", "₹500 step trail per lot", "Liquidity 15+5, R51 and R72's trades start with a ₹500 stop a lot and trail it ₹500 a lot behind from +₹1,000 a lot, paper and live (not tested, your exception); off takes the PIN.",
+        // 15 Nov (Boss's exception, failed gates): the ₹500 step trail per lot on Liquidity, R51 and R72.
+        Entry("risk", "risk.steptrail", "₹500 step trail per lot", "Liquidity 15+5, R51 and R72's trades start with a ₹500 stop a lot and trail it ₹500 a lot behind from +₹1,000 a lot, paper and live (failed gates, your exception); off takes the PIN.",
             listOf("Bot settings", "₹500 step trail per lot"), listOf("500", "step trail", "trailing stop", "stop loss", "liquidity", "r51", "r72"), guarded = true),
         Entry("risk", "risk.guards", "Kill switch", "Stops all new entries at once; exits and square-offs still go through. Asks you to confirm both ways.",
             GUARD, listOf("kill", "emergency", "stop all", "block"), guarded = true),

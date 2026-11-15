@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 /**
  * 15 Nov 2026 (Boss: "when a trade is bought the stop loss should be only 500 rs ... keep a 500 rs gap on every 500 rs gain"; per lot;
- * CLAUDE.md's fifth exception, not tested): [StepTrail]'s levels - the entry's -₹500 a lot, the steps from +₹1,000 a lot, rounded up
+ * CLAUDE.md's fifth exception, failed gates): [StepTrail]'s levels - the entry's -₹500 a lot, the steps from +₹1,000 a lot, rounded up
  * to the tick, tighter-only, never down - and how the passed arms' walk and the live mirror's decision use them.
  */
 class StepTrailTest {
@@ -82,10 +82,10 @@ class StepTrailTest {
         assertTrue(StepTrail.covers(DonchianArm.SOURCE)); assertTrue(StepTrail.covers(BreadthDonchianArm.SOURCE)); assertTrue(StepTrail.covers("liquidity"))
         for (b in LiquidityRules.BOOKS) assertTrue(StepTrail.covers(b.source))
         for (o in listOf(OovArm.SOURCE, Solo2.SOURCE, S5Trail.SOURCE, CisdNet.SOURCE, Ft3Rules.SOURCE, NightRules.SOURCE, "orb", "")) assertFalse(StepTrail.covers(o), o)
-        assertTrue(StepTrail.LABEL.contains("not tested, Boss's exception")); assertTrue(StepTrail.RECORD.contains("R152") && StepTrail.RECORD.contains("R172"))
+        assertTrue(StepTrail.LABEL.contains("failed gates, Boss's exception")); assertTrue(StepTrail.RECORD.contains("R152") && StepTrail.RECORD.contains("R172"))
         assertFalse(Regex("₹|\\bRs\\b|\\d,\\d").containsMatchIn(StepTrail.DIAG))
-        assertEquals("₹500 stop (not tested, Boss's exception)", StepTrail.words(StepTrail.WHY_STOP))
-        assertEquals("step trail (not tested, Boss's exception)", StepTrail.words(StepTrail.WHY_TRAIL))
+        assertEquals("₹500 stop (failed gates, Boss's exception)", StepTrail.words(StepTrail.WHY_STOP))
+        assertEquals("step trail (failed gates, Boss's exception)", StepTrail.words(StepTrail.WHY_TRAIL))
         assertEquals("stop", StepTrail.words("stop"))
     }
 

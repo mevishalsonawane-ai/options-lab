@@ -260,7 +260,7 @@ object PassedArmsHost {
          */
         val w20: Boolean? = null,
         /**
-         * 15 Nov (Boss's exception, not tested; [com.optionslab.engine.orb.StepTrail]): an R51 / R72 trade that entered with the ₹500 step
+         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): an R51 / R72 trade that entered with the ₹500 step
          * trail per lot ([StepTrailExits]). A trade keeps the rule it entered with (persisted); its step is kept with its lock ([Book.locks]).
          */
         val fx: Boolean = false,
@@ -1073,7 +1073,7 @@ object PassedArmsHost {
                         pickerWords(v.pickOn, c, { m(it) }, R51Picker.LABEL, R51Picker::takes, R51Picker.STATUS) else "") +
                     (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
                         "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
-                    // 15 Nov (Boss's exception, not tested): the ₹500 step trail - its closed trades apart from the arm's own exits.
+                    // 15 Nov (Boss's exception, failed gates): the ₹500 step trail - its closed trades apart from the arm's own exits.
                     (if (StepTrail.covers(s)) " · ${StepTrail.DIAG} ${if (StepTrailExits.isOn()) "on" else "off"} for new trades, " +
                         "${c.count { it.fx }} closed on it ${m(c.filter { it.fx }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.fx }} on the arm's own exits " +
                         m(c.filter { !it.fx }.sumOf { it.net ?: 0.0 }) else "") +
@@ -2167,7 +2167,7 @@ object PassedArmsHost {
     }.let { if (p.lock) PassedArms.withLock(it, p.l25) else it }
         // 1 Nov (R142 NP5-52): the 09:25 no-progress exit, on the trades that entered with it.
         .let { if (p.np5 && p.arm == OovArm.SOURCE) it.copy(noProgress = OovArm.NO_PROGRESS) else it }
-        // 15 Nov (Boss's exception, not tested): the ₹500 step trail per lot on the R51 / R72 trades that entered with it ([Pos.fx]); the
+        // 15 Nov (Boss's exception, failed gates): the ₹500 step trail per lot on the R51 / R72 trades that entered with it ([Pos.fx]); the
         // walk takes its -₹500 a lot only where tighter than the arm's own stop, and its steps as a lock (up only), beside the arm's own exits.
         .let { if (p.fx && StepTrail.covers(p.arm)) it.copy(stepTrail = PassedArms.StepTrailOn(lotOf(p))) else it }
 

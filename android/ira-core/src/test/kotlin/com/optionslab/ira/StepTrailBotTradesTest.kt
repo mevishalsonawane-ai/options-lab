@@ -7,7 +7,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * 15 Nov 2026 (Boss's ₹500 step trail per lot; not tested, Boss's exception): "explain my bots' trades" and the weak-link answer read a
+ * 15 Nov 2026 (Boss's ₹500 step trail per lot; failed gates, Boss's exception): "explain my bots' trades" and the weak-link answer read a
  * Liquidity trade on the step trail as such - its open line names its ₹500-a-lot stop or its trail's step, labelled, and its exits are
  * worded and counted as a stop and a profit lock.
  */
@@ -22,10 +22,10 @@ class StepTrailBotTradesTest {
         // A lot of 30 at 300: the 15% stop is 255; -₹500 a lot is 283.35 (tighter).
         val open = BotTrades.Trade("liquidity5", "BANKNIFTY14OCT2654300CE", "CE", 30, 300.0, at(12, 0), at(11, 55), lot = 30, fixed = true)
         val e = chain(open).exit
-        assertTrue(e.contains("its ₹500-a-lot stop (283.35; not tested, Boss's exception)"), e)
+        assertTrue(e.contains("its ₹500-a-lot stop (283.35; failed gates, Boss's exception)"), e)
         // Its best so far 340 (+₹1,200 a lot): the trail's +₹500 a lot, 316.70.
         val up = chain(open.copy(peak = 340.0)).exit
-        assertTrue(up.contains("its ₹500 step trail's stop (316.70; not tested, Boss's exception)"), up)
+        assertTrue(up.contains("its ₹500 step trail's stop (316.70; failed gates, Boss's exception)"), up)
         val plain = chain(open.copy(fixed = false)).exit
         assertTrue(plain.contains("its stop 15% under the price paid"), plain)
         // A cheap option: the 15% is tighter, so the 15% is named.
@@ -35,8 +35,8 @@ class StepTrailBotTradesTest {
     @Test fun itsExitsAreWordedAsTheRule() {
         val base = BotTrades.Trade("liquidity5", "BANKNIFTY14OCT2654300CE", "CE", 30, 300.0, at(12, 0), at(11, 55), lot = 30, fixed = true,
             exitTime = at(12, 10), charges = 50.0)
-        assertTrue(chain(base.copy(exit = 283.35, why = "₹500 stop")).exit.contains("out at its ₹500-a-lot stop (not tested"))
-        assertTrue(chain(base.copy(exit = 316.7, why = "step trail")).exit.contains("out at its ₹500 step trail (not tested"))
+        assertTrue(chain(base.copy(exit = 283.35, why = "₹500 stop")).exit.contains("out at its ₹500-a-lot stop (failed gates"))
+        assertTrue(chain(base.copy(exit = 316.7, why = "step trail")).exit.contains("out at its ₹500 step trail (failed gates"))
     }
 
     @Test fun theWeakLinkCountsThemAsAStopAndAProfitLock() {

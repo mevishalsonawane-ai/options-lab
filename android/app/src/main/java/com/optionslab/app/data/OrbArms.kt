@@ -193,7 +193,7 @@ object OrbArms {
         val capped: Double? = null,
         /**
          * 15 Nov (Boss: "when a trade is bought the stop loss should be only 500 rs ... keep a 500 rs gap on every 500 rs gain"; per lot;
-         * not tested, Boss's exception - [com.optionslab.engine.orb.StepTrail]): a Liquidity 15+5 trade (paper or live) that entered with the
+         * failed gates, Boss's exception - [com.optionslab.engine.orb.StepTrail]): a Liquidity 15+5 trade (paper or live) that entered with the
          * ₹500 step trail ([StepTrailExits]): its resting stop sits at -₹500 a lot where that is tighter than its own -15%, and is moved up
          * with its best price ([peak], persisted) once +₹1,000 a lot is reached. A trade keeps the rule it entered with (persisted). A label
          * too: these trades can be told apart from the plain rules (NOT counted as [ownRules], so the BANKNIFTY live stop rule still counts
@@ -3672,7 +3672,7 @@ object OrbArms {
         // The owner's stop: a resting SL-M sell 15% below the fill (the book owns it, as the ORB's -40), for all that filled. Its
         // exits are the paper account's parameters today (S9: a variant moves its exits only, from the session after).
         val lq = liqParamsOf(arm.source, now().toLocalDate(), live = false)
-        // 15 Nov (Boss's exception, not tested): the ₹500 step trail when the switch is on - its stop rests at -₹500 a lot where
+        // 15 Nov (Boss's exception, failed gates): the ₹500 step trail when the switch is on - its stop rests at -₹500 a lot where
         // that is tighter than the -15% (memory only: the switch was read in the background); with no lot size known it is not used.
         val fixed = StepTrailExits.forEntry(arm.source) && c.lotSize > 0
         val trigger = firstStop(LiquidityRules.stopTrigger(fill.price, lq.stopPct), fill.price, c.lotSize, fixed)

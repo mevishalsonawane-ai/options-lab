@@ -86,15 +86,17 @@ notes; match the surrounding code.
     - A fifth exception, chosen by Boss on 15 Nov ("if the profit moves to 1k, make stop loss 500, if the profit moves to 1.5k move stop
       loss to 1000, keep a 500 rs gap on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs, make this
       change to liquidity and donchian r51 and r72"): a ₹500 step trail per lot acts on Liquidity 15+5 (every book and index), R51 and
-      R72, on PAPER AND LIVE, although it was never tested.
+      R72, on PAPER AND LIVE, although it failed the gates (R176).
       - The rule, per lot (L lots; P&L = (price - fill) x quantity, before charges, as Kite shows it): a new trade starts with its stop
         at -₹500 x L, only where that is tighter than the arm's own stop (it never loosens one). Once its best open P&L reaches +₹1,000 x L
         the stop moves to +₹500 x L, and up ₹500 x L for every further ₹500 x L of best P&L; it never moves down. No fixed target. The
         arms' own exits all stay and the first one wins. A live trade takes its own levels on its live fill and lots; its stop rests at
         Zerodha and is modified up as it steps (the app sells at the level itself when it cannot rest there), never two exits.
-      - Its record: no research is behind these levels. R152, R167 and R172 found tight rupee stops and early profit locks hurt these arms.
+      - Its record: R176 replayed it on one year (20 Oct 2025 - 19 Oct 2026, about 6,300 trades at 1 lot): all three arms made ₹6.37 lakh
+        on their own rules and -₹3.23 lakh with it (₹500 stop on 60% of trades, wins 45% -> 35%); it failed every gate. R152, R167 and
+        R172 also found tight rupee stops and early profit locks hurt these arms.
       - It only lowers risk (a tighter stop, an earlier exit), so it acts on live through every existing live gate.
-      - It is labelled "not tested, Boss's exception" wherever it is shown, logged in the Autopilot change timeline, and one tap off
+      - It is labelled "failed gates, Boss's exception" wherever it is shown, logged in the Autopilot change timeline, and one tap off
         (Bot settings). Off restores the arms' own exits for new trades (open trades keep the rule they entered with); it adds live
         risk, so off and the Undo take the PIN.
     - No other failed idea may use these exceptions.

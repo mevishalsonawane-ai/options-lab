@@ -8,7 +8,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * 15 Nov 2026 (Boss's ₹500 step trail per lot; CLAUDE.md's fifth exception, not tested): its change-timeline entry ([AutoChange.stepTrail]) -
+ * 15 Nov 2026 (Boss's ₹500 step trail per lot; CLAUDE.md's fifth exception, failed gates): its change-timeline entry ([AutoChange.stepTrail]) -
  * Boss's own, live scope: on only tightens stops (lowers risk); its Undo puts the arms' own wider exits back (adds live risk) and takes
  * the PIN.
  */
@@ -29,9 +29,9 @@ class StepTrailChangeTest {
         assertFalse(AutoChange.never(on)); assertFalse(AutoChange.never(AutoChange.stepTrail(false)))
         assertTrue(AutoChange.bossOwn(on.kind))
         for (w in listOf("stop loss should be only 500 rs", "-₹500 a lot", "+₹1,000 a lot", "+₹500 a lot", "never down", "paper and live",
-                "first one wins", "tighter", "Not tested, Boss's exception", "R152", "R167", "R172"))
+                "first one wins", "tighter", "Failed gates, Boss's exception", "R152", "R167", "R172"))
             assertTrue(on.reason.contains(w), "$w: ${on.reason}")
-        assertTrue(on.what.contains("not tested, Boss's exception"))
+        assertTrue(on.what.contains("failed gates, Boss's exception"))
         assertTrue(AutoChange.stepTrail(false).reason.contains("own exits"))
     }
 

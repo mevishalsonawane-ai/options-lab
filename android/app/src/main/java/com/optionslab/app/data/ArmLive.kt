@@ -111,7 +111,7 @@ object ArmLive {
         /** 2 Nov: the paper contract this live trade copies (the paper book's own name for it): its paper notices stay down while open. */
         val paperSymbol: String? = null,
         /**
-         * 15 Nov (Boss's exception, not tested; [com.optionslab.engine.orb.StepTrail]): an R51 / R72 live (or shadow) trade whose paper
+         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): an R51 / R72 live (or shadow) trade whose paper
          * trade entered with the ₹500 step trail per lot: this trade has its OWN, on its own fill and lots (Kite's P&L) - its stop resting
          * at Zerodha at -₹500 a lot where tighter, then moved up with its best price ([best]) ([ruleStop]). Persisted.
          */
@@ -1036,12 +1036,15 @@ object ArmLive {
     internal fun rebuiltFixed(spec: LiveMirror.Spec, symbol: String): Boolean {
         if (!com.optionslab.engine.orb.StepTrail.covers(spec.key)) return false
         return runCatching {
+            // 15 Nov re-review: no confident paper match (the BFO list not read yet after a restart, an unreadable book) keeps
+            // the rule. It only tightens a live stop, so it may apply without the PIN; following the switch could take the rule
+            // away from a trade that entered with it (Boss switched it off for new trades only).
             val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == symbol }
-                ?: return StepTrailExits.isOn()
+                ?: return true
             hosts[spec.family]?.open()?.filter { leg -> leg.key == spec.key && leg.qty > 0 && leg.symbol?.let { Paper.contractOf(it) }?.let { c ->
                 c.underlying == ins.name && c.expiry == ins.expiry && c.right == ins.right && kotlin.math.abs(c.strike - ins.strike) < 1e-6 } == true }
-                ?.singleOrNull()?.fixed ?: StepTrailExits.isOn()
-        }.getOrDefault(StepTrailExits.isOn())
+                ?.singleOrNull()?.fixed ?: true
+        }.getOrDefault(true)
     }
 
     /**

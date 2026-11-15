@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 /**
  * 15 Nov 2026 (Boss: "if the profit moves to 1k, make stop loss 500, if the profit moves to 1.5k move stop loss to 1000, keep a 500 rs gap
  * on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs, make this change to liquidity and donchian r51
- * and r72"; per lot; CLAUDE.md's fifth exception, NOT TESTED): Boss's switch "₹500 step trail per lot (Liquidity, R51, R72)", ON by default.
+ * and r72"; per lot; CLAUDE.md's fifth exception, FAILED GATES): Boss's switch "₹500 step trail per lot (Liquidity, R51, R72)", ON by default.
  *
  * On, every NEW trade of Liquidity 15+5 (every book and index), R51 Donchian 20 and R72 Breadth Donchian - paper and its live copy -
  * enters with [StepTrail]'s stop beside its own exits: -₹500 a lot at the entry (only where tighter than the arm's own stop), then from
@@ -102,7 +102,7 @@ object StepTrailExits {
         publish()
         if (log) runCatching { com.optionslab.app.ira.Autopilot.logStepTrail(on) }
         return if (on) "On: new Liquidity 15+5, R51 and R72 trades start with a ₹500 stop a lot, raised to +₹500 a lot at +₹1,000 a lot and ₹500 " +
-            "a lot for every further ₹500 a lot, paper and live, beside their own exits (not tested, your exception)."
+            "a lot for every further ₹500 a lot, paper and live, beside their own exits (failed gates, your exception)."
         else "Off: new Liquidity 15+5, R51 and R72 trades use their own exits again. Open trades keep the exits they entered with."
     }
 

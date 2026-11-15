@@ -139,7 +139,7 @@ class StepTrailPassedTest : RobolectricTest() {
         val ex = PassedArmsHost.exitsOf(p, null)
         assertEquals(fs, ex.stop!!, 1e-9)
         assertEquals("the arm's own target stays", p.entry * 1.3, ex.target!!, 1e-9)
-        assertTrue(ex.note!!, ex.note!!.contains("not tested, Boss's exception"))
+        assertTrue(ex.note!!, ex.note!!.contains("failed gates, Boss's exception"))
         // Its line on the row says it too.
         assertTrue(PassedArmsHost.tradeLine(p, emptyMap()).contains(StepTrail.LABEL))
         // 09:24 trades a rupee under the level: sold by the ₹500 stop, booked at the walk's price (the minute's open), never better.
@@ -472,10 +472,10 @@ class StepTrailPassedTest : RobolectricTest() {
         assertFalse(live.fixed)
         StepTrailExits.resetForTest(on = true)
         assertFalse("its paper trade, matched by contract", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, sym))
-        // No confident match (a contract no paper trade holds): the switch now - on here, off below.
+        // No confident match (a contract no paper trade holds): keeps the rule, the risk-lowering side, whatever the switch says now.
         assertTrue(ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, "NIFTY26OCT99999CE"))
         StepTrailExits.resetForTest(on = false)
-        assertFalse(ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, "NIFTY26OCT99999CE"))
+        assertTrue("off is for new trades only", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, "NIFTY26OCT99999CE"))
         StepTrailExits.resetForTest(on = true)
         assertFalse("never another arm", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(OovArm.SOURCE)!!, sym))
     }
