@@ -1,0 +1,115 @@
+{
+ "LIQ@1": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "LIQ@2": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "LIQ@3": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "R72@1": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "R72@2": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "R72@3": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "R51@1": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "R51@2": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "R51@3": {
+  "passed": false,
+  "fails": [
+   "not positive in every period",
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r176": 1.0,
+  "twin_p": 1.0
+ },
+ "_m": {
+  "r176": 9,
+  "prior": 3970,
+  "total": 3979
+ }
+}
