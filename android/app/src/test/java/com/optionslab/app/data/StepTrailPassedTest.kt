@@ -32,13 +32,12 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 /**
- * 15 Nov 2026 (Boss: "if the profit moves to 1k, make stop loss 500 ... keep a 500 rs gap on every 500 rs gain. And when a trade is
- * bought the stop loss should be only 500 rs"; per lot; CLAUDE.md's fifth exception): R51 Donchian 20 and R72 Breadth Donchian with
- * the ₹500 step trail ([StepTrail], [StepTrailExits]) - on paper (-₹500 a lot where it is tighter, the steps at +₹1,000 and +₹1,500 a
- * lot, the arm's own stop when that is tighter, switch off = the old exits, a trade keeping its rule and its step across a restart),
- * and live (the Zerodha stop rested at the live trade's own -₹500 a lot and MODIFIED up as it steps, never down, its fill the step
- * trail's exit with no second sale, Boss's hands-off respected), and the switch with its timeline entry. NIFTY's lot is 65 here: at
- * 200, -₹500 a lot is 7.69 under the fill (the arm's -15% is 30 under) and each step 7.69 of premium.
+ * 15 Nov 2026, third version (Boss: "Switch to + picker + breakeven at +10% (V4)"; CLAUDE.md's fifth exception): R51 Donchian 20 and R72
+ * Breadth Donchian with the breakeven at +10% ([StepTrail], [StepTrailExits]) - on paper (the arm's own -15% stop at the entry, the
+ * breakeven once the option is 10% up, switch off = the old exits, a trade keeping its rule and its breakeven across a restart), and live
+ * (the Zerodha stop rested at the arm's own level and MODIFIED up to the breakeven, never down, its fill the breakeven lock's exit with no
+ * second sale, Boss's hands-off respected), and the switch with its timeline entry. NIFTY's lot is 65 here: at 200 the arm's -15% is 170;
+ * the breakeven is earned at 220.
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class StepTrailPassedTest : RobolectricTest() {
@@ -123,67 +122,56 @@ class StepTrailPassedTest : RobolectricTest() {
 
     // ---- paper ------------------------------------------------------------------------------------------------------------------
 
-    private fun step(entry: Double, bestRs: Double, tick: Double = StepTrail.TICK): Double =
-        StepTrail.trailLevel(entry, 65, entry + bestRs / 65, tick)!!
+    private fun be(entry: Double, tick: Double = StepTrail.TICK): Double = StepTrail.breakevenLevel(entry, 65, tick)!!
 
     private fun popupStop(p: PassedArmsHost.Pos): Double? = com.optionslab.ira.ArmExits.of(false, p.symbol).single().stop
 
-    @Test fun onPaperTheFiveHundredStopSellsWhereItIsTighterAndSaysSo() {
+    @Test fun onPaperItKeepsTheArmsOwnStopAndSaysSo() {
         val p = bought(200.0)
         assertTrue("entered with the rule", p.fx)
         assertEquals("its lot kept with it", 65, p.lot)
-        val fs = StepTrail.stopLevel(p.entry, 65)!!
-        assertEquals("7.69 under the fill, rounded up to the tick", p.entry - 7.65, fs, 0.051)
-        assertTrue("tighter than the -15%: $fs", fs > p.entry * 0.85)
-        // The position popup: the -₹500 a lot stop beside R51's own +30% target, labelled.
+        assertNull("no rule stop at the entry", StepTrail.stopLevel(p.entry, 65))
+        // The position popup: R51's own -15% and +30% target, labelled with where the breakeven starts.
         val ex = PassedArmsHost.exitsOf(p, null)
-        assertEquals(fs, ex.stop!!, 1e-9)
+        assertEquals(p.entry * 0.85, ex.stop!!, 1e-9)
         assertEquals("the arm's own target stays", p.entry * 1.3, ex.target!!, 1e-9)
-        assertTrue(ex.note!!, ex.note!!.contains("failed gates, Boss's exception"))
+        assertTrue(ex.note!!, ex.note!!.contains("failed gates, Boss's exception") && ex.note!!.contains("breakeven"))
         // Its line on the row says it too.
         assertTrue(PassedArmsHost.tradeLine(p, emptyMap()).contains(StepTrail.LABEL))
-        // 09:24 trades a rupee under the level: sold by the ₹500 stop, booked at the walk's price (the minute's open), never better.
-        market(LocalTime.of(9, 25)) { t -> if (t.isBefore(LocalTime.of(9, 24))) 200.0 else fs - 1.0 }
+        // 09:24 trades under the -15%: sold by its own stop.
+        market(LocalTime.of(9, 25)) { t -> if (t.isBefore(LocalTime.of(9, 24))) 200.0 else p.entry * 0.85 - 0.5 }
         manage(LocalTime.of(9, 25))
         val sold = closed()
-        assertEquals(StepTrail.WHY_STOP, sold.why)
-        assertTrue("${sold.exit} at or under $fs", sold.exit!! <= fs + 1e-9)
-        assertTrue("about -₹500 before charges: ${(sold.exit!! - p.entry) * p.qty}", (sold.exit!! - p.entry) * p.qty in -650.0..-450.0)
+        assertEquals("stop", sold.why)
         assertEquals(0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
         assertTrue("paper only: nothing at Zerodha", kite.placed.isEmpty())
     }
 
-    @Test fun onPaperTheStopStepsUpAtOneThousandAndFifteenHundredALotAndSellsAsTheStepTrail() {
+    @Test fun onPaperTheStopMovesToBreakevenAtTenPercentAndSellsAsTheBreakevenLock() {
         val p = bought(200.0)
         val e = p.entry
-        val s1 = step(e, 1_010.0); val s2 = step(e, 1_510.0)
-        assertEquals("+₹500 a lot", e + 7.70, s1, 0.051); assertEquals("+₹1,000 a lot", e + 15.40, s2, 0.051)
-        // 09:23's high is +₹1,007 a lot (the stop to +₹500 a lot from 09:24); from 09:24 the highs are +₹1,527 a lot (+₹1,000 a lot from 09:25).
-        val up = { t: LocalTime -> when { t.isBefore(LocalTime.of(9, 23)) -> 200.0; t.isBefore(LocalTime.of(9, 24)) -> e + 14.5; else -> e + 22.5 } }
+        val b = be(e)
+        assertTrue("over the fill: $b", b > e)
+        assertEquals("the fill plus the charges", e + StepTrail.chargesPerUnit(e, 65), b, 0.05 + 1e-9)
+        // 09:22 trades at +7% (not enough); 09:23 at +10.5% (the breakeven from 09:24); from 09:24 at +12.5% (no further step).
+        val up = { t: LocalTime -> when { t.isBefore(LocalTime.of(9, 22)) -> 200.0; t.isBefore(LocalTime.of(9, 23)) -> e + 14.0
+            t.isBefore(LocalTime.of(9, 24)) -> e + 21.0; else -> e + 25.0 } }
+        market(LocalTime.of(9, 23), up)
+        manage(LocalTime.of(9, 23))
+        assertEquals("+7%: still its own stop", e * 0.85, popupStop(open())!!, 1e-9)
         market(LocalTime.of(9, 24), up)
         manage(LocalTime.of(9, 24))
-        assertEquals("the stop at +₹500 a lot", s1, popupStop(open())!!, 1e-9)
+        assertEquals("the stop at breakeven", b, popupStop(open())!!, 1e-9)
         market(LocalTime.of(9, 27), up)
         manage(LocalTime.of(9, 27))
-        assertEquals("the stop at +₹1,000 a lot", s2, popupStop(open())!!, 1e-9)
-        assertTrue("still under R51's own +30%", e + 23.5 < e * 1.3)
-        // 09:27 opens at +10 (under +₹1,000 a lot): sold as the step trail at the minute's open, in profit.
-        market(LocalTime.of(9, 28)) { t -> if (t.isBefore(LocalTime.of(9, 27))) up(t) else e + 10.0 }
+        assertEquals("still the breakeven: one step only", b, popupStop(open())!!, 1e-9)
+        assertTrue("still under R51's own +30%", e + 26.0 < e * 1.3)
+        // 09:27 opens 3 under the fill (through the breakeven): sold as the breakeven lock at the minute's open.
+        market(LocalTime.of(9, 28)) { t -> if (t.isBefore(LocalTime.of(9, 27))) up(t) else e - 3.0 }
         manage(LocalTime.of(9, 28))
         val sold = closed()
         assertEquals(StepTrail.WHY_TRAIL, sold.why)
-        assertTrue("${sold.exit} at or under $s2", sold.exit!! <= s2 + 1e-9)
-        assertTrue("in profit: ${sold.exit} over ${e}", sold.exit!! > e)
-    }
-
-    @Test fun theArmsOwnStopWinsWhereItIsTighter() {
-        // At 50 the -15% (42.50, Rs 487.50 a lot) is tighter than -₹500 a lot (42.35).
-        val p = bought(50.0)
-        assertTrue(p.fx)
-        assertEquals(p.entry * 0.85, PassedArmsHost.exitsOf(p, null).stop!!, 1e-9)
-        market(LocalTime.of(9, 25)) { t -> if (t.isBefore(LocalTime.of(9, 24))) 50.0 else p.entry * 0.85 - 0.5 }
-        manage(LocalTime.of(9, 25))
-        assertEquals("the arm's own stop", "stop", closed().why)
+        assertTrue("${sold.exit} at or under $b", sold.exit!! <= b + 1e-9)
     }
 
     @Test fun withTheSwitchOffTheArmKeepsItsOldExits() {
@@ -191,32 +179,32 @@ class StepTrailPassedTest : RobolectricTest() {
         assertFalse(p.fx)
         assertEquals(p.entry * 0.85, PassedArmsHost.exitsOf(p, null).stop!!, 1e-9)
         assertEquals(p.entry * 1.3, PassedArmsHost.exitsOf(p, null).target!!, 1e-9)
-        // A fall to where the ₹500 stop would have been, a rise past +₹1,500 a lot and a give-back under its step: held.
+        // A fall to above the -15%, a rise past +10% and a give-back under where the breakeven would have been: held.
         market(LocalTime.of(9, 27)) { t -> when { t.isBefore(LocalTime.of(9, 22)) -> 200.0; t.isBefore(LocalTime.of(9, 23)) -> 191.0
-            t.isBefore(LocalTime.of(9, 25)) -> 224.0; else -> 205.0 } }
+            t.isBefore(LocalTime.of(9, 25)) -> 224.0; else -> 199.0 } }
         manage(LocalTime.of(9, 27))
         assertTrue(PassedArmsHost.view.value.open.any { it.shadow == null })
     }
 
-    @Test fun anOpenTradeKeepsTheRuleAndItsStepAcrossARestartAndASwitchOffNeverDown() {
+    @Test fun anOpenTradeKeepsTheRuleAndItsBreakevenAcrossARestartAndASwitchOffNeverDown() {
         val p = bought(200.0)
         val e = p.entry
-        val s1 = step(e, 1_010.0); val s2 = step(e, 1_510.0)
+        val b = be(e)
         val up = { t: LocalTime -> if (t.isBefore(LocalTime.of(9, 23))) 200.0 else e + 22.5 }
         market(LocalTime.of(9, 26), up)
         manage(LocalTime.of(9, 26))
-        assertEquals(s2, popupStop(open())!!, 1e-9)
+        assertEquals(b, popupStop(open())!!, 1e-9)
         // Boss switches it off (with the PIN): new trades only; this trade keeps its rule.
         assertTrue(StepTrailExits.set(false, pinConfirmed = true, log = false).startsWith("Off"))
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         val back = runBlocking { PassedArmsHost.refresh() }.open.single { it.shadow == null }
         assertTrue("persisted", back.fx); assertEquals(65, back.lot)
-        // 09:26 opens between the two steps: sold at the +₹1,000 a lot step (it never fell back to +₹500 a lot).
-        market(LocalTime.of(9, 27)) { t -> if (t.isBefore(LocalTime.of(9, 26))) up(t) else e + 12.0 }
+        // 09:26 opens 3 under the fill: sold at the breakeven's minute open (it never fell back to its own -15%).
+        market(LocalTime.of(9, 27)) { t -> if (t.isBefore(LocalTime.of(9, 26))) up(t) else e - 3.0 }
         manage(LocalTime.of(9, 27))
         val sold = closed()
         assertEquals(StepTrail.WHY_TRAIL, sold.why)
-        assertTrue("${sold.exit} between $s1 and $s2", sold.exit!! > s1 && sold.exit!! <= s2 + 1e-9)
+        assertTrue("${sold.exit} between ${e * 0.85} and $b", sold.exit!! > e * 0.85 && sold.exit!! <= b + 1e-9)
     }
 
     @Test fun anR72TradeUsesItToo() {
@@ -226,10 +214,11 @@ class StepTrailPassedTest : RobolectricTest() {
         // A would-be R72 trade (nothing held on the account) entered with the rule: its own exits close it.
         runBlocking { PassedArmsHost.addOpenForTest(PassedArmsHost.Pos(BreadthDonchianArm.SOURCE, "NIFTY", c.symbol, "CE", 65, 200.0, day.atTime(9, 20, 5), null,
             shadow = PassedArmsHost.SHADOW_OFF, fx = true)) }
-        market(LocalTime.of(9, 25)) { t -> if (t.isBefore(LocalTime.of(9, 24))) 200.0 else 184.0 }
+        // +11% at 09:22, then back to 195 (above its own -15%, 170, under the breakeven): sold as the breakeven lock.
+        market(LocalTime.of(9, 25)) { t -> when { t.isBefore(LocalTime.of(9, 22)) -> 200.0; t.isBefore(LocalTime.of(9, 24)) -> 222.0; else -> 195.0 } }
         manage(LocalTime.of(9, 25))
         val done = PassedArmsHost.view.value.closed.single { it.arm == BreadthDonchianArm.SOURCE }
-        assertEquals(StepTrail.WHY_STOP, done.why)
+        assertEquals(StepTrail.WHY_TRAIL, done.why)
     }
 
     @Test fun otherArmsNeverGetIt() {
@@ -261,44 +250,53 @@ class StepTrailPassedTest : RobolectricTest() {
 
     private fun quoted(px: Double) { kite.quote("NFO:$sym", px, px - 0.05, px + 0.05); runBlocking { ArmLive.watch() } }
 
-    @Test fun liveTheStopRestsAtTheLiveTradesOwnMinusFiveHundredALot() {
+    /** The live trade's best now 10.5% up: its Zerodha stop moved to the breakeven. */
+    private fun earnedLive(): ArmLive.Pos {
+        val live = ArmLive.view.value.open.single()
+        quoted(live.entry * 1.105)
+        assertEquals(be(live.entry, live.tick), ArmLive.view.value.open.single().stopTrigger!!, 1e-9)
+        return live
+    }
+
+    @Test fun liveTheStopRestsAtTheArmsOwnLevel() {
         goLive()
         bought(200.0)
         val (buy, stop) = kite.placed
         assertEquals("BUY", buy.form["transaction_type"])
         val live = ArmLive.view.value.open.single()
         assertTrue("the live trade carries the rule", live.fixed)
-        val fs = StepTrail.stopLevel(live.entry, 65, live.tick)!!
-        assertEquals("the resting SL at the live trade's own -₹500 a lot", "%.2f".format(java.util.Locale.ENGLISH, fs), stop.form["trigger_price"])
+        assertNull(StepTrail.stopLevel(live.entry, 65, live.tick))
+        val own = stop.form["trigger_price"]!!.toDouble()
+        assertEquals("the arm's -15% on the live fill", live.entry * 0.85, own, 0.051)
         assertEquals("SL", stop.form["order_type"])
-        assertEquals("%.2f".format(java.util.Locale.ENGLISH, com.optionslab.engine.orb.LiveMirror.stopLimit(fs, live.tick, 1)), stop.form["price"])
         assertTrue(ArmLive.armLine(DonchianArm.SOURCE).contains(StepTrail.LABEL))
     }
 
-    @Test fun liveTheStepModifiesTheZerodhaStopUpNeverDownAndItsFillIsTheStepTrailWithOneExit() {
+    @Test fun liveTheBreakevenModifiesTheZerodhaStopUpNeverDownAndItsFillIsTheBreakevenLockWithOneExit() {
         goLive()
         bought(200.0)
         val live = ArmLive.view.value.open.single()
         val e = live.entry
         val id = live.stopOrderId!!
-        // Zerodha's price (the paper option has not moved): +₹1,040 a lot - the same SL is modified up to +₹500 a lot.
-        quoted(e + 16.0)
+        val b = be(e, live.tick)
+        // Zerodha's price (the paper option has not moved): +5.5% and +9.5% - nothing yet.
+        quoted(e * 1.055)
+        quoted(e * 1.095)
+        assertTrue(modifies.isEmpty())
+        // +10.5%: the same SL is modified up to breakeven.
+        quoted(e * 1.105)
         assertEquals(1, modifies.size)
         assertEquals("/orders/regular/$id", modifies.single().path)
-        val s1 = step(e, 1_040.0, live.tick)
-        assertEquals(s1, kite.order(id).trigger, 1e-9)
-        assertEquals(s1, ArmLive.view.value.open.single().stopTrigger!!, 1e-9)
-        // A dip above it: never down.
-        quoted(e + 12.0)
+        assertEquals(b, kite.order(id).trigger, 1e-9)
+        assertEquals(b, ArmLive.view.value.open.single().stopTrigger!!, 1e-9)
+        // A dip above it, then a higher best: never down, and no further step.
+        quoted(e * 1.03)
+        quoted(e * 1.15)
         assertEquals(1, modifies.size)
-        // +₹1,560 a lot: +₹1,000 a lot.
-        quoted(e + 24.0)
-        val s2 = step(e, 1_560.0, live.tick)
-        assertEquals(2, modifies.size)
-        assertEquals(s2, kite.order(id).trigger, 1e-9)
+        assertEquals(b, kite.order(id).trigger, 1e-9)
         assertEquals("the same order moved: never a second stop", 1, kite.placed.count { it.form["order_type"] == "SL" })
-        // Zerodha fills it there: the step trail's exit, no MARKET sell.
-        kite.trigger(id, s2 - 0.5)
+        // Zerodha fills it there: the breakeven lock's exit, no MARKET sell.
+        kite.trigger(id, b - 0.5)
         runBlocking { ArmLive.watch() }
         assertEquals(StepTrail.WHY_TRAIL, ArmLive.view.value.closed.single().why)
         assertTrue(marketSells.isEmpty())
@@ -309,30 +307,29 @@ class StepTrailPassedTest : RobolectricTest() {
         assertTrue("never two exits for one position", marketSells.isEmpty())
     }
 
-    @Test fun liveTheStepAndItsBestPriceSurviveARestart() {
+    @Test fun liveTheBreakevenAndItsBestPriceSurviveARestart() {
         goLive()
         bought(200.0)
-        val live = ArmLive.view.value.open.single()
+        val live = earnedLive()
         val e = live.entry
-        quoted(e + 16.0)
-        val s1 = step(e, 1_040.0, live.tick)
+        val b = be(e, live.tick)
         ArmLive.forgetMemoryForTest()
-        quoted(e + 12.0)
+        quoted(e * 1.03)
         val back = ArmLive.view.value.open.single()
         assertTrue(back.fixed)
-        assertEquals("its best price kept", e + 16.0, back.best!!, 1e-9)
-        assertEquals("never down after a restart", s1, back.stopTrigger!!, 1e-9)
+        assertEquals("its best price kept", e * 1.105, back.best!!, 0.051)
+        assertEquals("never down after a restart", b, back.stopTrigger!!, 1e-9)
         assertEquals(1, modifies.size)
-        assertEquals(s1, kite.order(live.stopOrderId!!).trigger, 1e-9)
+        assertEquals(b, kite.order(live.stopOrderId!!).trigger, 1e-9)
     }
 
     @Test fun liveTheAppSaleWaitsWhileBossIsExitingByHand() {
         goLive()
         bought(200.0)
-        val live = ArmLive.view.value.open.single()
-        val fs = StepTrail.stopLevel(live.entry, 65, live.tick)!!
+        val live = earnedLive()
+        val b = be(live.entry, live.tick)
         kite.reject(live.stopOrderId!!, message = "cancelled", status = "CANCELLED")
-        kite.quote("NFO:$sym", fs - 0.5, fs - 0.55, fs - 0.45)
+        kite.quote("NFO:$sym", b - 0.5, b - 0.55, b - 0.45)
         ArmLive.handsOff("NFO", sym)
         runBlocking { ArmLive.watch() }
         runBlocking { ArmLive.watch() }
@@ -342,7 +339,7 @@ class StepTrailPassedTest : RobolectricTest() {
         runBlocking { ArmLive.watch() }
         runBlocking { ArmLive.watch() }
         assertEquals(1, marketSells.size)
-        assertEquals(StepTrail.WHY_STOP, ArmLive.view.value.closed.single().why)
+        assertEquals(StepTrail.WHY_TRAIL, ArmLive.view.value.closed.single().why)
     }
 
     @Test fun liveWithTheSwitchOffTheStopIsTheArmsOwnAsBefore() {
@@ -351,10 +348,9 @@ class StepTrailPassedTest : RobolectricTest() {
         val (_, stop) = kite.placed
         val live = ArmLive.view.value.open.single()
         assertFalse(live.fixed)
-        val own = stop.form["trigger_price"]!!.toDouble()
-        assertTrue("the -15% scaled to the live fill: $own", own < StepTrail.stopLevel(live.entry, 65, live.tick)!!)
-        quoted(live.entry + 24.0)
-        assertTrue("no step", modifies.isEmpty())
+        assertEquals("the -15% scaled to the live fill", live.entry * 0.85, stop.form["trigger_price"]!!.toDouble(), 0.051)
+        quoted(live.entry * 1.12)
+        assertTrue("no breakeven", modifies.isEmpty())
         assertTrue(marketSells.isEmpty())
     }
 
@@ -378,7 +374,7 @@ class StepTrailPassedTest : RobolectricTest() {
         if (!Autopilot.enabled()) return
         // Both flips are in the change timeline as Boss's; the newest one's Undo (back off) takes the PIN.
         val end = System.currentTimeMillis() + 5_000
-        fun flips() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.STEP_TRAIL_TARGET }
+        fun flips() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.BE10_TARGET }
         while (flips().size < 2 && System.currentTimeMillis() < end) Thread.sleep(20)
         assertEquals(listOf(AutoChange.SWITCHED_OFF, AutoChange.ON), flips().map { it.change.to })
         val newest = flips().last()
@@ -397,12 +393,12 @@ class StepTrailPassedTest : RobolectricTest() {
         StepTrailExits.resetForTest(on = true, loaded = false)
         StepTrailExits.load()
         val end = System.currentTimeMillis() + 5_000
-        fun ons() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.STEP_TRAIL_TARGET }
+        fun ons() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.BE10_TARGET }
         while (ons().isEmpty() && System.currentTimeMillis() < end) Thread.sleep(20)
         Thread.sleep(200)
         assertEquals("once", 1, ons().size)
         assertEquals(AutoChange.ON, ons().single().change.to)
-        assertTrue(ons().single().change.reason.contains("keep a 500 rs gap on every 500 rs gain"))
+        assertTrue(ons().single().change.reason.contains("Switch to + picker + breakeven at +10% (V4)"))
         assertNull(AutoChange.lastUndoable(Autopilot.book.value))
     }
     /**
@@ -425,44 +421,37 @@ class StepTrailPassedTest : RobolectricTest() {
         KiteStream.stop()
     }
 
-    /** A live trade's stop that Zerodha cancelled: the app sells at -₹500 a lot itself, booked as the ₹500 stop. */
-    @Test fun liveAStopGoneAtZerodhaIsSoldByTheAppAtTheLevelAsTheFiveHundredStop() {
+    /** A live trade's stop that Zerodha cancelled after the breakeven was earned: the app sells at the breakeven itself, as the breakeven lock. */
+    @Test fun liveAStopGoneAtZerodhaIsSoldByTheAppAtTheBreakeven() {
         goLive()
         bought(200.0)
-        val live = ArmLive.view.value.open.single()
-        val fs = StepTrail.stopLevel(live.entry, 65, live.tick)!!
+        val live = earnedLive()
+        val b = be(live.entry, live.tick)
         kite.reject(live.stopOrderId!!, message = "cancelled", status = "CANCELLED")
-        kite.quote("NFO:$sym", fs - 0.5, fs - 0.55, fs - 0.45)
+        kite.quote("NFO:$sym", b - 0.5, b - 0.55, b - 0.45)
         runBlocking { ArmLive.watch() }
         runBlocking { ArmLive.watch() }
         assertEquals(1, marketSells.size)
-        assertEquals(StepTrail.WHY_STOP, ArmLive.view.value.closed.single().why)
+        assertEquals(StepTrail.WHY_TRAIL, ArmLive.view.value.closed.single().why)
     }
 
-    /**
-     * A live book damaged and rebuilt from Zerodha keeps the paper trade's ₹500 step trail (its flag read from the paper book); its
-     * safety stop is lower than -₹500 a lot, so the app sells at that level itself, booked as the ₹500 stop.
-     */
-    @Test fun aRebuiltLiveTradeKeepsTheRuleAndTheAppSellsAtTheLevelOverItsSafetyStop() {
+    /** A live book damaged and rebuilt from Zerodha keeps the paper trade's rule (its flag read from the paper book), whatever the switch says now. */
+    @Test fun aRebuiltLiveTradeKeepsTheRule() {
         goLive()
         bought(200.0)
         val live = ArmLive.view.value.open.single()
-        val fs = StepTrail.stopLevel(live.entry, 65, live.tick)!!
         // Boss switches the rule off meanwhile (new trades only): the rebuilt trade still keeps what its paper trade entered with.
         assertTrue(StepTrailExits.set(false, pinConfirmed = true, log = false).startsWith("Off"))
-        // Its stop gone at Zerodha and the book damaged: rebuilt from Zerodha's position with a safety stop (-30%).
+        // Its stop gone at Zerodha and the book damaged: rebuilt from Zerodha's position with a safety stop.
         kite.reject(live.stopOrderId!!, message = "cancelled", status = "CANCELLED")
         val f = File(context.noBackupFilesDir, "arm_live.vault")
         val bytes = f.readBytes(); bytes[bytes.size / 2] = (bytes[bytes.size / 2].toInt() xor 0x5A).toByte(); f.writeBytes(bytes)
         ArmLive.forgetMemoryForTest()
-        kite.quote("NFO:$sym", fs - 0.5, fs - 0.55, fs - 0.45)
         runBlocking { ArmLive.watch() }
         runBlocking { ArmLive.watch() }
         val all = ArmLive.view.value.closed + ArmLive.view.value.open
         val rebuilt = all.single { it.ref.startsWith("recovered:") }
         assertTrue("the paper trade's flag", rebuilt.fixed)
-        assertEquals(1, marketSells.size)
-        assertEquals(StepTrail.WHY_STOP, rebuilt.why)
     }
     /** Re-review: a rebuilt trade whose own paper trade (the same contract) entered WITHOUT the rule stays without it. */
     @Test fun aRebuiltLiveTradeWhosePaperTradeHadNoRuleStaysWithout() {
@@ -480,25 +469,24 @@ class StepTrailPassedTest : RobolectricTest() {
         assertFalse("never another arm", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(OovArm.SOURCE)!!, sym))
     }
 
-    /** A stop at -₹500 a lot is booked "₹500 stop", at a step "step trail", whatever its kind (a rebuilt trade's safety stop), run through or not. */
-    @Test fun aStopAtTheLevelsIsTheRulesWhateverItsKind() {
+    /** A stop at the breakeven is booked "breakeven lock" whatever its kind (a rebuilt trade's safety stop moved there), run through or not. */
+    @Test fun aStopAtTheBreakevenIsTheRulesWhateverItsKind() {
         val t0 = day.atTime(10, 0)
-        val fs = StepTrail.stopLevel(200.0, 65, 0.05)!!
+        val s1 = StepTrail.trailLevel(200.0, 65, 221.0, 0.05)!!
+        assertNull("+8% earns nothing", StepTrail.trailLevel(200.0, 65, 216.0, 0.05))
         val p = ArmLive.Pos(DonchianArm.SOURCE, "recovered:1", sym, "NFO", "MIS", 1, 65, 65, 65, 0.05, 1, 200.0, t0, 200.0, 65, null, "E1",
-            stopOrderId = "S1", stopTrigger = fs, stopKind = ArmLive.SAFETY, fixed = true)
-        for (w in listOf("stop", "stop_run_through")) assertEquals(w, StepTrail.WHY_STOP, ArmLive.sellWhy(w, p))
-        assertEquals(StepTrail.WHY_STOP, ArmLive.stopWhyOf(p))
+            stopOrderId = "S1", stopTrigger = s1, stopKind = ArmLive.SAFETY, fixed = true)
+        for (w in listOf("stop", "stop_run_through")) assertEquals(w, StepTrail.WHY_TRAIL, ArmLive.sellWhy(w, p))
+        assertEquals(StepTrail.WHY_TRAIL, ArmLive.stopWhyOf(p))
         assertEquals("safety_stop", ArmLive.sellWhy("stop", p.copy(stopTrigger = 140.0)))
-        assertEquals("disaster_stop", ArmLive.sellWhy("stop", p.copy(stopKind = ArmLive.DISASTER)))
+        assertEquals("disaster_stop", ArmLive.sellWhy("stop", p.copy(stopTrigger = 140.0, stopKind = ArmLive.DISASTER)))
         assertEquals("stop_run_through", ArmLive.sellWhy("stop_run_through", p.copy(stopKind = ArmLive.OWN, fixed = false)))
-        val s1 = StepTrail.trailLevel(200.0, 65, 216.0, 0.05)!!
-        assertEquals(StepTrail.WHY_TRAIL, ArmLive.sellWhy("stop", p.copy(stopTrigger = s1, stopKind = ArmLive.OWN)))
-        assertEquals(StepTrail.WHY_TRAIL, ArmLive.stopWhyOf(p.copy(stopTrigger = s1)))
+        assertEquals(StepTrail.WHY_TRAIL, ArmLive.sellWhy("stop", p.copy(stopKind = ArmLive.OWN)))
         assertEquals("a level that is neither", "stop", ArmLive.sellWhy("stop", p.copy(stopTrigger = s1 + 1.0, stopKind = ArmLive.OWN)))
         // The best price only rises, and only on a rule trade.
-        assertEquals(216.0, ArmLive.withBest(p, 216.0).best!!, 1e-9)
-        assertEquals(216.0, ArmLive.withBest(p.copy(best = 216.0), 210.0).best!!, 1e-9)
-        assertNull(ArmLive.withBest(p.copy(fixed = false), 216.0).best)
+        assertEquals(221.0, ArmLive.withBest(p, 221.0).best!!, 1e-9)
+        assertEquals(221.0, ArmLive.withBest(p.copy(best = 221.0), 210.0).best!!, 1e-9)
+        assertNull(ArmLive.withBest(p.copy(fixed = false), 221.0).best)
         assertNull(ArmLive.withBest(p, null).best)
         assertEquals("exit", ArmLive.sellWhy(null, p))
     }

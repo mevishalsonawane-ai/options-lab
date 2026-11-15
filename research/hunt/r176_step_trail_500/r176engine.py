@@ -36,9 +36,12 @@ def _ceil_tick(x, tick):
 
 @njit(cache=True)
 def simulate_step(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tmax, need, cstop, tick, qty, be,
-                  stop_abs, step_amt, fb=1.0005, fs=0.9995, fst=0.999, tk=1.0):
+                  stop_abs, step_amt, fb=1.0005, fs=0.9995, fst=0.999, tk=1.0, gap_amt=-1.0, inc_amt=-1.0,
+                  trig_amt=-1.0):
     """r106engine.simulate (no rupee target) plus the step trail: step_amt = Rs 500 x lots for the whole position
-    (<= 0: off). Same returns; reason 9 = a step-trail stop."""
+    (<= 0: off); gap_amt = the gap under each step (<= 0: = step_amt, R176's rule; R177 Amendment B: Rs 1,000 x lots).
+    General form: once best >= trig_amt (<= 0: 2 x step_amt), stop = real + (floor(best / step_amt) x inc_amt - gap_amt)
+    / qty, inc_amt <= 0 meaning step_amt. R177 Amendment C: step Rs 1,000, inc Rs 500, gap Rs 1,500, trig Rs 1,000 (x lots). Same returns; reason 9 = a step-trail stop."""
     o, h, l, c, v = C[0], C[1], C[2], C[3], C[4]
     nan = np.nan
     n = o.shape[0]
@@ -91,9 +94,11 @@ def simulate_step(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps
             peak = h[m]
         if step_amt > 0:
             best = (peak - real_e) * qty
-            if best >= 2.0 * step_amt - 1e-9:
-                k = np.floor(best / step_amt + 1e-9) - 1.0
-                lv = _ceil_tick(real_e + k * step_amt / qty, tick)
+            trig = trig_amt if trig_amt > 0 else 2.0 * step_amt
+            if best >= trig - 1e-9:
+                g = gap_amt if gap_amt > 0 else step_amt
+                inc = inc_amt if inc_amt > 0 else step_amt
+                lv = _ceil_tick(real_e + (np.floor(best / step_amt + 1e-9) * inc - g) / qty, tick)
                 if lv > trail:
                     trail = lv
         if lk_trig > 0 and (peak - E_) * qty >= lk_trig:
@@ -142,9 +147,9 @@ def entry_stop_px(real: float, qty: float, lots: int, per_lot: float = K.STEP) -
     return s if s > 0 else -1.0
 
 
-def step_px(real: float, qty: float, best: float, lots: int) -> float:
+def step_px(real: float, qty: float, best: float, lots: int, gap_per_lot: float = K.STEP) -> float:
     """The step-trail premium at a best open P&L of `best` (rupees, whole position); -1 below +1,000 L."""
-    locked = K.step_locked(best, lots)
+    locked = K.step_locked(best, lots, gap_per_lot)
     return -1.0 if locked is None else K.ceil_tick(real + locked / qty)
 
 
@@ -169,7 +174,15 @@ def label(code: int, kind: str) -> str:
     return why
 
 
-def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lot: float = K.STEP) -> list:
+def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lot: float = K.STEP,
+          gap_per_lot: float = K.STEP, step_per_lot: float = K.STEP, inc_per_lot: float = -1.0,
+          trig_per_lot: float = -1.0, be_x: float = -1.0, stop_net: float = -1.0) -> list:
+    """(R177 Amendment C adds step_per_lot / inc_per_lot / trig_per_lot; the defaults are R176's rule.)
+    be_x > 0 (R179): R162's breakeven lock - once the premium is up be_x (fraction of the raw fill), the stop moves to the
+    premium whose stop sale nets Rs 0 after charges (r106engine.stop_price with T = 0), exactly as r162engine 'be'.
+    stop_net > 0 (R179 Amendment A): a stop at the premium whose stop sale nets -stop_net rupees for the whole position after
+    charges and the expected stop slippage (r106engine.stop_price, as R152), used only where tighter than the arm's own
+    -15%; with on=False there is no step trail."""
     """Price one day's candidates (dicts with side, strike, er[, fx]) for `lots` lots, with (on=True) or without Boss's
     step trail. Trade dicts (None = no fill) as r152engine.price plus 'stop_kind'."""
     st = E.stack(und, D)
@@ -185,15 +198,28 @@ def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lo
             out.append(None)
             continue
         C = st.S[ci]
-        raw, real, ef, _ = X.entry_info(C, c["er"], sq, qty)
+        raw, real, ef, tks = X.entry_info(C, c["er"], sq, qty)
         if ef < 0:
             out.append(None)
             continue
         be = real + ch(real, real) / qty if G.needs_be(ex) else 0.0
+        lkt, lkk = ex.lock_trig, ex.lock_keep
+        if be_x > 0:
+            s0 = X.stop_price(real, qty, 0.0, ch, tks, E.SLIP[2], E.SLIP[3])
+            lkt, lkk = be_x * raw * qty * (1 - 1e-12), (s0 - raw) * qty
         stop_abs, stop_f, step_amt, kind = levels(raw, real, qty, ex, on, lots, per_lot)
+        if stop_net > 0:
+            s_n = X.stop_price(real, qty, stop_net, ch, tks, E.SLIP[2], E.SLIP[3])
+            own = raw * (1.0 - ex.stop) if ex.stop >= 0 else -1.0
+            if s_n > 0 and s_n > own and s_n > stop_abs:
+                stop_abs, stop_f, kind = s_n, -1.0, "rupee"
+        if step_amt > 0:
+            step_amt = step_per_lot * lots
         a, b, rE, rX, r0, r1, r = simulate_step(C, int(c["er"]), int(sq), int(fx if fx is not None else -1), stop_f,
-                                                ex.target, ex.lock_trig, ex.lock_keep, ex.lock_trail, stp, ex.tmax,
-                                                ex.need, ex.close_stop, K51.TICK, qty, be, stop_abs, step_amt, *E.SLIP)
+                                                ex.target, lkt, lkk, ex.lock_trail, stp, ex.tmax,
+                                                ex.need, ex.close_stop, K51.TICK, qty, be, stop_abs, step_amt, *E.SLIP,
+                                                gap_per_lot * lots, inc_per_lot * lots if inc_per_lot > 0 else -1.0,
+                                                trig_per_lot * lots if trig_per_lot > 0 else -1.0)
         if r == E.R_NOFILL:
             out.append(None)
             continue

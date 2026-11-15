@@ -143,7 +143,7 @@ class TestApp : Application() {
         // 7 Nov: "Stop and target on my manual positions" is on in the app, but OFF for every other test (their live positions are
         // not what they test, and a protection placed on them would change their orders); its own tests turn it on.
         com.optionslab.app.data.ManualCover.resetForTest(on = false)
-        // 15 Nov: the ₹500 step trail on Liquidity, R51 and R72 is on in the app, but OFF for every other test (their arms'
+        // 15 Nov: Boss's rule (breakeven at +10%) on Liquidity, R51 and R72 is on in the app, but OFF for every other test (their arms'
         // own exits are what they test, and stay covered); its own tests turn it on.
         com.optionslab.app.data.StepTrailExits.resetForTest(on = false)
         com.optionslab.app.data.OrderReviewHost.init(this)
@@ -176,6 +176,9 @@ class TestApp : Application() {
         // The watch's workers (10 Oct): no claim, timing, shared state or busy mark left from an earlier test.
         com.optionslab.app.data.AutoExposure.resetForTest()
         com.optionslab.app.data.AppState.resetForTest()
+        // 15 Nov: no arm's order label (or a test's label keeper) left from an earlier test.
+        com.optionslab.app.data.ArmOrderLabels.resetForTest()
+        com.optionslab.app.security.SecurePrefs.testAfterCopyOut = null
         com.optionslab.app.work.WatchWorkers.resetForTest()
         com.optionslab.app.work.TradingBusy.resetForTest()
         com.optionslab.app.data.OrderFlowLive.init(this)
@@ -217,7 +220,8 @@ class TestApp : Application() {
         com.optionslab.app.data.StockOptions.wipe()
         com.optionslab.app.data.GrammarArm.wipe()
         com.optionslab.app.data.UsCues.testFetch = null; com.optionslab.app.data.UsCues.resetForTest()
-        com.optionslab.app.work.PositionCards.forgetPostedForTest()
+        // 15 Nov (CI): every card and the "open" flag, not only the posted words (BatteryAuditTest saw an earlier test's card).
+        com.optionslab.app.work.PositionCards.resetForTest()
         com.optionslab.app.widget.IraWidget.forgetDrawnForTest()
         // The event-driven checks and the order-speed figures of an earlier test (in memory only).
         com.optionslab.app.data.FastPath.resetForTest()

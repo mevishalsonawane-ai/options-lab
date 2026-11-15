@@ -260,11 +260,11 @@ object PassedArmsHost {
          */
         val w20: Boolean? = null,
         /**
-         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): an R51 / R72 trade that entered with the ₹500 step
-         * trail per lot ([StepTrailExits]). A trade keeps the rule it entered with (persisted); its step is kept with its lock ([Book.locks]).
+         * 15 Nov (Boss's exception, failed gates; [com.optionslab.engine.orb.StepTrail]): an R51 / R72 trade that entered with the breakeven
+         * rule ([StepTrailExits]). A trade keeps the rule it entered with (persisted); its breakeven is kept with its lock ([Book.locks]).
          */
         val fx: Boolean = false,
-        /** 15 Nov: the contract's lot size at the entry, for the ₹500 step trail's per-lot levels (null: an older trade). */
+        /** 15 Nov: the contract's lot size at the entry, for the breakeven rule's per-lot levels (null: an older trade). */
         val lot: Int? = null,
     ) {
         val open: Boolean get() = exit == null
@@ -746,7 +746,7 @@ object PassedArmsHost {
         }
         val x = exitsOf(p)
         val held = lock?.split('|')?.getOrNull(1)?.toDoubleOrNull()
-        // 15 Nov: the stop that applies - the entry's -₹500 a lot where it is tighter, raised to the lock or the step trail held ([held]).
+        // 15 Nov: the stop that applies - the arm's own stop (the rule has no entry stop since V4), raised to the lock or the stop rule held ([held]).
         val stop = listOfNotNull(PassedArms.effectiveStop(p.entry, x), held).maxOrNull()
         val sq = x.squareOff
         val at = PassedArms.timeExitAt(p.entryMinute, x)?.takeIf { it.toLocalDate() == p.day && it.toLocalTime().isBefore(sq) }?.toLocalTime() ?: sq
@@ -1073,7 +1073,7 @@ object PassedArmsHost {
                         pickerWords(v.pickOn, c, { m(it) }, R51Picker.LABEL, R51Picker::takes, R51Picker.STATUS) else "") +
                     (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
                         "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
-                    // 15 Nov (Boss's exception, failed gates): the ₹500 step trail - its closed trades apart from the arm's own exits.
+                    // 15 Nov (Boss's exception, failed gates): the breakeven rule - its closed trades apart from the arm's own exits.
                     (if (StepTrail.covers(s)) " · ${StepTrail.DIAG} ${if (StepTrailExits.isOn()) "on" else "off"} for new trades, " +
                         "${c.count { it.fx }} closed on it ${m(c.filter { it.fx }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.fx }} on the arm's own exits " +
                         m(c.filter { !it.fx }.sumOf { it.net ?: 0.0 }) else "") +
@@ -1865,7 +1865,7 @@ object PassedArmsHost {
             // would-be trade (the cap, a twin, record only) was never bought and books no entry spread, so it could neither
             // switch the arm off nor pass it. They stay in the record, labelled.
             val c = b.positions.filter { it.arm == s && !it.open && it.shadow == null }
-            // 15 Nov: the ₹500 step trail's trades COUNT here, unlike Liquidity's plain-rules records: this bar is a
+            // 15 Nov: the breakeven rule's trades COUNT here, unlike Liquidity's plain-rules records: this bar is a
             // safety cut-off that switches the arm off on what it really trades (as the 30-60-100 lock's trades count). Leaving them
             // out would keep the bar from ever judging an arm while the switch is on - less protection, not more. Its own-exits record
             // is split out in the diagnostics ([diagLine]).
@@ -2039,7 +2039,7 @@ object PassedArmsHost {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys + marks) }
                 // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
                 // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
-                // 15 Nov: [Pos.fx] goes with it - the live trade takes its own ₹500 step trail on ITS fill, lots and best price.
+                // 15 Nov: [Pos.fx] goes with it - the live trade takes its own breakeven rule on ITS fill, lots and best price.
                 runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos), fixed = pos.fx)) }
                 // 22 Oct: the time machine's reality check (shadow only; background): the arm's premium stop and target, out by its square-off.
                 runCatching {
@@ -2126,14 +2126,15 @@ object PassedArmsHost {
         save(r)
     }
 
-    /** 15 Nov: the ₹500 step trail a trade entered with, at its own levels and labelled (null: none). */
+    /** 15 Nov: Boss's stop rule a trade entered with (breakeven at +10%), at its own levels and labelled (null: none). */
     private fun fixedWords(p: Pos): String? {
         if (!p.fx || !StepTrail.covers(p.arm)) return null
         val lot = lotOf(p)
         val s = StepTrail.stopLevel(p.entry, lot)
-        val first = StepTrail.trailLevel(p.entry, lot, p.entry + StepTrail.START_RS / lot)
-        return StepTrail.LABEL + listOfNotNull(s?.let { "stop ${px(it)} where tighter" }, first?.let { "trailed from ${px(p.entry + StepTrail.START_RS / lot)}" })
-            .joinToString(", ", " (", ")").takeIf { s != null || first != null }.orEmpty()
+        val be = StepTrail.breakevenLevel(p.entry, lot)
+        return StepTrail.LABEL + listOfNotNull(s?.let { "stop ${px(it)} where tighter" },
+            be?.let { "breakeven ${px(it)} from ${px(StepTrail.breakevenTrigger(p.entry))}" })
+            .joinToString(", ", " (", ")").takeIf { s != null || be != null }.orEmpty()
     }
 
     private fun exitWords(p: Pos): String = listOfNotNull(exitWordsOwn(p), fixedWords(p)).joinToString("; ")
@@ -2167,12 +2168,12 @@ object PassedArmsHost {
     }.let { if (p.lock) PassedArms.withLock(it, p.l25) else it }
         // 1 Nov (R142 NP5-52): the 09:25 no-progress exit, on the trades that entered with it.
         .let { if (p.np5 && p.arm == OovArm.SOURCE) it.copy(noProgress = OovArm.NO_PROGRESS) else it }
-        // 15 Nov (Boss's exception, failed gates): the ₹500 step trail per lot on the R51 / R72 trades that entered with it ([Pos.fx]); the
-        // walk takes its -₹500 a lot only where tighter than the arm's own stop, and its steps as a lock (up only), beside the arm's own exits.
+        // 15 Nov (Boss's exception, failed gates): the breakeven rule on the R51 / R72 trades that entered with it ([Pos.fx]); the
+        // walk keeps the arm's own stop and takes the breakeven as a lock (up only), beside the arm's own exits.
         .let { if (p.fx && StepTrail.covers(p.arm)) it.copy(stepTrail = PassedArms.StepTrailOn(lotOf(p))) else it }
 
     /**
-     * 15 Nov: [p]'s lot size (the ₹500 step trail is per lot): the one kept at its entry; else its paper contract's (the paper book,
+     * 15 Nov: [p]'s lot size (the breakeven rule is per lot): the one kept at its entry; else its paper contract's (the paper book,
      * read already on this worker); else its quantity (a tighter stop, never a looser one).
      */
     private fun lotOf(p: Pos): Int = p.lot?.takeIf { it > 0 } ?: runCatching { Paper.contractOf(p.symbol)?.lotSize }.getOrNull()?.takeIf { it > 0 }
@@ -2589,10 +2590,33 @@ object PassedArmsHost {
         // the price now); else the last closed minute, else a quote.
         // 26 Oct (review): a closed minute stands in for the price now only when it is the one just ended (or the one before: the
         // feed's own lag); minutes kept from an earlier, slow read are older, so a quote is read instead, as before.
-        val ltp = runCatching { Paper.bookNow(c)?.takeIf { it.ageMs <= FRESH_MS }?.last }.getOrNull()?.takeIf { it > 0 }
-            ?: bars.lastOrNull()?.takeIf { !it.start.isBefore(now.withSecond(0).withNano(0).minusMinutes(2)) }?.close
-            ?: if (!overnight) runCatching { Paper.quote(c)?.ltp }.getOrNull()?.takeIf { it > 0 } else null
+        // 15 Nov (Boss: "Yes fix it"; [com.optionslab.ira.PriceNow]): only a price the option traded at since the entry, or a sane
+        // book's bid, is the price now. A last price from before the entry minute (an untraded monthly option's is from another day)
+        // and the bid of an empty or wide book are not: five FINNIFTY trades were "stopped" seconds after their entry on them.
+        val entrySec = p.entryTime.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        val seen = runCatching { Paper.bookNow(c) }.getOrNull()?.takeIf { it.ageMs <= FRESH_MS }
+        val streamCounts = seen != null && com.optionslab.ira.PriceNow.lastCounts(seen.last, seen.lastTradeSec, entrySec) &&
+            !com.optionslab.ira.PriceNow.farFromBook(seen.last, seen.lastTradeSec, seen.bid, seen.ask)
+        val entryMin = p.entryTime.withSecond(0).withNano(0)
+        val recentBar = bars.lastOrNull()?.takeIf { !it.start.isBefore(now.withSecond(0).withNano(0).minusMinutes(2)) && !it.start.isBefore(entryMin) }?.close
+        // Review: with a fresh packet everything is decided from memory - its last price when it counts, else its own book when sane
+        // (what a seller gets now), else the minute just closed - and nothing is read from the network (a quote read here would hold
+        // every other position's exit look behind it). Only with no fresh packet is a quote read, as before.
+        val ltp = if (seen != null) (if (streamCounts) seen.last else null) ?: com.optionslab.ira.PriceNow.bookBid(seen.bid, seen.ask) ?: recentBar
+            else recentBar ?: if (!overnight) runCatching { Paper.quote(c) }.getOrNull()?.let { q ->
+                com.optionslab.ira.PriceNow.ofQuote(q.ltp, q.noLast, q.bid, q.ask, null, Paper.lastCandleSec(c.symbol), entrySec)
+            } else null
         ltp?.let { b.marks[p.symbol] = it }
+        // Said once per trade (the arm's notes), so a stop that waits for a real price is never silent.
+        var waitNoted = false
+        if (ltp == null && !overnight && p.shadow == null && !now.isBefore(entryMin.plusMinutes(2))) {
+            val k = "${p.day}|noprice|${p.symbol}|${p.entryTime}"
+            if (k !in b.decided) {
+                b.decided += k
+                note(b, "${p.symbol}: no trade since its entry and no sane book just now - its stop is judged on the next real price (its time exit and square-off still act)")
+                waitNoted = true
+            }
+        }
         val known = b.locks[lockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
         // 20 Oct, review: the walk's own exit (its kind and price), so a stop or lock is never booked better than it ([sell]).
         var walked: PassedArms.Exit? = null
@@ -2620,7 +2644,7 @@ object PassedArmsHost {
         val np5Noted = why == null && np5Shadow(b, p, bars, now, known)
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
         if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
-        if (why == null) return np5Noted
+        if (why == null) return np5Noted || waitNoted
         val walkPx = walked?.takeIf { it.kind.why == why }?.price
         val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight, walkPx) else sell(b, p, c, why, ltp, walkPx)
         if (next != p) { b.positions[i] = next; return true }
@@ -2737,7 +2761,9 @@ object PassedArmsHost {
     private fun sellWouldBe(b: Book, p: Pos, why: String, ltp: Double?, overnight: Boolean, walkPx: Double? = null): Pos {
         // A seller gets the bid: the stream's fresh bid when it has one, else the price seen.
         val bid = runCatching { Paper.contractOf(p.symbol)?.let { Paper.bookNow(it) }?.takeIf { it.ageMs <= FRESH_MS }?.bid }.getOrNull()?.takeIf { it > 0 }
-        val at = (if (ltp != null) bid?.let { minOf(it, ltp) } ?: ltp else null) ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
+        // 15 Nov (review): with no price now ([com.optionslab.ira.PriceNow]) a clock exit books at the walk's own price (the last minute's
+        // close, else the entry), so a would-be trade on an untraded option still closes on time.
+        val at = (if (ltp != null) bid?.let { minOf(it, ltp) } ?: ltp else null) ?: walkPx?.takeIf { it.isFinite() && it > 0 } ?: if (overnight) (b.marks[p.symbol] ?: p.entry) else return p
         val target = PassedArms.targetLevel(p.entry, exitsOf(p))
         val booked = kindOf(why)?.let { PassedArms.booked(it, at, target, walkPx) } ?: at
         val charges = runCatching {
@@ -2818,8 +2844,8 @@ object PassedArmsHost {
             val now = now0()
             val p = Pos(arm, c.underlying, o.symbol, c.right.name, o.qty, o.fill, o.at ?: now, o.orderId, charges = chargesOf(o.orderId),
                 adopted = ADOPT_FILL, lock = b.lockOn, l25 = b.lockOn && b.l25On, st = arm == DonchianArm.SOURCE && b.stOn,
-                // 15 Nov (review): a position taken back was bought before this record - not a new trade, so no ₹500 step trail (its
-                // -₹500 a lot from an old fill could sell it at once).
+                // 15 Nov (review): a position taken back was bought before this record - not a new trade, so no breakeven rule (a
+                // breakeven judged from an old fill could sell it at once).
                 lot = c.lotSize.takeIf { it > 0 })
             b.positions += p
             b.marks[p.symbol] = p.entry

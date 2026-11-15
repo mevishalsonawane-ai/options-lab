@@ -41,6 +41,7 @@ class OrderReviewHostTest : RobolectricTest() {
 
     @After fun down() {
         OrderReviewHost.resetForTest()
+        AppState.resetForTest()
         VariantRunner.resetForTest()
         com.optionslab.app.work.BackgroundBudget.resetForTest()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -146,5 +147,172 @@ class OrderReviewHostTest : RobolectricTest() {
         } finally { km.setKeyguardLocked(false) }
         val a = ask("review my orders")
         assertTrue(a, a.startsWith("I have not reviewed any orders yet"))
+    }
+    // ---- 15 Nov: a missed day is reviewed, a failed review is said, the day's live orders survive a restart ---------------
+
+    @Test fun aMissedDayIsCaughtUpTheMostRecentOneFirst() {
+        // Last reviewed Thursday 8 Oct; the app then did not run on Friday 9 or Monday 12 evening (two evenings missed).
+        val ran = OrderReview.Book(lastRun = LocalDate.of(2026, 10, 8), cutoffMs = ms(LocalDate.of(2026, 10, 8), 15, 50))
+        val tue = LocalDate.of(2026, 10, 13)
+        // Outside market hours the next day: the most recent missed trading day (Monday), not the older one.
+        assertEquals(day to false, OrderReviewHost.due(at(tue, 8, 0), ran))
+        assertEquals(day to false, OrderReviewHost.due(at(tue, 6, 0), ran))
+        // Never while the market trades (09:00-15:45 on a trading day).
+        assertNull(OrderReviewHost.due(at(tue, 9, 0), ran))
+        assertNull(OrderReviewHost.due(at(tue, 12, 0), ran))
+        assertNull(OrderReviewHost.due(at(tue, 15, 44), ran))
+        // In the evening too, before the day's own review (which would otherwise take its place).
+        assertEquals(day to false, OrderReviewHost.due(at(tue, 16, 0), ran))
+        // Once it is reviewed, the day's own review is next; then nothing.
+        val caught = ran.copy(lastRun = day, cutoffMs = ms(day.plusDays(1), 0, 0) - 1)
+        assertNull(OrderReviewHost.due(at(tue, 10, 0), caught))
+        assertEquals(tue to false, OrderReviewHost.due(at(tue, 16, 0), caught))
+        // A caught-up day is never taken for MCX's morning catch-up (it was read to its end).
+        assertNull(OrderReviewHost.due(at(tue, 7, 30), caught))
+        // A weekend: Friday missed is reviewed on Saturday.
+        val thu = OrderReview.Book(lastRun = LocalDate.of(2026, 10, 15), cutoffMs = ms(LocalDate.of(2026, 10, 15), 15, 50))
+        assertEquals(LocalDate.of(2026, 10, 16) to false, OrderReviewHost.due(at(LocalDate.of(2026, 10, 17), 12, 0), thu))
+        // A review that never ran has missed nothing.
+        assertNull(OrderReviewHost.due(at(tue, 8, 0), OrderReview.Book()))
+        // A missed day's review that failed in this call: today's own is asked for instead.
+        assertEquals(tue to false, OrderReviewHost.due(at(tue, 16, 0), ran, skipMissed = true))
+        assertNull(OrderReviewHost.due(at(tue, 8, 0), ran, skipMissed = true))
+    }
+
+    @Test fun oneEveningRunReviewsTheMissedDayThenTodayEachToItsOwnEnd() = runBlocking {
+        val calls = ArrayList<Triple<LocalDate, Long, Long>>()
+        val base = inputs(withFlaw = true)
+        OrderReviewHost.testInputs = { d, from, to -> calls += Triple(d, from, to); base(d, from, to) }
+        val thu = LocalDate.of(2026, 10, 8)
+        assertTrue(OrderReviewHost.runIfDue(context, at(thu, 15, 50)))
+        calls.clear()
+        // Friday 9 Oct missed; Monday 12 Oct's evening run reviews Friday (to its own end), then Monday (to now).
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        val fri = LocalDate.of(2026, 10, 9)
+        val friEnd = ms(day.minusDays(2), 0, 0) - 1
+        assertEquals(listOf(fri, day), calls.map { it.first })
+        assertEquals(friEnd, calls[0].third)
+        assertEquals("Monday's window starts where Friday's ended", friEnd, calls[1].second)
+        assertEquals(ms(day, 15, 50), calls[1].third)
+        val b = OrderReviewHost.book.value
+        assertEquals(day, b.lastRun)
+        assertTrue(b.logs.map { it.day }.toString(), b.logs.map { it.day }.containsAll(listOf(thu, fri, day)))
+        assertTrue(Diag.lines().any { it.contains("reviewed $fri (a missed day, caught up)") })
+        // Nothing more that evening.
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 16, 30)))
+    }
+
+    @Test fun aReviewThatDoesNotCompleteSaysSoOnceWithTheClassOnly() = runBlocking {
+        OrderReviewHost.testInputs = { _, _, _ -> throw IllegalStateException("order 251012000123456 for AB1234 at Rs 4,000") }
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        val said = Diag.lines().filter { it.contains("did not complete") }
+        assertEquals(said.toString(), 1, said.size)
+        assertTrue(said.single(), said.single().contains("the review of $day did not complete: its records could not be read (IllegalStateException)"))
+        for (part in listOf("251012000123456", "AB1234", "4,000")) assertFalse(said.single(), said.single().contains(part))
+        // Tried again after ten minutes, failing the same way: not said again.
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 15, 55)))
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 16, 5)))
+        assertEquals(1, Diag.lines().count { it.contains("did not complete") })
+        assertNull(OrderReviewHost.book.value.lastRun)
+        // Once the records read again, the day is reviewed.
+        OrderReviewHost.testInputs = inputs(withFlaw = false)
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 16, 20)))
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+    }
+
+    @Test fun aFailingMissedDayNeverHoldsUpTodaysReview() = runBlocking {
+        val thu = LocalDate.of(2026, 10, 8)
+        val fri = LocalDate.of(2026, 10, 9)
+        OrderReviewHost.testInputs = inputs(withFlaw = false)
+        assertTrue(OrderReviewHost.runIfDue(context, at(thu, 15, 50)))
+        // Friday was missed, and its records cannot be read: Monday's evening run still reviews Monday.
+        val base = inputs(withFlaw = false)
+        OrderReviewHost.testInputs = { d, from, to -> if (d == fri) throw java.io.IOException("unreadable") else base(d, from, to) }
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+        assertTrue(Diag.lines().any { it.contains("the review of $fri did not complete") })
+        assertFalse(OrderReviewHost.runIfDue(context, at(day, 16, 30)))
+    }
+
+    @Test fun anEraseDuringTheMissedDaysReviewStopsTodaysAndSavesNothing() = runBlocking {
+        val thu = LocalDate.of(2026, 10, 8)
+        val fri = LocalDate.of(2026, 10, 9)
+        OrderReviewHost.testInputs = inputs(withFlaw = true)
+        assertTrue(OrderReviewHost.runIfDue(context, at(thu, 15, 50)))
+        val file = java.io.File(context.noBackupFilesDir, "orderreview/review.vault")
+        assertTrue(file.exists())
+        val days = ArrayList<LocalDate>()
+        val base = inputs(withFlaw = true)
+        // Erase everything while Friday (missed) is being reviewed.
+        OrderReviewHost.testInputs = { d, from, to -> days += d; if (d == fri) OrderReviewHost.wipe(); base(d, from, to) }
+        OrderReviewHost.runIfDue(context, at(day, 15, 50))
+        assertEquals("Monday's review never ran after the erase", listOf(fri), days)
+        assertNull(OrderReviewHost.book.value.lastRun)
+        assertFalse(OrderReviewHost.holdsForErase())
+        assertFalse("nothing saved after the erase", file.exists())
+    }
+
+    // ---- 15 Nov: the kept review sealed with the vault's key (it was plain text) ------------------------------------------
+
+    private val reviewDir: java.io.File get() = java.io.File(context.noBackupFilesDir, "orderreview")
+
+    @Test fun theKeptReviewIsSealedNeverPlainText() = runBlocking {
+        OrderReviewHost.testInputs = inputs(withFlaw = true)
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        val sealed = java.io.File(reviewDir, "review.vault")
+        assertTrue(sealed.isFile)
+        assertFalse(java.io.File(reviewDir, "review.txt").exists())
+        val raw = String(sealed.readBytes(), Charsets.ISO_8859_1)
+        for (w in listOf("ORB Fresh", "BANKNIFTY26OCT55000CE", "2026-10-12", "profit_lock")) assertFalse(w, raw.contains(w))
+    }
+
+    @Test fun anOldPlainFileIsMovedToTheSealedOneAndDeleted() {
+        val words = "Boss: stop moved too early on NIFTY"
+        val plain = java.io.File(reviewDir, "review.txt").apply { parentFile?.mkdirs()
+            writeText(OrderReview.encode(OrderReview.Book(proposals = listOf(words), lastRun = day, cutoffMs = 1L))) }
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+        assertEquals(listOf(words), OrderReviewHost.book.value.proposals)
+        assertFalse("the plain file is deleted once sealed", plain.exists())
+        assertTrue(java.io.File(reviewDir, "review.vault").isFile)
+        // A new process reads it back from the sealed file alone.
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+        assertEquals(listOf(words), OrderReviewHost.book.value.proposals)
+    }
+
+    @Test fun eraseRemovesTheSealedAndThePlainFile() = runBlocking {
+        OrderReviewHost.testInputs = inputs(withFlaw = true)
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        val sealed = java.io.File(reviewDir, "review.vault")
+        val plain = java.io.File(reviewDir, "review.txt").apply { writeText(OrderReview.encode(OrderReview.Book(lastRun = day, cutoffMs = 1L))) }
+        assertTrue(sealed.isFile && plain.isFile)
+        val names = OrderReviewHost.filesForErase().map { it.name }
+        assertTrue(names.toString(), "review.vault" in names && "review.txt" in names)
+        OrderReviewHost.wipe()
+        assertFalse(sealed.exists())
+        assertFalse(plain.exists())
+        assertFalse(OrderReviewHost.holdsForErase())
+    }
+
+    @Test fun aDamagedFileIsAnEmptyBookNeverACrash() = runBlocking {
+        java.io.File(reviewDir, "review.vault").apply { parentFile?.mkdirs(); writeBytes(ByteArray(80) { (it * 7).toByte() }) }
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(OrderReview.Book(), OrderReviewHost.book.value)
+        // Read as empty: the review goes on, and its new file is sealed and readable.
+        OrderReviewHost.testInputs = inputs(withFlaw = false)
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+        // A damaged plain file left from before 15 Nov (no sealed file): an empty book too.
+        OrderReviewHost.wipe()
+        java.io.File(reviewDir, "review.txt").apply { parentFile?.mkdirs(); writeBytes(ByteArray(80) { it.toByte() }) }
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(OrderReview.Book(), OrderReviewHost.book.value)
     }
 }

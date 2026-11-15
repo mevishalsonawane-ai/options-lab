@@ -38,7 +38,7 @@ object DiagDayHost {
     private fun trade(p: OrbArms.Position, label: String): DiagDay.Trade = DiagDay.Trade(
         arm = p.arm, live = p.live, right = p.right, entryAt = p.entryTime, entry = p.entry, exitAt = p.exitTime, exit = p.exit,
         why = p.why?.let(::r), lots = p.lots, source = Origins.display(label).first, unconfirmed = p.unconfirmed,
-        trail = p.ownExits)   // 15 Nov: the ₹500 step trail's trades marked too
+        trail = p.ownExits)   // 15 Nov: the breakeven rule's trades marked too
 
     /** What [DiagDay] reads for [day]. Each part on its own ([runCatching]): a part that fails is left out. */
     internal suspend fun input(day: LocalDate): DiagDay.Input {
@@ -103,6 +103,11 @@ object DiagDayHost {
         // 27 Oct (battery audit, Boss: "the battery drained a lot today"): the day's "Battery today" line - which background
         // loops ran and for how long (loop names, minutes and counts only), read for [day] itself like app_health.
         line("battery") { com.optionslab.app.work.BatteryMeter.lineFor(day) }
+        // 15 Nov (diagnostics audit): the vault writes made on the screen's thread (a freeze's cause; counts, file names and the
+        // calling code only) and the stop and target on Boss's manual positions (the switch and today's counts), as Copy
+        // diagnostics already has them. Both memory only.
+        line("main_writes") { com.optionslab.app.security.MainWrites.line() }
+        line("manual_cover") { ManualCover.line() }
         if (!GOLD) {
             line("order_speed") { OrderTiming.diagLine() }
             // Slippage is a premium difference a unit (points of premium), said with "₹" on the phone: written as points here so

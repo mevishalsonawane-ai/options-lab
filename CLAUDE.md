@@ -83,19 +83,20 @@ notes; match the surrounding code.
         so the Undo takes the PIN.
       - It is the one exception to "anything new that could skip live trades starts in shadow", by Boss's explicit choice.
       - R150's W20 on R51 stays a label only (shadow).
-    - A fifth exception, chosen by Boss on 15 Nov ("if the profit moves to 1k, make stop loss 500, if the profit moves to 1.5k move stop
-      loss to 1000, keep a 500 rs gap on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs, make this
-      change to liquidity and donchian r51 and r72"): a ₹500 step trail per lot acts on Liquidity 15+5 (every book and index), R51 and
-      R72, on PAPER AND LIVE, although it failed the gates (R176).
-      - The rule, per lot (L lots; P&L = (price - fill) x quantity, before charges, as Kite shows it): a new trade starts with its stop
-        at -₹500 x L, only where that is tighter than the arm's own stop (it never loosens one). Once its best open P&L reaches +₹1,000 x L
-        the stop moves to +₹500 x L, and up ₹500 x L for every further ₹500 x L of best P&L; it never moves down. No fixed target. The
-        arms' own exits all stay and the first one wins. A live trade takes its own levels on its live fill and lots; its stop rests at
-        Zerodha and is modified up as it steps (the app sells at the level itself when it cannot rest there), never two exits.
-      - Its record: R176 replayed it on one year (20 Oct 2025 - 19 Oct 2026, about 6,300 trades at 1 lot): all three arms made ₹6.37 lakh
-        on their own rules and -₹3.23 lakh with it (₹500 stop on 60% of trades, wins 45% -> 35%); it failed every gate. R152, R167 and
-        R172 also found tight rupee stops and early profit locks hurt these arms.
-      - It only lowers risk (a tighter stop, an earlier exit), so it acts on live through every existing live gate.
+    - A fifth exception, chosen by Boss on 15 Nov: Boss's exit rule acts on Liquidity 15+5 (every book and index), R51 and R72, on PAPER
+      AND LIVE, although it failed the gates. Its third version (Boss, after the whole R176 - R179 table: "Switch to + picker + breakeven
+      at +10% (V4)"; "Paper and live") replaced the morning's ₹500 step trail under the same switch.
+      - The rule: no rupee stop at the entry (each arm keeps its own stop, the -15%). Once the option has traded 10% above the fill, the
+        stop moves to breakeven (the fill plus the round trip's charges); it never moves down. No fixed target. R72 / R51 keep the R151
+        picker (the fourth exception). The arms' own exits all stay (ladder / L25, time stops, index exits, square-offs) and the first one
+        wins. A live trade takes its own breakeven on its live fill; its stop rests at Zerodha and is modified up (the app sells at the
+        level itself when it cannot rest there), never two exits. A fast market can sell below a stop.
+      - Its record: R179's V4 (the picker plus this breakeven) on one year (20 Oct 2025 - 19 Oct 2026, 1 lot): R72 1,069 trades, 56.6%
+        wins, ₹3.25 lakh (the picker alone 51.9%, ₹3.72 lakh); R51 1,367 trades, 55.5%, ₹2.50 lakh (50.8%, ₹2.93 lakh); Liquidity 688
+        trades, 41.3%, ₹1.00 lakh (its own rules 39.2%, ₹1.18 lakh). In the final period (Apr - Oct 2026) it made about what the picker
+        alone made (R72 ₹1.67 vs ₹1.71 lakh, R51 ₹1.45 vs ₹1.44 lakh). It failed the gates (twin q 1.00; R72's final win rate 53.5%).
+        The morning's ₹500 step trail (R176): all three arms ₹6.37 lakh -> -₹3.23 lakh, failed every gate.
+      - It only lowers risk (a higher stop, an earlier exit), so it acts on live through every existing live gate.
       - It is labelled "failed gates, Boss's exception" wherever it is shown, logged in the Autopilot change timeline, and one tap off
         (Bot settings). Off restores the arms' own exits for new trades (open trades keep the rule they entered with); it adds live
         risk, so off and the Undo take the PIN.

@@ -122,6 +122,10 @@ object Protections {
             Alerts.error("The saved stops and targets could not be read and were set aside. Their orders may still be resting: check the order book.", "Protection")
         }
         loadGen = gen
+        // 15 Nov, review: a new id is never one already on the list (a clock moved back after a restart included).
+        // Review (R2): never an id from a clock that was once ahead (more than [ID_SLACK_MS] past now): it would carry on to every new one.
+        val seedMax = nowMs() + ID_SLACK_MS
+        out.filter { it.id <= seedMax }.maxOfOrNull { it.id }?.let { top -> synchronized(this) { if (top > lastId) lastId = top } }
         if (gen == wipeGen) { cache = out; hint(out) }
         return out
     }
@@ -279,7 +283,7 @@ object Protections {
             }
             // An MCX contract keeps its own exchange and tick (9 Oct); NFO exactly as before.
             val tick = if (c.isMcx) McxMarket.find(symbol)?.tick ?: 0.05 else 0.05
-            val item = Item(nowMs(), false, symbol, c.exchange, product, qty, c.lotSize, tick, s0, trail, target, price, stopId, targetId)
+            val item = Item(newId(), false, symbol, c.exchange, product, qty, c.lotSize, tick, s0, trail, target, price, stopId, targetId)
             list += item; save(list)
             "Protected ${symbol}: ${item.describe()}"
         }
@@ -319,13 +323,20 @@ object Protections {
             val dir = if (qty > 0) 1 else -1
             val s0 = Protection.initialStop(dir, price, stop, trail, spec.tickSize)
             val side = if (qty > 0) Kite.Side.SELL else Kite.Side.BUY
+            // 15 Nov (Boss's diagnostics: a large manual position sat with no stop - its one stop order was above the exchange's
+            // freeze quantity, e.g. more than 1,800 NIFTY, and the exchange refuses such an order): above the freeze quantity the
+            // stop and target rest in slices, one protection per slice ([protectSliced]). At or under it: exactly as before.
+            val freeze = Kite.freezeQuantity(exchange, symbol)
+            val sizes = Kite.slices(abs(qty), spec.lotSize, freeze)
+            if (sizes.size > 1) return@withLock protectSliced(list, symbol, exchange, product, qty, price, s0, trail, target,
+                spec.lotSize, spec.tickSize, known, auto, sizes, freeze ?: abs(qty))
             var stopId: String? = null; var targetId: String? = null
             var partly = ""
             var replaced = false
             // 21 Oct, enhancement round 4 (idea 1): a carried position's stop and target as ONE two-leg GTT ([DayOco] on): whichever
             // fires, Zerodha cancels the other, even with the phone off. Not placed (refused, not yet held, the books not read): the
             // two DAY orders as before, said.
-            val fresh = Item(nowMs(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail, target, price, null, null, auto = auto)
+            val fresh = Item(newId(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail, target, price, null, null, auto = auto)
             if (dayOco(fresh)) when (val r = restDayGtt(fresh, qty)) {
                 is DayGtt.Placed -> {
                     list += r.item; save(list)
@@ -333,7 +344,7 @@ object Protections {
                 }
                 // Review: Zerodha's answer lost - the GTT may exist. Nothing else is placed beside it: the watch's next look finds it
                 // (and keeps it) or rests it then.
-                DayGtt.Unknown -> {
+                DayGtt.Unknown, DayGtt.Wait -> {
                     val item = fresh.copy(note = DAY_GTT)
                     list += item; save(list)
                     return@withLock "$symbol: Zerodha's answer to the GTT was lost. The app looks for it and rests the stop and target on " +
@@ -359,11 +370,245 @@ object Protections {
             targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
             // 21 Oct, enhancement round 5 (idea 1): the two orders in the day GTT's place, counted for the diagnostics.
             if (replaced && (stopId != null || targetId != null)) DayOco.note(DayGttTally.Event.REPLACED)
-            val item = Item(nowMs(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail,
+            val item = Item(newId(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail,
                 target.takeIf { targetId != null }, price, stopId, targetId, auto = auto)
             list += item; save(list)
             "Protected $symbol at Zerodha: ${item.describe()}$partly"
         }
+    }
+
+    /**
+     * 15 Nov: [protectLive] for a quantity above the exchange's freeze quantity ([freeze]): the stop (and target) rest as one order
+     * per slice of [sizes] (whole lots, each at most [freeze]), and each slice is its own protection (its own stop and target, one
+     * cancelling the other), so everything that watches, trails, shrinks, re-rests or removes one works on each slice as it always
+     * did. The slices of one position are told apart from any other protection by [siblings]: their quantities add up to at most
+     * what is held, and the orders of one never count as "another exit" against another ([othersBusy]).
+     *
+     * Each slice is saved as soon as its orders rest, so a slice already resting is never forgotten (a cancel or an error in a later
+     * slice included). A slice whose stop is refused ends the slicing there: the slices already resting stay (some protection is
+     * better than none), and the part left uncovered is said loudly, as an unprotected position is. Nothing rests beyond [qty].
+     * Carried (NRML) slices rest as DAY orders today, even with "one GTT" (DayOco) on: each slice takes its own GTT at the next open.
+     */
+    private suspend fun protectSliced(list: MutableList<Item>, symbol: String, exchange: String, product: String, qty: Int, price: Double,
+                                      s0: Double?, trail: Double?, target: Double?, lot: Int, tick: Double, known: List<String>,
+                                      auto: Boolean, sizes: List<Int>, freeze: Int): String {
+        val side = if (qty > 0) Kite.Side.SELL else Kite.Side.BUY
+        // Every order this sends is added here, so a lost reply on a later slice never adopts an earlier slice's order (same size).
+        val sent = ArrayList<String>(known)
+        val total = abs(qty)
+        var covered = 0
+        var rested = 0
+        var why: String? = null
+        var targetMissed: String? = null
+        var one: Item? = null
+        for (q in sizes) {
+            var stopId: String? = null
+            var targetId: String? = null
+            if (s0 != null) {
+                try {
+                    stopId = placeTracked(Kite.Order(symbol, side, q, lot, product, "SL", stopLimit(s0, side, tick), tick, exchange,
+                        "iraprotect", triggerPrice = s0), sent)
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    why = e.message ?: "an error"
+                }
+                if (stopId == null) break
+                sent += stopId
+            }
+            if (target != null) {
+                try {
+                    targetId = placeTracked(Kite.Order(symbol, side, q, lot, product, "LIMIT", Kite.onTick(target, tick, side), tick, exchange,
+                        "iraprotect"), sent)
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    // The stop rests: kept and watched, the target's refusal said (as for one order). No stop either: the end.
+                    if (stopId == null) why = e.message ?: "an error" else targetMissed = e.message ?: "an error"
+                }
+                targetId?.let { sent += it }
+            }
+            if (stopId == null && targetId == null) break
+            stopId?.let { Strategies.tagOwner("kite:$it", "Protection · stop") }
+            targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
+            val item = Item(newId(), true, symbol, exchange, product, qty.sign() * q, lot, tick, s0, trail, target.takeIf { targetId != null },
+                price, stopId, targetId, auto = auto)
+            list += item; save(list)
+            one = item
+            covered += q
+            rested++
+        }
+        val shown = one ?: return "Not protected: ${why ?: "nothing could be placed"}"
+        val kind = if (s0 != null) "stop" else "target"
+        val missed = targetMissed?.let { " The target was not placed on every slice ($it); their stops rest at Zerodha." } ?: ""
+        if (covered < total) {
+            unprotected("$symbol: only $covered of $total is protected at Zerodha. The $kind for the other ${total - covered} could not be " +
+                "placed ($why). That part has NO stop: set one for it yourself, or close it in Trade.")
+            return "Partly protected $symbol at Zerodha: ${shown.describe()} for $covered of $total only (in $rested order${if (rested == 1) "" else "s"} " +
+                "of at most $freeze, the exchange's freeze quantity); the other ${total - covered} is NOT protected ($why).$missed"
+        }
+        return "Protected $symbol at Zerodha in $rested slices of at most $freeze (the exchange's freeze quantity): ${shown.describe()}.$missed"
+    }
+
+    /**
+     * 15 Nov: the other active live protections on [p]'s contract (exchange, symbol, product, the same direction), [p] left out: the
+     * other slices of one position protected in slices ([protectSliced]). Only one protection per contract existed before (a new
+     * one replaces the old), so none of them is ever anything else. Read from the list in hand ([cache]: the watch updates it in
+     * place, slice by slice). One being removed is not counted: its orders still at Zerodha count as another exit, as before.
+     */
+    private fun siblings(p: Item): List<Item> = cache.orEmpty().filter {
+        it.active && it.live && it.id != p.id && it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product &&
+            it.note != REMOVING && it.qty.sign() == p.qty.sign()
+    }
+
+    /**
+     * 15 Nov, review: what sibling slice [s] really has resting to close its units, from books already read ([orders] by id;
+     * [gtts]: null when not read): its GTT active (a stop with it), or its stop order working with nothing of it or of its target
+     * filled - what is left of that stop, at most its units. Anything else counts nothing: a stop or target that filled or part
+     * filled, a target alone, nothing working, a book not read. So a slice never shrinks or ends its own stop on the strength of
+     * a sibling that is not really resting (it may then cover more for a pass, never less).
+     */
+    private fun restingCover(s: Item, orders: Map<String, Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int =
+        restingCoverKnown(s, orders, gtts) ?: abs(s.qty)
+
+    /**
+     * [restingCover], or null when it cannot be told: a sibling placed in the last [FRESH_SLICE_MS] whose stop (or GTT) a trailing
+     * read of the books does not show yet. Review (N3, R3): the placing paths count such a one whole ([restingCover]: two slices
+     * never cover the same units in one pass); the watch's shrink and end decisions are skipped for that pass instead (a sibling
+     * refused within a second must never make this slice give up its stop). Never an older one (yesterday's ended ids count 0).
+     */
+    private fun restingCoverKnown(s: Item, orders: Map<String, Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int? {
+        if (s.stop == null) return 0
+        val fresh = nowMs() - s.id in 0 until FRESH_SLICE_MS
+        val gid = s.gttId
+        if (gid != null) {
+            val g = gtts?.firstOrNull { it.id == gid }
+            if (g != null && g.active) return minOf(g.legQtys.firstOrNull() ?: abs(s.qty), abs(s.qty))
+            if (g == null && gtts != null && fresh && s.stopOrderId == null) return null
+        }
+        val sid = s.stopOrderId ?: return 0
+        val so = orders[sid] ?: return if (fresh) null else 0
+        val to = s.targetOrderId?.let { orders[it] }
+        if (!so.working || so.filled > 0 || (to != null && (to.filled > 0 || to.status == "COMPLETE"))) return 0
+        return minOf(com.optionslab.engine.risk.ExitQty.remaining(so.qty, so.filled, so.pending), abs(s.qty))
+    }
+
+    /** 15 Nov, review (R2): how far ahead of now a saved id may be and still seed [newId]. */
+    private const val ID_SLACK_MS = 5_000L
+
+    /** 15 Nov, review (N3): a slice set this recently is counted whole while a trailing read does not show its stop yet. */
+    private const val FRESH_SLICE_MS = 60_000L
+
+    /** 15 Nov, review (R3): [siblingCover] for the watch's shrink and end decisions; null when one sibling cannot be told yet. */
+    private fun siblingCoverKnown(p: Item, orders: Collection<Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int? {
+        val sib = siblings(p)
+        if (sib.isEmpty()) return 0
+        val byId = orders.associateBy { it.id }
+        var sum = 0
+        for (x in sib) sum += restingCoverKnown(x, byId, gtts) ?: return null
+        return sum
+    }
+
+    /** 15 Nov: the units [p]'s sibling slices really have resting ([restingCover]); 0 for a protection that is not sliced. */
+    private fun siblingCover(p: Item, orders: Collection<Broker.OrderRow>, gtts: List<Broker.GttRow>?): Int {
+        val sib = siblings(p)
+        if (sib.isEmpty()) return 0
+        val byId = orders.associateBy { it.id }
+        return sib.sumOf { restingCover(it, byId, gtts) }
+    }
+
+    /**
+     * 15 Nov: what already rests to close [p]'s contract on [side] that is NOT [p]'s own ([known]) nor a sibling slice's: working
+     * orders ([orders]) and GTTs ([gtts]). A sibling's stop and target are one-cancels-other (they cover its units once, and its
+     * units are taken off what is held instead: [siblingCover]). With no siblings: exactly the sum used before.
+     */
+    private fun othersBusy(p: Item, side: Kite.Side, orders: List<Broker.OrderRow>, gtts: List<Broker.GttRow>, known: Collection<String>): Int {
+        // 15 Nov, review: only a sibling counted as resting ([restingCover]) is left out; any other sibling's working orders count
+        // here as any exit does (both its stop and target: more counted as busy only ever places less).
+        val byId = orders.associateBy { it.id }
+        val all = siblings(p)
+        val counted = all.filter { restingCover(it, byId, gtts) > 0 }
+        val sibOrders = all.flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }.toSet()
+        val sibGtts = counted.mapNotNull { it.gttId }.toSet()
+        fun left(id: String?): Int = id?.let { byId[it] }?.takeIf { it.working }?.let { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } ?: 0
+        // Review (N4): a sibling not counted as resting adds the larger of its working stop and target (one-cancels-other: they
+        // never both sell), never their sum - a sum would leave this slice nothing to send while units go bare.
+        val uncounted = (all - counted.toSet()).sumOf { maxOf(left(it.stopOrderId), left(it.targetOrderId)) }
+        return orders.filter { it.working && it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product &&
+            it.side == side.name && it.id !in known && it.id !in sibOrders }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
+            uncounted + gtts.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.id !in sibGtts }.sumOf { it.covers(side.name, p.product) }
+    }
+
+    /**
+     * 15 Nov: the stop and target orders the app cancelled itself to send Boss's exit (the exit takeover in Trade), id to when, for
+     * an hour at most. Memory only (after a restart a cancelled stop is said as before). Read by the watch ([tickLive]): one of them
+     * found cancelled while the position is still held is placed again, never ended as Boss's choice.
+     */
+    private val takenOver = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** 15 Nov: [ids] are being cancelled by the app for Boss's exit ([takenOver]). Memory only; never blocks. */
+    fun noteTakenOver(ids: Collection<String>) {
+        val now = System.currentTimeMillis()
+        takenOver.entries.removeIf { now - it.value > 60 * 60_000L }
+        ids.forEach { takenOver[it] = now }
+    }
+
+    /**
+     * 15 Nov, review: Boss's exit for which [ids] were taken over ([noteTakenOver]) filled in full (AppModel, once every leg of it
+     * did). That does not mean the position is closed (lots added between the review and the send stay held), so they stay to be
+     * put back, on what is held less every exit fill the positions do not show yet. Only when Kite's positions do not give the
+     * day's quantity (that guard cannot work) does the put-back wait, for [EXIT_DONE_MS] (the market's clock).
+     */
+    fun exitFilledFor(ids: Collection<String>, exits: Map<String, Int> = emptyMap()) {
+        val now = nowMs()
+        exitFilled.entries.removeIf { now - it.value > EXIT_DONE_MS }
+        exitOrders.keys.retainAll(exitFilled.keys)
+        ids.forEach { exitFilled[it] = now; exitOrders[it] = exits }
+    }
+
+    /** 15 Nov, review (F1): Boss's exit orders (id to quantity filled) for each taken-over id said filled ([exitFilledFor]). */
+    private val exitOrders = java.util.concurrent.ConcurrentHashMap<String, Map<String, Int>>()
+
+    /**
+     * 15 Nov, review (F1): Boss's exit orders the order book must show COMPLETE, with their quantity filled, before a stop taken
+     * over by [ids] is put back - only within [EXIT_DONE_MS] of the fill (after that, as before: the lag guard alone). Null: none.
+     */
+    private fun mustShowFor(ids: Collection<String>): Map<String, Int>? =
+        ids.filter { exitDone(it) }.flatMap { exitOrders[it].orEmpty().entries }.associate { it.key to it.value }.takeIf { it.isNotEmpty() }
+
+    /** 15 Nov, review (F1): whether the order book [book] shows every one of [must] COMPLETE with its quantity filled. */
+    private fun bookShows(book: Collection<Broker.OrderRow>, must: Map<String, Int>?): Boolean =
+        must.isNullOrEmpty() || must.all { (id, q) -> book.any { it.id == id && it.status == "COMPLETE" && it.filled >= q } }
+
+    private val exitFilled = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val EXIT_DONE_MS = 120_000L
+
+    /** 15 Nov, review: [id] was cancelled for Boss's exit that filled in full, within [EXIT_DONE_MS] ([exitFilledFor]). */
+    private fun exitDone(id: String): Boolean = exitFilled[id]?.let { at -> nowMs() - at in 0..EXIT_DONE_MS } == true
+
+    /**
+     * 15 Nov, review (R1): whether Zerodha's positions give [p]'s day quantity on its exit side (the lag guard compares the order
+     * book's fills with it). Not read, or not given: false.
+     */
+    private suspend fun dayQtyKnown(p: Item): Boolean = runCatching {
+        val rs = Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }
+        rs.isNotEmpty() && rs.all { (if (p.qty > 0) it.daySellQty else it.dayBuyQty) != null }
+    }.getOrDefault(false)
+
+    /** TEST ONLY: whether [id]'s exit was said filled in full within [EXIT_DONE_MS] ([exitFilledFor]). */
+    internal fun exitDoneForTest(id: String): Boolean = exitDone(id)
+
+    /** TEST ONLY: whether [id] is still to be put back if its exit does not close the position ([noteTakenOver]). */
+    internal fun takenOverForTest(id: String): Boolean = takenOver.containsKey(id)
+
+    /** 15 Nov: a fresh protection id, never the same as one just given (slices set, or placed again, in the same millisecond). */
+    @Volatile private var lastId = 0L
+    @Synchronized private fun newId(): Long {
+        // 15 Nov, CI: the last id given is followed only while it is not ahead of the clock (a clock moved back, or once ahead):
+        // carried on, every new protection's id would be in the future, and the watch reads a carried one's id against today
+        // (an earlier day's orders ended with their day; "its first minute") - its stops would not be placed again at the open.
+        val now = nowMs()
+        val next = if (lastId > now + ID_SLACK_MS) now else maxOf(now, lastId + 1)
+        lastId = next
+        return next
     }
 
     /** Remove a protection: its resting orders are cancelled. */
@@ -510,18 +755,21 @@ object Protections {
         // Review: a GTT of this protection's own that went through but was never recorded (a lost reply, a save that did not land)
         // is adopted, never counted as "another exit": counted busy, the open would place the day's orders beside it.
         val want = listOfNotNull(p.stop, p.target).map { Math.round(Math.round(it / p.tick) * p.tick * 100) / 100.0 }.sorted()   // as [Kite.protect]
-        gtts.firstOrNull { g -> g.active && g.symbol == p.symbol && g.exchange == p.exchange && g.legSides.firstOrNull() == side.name &&
+        // 15 Nov: never a GTT another protection records (a sibling slice of the same size and levels: [protectSliced]).
+        val recorded = cache.orEmpty().filter { it.id != p.id }.mapNotNull { it.gttId }.toSet()
+        gtts.firstOrNull { g -> g.active && g.id !in recorded && g.symbol == p.symbol && g.exchange == p.exchange && g.legSides.firstOrNull() == side.name &&
             g.legProducts.firstOrNull() == p.product && (g.legQtys.firstOrNull() ?: 0) <= abs(p.qty) && g.triggers.size == want.size &&
             g.triggers.sorted().zip(want).all { (a, b) -> abs(a - b) < p.tick / 2 + 1e-9 } }?.let { mine ->
             gttTries.remove(p.id)
             return p.copy(gttId = mine.id)
         }
-        val busy = orders.filter { it.working && it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product && it.side == side.name }
-            .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
-            gtts.filter { it.symbol == p.symbol && it.exchange == p.exchange }.sumOf { it.covers(side.name, p.product) }
+        // 15 Nov: a sibling slice's orders and GTT are not "another exit": its units come off what is held instead ([othersBusy]).
+        val busy = othersBusy(p, side, orders, gtts, emptyList())
         // Review: what is held less every other exit, at most what this protection covers (an arm's own lots and GTT beside it
         // never take this protection's place).
-        val qty = com.optionslab.engine.risk.ExitQty.sendable(abs(net), busy, abs(p.qty), p.lotSize)
+        // Review (R3): a sibling set seconds ago that the books do not show yet: nothing this look (never two GTTs for the same units).
+        if (siblingCoverKnown(p, orders, gtts) == null) return p
+        val qty = com.optionslab.engine.risk.ExitQty.sendable((abs(net) - siblingCover(p, orders, gtts)).coerceAtLeast(0), busy, abs(p.qty), p.lotSize)
         fun tried() {
             val n = (gttTries[p.id] ?: 0) + 1
             gttTries[p.id] = n
@@ -585,13 +833,16 @@ object Protections {
      */
     private suspend fun keepDayGtt(p: Item, net: Int): Item? {
         val id = p.gttId ?: return null
-        val g = runCatching { Broker.gtts().firstOrNull { it.id == id } }.getOrNull() ?: return null
+        val all = runCatching { Broker.gtts() }.getOrNull() ?: return null
+        val g = all.firstOrNull { it.id == id } ?: return null
         val q = g.legQtys.firstOrNull() ?: return null
-        if (!g.active || g.triggers.size != 2 || q <= 0 || q > minOf(abs(net), abs(p.qty))) return null
+        // 15 Nov: a slice ([protectSliced]) keeps it only within what the other slices really have resting (their books read).
+        val sibOrders = if (siblings(p).any { it.stopOrderId != null }) runCatching { Broker.orders() }.getOrNull() ?: return null else emptyList()
+        if (!g.active || g.triggers.size != 2 || q <= 0 || q > minOf(abs(net) - siblingCover(p, sibOrders, all), abs(p.qty))) return null
         Alerts.post("${p.symbol}: its stop and target stay at Zerodha as one GTT today (${p.describe()}): whichever fires, Zerodha " +
             "cancels the other, even with the phone off.", Alerts.Kind.SUCCESS, "Protection")
         DayOco.note(DayGttTally.Event.KEPT)
-        return p.copy(id = nowMs(), qty = p.qty.sign() * q, stopOrderId = null, targetOrderId = null, note = DAY_GTT)
+        return p.copy(id = newId(), qty = p.qty.sign() * q, stopOrderId = null, targetOrderId = null, note = DAY_GTT)
     }
 
     /**
@@ -600,21 +851,27 @@ object Protections {
      * exit sent from here. [p] as a day GTT under a new id; null when it was not placed (the books or the price not read, nothing
      * left to cover, Zerodha refused it): the caller places the two DAY orders instead.
      */
-    private suspend fun restDayGtt(p: Item, net0: Int): DayGtt =
-        ExitCoordinator.turn(p.exchange, p.symbol, "protection") { restDayGttInTurn(p, net0) }
+    private suspend fun restDayGtt(p: Item, net0: Int, lagSafe: Boolean = false, mustShow: Map<String, Int>? = null): DayGtt =
+        ExitCoordinator.turn(p.exchange, p.symbol, "protection") { restDayGttInTurn(p, net0, lagSafe, mustShow) }
 
     /**
      * [restDayGtt]'s outcome. [Refused]: nothing was sent, or Zerodha said no (the caller may rest the two DAY orders). [Unknown]:
      * the books not read, or the GTT's answer lost and not found in the list (it may exist): the caller places NOTHING else this look.
      */
-    private sealed class DayGtt { class Placed(val item: Item) : DayGtt(); object Refused : DayGtt(); object Unknown : DayGtt() }
+    private sealed class DayGtt { class Placed(val item: Item) : DayGtt(); object Refused : DayGtt(); object Unknown : DayGtt()
+        /** 15 Nov, review (F2): nothing sent, nothing known to be wrong - asked again next look, no try used up. */
+        object Wait : DayGtt() }
 
-    private suspend fun restDayGttInTurn(p: Item, net0: Int): DayGtt {
+    private suspend fun restDayGttInTurn(p: Item, net0: Int, lagSafe: Boolean = false, mustShow: Map<String, Int>? = null): DayGtt {
         val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
         val gtts = runCatching { ExitCoordinator.gtts(p.exchange, p.symbol, "protection") }.getOrNull() ?: return DayGtt.Unknown
         val orders = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, "protection") }.getOrNull() ?: return DayGtt.Unknown
-        val net = heldAgain(p, orders) ?: return DayGtt.Unknown
-        if (net == 0 || net.sign() != net0.sign()) return DayGtt.Refused
+        // Review (F1): Boss's exit said filled in full but the order book just read does not show it yet: asked again next look.
+        if (!bookShows(orders, mustShow)) return DayGtt.Wait
+        val net = heldAgain(p, orders, lagSafe) ?: return DayGtt.Unknown
+        // Review (F2): put back after Boss's exit, nothing left held once the fills the positions trail are counted: asked again
+        // next look (never a refusal, which would give up the one-GTT route for good).
+        if (net == 0 || net.sign() != net0.sign()) return if (lagSafe) DayGtt.Wait else DayGtt.Refused
         // Review: a two-leg GTT of this protection's own that went through but was never recorded (a lost reply) is adopted, as
         // [restOvernightInTurn] does - never one another protection already records.
         val recorded = cache.orEmpty().mapNotNull { it.gttId }.toSet()
@@ -625,13 +882,15 @@ object Protections {
             gttTries.remove(p.id)
             noteFresh(p, mine.id)
             DayOco.note(DayGttTally.Event.PLACED)
-            return DayGtt.Placed(p.copy(id = nowMs(), qty = p.qty.sign() * (mine.legQtys.firstOrNull() ?: abs(p.qty)), stopOrderId = null,
+            return DayGtt.Placed(p.copy(id = newId(), qty = p.qty.sign() * (mine.legQtys.firstOrNull() ?: abs(p.qty)), stopOrderId = null,
                 targetOrderId = null, gttId = mine.id, note = DAY_GTT))
         }
-        val busy = orders.filter { it.working && it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product && it.side == side.name }
-            .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
-            gtts.filter { it.symbol == p.symbol && it.exchange == p.exchange }.sumOf { it.covers(side.name, p.product) }
-        val qty = com.optionslab.engine.risk.ExitQty.sendable(abs(net), busy, abs(p.qty), p.lotSize)
+        // 15 Nov: a sibling slice's orders and GTT are not "another exit": its units come off what is held instead ([othersBusy]).
+        val busy = othersBusy(p, side, orders, gtts, emptyList())
+        // Review (R3): a sibling set seconds ago that the books do not show yet: nothing this look (its answer is asked again).
+        // (F3: it waits even when there is room - so, if that sibling was refused, this one can then cover all of it.)
+        if (siblingCoverKnown(p, orders, gtts) == null) return DayGtt.Wait
+        val qty = com.optionslab.engine.risk.ExitQty.sendable((abs(net) - siblingCover(p, orders, gtts)).coerceAtLeast(0), busy, abs(p.qty), p.lotSize)
         if (qty <= 0) return DayGtt.Refused
         val last = lastPrice(p, stream = false) ?: return DayGtt.Refused
         val (g, why) = Kite.protect(Kite.Spec(p.exchange, p.symbol, 0L, p.lotSize, p.tick), p.product, p.qty.sign() * qty, last, p.stop, p.target)
@@ -652,7 +911,7 @@ object Protections {
         DayOco.note(DayGttTally.Event.PLACED)
         Alerts.post("${p.symbol}: its stop and target rest at Zerodha as one GTT for $qty (${p.describe()}): whichever fires, Zerodha " +
             "cancels the other, even with the phone off.", Alerts.Kind.SUCCESS, "Protection")
-        return DayGtt.Placed(p.copy(id = nowMs(), qty = p.qty.sign() * qty, stopOrderId = null, targetOrderId = null, gttId = id, note = DAY_GTT))
+        return DayGtt.Placed(p.copy(id = newId(), qty = p.qty.sign() * qty, stopOrderId = null, targetOrderId = null, gttId = id, note = DAY_GTT))
     }
 
     /** A day GTT placed or adopted in its turn: the expiry exits see it at once ([dayGttsOut]), before the list is saved. */
@@ -682,12 +941,27 @@ object Protections {
         suspend fun netNow(): Int? = runCatching {
             Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
         }.getOrNull()
-        val net = if (nowMs() - p.id < 60_000) null else netNow()
+        // Review (R2): an id ahead of now (a clock once ahead) is never "its first minute" for ever.
+        val net = if (nowMs() - p.id in 0L until 60_000L) null else netNow()
         val closed = net != null && (net == 0 || net.sign() != p.qty.sign())
         if (gid == null) return placeDayExits(p, net ?: return p)
-        val g = runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrElse { return p }
+        val allGtts = runCatching { Broker.gtts() }.getOrElse { return p }
+        val g = allGtts.firstOrNull { it.id == gid }
         if (g == null || g.status.lowercase() in GTT_GONE) {
             if (net == null) return p
+            // 15 Nov: deleted by the app itself for Boss's exit ([noteTakenOver]: "gtt:<id>") and the position still held - the exit
+            // refused, failed or part filled: its stop and target are placed again for what is held, never ended as gone. Not
+            // while Boss's exit is going, nor for [EXIT_DONE_MS] after it filled in full (the positions may trail it); always on
+            // what is held less any exit fill the positions do not show yet (review: never a naked stop on a flat account). Kept
+            // marked until it is placed, so every try is made the same careful way.
+            if (!closed && takenOver.containsKey("gtt:$gid")) {
+                if (ArmLive.handsOffNow(p.exchange, p.symbol) || (exitDone("gtt:$gid") && !dayQtyKnown(p))) return p
+                val next = placeDayExits(p.copy(gttId = null), net, lagSafe = true, mustShow = mustShowFor(listOf("gtt:$gid")))
+                if (next.active && next.gttId == null && next.stopOrderId == null && next.targetOrderId == null) return p
+                takenOver.remove("gtt:$gid")
+                runCatching { Diag.record("protection", "${p.symbol}: its GTT was deleted for your exit and the position is still held ($net): placed again") }
+                return next
+            }
             if (!closed) DayOco.note(DayGttTally.Event.GONE)
             if (!closed) unprotected("${p.symbol}: its stop and target's GTT is no longer at Zerodha (${g?.status ?: "not listed"}). " +
                 "The position is NOT protected: set the protection again.")
@@ -729,6 +1003,17 @@ object Protections {
         }
         if (net == null) return p
         if (closed) return p.copy(active = false, note = "position closed")
+        // 15 Nov: one slice ([protectSliced]) left with nothing to cover (the other slices cover all that is held): its GTT out,
+        // confirmed, and the slice ended; not confirmed: asked again next pass.
+        // 15 Nov, review: only what the other slices really have resting ([restingCover]); their orders read only when one has any.
+        // Review (N5): their orders not read: no shrink or end decision this pass (the next look reads them again).
+        val sibOrders = if (siblings(p).any { it.stopOrderId != null }) runCatching { Broker.orders() }.getOrNull() else emptyList()
+        val sibKnownCover = if (sibOrders == null) null else siblingCoverKnown(p, sibOrders, allGtts)
+        val sibCover = sibKnownCover ?: 0
+        if (sibKnownCover != null && sibCover > 0 && abs(net) <= sibCover) return when (gttState(p, cancelFired = false)) {
+            GttState.GONE -> p.copy(active = false, gttId = null, note = com.optionslab.ira.ManualCoverRule.SLICE_DONE)
+            GttState.HELD, GttState.FIRED -> p
+        }
         // Switched off (as read from the settings, never the unread default after a restart): in market hours, the GTT out first
         // (confirmed), then the day's two orders (never both resting).
         if (DayOco.isKnownOff() && marketOpen(p.exchange)) {
@@ -741,8 +1026,10 @@ object Protections {
         val covers = g.legQtys.firstOrNull() ?: abs(p.qty)
         var cur = p
         val last = lastPrice(p, stream = false)
-        if (abs(net) < covers && last != null) {
-            val n = (abs(net) / p.lotSize.coerceAtLeast(1)) * p.lotSize.coerceAtLeast(1)
+        // 15 Nov: a slice covers what is held less what the other slices cover (not sliced: what is held, as before).
+        val mine = abs(net) - sibCover
+        if (sibKnownCover != null && mine < covers && last != null) {
+            val n = (mine / p.lotSize.coerceAtLeast(1)) * p.lotSize.coerceAtLeast(1)
             if (n > 0) {
                 val (gtt, why) = Kite.protect(Kite.Spec(p.exchange, p.symbol, 0L, p.lotSize, p.tick), p.product, p.qty.sign() * n, last, p.stop, p.target)
                 val r = runCatching { Broker.modifyGtt(gid, requireNotNull(gtt) { why.joinToString("; ") }) }
@@ -758,7 +1045,7 @@ object Protections {
                     }
                 }
             }
-        } else if (abs(cur.qty) != covers && covers in 1..abs(net)) cur = p.copy(qty = p.qty.sign() * covers)
+        } else if (abs(cur.qty) != covers && covers in 1..mine) cur = p.copy(qty = p.qty.sign() * covers)
         return trailDayGtt(cur, gid, last ?: return cur)
     }
 
@@ -782,21 +1069,24 @@ object Protections {
      * looked for and tried again on the next, at most [GTT_TRIES] looks, then the two orders. Off: the two orders ([restAgain]) in
      * market hours. Out of hours with nothing placed: kept, and tried again on the next look.
      */
-    private suspend fun placeDayExits(p: Item, net: Int, ordersNow: Boolean = false): Item {
+    private suspend fun placeDayExits(p: Item, net: Int, ordersNow: Boolean = false, lagSafe: Boolean = false,
+                                      mustShow: Map<String, Int>? = null): Item {
         if (net == 0 || net.sign() != p.qty.sign()) return p.copy(active = false, note = "position closed")
         val cover = p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty)))
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (asked again next look,
         // without using up a GTT try).
         if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p.copy(qty = cover.qty)
         if (!ordersNow && dayOco(cover) && (gttTries[p.id] ?: 0) < GTT_TRIES) {
-            when (val r = restDayGtt(cover, net)) {
+            when (val r = restDayGtt(cover, net, lagSafe, mustShow)) {
                 is DayGtt.Placed -> return r.item
                 DayGtt.Unknown -> { gttTries[p.id] = (gttTries[p.id] ?: 0) + 1; return p.copy(qty = cover.qty) }
+                DayGtt.Wait -> return p.copy(qty = cover.qty)
                 DayGtt.Refused -> gttTries[p.id] = GTT_TRIES
             }
         }
         if (!marketOpen(p.exchange)) return p.copy(qty = cover.qty)
-        val next = restAgain(cover.copy(note = ""), net, said = "its stop and target rest at Zerodha as two orders again")
+        val next = restAgain(cover.copy(note = ""), net, said = "its stop and target rest at Zerodha as two orders again", lagSafe = lagSafe,
+            mustShow = mustShow)
             ?: run {
                 unprotected("${p.symbol}: its stop could not be placed at Zerodha. The position is NOT protected: set the protection again.")
                 return p.copy(active = false, note = "stop not placed")
@@ -811,12 +1101,14 @@ object Protections {
      * [p]'s stop and target placed again at their levels (an earlier day's DAY orders ended): the protection carried on under
      * a new id (today's: [cancelOrders] knows its orders are today's). Null when the stop could not be placed (the caller says so).
      */
-    private suspend fun restAgain(p0: Item, net0: Int = p0.qty, said: String? = null): Item? =
+    private suspend fun restAgain(p0: Item, net0: Int = p0.qty, said: String? = null, lagSafe: Boolean = false,
+                                  mustShow: Map<String, Int>? = null): Item? =
         // 20 Oct, enhancement round 2: read and placed in the contract's one exit turn ([ExitCoordinator]), as [restOvernight].
-        ExitCoordinator.turn(p0.exchange, p0.symbol, "protection") { restAgainInTurn(p0, net0, said) }
+        ExitCoordinator.turn(p0.exchange, p0.symbol, "protection") { restAgainInTurn(p0, net0, said, lagSafe, mustShow) }
 
     /** [said]: what the owner is told once they are placed (21 Oct, round 4: the day GTT switched off); null: the next session's words. */
-    private suspend fun restAgainInTurn(p00: Item, net0: Int, said: String? = null): Item? {
+    private suspend fun restAgainInTurn(p00: Item, net0: Int, said: String? = null, lagSafe: Boolean = false,
+                                        mustShow: Map<String, Int>? = null): Item? {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): nothing placed beside his sale (asked again next look).
         if (ArmLive.handsOffNow(p00.exchange, p00.symbol)) return p00
         val side = if (p00.qty > 0) Kite.Side.SELL else Kite.Side.BUY
@@ -825,19 +1117,31 @@ object Protections {
         // the two together never sell more than is held. All of it covered: nothing placed, and said. 20 Oct, enhancement round 1:
         // an active GTT on it (an arm's own, or one of ours not recorded) counts too, against all that is held ([net]).
         var book: List<Broker.OrderRow> = emptyList()
+        var gttBook: List<Broker.GttRow> = emptyList()
         val busy = runCatching {
             book = ExitCoordinator.orders(p00.exchange, p00.symbol, "protection")
-            book.filter { it.working && it.symbol == p00.symbol && it.exchange == p00.exchange && it.product == p00.product &&
-                it.side == side.name && it.id !in known }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
-                ExitCoordinator.gtts(p00.exchange, p00.symbol, "protection").filter { it.symbol == p00.symbol && it.exchange == p00.exchange }.sumOf { it.covers(side.name, p00.product) }
+            gttBook = ExitCoordinator.gtts(p00.exchange, p00.symbol, "protection")
+            // 15 Nov: a sibling slice's own orders and GTT are left out here; its units come off what is held instead (below).
+            othersBusy(p00, side, book, gttBook, known)
         }.getOrNull() ?: return p00                                       // the books not read: asked again next look
         // 20 Oct, enhancement round 2: what is held read again AFTER the books (an exit that filled since the caller's read shows
         // here, not as still held with nothing on its way out); never more than the caller saw.
-        val again = heldAgain(p00, book) ?: return p00
+        // Review (F1): Boss's exit said filled in full but the order book just read does not show it yet (the app learns a fill
+        // from Zerodha's stream before its order book shows it): asked again next look, so the lag guard has the fill to count.
+        if (!bookShows(book, mustShow)) return p00
+        val again = heldAgain(p00, book, lagSafe) ?: return p00
         if (again == 0 || again.sign() != net0.sign()) return p00         // closed meanwhile: the next look ends it
         val net = if (abs(again) < abs(net0)) again else net0
         val p0 = if (abs(p00.qty) > abs(net)) p00.copy(qty = net.sign() * abs(net)) else p00
-        val qty = com.optionslab.engine.risk.ExitQty.sendable(net, busy, abs(p0.qty), p0.lotSize)
+        // 15 Nov: a position protected in slices ([protectSliced]): what the other slices cover is not this one's to cover again.
+        // Review (R3): a sibling set seconds ago that the books do not show yet: nothing placed or ended this look; the next look,
+        // with books that show it (or show it refused), decides. Never two slices for the same units, never one ended for nothing.
+        // (F3: it waits even when there is room - so, if that sibling was refused, this one can then cover all of it.)
+        if (siblingCoverKnown(p00, book, gttBook) == null) return p00
+        val sib = siblingCover(p00, book, gttBook)
+        val room = (abs(net) - sib).coerceAtLeast(0)
+        if (sib > 0 && room <= 0) return p0.copy(active = false, note = com.optionslab.ira.ManualCoverRule.SLICE_DONE)
+        val qty = com.optionslab.engine.risk.ExitQty.sendable(room, busy, abs(p0.qty), p0.lotSize)
         if (qty <= 0) {
             Alerts.post("${p0.symbol}: an exit already resting at Zerodha covers it, so its stop and target were not placed again.",
                 Alerts.Kind.INFO, "Protection")
@@ -852,8 +1156,8 @@ object Protections {
                 // Usually the price opened through the stop (Zerodha refuses a stop on the wrong side of the price): said plainly.
                 val last = runCatching { Broker.quotes(listOf("${p.exchange}:${p.symbol}"))["${p.exchange}:${p.symbol}"]?.last }.getOrNull()
                 val through = last != null && last > 0 && (if (p.qty > 0) last <= s0 else last >= s0)
-                unprotected(if (through) "${p.symbol} opened at %.2f, already through its stop of %.2f, so the stop could not be placed again. Close it in Trade.".format(last, s0)
-                    else "${p.symbol}: its stop could not be placed again at the open (${e.message}). The position is NOT protected: set the protection again.")
+                unprotected(if (through) "${p.symbol} ${if (said == null) "opened" else "is"} at %.2f, already through its stop of %.2f, so the stop could not be placed again. Close it in Trade.".format(last, s0)
+                    else "${p.symbol}: its stop could not be placed again${if (said == null) " at the open" else ""} (${e.message}). The position is NOT protected: set the protection again.")
                 return p.copy(active = false, note = "stop not placed again")
             }
         }
@@ -866,7 +1170,7 @@ object Protections {
         if (stopId == null && targetId == null) return null
         stopId?.let { Strategies.tagOwner("kite:$it", "Protection · stop") }
         targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
-        val next = p.copy(id = nowMs(), stopOrderId = stopId, targetOrderId = targetId,
+        val next = p.copy(id = newId(), stopOrderId = stopId, targetOrderId = targetId,
             target = p.target.takeIf { targetId != null }, note = "placed again for today")
         Alerts.post(said?.let { "${p.symbol}: $it (${next.describe()})." }
             ?: "${p.symbol}: its stop and target ended with yesterday's session and were placed again at Zerodha (${next.describe()}).",
@@ -879,8 +1183,10 @@ object Protections {
      * 21 Oct, enhancement round 3 (idea 1): checked against the fills of [orders], the orders read just before it
      * ([ExitCoordinator.held]: an exit that filled a moment ago is never covered again while the positions catch up).
      */
-    private suspend fun heldAgain(p: Item, orders: List<Broker.OrderRow>): Int? = runCatching {
-        ExitCoordinator.held(p.exchange, p.symbol, p.product, "protection", orders)
+    private suspend fun heldAgain(p: Item, orders: List<Broker.OrderRow>, lagSafe: Boolean = false): Int? = runCatching {
+        // 15 Nov, review: [lagSafe] (a stop put back after Boss's exit): an exit fill the positions do not show yet is counted as
+        // sold whatever the lag guard's switch says - it only ever lowers what is placed.
+        ExitCoordinator.held(p.exchange, p.symbol, p.product, "protection", orders, forceLag = lagSafe)
     }.getOrNull()
 
     /**
@@ -1030,6 +1336,16 @@ object Protections {
         suspend fun netNow(): Int? = runCatching {
             (if (stream) Broker.positionsRecon() else Broker.positionBook()).net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }.sumOf { it.qty }
         }.getOrNull()
+        // 15 Nov, review: the other slices' cover ([protectSliced]) is only what they really have resting in the books just read
+        // ([restingCover]); a sibling's GTT list is read only when one has a GTT (never in a stream look: none counted then).
+        val gttSibling = siblings(p).any { it.gttId != null }
+        val sibGtts = if (!stream && gttSibling) runCatching { Broker.gtts() }.getOrNull() else null
+        val sibKnownCover = siblingCoverKnown(p, rows.values, sibGtts)
+        val sibCover = sibKnownCover ?: siblingCover(p, rows.values, sibGtts)
+        // Review (N5): a sibling resting as a GTT whose list was not read (a stream look, a failed read) is not known: this pass makes
+        // no shrink or end decision on the slices (no change is safer than a wrong one; any over-cover lasts until the next regular
+        // look, which reads the GTTs).
+        val sibKnown = !(gttSibling && sibGtts == null) && sibKnownCover != null
         if (stopDone || targetDone) {
             // One-cancels-other: finished only once the other exit is confirmed gone, or it
             // would still rest at Zerodha and could open a naked position when it fills.
@@ -1043,13 +1359,16 @@ object Protections {
                 if (stopDone) Alerts.Kind.ERROR else Alerts.Kind.SUCCESS, "Protection")
             // The other exit may have part-filled before it was cancelled: what is left is said plainly.
             val left = netNow()
-            if (left != null && left != 0) unprotected("${p.symbol}: after the ${if (stopDone) "stop" else "target"} filled, Zerodha shows ${p.product} net $left. " +
+            // 15 Nov: a position protected in slices - what the other slices still cover is protected; only the rest is said.
+            val bare = if (left == null || left == 0 || left.sign() != p.qty.sign()) left else left.sign() * (abs(left) - sibCover).coerceAtLeast(0)
+            if (left != null && bare != null && bare != 0) unprotected("${p.symbol}: after the ${if (stopDone) "stop" else "target"} filled, Zerodha shows ${p.product} net $left. " +
                 if (left.sign() != p.qty.sign()) "That is a position the other way round: close it in Trade." else "That part is no longer protected.")
             return p.copy(active = false, note = if (stopDone) "stop filled" else "target filled")
         }
         // The position closed by hand (or flipped): the resting exits would now open a new position.
         // (Not in its first minute: the position book can trail a fresh fill.)
-        val net = if (nowMs() - p.id < 60_000) null else netNow()
+        // Review (R2): an id ahead of now (a clock once ahead) is never "its first minute" for ever.
+        val net = if (nowMs() - p.id in 0L until 60_000L) null else netNow()
         if (net != null && (net == 0 || net.sign() != p.qty.sign())) {
             listOfNotNull(so, to).filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
             val still = runCatching { Broker.orders().filter { it.id == p.stopOrderId || it.id == p.targetOrderId }.any { it.working } }.getOrElse { true }
@@ -1062,6 +1381,15 @@ object Protections {
         // A carried position's overnight GTT is never judged on a positions read that failed (or a protection's first minute):
         // kept as it is and asked again on the next pass.
         if (net == null && p.gttId != null) return p
+        // 15 Nov: one slice of a position protected in slices ([protectSliced]) that part-sold, where the other slices already cover
+        // all that is held: its exits are cancelled (confirmed; else asked again next pass), so the slices together never sell more
+        // than is held. It only takes away exits that cover nothing: the rest of the position keeps its stops (review: counted only
+        // from stops really resting, so a sibling whose exit filled never makes this one give up its own).
+        if (sibKnown && net != null && net != 0 && net.sign() == p.qty.sign() && sibCover > 0 && abs(net) <= sibCover) {
+            if (!cancelOrders(p, "slice_not_needed")) return p
+            runCatching { Diag.record("protection", "${p.symbol}: one slice of its protection (${abs(p.qty)}) ended: the other slices cover all $net held") }
+            return p.copy(active = false, note = com.optionslab.ira.ManualCoverRule.SLICE_DONE)
+        }
         // 20 Oct, review: a carried (not intraday) position whose DAY exits Zerodha cancelled at the close: kept, and placed again
         // at the next session's open ([restAgain]) instead of ending here with nothing watching the position overnight.
         val carriedNow = p.product != "MIS" && net != null && net != 0 && net.sign() == p.qty.sign() && !marketOpen(p.exchange)
@@ -1076,12 +1404,72 @@ object Protections {
         // Review: a carried position's positions read that failed outside its market's hours never ends the protection (it would
         // lose tonight's GTT and the open's orders): asked again next pass.
         if (net == null && p.product != "MIS" && !marketOpen(p.exchange)) return p
+        // 15 Nov (Boss's diagnostics, 6 Nov: a stop the app cancelled for Boss's square-off stayed gone when the sale did not go): its
+        // stop or target cancelled by the app itself to send Boss's exit ([noteTakenOver]) while the position is still held - the
+        // exit refused, failed or only part filled - is placed again at its levels for what is held, once Boss's exit is done. Only
+        // ever puts back the stop it had: it never covers more than is held less every other exit ([restAgain]).
+        if (p.gttId == null && listOfNotNull(so, to).any { it.status == "CANCELLED" && takenOver.containsKey(it.id) }) {
+            if (net == null || net == 0 || net.sign() != p.qty.sign()) return p     // not read (or its first minute): next pass
+            if (stream) return p                                                     // the regular look places (never a stream look)
+            if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p                  // Boss's exit is still going
+            // Review (R1): always on what is held less every exit fill of today the positions do not show yet (the lag guard forced,
+            // any age: [restAgain]) - never a naked stop on a flat account, and a part still held gets its stop at once. Only when
+            // Kite's positions do not give the day's quantity (the guard cannot work) does it wait, for [EXIT_DONE_MS] after Boss's
+            // exit filled in full ([exitFilledFor]).
+            if (listOfNotNull(so, to).any { exitDone(it.id) } && !dayQtyKnown(p)) return p
+            // Its other exit still working is taken out first (confirmed), so the two put back never rest beside an old one.
+            val working = listOfNotNull(so, to).filter { it.working }
+            if (working.isNotEmpty()) {
+                working.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
+                val still = runCatching { Broker.orders().filter { r -> working.any { it.id == r.id } }.any { it.working } }.getOrElse { true }
+                if (still) return p
+            }
+            val back = restAgain(p.copy(qty = net.sign() * minOf(abs(net), abs(p.qty))), net,
+                said = "its stop${if (p.target != null) " and target" else ""} rest at Zerodha again (the app had cancelled them for your exit, " +
+                    "and the position is still held)", lagSafe = true, mustShow = mustShowFor(listOfNotNull(p.stopOrderId, p.targetOrderId)))
+            if (back == null) {
+                unprotected("${p.symbol}: its stop was cancelled for your exit, which did not close the position, and it could not be placed " +
+                    "again. The position is NOT protected: set a stop yourself.")
+                return p.copy(active = false, stopOrderId = null, targetOrderId = null, note = "stop not placed again")
+            }
+            if (back.active && back.id == p.id) return p                             // not placed this look: asked again next pass
+            listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { takenOver.remove(it) }
+            return back
+        }
         // A stop refused or cancelled at Zerodha leaves the position unprotected: say so.
         if (so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) {
-            unprotected("${p.symbol}: the stop at Zerodha was ${so.status.lowercase()}${so.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""}. The position is not protected by a stop.")
-            if (to == null || !to.working) return p.copy(active = false, stopOrderId = null, note = "stop ${so.status.lowercase()}")
-            return p.copy(stopOrderId = null, note = "stop ${so.status.lowercase()}")
+            // 15 Nov (Boss's diagnostics: a manual position's stop cancelled at the exchange was not covered again that day): told
+            // apart by Zerodha's own words. REJECTED, or CANCELLED with the exchange's reason, is the exchange's doing: ended as such
+            // ([com.optionslab.ira.ManualCoverRule.STOP_BY_EXCHANGE]), so "Stop and target on my manual positions" may cover the
+            // position again. CANCELLED with no reason given, or with words naming a user, is taken as Boss's own cancel (in Kite):
+            // respected (never put back automatically), and said loudly that the position now has no stop. How Kite words a user's
+            // cancel is an assumption not verified against live Kite ([com.optionslab.ira.ManualCoverRule.endedByExchange]).
+            val byExchange = com.optionslab.ira.ManualCoverRule.endedByExchange(so.status, so.message)
+            val alone = siblings(p).isEmpty()
+            val note = if (byExchange) com.optionslab.ira.ManualCoverRule.STOP_BY_EXCHANGE else "stop ${so.status.lowercase()}"
+            unprotected("${p.symbol}: the stop at Zerodha was ${so.status.lowercase()}${so.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""}. " +
+                (if (!alone) "${abs(p.qty)} of the position (one slice of its stops) is not protected by a stop." else "The position is not protected by a stop.") +
+                when {
+                    !byExchange -> " It was cancelled by you (in Kite?), so the app leaves it as it is: set a stop yourself if you want one."
+                    // Review: one slice of several - the other slices keep the position "protected", so nothing covers these units
+                    // again by itself.
+                    !alone -> " The other slices' stops still rest; set a stop for these ${abs(p.qty)} yourself."
+                    p.auto -> " The app places its stop and target again on its next look at your manual positions."
+                    else -> ""
+                })
+            if (to == null || !to.working) return p.copy(active = false, stopOrderId = null, note = note)
+            // An automatic protection ([ManualCover]) whose stop the exchange refused: its target is taken out too (confirmed), so the
+            // position is covered afresh (stop and target) rather than left with a target only. Not confirmed: kept as before.
+            if (p.auto && byExchange && alone) {
+                runCatching { Broker.cancel(to.id, to.variety) }
+                if (runCatching { Broker.orderState(to.id)?.status }.getOrNull() in GONE)
+                    return p.copy(active = false, stopOrderId = null, targetOrderId = null, note = note)
+            }
+            return p.copy(stopOrderId = null, note = note)
         }
+        // 15 Nov, review: an order placed seconds ago that a trailing read of the order book does not show yet is not "gone": asked
+        // again next pass (ended now, the order would rest at Zerodha untracked and another could be placed beside it).
+        if (((p.stopOrderId != null && so == null) || (p.targetOrderId != null && to == null)) && nowMs() - p.id in 0 until FRESH_SLICE_MS) return p
         // Both exits gone some other way (a DAY order that ended with its day, cancelled at Zerodha): say so.
         if ((so == null || !so.working) && (to == null || !to.working) && (p.stopOrderId != null || p.targetOrderId != null)) {
             // 20 Oct, review: a carried (NRML) position's stop and target are DAY orders and end with their day; the next session
@@ -1114,7 +1502,7 @@ object Protections {
                 if (dayOco(again)) when (val r = restDayGtt(again, net)) {
                     is DayGtt.Placed -> return r.item
                     // Review: its answer lost (it may exist): nothing else placed; the next look finds it or rests it.
-                    DayGtt.Unknown -> return again.copy(stopOrderId = null, targetOrderId = null, note = DAY_GTT)
+                    DayGtt.Unknown, DayGtt.Wait -> return again.copy(stopOrderId = null, targetOrderId = null, note = DAY_GTT)
                     DayGtt.Refused -> refused = true
                 }
                 restAgain(again, net)?.let {
@@ -1131,17 +1519,23 @@ object Protections {
         // is held, or the one that fills in full would leave the account the other way round.
         var stopQty = so?.qty ?: 0
         var cur = p
-        if (net != null && net != 0) {
+        // 15 Nov: a slice ([protectSliced]) comes down to what is held less what the other slices cover (never below nothing: the
+        // block above ends a slice with nothing left to cover). Not sliced: what is held, as before.
+        val mine = if (net == null || net == 0 || sibCover == 0 || net.sign() != p.qty.sign()) net else net.sign() * (abs(net) - sibCover)
+        if (sibKnown && net != null && net != 0 && mine != null) {
+            // 15 Nov, review: a reduce Zerodha refused leaves the order as it is: the protection keeps the quantity it really has.
+            var reduced = true
             for (o in listOfNotNull(so, to).filter { it.working }) {
-                val n = com.optionslab.engine.risk.ExitQty.shrinkTo(o.qty, o.filled, net, p.lotSize) ?: continue
+                val n = com.optionslab.engine.risk.ExitQty.shrinkTo(o.qty, o.filled, mine, p.lotSize) ?: continue
                 val r = runCatching {
                     Broker.modify(o, n, o.type, if (o.type == "SL-M") null else o.price, if (o.type == "SL" || o.type == "SL-M") o.trigger else null)
                 }
                 if (r.isSuccess) { if (o.id == so?.id) stopQty = n }
-                else Alerts.post("${p.symbol}: an exit covers more than is held ($net) and could not be reduced (${r.exceptionOrNull()?.message}); retrying.",
+                else reduced = false
+                if (r.isFailure) Alerts.post("${p.symbol}: an exit covers more than is held ($net) and could not be reduced (${r.exceptionOrNull()?.message}); retrying.",
                     Alerts.Kind.ERROR, "Protection", throttle = true)
             }
-            if (abs(net) < abs(p.qty)) cur = p.copy(qty = net)
+            if (reduced && abs(mine) < abs(p.qty)) cur = p.copy(qty = mine)
         }
         if (cur.trail == null || so == null || !so.working) return cur
         val key = "${p.exchange}:${p.symbol}"
@@ -1246,8 +1640,9 @@ object Protections {
         // 26 Oct (Erase everything): first the count (a look in flight then drops its list), then every copy in memory and the
         // files, a set-aside copy included. Never takes [lock] and never reads the vault.
         wipeGen++
+        synchronized(this) { lastId = 0L }
         cache = null; activeHint = null; autoHint = false; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap()
-        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L
+        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L; takenOver.clear(); exitFilled.clear(); exitOrders.clear()
         runCatching { gttTries.clear() }
         filesForErase().forEach { runCatching { it.delete() } }
     }
@@ -1264,5 +1659,8 @@ object Protections {
     }
 
     /** TEST ONLY: memory forgotten (the file kept), as after a restart: the next look reads the file. */
-    internal fun forgetMemoryForTest() { cache = null; gttTries.clear() }
+    /** TEST ONLY: the one-GTT tries used by protection [id] ([GTT_TRIES]). */
+    internal fun gttTriesForTest(id: Long): Int = gttTries[id] ?: 0
+
+    internal fun forgetMemoryForTest() { cache = null; gttTries.clear(); synchronized(this) { lastId = 0L } }
 }

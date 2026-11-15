@@ -253,6 +253,37 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("nothing more", 2, kite.placed.count { it.form["transaction_type"] == "SELL" })
     }
 
+    /**
+     * 15 Nov (audit: 27 live orders Zerodha rejected, "Insufficient funds", shown with no arm): an entry Zerodha refuses with no id is
+     * noted with its arm before it went ([ArmOrderLabels]), so the REJECTED order Zerodha keeps in its book is shown with the arm; an
+     * entry Zerodha takes is named by its id at once. Nothing about the entry changes (refused: nothing held, said as before).
+     */
+    @Test fun anEntryZerodhaRefusesIsStillShownWithItsArm() {
+        ArmOrderLabels.resetForTest()
+        val keepWas = ArmOrderLabels.keep
+        ArmOrderLabels.keep = { _, _ -> }                          // no background write of the label outliving this test
+        try {
+            val key = com.optionslab.engine.orb.DonchianArm.SOURCE
+            val label = LiveMirror.spec(key)!!.label
+            kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "Insufficient funds. Required margin is 6000.00 but available margin is 120.00.")
+            ArmLive.entered(ask(key, "nofunds"))
+            assertEquals("one try, as before", 1, kite.placed.size)
+            assertTrue(view().open.isEmpty())
+            assertEquals(true, view().refused[key]?.contains("Insufficient funds"))
+            // Zerodha's book keeps it as REJECTED (its id never reached the phone).
+            val at = com.optionslab.app.data.Market.now().toLocalDateTime().withNano(0).toString().replace('T', ' ')
+            val row = Broker.OrderRow("990001", sym, "BUY", 30, 0, 0.0, 0.0, "REJECTED", "Insufficient funds", at, "NFO", "MIS", "MARKET", tag = "iraarm")
+            assertEquals("$label · live entry", ArmOrderLabels.labelOf(row))
+            // An entry Zerodha takes: named by its id at once. (No day cap in its way: this test is about the label.)
+            SecurePrefs.putAll(mapOf("g.trades" to 0, "k.maxOrders" to 500))
+            kite.requests.clear()
+            ArmLive.entered(ask(key, "taken"))
+            assertEquals(view().refused[key], 1, view().openReal.size)
+            val id = kite.orders.values.first { it.side == "BUY" && it.status == "COMPLETE" }.id
+            assertEquals("$label · live entry", ArmOrderLabels.labelOf(Broker.OrderRow(id, sym, "BUY", 30, 30, 0.0, 200.0, "COMPLETE", "", at, "NFO", "MIS", "MARKET", tag = "iraarm")))
+        } finally { ArmOrderLabels.keep = keepWas; ArmOrderLabels.resetForTest() }
+    }
+
     /** 30 Oct (Part C): the kill switch, both split day stops and the paper-only period block live ENTRIES, never an exit. */
     @Test fun theKillSwitchAndEachSplitStopNeverBlockAnExit() {
         val ref = "k"

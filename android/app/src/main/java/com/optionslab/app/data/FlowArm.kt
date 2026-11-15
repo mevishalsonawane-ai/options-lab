@@ -784,7 +784,7 @@ object FlowArm {
         FlowRules.indexExit(p.put, spot(p.index), p.idxStop, p.idxTarget)?.let { return sellRest(p, c, it) }
         // No stop resting in the paper book: the arm checks the premium stop itself and puts the SL-M back while above it.
         if (!stopResting(p.stopOrderId)) {
-            val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: optionQuote(c)?.ltp
+            val ltp = Paper.heldPriceNow(c, p.entryTime, lookup = true)      // 15 Nov: only a price traded since the entry, or a sane book's bid
             if (ltp != null && ltp <= p.stop) return sellRest(p, c, "premium stop")
             val again = if (closingWorks(p.symbol)) null else runCatching { Paper.place(c, "SELL", p.lots, "SL-M", "MIS", null, p.stop) }
                 .getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${FlowRules.OWNER} · stop") } }

@@ -50,6 +50,19 @@ object PositionCards {
     @Volatile var anyOpen = false
         private set
 
+    /** 15 Nov: bumped by [resetForTest]; a refresh started before it never sets [anyOpen] after it. */
+    @Volatile private var resetGen = 0
+
+    /**
+     * TEST SEAM (15 Nov, CI: BatteryAuditTest found "Zerodha positions" held, left by an earlier test's fill card): every card,
+     * the last Zerodha book and the "open" flag forgotten, as a new process. A refresh already running from an earlier test
+     * never sets the "open" flag or the last book after it (its cards it may still post or take down).
+     */
+    internal fun resetForTest() {
+        resetGen++
+        posted.clear(); shown.clear(); sources.clear(); sourceQty.clear(); lastLive = null; anyOpen = false
+    }
+
     fun idOf(venue: String, symbol: String) = 30_000 + ("$venue|$symbol".hashCode() and Int.MAX_VALUE) % 5_000
 
     private fun rs(x: Double) = (if (x < 0) "−₹" else "+₹") + String.format(Locale.ENGLISH, "%,.0f", abs(x))
@@ -171,6 +184,7 @@ object PositionCards {
 
     /** Rewrite every card from the accounts' current positions; a position gone since the last pass gets its final card. */
     suspend fun refresh(context: Context) {
+        val gen0 = resetGen
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
         val now = HashMap<String, Unit>()
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
@@ -203,7 +217,7 @@ object PositionCards {
         // The order book as this pass read it (null: not read): what alone lets the widget call Zerodha's kept exact charges exact.
         var watchOrders: List<Broker.OrderRow>? = null
         if (s.live && liveLoggedIn) runCatching { Broker.positionBook() }.getOrNull()?.also { book ->
-            lastLive = book
+            if (gen0 == resetGen) lastLive = book
             com.optionslab.app.data.KiteStream.want("positions", book.net.filter { it.qty != 0 }.map { it.token })
         }?.let { com.optionslab.app.data.KiteStream.live(it) }?.also { liveBook = it }?.net?.also { net ->
             // Who opened a Zerodha position is read from the day's trades only when it is new or its size changed.
@@ -234,7 +248,7 @@ object PositionCards {
             shown.remove(k); posted.remove(k)
             runCatching { NotificationManagerCompat.from(context).cancel(idOf(k.substringBefore('|'), k.substringAfter('|'))) }
         }
-        anyOpen = now.isNotEmpty()
+        if (gen0 == resetGen) anyOpen = now.isNotEmpty()
         // The "Open" widget's Zerodha orders: while it shows any still working, one order-book read a pass (none when no
         // widget is placed, the switch is off, or none is working; screen off, about every 5 minutes), so a filled or
         // cancelled order leaves it. The read itself hands the book to the widget (Broker.orders).

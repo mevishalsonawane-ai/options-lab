@@ -59,7 +59,8 @@ class ManualCoverRuleTest {
         for (note in listOf("removed", "stop cancelled", "stop rejected", "covered by another exit",
                 "GTT fired, part left", "stop not placed"))
             assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, note)))), note)
-        for (note in listOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working"))
+        for (note in listOf("position closed", "GTT fired", "replaced", "stop filled", "target filled", "exit orders no longer working",
+                ManualCoverRule.SLICE_DONE, ManualCoverRule.STOP_BY_EXCHANGE))
             assertNull(ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, note)))), note)
         // One natural end and one removal the same day: Boss's removal wins.
         assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, "position closed"),
@@ -317,5 +318,64 @@ class ManualCoverRuleTest {
         assertTrue(ManualCoverRule.saidStopOnly(sym, 200.0, 137.9).contains("only the stop"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "RMS").contains("is NOT protected"))
         assertTrue(ManualCoverRule.saidGaveUp(sym, 130, "timed out", ManualCoverRule.MAX_ATTEMPTS).contains("tried 10 times"))
+    }
+
+    // ---- 15 Nov: the follow-up look, the exchange's refusals, slices -----------------------------------------------------------
+
+    /** A stop the exchange refused or cancelled is covered again; one cancelled with no reason (Boss, in Kite) is respected. */
+    @Test fun aStopEndedByTheExchangeIsCoveredAgainButBosssCancelIsRespected() {
+        assertNull(ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, ManualCoverRule.STOP_BY_EXCHANGE)))))
+        assertEquals(Skip.ENDED_TODAY, ManualCoverRule.skip(pos, Facts(endedToday = listOf(ManualCoverRule.Ended(sym, "stop cancelled")))))
+        // A carried position: the exchange's end on an earlier day never blocks either.
+        assertNull(ManualCoverRule.skip(pos.copy(carried = true), Facts(endedToday = listOf(ManualCoverRule.Ended(sym, ManualCoverRule.STOP_BY_EXCHANGE, today = false)))))
+        assertTrue(ManualCoverRule.SLICE_DONE in ManualCoverRule.NATURAL_ENDS && ManualCoverRule.STOP_BY_EXCHANGE in ManualCoverRule.NATURAL_ENDS)
+    }
+
+    @Test fun theFollowUpLookComesJustAfterTheSettleOrSoonAfterAFailedRead() {
+        assertNull(ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.NONE))
+        assertEquals(21_000L, ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.SIGHTED))
+        assertTrue(ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.SIGHTED)!! > ManualCoverRule.SETTLE_MS, "due when it comes")
+        assertEquals(10_000L, ManualCoverRule.followUpMs(ManualCoverRule.FollowUp.READ_FAILED))
+        // The second look 21 s after the first is due (the settle rule is unchanged: one sighting is never enough).
+        val l = ManualCoverRule.Looks()
+        assertFalse(l.see("k", 130, 0L))
+        assertEquals(setOf("k"), l.keys)
+        assertTrue(l.see("k", 130, ManualCoverRule.FOLLOW_UP_MS))
+        l.clear()
+        assertTrue(l.keys.isEmpty())
+    }
+
+    /**
+     * 15 Nov, review (R5): only REJECTED, or a cancel whose words clearly name the exchange or the broker's risk system, is the
+     * exchange's; any other cancel - blank (as every cancel in Boss's diagnostics was) or unknown wording - is Boss's.
+     */
+    @Test fun onlyTheExchangesRefusalOrClearlyWordedCancelIsTheExchanges() {
+        assertTrue(ManualCoverRule.endedByExchange("REJECTED", ""))
+        assertTrue(ManualCoverRule.endedByExchange("REJECTED", "Insufficient funds. Margin required: 57675.75."))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by exchange"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Order cancelled by RMS"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Trigger price is outside the CIRCUIT limit"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Quantity exceeds the freeze limit"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Order validity expired"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Margin shortfall"))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", ""), "blank: Boss's (every cancel in the diagnostics)")
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "   "))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by user"))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Your order has been cancelled."), "unknown words: Boss's")
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by system"), "unknown words: Boss's")
+        assertFalse(ManualCoverRule.endedByExchange("COMPLETE", "exchange"))
+        assertFalse(ManualCoverRule.endedByExchange("OPEN", ""))
+    }
+
+    /** 15 Nov, review: "pending" only for sightings of the last two minutes. */
+    @Test fun recentSightingsOnlyArePending() {
+        val l = ManualCoverRule.Looks()
+        l.see("old", 130, 0L)
+        l.see("new", 65, 100_000L)
+        assertEquals(setOf("old", "new"), l.keysSince(0L))
+        assertEquals(setOf("new"), l.keysSince(150_000L - ManualCoverRule.PENDING_MS))
+        // A new quantity is a new sighting.
+        l.see("old", 195, 200_000L)
+        assertEquals(setOf("old"), l.keysSince(100_001L))
     }
 }

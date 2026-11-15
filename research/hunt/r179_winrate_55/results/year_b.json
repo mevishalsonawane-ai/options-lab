@@ -1,0 +1,5792 @@
+{
+ "twins": {
+  "R72": {
+   "p": 1.0,
+   "mean": 483243,
+   "changed": 330
+  },
+  "R51": {
+   "p": 1.0,
+   "mean": 439037,
+   "changed": 413
+  }
+ },
+ "loss": {
+  "LIQ@1": {
+   "M1": {
+    "cap_exits": 117,
+    "over_1000": 29,
+    "over_1000_cap": 21,
+    "worst": -2715
+   },
+   "M2": {
+    "cap_exits": 117,
+    "over_1000": 29,
+    "over_1000_cap": 21,
+    "worst": -2715
+   }
+  },
+  "LIQ@2": {
+   "M1": {
+    "cap_exits": 116,
+    "over_1000": 221,
+    "over_1000_cap": 116,
+    "worst": -5383
+   },
+   "M2": {
+    "cap_exits": 116,
+    "over_1000": 221,
+    "over_1000_cap": 116,
+    "worst": -5383
+   }
+  },
+  "LIQ@3": {
+   "M1": {
+    "cap_exits": 116,
+    "over_1000": 281,
+    "over_1000_cap": 116,
+    "worst": -8051
+   },
+   "M2": {
+    "cap_exits": 116,
+    "over_1000": 281,
+    "over_1000_cap": 116,
+    "worst": -8051
+   }
+  },
+  "R72@1": {
+   "M1": {
+    "cap_exits": 355,
+    "over_1000": 98,
+    "over_1000_cap": 96,
+    "worst": -4066
+   },
+   "M2": {
+    "cap_exits": 355,
+    "over_1000": 98,
+    "over_1000_cap": 96,
+    "worst": -4066
+   }
+  },
+  "R72@2": {
+   "M1": {
+    "cap_exits": 348,
+    "over_1000": 432,
+    "over_1000_cap": 348,
+    "worst": -8084
+   },
+   "M2": {
+    "cap_exits": 348,
+    "over_1000": 432,
+    "over_1000_cap": 348,
+    "worst": -8084
+   }
+  },
+  "R72@3": {
+   "M1": {
+    "cap_exits": 346,
+    "over_1000": 455,
+    "over_1000_cap": 346,
+    "worst": -12103
+   },
+   "M2": {
+    "cap_exits": 346,
+    "over_1000": 455,
+    "over_1000_cap": 346,
+    "worst": -12103
+   }
+  },
+  "R51@1": {
+   "M1": {
+    "cap_exits": 443,
+    "over_1000": 126,
+    "over_1000_cap": 124,
+    "worst": -8269
+   },
+   "M2": {
+    "cap_exits": 443,
+    "over_1000": 126,
+    "over_1000_cap": 124,
+    "worst": -8269
+   }
+  },
+  "R51@2": {
+   "M1": {
+    "cap_exits": 434,
+    "over_1000": 550,
+    "over_1000_cap": 434,
+    "worst": -16492
+   },
+   "M2": {
+    "cap_exits": 434,
+    "over_1000": 550,
+    "over_1000_cap": 434,
+    "worst": -16492
+   }
+  },
+  "R51@3": {
+   "M1": {
+    "cap_exits": 430,
+    "over_1000": 595,
+    "over_1000_cap": 430,
+    "worst": -24714
+   },
+   "M2": {
+    "cap_exits": 430,
+    "over_1000": 595,
+    "over_1000_cap": 430,
+    "worst": -24714
+   }
+  }
+ },
+ "early": {
+  "sessions": 110,
+  "A@1": {
+   "LIQ": {
+    "trades": 316,
+    "win": 0.4209,
+    "net": 113873,
+    "avg_win": 2142,
+    "avg_loss": 935,
+    "worst_day": -5535,
+    "max_dd": 16913,
+    "largest_loss": -4757,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -4980
+    },
+    "months": {
+     "2025-10": -611,
+     "2025-11": 2638,
+     "2025-12": -4980,
+     "2026-01": 45771,
+     "2026-02": 43708,
+     "2026-03": 27346
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 316,
+     "own_stop": 6,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 214,
+      "squareoff": 6,
+      "stop": 6,
+      "time": 89
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1056,
+    "win": 0.4669,
+    "net": 128541,
+    "avg_win": 1792,
+    "avg_loss": 1341,
+    "worst_day": -25837,
+    "max_dd": 86529,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -72605
+    },
+    "months": {
+     "2025-10": 22318,
+     "2025-11": 8007,
+     "2025-12": -72605,
+     "2026-01": 57857,
+     "2026-02": 27329,
+     "2026-03": 85635
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1056,
+     "own_stop": 166,
+     "reasons": {
+      "lock": 17,
+      "missing": 2,
+      "squareoff": 66,
+      "stop": 166,
+      "time": 805
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1370,
+    "win": 0.4526,
+    "net": 86280,
+    "avg_win": 1744,
+    "avg_loss": 1326,
+    "worst_day": -28942,
+    "max_dd": 94176,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -51699
+    },
+    "months": {
+     "2025-10": 1267,
+     "2025-11": 16638,
+     "2025-12": -51699,
+     "2026-01": 75958,
+     "2026-02": -28345,
+     "2026-03": 72461
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1370,
+     "own_stop": 222,
+     "reasons": {
+      "lock": 16,
+      "missing": 2,
+      "squareoff": 59,
+      "stop": 222,
+      "time": 1071
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@1": {
+   "LIQ": {
+    "trades": 316,
+    "win": 0.4209,
+    "net": 100895,
+    "avg_win": 2053,
+    "avg_loss": 940,
+    "worst_day": -5535,
+    "max_dd": 16913,
+    "largest_loss": -4757,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -4980
+    },
+    "months": {
+     "2025-10": -3696,
+     "2025-11": 2882,
+     "2025-12": -4980,
+     "2026-01": 43350,
+     "2026-02": 39877,
+     "2026-03": 23461
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 316,
+     "own_stop": 6,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 204,
+      "squareoff": 4,
+      "stop": 6,
+      "time": 85
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 457,
+    "win": 0.6061,
+    "net": 156576,
+    "avg_win": 1671,
+    "avg_loss": 1701,
+    "worst_day": -24432,
+    "max_dd": 39246,
+    "largest_loss": -6315,
+    "worst_month": {
+     "month": "2025-12",
+     "net": 1507
+    },
+    "months": {
+     "2025-10": 16186,
+     "2025-11": 11671,
+     "2025-12": 1507,
+     "2026-01": 59159,
+     "2026-02": 12776,
+     "2026-03": 55277
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 457,
+     "own_stop": 60,
+     "reasons": {
+      "lock": 83,
+      "missing": 1,
+      "squareoff": 20,
+      "stop": 60,
+      "time": 293
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 694,
+    "win": 0.5605,
+    "net": 113329,
+    "avg_win": 1483,
+    "avg_loss": 1520,
+    "worst_day": -21287,
+    "max_dd": 35297,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2025-10",
+     "net": -3546
+    },
+    "months": {
+     "2025-10": -3546,
+     "2025-11": 13847,
+     "2025-12": 3962,
+     "2026-01": 73942,
+     "2026-02": 3386,
+     "2026-03": 21739
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 694,
+     "own_stop": 91,
+     "reasons": {
+      "lock": 114,
+      "missing": 1,
+      "squareoff": 10,
+      "stop": 91,
+      "time": 478
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@1": {
+   "LIQ": {
+    "trades": 317,
+    "win": 0.4038,
+    "net": 78234,
+    "avg_win": 1933,
+    "avg_loss": 895,
+    "worst_day": -5995,
+    "max_dd": 19420,
+    "largest_loss": -2565,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -5866
+    },
+    "months": {
+     "2025-10": -3655,
+     "2025-11": 4477,
+     "2025-12": -5866,
+     "2026-01": 45034,
+     "2026-02": 42990,
+     "2026-03": -4746
+    },
+    "mix": {
+     "stop500": 53,
+     "step": 0,
+     "other": 264,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 176,
+      "squareoff": 3,
+      "stop": 1,
+      "stop500": 53,
+      "time": 67
+     }
+    },
+    "rupee_stop_share": 0.9558
+   },
+   "R72": {
+    "trades": 454,
+    "win": 0.5044,
+    "net": 99020,
+    "avg_win": 1724,
+    "avg_loss": 1315,
+    "worst_day": -16890,
+    "max_dd": 40790,
+    "largest_loss": -4066,
+    "worst_month": {
+     "month": "2026-03",
+     "net": -2206
+    },
+    "months": {
+     "2025-10": 24578,
+     "2025-11": 4156,
+     "2025-12": -1440,
+     "2026-01": 66061,
+     "2026-02": 7871,
+     "2026-03": -2206
+    },
+    "mix": {
+     "stop500": 162,
+     "step": 0,
+     "other": 292,
+     "own_stop": 9,
+     "reasons": {
+      "lock": 80,
+      "squareoff": 10,
+      "stop": 9,
+      "stop500": 162,
+      "time": 193
+     }
+    },
+    "rupee_stop_share": 0.8722
+   },
+   "R51": {
+    "trades": 698,
+    "win": 0.4986,
+    "net": 62905,
+    "avg_win": 1460,
+    "avg_loss": 1272,
+    "worst_day": -13632,
+    "max_dd": 44479,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2026-03",
+     "net": -9502
+    },
+    "months": {
+     "2025-10": 10401,
+     "2025-11": -7526,
+     "2025-12": 2338,
+     "2026-01": 75005,
+     "2026-02": -7810,
+     "2026-03": -9502
+    },
+    "mix": {
+     "stop500": 225,
+     "step": 0,
+     "other": 473,
+     "own_stop": 24,
+     "reasons": {
+      "lock": 110,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 24,
+      "stop500": 225,
+      "time": 329
+     }
+    },
+    "rupee_stop_share": 0.8324
+   }
+  },
+  "M2@1": {
+   "LIQ": {
+    "trades": 317,
+    "win": 0.4038,
+    "net": 78234,
+    "avg_win": 1933,
+    "avg_loss": 895,
+    "worst_day": -5995,
+    "max_dd": 19420,
+    "largest_loss": -2565,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -5866
+    },
+    "months": {
+     "2025-10": -3655,
+     "2025-11": 4477,
+     "2025-12": -5866,
+     "2026-01": 45034,
+     "2026-02": 42990,
+     "2026-03": -4746
+    },
+    "mix": {
+     "stop500": 53,
+     "step": 0,
+     "other": 264,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 176,
+      "squareoff": 3,
+      "stop": 1,
+      "stop500": 53,
+      "time": 67
+     }
+    },
+    "rupee_stop_share": 0.9558
+   },
+   "R72": {
+    "trades": 454,
+    "win": 0.5044,
+    "net": 99020,
+    "avg_win": 1724,
+    "avg_loss": 1315,
+    "worst_day": -16890,
+    "max_dd": 40790,
+    "largest_loss": -4066,
+    "worst_month": {
+     "month": "2026-03",
+     "net": -2206
+    },
+    "months": {
+     "2025-10": 24578,
+     "2025-11": 4156,
+     "2025-12": -1440,
+     "2026-01": 66061,
+     "2026-02": 7871,
+     "2026-03": -2206
+    },
+    "mix": {
+     "stop500": 162,
+     "step": 0,
+     "other": 292,
+     "own_stop": 9,
+     "reasons": {
+      "lock": 80,
+      "squareoff": 10,
+      "stop": 9,
+      "stop500": 162,
+      "time": 193
+     }
+    },
+    "rupee_stop_share": 0.8722
+   },
+   "R51": {
+    "trades": 698,
+    "win": 0.4986,
+    "net": 62905,
+    "avg_win": 1460,
+    "avg_loss": 1272,
+    "worst_day": -13632,
+    "max_dd": 44479,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2026-03",
+     "net": -9502
+    },
+    "months": {
+     "2025-10": 10401,
+     "2025-11": -7526,
+     "2025-12": 2338,
+     "2026-01": 75005,
+     "2026-02": -7810,
+     "2026-03": -9502
+    },
+    "mix": {
+     "stop500": 225,
+     "step": 0,
+     "other": 473,
+     "own_stop": 24,
+     "reasons": {
+      "lock": 110,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 24,
+      "stop500": 225,
+      "time": 329
+     }
+    },
+    "rupee_stop_share": 0.8324
+   }
+  },
+  "A@2": {
+   "LIQ": {
+    "trades": 316,
+    "win": 0.4304,
+    "net": 242161,
+    "avg_win": 4236,
+    "avg_loss": 1855,
+    "worst_day": -10759,
+    "max_dd": 31338,
+    "largest_loss": -9466,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -7052
+    },
+    "months": {
+     "2025-10": -345,
+     "2025-11": 7446,
+     "2025-12": -7052,
+     "2026-01": 94856,
+     "2026-02": 90547,
+     "2026-03": 56708
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 316,
+     "own_stop": 6,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 214,
+      "squareoff": 6,
+      "stop": 6,
+      "time": 89
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1056,
+    "win": 0.4706,
+    "net": 306013,
+    "avg_win": 3602,
+    "avg_loss": 2655,
+    "worst_day": -51084,
+    "max_dd": 164515,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -135116
+    },
+    "months": {
+     "2025-10": 47974,
+     "2025-11": 24516,
+     "2025-12": -135116,
+     "2026-01": 125335,
+     "2026-02": 62710,
+     "2026-03": 180594
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1056,
+     "own_stop": 166,
+     "reasons": {
+      "lock": 17,
+      "missing": 2,
+      "squareoff": 66,
+      "stop": 166,
+      "time": 805
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1370,
+    "win": 0.4577,
+    "net": 235755,
+    "avg_win": 3494,
+    "avg_loss": 2632,
+    "worst_day": -57260,
+    "max_dd": 179011,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -90502
+    },
+    "months": {
+     "2025-10": 7117,
+     "2025-11": 44467,
+     "2025-12": -90502,
+     "2026-01": 163865,
+     "2026-02": -44481,
+     "2026-03": 155290
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1370,
+     "own_stop": 222,
+     "reasons": {
+      "lock": 16,
+      "missing": 2,
+      "squareoff": 59,
+      "stop": 222,
+      "time": 1071
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@2": {
+   "LIQ": {
+    "trades": 316,
+    "win": 0.4304,
+    "net": 215785,
+    "avg_win": 4057,
+    "avg_loss": 1866,
+    "worst_day": -10759,
+    "max_dd": 31338,
+    "largest_loss": -9466,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -7052
+    },
+    "months": {
+     "2025-10": -6563,
+     "2025-11": 7885,
+     "2025-12": -7052,
+     "2026-01": 89834,
+     "2026-02": 82741,
+     "2026-03": 48938
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 316,
+     "own_stop": 6,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 204,
+      "squareoff": 4,
+      "stop": 6,
+      "time": 85
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 457,
+    "win": 0.6061,
+    "net": 343687,
+    "avg_win": 3423,
+    "avg_loss": 3359,
+    "worst_day": -48320,
+    "max_dd": 76475,
+    "largest_loss": -12607,
+    "worst_month": {
+     "month": "2025-12",
+     "net": 5151
+    },
+    "months": {
+     "2025-10": 42987,
+     "2025-11": 27110,
+     "2025-12": 5151,
+     "2026-01": 121490,
+     "2026-02": 27051,
+     "2026-03": 119897
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 457,
+     "own_stop": 60,
+     "reasons": {
+      "lock": 79,
+      "missing": 1,
+      "squareoff": 20,
+      "stop": 60,
+      "time": 297
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 693,
+    "win": 0.557,
+    "net": 272537,
+    "avg_win": 3074,
+    "avg_loss": 2978,
+    "worst_day": -42307,
+    "max_dd": 67914,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2025-10",
+     "net": 3966
+    },
+    "months": {
+     "2025-10": 3966,
+     "2025-11": 34664,
+     "2025-12": 13494,
+     "2026-01": 152504,
+     "2026-02": 9456,
+     "2026-03": 58453
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 693,
+     "own_stop": 91,
+     "reasons": {
+      "lock": 108,
+      "missing": 1,
+      "squareoff": 10,
+      "stop": 91,
+      "time": 483
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@2": {
+   "LIQ": {
+    "trades": 317,
+    "win": 0.4132,
+    "net": 170928,
+    "avg_win": 3819,
+    "avg_loss": 1771,
+    "worst_day": -11981,
+    "max_dd": 35737,
+    "largest_loss": -5083,
+    "worst_month": {
+     "month": "2026-03",
+     "net": -8072
+    },
+    "months": {
+     "2025-10": -6565,
+     "2025-11": 10802,
+     "2025-12": -6774,
+     "2026-01": 93011,
+     "2026-02": 88526,
+     "2026-03": -8072
+    },
+    "mix": {
+     "stop500": 52,
+     "step": 0,
+     "other": 265,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 176,
+      "squareoff": 3,
+      "stop": 1,
+      "stop500": 52,
+      "time": 68
+     }
+    },
+    "rupee_stop_share": 0.9558
+   },
+   "R72": {
+    "trades": 455,
+    "win": 0.5077,
+    "net": 228655,
+    "avg_win": 3519,
+    "avg_loss": 2608,
+    "worst_day": -33586,
+    "max_dd": 80745,
+    "largest_loss": -8084,
+    "worst_month": {
+     "month": "2026-03",
+     "net": 3019
+    },
+    "months": {
+     "2025-10": 59409,
+     "2025-11": 11230,
+     "2025-12": 3452,
+     "2026-01": 134765,
+     "2026-02": 16781,
+     "2026-03": 3019
+    },
+    "mix": {
+     "stop500": 159,
+     "step": 0,
+     "other": 296,
+     "own_stop": 10,
+     "reasons": {
+      "lock": 76,
+      "squareoff": 10,
+      "stop": 10,
+      "stop500": 159,
+      "time": 200
+     }
+    },
+    "rupee_stop_share": 0.8637
+   },
+   "R51": {
+    "trades": 697,
+    "win": 0.4978,
+    "net": 176651,
+    "avg_win": 3025,
+    "avg_loss": 2494,
+    "worst_day": -25434,
+    "max_dd": 87239,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2026-02",
+     "net": -13804
+    },
+    "months": {
+     "2025-10": 31637,
+     "2025-11": -8811,
+     "2025-12": 16157,
+     "2026-01": 153794,
+     "2026-02": -13804,
+     "2026-03": -2321
+    },
+    "mix": {
+     "stop500": 219,
+     "step": 0,
+     "other": 478,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 104,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 25,
+      "stop500": 219,
+      "time": 339
+     }
+    },
+    "rupee_stop_share": 0.8235
+   }
+  },
+  "M2@2": {
+   "LIQ": {
+    "trades": 317,
+    "win": 0.4132,
+    "net": 170928,
+    "avg_win": 3819,
+    "avg_loss": 1771,
+    "worst_day": -11981,
+    "max_dd": 35737,
+    "largest_loss": -5083,
+    "worst_month": {
+     "month": "2026-03",
+     "net": -8072
+    },
+    "months": {
+     "2025-10": -6565,
+     "2025-11": 10802,
+     "2025-12": -6774,
+     "2026-01": 93011,
+     "2026-02": 88526,
+     "2026-03": -8072
+    },
+    "mix": {
+     "stop500": 52,
+     "step": 0,
+     "other": 265,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 176,
+      "squareoff": 3,
+      "stop": 1,
+      "stop500": 52,
+      "time": 68
+     }
+    },
+    "rupee_stop_share": 0.9558
+   },
+   "R72": {
+    "trades": 455,
+    "win": 0.5077,
+    "net": 228655,
+    "avg_win": 3519,
+    "avg_loss": 2608,
+    "worst_day": -33586,
+    "max_dd": 80745,
+    "largest_loss": -8084,
+    "worst_month": {
+     "month": "2026-03",
+     "net": 3019
+    },
+    "months": {
+     "2025-10": 59409,
+     "2025-11": 11230,
+     "2025-12": 3452,
+     "2026-01": 134765,
+     "2026-02": 16781,
+     "2026-03": 3019
+    },
+    "mix": {
+     "stop500": 159,
+     "step": 0,
+     "other": 296,
+     "own_stop": 10,
+     "reasons": {
+      "lock": 76,
+      "squareoff": 10,
+      "stop": 10,
+      "stop500": 159,
+      "time": 200
+     }
+    },
+    "rupee_stop_share": 0.8637
+   },
+   "R51": {
+    "trades": 697,
+    "win": 0.4978,
+    "net": 176651,
+    "avg_win": 3025,
+    "avg_loss": 2494,
+    "worst_day": -25434,
+    "max_dd": 87239,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2026-02",
+     "net": -13804
+    },
+    "months": {
+     "2025-10": 31637,
+     "2025-11": -8811,
+     "2025-12": 16157,
+     "2026-01": 153794,
+     "2026-02": -13804,
+     "2026-03": -2321
+    },
+    "mix": {
+     "stop500": 219,
+     "step": 0,
+     "other": 478,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 104,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 25,
+      "stop500": 219,
+      "time": 339
+     }
+    },
+    "rupee_stop_share": 0.8235
+   }
+  },
+  "A@3": {
+   "LIQ": {
+    "trades": 316,
+    "win": 0.4367,
+    "net": 370179,
+    "avg_win": 6282,
+    "avg_loss": 2791,
+    "worst_day": -15991,
+    "max_dd": 45836,
+    "largest_loss": -14175,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -9170
+    },
+    "months": {
+     "2025-10": -98,
+     "2025-11": 12178,
+     "2025-12": -9170,
+     "2026-01": 143894,
+     "2026-02": 137377,
+     "2026-03": 85998
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 316,
+     "own_stop": 6,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 214,
+      "squareoff": 6,
+      "stop": 6,
+      "time": 89
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1056,
+    "win": 0.4725,
+    "net": 482662,
+    "avg_win": 5403,
+    "avg_loss": 3974,
+    "worst_day": -76355,
+    "max_dd": 242618,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -197761
+    },
+    "months": {
+     "2025-10": 73588,
+     "2025-11": 40861,
+     "2025-12": -197761,
+     "2026-01": 192576,
+     "2026-02": 98081,
+     "2026-03": 275316
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1056,
+     "own_stop": 166,
+     "reasons": {
+      "lock": 17,
+      "missing": 2,
+      "squareoff": 66,
+      "stop": 166,
+      "time": 805
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1370,
+    "win": 0.4584,
+    "net": 384217,
+    "avg_win": 5256,
+    "avg_loss": 3931,
+    "worst_day": -85577,
+    "max_dd": 263933,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -129380
+    },
+    "months": {
+     "2025-10": 12923,
+     "2025-11": 72094,
+     "2025-12": -129380,
+     "2026-01": 251504,
+     "2026-02": -60702,
+     "2026-03": 237778
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1370,
+     "own_stop": 222,
+     "reasons": {
+      "lock": 16,
+      "missing": 2,
+      "squareoff": 59,
+      "stop": 222,
+      "time": 1071
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@3": {
+   "LIQ": {
+    "trades": 316,
+    "win": 0.4335,
+    "net": 330383,
+    "avg_win": 6061,
+    "avg_loss": 2793,
+    "worst_day": -15991,
+    "max_dd": 45836,
+    "largest_loss": -14175,
+    "worst_month": {
+     "month": "2025-10",
+     "net": -9446
+    },
+    "months": {
+     "2025-10": -9446,
+     "2025-11": 12815,
+     "2025-12": -9170,
+     "2026-01": 136231,
+     "2026-02": 125610,
+     "2026-03": 74344
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 316,
+     "own_stop": 6,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 204,
+      "squareoff": 4,
+      "stop": 6,
+      "time": 85
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 457,
+    "win": 0.6083,
+    "net": 524424,
+    "avg_win": 5134,
+    "avg_loss": 5044,
+    "worst_day": -72229,
+    "max_dd": 113728,
+    "largest_loss": -18887,
+    "worst_month": {
+     "month": "2025-12",
+     "net": 8417
+    },
+    "months": {
+     "2025-10": 65261,
+     "2025-11": 42429,
+     "2025-12": 8417,
+     "2026-01": 183745,
+     "2026-02": 41348,
+     "2026-03": 183225
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 457,
+     "own_stop": 60,
+     "reasons": {
+      "lock": 79,
+      "missing": 1,
+      "squareoff": 20,
+      "stop": 60,
+      "time": 297
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 693,
+    "win": 0.5628,
+    "net": 422182,
+    "avg_win": 4582,
+    "avg_loss": 4504,
+    "worst_day": -63318,
+    "max_dd": 100557,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2025-10",
+     "net": 7210
+    },
+    "months": {
+     "2025-10": 7210,
+     "2025-11": 55315,
+     "2025-12": 22590,
+     "2026-01": 230963,
+     "2026-02": 15530,
+     "2026-03": 90575
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 693,
+     "own_stop": 91,
+     "reasons": {
+      "lock": 108,
+      "missing": 1,
+      "squareoff": 10,
+      "stop": 91,
+      "time": 483
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@3": {
+   "LIQ": {
+    "trades": 317,
+    "win": 0.4164,
+    "net": 262125,
+    "avg_win": 5705,
+    "avg_loss": 2654,
+    "worst_day": -17986,
+    "max_dd": 52693,
+    "largest_loss": -7601,
+    "worst_month": {
+     "month": "2026-03",
+     "net": -11481
+    },
+    "months": {
+     "2025-10": -9492,
+     "2025-11": 17023,
+     "2025-12": -8899,
+     "2026-01": 140906,
+     "2026-02": 134067,
+     "2026-03": -11481
+    },
+    "mix": {
+     "stop500": 52,
+     "step": 0,
+     "other": 265,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 176,
+      "squareoff": 3,
+      "stop": 1,
+      "stop500": 52,
+      "time": 68
+     }
+    },
+    "rupee_stop_share": 0.9527
+   },
+   "R72": {
+    "trades": 455,
+    "win": 0.5121,
+    "net": 348658,
+    "avg_win": 5250,
+    "avg_loss": 3940,
+    "worst_day": -50290,
+    "max_dd": 120707,
+    "largest_loss": -12103,
+    "worst_month": {
+     "month": "2025-12",
+     "net": 5754
+    },
+    "months": {
+     "2025-10": 89706,
+     "2025-11": 18017,
+     "2025-12": 5754,
+     "2026-01": 203441,
+     "2026-02": 25639,
+     "2026-03": 6102
+    },
+    "mix": {
+     "stop500": 158,
+     "step": 0,
+     "other": 297,
+     "own_stop": 11,
+     "reasons": {
+      "lock": 76,
+      "squareoff": 10,
+      "stop": 11,
+      "stop500": 158,
+      "time": 200
+     }
+    },
+    "rupee_stop_share": 0.8571
+   },
+   "R51": {
+    "trades": 697,
+    "win": 0.505,
+    "net": 273532,
+    "avg_win": 4490,
+    "avg_loss": 3788,
+    "worst_day": -38017,
+    "max_dd": 130041,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2026-02",
+     "net": -19815
+    },
+    "months": {
+     "2025-10": 47595,
+     "2025-11": -10809,
+     "2025-12": 26242,
+     "2026-01": 232573,
+     "2026-02": -19815,
+     "2026-03": -2254
+    },
+    "mix": {
+     "stop500": 218,
+     "step": 0,
+     "other": 479,
+     "own_stop": 26,
+     "reasons": {
+      "lock": 104,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 26,
+      "stop500": 218,
+      "time": 339
+     }
+    },
+    "rupee_stop_share": 0.8178
+   }
+  },
+  "M2@3": {
+   "LIQ": {
+    "trades": 317,
+    "win": 0.4164,
+    "net": 262125,
+    "avg_win": 5705,
+    "avg_loss": 2654,
+    "worst_day": -17986,
+    "max_dd": 52693,
+    "largest_loss": -7601,
+    "worst_month": {
+     "month": "2026-03",
+     "net": -11481
+    },
+    "months": {
+     "2025-10": -9492,
+     "2025-11": 17023,
+     "2025-12": -8899,
+     "2026-01": 140906,
+     "2026-02": 134067,
+     "2026-03": -11481
+    },
+    "mix": {
+     "stop500": 52,
+     "step": 0,
+     "other": 265,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 16,
+      "missing": 1,
+      "rule_exit": 176,
+      "squareoff": 3,
+      "stop": 1,
+      "stop500": 52,
+      "time": 68
+     }
+    },
+    "rupee_stop_share": 0.9527
+   },
+   "R72": {
+    "trades": 455,
+    "win": 0.5121,
+    "net": 348658,
+    "avg_win": 5250,
+    "avg_loss": 3940,
+    "worst_day": -50290,
+    "max_dd": 120707,
+    "largest_loss": -12103,
+    "worst_month": {
+     "month": "2025-12",
+     "net": 5754
+    },
+    "months": {
+     "2025-10": 89706,
+     "2025-11": 18017,
+     "2025-12": 5754,
+     "2026-01": 203441,
+     "2026-02": 25639,
+     "2026-03": 6102
+    },
+    "mix": {
+     "stop500": 158,
+     "step": 0,
+     "other": 297,
+     "own_stop": 11,
+     "reasons": {
+      "lock": 76,
+      "squareoff": 10,
+      "stop": 11,
+      "stop500": 158,
+      "time": 200
+     }
+    },
+    "rupee_stop_share": 0.8571
+   },
+   "R51": {
+    "trades": 697,
+    "win": 0.505,
+    "net": 273532,
+    "avg_win": 4490,
+    "avg_loss": 3788,
+    "worst_day": -38017,
+    "max_dd": 130041,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2026-02",
+     "net": -19815
+    },
+    "months": {
+     "2025-10": 47595,
+     "2025-11": -10809,
+     "2025-12": 26242,
+     "2026-01": 232573,
+     "2026-02": -19815,
+     "2026-03": -2254
+    },
+    "mix": {
+     "stop500": 218,
+     "step": 0,
+     "other": 479,
+     "own_stop": 26,
+     "reasons": {
+      "lock": 104,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 26,
+      "stop500": 218,
+      "time": 339
+     }
+    },
+    "rupee_stop_share": 0.8178
+   }
+  }
+ },
+ "final": {
+  "sessions": 133,
+  "A@1": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.3725,
+    "net": 11155,
+    "avg_win": 1762,
+    "avg_loss": 997,
+    "worst_day": -11405,
+    "max_dd": 61062,
+    "largest_loss": -4639,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -37821
+    },
+    "months": {
+     "2026-04": -37821,
+     "2026-05": -8832,
+     "2026-06": -949,
+     "2026-07": 33022,
+     "2026-08": -1605,
+     "2026-09": 35620,
+     "2026-10": -8279
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 357,
+     "own_stop": 12,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 233,
+      "squareoff": 12,
+      "stop": 12,
+      "time": 99
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1200,
+    "win": 0.4583,
+    "net": 170336,
+    "avg_win": 1748,
+    "avg_loss": 1217,
+    "worst_day": -22571,
+    "max_dd": 61884,
+    "largest_loss": -6245,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -40908
+    },
+    "months": {
+     "2026-04": -15245,
+     "2026-05": 39929,
+     "2026-06": -40908,
+     "2026-07": 64441,
+     "2026-08": 21113,
+     "2026-09": 29606,
+     "2026-10": 71400
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1200,
+     "own_stop": 173,
+     "reasons": {
+      "lock": 13,
+      "squareoff": 65,
+      "stop": 173,
+      "time": 949
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1668,
+    "win": 0.4484,
+    "net": 131546,
+    "avg_win": 1648,
+    "avg_loss": 1197,
+    "worst_day": -21578,
+    "max_dd": 81683,
+    "largest_loss": -5985,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -54587
+    },
+    "months": {
+     "2026-04": 16172,
+     "2026-05": 29306,
+     "2026-06": -54587,
+     "2026-07": 68207,
+     "2026-08": 18751,
+     "2026-09": -2459,
+     "2026-10": 56156
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1668,
+     "own_stop": 218,
+     "reasons": {
+      "lock": 14,
+      "squareoff": 67,
+      "stop": 218,
+      "time": 1369
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@1": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.4118,
+    "net": 6432,
+    "avg_win": 1442,
+    "avg_loss": 979,
+    "worst_day": -11405,
+    "max_dd": 67497,
+    "largest_loss": -4639,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -37773
+    },
+    "months": {
+     "2026-04": -37773,
+     "2026-05": -18290,
+     "2026-06": -12,
+     "2026-07": 32786,
+     "2026-08": 3461,
+     "2026-09": 33732,
+     "2026-10": -7471
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 357,
+     "own_stop": 8,
+     "reasons": {
+      "lock": 30,
+      "missing": 1,
+      "rule_exit": 218,
+      "squareoff": 9,
+      "stop": 8,
+      "time": 91
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 604,
+    "win": 0.5348,
+    "net": 167233,
+    "avg_win": 1686,
+    "avg_loss": 1343,
+    "worst_day": -21301,
+    "max_dd": 28832,
+    "largest_loss": -6245,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -18110
+    },
+    "months": {
+     "2026-04": 344,
+     "2026-05": -18110,
+     "2026-06": 4257,
+     "2026-07": 91892,
+     "2026-08": -528,
+     "2026-09": 32131,
+     "2026-10": 57247
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 604,
+     "own_stop": 75,
+     "reasons": {
+      "lock": 67,
+      "squareoff": 17,
+      "stop": 75,
+      "time": 445
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 655,
+    "win": 0.5511,
+    "net": 144802,
+    "avg_win": 1514,
+    "avg_loss": 1367,
+    "worst_day": -14642,
+    "max_dd": 36021,
+    "largest_loss": -5985,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -20990
+    },
+    "months": {
+     "2026-04": 3625,
+     "2026-05": 19862,
+     "2026-06": -20990,
+     "2026-07": 64826,
+     "2026-08": 19009,
+     "2026-09": 5820,
+     "2026-10": 52651
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 655,
+     "own_stop": 78,
+     "reasons": {
+      "lock": 75,
+      "squareoff": 2,
+      "stop": 78,
+      "time": 500
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@1": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.3978,
+    "net": 16127,
+    "avg_win": 1470,
+    "avg_loss": 896,
+    "worst_day": -7734,
+    "max_dd": 56901,
+    "largest_loss": -2715,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -27456
+    },
+    "months": {
+     "2026-04": -27456,
+     "2026-05": -19035,
+     "2026-06": 1115,
+     "2026-07": 32442,
+     "2026-08": 1488,
+     "2026-09": 32861,
+     "2026-10": -5289
+    },
+    "mix": {
+     "stop500": 62,
+     "step": 0,
+     "other": 295,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 186,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 62,
+      "time": 69
+     }
+    },
+    "rupee_stop_share": 0.9664
+   },
+   "R72": {
+    "trades": 606,
+    "win": 0.4901,
+    "net": 136680,
+    "avg_win": 1728,
+    "avg_loss": 1218,
+    "worst_day": -21625,
+    "max_dd": 26214,
+    "largest_loss": -3781,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -8093
+    },
+    "months": {
+     "2026-04": -930,
+     "2026-05": -8093,
+     "2026-06": 114,
+     "2026-07": 86505,
+     "2026-08": -2914,
+     "2026-09": 21109,
+     "2026-10": 40889
+    },
+    "mix": {
+     "stop500": 189,
+     "step": 0,
+     "other": 417,
+     "own_stop": 24,
+     "reasons": {
+      "lock": 65,
+      "squareoff": 10,
+      "stop": 24,
+      "stop500": 189,
+      "time": 318
+     }
+    },
+    "rupee_stop_share": 0.8399
+   },
+   "R51": {
+    "trades": 665,
+    "win": 0.4932,
+    "net": 82133,
+    "avg_win": 1522,
+    "avg_loss": 1237,
+    "worst_day": -15883,
+    "max_dd": 36176,
+    "largest_loss": -4218,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -12198
+    },
+    "months": {
+     "2026-04": -12198,
+     "2026-05": 17019,
+     "2026-06": -8631,
+     "2026-07": 56515,
+     "2026-08": 5406,
+     "2026-09": -10317,
+     "2026-10": 34340
+    },
+    "mix": {
+     "stop500": 209,
+     "step": 0,
+     "other": 456,
+     "own_stop": 23,
+     "reasons": {
+      "lock": 72,
+      "stop": 23,
+      "stop500": 209,
+      "time": 361
+     }
+    },
+    "rupee_stop_share": 0.8301
+   }
+  },
+  "M2@1": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.3978,
+    "net": 16127,
+    "avg_win": 1470,
+    "avg_loss": 896,
+    "worst_day": -7734,
+    "max_dd": 56901,
+    "largest_loss": -2715,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -27456
+    },
+    "months": {
+     "2026-04": -27456,
+     "2026-05": -19035,
+     "2026-06": 1115,
+     "2026-07": 32442,
+     "2026-08": 1488,
+     "2026-09": 32861,
+     "2026-10": -5289
+    },
+    "mix": {
+     "stop500": 62,
+     "step": 0,
+     "other": 295,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 186,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 62,
+      "time": 69
+     }
+    },
+    "rupee_stop_share": 0.9664
+   },
+   "R72": {
+    "trades": 606,
+    "win": 0.4901,
+    "net": 136680,
+    "avg_win": 1728,
+    "avg_loss": 1218,
+    "worst_day": -21625,
+    "max_dd": 26214,
+    "largest_loss": -3781,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -8093
+    },
+    "months": {
+     "2026-04": -930,
+     "2026-05": -8093,
+     "2026-06": 114,
+     "2026-07": 86505,
+     "2026-08": -2914,
+     "2026-09": 21109,
+     "2026-10": 40889
+    },
+    "mix": {
+     "stop500": 189,
+     "step": 0,
+     "other": 417,
+     "own_stop": 24,
+     "reasons": {
+      "lock": 65,
+      "squareoff": 10,
+      "stop": 24,
+      "stop500": 189,
+      "time": 318
+     }
+    },
+    "rupee_stop_share": 0.8399
+   },
+   "R51": {
+    "trades": 665,
+    "win": 0.4932,
+    "net": 82133,
+    "avg_win": 1522,
+    "avg_loss": 1237,
+    "worst_day": -15883,
+    "max_dd": 36176,
+    "largest_loss": -4218,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -12198
+    },
+    "months": {
+     "2026-04": -12198,
+     "2026-05": 17019,
+     "2026-06": -8631,
+     "2026-07": 56515,
+     "2026-08": 5406,
+     "2026-09": -10317,
+     "2026-10": 34340
+    },
+    "mix": {
+     "stop500": 209,
+     "step": 0,
+     "other": 456,
+     "own_stop": 23,
+     "reasons": {
+      "lock": 72,
+      "stop": 23,
+      "stop500": 209,
+      "time": 361
+     }
+    },
+    "rupee_stop_share": 0.8301
+   }
+  },
+  "A@2": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.3838,
+    "net": 38639,
+    "avg_win": 3467,
+    "avg_loss": 1983,
+    "worst_day": -22450,
+    "max_dd": 117966,
+    "largest_loss": -9231,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -73218
+    },
+    "months": {
+     "2026-04": -73218,
+     "2026-05": -15458,
+     "2026-06": 402,
+     "2026-07": 69093,
+     "2026-08": -799,
+     "2026-09": 73539,
+     "2026-10": -14920
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 357,
+     "own_stop": 12,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 233,
+      "squareoff": 12,
+      "stop": 12,
+      "time": 99
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1200,
+    "win": 0.4625,
+    "net": 396251,
+    "avg_win": 3511,
+    "avg_loss": 2406,
+    "worst_day": -44447,
+    "max_dd": 111087,
+    "largest_loss": -12468,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -72639
+    },
+    "months": {
+     "2026-04": -21319,
+     "2026-05": 89496,
+     "2026-06": -72639,
+     "2026-07": 137605,
+     "2026-08": 48822,
+     "2026-09": 67730,
+     "2026-10": 146557
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1200,
+     "own_stop": 173,
+     "reasons": {
+      "lock": 13,
+      "squareoff": 65,
+      "stop": 173,
+      "time": 949
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1668,
+    "win": 0.455,
+    "net": 340059,
+    "avg_win": 3294,
+    "avg_loss": 2376,
+    "worst_day": -42690,
+    "max_dd": 145608,
+    "largest_loss": -11923,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -96531
+    },
+    "months": {
+     "2026-04": 43598,
+     "2026-05": 70546,
+     "2026-06": -96531,
+     "2026-07": 149137,
+     "2026-08": 49428,
+     "2026-09": 7005,
+     "2026-10": 116876
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1668,
+     "own_stop": 218,
+     "reasons": {
+      "lock": 14,
+      "squareoff": 67,
+      "stop": 218,
+      "time": 1369
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@2": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.4146,
+    "net": 27139,
+    "avg_win": 2902,
+    "avg_loss": 1925,
+    "worst_day": -22450,
+    "max_dd": 129762,
+    "largest_loss": -9231,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -73166
+    },
+    "months": {
+     "2026-04": -73166,
+     "2026-05": -34518,
+     "2026-06": 1989,
+     "2026-07": 67505,
+     "2026-08": 9189,
+     "2026-09": 69489,
+     "2026-10": -13351
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 357,
+     "own_stop": 8,
+     "reasons": {
+      "lock": 30,
+      "missing": 1,
+      "rule_exit": 218,
+      "squareoff": 9,
+      "stop": 8,
+      "time": 91
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 604,
+    "win": 0.5331,
+    "net": 360278,
+    "avg_win": 3424,
+    "avg_loss": 2632,
+    "worst_day": -41948,
+    "max_dd": 55485,
+    "largest_loss": -12468,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -29768
+    },
+    "months": {
+     "2026-04": 6134,
+     "2026-05": -29768,
+     "2026-06": 11634,
+     "2026-07": 187547,
+     "2026-08": 1142,
+     "2026-09": 67663,
+     "2026-10": 115926
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 604,
+     "own_stop": 75,
+     "reasons": {
+      "lock": 66,
+      "squareoff": 17,
+      "stop": 75,
+      "time": 446
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 655,
+    "win": 0.5496,
+    "net": 316989,
+    "avg_win": 3077,
+    "avg_loss": 2681,
+    "worst_day": -28984,
+    "max_dd": 68758,
+    "largest_loss": -11923,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -39356
+    },
+    "months": {
+     "2026-04": 12230,
+     "2026-05": 44049,
+     "2026-06": -39356,
+     "2026-07": 133355,
+     "2026-08": 42874,
+     "2026-09": 17048,
+     "2026-10": 106789
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 655,
+     "own_stop": 78,
+     "reasons": {
+      "lock": 74,
+      "squareoff": 2,
+      "stop": 78,
+      "time": 501
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@2": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.4006,
+    "net": 43424,
+    "avg_win": 2958,
+    "avg_loss": 1774,
+    "worst_day": -15311,
+    "max_dd": 110634,
+    "largest_loss": -5383,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -53926
+    },
+    "months": {
+     "2026-04": -53926,
+     "2026-05": -36569,
+     "2026-06": 3948,
+     "2026-07": 66612,
+     "2026-08": 5112,
+     "2026-09": 67651,
+     "2026-10": -9403
+    },
+    "mix": {
+     "stop500": 62,
+     "step": 0,
+     "other": 295,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 186,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 62,
+      "time": 69
+     }
+    },
+    "rupee_stop_share": 0.9664
+   },
+   "R72": {
+    "trades": 605,
+    "win": 0.4909,
+    "net": 300003,
+    "avg_win": 3500,
+    "avg_loss": 2401,
+    "worst_day": -43185,
+    "max_dd": 51913,
+    "largest_loss": -7516,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -11577
+    },
+    "months": {
+     "2026-04": 789,
+     "2026-05": -11577,
+     "2026-06": 9482,
+     "2026-07": 175826,
+     "2026-08": -2367,
+     "2026-09": 44882,
+     "2026-10": 82969
+    },
+    "mix": {
+     "stop500": 185,
+     "step": 0,
+     "other": 420,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 64,
+      "squareoff": 10,
+      "stop": 25,
+      "stop500": 185,
+      "time": 321
+     }
+    },
+    "rupee_stop_share": 0.8364
+   },
+   "R51": {
+    "trades": 665,
+    "win": 0.4917,
+    "net": 186764,
+    "avg_win": 3093,
+    "avg_loss": 2439,
+    "worst_day": -31559,
+    "max_dd": 70849,
+    "largest_loss": -8388,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -22746
+    },
+    "months": {
+     "2026-04": -22746,
+     "2026-05": 39097,
+     "2026-06": -14362,
+     "2026-07": 116062,
+     "2026-08": 15219,
+     "2026-09": -16419,
+     "2026-10": 69913
+    },
+    "mix": {
+     "stop500": 206,
+     "step": 0,
+     "other": 459,
+     "own_stop": 24,
+     "reasons": {
+      "lock": 71,
+      "stop": 24,
+      "stop500": 206,
+      "time": 364
+     }
+    },
+    "rupee_stop_share": 0.8256
+   }
+  },
+  "M2@2": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.4006,
+    "net": 43424,
+    "avg_win": 2958,
+    "avg_loss": 1774,
+    "worst_day": -15311,
+    "max_dd": 110634,
+    "largest_loss": -5383,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -53926
+    },
+    "months": {
+     "2026-04": -53926,
+     "2026-05": -36569,
+     "2026-06": 3948,
+     "2026-07": 66612,
+     "2026-08": 5112,
+     "2026-09": 67651,
+     "2026-10": -9403
+    },
+    "mix": {
+     "stop500": 62,
+     "step": 0,
+     "other": 295,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 186,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 62,
+      "time": 69
+     }
+    },
+    "rupee_stop_share": 0.9664
+   },
+   "R72": {
+    "trades": 605,
+    "win": 0.4909,
+    "net": 300003,
+    "avg_win": 3500,
+    "avg_loss": 2401,
+    "worst_day": -43185,
+    "max_dd": 51913,
+    "largest_loss": -7516,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -11577
+    },
+    "months": {
+     "2026-04": 789,
+     "2026-05": -11577,
+     "2026-06": 9482,
+     "2026-07": 175826,
+     "2026-08": -2367,
+     "2026-09": 44882,
+     "2026-10": 82969
+    },
+    "mix": {
+     "stop500": 185,
+     "step": 0,
+     "other": 420,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 64,
+      "squareoff": 10,
+      "stop": 25,
+      "stop500": 185,
+      "time": 321
+     }
+    },
+    "rupee_stop_share": 0.8364
+   },
+   "R51": {
+    "trades": 665,
+    "win": 0.4917,
+    "net": 186764,
+    "avg_win": 3093,
+    "avg_loss": 2439,
+    "worst_day": -31559,
+    "max_dd": 70849,
+    "largest_loss": -8388,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -22746
+    },
+    "months": {
+     "2026-04": -22746,
+     "2026-05": 39097,
+     "2026-06": -14362,
+     "2026-07": 116062,
+     "2026-08": 15219,
+     "2026-09": -16419,
+     "2026-10": 69913
+    },
+    "mix": {
+     "stop500": 206,
+     "step": 0,
+     "other": 459,
+     "own_stop": 24,
+     "reasons": {
+      "lock": 71,
+      "stop": 24,
+      "stop500": 206,
+      "time": 364
+     }
+    },
+    "rupee_stop_share": 0.8256
+   }
+  },
+  "A@3": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.3894,
+    "net": 65610,
+    "avg_win": 5147,
+    "avg_loss": 2981,
+    "worst_day": -33486,
+    "max_dd": 175017,
+    "largest_loss": -13824,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -108688
+    },
+    "months": {
+     "2026-04": -108688,
+     "2026-05": -22176,
+     "2026-06": 1707,
+     "2026-07": 105053,
+     "2026-08": -56,
+     "2026-09": 111354,
+     "2026-10": -21584
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 357,
+     "own_stop": 12,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 233,
+      "squareoff": 12,
+      "stop": 12,
+      "time": 99
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1200,
+    "win": 0.465,
+    "net": 621770,
+    "avg_win": 5260,
+    "avg_loss": 3603,
+    "worst_day": -66325,
+    "max_dd": 160424,
+    "largest_loss": -18678,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -104488
+    },
+    "months": {
+     "2026-04": -27377,
+     "2026-05": 138976,
+     "2026-06": -104488,
+     "2026-07": 210691,
+     "2026-08": 76503,
+     "2026-09": 105793,
+     "2026-10": 221672
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1200,
+     "own_stop": 173,
+     "reasons": {
+      "lock": 13,
+      "squareoff": 65,
+      "stop": 173,
+      "time": 949
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1668,
+    "win": 0.4598,
+    "net": 547916,
+    "avg_win": 4911,
+    "avg_loss": 3573,
+    "worst_day": -63776,
+    "max_dd": 209599,
+    "largest_loss": -17861,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -138454
+    },
+    "months": {
+     "2026-04": 70983,
+     "2026-05": 111528,
+     "2026-06": -138454,
+     "2026-07": 229910,
+     "2026-08": 80084,
+     "2026-09": 16311,
+     "2026-10": 177552
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1668,
+     "own_stop": 218,
+     "reasons": {
+      "lock": 14,
+      "squareoff": 67,
+      "stop": 218,
+      "time": 1369
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@3": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.4202,
+    "net": 47831,
+    "avg_win": 4314,
+    "avg_loss": 2895,
+    "worst_day": -33486,
+    "max_dd": 192193,
+    "largest_loss": -13824,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -108636
+    },
+    "months": {
+     "2026-04": -108636,
+     "2026-05": -50847,
+     "2026-06": 3954,
+     "2026-07": 102546,
+     "2026-08": 14859,
+     "2026-09": 105207,
+     "2026-10": -19252
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 357,
+     "own_stop": 8,
+     "reasons": {
+      "lock": 30,
+      "missing": 1,
+      "rule_exit": 218,
+      "squareoff": 9,
+      "stop": 8,
+      "time": 91
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 604,
+    "win": 0.5364,
+    "net": 553161,
+    "avg_win": 5124,
+    "avg_loss": 3953,
+    "worst_day": -62591,
+    "max_dd": 82019,
+    "largest_loss": -18678,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -41504
+    },
+    "months": {
+     "2026-04": 11939,
+     "2026-05": -41504,
+     "2026-06": 19095,
+     "2026-07": 283165,
+     "2026-08": 2641,
+     "2026-09": 103190,
+     "2026-10": 174634
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 604,
+     "own_stop": 75,
+     "reasons": {
+      "lock": 66,
+      "squareoff": 17,
+      "stop": 75,
+      "time": 446
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 655,
+    "win": 0.5511,
+    "net": 488815,
+    "avg_win": 4622,
+    "avg_loss": 4012,
+    "worst_day": -43311,
+    "max_dd": 101336,
+    "largest_loss": -17861,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -57548
+    },
+    "months": {
+     "2026-04": 20823,
+     "2026-05": 68027,
+     "2026-06": -57548,
+     "2026-07": 201855,
+     "2026-08": 66505,
+     "2026-09": 28215,
+     "2026-10": 160939
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 655,
+     "own_stop": 78,
+     "reasons": {
+      "lock": 74,
+      "squareoff": 2,
+      "stop": 78,
+      "time": 501
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@3": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.4062,
+    "net": 69270,
+    "avg_win": 4395,
+    "avg_loss": 2679,
+    "worst_day": -22902,
+    "max_dd": 166061,
+    "largest_loss": -8051,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -82070
+    },
+    "months": {
+     "2026-04": -82070,
+     "2026-05": -54189,
+     "2026-06": 6819,
+     "2026-07": 101111,
+     "2026-08": 8672,
+     "2026-09": 102391,
+     "2026-10": -13465
+    },
+    "mix": {
+     "stop500": 62,
+     "step": 0,
+     "other": 295,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 186,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 62,
+      "time": 69
+     }
+    },
+    "rupee_stop_share": 0.9664
+   },
+   "R72": {
+    "trades": 605,
+    "win": 0.4959,
+    "net": 464717,
+    "avg_win": 5229,
+    "avg_loss": 3620,
+    "worst_day": -65805,
+    "max_dd": 78876,
+    "largest_loss": -11250,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -15140
+    },
+    "months": {
+     "2026-04": -244,
+     "2026-05": -15140,
+     "2026-06": 15432,
+     "2026-07": 265314,
+     "2026-08": -2689,
+     "2026-09": 68715,
+     "2026-10": 133329
+    },
+    "mix": {
+     "stop500": 184,
+     "step": 0,
+     "other": 421,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 64,
+      "squareoff": 10,
+      "stop": 25,
+      "stop500": 184,
+      "time": 322
+     }
+    },
+    "rupee_stop_share": 0.8347
+   },
+   "R51": {
+    "trades": 665,
+    "win": 0.4947,
+    "net": 294034,
+    "avg_win": 4641,
+    "avg_loss": 3669,
+    "worst_day": -48297,
+    "max_dd": 108527,
+    "largest_loss": -12558,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -35752
+    },
+    "months": {
+     "2026-04": -35752,
+     "2026-05": 59046,
+     "2026-06": -20392,
+     "2026-07": 175647,
+     "2026-08": 24308,
+     "2026-09": -22601,
+     "2026-10": 113779
+    },
+    "mix": {
+     "stop500": 203,
+     "step": 0,
+     "other": 462,
+     "own_stop": 26,
+     "reasons": {
+      "lock": 71,
+      "stop": 26,
+      "stop500": 203,
+      "time": 365
+     }
+    },
+    "rupee_stop_share": 0.8211
+   }
+  },
+  "M2@3": {
+   "LIQ": {
+    "trades": 357,
+    "win": 0.4062,
+    "net": 69270,
+    "avg_win": 4395,
+    "avg_loss": 2679,
+    "worst_day": -22902,
+    "max_dd": 166061,
+    "largest_loss": -8051,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -82070
+    },
+    "months": {
+     "2026-04": -82070,
+     "2026-05": -54189,
+     "2026-06": 6819,
+     "2026-07": 101111,
+     "2026-08": 8672,
+     "2026-09": 102391,
+     "2026-10": -13465
+    },
+    "mix": {
+     "stop500": 62,
+     "step": 0,
+     "other": 295,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 186,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 62,
+      "time": 69
+     }
+    },
+    "rupee_stop_share": 0.9664
+   },
+   "R72": {
+    "trades": 605,
+    "win": 0.4959,
+    "net": 464717,
+    "avg_win": 5229,
+    "avg_loss": 3620,
+    "worst_day": -65805,
+    "max_dd": 78876,
+    "largest_loss": -11250,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -15140
+    },
+    "months": {
+     "2026-04": -244,
+     "2026-05": -15140,
+     "2026-06": 15432,
+     "2026-07": 265314,
+     "2026-08": -2689,
+     "2026-09": 68715,
+     "2026-10": 133329
+    },
+    "mix": {
+     "stop500": 184,
+     "step": 0,
+     "other": 421,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 64,
+      "squareoff": 10,
+      "stop": 25,
+      "stop500": 184,
+      "time": 322
+     }
+    },
+    "rupee_stop_share": 0.8347
+   },
+   "R51": {
+    "trades": 665,
+    "win": 0.4947,
+    "net": 294034,
+    "avg_win": 4641,
+    "avg_loss": 3669,
+    "worst_day": -48297,
+    "max_dd": 108527,
+    "largest_loss": -12558,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -35752
+    },
+    "months": {
+     "2026-04": -35752,
+     "2026-05": 59046,
+     "2026-06": -20392,
+     "2026-07": 175647,
+     "2026-08": 24308,
+     "2026-09": -22601,
+     "2026-10": 113779
+    },
+    "mix": {
+     "stop500": 203,
+     "step": 0,
+     "other": 462,
+     "own_stop": 26,
+     "reasons": {
+      "lock": 71,
+      "stop": 26,
+      "stop500": 203,
+      "time": 365
+     }
+    },
+    "rupee_stop_share": 0.8211
+   }
+  }
+ },
+ "six": {
+  "sessions": 126,
+  "A@1": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.3786,
+    "net": 28392,
+    "avg_win": 1750,
+    "avg_loss": 934,
+    "worst_day": -11405,
+    "max_dd": 38009,
+    "largest_loss": -4362,
+    "worst_month": {
+     "month": "2026-10",
+     "net": -15384
+    },
+    "months": {
+     "2026-04": -13478,
+     "2026-05": -8832,
+     "2026-06": -949,
+     "2026-07": 33022,
+     "2026-08": -1605,
+     "2026-09": 35620,
+     "2026-10": -15384
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 346,
+     "own_stop": 13,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 225,
+      "squareoff": 12,
+      "stop": 13,
+      "time": 95
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1116,
+    "win": 0.4659,
+    "net": 189980,
+    "avg_win": 1717,
+    "avg_loss": 1179,
+    "worst_day": -22571,
+    "max_dd": 61884,
+    "largest_loss": -6245,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -40908
+    },
+    "months": {
+     "2026-04": 5022,
+     "2026-05": 39929,
+     "2026-06": -40908,
+     "2026-07": 64441,
+     "2026-08": 21113,
+     "2026-09": 29606,
+     "2026-10": 70777
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1116,
+     "own_stop": 165,
+     "reasons": {
+      "lock": 13,
+      "squareoff": 60,
+      "stop": 165,
+      "time": 878
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1584,
+    "win": 0.4539,
+    "net": 148408,
+    "avg_win": 1609,
+    "avg_loss": 1166,
+    "worst_day": -21578,
+    "max_dd": 81683,
+    "largest_loss": -5430,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -54587
+    },
+    "months": {
+     "2026-04": 29623,
+     "2026-05": 29306,
+     "2026-06": -54587,
+     "2026-07": 68207,
+     "2026-08": 18751,
+     "2026-09": -2459,
+     "2026-10": 59567
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1584,
+     "own_stop": 214,
+     "reasons": {
+      "lock": 16,
+      "squareoff": 60,
+      "stop": 214,
+      "time": 1294
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@1": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.4191,
+    "net": 23670,
+    "avg_win": 1427,
+    "avg_loss": 911,
+    "worst_day": -11405,
+    "max_dd": 44444,
+    "largest_loss": -4362,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -18290
+    },
+    "months": {
+     "2026-04": -13431,
+     "2026-05": -18290,
+     "2026-06": -12,
+     "2026-07": 32786,
+     "2026-08": 3461,
+     "2026-09": 33732,
+     "2026-10": -14576
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 346,
+     "own_stop": 9,
+     "reasons": {
+      "lock": 30,
+      "missing": 1,
+      "rule_exit": 210,
+      "squareoff": 9,
+      "stop": 9,
+      "time": 87
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 539,
+    "win": 0.551,
+    "net": 178459,
+    "avg_win": 1628,
+    "avg_loss": 1261,
+    "worst_day": -17120,
+    "max_dd": 28832,
+    "largest_loss": -6245,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -18110
+    },
+    "months": {
+     "2026-04": 10749,
+     "2026-05": -18110,
+     "2026-06": 4257,
+     "2026-07": 91892,
+     "2026-08": -528,
+     "2026-09": 32131,
+     "2026-10": 58067
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 539,
+     "own_stop": 66,
+     "reasons": {
+      "lock": 65,
+      "squareoff": 12,
+      "stop": 66,
+      "time": 396
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 601,
+    "win": 0.5607,
+    "net": 149820,
+    "avg_win": 1443,
+    "avg_loss": 1274,
+    "worst_day": -14642,
+    "max_dd": 36021,
+    "largest_loss": -4718,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -20990
+    },
+    "months": {
+     "2026-04": 16872,
+     "2026-05": 19862,
+     "2026-06": -20990,
+     "2026-07": 64826,
+     "2026-08": 19009,
+     "2026-09": 5820,
+     "2026-10": 44422
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 601,
+     "own_stop": 72,
+     "reasons": {
+      "lock": 77,
+      "stop": 72,
+      "time": 452
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@1": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.4075,
+    "net": 26781,
+    "avg_win": 1448,
+    "avg_loss": 865,
+    "worst_day": -7734,
+    "max_dd": 42958,
+    "largest_loss": -2715,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -19035
+    },
+    "months": {
+     "2026-04": -11352,
+     "2026-05": -19035,
+     "2026-06": 1115,
+     "2026-07": 32442,
+     "2026-08": 1488,
+     "2026-09": 32861,
+     "2026-10": -10739
+    },
+    "mix": {
+     "stop500": 53,
+     "step": 0,
+     "other": 293,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 183,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 53,
+      "time": 70
+     }
+    },
+    "rupee_stop_share": 0.9653
+   },
+   "R72": {
+    "trades": 540,
+    "win": 0.5074,
+    "net": 140123,
+    "avg_win": 1654,
+    "avg_loss": 1177,
+    "worst_day": -11503,
+    "max_dd": 25065,
+    "largest_loss": -3781,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -8093
+    },
+    "months": {
+     "2026-04": 9600,
+     "2026-05": -8093,
+     "2026-06": 114,
+     "2026-07": 86505,
+     "2026-08": -2914,
+     "2026-09": 21109,
+     "2026-10": 33801
+    },
+    "mix": {
+     "stop500": 149,
+     "step": 0,
+     "other": 391,
+     "own_stop": 24,
+     "reasons": {
+      "lock": 63,
+      "squareoff": 8,
+      "stop": 24,
+      "stop500": 149,
+      "time": 296
+     }
+    },
+    "rupee_stop_share": 0.8185
+   },
+   "R51": {
+    "trades": 611,
+    "win": 0.5074,
+    "net": 97618,
+    "avg_win": 1463,
+    "avg_loss": 1182,
+    "worst_day": -9551,
+    "max_dd": 36176,
+    "largest_loss": -3781,
+    "worst_month": {
+     "month": "2026-09",
+     "net": -10317
+    },
+    "months": {
+     "2026-04": 18334,
+     "2026-05": 17019,
+     "2026-06": -8631,
+     "2026-07": 56515,
+     "2026-08": 5406,
+     "2026-09": -10317,
+     "2026-10": 19293
+    },
+    "mix": {
+     "stop500": 172,
+     "step": 0,
+     "other": 439,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 74,
+      "stop": 25,
+      "stop500": 172,
+      "time": 340
+     }
+    },
+    "rupee_stop_share": 0.8118
+   }
+  },
+  "M2@1": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.4075,
+    "net": 26781,
+    "avg_win": 1448,
+    "avg_loss": 865,
+    "worst_day": -7734,
+    "max_dd": 42958,
+    "largest_loss": -2715,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -19035
+    },
+    "months": {
+     "2026-04": -11352,
+     "2026-05": -19035,
+     "2026-06": 1115,
+     "2026-07": 32442,
+     "2026-08": 1488,
+     "2026-09": 32861,
+     "2026-10": -10739
+    },
+    "mix": {
+     "stop500": 53,
+     "step": 0,
+     "other": 293,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 183,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 53,
+      "time": 70
+     }
+    },
+    "rupee_stop_share": 0.9653
+   },
+   "R72": {
+    "trades": 540,
+    "win": 0.5074,
+    "net": 140123,
+    "avg_win": 1654,
+    "avg_loss": 1177,
+    "worst_day": -11503,
+    "max_dd": 25065,
+    "largest_loss": -3781,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -8093
+    },
+    "months": {
+     "2026-04": 9600,
+     "2026-05": -8093,
+     "2026-06": 114,
+     "2026-07": 86505,
+     "2026-08": -2914,
+     "2026-09": 21109,
+     "2026-10": 33801
+    },
+    "mix": {
+     "stop500": 149,
+     "step": 0,
+     "other": 391,
+     "own_stop": 24,
+     "reasons": {
+      "lock": 63,
+      "squareoff": 8,
+      "stop": 24,
+      "stop500": 149,
+      "time": 296
+     }
+    },
+    "rupee_stop_share": 0.8185
+   },
+   "R51": {
+    "trades": 611,
+    "win": 0.5074,
+    "net": 97618,
+    "avg_win": 1463,
+    "avg_loss": 1182,
+    "worst_day": -9551,
+    "max_dd": 36176,
+    "largest_loss": -3781,
+    "worst_month": {
+     "month": "2026-09",
+     "net": -10317
+    },
+    "months": {
+     "2026-04": 18334,
+     "2026-05": 17019,
+     "2026-06": -8631,
+     "2026-07": 56515,
+     "2026-08": 5406,
+     "2026-09": -10317,
+     "2026-10": 19293
+    },
+    "mix": {
+     "stop500": 172,
+     "step": 0,
+     "other": 439,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 74,
+      "stop": 25,
+      "stop500": 172,
+      "time": 340
+     }
+    },
+    "rupee_stop_share": 0.8118
+   }
+  },
+  "A@2": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.3902,
+    "net": 72613,
+    "avg_win": 3442,
+    "avg_loss": 1858,
+    "worst_day": -22450,
+    "max_dd": 73050,
+    "largest_loss": -8678,
+    "worst_month": {
+     "month": "2026-10",
+     "net": -28488
+    },
+    "months": {
+     "2026-04": -25677,
+     "2026-05": -15458,
+     "2026-06": 402,
+     "2026-07": 69093,
+     "2026-08": -799,
+     "2026-09": 73539,
+     "2026-10": -28488
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 346,
+     "own_stop": 13,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 225,
+      "squareoff": 12,
+      "stop": 13,
+      "time": 95
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1116,
+    "win": 0.4704,
+    "net": 431603,
+    "avg_win": 3448,
+    "avg_loss": 2333,
+    "worst_day": -44447,
+    "max_dd": 111087,
+    "largest_loss": -12468,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -72639
+    },
+    "months": {
+     "2026-04": 14155,
+     "2026-05": 89496,
+     "2026-06": -72639,
+     "2026-07": 137605,
+     "2026-08": 48822,
+     "2026-09": 67730,
+     "2026-10": 146436
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1116,
+     "own_stop": 165,
+     "reasons": {
+      "lock": 13,
+      "squareoff": 60,
+      "stop": 165,
+      "time": 878
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1584,
+    "win": 0.4609,
+    "net": 369927,
+    "avg_win": 3216,
+    "avg_loss": 2316,
+    "worst_day": -42690,
+    "max_dd": 145608,
+    "largest_loss": -10825,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -96531
+    },
+    "months": {
+     "2026-04": 64519,
+     "2026-05": 70546,
+     "2026-06": -96531,
+     "2026-07": 149137,
+     "2026-08": 49428,
+     "2026-09": 7005,
+     "2026-10": 125823
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1584,
+     "own_stop": 214,
+     "reasons": {
+      "lock": 16,
+      "squareoff": 60,
+      "stop": 214,
+      "time": 1294
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@2": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.422,
+    "net": 61112,
+    "avg_win": 2871,
+    "avg_loss": 1791,
+    "worst_day": -22450,
+    "max_dd": 84847,
+    "largest_loss": -8678,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -34518
+    },
+    "months": {
+     "2026-04": -25624,
+     "2026-05": -34518,
+     "2026-06": 1989,
+     "2026-07": 67505,
+     "2026-08": 9189,
+     "2026-09": 69489,
+     "2026-10": -26919
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 346,
+     "own_stop": 9,
+     "reasons": {
+      "lock": 30,
+      "missing": 1,
+      "rule_exit": 210,
+      "squareoff": 9,
+      "stop": 9,
+      "time": 87
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 539,
+    "win": 0.5492,
+    "net": 379794,
+    "avg_win": 3309,
+    "avg_loss": 2467,
+    "worst_day": -33591,
+    "max_dd": 55485,
+    "largest_loss": -12468,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -29768
+    },
+    "months": {
+     "2026-04": 23651,
+     "2026-05": -29768,
+     "2026-06": 11634,
+     "2026-07": 187547,
+     "2026-08": 1142,
+     "2026-09": 67663,
+     "2026-10": 117925
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 539,
+     "own_stop": 66,
+     "reasons": {
+      "lock": 64,
+      "squareoff": 12,
+      "stop": 66,
+      "time": 397
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 601,
+    "win": 0.5591,
+    "net": 324511,
+    "avg_win": 2934,
+    "avg_loss": 2495,
+    "worst_day": -28984,
+    "max_dd": 68758,
+    "largest_loss": -9389,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -39356
+    },
+    "months": {
+     "2026-04": 35460,
+     "2026-05": 44049,
+     "2026-06": -39356,
+     "2026-07": 133355,
+     "2026-08": 42874,
+     "2026-09": 17048,
+     "2026-10": 91080
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 601,
+     "own_stop": 72,
+     "reasons": {
+      "lock": 76,
+      "stop": 72,
+      "time": 453
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@2": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.4104,
+    "net": 65088,
+    "avg_win": 2914,
+    "avg_loss": 1709,
+    "worst_day": -15311,
+    "max_dd": 83031,
+    "largest_loss": -5383,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -36569
+    },
+    "months": {
+     "2026-04": -21909,
+     "2026-05": -36569,
+     "2026-06": 3948,
+     "2026-07": 66612,
+     "2026-08": 5112,
+     "2026-09": 67651,
+     "2026-10": -19756
+    },
+    "mix": {
+     "stop500": 53,
+     "step": 0,
+     "other": 293,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 183,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 53,
+      "time": 70
+     }
+    },
+    "rupee_stop_share": 0.9653
+   },
+   "R72": {
+    "trades": 539,
+    "win": 0.5083,
+    "net": 306029,
+    "avg_win": 3353,
+    "avg_loss": 2312,
+    "worst_day": -22647,
+    "max_dd": 45612,
+    "largest_loss": -7516,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -11577
+    },
+    "months": {
+     "2026-04": 20774,
+     "2026-05": -11577,
+     "2026-06": 9482,
+     "2026-07": 175826,
+     "2026-08": -2367,
+     "2026-09": 44882,
+     "2026-10": 69010
+    },
+    "mix": {
+     "stop500": 145,
+     "step": 0,
+     "other": 394,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 62,
+      "squareoff": 8,
+      "stop": 25,
+      "stop500": 145,
+      "time": 299
+     }
+    },
+    "rupee_stop_share": 0.8145
+   },
+   "R51": {
+    "trades": 611,
+    "win": 0.5057,
+    "net": 217628,
+    "avg_win": 2974,
+    "avg_loss": 2323,
+    "worst_day": -18915,
+    "max_dd": 64741,
+    "largest_loss": -7516,
+    "worst_month": {
+     "month": "2026-09",
+     "net": -16419
+    },
+    "months": {
+     "2026-04": 37845,
+     "2026-05": 39097,
+     "2026-06": -14362,
+     "2026-07": 116062,
+     "2026-08": 15219,
+     "2026-09": -16419,
+     "2026-10": 40186
+    },
+    "mix": {
+     "stop500": 169,
+     "step": 0,
+     "other": 442,
+     "own_stop": 26,
+     "reasons": {
+      "lock": 73,
+      "stop": 26,
+      "stop500": 169,
+      "time": 343
+     }
+    },
+    "rupee_stop_share": 0.8069
+   }
+  },
+  "M2@2": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.4104,
+    "net": 65088,
+    "avg_win": 2914,
+    "avg_loss": 1709,
+    "worst_day": -15311,
+    "max_dd": 83031,
+    "largest_loss": -5383,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -36569
+    },
+    "months": {
+     "2026-04": -21909,
+     "2026-05": -36569,
+     "2026-06": 3948,
+     "2026-07": 66612,
+     "2026-08": 5112,
+     "2026-09": 67651,
+     "2026-10": -19756
+    },
+    "mix": {
+     "stop500": 53,
+     "step": 0,
+     "other": 293,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 183,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 53,
+      "time": 70
+     }
+    },
+    "rupee_stop_share": 0.9653
+   },
+   "R72": {
+    "trades": 539,
+    "win": 0.5083,
+    "net": 306029,
+    "avg_win": 3353,
+    "avg_loss": 2312,
+    "worst_day": -22647,
+    "max_dd": 45612,
+    "largest_loss": -7516,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -11577
+    },
+    "months": {
+     "2026-04": 20774,
+     "2026-05": -11577,
+     "2026-06": 9482,
+     "2026-07": 175826,
+     "2026-08": -2367,
+     "2026-09": 44882,
+     "2026-10": 69010
+    },
+    "mix": {
+     "stop500": 145,
+     "step": 0,
+     "other": 394,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 62,
+      "squareoff": 8,
+      "stop": 25,
+      "stop500": 145,
+      "time": 299
+     }
+    },
+    "rupee_stop_share": 0.8145
+   },
+   "R51": {
+    "trades": 611,
+    "win": 0.5057,
+    "net": 217628,
+    "avg_win": 2974,
+    "avg_loss": 2323,
+    "worst_day": -18915,
+    "max_dd": 64741,
+    "largest_loss": -7516,
+    "worst_month": {
+     "month": "2026-09",
+     "net": -16419
+    },
+    "months": {
+     "2026-04": 37845,
+     "2026-05": 39097,
+     "2026-06": -14362,
+     "2026-07": 116062,
+     "2026-08": 15219,
+     "2026-09": -16419,
+     "2026-10": 40186
+    },
+    "mix": {
+     "stop500": 169,
+     "step": 0,
+     "other": 442,
+     "own_stop": 26,
+     "reasons": {
+      "lock": 73,
+      "stop": 26,
+      "stop500": 169,
+      "time": 343
+     }
+    },
+    "rupee_stop_share": 0.8069
+   }
+  },
+  "A@3": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.396,
+    "net": 116365,
+    "avg_win": 5109,
+    "avg_loss": 2792,
+    "worst_day": -33486,
+    "max_dd": 108209,
+    "largest_loss": -12993,
+    "worst_month": {
+     "month": "2026-10",
+     "net": -41618
+    },
+    "months": {
+     "2026-04": -37899,
+     "2026-05": -22176,
+     "2026-06": 1707,
+     "2026-07": 105053,
+     "2026-08": -56,
+     "2026-09": 111354,
+     "2026-10": -41618
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 346,
+     "own_stop": 13,
+     "reasons": {
+      "missing": 1,
+      "rule_exit": 225,
+      "squareoff": 12,
+      "stop": 13,
+      "time": 95
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1116,
+    "win": 0.4731,
+    "net": 672861,
+    "avg_win": 5165,
+    "avg_loss": 3494,
+    "worst_day": -66325,
+    "max_dd": 160424,
+    "largest_loss": -18678,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -104488
+    },
+    "months": {
+     "2026-04": 23315,
+     "2026-05": 138976,
+     "2026-06": -104488,
+     "2026-07": 210691,
+     "2026-08": 76503,
+     "2026-09": 105793,
+     "2026-10": 222071
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1116,
+     "own_stop": 165,
+     "reasons": {
+      "lock": 13,
+      "squareoff": 60,
+      "stop": 165,
+      "time": 878
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1584,
+    "win": 0.4653,
+    "net": 590807,
+    "avg_win": 4801,
+    "avg_loss": 3480,
+    "worst_day": -63776,
+    "max_dd": 209599,
+    "largest_loss": -16213,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -138454
+    },
+    "months": {
+     "2026-04": 99405,
+     "2026-05": 111528,
+     "2026-06": -138454,
+     "2026-07": 229910,
+     "2026-08": 80084,
+     "2026-09": 16311,
+     "2026-10": 192022
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1584,
+     "own_stop": 214,
+     "reasons": {
+      "lock": 16,
+      "squareoff": 60,
+      "stop": 214,
+      "time": 1294
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@3": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.4277,
+    "net": 98585,
+    "avg_win": 4267,
+    "avg_loss": 2692,
+    "worst_day": -33486,
+    "max_dd": 125385,
+    "largest_loss": -12993,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -50847
+    },
+    "months": {
+     "2026-04": -37847,
+     "2026-05": -50847,
+     "2026-06": 3954,
+     "2026-07": 102546,
+     "2026-08": 14859,
+     "2026-09": 105207,
+     "2026-10": -39286
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 346,
+     "own_stop": 9,
+     "reasons": {
+      "lock": 30,
+      "missing": 1,
+      "rule_exit": 210,
+      "squareoff": 9,
+      "stop": 9,
+      "time": 87
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 539,
+    "win": 0.5529,
+    "net": 580978,
+    "avg_win": 4949,
+    "avg_loss": 3709,
+    "worst_day": -50054,
+    "max_dd": 82019,
+    "largest_loss": -18678,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -41504
+    },
+    "months": {
+     "2026-04": 36568,
+     "2026-05": -41504,
+     "2026-06": 19095,
+     "2026-07": 283165,
+     "2026-08": 2641,
+     "2026-09": 103190,
+     "2026-10": 177822
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 539,
+     "own_stop": 66,
+     "reasons": {
+      "lock": 64,
+      "squareoff": 12,
+      "stop": 66,
+      "time": 397
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 601,
+    "win": 0.5607,
+    "net": 498835,
+    "avg_win": 4406,
+    "avg_loss": 3735,
+    "worst_day": -43311,
+    "max_dd": 101336,
+    "largest_loss": -14059,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -57548
+    },
+    "months": {
+     "2026-04": 54043,
+     "2026-05": 68027,
+     "2026-06": -57548,
+     "2026-07": 201855,
+     "2026-08": 66505,
+     "2026-09": 28215,
+     "2026-10": 137738
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 601,
+     "own_stop": 72,
+     "reasons": {
+      "lock": 76,
+      "stop": 72,
+      "time": 453
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@3": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.4162,
+    "net": 103554,
+    "avg_win": 4329,
+    "avg_loss": 2573,
+    "worst_day": -22902,
+    "max_dd": 123191,
+    "largest_loss": -8051,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -54189
+    },
+    "months": {
+     "2026-04": -32529,
+     "2026-05": -54189,
+     "2026-06": 6819,
+     "2026-07": 101111,
+     "2026-08": 8672,
+     "2026-09": 102391,
+     "2026-10": -28722
+    },
+    "mix": {
+     "stop500": 53,
+     "step": 0,
+     "other": 293,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 183,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 53,
+      "time": 70
+     }
+    },
+    "rupee_stop_share": 0.9653
+   },
+   "R72": {
+    "trades": 539,
+    "win": 0.5139,
+    "net": 476075,
+    "avg_win": 5007,
+    "avg_loss": 3477,
+    "worst_day": -33744,
+    "max_dd": 67002,
+    "largest_loss": -11250,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -15140
+    },
+    "months": {
+     "2026-04": 31933,
+     "2026-05": -15140,
+     "2026-06": 15432,
+     "2026-07": 265314,
+     "2026-08": -2689,
+     "2026-09": 68715,
+     "2026-10": 112511
+    },
+    "mix": {
+     "stop500": 144,
+     "step": 0,
+     "other": 395,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 62,
+      "squareoff": 8,
+      "stop": 25,
+      "stop500": 144,
+      "time": 300
+     }
+    },
+    "rupee_stop_share": 0.8126
+   },
+   "R51": {
+    "trades": 611,
+    "win": 0.509,
+    "net": 342695,
+    "avg_win": 4463,
+    "avg_loss": 3485,
+    "worst_day": -28275,
+    "max_dd": 94043,
+    "largest_loss": -11250,
+    "worst_month": {
+     "month": "2026-09",
+     "net": -22601
+    },
+    "months": {
+     "2026-04": 57310,
+     "2026-05": 59046,
+     "2026-06": -20392,
+     "2026-07": 175647,
+     "2026-08": 24308,
+     "2026-09": -22601,
+     "2026-10": 69377
+    },
+    "mix": {
+     "stop500": 166,
+     "step": 0,
+     "other": 445,
+     "own_stop": 28,
+     "reasons": {
+      "lock": 73,
+      "stop": 28,
+      "stop500": 166,
+      "time": 344
+     }
+    },
+    "rupee_stop_share": 0.802
+   }
+  },
+  "M2@3": {
+   "LIQ": {
+    "trades": 346,
+    "win": 0.4162,
+    "net": 103554,
+    "avg_win": 4329,
+    "avg_loss": 2573,
+    "worst_day": -22902,
+    "max_dd": 123191,
+    "largest_loss": -8051,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -54189
+    },
+    "months": {
+     "2026-04": -32529,
+     "2026-05": -54189,
+     "2026-06": 6819,
+     "2026-07": 101111,
+     "2026-08": 8672,
+     "2026-09": 102391,
+     "2026-10": -28722
+    },
+    "mix": {
+     "stop500": 53,
+     "step": 0,
+     "other": 293,
+     "own_stop": 1,
+     "reasons": {
+      "lock": 29,
+      "missing": 1,
+      "rule_exit": 183,
+      "squareoff": 9,
+      "stop": 1,
+      "stop500": 53,
+      "time": 70
+     }
+    },
+    "rupee_stop_share": 0.9653
+   },
+   "R72": {
+    "trades": 539,
+    "win": 0.5139,
+    "net": 476075,
+    "avg_win": 5007,
+    "avg_loss": 3477,
+    "worst_day": -33744,
+    "max_dd": 67002,
+    "largest_loss": -11250,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -15140
+    },
+    "months": {
+     "2026-04": 31933,
+     "2026-05": -15140,
+     "2026-06": 15432,
+     "2026-07": 265314,
+     "2026-08": -2689,
+     "2026-09": 68715,
+     "2026-10": 112511
+    },
+    "mix": {
+     "stop500": 144,
+     "step": 0,
+     "other": 395,
+     "own_stop": 25,
+     "reasons": {
+      "lock": 62,
+      "squareoff": 8,
+      "stop": 25,
+      "stop500": 144,
+      "time": 300
+     }
+    },
+    "rupee_stop_share": 0.8126
+   },
+   "R51": {
+    "trades": 611,
+    "win": 0.509,
+    "net": 342695,
+    "avg_win": 4463,
+    "avg_loss": 3485,
+    "worst_day": -28275,
+    "max_dd": 94043,
+    "largest_loss": -11250,
+    "worst_month": {
+     "month": "2026-09",
+     "net": -22601
+    },
+    "months": {
+     "2026-04": 57310,
+     "2026-05": 59046,
+     "2026-06": -20392,
+     "2026-07": 175647,
+     "2026-08": 24308,
+     "2026-09": -22601,
+     "2026-10": 69377
+    },
+    "mix": {
+     "stop500": 166,
+     "step": 0,
+     "other": 445,
+     "own_stop": 28,
+     "reasons": {
+      "lock": 73,
+      "stop": 28,
+      "stop500": 166,
+      "time": 344
+     }
+    },
+    "rupee_stop_share": 0.802
+   }
+  }
+ },
+ "year": {
+  "sessions": 247,
+  "A@1": {
+   "LIQ": {
+    "trades": 688,
+    "win": 0.3924,
+    "net": 117923,
+    "avg_win": 1935,
+    "avg_loss": 968,
+    "worst_day": -11405,
+    "max_dd": 61062,
+    "largest_loss": -4757,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -37821
+    },
+    "months": {
+     "2025-10": -611,
+     "2025-11": 2638,
+     "2025-12": -4980,
+     "2026-01": 45771,
+     "2026-02": 43708,
+     "2026-03": 27346,
+     "2026-04": -37821,
+     "2026-05": -8832,
+     "2026-06": -949,
+     "2026-07": 33022,
+     "2026-08": -1605,
+     "2026-09": 35620,
+     "2026-10": -15384
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 688,
+     "own_stop": 20,
+     "reasons": {
+      "missing": 2,
+      "rule_exit": 455,
+      "squareoff": 18,
+      "stop": 20,
+      "time": 193
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 2281,
+    "win": 0.4634,
+    "net": 298253,
+    "avg_win": 1763,
+    "avg_loss": 1279,
+    "worst_day": -25837,
+    "max_dd": 86529,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -72605
+    },
+    "months": {
+     "2025-10": 22318,
+     "2025-11": 8007,
+     "2025-12": -72605,
+     "2026-01": 57857,
+     "2026-02": 27329,
+     "2026-03": 85635,
+     "2026-04": -15245,
+     "2026-05": 39929,
+     "2026-06": -40908,
+     "2026-07": 64441,
+     "2026-08": 21113,
+     "2026-09": 29606,
+     "2026-10": 70777
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 2281,
+     "own_stop": 345,
+     "reasons": {
+      "lock": 30,
+      "missing": 2,
+      "squareoff": 134,
+      "stop": 345,
+      "time": 1770
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 3084,
+    "win": 0.451,
+    "net": 221238,
+    "avg_win": 1692,
+    "avg_loss": 1259,
+    "worst_day": -28942,
+    "max_dd": 94176,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -54587
+    },
+    "months": {
+     "2025-10": 1267,
+     "2025-11": 16638,
+     "2025-12": -51699,
+     "2026-01": 75958,
+     "2026-02": -28345,
+     "2026-03": 72461,
+     "2026-04": 16172,
+     "2026-05": 29306,
+     "2026-06": -54587,
+     "2026-07": 68207,
+     "2026-08": 18751,
+     "2026-09": -2459,
+     "2026-10": 59567
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 3084,
+     "own_stop": 452,
+     "reasons": {
+      "lock": 32,
+      "missing": 2,
+      "squareoff": 128,
+      "stop": 452,
+      "time": 2470
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@1": {
+   "LIQ": {
+    "trades": 688,
+    "win": 0.4128,
+    "net": 100222,
+    "avg_win": 1718,
+    "avg_loss": 960,
+    "worst_day": -11405,
+    "max_dd": 67497,
+    "largest_loss": -4757,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -37773
+    },
+    "months": {
+     "2025-10": -3696,
+     "2025-11": 2882,
+     "2025-12": -4980,
+     "2026-01": 43350,
+     "2026-02": 39877,
+     "2026-03": 23461,
+     "2026-04": -37773,
+     "2026-05": -18290,
+     "2026-06": -12,
+     "2026-07": 32786,
+     "2026-08": 3461,
+     "2026-09": 33732,
+     "2026-10": -14576
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 688,
+     "own_stop": 16,
+     "reasons": {
+      "lock": 46,
+      "missing": 2,
+      "rule_exit": 430,
+      "squareoff": 13,
+      "stop": 16,
+      "time": 181
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1069,
+    "win": 0.5659,
+    "net": 324629,
+    "avg_win": 1675,
+    "avg_loss": 1484,
+    "worst_day": -24432,
+    "max_dd": 39246,
+    "largest_loss": -6315,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -18110
+    },
+    "months": {
+     "2025-10": 16186,
+     "2025-11": 11671,
+     "2025-12": 1507,
+     "2026-01": 59159,
+     "2026-02": 12776,
+     "2026-03": 55277,
+     "2026-04": 344,
+     "2026-05": -18110,
+     "2026-06": 4257,
+     "2026-07": 91892,
+     "2026-08": -528,
+     "2026-09": 32131,
+     "2026-10": 58067
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1069,
+     "own_stop": 137,
+     "reasons": {
+      "lock": 150,
+      "missing": 1,
+      "squareoff": 37,
+      "stop": 137,
+      "time": 744
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1367,
+    "win": 0.5545,
+    "net": 249903,
+    "avg_win": 1494,
+    "avg_loss": 1450,
+    "worst_day": -21287,
+    "max_dd": 36021,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -20990
+    },
+    "months": {
+     "2025-10": -3546,
+     "2025-11": 13847,
+     "2025-12": 3962,
+     "2026-01": 73942,
+     "2026-02": 3386,
+     "2026-03": 21739,
+     "2026-04": 3625,
+     "2026-05": 19862,
+     "2026-06": -20990,
+     "2026-07": 64826,
+     "2026-08": 19009,
+     "2026-09": 5820,
+     "2026-10": 44422
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1367,
+     "own_stop": 176,
+     "reasons": {
+      "lock": 192,
+      "missing": 1,
+      "squareoff": 12,
+      "stop": 176,
+      "time": 986
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@1": {
+   "LIQ": {
+    "trades": 689,
+    "win": 0.3977,
+    "net": 88911,
+    "avg_win": 1676,
+    "avg_loss": 892,
+    "worst_day": -7734,
+    "max_dd": 70490,
+    "largest_loss": -2715,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -27456
+    },
+    "months": {
+     "2025-10": -3655,
+     "2025-11": 4477,
+     "2025-12": -5866,
+     "2026-01": 45034,
+     "2026-02": 42990,
+     "2026-03": -4746,
+     "2026-04": -27456,
+     "2026-05": -19035,
+     "2026-06": 1115,
+     "2026-07": 32442,
+     "2026-08": 1488,
+     "2026-09": 32861,
+     "2026-10": -10739
+    },
+    "mix": {
+     "stop500": 117,
+     "step": 0,
+     "other": 572,
+     "own_stop": 2,
+     "reasons": {
+      "lock": 45,
+      "missing": 2,
+      "rule_exit": 370,
+      "squareoff": 12,
+      "stop": 2,
+      "stop500": 117,
+      "time": 141
+     }
+    },
+    "rupee_stop_share": 0.9623
+   },
+   "R72": {
+    "trades": 1068,
+    "win": 0.4944,
+    "net": 228612,
+    "avg_win": 1724,
+    "avg_loss": 1263,
+    "worst_day": -21625,
+    "max_dd": 43414,
+    "largest_loss": -4066,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -8093
+    },
+    "months": {
+     "2025-10": 24578,
+     "2025-11": 4156,
+     "2025-12": -1440,
+     "2026-01": 66061,
+     "2026-02": 7871,
+     "2026-03": -2206,
+     "2026-04": -930,
+     "2026-05": -8093,
+     "2026-06": 114,
+     "2026-07": 86505,
+     "2026-08": -2914,
+     "2026-09": 21109,
+     "2026-10": 33801
+    },
+    "mix": {
+     "stop500": 355,
+     "step": 0,
+     "other": 713,
+     "own_stop": 34,
+     "reasons": {
+      "lock": 145,
+      "squareoff": 20,
+      "stop": 34,
+      "stop500": 355,
+      "time": 514
+     }
+    },
+    "rupee_stop_share": 0.853
+   },
+   "R51": {
+    "trades": 1381,
+    "win": 0.4924,
+    "net": 129991,
+    "avg_win": 1487,
+    "avg_loss": 1257,
+    "worst_day": -15883,
+    "max_dd": 58810,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -12198
+    },
+    "months": {
+     "2025-10": 10401,
+     "2025-11": -7526,
+     "2025-12": 2338,
+     "2026-01": 75005,
+     "2026-02": -7810,
+     "2026-03": -9502,
+     "2026-04": -12198,
+     "2026-05": 17019,
+     "2026-06": -8631,
+     "2026-07": 56515,
+     "2026-08": 5406,
+     "2026-09": -10317,
+     "2026-10": 19293
+    },
+    "mix": {
+     "stop500": 443,
+     "step": 0,
+     "other": 938,
+     "own_stop": 50,
+     "reasons": {
+      "lock": 185,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 50,
+      "stop500": 443,
+      "time": 693
+     }
+    },
+    "rupee_stop_share": 0.8306
+   }
+  },
+  "M2@1": {
+   "LIQ": {
+    "trades": 689,
+    "win": 0.3977,
+    "net": 88911,
+    "avg_win": 1676,
+    "avg_loss": 892,
+    "worst_day": -7734,
+    "max_dd": 70490,
+    "largest_loss": -2715,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -27456
+    },
+    "months": {
+     "2025-10": -3655,
+     "2025-11": 4477,
+     "2025-12": -5866,
+     "2026-01": 45034,
+     "2026-02": 42990,
+     "2026-03": -4746,
+     "2026-04": -27456,
+     "2026-05": -19035,
+     "2026-06": 1115,
+     "2026-07": 32442,
+     "2026-08": 1488,
+     "2026-09": 32861,
+     "2026-10": -10739
+    },
+    "mix": {
+     "stop500": 117,
+     "step": 0,
+     "other": 572,
+     "own_stop": 2,
+     "reasons": {
+      "lock": 45,
+      "missing": 2,
+      "rule_exit": 370,
+      "squareoff": 12,
+      "stop": 2,
+      "stop500": 117,
+      "time": 141
+     }
+    },
+    "rupee_stop_share": 0.9623
+   },
+   "R72": {
+    "trades": 1068,
+    "win": 0.4944,
+    "net": 228612,
+    "avg_win": 1724,
+    "avg_loss": 1263,
+    "worst_day": -21625,
+    "max_dd": 43414,
+    "largest_loss": -4066,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -8093
+    },
+    "months": {
+     "2025-10": 24578,
+     "2025-11": 4156,
+     "2025-12": -1440,
+     "2026-01": 66061,
+     "2026-02": 7871,
+     "2026-03": -2206,
+     "2026-04": -930,
+     "2026-05": -8093,
+     "2026-06": 114,
+     "2026-07": 86505,
+     "2026-08": -2914,
+     "2026-09": 21109,
+     "2026-10": 33801
+    },
+    "mix": {
+     "stop500": 355,
+     "step": 0,
+     "other": 713,
+     "own_stop": 34,
+     "reasons": {
+      "lock": 145,
+      "squareoff": 20,
+      "stop": 34,
+      "stop500": 355,
+      "time": 514
+     }
+    },
+    "rupee_stop_share": 0.853
+   },
+   "R51": {
+    "trades": 1381,
+    "win": 0.4924,
+    "net": 129991,
+    "avg_win": 1487,
+    "avg_loss": 1257,
+    "worst_day": -15883,
+    "max_dd": 58810,
+    "largest_loss": -8269,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -12198
+    },
+    "months": {
+     "2025-10": 10401,
+     "2025-11": -7526,
+     "2025-12": 2338,
+     "2026-01": 75005,
+     "2026-02": -7810,
+     "2026-03": -9502,
+     "2026-04": -12198,
+     "2026-05": 17019,
+     "2026-06": -8631,
+     "2026-07": 56515,
+     "2026-08": 5406,
+     "2026-09": -10317,
+     "2026-10": 19293
+    },
+    "mix": {
+     "stop500": 443,
+     "step": 0,
+     "other": 938,
+     "own_stop": 50,
+     "reasons": {
+      "lock": 185,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 50,
+      "stop500": 443,
+      "time": 693
+     }
+    },
+    "rupee_stop_share": 0.8306
+   }
+  },
+  "A@2": {
+   "LIQ": {
+    "trades": 688,
+    "win": 0.4026,
+    "net": 267232,
+    "avg_win": 3817,
+    "avg_loss": 1922,
+    "worst_day": -22450,
+    "max_dd": 117966,
+    "largest_loss": -9466,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -73218
+    },
+    "months": {
+     "2025-10": -345,
+     "2025-11": 7446,
+     "2025-12": -7052,
+     "2026-01": 94856,
+     "2026-02": 90547,
+     "2026-03": 56708,
+     "2026-04": -73218,
+     "2026-05": -15458,
+     "2026-06": 402,
+     "2026-07": 69093,
+     "2026-08": -799,
+     "2026-09": 73539,
+     "2026-10": -28488
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 688,
+     "own_stop": 20,
+     "reasons": {
+      "missing": 2,
+      "rule_exit": 455,
+      "squareoff": 18,
+      "stop": 20,
+      "time": 193
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 2281,
+    "win": 0.4673,
+    "net": 702143,
+    "avg_win": 3542,
+    "avg_loss": 2530,
+    "worst_day": -51084,
+    "max_dd": 164515,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -135116
+    },
+    "months": {
+     "2025-10": 47974,
+     "2025-11": 24516,
+     "2025-12": -135116,
+     "2026-01": 125335,
+     "2026-02": 62710,
+     "2026-03": 180594,
+     "2026-04": -21319,
+     "2026-05": 89496,
+     "2026-06": -72639,
+     "2026-07": 137605,
+     "2026-08": 48822,
+     "2026-09": 67730,
+     "2026-10": 146436
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 2281,
+     "own_stop": 345,
+     "reasons": {
+      "lock": 30,
+      "missing": 2,
+      "squareoff": 134,
+      "stop": 345,
+      "time": 1770
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 3084,
+    "win": 0.4569,
+    "net": 584762,
+    "avg_win": 3386,
+    "avg_loss": 2499,
+    "worst_day": -57260,
+    "max_dd": 179011,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -96531
+    },
+    "months": {
+     "2025-10": 7117,
+     "2025-11": 44467,
+     "2025-12": -90502,
+     "2026-01": 163865,
+     "2026-02": -44481,
+     "2026-03": 155290,
+     "2026-04": 43598,
+     "2026-05": 70546,
+     "2026-06": -96531,
+     "2026-07": 149137,
+     "2026-08": 49428,
+     "2026-09": 7005,
+     "2026-10": 125823
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 3084,
+     "own_stop": 452,
+     "reasons": {
+      "lock": 32,
+      "missing": 2,
+      "squareoff": 128,
+      "stop": 452,
+      "time": 2470
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@2": {
+   "LIQ": {
+    "trades": 688,
+    "win": 0.4186,
+    "net": 229355,
+    "avg_win": 3429,
+    "avg_loss": 1896,
+    "worst_day": -22450,
+    "max_dd": 129762,
+    "largest_loss": -9466,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -73166
+    },
+    "months": {
+     "2025-10": -6563,
+     "2025-11": 7885,
+     "2025-12": -7052,
+     "2026-01": 89834,
+     "2026-02": 82741,
+     "2026-03": 48938,
+     "2026-04": -73166,
+     "2026-05": -34518,
+     "2026-06": 1989,
+     "2026-07": 67505,
+     "2026-08": 9189,
+     "2026-09": 69489,
+     "2026-10": -26919
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 688,
+     "own_stop": 16,
+     "reasons": {
+      "lock": 46,
+      "missing": 2,
+      "rule_exit": 430,
+      "squareoff": 13,
+      "stop": 16,
+      "time": 181
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1069,
+    "win": 0.565,
+    "net": 705964,
+    "avg_win": 3415,
+    "avg_loss": 2918,
+    "worst_day": -48320,
+    "max_dd": 76475,
+    "largest_loss": -12607,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -29768
+    },
+    "months": {
+     "2025-10": 42987,
+     "2025-11": 27110,
+     "2025-12": 5151,
+     "2026-01": 121490,
+     "2026-02": 27051,
+     "2026-03": 119897,
+     "2026-04": 6134,
+     "2026-05": -29768,
+     "2026-06": 11634,
+     "2026-07": 187547,
+     "2026-08": 1142,
+     "2026-09": 67663,
+     "2026-10": 117925
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1069,
+     "own_stop": 137,
+     "reasons": {
+      "lock": 145,
+      "missing": 1,
+      "squareoff": 37,
+      "stop": 137,
+      "time": 749
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1366,
+    "win": 0.552,
+    "net": 573818,
+    "avg_win": 3068,
+    "avg_loss": 2842,
+    "worst_day": -42307,
+    "max_dd": 68758,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -39356
+    },
+    "months": {
+     "2025-10": 3966,
+     "2025-11": 34664,
+     "2025-12": 13494,
+     "2026-01": 152504,
+     "2026-02": 9456,
+     "2026-03": 58453,
+     "2026-04": 12230,
+     "2026-05": 44049,
+     "2026-06": -39356,
+     "2026-07": 133355,
+     "2026-08": 42874,
+     "2026-09": 17048,
+     "2026-10": 91080
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1366,
+     "own_stop": 176,
+     "reasons": {
+      "lock": 185,
+      "missing": 1,
+      "squareoff": 12,
+      "stop": 176,
+      "time": 992
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@2": {
+   "LIQ": {
+    "trades": 689,
+    "win": 0.4035,
+    "net": 203999,
+    "avg_win": 3344,
+    "avg_loss": 1766,
+    "worst_day": -15311,
+    "max_dd": 134344,
+    "largest_loss": -5383,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -53926
+    },
+    "months": {
+     "2025-10": -6565,
+     "2025-11": 10802,
+     "2025-12": -6774,
+     "2026-01": 93011,
+     "2026-02": 88526,
+     "2026-03": -8072,
+     "2026-04": -53926,
+     "2026-05": -36569,
+     "2026-06": 3948,
+     "2026-07": 66612,
+     "2026-08": 5112,
+     "2026-09": 67651,
+     "2026-10": -19756
+    },
+    "mix": {
+     "stop500": 116,
+     "step": 0,
+     "other": 573,
+     "own_stop": 2,
+     "reasons": {
+      "lock": 45,
+      "missing": 2,
+      "rule_exit": 370,
+      "squareoff": 12,
+      "stop": 2,
+      "stop500": 116,
+      "time": 142
+     }
+    },
+    "rupee_stop_share": 0.9623
+   },
+   "R72": {
+    "trades": 1068,
+    "win": 0.4963,
+    "net": 514699,
+    "avg_win": 3504,
+    "avg_loss": 2496,
+    "worst_day": -43185,
+    "max_dd": 80745,
+    "largest_loss": -8084,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -11577
+    },
+    "months": {
+     "2025-10": 59409,
+     "2025-11": 11230,
+     "2025-12": 3452,
+     "2026-01": 134765,
+     "2026-02": 16781,
+     "2026-03": 3019,
+     "2026-04": 789,
+     "2026-05": -11577,
+     "2026-06": 9482,
+     "2026-07": 175826,
+     "2026-08": -2367,
+     "2026-09": 44882,
+     "2026-10": 69010
+    },
+    "mix": {
+     "stop500": 348,
+     "step": 0,
+     "other": 720,
+     "own_stop": 36,
+     "reasons": {
+      "lock": 140,
+      "squareoff": 20,
+      "stop": 36,
+      "stop500": 348,
+      "time": 524
+     }
+    },
+    "rupee_stop_share": 0.8474
+   },
+   "R51": {
+    "trades": 1380,
+    "win": 0.4913,
+    "net": 333688,
+    "avg_win": 3052,
+    "avg_loss": 2472,
+    "worst_day": -31559,
+    "max_dd": 103292,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -22746
+    },
+    "months": {
+     "2025-10": 31637,
+     "2025-11": -8811,
+     "2025-12": 16157,
+     "2026-01": 153794,
+     "2026-02": -13804,
+     "2026-03": -2321,
+     "2026-04": -22746,
+     "2026-05": 39097,
+     "2026-06": -14362,
+     "2026-07": 116062,
+     "2026-08": 15219,
+     "2026-09": -16419,
+     "2026-10": 40186
+    },
+    "mix": {
+     "stop500": 434,
+     "step": 0,
+     "other": 946,
+     "own_stop": 52,
+     "reasons": {
+      "lock": 178,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 52,
+      "stop500": 434,
+      "time": 706
+     }
+    },
+    "rupee_stop_share": 0.8239
+   }
+  },
+  "M2@2": {
+   "LIQ": {
+    "trades": 689,
+    "win": 0.4035,
+    "net": 203999,
+    "avg_win": 3344,
+    "avg_loss": 1766,
+    "worst_day": -15311,
+    "max_dd": 134344,
+    "largest_loss": -5383,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -53926
+    },
+    "months": {
+     "2025-10": -6565,
+     "2025-11": 10802,
+     "2025-12": -6774,
+     "2026-01": 93011,
+     "2026-02": 88526,
+     "2026-03": -8072,
+     "2026-04": -53926,
+     "2026-05": -36569,
+     "2026-06": 3948,
+     "2026-07": 66612,
+     "2026-08": 5112,
+     "2026-09": 67651,
+     "2026-10": -19756
+    },
+    "mix": {
+     "stop500": 116,
+     "step": 0,
+     "other": 573,
+     "own_stop": 2,
+     "reasons": {
+      "lock": 45,
+      "missing": 2,
+      "rule_exit": 370,
+      "squareoff": 12,
+      "stop": 2,
+      "stop500": 116,
+      "time": 142
+     }
+    },
+    "rupee_stop_share": 0.9623
+   },
+   "R72": {
+    "trades": 1068,
+    "win": 0.4963,
+    "net": 514699,
+    "avg_win": 3504,
+    "avg_loss": 2496,
+    "worst_day": -43185,
+    "max_dd": 80745,
+    "largest_loss": -8084,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -11577
+    },
+    "months": {
+     "2025-10": 59409,
+     "2025-11": 11230,
+     "2025-12": 3452,
+     "2026-01": 134765,
+     "2026-02": 16781,
+     "2026-03": 3019,
+     "2026-04": 789,
+     "2026-05": -11577,
+     "2026-06": 9482,
+     "2026-07": 175826,
+     "2026-08": -2367,
+     "2026-09": 44882,
+     "2026-10": 69010
+    },
+    "mix": {
+     "stop500": 348,
+     "step": 0,
+     "other": 720,
+     "own_stop": 36,
+     "reasons": {
+      "lock": 140,
+      "squareoff": 20,
+      "stop": 36,
+      "stop500": 348,
+      "time": 524
+     }
+    },
+    "rupee_stop_share": 0.8474
+   },
+   "R51": {
+    "trades": 1380,
+    "win": 0.4913,
+    "net": 333688,
+    "avg_win": 3052,
+    "avg_loss": 2472,
+    "worst_day": -31559,
+    "max_dd": 103292,
+    "largest_loss": -16492,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -22746
+    },
+    "months": {
+     "2025-10": 31637,
+     "2025-11": -8811,
+     "2025-12": 16157,
+     "2026-01": 153794,
+     "2026-02": -13804,
+     "2026-03": -2321,
+     "2026-04": -22746,
+     "2026-05": 39097,
+     "2026-06": -14362,
+     "2026-07": 116062,
+     "2026-08": 15219,
+     "2026-09": -16419,
+     "2026-10": 40186
+    },
+    "mix": {
+     "stop500": 434,
+     "step": 0,
+     "other": 946,
+     "own_stop": 52,
+     "reasons": {
+      "lock": 178,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 52,
+      "stop500": 434,
+      "time": 706
+     }
+    },
+    "rupee_stop_share": 0.8239
+   }
+  },
+  "A@3": {
+   "LIQ": {
+    "trades": 688,
+    "win": 0.4099,
+    "net": 415755,
+    "avg_win": 5645,
+    "avg_loss": 2897,
+    "worst_day": -33486,
+    "max_dd": 175017,
+    "largest_loss": -14175,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -108688
+    },
+    "months": {
+     "2025-10": -98,
+     "2025-11": 12178,
+     "2025-12": -9170,
+     "2026-01": 143894,
+     "2026-02": 137377,
+     "2026-03": 85998,
+     "2026-04": -108688,
+     "2026-05": -22176,
+     "2026-06": 1707,
+     "2026-07": 105053,
+     "2026-08": -56,
+     "2026-09": 111354,
+     "2026-10": -41618
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 688,
+     "own_stop": 20,
+     "reasons": {
+      "missing": 2,
+      "rule_exit": 455,
+      "squareoff": 18,
+      "stop": 20,
+      "time": 193
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 2281,
+    "win": 0.4695,
+    "net": 1104831,
+    "avg_win": 5312,
+    "avg_loss": 3788,
+    "worst_day": -76355,
+    "max_dd": 242618,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2025-12",
+     "net": -197761
+    },
+    "months": {
+     "2025-10": 73588,
+     "2025-11": 40861,
+     "2025-12": -197761,
+     "2026-01": 192576,
+     "2026-02": 98081,
+     "2026-03": 275316,
+     "2026-04": -27377,
+     "2026-05": 138976,
+     "2026-06": -104488,
+     "2026-07": 210691,
+     "2026-08": 76503,
+     "2026-09": 105793,
+     "2026-10": 222071
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 2281,
+     "own_stop": 345,
+     "reasons": {
+      "lock": 30,
+      "missing": 2,
+      "squareoff": 134,
+      "stop": 345,
+      "time": 1770
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 3084,
+    "win": 0.4598,
+    "net": 946603,
+    "avg_win": 5069,
+    "avg_loss": 3746,
+    "worst_day": -85577,
+    "max_dd": 263933,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -138454
+    },
+    "months": {
+     "2025-10": 12923,
+     "2025-11": 72094,
+     "2025-12": -129380,
+     "2026-01": 251504,
+     "2026-02": -60702,
+     "2026-03": 237778,
+     "2026-04": 70983,
+     "2026-05": 111528,
+     "2026-06": -138454,
+     "2026-07": 229910,
+     "2026-08": 80084,
+     "2026-09": 16311,
+     "2026-10": 192022
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 3084,
+     "own_stop": 452,
+     "reasons": {
+      "lock": 32,
+      "missing": 2,
+      "squareoff": 128,
+      "stop": 452,
+      "time": 2470
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "V4@3": {
+   "LIQ": {
+    "trades": 688,
+    "win": 0.4244,
+    "net": 358180,
+    "avg_win": 5092,
+    "avg_loss": 2850,
+    "worst_day": -33486,
+    "max_dd": 192193,
+    "largest_loss": -14175,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -108636
+    },
+    "months": {
+     "2025-10": -9446,
+     "2025-11": 12815,
+     "2025-12": -9170,
+     "2026-01": 136231,
+     "2026-02": 125610,
+     "2026-03": 74344,
+     "2026-04": -108636,
+     "2026-05": -50847,
+     "2026-06": 3954,
+     "2026-07": 102546,
+     "2026-08": 14859,
+     "2026-09": 105207,
+     "2026-10": -39286
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 688,
+     "own_stop": 16,
+     "reasons": {
+      "lock": 46,
+      "missing": 2,
+      "rule_exit": 430,
+      "squareoff": 13,
+      "stop": 16,
+      "time": 181
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R72": {
+    "trades": 1069,
+    "win": 0.5678,
+    "net": 1080773,
+    "avg_win": 5116,
+    "avg_loss": 4383,
+    "worst_day": -72229,
+    "max_dd": 113728,
+    "largest_loss": -18887,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -41504
+    },
+    "months": {
+     "2025-10": 65261,
+     "2025-11": 42429,
+     "2025-12": 8417,
+     "2026-01": 183745,
+     "2026-02": 41348,
+     "2026-03": 183225,
+     "2026-04": 11939,
+     "2026-05": -41504,
+     "2026-06": 19095,
+     "2026-07": 283165,
+     "2026-08": 2641,
+     "2026-09": 103190,
+     "2026-10": 177822
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1069,
+     "own_stop": 137,
+     "reasons": {
+      "lock": 145,
+      "missing": 1,
+      "squareoff": 37,
+      "stop": 137,
+      "time": 749
+     }
+    },
+    "rupee_stop_share": 0.0
+   },
+   "R51": {
+    "trades": 1366,
+    "win": 0.5556,
+    "net": 887796,
+    "avg_win": 4590,
+    "avg_loss": 4276,
+    "worst_day": -63318,
+    "max_dd": 101336,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2026-06",
+     "net": -57548
+    },
+    "months": {
+     "2025-10": 7210,
+     "2025-11": 55315,
+     "2025-12": 22590,
+     "2026-01": 230963,
+     "2026-02": 15530,
+     "2026-03": 90575,
+     "2026-04": 20823,
+     "2026-05": 68027,
+     "2026-06": -57548,
+     "2026-07": 201855,
+     "2026-08": 66505,
+     "2026-09": 28215,
+     "2026-10": 137738
+    },
+    "mix": {
+     "stop500": 0,
+     "step": 0,
+     "other": 1366,
+     "own_stop": 176,
+     "reasons": {
+      "lock": 185,
+      "missing": 1,
+      "squareoff": 12,
+      "stop": 176,
+      "time": 992
+     }
+    },
+    "rupee_stop_share": 0.0
+   }
+  },
+  "M1@3": {
+   "LIQ": {
+    "trades": 689,
+    "win": 0.4093,
+    "net": 316137,
+    "avg_win": 4964,
+    "avg_loss": 2663,
+    "worst_day": -22902,
+    "max_dd": 200520,
+    "largest_loss": -8051,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -82070
+    },
+    "months": {
+     "2025-10": -9492,
+     "2025-11": 17023,
+     "2025-12": -8899,
+     "2026-01": 140906,
+     "2026-02": 134067,
+     "2026-03": -11481,
+     "2026-04": -82070,
+     "2026-05": -54189,
+     "2026-06": 6819,
+     "2026-07": 101111,
+     "2026-08": 8672,
+     "2026-09": 102391,
+     "2026-10": -28722
+    },
+    "mix": {
+     "stop500": 116,
+     "step": 0,
+     "other": 573,
+     "own_stop": 2,
+     "reasons": {
+      "lock": 45,
+      "missing": 2,
+      "rule_exit": 370,
+      "squareoff": 12,
+      "stop": 2,
+      "stop500": 116,
+      "time": 142
+     }
+    },
+    "rupee_stop_share": 0.9608
+   },
+   "R72": {
+    "trades": 1068,
+    "win": 0.5009,
+    "net": 792556,
+    "avg_win": 5233,
+    "avg_loss": 3766,
+    "worst_day": -65805,
+    "max_dd": 120707,
+    "largest_loss": -12103,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -15140
+    },
+    "months": {
+     "2025-10": 89706,
+     "2025-11": 18017,
+     "2025-12": 5754,
+     "2026-01": 203441,
+     "2026-02": 25639,
+     "2026-03": 6102,
+     "2026-04": -244,
+     "2026-05": -15140,
+     "2026-06": 15432,
+     "2026-07": 265314,
+     "2026-08": -2689,
+     "2026-09": 68715,
+     "2026-10": 112511
+    },
+    "mix": {
+     "stop500": 346,
+     "step": 0,
+     "other": 722,
+     "own_stop": 37,
+     "reasons": {
+      "lock": 140,
+      "squareoff": 20,
+      "stop": 37,
+      "stop500": 346,
+      "time": 525
+     }
+    },
+    "rupee_stop_share": 0.8436
+   },
+   "R51": {
+    "trades": 1380,
+    "win": 0.4964,
+    "net": 523165,
+    "avg_win": 4555,
+    "avg_loss": 3736,
+    "worst_day": -48297,
+    "max_dd": 157020,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -35752
+    },
+    "months": {
+     "2025-10": 47595,
+     "2025-11": -10809,
+     "2025-12": 26242,
+     "2026-01": 232573,
+     "2026-02": -19815,
+     "2026-03": -2254,
+     "2026-04": -35752,
+     "2026-05": 59046,
+     "2026-06": -20392,
+     "2026-07": 175647,
+     "2026-08": 24308,
+     "2026-09": -22601,
+     "2026-10": 69377
+    },
+    "mix": {
+     "stop500": 430,
+     "step": 0,
+     "other": 950,
+     "own_stop": 55,
+     "reasons": {
+      "lock": 178,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 55,
+      "stop500": 430,
+      "time": 707
+     }
+    },
+    "rupee_stop_share": 0.8188
+   }
+  },
+  "M2@3": {
+   "LIQ": {
+    "trades": 689,
+    "win": 0.4093,
+    "net": 316137,
+    "avg_win": 4964,
+    "avg_loss": 2663,
+    "worst_day": -22902,
+    "max_dd": 200520,
+    "largest_loss": -8051,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -82070
+    },
+    "months": {
+     "2025-10": -9492,
+     "2025-11": 17023,
+     "2025-12": -8899,
+     "2026-01": 140906,
+     "2026-02": 134067,
+     "2026-03": -11481,
+     "2026-04": -82070,
+     "2026-05": -54189,
+     "2026-06": 6819,
+     "2026-07": 101111,
+     "2026-08": 8672,
+     "2026-09": 102391,
+     "2026-10": -28722
+    },
+    "mix": {
+     "stop500": 116,
+     "step": 0,
+     "other": 573,
+     "own_stop": 2,
+     "reasons": {
+      "lock": 45,
+      "missing": 2,
+      "rule_exit": 370,
+      "squareoff": 12,
+      "stop": 2,
+      "stop500": 116,
+      "time": 142
+     }
+    },
+    "rupee_stop_share": 0.9608
+   },
+   "R72": {
+    "trades": 1068,
+    "win": 0.5009,
+    "net": 792556,
+    "avg_win": 5233,
+    "avg_loss": 3766,
+    "worst_day": -65805,
+    "max_dd": 120707,
+    "largest_loss": -12103,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -15140
+    },
+    "months": {
+     "2025-10": 89706,
+     "2025-11": 18017,
+     "2025-12": 5754,
+     "2026-01": 203441,
+     "2026-02": 25639,
+     "2026-03": 6102,
+     "2026-04": -244,
+     "2026-05": -15140,
+     "2026-06": 15432,
+     "2026-07": 265314,
+     "2026-08": -2689,
+     "2026-09": 68715,
+     "2026-10": 112511
+    },
+    "mix": {
+     "stop500": 346,
+     "step": 0,
+     "other": 722,
+     "own_stop": 37,
+     "reasons": {
+      "lock": 140,
+      "squareoff": 20,
+      "stop": 37,
+      "stop500": 346,
+      "time": 525
+     }
+    },
+    "rupee_stop_share": 0.8436
+   },
+   "R51": {
+    "trades": 1380,
+    "win": 0.4964,
+    "net": 523165,
+    "avg_win": 4555,
+    "avg_loss": 3736,
+    "worst_day": -48297,
+    "max_dd": 157020,
+    "largest_loss": -24714,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -35752
+    },
+    "months": {
+     "2025-10": 47595,
+     "2025-11": -10809,
+     "2025-12": 26242,
+     "2026-01": 232573,
+     "2026-02": -19815,
+     "2026-03": -2254,
+     "2026-04": -35752,
+     "2026-05": 59046,
+     "2026-06": -20392,
+     "2026-07": 175647,
+     "2026-08": 24308,
+     "2026-09": -22601,
+     "2026-10": 69377
+    },
+    "mix": {
+     "stop500": 430,
+     "step": 0,
+     "other": 950,
+     "own_stop": 55,
+     "reasons": {
+      "lock": 178,
+      "missing": 1,
+      "squareoff": 9,
+      "stop": 55,
+      "stop500": 430,
+      "time": 707
+     }
+    },
+    "rupee_stop_share": 0.8188
+   }
+  }
+ },
+ "cap_a_lot": 1500.0
+}

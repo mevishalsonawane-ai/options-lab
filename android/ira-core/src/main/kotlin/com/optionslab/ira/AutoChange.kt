@@ -689,8 +689,14 @@ object AutoChange {
      * lowering risk, logged so the timeline shows it; its Undo switches it back on (Boss's choice; paper only, no PIN).
      */
     fun passedArmOff(source: String, label: String, why: String): Change = Change(Kind.PAPER_ARM_ON, PAPER_ARM + source, ON, SWITCHED_OFF,
-        "its forward-test bar, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
+        "$FORWARD_BAR_WORDS, set in advance: $why - so it switched itself off (that only lowers risk); switching it back on is your choice",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG, -1), Risk.LOWER, Scope.PAPER, what = "$label's switch (paper)")
+
+    /** How [passedArmOff]'s reason starts ([byForwardBar]). */
+    const val FORWARD_BAR_WORDS = "its forward-test bar"
+
+    /** Whether [c] is an arm switched off by its own forward-test bar ([passedArmOff]), not by Boss. */
+    fun byForwardBar(c: Change): Boolean = c.kind == Kind.PAPER_ARM_ON && c.to == SWITCHED_OFF && c.reason.startsWith(FORWARD_BAR_WORDS)
 
     /**
      * 25 Oct (app audit; 23 Oct: R51, R52 and Solo 2.0 were switched off between 09:49 and 10:36 and the change timeline showed only
@@ -943,22 +949,25 @@ object AutoChange {
     const val STEP_TRAIL_TARGET = "exit:step_trail_500"
 
     /**
-     * 15 Nov 2026 (Boss: "if the profit moves to 1k, make stop loss 500 ... keep a 500 rs gap on every 500 rs gain. And when a trade is bought
-     * the stop loss should be only 500 rs"; per lot; CLAUDE.md's fifth exception): every new trade of Liquidity 15+5, R51 Donchian 20 and R72
-     * Breadth Donchian starts with its stop at -₹500 a lot (where tighter than the arm's own) and trails it from +₹1,000 a lot, on paper and
-     * live - switched [on], or off again. Failed R176's gates. On only tightens stops (risk down); off puts the arms' own wider exits back (risk up,
+     * 15 Nov 2026, third version: the target of the breakeven at +10% (V4) that replaced the ₹500 step trail ([stepTrail]), a target of its
+     * own so the update is logged once in the timeline; [STEP_TRAIL_TARGET]'s older entries still undo the same switch ([superseded]).
+     */
+    const val BE10_TARGET = "exit:breakeven_10"
+
+    /**
+     * 15 Nov 2026, third version (Boss: "Switch to + picker + breakeven at +10% (V4)"; CLAUDE.md's fifth exception; it replaced the
+     * morning's ₹500 step trail): every new trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian keeps its arm's own stop and
+     * moves it to breakeven once the option is 10% above the fill, on paper and live - switched [on], or off again. Failed R179's gates. On only tightens stops (risk down); off puts the arms' own wider exits back (risk up,
      * live scope: its Undo takes the PIN).
      */
-    fun stepTrail(on: Boolean): Change = Change(Kind.PAPER_FILTER, STEP_TRAIL_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
-        if (on) "your ask (15 Nov, \"when a trade is bought the stop loss should be only 500 rs ... keep a 500 rs gap on every 500 rs gain\"): " +
-            "each new trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian starts with its stop at -₹500 a lot (only where tighter " +
-            "than the arm's own stop); once its best open P&L reaches +₹1,000 a lot the stop moves to +₹500 a lot and rises ₹500 a lot for " +
-            "every further ₹500 a lot, never down; paper and live; the arms' own exits stay and the first one wins. Failed gates, Boss's " +
-            "exception: R176 replayed it on one year (about 6,300 trades at 1 lot): all three arms went from ₹6.37 L on their own rules to " +
-            "-₹3.23 L with it; R152, R167 and R172 also found tight rupee stops and early profit locks hurt these arms"
-        else "Liquidity 15+5, R51 and R72's new trades are back on their own exits (no ₹500 stop or step trail; their own wider stops, live too)",
+    fun stepTrail(on: Boolean): Change = Change(Kind.PAPER_FILTER, BE10_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (15 Nov, \"Switch to + picker + breakeven at +10% (V4)\"): each new trade of Liquidity 15+5, R51 Donchian 20 and " +
+            "R72 Breadth Donchian keeps its arm's own stop; once the option is 10% above the fill the stop moves to breakeven (the fill plus " +
+            "the charges), never down; R72 / R51 keep the R151 picker; paper and live; the arms' own exits stay and the first one wins. It " +
+            "replaced the ₹500 step trail. Failed gates, Boss's exception: ${com.optionslab.engine.orb.StepTrail.RECORD}"
+        else "Liquidity 15+5, R51 and R72's new trades are back on their own exits (no breakeven at +10%; live too)",
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
-        what = "₹500 step trail per lot on Liquidity, R51 and R72, paper and live (failed gates, Boss's exception)")
+        what = "breakeven at +10% on Liquidity, R51 and R72, paper and live (failed gates, Boss's exception)")
 
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"
@@ -1446,6 +1455,10 @@ object AutoChange {
             if (healthOnly && riskOf(c) != Risk.LOWER) { held += c to "the mid-day pass only lowers risk"; continue }
             val why = blocked(book, c.key, day)
             if (why != null) { held += c to why; continue }
+            // 15 Nov (Boss's diagnostics: drift.z_crit stepped 3.2 -> 2.8 on 2, 5, 9 and 12 Nov on the same 32 trades): the self-review's
+            // threshold steps again only on NEW evidence - more trades than its last step for the same review had.
+            val stale = staleDrift(book, c, day)
+            if (stale != null) { held += c to stale; continue }
             if (d == Decision.AUTO) {
                 when {
                     autos >= MAX_AUTO_DAY -> held += c to "today's $MAX_AUTO_DAY changes are made"
@@ -1457,6 +1470,20 @@ object AutoChange {
             }
         }
         return Plan(auto, ask, held, never)
+    }
+
+    /** [staleDrift]: at the review window's cap, a step may follow the last one after this many days. */
+    const val DRIFT_FULL_WINDOW_DAYS = 14L
+
+    /** Why [c], a step of the self-review's threshold, has no new evidence since its last step for the same review; null: it has (or is not one). */
+    internal fun staleDrift(book: Book, c: Change, day: LocalDate): String? {
+        if (c.kind != Kind.DRIFT_THRESHOLD || c.lessonId?.startsWith("drift:") != true) return null
+        val last = book.entries.lastOrNull { it.change.kind == Kind.DRIFT_THRESHOLD && it.change.lessonId == c.lessonId &&
+            (it.status == Status.PROBATION || it.status == Status.KEPT || it.status == Status.REVERT_ASKED) } ?: return null
+        // Review: the review's window is capped ([DriftReview.WINDOWS]: 50 trades), so at the cap the count cannot grow - there a
+        // step counts as new evidence again once [DRIFT_FULL_WINDOW_DAYS] have passed (the window has moved on).
+        if (c.evidence.n >= DriftReview.WINDOWS.max() && java.time.temporal.ChronoUnit.DAYS.between(last.day, day) >= DRIFT_FULL_WINDOW_DAYS) return null
+        return if (last.change.evidence.n >= c.evidence.n) "no new evidence since the last step (${last.change.evidence.n} trades then, ${c.evidence.n} now)" else null
     }
 
     private fun nextId(book: Book, day: LocalDate, k: Int = 0): String = "$day#${book.entries.size + k + 1}"
@@ -1526,7 +1553,9 @@ object AutoChange {
         if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE,
                 Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT, Kind.LIQ_BREAKEVEN, Kind.IDEA_RULE, Kind.DAY_STOP)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
-        return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && it.change.target == e.change.target }
+        // 15 Nov: the rule's first version (₹500 step trail) and this one (breakeven at +10%) are one switch.
+        fun same(t: String) = if (t == STEP_TRAIL_TARGET) BE10_TARGET else t
+        return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && same(it.change.target) == same(e.change.target) }
     }
 
     /** What Boss is told when he taps Undo on a [superseded] flip of his trail switch. */

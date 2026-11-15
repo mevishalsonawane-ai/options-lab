@@ -1,0 +1,40 @@
+id: r180-manual-book2-ob-pullback
+title: 'R180 outside build manual, Book 2 "R132 S3-V1-E3 Order-Block Pullback" (the manual''s rule, not the repo''s R132 S3-V1-E3):
+  rebuilt exactly as written on real option prices'
+family: patterns-indicators
+date: '2026-11-15'
+doc: research/hunt/r180_dual_book_check/results/report.md
+hypothesis: An outside PDF build manual sent to Boss claims Book 2 "R132 S3-V1-E3 Order-Block Pullback" (the manual's rule,
+  not the repo's R132 S3-V1-E3) made 271 trades, 59.8% wins, Rs 43,924 at 1 lot (design 206 / 59.2% / Rs 29,336; holdout 65
+  / 61.5% / Rs 14,589) on our real 1-minute option prices. Does it reproduce, and does it pass the repo's gates?
+data_version: Drive lake gdrive:IraAlgo-data-lake (index_1m, options_rolling_1m WEEK), ending 19 Oct 2026; R51 Amendment A
+  clean stores rebuilt for R180 from 1 Nov 2024 (clean_r180)
+period:
+  design: 2024-11-04..2026-03-31 (the manual's design)
+  holdout: 2026-04-01..2026-10-19 (the manual's holdout; read by R51-R176 before, not clean)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s 5-minute / 1-minute bars (underlying); ATM straddle vs 09:20 as an option-chain filter; no
+  option-chart signal'
+model_or_rule: 5-min fractal swings (k = 2), a displacement bar (body > 1.5 x the 20-bar median) breaking the last swing,
+  its order block (last opposite candle within 5 bars, valid 60 min); 1-min pullback into the zone closing in the direction
+  12:15-14:45 with the ATM straddle < -5% vs 09:20; index stop past the far edge + 0.1 ATR, 60% rupee lock after +Rs 1,000,
+  else 15:19; one position at a time
+settings: research/hunt/r180_dual_book_check/r180cfg.py; PREREG.md section 2 (every ambiguity and choice)
+prereg: research/hunt/r180_dual_book_check/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Ours: 863 / 33.5% / -Rs 71,838 (manual 271 / 59.8% / Rs 43,924); design 633 / 32.4% / -Rs 43,448; holdout 230
+    / 36.5% / -Rs 28,390; 2x slippage -Rs 86,442; avg win Rs 1,136 / loss -Rs 697; worst month -Rs 20,079; max DD -Rs 94,733.
+    Repo fill (next-minute open): 868 / 32.8% / -Rs 89,973. Random-entry twin p 0.469 (twin mean -Rs 74,148), BH q 1.00 (m
+    = 4,051). Does not reproduce; fails: design_pos, hold_pos, slip2_pos, acct_dd, acct_month, twin_p, bh_q.'
+  costs: Costs('dated') on both orders, R17 liq fills (stop sales x0.999 - 2x half-spread, gaps at the open), 2x slippage
+    = SLIP2; 1 lot by the lot size in force
+holdout_read: true
+verdict: rejected
+notes: An outside document's claim, rebuilt as written; not reproduced. The manual reuses repo study names (R72 X1, R132 S3-V1-E3)
+  for different rules, and its Book 2 per-index rows add to 425 trades, not 271. Nothing in the app changes.

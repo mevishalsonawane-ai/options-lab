@@ -331,6 +331,9 @@ object Paper {
             volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = System.currentTimeMillis() to it }
     }
 
+    /** 15 Nov: the start (epoch seconds) of the newest candle [quote] last read for [symbol]; null: none. Memory only ([com.optionslab.ira.PriceNow]). */
+    fun lastCandleSec(symbol: String): Long? = candleBars[symbol]?.second?.lastOrNull()?.epochSecond
+
     /** Today's 1-minute candles per symbol as [quote] last read them (when, bars): the minutes' highs and lows. */
     private val candleBars = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<Upstox.Bar>>>()
 
@@ -549,15 +552,70 @@ object Paper {
      * the order path. Null when the stream has never had the contract.
      */
     data class BookNow(val last: Double?, val bid: Double?, val ask: Double?, val bidQty: Long?, val askQty: Long?,
-                       val bid5: Long?, val ask5: Long?, val ageMs: Long)
+                       val bid5: Long?, val ask5: Long?, val ageMs: Long,
+                       /** 15 Nov: when [last] traded (epoch seconds; null: the packet carries none) - [com.optionslab.ira.PriceNow]. */
+                       val lastTradeSec: Long? = null)
 
     fun bookNow(c: Contract, nowMs: Long = System.currentTimeMillis()): BookNow? = runCatching {
         val token = kiteTokens[c.symbol]?.takeIf { it > 0 } ?: return null
         val seen = KiteStream.seen(token) ?: return null
         val t = seen.tick
         BookNow(t.last.takeIf { it > 0 }, t.bid?.takeIf { it > 0 }, t.ask?.takeIf { it > 0 }, t.bidQty, t.askQty,
-            t.depth?.bidQty, t.depth?.askQty, (nowMs - seen.at).coerceAtLeast(0L))
+            t.depth?.bidQty, t.depth?.askQty, (nowMs - seen.at).coerceAtLeast(0L), t.lastTradeTime?.takeIf { it > 0 })
     }.getOrNull()
+
+    /**
+     * 15 Nov ([com.optionslab.ira.PriceNow]): what [c], held since [since], is worth now for judging its stop, lock or target - from
+     * the stream's last packet alone (at most [maxAgeMs] old): its last price when that traded in the entry minute or later (and is
+     * not far outside its book), else its book's bid when the book is sane; null: no packet, or neither. Memory only (the tokens
+     * already looked up; with [lookup] also the day's list as the arms' own stream reads find it): never the vault or the network.
+     */
+    fun heldPriceNow(c: Contract, since: java.time.LocalDateTime, maxAgeMs: Long = Long.MAX_VALUE, nowMs: Long = System.currentTimeMillis(),
+                     lookup: Boolean = false): Double? = runCatching {
+        val t = packetOf(c, maxAgeMs, nowMs, lookup) ?: return null
+        val sinceSec = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        val tt = t.lastTradeTime?.takeIf { it > 0 }
+        val pn = com.optionslab.ira.PriceNow
+        if (pn.lastCounts(t.last, tt, sinceSec) && !pn.farFromBook(t.last, tt, t.bid, t.ask)) t.last else pn.bookBid(t.bid, t.ask)
+    }.getOrNull()
+
+    /** The stream's last packet of [c] when at most [maxAgeMs] old (memory only; keeps the contract followed); null: none. */
+    private fun packetOf(c: Contract, maxAgeMs: Long, nowMs: Long, lookup: Boolean = false): com.optionslab.engine.KiteTicks.Tick? {
+        val token = kiteTokens[c.symbol]?.takeIf { it > 0 }
+            ?: (if (lookup && c.exchange == "NFO") Broker.cachedInstruments()?.let { Broker.find(it, c.underlying, c.expiry, c.strike, c.right)?.token } else null)?.takeIf { it > 0 }
+            ?: return null
+        runCatching { KiteStream.touch(listOf(token)) }
+        val seen = KiteStream.seen(token) ?: return null
+        return seen.tick.takeIf { nowMs - seen.at in 0..maxAgeMs }
+    }
+
+    /**
+     * 15 Nov: [heldPriceNow] when the stream has a packet of [c] (nothing is read then), else a quote read as before and judged the
+     * same way ([com.optionslab.ira.PriceNow.ofQuote]: a sane book's bid, or a candle close from the entry minute on); null: no price now.
+     */
+    suspend fun priceNowFor(c: Contract, since: java.time.LocalDateTime, maxAgeMs: Long = Long.MAX_VALUE): Double? {
+        if (runCatching { packetOf(c, maxAgeMs, System.currentTimeMillis()) }.getOrNull() != null) return heldPriceNow(c, since, maxAgeMs)
+        val q = runCatching { quote(c) }.getOrNull() ?: return null
+        val sinceSec = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        return com.optionslab.ira.PriceNow.ofQuote(q.ltp, q.noLast, q.bid, q.ask, null, lastCandleSec(c.symbol), sinceSec)
+    }
+
+    /**
+     * 15 Nov: whether a resting CLOSING stop of [c], resting since [since], must wait this pass because the price [q] it would be
+     * judged on is not a price now: a stray bid (no last price and no real two-sided book, [com.optionslab.ira.PriceNow.bookBid]), or the stream's last price repeated from a
+     * trade before the stop rested. An exchange stop triggers on trades only. Memory only.
+     */
+    private fun stopMustWait(c: Contract, q: Quote, since: java.time.LocalDateTime, sell: Boolean, trigger: Double?): Boolean = runCatching {
+        if (c.isMcx) return false
+        // Review: never held when the book's far side is itself through the trigger (a sale: even the ask is at or under it).
+        if (trigger != null && (if (sell) q.ask > 0 && q.ask <= trigger else q.bid > 0 && q.bid >= trigger)) return false
+        if (q.noLast) return com.optionslab.ira.PriceNow.bookBid(q.bid, q.ask) == null
+        val t = packetOf(c, 5_000L, System.currentTimeMillis()) ?: return false
+        if (kotlin.math.abs(t.last - q.ltp) > 1e-9) return false          // not the stream's last price (a candle, Zerodha's quote)
+        val tt = t.lastTradeTime?.takeIf { it > 0 }
+        val sinceSec = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        !com.optionslab.ira.PriceNow.lastCounts(t.last, tt, sinceSec) || com.optionslab.ira.PriceNow.farFromBook(t.last, tt, t.bid, t.ask)
+    }.getOrDefault(false)
 
     /** A paper fill's quote may be this old at most when a newer one can be had ([place], 16 Oct). */
     const val FILL_FRESH_MS = 2_000L
@@ -972,6 +1030,14 @@ object Paper {
             val bq = out[Sandbox.key(o.symbol, c.exchange)]?.takeIf { it.noLast } ?: continue
             if (opens(o.symbol, o.action) && bookEntryRefusal(c, bq) != null) hold += o.orderId
         }
+        // 15 Nov (Boss: "Yes fix those too"): a resting stop that closes a position waits while its only price is not a price now
+        // ([stopMustWait]) - judged again on the next pass, never filled on a stray bid or a trade from before it rested.
+        for (o in working) {
+            if (o.status != "trigger pending" || opens(o.symbol, o.action)) continue
+            val c = book().contracts[o.symbol] ?: continue
+            val oq = out[Sandbox.key(o.symbol, c.exchange)] ?: continue
+            if (stopMustWait(c, oq, o.updateTimestamp, o.action.equals("SELL", true), o.triggerPrice?.toDouble())) hold += o.orderId
+        }
         return ExitPrices(out, hold, notes)
     }
 
@@ -983,7 +1049,7 @@ object Paper {
         if (p.notes.isEmpty()) return
         events.filterIsInstance<SandboxEvent.Fill>().filter { it.symbol in p.notes }
             .forEach { f -> runCatching { Diag.record("paper", "Stale price: " + p.notes.getValue(f.symbol) + "; filled @ ${"%.2f".format(Locale.ENGLISH, f.price)}") } }
-        p.hold.filter { heldNoted.add(it) }.forEach { id -> runCatching { Diag.record("paper", "Stale price: entry order $id waits for a fresh price (no stream, candle over a minute old)") } }
+        p.hold.filter { heldNoted.add(it) }.forEach { id -> runCatching { Diag.record("paper", "Stale price: order $id waits for a real price (an entry: no stream and a candle over a minute old; a stop: no trade since it rested and no real book)") } }
     }
 
     /** The diagnostics line: the bid/ask spread paper fills paid this session (Honest paper, 08 Oct). */
@@ -1386,6 +1452,7 @@ object Paper {
             for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && (it.action == "SELL" || it.action == "BUY") }) {
                 val c = b.contracts[o.symbol] ?: continue
                 if (q[Sandbox.key(o.symbol, o.exchange)] == null) continue          // only on a pass that read this contract's price
+                if (o.orderId in fill.hold) continue                                // 15 Nov: no price now for it ([stopMustWait])
                 val trig = o.triggerPrice?.toDouble() ?: continue
                 val px = runCatching { if (o.action == "BUY") restingBuyFill(c, o.updateTimestamp, trig) else restingFill(c, o.updateTimestamp, trig) }.getOrNull() ?: continue
                 e.fillRestingStop(s, o.orderId, px, now, q[Sandbox.key(o.symbol, o.exchange)]).also { if (it.result.ok) { s = it.state; events += it.events } }
@@ -1447,6 +1514,7 @@ object Paper {
             var s = b.state
             for (o in s.orders.filter { it.status == "trigger pending" && it.priceType == "SL-M" && it.action == "SELL" }) {
                 val fq = fill.quotes[Sandbox.key(o.symbol, o.exchange)] ?: continue
+                if (o.orderId in fill.hold) continue                                // 15 Nov: no price now for it ([stopMustWait])
                 val px = fq.ltp
                 val trig = o.triggerPrice?.toDouble() ?: continue
                 if (!com.optionslab.engine.risk.MissedLock.missed(px, trig)) continue

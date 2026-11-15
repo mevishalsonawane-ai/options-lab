@@ -970,11 +970,12 @@ object NtfyArm {
         if (!now.isBefore(sq) || p.day.isBefore(now.toLocalDate())) return sellRest(p, c, "square-off")
         // 26 Oct (IraThinker review): the source rule's hold is over (mom60: 60 minutes) - out at full cadence, like the stop.
         p.exitAt?.let { if (!now.isBefore(it)) return sellRest(p, c, "time exit (the source rule's hold)") }
-        val ltp = runCatching { Paper.bookNow(c)?.last }.getOrNull()?.takeIf { it > 0 } ?: runCatching { Paper.quote(c)?.ltp }.getOrNull() ?: return p
+        // 15 Nov: only a price traded since the entry, or a real book's bid; with none the stop is still put back below (review).
+        val ltp = Paper.priceNowFor(c, p.entryTime)
         // No stop resting in the paper book: the arm checks the stop itself - through it, sold now - and puts the SL-M back while
         // above it; never a position riding to the square-off without a stop.
         if (!stopResting(p.stopOrderId)) {
-            if (ltp <= p.stop) return sellRest(p, c, if (p.halfDone) "stop at cost" else if (p.ourStop) "our stop" else "stop")
+            if (ltp != null && ltp <= p.stop) return sellRest(p, c, if (p.halfDone) "stop at cost" else if (p.ourStop) "our stop" else "stop")
             val lots = ((p.qty - p.soldQty) / c.lotSize.coerceAtLeast(1)).coerceAtLeast(1)
             // Not while a sale already works for the symbol: a stop put in beside it could open a short on a flat book.
             val again = if (closingWorks(p.symbol)) null else runCatching { Paper.place(c, "SELL", lots, "SL-M", "MIS", null, p.stop) }.getOrNull()?.takeIf { it.ok }?.orderId
@@ -983,7 +984,7 @@ object NtfyArm {
         }
         val rule = Exit.of(p.exitRule)
         val level = if (p.halfDone) p.lastTarget else p.target
-        if (level == null || ltp < level) return p
+        if (ltp == null || level == null || ltp < level) return p
         if (rule == Exit.HALF_COST && !p.halfDone) {
             // T1: half sold (when there is a half to sell), the stop moved to cost for the rest.
             val half = NtfyRules.halfLots(p.lots)

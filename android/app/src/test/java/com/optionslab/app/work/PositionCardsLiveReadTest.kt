@@ -83,6 +83,19 @@ class PositionCardsLiveReadTest : RobolectricTest() {
         assertFalse("nothing was ever read: nothing to keep", PositionCards.anyOpen)
     }
 
+    /** 15 Nov (CI, BatteryAuditTest): the tests' reset forgets the open cards and the last Zerodha book, as a new process. */
+    @Test fun theTestResetForgetsTheOpenCardsAndTheLastBook() {
+        kite.position(ce, 75, 100.0)
+        refresh()
+        assertTrue(PositionCards.anyOpen)
+        PositionCards.resetForTest()
+        assertFalse("nothing open after the reset", PositionCards.anyOpen)
+        // A failed read right after: no earlier book is kept to call it open.
+        kite.down += "/portfolio/positions"
+        refresh()
+        assertFalse("the last book was forgotten too", PositionCards.anyOpen)
+    }
+
     @Test fun inPaperModeNoLiveCardIsKept() {
         kite.position(ce, 75, 100.0)
         refresh()

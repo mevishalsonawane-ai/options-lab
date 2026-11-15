@@ -126,12 +126,15 @@ def exits(arm: str):
 
 
 ENTRY = {"v": K.STEP}                                   # the entry stop a lot (Amendment B sets Rs 1,000)
+GAP = {"v": K.STEP}                                     # the gap under each step a lot (R177 Amendment B: Rs 1,000)
+STEPCFG = {"step": K.STEP, "inc": -1.0, "trig": -1.0}   # R177 Amendment C: step 1,000, inc 500, trig 1,000 a lot
 
 
 def priced(arm: str, us: list, on: bool, lots: int) -> list:
     M = mods()
     ex = exits(arm)
-    return [M["Z"].price(key[0], M["r51data"].load(key[0])[key[1]], cands, ex, on, lots, ENTRY["v"])
+    return [M["Z"].price(key[0], M["r51data"].load(key[0])[key[1]], cands, ex, on, lots, ENTRY["v"],
+                          GAP["v"], STEPCFG["step"], STEPCFG["inc"], STEPCFG["trig"])
             for key, cands, _, _ in us]
 
 

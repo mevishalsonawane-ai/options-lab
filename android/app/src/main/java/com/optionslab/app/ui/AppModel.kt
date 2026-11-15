@@ -1061,7 +1061,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      *    are cancelled, the cancels confirmed, and the leg goes as reviewed.
      * A protection's day GTT on the contract is deleted first. null: nothing done (the check that follows says why).
      */
-    private suspend fun takeOverLeg(legs: List<com.optionslab.engine.Kite.Order>, i: Int): Took? {
+    private suspend fun takeOverLeg(legs: List<com.optionslab.engine.Kite.Order>, i: Int, taken: MutableList<String>? = null): Took? {
         val b = com.optionslab.app.data.Broker
         val o = legs[i]
         if (o.product == "CNC") return null
@@ -1075,6 +1075,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val key = "${o.exchange}:${o.tradingSymbol}"
         com.optionslab.app.data.ArmLive.handsOff(o.exchange, o.tradingSymbol)
         com.optionslab.app.data.Protections.dayGttHint[key].orEmpty().forEach { id ->
+            // 15 Nov: told to the protections first, so a GTT deleted for an exit that then does not go is placed again ([Protections.noteTakenOver]).
+            runCatching { com.optionslab.app.data.Protections.noteTakenOver(listOf("gtt:$id")) }
+            taken?.add("gtt:$id")
             if (runCatching { b.deleteGtt(id) }.isSuccess) runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: its protection's GTT $id deleted first (you, the exit)") }
         }
         fun resting(rows: List<com.optionslab.app.data.Broker.OrderRow>) = rows.filter { it.working && it.symbol == o.tradingSymbol && it.exchange == o.exchange &&
@@ -1096,9 +1099,27 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 if (m.isSuccess) return Took.Exit(r.id, px)
             }
         }
+        // 15 Nov (Boss's diagnostics, 6 Nov: a protection's stop cancelled for his exit stayed gone when the sale did not go): the
+        // protections are told these are the app's own cancels for this exit, so a stop of theirs found cancelled while the position
+        // is still held (the exit refused, failed or part filled) is placed again once the exit is done ([Protections.noteTakenOver]),
+        // never ended as his choice. The arms' own stops are rested again by their watch as before, once the contract is handed back.
+        runCatching { com.optionslab.app.data.Protections.noteTakenOver(rest.map { it.id }) }
+        taken?.addAll(rest.map { it.id })
         for (r in rest) runCatching { b.cancel(r.id, r.variety) }
         // The cancels confirmed (or the check that follows sees what still works and says so).
-        repeat(10) { if (resting(runCatching { b.orders() }.getOrDefault(emptyList())).none { r -> rest.any { it.id == r.id } }) return Took.Cleared; kotlinx.coroutines.delay(300) }
+        // 15 Nov (Boss's diagnostics, 6 Nov: a stop cancelled and about 11 minutes with none at Zerodha): a FAILED read of the order
+        // book is not a confirmation - only a book that was read and no longer shows them is. Not confirmed after the tries: the check
+        // that follows reads the book again and refuses the leg with what still works.
+        // (Review: bounded - two failed reads in a row end the wait, so a dead connection never holds the exit for long.)
+        var failed = 0
+        for (k in 0 until 10) {
+            val rows = runCatching { b.orders() }.getOrNull()
+            if (rows != null && resting(rows).none { r -> rest.any { it.id == r.id } }) return Took.Cleared
+            failed = if (rows == null) failed + 1 else 0
+            if (failed >= 2) break
+            kotlinx.coroutines.delay(300)
+        }
+        runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: the cancel of its resting exits could not be confirmed (the order book did not answer); checked again before the leg goes") }
         return Took.Cleared
     }
 
@@ -1625,6 +1646,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val b = com.optionslab.app.data.Broker
             val fills = ArrayList(before)
+            // 15 Nov, review: the exits taken over for this exit ([takeOverLeg]); once every leg filled in full they are never put back.
+            val taken = ArrayList<String>()
             try {
                 // The device check and (for exits) the fresh read of the positions run side by side: both must pass before anything is sent.
                 val (bad, stale) = kotlinx.coroutines.coroutineScope {
@@ -1644,7 +1667,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     sending.value = Load.Busy("Leg ${i + 1} of ${cur.legs.size}: ${leg.side} ${leg.tradingSymbol}")
                     val done = if (i > start) "Legs ${start + 1} to $i went. " else ""
                     if (takeOver) {
-                        val took = takeOverLeg(cur.legs, i)
+                        val took = takeOverLeg(cur.legs, i, taken)
                         if (took is Took.Exit) {
                             // The resting exit turned into this leg's exit: its fill is the leg's (no second order).
                             val f = runCatching { b.awaitOrder(took.id) }.getOrElse { e -> com.optionslab.app.data.Broker.Fill(took.id, "UNKNOWN", 0.0, 0, e.message ?: "status not confirmed") }
@@ -1687,7 +1710,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     if (cur.exit && f.filled == 0 && f.status == "REJECTED" && exitRefusedForMargin(f.message)) {
                         runCatching { com.optionslab.app.data.Diag.record("orders", "exit ${leg.tradingSymbol}: Zerodha refused it for margin (an exit rested on it); its resting exits taken over, sent again (you, the exit)") }
                         // (6 Nov review: from this slice on, so a later freeze slice is the contract's first and its resting exits are taken.)
-                        when (val took = runCatching { takeOverLeg(cur.legs.drop(i), 0) }.getOrNull()) {
+                        when (val took = runCatching { takeOverLeg(cur.legs.drop(i), 0, taken) }.getOrNull()) {
                             is Took.Exit -> {
                                 launch { runCatching { com.optionslab.app.data.Strategies.tagOwner("kite:${took.id}", cur.source) } }
                                 f = runCatching { b.awaitOrder(took.id) }.getOrElse { e -> com.optionslab.app.data.Broker.Fill(took.id, "UNKNOWN", 0.0, 0, e.message ?: "status not confirmed") }
@@ -1738,6 +1761,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
                 stuck.value = null
+                // 15 Nov, review: every leg filled in full: the stops taken over for it wait while Zerodha's positions may trail the
+                // fill, then come back only if the position is still held ([com.optionslab.app.data.Protections.exitFilledFor]).
+                // Review (F1): with the exit's own orders, so a stop is put back only once Zerodha's order book shows them filled
+                // (the stream told this app first): until then the lag guard would have no fill to count.
+                if (taken.isNotEmpty()) runCatching { com.optionslab.app.data.Protections.exitFilledFor(taken, fills.associate { it.orderId to it.filled }) }
                 // 18 Oct, review: every leg filled, so it is shown as filled now. The steps after (the ledger, the MCX watch, the
                 // bracket's exits) each fail on their own and are said as "Filled, but ..." - never "Not sent", which could
                 // lead Boss to send the same live orders again.

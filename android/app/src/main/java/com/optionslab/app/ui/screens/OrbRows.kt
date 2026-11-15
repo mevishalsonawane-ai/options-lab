@@ -369,7 +369,7 @@ internal fun orbExplanation(a: OrbArms.ArmView, view: OrbArms.View): List<String
     when {
         a.arm.liquidity -> {
             out += LIQ_DESCRIPTION + "."
-            // 15 Nov (Boss's exception, CLAUDE.md): the ₹500 step trail on its new trades, when on (Bot settings).
+            // 15 Nov (Boss's exception, CLAUDE.md): the breakeven rule on its new trades, when on (Bot settings).
             stepTrailLine(src, com.optionslab.app.data.StepTrailExits.isOn())?.let { out += it }
             if (a.armed && a.status.isNotBlank()) out += a.status
             a.lots?.let { out += com.optionslab.engine.orb.LiquidityLots.line(it, a.lotSizes) }

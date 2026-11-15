@@ -103,7 +103,8 @@ class BatteryAuditTest : RobolectricTest() {
     @Test fun nothingHeldTheAnalysisRestsOnALowBattery() = runBlocking {
         at(day, "11:00")
         booksRead()
-        assertFalse(HeldNow.any(mcxLive = true))
+        // 15 Nov (CI): the held book named when it fails.
+        assertFalse(com.optionslab.ira.Held.line(HeldNow.sources()), HeldNow.any(mcxLive = true))
         phone(pct = 25, charging = false, saver = false)
         assertEquals(AnalysisRest.Pace.REST, Battery.analysisPace(context, false))
         assertNull("the Candle agent rests", CandleAgentHost.delayMs(context))

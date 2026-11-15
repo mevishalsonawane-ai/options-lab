@@ -109,11 +109,14 @@ object WeakLink {
     private fun held(t: Trade): Long = Duration.between(t.entryTime, t.exitTime).toMinutes()
 
     private const val STOP_500 = com.optionslab.engine.orb.StepTrail.WHY_STOP
-    private const val STEP_TRAIL = com.optionslab.engine.orb.StepTrail.WHY_TRAIL
+    private const val STEP_TRAIL = com.optionslab.engine.orb.StepTrail.OLD_WHY_TRAIL
+    private const val BREAKEVEN = com.optionslab.engine.orb.StepTrail.WHY_TRAIL
 
     private val EXITS = listOf(
-        // 15 Nov: the ₹500 step trail's (Boss's exception) count as a stop (its entry's ₹500 a lot) and a profit lock (its raised stop).
-        "at the stop" to setOf("stop", STOP_500), "at the target" to setOf("target"), "at the profit lock" to setOf("profit_lock", STEP_TRAIL),
+        // 15 Nov: Boss's exception's exits count as a stop (the morning's ₹500 on older records) and a profit lock (the breakeven at
+        // +10%; the morning's step trail).
+        "at the stop" to setOf("stop", STOP_500), "at the target" to setOf("target"),
+        "at the profit lock" to setOf("profit_lock", STEP_TRAIL, BREAKEVEN),
         "at the 15:10 square-off" to setOf("session_end", "backstop_square_off"), "at a time stop" to setOf("time_stop"),
         "at an index stop, a failed break or new liquidity" to setOf("index_stop", "failed_break", "new_liquidity"),
         "closed or stopped by you" to setOf("closed_by_you", "operator_stop"),

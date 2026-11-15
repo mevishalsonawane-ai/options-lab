@@ -209,7 +209,7 @@ object SecurePrefs {
         val gen = generation
         writer.execute {
             val snap = synchronized(this) { if (pending && gen == generation) copyOut(gen) else null } ?: return@execute
-            runCatching { write(snap) }
+            runCatching { testAfterCopyOut?.invoke(); write(snap) }
         }
     }
 
@@ -324,6 +324,12 @@ object SecurePrefs {
         else -> old.javaClass == new.javaClass && old.toString() == new.toString()
     }
 
+    /** 15 Nov: the longest [flush] waits for a write another thread has copied out (the writer's own wait is 30 s too). */
+    private const val FLUSH_WAIT_MS = 30_000L
+
+    /** TEST ONLY (15 Nov): runs on the background writer between copying the map out and writing it. */
+    @Volatile internal var testAfterCopyOut: (() -> Unit)? = null
+
     /** The last background write failed (e.g. a Keystore fault); the values stay in memory and the next save retries. */
     @Volatile private var writeFailed = false
 
@@ -339,8 +345,18 @@ object SecurePrefs {
         for (k in SecureBlobs.dirtyKeys()) runCatching { writer.execute { SecureBlobs.saveNow(k) } }
         if (synchronized(this) { pending || lazyDirty || migrating } || SecureBlobs.anyDirty()) runCatching { writer.submit(Runnable {}).get(30, java.util.concurrent.TimeUnit.SECONDS) }
         // A write another thread copied out and is still putting on disk counts as not yet written: wait for it.
+        // 15 Nov, CI (GuardTest): a writer that has copied the map out (so nothing is "pending" any more) but not yet taken the
+        // disk lock was not waited for, and flush said "not written" although the write was a moment away. Every copied-out
+        // write ends written, failed ([writeFailed]) or dropped by an erase (which counts the written mark up to it), so this
+        // waits for that end, at most [FLUSH_WAIT_MS] (as the writer's own wait above); never on this object's lock.
         val want = synchronized(this) { seq }
-        val written = synchronized(ioLock) { writtenSeq >= want }
+        val until = System.currentTimeMillis() + FLUSH_WAIT_MS
+        var written = synchronized(ioLock) { writtenSeq >= want }
+        while (!written && !writeFailed && System.currentTimeMillis() < until) {
+            // Interrupted: "not written", so the caller writes it itself (as on a failed write); the interrupt is kept.
+            try { Thread.sleep(5) } catch (_: InterruptedException) { Thread.currentThread().interrupt(); return false }
+            written = synchronized(ioLock) { writtenSeq >= want }
+        }
         return written && !writeFailed && synchronized(this) { !pending && !lazyDirty } && !SecureBlobs.anyDirty()
     }
 

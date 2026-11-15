@@ -1,0 +1,33 @@
+id: r179-v2
+title: 'R179 V2: Rs 1,500 rule + breakeven lock (R162 BE10) on R72 / R51 for a win rate above 55% (last year, 1 lot)'
+family: trade-management
+date: '2026-11-15'
+doc: research/hunt/r179_winrate_55/results/report.md
+hypothesis: 'Boss: raise the win rate above 55% while keeping profit; Rs 1,500 rule + breakeven lock (R162 BE10).'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted here; early part 2025-10-20..2026-03-31 (picker in-sample)
+  holdout: 2026-04-01..2026-10-13 final (clean for the picker; read by many studies); year to 2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (entries; R151 picker features at the decision minute); stops on the premium'
+model_or_rule: Rs 1,500 rule + breakeven lock (R162 BE10); PREREG.md section 1
+settings: research/hunt/r179_winrate_55/r179study.py
+prereg: research/hunt/r179_winrate_55/PREREG.md
+variants_tried: 1
+results:
+  summary: 'R72: year 2292 trades win 46.2% Rs 128,225 (base Rs 178,703); final win 46.3% Rs 101,102; twin p 1.0; failed:
+    win rate below 55% (year or final); net below its base (year or final); twin BH q 1.00 > 0.10; outside the account stop
+    rule in early, final, six, year | R51: year 3105 trades win 45.4% Rs 59,506 (base Rs 100,137); final win 45.4% Rs 67,873;
+    twin p 1.0; failed: win rate below 55% (year or final); net below its base (year or final); twin BH q 1.00 > 0.10; outside
+    the account stop rule in early, final, six, year.'
+  costs: dated Zerodha charges on the whole quantity; R17 fills (stops sold as stops)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4038. Nothing in the app changes.

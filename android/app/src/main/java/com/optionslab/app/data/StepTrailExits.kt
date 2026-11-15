@@ -11,13 +11,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
- * 15 Nov 2026 (Boss: "if the profit moves to 1k, make stop loss 500, if the profit moves to 1.5k move stop loss to 1000, keep a 500 rs gap
- * on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs, make this change to liquidity and donchian r51
- * and r72"; per lot; CLAUDE.md's fifth exception, FAILED GATES): Boss's switch "₹500 step trail per lot (Liquidity, R51, R72)", ON by default.
+ * 15 Nov 2026 (Boss's stop rule on Liquidity, R51 and R72; per lot; CLAUDE.md's fifth exception, FAILED GATES): Boss's switch, ON by
+ * default. Its third version (Boss: "Switch to + picker + breakeven at +10% (V4)") replaced the morning's ₹500 step trail under the same
+ * switch, so Boss's on / off carries over.
  *
  * On, every NEW trade of Liquidity 15+5 (every book and index), R51 Donchian 20 and R72 Breadth Donchian - paper and its live copy -
- * enters with [StepTrail]'s stop beside its own exits: -₹500 a lot at the entry (only where tighter than the arm's own stop), then from
- * +₹1,000 a lot of best P&L a stop at +₹500 a lot, raised ₹500 a lot for every further ₹500 a lot, never down. A trade keeps the rule it
+ * enters with [StepTrail]'s breakeven beside its own exits (its own stop stays): the stop moves to breakeven (the fill plus the charges)
+ * once the option is 10% above the fill, never down. A trade keeps the rule it
  * entered with (the flag is written on the trade, and its best price or step with it), so a restart applies it to the positions already
  * open without reading this switch, and a change of the switch never moves a stop already resting at Zerodha.
  *
@@ -77,7 +77,7 @@ object StepTrailExits {
     /** The diagnostics line. Memory only. */
     fun line(): String = "${StepTrail.DIAG.replaceFirstChar { it.uppercase() }}: " + when {
         !loaded -> "not read yet (counts as on)"
-        on -> "on - new Liquidity 15+5, R51 and R72 trades start with a stop of 500 a lot and trail it up 500 a lot for every 500 a lot of best profit from 1000 a lot, paper and live"
+        on -> "on - new Liquidity 15+5, R51 and R72 trades keep their own stop and move it to breakeven at 10 percent up, paper and live"
         else -> "off - new trades use the arms' own exits"
     }
 
@@ -87,12 +87,12 @@ object StepTrailExits {
      * What to say.
      */
     fun set(on: Boolean, pinConfirmed: Boolean = false, log: Boolean = true): String {
-        if (!on && !pinConfirmed) return "Turning the ₹500 step trail off puts the arms' own wider exits back, live too: it takes your PIN. Nothing changed."
+        if (!on && !pinConfirmed) return "Turning the breakeven at +10% off puts the arms' own exits back alone, live too: it takes your PIN. Nothing changed."
         // Review: the saved switch is read first (a worker thread: the card and the Undo both call this off the main thread), so a
         // flip before the start's read never records a change that did not happen.
         if (!loaded) load()
         synchronized(this) {
-            if (this.on == on) return "The ₹500 step trail is already ${if (on) "on" else "off"}."
+            if (this.on == on) return "The breakeven at +10% is already ${if (on) "on" else "off"}."
             this.on = on
             loaded = true
             switched = true
@@ -101,8 +101,8 @@ object StepTrailExits {
         runCatching { Diag.record("step-trail", "${StepTrail.LABEL}: ${if (on) "off → on" else "on → off"} (by you; new trades of Liquidity 15+5, R51 and R72)") }
         publish()
         if (log) runCatching { com.optionslab.app.ira.Autopilot.logStepTrail(on) }
-        return if (on) "On: new Liquidity 15+5, R51 and R72 trades start with a ₹500 stop a lot, raised to +₹500 a lot at +₹1,000 a lot and ₹500 " +
-            "a lot for every further ₹500 a lot, paper and live, beside their own exits (failed gates, your exception)."
+        return if (on) "On: new Liquidity 15+5, R51 and R72 trades keep their own stop and move it to breakeven once the option is 10% up, " +
+            "paper and live, beside their own exits (failed gates, your exception)."
         else "Off: new Liquidity 15+5, R51 and R72 trades use their own exits again. Open trades keep the exits they entered with."
     }
 
