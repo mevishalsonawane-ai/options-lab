@@ -315,7 +315,8 @@ fun Reauth(model: AppModel, onOk: () -> Unit, onCancel: () -> Unit, pinOnly: Boo
 /**
  * Beside the Live switch (18 Oct, Boss: "Live like paper, arms too"): what goes live with it. "AI trades go live" (on with the
  * switch to Live; turned off here on its own, no PIN), and each arm's own live choice - unchanged by the switch: only an arm
- * cleared for live with its own PIN trades live by itself; paper-only arms and paper changes stay on paper. Reads only.
+ * cleared for live with its own PIN trades live by itself (15 Nov: Liquidity 15+5 by its switch alone); paper-only arms and paper
+ * changes stay on paper. Reads only.
  */
 @Composable
 internal fun LiveScopeNote(model: AppModel, live: Boolean) {
@@ -363,6 +364,8 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
             (if (liveArms.isEmpty()) "no arm is cleared to trade live by itself" else "trade live when armed: ${liveArms.joinToString(", ")}") + ". " +
             (if (paperArms.isNotEmpty()) "On paper: ${paperArms.joinToString(", ")}. " else "") +
             "An ORB-family arm trades live only when you arm it in Live with its own PIN; one armed in Paper asks you first. " +
+            // 15 Nov (Boss): Liquidity 15+5's switch alone clears it for Zerodha.
+            "Liquidity 15+5 needs no PIN of its own: while its switch is on it trades live whenever the app is in Live. " +
             "The paper strategies below trade live by their own switch. An arm you switch off never buys: it runs in shadow, " +
             "its would-be trades recorded so you can watch it.")
         ArmsLiveList(model)

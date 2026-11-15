@@ -120,6 +120,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.ManualCover.init(this)
         // 15 Nov (Boss's exception): the breakeven rule on Liquidity, R51 and R72 (on by default), read in the background.
         com.optionslab.app.data.StepTrailExits.init(this)
+        // 15 Nov (Boss): the funds check on the arms' live entries (shadow by default), its switch read in the background.
+        com.optionslab.app.data.FundsCheck.init(this)
         // 21 Oct, enhancement round 4 (idea 3): the payout-aware drawdown (in shadow by default), read in the background.
         com.optionslab.app.data.PayoutWatch.init(this)
         com.optionslab.app.data.History.init(this)

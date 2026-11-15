@@ -1955,7 +1955,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * [Jobs.ensureWatch] decides off the main thread itself. Likewise every start of the watch from this model.
      */
     fun armOrb(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean = false) = strategyDo {
-        val msg = com.optionslab.app.data.OrbArms.setArmed(source, on, automatic, pinConfirmed)
+        // 15 Nov: Boss's own switch on Home (Liquidity 15+5 needs no PIN of its own in Live; every other arm as before).
+        val msg = com.optionslab.app.data.OrbArms.setArmed(source, on, automatic, pinConfirmed, bySwitch = true)
         if (on) Jobs.ensureWatch(ctx)
         msg
     }

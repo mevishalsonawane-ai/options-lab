@@ -823,9 +823,14 @@ object ArmLive {
         // setting, never more. Priced at the higher of the last price, the offer and its own limit. A sale, a future or an MCX
         // option (its own segment's money) is never cut; not even one lot fitting, or the cash unreadable, goes as before.
         val want = qty / ins.lot
-        if (want > 1 && a.side > 0 && a.contract.right != Right.IX && ins.exchange != "MCX") {
+        // 15 Nov: the funds check below reuses the fit's own read when it ran (nothing new is read for it).
+        val optionBuy = a.side > 0 && a.contract.right != Right.IX && ins.exchange != "MCX"
+        val fitPx = maxOf(last, quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: last, a.limit ?: 0.0)
+        var fitFree: Double? = null
+        if (want > 1 && optionBuy) {
             val free = Broker.freeCash()
-            val px = maxOf(last, quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: last, a.limit ?: 0.0)
+            fitFree = free
+            val px = fitPx
             val fit = LiveMirror.lotsThatFit(want, px * ins.lot * ins.multiplier, free)
             if (free != null && fit in 1 until want) {
                 qty = fit * ins.lot
@@ -871,6 +876,16 @@ object ArmLive {
                     it.side == (if (a.side >= 0) 1 else -1) }.map { LiveMirror.spec(it.key)?.label ?: it.key }
             }
             LiveMirror.sameContractWords(spec.label, ins.symbol, others)?.let { note(a.key, it) }
+        }
+        // 15 Nov (Boss: "Yes" to it in shadow; 25 arm live buys of 2-6 Nov refused by Zerodha, "Insufficient funds"): the funds check -
+        // an index option buy the free cash cannot pay for even one lot. Its figure is what this path already read: the fit's read
+        // above, else the margins the account guard's read just used ([Broker.keptFreeCash], memory). Unknown: it says nothing. In
+        // SHADOW (its switch off, the default) the order goes exactly as before and the would-skip is logged; on, it is not sent.
+        if (optionBuy) {
+            val free = fitFree ?: Broker.keptFreeCash()
+            FundsCheck.check(spec.label, ins.symbol, qty / ins.lot, fitPx * ins.lot * ins.multiplier, free, fitPx)?.let { why ->
+                notMirrored(a, why); return@withLock
+            }
         }
         val known = known()
         // (The entry door asks the switches again inside it, from memory: [doorRefusal].)

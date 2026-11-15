@@ -538,7 +538,10 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals("and BANKNIFTY's own time stop too", "time_stop", after.single { it.arm == "liquidity5" }.why)
     }
 
-    /** Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once; never cleared for Zerodha. */
+    /**
+     * Research h4 (07 Oct): a book saved with the switch on takes the MIDCPNIFTY books on paper, once. 15 Nov (Boss): Liquidity's
+     * switch alone clears its books for Zerodha - in Live they trade there with the others (no PIN of their own).
+     */
     @Test fun theMidcpniftyBooksJoinAnArmedSwitchOnPaperOnce() {
         val books = listOf("liquidity15", "liquidity5", "liquidity30_fin", "liquidity5_fin")
         fun flags(v: Boolean) = org.json.JSONObject().apply { books.forEach { put(it, v) } }
@@ -549,7 +552,8 @@ class LiquidityArmTest : RobolectricTest() {
             .put("positions", org.json.JSONArray()))
         val r = row()
         assertTrue(r.armed); assertTrue(r.automatic)
-        assertFalse("the MIDCPNIFTY books are never cleared for Zerodha by this change", r.liveOk)
+        assertTrue("15 Nov: cleared for Zerodha by the switch alone (in Live only)", r.liveOk)
+        assertTrue(runBlocking { OrbArms.liquidityLiveCleared() }.let { c -> c.getValue("liquidity15_mid") && c.getValue("liquidity5_mid") })
         val joined = com.optionslab.engine.orb.LiquidityRules.MIDCP_JOINED
         assertTrue(r.status, r.status.contains("MIDCPNIFTY 15-min: $joined") && r.status.contains("MIDCPNIFTY 5-min: $joined"))
         val states = runBlocking { OrbArms.liquidityDay(day) }.first

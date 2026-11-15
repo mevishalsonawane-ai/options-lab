@@ -53,7 +53,7 @@ private fun px(x: Double) = String.format(Locale.ENGLISH, "%.2f", x)
  * The built-in arms on Home's Strategies card: ORB, ORB Fresh, ORB Sweep, Range Fade (un-retired by Boss on 07 Oct, on
  * paper), the Hero arm and Liquidity 15+5, each with its switch, what the arm is doing now, a waiting approval, and a tap
  * for the day's detail (with the four's 2021–2026 record, as information). New entries follow the Paper/Live switch; in
- * Live arming takes the PIN and each entry not cleared for Zerodha is approved with it. An open position shows the account
+ * Live arming takes the PIN (15 Nov: not Liquidity 15+5's - its switch clears it) and each entry not cleared for Zerodha is approved with it. An open position shows the account
  * it is in. Under the rows, the research shadows (no orders) and the tap for their records.
  */
 @Composable
@@ -237,21 +237,27 @@ internal fun OrbRowsContent(
 
     choosing?.let { src ->
         val label = view.arms.first { it.arm.source == src }.arm.label
+        // 15 Nov (Boss: "no extra pin based approval needed"): Liquidity 15+5 is switched on in Live with no PIN of its own (going Live
+        // took it); its live entries still pass every other gate. ORB and the others still take the PIN here.
+        val liq = view.arms.first { it.arm.source == src }.arm.liquidity
         AlertDialog(
             onDismissRequest = { choosing = null },
             properties = DialogProperties(securePolicy = com.optionslab.app.security.Capture.policy),
             title = { Text("Arm $label" + if (live) " (LIVE)" else " (paper)", style = Type.title) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(if (live) "The app is in LIVE: entries go to Zerodha, ${view.arms.first { it.arm.source == src }.lots?.let { com.optionslab.engine.orb.LiquidityLots.words(it) } ?: "1 lot"} MIS. Arming takes your PIN or fingerprint once. " +
+                    Text(if (live) "The app is in LIVE: entries go to Zerodha, ${view.arms.first { it.arm.source == src }.lots?.let { com.optionslab.engine.orb.LiquidityLots.words(it) } ?: "1 lot"} MIS. " +
+                        (if (liq) "No PIN of its own: it trades on Zerodha while this switch is on, through every live gate (AI trades go live, the guard, the kill switch, the day lock). "
+                            else "Arming takes your PIN or fingerprint once. ") +
                         "An open position always exits in the account it entered."
+                        else if (liq) "The app is in Paper: entries go to the paper account. When you switch the app to Live (with your PIN), it trades on Zerodha while this switch is on."
                         else "The app is in Paper: entries go to the paper account. To trade automatically on Zerodha, switch to Live and arm it again (PIN once).",
                         style = Type.bodySmall.copy(color = p.inkSoft))
                     OrbChoice("Automatic", "Buys on the breakout and sells on the stop, target or 15:10 by itself, every trading day, until you switch it off.") {
-                        if (live) armAuth = src to true else actions.arm(src, true, true, false); choosing = null
+                        if (live && !liq) armAuth = src to true else actions.arm(src, true, true, false); choosing = null
                     }
                     OrbChoice("Ask me to approve", "You get a notification on a breakout; the entry goes only if you approve before the next bar closes.") {
-                        if (live) armAuth = src to false else actions.arm(src, true, false, false); choosing = null
+                        if (live && !liq) armAuth = src to false else actions.arm(src, true, false, false); choosing = null
                     }
                     Note(if (view.arms.first { it.arm.source == src }.arm.liquidity)
                         "Either way the stop 15% below the price paid rests as an order (paper book, or an SL order at Zerodha), and the exits at the next liquidity, on a failed break, on new liquidity and at 15:10 run by themselves."
@@ -266,11 +272,8 @@ internal fun OrbRowsContent(
             dismissButton = { TextButton({ choosing = null }) { Text("Cancel") } },
         )
     }
-    // The ORB arms keep their own words; Liquidity 15+5 names itself (and says when each entry still waits for approval).
-    armAuth?.let { (src, auto) -> reauth(if (view.arms.firstOrNull { it.arm.source == src }?.arm?.liquidity == true)
-            "Enter your app PIN to arm Liquidity 15+5 on Zerodha. " +
-                (if (auto) "It then trades real money by itself until you switch it off." else "Each entry still waits for your approval with the PIN.")
-        else "Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
+    // The ORB arms' own words (15 Nov: Liquidity 15+5 never asks here - its switch needs no PIN of its own).
+    armAuth?.let { (src, auto) -> reauth("Enter your app PIN to arm ORB on Zerodha. It then trades real money by itself until you switch it off.",
         { armAuth = null; actions.arm(src, true, auto, true) }, { armAuth = null }) }
     reauthFor?.let { src -> reauth(null, { reauthFor = null; actions.approve(src, true) }, { reauthFor = null }) }
     if (reenableAuth) reauth("Enter your app PIN to let Liquidity BANKNIFTY take live entries again after its stop rule. Its stop rule then counts from now.",

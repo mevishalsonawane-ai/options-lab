@@ -708,6 +708,8 @@ fun RiskPage(model: AppModel) {
             item { SameDirectionCapCard() }
             // 20 Oct, enhancement round 1: Boss's account stop rule over the whole account (in shadow until switched on).
             item { AccountStopCard(model) }
+            // 15 Nov (Boss): the funds check on the arms' live entries (in shadow until switched on; off again takes the PIN).
+            item { FundsCheckCard(model) }
             // 25 Oct (Boss's decisions on the app audit): the new risk rules - paper on, live in shadow until switched on.
             item { BossRiskCard(model) }
             // 21 Oct, enhancement round 4: payouts counted in the drawdown (in shadow until switched on; acts only on Boss's PIN).

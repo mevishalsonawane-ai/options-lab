@@ -582,6 +582,64 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(view().log.none { "of your 3 lots" in it })
     }
 
+    // ---- 15 Nov: the funds check (Boss: "Yes" to it in shadow) ----------------------------------------------------------------
+
+    /**
+     * Shadow (its switch off, the default): a 1-lot buy the free cash cannot pay for (Rs 5,000 against about Rs 6,000) goes to Zerodha
+     * exactly as before; the would-skip is logged and counted - from the margins the entry's own account read just read.
+     */
+    @Test fun theFundsCheckInShadowLogsTheEntryAndSendsItAsBefore() {
+        kite.cash = 5_000.0
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "short1"))
+        assertEquals("sent as before", "30", kite.placed.first().form["quantity"])
+        assertEquals("BUY", kite.placed.first().form["transaction_type"])
+        val r = FundsCheck.recsOf().single()
+        assertFalse("logged only", r.applied); assertEquals(sym, r.symbol); assertEquals(1, r.lots)
+        assertEquals(LiveMirror.spec(com.optionslab.engine.orb.DonchianArm.SOURCE)!!.label, r.owner)
+    }
+
+    /** Shadow, 3 lots wanted and not one fitting: the fit's own read is the figure (the order goes with all 3, as before), logged once. */
+    @Test fun theFundsCheckReusesTheFitsReadForSeveralLots() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
+        kite.cash = 5_000.0
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "short3"))
+        assertEquals("90", kite.placed.first().form["quantity"])
+        assertEquals(3, FundsCheck.recsOf().single().lots)
+    }
+
+    /** On (Boss's switch): the entry is not sent to Zerodha, kept as a would-be entry and said on the arm's row. */
+    @Test fun theFundsCheckOnSendsNothingTheCashCannotPayFor() {
+        FundsCheck.set(true)
+        kite.cash = 5_000.0
+        val key = com.optionslab.engine.orb.DonchianArm.SOURCE
+        ArmLive.entered(ask(key, "short-on"))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertTrue(view().open.isEmpty())
+        assertEquals(true, view().refused[key]?.contains(FundsCheck.WORDS))
+        assertTrue(FundsCheck.recsOf().single().applied)
+        // Cash enough again: the next entry goes (the check never resizes or adds).
+        kite.cash = 500_000.0
+        ArmLive.entered(ask(key, "short-on-2"))
+        assertEquals("30", kite.placed.first().form["quantity"])
+        assertEquals(1, FundsCheck.recsOf().size)
+    }
+
+    /** On, but every other gate first: the kill switch refuses before it, and enough cash is never touched by it. */
+    @Test fun theFundsCheckNeverWeakensAnotherGate() {
+        FundsCheck.set(true)
+        SecurePrefs.put("g.kill", true)
+        kite.cash = 5_000.0
+        val key = com.optionslab.engine.orb.DonchianArm.SOURCE
+        ArmLive.entered(ask(key, "kill"))
+        assertTrue(kite.placed.isEmpty()); assertEquals(true, view().refused[key]?.contains("kill switch"))
+        assertTrue("the kill switch refused it first: the check never ran", FundsCheck.recsOf().isEmpty())
+        SecurePrefs.put("g.kill", false)
+        // In Paper nothing is asked at all.
+        AutomationSupport.liveSettings(live = false)
+        ArmLive.entered(ask(key, "paper"))
+        assertTrue(kite.placed.isEmpty()); assertTrue(FundsCheck.recsOf().isEmpty())
+    }
+
     @Test fun allTheLotsGoWhenTheFreeCashFitsThem() {
         AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "plenty"))   // the fake account's Rs 5 lakh

@@ -37,6 +37,25 @@ class LiveMirrorTest {
         assertEquals(" · 2 of your 3 lots: the free cash (Rs 13,000) fits 2", LiveMirror.fitWords(3, 2, 13_000.0))
     }
 
+    /** 15 Nov: the funds check's would-skip - not even one lot fits the free cash; silent whenever a figure is unknown. */
+    @Test fun shortOfOneLotOnlyWhenTheCashIsKnownAndShort() {
+        // 1 lot = Rs 6,000 of premium (Rs 6,180 with the 3% room).
+        assertTrue(LiveMirror.shortOfOneLot(6_000.0, 5_000.0), "under one lot")
+        assertTrue(LiveMirror.shortOfOneLot(6_000.0, 6_100.0), "one lot but not its room")
+        assertTrue(LiveMirror.shortOfOneLot(6_000.0, 0.0), "no cash")
+        assertTrue(LiveMirror.shortOfOneLot(6_000.0, -500.0), "a debit")
+        assertFalse(LiveMirror.shortOfOneLot(6_000.0, 6_181.0), "one lot with its room")
+        assertFalse(LiveMirror.shortOfOneLot(6_000.0, 500_000.0))
+        // Unknown: says nothing.
+        assertFalse(LiveMirror.shortOfOneLot(6_000.0, null))
+        assertFalse(LiveMirror.shortOfOneLot(6_000.0, Double.NaN))
+        assertFalse(LiveMirror.shortOfOneLot(6_000.0, Double.POSITIVE_INFINITY))
+        assertFalse(LiveMirror.shortOfOneLot(0.0, 5_000.0))
+        assertFalse(LiveMirror.shortOfOneLot(-1.0, 5_000.0))
+        assertFalse(LiveMirror.shortOfOneLot(Double.NaN, 5_000.0))
+        assertFalse(LiveMirror.shortOfOneLot(Double.POSITIVE_INFINITY, 5_000.0))
+    }
+
     private val day = LocalDate.of(2026, 10, 27)
     private fun at(h: Int, m: Int, d: LocalDate = day): LocalDateTime = d.atTime(h, m)
 

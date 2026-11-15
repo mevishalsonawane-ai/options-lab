@@ -397,6 +397,14 @@ object LiveMirror {
     /** 4 Nov: the room [lotsThatFit] keeps above the premium (3%: a MARKET fill a little above the last price, and the charges). */
     const val FIT_BUFFER = 0.03
 
+    /**
+     * 15 Nov (the phone's diagnostics: 25 arm live buys of 2-6 Nov rejected by Zerodha, "Insufficient funds"): whether the free cash
+     * [free] cannot pay even one lot at [perLot] rupees (with [lotsThatFit]'s room) - the funds check's would-skip. False whenever a
+     * figure is not known (the cash unread, a price missing): it says nothing then, and the entry goes as before.
+     */
+    fun shortOfOneLot(perLot: Double, free: Double?): Boolean =
+        perLot > 0 && perLot.isFinite() && free != null && free.isFinite() && lotsThatFit(1, perLot, free) == 0
+
     /** 4 Nov: the words on the entry line when fewer lots were bought than Boss's setting. */
     fun fitWords(want: Int, fit: Int, free: Double): String =
         " · $fit of your $want lots: the free cash (Rs %,.0f) fits $fit".format(java.util.Locale.ENGLISH, free)

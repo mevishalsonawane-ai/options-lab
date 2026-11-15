@@ -416,6 +416,8 @@ object Diag {
         (runCatching { ManualCover.line() }.getOrElse { "Stop and target on my manual positions: could not read" }) + "\n" +
         // 15 Nov (Boss's exception): the breakeven rule on Liquidity, R51 and R72 ([StepTrailExits]), in this chain too.
         (runCatching { StepTrailExits.line() }.getOrElse { "breakeven at 10 percent: could not read" }) + "\n" +
+        // 15 Nov: the funds check on the arms' live entries ([FundsCheck]; shadow by default): today's would-skips, no rupees.
+        (runCatching { FundsCheck.line() }.getOrElse { "Funds check: could not read" }) + "\n" +
         (runCatching { PayoutWatch.line() }.getOrElse { "Payout-aware drawdown: could not read" }) + "\n"
 
     /** The MCX paper arms' line and NR7 crude's record-only line (21 Oct). Its own function: the report's one is near the compiler's limit. */

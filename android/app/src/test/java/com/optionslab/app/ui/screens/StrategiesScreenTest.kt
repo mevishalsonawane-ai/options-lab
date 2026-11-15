@@ -673,14 +673,18 @@ class OrbRowsTest {
         assertEquals(listOf("orb arm liquidity on=true auto=true pin=false"), rec.calls)
     }
 
-    @Test fun armingInLiveTakesThePinWithItsReason() {
+    /**
+     * 15 Nov (Boss: "Liquidity should be always working if i have swtich on it on dashboard, no extra pin based approval needed"):
+     * in Live its switch asks no PIN of its own - the choice goes straight through, and the dialog says it trades on Zerodha.
+     */
+    @Test fun armingLiquidityInLiveAsksNoPin() {
         rows(StrategyFakes.orbView(), live = true)
         tapSwitch("Liquidity 15+5")
         assertTrue(shown("Arm Liquidity 15+5 (LIVE)"))
+        assertTrue(shown("No PIN of its own"))
         tap("Ask me to approve")
-        assertTrue(shown("Enter your app PIN to arm Liquidity 15+5 on Zerodha"))
-        tap("PIN OK")
-        assertEquals(listOf("orb arm liquidity on=true auto=false pin=true"), rec.calls)
+        assertTrue("no PIN asked", !shown("Enter your app PIN"))
+        assertEquals(listOf("orb arm liquidity on=true auto=false pin=false"), rec.calls)
     }
 
     @Test fun anArmedArmSaysWhatItWaitsForAndDisarms() {

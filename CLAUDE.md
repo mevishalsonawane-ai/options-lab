@@ -35,11 +35,22 @@ notes; match the surrounding code.
   - Boss's exception (4 Nov: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1 ... make it default, dont
     have 1 more option"): an arm's live index option buy of more than one lot is cut to the lots the free cash fits, always on,
     no switch. It never buys more than Boss's lots setting and still passes every live gate.
+  - The funds check (Boss, 15 Nov: "Yes" to building it in shadow): an arm's live index option buy (the arms' live copies, ORB and
+    Liquidity 15+5) that the free cash cannot pay for even one lot. It reads only the free cash the entry already read; unknown, it
+    says nothing. In shadow by default (logged and counted, the order goes as before); its Bot settings switch (off by default)
+    makes it skip the entry. On needs no PIN (it lowers risk); off takes the PIN.
 - EVERY ARM CAN GO LIVE (Boss, 30 Oct: "make all arms as live, will stop it if i want, dont keep any in paper only or
   record only, make all live if i move to live market").
   - No arm is paper-only or record-only by design. Each arm's live trade goes only through the same gates: the app in
     Live with Boss's PIN, "AI trades go live" on, the arm's own Trade live switch, every guard and the kill switch.
   - Boss stops any arm with its own switch.
+  - Liquidity 15+5 (Boss, 15 Nov: "Liquidity should be always working if i have swtich on it on dashboard, no extra pin based
+    approval needed"): its dashboard switch alone clears its books for Zerodha - no separate PIN of its own when it is switched
+    on in Live, and a book switched on in Paper goes live when the app goes Live. Every other gate still applies: the app in Live
+    (which takes Boss's PIN), "AI trades go live", the switch itself (and each index's parking), every guard, the kill switch, the
+    day stop and the day lock, and its own live stop rule. Only Boss's own switch on Home does it: Jarvis by voice, the day plan
+    and every automation still cannot switch it on in Live. Off stays one tap. Every other arm is unchanged (armed in Live with
+    its own PIN).
   - Jarvis's own trades still stay on paper (the rule above).
 - PAPER (Boss, 13 Oct): an idea that has PASSED the research gates (below) may act on paper arms straight away, with no
   shadow phase.
