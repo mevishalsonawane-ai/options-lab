@@ -103,13 +103,14 @@ def entry_amount(lots: int, per_lot: float = STEP) -> float:
     return per_lot * lots
 
 
-def step_locked(best: float, lots: int) -> float | None:
+def step_locked(best: float, lots: int, gap_per_lot: float = STEP) -> float | None:
     """Rupees (before charges, whole position) the step trail locks at a best open P&L of `best`; None below +1,000 L.
-    (floor(best / 500L) - 1) x 500L: +500L at 1,000L, +1,000L at 1,500L, ..."""
+    floor(best / 500L) x 500L - gap: with the Rs 500 gap +500L at 1,000L, +1,000L at 1,500L, ...; with R177 Amendment
+    B's Rs 1,000 gap: 0 (cost) at 1,000L, +500L at 1,500L, +1,000L at 2,000L."""
     u = step_amount(lots)
     if not (best == best) or best < 2.0 * u - 1e-9:
         return None
-    return (math.floor(best / u + 1e-9) - 1.0) * u
+    return math.floor(best / u + 1e-9) * u - gap_per_lot * lots
 
 
 def month_of(d: date) -> str:

@@ -193,27 +193,36 @@ FINAL_FLAG_A = RESULTS / "FINAL_READ_A"
 M_TOTAL_A = M_TOTAL + len(K6.ARMS)                                  # 4,000
 
 
+GAP = {"v": K6.STEP}                                                # Amendment B sets Rs 1,000
+FINAL_FLAG_B = RESULTS / "FINAL_READ_B"
+M_TOTAL_B = M_TOTAL_A + 2 * len(K6.ARMS)                            # 4,006
+
+
 def _priced_stop(arm: str, us: list, lots: int) -> list:
-    """Price with R176 Amendment B's stop rule (Rs 1,000 a lot entry stop + the Rs 500 step trail)."""
-    old = S6.ENTRY["v"]
-    S6.ENTRY["v"] = K6.ENTRY_B
+    """Price with the Rs 1,000 a lot entry stop + the step trail (gap GAP['v'] a lot: Rs 500, or Rs 1,000 in B)."""
+    old, oldg = S6.ENTRY["v"], S6.GAP["v"]
+    S6.ENTRY["v"], S6.GAP["v"] = K6.ENTRY_B, GAP["v"]
     try:
         return S6.priced(arm, us, True, lots)
     finally:
-        S6.ENTRY["v"] = old
+        S6.ENTRY["v"], S6.GAP["v"] = old, oldg
 
 
-def run_a() -> dict:
-    """Amendment A: A, S1k (the stop rule alone) and K1S (K1 + the stop rule), 1-3 lots, with / without the picker."""
+def run_a(b: bool = False) -> dict:
+    """Amendment A (b=False): A, S1k (the stop rule alone) and K1S (K1 + the stop rule), 1-3 lots, with / without the
+    picker. Amendment B (b=True): the same with a Rs 1,000 gap under each step (SG / K1SG stored under the same keys),
+    plus R176's exit twins for SG."""
     assert K6.POST, "R177 reads the stores built to 19 Oct (R176_POST=1)"
-    if FINAL_FLAG_A.exists():
-        raise SystemExit("R177 Amendment A already read once: " + FINAL_FLAG_A.read_text())
-    FINAL_FLAG_A.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+    flag = FINAL_FLAG_B if b else FINAL_FLAG_A
+    if flag.exists():
+        raise SystemExit("R177 amendment already read once: " + flag.read_text())
+    flag.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+    GAP["v"] = 1000.0 if b else K6.STEP
     M = mods()
     M["C"].open_final()
     lo, hi = K6.Y_START, K6.Y_END
     out = {"_meta": dict(span=f"{lo} .. {hi}", stores="19 Oct", rule="K1 + Rs 1,000 a lot entry stop + Rs 500 step trail"),
-           "parity": {}, "twins": {}, "check_s1k": {}}
+           "parity": {}, "twins": {}, "check_s1k": {}, "twins_sg": {}, "gap_a_lot": GAP["v"]}
     r176b = json.loads((HERE.parent / "r176_step_trail_500" / "results" / "yearb.json").read_text())
     trades = {}
     rng = np.random.default_rng(SEED)
@@ -236,10 +245,19 @@ def run_a() -> dict:
                 r["reproduced"] = r["trades"] == pub[0] and abs(r["net"] - pub[1]) <= 1
                 out["parity"][arm] = r
                 assert r["reproduced"], ("parity failed", arm, r)
-            ref = r176b["year"][f"S@{lots}"][arm]
-            out["check_s1k"][f"{arm}@{lots}"] = dict(trades=len(s1), net=round(sum(t["net"] for t in s1)),
-                                                     r176b=[ref["trades"], ref["net"]])
-            print(arm, lots, "S1k check", out["check_s1k"][f"{arm}@{lots}"], flush=True)
+            if not b:
+                ref = r176b["year"][f"S@{lots}"][arm]
+                out["check_s1k"][f"{arm}@{lots}"] = dict(trades=len(s1), net=round(sum(t["net"] for t in s1)),
+                                                         r176b=[ref["trades"], ref["net"]])
+                print(arm, lots, "S1k check", out["check_s1k"][f"{arm}@{lots}"], flush=True)
+            elif lots == 1:
+                prA = S6.priced(arm, usA, False, 1)
+                plain = {(t["und"], S6._d(t["day"]), c["er"], c["side"]): t
+                         for (key, cands, _, _), row in zip(usA, prA) for c, t in zip(cands, row) if t is not None}
+                tw, chg = exit_twins(arm, s1, plain, K6.TWINS, rng)
+                out["twins_sg"][arm] = dict(p=round(M["S"].twin_p(sum(t["net"] for t in s1), tw), 4),
+                                            mean=round(float(tw.mean())), changed=chg)
+                print(arm, "SG twin", out["twins_sg"][arm], flush=True)
             for v, tr in (("A", a), ("S1k", s1), ("K1S", ks)):
                 trades.setdefault((v, lots), {})[arm] = tr
                 trades.setdefault(("B" if v == "A" else "B+" + v, lots), {})[arm] = (
@@ -263,23 +281,29 @@ def run_a() -> dict:
             res[f"{v}@{lots}"] = {a_: S6.describe(sub[a_], n_sess, months) for a_ in K6.ARMS}
             res[f"{v}@{lots}"]["ALL"] = S6.describe(S6.together(sub), n_sess, months)
         out[per] = res
-    (RESULTS / "year_a.json").write_text(json.dumps(out, indent=1, default=str))
+    (RESULTS / ("year_b.json" if b else "year_a.json")).write_text(json.dumps(out, indent=1, default=str))
     return out
 
 
-def decide_a() -> dict:
-    r = json.loads((RESULTS / "year_a.json").read_text())
-    ps = [r["twins"][a]["p"] for a in K6.ARMS]
-    q_all, q_own = S6.bh_q(ps, M_TOTAL_A), S6.bh_q(ps, len(ps))
+def decide_a(b: bool = False) -> dict:
+    """Amendment A: K1S (3 tests, m 4,000). Amendment B: SG and K1SG (6 tests, m 4,006); keys 'S1k' / 'K1S' in
+    year_b.json hold SG / K1SG."""
+    r = json.loads((RESULTS / ("year_b.json" if b else "year_a.json")).read_text())
+    tests = [(a, "K1S", r["twins"][a]["p"]) for a in K6.ARMS]
+    if b:
+        tests = [(a, "S1k", r["twins_sg"][a]["p"]) for a in K6.ARMS] + tests
+    ps = [t[2] for t in tests]
+    q_all, q_own = S6.bh_q(ps, M_TOTAL_B if b else M_TOTAL_A), S6.bh_q(ps, len(ps))
     out = {}
-    for a, qa, qo in zip(K6.ARMS, q_all, q_own):
-        per = {p: dict(S=r[p]["K1S@1"][a], A=r[p]["A@1"][a]) for p in K6.YEAR_PERIODS}
+    for (a, v, p_), qa, qo in zip(tests, q_all, q_own):
+        per = {p: dict(S=r[p][f"{v}@1"][a], A=r[p]["A@1"][a]) for p in K6.YEAR_PERIODS}
         g = S6.gates(per, qa, K6.YEAR_PERIODS, K6.YEAR_BETTER)
-        g.update(q_own=round(qo, 4), twin_p=r["twins"][a]["p"],
+        g.update(q_own=round(qo, 4), twin_p=p_,
                  passed_except_account_stop=not [f for f in g["fails"] if "account stop" not in f])
-        out[a] = g
-    out["_m"] = dict(tests=len(K6.ARMS), prior=M_TOTAL, total=M_TOTAL_A)
-    (RESULTS / "decision_a.json").write_text(json.dumps(out, indent=1))
+        name = ({"S1k": "SG", "K1S": "K1SG"}[v] if b else v)
+        out[a if not b else f"{a}:{name}"] = g
+    out["_m"] = dict(tests=len(tests), prior=M_TOTAL_A if b else M_TOTAL, total=M_TOTAL_B if b else M_TOTAL_A)
+    (RESULTS / ("decision_b.json" if b else "decision_a.json")).write_text(json.dumps(out, indent=1))
     return out
 
 
@@ -307,6 +331,10 @@ if __name__ == "__main__":
         run_a()
     elif cmd == "decide-a":
         print(json.dumps(decide_a(), indent=1))
+    elif cmd == "year-b":
+        run_a(True)
+    elif cmd == "decide-b":
+        print(json.dumps(decide_a(True), indent=1))
     elif cmd == "decide":
         print(json.dumps(decide(), indent=1))
     else:

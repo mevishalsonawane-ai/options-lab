@@ -100,3 +100,18 @@ stoploss of 500, and on 1500 make it 1000"*.
 - **Tests: 3 more** (3 arms); BH **m = 3,997 + 3 = 4,000**.
 - Honesty: chosen after seeing R176's and R177's results on the same year (data-led); the final period is read again
   (`results/FINAL_READ_A`). Weaker evidence than a fresh test on new days.
+
+## Amendment B (15 Nov 2026, before any number for it was computed): a Rs 1,000 gap under each step
+
+Boss, 15 Nov 2026, after Amendment A: *"Test with 1000 gap on every step"*.
+
+- **Stop rule G** (replacing the Rs 500 gap): entry stop -Rs 1,000 a lot (as Amendment A; only where tighter than -15%);
+  steps unchanged (every Rs 500 a lot of best open P&L, starting at +Rs 1,000 a lot); the stop = entry +
+  floor(best / 500 L) x 500 L - 1,000 L, rounded UP to the tick: **cost (the entry price) at +Rs 1,000 a lot, +Rs 500 at
+  +Rs 1,500, +Rs 1,000 at +Rs 2,000, ...**. Only moves up; no target; every other exit stays; stops sold as stops.
+- Variants: **SG** = rule G alone on today's trades; **K1SG** = K1 + rule G. Both tested.
+- Window, periods, costs, pickers (descriptive), lots, gates: as Amendment A. Twins (500, seed 177): SG = R176's random
+  exit twin (random exit minute between the fill and A's exit for every trade SG closed earlier); K1SG = Amendment A's
+  selection twin against SG.
+- **Tests: 6 more** (2 variants x 3 arms); BH **m = 4,000 + 6 = 4,006**.
+- Honesty: chosen after seeing R176 / R177 on the same year; the final period is read again (`results/FINAL_READ_B`).

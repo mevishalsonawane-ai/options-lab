@@ -36,9 +36,9 @@ def _ceil_tick(x, tick):
 
 @njit(cache=True)
 def simulate_step(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps, tmax, need, cstop, tick, qty, be,
-                  stop_abs, step_amt, fb=1.0005, fs=0.9995, fst=0.999, tk=1.0):
+                  stop_abs, step_amt, fb=1.0005, fs=0.9995, fst=0.999, tk=1.0, gap_amt=-1.0):
     """r106engine.simulate (no rupee target) plus the step trail: step_amt = Rs 500 x lots for the whole position
-    (<= 0: off). Same returns; reason 9 = a step-trail stop."""
+    (<= 0: off); gap_amt = the gap under each step (<= 0: = step_amt, R176's rule; R177 Amendment B: Rs 1,000 x lots). Same returns; reason 9 = a step-trail stop."""
     o, h, l, c, v = C[0], C[1], C[2], C[3], C[4]
     nan = np.nan
     n = o.shape[0]
@@ -92,8 +92,8 @@ def simulate_step(C, e, sq, fx, stop_f, tgt_f, lk_trig, lk_keep, lk_trail, steps
         if step_amt > 0:
             best = (peak - real_e) * qty
             if best >= 2.0 * step_amt - 1e-9:
-                k = np.floor(best / step_amt + 1e-9) - 1.0
-                lv = _ceil_tick(real_e + k * step_amt / qty, tick)
+                g = gap_amt if gap_amt > 0 else step_amt
+                lv = _ceil_tick(real_e + (np.floor(best / step_amt + 1e-9) * step_amt - g) / qty, tick)
                 if lv > trail:
                     trail = lv
         if lk_trig > 0 and (peak - E_) * qty >= lk_trig:
@@ -142,9 +142,9 @@ def entry_stop_px(real: float, qty: float, lots: int, per_lot: float = K.STEP) -
     return s if s > 0 else -1.0
 
 
-def step_px(real: float, qty: float, best: float, lots: int) -> float:
+def step_px(real: float, qty: float, best: float, lots: int, gap_per_lot: float = K.STEP) -> float:
     """The step-trail premium at a best open P&L of `best` (rupees, whole position); -1 below +1,000 L."""
-    locked = K.step_locked(best, lots)
+    locked = K.step_locked(best, lots, gap_per_lot)
     return -1.0 if locked is None else K.ceil_tick(real + locked / qty)
 
 
@@ -169,7 +169,8 @@ def label(code: int, kind: str) -> str:
     return why
 
 
-def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lot: float = K.STEP) -> list:
+def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lot: float = K.STEP,
+          gap_per_lot: float = K.STEP) -> list:
     """Price one day's candidates (dicts with side, strike, er[, fx]) for `lots` lots, with (on=True) or without Boss's
     step trail. Trade dicts (None = no fill) as r152engine.price plus 'stop_kind'."""
     st = E.stack(und, D)
@@ -193,7 +194,8 @@ def price(und: str, D, cands: list, ex: E.Exits, on: bool, lots: int = 1, per_lo
         stop_abs, stop_f, step_amt, kind = levels(raw, real, qty, ex, on, lots, per_lot)
         a, b, rE, rX, r0, r1, r = simulate_step(C, int(c["er"]), int(sq), int(fx if fx is not None else -1), stop_f,
                                                 ex.target, ex.lock_trig, ex.lock_keep, ex.lock_trail, stp, ex.tmax,
-                                                ex.need, ex.close_stop, K51.TICK, qty, be, stop_abs, step_amt, *E.SLIP)
+                                                ex.need, ex.close_stop, K51.TICK, qty, be, stop_abs, step_amt, *E.SLIP,
+                                                gap_per_lot * lots)
         if r == E.R_NOFILL:
             out.append(None)
             continue

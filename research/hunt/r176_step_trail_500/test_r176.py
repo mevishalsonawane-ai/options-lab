@@ -298,3 +298,31 @@ def test_amendment_b_wider_stop_survives_a_dip_the_500_stop_does_not():
                           NOTIME.steps_arr(), NOTIME.tmax, NOTIME.need, NOTIME.close_stop, 0.05, 65.0, 0.0, s, st, *E.SLIP)
     assert r5[6] == E.R_STOP and r5[5] == 20
     assert r10[5] != 20                                            # the Rs 1,000 stop (184.85) holds
+
+
+def test_gap_1000_step_levels():
+    assert K.step_locked(999.0, 1, 1000.0) is None
+    assert K.step_locked(1000.0, 1, 1000.0) == 0.0                 # cost at +1,000
+    assert K.step_locked(1499.0, 1, 1000.0) == 0.0
+    assert K.step_locked(1500.0, 1, 1000.0) == 500.0
+    assert K.step_locked(2000.0, 1, 1000.0) == 1000.0
+    assert K.step_locked(4500.0, 3, 1000.0) == 1500.0              # 3 lots: 4,500 -> 4,500 - 3,000
+    assert K.step_locked(1500.0, 1) == 1000.0                      # default gap unchanged
+
+
+def test_gap_1000_in_the_simulator():
+    C = _flat()
+    C[1, 15] = 125.0                                               # best ~1,622 at 1 lot
+    C[0, 16], C[1, 16], C[2, 16], C[3, 16] = 118.0, 119.0, 117.0, 118.0
+    C[2, 17], C[0, 17], C[3, 17] = 107.0, 112.0, 108.0              # falls to 107: below +500 locked (107.75)
+    raw, real, ef, _ = X.entry_info(C, 10, 360, 65.0)
+    s, f, st, kind = Z.levels(raw, real, 65.0, NOTIME, True, 1)
+    r = Z.simulate_step(C, 10, 360, -1, f, NOTIME.target, NOTIME.lock_trig, NOTIME.lock_keep, NOTIME.lock_trail,
+                        NOTIME.steps_arr(), NOTIME.tmax, NOTIME.need, NOTIME.close_stop, 0.05, 65.0, 0.0, s, st, *E.SLIP,
+                        1000.0)
+    lv = Z.step_px(real, 65.0, (125.0 - real) * 65.0, 1, 1000.0)
+    assert r[6] == Z.R_STEP and r[5] == 17 and r[1] == pytest.approx(lv) and (lv - real) * 65 >= 500.0
+    # the Rs 500 gap (stop 115.5) also exits at minute 17, but at the open 112 (a gap through it), above 107.75
+    r5 = Z.simulate_step(C, 10, 360, -1, f, NOTIME.target, NOTIME.lock_trig, NOTIME.lock_keep, NOTIME.lock_trail,
+                         NOTIME.steps_arr(), NOTIME.tmax, NOTIME.need, NOTIME.close_stop, 0.05, 65.0, 0.0, s, st, *E.SLIP)
+    assert r5[5] == 17 and r5[1] > r[1]
