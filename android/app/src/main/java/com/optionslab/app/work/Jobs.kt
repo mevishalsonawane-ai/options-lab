@@ -292,9 +292,35 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         // Off the main thread: settings are a Keystore decrypt and the expiry check parses the instrument list.
         // The service is still started inside the alarm's window, which is what lets it start from the background.
+        // 15 Nov (audit: ANRs in AlarmReceiver in Boss's diagnostics): the receiver is let go after [FINISH_MS] at most, whatever
+        // the work is doing (a command set for later, a slow Keystore or disk); the work itself goes on, in the same order, and is
+        // never cut short. Before, a slow job held the broadcast open until Android called it an ANR. The jobs that guard open
+        // positions (the 09:14 watch's start, the heartbeat's restart of a dead watch) are the first thing each one does, so they
+        // still run at once, inside the alarm's window.
         val pending = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try { handle(context, intent) } finally { pending.finish() }
+        finishWithin(FINISH_MS, CoroutineScope(SupervisorJob() + Dispatchers.IO), finish = { runCatching { pending?.finish() } },
+            late = { runCatching { com.optionslab.app.data.Diag.record("speed", "alarm ${intent.action}: still working after ${FINISH_MS / 1000} s; " +
+                "the alarm was let go, the work goes on") } }) { handle(context, intent) }
+    }
+
+    companion object {
+        /** 15 Nov: how long an alarm's broadcast is held open at most (under Android's 10 s for a foreground broadcast). */
+        internal const val FINISH_MS = 8_000L
+
+        /**
+         * 15 Nov: [work] on [scope], and [finish] (the broadcast's end) called exactly once - when [work] ends (or throws), or after
+         * [boundMs] if it is still running then ([late] said first). [work] is never cancelled by the bound. The work's job.
+         */
+        internal fun finishWithin(boundMs: Long, scope: CoroutineScope, finish: () -> Unit, late: () -> Unit = {}, work: () -> Unit): Job {
+            val done = java.util.concurrent.atomic.AtomicBoolean(false)
+            fun once() { if (done.compareAndSet(false, true)) runCatching { finish() } }
+            val timer = scope.launch {
+                delay(boundMs)
+                if (!done.get()) { runCatching { late() }; once() }
+            }
+            return scope.launch {
+                try { work() } finally { timer.cancel(); once() }
+            }
         }
     }
 
