@@ -83,18 +83,19 @@ notes; match the surrounding code.
         so the Undo takes the PIN.
       - It is the one exception to "anything new that could skip live trades starts in shadow", by Boss's explicit choice.
       - R150's W20 on R51 stays a label only (shadow).
-    - A fifth exception, chosen by Boss on 15 Nov ("if the profit moves to 1k, make stop loss 500, if the profit moves to 1.5k move stop
-      loss to 1000, keep a 500 rs gap on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs, make this
-      change to liquidity and donchian r51 and r72"): a ₹500 step trail per lot acts on Liquidity 15+5 (every book and index), R51 and
-      R72, on PAPER AND LIVE, although it failed the gates (R176).
-      - The rule, per lot (L lots; P&L = (price - fill) x quantity, before charges, as Kite shows it): a new trade starts with its stop
-        at -₹500 x L, only where that is tighter than the arm's own stop (it never loosens one). Once its best open P&L reaches +₹1,000 x L
-        the stop moves to +₹500 x L, and up ₹500 x L for every further ₹500 x L of best P&L; it never moves down. No fixed target. The
-        arms' own exits all stay and the first one wins. A live trade takes its own levels on its live fill and lots; its stop rests at
-        Zerodha and is modified up as it steps (the app sells at the level itself when it cannot rest there), never two exits.
-      - Its record: R176 replayed it on one year (20 Oct 2025 - 19 Oct 2026, about 6,300 trades at 1 lot): all three arms made ₹6.37 lakh
-        on their own rules and -₹3.23 lakh with it (₹500 stop on 60% of trades, wins 45% -> 35%); it failed every gate. R152, R167 and
-        R172 also found tight rupee stops and early profit locks hurt these arms.
+    - A fifth exception, chosen by Boss on 15 Nov: Boss's stop rule acts on Liquidity 15+5 (every book and index), R51 and R72, on PAPER
+      AND LIVE, although it failed the gates. Its second version (Boss, after R179: "Make it 1.5k stoploss", "Paper and live", "Instead 10%
+      breakeven, make it 5% breakeven") replaced the morning's ₹500 step trail under the same switch.
+      - The rule, per lot: a new trade starts with its stop where it loses ₹1,500 a lot AFTER the round trip's charges, only where that is
+        tighter than the arm's own stop (it never loosens one; a cheap option keeps its -15%). Once the option has traded 5% above the
+        fill, the stop moves to breakeven (the fill plus the charges); it never moves down. No fixed target. The arms' own exits all stay
+        (ladder / L25, time stops, index exits, square-offs) and the first one wins. A live trade takes its own levels on its live fill;
+        its stop rests at Zerodha and is modified up (the app sells at the level itself when it cannot rest there), never two exits. A
+        fast market can sell below a stop.
+      - Its record: R179 Amendment C replayed exactly this rule (with the R151 picker on R72 / R51) on one year (20 Oct 2025 - 19 Oct
+        2026, 1 lot): R51 54.5% wins and ₹47k (its own rules 45.1%, ₹2.21 lakh), R72 55.9% and ₹1.70 lakh (46.3%, ₹2.98 lakh), Liquidity
+        43.4% and ₹64k (39.2%, ₹1.18 lakh); it failed the gates. With the breakeven at +10% (Amendment B) it made more (R51 ₹1.30 lakh,
+        R72 ₹2.29 lakh). The morning's ₹500 step trail (R176): all three arms ₹6.37 lakh -> -₹3.23 lakh, failed every gate.
       - It only lowers risk (a tighter stop, an earlier exit), so it acts on live through every existing live gate.
       - It is labelled "failed gates, Boss's exception" wherever it is shown, logged in the Autopilot change timeline, and one tap off
         (Bot settings). Off restores the arms' own exits for new trades (open trades keep the rule they entered with); it adds live

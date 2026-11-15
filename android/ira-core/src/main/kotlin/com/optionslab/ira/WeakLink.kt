@@ -108,12 +108,16 @@ object WeakLink {
 
     private fun held(t: Trade): Long = Duration.between(t.entryTime, t.exitTime).toMinutes()
 
-    private const val STOP_500 = com.optionslab.engine.orb.StepTrail.WHY_STOP
-    private const val STEP_TRAIL = com.optionslab.engine.orb.StepTrail.WHY_TRAIL
+    private const val STOP_500 = com.optionslab.engine.orb.StepTrail.OLD_WHY_STOP
+    private const val STEP_TRAIL = com.optionslab.engine.orb.StepTrail.OLD_WHY_TRAIL
+    private const val STOP_1500 = com.optionslab.engine.orb.StepTrail.WHY_STOP
+    private const val BREAKEVEN = com.optionslab.engine.orb.StepTrail.WHY_TRAIL
 
     private val EXITS = listOf(
-        // 15 Nov: the ₹500 step trail's (Boss's exception) count as a stop (its entry's ₹500 a lot) and a profit lock (its raised stop).
-        "at the stop" to setOf("stop", STOP_500), "at the target" to setOf("target"), "at the profit lock" to setOf("profit_lock", STEP_TRAIL),
+        // 15 Nov: Boss's exception's exits count as a stop (the entry's ₹1,500 a lot; the morning's ₹500) and a profit lock (the breakeven;
+        // the morning's step trail).
+        "at the stop" to setOf("stop", STOP_500, STOP_1500), "at the target" to setOf("target"),
+        "at the profit lock" to setOf("profit_lock", STEP_TRAIL, BREAKEVEN),
         "at the 15:10 square-off" to setOf("session_end", "backstop_square_off"), "at a time stop" to setOf("time_stop"),
         "at an index stop, a failed break or new liquidity" to setOf("index_stop", "failed_break", "new_liquidity"),
         "closed or stopped by you" to setOf("closed_by_you", "operator_stop"),
@@ -125,7 +129,7 @@ object WeakLink {
         val groups = EXITS.map { (w, s) -> w to ts.filter { it.why in s } } + ("for another reason" to ts.filter { it.why !in known })
         val parts = groups.filter { it.second.isNotEmpty() }.sortedByDescending { it.second.size }
             .map { (w, g) -> "${g.size} $w (${rs(g.sumOf { it.net })})" }
-        val stops = ts.filter { it.why == "stop" || it.why == STOP_500 }
+        val stops = ts.filter { it.why == "stop" || it.why == STOP_500 || it.why == STOP_1500 }
         val quick = stops.count { held(it) <= QUICK_MINUTES }
         return "Exits: " + parts.joinToString(", ") + "." +
             if (stops.isNotEmpty()) " Of the ${stops.size} stop${if (stops.size == 1) "" else "s"}, $quick came within $QUICK_MINUTES minutes of entry." else ""

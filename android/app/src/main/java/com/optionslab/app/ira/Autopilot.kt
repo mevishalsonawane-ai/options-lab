@@ -524,8 +524,9 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
-            } else if (c.target == AutoChange.STEP_TRAIL_TARGET) {
-                // 15 Nov (Boss's exception, CLAUDE.md): the ₹500 step trail on Liquidity, R51 and R72 ([logStepTrailOn],
+            } else if (c.target == AutoChange.STEP_TRAIL_TARGET || c.target == AutoChange.STOP_1500_TARGET) {
+                // 15 Nov (Boss's exception, CLAUDE.md): Boss's stop rule on Liquidity, R51 and R72 - the morning's ₹1,500 stop rule's
+                // entries and the ₹1,500 stop + breakeven at +5% that replaced it under the same switch ([logStepTrailOn],
                 // [logStepTrail]): the Undo switches it off or on for new trades. Off puts the wider exits back, live too: the PIN, by the
                 // change's live scope ([needsPin]), asked before this runs; not logged again.
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
@@ -1392,16 +1393,17 @@ internal object Autopilot {
     }
 
     /**
-     * 15 Nov (Boss's exception, CLAUDE.md: "keep a 500 rs gap on every 500 rs gain"): the ₹500 step trail on Liquidity 15+5, R51 and
-     * R72, paper and live, on by the update - logged once as Boss's ([com.optionslab.app.data.StepTrailExits]).
+     * 15 Nov (Boss's exception, CLAUDE.md: "Make it 1.5k stoploss", "Instead 10% breakeven, make it 5% breakeven"): the ₹1,500 stop a lot +
+     * breakeven at +5% on Liquidity 15+5, R51 and R72 (it replaced the morning's ₹1,500 stop rule), paper and live, on by the update -
+     * logged once as Boss's under its own target ([AutoChange.STOP_1500_TARGET], [com.optionslab.app.data.StepTrailExits]).
      */
     fun logStepTrailOn() {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"keep a 500 rs gap on every 500 rs gain. And when a trade is bought the stop loss should be only 500 rs\"); " +
-            "failed gates, Boss's exception - paper and live, new trades")
+        logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"Make it 1.5k stoploss\", \"Instead 10% breakeven, make it 5% " +
+            "breakeven\"; it replaced the ₹500 step trail); failed gates, Boss's exception - paper and live, new trades")
     }
 
-    /** 15 Nov: Boss flipping the ₹500 step trail in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
+    /** 15 Nov: Boss flipping the ₹1,500 stop rule in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
     fun logStepTrail(on: Boolean) {
         if (!enabled()) return
         val c = AutoChange.stepTrail(on)

@@ -322,7 +322,7 @@ object VariantRunner {
             for (p in closed) {
                 // Boss's opt-in Liquidity give-back trail (R19b) or breakeven at +10% (R100 A4, 22 Oct) is not the rules' own
                 // result: left out of the baseline.
-                // 15 Nov: the ₹500 step trail's trades too ([OrbArms.Position.ownExits]).
+                // 15 Nov: the ₹1,500 stop rule's trades too ([OrbArms.Position.ownExits]).
                 if (p.day != d || p.exit == null || p.ownExits) continue
                 val key = lab(p.arm)
                 val run = runs[key] ?: continue
