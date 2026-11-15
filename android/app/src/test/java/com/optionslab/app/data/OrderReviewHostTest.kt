@@ -239,7 +239,7 @@ class OrderReviewHostTest : RobolectricTest() {
         val fri = LocalDate.of(2026, 10, 9)
         OrderReviewHost.testInputs = inputs(withFlaw = true)
         assertTrue(OrderReviewHost.runIfDue(context, at(thu, 15, 50)))
-        val file = java.io.File(context.noBackupFilesDir, "orderreview/review.txt")
+        val file = java.io.File(context.noBackupFilesDir, "orderreview/review.vault")
         assertTrue(file.exists())
         val days = ArrayList<LocalDate>()
         val base = inputs(withFlaw = true)
