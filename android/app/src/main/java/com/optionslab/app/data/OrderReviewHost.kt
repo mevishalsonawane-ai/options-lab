@@ -37,8 +37,9 @@ import java.time.ZoneId
  *    Benjamini-Hochberg decide; paper first, live only with Boss's PIN), or kept as a proposal when the lab cannot test it;
  *    each pattern's days go to Jarvis's lessons ([lessonInputs]). Promoted changes are measured before and after on the
  *    strategy's own nets ([OrderReview.beforeAfter]).
- *  - One small file (noBackupFilesDir/orderreview/review.txt: 60 days of counts, the latest day in full, the lab requests),
- *    and memory. One evening notification only when something serious happened (no rupees; deduped per day).
+ *  - One small file (noBackupFilesDir/orderreview/review.vault, sealed with the vault's key since 15 Nov - it was plain text
+ *    in review.txt before: 60 days of counts, the latest day in full, the lab requests), and memory. One evening
+ *    notification only when something serious happened (no rupees; deduped per day).
  *  - 15 Nov (Boss's diagnostics: the day's live orders were gone after a restart): each day's live orders as last read are also
  *    kept in a small sealed file a day (orderreview/orders-<day>.vault, the vault's encryption; [snapshotOrders]), written by
  *    this host's own background watcher, a few days kept. A day missed (the app not running that evening) is reviewed at the
@@ -48,7 +49,10 @@ import java.time.ZoneId
  */
 object OrderReviewHost {
     private const val DIR = "orderreview"
-    private const val FILE = "review.txt"
+    /** 15 Nov: the kept review, sealed with the vault's key (its flaws carry order ids, symbols and rupees: account data). */
+    private const val FILE = "review.vault"
+    /** Before 15 Nov the review was kept here in plain text: read once at the first load, written sealed, then deleted. */
+    private const val PLAIN_FILE = "review.txt"
     /** F&O closes 15:40: the day's review from 15:45. */
     const val FROM = 15 * 60 + 45
     /** The next morning's catch-up for MCX's evening trades (MCX closes 23:30 or 23:55). */
@@ -106,27 +110,53 @@ object OrderReviewHost {
 
     private fun file(): File? = dir()?.let { File(it, FILE) }
 
-    /** The kept file read once (a worker thread; small). A file there that cannot be read is never taken as empty. */
+    private fun plainFile(): File? = dir()?.let { File(it, PLAIN_FILE) }
+
+    /**
+     * The kept file read once (a worker thread; small: a Keystore decryption). A file there that cannot be read just now (the
+     * Keystore busy, an erase running) is never taken as empty: not loaded, nothing saved over it, read again next time.
+     * 15 Nov: sealed ([FILE]). A sealed file that can never be opened (damaged, or its key gone) is an empty book, never a
+     * crash: it is deleted and said in the diary. No sealed file but the plain one kept before 15 Nov ([PLAIN_FILE]): read
+     * once, written sealed, and the plain file deleted (kept until the sealed write is done, so nothing is lost).
+     */
     fun ensureLoaded() {
         if (loaded) return
         synchronized(lock) {
             if (loaded) return
             val f = file() ?: return
-            val read = runCatching { if (f.isFile) f.readText() else null }
-            if (read.isFailure) { runCatching { Diag.record("orders", "the order review's file could not be read: not loaded, nothing saved over it") }; return }
-            if (_book.value == OrderReview.Book()) _book.value = OrderReview.decode(read.getOrNull())
+            val plain = plainFile()
+            var migrate = false
+            val text: String? = try {
+                if (f.isFile) com.optionslab.app.security.Vault.readFileSteady(f)?.toString(Charsets.UTF_8)
+                else if (plain != null && plain.isFile) plain.readText().also { migrate = true }
+                else null
+            } catch (_: com.optionslab.app.security.Vault.Tampered) {
+                runCatching { f.delete() }
+                runCatching { Diag.record("orders", "the order review's file could not be opened (damaged): started again empty") }
+                loaded = true
+                return
+            } catch (_: Throwable) {
+                runCatching { Diag.record("orders", "the order review's file could not be read: not loaded, nothing saved over it") }
+                return
+            }
+            if (_book.value == OrderReview.Book()) _book.value = OrderReview.decode(text)
             loaded = true
+            // Written sealed now (the plain file is deleted by the save once the sealed one is written).
+            if (migrate) save(_book.value)
         }
     }
 
+    /**
+     * The book written to its sealed file (a worker thread, under [lock]: a Keystore encryption and a disk sync). 15 Nov: through
+     * the vault, as the app's other private files; once written, the plain file kept before 15 Nov is deleted. A write an erase
+     * drops ([com.optionslab.app.security.Vault.writeFileWritten] false) deletes nothing.
+     */
     private fun save(b: OrderReview.Book) {
         if (!loaded) return
         val f = file() ?: return
         runCatching {
-            f.parentFile?.mkdirs()
-            val tmp = File(f.parentFile, f.name + ".tmp")
-            java.io.FileOutputStream(tmp).use { out -> out.write(OrderReview.encode(b).toByteArray(Charsets.UTF_8)); out.flush(); out.fd.sync() }
-            if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+            if (com.optionslab.app.security.Vault.writeFileWritten(f, OrderReview.encode(b).toByteArray(Charsets.UTF_8)))
+                plainFile()?.takeIf { it.exists() }?.let { p -> p.delete(); File(p.parentFile, p.name + ".tmp").delete() }
         }
     }
 
@@ -820,8 +850,16 @@ object OrderReviewHost {
     /** 26 Oct: a review kept in memory (memory only, for the erase's tests). 15 Nov: or a day's live orders. */
     internal fun holdsForErase(): Boolean = _book.value != OrderReview.Book() || synchronized(snapLock) { snaps.values.any { it.isNotEmpty() } }
 
-    /** 26 Oct: the review's file and its temporary file (none before [init]). 15 Nov: and every day's kept live orders. */
-    internal fun filesForErase(): List<File> = file()?.let { listOf(it, File(it.parentFile, it.name + ".tmp")) + snapFiles() }.orEmpty()
+    /**
+     * 26 Oct: the review's file and its temporary file (none before [init]). 15 Nov: the sealed file and the vault's temporary
+     * files of it, the plain file kept before 15 Nov and its temporary file, and every day's kept live orders.
+     */
+    internal fun filesForErase(): List<File> {
+        val f = file() ?: return emptyList()
+        val p = plainFile() ?: return emptyList()
+        val temps = runCatching { dir()?.listFiles { x -> x.name.startsWith("$FILE.") && x.name.endsWith(".tmp") }?.toList() }.getOrNull().orEmpty()
+        return listOf(f, p, File(p.parentFile, p.name + ".tmp")) + temps + snapFiles()
+    }
 
     /** TEST ONLY: nothing kept, the file read (as empty); the live orders' snapshots forgotten (memory only) and their watcher off. */
     internal fun resetForTest() {

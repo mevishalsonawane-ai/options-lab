@@ -251,4 +251,68 @@ class OrderReviewHostTest : RobolectricTest() {
         assertFalse(OrderReviewHost.holdsForErase())
         assertFalse("nothing saved after the erase", file.exists())
     }
+
+    // ---- 15 Nov: the kept review sealed with the vault's key (it was plain text) ------------------------------------------
+
+    private val reviewDir: java.io.File get() = java.io.File(context.noBackupFilesDir, "orderreview")
+
+    @Test fun theKeptReviewIsSealedNeverPlainText() = runBlocking {
+        OrderReviewHost.testInputs = inputs(withFlaw = true)
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        val sealed = java.io.File(reviewDir, "review.vault")
+        assertTrue(sealed.isFile)
+        assertFalse(java.io.File(reviewDir, "review.txt").exists())
+        val raw = String(sealed.readBytes(), Charsets.ISO_8859_1)
+        for (w in listOf("ORB Fresh", "BANKNIFTY26OCT55000CE", "2026-10-12", "profit_lock")) assertFalse(w, raw.contains(w))
+    }
+
+    @Test fun anOldPlainFileIsMovedToTheSealedOneAndDeleted() {
+        val words = "Boss: stop moved too early on NIFTY"
+        val plain = java.io.File(reviewDir, "review.txt").apply { parentFile?.mkdirs()
+            writeText(OrderReview.encode(OrderReview.Book(proposals = listOf(words), lastRun = day, cutoffMs = 1L))) }
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+        assertEquals(listOf(words), OrderReviewHost.book.value.proposals)
+        assertFalse("the plain file is deleted once sealed", plain.exists())
+        assertTrue(java.io.File(reviewDir, "review.vault").isFile)
+        // A new process reads it back from the sealed file alone.
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+        assertEquals(listOf(words), OrderReviewHost.book.value.proposals)
+    }
+
+    @Test fun eraseRemovesTheSealedAndThePlainFile() = runBlocking {
+        OrderReviewHost.testInputs = inputs(withFlaw = true)
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        val sealed = java.io.File(reviewDir, "review.vault")
+        val plain = java.io.File(reviewDir, "review.txt").apply { writeText(OrderReview.encode(OrderReview.Book(lastRun = day, cutoffMs = 1L))) }
+        assertTrue(sealed.isFile && plain.isFile)
+        val names = OrderReviewHost.filesForErase().map { it.name }
+        assertTrue(names.toString(), "review.vault" in names && "review.txt" in names)
+        OrderReviewHost.wipe()
+        assertFalse(sealed.exists())
+        assertFalse(plain.exists())
+        assertFalse(OrderReviewHost.holdsForErase())
+    }
+
+    @Test fun aDamagedFileIsAnEmptyBookNeverACrash() = runBlocking {
+        java.io.File(reviewDir, "review.vault").apply { parentFile?.mkdirs(); writeBytes(ByteArray(80) { (it * 7).toByte() }) }
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(OrderReview.Book(), OrderReviewHost.book.value)
+        // Read as empty: the review goes on, and its new file is sealed and readable.
+        OrderReviewHost.testInputs = inputs(withFlaw = false)
+        assertTrue(OrderReviewHost.runIfDue(context, at(day, 15, 50)))
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(day, OrderReviewHost.book.value.lastRun)
+        // A damaged plain file left from before 15 Nov (no sealed file): an empty book too.
+        OrderReviewHost.wipe()
+        java.io.File(reviewDir, "review.txt").apply { parentFile?.mkdirs(); writeBytes(ByteArray(80) { it.toByte() }) }
+        OrderReviewHost.reloadForTest()
+        OrderReviewHost.ensureLoaded()
+        assertEquals(OrderReview.Book(), OrderReviewHost.book.value)
+    }
 }

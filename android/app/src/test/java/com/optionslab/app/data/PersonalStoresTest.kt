@@ -292,6 +292,7 @@ class PersonalStoresTest {
         },
         s("OrderReviewHost") {
             // The review's own file as its pass writes it (the pass needs a day's orders), then read into memory as at a start.
+            // 15 Nov: the plain file kept before that day, moved to the sealed review.vault (and deleted) by this read.
             java.io.File(app.noBackupFilesDir, "orderreview/review.txt").apply { parentFile?.mkdirs()
                 writeText(com.optionslab.ira.OrderReview.encode(com.optionslab.ira.OrderReview.Book(proposals = listOf("Boss: stop moved too early on NIFTY"), lastRun = java.time.LocalDate.of(2026, 10, 23), cutoffMs = 1L))) }
             com.optionslab.app.data.OrderReviewHost.reloadForTest()
