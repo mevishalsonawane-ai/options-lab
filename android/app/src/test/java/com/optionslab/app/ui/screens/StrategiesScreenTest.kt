@@ -182,6 +182,7 @@ internal class RecordingStrategyActions(var saveError: String? = null) : Strateg
     override fun shadowOff(id: String) { calls += "shadow off $id" }
     override fun lots(n: Int) { calls += "orb lots $n" }
     override fun unpark(index: String) { calls += "orb unpark $index" }
+    override fun liftLiquidityPark(pinConfirmed: Boolean) { calls += "orb lift pin=$pinConfirmed" }
 }
 
 /** A click through the node's semantics action (as TalkBack does): works wherever the node is, on screen or not. */
@@ -685,6 +686,38 @@ class OrbRowsTest {
         tap("Ask me to approve")
         assertTrue("no PIN asked", !shown("Enter your app PIN"))
         assertEquals(listOf("orb arm liquidity on=true auto=false pin=false"), rec.calls)
+    }
+
+    /** [view] with Liquidity's row changed by [f]. */
+    private fun OrbArms.View.liq(f: (OrbArms.ArmView) -> OrbArms.ArmView) = copy(arms = arms.map { if (it.arm.liquidity) f(it) else it })
+
+    /** 15 Nov (review): in Live, books on but not cleared by Boss's own switch say so - the badge and the books on paper. */
+    @Test fun liquidityNotSwitchedOnByBossSaysItIsOnPaperUntilHeDoes() {
+        rows(StrategyFakes.orbView(armed = true).liq { it.copy(liveOk = false, cleared = false, paperUntilSwitch = listOf("FINNIFTY 30-min", "FINNIFTY 5-min")) }, live = true)
+        assertTrue(shown(LIQ_PAPER_BADGE))
+        assertTrue(shown("On paper until you switch it on yourself on Home (off, then on): FINNIFTY 30-min, FINNIFTY 5-min"))
+        assertTrue(!shown(LIFT_PARK))
+    }
+
+    /** 15 Nov (review): cleared but its park not read yet (the first moments after a start): never "switch it on", a neutral badge. */
+    @Test fun aClearedLiquidityWhoseParkIsNotReadYetSaysSoNeutrally() {
+        rows(StrategyFakes.orbView(armed = true).liq { it.copy(liveOk = false, cleared = true) }, live = true)
+        assertTrue(shown("ARMED · LIVE · CHECKING ITS PARK"))
+        assertTrue(!shown(LIQ_PAPER_BADGE)); assertTrue(!shown("On paper until you switch it on"))
+    }
+
+    /** 15 Nov (review): parked to paper - its badge, the words, and the Lift button that asks the PIN first. */
+    @Test fun aParkedLiquidityIsLiftedOnlyAfterThePin() {
+        rows(StrategyFakes.orbView(armed = true).liq { it.copy(liveOk = false, cleared = true, reviewParked = true) }, live = true)
+        assertTrue(shown(LIQ_PARKED_BADGE))
+        assertTrue(shown("Parked to paper (by its self-review or the change timeline's Undo)"))
+        tap(LIFT_PARK)
+        assertTrue(shown("Enter your app PIN to lift Liquidity's park to paper"))
+        tap("PIN cancel")
+        assertTrue("nothing lifted without the PIN", rec.calls.isEmpty())
+        tap(LIFT_PARK)
+        tap("PIN OK")
+        assertEquals(listOf("orb lift pin=true"), rec.calls)
     }
 
     @Test fun anArmedArmSaysWhatItWaitsForAndDisarms() {

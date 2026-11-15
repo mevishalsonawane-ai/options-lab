@@ -109,6 +109,10 @@ internal interface OrbActions {
     fun firstLiveWatched(on: Boolean) {}
 }
 
+/** 15 Nov: Liquidity's badges in Live when its entries go to paper: parked to paper, or not switched on by Boss himself on Home. */
+internal const val LIQ_PARKED_BADGE = "ARMED · PARKED TO PAPER"
+internal const val LIQ_PAPER_BADGE = "ARMED · PAPER UNTIL YOU SWITCH IT ON"
+
 /** 15 Nov: the button that lifts Liquidity's self-review park to paper (its PIN asked first). */
 internal const val LIFT_PARK = "Lift the park to paper (PIN)"
 
@@ -179,10 +183,12 @@ internal fun OrbRowsContent(
                         // 30 Oct (Boss: "dont keep any in paper only"): these trade live through their own Trade live switch (the mirror).
                         a.armed && a.arm.hero -> "ARMED · PAPER + ITS LIVE SWITCH" to p.amber
                         a.armed && a.arm.paperOnly -> "ARMED · AUTO · PAPER + ITS LIVE SWITCH" to p.verdigris
-                        // 15 Nov: Liquidity in Live but on paper - parked by its review, or not switched on by Boss himself on Home.
-                        a.armed && a.arm.liquidity && live && a.reviewParked -> "ARMED · PAPER (PARKED BY ITS REVIEW)" to p.amber
+                        // 15 Nov: Liquidity in Live but on paper - its live entries parked to paper, or not switched on by Boss himself on
+                        // Home; cleared but its park not read yet (the first moments after a start): said neutrally, never "switch it on".
+                        a.armed && a.arm.liquidity && live && a.reviewParked -> LIQ_PARKED_BADGE to p.amber
                         a.armed && live && a.liveOk -> "ARMED · LIVE · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.oxblood
-                        a.armed && a.arm.liquidity && live -> "ARMED · PAPER UNTIL YOU SWITCH IT ON" to p.amber
+                        a.armed && a.arm.liquidity && live && !a.cleared -> LIQ_PAPER_BADGE to p.amber
+                        a.armed && a.arm.liquidity && live -> "ARMED · LIVE · CHECKING ITS PARK" to p.amber
                         a.armed && live -> "ARMED · LIVE · APPROVE (re-arm for auto)" to p.oxblood
                         a.armed -> "ARMED · PAPER · ${if (a.automatic) "AUTO" else "APPROVE"}" to p.verdigris
                         // 30 Oct (Boss): off never buys; it runs in shadow (would-be trades recorded).
@@ -201,7 +207,8 @@ internal fun OrbRowsContent(
                     Text("On paper until you switch it on yourself on Home (off, then on): ${a.paperUntilSwitch.joinToString(", ")}",
                         style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp), modifier = Modifier.testTag("orb-paper-until:${a.arm.source}"))
                 if (a.reviewParked) {
-                    Text("Parked to paper by its review: its next entries go to the paper account. Lifting the park takes your PIN.",
+                    Text("Parked to paper (by its self-review or the change timeline's Undo): its next entries go to the paper account. " +
+                        "Lifting the park takes your PIN.",
                         style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
                     BrassButton(LIFT_PARK, Modifier.padding(top = 2.dp), tone = p.oxblood) { liftAuth = true }
                 }

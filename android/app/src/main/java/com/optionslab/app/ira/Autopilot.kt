@@ -451,10 +451,8 @@ internal object Autopilot {
                 if (!c.target.startsWith(AutoChange.LIQ_INDEX) || index !in com.optionslab.engine.orb.ArmsCleanup.LIQ_INDICES) return null
                 when (c.to) {
                     AutoChange.PARKED, AutoChange.SWITCHED_OFF -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.OrbArms.parkLiquidity(index) }
-                    // 15 Nov (Boss: Liquidity trades live by its switch alone): switched back on from here while the app is in Live, its
-                    // books would trade on Zerodha - so from the timeline that takes the PIN (Boss's own row needs none).
-                    AutoChange.ON -> if (!pinConfirmed && runCatching { com.optionslab.app.data.OrbArms.liveNow() }.getOrDefault(true)) null
-                        else kotlinx.coroutines.runBlocking { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
+                    // (15 Nov: an unpark never clears its books for Zerodha - they stay on paper until Boss's own switch on Home.)
+                    AutoChange.ON -> kotlinx.coroutines.runBlocking { com.optionslab.app.data.OrbArms.unparkLiquidity(index) }
                     else -> null
                 }
             }

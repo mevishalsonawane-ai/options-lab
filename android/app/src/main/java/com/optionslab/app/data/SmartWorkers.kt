@@ -193,6 +193,16 @@ object SmartWorkers {
      */
     fun parkedToPaperNow(key: String): Boolean = !loaded || key in _settings.value.parked
 
+    /**
+     * 15 Nov (review): Boss switched [key] on himself (his own switch, or with his PIN): its self-review's PAUSE of new paper entries
+     * ([Settings.paused]) is lifted - as "switch it back on yourself" says. Its park to paper ([Settings.parked], live entries to paper)
+     * is NOT: that is lifted only with his PIN ([ownerRearmed]). Only ever called from Boss's own action.
+     */
+    fun ownerResumedPaper(key: String) {
+        ensureLoaded()
+        change { s -> if (key in s.paused) s.copy(paused = s.paused - key) to "$key: new paper entries switched back on by you" else null }
+    }
+
     /** 15 Nov: [key] is known to be parked to paper by its review (false until the settings are read: the row's words only). Memory only. */
     fun reviewParked(key: String): Boolean = loaded && key in _settings.value.parked
 

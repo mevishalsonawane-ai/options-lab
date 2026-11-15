@@ -45,10 +45,12 @@ notes; match the surrounding code.
     Live with Boss's PIN, "AI trades go live" on, the arm's own Trade live switch, every guard and the kill switch.
   - Boss stops any arm with its own switch.
   - Liquidity 15+5 (Boss, 15 Nov: "Liquidity should be always working if i have swtich on it on dashboard, no extra pin based
-    approval needed"): only Boss's own switch on Home (in Paper or Live) or his PIN clears a Liquidity book for live - no separate
-    PIN when he switches it on there in Live, and a book he switched on there in Paper goes live when the app goes Live. Any other
-    way of switching it on (Jarvis by voice, the day plan, the change timeline, an unpark, a one-time change, a restore) keeps it
-    on paper until he switches it on himself on Home; every switch-off clears it. Every other gate still applies: the app in Live
+    approval needed"): on the 15 Nov update every Liquidity book that was on was cleared once, by Boss's request, so the books his
+    dashboard shows on trade live when the app is in Live (automatic or approve, as each is set). From then on only Boss's own
+    switch on Home (in Paper or Live) or his PIN clears a book - no separate PIN when he switches it on there in Live, and a book he
+    switched on there in Paper goes live when the app goes Live. Switched on any other way afterwards (Jarvis by voice, the day
+    plan, the change timeline, an unpark, a restore), it stays on paper until he switches it on himself on Home; every switch-off
+    clears it. Every other gate still applies: the app in Live
     (which takes Boss's PIN), "AI trades go live", the switch itself (and each index's parking), every guard, the kill switch, the
     day stop and the day lock, its own live stop rule and its self-review's park to paper (lifted only with the PIN). Off stays one
     tap. Every other arm is unchanged (armed in Live with its own PIN).

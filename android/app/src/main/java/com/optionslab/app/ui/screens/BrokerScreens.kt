@@ -334,8 +334,9 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
             // live through its mirror ([com.optionslab.app.data.ArmLive]): listed as live when its Trade live is on and Shadow off.
             val mirror = com.optionslab.app.data.ArmLive.view.value
             fun mirrored(a: com.optionslab.app.data.OrbArms.ArmView) = a.arm.paperOnly && mirror.loaded && mirror.on(a.arm.source) && !mirror.shadowOn(a.arm.source)
-            (orb.filter { (it.liveOk && !it.arm.paperOnly) || mirrored(it) }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }) to
-                orb.filter { !((it.liveOk && !it.arm.paperOnly) || mirrored(it)) }.map { it.arm.label }
+            // 15 Nov: [cleared] - armed and cleared whatever the mode (Liquidity's liveOk is "live now", false in Paper).
+            (orb.filter { (it.cleared && !it.arm.paperOnly) || mirrored(it) }.map { it.arm.label } + strat.filter { it.liveEnabled }.map { it.name }) to
+                orb.filter { !((it.cleared && !it.arm.paperOnly) || mirrored(it)) }.map { it.arm.label }
         }
         // Set on the main thread (never from a worker's continuation: the compose tests' unconfined dispatcher would run the frame there).
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { aiLive = ai; liveArms = on; paperArms = off }
@@ -365,7 +366,8 @@ internal fun LiveScopeNote(model: AppModel, live: Boolean) {
             (if (paperArms.isNotEmpty()) "On paper: ${paperArms.joinToString(", ")}. " else "") +
             "An ORB-family arm trades live only when you arm it in Live with its own PIN; one armed in Paper asks you first. " +
             // 15 Nov (Boss): Liquidity 15+5's switch alone clears it for Zerodha.
-            "Liquidity 15+5 needs no PIN of its own: while its switch is on it trades live whenever the app is in Live. " +
+            "Liquidity 15+5 needs no PIN of its own: switched on by you on Home it trades live whenever the app is in Live; switched on " +
+            "by Jarvis or the day plan it stays on paper until you switch it on yourself on Home. " +
             "The paper strategies below trade live by their own switch. An arm you switch off never buys: it runs in shadow, " +
             "its would-be trades recorded so you can watch it.")
         ArmsLiveList(model)

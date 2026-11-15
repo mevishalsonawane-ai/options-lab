@@ -131,6 +131,34 @@ class OneSwitchTest {
         assertFalse("the PIN step closed", asked)
     }
 
+    /**
+     * 15 Nov (review): beside the Live switch, Liquidity 15+5 cleared by Boss's own switch is listed as trading live when armed - in
+     * Paper too (it trades live the moment he goes Live); switched on by Jarvis or the day plan (not cleared), it is listed on paper.
+     */
+    @Test fun theLivePreviewListsLiquidityByItsClearanceInPaperAndLive() {
+        val books = listOf("liquidity15", "liquidity5")
+        fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
+        val m = holder.model
+        // One composition (a test sets its content once); a new phase composes the note afresh, so it reads the arms again.
+        var phase by androidx.compose.runtime.mutableStateOf(0)
+        var liveNow by androidx.compose.runtime.mutableStateOf(false)
+        compose.setContent { IraAlgoTheme("light") { androidx.compose.runtime.key(phase) { LiveScopeNote(m, live = liveNow) } } }
+        for (live in listOf(false, true)) {
+            AutomationSupport.liveSettings(live = live)
+            AutomationSupport.orbState(app, JSONObject().put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(true)))
+            liveNow = live; phase++
+            compose.waitForIdle()
+            pump { exists("trade live when armed: Liquidity 15+5", substring = true) }
+            assertFalse("live=$live", exists("On paper: Liquidity 15+5", substring = true))
+            // Switched on without Boss's switch: on paper.
+            AutomationSupport.orbState(app, JSONObject().put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false)))
+            phase++
+            compose.waitForIdle()
+            pump { exists("On paper: Liquidity 15+5", substring = true) }
+            assertTrue(exists("stays on paper until you switch it on yourself on Home", substring = true))
+        }
+    }
+
     @Test fun aiTradesGoLiveCanBeTurnedOffOnItsOwnBesideTheLiveSwitchWithoutAPin() {
         IraNewsTrades.paperFirst = false
         AutomationSupport.liveSettings(live = true)

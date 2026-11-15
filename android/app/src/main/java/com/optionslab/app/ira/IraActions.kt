@@ -79,7 +79,8 @@ internal object IraActions {
         val liveNow = runCatching { com.optionslab.app.data.OrbArms.liveNow() }.getOrDefault(false)
         runCatching { com.optionslab.app.data.OrbArms.view().arms }.getOrDefault(emptyList()).forEach { a ->
             val src = a.arm.source
-            out += Item(a.arm.label, a.armed, needsPin = liveNow && a.armed && !a.arm.paperOnly && !a.liveOk, hero = a.arm.hero, start = suspend {
+            // 15 Nov: a Liquidity book not cleared is fixed by Boss's own switch on Home, never a PIN here: not counted as needing one.
+            out += Item(a.arm.label, a.armed, needsPin = liveNow && a.armed && !a.arm.paperOnly && !a.cleared && !a.arm.liquidity, hero = a.arm.hero, start = suspend {
                 if (a.armed) "${a.arm.label} is already on."
                 else {
                     // Never cleared for Zerodha by voice: in Live, OrbArms refuses without the PIN (armed on Home instead).
