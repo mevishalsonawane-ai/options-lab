@@ -1,0 +1,37 @@
+id: r177c-sc
+title: 'R177 Amendment C SC: Rs 1,500 a lot initial stop, up Rs 500 a lot per Rs 1,000 a lot of gain, on Liquidity 15+5, R72,
+  R51 (last year)'
+family: trade-management
+date: '2026-11-15'
+doc: research/hunt/r177_vp_trap/results/report.md
+hypothesis: 'Boss (15 Nov): ''initial stoploss at 1500 and increase it by 500 on every 1000 gain'' - -Rs 1,000 at +Rs 1,000
+  a lot, -Rs 500 at +Rs 2,000, cost at +Rs 3,000, ....'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted; early part 2025-10-20..2026-03-31
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); whole year 2025-10-20..2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the traded index (entries unchanged); stops on the premium'
+model_or_rule: Rs 1,500 a lot initial stop, up Rs 500 a lot per Rs 1,000 a lot of gain; PREREG.md Amendment C
+settings: research/hunt/r177_vp_trap/r177study.py run_a(c=True); PREREG.md Amendment C
+prereg: research/hunt/r177_vp_trap/PREREG.md
+variants_tried: 2
+results:
+  summary: 'Liquidity 15+5: today Rs 117,923 -> 688 trades Rs 77,921 (win 37%); twin p 1.0, BH q 1.0; failed: net not above
+    today''s rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs
+    13k month) in final, six, year | R72: today Rs 298,253 -> 2283 trades Rs 178,703 (win 42%); twin p 1.0, BH q 1.0; failed:
+    net not above today''s rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k
+    drawdown / -Rs 13k month) in early, final, six, year | R51: today Rs 221,238 -> 3098 trades Rs 100,137 (win 41%); twin
+    p 1.0, BH q 1.0; failed: net not above today''s rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account
+    stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year.'
+  costs: dated Zerodha charges on the whole quantity; R17 fills (stops sold as stops, gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4012. Chosen after seeing R176 / R177 on the same year. Nothing in the app changes.

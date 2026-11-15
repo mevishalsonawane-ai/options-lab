@@ -1,0 +1,79 @@
+{
+ "LIQ:SC": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "R72:SC": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "R51:SC": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "LIQ:K1SC": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 0.12,
+  "twin_p": 0.02,
+  "passed_except_account_stop": false
+ },
+ "R72:K1SC": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 1.0,
+  "twin_p": 0.4351,
+  "passed_except_account_stop": false
+ },
+ "R51:K1SC": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_own": 1.0,
+  "twin_p": 0.8523,
+  "passed_except_account_stop": false
+ },
+ "_m": {
+  "tests": 6,
+  "prior": 4006,
+  "total": 4012
+ }
+}

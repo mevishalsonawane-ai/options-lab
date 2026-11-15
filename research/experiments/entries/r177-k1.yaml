@@ -1,0 +1,40 @@
+id: r177-k1
+title: 'R177 K1: skip after a failed value-area break from Boss''s volume-profile PDF, on Liquidity 15+5, R72, R51 (last year,
+  1 lot)'
+family: daily-filters
+date: '2026-11-15'
+doc: research/hunt/r177_vp_trap/results/report.md
+hypothesis: 'Boss''s PDF (Volume Profile & Order Flow Setups, Cases 1, 2, 5): a break beyond yesterday''s value area (or day
+  range) that closes back inside is a trap; skip after a failed value-area break should raise profit by avoiding wrong trades.
+  Footprint / delta / CVD not tested (no tick data for a year).'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted; early part 2025-10-20..2026-03-31
+  holdout: 2026-04-01..2026-10-13 final (read by many studies); whole year 2025-10-20..2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the traded index (yesterday''s TPO value area / high / low from index 1-minute bars; today''s index closes);
+  the arms'' entries unchanged'
+model_or_rule: skip after a failed value-area break; PREREG.md section 2
+settings: research/hunt/r177_vp_trap/r177lib.py, r177study.py; PREREG.md
+prereg: research/hunt/r177_vp_trap/PREREG.md
+variants_tried: 3
+results:
+  summary: 'Liquidity 15+5: 688 trades Rs 117,923 -> 592 trades Rs 139,609 (final Rs 11,155 -> Rs 16,826); twin p 0.014, BH
+    q 1.0; failed: exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final,
+    six, year | R72: 2281 trades Rs 298,253 -> 2185 trades Rs 298,382 (final Rs 170,336 -> Rs 175,703); twin p 0.2395, BH
+    q 1.0; failed: net not above today''s rules (early, final, year); exit-twin BH q 1.00 > 0.10; outside the account stop
+    rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year | R51: 3084 trades Rs 221,238 -> 2986 trades Rs 212,002
+    (final Rs 131,546 -> Rs 125,602); twin p 0.5469, BH q 1.0; failed: net not above today''s rules (early, final, year);
+    exit-twin BH q 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year.'
+  costs: dated Zerodha charges on the whole quantity; R17 fills (stops sold as stops, gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: BH m = 3997. Liquidity K1 beat today's rules in every period (twin p 0.014, q within R177 0.126) but failed BH and
+  the account-stop gate; a lead for a forward test, not adopted. Nothing in the app changes.

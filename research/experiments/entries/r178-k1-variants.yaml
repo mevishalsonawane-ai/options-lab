@@ -1,0 +1,35 @@
+id: r178-k1-variants
+title: 'R178: six K1 skip variants (value-area / day-range failed breaks) selected on Nov 2024 - Oct 2025'
+family: daily-filters
+date: '2026-11-15'
+doc: research/hunt/r178_k1_enhance/results/report.md
+hypothesis: 'Boss: ''Can we enhance k1 skip more''. Variants of R177''s K1 (windows 15 / 30 / 60 min / all day, yesterday''s
+  high / low, K1 or K5), chosen on the year before K1 was found, then tested on the last year.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: 2024-11-20..2025-10-19 (selection; halves to / from 1 May 2025)
+  holdout: '2025-10-20..2026-10-19 (not tested: nothing qualified)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the traded index (yesterday''s TPO value area / high / low, today''s 1-minute closes)'
+model_or_rule: skip calls (puts) after a failed break above VAH / PDH (below VAL / PDL); PREREG.md section 2
+settings: research/hunt/r178_k1_enhance/r178study.py; PREREG.md
+prereg: research/hunt/r178_k1_enhance/PREREG.md
+variants_tried: 18
+results:
+  summary: 'LIQ: today Rs 143,377; K1 Rs 88,396, K2 Rs 126,858, K3 Rs 95,123, K4 Rs 107,525, K5 Rs 93,741, K6 Rs 86,062; chosen
+    none | R72: today Rs 88,388; K1 -Rs 28,759, K2 Rs 50,224, K3 -Rs 77,370, K4 -Rs 16,153, K5 Rs 22,132, K6 -Rs 36,584; chosen
+    none | R51: today -Rs 35,854; K1 -Rs 108,613, K2 -Rs 21,436, K3 -Rs 160,517, K4 -Rs 54,279, K5 -Rs 52,290, K6 -Rs 83,048;
+    chosen none. No variant beat today''s rules in both halves on any arm; K1 cut Liquidity from Rs 1.43 L to Rs 88k on the
+    selection year.'
+  costs: dated Zerodha charges on the whole quantity; R17 fills
+holdout_read: false
+verdict: rejected
+notes: BH m = 4,030 (18 selection comparisons counted). R177's K1 lead did not hold on the earlier year. Nothing in the app
+  changes.

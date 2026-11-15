@@ -1,0 +1,114 @@
+{
+ "LIQ:X1": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "R72:X1": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "R51:X1": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "LIQ:X2": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "R72:X2": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "R51:X2": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 1.0,
+  "twin_p": 1.0,
+  "passed_except_account_stop": false
+ },
+ "LIQ:K1": {
+  "passed": false,
+  "fails": [
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 0.126,
+  "twin_p": 0.014,
+  "passed_except_account_stop": false
+ },
+ "R72:K1": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 1.0,
+  "twin_p": 0.2395,
+  "passed_except_account_stop": false
+ },
+ "R51:K1": {
+  "passed": false,
+  "fails": [
+   "net not above today's rules (early, final, year)",
+   "exit-twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ],
+  "q_all": 1.0,
+  "q_r177": 1.0,
+  "twin_p": 0.5469,
+  "passed_except_account_stop": false
+ },
+ "_m": {
+  "r177": 9,
+  "prior": 3988,
+  "total": 3997
+ }
+}

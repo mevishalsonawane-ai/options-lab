@@ -1,0 +1,34 @@
+id: r179a-max-loss-1000
+title: 'R179 Amendment A: Rs 1,000 maximum loss (after charges) on picker + breakeven, R72 / R51 / Liquidity'
+family: trade-management
+date: '2026-11-15'
+doc: research/hunt/r179_winrate_55/results/report.md
+hypothesis: 'Boss: ''15% is too much for the stoploss, i want 1k max loss for all the above strategies''.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted; early part 2025-10-20..2026-03-31 (picker in-sample)
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); year to 2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (entries; R151 picker features); stop on the premium'
+model_or_rule: Rs 1,000 net stop a lot (and per trade at 2-3 lots) where tighter than -15%, on R151 picker + R162 BE10
+settings: research/hunt/r179_winrate_55/r179study.py run_a; PREREG.md Amendment A
+prereg: research/hunt/r179_winrate_55/PREREG.md
+variants_tried: 2
+results:
+  summary: 'LIQ: today 39.2% Rs 117,923 -> cap 689 trades 36.1% Rs 77,737, avg loss -Rs 782, biggest -Rs 2,565 | R72: today
+    46.3% Rs 298,253 -> cap 1076 trades 41.0% Rs 158,839, avg loss -Rs 958, biggest -Rs 3,781; failed: win rate below 55%
+    (year or final); net below its base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in early, final,
+    six, year | R51: today 45.1% Rs 221,238 -> cap 1394 trades 41.8% Rs 75,184, avg loss -Rs 972, biggest -Rs 8,269; failed:
+    win rate below 55% (year or final); net below its base (year or final); twin BH q 1.00 > 0.10; outside the account stop
+    rule in early, final, six, year.'
+  costs: dated Zerodha charges; R17 fills (stops sold as stops)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4040. Win rate falls to about 41% and profit by half or more. Nothing in the app changes.
