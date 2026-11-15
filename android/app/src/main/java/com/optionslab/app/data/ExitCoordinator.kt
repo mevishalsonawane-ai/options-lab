@@ -147,16 +147,6 @@ object ExitCoordinator {
     private val PLACED = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     private fun placedMs(s: String): Long? = if (s.isBlank()) null else runCatching { java.time.LocalDateTime.parse(s, PLACED).atZone(IST).toInstant().toEpochMilli() }.getOrNull()
 
-    /**
-     * 15 Nov, review: whether [orders] (a read of the order book) show an [exitSide] fill on [exchange]:[symbol] [product] that the
-     * exchange changed within [ExitDesk.RECENT_FILL_MS] (its update time): the positions may not show it yet. Memory only.
-     */
-    fun exitFilledRecently(exchange: String, symbol: String, product: String, exitSide: String, orders: Collection<Broker.OrderRow>): Boolean {
-        val now = nowMs()
-        return orders.any { it.symbol == symbol && it.exchange == exchange && it.product == product && it.side == exitSide && it.filled > 0 &&
-            ExitDesk.filledRecently(ExitDesk.Fill(it.id, it.side, it.filled, placedMs(it.updatedAt)), now) }
-    }
-
     // ---- for the exit senders -------------------------------------------------------------------------------------------------
 
     /**

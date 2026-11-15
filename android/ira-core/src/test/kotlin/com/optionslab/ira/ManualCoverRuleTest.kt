@@ -353,8 +353,13 @@ class ManualCoverRuleTest {
         assertFalse(ManualCoverRule.endedByExchange("CANCELLED", ""), "no words: Boss's")
         assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "   "))
         assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by user"))
-        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Order CANCELLED BY the client"))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Order cancelled by the client"))
         assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "USER cancel"))
+        assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by you"))
+        // Review (N6): the exchange's and the broker's own words are the exchange's.
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by exchange"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Order cancelled by RMS"))
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by system: circuit limit breached"))
         assertFalse(ManualCoverRule.endedByExchange("COMPLETE", "anything"))
         assertFalse(ManualCoverRule.endedByExchange("OPEN", ""))
     }

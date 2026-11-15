@@ -65,17 +65,20 @@ object ManualCoverRule {
 
     /**
      * 15 Nov, review: whether a stop that ended [status] with Zerodha's words [message] was ended by the exchange (REJECTED, or
-     * CANCELLED giving a reason that does not read as a user's cancel) rather than by Boss. A cancel with no words, or with words
-     * naming a user ("user", "cancelled by"), is Boss's: respected. ASSUMPTION, NOT VERIFIED against live Kite: a cancel Boss makes
-     * in Kite comes back with no status message, and the exchange's own cancels (market protection, circuit, IOC) give one. When
-     * unsure it is read as Boss's (the app then never puts the stop back by itself and says so loudly).
+     * CANCELLED with words of the exchange's or the broker's own: market protection, RMS, "cancelled by exchange", a circuit)
+     * rather than by Boss. Boss's: CANCELLED with no words, or words naming the user ("user", "by you", "client"). ASSUMPTION, NOT
+     * VERIFIED against live Kite: a cancel Boss makes in Kite comes back with no status message (or one naming the user). Read
+     * as Boss's, the app never puts the stop back by itself and says so loudly.
      */
     fun endedByExchange(status: String, message: String): Boolean {
         if (status.equals("REJECTED", ignoreCase = true)) return true
         if (!status.equals("CANCELLED", ignoreCase = true) || message.isBlank()) return false
         val m = message.lowercase()
-        return "user" !in m && "cancelled by" !in m && "canceled by" !in m
+        return USER_WORDS.none { it in m }
     }
+
+    /** The words that make a cancel's message Boss's own ([endedByExchange]). */
+    private val USER_WORDS = listOf("user", "by you", "client")
 
     /**
      * 15 Nov: the note of one slice of a protection rested in slices (a quantity above the exchange's freeze quantity) that ended

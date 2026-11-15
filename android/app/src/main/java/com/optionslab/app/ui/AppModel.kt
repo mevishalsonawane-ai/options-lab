@@ -1761,9 +1761,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
                 stuck.value = null
-                // 15 Nov, review: every leg filled in full: the stops taken over for it are not put back, even while Zerodha's
-                // positions still trail the fill ([com.optionslab.app.data.Protections.forgetTakenOver]).
-                if (taken.isNotEmpty()) runCatching { com.optionslab.app.data.Protections.forgetTakenOver(taken) }
+                // 15 Nov, review: every leg filled in full: the stops taken over for it wait while Zerodha's positions may trail the
+                // fill, then come back only if the position is still held ([com.optionslab.app.data.Protections.exitFilledFor]).
+                if (taken.isNotEmpty()) runCatching { com.optionslab.app.data.Protections.exitFilledFor(taken) }
                 // 18 Oct, review: every leg filled, so it is shown as filled now. The steps after (the ledger, the MCX watch, the
                 // bracket's exits) each fail on their own and are said as "Filled, but ..." - never "Not sent", which could
                 // lead Boss to send the same live orders again.

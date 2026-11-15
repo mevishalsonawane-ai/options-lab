@@ -368,4 +368,44 @@ class ProtectionsSlicesTest : RobolectricTest() {
         old.flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }.forEach { assertEquals("CANCELLED", kite.order(it).status) }
         assertEquals(listOf(95.0, 95.0), active().map { it.stop })
     }
+
+    /**
+     * N3: at the open the first slice rests its stop again, and the order book read for the second does not show it yet: the new
+     * stop is counted whole (it was set seconds ago), so the second never covers the same units again.
+     */
+    @Test fun aSiblingsStopJustPlacedButNotYetInTheBookIsCounted() {
+        kite.position(sym, 3600, 100.0)
+        kite.login()
+        protect(3600, target = null)
+        kite.orders.clear()                                                 // yesterday's DAY orders are gone
+        kite.position(sym, 1800, 100.0)                                     // half sold overnight
+        nextSession(9, 20)
+        kite.requests.clear()
+        kite.trailReads = 10                                                // the next order placed trails the order book's reads
+        tick()
+        assertEquals("never more than is held", 1800, kite.placed.filter { it.form["order_type"] == "SL" }.sumOf { it.form.getValue("quantity").toInt() })
+        assertEquals(1800, active().sumOf { it.qty })
+    }
+
+    /**
+     * N4: a sibling not counted as resting (its target part filled) is counted as busy by the larger of its stop and target, never
+     * their sum: the slice put back after Boss's exit gets what is left to cover, not nothing.
+     */
+    @Test fun aNonRestingSiblingIsBusyByItsLargerExitNotTheSum() {
+        kite.position(sym, 3600, 100.0)
+        kite.login()
+        protect(3600)
+        val (a, b) = active()
+        kite.fillPart(b.targetOrderId!!, 600, 130.0)                        // 3,000 held; B's stop 1,800 and target 1,200 still work
+        val ids = listOfNotNull(a.stopOrderId, a.targetOrderId)
+        Protections.noteTakenOver(ids)
+        runBlocking { ids.forEach { Broker.cancel(it) } }                   // A's taken over for an exit that did not go
+        minutesLater()
+        kite.requests.clear()
+        tick()
+        assertEquals("1,800 of B's stop plus 1,200 again: all 3,000 held", listOf("1200", "1200"), kite.placed.map { it.form["quantity"] })
+        val now = active().first { it.id != b.id }
+        assertEquals(1200, now.qty)
+        assertEquals("TRIGGER PENDING", kite.order(now.stopOrderId!!).status)
+    }
 }

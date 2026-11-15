@@ -266,8 +266,8 @@ class OrderFlowLive2Test : RobolectricTest() {
     }
 
     /**
-     * 15 Nov, review: the square-off filled in full while Zerodha's positions still trail it: the stops taken over for it are never
-     * put back (a stop on a flat account would be a naked short if it triggered).
+     * 15 Nov, review: the square-off filled in full while Zerodha's positions still trail it: the stops taken over for it are not
+     * put back while the positions may trail (a stop on a flat account would be a naked short if it triggered).
      */
     @Test fun aSquareOffThatFilledNeverPutsTheProtectionsStopBack() {
         kite.position(ce, 75, 90.0)
@@ -280,9 +280,12 @@ class OrderFlowLive2Test : RobolectricTest() {
         m.sendPlan()
         assertEquals("COMPLETE", sent(m).single().status)
         assertEquals("sold at Zerodha", 0, kite.positions.getValue("NFO:$ce:NRML").first)
-        assertFalse("not to be put back", Protections.takenOverForTest(p.stopOrderId!!))
+        assertTrue("said filled in full: it waits while the positions may trail", Protections.exitDoneForTest(p.stopOrderId!!))
         BrokerArea.await("the contract handed back") { (!com.optionslab.app.data.ArmLive.handsOffNow("NFO", ce)).takeIf { it } }
-        com.optionslab.app.data.Market.testClock = com.optionslab.app.testing.MarketClockRule.clockAt(12, 5)
+        // Past the protection's first minute, within the wait after the fill.
+        val at = com.optionslab.app.testing.MarketClockRule.pinnedDay().atTime(12, 1, 40).atZone(com.optionslab.engine.IST).toInstant()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST),
+            java.time.Duration.between(java.time.Instant.now(), at))
         val before = kite.placed.size
         runBlocking { Protections.tick() }
         assertEquals("no stop placed again", before, kite.placed.size)

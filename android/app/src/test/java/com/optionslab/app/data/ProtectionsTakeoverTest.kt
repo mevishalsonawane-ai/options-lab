@@ -215,21 +215,78 @@ class ProtectionsTakeoverTest : RobolectricTest() {
         assertFalse(Alerts.posted.any { it.text.contains("rest at Zerodha again") })
     }
 
-    /** The exit filled in full (AppModel then forgets the takeover): nothing is put back or said while the positions trail. */
-    @Test fun aTakeoverForgottenAfterItsExitFilledPutsNothingBack() {
+    /** The exit filled in full (AppModel says so): while the positions may trail it, nothing is put back or said. */
+    @Test fun anExitFilledInFullWaitsWhileThePositionsMayTrail() {
         val p = protect()
         takeOver(p)
-        val ids = listOfNotNull(p.stopOrderId, p.targetOrderId)
-        Protections.forgetTakenOver(ids)
-        assertFalse(Protections.takenOverForTest(ids.first()))
+        later()
         kite.positionsTrailReads = 1_000
         runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 150, 75, "NRML", "LIMIT", 99.95,
             0.05, "NFO", "manual"), exit = true) }
-        Market.testClock = MarketClockRule.clockAt(12, 10)                 // past the minute: the positions trail all the same
+        val ids = listOfNotNull(p.stopOrderId, p.targetOrderId)
+        Protections.exitFilledFor(ids)
+        assertTrue(Protections.exitDoneForTest(ids.first()))
+        assertTrue("still marked, in case the position is still held after the wait", Protections.takenOverForTest(ids.first()))
         kite.requests.clear()
         tick(); tick()
         assertTrue(kite.placed.isEmpty())
         assertFalse("never said as Boss's own cancel", Alerts.posted.any { it.text.contains("cancelled by you") })
         assertEquals("kept until the positions show it closed", p.id, runBlocking { Protections.active() }.single().id)
+    }
+
+    /**
+     * N1: every leg "filled in full" but lots were added between the review and the send, so part is still held: after the wait the
+     * stop comes back for what is held (never ended as Boss's cancel).
+     */
+    @Test fun anExitFilledInFullThatLeftPartHeldGetsItsStopBackAfterTheWait() {
+        val p = protect()
+        takeOver(p)
+        later()                                                              // 12:05
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 75, 75, "NRML", "LIMIT", 99.95,
+            0.05, "NFO", "manual"), exit = true) }                          // the stale square-off sold 75 of the 150
+        val ids = listOfNotNull(p.stopOrderId, p.targetOrderId)
+        Protections.exitFilledFor(ids)
+        kite.requests.clear()
+        tick()
+        assertTrue("waits while the positions may trail", kite.placed.isEmpty())
+        Market.testClock = MarketClockRule.clockAt(12, 8)                  // past the wait
+        tick()
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals(listOf("75", "75"), kite.placed.map { it.form["quantity"] })
+        assertEquals(75, runBlocking { Protections.active() }.single().qty)
+        assertFalse(Alerts.posted.any { it.text.contains("cancelled by you") })
+    }
+
+    /** N2: an exit that filled only in part gets its stop back on the next regular look, for what is left (no minute's wait). */
+    @Test fun aPartFilledExitGetsItsStopBackOnTheNextLook() {
+        val p = protect()
+        takeOver(p)
+        later()
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 75, 75, "NRML", "LIMIT", 99.95,
+            0.05, "NFO", "manual"), exit = true) }                          // filled a moment ago: 75 left
+        kite.requests.clear()
+        tick()
+        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals(listOf("75", "75"), kite.placed.map { it.form["quantity"] })
+    }
+
+    /** N7: a day GTT deleted for the exit whose placing again fails stays marked, so every later try is made the same careful way. */
+    @Test fun aDayGttNotPlacedAgainStaysMarkedForTheNextTry() {
+        DayOco.resetForTest(on = true)
+        try {
+            runBlocking { Protections.protectLive(sym, "NFO", "NRML", 150, 100.0, 90.0, null, 130.0) }
+            val gid = runBlocking { Protections.active() }.single().gttId!!
+            Protections.noteTakenOver(listOf("gtt:$gid"))
+            runBlocking { Broker.deleteGtt(gid) }
+            ArmLive.handsOff("NFO", sym)                                    // Boss's exit still going: nothing placed this look
+            later()
+            tick()
+            assertTrue(Protections.takenOverForTest("gtt:$gid"))
+            assertEquals(gid, runBlocking { Protections.active() }.single().gttId)
+            ArmLive.handsBack("NFO", sym)
+            tick()
+            assertFalse("placed now: no longer marked", Protections.takenOverForTest("gtt:$gid"))
+            assertTrue(kite.gtts.isNotEmpty())
+        } finally { DayOco.resetForTest() }
     }
 }
