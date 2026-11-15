@@ -121,4 +121,32 @@ class OrderReviewSnapshotTest : RobolectricTest() {
         AppState.resetForTest()
         assertEquals(listOf("kite:1"), liveIn(td).map { it.id })
     }
+
+    /**
+     * A kept order is named as a live one is ([ordersIn]: the owners' book, else [ArmOrderLabels]): after a restart, a REJECTED
+     * order whose id never reached the phone is still named by its arm's refused try (the exchange and product are kept for it).
+     */
+    @Test fun aKeptRejectedOrderIsNamedByItsArmsRefusedTry() {
+        val at = td.atTime(10, 0)
+        val placed = at.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+        val rejected = Broker.OrderRow("301", "NIFTY26NOV25000CE", "BUY", 75, 0, 0.0, 0.0, "REJECTED", "Insufficient funds", placed, "NFO", "MIS", "MARKET", tag = "iraarm")
+        assertEquals(1, OrderReviewHost.snapshotOrders(listOf(rejected)))
+        OrderReviewHost.reloadForTest()
+        AppState.resetForTest()
+        val keepWas = ArmOrderLabels.keep
+        ArmOrderLabels.resetForTest()
+        ArmOrderLabels.keep = { _, _ -> }
+        try {
+            val atMs = at.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+            val ticket = ArmOrderLabels.sending(com.optionslab.engine.Kite.Order("NIFTY26NOV25000CE", com.optionslab.engine.Kite.Side.BUY, 75, 75, "MIS", "MARKET",
+                null, 0.05, "NFO", "iraarm"), "R72 · live entry", atMs)
+            ArmOrderLabels.refused(ticket)
+            val o = liveIn(td).single()
+            assertEquals("kite:301", o.id)
+            assertEquals(com.optionslab.ira.Charges.owner("R72 · live entry"), o.strategy)
+        } finally {
+            ArmOrderLabels.keep = keepWas
+            ArmOrderLabels.resetForTest()
+        }
+    }
 }

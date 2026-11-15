@@ -514,14 +514,19 @@ object OrderReviewHost {
 
     private fun dayOf(atMs: Long): LocalDate = java.time.Instant.ofEpochMilli(atMs).atZone(IST).toLocalDate()
 
-    /** What is kept of one order: what [ordersIn] reads, nothing more. */
+    /**
+     * What is kept of one order: what [ordersIn] reads, nothing more - with the exchange and product, which [ArmOrderLabels.labelOf]
+     * matches a rejected order to its arm's refused try by.
+     */
     private fun keptRow(o: Broker.OrderRow) = Broker.OrderRow(id = o.id, symbol = o.symbol, side = o.side, qty = o.qty, filled = o.filled, price = 0.0,
-        avg = if (o.avg.isFinite()) o.avg else 0.0, status = o.status, message = o.message, placedAt = o.placedAt, type = o.type, tag = o.tag)
+        avg = if (o.avg.isFinite()) o.avg else 0.0, status = o.status, message = o.message, placedAt = o.placedAt, exchange = o.exchange,
+        product = o.product, type = o.type, tag = o.tag)
 
     private fun encodeRows(rows: Collection<Broker.OrderRow>): ByteArray {
         val a = org.json.JSONArray()
         for (o in rows) a.put(org.json.JSONObject().put("id", o.id).put("symbol", o.symbol).put("side", o.side).put("qty", o.qty).put("filled", o.filled)
-            .put("avg", o.avg).put("status", o.status).put("message", o.message).put("placedAt", o.placedAt).put("type", o.type).put("tag", o.tag))
+            .put("avg", o.avg).put("status", o.status).put("message", o.message).put("placedAt", o.placedAt).put("type", o.type).put("tag", o.tag)
+            .put("exchange", o.exchange).put("product", o.product))
         return a.toString().toByteArray(Charsets.UTF_8)
     }
 
@@ -534,7 +539,8 @@ object OrderReviewHost {
             if (id.isEmpty()) continue
             out[id] = Broker.OrderRow(id = id, symbol = j.optString("symbol"), side = j.optString("side"), qty = j.optInt("qty"), filled = j.optInt("filled"),
                 price = 0.0, avg = j.optDouble("avg", 0.0).let { if (it.isFinite()) it else 0.0 }, status = j.optString("status"),
-                message = j.optString("message"), placedAt = j.optString("placedAt"), type = j.optString("type", "LIMIT"), tag = j.optString("tag"))
+                message = j.optString("message"), placedAt = j.optString("placedAt"), exchange = j.optString("exchange", "NFO"),
+                product = j.optString("product"), type = j.optString("type", "LIMIT"), tag = j.optString("tag"))
         }
         return out
     }
