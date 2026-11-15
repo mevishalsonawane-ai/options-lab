@@ -31,8 +31,9 @@ class ArmOrderLabelsTest : RobolectricTest() {
         Kite.Order(symbol, side, qty, 75, "MIS", "MARKET", null, 0.05, "NFO", tag)
 
     private fun row(id: String, at: LocalDateTime = t0, status: String = "REJECTED", qty: Int = 75, filled: Int = 0, symbol: String = sym,
-                    side: String = "BUY", tag: String = "iraarm", exchange: String = "NFO", placedAt: String = at.format(fmt)) =
-        Broker.OrderRow(id, symbol, side, qty, filled, 0.0, 0.0, status, "Insufficient funds", placedAt, exchange, "MIS", "MARKET", tag = tag)
+                    side: String = "BUY", tag: String = "iraarm", exchange: String = "NFO", placedAt: String = at.format(fmt),
+                    product: String = "MIS", type: String = "MARKET") =
+        Broker.OrderRow(id, symbol, side, qty, filled, 0.0, 0.0, status, "Insufficient funds", placedAt, exchange, product, type, tag = tag)
 
     @Before fun up() {
         ArmOrderLabels.resetForTest()
@@ -86,6 +87,8 @@ class ArmOrderLabelsTest : RobolectricTest() {
         assertNull("another bot's tag", ArmOrderLabels.labelOf(row("8", tag = "iraorb")))
         assertNull("a hand order (no tag)", ArmOrderLabels.labelOf(row("9", tag = "")))
         assertNull("another exchange", ArmOrderLabels.labelOf(row("10", exchange = "BFO")))
+        assertNull("another order type", ArmOrderLabels.labelOf(row("10a", type = "LIMIT")))
+        assertNull("another product", ArmOrderLabels.labelOf(row("10b", product = "NRML")))
         assertNull("too early", ArmOrderLabels.labelOf(row("11", at = t0.minusSeconds(ArmOrderLabels.BEFORE_MS / 1000 + 1))))
         assertNull("too late", ArmOrderLabels.labelOf(row("12", at = t0.plusSeconds(ArmOrderLabels.AFTER_MS / 1000 + 1))))
         assertNull("no time", ArmOrderLabels.labelOf(row("13", placedAt = "")))
@@ -95,13 +98,33 @@ class ArmOrderLabelsTest : RobolectricTest() {
         assertEquals("R51 · live entry", ArmOrderLabels.labelOf(row("15", at = t0.minusSeconds(ArmOrderLabels.BEFORE_MS / 1000))))
     }
 
-    @Test fun twoArmsOnOneContractEachNameTheirOwnOrderByTheNearestTime() {
-        // R51 and R72 buy the same contract and lots two minutes apart (as on 3, 4 and 6 Nov); both are refused with no id.
+    @Test fun twoArmsRefusedOnOneContractCloseTogetherAreLeftUnnamed() {
+        // R51 and R72 buy the same contract and lots two minutes apart (as on 3, 4 and 6 Nov); both are refused with no id. A
+        // rejected order that fits both is never guessed between them.
         ArmOrderLabels.refused(ArmOrderLabels.sending(order(), "R51 · live entry", ms(t0)))
         ArmOrderLabels.refused(ArmOrderLabels.sending(order(), "R72 · live entry", ms(t0.plusMinutes(2))))
-        assertEquals("R72 · live entry", ArmOrderLabels.labelOf(row("302", at = t0.plusMinutes(2).plusSeconds(1))))
-        assertEquals("R51 · live entry", ArmOrderLabels.labelOf(row("301", at = t0.plusSeconds(1))))
-        assertEquals(setOf("301" to "R51 · live entry", "302" to "R72 · live entry"), kept.toSet())
+        assertNull(ArmOrderLabels.labelOf(row("302", at = t0.plusMinutes(2).plusSeconds(1))))
+        assertNull(ArmOrderLabels.labelOf(row("301", at = t0.plusSeconds(1))))
+        assertTrue(kept.isEmpty())
+        // Further apart, each order fits only its own arm's try: named.
+        val later = t0.plusMinutes(30)
+        ArmOrderLabels.refused(ArmOrderLabels.sending(order(), "R51 · live entry", ms(later)))
+        ArmOrderLabels.refused(ArmOrderLabels.sending(order(), "R72 · live entry", ms(later.plusMinutes(10))))
+        assertEquals("R72 · live entry", ArmOrderLabels.labelOf(row("312", at = later.plusMinutes(10).plusSeconds(1))))
+        assertEquals("R51 · live entry", ArmOrderLabels.labelOf(row("311", at = later.plusSeconds(1))))
+        // Two refused tries of the SAME arm fit: named (the nearest takes it, the other stays free for its own order).
+        ArmOrderLabels.refused(ArmOrderLabels.sending(order(qty = 150), "R51 · live entry", ms(later)))
+        ArmOrderLabels.refused(ArmOrderLabels.sending(order(qty = 150), "R51 · live entry", ms(later.plusMinutes(1))))
+        assertEquals("R51 · live entry", ArmOrderLabels.labelOf(row("321", qty = 150, at = later.plusSeconds(2))))
+        assertEquals("R51 · live entry", ArmOrderLabels.labelOf(row("322", qty = 150, at = later.plusMinutes(1).plusSeconds(2))))
+        assertNull("one order a try", ArmOrderLabels.labelOf(row("323", qty = 150, at = later.plusMinutes(1).plusSeconds(3))))
+    }
+
+    @Test fun theOrderTypeAndProductMustMatch() {
+        val limit = Kite.Order(sym, Kite.Side.BUY, 75, 75, "NRML", "LIMIT", 120.0, 0.05, "NFO", "iraarm")
+        ArmOrderLabels.refused(ArmOrderLabels.sending(limit, "Hero · live entry", ms(t0)))
+        assertNull("a MARKET MIS order is not this LIMIT NRML try's", ArmOrderLabels.labelOf(row("331")))
+        assertEquals("Hero · live entry", ArmOrderLabels.labelOf(row("332", product = "NRML", type = "LIMIT")))
     }
 
     @Test fun theTagIsComparedAsZerodhaKeepsIt() {
@@ -142,6 +165,12 @@ class ArmOrderLabelsTest : RobolectricTest() {
         assertNull("yesterday's refused tries too", ArmOrderLabels.labelOf(row("601")))
     }
 
+    @Test fun theResetPutsTheAppsOwnKeeperBack() {
+        val mine = ArmOrderLabels.keep
+        ArmOrderLabels.resetForTest()
+        assertTrue("the test's recorder is gone", ArmOrderLabels.keep !== mine)
+    }
+
     @Test fun aKeeperThatThrowsNeverCostsTheLabel() {
         ArmOrderLabels.keep = { _, _ -> throw IllegalStateException("the labels' book could not be written") }
         ArmOrderLabels.refused(ArmOrderLabels.sending(order(), "R51 · live entry", ms(t0)))
@@ -160,6 +189,7 @@ class ArmOrderLabelsTest : RobolectricTest() {
         assertEquals(mapOf("kite:801" to "R51", "kite:802" to "Arms (live)"), orders)
         // A label already in the app's order labels wins.
         ArmOrderLabels.resetForTest()
+        ArmOrderLabels.keep = { id, label -> kept += id to label }      // (the reset put the app's own keeper back)
         ArmOrderLabels.refused(ArmOrderLabels.sending(order(), "R51 · live entry", ms(t0)))
         val named = OrderReviewHost.ordersIn(mapOf("kite:801" to "R72 · live entry"), ms(day.atStartOfDay()), ms(day.plusDays(1).atStartOfDay()) - 1)
             .first { it.id == "kite:801" }

@@ -274,9 +274,11 @@ class ArmLiveTest : RobolectricTest() {
             val at = com.optionslab.app.data.Market.now().toLocalDateTime().withNano(0).toString().replace('T', ' ')
             val row = Broker.OrderRow("990001", sym, "BUY", 30, 0, 0.0, 0.0, "REJECTED", "Insufficient funds", at, "NFO", "MIS", "MARKET", tag = "iraarm")
             assertEquals("$label · live entry", ArmOrderLabels.labelOf(row))
-            // An entry Zerodha takes: named by its id at once.
+            // An entry Zerodha takes: named by its id at once. (No day cap in its way: this test is about the label.)
+            SecurePrefs.putAll(mapOf("g.trades" to 0, "k.maxOrders" to 500))
             kite.requests.clear()
             ArmLive.entered(ask(key, "taken"))
+            assertEquals(view().refused[key], 1, view().openReal.size)
             val id = kite.orders.values.first { it.side == "BUY" && it.status == "COMPLETE" }.id
             assertEquals("$label · live entry", ArmOrderLabels.labelOf(Broker.OrderRow(id, sym, "BUY", 30, 30, 0.0, 200.0, "COMPLETE", "", at, "NFO", "MIS", "MARKET", tag = "iraarm")))
         } finally { ArmOrderLabels.keep = keepWas; ArmOrderLabels.resetForTest() }
