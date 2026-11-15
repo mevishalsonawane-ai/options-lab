@@ -328,3 +328,10 @@ def test_lookahead_entry_features():
     h = LB.entry_features(cut(s, S), ab, T0, S, +1)
     for k in f:
         assert (f[k] == g[k] == h[k]) or (np.isnan(f[k]) and np.isnan(g[k]) and np.isnan(h[k])), k
+
+
+def test_bootstrap_constant_feature_is_nan_not_a_crash():
+    xs = [np.zeros(50) for _ in range(5)]
+    ys = [np.arange(50.0) for _ in range(5)]
+    b = LB.day_bootstrap(xs, ys, draws=50)
+    assert np.isnan(b["r"]) and np.isnan(b["lo"]) and np.isnan(b["p"]) and b["n"] == 250

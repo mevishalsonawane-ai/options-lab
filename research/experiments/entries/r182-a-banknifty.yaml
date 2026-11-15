@@ -1,0 +1,29 @@
+id: r182-a-banknifty
+title: 'R182 Part A BANKNIFTY: does the 5-minute futures order-flow delta predict the next 15 minutes'' futures return?'
+family: flow-oi
+date: '2026-11-15'
+doc: research/hunt/r182_delta_study/results/report.md
+hypothesis: 'A positive (negative) 5-minute tick-rule delta on the near future is followed by a rise (fall) over the next
+  15 minutes: rank correlation > 0, day-block bootstrap p.'
+data_version: 'phone recordings exported 15 Nov 2026: 1-second order flow 15 Oct - 13 Nov 2026 (20 days, futures of NIFTY,
+  BANKNIFTY, FINNIFTY, MIDCPNIFTY); minute order flow 15-28 Oct (cross-check); daily diagnostics 19 Oct - 14 Nov (paper orders
+  only); outside git'
+period:
+  design: 'none: one pre-registered test on all 20 days (no split; descriptive grid alongside)'
+  holdout: none
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the index near future''s 1-second tick-rule delta (buy_vol - sell_vol, the app''s OrderFlow recorder), scaled
+  by the day''s mean |1-minute delta| so far; target: the future''s own log return'
+model_or_rule: Spearman(D5 at the minute close, log return close -> close + 15 minutes), minute closes 09:30-15:14
+settings: research/hunt/r182_delta_study/PREREG.md section 4; r182lib.py
+prereg: research/hunt/r182_delta_study/PREREG.md
+variants_tried: 1
+results:
+  summary: '6,356 minutes over 20 days: rho -0.028 (95% day-bootstrap -0.075..+0.020), p 0.243 (circular-shift p 0.295), BH
+    q 1.000 (m 4073). Same-minute delta vs price rho +0.282 (+0.259..+0.308).'
+  costs: none (a correlation with the futures return, no trade)
+holdout_read: null
+verdict: rejected
+notes: Exploratory sample (20 days). Delta moves WITH price in the same minute; the test is whether it leads it.

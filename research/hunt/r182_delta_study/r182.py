@@ -241,7 +241,7 @@ def main(argv=None):
                   p=A[u]["primary"]["p"]) for u in LB.INDICES]
     tests += [dict(id=f"r182-b-{arm.lower()}", what=f"Part B primary, {arm}: skip when the 5-minute futures delta opposes",
                    p=B[arm]["P"]["twins"]["p"]) for arm in ARMS]
-    ps = [t["p"] if t["p"] is not None else 1.0 for t in tests]
+    ps = [t["p"] if (t["p"] is not None and np.isfinite(t["p"])) else 1.0 for t in tests]
     q_all, q_in = LB.bh_with_prior(ps, LB.M_PRIOR + len(tests))
     for t, qa, qi in zip(tests, q_all, q_in):
         t["q"], t["q_within"] = float(qa), float(qi)

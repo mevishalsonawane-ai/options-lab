@@ -213,6 +213,9 @@ def day_bootstrap(xs: list, ys: list, stat=spearman_days, draws: int = 2000, see
         idx = rng.integers(0, k, k)
         bs[j] = stat([xs[i] for i in idx], [ys[i] for i in idx])
     bs = bs[np.isfinite(bs)]
+    if len(bs) < 2:              # a constant feature (e.g. no absorption at all on an index): no correlation exists
+        return dict(r=obs, lo=float("nan"), hi=float("nan"), se=float("nan"), z=float("nan"), p=float("nan"), n_days=k,
+                    n=int(sum(int((np.isfinite(a) & np.isfinite(b)).sum()) for a, b in zip(xs, ys))))
     se = float(np.std(bs, ddof=1)) if len(bs) > 1 else float("nan")
     z = obs / se if se and se > 0 else float("nan")
     p = float(math.erfc(abs(z) / math.sqrt(2))) if np.isfinite(z) else float("nan")
