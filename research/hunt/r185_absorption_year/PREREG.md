@@ -178,3 +178,22 @@ For each setup x index, the chosen variant on 20 Oct 2025 - 19 Oct 2026, read on
   MIDCPNIFTY, SENSEX the same way.
 - Any change to this plan after this commit is an amendment, dated, with its reason, and says whether any number had
   been seen.
+
+## Amendment A (16 Nov 2026, after NIFTY's final read; before any BANKNIFTY, FINNIFTY, MIDCPNIFTY or SENSEX signal, trade or rupee)
+
+**Change:** section 1's lot ("the repo's lot schedule by date") is replaced by the **true lot of the contract traded, by
+trading day** (`r185lib.TRUE_LOTS`), for every index. **Why:** the repo's shared schedule (`research/obuy/config.py`)
+differs from what the exchanges printed (the phone's own BANKNIFTY paper fills in Oct - Nov 2026 were 30 a lot; the
+schedule says 35). **Sources:** NSE's F&O bhavcopies in the lake (`nse_bhavcopy/`, 144 weekly files 11 Jul 2024 - 7 Oct
+2026; `NewBrdLotQty` of the nearest index-option expiry in the latest file on or before the day; `r185lots.py` ->
+`results/lot_sizes.json`); for SENSEX (BSE, not in NSE's file) the lake's option volumes and OI (every contract's daily
+units a multiple of 10 to 3 Jan 2025 and on 22 - 28 Jan 2025, of 20 otherwise); Dhan's instrument master for the live
+contracts agrees (NIFTY 65, BANKNIFTY 30, FINNIFTY 60, MIDCPNIFTY 120, SENSEX 20). The shared schedule is NOT changed in
+this branch.
+
+**What had been seen:** NIFTY's selection and final read. NIFTY's final year (20 Oct 2025 - 19 Oct 2026) used the right
+lots (75, then 65 from 31 Dec 2025: the schedule and the true lots agree there), so **NIFTY's final read and verdicts
+stand unchanged**. NIFTY's selection window had 28 Nov - 26 Dec 2024 and 24 - 30 Jan 2025 at 75 instead of 25; the
+NIFTY selection is recomputed with the true lots and reported next to the original (`results/selection_NIFTY_truelots.json`,
+descriptive): if the choice would have differed, that is disclosed, and the final read is not repeated. No rule,
+grid, period, test or bar changes. BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX use the true lots from the start.

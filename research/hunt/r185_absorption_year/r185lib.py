@@ -42,7 +42,30 @@ vid = R4.vid
 BSE = {"SENSEX"}
 
 
+# Amendment A (16 Nov 2026): the TRUE lot of the contract R185 trades, by trading day, from NSE's F&O bhavcopies
+# (NewBrdLotQty of the nearest expiry; r185lots.py -> results/lot_sizes.json) and, for SENSEX (BSE), from the option
+# volumes and OI in the lake (every contract's units a multiple of 10 to 3 Jan 2025 and on 22 - 28 Jan 2025, of 20
+# otherwise). Dhan's instrument master agrees for the live contracts (NIFTY 65, BANKNIFTY 30, FINNIFTY 60, MIDCPNIFTY
+# 120, SENSEX 20). The repo's shared LOT_SCHEDULE differs on some of these dates; it is left unchanged here.
+TRUE_LOTS = {   # index: [(first day, lot), ...] - each lot holds until the next entry
+    "NIFTY": [("2024-01-01", 25), ("2024-12-27", 75), ("2025-01-24", 25), ("2025-01-31", 75), ("2025-12-31", 65)],
+    "BANKNIFTY": [("2024-01-01", 15), ("2025-01-31", 30), ("2025-06-27", 35), ("2025-12-31", 30)],
+    "FINNIFTY": [("2024-01-01", 25), ("2025-01-31", 65), ("2025-12-31", 60)],
+    "MIDCPNIFTY": [("2024-01-01", 50), ("2025-01-31", 120), ("2025-06-27", 140), ("2025-12-31", 120)],
+    "SENSEX": [("2024-01-01", 10), ("2025-01-06", 20), ("2025-01-22", 10), ("2025-01-29", 20)],
+}
+
+
 def lot_of(und: str, d: date) -> int:
+    lot = None
+    for since, n in TRUE_LOTS[und]:
+        if d >= date.fromisoformat(since):
+            lot = n
+    return int(lot)
+
+
+def schedule_lot_of(und: str, d: date) -> int:
+    """The repo's shared schedule (research/obuy/config.py), kept for the comparison only."""
     lot = None
     for since, n in LOT_SCHEDULE[und]:
         if d >= date.fromisoformat(since):

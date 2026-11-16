@@ -279,6 +279,9 @@ def test_gates_and_verdict():
 
 def test_lot_schedule_and_charges():
     assert L.lot_of("NIFTY", date(2025, 6, 1)) == 75 and L.lot_of("NIFTY", date(2026, 1, 5)) == 65
+    assert L.lot_of("NIFTY", date(2024, 12, 2)) == 25 and L.schedule_lot_of("NIFTY", date(2024, 12, 2)) == 75
+    assert L.lot_of("BANKNIFTY", date(2026, 10, 21)) == 30          # the phone's paper trades, 21 Oct 2026
+    assert L.lot_of("SENSEX", date(2025, 1, 27)) == 10 and L.lot_of("SENSEX", date(2026, 5, 1)) == 20
     assert L.charge(False, 100, 75, date(2026, 5, 1)) > L.charge(False, 100, 75, date(2026, 3, 1))   # STT 0.1%
     assert L.charge(True, 0, 75, date(2026, 5, 1)) == 0.0
 
@@ -397,3 +400,30 @@ def test_validation_minute_last_and_compare():
     r = VA.compare(m, dh)
     assert r["matched"] == 2 and r["median_abs"] == pytest.approx(0.25) and r["within_rs1"] == 1.0
     assert VA.compare(m, dh.iloc[:0])["matched"] == 0
+
+
+def test_true_lots_match_the_bhavcopy_table():
+    """Amendment A: TRUE_LOTS agrees with results/lot_sizes.json (NSE's bhavcopy) on every trading day it covers."""
+    p = HERE / "results" / "lot_sizes.json"
+    if not p.exists():
+        pytest.skip("no lot table")
+    T = json.loads(p.read_text())
+    n = 0
+    for und, v in T["indices"].items():
+        for r in v["runs"]:
+            if r["true"] is None:
+                continue
+            for d in pd.bdate_range(r["frm"], r["to"]).date:
+                assert L.lot_of(und, d) == r["true"], (und, d)
+                n += 1
+    assert n > 1000
+
+
+def test_lots_rule():
+    import r185lots as LT
+    files = {"2025-01-20": {"NIFTY": {"2025-01-23": 75, "2025-01-30": 25}},
+             "2025-01-27": {"NIFTY": {"2025-01-30": 25, "2025-02-06": 75}}}
+    assert LT.lot_on(files, "NIFTY", date(2025, 1, 21)) == 75
+    assert LT.lot_on(files, "NIFTY", date(2025, 1, 24)) == 25
+    assert LT.lot_on(files, "NIFTY", date(2025, 1, 31)) == 75
+    assert LT.lot_on({}, "NIFTY", date(2025, 1, 31)) is None
