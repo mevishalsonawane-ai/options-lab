@@ -108,6 +108,9 @@ class StepTrailPassedTest : RobolectricTest() {
         Market.testClock = null
         PassedArmsHost.testNoAutoOn = true
         if (Autopilot.enabled()) Autopilot.resetForTest()
+        // 16 Nov (main CI): the option-highs read runs in the background; let it finish while the fakes still answer, then forget it,
+        // so no read is left to reach the real feed after the fakes close.
+        runBlocking { RuleHighs.settleForTest() }; RuleHighs.clear()
         kite.close(); upstox.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
