@@ -28,7 +28,8 @@ import java.time.LocalDateTime
  * Order speed, round 2 (9 Oct), against the fake Kite:
  *  (i) a live ORB stop decided from a stream tick sends exactly one sell, within 300 ms of the tick;
  *  (iii) the exchange stop: an app exit takes the resting stop out first; a resting stop that filled is the exit; a cancel
- *        refused because the stop already filled sends no second sell; "keep a stop at the exchange" places a missing one;
+ *        refused because the stop already filled sends no second sell; a missing stop is placed again at Zerodha (16 Nov:
+ *        always, never one Boss cancelled);
  *  (iv) placing and following an order reads nothing from the settings vault;
  *  the price pick: a fresh tick is used without a REST call, a stale one falls back to REST; the screens' version moves at
  *  most every 250 ms and ends on the latest.
@@ -83,10 +84,15 @@ class OrderPathRound2Test : RobolectricTest() {
 
     private fun ago(minutes: Long) = maxOf(now.minusMinutes(minutes), now.toLocalDate().atStartOfDay())
 
-    private fun position(qty: Int, entry: Double, stopId: String? = null, stop: Double? = null) =
+    /**
+     * [byYou] (16 Nov): its stop at Zerodha was cancelled by Boss ([OrbArms.Position.stopByYou]) - the one live position left with no
+     * stop resting there on purpose: every other missing stop is put back at Zerodha on the next regular pass.
+     */
+    private fun position(qty: Int, entry: Double, stopId: String? = null, stop: Double? = null, byYou: Boolean = false) =
         JSONObject().put("arm", "orb").put("symbol", paperCe).put("right", "CE").put("qty", qty).put("entry", entry)
             .put("entryTime", ago(30).toString()).put("signalBar", ago(35).toString())
             .put("entryOrderId", "E1").put("stopOrderId", stopId ?: "").apply { stop?.let { put("stopTrigger", it) } }
+            .apply { if (byYou) put("stopByYou", true) }
             .put("exitTime", "").put("why", "").put("charges", 0.0).put("live", true).put("kite", sym).put("unconfirmed", false)
 
     private fun state(positions: List<JSONObject>) {
@@ -119,8 +125,9 @@ class OrderPathRound2Test : RobolectricTest() {
     // ---- (i) a live stop decided from a stream tick ------------------------------------------------------------------
 
     @Test fun aLiveStopDecidedFromAStreamTickSendsExactlyOneSellWithin300ms() {
-        // A live ORB lot bought at 200 whose stop is NOT resting at Zerodha (the app watches its -40 stop itself).
-        state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))
+        // A live ORB lot bought at 200 whose stop is NOT resting at Zerodha (the app watches its -40 stop itself): 16 Nov, Boss
+        // cancelled it in Kite (any other missing stop is put back at Zerodha on the regular pass).
+        state(listOf(position(30, 200.0, stopId = null, stop = 160.0, byYou = true)))
         kite.position(sym, 30, 200.0, product = "MIS")
         KiteStream.liveForTest(true)
         // The regular pass: Zerodha's orders and positions read (and kept for the fast looks); nothing to do at 200.
@@ -157,7 +164,8 @@ class OrderPathRound2Test : RobolectricTest() {
      * Here the load is done at once (on the look's own thread), so the window is hit every time.
      */
     @Test fun aStopTickRightAfterTheFirstLookLoadedThePaperBookSellsWithin300ms() {
-        state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))
+        // (16 Nov: its stop cancelled by Boss, so the app alone watches it - as above.)
+        state(listOf(position(30, 200.0, stopId = null, stop = 160.0, byYou = true)))
         kite.position(sym, 30, 200.0, product = "MIS")
         KiteStream.liveForTest(true)
         tick(200.0)
@@ -266,23 +274,28 @@ class OrderPathRound2Test : RobolectricTest() {
         assertEquals(0, kite.positions.getValue("NFO:$sym:MIS").first)
     }
 
-    @Test fun keepingAStopAtTheExchangePlacesAMissingOneAtTheArmsLevelOnlyWhenChosen() {
-        state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))
+    /**
+     * 16 Nov (Boss: "All the stops and profit locks should be on zerodha"; "yes" to the ORB arms): a live position whose stop is not
+     * resting at Zerodha gets it placed again at the arm's own level on the next regular check - whatever the old "Keep a stop at the
+     * exchange" setting says (no longer read) - but never one Boss cancelled themselves in Kite ([OrbArms.Position.stopByYou]).
+     */
+    @Test fun aMissingStopIsPlacedAtTheArmsLevelAlwaysButNeverOneBossCancelled() {
+        AppSettings.save(AppSettings.load().copy(exchangeStops = false))
+        // Cancelled by Boss: the app watches it itself, nothing is placed.
+        state(listOf(position(30, 200.0, stopId = null, stop = 160.0, byYou = true)))
         kite.position(sym, 30, 200.0, product = "MIS")
-        // Off (the default): the app watches the stop itself, nothing is placed.
         pass()
-        assertTrue("setting off at 200: nothing placed, yet ${kite.placed.map { it.form }} (price " +
-            "${runBlocking { Broker.quotes(listOf("NFO:$sym")) }["NFO:$sym"]?.last}, exits ${arm().today.map { it.why }})", kite.placed.isEmpty())
+        assertTrue("Boss's cancel respected: nothing placed, yet ${kite.placed.map { it.form }}", kite.placed.isEmpty())
         assertNull(arm().open!!.stopOrderId)
-        // On: the next regular check places an SL SELL at the arm's own 160 (its limit under it), and keeps it.
-        AppSettings.save(AppSettings.load().copy(exchangeStops = true))
-        assertTrue("the switch is read back", AppSettings.load().exchangeStops)
+        // Missing for any other reason (it could not be placed): the next regular check places an SL SELL at the arm's own 160 (its
+        // limit under it), the setting off, and keeps it.
+        state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))
         pass()
-        val sl = kite.placed.singleOrNull() ?: throw AssertionError("setting on: one SL placed at 160, got ${kite.placed.map { it.form }}")
+        val sl = kite.placed.singleOrNull() ?: throw AssertionError("one SL placed at 160, got ${kite.placed.map { it.form }}")
         assertEquals("SL", sl.form["order_type"]); assertEquals("SELL", sl.form["transaction_type"])
         assertEquals("160.00", sl.form["trigger_price"]); assertEquals("30", sl.form["quantity"])
         assertEquals(kite.orders.keys.last(), arm().open!!.stopOrderId)
-        // A fast look never places one, and the next pass does not place a second.
+        // The next pass does not place a second.
         pass()
         assertEquals(1, kite.placed.size)
         // A price already at the level: no stop placed (the app's own check sells instead).

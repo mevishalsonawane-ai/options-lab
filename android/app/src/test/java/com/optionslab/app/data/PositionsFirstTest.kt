@@ -86,11 +86,14 @@ class PositionsFirstTest : RobolectricTest() {
 
     private fun ago(minutes: Long) = maxOf(now.minusMinutes(minutes), now.toLocalDate().atStartOfDay())
 
-    /** A live ORB lot bought at 200, its -40 stop (160) watched by the app itself (none resting at Zerodha). */
+    /**
+     * A live ORB lot bought at 200, its -40 stop (160) watched by the app itself (none resting at Zerodha: 16 Nov, Boss cancelled it in
+     * Kite - any other missing stop is put back at Zerodha on the regular pass).
+     */
     private fun heldLive() {
         val p = JSONObject().put("arm", "orb").put("symbol", paperCe).put("right", "CE").put("qty", 30).put("entry", 200.0)
             .put("entryTime", ago(30).toString()).put("signalBar", ago(35).toString())
-            .put("entryOrderId", "E1").put("stopOrderId", "").put("stopTrigger", 160.0)
+            .put("entryOrderId", "E1").put("stopOrderId", "").put("stopTrigger", 160.0).put("stopByYou", true)
             .put("exitTime", "").put("why", "").put("charges", 0.0).put("live", true).put("kite", sym).put("unconfirmed", false)
         val o = JSONObject()
             .put("armed", JSONObject().put("orb", false)).put("auto", JSONObject().put("orb", true)).put("liveOk", JSONObject().put("orb", true))
