@@ -1,0 +1,37 @@
+id: r186b-p60
+title: 'R186 Amendment B P60: 60% lock of the best open P&L once +Rs 1,000 a lot net (as S5 Trail), on top of today''s exit
+  rule, Liquidity / R72 / R51'
+family: trade-management
+date: '2026-11-16'
+doc: research/hunt/r186_fixed_profit/results/summary.md
+hypothesis: 'Boss: other ways to stop trades that reach +Rs 1,000 / 1,500 / 2,000 a lot from ending negative.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted here; early part 2025-10-20..2026-03-31 (R151 picker in-sample)
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); year to 2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (entries; R151 picker); the exit on the option premium'
+model_or_rule: 60% lock of the best open P&L once +Rs 1,000 a lot net (as S5 Trail); on top of own stop + R162 breakeven at
+  +10% (+ R151 picker); PREREG.md Amendment B
+settings: research/hunt/r186_fixed_profit/r186study.py run-b
+prereg: research/hunt/r186_fixed_profit/PREREG.md
+variants_tried: 3
+results:
+  summary: 'LIQ (1 lot): year 690 trades win 48.7% Rs 15,313 (base Rs 100,222); final -Rs 27,118 (base Rs 6,432); twin p 1.0;
+    failed: net below the base (year or final); not positive in every period; twin BH q 1.00 > 0.10; outside the account stop
+    rule in final, six, year | R72 (1 lot): year 1101 trades win 64.0% Rs 202,696 (base Rs 324,629); final Rs 101,461 (base
+    Rs 167,233); twin p 0.4411; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop
+    rule in final, six, year | R51 (1 lot): year 1439 trades win 63.0% Rs 164,016 (base Rs 249,903); final Rs 55,093 (base
+    Rs 144,802); twin p 0.6447; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop
+    rule in final, year.'
+  costs: dated Zerodha charges; R17 fills (locks and the index exit sold as stops)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4876. Nothing in the app changes.

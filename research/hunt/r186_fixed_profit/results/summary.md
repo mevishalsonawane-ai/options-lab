@@ -4,7 +4,7 @@ Boss, 16 Nov 2026: *"I want you to check if i had a hard 1-1.5 fix profit what w
 *"the profit of a lot is 1000, then ends of negative, then its 1.5k again negative, again 2k again negative, this has
 happened every single day"*.
 
-**Short answer: a hard target cuts the profit by about half to nine tenths on every arm. It raises the win rate (to 60-66%
+**Short answer (all eight rules tested, none helps): a hard target cuts the profit by about half to nine tenths on every arm. It raises the win rate (to 60-66%
 on R72 / R51), but the wins become small (about Rs 1,000) while the losses stay the same size (about Rs 1,500). The Rs 500
 step lock is less bad but still costs Rs 81k - 1.12 L a year. Your observation is real (about 1 in 5 losing trades had been
 +Rs 1,000 first), but the trades that keep running pay for it. Nothing passed. Keep today's rule.**
@@ -82,9 +82,41 @@ most days at least one R72 / R51 trade did it. But over the year, of the 621 R72
 end in a loss, and the ones that ran on made more than the 102 gave back. Locking the gain early (any of the five rules)
 cost more than it saved in every period.
 
+## Three more answers (Amendment B): 60% lock, index lock, split exit
+
+You asked for other ways to stop "+Rs 1,000, then negative". Same base, same year, 1 lot unless said.
+
+- **P60**: once +Rs 1,000 a lot, the stop locks 60% of the best open profit (as S5 Trail).
+- **IDX** (signal on the index): once +Rs 1,000 a lot, sell when a 1-minute index close goes back through the index level
+  at the entry.
+- **SPLIT** (2-3 lots): sell 1 lot at +Rs 1,000; the other lots' stop moves to breakeven.
+
+| year (Apr - Oct 2026) | today (base) | P60 | IDX | SPLIT at 3 lots (base at 3 lots) |
+|---|---|---|---|---|
+| **R72** net | Rs 3.25 L (Rs 1.67 L) | Rs 2.03 L (Rs 1.01 L) | Rs 2.52 L (Rs 1.22 L) | Rs 7.38 L vs Rs 10.81 L (Rs 3.39 L vs Rs 5.53 L) |
+| win rate | 56.6% | 64.0% | 54.9% | 65.1% vs 56.8% |
+| worst month | -Rs 18,110 | -Rs 16,639 | -Rs 20,904 | -Rs 41,471 vs -Rs 41,504 |
+| **R51** net | Rs 2.50 L (Rs 1.45 L) | Rs 1.64 L (Rs 55,093) | Rs 1.91 L (Rs 95,773) | Rs 5.93 L vs Rs 8.88 L (Rs 2.57 L vs Rs 4.89 L) |
+| win rate | 55.5% | 63.0% | 54.4% | 63.3% vs 55.6% |
+| worst month | -Rs 20,990 | -Rs 31,425 | -Rs 20,111 | -Rs 51,720 vs -Rs 57,548 |
+| **Liquidity** net | Rs 1.00 L (Rs 6,432) | Rs 15,313 (-Rs 27,118) | Rs 85,036 (Rs 14,173) | Rs 2.06 L vs Rs 3.58 L (-Rs 2,157 vs Rs 47,831) |
+| win rate | 41.3% | 48.7% | 40.8% | 49.1% vs 42.4% |
+| worst month | -Rs 37,773 | -Rs 30,303 | -Rs 32,041 | -Rs 91,960 vs -Rs 1.09 L |
+
+Trades in the year at 1 lot: R72 1,069 / 1,101 / 1,076; R51 1,367 / 1,439 / 1,372; Liquidity 688 / 690 / 688 (base /
+P60 / IDX); SPLIT at 3 lots R72 1,076, R51 1,374, Liquidity 688.
+
+- **All 9 fail** (BH m = 4,876). None makes as much as today's rule in the year. IDX is the gentlest (it loses
+  Rs 15k-73k a year) and was the only one ahead of the base anywhere: Liquidity in Apr - Oct (Rs 14,173 vs Rs 6,432), but
+  not in the year.
+- **SPLIT** keeps more than a full target (R72 at 3 lots Rs 7.38 L vs Rs 4.30 L with the Rs 1,000 target) but still about
+  a third less than today; moving the other lots to breakeven sells them on normal wobbles.
+- P60 raises the win rate to 63-64% on R72 / R51 but, like the targets, shrinks the average win (R72 Rs 1,159 vs Rs 1,675).
+- 2 lots, SPLIT (year): R72 Rs 4.11 L vs Rs 7.06 L, R51 Rs 3.19 L vs Rs 5.74 L, Liquidity Rs 72,841 vs Rs 2.29 L.
+
 ## Gates
 
-All 15 tests fail (BH m = 4,867). Every rule makes less than today's rule in the year and in Apr - Oct 2026. The R72 / R51
+All 15 first tests fail (BH m = 4,867), and all 9 of Amendment B (m = 4,876). Every rule makes less than today's rule in the year and in Apr - Oct 2026. The R72 / R51
 targets and step lock beat random exit minutes (p 0.002-0.014) but not after counting all 4,867 tests (q 1.00), and beating
 random exits is not beating today's rule. None keeps the account stop rule in every period (today's rule does not either).
 

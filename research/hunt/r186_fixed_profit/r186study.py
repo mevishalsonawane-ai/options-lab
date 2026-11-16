@@ -4,6 +4,8 @@ the last year (20 Oct 2025 - 19 Oct 2026); plus how often a trade was +Rs 1,000 
 
     R176_POST=1 python research/hunt/r186_fixed_profit/r186study.py run       # read once -> results/year.json
     python research/hunt/r186_fixed_profit/r186study.py decide                 # gates -> results/decision.json
+    R176_POST=1 python research/hunt/r186_fixed_profit/r186study.py run-b     # Amendment B, read once -> year_b.json
+    python research/hunt/r186_fixed_profit/r186study.py decide-b               # -> results/decision_b.json
     # 7a on 20 Oct - 13 Nov 2026: a copy of the lake with the 2026 files joined to their gap1113 / fill1113 parts, stores
     # built outside git (never the real 19 Oct stores; _extend() refuses the default cache)
     X="IRAALGO_LAKE=~/.cache/iraalgo/r186ext/lake IRAALGO_CACHE=~/.cache/iraalgo/r186ext/cache R51_CLEAN=1 R176_POST=1"
@@ -112,15 +114,19 @@ def target_effect(trades: list, plain: dict, reasons: tuple) -> dict:
 
 
 # ================================================================================================ data
-def priced(arm: str, us: list, lots: int, tgt: float = -1.0, lock: str = "") -> list:
+def priced(arm: str, us: list, lots: int, tgt: float = -1.0, lock: str = "", idx: bool = False,
+           split: bool = False) -> list:
     M = R7.mods()
     import r186engine as Z
     ex = S6.exits(arm)
-    return [Z.price(key[0], M["r51data"].load(key[0])[key[1]], cands, ex, lots, tgt, lock) for key, cands, _, _ in us]
+    return [Z.price(key[0], M["r51data"].load(key[0])[key[1]], cands, ex, lots, tgt, lock, idx=idx, split=split)
+            for key, cands, _, _ in us]
 
 
-def exit_twins(arm: str, trades: list, plain: dict, n: int, rng) -> tuple:
-    """PREREG 5.3 at 1 lot: (twin totals (n,), changed count)."""
+def exit_twins(arm: str, trades: list, plain: dict, n: int, rng, lots: int = 1) -> tuple:
+    """PREREG 5.3: (twin totals (n,), changed count). A changed trade: one the rule closed earlier than the base, or
+    (Amendment B, SPLIT) one whose target leg filled; it is sold whole at a random minute between its fill and the
+    base's exit, the base's exits active before it."""
     import r186engine as Z
     M = R7.mods()
     ex = S6.exits(arm)
@@ -128,13 +134,14 @@ def exit_twins(arm: str, trades: list, plain: dict, n: int, rng) -> tuple:
     ch = 0
     for t in trades:
         p = plain.get(key_of(t))
-        if p is None or not (t["xr"] < p["xr"] and p["xr"] - t["er"] >= 2):
+        early = t["split_hit"] if "split_hit" in t else t["xr"] < p["xr"] if p is not None else False
+        if p is None or not (early and p["xr"] - t["er"] >= 2):
             tot += t["net"]
             continue
         ch += 1
         rows = M["S"].twin_rows(t["er"], p["xr"], n, rng)
         D = M["r51data"].load(t["und"])[t["day"]]
-        tot += Z.forced_nets(t["und"], D, t, ex, rows, 1, int(t.get("fx_arm", -1)))
+        tot += Z.forced_nets(t["und"], D, t, ex, rows, lots, int(t.get("fx_arm", -1)))
     return tot, ch
 
 
@@ -218,6 +225,99 @@ def run() -> dict:
                                   for a_, tr in by_arm.items()}
         out[per] = res
     (RESULTS / "year.json").write_text(json.dumps(out, indent=1, default=str))
+    return out
+
+
+# ================================================================================================ Amendment B
+FINAL_FLAG_B = RESULTS / "FINAL_READ_B"
+RULES_B = {"P60": dict(lock="P60"), "IDX": dict(idx=True), "SPLIT": dict(split=True)}
+WHY_B = {"P60": ("step_lock",), "IDX": ("index_lock",), "SPLIT": ("split_target",)}
+GATE_LOTS_B = {"P60": 1, "IDX": 1, "SPLIT": 3}
+TESTS_B = tuple((a, r) for r in RULES_B for a in ARMS)              # 9
+M_TOTAL_B = M_TOTAL + len(TESTS_B)                                  # 4,876
+
+
+def run_b() -> dict:
+    """Amendment B: P60 and IDX (gated at 1 lot, 3 lots reported); SPLIT (2 and 3 lots, gated at 3)."""
+    assert K6.POST, "R186 reads the stores built to 19 Oct (R176_POST=1)"
+    if FINAL_FLAG_B.exists():
+        raise SystemExit("R186 Amendment B already read once: " + FINAL_FLAG_B.read_text())
+    FINAL_FLAG_B.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+    M = R7.mods()
+    M["C"].open_final()
+    lo, hi = K6.Y_START, K6.Y_END
+    out = {"parity": {}, "twins": {}, "effect": {}}
+    trades = {}
+    rng = np.random.default_rng(SEED)
+    ref = json.loads((RESULTS / "year.json").read_text())
+    for arm in ARMS:
+        us0 = S6.units(arm, lo, hi)
+        usA, _ = R7.apply_rule(arm, us0, None)
+        P = sc = thr = None
+        if arm in K6.PICKER_ARMS:
+            P = S6.picker()
+            sc, thr = P.scores(arm, us0)
+        keep = (lambda tr: tr) if P is None else (lambda tr: [t for t in tr if P.kept(t, sc, thr)])
+
+        def walked(pr):
+            return [t for t in S6.walk(arm, usA, pr) if lo <= t["day"] <= hi]
+
+        for lots in K6.LOTS:
+            pr_b = priced(arm, usA, lots)
+            base = keep(walked(pr_b))
+            trades.setdefault(("BASE", lots), {})[arm] = base
+            if lots in (1, 3):
+                y = ref["year"][f"BASE@{lots}"][arm]
+                r = dict(trades=len(base), net=round(sum(t["net"] for t in base)), year_json=[y["trades"], y["net"]])
+                r["reproduced"] = r["trades"] == y["trades"] and abs(r["net"] - y["net"]) <= 1
+                out["parity"][f"{arm}@{lots}"] = r
+                print(arm, lots, "parity", r, flush=True)
+                assert r["reproduced"], ("parity failed", arm, lots, r)
+            plain = {(t["und"], S6._d(t["day"]), c["er"], c["side"]): t
+                     for (key, cands, _, _), row in zip(usA, pr_b) for c, t in zip(cands, row) if t is not None}
+            for rule, kw in RULES_B.items():
+                if (rule == "SPLIT" and lots == 1) or (rule != "SPLIT" and lots == 2):
+                    continue                              # SPLIT needs 2+ lots; P60 / IDX at 1 and 3 lots
+                tr = keep(walked(priced(arm, usA, lots, **kw)))
+                trades.setdefault((rule, lots), {})[arm] = tr
+                out["effect"][f"{arm}:{rule}@{lots}"] = {per: target_effect(S6.in_span(tr, per), plain, WHY_B[rule])
+                                                         for per in K6.YEAR_PERIODS}
+                if lots == GATE_LOTS_B[rule]:
+                    tw, chg = exit_twins(arm, tr, plain, K6.TWINS, rng, lots)
+                    act = sum(t["net"] for t in tr)
+                    out["twins"][f"{arm}:{rule}"] = dict(p=round(M["S"].twin_p(act, tw), 4), mean=round(float(tw.mean())),
+                                                         changed=chg, lots=lots)
+                    print(arm, rule, "twin", out["twins"][f"{arm}:{rule}"], flush=True)
+            print(arm, lots, {v: (len(trades[(v, lots)][arm]), round(sum(t["net"] for t in trades[(v, lots)][arm])))
+                              for v in ("BASE", *RULES_B) if arm in trades.get((v, lots), {})}, flush=True)
+    for per in K6.YEAR_PERIODS:
+        plo, phi = K6.span_of(per)
+        n_sess = len(S6.sessions(plo, phi))
+        months = K6.months_between(plo, phi)
+        res = {"sessions": n_sess}
+        for (v, lots), by_arm in trades.items():
+            res[f"{v}@{lots}"] = {a_: S6.describe([t for t in tr if plo <= t["day"] <= phi], n_sess, months)
+                                  for a_, tr in by_arm.items()}
+        out[per] = res
+    (RESULTS / "year_b.json").write_text(json.dumps(out, indent=1, default=str))
+    return out
+
+
+def decide_b() -> dict:
+    r = json.loads((RESULTS / "year_b.json").read_text())
+    ps = [r["twins"][f"{a}:{v}"]["p"] for a, v in TESTS_B]
+    q_all, q_own = S6.bh_q(ps, M_TOTAL_B), S6.bh_q(ps, len(ps))
+    out = {}
+    for (a, v), qa, qo in zip(TESTS_B, q_all, q_own):
+        n = GATE_LOTS_B[v]
+        per = {p: r[p][f"{v}@{n}"][a] for p in K6.YEAR_PERIODS}
+        base = {p: r[p][f"BASE@{n}"][a] for p in K6.YEAR_PERIODS}
+        g = gates_r186(per, base, qa)
+        g.update(lots=n, q_own=round(qo, 4), twin_p=r["twins"][f"{a}:{v}"]["p"], net_year=per["year"]["net"],
+                 base_net_year=base["year"]["net"], net_final=per["final"]["net"], base_net_final=base["final"]["net"])
+        out[f"{a}:{v}"] = g
+    out["_m"] = dict(tests=len(TESTS_B), prior=M_TOTAL, total=M_TOTAL_B)
+    (RESULTS / "decision_b.json").write_text(json.dumps(out, indent=1))
     return out
 
 
@@ -307,6 +407,10 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     if cmd == "run":
         run()
+    elif cmd == "run-b":
+        run_b()
+    elif cmd == "decide-b":
+        print(json.dumps(decide_b(), indent=1))
     elif cmd == "gap-build":
         gap_build()
     elif cmd == "gap":

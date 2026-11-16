@@ -104,6 +104,38 @@ def main():
         for a in ARMS:
             b = g["base"][a]
             L.append(f"| {a} | {b['trades']} | {b['days']} | {pct(b['win'])} | {rs(b['net'])} |")
+    rb = RESULTS / "year_b.json"
+    if rb.exists():
+        b = json.loads(rb.read_text())
+        db = json.loads((RESULTS / "decision_b.json").read_text())
+        L += ["", "## Amendment B: 60% lock (P60), index lock (IDX), split exit (SPLIT)", "", "Parity of the base: "
+              + "; ".join(f"{k} {v['trades']} / {rs(v['net'])} ({'same' if v['reproduced'] else 'DIFFERENT'})"
+                          for k, v in b["parity"].items()) + ".", ""]
+        for lots in (1, 2, 3):
+            for per in PER:
+                rows = []
+                for a in ARMS:
+                    for v in ("BASE", "P60", "IDX", "SPLIT"):
+                        st = b[per].get(f"{v}@{lots}", {}).get(a)
+                        if st is None:
+                            continue
+                        e = b["effect"].get(f"{a}:{v}@{lots}", {}).get(per)
+                        ef = ("-", "-", "-", "-") if e is None else (e["closed"], e["base_made_more"],
+                                                                     rs(e["profit_given_up"]), rs(e["profit_saved"]))
+                        rows.append(f"| {a} | {v} | {st['trades']} | {pct(st['win'])} | {rs(st['net'])} | {rs(st['avg_win'])} | "
+                                    f"{rs(st['avg_loss'])} | {ef[0]} | {ef[1]} | {ef[2]} | {ef[3]} | {rs(st['max_dd'])} | "
+                                    f"{rs(st['worst_month']['net'])} ({st['worst_month']['month']}) |")
+                if rows:
+                    L += [f"### {lots} lot{'s' if lots > 1 else ''}, {PNAME[per]}", "",
+                          "| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | "
+                          "saved | max DD | worst month |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"] + rows + [""]
+        L += [f"Gates (BH m = {db['_m']['total']}):", "", "| test | lots | twin p | changed | BH q | passed | "
+              "passed apart from the account stop | fails |", "|---|---|---|---|---|---|---|---|"]
+        for k, g in db.items():
+            if k.startswith("_"):
+                continue
+            L.append(f"| {k} | {g['lots']} | {g['twin_p']} | {b['twins'][k]['changed']} | {g['q']} | {g['passed']} | "
+                     f"{g['passed_except_account_stop']} | {'; '.join(g['fails']) or '-'} |")
     (RESULTS / "report.md").write_text("\n".join(L) + "\n")
     print("report.md written")
 

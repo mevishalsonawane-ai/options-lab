@@ -294,3 +294,189 @@ BH m = 4867 (4852 + 15).
 | R72 | 118 | 17 | 52.5% | -Rs 4,445 |
 | R51 | 124 | 18 | 63.7% | Rs 16,108 |
 | LIQ | 43 | 13 | 60.5% | Rs 5,247 |
+
+## Amendment B: 60% lock (P60), index lock (IDX), split exit (SPLIT)
+
+Parity of the base: LIQ@1 688 / Rs 1.00 L (same); LIQ@3 688 / Rs 3.58 L (same); R72@1 1069 / Rs 3.25 L (same); R72@3 1069 / Rs 10.81 L (same); R51@1 1367 / Rs 2.50 L (same); R51@3 1366 / Rs 8.88 L (same).
+
+### 1 lot, early (20 Oct 2025 - 31 Mar 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 457 | 60.6% | Rs 1.57 L | Rs 1,671 | Rs 1,701 | - | - | - | - | Rs 39,246 | Rs 1,507 (2025-12) |
+| R72 | P60 | 467 | 69.4% | Rs 1.02 L | Rs 1,081 | Rs 1,736 | 277 | 122 | Rs 2.37 L | Rs 2.05 L | Rs 14,949 | -Rs 1,574 (2025-10) |
+| R72 | IDX | 461 | 57.7% | Rs 1.29 L | Rs 1,550 | Rs 1,455 | 89 | 43 | Rs 85,841 | Rs 70,035 | Rs 28,824 | -Rs 1,232 (2025-12) |
+| R51 | BASE | 694 | 56.0% | Rs 1.13 L | Rs 1,483 | Rs 1,520 | - | - | - | - | Rs 35,297 | -Rs 3,546 (2025-10) |
+| R51 | P60 | 726 | 65.4% | Rs 1.17 L | Rs 1,066 | Rs 1,552 | 376 | 165 | Rs 2.74 L | Rs 2.62 L | Rs 17,492 | -Rs 12,013 (2025-10) |
+| R51 | IDX | 695 | 55.7% | Rs 1.05 L | Rs 1,343 | Rs 1,348 | 105 | 49 | Rs 90,804 | Rs 77,433 | Rs 28,155 | -Rs 4,398 (2026-03) |
+| LIQ | BASE | 316 | 42.1% | Rs 1.01 L | Rs 2,053 | Rs 940 | - | - | - | - | Rs 16,913 | -Rs 4,980 (2025-12) |
+| LIQ | P60 | 318 | 51.3% | Rs 50,155 | Rs 1,208 | Rs 947 | 97 | 43 | Rs 1.50 L | Rs 67,172 | Rs 20,834 | -Rs 1,719 (2025-12) |
+| LIQ | IDX | 316 | 42.7% | Rs 81,358 | Rs 1,786 | Rs 883 | 34 | 13 | Rs 42,533 | Rs 22,388 | Rs 17,180 | -Rs 3,333 (2025-10) |
+
+### 1 lot, final (1 Apr - 13 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 604 | 53.5% | Rs 1.67 L | Rs 1,686 | Rs 1,343 | - | - | - | - | Rs 28,832 | -Rs 18,110 (2026-05) |
+| R72 | P60 | 626 | 60.1% | Rs 1.01 L | Rs 1,232 | Rs 1,447 | 279 | 139 | Rs 1.98 L | Rs 1.44 L | Rs 40,016 | -Rs 16,639 (2026-05) |
+| R72 | IDX | 607 | 52.7% | Rs 1.22 L | Rs 1,524 | Rs 1,274 | 83 | 48 | Rs 89,881 | Rs 35,148 | Rs 43,674 | -Rs 20,904 (2026-05) |
+| R51 | BASE | 655 | 55.1% | Rs 1.45 L | Rs 1,514 | Rs 1,367 | - | - | - | - | Rs 36,021 | -Rs 20,990 (2026-06) |
+| R51 | P60 | 694 | 60.8% | Rs 55,093 | Rs 1,036 | Rs 1,405 | 296 | 146 | Rs 2.28 L | Rs 1.49 L | Rs 44,722 | -Rs 31,425 (2026-04) |
+| R51 | IDX | 659 | 53.4% | Rs 95,773 | Rs 1,351 | Rs 1,237 | 90 | 54 | Rs 96,180 | Rs 44,983 | Rs 43,730 | -Rs 20,111 (2026-04) |
+| LIQ | BASE | 357 | 41.2% | Rs 6,432 | Rs 1,442 | Rs 979 | - | - | - | - | Rs 67,497 | -Rs 37,773 (2026-04) |
+| LIQ | P60 | 357 | 47.1% | -Rs 27,118 | Rs 949 | Rs 987 | 90 | 30 | Rs 94,187 | Rs 60,637 | Rs 56,047 | -Rs 30,303 (2026-04) |
+| LIQ | IDX | 357 | 40.3% | Rs 14,173 | Rs 1,466 | Rs 924 | 35 | 16 | Rs 7,945 | Rs 15,686 | Rs 62,446 | -Rs 32,041 (2026-04) |
+
+### 1 lot, last 6 months (20 Apr - 19 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 539 | 55.1% | Rs 1.78 L | Rs 1,628 | Rs 1,261 | - | - | - | - | Rs 28,832 | -Rs 18,110 (2026-05) |
+| R72 | P60 | 555 | 60.9% | Rs 1.24 L | Rs 1,244 | Rs 1,367 | 250 | 120 | Rs 1.59 L | Rs 1.30 L | Rs 35,212 | -Rs 16,639 (2026-05) |
+| R72 | IDX | 539 | 54.7% | Rs 1.42 L | Rs 1,488 | Rs 1,217 | 68 | 40 | Rs 61,950 | Rs 25,570 | Rs 37,311 | -Rs 20,904 (2026-05) |
+| R51 | BASE | 601 | 56.1% | Rs 1.50 L | Rs 1,443 | Rs 1,274 | - | - | - | - | Rs 36,021 | -Rs 20,990 (2026-06) |
+| R51 | P60 | 641 | 61.6% | Rs 81,373 | Rs 1,037 | Rs 1,335 | 278 | 136 | Rs 1.96 L | Rs 1.33 L | Rs 26,241 | -Rs 10,139 (2026-06) |
+| R51 | IDX | 604 | 54.5% | Rs 1.17 L | Rs 1,337 | Rs 1,174 | 73 | 44 | Rs 64,783 | Rs 29,576 | Rs 38,113 | -Rs 13,688 (2026-06) |
+| LIQ | BASE | 346 | 41.9% | Rs 23,670 | Rs 1,427 | Rs 911 | - | - | - | - | Rs 44,444 | -Rs 18,290 (2026-05) |
+| LIQ | P60 | 346 | 47.7% | -Rs 16,289 | Rs 925 | Rs 933 | 90 | 32 | Rs 94,529 | Rs 54,571 | Rs 37,056 | -Rs 15,744 (2026-10) |
+| LIQ | IDX | 346 | 40.2% | Rs 22,402 | Rs 1,453 | Rs 868 | 34 | 18 | Rs 11,526 | Rs 10,258 | Rs 45,012 | -Rs 17,838 (2026-05) |
+
+### 1 lot, year (20 Oct 2025 - 19 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 1069 | 56.6% | Rs 3.25 L | Rs 1,675 | Rs 1,484 | - | - | - | - | Rs 39,246 | -Rs 18,110 (2026-05) |
+| R72 | P60 | 1101 | 64.0% | Rs 2.03 L | Rs 1,159 | Rs 1,552 | 562 | 265 | Rs 4.38 L | Rs 3.51 L | Rs 43,584 | -Rs 16,639 (2026-05) |
+| R72 | IDX | 1076 | 54.9% | Rs 2.52 L | Rs 1,532 | Rs 1,348 | 174 | 92 | Rs 1.77 L | Rs 1.07 L | Rs 49,563 | -Rs 20,904 (2026-05) |
+| R51 | BASE | 1367 | 55.5% | Rs 2.50 L | Rs 1,494 | Rs 1,450 | - | - | - | - | Rs 36,021 | -Rs 20,990 (2026-06) |
+| R51 | P60 | 1439 | 63.0% | Rs 1.64 L | Rs 1,051 | Rs 1,483 | 683 | 316 | Rs 5.07 L | Rs 4.15 L | Rs 52,234 | -Rs 31,425 (2026-04) |
+| R51 | IDX | 1372 | 54.4% | Rs 1.91 L | Rs 1,345 | Rs 1,298 | 196 | 104 | Rs 1.88 L | Rs 1.22 L | Rs 61,976 | -Rs 20,111 (2026-04) |
+| LIQ | BASE | 688 | 41.3% | Rs 1.00 L | Rs 1,718 | Rs 960 | - | - | - | - | Rs 67,497 | -Rs 37,773 (2026-04) |
+| LIQ | P60 | 690 | 48.7% | Rs 15,313 | Rs 1,067 | Rs 969 | 191 | 76 | Rs 2.46 L | Rs 1.29 L | Rs 60,172 | -Rs 30,303 (2026-04) |
+| LIQ | IDX | 688 | 40.8% | Rs 85,036 | Rs 1,611 | Rs 903 | 73 | 32 | Rs 54,097 | Rs 38,303 | Rs 62,446 | -Rs 32,041 (2026-04) |
+
+### 2 lots, early (20 Oct 2025 - 31 Mar 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 457 | 60.6% | Rs 3.44 L | Rs 3,423 | Rs 3,359 | - | - | - | - | Rs 76,475 | Rs 5,151 (2025-12) |
+| R72 | SPLIT | 459 | 72.3% | Rs 2.37 L | Rs 2,070 | Rs 3,547 | 301 | 152 | Rs 3.85 L | Rs 2.96 L | Rs 40,325 | Rs 5,592 (2025-12) |
+| R51 | BASE | 693 | 55.7% | Rs 2.73 L | Rs 3,074 | Rs 2,978 | - | - | - | - | Rs 67,914 | Rs 3,966 (2025-10) |
+| R51 | SPLIT | 696 | 66.4% | Rs 2.04 L | Rs 2,000 | Rs 3,076 | 404 | 196 | Rs 4.21 L | Rs 3.66 L | Rs 44,869 | -Rs 2,006 (2025-10) |
+| LIQ | BASE | 316 | 43.0% | Rs 2.16 L | Rs 4,057 | Rs 1,866 | - | - | - | - | Rs 31,338 | -Rs 7,052 (2025-12) |
+| LIQ | SPLIT | 316 | 50.9% | Rs 1.08 L | Rs 2,488 | Rs 1,886 | 129 | 62 | Rs 1.99 L | Rs 1.04 L | Rs 22,193 | -Rs 3,914 (2025-10) |
+
+### 2 lots, final (1 Apr - 13 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 604 | 53.3% | Rs 3.60 L | Rs 3,424 | Rs 2,632 | - | - | - | - | Rs 55,485 | -Rs 29,768 (2026-05) |
+| R72 | SPLIT | 609 | 60.8% | Rs 1.72 L | Rs 2,308 | Rs 2,854 | 321 | 182 | Rs 3.73 L | Rs 1.76 L | Rs 68,035 | -Rs 32,629 (2026-04) |
+| R51 | BASE | 655 | 55.0% | Rs 3.17 L | Rs 3,077 | Rs 2,681 | - | - | - | - | Rs 68,758 | -Rs 39,356 (2026-06) |
+| R51 | SPLIT | 663 | 61.7% | Rs 1.30 L | Rs 2,092 | Rs 2,859 | 333 | 184 | Rs 3.79 L | Rs 2.04 L | Rs 86,552 | -Rs 46,505 (2026-04) |
+| LIQ | BASE | 357 | 41.5% | Rs 27,139 | Rs 2,902 | Rs 1,925 | - | - | - | - | Rs 1.30 L | -Rs 73,166 (2026-04) |
+| LIQ | SPLIT | 357 | 48.2% | -Rs 21,481 | Rs 2,034 | Rs 2,007 | 120 | 47 | Rs 1.35 L | Rs 1.02 L | Rs 1.01 L | -Rs 61,446 (2026-04) |
+
+### 2 lots, last 6 months (20 Apr - 19 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 539 | 54.9% | Rs 3.80 L | Rs 3,309 | Rs 2,467 | - | - | - | - | Rs 55,485 | -Rs 29,768 (2026-05) |
+| R72 | SPLIT | 540 | 61.9% | Rs 2.21 L | Rs 2,320 | Rs 2,688 | 288 | 163 | Rs 3.01 L | Rs 1.49 L | Rs 47,461 | -Rs 26,197 (2026-05) |
+| R51 | BASE | 601 | 55.9% | Rs 3.25 L | Rs 2,934 | Rs 2,495 | - | - | - | - | Rs 68,758 | -Rs 39,356 (2026-06) |
+| R51 | SPLIT | 608 | 62.7% | Rs 1.78 L | Rs 2,087 | Rs 2,718 | 310 | 166 | Rs 3.14 L | Rs 1.79 L | Rs 57,372 | -Rs 19,759 (2026-06) |
+| LIQ | BASE | 346 | 42.2% | Rs 61,112 | Rs 2,871 | Rs 1,791 | - | - | - | - | Rs 84,847 | -Rs 34,518 (2026-05) |
+| LIQ | SPLIT | 346 | 48.5% | Rs 2,609 | Rs 2,018 | Rs 1,890 | 118 | 46 | Rs 1.34 L | Rs 91,085 | Rs 62,749 | -Rs 33,683 (2026-10) |
+
+### 2 lots, year (20 Oct 2025 - 19 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 1069 | 56.5% | Rs 7.06 L | Rs 3,415 | Rs 2,918 | - | - | - | - | Rs 76,475 | -Rs 29,768 (2026-05) |
+| R72 | SPLIT | 1076 | 65.8% | Rs 4.11 L | Rs 2,192 | Rs 3,101 | 628 | 338 | Rs 7.61 L | Rs 4.75 L | Rs 72,885 | -Rs 32,629 (2026-04) |
+| R51 | BASE | 1366 | 55.2% | Rs 5.74 L | Rs 3,068 | Rs 2,842 | - | - | - | - | Rs 68,758 | -Rs 39,356 (2026-06) |
+| R51 | SPLIT | 1377 | 64.0% | Rs 3.19 L | Rs 2,042 | Rs 2,983 | 747 | 384 | Rs 8.04 L | Rs 5.76 L | Rs 97,674 | -Rs 46,505 (2026-04) |
+| LIQ | BASE | 688 | 41.9% | Rs 2.29 L | Rs 3,429 | Rs 1,896 | - | - | - | - | Rs 1.30 L | -Rs 73,166 (2026-04) |
+| LIQ | SPLIT | 688 | 49.1% | Rs 72,841 | Rs 2,237 | Rs 1,953 | 253 | 111 | Rs 3.36 L | Rs 2.09 L | Rs 1.01 L | -Rs 61,446 (2026-04) |
+
+### 3 lots, early (20 Oct 2025 - 31 Mar 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 457 | 60.8% | Rs 5.24 L | Rs 5,134 | Rs 5,044 | - | - | - | - | Rs 1.14 L | Rs 8,417 (2025-12) |
+| R72 | P60 | 467 | 69.6% | Rs 3.46 L | Rs 3,294 | Rs 5,105 | 279 | 121 | Rs 7.31 L | Rs 6.19 L | Rs 43,174 | -Rs 1,414 (2025-10) |
+| R72 | IDX | 459 | 57.7% | Rs 4.31 L | Rs 4,771 | Rs 4,297 | 93 | 44 | Rs 2.75 L | Rs 2.15 L | Rs 82,371 | Rs 270 (2025-12) |
+| R72 | SPLIT | 459 | 71.0% | Rs 3.95 L | Rs 3,291 | Rs 5,094 | 301 | 157 | Rs 4.75 L | Rs 3.69 L | Rs 74,672 | Rs 8,487 (2025-12) |
+| R51 | BASE | 693 | 56.3% | Rs 4.22 L | Rs 4,582 | Rs 4,504 | - | - | - | - | Rs 1.01 L | Rs 7,210 (2025-10) |
+| R51 | P60 | 728 | 65.8% | Rs 4.06 L | Rs 3,232 | Rs 4,588 | 385 | 168 | Rs 8.54 L | Rs 7.96 L | Rs 49,139 | -Rs 31,800 (2025-10) |
+| R51 | IDX | 695 | 56.1% | Rs 3.75 L | Rs 4,110 | Rs 4,027 | 111 | 51 | Rs 2.96 L | Rs 2.40 L | Rs 69,915 | -Rs 2,644 (2026-03) |
+| R51 | SPLIT | 695 | 65.5% | Rs 3.59 L | Rs 3,162 | Rs 4,499 | 403 | 203 | Rs 4.97 L | Rs 4.47 L | Rs 69,094 | Rs 14,418 (2025-10) |
+| LIQ | BASE | 316 | 43.4% | Rs 3.30 L | Rs 6,061 | Rs 2,793 | - | - | - | - | Rs 45,836 | -Rs 9,446 (2025-10) |
+| LIQ | P60 | 318 | 52.2% | Rs 1.70 L | Rs 3,594 | Rs 2,809 | 98 | 45 | Rs 4.55 L | Rs 1.97 L | Rs 62,400 | Rs 198 (2025-12) |
+| LIQ | IDX | 316 | 44.6% | Rs 2.72 L | Rs 5,214 | Rs 2,647 | 34 | 13 | Rs 1.28 L | Rs 67,411 | Rs 48,516 | -Rs 8,305 (2025-10) |
+| LIQ | SPLIT | 316 | 50.9% | Rs 2.30 L | Rs 4,127 | Rs 2,803 | 129 | 61 | Rs 2.10 L | Rs 1.24 L | Rs 28,610 | -Rs 6,894 (2025-10) |
+
+### 3 lots, final (1 Apr - 13 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 604 | 53.6% | Rs 5.53 L | Rs 5,124 | Rs 3,953 | - | - | - | - | Rs 82,019 | -Rs 41,504 (2026-05) |
+| R72 | P60 | 626 | 60.2% | Rs 3.66 L | Rs 3,777 | Rs 4,247 | 284 | 142 | Rs 6.04 L | Rs 4.43 L | Rs 1.07 L | -Rs 44,874 (2026-04) |
+| R72 | IDX | 607 | 52.7% | Rs 4.08 L | Rs 4,625 | Rs 3,735 | 86 | 50 | Rs 2.77 L | Rs 1.06 L | Rs 1.11 L | -Rs 49,971 (2026-04) |
+| R72 | SPLIT | 609 | 60.4% | Rs 3.39 L | Rs 3,682 | Rs 4,215 | 321 | 185 | Rs 4.37 L | Rs 2.03 L | Rs 1.06 L | -Rs 41,471 (2026-05) |
+| R51 | BASE | 655 | 55.1% | Rs 4.89 L | Rs 4,622 | Rs 4,012 | - | - | - | - | Rs 1.01 L | -Rs 57,548 (2026-06) |
+| R51 | P60 | 695 | 61.7% | Rs 2.14 L | Rs 3,095 | Rs 4,187 | 302 | 149 | Rs 7.10 L | Rs 4.54 L | Rs 1.38 L | -Rs 85,179 (2026-04) |
+| R51 | IDX | 659 | 53.7% | Rs 3.35 L | Rs 4,090 | Rs 3,647 | 93 | 57 | Rs 2.96 L | Rs 1.36 L | Rs 1.25 L | -Rs 52,097 (2026-04) |
+| R51 | SPLIT | 661 | 61.3% | Rs 2.57 L | Rs 3,300 | Rs 4,217 | 331 | 184 | Rs 4.48 L | Rs 2.38 L | Rs 1.17 L | -Rs 51,720 (2026-04) |
+| LIQ | BASE | 357 | 42.0% | Rs 47,831 | Rs 4,314 | Rs 2,895 | - | - | - | - | Rs 1.92 L | -Rs 1.09 L (2026-04) |
+| LIQ | P60 | 357 | 48.2% | -Rs 53,794 | Rs 2,843 | Rs 2,934 | 91 | 32 | Rs 2.86 L | Rs 1.84 L | Rs 1.60 L | -Rs 86,301 (2026-04) |
+| LIQ | IDX | 357 | 41.7% | Rs 70,733 | Rs 4,326 | Rs 2,759 | 35 | 16 | Rs 24,258 | Rs 47,160 | Rs 1.78 L | -Rs 91,439 (2026-04) |
+| LIQ | SPLIT | 357 | 48.2% | -Rs 2,157 | Rs 3,178 | Rs 2,966 | 120 | 49 | Rs 1.52 L | Rs 1.21 L | Rs 1.56 L | -Rs 91,960 (2026-04) |
+
+### 3 lots, last 6 months (20 Apr - 19 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 539 | 55.3% | Rs 5.81 L | Rs 4,949 | Rs 3,709 | - | - | - | - | Rs 82,019 | -Rs 41,504 (2026-05) |
+| R72 | P60 | 555 | 61.1% | Rs 4.28 L | Rs 3,814 | Rs 4,006 | 255 | 123 | Rs 4.86 L | Rs 3.99 L | Rs 90,233 | -Rs 34,100 (2026-05) |
+| R72 | IDX | 539 | 54.7% | Rs 4.63 L | Rs 4,515 | Rs 3,563 | 71 | 42 | Rs 1.93 L | Rs 77,800 | Rs 1.02 L | -Rs 49,867 (2026-05) |
+| R72 | SPLIT | 540 | 61.9% | Rs 4.11 L | Rs 3,693 | Rs 3,993 | 288 | 166 | Rs 3.36 L | Rs 1.70 L | Rs 76,527 | -Rs 41,471 (2026-05) |
+| R51 | BASE | 601 | 56.1% | Rs 4.99 L | Rs 4,406 | Rs 3,735 | - | - | - | - | Rs 1.01 L | -Rs 57,548 (2026-06) |
+| R51 | P60 | 642 | 62.6% | Rs 2.89 L | Rs 3,092 | Rs 3,976 | 284 | 139 | Rs 6.14 L | Rs 4.06 L | Rs 72,596 | -Rs 24,199 (2026-06) |
+| R51 | IDX | 604 | 54.8% | Rs 3.94 L | Rs 4,045 | Rs 3,462 | 76 | 47 | Rs 2.02 L | Rs 89,855 | Rs 1.08 L | -Rs 35,451 (2026-06) |
+| R51 | SPLIT | 606 | 62.2% | Rs 3.26 L | Rs 3,292 | Rs 3,997 | 308 | 166 | Rs 3.57 L | Rs 2.04 L | Rs 88,381 | -Rs 39,983 (2026-06) |
+| LIQ | BASE | 346 | 42.8% | Rs 98,585 | Rs 4,267 | Rs 2,692 | - | - | - | - | Rs 1.25 L | -Rs 50,847 (2026-05) |
+| LIQ | P60 | 346 | 48.8% | -Rs 22,139 | Rs 2,772 | Rs 2,771 | 91 | 34 | Rs 2.87 L | Rs 1.66 L | Rs 1.05 L | -Rs 41,866 (2026-10) |
+| LIQ | IDX | 346 | 41.6% | Rs 94,400 | Rs 4,284 | Rs 2,587 | 34 | 18 | Rs 35,037 | Rs 30,851 | Rs 1.28 L | -Rs 49,993 (2026-05) |
+| LIQ | SPLIT | 346 | 48.5% | Rs 33,557 | Rs 3,156 | Rs 2,790 | 118 | 48 | Rs 1.52 L | Rs 1.05 L | Rs 99,182 | -Rs 46,403 (2026-10) |
+
+### 3 lots, year (20 Oct 2025 - 19 Oct 2026)
+
+| arm | rule | trades | win | net | avg win | avg loss | closed by rule | base made more | given up | saved | max DD | worst month |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R72 | BASE | 1069 | 56.8% | Rs 10.81 L | Rs 5,116 | Rs 4,383 | - | - | - | - | Rs 1.14 L | -Rs 41,504 (2026-05) |
+| R72 | P60 | 1101 | 64.2% | Rs 7.11 L | Rs 3,545 | Rs 4,557 | 569 | 267 | Rs 13.46 L | Rs 10.68 L | Rs 1.18 L | -Rs 44,874 (2026-04) |
+| R72 | IDX | 1074 | 54.9% | Rs 8.44 L | Rs 4,682 | Rs 3,963 | 181 | 95 | Rs 5.54 L | Rs 3.26 L | Rs 1.37 L | -Rs 49,971 (2026-04) |
+| R72 | SPLIT | 1076 | 65.1% | Rs 7.38 L | Rs 3,491 | Rs 4,537 | 628 | 346 | Rs 9.16 L | Rs 5.75 L | Rs 1.16 L | -Rs 41,471 (2026-05) |
+| R51 | BASE | 1366 | 55.6% | Rs 8.88 L | Rs 4,590 | Rs 4,276 | - | - | - | - | Rs 1.01 L | -Rs 57,548 (2026-06) |
+| R51 | P60 | 1442 | 63.7% | Rs 5.98 L | Rs 3,163 | Rs 4,401 | 698 | 322 | Rs 15.77 L | Rs 12.64 L | Rs 1.60 L | -Rs 85,179 (2026-04) |
+| R51 | IDX | 1372 | 54.7% | Rs 6.85 L | Rs 4,096 | Rs 3,852 | 205 | 109 | Rs 5.95 L | Rs 3.76 L | Rs 1.72 L | -Rs 52,097 (2026-04) |
+| R51 | SPLIT | 1374 | 63.3% | Rs 5.93 L | Rs 3,221 | Rs 4,383 | 744 | 391 | Rs 9.50 L | Rs 6.91 L | Rs 1.39 L | -Rs 51,720 (2026-04) |
+| LIQ | BASE | 688 | 42.4% | Rs 3.58 L | Rs 5,092 | Rs 2,850 | - | - | - | - | Rs 1.92 L | -Rs 1.09 L (2026-04) |
+| LIQ | P60 | 690 | 49.9% | Rs 93,992 | Rs 3,176 | Rs 2,886 | 193 | 80 | Rs 7.45 L | Rs 3.85 L | Rs 1.71 L | -Rs 86,301 (2026-04) |
+| LIQ | IDX | 688 | 42.6% | Rs 3.12 L | Rs 4,714 | Rs 2,706 | 73 | 32 | Rs 1.63 L | Rs 1.15 L | Rs 1.78 L | -Rs 91,439 (2026-04) |
+| LIQ | SPLIT | 688 | 49.1% | Rs 2.06 L | Rs 3,604 | Rs 2,893 | 253 | 112 | Rs 3.67 L | Rs 2.47 L | Rs 1.56 L | -Rs 91,960 (2026-04) |
+
+Gates (BH m = 4876):
+
+| test | lots | twin p | changed | BH q | passed | passed apart from the account stop | fails |
+|---|---|---|---|---|---|---|---|
+| LIQ:P60 | 1 | 1.0 | 187 | 1.0 | False | False | net below the base (year or final); not positive in every period; twin BH q 1.00 > 0.10; outside the account stop rule in final, six, year |
+| R72:P60 | 1 | 0.4411 | 549 | 1.0 | False | False | net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in final, six, year |
+| R51:P60 | 1 | 0.6447 | 662 | 1.0 | False | False | net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in final, year |
+| LIQ:IDX | 1 | 1.0 | 69 | 1.0 | False | False | net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in final, six, year |
+| R72:IDX | 1 | 1.0 | 170 | 1.0 | False | False | net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in final, six, year |
+| R51:IDX | 1 | 1.0 | 190 | 1.0 | False | False | net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in final, six, year |
+| LIQ:SPLIT | 3 | 0.0818 | 244 | 1.0 | False | False | net below the base (year or final); not positive in every period; twin BH q 1.00 > 0.10; outside the account stop rule in final, six, year |
+| R72:SPLIT | 3 | 0.002 | 625 | 1.0 | False | False | net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in early, final, six, year |
+| R51:SPLIT | 3 | 0.002 | 740 | 1.0 | False | False | net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop rule in early, final, six, year |

@@ -32,7 +32,7 @@ def _flat(px=100.0, n=375):
     return C
 
 
-def _sim(C, tgt=-1.0, mode="", be=True, fx=-1):
+def _sim(C, tgt=-1.0, mode="", be=True, fx=-1, ix=None, ix_lvl=np.nan, ix_on=False, sgn=1.0):
     raw, real, ef, tks = RX.entry_info(C, 10, 360, QTY)
     lkt, lkk = -1.0, 0.0
     if be:
@@ -40,8 +40,9 @@ def _sim(C, tgt=-1.0, mode="", be=True, fx=-1):
         lkt, lkk = 0.10 * raw * QTY * (1 - 1e-12), (s0 - raw) * QTY
     tp = RX.target_price(real, QTY, tgt, _ch) if tgt > 0 else -1.0
     rt, rl = Z.lock_levels(mode, real, QTY, 1, _ch, tks, float(np.nanmax(C[1][ef:360])))
+    ixt = RX.target_price(real, QTY, 1000.0, _ch) if ix_on else -1.0
     r = Z.simulate(C, 10, 360, fx, 0.15, lkt, lkk, 0.0, NOTIME.steps_arr(), 0, -1.0, -1.0, 0.05, QTY, 0.0, tp, rt, rl,
-                   *E.SLIP)
+                   Z.NONE if ix is None else ix, ix_lvl, ixt, sgn, *E.SLIP)
     return real, tp, rt, rl, r
 
 
@@ -101,7 +102,7 @@ def test_off_equals_r176(seed):
         a = Z6.simulate_step(C, 10, 360, -1, ex.stop, -1.0, lkt, lkk, 0.0, ex.steps_arr(), ex.tmax, ex.need, -1.0, 0.05,
                              QTY, 101.0, -1.0, -1.0, *E.SLIP)
         b = Z.simulate(C, 10, 360, -1, ex.stop, lkt, lkk, 0.0, ex.steps_arr(), ex.tmax, ex.need, -1.0, 0.05, QTY, 101.0,
-                       -1.0, Z.NONE, Z.NONE, *E.SLIP)
+                       -1.0, Z.NONE, Z.NONE, Z.NONE, np.nan, -1.0, 1.0, *E.SLIP)
         assert tuple(np.nan_to_num(a)) == pytest.approx(tuple(np.nan_to_num(b[:7])))
 
 
@@ -194,3 +195,55 @@ def test_target_effect():
 def test_bh_count():
     assert len(T.TESTS) == 15 and T.M_TOTAL == 4852 + 15 == 4867
     assert {a for a, _ in T.TESTS} == {"LIQ", "R72", "R51"}
+
+
+# ------------------------------------------------------------------------------------------------ Amendment B
+def test_p60_levels_lock_60pct():
+    hi = _flat()
+    hi[1, 15] = 160.0
+    real, _, rt, rl, _ = _sim(hi, mode="P60", be=False)
+    assert len(rt) > 10 and np.all(np.diff(rt) >= 0) and np.all(np.diff(rl) >= 0)
+    tks = float(E._ticks(E._vol5(hi[4], 9, QTY)))
+    for k in (0, 5, len(rt) - 1):
+        trig_net = 1000.0 + 50.0 * k
+        assert (rt[k] - real) * QTY - _ch(real, rt[k]) >= trig_net
+        rx = rl[k] * E.SLIP[2] - 2.0 * E.SLIP[3] * tks * 0.05
+        got = (rx - real) * QTY - _ch(real, rx)
+        assert 0.6 * trig_net - 1e-6 <= got < 0.6 * trig_net + 0.05 * QTY + 1.0
+
+
+def test_idx_lock_sells_next_open_after_index_crosses_back():
+    C = _flat()
+    real, _, rt, _, _ = _sim(_flat(), mode="L500", be=False)
+    ix = np.full(375, 20000.0)
+    C[1, 20] = rt[0] + 0.05                                            # +Rs 1,000 reached in minute 20
+    C[:4, 21:] = 105.0
+    ix[22] = 19990.0                                                  # minute 22's index close is back under the entry level
+    _, _, _, _, r = _sim(C, be=False, ix=ix, ix_lvl=20000.0, ix_on=True)
+    assert r[6] == Z.R_IDX and r[5] == 23 and r[1] == 105.0
+    _, _, _, _, rp = _sim(C, be=False, ix=ix, ix_lvl=20000.0, ix_on=True, sgn=-1.0)   # a put: a fall is not against it
+    assert rp[6] != Z.R_IDX
+    C2 = C.copy()
+    C2[1, 20] = 100.0                                                  # never +Rs 1,000: the index lock never arms
+    _, _, _, _, r2 = _sim(C2, be=False, ix=ix, ix_lvl=20000.0, ix_on=True)
+    assert r2[6] != Z.R_IDX
+
+
+def test_split_breakeven_leg_moves_after_target_price():
+    C = _flat()
+    raw, real, ef, tks = RX.entry_info(C, 10, 360, QTY)
+    tgt1 = RX.target_price(real, QTY / 3, 1000.0, lambda a, b: _ch(a, b, QTY / 3))
+    sbe = RX.stop_price(real, 2 * QTY / 3, 0.0, lambda a, b: _ch(a, b, 2 * QTY / 3), tks, E.SLIP[2], E.SLIP[3])
+    C[1, 20] = tgt1 + 0.05
+    C[:4, 21] = sbe + 1.0
+    C[2, 22], C[0, 22], C[1, 22], C[3, 22] = sbe - 0.5, sbe + 0.5, sbe + 1.0, sbe
+    rB = Z.simulate(C, 10, 360, -1, 0.15, -1.0, 0.0, 0.0, NOTIME.steps_arr(), 0, -1.0, -1.0, 0.05, QTY, 0.0, -1.0,
+                    np.array([tgt1]), np.array([sbe]), Z.NONE, np.nan, -1.0, 1.0, *E.SLIP)
+    assert rB[6] == Z.R_RLOCK and rB[5] == 22 and rB[1] == pytest.approx(sbe)
+    rA = Z.simulate(C, 10, 360, -1, 0.15, -1.0, 0.0, 0.0, NOTIME.steps_arr(), 0, -1.0, -1.0, 0.05, QTY, 0.0, tgt1,
+                    Z.NONE, Z.NONE, Z.NONE, np.nan, -1.0, 1.0, *E.SLIP)
+    assert rA[6] == E.R_TARGET and rA[5] == 20
+
+
+def test_bh_count_b():
+    assert len(T.TESTS_B) == 9 and T.M_TOTAL_B == 4867 + 9 == 4876

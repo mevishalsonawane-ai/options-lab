@@ -1952,3 +1952,7 @@ and then end negative. Base = the app's rule (own stop + breakeven at +10%; R151
   a loss (22.0% of all 464 losers), R51 120 of 737 (19.7% of 609), Liquidity 56 of 253 (13.9% of 404). In 21 Oct - 13 Nov
   2026 (the lake's gap files) it was higher: about a third of R72 / R51 losers (R72 19 of 56, R51 14 of 45).
 - All 15 tests fail (net below the base in the year and Apr - Oct 2026; twin BH q 1.00 with m = 4,867). Nothing changes.
+- **Amendment B (0 of 9 pass, m = 4,876):** 60% lock after +Rs 1,000 (P60): year R72 Rs 2.03 L, R51 Rs 1.64 L,
+  Liquidity Rs 15,313; index lock (sell when the index closes back through its entry level once +Rs 1,000; signal on the
+  index): R72 Rs 2.52 L, R51 Rs 1.91 L, Liquidity Rs 85,036; split exit at 3 lots (1 lot at +Rs 1,000, the rest to
+  breakeven): R72 Rs 7.38 L vs Rs 10.81 L, R51 Rs 5.93 L vs Rs 8.88 L, Liquidity Rs 2.06 L vs Rs 3.58 L.
