@@ -110,3 +110,27 @@ rule is logged in `research/experiments/entries/` whatever it shows.
 pytest (synthetic): the target fills at the net target price; a gap through fills at the open; the target never fires
 before the fill; target / lock off leaves R176's simulator unchanged; the L500 levels (+500 at +1,000, +1,000 at +1,500,
 only up, from the next minute); L-BE1000 locks Rs 0 only; the gates; the BH count.
+
+## Amendment B (16 Nov 2026, written before any number for it was computed): three more answers to "+Rs 1,000, then negative"
+
+Boss asked for other solutions to the same problem. Same base, window, periods, gates (section 5) and twins (500, seed 186);
+every rule on top of the base, whichever exit comes first.
+
+- **P60** (as S5 Trail's lock): once the best open P&L reaches +Rs 1,000 a lot net, the stop locks 60% of the best open
+  P&L (net), and only rises. Built on the step-lock ladder in Rs 50 a lot steps of the best open P&L: at a best of
+  +1,000 + 50k a lot net the stop is the premium whose stop sale nets 60% of that (so it locks at most Rs 30 a lot less
+  than an exact 60%). Acts from the next minute; sold as a stop. Gated at 1 lot; 3 lots reported.
+- **SPLIT** (2 and 3 lots only): one lot carries a resting target at +Rs 1,000 net for that lot (filled as section 3);
+  when it fills, the other lots' stop moves to the premium whose stop sale nets Rs 0 for those lots (from the next
+  minute; only raises the stop); they keep every base exit. Both legs use the whole position's entry fill; charges are
+  counted per leg (so the Rs 20 entry brokerage is counted twice, a few rupees against SPLIT). The trade's net is the sum
+  of the legs; it ends when the last leg ends. **Gated at 3 lots** against the base at 3 lots (the account stop rule at 3
+  lots as at 1 lot: Rs 40k / Rs 13k); 2 lots reported. Its twin: each trade where the target leg filled is instead sold
+  whole at a random minute between the fill and the base's exit (base exits active before it, 3 lots).
+- **IDX** (signal on the underlying): once the option has been +Rs 1,000 a lot net (the trigger premium of section 7b),
+  the trade is sold at the next minute's open (as a market sale, the R17 stop fill) when a 1-minute index close crosses
+  back through the index level at the entry fill (the index open of the fill minute): for a call a close below it, for a
+  put a close above it. Checked from the minute the trigger is reached (its close comes after its high). Gated at 1 lot;
+  3 lots reported.
+- **Tests: 3 rules x 3 arms = 9; BH m = 4,867 + 9 = 4,876** (the first 15 tests' q are not re-stated; their verdicts
+  stand either way). The final is read again (`results/FINAL_READ_B`, written before the one read).
