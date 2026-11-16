@@ -1,0 +1,43 @@
+id: r185-exh-sensex
+title: R185 exhaustion on SENSEX over a year (BVC flow from the index price and ATM option volume)
+family: flow-oi
+date: '2026-11-16'
+doc: research/hunt/r185_absorption_year/results/report.md
+hypothesis: R184's exhaustion rule, on flow estimated by bulk volume classification from the index's 1-minute price and the
+  near-ATM options' volume, picks entries whose ATM option trades beat random entries at the same minutes and beat doing nothing,
+  after real charges.
+data_version: 'data lake (Dhan v2, gdrive:IraAlgo-data-lake): index 1-minute and rolling WEEK options ATM-10..+10 to 19 Oct
+  2026, plus the 20 Oct - 13 Nov 2026 gap fetched from Dhan on 16 Nov 2026 (gdrive:IraAlgo-data-lake/dhan/); outside git'
+period:
+  design: '2024-11-20..2025-10-19 (halves H1 to 30 Apr 2025, H2 from 1 May; 32 variants, 0 eligible; chosen EXH X15 k3 b6
+    flip+close T30: 836 trades, Rs -65,877; fallback, nothing passed)'
+  holdout: 2025-10-20..2026-10-19 (read once after results/FINAL_READ_SENSEX)
+instruments:
+- SENSEX
+features:
+- 'signal source: the SENSEX index''s own 1-minute price (underlying); each minute''s buy / sell split by BVC (Phi of the
+  price change over the day''s earlier sigma) sized by the summed volume of the ATM-2..+2 calls and puts - option-volume context
+  (OVC); no futures volume history and no second-level history exist at Dhan; option prices only price the trade'
+- 'exhaustion (R184''s rule on BVC flow): a climax minute at a new X-minute low with an estimated selling spike (|D| >= k
+  x the day''s mean |D| so far), then within 3 minutes selling under half the climax''s, no low beyond beta bp, and D turns
+  positive -> buy the ATM CALL (mirror at a high -> PUT)'
+model_or_rule: 'EXH X15 k3 b6 flip+close T30: exhaustion (R184''s rule on BVC flow): a climax minute at a new X-minute low
+  with an estimated selling spike (|D| >= k x the day''s mean |D| so far), then within 3 minutes selling under half the climax''s,
+  no low beyond beta bp, and D turns positive -> buy the ATM CALL (mirror at a high -> PUT). Exits: -15% premium stop, breakeven
+  (fill + charges) from the minute after +10%, index stop beyond the extreme by beta bp, time stop T minutes, 15:14 (15:04
+  expiry). 1 lot (lot schedule by date).'
+settings: research/hunt/r185_absorption_year/PREREG.md sections 2-6; r185lib.py
+prereg: research/hunt/r185_absorption_year/PREREG.md
+variants_tried: 32
+results:
+  summary: 'Final year 891 trades, win 31%, Rs -2,711 (2x slippage Rs -13,198), mean Rs -3 a trade; worst month Rs -11,277,
+    max drawdown Rs 32,213. Random twins mean Rs -87: p 0.007, BH q 1.00; mean > 0 p 0.537, q 1.00 (m 4,852). Pre-registered
+    verdict: no evidence (nothing passed the selection).'
+  costs: Costs('dated') both sides (BSE charges for SENSEX); Fills('liq') slippage by the contract's minute volume; 2x slippage
+    sensitivity; no historical bid / ask
+holdout_read: true
+verdict: rejected
+notes: 'BVC infers the side from price, so it cannot see true absorption (volume that fails to move price); this tests R184''s
+  definitions on estimated flow. BH m = 4,852 (4,512 after R184 + 320 variants + 20 tests). Gate fails: nothing passed the
+  selection; not positive in every period (or the year at 2x slippage); BH q twins 1.00 / zero 1.00 > 0.10. Nothing in the
+  app changes.'

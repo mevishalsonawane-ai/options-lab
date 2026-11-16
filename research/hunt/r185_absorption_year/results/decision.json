@@ -206,17 +206,69 @@
    "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
   ]
  },
+ "ABS SENSEX": {
+  "vid": "ABS w3 k3 b6 turn T30",
+  "passed_selection": false,
+  "verdict": "no evidence (nothing passed the selection)",
+  "n": 165,
+  "win": 0.2727,
+  "net": -8838.0,
+  "net2": -10258.0,
+  "mean": -53.6,
+  "twin_mean": -67.8,
+  "p_twin": 0.4126,
+  "q_twin": 1.0,
+  "p_zero": 0.7732,
+  "q_zero": 1.0,
+  "worst_month": {
+   "month": "2026-08",
+   "net": -11142.0
+  },
+  "max_dd": 22919.0,
+  "gate_fails": [
+   "nothing passed the selection",
+   "not positive in every period (or the year at 2x slippage)",
+   "not above the twins in early, final and the year",
+   "BH q twins 1.00 / zero 1.00 > 0.10"
+  ]
+ },
+ "EXH SENSEX": {
+  "vid": "EXH X15 k3 b6 flip+close T30",
+  "passed_selection": false,
+  "verdict": "no evidence (nothing passed the selection)",
+  "n": 891,
+  "win": 0.3143,
+  "net": -2711.0,
+  "net2": -13198.0,
+  "mean": -3.0,
+  "twin_mean": -86.9,
+  "p_twin": 0.007,
+  "q_twin": 1.0,
+  "p_zero": 0.5374,
+  "q_zero": 1.0,
+  "worst_month": {
+   "month": "2026-01",
+   "net": -11277.0
+  },
+  "max_dd": 32213.0,
+  "gate_fails": [
+   "nothing passed the selection",
+   "not positive in every period (or the year at 2x slippage)",
+   "BH q twins 1.00 / zero 1.00 > 0.10"
+  ]
+ },
  "_m": {
   "prior": 4512,
   "variants": 320,
   "tests": 20,
   "total": 4852,
-  "tests_read": 16,
+  "tests_read": 20,
   "indices_read": [
    "NIFTY",
    "BANKNIFTY",
    "FINNIFTY",
-   "MIDCPNIFTY"
+   "MIDCPNIFTY",
+   "SENSEX"
   ]
  },
  "_tests": [
@@ -224,7 +276,7 @@
    "id": "ABS NIFTY T1 twins",
    "p": 0.5445,
    "q_all": 1.0,
-   "q_within": 0.968
+   "q_within": 0.9075
   },
   {
    "id": "ABS NIFTY T2 zero",
@@ -236,7 +288,7 @@
    "id": "EXH NIFTY T1 twins",
    "p": 0.022,
    "q_all": 1.0,
-   "q_within": 0.296
+   "q_within": 0.22
   },
   {
    "id": "EXH NIFTY T2 zero",
@@ -248,7 +300,7 @@
    "id": "ABS BANKNIFTY T1 twins",
    "p": 0.3477,
    "q_all": 1.0,
-   "q_within": 0.7947
+   "q_within": 0.8693
   },
   {
    "id": "ABS BANKNIFTY T2 zero",
@@ -260,7 +312,7 @@
    "id": "EXH BANKNIFTY T1 twins",
    "p": 0.0579,
    "q_all": 1.0,
-   "q_within": 0.3088
+   "q_within": 0.2895
   },
   {
    "id": "EXH BANKNIFTY T2 zero",
@@ -272,7 +324,7 @@
    "id": "ABS FINNIFTY T1 twins",
    "p": 0.037,
    "q_all": 1.0,
-   "q_within": 0.296
+   "q_within": 0.2467
   },
   {
    "id": "ABS FINNIFTY T2 zero",
@@ -284,7 +336,7 @@
    "id": "EXH FINNIFTY T1 twins",
    "p": 0.3357,
    "q_all": 1.0,
-   "q_within": 0.7947
+   "q_within": 0.8693
   },
   {
    "id": "EXH FINNIFTY T2 zero",
@@ -296,7 +348,7 @@
    "id": "ABS MIDCPNIFTY T1 twins",
    "p": 0.2398,
    "q_all": 1.0,
-   "q_within": 0.7674
+   "q_within": 0.7993
   },
   {
    "id": "ABS MIDCPNIFTY T2 zero",
@@ -315,6 +367,30 @@
    "p": 0.9982,
    "q_all": 1.0,
    "q_within": 0.9997
+  },
+  {
+   "id": "ABS SENSEX T1 twins",
+   "p": 0.4126,
+   "q_all": 1.0,
+   "q_within": 0.8852
+  },
+  {
+   "id": "ABS SENSEX T2 zero",
+   "p": 0.7732,
+   "q_all": 1.0,
+   "q_within": 0.9997
+  },
+  {
+   "id": "EXH SENSEX T1 twins",
+   "p": 0.007,
+   "q_all": 1.0,
+   "q_within": 0.14
+  },
+  {
+   "id": "EXH SENSEX T2 zero",
+   "p": 0.5374,
+   "q_all": 1.0,
+   "q_within": 0.9075
   }
  ]
 }

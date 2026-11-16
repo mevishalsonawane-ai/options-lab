@@ -12,6 +12,8 @@ Signal: the index's own 1-minute price with the ATM-2..+2 options' volume as BVC
 | Exhaustion FINNIFTY | EXH X15 k3 b3 flip T30 | no (fallback) | 819 | 31% | Rs -45,338 (Rs -76,887) | Rs -55 | Rs -78 | 0.336 | 1.00 | Rs -20,832 | Rs 60,113 | no evidence (nothing passed the selection) |
 | Absorption MIDCPNIFTY | ABS w3 k2 b6 none T15 | no (fallback) | 445 | 38% | Rs -43,349 (Rs -62,464) | Rs -97 | Rs -134 | 0.240 | 1.00 | Rs -10,880 | Rs 43,587 | no evidence (nothing passed the selection) |
 | Exhaustion MIDCPNIFTY | EXH X15 k3 b3 flip+close T30 | no (fallback) | 834 | 30% | Rs -113,568 (Rs -155,068) | Rs -136 | Rs -143 | 0.443 | 1.00 | Rs -29,435 | Rs 114,470 | no evidence (nothing passed the selection) |
+| Absorption SENSEX | ABS w3 k3 b6 turn T30 | no (fallback) | 165 | 27% | Rs -8,838 (Rs -10,258) | Rs -54 | Rs -68 | 0.413 | 1.00 | Rs -11,142 | Rs 22,919 | no evidence (nothing passed the selection) |
+| Exhaustion SENSEX | EXH X15 k3 b6 flip+close T30 | no (fallback) | 891 | 31% | Rs -2,711 (Rs -13,198) | Rs -3 | Rs -87 | 0.007 | 1.00 | Rs -11,277 | Rs 32,213 | no evidence (nothing passed the selection) |
 
-- Indices not read yet: SENSEX (same frozen rules; their tests count in m = 4,852 either way).
+- Indices not read yet: none (same frozen rules; their tests count in m = 4,852 either way).
 - Nothing in the app changes. Full write-up: `results/report.md`.

@@ -1955,7 +1955,7 @@ time stop. 32 versions per setup chosen on 15 Oct - 3 Nov (13 days), holdout 4 -
 - All 8 tests BH q 1.0 (m = 4,512). 20 days can only detect an edge of about Rs 850-1,950 a trade; most of the 128
   design versions lost. The 1-second recorder drops big unchanged-price prints (R182), the very prints absorption reads.
 
-## Absorption and exhaustion on a full year (R185, 16 Nov 2026) - NIFTY: both lose money, nothing passed selection
+## Absorption and exhaustion on a full year (R185, 16 Nov 2026) - 9 of 10 lose money; FINNIFTY absorption +Rs 20k is inconclusive
 `hunt/r185_absorption_year/results/report.md`. Boss asked for R184 re-tested on a year of Dhan minute data. Dhan has no
 index futures minute volume for past years and **no second-level history**, so the signal source is the index's own
 1-minute price with the ATM-2..+2 options' volume as context (BVC flow; labelled option-volume context). R184's rules,
@@ -1978,5 +1978,11 @@ recordings (72,623 minutes, median gap Rs 0.30).
 - **MIDCPNIFTY: nothing passed the selection.** Final year, fallback versions: absorption 445 trades, 38% won, Rs -43,349
   (worst month Rs -10,880); exhaustion 834 trades, 30% won, Rs -1,13,568 (worst month Rs -29,435, drawdown Rs 1.14 L);
   q 1.0, both rejected.
-- Estimated flow from price cannot see true absorption (volume that fails to move price). SENSEX follows under the same
-  frozen rules.
+- **SENSEX: nothing passed the selection.** Final year, fallback versions: absorption 165 trades, 27% won, Rs -8,838;
+  exhaustion 891 trades, 31% won, Rs -2,711 (better than random entries' Rs -87 a trade, p 0.007, but not above zero);
+  q 1.0, both rejected.
+- **All five indices:** 9 of 10 setups lost money in the final year; only FINNIFTY absorption made money (Rs 20,097 on 205
+  trades), and it does not survive the multiple-testing correction - a frozen-rule forward test on new days is the only
+  honest next step. Estimated flow from price cannot see true absorption (volume that fails to move price): a real
+  order-flow test needs tick or second-level data (the phone's own recordings as they grow, or bought tick history).
+- NIFTY's selection re-run with the true lots (descriptive) still has no eligible version.
