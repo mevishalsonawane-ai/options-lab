@@ -1,0 +1,51 @@
+id: r187-u2
+title: 'R187 U2: network exit choice: per trade, the studied exit the network expects to net the most'
+family: ml
+date: '2026-11-16'
+doc: research/hunt/r187_neural_meta/results/summary.md
+hypothesis: 'Boss: a multi-layer network over all the lake data and the earlier studies makes the ORB family and the other
+  arms more profitable, with a higher win rate and smaller losses.'
+data_version: Drive lake gdrive:IraAlgo-data-lake (index 1-minute 2017/2021 - 13 Nov 2026, rolling index options Aug 2021
+  - 13 Nov 2026); R51 clean stores to 19 Oct 2026 and R186's extended copy to 13 Nov; R3 BANKNIFTY store rebuilt to 13 Nov
+period:
+  design: training from Aug 2021 (ORB) / 20 Nov 2024 (R arms); walk-forward folds Apr 2025 - Mar 2026
+  holdout: 'final 1 Apr - 13 Oct 2026 (read again: contaminated); year 20 Oct 2025 - 19 Oct 2026; new month 21 Oct - 13 Nov
+    2026 descriptive'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (entries unchanged)'
+- 'network inputs: traded-index and cross-index minute features, India VIX, option-chain context (OI, IV, PCR, ATM premium
+  / OI changes), R151''s 28 features + picker score, R169''s 11 ORB features, R183 sideways measures, arm / underlying / exit
+  identity'
+model_or_rule: 'network exit choice: per trade, the studied exit the network expects to net the most; sklearn MLP classifier
+  + regressor (2 settings x 2 alphas, 3 hidden layers), walk-forward quarterly then frozen at 31 Mar 2026; PREREG.md section
+  3'
+settings: research/hunt/r187_neural_meta/r187study.py
+prereg: research/hunt/r187_neural_meta/PREREG.md
+variants_tried: 6
+results:
+  summary: 'R72 Breadth Donchian: year 1094 trades win 63.2% Rs 216,794 (base 1097 / 64.4% / Rs 213,110); final 623 59.9%
+    Rs 109,696 (base Rs 111,117); twin p 0.709; failed: win rate not above the base (year); neither drawdown nor worst month
+    better (year); net below the base (final); win rate not above the base (final); neither drawdown nor worst month better
+    (final); twin BH q 1.00 > 0.10 | R51 Donchian 20 + Supertrend: year 1410 trades win 60.4% Rs 217,180 (base 1430 / 62.7%
+    / Rs 162,959); final 671 58.3% Rs 112,679 (base Rs 57,450); twin p 0.303; failed: win rate not above the base (year);
+    win rate not above the base (final); twin BH q 1.00 > 0.10 | Liquidity 15+5: year 688 trades win 43.9% Rs 85,996 (base
+    688 / 44.5% / Rs 98,239); final 357 43.7% Rs 6,424 (base Rs 6,424); twin p 0.914; failed: net below the base (year); win
+    rate not above the base (year); neither drawdown nor worst month better (year); win rate not above the base (final); neither
+    drawdown nor worst month better (final); twin BH q 1.00 > 0.10 | ORB: year 237 trades win 39.7% -Rs 22,263 (base 237 /
+    39.2% / -Rs 22,716); final 128 44.5% Rs 2,725 (base Rs 2,876); twin p 0.637; failed: net below the base (final); neither
+    drawdown nor worst month better (final); not positive in every period; twin BH q 1.00 > 0.10 | ORB Fresh: year 237 trades
+    win 39.7% -Rs 22,263 (base 237 / 39.2% / -Rs 22,716); final 128 44.5% Rs 2,725 (base Rs 2,876); twin p 0.665; failed:
+    net below the base (final); neither drawdown nor worst month better (final); not positive in every period; twin BH q 1.00
+    > 0.10 | ORB Sweep: year 332 trades win 28.6% -Rs 83,361 (base 326 / 28.5% / -Rs 81,308); final 177 28.2% -Rs 53,271 (base
+    -Rs 54,421); twin p 0.571; failed: net below the base (year); win rate not above the base (final); not positive in every
+    period; twin BH q 1.00 > 0.10.'
+  costs: 'dated Zerodha charges; R17 fills (R arms: R186 engine; ORB: R169''s B0 engine)'
+holdout_read: true
+verdict: rejected
+notes: BH m = 4,902. A pass would be a second look on a contaminated final (shadow only). Nothing in the app changes.

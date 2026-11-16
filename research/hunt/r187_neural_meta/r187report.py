@@ -97,7 +97,10 @@ def main():
             tw = {u: yr["twins"].get(f"{a}:{u}") for u in ("U1", "U2", "U3", "U4") if f"{a}:{u}" in yr["twins"]}
             L += ["Twins (year): " + "; ".join(f"{u} p {v['p']:.3f} (twin mean {rs(v['mean'])})" for u, v in tw.items()), ""]
     if wf:
-        L += ["## Walk-forward window (Apr 2025 - Mar 2026, folds F1-F4; design data)", ""]
+        L += ["## Walk-forward window (Apr 2025 - Mar 2026, folds F1-F4; design data)", "",
+              "The ORB rows were run before the final read; the first run crashed on an import before writing its file, so "
+              "the R72 / R51 / Liquidity rows were re-run (same frozen models, design data only) while the final ran. "
+              "Nothing in the final run depends on them.", ""]
         for a in K.ARMS:
             L += [f"**{K.ARM_NAME[a]}**", ""] + arm_tables(wf[a], None) + [""]
     if nm:
