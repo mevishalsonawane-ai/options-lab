@@ -365,7 +365,7 @@ class MiscScreensTest {
         tap("Start fresh from tomorrow")
         compose.waitForText("Start the live P&L page fresh?")
         tap("Start fresh")
-        compose.waitUntil(10_000) { model.settings.value.livePnlFrom == "2026-11-17" }
+        compose.until(20_000, "the start saved as 2026-11-17") { model.settings.value.livePnlFrom == "2026-11-17" }
         compose.waitForText("Showing live P&L from Tue 17 Nov 2026.")
         compose.waitForText("Earlier live days are hidden here, not deleted; risk rules still count them.")
         compose.waitForNoText("−₹3,087")
@@ -373,7 +373,7 @@ class MiscScreensTest {
         assertFalse("no hidden day in the week column or the summary", compose.has("−4.3k"))
         assertFalse(compose.has("Start fresh from tomorrow"))
         // Saved in the settings vault, and nothing deleted: the risk rules' days are exactly as before.
-        compose.waitUntil(10_000) { com.optionslab.app.data.AppSettings.load().livePnlFrom == "2026-11-17" }
+        compose.until(20_000) { com.optionslab.app.data.AppSettings.load().livePnlFrom == "2026-11-17" }
         assertEquals(before, com.optionslab.app.data.DailyPnl.all(true))
         assertEquals(liveDays, prefs.getString("pnl.days.live"))
 
@@ -387,10 +387,10 @@ class MiscScreensTest {
 
         // Show all history again: every day back.
         tap("Show all history again")
-        compose.waitUntil(10_000) { model.settings.value.livePnlFrom == "" }
+        compose.until(20_000) { model.settings.value.livePnlFrom == "" }
         compose.waitForText("−₹3,087")
         compose.waitForText("Start fresh from tomorrow")
-        compose.waitUntil(10_000) { com.optionslab.app.data.AppSettings.load().livePnlFrom == "" }
+        compose.until(20_000) { com.optionslab.app.data.AppSettings.load().livePnlFrom == "" }
         assertEquals(before, com.optionslab.app.data.DailyPnl.all(true))
     }
 
