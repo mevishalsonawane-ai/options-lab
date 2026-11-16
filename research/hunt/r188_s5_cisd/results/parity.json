@@ -1,0 +1,60 @@
+{
+ "s5_r123_list": {
+  "rebuilt": 596,
+  "saved": 596,
+  "same": true
+ },
+ "s5_picks": {
+  "rebuilt": 982,
+  "r123": 982,
+  "same": true
+ },
+ "s5_r128": {
+  "replayed": 596,
+  "r128": 596,
+  "matched": 596,
+  "share_within_1": 1.0,
+  "max_diff": 0.0,
+  "wf": {
+   "n": 555,
+   "win": 0.5873873873873874,
+   "avg_net": 239.77302702702707,
+   "worst_month": -18595.809999999998,
+   "worst_month_name": "2024-09",
+   "r128_n": 555,
+   "r128_avg_net": 239.77302702702707,
+   "r128_win": 0.5873873873873874
+  },
+  "holdout": {
+   "n": 41,
+   "win": 0.8292682926829268,
+   "avg_net": 560.7551219512196,
+   "worst_month": -2328.42,
+   "worst_month_name": "2026-04",
+   "r128_n": 41,
+   "r128_avg_net": 560.7551219512196,
+   "r128_win": 0.8292682926829268
+  }
+ },
+ "cisd_r133": {
+  "replayed_trades": 3871,
+  "r133_trades": 3871,
+  "matched": 3871,
+  "only_replay": 0,
+  "only_r133": 0,
+  "share_within_1": 1.0,
+  "max_diff": 0.0,
+  "design": {
+   "n": 413,
+   "win": 0.6852300242130751,
+   "avg_net": 260.76813559322034,
+   "all_setups": 3291
+  },
+  "final": {
+   "n": 35,
+   "win": 0.7142857142857143,
+   "avg_net": 76.60628571428563,
+   "all_setups": 580
+  }
+ }
+}
