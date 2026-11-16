@@ -1966,5 +1966,8 @@ recordings (72,623 minutes, median gap Rs 0.30).
 - Final year, fallback versions: **absorption 451 trades, 26% won, Rs -50,042** (twins Rs -105 a trade, p 0.54; worst
   month Rs -13,085, drawdown Rs 51.8k - outside the account stop rule); **exhaustion 888 trades, 38% won, Rs -30,656**
   (Rs -34 a trade, better than random entries' Rs -91, p 0.022, but below zero; BH q 1.0, m = 4,852).
-- Estimated flow from price cannot see true absorption (volume that fails to move price). BANKNIFTY, FINNIFTY,
-  MIDCPNIFTY and SENSEX follow under the same frozen rules.
+- **BANKNIFTY: no version passed the selection either** (true lot by day, Amendment A). Final year, fallback versions:
+  **absorption 203 trades, 46% won, Rs -21,339** (Rs -105 a trade vs random Rs -129, p 0.35); **exhaustion 980 trades,
+  36% won, Rs -1,00,340** (Rs -102 a trade vs random Rs -148, p 0.058; worst month Rs -23,061, drawdown Rs 1.03 L); q 1.0.
+- Estimated flow from price cannot see true absorption (volume that fails to move price). FINNIFTY, MIDCPNIFTY and
+  SENSEX follow under the same frozen rules.
