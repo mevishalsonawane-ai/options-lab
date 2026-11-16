@@ -1,0 +1,2613 @@
+{
+ "und": "BANKNIFTY",
+ "prereg_sha256": "157a82109f304e6c3c0e0b1e5135a1fefe3523f76e3d5705a6b60c42962e3969",
+ "m_total": 4852,
+ "signal_source": "the index's own 1-minute price (the underlying); each minute's buy / sell split estimated by BVC from the index price change, sized by the summed volume of the ATM-2..ATM+2 calls and puts (option-volume context, OVC); no rule reads an option's own price chart",
+ "halves": {
+  "H1": [
+   "2024-11-21",
+   "2025-04-30",
+   109
+  ],
+  "H2": [
+   "2025-05-02",
+   "2025-10-17",
+   118
+  ]
+ },
+ "data": {
+  "days_total": 490,
+  "expiry_days_in_selection": 11,
+  "steps": [
+   100.0
+  ],
+  "dropped": [
+   "2025-10-21",
+   "2026-11-08"
+  ]
+ },
+ "cells": {
+  "ABS BANKNIFTY": {
+   "variants": [
+    {
+     "i": 0,
+     "vid": "ABS w3 k2 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "H1": {
+      "n": 5,
+      "net": -1261.0,
+      "mean": -252.1,
+      "win": 0.0,
+      "net2": -1302.0,
+      "twin_mean": -103.3,
+      "signals": 6,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 3,
+      "net": 67.0,
+      "mean": 22.5,
+      "win": 0.3333,
+      "net2": 23.0,
+      "twin_mean": -110.2,
+      "signals": 3,
+      "unpriced": {}
+     },
+     "n": 8,
+     "net": -1194.0,
+     "signals": 9,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 1,
+     "vid": "ABS w3 k2 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "H1": {
+      "n": 5,
+      "net": -1261.0,
+      "mean": -252.1,
+      "win": 0.0,
+      "net2": -1302.0,
+      "twin_mean": -133.4,
+      "signals": 6,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 3,
+      "net": 296.0,
+      "mean": 98.8,
+      "win": 0.3333,
+      "net2": 252.0,
+      "twin_mean": -191.8,
+      "signals": 3,
+      "unpriced": {}
+     },
+     "n": 8,
+     "net": -965.0,
+     "signals": 9,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 2,
+     "vid": "ABS w3 k2 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "H1": {
+      "n": 3,
+      "net": -922.0,
+      "mean": -307.4,
+      "win": 0.0,
+      "net2": -955.0,
+      "twin_mean": -139.9,
+      "signals": 3,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 1,
+      "net": -365.0,
+      "mean": -365.3,
+      "win": 0.0,
+      "net2": -373.0,
+      "twin_mean": 109.4,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "n": 4,
+     "net": -1287.0,
+     "signals": 4,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 3,
+     "vid": "ABS w3 k2 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "H1": {
+      "n": 3,
+      "net": -922.0,
+      "mean": -307.4,
+      "win": 0.0,
+      "net2": -955.0,
+      "twin_mean": -121.1,
+      "signals": 3,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 1,
+      "net": -365.0,
+      "mean": -365.3,
+      "win": 0.0,
+      "net2": -373.0,
+      "twin_mean": 73.6,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "n": 4,
+     "net": -1287.0,
+     "signals": 4,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 4,
+     "vid": "ABS w3 k2 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "H1": {
+      "n": 42,
+      "net": -6149.0,
+      "mean": -146.4,
+      "win": 0.1905,
+      "net2": -6687.0,
+      "twin_mean": -100.8,
+      "signals": 98,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 158,
+      "net": -25455.0,
+      "mean": -161.1,
+      "win": 0.3481,
+      "net2": -29387.0,
+      "twin_mean": -144.2,
+      "signals": 262,
+      "unpriced": {}
+     },
+     "n": 200,
+     "net": -31604.0,
+     "signals": 360,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 5,
+     "vid": "ABS w3 k2 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "H1": {
+      "n": 42,
+      "net": -8926.0,
+      "mean": -212.5,
+      "win": 0.119,
+      "net2": -9486.0,
+      "twin_mean": -105.8,
+      "signals": 98,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 156,
+      "net": -23245.0,
+      "mean": -149.0,
+      "win": 0.3205,
+      "net2": -27285.0,
+      "twin_mean": -143.1,
+      "signals": 262,
+      "unpriced": {}
+     },
+     "n": 198,
+     "net": -32171.0,
+     "signals": 360,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 6,
+     "vid": "ABS w3 k2 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "H1": {
+      "n": 34,
+      "net": -5327.0,
+      "mean": -156.7,
+      "win": 0.1176,
+      "net2": -5660.0,
+      "twin_mean": -129.1,
+      "signals": 54,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 107,
+      "net": -20591.0,
+      "mean": -192.4,
+      "win": 0.3178,
+      "net2": -23082.0,
+      "twin_mean": -119.5,
+      "signals": 135,
+      "unpriced": {}
+     },
+     "n": 141,
+     "net": -25918.0,
+     "signals": 189,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 7,
+     "vid": "ABS w3 k2 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "H1": {
+      "n": 34,
+      "net": -8473.0,
+      "mean": -249.2,
+      "win": 0.0294,
+      "net2": -8832.0,
+      "twin_mean": -137.4,
+      "signals": 54,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 106,
+      "net": -20136.0,
+      "mean": -190.0,
+      "win": 0.3585,
+      "net2": -22723.0,
+      "twin_mean": -133.6,
+      "signals": 135,
+      "unpriced": {}
+     },
+     "n": 140,
+     "net": -28609.0,
+     "signals": 189,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 8,
+     "vid": "ABS w3 k3 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "H1": {
+      "n": 1,
+      "net": -36.0,
+      "mean": -35.7,
+      "win": 0.0,
+      "net2": -56.0,
+      "twin_mean": -123.4,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 1,
+      "net": -6.0,
+      "mean": -5.7,
+      "win": 0.0,
+      "net2": -14.0,
+      "twin_mean": -244.2,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "n": 2,
+     "net": -42.0,
+     "signals": 2,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 9,
+     "vid": "ABS w3 k3 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "H1": {
+      "n": 1,
+      "net": -36.0,
+      "mean": -35.7,
+      "win": 0.0,
+      "net2": -56.0,
+      "twin_mean": -257.3,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 1,
+      "net": -6.0,
+      "mean": -5.7,
+      "win": 0.0,
+      "net2": -14.0,
+      "twin_mean": -202.4,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "n": 2,
+     "net": -42.0,
+     "signals": 2,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 10,
+     "vid": "ABS w3 k3 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "H1": {
+      "n": 1,
+      "net": -752.0,
+      "mean": -751.9,
+      "win": 0.0,
+      "net2": -772.0,
+      "twin_mean": -209.9,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 1,
+      "net": -365.0,
+      "mean": -365.3,
+      "win": 0.0,
+      "net2": -373.0,
+      "twin_mean": 185.8,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "n": 2,
+     "net": -1117.0,
+     "signals": 2,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 11,
+     "vid": "ABS w3 k3 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "H1": {
+      "n": 1,
+      "net": -752.0,
+      "mean": -751.9,
+      "win": 0.0,
+      "net2": -772.0,
+      "twin_mean": -269.6,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 1,
+      "net": -365.0,
+      "mean": -365.3,
+      "win": 0.0,
+      "net2": -373.0,
+      "twin_mean": 53.6,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "n": 2,
+     "net": -1117.0,
+     "signals": 2,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 12,
+     "vid": "ABS w3 k3 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "H1": {
+      "n": 17,
+      "net": -1036.0,
+      "mean": -61.0,
+      "win": 0.0588,
+      "net2": -1163.0,
+      "twin_mean": -108.6,
+      "signals": 26,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 34,
+      "net": -5615.0,
+      "mean": -165.2,
+      "win": 0.2941,
+      "net2": -6405.0,
+      "twin_mean": -153.6,
+      "signals": 43,
+      "unpriced": {}
+     },
+     "n": 51,
+     "net": -6651.0,
+     "signals": 69,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 13,
+     "vid": "ABS w3 k3 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "H1": {
+      "n": 17,
+      "net": -1337.0,
+      "mean": -78.6,
+      "win": 0.0,
+      "net2": -1466.0,
+      "twin_mean": -120.6,
+      "signals": 26,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 34,
+      "net": -6986.0,
+      "mean": -205.5,
+      "win": 0.2353,
+      "net2": -7819.0,
+      "twin_mean": -169.9,
+      "signals": 43,
+      "unpriced": {}
+     },
+     "n": 51,
+     "net": -8323.0,
+     "signals": 69,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 14,
+     "vid": "ABS w3 k3 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "H1": {
+      "n": 13,
+      "net": -1983.0,
+      "mean": -152.6,
+      "win": 0.0,
+      "net2": -2067.0,
+      "twin_mean": -51.8,
+      "signals": 16,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 19,
+      "net": -3284.0,
+      "mean": -172.8,
+      "win": 0.2632,
+      "net2": -3671.0,
+      "twin_mean": -126.4,
+      "signals": 22,
+      "unpriced": {}
+     },
+     "n": 32,
+     "net": -5267.0,
+     "signals": 38,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 15,
+     "vid": "ABS w3 k3 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "H1": {
+      "n": 13,
+      "net": -1983.0,
+      "mean": -152.6,
+      "win": 0.0,
+      "net2": -2067.0,
+      "twin_mean": -109.8,
+      "signals": 16,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 19,
+      "net": -5455.0,
+      "mean": -287.1,
+      "win": 0.2105,
+      "net2": -5863.0,
+      "twin_mean": -200.2,
+      "signals": 22,
+      "unpriced": {}
+     },
+     "n": 32,
+     "net": -7438.0,
+     "signals": 38,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 16,
+     "vid": "ABS w5 k2 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "H1": {
+      "n": 1,
+      "net": -426.0,
+      "mean": -425.6,
+      "win": 0.0,
+      "net2": -445.0,
+      "twin_mean": -36.8,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 0,
+      "net": 0.0,
+      "mean": null,
+      "win": null,
+      "net2": 0.0,
+      "twin_mean": null,
+      "signals": 0,
+      "unpriced": {}
+     },
+     "n": 1,
+     "net": -426.0,
+     "signals": 1,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 17,
+     "vid": "ABS w5 k2 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "H1": {
+      "n": 1,
+      "net": -426.0,
+      "mean": -425.6,
+      "win": 0.0,
+      "net2": -445.0,
+      "twin_mean": -150.7,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 0,
+      "net": 0.0,
+      "mean": null,
+      "win": null,
+      "net2": 0.0,
+      "twin_mean": null,
+      "signals": 0,
+      "unpriced": {}
+     },
+     "n": 1,
+     "net": -426.0,
+     "signals": 1,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 18,
+     "vid": "ABS w5 k2 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "H1": {
+      "n": 1,
+      "net": -1142.0,
+      "mean": -1141.7,
+      "win": 0.0,
+      "net2": -1162.0,
+      "twin_mean": -79.0,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 0,
+      "net": 0.0,
+      "mean": null,
+      "win": null,
+      "net2": 0.0,
+      "twin_mean": null,
+      "signals": 0,
+      "unpriced": {}
+     },
+     "n": 1,
+     "net": -1142.0,
+     "signals": 1,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 19,
+     "vid": "ABS w5 k2 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "H1": {
+      "n": 1,
+      "net": -1142.0,
+      "mean": -1141.7,
+      "win": 0.0,
+      "net2": -1162.0,
+      "twin_mean": 3.4,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 0,
+      "net": 0.0,
+      "mean": null,
+      "win": null,
+      "net2": 0.0,
+      "twin_mean": null,
+      "signals": 0,
+      "unpriced": {}
+     },
+     "n": 1,
+     "net": -1142.0,
+     "signals": 1,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 20,
+     "vid": "ABS w5 k2 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "H1": {
+      "n": 23,
+      "net": -802.0,
+      "mean": -34.9,
+      "win": 0.1304,
+      "net2": -944.0,
+      "twin_mean": -85.6,
+      "signals": 43,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 55,
+      "net": -8600.0,
+      "mean": -156.4,
+      "win": 0.3636,
+      "net2": -9805.0,
+      "twin_mean": -157.7,
+      "signals": 69,
+      "unpriced": {}
+     },
+     "n": 78,
+     "net": -9402.0,
+     "signals": 112,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 21,
+     "vid": "ABS w5 k2 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "H1": {
+      "n": 23,
+      "net": -1502.0,
+      "mean": -65.3,
+      "win": 0.0435,
+      "net2": -1646.0,
+      "twin_mean": -116.2,
+      "signals": 43,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 53,
+      "net": -10489.0,
+      "mean": -197.9,
+      "win": 0.3208,
+      "net2": -11659.0,
+      "twin_mean": -153.0,
+      "signals": 69,
+      "unpriced": {}
+     },
+     "n": 76,
+     "net": -11991.0,
+     "signals": 112,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 22,
+     "vid": "ABS w5 k2 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "H1": {
+      "n": 17,
+      "net": -1689.0,
+      "mean": -99.4,
+      "win": 0.0,
+      "net2": -1780.0,
+      "twin_mean": -59.9,
+      "signals": 26,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 26,
+      "net": -548.0,
+      "mean": -21.1,
+      "win": 0.3846,
+      "net2": -1071.0,
+      "twin_mean": -122.5,
+      "signals": 34,
+      "unpriced": {}
+     },
+     "n": 43,
+     "net": -2237.0,
+     "signals": 60,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 23,
+     "vid": "ABS w5 k2 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "H1": {
+      "n": 17,
+      "net": -2431.0,
+      "mean": -143.0,
+      "win": 0.0,
+      "net2": -2522.0,
+      "twin_mean": -96.8,
+      "signals": 26,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 26,
+      "net": -1093.0,
+      "mean": -42.0,
+      "win": 0.5385,
+      "net2": -1638.0,
+      "twin_mean": -179.1,
+      "signals": 34,
+      "unpriced": {}
+     },
+     "n": 43,
+     "net": -3524.0,
+     "signals": 60,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 24,
+     "vid": "ABS w5 k3 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "H1": {
+      "n": 1,
+      "net": -426.0,
+      "mean": -425.6,
+      "win": 0.0,
+      "net2": -445.0,
+      "twin_mean": -87.4,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 0,
+      "net": 0.0,
+      "mean": null,
+      "win": null,
+      "net2": 0.0,
+      "twin_mean": null,
+      "signals": 0,
+      "unpriced": {}
+     },
+     "n": 1,
+     "net": -426.0,
+     "signals": 1,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 25,
+     "vid": "ABS w5 k3 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "H1": {
+      "n": 1,
+      "net": -426.0,
+      "mean": -425.6,
+      "win": 0.0,
+      "net2": -445.0,
+      "twin_mean": -53.0,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 0,
+      "net": 0.0,
+      "mean": null,
+      "win": null,
+      "net2": 0.0,
+      "twin_mean": null,
+      "signals": 0,
+      "unpriced": {}
+     },
+     "n": 1,
+     "net": -426.0,
+     "signals": 1,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 26,
+     "vid": "ABS w5 k3 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "H1": {
+      "n": 1,
+      "net": -1142.0,
+      "mean": -1141.7,
+      "win": 0.0,
+      "net2": -1162.0,
+      "twin_mean": -129.2,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 0,
+      "net": 0.0,
+      "mean": null,
+      "win": null,
+      "net2": 0.0,
+      "twin_mean": null,
+      "signals": 0,
+      "unpriced": {}
+     },
+     "n": 1,
+     "net": -1142.0,
+     "signals": 1,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 27,
+     "vid": "ABS w5 k3 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "H1": {
+      "n": 1,
+      "net": -1142.0,
+      "mean": -1141.7,
+      "win": 0.0,
+      "net2": -1162.0,
+      "twin_mean": -181.4,
+      "signals": 1,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 0,
+      "net": 0.0,
+      "mean": null,
+      "win": null,
+      "net2": 0.0,
+      "twin_mean": null,
+      "signals": 0,
+      "unpriced": {}
+     },
+     "n": 1,
+     "net": -1142.0,
+     "signals": 1,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 28,
+     "vid": "ABS w5 k3 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "H1": {
+      "n": 4,
+      "net": -214.0,
+      "mean": -53.5,
+      "win": 0.25,
+      "net2": -239.0,
+      "twin_mean": -107.9,
+      "signals": 5,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 7,
+      "net": -497.0,
+      "mean": -71.0,
+      "win": 0.4286,
+      "net2": -653.0,
+      "twin_mean": -144.0,
+      "signals": 8,
+      "unpriced": {}
+     },
+     "n": 11,
+     "net": -711.0,
+     "signals": 13,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 29,
+     "vid": "ABS w5 k3 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "H1": {
+      "n": 4,
+      "net": -727.0,
+      "mean": -181.7,
+      "win": 0.0,
+      "net2": -751.0,
+      "twin_mean": -121.0,
+      "signals": 5,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 7,
+      "net": -647.0,
+      "mean": -92.4,
+      "win": 0.1429,
+      "net2": -803.0,
+      "twin_mean": -191.0,
+      "signals": 8,
+      "unpriced": {}
+     },
+     "n": 11,
+     "net": -1374.0,
+     "signals": 13,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 30,
+     "vid": "ABS w5 k3 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "H1": {
+      "n": 2,
+      "net": -664.0,
+      "mean": -331.8,
+      "win": 0.0,
+      "net2": -680.0,
+      "twin_mean": -111.2,
+      "signals": 2,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 3,
+      "net": 11.0,
+      "mean": 3.5,
+      "win": 0.3333,
+      "net2": -38.0,
+      "twin_mean": -70.0,
+      "signals": 3,
+      "unpriced": {}
+     },
+     "n": 5,
+     "net": -653.0,
+     "signals": 5,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 31,
+     "vid": "ABS w5 k3 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "H1": {
+      "n": 2,
+      "net": -1406.0,
+      "mean": -703.0,
+      "win": 0.0,
+      "net2": -1422.0,
+      "twin_mean": -201.2,
+      "signals": 2,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 3,
+      "net": 37.0,
+      "mean": 12.3,
+      "win": 0.3333,
+      "net2": -11.0,
+      "twin_mean": -209.0,
+      "signals": 3,
+      "unpriced": {}
+     },
+     "n": 5,
+     "net": -1369.0,
+     "signals": 5,
+     "unpriced": {},
+     "eligible": false
+    }
+   ],
+   "n_eligible": 0,
+   "choice": {
+    "i": 6,
+    "vid": "ABS w3 k2 b6 turn T15",
+    "params": {
+     "setup": "ABS",
+     "w": 3,
+     "k": 2,
+     "beta": 6,
+     "confirm": "turn",
+     "T": 15
+    },
+    "passed_selection": false,
+    "summary": {
+     "n": 141,
+     "win": 0.2695,
+     "net": -25918.0,
+     "net2": -28741.0,
+     "mean": -183.8,
+     "mean2": -203.8,
+     "avg_win": 452.0,
+     "avg_loss": -418.0,
+     "sd": 549.9,
+     "worst_day": -2521.0,
+     "best_day": 1367.0,
+     "days_traded": 71,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -8187.0
+     },
+     "max_dd": 25918.0,
+     "months": {
+      "2024-11": -355.0,
+      "2024-12": -1122.0,
+      "2025-01": -528.0,
+      "2025-02": -1111.0,
+      "2025-03": -1816.0,
+      "2025-04": -395.0,
+      "2025-05": -2078.0,
+      "2025-06": 1611.0,
+      "2025-07": -6271.0,
+      "2025-08": -3729.0,
+      "2025-09": -8187.0,
+      "2025-10": -1938.0
+     },
+     "by_side": {
+      "L": {
+       "n": 64,
+       "net": -10208.0
+      },
+      "S": {
+       "n": 77,
+       "net": -15710.0
+      }
+     },
+     "by_exit": {
+      "breakeven": {
+       "n": 17,
+       "net": -226.15
+      },
+      "prem_stop": {
+       "n": 13,
+       "net": -3090.55
+      },
+      "time": {
+       "n": 75,
+       "net": 6139.62
+      },
+      "index_stop": {
+       "n": 36,
+       "net": -28740.44
+      }
+     }
+    },
+    "twins_descriptive": {
+     "p": 0.8571428571428571,
+     "mean": -114.4,
+     "p10": -197.7,
+     "p90": -36.2,
+     "n_sets": 1000,
+     "pooled_mean": -114.6
+    },
+    "H1": {
+     "n": 34,
+     "net": -5327.0,
+     "mean": -156.7,
+     "win": 0.1176,
+     "net2": -5660.0,
+     "twin_mean": -129.1,
+     "signals": 54,
+     "unpriced": {}
+    },
+    "H2": {
+     "n": 107,
+     "net": -20591.0,
+     "mean": -192.4,
+     "win": 0.3178,
+     "net2": -23082.0,
+     "twin_mean": -119.5,
+     "signals": 135,
+     "unpriced": {}
+    }
+   }
+  },
+  "EXH BANKNIFTY": {
+   "variants": [
+    {
+     "i": 0,
+     "vid": "EXH X15 k2 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "H1": {
+      "n": 427,
+      "net": -20608.0,
+      "mean": -48.3,
+      "win": 0.3466,
+      "net2": -29613.0,
+      "twin_mean": -123.1,
+      "signals": 1008,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 463,
+      "net": -63926.0,
+      "mean": -138.1,
+      "win": 0.3693,
+      "net2": -76330.0,
+      "twin_mean": -126.3,
+      "signals": 1215,
+      "unpriced": {}
+     },
+     "n": 890,
+     "net": -84534.0,
+     "signals": 2223,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 1,
+     "vid": "EXH X15 k2 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "H1": {
+      "n": 425,
+      "net": -24348.0,
+      "mean": -57.3,
+      "win": 0.2894,
+      "net2": -33721.0,
+      "twin_mean": -122.6,
+      "signals": 1008,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 462,
+      "net": -68413.0,
+      "mean": -148.1,
+      "win": 0.2987,
+      "net2": -81346.0,
+      "twin_mean": -134.6,
+      "signals": 1215,
+      "unpriced": {}
+     },
+     "n": 887,
+     "net": -92761.0,
+     "signals": 2223,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 2,
+     "vid": "EXH X15 k2 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "H1": {
+      "n": 426,
+      "net": -18334.0,
+      "mean": -43.0,
+      "win": 0.3592,
+      "net2": -27273.0,
+      "twin_mean": -124.3,
+      "signals": 977,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 463,
+      "net": -61584.0,
+      "mean": -133.0,
+      "win": 0.3801,
+      "net2": -73962.0,
+      "twin_mean": -134.9,
+      "signals": 1162,
+      "unpriced": {}
+     },
+     "n": 889,
+     "net": -79918.0,
+     "signals": 2139,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 3,
+     "vid": "EXH X15 k2 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "H1": {
+      "n": 424,
+      "net": -21102.0,
+      "mean": -49.8,
+      "win": 0.2948,
+      "net2": -30405.0,
+      "twin_mean": -116.6,
+      "signals": 977,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 461,
+      "net": -68848.0,
+      "mean": -149.3,
+      "win": 0.2993,
+      "net2": -81793.0,
+      "twin_mean": -126.8,
+      "signals": 1162,
+      "unpriced": {}
+     },
+     "n": 885,
+     "net": -89950.0,
+     "signals": 2139,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 4,
+     "vid": "EXH X15 k2 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "H1": {
+      "n": 430,
+      "net": -29576.0,
+      "mean": -68.8,
+      "win": 0.3791,
+      "net2": -38337.0,
+      "twin_mean": -125.0,
+      "signals": 1137,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 466,
+      "net": -79882.0,
+      "mean": -171.4,
+      "win": 0.4013,
+      "net2": -91677.0,
+      "twin_mean": -123.5,
+      "signals": 1309,
+      "unpriced": {}
+     },
+     "n": 896,
+     "net": -109458.0,
+     "signals": 2446,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 5,
+     "vid": "EXH X15 k2 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "H1": {
+      "n": 429,
+      "net": -41946.0,
+      "mean": -97.8,
+      "win": 0.3124,
+      "net2": -51175.0,
+      "twin_mean": -119.8,
+      "signals": 1137,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 463,
+      "net": -76666.0,
+      "mean": -165.6,
+      "win": 0.3499,
+      "net2": -88930.0,
+      "twin_mean": -126.4,
+      "signals": 1309,
+      "unpriced": {}
+     },
+     "n": 892,
+     "net": -118612.0,
+     "signals": 2446,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 6,
+     "vid": "EXH X15 k2 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "H1": {
+      "n": 429,
+      "net": -33236.0,
+      "mean": -77.5,
+      "win": 0.38,
+      "net2": -41964.0,
+      "twin_mean": -124.3,
+      "signals": 1083,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 466,
+      "net": -77543.0,
+      "mean": -166.4,
+      "win": 0.4099,
+      "net2": -89319.0,
+      "twin_mean": -130.7,
+      "signals": 1247,
+      "unpriced": {}
+     },
+     "n": 895,
+     "net": -110779.0,
+     "signals": 2330,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 7,
+     "vid": "EXH X15 k2 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "H1": {
+      "n": 428,
+      "net": -44868.0,
+      "mean": -104.8,
+      "win": 0.3131,
+      "net2": -54077.0,
+      "twin_mean": -118.7,
+      "signals": 1083,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 462,
+      "net": -68933.0,
+      "mean": -149.2,
+      "win": 0.355,
+      "net2": -81179.0,
+      "twin_mean": -122.4,
+      "signals": 1247,
+      "unpriced": {}
+     },
+     "n": 890,
+     "net": -113801.0,
+     "signals": 2330,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 8,
+     "vid": "EXH X15 k3 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "H1": {
+      "n": 357,
+      "net": -26385.0,
+      "mean": -73.9,
+      "win": 0.3557,
+      "net2": -33549.0,
+      "twin_mean": -118.4,
+      "signals": 513,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 401,
+      "net": -59104.0,
+      "mean": -147.4,
+      "win": 0.3441,
+      "net2": -69656.0,
+      "twin_mean": -132.4,
+      "signals": 638,
+      "unpriced": {}
+     },
+     "n": 758,
+     "net": -85489.0,
+     "signals": 1151,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 9,
+     "vid": "EXH X15 k3 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "H1": {
+      "n": 350,
+      "net": -34229.0,
+      "mean": -97.8,
+      "win": 0.2971,
+      "net2": -41612.0,
+      "twin_mean": -119.6,
+      "signals": 513,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 396,
+      "net": -60146.0,
+      "mean": -151.9,
+      "win": 0.303,
+      "net2": -70995.0,
+      "twin_mean": -136.7,
+      "signals": 638,
+      "unpriced": {}
+     },
+     "n": 746,
+     "net": -94375.0,
+     "signals": 1151,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 10,
+     "vid": "EXH X15 k3 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "H1": {
+      "n": 352,
+      "net": -27343.0,
+      "mean": -77.7,
+      "win": 0.358,
+      "net2": -34405.0,
+      "twin_mean": -116.8,
+      "signals": 498,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 398,
+      "net": -60575.0,
+      "mean": -152.2,
+      "win": 0.3442,
+      "net2": -71104.0,
+      "twin_mean": -137.6,
+      "signals": 610,
+      "unpriced": {}
+     },
+     "n": 750,
+     "net": -87918.0,
+     "signals": 1108,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 11,
+     "vid": "EXH X15 k3 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "H1": {
+      "n": 346,
+      "net": -35023.0,
+      "mean": -101.2,
+      "win": 0.2948,
+      "net2": -42316.0,
+      "twin_mean": -115.1,
+      "signals": 498,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 393,
+      "net": -58563.0,
+      "mean": -149.0,
+      "win": 0.3079,
+      "net2": -69345.0,
+      "twin_mean": -143.6,
+      "signals": 610,
+      "unpriced": {}
+     },
+     "n": 739,
+     "net": -93586.0,
+     "signals": 1108,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 12,
+     "vid": "EXH X15 k3 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "H1": {
+      "n": 378,
+      "net": -37949.0,
+      "mean": -100.4,
+      "win": 0.381,
+      "net2": -45318.0,
+      "twin_mean": -118.7,
+      "signals": 581,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 418,
+      "net": -63316.0,
+      "mean": -151.5,
+      "win": 0.3876,
+      "net2": -73832.0,
+      "twin_mean": -124.5,
+      "signals": 709,
+      "unpriced": {}
+     },
+     "n": 796,
+     "net": -101265.0,
+     "signals": 1290,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 13,
+     "vid": "EXH X15 k3 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "H1": {
+      "n": 375,
+      "net": -37331.0,
+      "mean": -99.6,
+      "win": 0.3333,
+      "net2": -45055.0,
+      "twin_mean": -117.4,
+      "signals": 581,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 408,
+      "net": -74395.0,
+      "mean": -182.3,
+      "win": 0.348,
+      "net2": -85045.0,
+      "twin_mean": -132.4,
+      "signals": 709,
+      "unpriced": {}
+     },
+     "n": 783,
+     "net": -111726.0,
+     "signals": 1290,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 14,
+     "vid": "EXH X15 k3 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "H1": {
+      "n": 371,
+      "net": -38417.0,
+      "mean": -103.6,
+      "win": 0.3854,
+      "net2": -45672.0,
+      "twin_mean": -114.0,
+      "signals": 549,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 412,
+      "net": -64803.0,
+      "mean": -157.3,
+      "win": 0.3883,
+      "net2": -75111.0,
+      "twin_mean": -130.1,
+      "signals": 669,
+      "unpriced": {}
+     },
+     "n": 783,
+     "net": -103220.0,
+     "signals": 1218,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 15,
+     "vid": "EXH X15 k3 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "H1": {
+      "n": 368,
+      "net": -39968.0,
+      "mean": -108.6,
+      "win": 0.3342,
+      "net2": -47557.0,
+      "twin_mean": -114.2,
+      "signals": 549,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 402,
+      "net": -73734.0,
+      "mean": -183.4,
+      "win": 0.3483,
+      "net2": -84174.0,
+      "twin_mean": -123.8,
+      "signals": 669,
+      "unpriced": {}
+     },
+     "n": 770,
+     "net": -113702.0,
+     "signals": 1218,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 16,
+     "vid": "EXH X30 k2 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "H1": {
+      "n": 423,
+      "net": -17458.0,
+      "mean": -41.3,
+      "win": 0.3499,
+      "net2": -26375.0,
+      "twin_mean": -115.5,
+      "signals": 852,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 458,
+      "net": -70815.0,
+      "mean": -154.6,
+      "win": 0.3624,
+      "net2": -82983.0,
+      "twin_mean": -133.1,
+      "signals": 1022,
+      "unpriced": {}
+     },
+     "n": 881,
+     "net": -88273.0,
+     "signals": 1874,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 17,
+     "vid": "EXH X30 k2 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "H1": {
+      "n": 422,
+      "net": -31791.0,
+      "mean": -75.3,
+      "win": 0.2844,
+      "net2": -41099.0,
+      "twin_mean": -130.3,
+      "signals": 852,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 457,
+      "net": -70336.0,
+      "mean": -153.9,
+      "win": 0.2976,
+      "net2": -83021.0,
+      "twin_mean": -128.4,
+      "signals": 1022,
+      "unpriced": {}
+     },
+     "n": 879,
+     "net": -102127.0,
+     "signals": 1874,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 18,
+     "vid": "EXH X30 k2 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "H1": {
+      "n": 422,
+      "net": -15819.0,
+      "mean": -37.5,
+      "win": 0.3649,
+      "net2": -24676.0,
+      "twin_mean": -121.5,
+      "signals": 827,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 458,
+      "net": -70576.0,
+      "mean": -154.1,
+      "win": 0.369,
+      "net2": -82743.0,
+      "twin_mean": -133.5,
+      "signals": 976,
+      "unpriced": {}
+     },
+     "n": 880,
+     "net": -86395.0,
+     "signals": 1803,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 19,
+     "vid": "EXH X30 k2 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "H1": {
+      "n": 421,
+      "net": -28675.0,
+      "mean": -68.1,
+      "win": 0.2922,
+      "net2": -37914.0,
+      "twin_mean": -122.3,
+      "signals": 827,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 455,
+      "net": -65067.0,
+      "mean": -143.0,
+      "win": 0.3011,
+      "net2": -77705.0,
+      "twin_mean": -131.7,
+      "signals": 976,
+      "unpriced": {}
+     },
+     "n": 876,
+     "net": -93742.0,
+     "signals": 1803,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 20,
+     "vid": "EXH X30 k2 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "H1": {
+      "n": 428,
+      "net": -25172.0,
+      "mean": -58.8,
+      "win": 0.3949,
+      "net2": -33873.0,
+      "twin_mean": -121.3,
+      "signals": 955,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 461,
+      "net": -80503.0,
+      "mean": -174.6,
+      "win": 0.3948,
+      "net2": -92171.0,
+      "twin_mean": -123.4,
+      "signals": 1098,
+      "unpriced": {}
+     },
+     "n": 889,
+     "net": -105675.0,
+     "signals": 2053,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 21,
+     "vid": "EXH X30 k2 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "H1": {
+      "n": 426,
+      "net": -45600.0,
+      "mean": -107.0,
+      "win": 0.3216,
+      "net2": -54757.0,
+      "twin_mean": -124.5,
+      "signals": 955,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 458,
+      "net": -84767.0,
+      "mean": -185.1,
+      "win": 0.3428,
+      "net2": -96880.0,
+      "twin_mean": -116.6,
+      "signals": 1098,
+      "unpriced": {}
+     },
+     "n": 884,
+     "net": -130367.0,
+     "signals": 2053,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 22,
+     "vid": "EXH X30 k2 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "H1": {
+      "n": 427,
+      "net": -29809.0,
+      "mean": -69.8,
+      "win": 0.3911,
+      "net2": -38466.0,
+      "twin_mean": -123.7,
+      "signals": 913,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 459,
+      "net": -82747.0,
+      "mean": -180.3,
+      "win": 0.4009,
+      "net2": -94357.0,
+      "twin_mean": -128.8,
+      "signals": 1045,
+      "unpriced": {}
+     },
+     "n": 886,
+     "net": -112556.0,
+     "signals": 1958,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 23,
+     "vid": "EXH X30 k2 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "H1": {
+      "n": 425,
+      "net": -47946.0,
+      "mean": -112.8,
+      "win": 0.3224,
+      "net2": -57052.0,
+      "twin_mean": -123.9,
+      "signals": 913,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 454,
+      "net": -78732.0,
+      "mean": -173.4,
+      "win": 0.348,
+      "net2": -90721.0,
+      "twin_mean": -123.3,
+      "signals": 1045,
+      "unpriced": {}
+     },
+     "n": 879,
+     "net": -126678.0,
+     "signals": 1958,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 24,
+     "vid": "EXH X30 k3 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "H1": {
+      "n": 344,
+      "net": -25416.0,
+      "mean": -73.9,
+      "win": 0.3517,
+      "net2": -32345.0,
+      "twin_mean": -121.6,
+      "signals": 464,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 388,
+      "net": -67203.0,
+      "mean": -173.2,
+      "win": 0.3325,
+      "net2": -77461.0,
+      "twin_mean": -133.1,
+      "signals": 561,
+      "unpriced": {}
+     },
+     "n": 732,
+     "net": -92619.0,
+     "signals": 1025,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 25,
+     "vid": "EXH X30 k3 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "H1": {
+      "n": 338,
+      "net": -36075.0,
+      "mean": -106.7,
+      "win": 0.2959,
+      "net2": -43195.0,
+      "twin_mean": -123.9,
+      "signals": 464,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 383,
+      "net": -69217.0,
+      "mean": -180.7,
+      "win": 0.295,
+      "net2": -79711.0,
+      "twin_mean": -136.2,
+      "signals": 561,
+      "unpriced": {}
+     },
+     "n": 721,
+     "net": -105292.0,
+     "signals": 1025,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 26,
+     "vid": "EXH X30 k3 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "H1": {
+      "n": 339,
+      "net": -28130.0,
+      "mean": -83.0,
+      "win": 0.354,
+      "net2": -34957.0,
+      "twin_mean": -117.3,
+      "signals": 451,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 384,
+      "net": -63283.0,
+      "mean": -164.8,
+      "win": 0.3385,
+      "net2": -73452.0,
+      "twin_mean": -131.1,
+      "signals": 537,
+      "unpriced": {}
+     },
+     "n": 723,
+     "net": -91413.0,
+     "signals": 988,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 27,
+     "vid": "EXH X30 k3 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "H1": {
+      "n": 334,
+      "net": -39919.0,
+      "mean": -119.5,
+      "win": 0.2904,
+      "net2": -46953.0,
+      "twin_mean": -124.0,
+      "signals": 451,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 379,
+      "net": -62671.0,
+      "mean": -165.4,
+      "win": 0.3034,
+      "net2": -73047.0,
+      "twin_mean": -135.6,
+      "signals": 537,
+      "unpriced": {}
+     },
+     "n": 713,
+     "net": -102590.0,
+     "signals": 988,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 28,
+     "vid": "EXH X30 k3 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "H1": {
+      "n": 370,
+      "net": -35051.0,
+      "mean": -94.7,
+      "win": 0.3838,
+      "net2": -42226.0,
+      "twin_mean": -111.5,
+      "signals": 526,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 400,
+      "net": -66572.0,
+      "mean": -166.4,
+      "win": 0.3875,
+      "net2": -76642.0,
+      "twin_mean": -122.7,
+      "signals": 627,
+      "unpriced": {}
+     },
+     "n": 770,
+     "net": -101623.0,
+     "signals": 1153,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 29,
+     "vid": "EXH X30 k3 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "H1": {
+      "n": 366,
+      "net": -36298.0,
+      "mean": -99.2,
+      "win": 0.3388,
+      "net2": -43779.0,
+      "twin_mean": -124.3,
+      "signals": 526,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 393,
+      "net": -79735.0,
+      "mean": -202.9,
+      "win": 0.3461,
+      "net2": -89992.0,
+      "twin_mean": -136.0,
+      "signals": 627,
+      "unpriced": {}
+     },
+     "n": 759,
+     "net": -116033.0,
+     "signals": 1153,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 30,
+     "vid": "EXH X30 k3 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "H1": {
+      "n": 363,
+      "net": -37429.0,
+      "mean": -103.1,
+      "win": 0.3857,
+      "net2": -44491.0,
+      "twin_mean": -114.3,
+      "signals": 498,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 395,
+      "net": -63233.0,
+      "mean": -160.1,
+      "win": 0.3924,
+      "net2": -73082.0,
+      "twin_mean": -128.2,
+      "signals": 593,
+      "unpriced": {}
+     },
+     "n": 758,
+     "net": -100662.0,
+     "signals": 1091,
+     "unpriced": {},
+     "eligible": false
+    },
+    {
+     "i": 31,
+     "vid": "EXH X30 k3 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "H1": {
+      "n": 359,
+      "net": -43760.0,
+      "mean": -121.9,
+      "win": 0.3343,
+      "net2": -51113.0,
+      "twin_mean": -110.9,
+      "signals": 498,
+      "unpriced": {}
+     },
+     "H2": {
+      "n": 388,
+      "net": -70456.0,
+      "mean": -181.6,
+      "win": 0.3557,
+      "net2": -80474.0,
+      "twin_mean": -125.0,
+      "signals": 593,
+      "unpriced": {}
+     },
+     "n": 747,
+     "net": -114216.0,
+     "signals": 1091,
+     "unpriced": {},
+     "eligible": false
+    }
+   ],
+   "n_eligible": 0,
+   "choice": {
+    "i": 2,
+    "vid": "EXH X15 k2 b3 flip+close T15",
+    "params": {
+     "setup": "EXH",
+     "X": 15,
+     "k": 2,
+     "beta": 3,
+     "confirm": "flip+close",
+     "T": 15
+    },
+    "passed_selection": false,
+    "summary": {
+     "n": 889,
+     "win": 0.3701,
+     "net": -79918.0,
+     "net2": -101235.0,
+     "mean": -89.9,
+     "mean2": -113.9,
+     "avg_win": 641.0,
+     "avg_loss": -519.0,
+     "sd": 745.0,
+     "worst_day": -5611.0,
+     "best_day": 4440.0,
+     "days_traded": 227,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -19821.0
+     },
+     "max_dd": 79918.0,
+     "months": {
+      "2024-11": -5986.0,
+      "2024-12": -8795.0,
+      "2025-01": -2596.0,
+      "2025-02": -7854.0,
+      "2025-03": -1187.0,
+      "2025-04": 8084.0,
+      "2025-05": -16700.0,
+      "2025-06": -2069.0,
+      "2025-07": -19821.0,
+      "2025-08": -5998.0,
+      "2025-09": -6809.0,
+      "2025-10": -10186.0
+     },
+     "by_side": {
+      "L": {
+       "n": 429,
+       "net": -39119.0
+      },
+      "S": {
+       "n": 460,
+       "net": -40799.0
+      }
+     },
+     "by_exit": {
+      "index_stop": {
+       "n": 421,
+       "net": -253534.38
+      },
+      "time": {
+       "n": 428,
+       "net": 179634.34
+      },
+      "prem_stop": {
+       "n": 13,
+       "net": -5715.52
+      },
+      "breakeven": {
+       "n": 27,
+       "net": -302.46
+      }
+     }
+    },
+    "twins_descriptive": {
+     "p": 0.06393606393606394,
+     "mean": -132.3,
+     "p10": -165.7,
+     "p90": -96.4,
+     "n_sets": 1000,
+     "pooled_mean": -132.2
+    },
+    "H1": {
+     "n": 426,
+     "net": -18334.0,
+     "mean": -43.0,
+     "win": 0.3592,
+     "net2": -27273.0,
+     "twin_mean": -124.3,
+     "signals": 977,
+     "unpriced": {}
+    },
+    "H2": {
+     "n": 463,
+     "net": -61584.0,
+     "mean": -133.0,
+     "win": 0.3801,
+     "net2": -73962.0,
+     "twin_mean": -134.9,
+     "signals": 1162,
+     "unpriced": {}
+    }
+   }
+  }
+ }
+}
