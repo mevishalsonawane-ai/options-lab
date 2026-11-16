@@ -348,6 +348,11 @@ def test_money_and_gates():
     b = dict(total=600.0, win=0.5, worst_month=-100.0, max_dd=-800.0)
     assert all(S.part_gates(s, b).values())
     assert S.money(None)["n"] == 0
+    # equal to the paisa is not smaller
+    e = dict(worst_month=-3948.9100000000017, max_dd=-10001.800000000001)
+    f = dict(worst_month=-3948.9100000000017, max_dd=-10001.800000000003)
+    assert not S.better_risk(e, f)
+    assert S.better_risk(dict(worst_month=-3948.0, max_dd=-10001.8), f)
 
 
 # ------------------------------------------------------------------------------------------------ study locks

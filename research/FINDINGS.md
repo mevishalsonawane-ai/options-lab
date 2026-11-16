@@ -1932,3 +1932,21 @@ gates. C1 -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000; C2 day cap (no new ent
   and lock never beat random exit minutes (best p 0.19). The day cap blocks afternoon recoveries.
 - **Lead:** the 10:00 cut alone beat random skips at 3 lots (p 0.025 R72, 0.033 R51), tested only with C1's exits.
 - **R151's picker (live) already cuts red days by about 40% at the same profit** (R72, 1 lot, second look).
+
+## S5 Trail and CISD + network: more money AND more wins? (R188, 17 Nov 2026) - 0 of 23 pass
+`hunt/r188_s5_cisd/results/report.md`. Boss: "Cam we make s5,csid more profitable and more winrate". 1 lot, dated
+charges, liquidity-aware fills. Signal source: the index (S5: R123's network; CISD: the index's 5-minute bars).
+- **Rebuilt exactly first.** R123's saved network outputs (Drive, `derived/r123/cleaned`) reproduce R128's S5 (555 /
+  41 trades, +Rs 240 / +Rs 561 a trade) and R133's CISD (413 of 3,291 setups, 69% won, +Rs 261; 35 seen-holdout
+  trades) trade by trade to the paisa; R134's rebuilt network reproduces R123's 1 - 19 Oct forecasts exactly.
+- **Base = the app** (out by 15:15): S5 design 562 trades, 58.5%, Rs 1.29 lakh (drawdown -Rs 49.5k, worst month
+  -Rs 19.3k: breaks the account stop); final (Apr - Oct 2026, base seen before) 40, 85.0%, Rs 25.0k. CISD design 413,
+  67.6%, Rs 1.05 lakh; final 35, 71.4%, Rs 3.2k.
+- **Exits** (+10% breakeven, R186's step lock, breakeven at +Rs 1,000, index lock, the 60% lock from +Rs 500, a
+  -Rs 1,500 stop): on both arms they raise the win rate and lower profit, or the reverse; none does both in design and
+  final. On CISD, breakeven at +Rs 1,000 and the index lock never act (the 60% lock always comes first).
+- **Entry skips** (price and OI fell, VIX down > 3.13%, expiry day, ADX < 20; CISD's network threshold, +50 chosen on
+  design): nearest miss **CISD skip expiry days** - design 366 trades, 69.1%, Rs 1.14 lakh; final 34, 73.5%,
+  Rs 3.4k - but its final worst month and drawdown equal the base's. The stricter network keeps 10 final trades.
+- **The twin gate cannot be met** with 500 twins at m 4,925 (said in PREREG). New month (21 Oct - 13 Nov): S5 3 trades
+  +Rs 3.8k, CISD 8 trades +Rs 6.6k with today's rules; too small to judge. Keep both arms as they are.

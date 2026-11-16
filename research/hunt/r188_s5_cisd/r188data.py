@@ -206,7 +206,7 @@ def load_preds() -> pd.DataFrame:
     return P
 
 
-def need_for(und: str, P: pd.DataFrame, cands: pd.DataFrame, wexp_guess: set) -> dict:
+def need_for(und: str, P: pd.DataFrame, cands: pd.DataFrame) -> dict:
     """Which contracts to keep: S5 picks (both sides' ATM at the decision, so a variant can re-pick) and every CISD
     setup's ATM contract on its side (weekly; on a weekly expiry day the monthly as well)."""
     g = D3.load_grid(und, C.END)
@@ -246,7 +246,7 @@ def main():
         P = load_preds()
         cands = pd.read_parquet(C.TRADES / "cisd_cands.parquet")
         cands["day"] = pd.to_datetime(cands.day).dt.date
-        res = extract(und, need_for(und, P, cands, set()))
+        res = extract(und, need_for(und, P, cands))
         with open(C.BARS / f"{und}.pkl", "wb") as f:
             pickle.dump(res, f, protocol=pickle.HIGHEST_PROTOCOL)
         shutil.rmtree(SCRATCH, ignore_errors=True)

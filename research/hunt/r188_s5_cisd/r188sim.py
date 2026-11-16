@@ -539,7 +539,9 @@ def money(T: pd.DataFrame) -> dict:
 
 
 def better_risk(s: dict, b: dict) -> bool:
-    return s["worst_month"] > b["worst_month"] or s["max_dd"] > b["max_dd"]
+    """Worst month or max drawdown smaller (less negative), compared to the paisa: equal is not smaller (17 Nov: the
+    first final pass compared raw floats, and an equal drawdown differing in the 12th decimal counted as smaller)."""
+    return round(s["worst_month"], 2) > round(b["worst_month"], 2) or round(s["max_dd"], 2) > round(b["max_dd"], 2)
 
 
 def part_gates(s: dict, b: dict) -> dict:

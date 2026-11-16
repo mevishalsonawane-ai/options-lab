@@ -209,7 +209,6 @@ def twin_p(arm, st, B: pd.DataFrame, V: pd.DataFrame, pool: pd.DataFrame, cands_
         alt.append(x if len(x) else np.array([r.net]))
     base_net = Bk.net.values
     base_tot = float(base_net.sum())
-    ch_idx = {tuple(x): i for i, x in enumerate(ch[key].values)}
     ch_base = ch.net.values
     pool_net = pool.net.values if len(pool) else np.zeros(0)
     obs = float(Vk.net.sum())
@@ -223,7 +222,6 @@ def twin_p(arm, st, B: pd.DataFrame, V: pd.DataFrame, pool: pd.DataFrame, cands_
         if added and len(pool_net):
             tot += pool_net[rng.choice(len(pool_net), min(added, len(pool_net)), replace=False)].sum()
         tw[k] = tot
-    _ = ch_idx
     return float((1 + (tw >= obs).sum()) / (1 + C.TWINS))
 
 
@@ -270,7 +268,14 @@ def final() -> dict:
         kb = kept(B)
         out[arm]["new_month_base_trades"] = kb[kb.period == "new"][["und", "day", "entry", "side", "net", "why"]] \
             .to_dict("records")
-    # tests not formed (COMBO) still count in m: p = 1
+    out["_m"] = dict(tests=len(C.TESTS), prior=C.M_PRIOR, total=C.M_TOTAL)
+    out["_design"] = d
+    write("final.json", gate(out))
+    return out
+
+
+def gate(out: dict) -> dict:
+    """Gates 1-4 from the stored numbers (no data is read). Tests not formed (COMBO) still count in m with p = 1."""
     ps, ids = [], []
     for arm, lv in C.TESTS:
         ids.append((arm, lv))
@@ -288,10 +293,21 @@ def final() -> dict:
         r["gates"] = dict(design=gd, final=gf, final_n=r["final"]["n"] >= C.MIN_FINAL_N, q=q <= 0.10)
         r["passes_1_3"] = all(gd.values()) and all(gf.values()) and r["final"]["n"] >= C.MIN_FINAL_N
         r["passes"] = r["passes_1_3"] and q <= 0.10
-    out["_m"] = dict(tests=len(C.TESTS), prior=C.M_PRIOR, total=C.M_TOTAL)
-    out["_design"] = d
-    write("final.json", out)
     return out
+
+
+def regate() -> dict:
+    """Re-derive the gates in results/final.json from its stored numbers (17 Nov: the paisa comparison fix)."""
+    out = json.loads((C.RESULTS / "final.json").read_text())
+    for arm in ("S5", "CISD"):
+        for lv in list(out[arm]):
+            if isinstance(out[arm][lv], dict) and out[arm][lv].get("not_formed"):
+                del out[arm][lv]
+    out = gate(out)
+    out["_regated"] = "gates re-derived from the stored numbers with the paisa comparison (17 Nov); no data re-read"
+    write("final.json", out)
+    return {a: {k: v.get("passes_1_3") for k, v in out[a].items() if isinstance(v, dict) and "q" in v}
+            for a in ("S5", "CISD")}
 
 
 def _strike(cands: pd.DataFrame, r) -> float:
@@ -301,5 +317,5 @@ def _strike(cands: pd.DataFrame, r) -> float:
 
 if __name__ == "__main__":
     cmd = sys.argv[1]
-    res = {"parity": parity, "design": design, "final": final}[cmd]()
+    res = {"parity": parity, "design": design, "final": final, "regate": regate}[cmd]()
     print(json.dumps(res, indent=1, default=str)[:6000])
