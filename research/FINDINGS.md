@@ -1933,7 +1933,7 @@ gates. C1 -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000; C2 day cap (no new ent
 - **Lead:** the 10:00 cut alone beat random skips at 3 lots (p 0.025 R72, 0.033 R51), tested only with C1's exits.
 - **R151's picker (live) already cuts red days by about 40% at the same profit** (R72, 1 lot, second look).
 
-## A hard fixed profit (Rs 1,000 / 1,250 / 1,500 a lot) and a Rs 500 step lock on Liquidity, R51, R72 (R186, 16 Nov 2026) - 0 of 15 pass; keep today's rule
+## A hard fixed profit (Rs 1,000 / 1,250 / 1,500 a lot) and a Rs 500 step lock on Liquidity, R51, R72 (R186, 16 Nov 2026) - 0 of 15 pass (+ 0 of 9, 0 of 6 in Amendments B, C); keep today's rule
 
 Boss asked what a hard Rs 1,000-1,500 a lot profit target would do, and noted trades that reach +Rs 1,000 / 1,500 / 2,000
 and then end negative. Base = the app's rule (own stop + breakeven at +10%; R151 picker on R72 / R51). Year 20 Oct 2025 -
@@ -1956,3 +1956,12 @@ and then end negative. Base = the app's rule (own stop + breakeven at +10%; R151
   Liquidity Rs 15,313; index lock (sell when the index closes back through its entry level once +Rs 1,000; signal on the
   index): R72 Rs 2.52 L, R51 Rs 1.91 L, Liquidity Rs 85,036; split exit at 3 lots (1 lot at +Rs 1,000, the rest to
   breakeven): R72 Rs 7.38 L vs Rs 10.81 L, R51 Rs 5.93 L vs Rs 8.88 L, Liquidity Rs 2.06 L vs Rs 3.58 L.
+- **Amendment C (0 of 6 pass, m = 4,882): a Rs 1,000 or Rs 1,500 a lot stop on V5** (the app's rule now: picker + own
+  stop + breakeven at +10% + L500 on R72 / R51; own stop + breakeven + LBE1000 on Liquidity), as R179's M1 / M15 (net after
+  charges and expected slippage, only where tighter than -15%, a real stop order). Year, 1 lot, V5 -> +Rs 1,500 -> +Rs 1,000:
+  R72 Rs 2,13,110 (1,097 trades, 64.4%) -> Rs 1,52,306 (58.0%) -> Rs 1,36,891 (50.4%); R51 Rs 1,62,959 (1,430, 62.7%) ->
+  Rs 72,074 -> Rs 49,797 (and -Rs 7,484 in Apr - Oct 2026); Liquidity Rs 98,239 (688) -> Rs 89,180 -> Rs 76,543. The Rs 1,000
+  stop closed 479 R72 / 621 R51 / 222 Liquidity trades, of which 152 / 186 / 34 would have ended in profit under V5. It
+  halves the worst day on R72 but raises the max drawdown on R72 and R51. 21 Oct - 13 Nov 2026 (gap files, descriptive):
+  R72 Rs 9,481 -> -Rs 12,107 -> -Rs 20,812; R51 Rs 25,448 -> Rs 17,164 -> Rs 11,239; Liquidity Rs 4,575 -> Rs 5,667 ->
+  Rs 9,038. Keep V5 without a rupee stop.

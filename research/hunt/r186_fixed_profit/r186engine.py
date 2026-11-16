@@ -33,11 +33,14 @@ BE_X = 0.10                             # R162's breakeven lock at +10% (the bas
 
 @njit(cache=True)
 def simulate(C, e, sq, fx, stop_f, lk_trig, lk_keep, lk_trail, steps, tmax, need, cstop, tick, qty, be, tgt_abs,
-             rl_trig, rl_lock, ix, ix_lvl, ix_trig, ix_sgn, fb=1.0005, fs=0.9995, fst=0.999, tk=1.0):
+             rl_trig, rl_lock, ix, ix_lvl, ix_trig, ix_sgn, fb=1.0005, fs=0.9995, fst=0.999, tk=1.0, stop_abs=-1.0):
     """Returns (raw entry, exit price, real entry, real exit, fill row, exit row, reason, peak).
     Amendment B's index lock (IDX): ix = the index's 1-minute closes, ix_lvl = the index open of the fill minute (ix_trig
     <= 0: off); once the minute high has reached ix_trig, a 1-minute index close back through ix_lvl (ix_sgn +1 call:
-    below it; -1 put: above it) sells at the next minute's open as a market sale (R17 stop fill, reason 12)."""
+    below it; -1 put: above it) sells at the next minute's open as a market sale (R17 stop fill, reason 12).
+    Amendment C: stop_abs > 0 replaces the fractional entry stop with that premium (as r176engine.simulate_step; the
+    caller passes it only where it is tighter than -15%); it is a stop order, so a minute opening below it fills at the
+    open."""
     o, h, l, c, v = C[0], C[1], C[2], C[3], C[4]
     nan = np.nan
     n = o.shape[0]
@@ -51,6 +54,8 @@ def simulate(C, e, sq, fx, stop_f, lk_trig, lk_keep, lk_trail, steps, tmax, need
     E_ = float(o[ef])
     real_e = _r2(E_ * fb) + tk * _ticks(_vol5(v, ef - 1, qty)) * tick
     stop = E_ * (1.0 - stop_f) if stop_f >= 0 else -1.0
+    if stop_abs > 0:
+        stop = stop_abs
     tgt = tgt_abs if tgt_abs > 0 else 1e18
     lock = -1.0
     rlock = -1.0
@@ -172,6 +177,15 @@ def lock_levels(mode: str, real: float, qty: float, lots: int, ch, tks: float, h
     return np.asarray(tr, float), np.asarray(lk, float)
 
 
+def cap_stop_px(raw: float, real: float, qty: float, lots: int, cap_net: float, stop_f: float, ch, tks: float) -> float:
+    """Amendment C (R179 Amendment A's M1): the premium whose stop sale nets -cap_net x lots after charges and the expected
+    R17 stop slippage (r106engine.stop_price), or -1 where the arm's own fractional stop (raw x (1 - stop_f)) is already
+    at or above it (-15% loses less, so -15% stays)."""
+    s = X.stop_price(real, qty, cap_net * lots, ch, tks, E.SLIP[2], E.SLIP[3])
+    own = raw * (1.0 - stop_f) if stop_f >= 0 else -1.0
+    return float(s) if s > 0 and s > own else -1.0
+
+
 def best_net(peak: float, rE: float, qty: float, ch) -> float:
     """The best open P&L net (PREREG 7a): (peak - real entry) x qty - charges(entry, peak)."""
     return float((peak - rE) * qty - ch(rE, peak))
@@ -182,11 +196,14 @@ def _charges_fn(und: str, qty: float, d):
 
 
 def price(und: str, D, cands: list, ex: E.Exits, lots: int = 1, tgt_net: float = -1.0, lock: str = "",
-          be_x: float = BE_X, idx: bool = False, split: bool = False) -> list:
+          be_x: float = BE_X, idx: bool = False, split: bool = False, cap_net: float = -1.0) -> list:
     """Price one day's candidates as R179's base (the arm's own exits + the breakeven lock at +be_x), with a net target of
     tgt_net a lot (> 0) and / or a lock ('L500' / 'LBE' / 'P60'), or (Amendment B) the index lock (idx=True) or the split
     exit (split=True, lots >= 2: one lot with a +Rs 1,000 net target, the rest moved to net breakeven when it fills).
-    Trade dicts as r176engine.price plus 'peak', 'best' (best open P&L net), 'tgt_px' (and 'split_hit')."""
+    Trade dicts as r176engine.price plus 'peak', 'best' (best open P&L net), 'tgt_px' (and 'split_hit').
+    Amendment C: cap_net > 0 = an entry stop at the premium whose stop sale nets -cap_net a lot (x lots) after charges and
+    the expected stop slippage (cap_stop_px, R179 Amendment A's M1), only where tighter than the arm's own -15%; its exits
+    are labelled 'cap' (stop_kind 'rupee', stop_px its premium)."""
     st = E.stack(und, D)
     lot1 = float(K51.lot(und, D.d))
     qty = lot1 * lots
@@ -218,11 +235,13 @@ def price(und: str, D, cands: list, ex: E.Exits, lots: int = 1, tgt_net: float =
                 lkt_, lkk_ = be_x * raw * qty * (1 - 1e-12), (s0 - raw) * qty    # in the simulator's qty (= qty)
             return be_, lkt_, lkk_
 
+        s_cap = cap_stop_px(raw, real, qty, lots, cap_net, ex.stop, ch, tks) if cap_net > 0 else -1.0
+
         def sim(tgt, rt, rl, ix_lvl=np.nan, ix_trig=-1.0, q_leg=qty, ch_leg=ch):
             be_, lkt_, lkk_ = base_lock(q_leg, ch_leg)
             return simulate(C, int(c["er"]), int(sq), fx, ex.stop, lkt_, lkk_, ex.lock_trail, stp, ex.tmax, ex.need,
                             ex.close_stop, K51.TICK, qty, be_, tgt, rt, rl, ixc, ix_lvl, ix_trig,
-                            1.0 if c["side"] == "C" else -1.0, *E.SLIP)
+                            1.0 if c["side"] == "C" else -1.0, *E.SLIP, s_cap)
 
         split_hit = None
         if split and lots >= 2:
@@ -252,8 +271,11 @@ def price(und: str, D, cands: list, ex: E.Exits, lots: int = 1, tgt_net: float =
             net = (rX - rE) * qty - ch(rE, rX)
         d = dict(und=und, day=D.d, side=c["side"], strike=float(c["strike"]), er=int(r0), xr=int(r1), E=float(a),
                  X=float(b), rE=float(rE), rX=float(rX), qty=qty, lots=lots, why=REASONS[int(r)], net=float(net),
-                 gross=float(net + ch(rE, rX)), stop_px=-1.0, stop_kind="own", peak=float(pk),
+                 gross=float(net + ch(rE, rX)), stop_px=float(s_cap), stop_kind="rupee" if s_cap > 0 else "own",
+                 peak=float(pk),
                  best=best_net(pk, rE, qty, ch), tgt_px=float(tgt))
+        if s_cap > 0 and int(r) == E.R_STOP:
+            d["why"] = "cap"
         if split_hit is not None:
             d["split_hit"] = split_hit
             d["why"] = "split_target" if split_hit else REASONS[int(r)]
@@ -262,10 +284,10 @@ def price(und: str, D, cands: list, ex: E.Exits, lots: int = 1, tgt_net: float =
 
 
 def forced_nets(und: str, D, trade: dict, ex: E.Exits, rows: np.ndarray, lots: int = 1, fx0: int = -1,
-                be_x: float = BE_X) -> np.ndarray:
+                be_x: float = BE_X, lock: str = "") -> np.ndarray:
     """The random-exit twin (PREREG 5.3): the net of `trade` (from its signal row er_sig) sold at the open of each row in
     `rows`, with the BASE's exits (own stop, ladder / L25, time stop, breakeven lock) active before it; fx0 (the arm's own
-    index exit) still applies when earlier."""
+    index exit) still applies when earlier. lock (Amendment C, the base V5): that step lock ('L500' / 'LBE') is active too."""
     st = E.stack(und, D)
     C = st.S[st.idx(trade["side"], trade["strike"])]
     qty = float(K51.lot(und, D.d)) * lots
@@ -278,11 +300,16 @@ def forced_nets(und: str, D, trade: dict, ex: E.Exits, rows: np.ndarray, lots: i
         s0 = X.stop_price(real, qty, 0.0, ch, tks, E.SLIP[2], E.SLIP[3])
         lkt, lkk = be_x * raw * qty * (1 - 1e-12), (s0 - raw) * qty
     stp = ex.steps_arr()
+    rt = rl = NONE
+    if lock:
+        hseg = C[1][ef:sq]
+        hmax = float(np.nanmax(hseg)) if np.isfinite(hseg).any() else 0.0
+        rt, rl = lock_levels(lock, real, qty, lots, ch, tks, hmax)
     out = np.zeros(len(rows))
     for i, row in enumerate(np.asarray(rows, np.int64)):
         f = int(row) if fx0 < 0 else int(min(row, fx0))
         a, b, rE, rX, r0, r1, r, pk = simulate(C, int(trade["er_sig"]), int(sq), f, ex.stop, lkt, lkk, ex.lock_trail, stp,
-                                               ex.tmax, ex.need, ex.close_stop, K51.TICK, qty, be, -1.0, NONE, NONE,
+                                               ex.tmax, ex.need, ex.close_stop, K51.TICK, qty, be, -1.0, rt, rl,
                                                NONE, np.nan, -1.0, 1.0, *E.SLIP)
         out[i] = 0.0 if r == 0 else (rX - rE) * qty - ch(rE, rX)
     return out

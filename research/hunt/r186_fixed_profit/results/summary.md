@@ -9,6 +9,8 @@ on R72 / R51), but the wins become small (about Rs 1,000) while the losses stay 
 step lock is less bad but still costs Rs 81k - 1.12 L a year. Your observation is real (about 1 in 5 losing trades had been
 +Rs 1,000 first), but the trades that keep running pay for it. Nothing passed. Keep today's rule.**
 
+**16 Nov, the Rs 1,000 stop question (Amendment C, below): keep V5 as it is. Adding a Rs 1,000 a lot stop makes less on every arm in the year (R72 Rs 2.13 L -> Rs 1.37 L, R51 Rs 1.63 L -> Rs 49,797, Liquidity Rs 98,239 -> Rs 76,543); a Rs 1,500 stop also makes less (Rs 1.52 L, Rs 72,074, Rs 89,180).**
+
 How it was tested: the rule in the app today (each arm's own stop + breakeven at +10%; the picker on R72 / R51) is the
 base. Each new exit was added on top; every other exit stayed; the first exit wins. Last year, 20 Oct 2025 - 19 Oct 2026,
 1 lot, after Zerodha charges and slippage. Signals on the index; only the option's exit changes. The target sells at the
@@ -32,7 +34,7 @@ price that nets the amount after charges (or at the opening price if the option 
 | win rate | 41.3% | 49.6% | 46.3% | 45.1% | 48.7% | 43.7% |
 | net | **Rs 1.00 L** | Rs 10,282 | Rs 8,348 | Rs 11,998 | Rs 19,404 | Rs 98,239 |
 | worst month | -Rs 37,773 | -Rs 28,680 | -Rs 35,294 | -Rs 35,519 | -Rs 30,655 | -Rs 32,670 |
-| max drawdown | Rs 67,497 | Rs 47,663 | Rs 57,810 | Rs 56,991 | Rs 58,857 | Rs 59,441 |
+| max drawdown | Rs 67,497 | Rs 47,663 | Rs 57,810 | Rs 56,991 | Rs 58,857 | Rs 60,281 |
 
 Today's plain rules without the picker or the breakeven (for comparison): R72 2,281 trades, 46.3%, Rs 2.98 L; R51 3,084,
 45.1%, Rs 2.21 L; Liquidity 688, 39.2%, Rs 1.18 L.
@@ -130,3 +132,109 @@ random exits is not beating today's rule. None keeps the account stop rule in ev
 - The month you watched includes 8 Nov's Muhurat session (R72 5 trades, R51 4). The rebuilt stores match the 19 Oct
   stores on every day except 19 Oct itself (that session had no next day in the old stores).
 - Nothing in the app changes. Every number: `report.md`.
+
+## Amendment C: a Rs 1,000 instead of Rs 1,500 stop on today's app rule (V5)
+
+Boss, 16 Nov 2026: *"instead of 1.5k stop loss what will happen if we make it 1k, also show me detailed difference before
+and after"*.
+
+**Short answer: do not install a Rs 1,000 stop, and the Rs 1,500 stop also costs money. On today's app rule (V5) both stops
+earn less than having no rupee stop at all, on all three arms, in the year. The Rs 1,000 stop is the worst: it closes about
+4 in 10 R72 / R51 trades, and about a third of those would have ended in profit. 0 of 6 pass.**
+
+V5 = the app now: R72 / R51 = picker + own -15% stop + breakeven at +10% + Rs 500 step lock (L500); Liquidity = own stop +
+breakeven at +10% + breakeven once +Rs 1,000 (LBE1000). S1500 / S1000 = V5 plus a stop at the price that loses Rs 1,500 /
+Rs 1,000 a lot after charges and expected slippage (only where tighter than -15%). It is a real stop order: if the option
+opens below it, it sells at that open, so a trade can still lose more. Year 20 Oct 2025 - 19 Oct 2026; Apr - Oct = 1 Apr -
+13 Oct 2026. Signal on the index; only the option's stop changes.
+
+### 1 lot, year (Apr - Oct 2026 in brackets)
+
+| | V5 (today) | V5 + Rs 1,500 stop | V5 + Rs 1,000 stop |
+|---|---|---|---|
+| **R72** trades | 1,097 (624) | 1,098 (626) | 1,099 (627) |
+| win rate | 64.4% (60.4%) | 58.0% (56.4%) | 50.4% (47.9%) |
+| net | **Rs 2,13,110** (Rs 1,11,117) | Rs 1,52,306 (Rs 1,00,492) | Rs 1,36,891 (Rs 76,919) |
+| average win / loss | Rs 1,166 / 1,560 | Rs 1,181 / 1,301 | Rs 1,200 / 969 |
+| biggest loss | -Rs 6,315 | -Rs 3,781 | -Rs 3,781 |
+| trades the stop closed | - | 316 (173) | 479 (279) |
+| of those, V5 would have won | - | 70, Rs 1.84 L profit lost | 152, Rs 3.24 L profit lost |
+| trades losing over Rs 1,000 | 256 (156) | 367 (208) | 96 (55) |
+| max drawdown | Rs 42,286 | Rs 76,403 | Rs 63,832 |
+| worst month | -Rs 13,690 (Apr) | -Rs 15,048 (Apr) | -Rs 12,017 (Mar) |
+| worst day | -Rs 23,042 | -Rs 19,627 | -Rs 12,709 |
+| **R51** trades | 1,430 (684) | 1,442 (693) | 1,445 (695) |
+| win rate | 62.7% (60.7%) | 56.9% (55.6%) | 50.0% (48.1%) |
+| net | **Rs 1,62,959** (Rs 57,450) | Rs 72,074 (Rs 20,594) | Rs 49,797 (**-Rs 7,484**) |
+| average win / loss | Rs 1,067 / 1,489 | Rs 1,056 / 1,277 | Rs 1,048 / 978 |
+| biggest loss | -Rs 8,269 | -Rs 8,269 | -Rs 8,269 (a gap) |
+| trades the stop closed | - | 402 (193) | 621 (307) |
+| of those, V5 would have won | - | 84, Rs 2.22 L profit lost | 186, Rs 4.05 L profit lost |
+| trades losing over Rs 1,000 | 319 (156) | 466 (225) | 146 (77) |
+| max drawdown | Rs 54,101 | Rs 78,678 | Rs 68,830 |
+| worst month | -Rs 29,871 (Apr) | -Rs 33,166 (Apr) | -Rs 26,604 (Sep) |
+| worst day | -Rs 16,957 | -Rs 16,048 | -Rs 11,729 |
+| **Liquidity** trades | 688 (357) | 689 (357) | 689 (357) |
+| win rate | 44.5% (43.7%) | 43.0% (42.3%) | 39.5% (38.1%) |
+| net | **Rs 98,239** (Rs 6,424) | Rs 89,180 (Rs 17,752) | Rs 76,543 (Rs 8,410) |
+| average win / loss | Rs 1,471 / 921 | Rs 1,437 / 856 | Rs 1,443 / 758 |
+| biggest loss | -Rs 4,757 | -Rs 2,715 | -Rs 2,565 |
+| trades the stop closed | - | 102 (54) | 222 (120) |
+| of those, V5 would have won | - | 10, Rs 40,233 profit lost | 34, Rs 91,942 profit lost |
+| trades losing over Rs 1,000 | 132 (69) | 156 (79) | 51 (25) |
+| max drawdown | Rs 60,281 | Rs 67,263 | Rs 57,852 |
+| worst month | -Rs 32,670 (Apr) | -Rs 23,346 (Apr) | -Rs 16,216 (May) |
+| worst day | -Rs 9,918 | -Rs 6,233 | -Rs 6,147 |
+
+"Trades losing over Rs 1,000": with the Rs 1,500 stop this count includes its own stop exits (each loses about Rs 1,500).
+With the Rs 1,000 stop, the trades it closed that still lost more than Rs 1,000 (the option opened below the stop, or the
+fill was worse than expected) were R72 95 of 479, R51 145 of 621, Liquidity 44 of 222.
+
+### 3 lots, year (Apr - Oct 2026 in brackets)
+
+| net | V5 (today) | V5 + Rs 1,500 a lot | V5 + Rs 1,000 a lot |
+|---|---|---|---|
+| R72 | **Rs 7.31 L** (Rs 3.94 L) | Rs 5.89 L (Rs 3.68 L) | Rs 5.65 L (Rs 3.10 L) |
+| R51 | **Rs 5.80 L** (Rs 2.13 L) | Rs 3.47 L (Rs 91,530) | Rs 2.95 L (Rs 27,022) |
+| Liquidity | **Rs 3.57 L** (Rs 45,931) | Rs 3.25 L (Rs 74,652) | Rs 2.86 L (Rs 48,492) |
+
+At 3 lots, year: win rate R72 64.2% / 58.5% / 51.7%, R51 63.5% / 57.9% / 51.4%, Liquidity 45.2% / 43.7% / 40.5%; max
+drawdown R72 Rs 1.18 L / 2.10 L / 1.60 L, R51 Rs 1.62 L / 2.15 L / 1.94 L, Liquidity Rs 1.71 L / 1.93 L / 1.59 L; the
+Rs 1,000 a lot stop closed R72 459, R51 596, Liquidity 216 trades (138 / 174 / 32 of them V5 would have won).
+
+### The month you watched, 21 Oct - 13 Nov 2026, 1 lot (rebuilt from the lake's gap files; not your app's records)
+
+| | V5 (today) | + Rs 1,500 stop | + Rs 1,000 stop |
+|---|---|---|---|
+| R72 | 126 trades, 61.9%, **Rs 9,481** | 127, 51.2%, -Rs 12,107 | 128, 37.5%, -Rs 20,812 |
+| R51 | 142, 69.0%, **Rs 25,448** | 142, 61.3%, Rs 17,164 | 144, 50.7%, Rs 11,239 |
+| Liquidity | 43, 62.8%, Rs 4,575 | 43, 62.8%, Rs 5,667 | 43, 60.5%, **Rs 9,038** |
+
+The Rs 1,000 stop closed R72 72 trades (28 of them V5 would have won, Rs 53,821 profit lost), R51 67 (27, Rs 54,759),
+Liquidity 11 (1, Rs 2,087). Worst day: R72 -Rs 14,547 / -13,046 / -14,822, R51 -Rs 7,242 / -8,153 / -5,723.
+
+### Why a tighter stop loses money here
+
+- Options wobble. Where it applies, a Rs 1,000 a lot stop sits much closer to the entry than -15%, so normal swings hit it:
+  it closed 479 of 1,099 R72 trades and 621 of 1,445 R51 trades in the year. About a third of those (152 R72, 186 R51)
+  would have come back and ended in profit under V5.
+- The stop makes the average loss smaller (R72 Rs 1,560 -> Rs 969) but there are many more losses (win rate 64% -> 50%),
+  so the net falls (R72 Rs 2.13 L -> Rs 1.37 L, R51 Rs 1.63 L -> Rs 49,797, and R51 goes negative in Apr - Oct).
+- It does cut the worst day (R72 -Rs 23,042 -> -Rs 12,709) and the biggest single loss, but not the max drawdown, which is
+  bigger on R72 and R51.
+- Liquidity is the one place it nearly holds up: in Apr - Oct it was ahead (Rs 8,410 and Rs 17,752 vs Rs 6,424) and in the
+  month you watched the Rs 1,000 stop was ahead (Rs 9,038 vs Rs 4,575), but over the year both lose (Rs 76,543 / 89,180 vs
+  Rs 98,239).
+
+### Gates (Amendment C)
+
+0 of 6 pass (BH m = 4,882). Every stop makes less than V5 in the year; random exits on the same trades do better than the
+stop (twin p 1.0 everywhere). None keeps the account stop rule in every period (V5 does not either).
+
+### Honest notes (Amendment C)
+
+- With the stop off, V5 reproduced this study's own numbers exactly: R72 1,097 trades / Rs 2,13,110, R51 1,430 /
+  Rs 1,62,959, Liquidity 688 / Rs 98,239 (year, 1 lot).
+- Data-led follow-up on the same year; Apr - Oct 2026 was read again. The amounts came from you.
+- The month you watched is descriptive only (rebuilt stores, outside git; no new download).
+- Nothing in the app changes. Every number: `year_c.json`, `decision_c.json`, `gap_month_c.json`.

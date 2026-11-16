@@ -11,6 +11,9 @@ the last year (20 Oct 2025 - 19 Oct 2026); plus how often a trade was +Rs 1,000 
     X="IRAALGO_LAKE=~/.cache/iraalgo/r186ext/lake IRAALGO_CACHE=~/.cache/iraalgo/r186ext/cache R51_CLEAN=1 R176_POST=1"
     env $X python research/hunt/r186_fixed_profit/r186study.py gap-build      # stores to 13 Nov
     env $X python research/hunt/r186_fixed_profit/r186study.py gap            # -> results/gap_month.json
+    R176_POST=1 python research/hunt/r186_fixed_profit/r186study.py run-c     # Amendment C, read once -> year_c.json
+    python research/hunt/r186_fixed_profit/r186study.py decide-c               # -> results/decision_c.json
+    env $X python research/hunt/r186_fixed_profit/r186study.py gap-c          # -> results/gap_month_c.json
 
 Reuses R179's units, picker and walk (R176 / R106) and R177's apply_rule. Pure parts: gates_r186, giveback,
 target_effect (test_r186.py). Plain-English notes, 16 Nov 2026.
@@ -115,15 +118,15 @@ def target_effect(trades: list, plain: dict, reasons: tuple) -> dict:
 
 # ================================================================================================ data
 def priced(arm: str, us: list, lots: int, tgt: float = -1.0, lock: str = "", idx: bool = False,
-           split: bool = False) -> list:
+           split: bool = False, cap: float = -1.0) -> list:
     M = R7.mods()
     import r186engine as Z
     ex = S6.exits(arm)
-    return [Z.price(key[0], M["r51data"].load(key[0])[key[1]], cands, ex, lots, tgt, lock, idx=idx, split=split)
-            for key, cands, _, _ in us]
+    return [Z.price(key[0], M["r51data"].load(key[0])[key[1]], cands, ex, lots, tgt, lock, idx=idx, split=split,
+                    cap_net=cap) for key, cands, _, _ in us]
 
 
-def exit_twins(arm: str, trades: list, plain: dict, n: int, rng, lots: int = 1) -> tuple:
+def exit_twins(arm: str, trades: list, plain: dict, n: int, rng, lots: int = 1, lock: str = "") -> tuple:
     """PREREG 5.3: (twin totals (n,), changed count). A changed trade: one the rule closed earlier than the base, or
     (Amendment B, SPLIT) one whose target leg filled; it is sold whole at a random minute between its fill and the
     base's exit, the base's exits active before it."""
@@ -141,7 +144,7 @@ def exit_twins(arm: str, trades: list, plain: dict, n: int, rng, lots: int = 1) 
         ch += 1
         rows = M["S"].twin_rows(t["er"], p["xr"], n, rng)
         D = M["r51data"].load(t["und"])[t["day"]]
-        tot += Z.forced_nets(t["und"], D, t, ex, rows, lots, int(t.get("fx_arm", -1)))
+        tot += Z.forced_nets(t["und"], D, t, ex, rows, lots, int(t.get("fx_arm", -1)), lock=lock)
     return tot, ch
 
 
@@ -321,6 +324,151 @@ def decide_b() -> dict:
     return out
 
 
+# ================================================================================================ Amendment C
+FINAL_FLAG_C = RESULTS / "FINAL_READ_C"
+V5_LOCK = {"R72": "L500", "R51": "L500", "LIQ": "LBE"}               # the exit rule in the app now (V5)
+RULES_C = {"S1500": 1500.0, "S1000": 1000.0}                        # entry stop, Rs a lot net (only where tighter than -15%)
+TESTS_C = tuple((a, r) for r in RULES_C for a in ARMS)              # 6
+M_TOTAL_C = M_TOTAL_B + len(TESTS_C)                                # 4,882
+PARITY_C = {"R72": (1097, 213110), "R51": (1430, 162959), "LIQ": (688, 98239)}   # year.json L500 / LBE1000, year, 1 lot
+
+
+def cap_effect(trades: list, plain: dict, lots: int = 1, lim: float = 1000.0) -> dict:
+    """Amendment C: the trades the entry stop closed ('cap'), how many of those V5 (same signal) closed with a profit and
+    the profit given up on them (V5 net - capped net), the net effect over all capped trades (V5 net - capped net, summed;
+    > 0 means the stop cost money), and how many trades lost more than `lim` a lot (gaps, slippage)."""
+    capped = [t for t in trades if t.get("why") == "cap"]
+    won = lost_profit = effect = 0.0
+    n_won = 0
+    for t in capped:
+        p = plain.get(key_of(t))
+        if p is None:
+            continue
+        effect += p["net"] - t["net"]
+        if p["net"] > 0:
+            n_won += 1
+            lost_profit += p["net"] - t["net"]
+    return dict(cap_closed=len(capped), v5_would_win=n_won, profit_lost_on_those=round(lost_profit),
+                cost_vs_v5=round(effect), over_1000=sum(1 for t in trades if t["net"] < -lim * lots - 1e-6),
+                capped_over_1000=sum(1 for t in capped if t["net"] < -lim * lots - 1e-6))
+
+
+def _arm_units(arm: str, lo, hi):
+    us0 = S6.units(arm, lo, hi)
+    usA, _ = R7.apply_rule(arm, us0, None)
+    P = sc = thr = None
+    if arm in K6.PICKER_ARMS:
+        P = S6.picker()
+        sc, thr = P.scores(arm, us0)
+    keep = (lambda tr: tr) if P is None else (lambda tr: [t for t in tr if P.kept(t, sc, thr)])
+    return usA, keep
+
+
+def run_c() -> dict:
+    """Amendment C: V5 vs V5+S1500 vs V5+S1000 at 1 lot (gated) and 3 lots (reported)."""
+    assert K6.POST, "R186 reads the stores built to 19 Oct (R176_POST=1)"
+    if FINAL_FLAG_C.exists():
+        raise SystemExit("R186 Amendment C already read once: " + FINAL_FLAG_C.read_text())
+    FINAL_FLAG_C.write_text(datetime.now(timezone.utc).isoformat() + "\n")
+    M = R7.mods()
+    M["C"].open_final()
+    lo, hi = K6.Y_START, K6.Y_END
+    out = {"parity": {}, "twins": {}, "effect": {}}
+    trades = {}
+    rng = np.random.default_rng(SEED)
+    for arm in ARMS:
+        usA, keep = _arm_units(arm, lo, hi)
+        lk = V5_LOCK[arm]
+
+        def walked(pr):
+            return [t for t in S6.walk(arm, usA, pr) if lo <= t["day"] <= hi]
+
+        for lots in (1, 3):
+            pr_v5 = priced(arm, usA, lots, lock=lk)
+            v5 = keep(walked(pr_v5))
+            trades.setdefault(("V5", lots), {})[arm] = v5
+            if lots == 1:
+                pub = PARITY_C[arm]
+                r = dict(trades=len(v5), net=round(sum(t["net"] for t in v5)), published=list(pub))
+                r["reproduced"] = r["trades"] == pub[0] and abs(r["net"] - pub[1]) <= 1
+                out["parity"][arm] = r
+                print(arm, "parity", r, flush=True)
+                assert r["reproduced"], ("parity failed", arm, r)
+            plain = {(t["und"], S6._d(t["day"]), c["er"], c["side"]): t
+                     for (key, cands, _, _), row in zip(usA, pr_v5) for c, t in zip(cands, row) if t is not None}
+            out["effect"][f"{arm}:V5@{lots}"] = {per: cap_effect(S6.in_span(v5, per), plain, lots)
+                                                 for per in K6.YEAR_PERIODS}
+            for rule, cap in RULES_C.items():
+                tr = keep(walked(priced(arm, usA, lots, lock=lk, cap=cap)))
+                trades.setdefault((rule, lots), {})[arm] = tr
+                out["effect"][f"{arm}:{rule}@{lots}"] = {per: cap_effect(S6.in_span(tr, per), plain, lots)
+                                                         for per in K6.YEAR_PERIODS}
+                if lots == 1:
+                    tw, chg = exit_twins(arm, tr, plain, K6.TWINS, rng, lots, lock=lk)
+                    act = sum(t["net"] for t in tr)
+                    out["twins"][f"{arm}:{rule}"] = dict(p=round(M["S"].twin_p(act, tw), 4), mean=round(float(tw.mean())),
+                                                         changed=chg)
+                    print(arm, rule, "twin", out["twins"][f"{arm}:{rule}"], flush=True)
+            print(arm, lots, {v: (len(trades[(v, lots)][arm]), round(sum(t["net"] for t in trades[(v, lots)][arm])))
+                              for v in ("V5", *RULES_C)}, flush=True)
+    for per in K6.YEAR_PERIODS:
+        plo, phi = K6.span_of(per)
+        n_sess = len(S6.sessions(plo, phi))
+        months = K6.months_between(plo, phi)
+        res = {"sessions": n_sess}
+        for (v, lots), by_arm in trades.items():
+            res[f"{v}@{lots}"] = {a_: S6.describe([t for t in tr if plo <= t["day"] <= phi], n_sess, months)
+                                  for a_, tr in by_arm.items()}
+        out[per] = res
+    (RESULTS / "year_c.json").write_text(json.dumps(out, indent=1, default=str))
+    return out
+
+
+def decide_c() -> dict:
+    r = json.loads((RESULTS / "year_c.json").read_text())
+    ps = [r["twins"][f"{a}:{v}"]["p"] for a, v in TESTS_C]
+    q_all, q_own = S6.bh_q(ps, M_TOTAL_C), S6.bh_q(ps, len(ps))
+    out = {}
+    for (a, v), qa, qo in zip(TESTS_C, q_all, q_own):
+        per = {p: r[p][f"{v}@1"][a] for p in K6.YEAR_PERIODS}
+        base = {p: r[p]["V5@1"][a] for p in K6.YEAR_PERIODS}
+        g = gates_r186(per, base, qa)
+        g.update(q_own=round(qo, 4), twin_p=r["twins"][f"{a}:{v}"]["p"], net_year=per["year"]["net"],
+                 base_net_year=base["year"]["net"], net_final=per["final"]["net"], base_net_final=base["final"]["net"])
+        out[f"{a}:{v}"] = g
+    out["_m"] = dict(tests=len(TESTS_C), prior=M_TOTAL_B, total=M_TOTAL_C)
+    (RESULTS / "decision_c.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
+GAP_C_LO = date(2026, 10, 21)
+
+
+def gap_c() -> dict:
+    """Amendment C on 21 Oct - 13 Nov 2026 at 1 lot (descriptive), on the extended stores (as gap_month)."""
+    assert K6.POST, "R176_POST=1"
+    _extend()
+    M = R7.mods()
+    M["C"].open_final()
+    out = {"window": f"{GAP_C_LO} .. {GAP_HI}", "rows": {}, "effect": {}}
+    for arm in ARMS:
+        usA, keep = _arm_units(arm, CHECK_LO, GAP_HI)
+        lk = V5_LOCK[arm]
+        pr_v5 = priced(arm, usA, 1, lock=lk)
+        plain = {(t["und"], S6._d(t["day"]), c["er"], c["side"]): t
+                 for (key, cands, _, _), row in zip(usA, pr_v5) for c, t in zip(cands, row) if t is not None}
+        for v, cap in (("V5", -1.0), *RULES_C.items()):
+            pr = pr_v5 if cap < 0 else priced(arm, usA, 1, lock=lk, cap=cap)
+            tr = [t for t in keep(S6.walk(arm, usA, pr)) if GAP_C_LO <= t["day"] <= GAP_HI]
+            n_sess = len({t["day"] for t in tr}) or 1
+            out["rows"][f"{v}:{arm}"] = S6.describe(tr, n_sess, ("2026-10", "2026-11"))
+            out["effect"][f"{v}:{arm}"] = cap_effect(tr, plain)
+            print(arm, v, out["rows"][f"{v}:{arm}"]["trades"], out["rows"][f"{v}:{arm}"]["net"], out["effect"][f"{v}:{arm}"],
+                  flush=True)
+    (RESULTS / "gap_month_c.json").write_text(json.dumps(out, indent=1, default=str))
+    return out
+
+
 GAP_LO, GAP_HI = date(2026, 10, 20), date(2026, 11, 13)
 CHECK_LO = date(2026, 9, 1)                                         # overlap with the stores to 19 Oct (a parity check)
 
@@ -411,6 +559,12 @@ if __name__ == "__main__":
         run_b()
     elif cmd == "decide-b":
         print(json.dumps(decide_b(), indent=1))
+    elif cmd == "run-c":
+        run_c()
+    elif cmd == "decide-c":
+        print(json.dumps(decide_c(), indent=1))
+    elif cmd == "gap-c":
+        gap_c()
     elif cmd == "gap-build":
         gap_build()
     elif cmd == "gap":

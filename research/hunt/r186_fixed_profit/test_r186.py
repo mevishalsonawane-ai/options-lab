@@ -247,3 +247,111 @@ def test_split_breakeven_leg_moves_after_target_price():
 
 def test_bh_count_b():
     assert len(T.TESTS_B) == 9 and T.M_TOTAL_B == 4867 + 9 == 4876
+
+
+# ------------------------------------------------------------------------------------------------ Amendment C
+def _ramp(p0=200.0, p1=150.0, n=375, start=12, length=60):
+    """Flat at p0, then a steady slide to p1 over `length` minutes (no gaps: each minute opens at the last close)."""
+    C = _flat(p0, n)
+    path = np.concatenate([np.full(start, p0), np.linspace(p0, p1, length), np.full(n - start - length, p1)])
+    C[0, 1:] = path[:-1]
+    C[1] = np.maximum(path, C[0])
+    C[2] = np.minimum(path, C[0])
+    C[3] = path
+    C[0, 0] = p0
+    return C
+
+
+def _simc(C, cap, lots=1, mode="", be=True):
+    qty = QTY * lots
+    ch = (lambda a, b: _ch(a, b, qty))  # noqa: E731
+    raw, real, ef, tks = RX.entry_info(C, 10, 360, qty)
+    lkt, lkk = -1.0, 0.0
+    if be:
+        s0 = RX.stop_price(real, qty, 0.0, ch, tks, E.SLIP[2], E.SLIP[3])
+        lkt, lkk = 0.10 * raw * qty * (1 - 1e-12), (s0 - raw) * qty
+    rt, rl = Z.lock_levels(mode, real, qty, lots, ch, tks, float(np.nanmax(C[1][ef:360])))
+    s = Z.cap_stop_px(raw, real, qty, lots, cap, 0.15, ch, tks) if cap > 0 else -1.0
+    r = Z.simulate(C, 10, 360, -1, 0.15, lkt, lkk, 0.0, NOTIME.steps_arr(), 0, -1.0, -1.0, 0.05, qty, 0.0, -1.0, rt, rl,
+                   Z.NONE, np.nan, -1.0, 1.0, *E.SLIP, s)
+    return s, raw, real, r, (r[3] - r[2]) * qty - ch(r[2], r[3])
+
+
+def test_cap_only_where_tighter_than_15pct():
+    s, raw, *_ = _simc(_flat(200.0), 1000.0)                         # -15% of 200 loses ~Rs 1,950: the cap is tighter
+    assert s > raw * 0.85
+    s50, raw50, *_ = _simc(_flat(50.0), 1000.0)                      # -15% of 50 loses ~Rs 490: -15% stays
+    assert s50 == -1.0
+    s15, raw, *_ = _simc(_flat(200.0), 1500.0)
+    assert raw * 0.85 < s15 < s or s15 == -1.0                       # Rs 1,500 sits lower than Rs 1,000
+
+
+def test_cap_is_per_lot():
+    s1, *_ = _simc(_flat(200.0), 1000.0, lots=1)
+    s3, *_ = _simc(_flat(200.0), 1000.0, lots=3)                     # Rs 3,000 on 3 lots: about the same premium
+    assert abs(s3 - s1) <= 1.0                                       # (slippage ticks grow a little with size)
+    ch3 = (lambda a, b: _ch(a, b, 3 * QTY))  # noqa: E731
+    raw, real, ef, tks = RX.entry_info(_flat(200.0), 10, 360, 3 * QTY)
+    s_pos = Z.cap_stop_px(raw, real, 3 * QTY, 1, 1000.0, 0.15, ch3, tks)  # Rs 1,000 for the whole position: far tighter
+    assert s_pos > s3 + 2.0
+
+
+def test_cap_stop_nets_about_minus_1000_and_exits_as_stop():
+    C = _ramp()
+    s, raw, real, r, net = _simc(C, 1000.0)
+    assert r[6] == E.R_STOP and r[1] == pytest.approx(s)
+    assert -1000.0 - 0.05 * QTY - 1.0 <= net <= -1000.0 + 0.05 * QTY + 1.0
+    _, _, _, r0, net0 = _simc(C, -1.0)                               # without the cap the -15% stop loses more
+    assert r0[6] == E.R_STOP and net0 < net - 500.0 and r0[5] > r[5]
+    _, _, _, r3, net3 = _simc(C, 1000.0, lots=3)
+    assert -3000.0 - 0.05 * 3 * QTY - 3.0 <= net3 <= -3000.0 + 0.05 * 3 * QTY + 3.0
+
+
+def test_cap_gap_fills_at_open_below_the_stop():
+    C = _flat(200.0)
+    C[0, 30], C[1, 30], C[2, 30], C[3, 30] = 175.0, 176.0, 174.0, 175.0  # opens below the cap (and above -15%)
+    s, raw, real, r, net = _simc(C, 1000.0)
+    assert s > 175.0 > raw * 0.85
+    assert r[6] == E.R_STOP and r[5] == 30 and r[1] == 175.0
+    assert net < -1000.0 - 1.0                                       # a gap loses more than Rs 1,000
+
+
+def test_cap_off_equals_v5_and_breakeven_still_wins():
+    for C in (_ramp(200.0, 260.0), _flat(200.0)):                   # never near the cap: the cap changes nothing
+        assert _simc(C, -1.0, mode="L500")[3] == _simc(C, 1000.0, mode="L500")[3]
+    up_then_down = _ramp(200.0, 225.0, length=20)                    # +12.5% sets the breakeven, then a slide
+    up_then_down[:4, 40:] = 199.0
+    _, _, _, r, net = _simc(up_then_down, 1000.0, mode="L500")
+    assert r[6] in (E.R_LOCK, Z.R_RLOCK) and net > -500.0           # a lock above the cap sold it, not the cap
+
+
+def test_cap_off_is_simulate_default():
+    C = _ramp()
+    raw, real, ef, tks = RX.entry_info(C, 10, 360, QTY)
+    args = (C, 10, 360, -1, 0.15, -1.0, 0.0, 0.0, NOTIME.steps_arr(), 0, -1.0, -1.0, 0.05, QTY, 0.0, -1.0, Z.NONE, Z.NONE,
+            Z.NONE, np.nan, -1.0, 1.0, *E.SLIP)
+    assert Z.simulate(*args) == Z.simulate(*args, -1.0)
+
+
+def test_cap_effect():
+    plain = {("NIFTY", DAY, 1, "C"): dict(net=800.0), ("NIFTY", DAY, 2, "C"): dict(net=-2000.0),
+             ("NIFTY", DAY, 3, "C"): dict(net=500.0)}
+    tr = [dict(und="NIFTY", day=DAY, er_sig=1, side="C", why="cap", net=-1000.0),
+          dict(und="NIFTY", day=DAY, er_sig=2, side="C", why="cap", net=-1300.0),
+          dict(und="NIFTY", day=DAY, er_sig=3, side="C", why="time", net=500.0)]
+    e = T.cap_effect(tr, plain)
+    assert e["cap_closed"] == 2 and e["v5_would_win"] == 1 and e["profit_lost_on_those"] == 1800
+    assert e["cost_vs_v5"] == 1800 - 700 and e["over_1000"] == 1 and e["capped_over_1000"] == 1
+
+
+def test_bh_count_c():
+    assert len(T.TESTS_C) == 6 and T.M_TOTAL_C == 4876 + 6 == 4882
+    assert T.V5_LOCK == {"R72": "L500", "R51": "L500", "LIQ": "LBE"}
+
+
+def test_v5_parity_targets_are_year_json():
+    import json
+    r = json.loads((T.RESULTS / "year.json").read_text())["year"]
+    for arm, rule in (("R72", "L500"), ("R51", "L500"), ("LIQ", "LBE1000")):
+        y = r[f"{rule}@1"][arm]
+        assert (y["trades"], y["net"]) == T.PARITY_C[arm]
