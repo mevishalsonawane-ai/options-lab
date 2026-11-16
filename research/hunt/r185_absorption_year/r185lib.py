@@ -173,6 +173,9 @@ def trade(D: Day, r: int, side: str, stop: float, T: int):
     """PREREG s3: one 1-lot trade from a signal at bar r. Returns (dict, None) or (None, reason)."""
     if not np.isfinite(D.c[r]):
         return None, "no_spot"
+    # 16 Nov (FINNIFTY final stage): a day whose option strikes give no step (no near strikes recorded) has no ATM to buy.
+    if D.step is None or not np.isfinite(D.step) or D.step <= 0:
+        return None, "no_strike"
     K = atm(float(D.c[r]), D.step)
     cont = D.opt["C" if side == "L" else "P"].get(K)
     if cont is None:

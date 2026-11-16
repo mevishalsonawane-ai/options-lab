@@ -427,3 +427,11 @@ def test_lots_rule():
     assert LT.lot_on(files, "NIFTY", date(2025, 1, 24)) == 25
     assert LT.lot_on(files, "NIFTY", date(2025, 1, 31)) == 75
     assert LT.lot_on({}, "NIFTY", date(2025, 1, 31)) is None
+
+
+def test_a_day_without_a_strike_step_is_not_traded():
+    """16 Nov: a day whose strikes give no step (NaN) prices nothing instead of crashing (FINNIFTY final stage)."""
+    D = make_day(step=float("nan"))
+    t, why = L.trade(D, 100, "L", float(D.c[100]) - 20, 15)
+    assert t is None and why == "no_strike"
+    assert L.twin(D, 100, "L", 20.0, 15) is None
