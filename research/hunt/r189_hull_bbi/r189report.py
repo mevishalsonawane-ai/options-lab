@@ -112,6 +112,14 @@ def write(cells: dict, nofill: dict, trades: dict, ch: dict):
     L.append(f"- Of all 16 exits on the same entries, the best last-6-months result was {best_final} "
              f"({K.EXIT_NAME[best_final]}): {bf['trades']} trades, {rs(bf['net'])} (a secondary number, not gated; "
              f"picking it after seeing the holdout would be hindsight).")
+    tp = [t for t in trades[P]]
+    gross = sum((t.exit_raw - t.entry_raw) * t.lot for t in tp)
+    net = sum(t.net[0] for t in tp)
+    L.append(f"- Where the money went (picked rule, full period, 1 lot, {len(tp)} trades): before any cost the option "
+             f"moves made {rs(gross)}; slippage and charges took {rs(gross - net)} (about "
+             f"{rs((gross - net) / max(len(tp), 1))} a trade). The line's signal is close to a coin toss on 1-minute "
+             f"candles, and it trades about {len(tp) / max(len({(t.und, t.day) for t in tp}), 1):.1f} times a day per "
+             "index, so costs decide the result.")
     n_pos = sum(1 for x in K.EXITS if c(f"BOSS-{x}")["per"]["final"]["net"] > 0)
     n_pos_d = sum(1 for x in K.EXITS if c(f"BOSS-{x}")["per"]["design"]["net"] > 0)
     L.append(f"- Exits with a positive design net (all five, 1 lot): {n_pos_d} of 16; with a positive last 6 months: "

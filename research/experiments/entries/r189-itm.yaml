@@ -1,0 +1,44 @@
+id: r189-itm
+title: 'R189: Boss''s line, 1-ITM strike, exit X16 (1-min only, no 10-sec data; 5 index options, 1-3 lots)'
+family: patterns-indicators
+date: '2026-11-16'
+doc: research/hunt/r189_hull_bbi/results/report.md
+hypothesis: 'Boss''s TradingView Hull line (HMA 55 as Boss''s script writes it: WMA(2 x WMA55 - WMA27, 7)): buy a call when
+  the last 2 closed candles are above the rising (blue) line, a put when below the falling (red) line; Boss asked for 1-min
+  AND 10-sec agreement and ''Find the exit by research''. This group: Boss''s line, 1-ITM strike, exit X16. Does it make money
+  after costs and beat random entries?'
+data_version: 'options-lab dhan-data branch (Dhan v2, fetched 6 Oct 2026): 1-minute index candles and rolling ATM +/- 10 1-minute
+  options of the nearest expiry, read with research/obuy/data.py; no 10-second data reachable (the phone''s per-second recordings
+  are sealed)'
+period:
+  design: 2024-11-20..2026-03-31 (4 folds; the exit chosen on them)
+  holdout: 2026-04-01..2026-10-06 final = last 6 months, read once (results/FINAL_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index spot (1-minute candles; Hull line on the continuous 1-minute close series)'
+- ATM option of the nearest expiry (1-ITM variant)
+- '1-min only: the 10-second half of Boss''s rule was not tested'
+model_or_rule: Boss's line, 1-ITM strike, exit X16; fresh signal only (condition false -> true), one position per index, orders
+  09:20-15:00; -15% premium stop and 15:10 square-off (15:05 on expiry) on every exit; 1, 2, 3 lots
+settings: research/hunt/r189_hull_bbi/r189cfg.py; PREREG.md section 3
+prereg: research/hunt/r189_hull_bbi/PREREG.md
+variants_tried: 54
+results:
+  summary: 'ITM-X16 1 lot: full 15563 trades, win 41%, -Rs 12,36,692, max DD Rs 12,83,573; last 6 months 4176 trades, win
+    40%, -Rs 5,52,172 | ITM-X16 2 lots: full 15563 trades, win 41%, -Rs 17,53,859, max DD Rs 18,57,035; last 6 months 4176
+    trades, win 40%, -Rs 9,10,888 | ITM-X16 3 lots: full 15563 trades, win 42%, -Rs 22,78,541, max DD Rs 24,38,037; last 6
+    months 4176 trades, win 41%, -Rs 12,71,059 | calls 1 lot last 6 months: 2178 trades, win 39%, -Rs 3,31,948 | puts 1 lot
+    last 6 months: 1998 trades, win 40%, -Rs 2,20,223. All five indices, calls + puts unless stated; 0 of 54 cells (rule x
+    index x side x lots) passed the gates; lowest twin p 0.307, lowest BH q 1.00.'
+  costs: 'dated Zerodha charges on the whole quantity; R17 fills (slippage from the 5-minute volume per position; premium
+    and index stops sold as stop orders: x0.999 minus 2x the half-spread; limit targets at their price)'
+holdout_read: true
+verdict: rejected
+notes: 'BH m = 5,712. The exit was chosen on the design folds only (no exit had all 4 folds > 0: best design net); Boss''s
+  script lags more than the standard Hull (it doubles the slow WMA, not the fast). Signal on the underlying; nothing in the
+  app changes.'

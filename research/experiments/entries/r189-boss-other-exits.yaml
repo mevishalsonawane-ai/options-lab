@@ -1,0 +1,51 @@
+id: r189-boss-other-exits
+title: 'R189: Boss''s Hull line, close beyond it, ATM, each of the other 15 exit candidates (secondary, not chosen by the
+  design rule) (1-min only, no 10-sec data; 5 index options, 1-3 lots)'
+family: patterns-indicators
+date: '2026-11-16'
+doc: research/hunt/r189_hull_bbi/results/report.md
+hypothesis: 'Boss''s TradingView Hull line (HMA 55 as Boss''s script writes it: WMA(2 x WMA55 - WMA27, 7)): buy a call when
+  the last 2 closed candles are above the rising (blue) line, a put when below the falling (red) line; Boss asked for 1-min
+  AND 10-sec agreement and ''Find the exit by research''. This group: Boss''s Hull line, close beyond it, ATM, each of the
+  other 15 exit candidates (secondary, not chosen by the design rule). Does it make money after costs and beat random entries?'
+data_version: 'options-lab dhan-data branch (Dhan v2, fetched 6 Oct 2026): 1-minute index candles and rolling ATM +/- 10 1-minute
+  options of the nearest expiry, read with research/obuy/data.py; no 10-second data reachable (the phone''s per-second recordings
+  are sealed)'
+period:
+  design: 2024-11-20..2026-03-31 (4 folds; the exit chosen on them)
+  holdout: 2026-04-01..2026-10-06 final = last 6 months, read once (results/FINAL_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index spot (1-minute candles; Hull line on the continuous 1-minute close series)'
+- ATM option of the nearest expiry (1-ITM variant)
+- '1-min only: the 10-second half of Boss''s rule was not tested'
+model_or_rule: Boss's Hull line, close beyond it, ATM, each of the other 15 exit candidates (secondary, not chosen by the
+  design rule); fresh signal only (condition false -> true), one position per index, orders 09:20-15:00; -15% premium stop
+  and 15:10 square-off (15:05 on expiry) on every exit; 1, 2, 3 lots
+settings: research/hunt/r189_hull_bbi/r189cfg.py; PREREG.md section 3
+prereg: research/hunt/r189_hull_bbi/PREREG.md
+variants_tried: 810
+results:
+  summary: 'X01 1 lot: design -Rs 11,62,901, last 6 months 4167 trades -Rs 5,10,519 | X02 1 lot: design -Rs 15,38,448, last
+    6 months 6721 trades -Rs 3,85,980 | X03 1 lot: design -Rs 16,87,362, last 6 months 6911 trades -Rs 4,09,723 | X04 1 lot:
+    design -Rs 10,58,032, last 6 months 1645 trades -Rs 5,74,361 | X05 1 lot: design -Rs 13,15,977, last 6 months 2952 trades
+    -Rs 7,18,755 | X06 1 lot: design -Rs 11,46,535, last 6 months 2426 trades -Rs 7,12,300 | X07 1 lot: design -Rs 9,27,687,
+    last 6 months 2185 trades -Rs 6,75,480 | X08 1 lot: design -Rs 14,06,730, last 6 months 4880 trades -Rs 2,75,626 | X09
+    1 lot: design -Rs 17,14,377, last 6 months 6848 trades -Rs 7,14,062 | X10 1 lot: design -Rs 16,69,474, last 6 months 6797
+    trades -Rs 6,88,123 | X11 1 lot: design -Rs 11,11,448, last 6 months 2238 trades -Rs 4,94,875 | X12 1 lot: design -Rs
+    11,91,392, last 6 months 2802 trades -Rs 5,92,414 | X13 1 lot: design -Rs 15,71,381, last 6 months 6753 trades -Rs 7,59,663
+    | X14 1 lot: design -Rs 13,44,237, last 6 months 5994 trades -Rs 7,36,390 | X15 1 lot: design -Rs 12,21,620, last 6 months
+    5406 trades -Rs 7,46,056. All five indices, calls + puts unless stated; 0 of 810 cells (rule x index x side x lots) passed
+    the gates; lowest twin p 0.001, lowest BH q 0.00.'
+  costs: 'dated Zerodha charges on the whole quantity; R17 fills (slippage from the 5-minute volume per position; premium
+    and index stops sold as stop orders: x0.999 minus 2x the half-spread; limit targets at their price)'
+holdout_read: true
+verdict: rejected
+notes: 'BH m = 5,712. The exit was chosen on the design folds only (no exit had all 4 folds > 0: best design net); Boss''s
+  script lags more than the standard Hull (it doubles the slow WMA, not the fast). Signal on the underlying; nothing in the
+  app changes.'
