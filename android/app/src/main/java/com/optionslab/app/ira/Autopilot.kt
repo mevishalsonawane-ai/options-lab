@@ -525,7 +525,7 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
-            } else if (c.target == AutoChange.STEP_TRAIL_TARGET || c.target == AutoChange.BE10_TARGET) {
+            } else if (AutoChange.isStepTrailTarget(c.target)) {
                 // 15 Nov (Boss's exception, CLAUDE.md): Boss's stop rule on Liquidity, R51 and R72 - the morning's ₹500 step trail's
                 // entries and the breakeven at +10% that replaced it under the same switch ([logStepTrailOn],
                 // [logStepTrail]): the Undo switches it off or on for new trades. Off puts the arms' own exits back alone, live too: the PIN, by the
@@ -533,6 +533,17 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 // (review: the PIN as this call was given it - never assumed - so no automatic path can switch it off without it.)
                 com.optionslab.app.data.StepTrailExits.set(c.to == AutoChange.ON, pinConfirmed = pinConfirmed, log = false)
+                    .takeIf { !it.contains("Nothing changed") }
+            } else if (c.target == AutoChange.STEP_LOCK_TARGET) {
+                // 16 Nov (Boss's exception, CLAUDE.md): the fourth version on top of V4 ([logStepLockOn], [logStepLock]): the Undo goes
+                // back to V4 alone (the step lock off, the breakeven at +10% kept) or to V5 again. Back to V4 adds live risk: the PIN, by the
+                // change's live scope, asked before this runs (as given, never assumed); not logged again. The rule's main switch is untouched.
+                // (An entry the unmerged first build of 16 Nov wrote here with on / off flipped the rule's main switch: undone as that.)
+                if (c.to == AutoChange.ON || c.to == AutoChange.SWITCHED_OFF)
+                    return com.optionslab.app.data.StepTrailExits.set(c.to == AutoChange.ON, pinConfirmed = pinConfirmed, log = false)
+                        .takeIf { !it.contains("Nothing changed") }
+                if (c.to != AutoChange.V4_ONLY && c.to != AutoChange.V5_LOCK) return null
+                com.optionslab.app.data.StepTrailExits.setLock(c.to == AutoChange.V5_LOCK, pinConfirmed = pinConfirmed, log = false)
                     .takeIf { !it.contains("Nothing changed") }
             } else if (c.target == AutoChange.PICK_TARGET) {
                 // 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers ([logPassedPickerOn]): the Undo switches them off or on.
@@ -1402,6 +1413,35 @@ internal object Autopilot {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"Switch to + picker + breakeven at +10% " +
             "(V4)\"; it replaced the ₹500 step trail); failed gates, Boss's exception - paper and live, new trades")
+    }
+
+    /**
+     * 16 Nov (Boss's exception, CLAUDE.md: "For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven at
+     * +₹1,000"): the fourth version on top of V4, by the update - logged once as Boss's, as what it is (V4 alone -> V5), under its own
+     * target ([AutoChange.STEP_LOCK_TARGET]): its Undo goes back to V4 alone, with the PIN.
+     */
+    fun logStepLockOn() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.stepLock(true), "the 16 Nov update (your ask: \"For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) " +
+            "And for liquidity use Breakeven at +₹1,000\"); added on top of the breakeven at +10% (V4 -> V5); failed gates, Boss's exception - " +
+            "paper and live, new trades; Undo goes back to V4 (with your PIN)", sameReason = true)
+    }
+
+    /** 16 Nov: Boss switching the fourth version in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
+    fun logStepLock(on: Boolean) {
+        if (!enabled()) return
+        val c = AutoChange.stepLock(on)
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
+                        note = if (on) "your choice; paper and live, new trades" else "your choice (with your PIN); new trades back on V4 alone").first
+                    save()
+                }
+            }
+        }
     }
 
     /** 15 Nov: Boss flipping the breakeven at +10% in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */

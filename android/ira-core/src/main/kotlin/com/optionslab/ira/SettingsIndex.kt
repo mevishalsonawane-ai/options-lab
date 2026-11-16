@@ -222,9 +222,10 @@ object SettingsIndex {
         Entry("risk", "risk.armlots", "Live lots per arm trade", "How many lots each arm's live trade buys (− / +, default 1); raising it asks for the PIN.",
             listOf("Bot settings", "Live lots per arm trade"), listOf("lots", "lot size", "quantity", "size", "increase"), guarded = true),
         // 15 Nov (Boss's exception, failed gates): the breakeven at +10% on Liquidity, R51 and R72 (it replaced the
-        // morning's ₹500 step trail; the old words still find it).
-        Entry("risk", "risk.steptrail", "Breakeven at +10%", "Liquidity 15+5, R51 and R72's trades keep their own stop and move it to breakeven once the option is 10% up, paper and live (failed gates, your exception); off takes the PIN.",
-            listOf("Bot settings", "Breakeven at +10%"), listOf("breakeven", "10%", "v4", "stop loss", "profit lock", "500", "step trail", "liquidity", "r51", "r72"), guarded = true),
+        // morning's ₹500 step trail; the old words still find it). 16 Nov, fourth version: plus R51 / R72's ₹500 step lock and
+        // Liquidity's breakeven at +₹1,000 a lot, under the same switch.
+        Entry("risk", "risk.steptrail", "Step lock and breakeven", "R51 and R72 lock +₹500 a lot at +₹1,000 and step up ₹500 at a time; Liquidity 15+5 moves its stop to breakeven at +10% or +₹1,000 a lot, whichever first; all keep breakeven at +10% and their own stop, paper and live (failed gates, your exception); off takes the PIN.",
+            listOf("Bot settings", "Step lock and breakeven"), listOf("breakeven", "10%", "v4", "stop loss", "profit lock", "500", "1000", "step lock", "step trail", "lock", "liquidity", "r51", "r72"), guarded = true),
         Entry("risk", "risk.guards", "Kill switch", "Stops all new entries at once; exits and square-offs still go through. Asks you to confirm both ways.",
             GUARD, listOf("kill", "emergency", "stop all", "block"), guarded = true),
         Entry("risk", "risk.guards", "Daily loss limit", "New entries refused once the day's loss reaches it.", GUARD, listOf("loss", "max loss", "limit")),

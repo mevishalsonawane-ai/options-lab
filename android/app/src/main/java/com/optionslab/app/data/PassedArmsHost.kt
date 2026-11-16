@@ -99,7 +99,7 @@ object PassedArmsHost {
     private fun mirrorLegs(): List<ArmLive.PaperLeg>? {
         if (cache == null) return null
         val v = _view.value
-        return (v.open + v.today.filter { !it.open }).filter { it.shadow == null }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0, fixed = it.fx, symbol = it.symbol) }
+        return (v.open + v.today.filter { !it.open }).filter { it.shadow == null }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0, fixed = it.fx, symbol = it.symbol, lock = it.fx && it.sl) }
     }
 
     /** [p]'s own stop on the premium at its entry (-15% and the like); null for S1 (its stop is on the index). */
@@ -266,6 +266,11 @@ object PassedArmsHost {
         val fx: Boolean = false,
         /** 15 Nov: the contract's lot size at the entry, for the breakeven rule's per-lot levels (null: an older trade). */
         val lot: Int? = null,
+        /**
+         * 16 Nov (the fourth version, Boss's exception): with [fx], the trade also has R51 / R72's ₹500 step lock from +₹1,000 a lot
+         * ([StepTrail.Lock.L500]); false: V4 alone, as it entered. Persisted; its lock is kept with its lock ([Book.locks]) as the breakeven is.
+         */
+        val sl: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -625,7 +630,7 @@ object PassedArmsHost {
             p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false),
             p.optString("shadow").ifEmpty { null }, p.optBoolean("np5", false), d("pick"),
             if (p.has("w20")) p.getBoolean("w20") else null, p.optBoolean("step500", false),
-                p.optInt("lot500", 0).takeIf { it > 0 })
+                p.optInt("lot500", 0).takeIf { it > 0 }, p.optBoolean("stepLock", false))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -645,6 +650,7 @@ object PassedArmsHost {
             p.w20?.let { put("w20", it) }
             if (p.fx) put("step500", true)
             p.lot?.let { put("lot500", it) }
+            if (p.sl) put("stepLock", true)
         }
 
     private val written = Vault.LastWrite()
@@ -676,7 +682,7 @@ object PassedArmsHost {
         o.put("r72PickerShadow", b.pickOn)
         o.put("r51W20Shadow", b.w20On)
         o.put("recordOnly", JSONArray().apply { b.recordOnly.sorted().forEach { put(it) } })
-        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
+        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && (lockKey(it) == k || ownLockKey(it) == k) } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         // 19 Oct (order speed): written on this book's own writer thread ([writer]), never under [lock] on the caller's - an
         // entry booked here ([record]) used to wait for the vault write before the next index's entry, and the 15-second stop
@@ -1074,8 +1080,13 @@ object PassedArmsHost {
                     (if (s == OovArm.SOURCE) " · 09:25 no-progress exit (R142) ${if (v.np5On) "on" else "off"} for new trades (live in shadow), " +
                         "${c.count { it.np5 }} closed on it ${m(c.filter { it.np5 }.sumOf { it.net ?: 0.0 })}" else "") +
                     // 15 Nov (Boss's exception, failed gates): the breakeven rule - its closed trades apart from the arm's own exits.
-                    (if (StepTrail.covers(s)) " · ${StepTrail.DIAG} ${if (StepTrailExits.isOn()) "on" else "off"} for new trades, " +
-                        "${c.count { it.fx }} closed on it ${m(c.filter { it.fx }.sumOf { it.net ?: 0.0 })}, ${c.count { !it.fx }} on the arm's own exits " +
+                    // 16 Nov: the fourth version (the step lock) is the switch's now; its trades are counted with the rule's.
+                    // Review: the two versions' closed trades counted apart (V4 alone; with the step lock).
+                    (if (StepTrail.covers(s)) " · ${StepTrail.DIAG} ${if (StepTrailExits.isOn()) "on" else "off"}, ${StepTrail.DIAG_LOCK} " +
+                        "${if (StepTrailExits.isOn() && StepTrailExits.lockOn()) "on" else "off"} for new trades, " +
+                        "${c.count { it.fx && it.sl }} closed on it ${m(c.filter { it.fx && it.sl }.sumOf { it.net ?: 0.0 })}, " +
+                        "${c.count { it.fx && !it.sl }} on the breakeven alone ${m(c.filter { it.fx && !it.sl }.sumOf { it.net ?: 0.0 })}, " +
+                        "${c.count { !it.fx }} on the arm's own exits " +
                         m(c.filter { !it.fx }.sumOf { it.net ?: 0.0 }) else "") +
                 // (16 Oct, R73 review: the unjudged count is said once above, today's only; its kept line is not repeated.)
                 v.status.filterKeys { it.startsWith("$s|") && it != ST_UNJUDGED_KEY }.toSortedMap().entries.joinToString("") { (k, x) -> "\n${label(s)} · ${k.substringAfter('|')} ${rupees(x)}" } +
@@ -2026,6 +2037,8 @@ object PassedArmsHost {
                 val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
                     l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn,
                     np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy, fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 })
+                    // 16 Nov: a new trade with the rule takes its fourth version (the step lock) too while that is on (Bot settings).
+                    .let { it.copy(sl = it.fx && StepTrailExits.lockOn()) }
                 b.positions += pos
                 b.marks[c.symbol] = fill.price
                 b.decided += keys
@@ -2040,7 +2053,7 @@ object PassedArmsHost {
                 // 18 Oct: its live path ([ArmLive]): the same option and lots, its stop resting at Zerodha - only in Live with AI
                 // trades on, its own "Trade live" on and every guard clear (memory only here; the order goes on a worker).
                 // 15 Nov: [Pos.fx] goes with it - the live trade takes its own breakeven rule on ITS fill, lots and best price.
-                runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos), fixed = pos.fx)) }
+                runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos), fixed = pos.fx, lock = pos.fx && pos.sl)) }
                 // 22 Oct: the time machine's reality check (shadow only; background): the arm's premium stop and target, out by its square-off.
                 runCatching {
                     val x = exitsOf(pos)
@@ -2097,7 +2110,7 @@ object PassedArmsHost {
         runCatching { Paper.rememberContract(c) }
         val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
             breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On,
-            fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 })
+            fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 }).let { it.copy(sl = it.fx && StepTrailExits.lockOn()) }
         b.positions += pos
         if (c.symbol !in b.marks) b.marks[c.symbol] = ref
         b.decided += keys
@@ -2126,14 +2139,25 @@ object PassedArmsHost {
         save(r)
     }
 
-    /** 15 Nov: Boss's stop rule a trade entered with (breakeven at +10%), at its own levels and labelled (null: none). */
+    /** 16 Nov: the fourth version's lock [p] entered with (R51 / R72's ₹500 step lock), or null: V4 alone, or not a rule trade. */
+    private fun lockOf(p: Pos): StepTrail.Lock? = if (p.fx && p.sl) StepTrail.lockFor(p.arm) else null
+
+    /**
+     * 15 Nov: Boss's stop rule a trade entered with (breakeven at +10%; 16 Nov: and the step lock from +₹1,000 a lot), at its own levels
+     * and labelled (null: none).
+     */
     private fun fixedWords(p: Pos): String? {
         if (!p.fx || !StepTrail.covers(p.arm)) return null
         val lot = lotOf(p)
+        val lk = lockOf(p)
         val s = StepTrail.stopLevel(p.entry, lot)
         val be = StepTrail.breakevenLevel(p.entry, lot)
-        return StepTrail.LABEL + listOfNotNull(s?.let { "stop ${px(it)} where tighter" },
-            be?.let { "breakeven ${px(it)} from ${px(StepTrail.breakevenTrigger(p.entry))}" })
+        val q = p.qty.coerceAtLeast(1)
+        val first = lk?.let { StepTrail.lockTrigger(p.entry, lot, q, 0) }
+        val keep = lk?.let { StepTrail.lockKeep(p.entry, lot, q, 0, it) }
+        return StepTrail.labelOf(lk) + listOfNotNull(s?.let { "stop ${px(it)} where tighter" },
+            be?.let { "breakeven ${px(it)} from ${px(StepTrail.breakevenTrigger(p.entry))}" },
+            if (first != null && keep != null) "step lock ${px(keep)} from ${px(first)}, then up ₹500 a lot a step" else null)
             .joinToString(", ", " (", ")").takeIf { s != null || be != null }.orEmpty()
     }
 
@@ -2170,7 +2194,9 @@ object PassedArmsHost {
         .let { if (p.np5 && p.arm == OovArm.SOURCE) it.copy(noProgress = OovArm.NO_PROGRESS) else it }
         // 15 Nov (Boss's exception, failed gates): the breakeven rule on the R51 / R72 trades that entered with it ([Pos.fx]); the
         // walk keeps the arm's own stop and takes the breakeven as a lock (up only), beside the arm's own exits.
-        .let { if (p.fx && StepTrail.covers(p.arm)) it.copy(stepTrail = PassedArms.StepTrailOn(lotOf(p))) else it }
+        // 16 Nov: with the fourth version's step lock when it entered with it ([Pos.sl]), on its own quantity (per lot).
+        .let { if (p.fx && StepTrail.covers(p.arm)) it.copy(stepTrail = PassedArms.StepTrailOn(lotOf(p), lock = lockOf(p), qty = p.qty.coerceAtLeast(1))) else it }
+        // (16 Nov: on the quantity bought - a paper R51 / R72 trade is never sold in part, so its quantity is its entry quantity.)
 
     /**
      * 15 Nov: [p]'s lot size (the breakeven rule is per lot): the one kept at its entry; else its paper contract's (the paper book,
@@ -2618,6 +2644,10 @@ object PassedArmsHost {
             }
         }
         val known = b.locks[lockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
+        // 16 Nov (review): a rule trade's own R64 lock (without the rule), remembered apart, from the same one walk ([PassedArms.Walk.ownLock]).
+        val ownRule = p.fx && StepTrail.covers(p.arm)
+        val knownOwn = if (ownRule && p.lock) b.locks[ownLockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() } else null
+        var ownWalked: Double? = null
         // 20 Oct, review: the walk's own exit (its kind and price), so a stop or lock is never booked better than it ([sell]).
         var walked: PassedArms.Exit? = null
         val why: String? = when {
@@ -2634,8 +2664,9 @@ object PassedArmsHost {
                         walked = lw.exit
                     }.exit?.kind?.why else null
             }
-            else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known, if (p.lock) breakeven(p) else null).also { w ->
+            else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known, if (p.lock) breakeven(p) else null, knownOwn).also { w ->
                 w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[lockKey(p)] = "$now|$lv" }
+                if (ownRule && p.lock) w.ownLock?.let { lv -> ownWalked = lv; if (knownOwn == null || lv > knownOwn.second) b.locks[ownLockKey(p)] = "$now|$lv" }
                 walked = w.exit
             }.exit?.kind?.why
         } ?: if (stopped) "operator_stop" else null
@@ -2643,7 +2674,16 @@ object PassedArmsHost {
         // it would have taken is logged once, nothing sold ([np5Shadow]).
         val np5Noted = why == null && np5Shadow(b, p, bars, now, known)
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
-        if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
+        // 16 Nov (review): a rule trade's live copy takes the rule's levels (breakeven, step lock) on its OWN live fill, lots and best
+        // ([ArmLive.ruleStop]): the paper level handed over is the arm's own exits alone - its stop and, with R64's lock, that lock walked
+        // without the rule - never the paper trade's own breakeven or step lock, worked out on the paper fill.
+        if (p.shadow == null) runCatching {
+            // (Review: the arm's own lock comes from the same one walk ([PassedArms.Walk.ownLock]), remembered apart ([ownLockKey]) so a
+            // restart or a short read never hands over less than it had.)
+            val paperLock = if (ownRule) { if (p.lock) listOfNotNull(ownWalked, knownOwn?.second).maxOrNull() else null }
+                else b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()
+            ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), paperLock).maxOrNull())
+        }
         if (why == null) return np5Noted || waitNoted
         val walkPx = walked?.takeIf { it.kind.why == why }?.price
         val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight, walkPx) else sell(b, p, c, why, ltp, walkPx)
@@ -2782,6 +2822,9 @@ object PassedArmsHost {
     private fun lockKey(p: Pos): String = if (p.shadow != null) "${p.shadow}|${p.arm}|${p.symbol}"
         else if (p.arm == BreadthDonchianArm.SOURCE) "${p.arm}|${p.symbol}" else p.symbol
 
+    /** 16 Nov (review): the key of a rule trade's own R64 lock (walked without the rule), for its live copy's level. */
+    private fun ownLockKey(p: Pos): String = "own|" + lockKey(p)
+
     /**
      * 16 Oct (R72): R51 Donchian 20 and R72 Breadth Donchian may hold the same option at once - most of R72's breaks are R51's own,
      * and the two run side by side to be compared on the same days. Each holds its own lot on paper and sells only it; their
@@ -2791,7 +2834,7 @@ object PassedArmsHost {
 
     /** [p]'s lock and (when no other open trade here holds its option) its last price, forgotten. */
     private fun forget(b: Book, p: Pos) {
-        b.locks.remove(lockKey(p))
+        b.locks.remove(lockKey(p)); b.locks.remove(ownLockKey(p))
         if (b.positions.none { it.open && it.symbol == p.symbol && !same(it, p) }) b.marks.remove(p.symbol)
     }
 
@@ -2891,7 +2934,7 @@ object PassedArmsHost {
 
     /** The ladder a trade entered with, labelled so each record stays separable (the research exits, A4, A4 + L25). */
     private fun lockTag(p: Pos): String = (if (!p.lock) "" else if (p.l25) " · 30-60-100 lock + L25" else " · 30-60-100 lock") +
-        (if (p.st) " · Supertrend filter" else "") + (if (p.fx) " · ${StepTrail.LABEL}" else "") + (if (p.shadow != null) " · ${shadowWords(p)}" else "")
+        (if (p.st) " · Supertrend filter" else "") + (if (p.fx) " · ${StepTrail.labelOf(lockOf(p))}" else "") + (if (p.shadow != null) " · ${shadowWords(p)}" else "")
 
     /** Bumped by [wipe] (under [writeLock]): a read, a save or a pass's entries under way when the erase came are not kept. */
     @Volatile private var wipes = 0

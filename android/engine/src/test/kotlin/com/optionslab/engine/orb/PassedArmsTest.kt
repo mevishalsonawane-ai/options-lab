@@ -117,8 +117,10 @@ class PassedArmsTest {
         assertEquals(130.0, PassedArms.booked(PassedArms.ExitKind.TARGET, 133.0, 130.0, 131.0), 1e-9)
         assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.TIME, 97.0, 130.0, 90.0), 1e-9)
         assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.SQUARE_OFF, 97.0, 130.0, 90.0), 1e-9)
-        // 15 Nov: the two [StepTrail] kinds (Boss's exception) make eight.
-        assertEquals(8, k.size)
+        // 15 Nov: the two [StepTrail] kinds (Boss's exception) make eight; 16 Nov: the step lock's, nine (booked at the walk's price as a stop).
+        assertEquals(9, k.size)
+        // (16 Nov review: the step lock's padded stop is booked where R186 books its sale: 0.999 x 110 to the paisa, less two ticks.)
+        assertEquals(109.79, PassedArms.booked(PassedArms.ExitKind.STEP_LOCK, 104.0, 130.0, 110.0), 1e-9)
         assertEquals(97.0, PassedArms.booked(PassedArms.ExitKind.NO_PROGRESS, 97.0, 130.0, 90.0), 1e-9)
     }
 

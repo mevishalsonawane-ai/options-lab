@@ -38,6 +38,34 @@ class StepTrailBotTradesTest {
         assertTrue(chain(open.copy(fixed = false, peak = 551.0)).exit.contains("its stop 15% under the price paid"))
     }
 
+    @Test fun aFourthVersionTradeNamesItsBreakevenAtPlusOneThousand() {
+        // 16 Nov: Liquidity with the lock (BE1000): a lot of 30 at 500 nets +₹1,000 near 534.x (+7%), before +10% (550).
+        val open = BotTrades.Trade("liquidity5", "BANKNIFTY14OCT2654300CE", "CE", 30, 500.0, at(12, 0), at(11, 55), lot = 30, fixed = true, lock = true)
+        val tr = com.optionslab.engine.orb.StepTrail.lockTrigger(500.0, 30, 30, 0)!!
+        assertTrue(tr < 550.0, "$tr")
+        // R186's breakeven at +₹1,000: the stop whose sale nets ₹0 after charges and the stop's slippage.
+        val be = com.optionslab.engine.orb.StepTrail.lockKeep(500.0, 30, 30, 0, com.optionslab.engine.orb.StepTrail.Lock.BE1000)!!
+        assertTrue(chain(open.copy(peak = tr - 0.05)).exit.contains("its stop 15% under the price paid"))
+        val up = chain(open.copy(peak = tr)).exit
+        assertTrue(up.contains("its breakeven stop, moved there at +10% or +₹1,000 a lot, whichever came first (${two(be)}; failed gates, Boss's exception)"), up)
+        // The same best on a V4 trade (no lock): still its 15% stop.
+        assertTrue(chain(open.copy(peak = tr, lock = false)).exit.contains("its stop 15% under the price paid"))
+        // 2 lots: +₹2,000 on the pair.
+        val two = open.copy(qty = 60)
+        val tr2 = com.optionslab.engine.orb.StepTrail.lockTrigger(500.0, 30, 60, 0)!!
+        assertTrue(chain(two.copy(peak = tr2 - 0.05)).exit.contains("its stop 15% under the price paid"))
+        assertTrue(chain(two.copy(peak = tr2)).exit.contains("whichever came first"))
+        // A lot sold already: the levels stay on the entry quantity (2 lots), never on what is left.
+        assertTrue(chain(two.copy(qty = 30, entryQty = 60, peak = tr2)).exit.contains("whichever came first"))
+        assertEquals(tr2 < tr, true, "the pair's trigger is a little lower (the flat brokerage shared)")
+        // Its exit words.
+        val shut = open.copy(exit = be, exitTime = at(12, 10), why = "breakeven lock")
+        assertTrue(chain(shut).exit.contains("out at its breakeven stop (moved there at +10% or +₹1,000 a lot; failed gates"), chain(shut).exit)
+        val r51 = BotTrades.Trade("r51_donchian20", "NIFTY25NOV2626000CE", "CE", 65, 200.0, at(12, 0), at(11, 55), lot = 65, fixed = true, lock = true,
+            exit = 210.0, exitTime = at(12, 20), why = "step lock")
+        assertTrue(chain(r51).exit.contains("out at its ₹500 step lock (failed gates, Boss's exception)"), chain(r51).exit)
+    }
+
     @Test fun itsExitsAreWordedAsTheRule() {
         val base = BotTrades.Trade("liquidity5", "BANKNIFTY14OCT2654300CE", "CE", 30, 300.0, at(12, 0), at(11, 55), lot = 30, fixed = true,
             exitTime = at(12, 10), charges = 50.0)
@@ -55,5 +83,7 @@ class StepTrailBotTradesTest {
         // The breakeven counts as a profit lock.
         val n = WeakLink.Trade("Liquidity 5m", at(12, 0), at(12, 30), "breakeven lock", -20.0)
         assertTrue(WeakLink.exits(listOf(n)).contains("1 at the profit lock"))
+        // 16 Nov: R51 / R72's step lock too.
+        assertTrue(WeakLink.exits(listOf(n.copy(why = "step lock", net = 520.0))).contains("1 at the profit lock"))
     }
 }

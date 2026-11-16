@@ -201,6 +201,25 @@ object OrbArms {
          * every live trade).
          */
         val fixed: Boolean = false,
+        /**
+         * 16 Nov (the fourth version, Boss's exception): with [fixed], the trade also moves its stop to breakeven once its best open P&L is
+         * +₹1,000 a lot net, if that comes before +10% ([com.optionslab.engine.orb.StepTrail.Lock.BE1000]); false: V4 alone, as it entered.
+         * Persisted.
+         */
+        val lock: Boolean = false,
+        /**
+         * 16 Nov (review): the quantity it was bought with (null: an older or an unconfirmed trade): the lock's per-lot levels stay on it
+         * when a part is sold later (a partial live exit splits the trade and its quantity). Persisted.
+         */
+        val entryQty: Int? = null,
+        /**
+         * 16 Nov (review): its stop at Zerodha was cancelled by Boss (not by the exchange, Zerodha's risk system or a rejection,
+         * [com.optionslab.ira.ManualCoverRule.endedByExchange]): their choice is respected - the app never puts it back by itself and
+         * watches the level itself. Persisted.
+         */
+        val stopByYou: Boolean = false,
+        /** 16 Nov (review): the app itself cancelled its stop (an exit taking it out first) and Zerodha had not shown it out yet. Persisted. */
+        val appCancelled: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         /**
@@ -220,7 +239,8 @@ object OrbArms {
          * the breakeven rule ([com.optionslab.engine.orb.StepTrail.LABEL]), or both joined; null: the plain rules.
          */
         val ownExitsLabel: String? get() = listOfNotNull(if (ownRules) LiquidityBreakeven.label(trail, be) else null,
-            if (fixed) com.optionslab.engine.orb.StepTrail.LABEL else null).joinToString(" and ").ifEmpty { null }
+            if (fixed) com.optionslab.engine.orb.StepTrail.labelOf(if (lock) com.optionslab.engine.orb.StepTrail.lockFor(arm) else null) else null)
+            .joinToString(" and ").ifEmpty { null }
         val day: LocalDate get() = entryTime.toLocalDate()
         val points: Double? get() = exit?.let { it - entry }
         /** The whole trade's P&L before charges: what is held now at [exit], plus any part sold early at [soldAt]. */
@@ -369,7 +389,9 @@ object OrbArms {
                         be = if (p.has("breakeven")) p.getDouble("breakeven") else null,
                         priceRetry = p.optBoolean("priceRetry", false),
                         capped = if (p.has("capped")) p.getDouble("capped") else null,
-                        fixed = p.optBoolean("step500", false))
+                        fixed = p.optBoolean("step500", false), lock = p.optBoolean("stepLock", false),
+                        entryQty = p.optInt("entryQty", 0).takeIf { it > 0 }, stopByYou = p.optBoolean("stopByYou", false),
+                        appCancelled = p.optBoolean("appCancelled", false))
                 }
             }
             o.optJSONObject("pending")?.let { m -> m.keys().forEach { k -> val p = m.getJSONObject(k)
@@ -981,7 +1003,8 @@ object OrbArms {
                         p.mgrStop?.let { put("mgrStop", it) }
                         p.stopPts?.let { put("stopPts", it) }; p.targetPts?.let { put("targetPts", it) }; p.liq?.let { put("liq", liqText(it)) }
                         p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) }; p.be?.let { put("breakeven", it) }
-                        if (p.priceRetry) put("priceRetry", true); p.capped?.let { put("capped", it) }; if (p.fixed) put("step500", true) })
+                        if (p.priceRetry) put("priceRetry", true); p.capped?.let { put("capped", it) }; if (p.fixed) put("step500", true); if (p.lock) put("stepLock", true)
+                        p.entryQty?.let { put("entryQty", it) }; if (p.stopByYou) put("stopByYou", true); if (p.appCancelled) put("appCancelled", true) })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -1091,6 +1114,17 @@ object OrbArms {
         else -> "stop"
     }
 
+    /**
+     * 16 Nov: the "Kept apart" note of closed rule trades [trailed] (all on the rule, none on Boss's own trail / breakeven): V4's record,
+     * the fourth version's (R186's), or - a mix - each version's count with its record (review: their records stay apart).
+     */
+    internal fun fixedNote(trailed: List<Position>): String = when {
+        trailed.all { it.lock } -> "your 16 Nov choice; ${com.optionslab.engine.orb.StepTrail.LOCK_RECORD}"
+        trailed.none { it.lock } -> "your 15 Nov choice; ${com.optionslab.engine.orb.StepTrail.RECORD}"
+        else -> "your 15 Nov choice (${trailed.count { !it.lock }}): ${com.optionslab.engine.orb.StepTrail.RECORD}; " +
+            "your 16 Nov choice (${trailed.count { it.lock }}): ${com.optionslab.engine.orb.StepTrail.LOCK_RECORD}"
+    }
+
     /** 15 Nov: [com.optionslab.engine.orb.StepTrail], by a short name (a getter: never read before this object's own start). */
     private val FIXED: com.optionslab.engine.orb.StepTrail get() = com.optionslab.engine.orb.StepTrail
 
@@ -1101,8 +1135,26 @@ object OrbArms {
      * 15 Nov: [p]'s stop-rule stop now (null: not a stop-rule Liquidity trade, or no level), on the [tick]: the breakeven
      * once its best price ([Position.peak]) was 10% up.
      */
-    private fun fixedStopOf(p: Position, tick: Double = OrbRules.TICK): Double? =
-        if (!p.fixed || !FIXED.covers(p.arm)) null else FIXED.levelOf(p.entry, lotOf(p), p.peak, tick)
+    internal fun fixedStopOf(p: Position, tick: Double = OrbRules.TICK): Double? =
+        if (!p.fixed || !FIXED.covers(p.arm)) null else FIXED.levelOf(p.entry, lotOf(p), p.peak, tick, ladderOf(p, tick))
+
+    /**
+     * 16 Nov: [p]'s quantity at the entry ([Position.entryQty]; an older trade's: what it holds plus any part sold early), for the lock's
+     * per-lot rupees: a part sale never changes where the lock starts (review).
+     */
+    private fun lockQty(p: Position): Int = (p.entryQty ?: (p.qty + p.sold)).coerceAtLeast(1)
+
+
+    /**
+     * 16 Nov: [p]'s lock levels (null: V4 alone, or not a rule trade): built once for the trade on its fill, lot and entry quantity and
+     * kept, so the full-cadence checks never redo the charge maths. Pure memory; a trade whose fill or quantity is not the ladder's (a
+     * late confirmation) gets its own. Bounded: the trades of a day.
+     */
+    private fun ladderOf(p: Position, tick: Double = OrbRules.TICK): com.optionslab.engine.orb.StepTrail.Ladder? =
+        lockOf(p)?.let { FIXED.ladder(p.entry, lotOf(p), lockQty(p), it, tick) }
+
+    /** 16 Nov: the fourth version's lock [p] entered with (Liquidity's breakeven at +₹1,000 a lot), or null: V4 alone, or not a rule trade. */
+    private fun lockOf(p: Position): com.optionslab.engine.orb.StepTrail.Lock? = if (p.fixed && p.lock) FIXED.lockFor(p.arm) else null
 
     /**
      * 15 Nov: the rule's words for the position popup (null: not a rule trade): its stop once the breakeven is earned, else where the
@@ -1111,20 +1163,24 @@ object OrbArms {
     private fun fixedWords(p: Position): String? {
         if (!p.fixed || !FIXED.covers(p.arm)) return null
         val en = java.util.Locale.ENGLISH
-        return fixedStopOf(p)?.let { FIXED.LABEL + ": stop " + "%.2f".format(en, it) }
-            ?: (FIXED.LABEL + ": breakeven from " + "%.2f".format(en, FIXED.breakevenTrigger(p.entry)))
+        val label = FIXED.labelOf(lockOf(p))
+        // 16 Nov: with the lock, the breakeven starts at +10% or at the premium that nets +₹1,000 a lot, the lower.
+        val from = listOfNotNull(FIXED.breakevenTrigger(p.entry), ladderOf(p)?.trigger(0)).minOf { it }
+        return fixedStopOf(p)?.let { label + ": stop " + "%.2f".format(en, it) }
+            ?: (label + ": breakeven from " + "%.2f".format(en, from))
     }
 
     /** 15 Nov: the reason a sale at [fixedStopOf] is booked with: "breakeven lock" once the breakeven is earned, else the entry stop's word (unused since V4: no entry stop). */
-    private fun ruleWhy(p: Position, tick: Double = OrbRules.TICK): String =
-        if (FIXED.trailLevel(p.entry, lotOf(p), p.peak, tick) != null) FIXED.WHY_TRAIL else FIXED.WHY_STOP
+    internal fun ruleWhy(p: Position, tick: Double = OrbRules.TICK): String =
+        if (FIXED.trailLevel(p.entry, lotOf(p), p.peak, tick, ladderOf(p, tick)) != null) FIXED.WHY_TRAIL else FIXED.WHY_STOP
 
     /** 15 Nov: whether the price now [ltp] is at or under [p]'s stop-rule stop while its stop (resting or watched) is lower. */
-    private fun fixedBelow(p: Position, ltp: Double, tick: Double = OrbRules.TICK): Boolean =
+    internal fun fixedBelow(p: Position, ltp: Double, tick: Double = OrbRules.TICK): Boolean =
         fixedStopOf(p, tick)?.let { fs -> fs > (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 && FIXED.stopHit(ltp, fs) } == true
 
     /** 15 Nov: what [p]'s resting stop is under the stop rule - "₹500 stop" (older records), "breakeven lock" - or null (its own, or not a rule trade). */
-    private fun fixedWhy(p: Position): String? = if (!p.fixed || !FIXED.covers(p.arm)) null else FIXED.whyAt(p.stopTrigger, p.entry, lotOf(p))
+    internal fun fixedWhy(p: Position): String? = if (!p.fixed || !FIXED.covers(p.arm)) null
+        else FIXED.whyAt(p.stopTrigger, p.entry, lotOf(p), ladder = ladderOf(p), best = p.peak)
 
     /**
      * 15 Nov: the first stop of a Liquidity entry filled at [fill] on a contract of [lot] - its own [own] (-15%); with the rule ([fixed]) the tighter of that
@@ -1430,7 +1486,8 @@ object OrbArms {
         val ownLabel = trailed.mapNotNull { it.ownExitsLabel }.distinct().let { l -> l.singleOrNull() ?: if (l.isEmpty()) "on your own exit rules" else "on your own exit rules (${l.joinToString("; ")})" }
         val ownNote = when {
             ownLabel == LiquidityTrail.TRAILED -> LiquidityTrail.NOTE
-            trailed.all { it.fixed && !it.ownRules } -> "your 15 Nov choice; ${com.optionslab.engine.orb.StepTrail.RECORD}"
+            // 16 Nov: the fourth version's trades (breakeven at +₹1,000 too) with R186's record.
+            trailed.all { it.fixed && !it.ownRules } -> fixedNote(trailed)
             trailed.none { it.fixed } -> LiquidityBreakeven.NOTE
             else -> "your own choices, kept apart from the plain rules"
         }
@@ -2346,7 +2403,12 @@ object OrbArms {
             // The highest price since the entry (F2): every stream tick, else the 1-minute candles' highs - laddered arms and
             // Boss's paper give-back trail only.
             // (15 Nov review: a breakeven rule trade alone reads no candles here - its breakeven follows the best price seen ([heldRange]).)
-            val highs = if (ladderTarget(cur) != null || cur.trail != null || cur.be != null) bestSince(cur, c, t, mayRead = regular) else Highs(null, null)
+            // 16 Nov (review): a breakeven rule trade reads them too (the shared [bestSince] / [Paper.highSince]: ticks, else the candles
+            // after the entry minute), so a spike between two looks still earns its breakeven or lock, as the research's minute highs.
+            val highs0 = if (ladderTarget(cur) != null || cur.trail != null || cur.be != null) bestSince(cur, c, t, mayRead = regular) else Highs(null, null)
+            // (Review: a rule trade's highs read in the background ([RuleHighs]), never on the look itself; the look takes the last found.)
+            val ruleHi = if (cur.fixed) { if (regular) RuleHighs.ask("paper:${managerId(cur)}", c, cur.entryTime); RuleHighs.peek("paper:${managerId(cur)}") } else null
+            val highs = if (ruleHi == null) highs0 else highs0.copy(lock = listOfNotNull(highs0.lock, ruleHi).maxOrNull())
             val (laddered, locked) = ladder(cur, ltp, highs.lock)
             // The trail's give-back from the best price BEFORE this look (a new best counts from the next look, as the ladder).
             val trailHit = LiquidityTrail.exits(cur.entry, cur.peak ?: cur.entry, ltp, cur.lot, cur.trail, cur.trailFrom)
@@ -3059,8 +3121,10 @@ object OrbArms {
         // order goes exactly as before and the would-skip is logged; on, it is not sent (kept as a would-be entry).
         FundsCheck.check(arm.label, sym, lots.coerceAtLeast(1), last * ins.lotSize, Broker.keptFreeCash(), last)?.let { return it }
         val known = knownKite(b)
-        // 15 Nov (Boss's exception): a Liquidity live entry enters with the breakeven rule while the switch is on (memory only).
+        // 15 Nov (Boss's exception): a Liquidity live entry enters with the breakeven rule while the switch is on (memory only); 16 Nov:
+        // a new one with the fourth version's breakeven at +₹1,000 a lot too ([Position.lock]).
         val fixed = liquidity != null && StepTrailExits.forEntry(arm.source)
+        val lockNew = fixed && StepTrailExits.lockOn()
         val armKey = if (liquidity != null) FlowShadow.liquidityKey(c.underlying) else arm.source
         // 22 Oct: the checks above cleared THIS order: stamped with its fingerprint (and the stop it rests), recomputed at the door.
         val liveStop = if (liquidity == null) OrbRules.stopTrigger(last, lp.stopPoints) else LiquidityRules.stopTrigger(last, lq.stopPct)
@@ -3095,7 +3159,7 @@ object OrbArms {
             // Zerodha has not said how it ended: held as unconfirmed (so the arm buys nothing more) until the books settle it.
             b.positions += stamped(Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, id, null, null,
                 live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ladderOn(arm, today0, true),
-                near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed))
+                near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew))
             runCatching { save(b) }
             com.optionslab.app.work.Alerts.error("${arm.label}: Zerodha did not confirm the buy of $sym. It is treated as held (no stop yet) " +
                 "until the order book shows what filled.", "ORB live")
@@ -3113,7 +3177,7 @@ object OrbArms {
         b.positions += stamped(Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
             ladder = ladderOn(arm, today0, true), near = near, volSkip = volSkip, strong = strong,
-            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed))
+            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew, entryQty = f.filled))
         // 22 Oct: the time machine's reality check on the live entry too (shadow only; background).
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, arm.label, "orb:${arm.source}:$id", c.underlying, if (c.right == Right.CE) 1 else -1,
             signalBar.plusMinutes(5), if (liquidity == null) lp.stopPoints else LiquidityRules.indexStopPoints(c.underlying),
@@ -3168,7 +3232,7 @@ object OrbArms {
                 points = pts0, pct = pct0).let { (a, b, _) -> a to b }
             else null to (if (liq) firstStop(LiquidityRules.stopTrigger(fill, pct0), fill, lotOf(p), p.fixed) else OrbRules.stopTrigger(fill, pts0))
         return p.copy(qty = st.filled, entry = fill, entryOrderId = oid, stopOrderId = stopId, stopTrigger = trigger,
-            charges = kiteCharge("BUY", fill, st.filled), unconfirmed = false)
+            charges = kiteCharge("BUY", fill, st.filled), unconfirmed = false, entryQty = st.filled)
     }
 
     /** Stop, target, 15:10 and the operator stop for positions held at Zerodha. */
@@ -3202,10 +3266,31 @@ object OrbArms {
             // A stop taken out at Zerodha (refused, or cancelled by hand or by Zerodha) leaves the position without one: say so.
             // 22 Oct (arms audit): not when the app's own 15:05 expiry square-off took it out to sell the position (it cancels an
             // arm's stop first): that is no stop lost, and the square-off sells it.
-            if (so != null && so.status in setOf("REJECTED", "CANCELLED") && !expiryClosing(p.symbol, sym, t, orders.values)) com.optionslab.app.work.Alerts.error(
-                "${armOf(p.arm).label}: the stop at Zerodha was ${so.status.lowercase()} (${so.message.ifBlank { "no reason given" }}). " +
-                    "The app now watches " + (p.stopTrigger?.let { "the stop at %.2f".format(Locale.ENGLISH, it) } ?: "the stop") + " itself.", "ORB live")
-            val cur = if (so != null && (so.status == "CANCELLED" || so.status == "REJECTED")) p.copy(stopOrderId = null).also { b.positions[i] = it } else p
+            // 16 Nov (review, Boss: "All the stops and profit locks should be on zerodha"): told apart by Zerodha's own words
+            // ([com.optionslab.ira.ManualCoverRule.endedByExchange]) - ended by the exchange, its risk system or a rejection: a Liquidity
+            // stop is placed again at Zerodha ([restExchangeStop]); cancelled by Boss (in Kite): respected, never put back by itself, and
+            // the app watches the level itself. Each said as it is.
+            val ended = so != null && so.status in setOf("REJECTED", "CANCELLED")
+            // (Review: a cancel the app made itself - an exit taking its stop out first - is never taken as Boss's.)
+            // (Also any other of the app's own takers: a square-off's sale on the contract, Stop for today - never Boss's.)
+            val appsOwn = ended && (ownCancel(so!!.id) || p.appCancelled || stopped ||
+                orders.values.any { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS })
+            val byExchange = ended && (com.optionslab.ira.ManualCoverRule.endedByExchange(so!!.status, so.message) || appsOwn)
+            val liqArm = armOf(p.arm).liquidity
+            val level = p.stopTrigger?.let { "the stop at %.2f".format(Locale.ENGLISH, it) } ?: "the stop"
+            if (ended && !expiryClosing(p.symbol, sym, t, orders.values) && !appsOwn) com.optionslab.app.work.Alerts.error(
+                "${armOf(p.arm).label}: the stop at Zerodha was ${so!!.status.lowercase()} (${so.message.ifBlank { "no reason given" }}). " + when {
+                    liqArm && !byExchange -> "It looks cancelled by you (in Kite), so the app does not put it back: it watches $level " +
+                        "itself and sells there. Set a stop at Zerodha yourself if you want one there."
+                    liqArm -> "The app watches $level itself and places it again at Zerodha on its next check while the price allows it to rest " +
+                        "there (not with Stop for today, at the square-off, or while you are exiting it by hand: those sell it)."
+                    else -> "The app now watches $level itself."
+                }, "ORB live")
+            // (Liquidity 15+5 only: every other arm keeps its "Keep a stop at the exchange" behaviour as before.)
+            // (Review: the app's own-cancel mark lasts only until Zerodha shows that stop again working - then a later cancel is Boss's to make.)
+            val cur = if (ended) p.copy(stopOrderId = null, appCancelled = false,
+                stopByYou = p.stopByYou || (!byExchange && armOf(p.arm).liquidity)).also { b.positions[i] = it }
+                else if (p.appCancelled && so != null && so.working) p.copy(appCancelled = false).also { b.positions[i] = it } else p
             val held = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
             val ltp = q["NFO:$sym"]?.last?.takeIf { it > 0 }
             ltp?.let { mark(p.symbol, it, t) }
@@ -3214,7 +3299,7 @@ object OrbArms {
                 // Its stop must be confirmed out first: left resting, it would sell into a short.
                 val sid = cur.stopOrderId
                 if (sid != null) {
-                    runCatching { Broker.cancel(sid) }
+                    cancelOwnStop(sid)
                     if (runCatching { Broker.orderState(sid)?.status }.getOrNull() !in DONE) continue
                 }
                 // 22 Oct (arms audit): the app's expiry square-off ("iraalgoexpiry") sold it: said so, never "closed by you".
@@ -3235,10 +3320,18 @@ object OrbArms {
             }
             // The price ran through the stop's limit without it filling: sell at market instead.
             val tick = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(0.05)
-            // "Keep a stop-loss order at the exchange" (Settings → Zerodha, off unless chosen): a position whose stop is not
-            // resting at Zerodha (it could not be placed, or was refused or cancelled) gets it placed again at the arm's own
-            // level on the regular pass - never on a fast look, at most once a minute - while the price is still above it.
-            if (regular && cur.stopOrderId == null && held > 0) {
+            // "Keep a stop-loss order at the exchange" (Settings → Zerodha, off unless chosen; 16 Nov: always for Liquidity 15+5, Boss's
+            // "All the stops and profit locks should be on zerodha"): a position whose stop is not resting at Zerodha (it could not be
+            // placed, or was refused or cancelled) gets it placed again at the highest level it may rest at on the regular pass - never
+            // on a fast look, at most once a minute - while the price is still above it.
+            // (Review: never at or after the square-off or with Boss's Stop for today - those sell on this pass - and never beside another
+            // sell working on the contract, a square-off's MARKET sale on its way: never two exits.)
+            // (Review: held back only by this position's own exits - the 15:05 expiry square-off ([expiryClosing]), a working square-off
+            // order ([SquareOffExit.TAGS]) or its own arm's exit sale still working ([ownSaleWorking]); another book's or Boss's resting
+            // order never holds this position's stop back. Never a stop Boss cancelled themselves ([Position.stopByYou]).)
+            if (regular && cur.stopOrderId == null && held > 0 && !stopped && !cur.stopByYou && t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) &&
+                !expiryClosing(cur.symbol, sym, t, orders.values) &&
+                orders.values.none { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } && !ownSaleWorking(cur, sym, orders.values)) {
                 val rested = runCatching { restExchangeStop(b, cur, sym, held, ltp, tick) }.getOrNull()
                 if (rested != null) { b.positions[i] = rested; continue }
             }
@@ -3252,7 +3345,14 @@ object OrbArms {
                 ?.let { ProfitLock.onTick(it, tick) }
             val lockResting = lockNow != null && cur.stopOrderId != null && (cur.stopTrigger ?: Double.NEGATIVE_INFINITY) >= lockNow - 1e-9
             val (laddered, locked) = ladder(cur, ltp, high)
-            val seen = heldRange(laddered, ltp)
+            // 16 Nov (review): a live Liquidity rule trade's best price also takes the option's highs after its entry minute (the shared
+            // [bestSince]: the stream's kept ticks, else the candles - those only on the regular pass), as the R51 / R72 live copies do.
+            // (Review: never a read on the look itself: [RuleHighs] reads in the background, one at a time, and the look takes its last high.)
+            val ruleHigh = if (cur.fixed) {
+                if (regular) runCatching { Paper.contractOf(cur.symbol) }.getOrNull()?.let { pc -> RuleHighs.ask("orb:${managerId(cur)}", pc, cur.entryTime) }
+                RuleHighs.peek("orb:${managerId(cur)}")
+            } else null
+            val seen = heldRange(laddered, ltp).let { s0 -> ruleHigh?.takeIf { it > (s0.peak ?: s0.entry) }?.let { s0.copy(peak = it) } ?: s0 }
             if (seen !== cur) b.positions[i] = seen
             val why = when {
                 stopped -> "operator_stop"
@@ -3302,6 +3402,40 @@ object OrbArms {
         return out
     }
 
+    /**
+     * 16 Nov (review): whether a SALE that could sell [p]'s units is still working on [sym] (its own arm's sale whose reply was lost or
+     * not finished yet, or Boss's own sale in Kite): a sale (not a resting stop) labelled with [p]'s arm, or with no label kept (not
+     * known: the careful side). Another book's labelled sale, and any resting stop, never hold it back. Reads the order labels (a
+     * regular pass only).
+     */
+    private suspend fun ownSaleWorking(p: Position, sym: String, orders: Collection<Broker.OrderRow>): Boolean {
+        // (Review: any working SALE on the contract - not a resting stop - whose label is not another arm's: this arm's own, or one with
+        // no label kept, Boss's own sale in Kite included: a stop never goes in beside a sale that could sell the same units.)
+        // (And a resting stop of the arms' own ("iraorb") with no other book's label: this position's own stop whose reply was lost.)
+        val sales = orders.filter { it.symbol == sym && it.working && it.side == "SELL" && it.id != p.stopOrderId &&
+            ((it.type != "SL" && it.type != "SL-M") || it.tag == "iraorb") }
+        if (sales.isEmpty()) return false
+        val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
+        val label = armOf(p.arm).label
+        return sales.any { o -> owners["kite:${o.id}"]?.substringBefore(" · ")?.let { it == label } ?: true }
+    }
+
+    /**
+     * 16 Nov (review): the stop orders this process cancelled itself (an exit taking its stop out first, a gone position's stop): a
+     * cancel of one of these is the app's, never taken as Boss's ([Position.stopByYou]). Memory only, bounded.
+     */
+    private val ownCancels: MutableSet<String> = java.util.Collections.newSetFromMap(object : java.util.LinkedHashMap<String, Boolean>() {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?): Boolean = size > 500   // the oldest first
+    })
+
+    private fun ownCancel(id: String): Boolean = synchronized(ownCancels) { id in ownCancels }
+
+    /** Cancels the stop [id] as the app's own ([ownCancels]). */
+    private suspend fun cancelOwnStop(id: String) {
+        synchronized(ownCancels) { ownCancels += id }
+        runCatching { Broker.cancel(id) }
+    }
+
     /** When each position's exchange stop was last placed again ([restExchangeStop]): at most once a minute each. */
     private val restoppedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
@@ -3312,7 +3446,9 @@ object OrbArms {
      * Null when nothing was placed (the setting off, too soon, no level, or Zerodha refused: the app keeps watching it).
      */
     private suspend fun restExchangeStop(b: Book, p: Position, sym: String, held: Int, ltp: Double, tick: Double): Position? {
-        if (!runCatching { AppSettings.load().exchangeStops }.getOrDefault(false)) return null
+        // 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): a Liquidity 15+5 trade's stop - its -15%, the breakeven,
+        // the breakeven at +₹1,000, its lock - is always put back at Zerodha, the setting or not; every other arm as the setting says.
+        if (!armOf(p.arm).liquidity && !runCatching { AppSettings.load().exchangeStops }.getOrDefault(false)) return null
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no new stop beside his sale (asked again next look).
         if (ArmLive.handsOffNow("NFO", sym)) return null
         val key = "${p.arm}|$sym|${p.entryTime}"
@@ -3389,7 +3525,7 @@ object OrbArms {
         p.stopOrderId?.let { id ->
             // The resting exchange stop comes out FIRST (timed for the order speed card); one that already filled is the exit.
             val c0 = System.currentTimeMillis()
-            runCatching { Broker.cancel(id) }
+            cancelOwnStop(id)
             val st = runCatching { Broker.orderState(id) }.getOrNull()
             runCatching { OrderTiming.stopCancel(System.currentTimeMillis() - c0) }
             if (st?.status == "COMPLETE") {
@@ -3398,7 +3534,8 @@ object OrbArms {
                     charges = p.charges + kiteCharge("SELL", px, p.qty)) to null
             }
             // Only sell once the stop is known to be out: a stop still working plus a market sell could both fill.
-            if (st == null || st.status !in setOf("CANCELLED", "REJECTED")) return p to null
+            // (16 Nov review: marked as the app's own cancel, so the next look - after a restart too - never takes it as Boss's.)
+            if (st == null || st.status !in setOf("CANCELLED", "REJECTED")) return p.copy(appCancelled = true) to null
         }
         // What is held and what is already on its way out, read again after the stop came out. Only this position's own
         // orders are ever cancelled here: another sell resting on the symbol (the other arm's stop, a protection, the
@@ -3871,7 +4008,7 @@ object OrbArms {
             trail = trail, trailFrom = LiquidityTrail.forEntryFrom(trail),
             // 22 Oct: Boss's own breakeven at +10% (R100 A4 did not pass: their opt-in switch, off by default): paper entries only.
             be = LiquidityBreakeven.forEntry(arm, live = false, switchOn = runCatching { LiquidityTest.breakevenOn() }.getOrDefault(false)),
-            priceRetry = price.retried || entry.retried, capped = cap, fixed = fixed))
+            priceRetry = price.retried || entry.retried, capped = cap, fixed = fixed, lock = fixed && StepTrailExits.lockOn(), entryQty = fill.quantity))
         marks[c.symbol] = fill.price
         // 22 Oct: the time machine's reality check (shadow only; background): the index stop and the level-to-target distance in index points.
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, LiquidityRules.ARM.label, "orb:${arm.source}:${buy.orderId ?: now()}", c.underlying,
@@ -4798,6 +4935,7 @@ object OrbArms {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
         cache = null; writtenText = null; writtenStat = null
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
+        synchronized(ownCancels) { ownCancels.clear() }
     }
 
     /**
@@ -4807,6 +4945,7 @@ object OrbArms {
      * set-aside copies of the file. Never reads the vault; safe before [init].
      */
     @Synchronized fun wipe() {
+        synchronized(ownCancels) { ownCancels.clear() }
         wipeGen++
         cache = null; restoppedAt.clear(); writtenText = null; writtenStat = null
         forgetHints()
