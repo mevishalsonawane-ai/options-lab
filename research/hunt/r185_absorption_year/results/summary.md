@@ -8,6 +8,8 @@ Signal: the index's own 1-minute price with the ATM-2..+2 options' volume as BVC
 | Exhaustion NIFTY | EXH X30 k3 b6 flip+close T15 | no (fallback) | 888 | 38% | Rs -30,656 (Rs -45,644) | Rs -34 | Rs -90 | 0.022 | 1.00 | Rs -7,207 | Rs 36,009 | no evidence (nothing passed the selection) |
 | Absorption BANKNIFTY | ABS w3 k2 b6 turn T15 | no (fallback) | 203 | 46% | Rs -21,339 (Rs -25,407) | Rs -105 | Rs -129 | 0.348 | 1.00 | Rs -9,840 | Rs 24,038 | no evidence (nothing passed the selection) |
 | Exhaustion BANKNIFTY | EXH X15 k2 b3 flip+close T15 | no (fallback) | 980 | 36% | Rs -100,340 (Rs -129,055) | Rs -102 | Rs -148 | 0.058 | 1.00 | Rs -23,061 | Rs 103,412 | no evidence (nothing passed the selection) |
+| Absorption FINNIFTY | ABS w5 k2 b6 turn T30 | yes | 205 | 41% | Rs 20,097 (Rs 13,329) | Rs 98 | Rs -58 | 0.037 | 1.00 | Rs -7,854 | Rs 12,691 | worth a forward test |
+| Exhaustion FINNIFTY | EXH X15 k3 b3 flip T30 | no (fallback) | 819 | 31% | Rs -45,338 (Rs -76,887) | Rs -55 | Rs -78 | 0.336 | 1.00 | Rs -20,832 | Rs 60,113 | no evidence (nothing passed the selection) |
 
-- Indices not read yet: FINNIFTY, MIDCPNIFTY, SENSEX (same frozen rules; their tests count in m = 4,852 either way).
+- Indices not read yet: MIDCPNIFTY, SENSEX (same frozen rules; their tests count in m = 4,852 either way).
 - Nothing in the app changes. Full write-up: `results/report.md`.

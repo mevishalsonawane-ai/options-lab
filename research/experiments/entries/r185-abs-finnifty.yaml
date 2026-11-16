@@ -1,0 +1,42 @@
+id: r185-abs-finnifty
+title: R185 absorption on FINNIFTY over a year (BVC flow from the index price and ATM option volume)
+family: flow-oi
+date: '2026-11-16'
+doc: research/hunt/r185_absorption_year/results/report.md
+hypothesis: R184's absorption rule, on flow estimated by bulk volume classification from the index's 1-minute price and the
+  near-ATM options' volume, picks entries whose ATM option trades beat random entries at the same minutes and beat doing nothing,
+  after real charges.
+data_version: 'data lake (Dhan v2, gdrive:IraAlgo-data-lake): index 1-minute and rolling WEEK options ATM-10..+10 to 19 Oct
+  2026, plus the 20 Oct - 13 Nov 2026 gap fetched from Dhan on 16 Nov 2026 (gdrive:IraAlgo-data-lake/dhan/); outside git'
+period:
+  design: '2024-11-20..2025-10-19 (halves H1 to 30 Apr 2025, H2 from 1 May; 32 variants, 1 eligible; chosen ABS w5 k2 b6 turn
+    T30: 118 trades, Rs 17,629; passed the selection)'
+  holdout: 2025-10-20..2026-10-19 (read once after results/FINAL_READ_FINNIFTY)
+instruments:
+- FINNIFTY
+features:
+- 'signal source: the FINNIFTY index''s own 1-minute price (underlying); each minute''s buy / sell split by BVC (Phi of the
+  price change over the day''s earlier sigma) sized by the summed volume of the ATM-2..+2 calls and puts - option-volume context
+  (OVC); no futures volume history and no second-level history exist at Dhan; option prices only price the trade'
+- 'absorption (R184''s rule on BVC flow): heavy estimated selling over w minutes (sum of D <= -k x the day''s mean |w-minute
+  sum| so far) while the window''s low stays within beta bp of the close before it -> buy the ATM CALL (mirror -> PUT); ''turn''
+  = the next minute closes in the trade''s direction'
+model_or_rule: 'ABS w5 k2 b6 turn T30: absorption (R184''s rule on BVC flow): heavy estimated selling over w minutes (sum
+  of D <= -k x the day''s mean |w-minute sum| so far) while the window''s low stays within beta bp of the close before it
+  -> buy the ATM CALL (mirror -> PUT); ''turn'' = the next minute closes in the trade''s direction. Exits: -15% premium stop,
+  breakeven (fill + charges) from the minute after +10%, index stop beyond the extreme by beta bp, time stop T minutes, 15:14
+  (15:04 expiry). 1 lot (lot schedule by date).'
+settings: research/hunt/r185_absorption_year/PREREG.md sections 2-6; r185lib.py
+prereg: research/hunt/r185_absorption_year/PREREG.md
+variants_tried: 32
+results:
+  summary: 'Final year 205 trades, win 41%, Rs 20,097 (2x slippage Rs 13,329), mean Rs 98 a trade; worst month Rs -7,854,
+    max drawdown Rs 12,691. Random twins mean Rs -58: p 0.037, BH q 1.00; mean > 0 p 0.082, q 1.00 (m 4,852). Pre-registered
+    verdict: worth a forward test.'
+  costs: Costs('dated') both sides (BSE charges for SENSEX); Fills('liq') slippage by the contract's minute volume; 2x slippage
+    sensitivity; no historical bid / ask
+holdout_read: true
+verdict: inconclusive
+notes: 'BVC infers the side from price, so it cannot see true absorption (volume that fails to move price); this tests R184''s
+  definitions on estimated flow. BH m = 4,852 (4,512 after R184 + 320 variants + 20 tests). Gate fails: BH q twins 1.00 /
+  zero 1.00 > 0.10. Nothing in the app changes.'

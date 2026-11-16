@@ -6,7 +6,7 @@
 
 **Trade:** 1 lot of the ATM option (nearest expiry: weekly for NIFTY / SENSEX; for BANKNIFTY, FINNIFTY and MIDCPNIFTY the nearest is the monthly since Nov 2024), bought at the open of the minute after the signal; -15% premium stop, breakeven (fill + charges) from the minute after +10%, index stop beyond the extreme, 15 / 30-minute time stop, 15:14 (15:04 on expiry). Real dated charges, liquidity slippage (2x shown).
 
-**Indices read:** NIFTY, BANKNIFTY (order fixed: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX). BH m = 4,852 (4,512 after R184 + 320 variants + 20 tests), q ranked over the 8 tests read so far.
+**Indices read:** NIFTY, BANKNIFTY, FINNIFTY (order fixed: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX). BH m = 4,852 (4,512 after R184 + 320 variants + 20 tests), q ranked over the 12 tests read so far.
 
 ## Lots (Amendment A)
 
@@ -343,12 +343,48 @@ Read at 2026-11-16T03:42:08.703549+00:00 after `FINAL_READ_BANKNIFTY` (2026-11-1
 | EXH X30 k2 b6 flip+close T15 | 879 | Rs -138,322 | 420 / Rs -56,123 / Rs -134 / Rs -116 | 459 / Rs -82,199 / Rs -179 / Rs -126 |  |
 | EXH X30 k2 b6 flip T15 | 887 | Rs -146,159 | 423 / Rs -56,210 / Rs -133 / Rs -118 | 464 / Rs -89,949 / Rs -194 / Rs -126 |  |
 
-Final not read yet.
+### Final year (20 Oct 2025 - 19 Oct 2026, read once)
+
+Read at 2026-11-16T03:44:46.213348+00:00 after `FINAL_READ_FINNIFTY` (2026-11-16T03:43:25Z); 246 days.
+
+**Absorption `ABS w5 k2 b6 turn T30`** - verdict: **worth a forward test**
+
+- Year: 205 trades on 119 days (379 signals; unpriced {'no_strike': 3, 'no_price': 3}), win 41%, Rs 20,097 (2x slippage Rs 13,329), mean Rs 98 a trade (avg win Rs 1,030, avg loss Rs -562), worst day Rs -2,622, worst month Rs -7,854 (2026-03), max drawdown Rs 12,691.
+- Random twins (1,000 sets, same minute / side / stop distance on other days): mean Rs -58 a trade (10-90%: Rs -161 to Rs 49); p 0.037, BH q 1.00. Mean > 0 (day bootstrap): p 0.082, q 1.00.
+- Smallest edge detectable (80% power): Rs 181 a trade at 5%, Rs 359 at the BH level.
+- By side: calls 82 (Rs 6,868), puts 123 (Rs 13,229). By exit: breakeven 8 (Rs -2,125), index_stop 67 (Rs -49,841), prem_stop 5 (Rs -2,041), time 125 (Rs 74,103).
+- Gates: failed - BH q twins 1.00 / zero 1.00 > 0.10.
+
+| period | trades | win | net | net 2x | mean | twins mean | worst month | max DD |
+|---|---|---|---|---|---|---|---|---|
+| early (20 Oct 2025 - 31 Mar 2026) | 106 | 39% | Rs 6,033 | Rs 2,695 | Rs 57 | Rs -50 | Rs -7,854 | Rs 9,657 |
+| final (1 Apr - 19 Oct 2026) | 99 | 44% | Rs 14,064 | Rs 10,633 | Rs 142 | Rs -68 | Rs -3,450 | Rs 4,984 |
+| last 6 months (20 Apr - 19 Oct 2026) | 98 | 44% | Rs 13,699 | Rs 10,306 | Rs 140 | Rs -67 | Rs -3,450 | Rs 4,984 |
+| year (20 Oct 2025 - 19 Oct 2026) | 205 | 41% | Rs 20,097 | Rs 13,329 | Rs 98 | Rs -58 | Rs -7,854 | Rs 12,691 |
+
+- Recent weeks (20 Oct - 13 Nov 2026, 17 days, descriptive): 7 trades, win 43%, Rs 1,596.
+
+**Exhaustion `EXH X15 k3 b3 flip T30`** - verdict: **no evidence (nothing passed the selection)**
+
+- Year: 819 trades on 238 days (1301 signals; unpriced {'no_price': 15, 'no_strike': 14}), win 31%, Rs -45,338 (2x slippage Rs -76,887), mean Rs -55 a trade (avg win Rs 1,106, avg loss Rs -583), worst day Rs -7,515, worst month Rs -20,832 (2026-01), max drawdown Rs 60,113.
+- Random twins (1,000 sets, same minute / side / stop distance on other days): mean Rs -78 a trade (10-90%: Rs -130 to Rs -21); p 0.336, BH q 1.00. Mean > 0 (day bootstrap): p 0.921, q 1.00.
+- Smallest edge detectable (80% power): Rs 99 a trade at 5%, Rs 196 at the BH level.
+- By side: calls 437 (Rs -31,777), puts 382 (Rs -13,561). By exit: breakeven 42 (Rs -2,976), index_stop 475 (Rs -272,946), prem_stop 12 (Rs -16,827), time 290 (Rs 247,412).
+- Gates: failed - nothing passed the selection; not positive in every period (or the year at 2x slippage); not above the twins in early, final and the year; BH q twins 1.00 / zero 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year.
+
+| period | trades | win | net | net 2x | mean | twins mean | worst month | max DD |
+|---|---|---|---|---|---|---|---|---|
+| early (20 Oct 2025 - 31 Mar 2026) | 368 | 32% | Rs -34,456 | Rs -47,501 | Rs -94 | Rs -82 | Rs -20,832 | Rs 43,844 |
+| final (1 Apr - 19 Oct 2026) | 451 | 31% | Rs -10,882 | Rs -29,386 | Rs -24 | Rs -78 | Rs -14,005 | Rs 35,288 |
+| last 6 months (20 Apr - 19 Oct 2026) | 430 | 31% | Rs -11,058 | Rs -28,374 | Rs -26 | Rs -79 | Rs -14,005 | Rs 35,288 |
+| year (20 Oct 2025 - 19 Oct 2026) | 819 | 31% | Rs -45,338 | Rs -76,887 | Rs -55 | Rs -80 | Rs -20,832 | Rs 60,113 |
+
+- Recent weeks (20 Oct - 13 Nov 2026, 17 days, descriptive): 56 trades, win 30%, Rs 12,340.
 
 ## What this does not show
 
 - True absorption (aggressive volume that fails to move price) needs real buy / sell volume; Dhan has neither futures minute volume for past years nor any second-level history. The phone's own recorder (R182 / R184) is the only source of tick-rule flow and covers weeks, not a year.
 - One lot, one index at a time; no portfolio of indices.
 
-- Indices not read yet: FINNIFTY, MIDCPNIFTY, SENSEX (same frozen rules; their tests count in m = 4,852 either way).
+- Indices not read yet: MIDCPNIFTY, SENSEX (same frozen rules; their tests count in m = 4,852 either way).
 - Nothing in the app changes. Full write-up: `results/report.md`.

@@ -1969,5 +1969,11 @@ recordings (72,623 minutes, median gap Rs 0.30).
 - **BANKNIFTY: no version passed the selection either** (true lot by day, Amendment A). Final year, fallback versions:
   **absorption 203 trades, 46% won, Rs -21,339** (Rs -105 a trade vs random Rs -129, p 0.35); **exhaustion 980 trades,
   36% won, Rs -1,00,340** (Rs -102 a trade vs random Rs -148, p 0.058; worst month Rs -23,061, drawdown Rs 1.03 L); q 1.0.
-- Estimated flow from price cannot see true absorption (volume that fails to move price). FINNIFTY, MIDCPNIFTY and
-  SENSEX follow under the same frozen rules.
+- **FINNIFTY: absorption passed the selection** (ABS w5 k2 b6 turn T30: 118 trades, Rs 17,629, twin p 0.003) and in the
+  final year made **Rs 20,097 on 205 trades, 41% won** (Rs 98 a trade vs random entries' Rs -58, twin p 0.037; Rs 13,329
+  at 2x slippage; worst month Rs -7,854, drawdown Rs 12.7k) - but **BH q 1.0** across m = 4,852 and the mean is not
+  clearly above zero (p 0.08): inconclusive, worth a forward test only. FINNIFTY exhaustion: nothing passed; final year
+  819 trades, 31% won, Rs -45,338 (q 1.0), rejected. (FINNIFTY options were not recorded by the phone, so Dhan's
+  FINNIFTY bars could not be cross-checked.)
+- Estimated flow from price cannot see true absorption (volume that fails to move price). MIDCPNIFTY and SENSEX follow
+  under the same frozen rules.
