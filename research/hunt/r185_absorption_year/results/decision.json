@@ -51,14 +51,67 @@
    "BH q twins 1.00 / zero 1.00 > 0.10"
   ]
  },
+ "ABS BANKNIFTY": {
+  "vid": "ABS w3 k2 b6 turn T15",
+  "passed_selection": false,
+  "verdict": "no evidence (nothing passed the selection)",
+  "n": 203,
+  "win": 0.4631,
+  "net": -21339.0,
+  "net2": -25407.0,
+  "mean": -105.1,
+  "twin_mean": -129.3,
+  "p_twin": 0.3477,
+  "q_twin": 1.0,
+  "p_zero": 0.9925,
+  "q_zero": 1.0,
+  "worst_month": {
+   "month": "2025-12",
+   "net": -9840.0
+  },
+  "max_dd": 24038.0,
+  "gate_fails": [
+   "nothing passed the selection",
+   "not positive in every period (or the year at 2x slippage)",
+   "not above the twins in early, final and the year",
+   "BH q twins 1.00 / zero 1.00 > 0.10"
+  ]
+ },
+ "EXH BANKNIFTY": {
+  "vid": "EXH X15 k2 b3 flip+close T15",
+  "passed_selection": false,
+  "verdict": "no evidence (nothing passed the selection)",
+  "n": 980,
+  "win": 0.3643,
+  "net": -100340.0,
+  "net2": -129055.0,
+  "mean": -102.4,
+  "twin_mean": -148.0,
+  "p_twin": 0.0579,
+  "q_twin": 1.0,
+  "p_zero": 0.9997,
+  "q_zero": 1.0,
+  "worst_month": {
+   "month": "2025-12",
+   "net": -23061.0
+  },
+  "max_dd": 103412.0,
+  "gate_fails": [
+   "nothing passed the selection",
+   "not positive in every period (or the year at 2x slippage)",
+   "BH q twins 1.00 / zero 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year"
+  ]
+ },
  "_m": {
   "prior": 4512,
   "variants": 320,
   "tests": 20,
   "total": 4852,
-  "tests_read": 4,
+  "tests_read": 8,
   "indices_read": [
-   "NIFTY"
+   "NIFTY",
+   "BANKNIFTY"
   ]
  },
  "_tests": [
@@ -66,25 +119,49 @@
    "id": "ABS NIFTY T1 twins",
    "p": 0.5445,
    "q_all": 1.0,
-   "q_within": 0.9959
+   "q_within": 0.9997
   },
   {
    "id": "ABS NIFTY T2 zero",
    "p": 0.9959,
    "q_all": 1.0,
-   "q_within": 0.9959
+   "q_within": 0.9997
   },
   {
    "id": "EXH NIFTY T1 twins",
    "p": 0.022,
    "q_all": 1.0,
-   "q_within": 0.088
+   "q_within": 0.176
   },
   {
    "id": "EXH NIFTY T2 zero",
    "p": 0.9199,
    "q_all": 1.0,
-   "q_within": 0.9959
+   "q_within": 0.9997
+  },
+  {
+   "id": "ABS BANKNIFTY T1 twins",
+   "p": 0.3477,
+   "q_all": 1.0,
+   "q_within": 0.9272
+  },
+  {
+   "id": "ABS BANKNIFTY T2 zero",
+   "p": 0.9925,
+   "q_all": 1.0,
+   "q_within": 0.9997
+  },
+  {
+   "id": "EXH BANKNIFTY T1 twins",
+   "p": 0.0579,
+   "q_all": 1.0,
+   "q_within": 0.2316
+  },
+  {
+   "id": "EXH BANKNIFTY T2 zero",
+   "p": 0.9997,
+   "q_all": 1.0,
+   "q_within": 0.9997
   }
  ]
 }
