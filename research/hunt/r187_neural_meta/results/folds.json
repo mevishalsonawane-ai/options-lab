@@ -1,0 +1,372 @@
+{
+ "F1": {
+  "n_train_trades": 4337,
+  "n_inner": 2557,
+  "n_val": 1780,
+  "n_rows": 32673,
+  "clf_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.001,
+   "losses": {
+    "(64, 32, 16)|0.001": 0.811214,
+    "(64, 32, 16)|0.01": 0.811492,
+    "(128, 64, 32)|0.001": 0.912157,
+    "(128, 64, 32)|0.01": 0.912344
+   }
+  },
+  "reg_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.001,
+   "losses": {
+    "(64, 32, 16)|0.001": 2.467861,
+    "(64, 32, 16)|0.01": 2.46866,
+    "(128, 64, 32)|0.001": 2.594289,
+    "(128, 64, 32)|0.01": 2.589428
+   }
+  },
+  "choices": {
+   "R72": {
+    "n_val": 367,
+    "theta1": 0.45,
+    "delta": 0.0,
+    "theta3": 0.4,
+    "theta4": 0.65
+   },
+   "R51": {
+    "n_val": 423,
+    "theta1": null,
+    "delta": Infinity,
+    "theta3": null,
+    "theta4": null
+   },
+   "LIQ": {
+    "n_val": 151,
+    "theta1": 0.35,
+    "delta": Infinity,
+    "theta3": 0.35
+   },
+   "orb": {
+    "n_val": 59,
+    "theta1": null,
+    "delta": 0.0,
+    "theta3": null
+   },
+   "orb_fresh": {
+    "n_val": 59,
+    "theta1": null,
+    "delta": 0.0,
+    "theta3": null
+   },
+   "orb_sweep": {
+    "n_val": 90,
+    "theta1": null,
+    "delta": Infinity,
+    "theta3": null
+   }
+  }
+ },
+ "F2": {
+  "n_train_trades": 5928,
+  "n_inner": 4337,
+  "n_val": 1591,
+  "n_rows": 45273,
+  "clf_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.001,
+   "losses": {
+    "(64, 32, 16)|0.001": 0.724761,
+    "(64, 32, 16)|0.01": 0.725749,
+    "(128, 64, 32)|0.001": 0.784034,
+    "(128, 64, 32)|0.01": 0.788483
+   }
+  },
+  "reg_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.001,
+   "losses": {
+    "(64, 32, 16)|0.001": 3.040123,
+    "(64, 32, 16)|0.01": 3.044465,
+    "(128, 64, 32)|0.001": 3.290746,
+    "(128, 64, 32)|0.01": 3.284496
+   }
+  },
+  "choices": {
+   "R72": {
+    "n_val": 328,
+    "theta1": 0.425,
+    "delta": 0.0,
+    "theta3": 0.425,
+    "theta4": 0.425
+   },
+   "R51": {
+    "n_val": 386,
+    "theta1": 0.4,
+    "delta": 100.0,
+    "theta3": 0.4,
+    "theta4": 0.625
+   },
+   "LIQ": {
+    "n_val": 165,
+    "theta1": null,
+    "delta": Infinity,
+    "theta3": null
+   },
+   "orb": {
+    "n_val": 52,
+    "theta1": 0.3,
+    "delta": Infinity,
+    "theta3": 0.3
+   },
+   "orb_fresh": {
+    "n_val": 52,
+    "theta1": 0.3,
+    "delta": Infinity,
+    "theta3": 0.3
+   },
+   "orb_sweep": {
+    "n_val": 76,
+    "theta1": null,
+    "delta": 0.0,
+    "theta3": null
+   }
+  }
+ },
+ "F3": {
+  "n_train_trades": 7574,
+  "n_inner": 5928,
+  "n_val": 1646,
+  "n_rows": 58295,
+  "clf_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.01,
+   "losses": {
+    "(64, 32, 16)|0.001": 0.696344,
+    "(64, 32, 16)|0.01": 0.694533,
+    "(128, 64, 32)|0.001": 0.756663,
+    "(128, 64, 32)|0.01": 0.764608
+   }
+  },
+  "reg_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.001,
+   "losses": {
+    "(64, 32, 16)|0.001": 1.676501,
+    "(64, 32, 16)|0.01": 1.679852,
+    "(128, 64, 32)|0.001": 1.79502,
+    "(128, 64, 32)|0.01": 1.778926
+   }
+  },
+  "choices": {
+   "R72": {
+    "n_val": 208,
+    "theta1": null,
+    "delta": 0.0,
+    "theta3": null,
+    "theta4": 0.425
+   },
+   "R51": {
+    "n_val": 404,
+    "theta1": 0.55,
+    "delta": 0.0,
+    "theta3": 0.5,
+    "theta4": 0.525
+   },
+   "LIQ": {
+    "n_val": 139,
+    "theta1": 0.5,
+    "delta": 0.0,
+    "theta3": null
+   },
+   "orb": {
+    "n_val": 59,
+    "theta1": 0.375,
+    "delta": Infinity,
+    "theta3": 0.375
+   },
+   "orb_fresh": {
+    "n_val": 59,
+    "theta1": 0.375,
+    "delta": Infinity,
+    "theta3": 0.375
+   },
+   "orb_sweep": {
+    "n_val": 87,
+    "theta1": 0.3,
+    "delta": 0.0,
+    "theta3": 0.3
+   }
+  }
+ },
+ "F4": {
+  "n_train_trades": 9284,
+  "n_inner": 7574,
+  "n_val": 1710,
+  "n_rows": 71831,
+  "clf_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.01,
+   "losses": {
+    "(64, 32, 16)|0.001": 0.706115,
+    "(64, 32, 16)|0.01": 0.705582,
+    "(128, 64, 32)|0.001": 0.737364,
+    "(128, 64, 32)|0.01": 0.743105
+   }
+  },
+  "reg_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.01,
+   "losses": {
+    "(64, 32, 16)|0.001": 1.865091,
+    "(64, 32, 16)|0.01": 1.853662,
+    "(128, 64, 32)|0.001": 1.955705,
+    "(128, 64, 32)|0.01": 1.945389
+   }
+  },
+  "choices": {
+   "R72": {
+    "n_val": 228,
+    "theta1": null,
+    "delta": 100.0,
+    "theta3": null,
+    "theta4": 0.5
+   },
+   "R51": {
+    "n_val": 441,
+    "theta1": null,
+    "delta": 100.0,
+    "theta3": null,
+    "theta4": 0.425
+   },
+   "LIQ": {
+    "n_val": 149,
+    "theta1": 0.375,
+    "delta": Infinity,
+    "theta3": 0.375
+   },
+   "orb": {
+    "n_val": 62,
+    "theta1": 0.4,
+    "delta": 0.0,
+    "theta3": 0.4
+   },
+   "orb_fresh": {
+    "n_val": 62,
+    "theta1": 0.4,
+    "delta": 0.0,
+    "theta3": 0.4
+   },
+   "orb_sweep": {
+    "n_val": 82,
+    "theta1": null,
+    "delta": 0.0,
+    "theta3": null
+   }
+  }
+ },
+ "F5": {
+  "n_train_trades": 11018,
+  "n_inner": 9284,
+  "n_val": 1734,
+  "n_rows": 85564,
+  "clf_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.01,
+   "losses": {
+    "(64, 32, 16)|0.001": 0.691799,
+    "(64, 32, 16)|0.01": 0.690861,
+    "(128, 64, 32)|0.001": 0.737853,
+    "(128, 64, 32)|0.01": 0.729184
+   }
+  },
+  "reg_setting": {
+   "hidden": [
+    64,
+    32,
+    16
+   ],
+   "alpha": 0.01,
+   "losses": {
+    "(64, 32, 16)|0.001": 2.855137,
+    "(64, 32, 16)|0.01": 2.847152,
+    "(128, 64, 32)|0.001": 3.091369,
+    "(128, 64, 32)|0.01": 3.058022
+   }
+  },
+  "choices": {
+   "R72": {
+    "n_val": 298,
+    "theta1": null,
+    "delta": 100.0,
+    "theta3": null,
+    "theta4": 0.575
+   },
+   "R51": {
+    "n_val": 357,
+    "theta1": null,
+    "delta": 0.0,
+    "theta3": null,
+    "theta4": 0.575
+   },
+   "LIQ": {
+    "n_val": 180,
+    "theta1": 0.4,
+    "delta": Infinity,
+    "theta3": 0.4
+   },
+   "orb": {
+    "n_val": 58,
+    "theta1": 0.4,
+    "delta": 0.0,
+    "theta3": 0.375
+   },
+   "orb_fresh": {
+    "n_val": 58,
+    "theta1": 0.4,
+    "delta": 0.0,
+    "theta3": 0.375
+   },
+   "orb_sweep": {
+    "n_val": 81,
+    "theta1": null,
+    "delta": 100.0,
+    "theta3": null
+   }
+  }
+ }
+}

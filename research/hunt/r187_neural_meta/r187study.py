@@ -304,8 +304,8 @@ def r_uses(A, crow: dict, folds: dict) -> dict:
 
 def orb_uses(arm: str, lo: date, hi: date, folds: dict) -> tuple:
     """({use: trades}, alts {trade id: {exit: net}}) for an ORB arm on sessions lo..hi."""
+    import r187orb as OB                              # first: it puts R169 / R3 on the path
     import r169lib as X
-    import r187orb as OB
     lk = lake()
     ss = [s for s in OB.sessions() if lo <= s.day <= hi]
     ctx = OB.contexts()
@@ -376,24 +376,25 @@ def tables(uses: dict, periods=K.PERIODS) -> dict:
     return {u: {p: describe(tr, *K.span_of(p)) for p in periods} for u, tr in uses.items()}
 
 
-def wf():
-    """The uses on the walk-forward window (Apr 2025 - Mar 2026; folds F1-F4), design data only."""
+def wf(arms=K.ARMS):
+    """The uses on the walk-forward window (Apr 2025 - Mar 2026; folds F1-F4), design data only. Written after each arm
+    (results/wf.json keeps the arms already done)."""
     import r187rarms as RA
     folds = {k: v for k, v in _load("folds").items() if k in K.DESIGN_FOLDS}
     rows = _load("design_rows")
-    res = {}
+    p = K.RESULTS / "wf.json"
+    res = json.loads(p.read_text()) if p.exists() else {}
     lo, hi = K.span_of("wf")
-    for arm in K.R_ARMS:
-        A = RA.Arm(arm, K.R_START, K.DESIGN_END)
-        u = r_uses(A, {k: dict(r) for k, r in rows[arm].items()}, folds)
-        res[arm] = {k: describe(v, lo, hi) for k, v in u.items()}
-        print(arm, {k: (v["trades"], v["win"], v["net"]) for k, v in res[arm].items()}, flush=True)
-    for arm in K.ORB_ARMS:
-        u, _ = orb_uses(arm, lo, hi, folds)
-        res[arm] = {k: describe(v, lo, hi) for k, v in u.items()}
-        print(arm, {k: (v["trades"], v["win"], v["net"]) for k, v in res[arm].items()}, flush=True)
     K.RESULTS.mkdir(parents=True, exist_ok=True)
-    (K.RESULTS / "wf.json").write_text(json.dumps(res, indent=1, default=str))
+    for arm in arms:
+        if arm in K.R_ARMS:
+            A = RA.Arm(arm, K.R_START, K.DESIGN_END)
+            u = r_uses(A, {k: dict(r) for k, r in rows[arm].items()}, folds)
+        else:
+            u, _ = orb_uses(arm, lo, hi, folds)
+        res[arm] = {k: describe(v, lo, hi) for k, v in u.items()}
+        print(arm, {k: (v["trades"], v["win"], v["net"]) for k, v in res[arm].items()}, flush=True)
+        p.write_text(json.dumps(res, indent=1, default=str))
 
 
 # ================================================================================================ the final read
@@ -515,6 +516,6 @@ if __name__ == "__main__":
     fn = {"build": build, "train": train, "wf": wf, "final": final, "new": new_month, "decide": decide}.get(cmd)
     if fn is None:
         raise SystemExit(__doc__)
-    r = fn()
+    r = fn(tuple(sys.argv[2:])) if (cmd == "wf" and len(sys.argv) > 2) else fn()
     if cmd == "decide":
         print(json.dumps(r, indent=1))
