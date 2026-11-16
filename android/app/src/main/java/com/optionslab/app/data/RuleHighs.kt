@@ -42,7 +42,8 @@ internal object RuleHighs {
         asked[key] = nowMs
         if (asked.size > KEPT) asked.entries.filter { nowMs - it.value > DAY_MS }.forEach { forget(it.key) }
         val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
-            val h = listOfNotNull(runCatching { Paper.highSince(c, since) }.getOrNull(),
+            // (Its candles read fresh - at most once a minute a trade, in the background - never another reader's older copy.)
+            val h = listOfNotNull(runCatching { Paper.highSince(c, since, maxAgeMs = 0L) }.getOrNull(),
                 runCatching { Paper.gapHighSince(c, since) }.getOrNull()?.high).filter { it.isFinite() && it > 0 }.maxOrNull()
             // (A trade forgotten meanwhile - closed, released - takes nothing back.)
             if (h != null && kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive == true && asked.containsKey(key))
