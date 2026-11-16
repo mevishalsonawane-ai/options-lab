@@ -120,7 +120,8 @@ class OrbReRestTest : RobolectricTest() {
             // The next pass places no second stop.
             pass()
             assertEquals(arm, 1, slCount())
-            kite.requests.clear()
+            // The next case starts on a clean order book (this trade's stop would be the next one's own orphan stop).
+            kite.requests.clear(); kite.orders.clear()
         }
     }
 
@@ -228,13 +229,21 @@ class OrbReRestTest : RobolectricTest() {
         assertEquals("never a second stop beside its own", 0, slCount())
     }
 
-    /** The app's own cancel (an exit taking its stop out first) is never taken as Boss's: no "cancelled by you", never stopByYou. */
+    /**
+     * The app's own cancel (an exit took its stop out first; the sale did not go and the cancel was not yet confirmed - kept on the
+     * trade across a restart, [OrbArms.Position.appCancelled]) is never taken as Boss's, even with no reason given: no "cancelled by
+     * you", and the stop is put back.
+     */
     @Test fun theAppsOwnCancelIsNeverTakenAsBosss() {
-        held("orb")
-        kite.quote("NFO:$sym", 245.0, 244.95, 245.05)                    // the ORB's +40 target: the app takes its stop out and sells
+        val s = held("orb")
+        val saved = JSONObject(String(com.optionslab.app.security.Vault.readFile(java.io.File(context.filesDir, "orb.vault"))!!, Charsets.UTF_8))
+        saved.getJSONArray("positions").getJSONObject(0).put("appCancelled", true)
+        AutomationSupport.orbState(context, saved)
+        kite.reject(s, message = "", status = "CANCELLED")
         pass()
-        assertNotNull(row().today.single().exit)
+        assertFalse(row().open!!.stopByYou)
         assertFalse(alerts(), AutomationSupport.alerts().any { it.contains("cancelled by you") })
+        assertEquals("put back", 1, slCount())
     }
 
     /** A fast look (a stream tick's) never places a stop - only the regular pass does. */
@@ -261,6 +270,18 @@ class OrbReRestTest : RobolectricTest() {
         assertFalse(row().open!!.stopByYou)
     }
 
+    /** A put-back stop seen resting at Zerodha, then ended again in the same words: that is a new loss, said again. */
+    @Test fun aStopEndedAgainAfterItRestedIsSaidAgain() {
+        val s = held("orb")
+        kite.reject(s, message = exchangeCancel, status = "CANCELLED")
+        pass()
+        val again = row().open!!.stopOrderId!!
+        pass()                                                             // seen resting at Zerodha
+        kite.reject(again, message = exchangeCancel, status = "CANCELLED")
+        pass()
+        assertEquals(alerts(), 2, AutomationSupport.alerts().count { it.contains("ORB: the stop at Zerodha was cancelled") })
+    }
+
     /**
      * A book saved by the earlier build (before this update): an ORB live trade open with no stop at Zerodha may be one Boss cancelled
      * (that build never noted it) - it keeps being watched by the app, never put back by itself; one with its stop resting is untouched.
@@ -281,6 +302,7 @@ class OrbReRestTest : RobolectricTest() {
         kite.position(sym, 30, 200.0, product = "MIS")
         kite.requests.clear()
         assertTrue(row().open!!.stopByYou)
+        assertTrue(alerts(), AutomationSupport.alerts().any { it.contains("open live ORB trade(s) have no stop at Zerodha") })
         pass()
         assertEquals("not put back", 0, slCount())
         // Marked once: a later load (a restart) changes nothing more, and the app still sells at 160 itself.
@@ -290,5 +312,28 @@ class OrbReRestTest : RobolectricTest() {
         pass()
         assertEquals(1, marketSells.size)
         assertEquals("stop", row().today.single().why)
+    }
+
+    /** With "Keep a stop-loss order at the exchange" on, the earlier build was putting such a stop back: it still is after the update. */
+    @Test fun withTheOldSettingOnATradeOpenWithNoStopIsStillPutBack() {
+        AppSettings.save(AppSettings.load().copy(exchangeStops = true))
+        val p = JSONObject().put("arm", "orb").put("symbol", paperCe).put("right", "CE").put("qty", 30).put("entry", 200.0)
+            .put("entryTime", ago(30).toString()).put("signalBar", ago(35).toString())
+            .put("entryOrderId", "E1").put("stopOrderId", "").put("stopTrigger", 160.0)
+            .put("exitTime", "").put("why", "").put("charges", 0.0).put("live", true).put("kite", sym).put("unconfirmed", false)
+        val migrated = JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)
+            .put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN).put(com.optionslab.engine.orb.ParkedArms.MIGRATION)
+            .put(com.optionslab.engine.orb.FamilyPark.MIGRATION).put(OrbArms.LIQ_SWITCH_CLEAR)
+        AutomationSupport.orbState(context, JSONObject()
+            .put("armed", JSONObject().put("orb", true)).put("auto", JSONObject().put("orb", true)).put("liveOk", JSONObject().put("orb", true))
+            .put("legs", JSONObject().put("day", now.toLocalDate().toString()).put("strike", 52_000).put("expiry", expiry.toString())
+                .put("ce", contract(paperCe, "CE", expiry)).put("pe", contract(paperPe, "PE", expiry)))
+            .put("positions", JSONArray(listOf(p))).put("migrated", migrated))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.requests.clear()
+        assertFalse(row().open!!.stopByYou)
+        pass()
+        assertEquals(1, slCount())
+        assertEquals("160.00", kite.placed.last().form["trigger_price"])
     }
 }
