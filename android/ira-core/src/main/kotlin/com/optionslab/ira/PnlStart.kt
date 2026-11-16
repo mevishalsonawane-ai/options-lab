@@ -57,6 +57,17 @@ object PnlStart {
     fun <V> shown(days: Map<LocalDate, V>, from: LocalDate?): Map<LocalDate, V> =
         if (from == null) days else days.filterKeys { shows(it, from) }
 
+    /** The start as epoch milliseconds at its midnight, India time ([Long.MIN_VALUE] with no start: every note). */
+    fun sinceMillis(from: LocalDate?): Long = from?.atStartOfDay(IST)?.toInstant()?.toEpochMilli() ?: Long.MIN_VALUE
+
+    /**
+     * A journal note shown with the start: written on or after [since] ([sinceMillis]) and not on a fill of a hidden trip
+     * ([hiddenFills], the note's [key] is the fill's id).
+     */
+    fun showsNote(key: String, at: Long, since: Long, hiddenFills: Set<String>): Boolean = at >= since && key !in hiddenFills
+
+    private val IST: java.time.ZoneId = java.time.ZoneOffset.ofHoursMinutes(5, 30)
+
     /** "Showing live P&L from Tue 17 Nov 2026." */
     fun line(from: LocalDate): String =
         "Showing live P&L from ${from.format(DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.ENGLISH))}."

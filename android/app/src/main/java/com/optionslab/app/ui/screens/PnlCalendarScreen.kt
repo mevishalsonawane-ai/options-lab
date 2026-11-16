@@ -64,6 +64,7 @@ import com.optionslab.app.ui.components.LedgerCard
 import com.optionslab.app.ui.components.Note
 import com.optionslab.app.ui.theme.LocalPalette
 import com.optionslab.app.ui.theme.Type
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -154,6 +155,8 @@ fun PnlCalendarScreen(model: AppModel) {
         value = withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.TradeBook.trips(live) }.getOrDefault(emptyList()) }
     }
     val trips = remember(allTrips, from) { if (from == null) allTrips else allTrips.filter { com.optionslab.ira.PnlStart.shows(it.day, from) } }
+    // The fills of the trips hidden by the start date: their journal notes are hidden with them.
+    val hiddenFills = remember(allTrips, from) { if (from == null) emptySet() else allTrips.filterNot { com.optionslab.ira.PnlStart.shows(it.day, from) }.flatMap { it.fillIds }.toSet() }
     val ownerNames = remember(trips, owners) { trips.map { com.optionslab.app.data.TradeBook.ownerOf(it, owners) }.distinct().sorted() }
 
     // Keep today's figure fresh while the calendar is open.
@@ -202,6 +205,7 @@ fun PnlCalendarScreen(model: AppModel) {
     val csv = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) {
             val rows = all.values.sortedBy { it.date }
+            val shownFrom = from
             val text = buildString {
                 append("date,account,strategy,pnl,trades,charges\n")
                 rows.forEach { d -> append("${d.date},${if (live) "Zerodha" else "Paper"},${owner.replace(',', ' ')},${"%.2f".format(Locale.ENGLISH, d.pnl)},${d.trades},${"%.2f".format(Locale.ENGLISH, d.charges)}\n") }
@@ -212,7 +216,8 @@ fun PnlCalendarScreen(model: AppModel) {
                 val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     runCatching { resolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } }.isSuccess
                 }
-                if (ok) com.optionslab.app.work.Alerts.success("Exported ${rows.size} days.") else com.optionslab.app.work.Alerts.error("Could not write the file.")
+                // 16 Nov: with the live start date the file holds the days shown, and says so (the earlier ones are only hidden).
+                if (ok) com.optionslab.app.work.Alerts.success("Exported ${rows.size} days${shownFrom?.let { " (from $it; earlier live days are hidden here, not deleted)" } ?: ""}.") else com.optionslab.app.work.Alerts.error("Could not write the file.")
             }
         }
     }
@@ -249,13 +254,15 @@ fun PnlCalendarScreen(model: AppModel) {
                 if (owner != "All") Note("$owner: realised round trips by the day they closed, before charges (the charges under the totals).", Modifier.padding(top = 6.dp))
                 // 16 Nov (Boss): start the Zerodha page fresh from the next trading day, or show every day again. Hiding lowers no
                 // limit and removes nothing, so it takes no PIN; one tap and a confirm. Written through the settings' own writer (IO).
+                // In the model's scope, so leaving the page at once never loses the confirmed choice. Back to All: a strategy chip
+                // with no shown trip would vanish while still filtering.
                 if (live) StartFresh(from, onStart = {
-                    csvScope.launch {
+                    picked = null; owner = "All"
+                    model.viewModelScope.launch {
                         val next = withContext(Dispatchers.IO) { com.optionslab.ira.PnlStart.nextTradingDay(Market.today()) { Market.isTradingDay(it) } }
                         model.update { it.copy(livePnlFrom = next.toString()) }
-                        picked = null
                     }
-                }, onClear = { model.update { it.copy(livePnlFrom = "") }; picked = null })
+                }, onClear = { model.update { it.copy(livePnlFrom = "") }; picked = null; owner = "All" })
             }
         }
         // A past date's orders, trades and positions live here only (the Trade tab shows today's): tap a date to list its fills.
@@ -267,7 +274,7 @@ fun PnlCalendarScreen(model: AppModel) {
         // Jarvis's strategies only (Solo, Liquidity, Hero, the shadows): not in IraGoldAlgo, nor a build without Jarvis.
         if (com.optionslab.app.BuildConfig.JARVIS && !com.optionslab.app.BuildConfig.GOLD) item { LiveVsBacktest(tick) }
         item { ChargesCard(live, month, tick, from) }
-        item { JournalCard(trips, from) }
+        item { JournalCard(trips, from, hiddenFills) }
     }
     }
 }
@@ -713,19 +720,19 @@ private fun ChargesCard(live: Boolean, month: YearMonth, tick: Int, from: LocalD
 
 /** P&L by journal tag, and the latest notes. */
 @Composable
-private fun JournalCard(trips: List<com.optionslab.engine.RoundTrips.Trip>, from: LocalDate? = null) {
+private fun JournalCard(trips: List<com.optionslab.engine.RoundTrips.Trip>, from: LocalDate? = null, hiddenFills: Set<String> = emptySet()) {
     val p = LocalPalette.current
-    // 16 Nov: with the live page's start date, notes written before it are hidden too (display only).
-    val since = from?.atStartOfDay(com.optionslab.engine.IST)?.toInstant()?.toEpochMilli() ?: Long.MIN_VALUE
+    // 16 Nov: with the live page's start date, notes written before it, or on a hidden trip's fill, are hidden too (display only).
+    val since = com.optionslab.ira.PnlStart.sinceMillis(from)
     // The journal is a vault file: read (decrypted) off the main thread, not while composing.
     val read by produceState<Pair<List<com.optionslab.app.data.Journal.TagStat>, List<com.optionslab.app.data.Journal.Entry>>>(emptyList<com.optionslab.app.data.Journal.TagStat>() to emptyList(), trips, since) {
         value = withContext(Dispatchers.IO) { runCatching {
-            com.optionslab.app.data.Journal.byTag(trips) to com.optionslab.app.data.Journal.all().values.filter { it.note.isNotBlank() && it.at >= since }.sortedByDescending { it.at }.take(5)
+            com.optionslab.app.data.Journal.byTag(trips) to com.optionslab.app.data.Journal.all().values.filter { it.note.isNotBlank() && com.optionslab.ira.PnlStart.showsNote(it.key, it.at, since, hiddenFills) }.sortedByDescending { it.at }.take(5)
         }.getOrNull() } ?: value
     }
     val stats = read.first
     // Filtered again as shown: the last read (another start, or none) stays in view until the new one lands.
-    val notes = read.second.filter { it.at >= since }
+    val notes = read.second.filter { com.optionslab.ira.PnlStart.showsNote(it.key, it.at, since, hiddenFills) }
     LedgerCard {
         Eyebrow("Journal")
         if (stats.isEmpty() && notes.isEmpty()) {

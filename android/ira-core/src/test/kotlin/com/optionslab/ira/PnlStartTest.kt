@@ -94,6 +94,19 @@ class PnlStartTest {
         assertEquals(emptyMap(), PnlStart.shown(emptyMap<LocalDate, Day>(), tue17))
     }
 
+    @Test fun journalNotesBeforeTheStartOrOnAHiddenTripAreHidden() {
+        // 17 Nov 2026 00:00 IST = 16 Nov 18:30 UTC.
+        val since = PnlStart.sinceMillis(tue17)
+        assertEquals(java.time.Instant.parse("2026-11-16T18:30:00Z").toEpochMilli(), since)
+        assertEquals(Long.MIN_VALUE, PnlStart.sinceMillis(null))
+        assertTrue(PnlStart.showsNote("kite:1", since, since, emptySet()))
+        assertFalse(PnlStart.showsNote("kite:1", since - 1, since, emptySet()))
+        // Written after the start, but on a fill of a trip hidden by it.
+        assertFalse(PnlStart.showsNote("kite:9", since + 60_000, since, setOf("kite:9")))
+        // No start: every note.
+        assertTrue(PnlStart.showsNote("kite:1", 0L, PnlStart.sinceMillis(null), emptySet()))
+    }
+
     @Test fun theWords() {
         assertEquals("Showing live P&L from Tue 17 Nov 2026.", PnlStart.line(tue17))
         assertEquals("Earlier live days are hidden here, not deleted; risk rules still count them.", PnlStart.NOTE)

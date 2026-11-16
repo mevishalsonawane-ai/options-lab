@@ -194,7 +194,7 @@ object TradeBook {
         val out = LinkedHashMap<String, Double>()
         if (live) {
             // 16 Nov: [from] - the live P&L page's start date (PnlStart) - leaves out the trades before it (display only).
-            val inMonth = liveSnapshot().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month && (from == null || !t.toLocalDate().isBefore(from)) } == true }
+            val inMonth = liveSnapshot().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month && com.optionslab.ira.PnlStart.shows(t.toLocalDate(), from) } == true }
             com.optionslab.ira.PnlCharges.perFill(inMonth.map { chargeFill(it, kiteTime(it.at)?.toLocalDate()?.toString().orEmpty()) })
                 .forEach { m -> m.forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v } }
         } else Paper.state.trades.filter { YearMonth.from(it.timestamp) == month }.forEach { t ->
