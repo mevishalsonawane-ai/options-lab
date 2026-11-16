@@ -20,6 +20,9 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+if (sys.argv[1:] or [""])[0] == "train":            # one BLAS thread per fold process (folds run in parallel)
+    for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+        os.environ.setdefault(_v, "1")
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
@@ -220,33 +223,41 @@ def choices(val: list, arm: str) -> dict:
     return out
 
 
-def train():
+def fit_fold(spec: tuple) -> tuple:
+    """One fold: the settings on the inner validation quarter, the theta / delta choices from the inner models' scores
+    on that quarter, and the 3-seed refit on the whole training window (trades before the fold only)."""
+    name, lo, hi, vlo = spec
     rows = _load("design_rows")
-    folds = {}
-    for name, lo, hi, vlo in K.FOLDS:
-        tr = training_rows(rows, lo)
-        inner, val = [r for r in tr if r["day"] < vlo], [r for r in tr if r["day"] >= vlo]
-        assert max(r["day"] for r in tr) < lo and all(r["day"] < lo for r in val)
-        Xi, ywi, yni, _ = N.stacked(inner)
-        Xv, ywv, ynv, _ = N.stacked(val)
-        Xt, ywt, ynt, _ = N.stacked(tr)
-        info = dict(n_train_trades=len(tr), n_inner=len(inner), n_val=len(val), n_rows=int(len(Xt)))
-        inner_m, full = {}, {}
-        for kind in ("clf", "reg"):
-            h, a, m_in, losses = N.choose_setting(kind, Xi, ywi, yni, Xv, ywv, ynv)
-            inner_m[kind] = m_in
-            info[f"{kind}_setting"] = dict(hidden=list(h), alpha=a, losses=losses)
-            full[kind] = N.Model(kind, h, a).fit(Xt, ywt, ynt)
-            print(name, kind, info[f"{kind}_setting"], flush=True)
-        valc = [dict(r) for r in val]
-        predict(inner_m, valc)
-        # ORB Fresh takes ORB's choices (its validation trades are ORB's)
-        ch = {a: choices(valc, "orb" if a == "orb_fresh" else a) for a in K.ARMS}
-        info["choices"] = ch
-        folds[name] = dict(models=full, info=info, lo=lo, hi=hi, vlo=vlo)
-        print(name, info["n_train_trades"], ch, flush=True)
-        _save("folds", folds)
-    (K.RESULTS).mkdir(parents=True, exist_ok=True)
+    tr = training_rows(rows, lo)
+    inner, val = [r for r in tr if r["day"] < vlo], [r for r in tr if r["day"] >= vlo]
+    assert max(r["day"] for r in tr) < lo and all(r["day"] < lo for r in val) and all(r["day"] < vlo for r in inner)
+    Xi, ywi, yni, ii = N.stacked(inner)
+    Xv, ywv, ynv, _ = N.stacked(val)
+    Xt, ywt, ynt, it = N.stacked(tr)
+    oi, ot = N.order_of(inner, ii), N.order_of(tr, it)
+    info = dict(n_train_trades=len(tr), n_inner=len(inner), n_val=len(val), n_rows=int(len(Xt)))
+    inner_m, full = {}, {}
+    for kind in ("clf", "reg"):
+        h, a, m_in, losses = N.choose_setting(kind, Xi, ywi, yni, Xv, ywv, ynv, oi)
+        inner_m[kind] = m_in
+        info[f"{kind}_setting"] = dict(hidden=list(h), alpha=a, losses=losses)
+        full[kind] = N.Model(kind, h, a).fit(Xt, ywt, ynt, ot)
+        print(name, kind, info[f"{kind}_setting"], flush=True)
+    valc = [dict(r) for r in val]
+    predict(inner_m, valc)
+    # ORB Fresh takes ORB's choices (its validation trades are ORB's)
+    info["choices"] = {a: choices(valc, "orb" if a == "orb_fresh" else a) for a in K.ARMS}
+    print(name, info["n_train_trades"], info["choices"], flush=True)
+    return name, dict(models=full, info=info, lo=lo, hi=hi, vlo=vlo)
+
+
+def train():
+    from multiprocessing import Pool
+    with Pool(min(4, len(K.FOLDS))) as p:
+        got = p.map(fit_fold, K.FOLDS)
+    folds = dict(got)
+    _save("folds", folds)
+    K.RESULTS.mkdir(parents=True, exist_ok=True)
     (K.RESULTS / "folds.json").write_text(json.dumps({k: v["info"] for k, v in folds.items()}, indent=1, default=str))
 
 
@@ -504,7 +515,6 @@ if __name__ == "__main__":
     fn = {"build": build, "train": train, "wf": wf, "final": final, "new": new_month, "decide": decide}.get(cmd)
     if fn is None:
         raise SystemExit(__doc__)
-    os.environ.setdefault("PYTHONHASHSEED", "187")
     r = fn()
     if cmd == "decide":
         print(json.dumps(r, indent=1))

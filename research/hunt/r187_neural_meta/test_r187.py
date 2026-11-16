@@ -286,3 +286,13 @@ def test_orb_walk_matches_r169_b0():
         # a chooser that always answers B0 is B0
         same = OB.walk(arm, ss, lambda *a: "B0")
         assert [round(t["net"], 6) for t in same] == [round(t["net"], 6) for t in mine]
+
+
+def test_early_stopping_split_takes_whole_latest_trades():
+    rows = [dict(day=date(2025, 1, 1) + timedelta(days=i)) for i in range(20)]
+    ix = np.repeat(np.arange(20), 8)                         # each trade stacked 8 times
+    order = N.order_of(rows, ix)
+    es = N.es_split(order, 0.10)
+    assert es.sum() == 2 * 8                                 # the 2 latest trades, all their rows
+    assert set(ix[es]) == {18, 19} and not (set(ix[es]) & set(ix[~es]))
+    assert not N.es_split(np.array([5, 5, 5]), 0.1).any()    # one trade: nothing held out

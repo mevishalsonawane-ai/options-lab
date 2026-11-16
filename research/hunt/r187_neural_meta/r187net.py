@@ -46,7 +46,8 @@ def with_exit(bv: np.ndarray, exits) -> np.ndarray:
 
 
 def stacked(rows: list) -> tuple:
-    """(X, y_win, y_net, row index) over every row x every exit of its arm's menu with a finite net."""
+    """(X, y_win, y_net, row index) over every row x every exit of its arm's menu with a finite net. Model.fit takes the
+    rows' days through `order_of(rows, ix)` for its by-date, by-trade early-stopping split."""
     X, yw, yn, ix = [], [], [], []
     for i, r in enumerate(rows):
         bv = base_vector(r)
@@ -90,10 +91,48 @@ class Target:
         return np.clip(y, self.lo, self.hi) / K.NET_SCALE
 
 
-def _mlp(kind: str, hidden: tuple, alpha: float, seed: int):
+def order_of(rows: list, ix: np.ndarray) -> np.ndarray:
+    """Per stacked row: (day ordinal * 1e6 + trade index), so the early-stopping split takes whole trades, the latest."""
+    return np.array([rows[i]["day"].toordinal() * 1_000_000 + i for i in ix], dtype=np.int64)
+
+
+def es_split(order: np.ndarray, frac: float) -> np.ndarray:
+    """Boolean mask of the early-stopping rows: every stacked row of the latest `frac` of the trades (by date)."""
+    trades = np.unique(order)
+    n = max(1, int(round(frac * len(trades)))) if len(trades) > 1 else 0
+    cut = trades[-n:] if n else trades[:0]
+    return np.isin(order, cut)
+
+
+def _fit_es(kind: str, hidden: tuple, alpha: float, seed: int, Z, y, order):
+    """Amendment A (bug fix): Adam epochs with early stopping on the latest 10% of the training TRADES (all their
+    stacked rows), keeping the best epoch; sklearn's own early stopping split stacked rows of one trade at random
+    between fitting and stopping, so it never stopped (it memorised)."""
+    import copy
+
     from sklearn.neural_network import MLPClassifier, MLPRegressor
+    kw = {k: v for k, v in K.MLP_KW.items() if k not in ("early_stopping", "validation_fraction", "n_iter_no_change",
+                                                        "max_iter")}
     cls = MLPClassifier if kind == "clf" else MLPRegressor
-    return cls(hidden_layer_sizes=hidden, alpha=alpha, random_state=seed, **K.MLP_KW)
+    m = cls(hidden_layer_sizes=hidden, alpha=alpha, random_state=seed, max_iter=1, shuffle=True, **kw)
+    es = es_split(order, K.MLP_KW["validation_fraction"])
+    fit, chk = (~es, es) if es.any() and (~es).any() else (np.ones(len(Z), bool), np.ones(len(Z), bool))
+    best, best_m, bad = np.inf, None, 0
+    for _ in range(K.MLP_KW["max_iter"]):
+        if kind == "clf":
+            m.partial_fit(Z[fit], y[fit], classes=np.array([0, 1]))
+            q = np.clip(m.predict_proba(Z[chk])[:, 1], 1e-6, 1 - 1e-6)
+            loss = float(-np.mean(y[chk] * np.log(q) + (1 - y[chk]) * np.log(1 - q)))
+        else:
+            m.partial_fit(Z[fit], y[fit])
+            loss = float(np.mean((m.predict(Z[chk]) - y[chk]) ** 2))
+        if loss < best - 1e-6:
+            best, best_m, bad = loss, copy.deepcopy(m), 0
+        else:
+            bad += 1
+            if bad >= K.MLP_KW["n_iter_no_change"]:
+                break
+    return best_m if best_m is not None else m
 
 
 class Model:
@@ -103,14 +142,15 @@ class Model:
         self.kind, self.hidden, self.alpha, self.seeds = kind, hidden, alpha, tuple(seeds)
         self.nets = []
 
-    def fit(self, X: np.ndarray, yw: np.ndarray, yn: np.ndarray) -> "Model":
+    def fit(self, X: np.ndarray, yw: np.ndarray, yn: np.ndarray, order: np.ndarray | None = None) -> "Model":
         self.prep = Prep(X)
         Z = self.prep(X)
         self.tgt = Target(yn)
         y = yw if self.kind == "clf" else self.tgt(yn)
+        order = np.arange(len(X), dtype=np.int64) if order is None else order
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            self.nets = [_mlp(self.kind, self.hidden, self.alpha, s).fit(Z, y) for s in self.seeds]
+            self.nets = [_fit_es(self.kind, self.hidden, self.alpha, s, Z, y, order) for s in self.seeds]
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -128,12 +168,12 @@ def val_loss(kind: str, p: np.ndarray, yw: np.ndarray, yn: np.ndarray, tgt: Targ
     return float(np.mean((p / K.NET_SCALE - tgt(yn)) ** 2))
 
 
-def choose_setting(kind: str, Xi, ywi, yni, Xv, ywv, ynv) -> tuple:
+def choose_setting(kind: str, Xi, ywi, yni, Xv, ywv, ynv, oi=None) -> tuple:
     """(hidden, alpha, inner model, losses): the setting with the lowest inner-validation loss (seed 187 only)."""
     best, losses = None, {}
     for h in K.HIDDEN:
         for a in K.ALPHAS:
-            m = Model(kind, h, a, seeds=(K.SEEDS[0],)).fit(Xi, ywi, yni)
+            m = Model(kind, h, a, seeds=(K.SEEDS[0],)).fit(Xi, ywi, yni, oi)
             loss = val_loss(kind, m.predict(Xv), ywv, ynv, m.tgt)
             losses[f"{h}|{a}"] = round(loss, 6)
             if best is None or loss < best[0]:

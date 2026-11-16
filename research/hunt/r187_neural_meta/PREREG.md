@@ -196,3 +196,23 @@ only (3 lots are not run: compute).
 pytest: each new feature's look-ahead guard (junk after the decision row changes nothing); the fold builder (no training
 trade on or after the fold's first day; the inner validation strictly before the fold); scaling / imputation fitted on
 training rows only; theta / delta choice on synthetic scores; the U2 exit composition; the gates; the twins; the BH count.
+
+## Amendment A (16 Nov 2026, a bug fix, before any use or trade result was computed)
+
+**What was seen:** the first `train` run printed only the inner-validation losses of the hyperparameter choice (no use,
+no trade outcome, no theta / delta result was looked at beyond the first fold's printed choices). The classifier's
+inner-validation log-loss was 3.2 - 4.6 in every fold (a constant guess scores about 0.69; a plain logistic regression on
+the same rows of F1 scored 0.85), with a training log-loss of 0.04: the networks memorised.
+
+**Cause (a bug):** sklearn's built-in early stopping holds out a RANDOM 10% of the stacked rows. A trade appears once per
+exit rule (7-8 rows with almost the same label), so its rows sat on both sides of that split and the stopping loss kept
+falling while the network memorised trades. Early stopping, as pre-registered, never acted.
+
+**Fix (no setting changed):** the same early stopping, implemented by hand: Adam one epoch at a time (`partial_fit`, the
+pre-registered learning rate, batch, alpha and layers), stopping after 10 epochs without improvement (at most 200) on the
+LATEST 10% of the training TRADES by date (all their stacked rows), keeping the best epoch. The grids, the uses, the
+gates and every other line of this file are unchanged. The first run's models were discarded.
+
+**Disclosed:** after the fix, F1's inner-validation log-loss of the chosen classifier is about 0.91 (F1's training is
+mostly ORB rows from 2021-2024, its validation mostly R72 / R51 rows from Jan - Mar 2025 with a different win rate). That
+is worse than a constant guess: an early sign the network finds little. Nothing is re-tuned for it.
