@@ -63,6 +63,29 @@ def main():
          "19 Oct 2025 (two halves must beat zero and the random twins), final 20 Oct 2025 - 19 Oct 2026 read once.", "",
          "| setup, index | chosen version | passed selection | year trades | win | net (2x slip) | a trade | twins a trade "
          "| twin p | BH q | worst month | max DD | verdict |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    L += ["## Lots (Amendment A)", "",
+          "Every trade uses the true lot of the contract traded on its day (`r185lib.TRUE_LOTS`): NSE's F&O bhavcopies in "
+          "the lake (`NewBrdLotQty` of the nearest expiry, `r185lots.py` -> `results/lot_sizes.json`); SENSEX from the "
+          "lake's option volume / OI units; Dhan's instrument master agrees for the live contracts. The repo's shared "
+          "schedule (`research/obuy/config.py`) is left unchanged; it differs on these trading days:", ""]
+    lt = load("lot_sizes.json")
+    if lt:
+        for und, v in lt["indices"].items():
+            for r in v["wrong"]:
+                L.append(f"- {und} {r['frm']} - {r['to']}: true {r['true']}, schedule {r['schedule']}")
+    L += ["- SENSEX 2024-11-28 - 2025-01-03 and 2025-01-22 - 2025-01-28: true 10, schedule 20", ""]
+    tl = load("selection_NIFTY_truelots.json")
+    so = load("selection_NIFTY.json")
+    if tl and so:
+        L.append("NIFTY's selection was run before the amendment with the schedule's lots (75 instead of 25 on 28 Nov - "
+                 "26 Dec 2024 and 24 - 30 Jan 2025). Recomputed with the true lots (descriptive; the final year already "
+                 "used the true lots and is not re-read):")
+        for key in so["cells"]:
+            a, b = so["cells"][key], tl["cells"][key]
+            L.append(f"- {key}: eligible {a['n_eligible']} -> {b['n_eligible']}; choice `{a['choice']['vid']}` -> "
+                     f"`{b['choice']['vid']}` ({'same' if a['choice']['vid'] == b['choice']['vid'] else 'DIFFERENT'}); "
+                     f"its selection net {rs(a['choice']['summary']['net'])} -> {rs(b['choice']['summary']['net'])}.")
+        L.append("")
     L += ["## Data", ""]
     for u in selected:
         m = load(f"data_manifest_{u}.json")
