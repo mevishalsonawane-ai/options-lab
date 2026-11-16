@@ -170,7 +170,7 @@ internal object IraBots {
             p.charges, p.live, p.level, p.target, p.ladder, p.peak, trough = p.low, lot = p.lot,
             // 22 Oct: Boss's own rules (the ₹500 trail, the breakeven at +10%) keep a trade out of the plain-rules record, labelled.
             // 15 Nov: the breakeven rule too (failed gates, Boss's exception; [com.optionslab.app.data.OrbArms.Position.ownExits]).
-            trail = p.ownExits, rules = p.ownExitsLabel, fixed = p.fixed)
+            trail = p.ownExits, rules = p.ownExitsLabel, fixed = p.fixed, lock = p.fixed && p.lock)
 
     /**
      * "Explain my bots' trades today" ([com.optionslab.ira.BotTrades]): today's arm trades from the arms' own book, their

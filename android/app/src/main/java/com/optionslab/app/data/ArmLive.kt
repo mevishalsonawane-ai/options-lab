@@ -118,6 +118,11 @@ object ArmLive {
         val fixed: Boolean = false,
         /** 15 Nov: the best price seen while it was held (the stop rule's best P&L; persisted, so a restart never lowers its stop). */
         val best: Double? = null,
+        /**
+         * 16 Nov (the fourth version, Boss's exception): with [fixed], the trade also has R51 / R72's ₹500 step lock
+         * ([com.optionslab.engine.orb.StepTrail.Lock.L500]) on its own fill, lots and [best]; false: V4 alone, as it entered. Persisted.
+         */
+        val lock: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -244,7 +249,9 @@ object ArmLive {
                         /** 15 Nov: the paper trade entered with the breakeven rule (R51 / R72; a rebuilt live trade reads it). */
                         val fixed: Boolean = false,
                         /** 15 Nov: the paper contract's symbol, so a rebuilt live trade finds ITS paper trade (null: not given). */
-                        val symbol: String? = null)
+                        val symbol: String? = null,
+                        /** 16 Nov: the paper trade entered with the fourth version's step lock too (a rebuilt live trade reads it). */
+                        val lock: Boolean = false)
 
     private val hosts = java.util.concurrent.ConcurrentHashMap<String, Host>()
 
@@ -297,7 +304,9 @@ object ArmLive {
     data class Ask(val key: String, val ref: String, val contract: Paper.Contract, val side: Int, val paperQty: Int, val paperEntry: Double,
                    val stop: Double? = null, val limit: Double? = null,
                    /** 15 Nov: the paper trade entered with the breakeven rule ([Pos.fixed]; only R51 / R72 ever set it). */
-                   val fixed: Boolean = false)
+                   val fixed: Boolean = false,
+                   /** 16 Nov: and with the fourth version's step lock ([Pos.lock]). */
+                   val lock: Boolean = false)
 
     /** The paper trade [ref]'s stop or lock is at [paperLevel] now: the live stop follows on the next look (memory only). */
     fun level(ref: String, paperLevel: Double?) {
@@ -484,7 +493,7 @@ object ArmLive {
             p.optBoolean("unconfirmed"), d("exit"), s("exitTime")?.let { LocalDateTime.parse(it) }, s("why"), p.optDouble("charges", 0.0),
             p.optBoolean("shadow"), s("stopKind") ?: OWN, if (p.has("stopQty")) p.getInt("stopQty") else null,
             p.optBoolean("heldSeen", !p.has("heldSeen")), if (p.has("zeroSince")) p.getLong("zeroSince") else null, p.optInt("stopBooked", 0),
-            s("paperSymbol"), p.optBoolean("step500", false), d("best"))
+            s("paperSymbol"), p.optBoolean("step500", false), d("best"), p.optBoolean("stepLock", false))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("key", p.key).put("ref", p.ref).put("symbol", p.symbol).put("exchange", p.exchange)
@@ -495,7 +504,7 @@ object ArmLive {
         .put("seen", p.seen).put("unconfirmed", p.unconfirmed).put("exitTime", p.exitTime?.toString() ?: "").put("why", p.why ?: "")
         .put("charges", p.charges).put("shadow", p.shadow).put("stopKind", p.stopKind).put("heldSeen", p.heldSeen)
         .apply { p.stopQty?.let { put("stopQty", it) }; p.zeroSinceMs?.let { put("zeroSince", it) }; p.paperSymbol?.let { put("paperSymbol", it) } }
-        .put("stopBooked", p.stopBooked).apply { if (p.fixed) put("step500", true); p.best?.let { put("best", it) } }
+        .put("stopBooked", p.stopBooked).apply { if (p.fixed) put("step500", true); p.best?.let { put("best", it) }; if (p.lock) put("stepLock", true) }
 
     private fun save(b: Book) {
         // 26 Oct: a book read before an erase is never written back over it.
@@ -856,7 +865,8 @@ object ArmLive {
         val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), "arm:${a.key}", stop = a.stop), "arm live gate")
         val base = Pos(a.key, a.ref, ins.symbol, ins.exchange, spec.product, if (a.side >= 0) 1 else -1, qty, qty, ins.lot, ins.tick, ins.multiplier,
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol,
-            fixed = a.fixed && a.side > 0 && com.optionslab.engine.orb.StepTrail.covers(a.key))
+            fixed = a.fixed && a.side > 0 && com.optionslab.engine.orb.StepTrail.covers(a.key),
+            lock = a.fixed && a.lock && a.side > 0 && com.optionslab.engine.orb.StepTrail.lockFor(a.key) != null)
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
         // 3 Nov (Boss): an index not selected in Bot settings → Indices stays in shadow (recorded, never sent).
         // (Read again here, just before anything is sent: a change made while this entry was on its way counts.)
@@ -989,7 +999,7 @@ object ArmLive {
 
     private fun stopWords(p: Pos): String = when (p.stopKind) { SAFETY -> "safety stop"; DISASTER -> "disaster stop"
         // 15 Nov: the breakeven rule's stops (Boss's exception), named as such on the entry line and the fill's card.
-        else -> stopWhyOf(p).takeIf { it == com.optionslab.engine.orb.StepTrail.WHY_STOP || it == com.optionslab.engine.orb.StepTrail.WHY_TRAIL }
+        else -> stopWhyOf(p).takeIf { com.optionslab.engine.orb.StepTrail.isRuleWhy(it) }
             ?.let { com.optionslab.engine.orb.StepTrail.words(it) } ?: "stop" }
 
     /**
@@ -1038,14 +1048,35 @@ object ArmLive {
     /** 15 Nov: [p]'s lot size for the stop rule (per lot: Zerodha's lot, in units for an option). */
     private fun ruleLot(p: Pos): Int = (p.lot * p.multiplier.coerceAtLeast(1)).coerceAtLeast(1)
 
-    /** 15 Nov: [p]'s own stop-rule stop now - the breakeven once its [Pos.best] was 10% up - on its tick (null: not a rule trade). */
-    private fun ruleStop(p: Pos): Double? = if (!p.fixed || p.side <= 0) null
-        else com.optionslab.engine.orb.StepTrail.levelOf(p.entry, ruleLot(p), p.best, p.tick)
+    /** 16 Nov: [p]'s lock of the fourth version (R51 / R72's ₹500 step lock), or null: V4 alone (entered before it, or not a rule trade). */
+    private fun ruleLock(p: Pos): com.optionslab.engine.orb.StepTrail.Lock? = if (p.fixed && p.lock) com.optionslab.engine.orb.StepTrail.lockFor(p.key) else null
 
-    /** 15 Nov: the reason a sale at [ruleStop] is booked with: the breakeven's once earned, else the entry stop's (unused since V4: no entry stop). */
-    private fun ruleWhy(p: Pos): String =
-        if (p.fixed && com.optionslab.engine.orb.StepTrail.trailLevel(p.entry, ruleLot(p), p.best, p.tick) != null) com.optionslab.engine.orb.StepTrail.WHY_TRAIL
-        else com.optionslab.engine.orb.StepTrail.WHY_STOP
+    /**
+     * 16 Nov: [p]'s quantity at the entry in units, for the lock's per-lot rupees (lots = this / [ruleLot]). The entry's (review): a part
+     * that a stop sold never changes the levels, so the lock can never step down (R186 keeps the lots for the whole trade).
+     */
+    private fun ruleQty(p: Pos): Int = (maxOf(p.entryQty, p.qty) * p.multiplier.coerceAtLeast(1)).coerceAtLeast(1)
+
+    /**
+     * 15 Nov: [p]'s own stop-rule stop now - the breakeven once its [Pos.best] was 10% up; 16 Nov: or the step lock's, the higher - on its
+     * tick (null: not a rule trade).
+     */
+    internal fun ruleStop(p: Pos): Double? = if (!p.fixed || p.side <= 0) null
+        else com.optionslab.engine.orb.StepTrail.levelOf(p.entry, ruleLot(p), p.best, p.tick, ruleLock(p), ruleQty(p))
+
+    /**
+     * 15 Nov: the reason a sale at [ruleStop] is booked with: the breakeven's once earned (16 Nov: the step lock's when that is the level),
+     * else the entry stop's (unused since V4: no entry stop).
+     */
+    internal fun ruleWhy(p: Pos): String {
+        val lv = if (p.fixed) com.optionslab.engine.orb.StepTrail.trailLevel(p.entry, ruleLot(p), p.best, p.tick, ruleLock(p), ruleQty(p)) else null
+        return when {
+            lv == null -> com.optionslab.engine.orb.StepTrail.WHY_STOP
+            com.optionslab.engine.orb.StepTrail.whyAt(lv, p.entry, ruleLot(p), p.tick, ruleLock(p), ruleQty(p)) ==
+                com.optionslab.engine.orb.StepTrail.WHY_LOCK -> com.optionslab.engine.orb.StepTrail.WHY_LOCK
+            else -> com.optionslab.engine.orb.StepTrail.WHY_TRAIL
+        }
+    }
 
     /**
      * 15 Nov: whether [p] (after [withBest]) is worth saving over [was]: anything but a higher best price that earned no new step. Only a
@@ -1059,22 +1090,42 @@ object ArmLive {
         if (!p.fixed || ltp == null || !(ltp > 0) || ltp <= (p.best ?: p.entry)) p else p.copy(best = ltp)
 
     /**
-     * 15 Nov: whether a live R51 / R72 trade rebuilt from Zerodha's [symbol] keeps the breakeven rule: its own
-     * paper trade's flag, found by the same contract (index, expiry, strike, right) when exactly one open paper trade of the arm is on
-     * it; with no confident match, the switch now (review: off means the arms' own exits). Never for another arm. Memory only.
+     * 15 Nov: the open paper trade of the arm [spec] a live trade rebuilt from Zerodha's [symbol] copies: found by the same contract (index,
+     * expiry, strike, right) when exactly one open paper trade of the arm is on it; null with no confident match (the BFO list not read yet
+     * after a restart, an unreadable book, none or two on it). Memory only.
      */
-    internal fun rebuiltFixed(spec: LiveMirror.Spec, symbol: String): Boolean {
-        if (!com.optionslab.engine.orb.StepTrail.covers(spec.key)) return false
-        return runCatching {
-            // 15 Nov re-review: no confident paper match (the BFO list not read yet after a restart, an unreadable book) keeps
-            // the rule. It only tightens a live stop, so it may apply without the PIN; following the switch could take the rule
-            // away from a trade that entered with it (Boss switched it off for new trades only).
-            val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == symbol }
-                ?: return true
-            hosts[spec.family]?.open()?.filter { leg -> leg.key == spec.key && leg.qty > 0 && leg.symbol?.let { Paper.contractOf(it) }?.let { c ->
-                c.underlying == ins.name && c.expiry == ins.expiry && c.right == ins.right && kotlin.math.abs(c.strike - ins.strike) < 1e-6 } == true }
-                ?.singleOrNull()?.fixed ?: true
-        }.getOrDefault(true)
+    private fun rebuiltLeg(spec: LiveMirror.Spec, symbol: String): PaperLeg? = runCatching {
+        val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == symbol }
+            ?: return null
+        hosts[spec.family]?.open()?.filter { leg -> leg.key == spec.key && leg.qty > 0 && leg.symbol?.let { Paper.contractOf(it) }?.let { c ->
+            c.underlying == ins.name && c.expiry == ins.expiry && c.right == ins.right && kotlin.math.abs(c.strike - ins.strike) < 1e-6 } == true }
+            ?.singleOrNull()
+    }.getOrNull()
+
+    /**
+     * 15 Nov: whether a live R51 / R72 trade rebuilt from Zerodha's [symbol] keeps the breakeven rule: its own paper trade's flag
+     * ([rebuiltLeg]); with no confident match, kept. Never for another arm. Memory only.
+     */
+    internal fun rebuiltFixed(spec: LiveMirror.Spec, symbol: String): Boolean = rebuiltRule(spec, symbol).first
+
+    /**
+     * 16 Nov: whether it also keeps the fourth version's step lock: its own paper trade's ([rebuiltLeg]); with no confident match, kept
+     * as [rebuiltFixed] is. Never for another arm, never without the breakeven rule. Memory only.
+     */
+    internal fun rebuiltLock(spec: LiveMirror.Spec, symbol: String): Boolean = rebuiltRule(spec, symbol).second
+
+    /**
+     * The breakeven rule and the step lock (in that order) of a live trade rebuilt from Zerodha's [symbol], from one paper match.
+     * 15 Nov re-review: no confident paper match keeps the rule (16 Nov: and the lock). Each only tightens a live stop, so it may apply
+     * without the PIN; following the switch could take the rule away from a trade that entered with it (Boss switched it off for new
+     * trades only). A V4 trade open across the 16 Nov update whose paper match is not found takes the lock too: the tighter side.
+     */
+    internal fun rebuiltRule(spec: LiveMirror.Spec, symbol: String): Pair<Boolean, Boolean> {
+        if (!com.optionslab.engine.orb.StepTrail.covers(spec.key)) return false to false
+        val leg = rebuiltLeg(spec, symbol)
+        val fixed = leg?.fixed ?: true
+        val lock = fixed && com.optionslab.engine.orb.StepTrail.lockFor(spec.key) != null && (leg?.let { it.fixed && it.lock } ?: true)
+        return fixed to lock
     }
 
     /**
@@ -1085,7 +1136,7 @@ object ArmLive {
         if (why != "stop" && why != "stop_run_through") return why ?: "exit"
         val rule = stopWhyOf(p)
         return when {
-            rule == com.optionslab.engine.orb.StepTrail.WHY_STOP || rule == com.optionslab.engine.orb.StepTrail.WHY_TRAIL -> rule
+            com.optionslab.engine.orb.StepTrail.isRuleWhy(rule) -> rule
             p.stopKind != OWN -> p.stopWord
             else -> why
         }
@@ -1094,7 +1145,7 @@ object ArmLive {
     /** 15 Nov: what a stop exit of [p] is booked as - "₹500 stop" (older records) / "breakeven lock" when its stop rests at those levels, else [Pos.stopWord]. */
     internal fun stopWhyOf(p: Pos): String =
         // Any stop of its own or a safety stop at those levels (a rebuilt trade's starts as a safety stop); never the disaster stop.
-        (if (p.fixed && p.stopKind != DISASTER) com.optionslab.engine.orb.StepTrail.whyAt(p.stopTrigger, p.entry, ruleLot(p), p.tick) else null) ?: p.stopWord
+        (if (p.fixed && p.stopKind != DISASTER) com.optionslab.engine.orb.StepTrail.whyAt(p.stopTrigger, p.entry, ruleLot(p), p.tick, ruleLock(p), ruleQty(p)) else null) ?: p.stopWord
 
     // ---- the stop at Zerodha -------------------------------------------------------------------------------------------------
 
@@ -1998,6 +2049,8 @@ object ArmLive {
             val tick = runCatching { Broker.spec(pos.exchange, pos.symbol).tickSize }.getOrDefault(0.05)
             val lot = runCatching { Broker.spec(pos.exchange, pos.symbol).lotSize }.getOrDefault(1).coerceAtLeast(1)
             val side = if (pos.qty > 0) 1 else -1
+            // 15 Nov / 16 Nov: the breakeven rule and the step lock its paper trade entered with ([rebuiltRule]; a buy only).
+            val rule = if (side > 0) rebuiltRule(spec, pos.symbol) else (false to false)
             val p = Pos(spec.key, "recovered:${entry.id}", pos.symbol, pos.exchange, pos.product, side, kotlin.math.abs(pos.qty), kotlin.math.abs(pos.qty), lot, tick,
                 pos.multiplier.toInt().coerceAtLeast(1), pos.avg.takeIf { it > 0 } ?: entry.avg, now(), pos.avg, kotlin.math.abs(pos.qty),
                 // Its contract's expiry from the day's lists, so the 15:05 expiry square-off applies to it too (review).
@@ -2006,7 +2059,7 @@ object ArmLive {
                 seen = false, heldSeen = true, stopKind = SAFETY,
                 // 15 Nov: an R51 / R72 trade taken back from Zerodha keeps the breakeven rule its paper trade entered
                 // with, when the paper book shows exactly one open trade of that arm; else the switch now (it only lowers risk).
-                fixed = side > 0 && rebuiltFixed(spec, pos.symbol))
+                fixed = rule.first, lock = rule.second)
             // A stop of this path's own still resting on it is kept as its stop; else the safety stop rests.
             val so = orders.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
                 (it.type == "SL" || it.type == "SL-M") }.singleOrNull()
@@ -2084,7 +2137,7 @@ object ArmLive {
             ". Now: ${stateOf(key)}." + (if (skipped > 0) " Not mirrored today: $skipped (last: $why)." else "") +
             // 15 Nov (Boss's exception): R51 / R72's live trades carry their own breakeven rule while the switch is on.
             (if (com.optionslab.engine.orb.StepTrail.covers(key) && StepTrailExits.isOn())
-                " New live trades: ${com.optionslab.engine.orb.StepTrail.LABEL}, on their own fill and lots." else "")
+                " New live trades: ${com.optionslab.engine.orb.StepTrail.labelOf(com.optionslab.engine.orb.StepTrail.lockFor(key))}, on their own fill and lots." else "")
     }
 
     /** The diagnostics' line. Memory only. */

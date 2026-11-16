@@ -31,6 +31,8 @@ import java.time.LocalTime
  * breakeven at +10% ([StepTrail], [StepTrailExits]) on PAPER - its own -15% stop rests at the entry (the rule sets none), moved up to
  * breakeven (the fill plus the charges) once the option is 10% up (1 and 2 lots), never down, sold there and labelled; off, nothing
  * changes; a restart keeps it. (The 5-minute book's signal: CE, lot 30, at 13:05; the break holds; the option at about 600.)
+ * 16 Nov 2026, fourth version (Boss: "... for liquidity use Breakeven at +₹1,000"): a new trade also moves to the same breakeven once its
+ * best open P&L is +₹1,000 a lot net (about +6% at 600, before +10%), whichever first; nothing more; labelled with R186's record.
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class StepTrailLiquidityTest : RobolectricTest() {
@@ -101,6 +103,8 @@ class StepTrailLiquidityTest : RobolectricTest() {
 
     private fun lotOf(p: OrbArms.Position): Int = p.lot ?: 30
     private fun be(p: OrbArms.Position): Double = StepTrail.breakevenLevel(p.entry, lotOf(p))!!
+    /** 16 Nov: the premium at which [p]'s open P&L nets +₹1,000 a lot (its breakeven from there, the fourth version). */
+    private fun plus1000(p: OrbArms.Position): Double = StepTrail.lockTrigger(p.entry, lotOf(p), p.qty, 0)!!
 
     /** The option at [px]: the paper book's own pass, then the arms' at [t]. */
     private fun priced(px: Double, t: LocalTime) {
@@ -114,6 +118,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
     @Test fun itKeepsItsOwnStopAtTheEntryAndThePopupNamesTheRule() {
         val p = entered()
         assertTrue(p.fixed)
+        assertTrue("a new trade takes the fourth version", p.lock)
         assertEquals(30, p.lot)
         assertEquals("no rule stop at the entry: its own -15%", LiquidityRules.stopTrigger(p.entry)!!, p.stopTrigger!!, 1e-9)
         val stop = Paper.state.orders.single { it.action == "SELL" }
@@ -122,6 +127,8 @@ class StepTrailLiquidityTest : RobolectricTest() {
         // The position popup carries the label and where the breakeven starts.
         val exits = com.optionslab.ira.ArmExits.line(false, p.symbol)!!
         assertTrue(exits, exits.contains("failed gates, Boss's exception") && exits.contains("breakeven from"))
+        // 16 Nov: it starts at the sooner of +₹1,000 a lot and +10%: here +₹1,000 a lot.
+        assertTrue(exits, exits.contains(StepTrail.LABEL_BE1000) && exits.contains("breakeven from " + String.format(java.util.Locale.ENGLISH, "%.2f", plus1000(p))))
         // The option falls under the -15%: the book fills it; booked as its own stop.
         priced(LiquidityRules.stopTrigger(p.entry)!! - 0.5, LocalTime.of(13, 15))
         val closed = row().today.single()
@@ -130,16 +137,18 @@ class StepTrailLiquidityTest : RobolectricTest() {
         assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
     }
 
-    @Test fun theStopMovesToBreakevenAtTenPercentNeverDownAndSellsAsTheBreakevenLock() {
+    @Test fun theStopMovesToBreakevenAtPlusOneThousandALotNeverDownAndSellsAsTheBreakevenLock() {
         val p = entered()
         val own = LiquidityRules.stopTrigger(p.entry)!!
-        // +5% and +9%: not yet - the stop stays at its own -15%.
+        val first = plus1000(p)
+        assertTrue("+₹1,000 a lot comes before +10% at 600: $first", first < p.entry * 1.10 && first > p.entry * 1.05)
+        // +5% and one tick under +₹1,000 a lot: not yet - the stop stays at its own -15%.
         priced(p.entry * 1.05, LocalTime.of(13, 6))
         assertEquals(own, row().today.single().stopTrigger!!, 1e-9)
-        priced(p.entry * 1.09, LocalTime.of(13, 7))
+        priced(first - 0.05, LocalTime.of(13, 7))
         assertEquals(own, row().today.single().stopTrigger!!, 1e-9)
-        // +11%: the stop moves up to breakeven (the resting paper stop modified, not a new order).
-        priced(p.entry * 1.11, LocalTime.of(13, 8))
+        // +₹1,000 a lot net (under +10%): the stop moves up to breakeven (the resting paper stop modified, not a new order).
+        priced(first, LocalTime.of(13, 8))
         val b = be(p)
         assertEquals("the fill plus the charges", p.entry + StepTrail.chargesPerUnit(p.entry, 30), b, 0.05 + 1e-9)
         assertTrue("over the fill: $b", b > p.entry)
@@ -151,7 +160,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
         priced(p.entry * 1.03, LocalTime.of(13, 9))
         assertEquals(b, row().today.single().stopTrigger!!, 1e-9)
         priced(p.entry * 1.14, LocalTime.of(13, 10))
-        assertEquals(b, row().today.single().stopTrigger!!, 1e-9)
+        assertEquals("nothing more: no step lock on Liquidity", b, row().today.single().stopTrigger!!, 1e-9)
         // Back under it: the resting stop fills, booked as the breakeven lock, about ₹0 before charges.
         priced(b - 0.5, LocalTime.of(13, 11))
         val closed = row().today.single()
@@ -193,6 +202,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(OrbArms)
         val back = row().today.single()
         assertTrue("an open trade keeps the rule it entered with", back.fixed)
+        assertTrue("and its fourth version", back.lock)
         assertEquals("never back down after a restart", b, back.stopTrigger!!, 1e-9)
         priced(p.entry * 1.03, LocalTime.of(13, 8))
         assertEquals(b, row().today.single().stopTrigger!!, 1e-9)
@@ -207,7 +217,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
         priced(be(p) - 0.5, LocalTime.of(13, 15))
         val closed = row().today.single()
         assertEquals(StepTrail.WHY_TRAIL, closed.why)
-        assertTrue(closed.ownExits); assertEquals(StepTrail.LABEL, closed.ownExitsLabel)
+        assertTrue(closed.ownExits); assertEquals(StepTrail.LABEL_BE1000, closed.ownExitsLabel)
         val book = runBlocking { OrbArms.closedPaper() }
         assertTrue("not in the forward check", ForwardRecords.liquidity(book).isEmpty())
         assertTrue("not in the record chart", ForwardRecords.liquidityEquityTrades(book).isEmpty())
@@ -215,12 +225,12 @@ class StepTrailLiquidityTest : RobolectricTest() {
         if (!com.optionslab.app.BuildConfig.GOLD) {
             val t = view!!
             assertTrue(t.paperTest, t.paperTest.contains("0 trades since 13 Oct"))
-            assertTrue(t.paperTest, t.paperTest.contains("Kept apart, ${StepTrail.LABEL} (your 15 Nov choice; R179"))
+            assertTrue(t.paperTest, t.paperTest.contains("Kept apart, ${StepTrail.LABEL_BE1000} (your 16 Nov choice; R186"))
             assertFalse(t.paperTest, t.paperTest.contains("plain rules ("))
         }
         // Explain-my-bots and the weekly / cut-off readers see it as the rule's own.
         val bt = com.optionslab.app.ira.IraBots.tradeOf(closed)
-        assertTrue(bt.trail); assertTrue(bt.fixed); assertEquals(StepTrail.LABEL, bt.rules)
+        assertTrue(bt.trail); assertTrue(bt.fixed); assertTrue(bt.lock); assertEquals(StepTrail.LABEL_BE1000, bt.rules)
     }
 
     /** With Boss's own paper breakeven at +10% too, the two breakevens sit about together; the higher stop wins and both are named. */
@@ -241,7 +251,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
             val closed = row().today.single()
             assertTrue(closed.why, closed.why == StepTrail.WHY_TRAIL || closed.why == com.optionslab.engine.orb.LiquidityBreakeven.WHY)
             val label = closed.ownExitsLabel!!
-            assertTrue(label, label.contains(com.optionslab.engine.orb.LiquidityBreakeven.LABEL.removePrefix("with ")) && label.contains(StepTrail.LABEL))
+            assertTrue(label, label.contains(com.optionslab.engine.orb.LiquidityBreakeven.LABEL.removePrefix("with ")) && label.contains(StepTrail.LABEL_BE1000))
             if (!com.optionslab.app.BuildConfig.GOLD) {
                 val t = row().test!!
                 assertTrue(t.paperTest, t.paperTest.contains("Kept apart, $label (your own choices, kept apart from the plain rules): 1 trade"))
@@ -360,10 +370,14 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
         val p = approved(2)
         val id = p.stopOrderId!!
         val b = be(p.entry)
+        // 16 Nov: the fourth version - the breakeven from +₹1,000 a lot net on the two lots (+₹2,000), here before +10%.
+        val first = StepTrail.lockTrigger(p.entry, 30, p.qty, 0)!!
+        assertTrue("$first", first < p.entry * 1.10 && first > p.entry * 1.055)
+        assertTrue(p.lock)
         quoted(p.entry * 1.055)                                    // +5.5%: not yet (the second version's trigger)
-        quoted(p.entry * 1.095)                                    // +9.5%: not yet
+        quoted(first - 0.05)                                       // a tick under +₹1,000 a lot: not yet
         assertTrue(modifies.isEmpty())
-        quoted(p.entry * 1.105)                                    // +10.5%: up to breakeven
+        quoted(first)                                              // +₹1,000 a lot: up to breakeven
         assertEquals(1, modifies.size)
         assertEquals("/orders/regular/$id", modifies.single().path)
         assertEquals(b, kite.order(id).trigger, 1e-9)
@@ -386,7 +400,7 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
         val b = be(p.entry)
         AutomationSupport.reloadFromDisk(OrbArms)
         val back = row().open!!
-        assertTrue(back.fixed); assertEquals(b, back.stopTrigger!!, 1e-9)
+        assertTrue(back.fixed); assertTrue(back.lock); assertEquals(b, back.stopTrigger!!, 1e-9)
         quoted(p.entry * 1.03)
         assertEquals("never moved down", 1, modifies.size)
         assertEquals(b, kite.order(p.stopOrderId!!).trigger, 1e-9)

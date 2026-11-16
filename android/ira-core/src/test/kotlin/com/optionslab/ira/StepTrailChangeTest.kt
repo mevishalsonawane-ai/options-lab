@@ -8,7 +8,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * 15 Nov 2026 (Boss's rule, third version: breakeven at +10% (V4); CLAUDE.md's fifth exception, failed gates): its
+ * 15 Nov 2026 (Boss's rule, third version: breakeven at +10% (V4); 16 Nov, fourth version: the step lock and breakeven at +₹1,000;
+ * CLAUDE.md's fifth exception, failed gates): its
  * change-timeline entry ([AutoChange.stepTrail]) -
  * Boss's own, live scope: on only raises stops (lowers risk); its Undo puts the arms' own exits back alone (adds live risk) and takes
  * the PIN.
@@ -19,7 +20,7 @@ class StepTrailChangeTest {
     @Test fun onLowersRiskAndItsUndoTakesThePin() {
         val on = AutoChange.stepTrail(true)
         assertEquals(AutoChange.Kind.PAPER_FILTER, on.kind)
-        assertEquals(AutoChange.BE10_TARGET, on.target, "its own target, so the update is logged once")
+        assertEquals(AutoChange.STEP_LOCK_TARGET, on.target, "its own target, so the 16 Nov update is logged once")
         assertEquals(AutoChange.SWITCHED_OFF, on.from); assertEquals(AutoChange.ON, on.to)
         assertEquals(AutoChange.Scope.LIVE, on.scope)
         assertEquals(AutoChange.Risk.LOWER, AutoChange.riskOf(on))
@@ -29,8 +30,9 @@ class StepTrailChangeTest {
         assertFalse(AutoChange.undoNeedsPin(AutoChange.stepTrail(false)), "switching it back on only adds earlier exits")
         assertFalse(AutoChange.never(on)); assertFalse(AutoChange.never(AutoChange.stepTrail(false)))
         assertTrue(AutoChange.bossOwn(on.kind))
-        for (w in listOf("Switch to + picker + breakeven at +10% (V4)", "keeps its arm's own stop", "10% above the fill", "breakeven",
-                "never down", "R151 picker", "paper and live", "first one wins", "replaced the ₹500 step trail", "Failed gates, Boss's exception",
+        for (w in listOf("For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven at +₹1,000",
+                "keeps its arm's own stop", "breakeven at +10%", "+₹500 a lot", "+₹1,000 a lot", "+1,500 locks +1,000", "only rises",
+                "R151 picker", "paper and live", "first exit wins", "Failed gates, Boss's exception", "R186", "1,097 trades", "₹98,239",
                 "R179", "V4"))
             assertTrue(on.reason.contains(w), "$w: ${on.reason}")
         assertTrue(on.what.contains("failed gates, Boss's exception"))
@@ -41,9 +43,11 @@ class StepTrailChangeTest {
         val others = listOf(AutoChange.ST_TARGET, AutoChange.LOCK_TARGET, AutoChange.L25_TARGET, AutoChange.SAME_DIR_TARGET, AutoChange.NO_TWIN_TARGET,
             AutoChange.BOOK_PRICE_TARGET, AutoChange.WIDE_TARGET, AutoChange.NO_PROGRESS_TARGET, AutoChange.W20_TARGET, AutoChange.PICK_TARGET) +
             AutoChange.BOSS_PAPER_RULES
-        assertFalse(AutoChange.STEP_TRAIL_TARGET in others); assertFalse(AutoChange.BE10_TARGET in others)
-        assertFalse("liquidity" in AutoChange.STEP_TRAIL_TARGET); assertFalse("liquidity" in AutoChange.BE10_TARGET)
-        assertTrue(AutoChange.BE10_TARGET != AutoChange.STEP_TRAIL_TARGET)
+        for (t in listOf(AutoChange.STEP_TRAIL_TARGET, AutoChange.BE10_TARGET, AutoChange.STEP_LOCK_TARGET)) {
+            assertFalse(t in others, t); assertFalse("liquidity" in t, t); assertTrue(AutoChange.isStepTrailTarget(t), t)
+        }
+        assertEquals(3, setOf(AutoChange.STEP_TRAIL_TARGET, AutoChange.BE10_TARGET, AutoChange.STEP_LOCK_TARGET).size)
+        assertFalse(AutoChange.isStepTrailTarget(AutoChange.LOCK_TARGET), "R64's paper lock is another switch")
         val (b, e) = AutoChange.record(AutoChange.Book(), AutoChange.stepTrail(true), AutoChange.Status.KEPT, 1_000L, day, by = "your ask")
         val undo = AutoChange.undo(b, e.id)!!
         assertEquals(AutoChange.SWITCHED_OFF, undo.inverse.to); assertTrue(undo.needsPin)
@@ -62,8 +66,13 @@ class StepTrailChangeTest {
         val (b, e) = AutoChange.record(AutoChange.Book(), old, AutoChange.Status.KEPT, 1_000L, day, by = "your ask")
         assertFalse(AutoChange.superseded(b, e), "nothing newer yet: it undoes")
         val (b2, newer) = AutoChange.record(b, AutoChange.stepTrail(false), AutoChange.Status.KEPT, 2_000L, day, by = "your choice")
-        assertTrue(AutoChange.superseded(b2, e), "the breakeven version's flip is the same switch: only the newest undoes")
+        assertTrue(AutoChange.superseded(b2, e), "the step lock version's flip is the same switch: only the newest undoes")
         assertFalse(AutoChange.superseded(b2, newer))
+        // 16 Nov: the third version's (V4) entry likewise.
+        val v4 = AutoChange.stepTrail(true).copy(target = AutoChange.BE10_TARGET)
+        val (c, ce) = AutoChange.record(AutoChange.Book(), v4, AutoChange.Status.KEPT, 1_000L, day, by = "your ask")
+        assertFalse(AutoChange.superseded(c, ce))
+        assertTrue(AutoChange.superseded(AutoChange.record(c, AutoChange.stepTrail(false), AutoChange.Status.KEPT, 2_000L, day, by = "you").first, ce))
         // Another switch's entry is not affected.
         val (b3, other) = AutoChange.record(AutoChange.Book(), AutoChange.stepTrail(true).copy(target = AutoChange.PICK_TARGET),
             AutoChange.Status.KEPT, 1_000L, day, by = "x")

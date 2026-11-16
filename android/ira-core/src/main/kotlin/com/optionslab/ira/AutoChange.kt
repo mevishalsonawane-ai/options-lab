@@ -955,19 +955,31 @@ object AutoChange {
     const val BE10_TARGET = "exit:breakeven_10"
 
     /**
-     * 15 Nov 2026, third version (Boss: "Switch to + picker + breakeven at +10% (V4)"; CLAUDE.md's fifth exception; it replaced the
-     * morning's ₹500 step trail): every new trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian keeps its arm's own stop and
-     * moves it to breakeven once the option is 10% above the fill, on paper and live - switched [on], or off again. Failed R179's gates. On only tightens stops (risk down); off puts the arms' own wider exits back (risk up,
-     * live scope: its Undo takes the PIN).
+     * 16 Nov 2026, fourth version: the target of the step lock (R51, R72) and the breakeven at +₹1,000 (Liquidity) on top of the breakeven
+     * at +10% ([stepTrail]), a target of its own so the update is logged once in the timeline; [STEP_TRAIL_TARGET]'s and [BE10_TARGET]'s
+     * older entries still undo the same switch ([superseded]).
      */
-    fun stepTrail(on: Boolean): Change = Change(Kind.PAPER_FILTER, BE10_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
-        if (on) "your ask (15 Nov, \"Switch to + picker + breakeven at +10% (V4)\"): each new trade of Liquidity 15+5, R51 Donchian 20 and " +
-            "R72 Breadth Donchian keeps its arm's own stop; once the option is 10% above the fill the stop moves to breakeven (the fill plus " +
-            "the charges), never down; R72 / R51 keep the R151 picker; paper and live; the arms' own exits stay and the first one wins. It " +
-            "replaced the ₹500 step trail. Failed gates, Boss's exception: ${com.optionslab.engine.orb.StepTrail.RECORD}"
-        else "Liquidity 15+5, R51 and R72's new trades are back on their own exits (no breakeven at +10%; live too)",
+    const val STEP_LOCK_TARGET = "exit:step_lock_be1000"
+
+    /** Whether [target] is one of this one switch's targets, any version's. */
+    fun isStepTrailTarget(target: String): Boolean = target == STEP_TRAIL_TARGET || target == BE10_TARGET || target == STEP_LOCK_TARGET
+
+    /**
+     * 16 Nov 2026, fourth version (Boss, after R186: "For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven
+     * at +₹1,000"; CLAUDE.md's fifth exception; on top of the third version, V4): every new trade of Liquidity 15+5, R51 Donchian 20 and
+     * R72 Breadth Donchian keeps its arm's own stop and moves it to breakeven once the option is 10% above the fill; R51 / R72 also lock
+     * +₹500 a lot at +₹1,000 a lot net and step it up ₹500 at a time, Liquidity moves to breakeven at +₹1,000 a lot if that comes first;
+     * paper and live - switched [on], or off again. Failed R179's and R186's gates. On only tightens stops (risk down); off puts the arms'
+     * own wider exits back (risk up, live scope: its Undo takes the PIN).
+     */
+    fun stepTrail(on: Boolean): Change = Change(Kind.PAPER_FILTER, STEP_LOCK_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (16 Nov, \"For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven at +₹1,000\"): " +
+            "each new trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian keeps its arm's own stop and the breakeven at +10%; " +
+            "${com.optionslab.engine.orb.StepTrail.LOCK_RULE}; R72 / R51 keep the R151 picker. Failed gates, Boss's exception: " +
+            "${com.optionslab.engine.orb.StepTrail.LOCK_RECORD}. Before it: ${com.optionslab.engine.orb.StepTrail.RECORD}"
+        else "Liquidity 15+5, R51 and R72's new trades are back on their own exits (no step lock, no breakeven; live too)",
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
-        what = "breakeven at +10% on Liquidity, R51 and R72, paper and live (failed gates, Boss's exception)")
+        what = "step lock (R51, R72) and breakeven at +₹1,000 (Liquidity) on breakeven at +10%, paper and live (failed gates, Boss's exception)")
 
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"
@@ -1557,8 +1569,8 @@ object AutoChange {
         if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE,
                 Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT, Kind.LIQ_BREAKEVEN, Kind.IDEA_RULE, Kind.DAY_STOP)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
-        // 15 Nov: the rule's first version (₹500 step trail) and this one (breakeven at +10%) are one switch.
-        fun same(t: String) = if (t == STEP_TRAIL_TARGET) BE10_TARGET else t
+        // 15 Nov: the rule's first version (₹500 step trail), the third (breakeven at +10%) and, 16 Nov, the fourth (step lock) are one switch.
+        fun same(t: String) = if (isStepTrailTarget(t)) STEP_LOCK_TARGET else t
         return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && same(it.change.target) == same(e.change.target) }
     }
 

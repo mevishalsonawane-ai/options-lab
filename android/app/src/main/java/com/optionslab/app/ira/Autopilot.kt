@@ -525,7 +525,7 @@ internal object Autopilot {
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
                 kotlinx.coroutines.runBlocking { com.optionslab.app.data.PassedArmsHost.setW20(c.to == AutoChange.ON, log = false) }
                     .takeIf { !it.contains("not ready") }
-            } else if (c.target == AutoChange.STEP_TRAIL_TARGET || c.target == AutoChange.BE10_TARGET) {
+            } else if (AutoChange.isStepTrailTarget(c.target)) {
                 // 15 Nov (Boss's exception, CLAUDE.md): Boss's stop rule on Liquidity, R51 and R72 - the morning's ₹500 step trail's
                 // entries and the breakeven at +10% that replaced it under the same switch ([logStepTrailOn],
                 // [logStepTrail]): the Undo switches it off or on for new trades. Off puts the arms' own exits back alone, live too: the PIN, by the
@@ -1400,8 +1400,9 @@ internal object Autopilot {
      */
     fun logStepTrailOn() {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"Switch to + picker + breakeven at +10% " +
-            "(V4)\"; it replaced the ₹500 step trail); failed gates, Boss's exception - paper and live, new trades")
+        // 16 Nov: the fourth version's own target ([AutoChange.STEP_LOCK_TARGET]), so the update is logged once more, as its own.
+        logBossOwnOnce(AutoChange.stepTrail(true), "the 16 Nov update (your ask: \"For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) " +
+            "And for liquidity use Breakeven at +₹1,000\"; on top of the breakeven at +10%); failed gates, Boss's exception - paper and live, new trades")
     }
 
     /** 15 Nov: Boss flipping the breakeven at +10% in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */

@@ -145,7 +145,11 @@ object PassedArms {
                             val stepTrail: StepTrailOn? = null)
 
     /** 15 Nov: the stop rule on a trade: its contract's [lot] size and [tick] ([StepTrail]). */
-    data class StepTrailOn(val lot: Int, val tick: Double = StepTrail.TICK)
+    data class StepTrailOn(val lot: Int, val tick: Double = StepTrail.TICK,
+                           /** 16 Nov (fourth version): the lock the trade entered with on top of the breakeven (null: V4 alone). */
+                           val lock: StepTrail.Lock? = null,
+                           /** 16 Nov: the trade's quantity, for the lock's per-lot rupees (lots = qty / [lot]). */
+                           val qty: Int = lot)
 
     /**
      * R142's "no progress" exit (research/HUNT_R142_BAD_BREAK_NO_PROGRESS.md, NP5-52; held in all six periods tested, R143 and
@@ -185,7 +189,9 @@ object PassedArms {
         /** 15 Nov ([StepTrail]): the first version's ₹500 entry stop (no longer produced since V4: the rule sets no entry stop). */
         STEP_STOP(StepTrail.WHY_STOP),
         /** 15 Nov ([StepTrail]): a stop the breakeven rule raised. */
-        STEP_TRAIL(StepTrail.WHY_TRAIL) }
+        STEP_TRAIL(StepTrail.WHY_TRAIL),
+        /** 16 Nov ([StepTrail.Lock.L500]): a stop the ₹500 step lock raised. */
+        STEP_LOCK(StepTrail.WHY_LOCK) }
 
     /** An exit decided: why, and the price the research would have booked it at (a stop's level or a gap's open; the target). */
     data class Exit(val kind: ExitKind, val at: LocalDateTime, val price: Double)
@@ -231,7 +237,11 @@ object PassedArms {
         // The exit kind of a stop at the stops [stopB] with [lock] earned: the rule's breakeven, the lock, or the arm's own stop.
         fun kindOf(stopB: Double?, lk: Double?): ExitKind = when {
             lk != null && lk >= (stopB ?: -1.0) ->
-                if (st != null && StepTrail.whyAt(lk, entry, st.lot, st.tick) == StepTrail.WHY_TRAIL) ExitKind.STEP_TRAIL else ExitKind.LOCK
+                when (if (st != null) StepTrail.whyAt(lk, entry, st.lot, st.tick, st.lock, st.qty) else null) {
+                    StepTrail.WHY_TRAIL -> ExitKind.STEP_TRAIL
+                    StepTrail.WHY_LOCK -> ExitKind.STEP_LOCK
+                    else -> ExitKind.LOCK
+                }
             else -> ExitKind.STOP
         }
         val tgt = targetLevel(entry, x)
@@ -267,7 +277,7 @@ object PassedArms {
             // 15 Nov ([StepTrail]): the breakeven from the best high after the entry minute, from the next minute on (as the lock).
             if (st != null && !first) {
                 if (b.high > stepPeak) stepPeak = b.high
-                StepTrail.trailLevel(entry, st.lot, stepPeak, st.tick)?.let { if (lock == null || it > lock!!) lock = it }
+                StepTrail.trailLevel(entry, st.lot, stepPeak, st.tick, st.lock, st.qty)?.let { if (lock == null || it > lock!!) lock = it }
             }
             if (npEnd != null && npLevel != null && !b.start.isAfter(npEnd)) {
                 npSeen++
@@ -325,7 +335,7 @@ object PassedArms {
      */
     fun booked(kind: ExitKind, fill: Double, target: Double?, walk: Double?): Double = when {
         kind == ExitKind.TARGET -> booked(kind, fill, target)
-        (kind == ExitKind.STOP || kind == ExitKind.LOCK || kind == ExitKind.STEP_TRAIL) && walk != null && walk.isFinite() && walk > 0 -> walk
+        (kind == ExitKind.STOP || kind == ExitKind.LOCK || kind == ExitKind.STEP_TRAIL || kind == ExitKind.STEP_LOCK) && walk != null && walk.isFinite() && walk > 0 -> walk
         else -> fill
     }
 

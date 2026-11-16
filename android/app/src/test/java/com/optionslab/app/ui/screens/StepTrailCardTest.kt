@@ -23,7 +23,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * 15 Nov 2026 (Boss's exception, third version): Bot settings' "Breakeven at +10%" card ([StepTrailCardFlow]): labelled "failed gates, Boss's
+ * 15 Nov 2026 (Boss's exception, third version; 16 Nov, fourth version: the step lock and breakeven at +₹1,000): Bot settings' "Step lock and breakeven" card ([StepTrailCardFlow]): labelled "failed gates, Boss's
  * exception" with its honest record; on, switching it off asks the PIN first (where a PIN is asked) and goes off only once it is given;
  * off, on again is one tap; before the switch is read it offers none. Also the arms' rows' line ([stepTrailLine]).
  */
@@ -49,21 +49,28 @@ class StepTrailCardTest {
         var ons = 0; var offs = 0
         show(StepTrailExits.View(on = true, loaded = true), pinAsked = true, { ons++ }, { offs++ })
         compose.waitForIdle()
-        assertTrue(shows("Breakeven at +10%"))
-        assertTrue(shows(StepTrail.SWITCH))
-        assertTrue(shows("On: new trades of the three arms get the breakeven at +10%"))
+        assertTrue(shows("Step lock and breakeven"))
+        assertTrue(shows(StepTrail.SWITCH_V5))
+        assertTrue(StepTrail.SWITCH_V5.contains("failed gates, Boss's exception"))
+        assertTrue(shows("On: new trades of the three arms get the step lock or breakeven at +₹1,000, and the breakeven at +10%"))
         assertTrue(shows("Failed gates, Boss's exception", sub = true))
         assertTrue(shows("R179", sub = true))
+        // 16 Nov: the fourth version's rules and R186's record.
+        assertTrue(shows("the stop locks +₹500 a lot, then stays ₹500 a lot under each further ₹500 step", sub = true))
+        assertTrue(shows("breakeven at +10% or +₹1,000 a lot, whichever comes first", sub = true))
+        assertTrue(shows("R186", sub = true))
+        assertTrue(shows("₹98,239", sub = true))
+        assertTrue(shows("open trades from before keep the breakeven at +10% alone", sub = true))
         assertTrue(shows("keeps its arm's own stop", sub = true))
         assertTrue(shows("10% above the fill, the stop moves to breakeven", sub = true))
-        compose.onNodeWithText(StepTrail.SWITCH).performClick()
+        compose.onNodeWithText(StepTrail.SWITCH_V5).performClick()
         compose.waitForIdle()
         assertTrue(shows("PIN asked"))
         assertEquals("not off before the PIN", 0, offs)
         compose.onNodeWithText("PIN cancel").performClick()
         compose.waitForIdle()
         assertEquals("cancelled: still on", 0, offs)
-        compose.onNodeWithText(StepTrail.SWITCH).performClick()
+        compose.onNodeWithText(StepTrail.SWITCH_V5).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("PIN right").performClick()
         compose.waitForIdle()
@@ -75,7 +82,7 @@ class StepTrailCardTest {
         var offs = 0
         show(StepTrailExits.View(on = true, loaded = true), pinAsked = false, { }, { offs++ })
         compose.waitForIdle()
-        compose.onNodeWithText(StepTrail.SWITCH).performClick()
+        compose.onNodeWithText(StepTrail.SWITCH_V5).performClick()
         compose.waitForIdle()
         assertFalse(shows("PIN asked"))
         assertEquals(1, offs)
@@ -87,7 +94,7 @@ class StepTrailCardTest {
         show(StepTrailExits.View(on = false, loaded = true), pinAsked = true, { ons++ }, { offs++ })
         compose.waitForIdle()
         assertTrue(shows("Off: new trades use the arms' own exits"))
-        compose.onNodeWithText(StepTrail.SWITCH).performClick()
+        compose.onNodeWithText(StepTrail.SWITCH_V5).performClick()
         compose.waitForIdle()
         assertFalse(shows("PIN asked"))
         assertEquals(1, ons); assertEquals(0, offs)
@@ -99,16 +106,20 @@ class StepTrailCardTest {
         show(StepTrailExits.View(), pinAsked = true, { taps++ }, { taps++ })
         compose.waitForIdle()
         assertTrue(shows("Reading the switch..."))
-        assertFalse(shows(StepTrail.SWITCH))
+        assertFalse(shows(StepTrail.SWITCH_V5))
         assertEquals(0, taps)
     }
 
     @Test fun theArmsRowsSayItWhenOnAndOnlyForTheThree() {
         for (src in listOf(com.optionslab.engine.orb.DonchianArm.SOURCE, com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "liquidity")) {
             val line = stepTrailLine(src, true)!!
-            assertTrue(line, line.contains("failed gates, Boss's exception") && line.contains("R179"))
+            assertTrue(line, line.contains("failed gates, Boss's exception") && line.contains("R179") && line.contains("R186"))
             assertNull(stepTrailLine(src, false))
         }
+        // 16 Nov: each arm's own lock named.
+        assertTrue(stepTrailLine(com.optionslab.engine.orb.DonchianArm.SOURCE, true)!!.startsWith(StepTrail.LABEL_L500))
+        assertTrue(stepTrailLine(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, true)!!.startsWith(StepTrail.LABEL_L500))
+        assertTrue(stepTrailLine("liquidity", true)!!.startsWith(StepTrail.LABEL_BE1000))
         for (other in listOf(com.optionslab.engine.orb.OovArm.SOURCE, com.optionslab.engine.orb.Solo2.SOURCE, "orb")) assertNull(stepTrailLine(other, true))
     }
 }
