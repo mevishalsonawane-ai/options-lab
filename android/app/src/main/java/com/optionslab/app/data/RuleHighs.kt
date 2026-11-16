@@ -23,7 +23,7 @@ internal object RuleHighs {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val highs = java.util.concurrent.ConcurrentHashMap<String, Double>()
     private val inFlight = java.util.concurrent.ConcurrentHashMap<String, Job>()
-    /** When each trade's read was last started (wall clock, ms): at most one a minute each ([EVERY_MS]); and its age for pruning. */
+    /** When each trade's read was last started (the market's clock, ms): at most one a minute each ([EVERY_MS]); and its age for pruning. */
     private val asked = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private const val KEPT = 200
     private const val EVERY_MS = 60_000L
@@ -36,7 +36,7 @@ internal object RuleHighs {
      * Starts a background read of [c]'s highest price after [since]'s minute for the trade [key] - unless one is running or one started
      * in the last minute (the feed read once a minute a trade, as the paper books' gap read). Trades not asked for a day are dropped.
      */
-    fun ask(key: String, c: Paper.Contract, since: LocalDateTime, nowMs: Long = System.currentTimeMillis()) {
+    fun ask(key: String, c: Paper.Contract, since: LocalDateTime, nowMs: Long = marketMs()) {
         if (inFlight[key]?.isActive == true) return
         asked[key]?.let { if (nowMs - it in 0 until EVERY_MS) return }
         asked[key] = nowMs
@@ -52,6 +52,9 @@ internal object RuleHighs {
         job.invokeOnCompletion { inFlight.remove(key, job) }
         job.start()
     }
+
+    /** The market's clock (the minutes the feed's candles are on; the tests' fixed clock), ms. */
+    private fun marketMs(): Long = runCatching { Market.now().toInstant().toEpochMilli() }.getOrElse { System.currentTimeMillis() }
 
     /** The trade [key] closed: its high forgotten. */
     fun forget(key: String) { highs.remove(key); asked.remove(key); inFlight.remove(key)?.cancel() }
