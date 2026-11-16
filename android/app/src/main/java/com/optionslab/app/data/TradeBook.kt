@@ -190,10 +190,11 @@ object TradeBook {
     private val dayOrderIds = com.optionslab.ira.DayKept<Set<String>>()
 
     /** Charges paid in [month], line by line. */
-    fun charges(live: Boolean, month: YearMonth): Map<String, Double> {
+    fun charges(live: Boolean, month: YearMonth, from: java.time.LocalDate? = null): Map<String, Double> {
         val out = LinkedHashMap<String, Double>()
         if (live) {
-            val inMonth = liveSnapshot().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month } == true }
+            // 16 Nov: [from] - the live P&L page's start date (PnlStart) - leaves out the trades before it (display only).
+            val inMonth = liveSnapshot().filter { kiteTime(it.at)?.let { t -> YearMonth.from(t) == month && (from == null || !t.toLocalDate().isBefore(from)) } == true }
             com.optionslab.ira.PnlCharges.perFill(inMonth.map { chargeFill(it, kiteTime(it.at)?.toLocalDate()?.toString().orEmpty()) })
                 .forEach { m -> m.forEach { (k, v) -> out[k] = (out[k] ?: 0.0) + v } }
         } else Paper.state.trades.filter { YearMonth.from(it.timestamp) == month }.forEach { t ->

@@ -326,6 +326,74 @@ class MiscScreensTest {
         assertEquals("date,account,strategy,pnl,trades,charges\n", String(picker.written(out)!!))
     }
 
+    // 16 Nov (Boss: "make it blank until yesterday, and show only from tomorrow, for live"): the Zerodha page's start date hides the
+    // earlier days on the page only; the stored days (what the risk rules read) are untouched, and the paper page is unaffected.
+    @Test fun theLivePageStartsFreshFromTheNextTradingDayAndHidesWithoutDeleting() {
+        val ist = com.optionslab.engine.IST
+        // Monday 16 Nov 2026 (a trading day): the next trading day is Tuesday 17 Nov.
+        Market.testClock = java.time.Clock.fixed(LocalDate.of(2026, 11, 16).atTime(12, 0).atZone(ist).toInstant(), ist)
+        val prefs = com.optionslab.app.security.SecurePrefs
+        // Two live days before the start (13 Nov and today) and one paper day.
+        val liveDays = org.json.JSONObject()
+            .put("2026-11-13", org.json.JSONArray().put(-4_321.0).put(3).put(120.0).put(0))
+            .put("2026-11-16", org.json.JSONArray().put(1_234.0).put(2).put(80.0).put(0)).toString()
+        prefs.put("pnl.days.live", liveDays)
+        prefs.put("pnl.days.paper", org.json.JSONObject().put("2026-11-12", org.json.JSONArray().put(-555.0).put(1).put(0.0).put(0)).toString())
+        val before = com.optionslab.app.data.DailyPnl.all(true)
+        assertEquals(2, before.size)
+
+        show { PnlCalendarScreen(model) }
+        compose.waitForText("Paper")
+        // Paper has no start control.
+        compose.waitForText("−₹555")
+        assertFalse(compose.has("Start fresh from tomorrow"))
+        tap("Zerodha")
+        compose.waitForText("Start fresh from tomorrow")
+        // Both live days count in the month before (−4,321 + 1,234), and 13 Nov is in its week's total and the worst day.
+        compose.waitForText("−₹3,087")
+        assertTrue(compose.has("−4.3k"))
+
+        // Cancel changes nothing.
+        tap("Start fresh from tomorrow")
+        compose.waitForText("Start the live P&L page fresh?")
+        tap("Cancel")
+        compose.waitForNoText("Start the live P&L page fresh?")
+        assertEquals("", model.settings.value.livePnlFrom)
+        compose.onNodeWithText("−₹3,087").assertExists()
+
+        // Confirmed: from Tue 17 Nov; 13 Nov and today look empty, the month's figures count nothing.
+        tap("Start fresh from tomorrow")
+        compose.waitForText("Start the live P&L page fresh?")
+        tap("Start fresh")
+        compose.waitUntil(10_000) { model.settings.value.livePnlFrom == "2026-11-17" }
+        compose.waitForText("Showing live P&L from Tue 17 Nov 2026.")
+        compose.waitForText("Earlier live days are hidden here, not deleted; risk rules still count them.")
+        compose.waitForNoText("−₹3,087")
+        compose.waitForText("No trading days recorded this month.")
+        assertFalse("no hidden day in the week column or the summary", compose.has("−4.3k"))
+        assertFalse(compose.has("Start fresh from tomorrow"))
+        // Saved in the settings vault, and nothing deleted: the risk rules' days are exactly as before.
+        compose.waitUntil(10_000) { com.optionslab.app.data.AppSettings.load().livePnlFrom == "2026-11-17" }
+        assertEquals(before, com.optionslab.app.data.DailyPnl.all(true))
+        assertEquals(liveDays, prefs.getString("pnl.days.live"))
+
+        // Paper is unaffected by the live start.
+        tap("Paper")
+        compose.waitForText("−₹555")
+        assertFalse(compose.has("Show all history again"))
+        tap("Zerodha")
+        compose.waitForText("Show all history again")
+        assertFalse(compose.has("−₹3,087"))
+
+        // Show all history again: every day back.
+        tap("Show all history again")
+        compose.waitUntil(10_000) { model.settings.value.livePnlFrom == "" }
+        compose.waitForText("−₹3,087")
+        compose.waitForText("Start fresh from tomorrow")
+        compose.waitUntil(10_000) { com.optionslab.app.data.AppSettings.load().livePnlFrom == "" }
+        assertEquals(before, com.optionslab.app.data.DailyPnl.all(true))
+    }
+
     // ---- The alert banner -------------------------------------------------------------------------
 
     @Test fun alertsShowAtTheTopTheLatestThreeAndSwipeAway() {

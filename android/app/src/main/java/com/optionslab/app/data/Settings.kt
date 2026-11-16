@@ -152,6 +152,12 @@ data class AppSettings(
     val paperWeeklyLoss: Double = com.optionslab.ira.BossRisk.PAPER_WEEKLY_DEFAULT,
     /** Home's paper running total counts from this day (ISO date; Boss's 08 Oct wish, [com.optionslab.engine.risk.PaperSince]). Words only. */
     val paperSince: String = com.optionslab.engine.risk.PaperSince.DEFAULT_START.toString(),
+    /**
+     * 16 Nov (Boss: "make it blank until yesterday, and show only from tomorrow, for live"): the Zerodha P&L page shows only the days
+     * on or after this one (ISO date; blank = every day, the default), set once by Boss's own tap ([com.optionslab.ira.PnlStart]).
+     * Display only: nothing is deleted and no risk rule reads it.
+     */
+    val livePnlFrom: String = "",
 ) {
     val entryMinute: Int get() = runCatching { hhmm(entry) }.getOrDefault(ExpiryPut.DEFAULT_ENTRY)
 
@@ -269,6 +275,7 @@ data class AppSettings(
                     .let { if (p.getInt(PAPER_LOSS_VERSION_KEY, 0) < 1 && it == OLD_PAPER_LOSS) d.mcxPaperDailyLoss else it },
                 paperWeeklyLoss = p.getDouble("g.pWeek", d.paperWeeklyLoss).let { if (it.isFinite() && it >= 0) it else d.paperWeeklyLoss },
                 paperSince = com.optionslab.engine.risk.PaperSince.startOf(p.getString("ui.paperSince", d.paperSince)).toString(),
+                livePnlFrom = com.optionslab.ira.PnlStart.startOf(p.getString("ui.livePnlFrom", d.livePnlFrom))?.toString() ?: "",
             )
         }
 
@@ -347,6 +354,7 @@ data class AppSettings(
                 "g.dayLock" to com.optionslab.engine.risk.DayLock.clean(s.dayLock),
                 "g.mcxOwn" to s.mcxOwnLimits, "g.mcxDayLock" to com.optionslab.engine.risk.DayLock.clean(s.mcxDayLock), "g.mcxPLoss" to s.mcxPaperDailyLoss, "g.pWeek" to s.paperWeeklyLoss,
                 "ui.paperSince" to com.optionslab.engine.risk.PaperSince.startOf(s.paperSince).toString(),
+                "ui.livePnlFrom" to (com.optionslab.ira.PnlStart.startOf(s.livePnlFrom)?.toString() ?: ""),
             )
 
         /**
