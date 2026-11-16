@@ -105,6 +105,12 @@ class StepTrailLiquidityTest : RobolectricTest() {
     private fun be(p: OrbArms.Position): Double = StepTrail.breakevenLevel(p.entry, lotOf(p))!!
     /** 16 Nov: the premium at which [p]'s open P&L nets +₹1,000 a lot (its breakeven from there, the fourth version). */
     private fun plus1000(p: OrbArms.Position): Double = StepTrail.lockTrigger(p.entry, lotOf(p), p.qty, 0)!!
+    /**
+     * 16 Nov: the rule's stop for [p] whose best is [best]: the higher of V4's breakeven (from +10%) and R186's breakeven at +₹1,000 a lot
+     * (the stop whose sale nets ₹0 on the whole quantity after charges and the stop's slippage), each once earned.
+     */
+    private fun stopAt(p: OrbArms.Position, best: Double): Double =
+        StepTrail.levelOf(p.entry, lotOf(p), best, ladder = StepTrail.Ladder(p.entry, lotOf(p), p.qty, StepTrail.Lock.BE1000))!!
 
     /** The option at [px]: the paper book's own pass, then the arms' at [t]. */
     private fun priced(px: Double, t: LocalTime) {
@@ -149,9 +155,9 @@ class StepTrailLiquidityTest : RobolectricTest() {
         assertEquals(own, row().today.single().stopTrigger!!, 1e-9)
         // +₹1,000 a lot net (under +10%): the stop moves up to breakeven (the resting paper stop modified, not a new order).
         priced(first, LocalTime.of(13, 8))
-        val b = be(p)
-        assertEquals("the fill plus the charges", p.entry + StepTrail.chargesPerUnit(p.entry, 30), b, 0.05 + 1e-9)
-        assertTrue("over the fill: $b", b > p.entry)
+        val b = stopAt(p, first)
+        assertEquals("R186's ₹0 stop", StepTrail.lockKeep(p.entry, 30, 30, 0, StepTrail.Lock.BE1000)!!, b, 1e-9)
+        assertTrue("over the fill: $b", b > p.entry && b < p.entry * 1.01)
         val after1 = row().today.single()
         assertEquals(b, after1.stopTrigger!!, 1e-9)
         assertEquals(b, restingStop(after1).triggerPrice!!.toDouble(), 1e-9)
@@ -160,13 +166,16 @@ class StepTrailLiquidityTest : RobolectricTest() {
         priced(p.entry * 1.03, LocalTime.of(13, 9))
         assertEquals(b, row().today.single().stopTrigger!!, 1e-9)
         priced(p.entry * 1.14, LocalTime.of(13, 10))
-        assertEquals("nothing more: no step lock on Liquidity", b, row().today.single().stopTrigger!!, 1e-9)
+        // Nothing more: no step lock on Liquidity - at most the higher of the two breakevens (V4's earned at +10%).
+        val b2 = stopAt(p, p.entry * 1.14)
+        assertEquals(maxOf(b, be(p)), b2, 1e-9)
+        assertEquals("nothing more: no step lock on Liquidity", b2, row().today.single().stopTrigger!!, 1e-9)
         // Back under it: the resting stop fills, booked as the breakeven lock, about ₹0 before charges.
-        priced(b - 0.5, LocalTime.of(13, 11))
+        priced(b2 - 0.5, LocalTime.of(13, 11))
         val closed = row().today.single()
         assertFalse(closed.open)
         assertEquals(StepTrail.WHY_TRAIL, closed.why)
-        assertTrue("about the charges before charges: ${closed.grossPnl}", closed.grossPnl!! in -40.0..((b - p.entry) * 30 + 1.0))
+        assertTrue("about the charges before charges: ${closed.grossPnl}", closed.grossPnl!! in -40.0..((b2 - p.entry) * 30 + 1.0))
         assertEquals(0, Paper.state.positions.filter { it.product == "MIS" }.sumOf { it.quantity })
     }
 
@@ -177,11 +186,48 @@ class StepTrailLiquidityTest : RobolectricTest() {
         assertEquals("its own -15%", LiquidityRules.stopTrigger(p.entry)!!, p.stopTrigger!!, 1e-9)
         assertEquals(60, Paper.state.orders.single { it.action == "SELL" }.quantity)
         priced(p.entry * 1.11, LocalTime.of(13, 7))
-        assertEquals("per lot: the same level as one lot's", be(p), row().today.single().stopTrigger!!, 1e-9)
-        priced(be(p) - 0.5, LocalTime.of(13, 8))
+        val b = stopAt(p, p.entry * 1.11)
+        assertEquals("per lot, on the two lots", b, row().today.single().stopTrigger!!, 1e-9)
+        priced(b - 0.5, LocalTime.of(13, 8))
         val closed = row().today.single()
         assertEquals(StepTrail.WHY_TRAIL, closed.why)
-        assertTrue("about the charges x 2 before charges: ${closed.grossPnl}", closed.grossPnl!! in -80.0..((be(p) - p.entry) * 60 + 2.0))
+        assertTrue("about the charges x 2 before charges: ${closed.grossPnl}", closed.grossPnl!! in -80.0..((b - p.entry) * 60 + 2.0))
+    }
+
+    /** 16 Nov (review): a part sold (a partial live exit splits the trade) never moves the levels: they stay on the entry quantity. */
+    @Test fun aPartSoldKeepsTheLevelsOnTheEntryQuantity() {
+        assertTrue(runBlocking { OrbArms.setLiquidityLots(2, "test") }.startsWith("Liquidity 15+5 now buys 2 lots"))
+        val p = entered()
+        assertEquals(60, p.qty); assertEquals("the entry quantity kept", 60, p.entryQty)
+        val first = plus1000(p)
+        val held = p.copy(peak = first)
+        val lv = OrbArms.fixedStopOf(held)!!
+        assertEquals(stopAt(p, first), lv, 1e-9)
+        // One lot sold at Zerodha: the rest (30) keeps the two lots' levels - the same stop, the same name, the same app sale.
+        val rest = held.copy(qty = 30)
+        assertEquals(lv, OrbArms.fixedStopOf(rest)!!, 1e-9)
+        assertEquals(StepTrail.WHY_TRAIL, OrbArms.ruleWhy(rest))
+        assertEquals(StepTrail.WHY_TRAIL, OrbArms.fixedWhy(rest.copy(stopTrigger = lv)))
+        assertTrue(OrbArms.fixedBelow(rest, lv - 0.05)); assertFalse(OrbArms.fixedBelow(rest, lv + 0.5))
+        // Worked out on what is left (the old split), one lot's trigger is higher: the same best would not have earned it.
+        assertTrue(StepTrail.lockTrigger(p.entry, 30, 30, 0)!! > first)
+        assertEquals(null, OrbArms.fixedStopOf(rest.copy(entryQty = null)))
+        // The entry quantity survives a restart.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertEquals(60, row().today.single().entryQty)
+    }
+
+    /** 16 Nov (review): the "Kept apart" note names each version's record, and both with their counts when V4 and V5 trades mix. */
+    @Test fun theKeptApartNoteSaysEachVersionsRecord() {
+        val p = entered()
+        val v5 = p.copy(lock = true); val v4 = p.copy(lock = false)
+        assertEquals("your 16 Nov choice; ${StepTrail.LOCK_RECORD}", OrbArms.fixedNote(listOf(v5, v5)))
+        assertEquals("your 15 Nov choice; ${StepTrail.RECORD}", OrbArms.fixedNote(listOf(v4)))
+        val mix = OrbArms.fixedNote(listOf(v4, v5, v5))
+        assertTrue(mix, mix.contains("your 15 Nov choice (1): ${StepTrail.RECORD}") && mix.contains("your 16 Nov choice (2): ${StepTrail.LOCK_RECORD}"))
+        // Their labels stay apart too.
+        assertEquals(StepTrail.LABEL_BE1000, v5.copy(trail = null, be = null).ownExitsLabel)
+        assertEquals(StepTrail.LABEL, v4.copy(trail = null, be = null).ownExitsLabel)
     }
 
     @Test fun withTheSwitchOffItTradesAsBefore() {
@@ -197,7 +243,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
     @Test fun theFlagAndTheBreakevenSurviveARestartAndASwitchOff() {
         val p = entered()
         priced(p.entry * 1.11, LocalTime.of(13, 7))
-        val b = be(p)
+        val b = stopAt(p, p.entry * 1.11)
         assertTrue(StepTrailExits.set(false, pinConfirmed = true, log = false).startsWith("Off"))
         AutomationSupport.reloadFromDisk(OrbArms)
         val back = row().today.single()
@@ -214,7 +260,7 @@ class StepTrailLiquidityTest : RobolectricTest() {
     @Test fun aRuleTradeIsKeptOutOfThePlainRulesRecordsAndLabelled() {
         val p = entered()
         priced(p.entry * 1.11, LocalTime.of(13, 7))
-        priced(be(p) - 0.5, LocalTime.of(13, 15))
+        priced(stopAt(p, p.entry * 1.11) - 0.5, LocalTime.of(13, 15))
         val closed = row().today.single()
         assertEquals(StepTrail.WHY_TRAIL, closed.why)
         assertTrue(closed.ownExits); assertEquals(StepTrail.LABEL_BE1000, closed.ownExitsLabel)
@@ -334,13 +380,16 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
 
     /** The rule's breakeven for a fill at [entry] (lot 30), and as Kite's forms carry it. */
     private fun be(entry: Double): Double = StepTrail.breakevenLevel(entry, 30)!!
+    /** 16 Nov: the rule's stop for the live trade [p] whose best is [best] (the higher of V4's and R186's breakeven at +₹1,000, each once earned). */
+    private fun lvl(p: OrbArms.Position, best: Double): Double =
+        StepTrail.levelOf(p.entry, 30, best, ladder = StepTrail.Ladder(p.entry, 30, p.qty, StepTrail.Lock.BE1000))!!
     private fun two(x: Double): String = String.format(java.util.Locale.ENGLISH, "%.2f", x)
 
     /** An approved trade of [lots] lots whose option has traded 10.5% up: its stop moved to the breakeven. */
     private fun earned(lots: Int): OrbArms.Position {
         val p = approved(lots)
         quoted(p.entry * 1.105)
-        assertEquals(be(p.entry), row().open!!.stopTrigger!!, 1e-9)
+        assertEquals(lvl(p, p.entry * 1.105), row().open!!.stopTrigger!!, 1e-9)
         return p
     }
 
@@ -369,9 +418,9 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
     @Test fun theBreakevenModifiesTheRestingStopUpNeverDownAndZerodhasFillThereIsTheBreakevenLock() {
         val p = approved(2)
         val id = p.stopOrderId!!
-        val b = be(p.entry)
         // 16 Nov: the fourth version - the breakeven from +₹1,000 a lot net on the two lots (+₹2,000), here before +10%.
         val first = StepTrail.lockTrigger(p.entry, 30, p.qty, 0)!!
+        val b = lvl(p, first)
         assertTrue("$first", first < p.entry * 1.10 && first > p.entry * 1.055)
         assertTrue(p.lock)
         quoted(p.entry * 1.055)                                    // +5.5%: not yet (the second version's trigger)
@@ -383,12 +432,15 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
         assertEquals(b, kite.order(id).trigger, 1e-9)
         assertEquals(b, row().open!!.stopTrigger!!, 1e-9)
         quoted(p.entry * 1.03)                                     // a dip above it: never down
-        quoted(p.entry * 1.15)                                     // a higher best: no further step
         assertEquals(1, modifies.size)
-        assertEquals(b, kite.order(id).trigger, 1e-9)
+        quoted(p.entry * 1.15)                                     // a higher best: at most V4's breakeven (+10%) if higher; no step
+        val b2 = lvl(p, p.entry * 1.15)
+        assertEquals(maxOf(b, be(p.entry)), b2, 1e-9)
+        assertEquals(if (b2 > b + 1e-9) 2 else 1, modifies.size)
+        assertEquals(b2, kite.order(id).trigger, 1e-9)
         assertEquals("the same order, moved (never a second stop)", 1, kite.placed.count { it.form["order_type"] == "SL" })
         // Zerodha's stop fills there: that is the breakeven lock's exit, no MARKET sell.
-        kite.trigger(id, b - 0.5)
+        kite.trigger(id, b2 - 0.5)
         runBlocking { OrbArms.priceCheckOnly() }
         val done = row().today.single()
         assertEquals(StepTrail.WHY_TRAIL, done.why)
@@ -397,7 +449,7 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
 
     @Test fun theBreakevenSurvivesARestart() {
         val p = earned(2)
-        val b = be(p.entry)
+        val b = lvl(p, p.entry * 1.105)
         AutomationSupport.reloadFromDisk(OrbArms)
         val back = row().open!!
         assertTrue(back.fixed); assertTrue(back.lock); assertEquals(b, back.stopTrigger!!, 1e-9)
@@ -409,7 +461,7 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
     @Test fun theAppSaleWaitsWhileBossIsExitingByHand() {
         val p = earned(2)
         kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
-        val under = be(p.entry) - 1.0
+        val under = lvl(p, p.entry * 1.105) - 1.0
         kite.quote("NFO:$sym", under, under - 0.05, under + 0.05)
         ArmLive.handsOff("NFO", sym)
         try {
@@ -437,8 +489,24 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
         AppSettings.save(AppSettings.load().copy(exchangeStops = true))
         kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
         runBlocking { OrbArms.priceCheckOnly() }
-        assertEquals(two(be(p.entry)), kite.placed.last().form["trigger_price"])
-        assertEquals(be(p.entry), row().open!!.stopTrigger!!, 1e-9)
+        assertEquals(two(lvl(p, p.entry * 1.105)), kite.placed.last().form["trigger_price"])
+        assertEquals(lvl(p, p.entry * 1.105), row().open!!.stopTrigger!!, 1e-9)
+    }
+
+    /**
+     * 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): a Liquidity trade's missing stop is put back at Zerodha at the
+     * breakeven it earned even with "Keep a stop at the exchange" off - never held in the app alone while it can rest.
+     */
+    @Test fun aMissingStopIsRestedAgainAtZerodhaWithoutTheSetting() {
+        val p = earned(2)
+        AppSettings.save(AppSettings.load().copy(exchangeStops = false))
+        val sls = kite.placed.count { it.form["order_type"] == "SL" }
+        kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("rested again at Zerodha", sls + 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertEquals(two(lvl(p, p.entry * 1.105)), kite.placed.last().form["trigger_price"])
+        assertEquals(lvl(p, p.entry * 1.105), row().open!!.stopTrigger!!, 1e-9)
+        assertTrue("no app sale while it can rest", marketSells.isEmpty())
     }
 
     /** At or under the breakeven a missing stop is not re-rested (no -15% put back): the same look sells at the level. */
@@ -446,7 +514,7 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
         val p = earned(2)
         AppSettings.save(AppSettings.load().copy(exchangeStops = true))
         kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
-        val under = be(p.entry) - 1.0
+        val under = lvl(p, p.entry * 1.105) - 1.0
         kite.quote("NFO:$sym", under, under - 0.05, under + 0.05)
         val sls = kite.placed.count { it.form["order_type"] == "SL" }
         runBlocking { OrbArms.priceCheckOnly() }

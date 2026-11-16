@@ -104,11 +104,13 @@ notes; match the surrounding code.
       (V4)"; "Paper and live"), under the same switch; the third replaced the morning's ₹500 step trail.
       - The rule: no rupee stop at the entry (each arm keeps its own stop, the -15%). Once the option has traded 10% above the fill, the
         stop moves to breakeven (the fill plus the round trip's charges). On top of that:
-        - R51 and R72: once the best open P&L reaches +₹1,000 a lot net after charges, the stop rises to the premium whose sale nets
+        - R51 and R72: once the best open P&L reaches +₹1,000 a lot net after charges, the stop rises to the premium whose stop sale nets
           +₹500 a lot; then it stays ₹500 a lot under each further ₹500-a-lot step of the best (+₹1,500 locks +₹1,000, +₹2,000 locks
           +₹1,500, ...). The higher of this lock and the breakeven applies.
-        - Liquidity: once the best open P&L reaches +₹1,000 a lot net, the stop moves to the same breakeven, so breakeven at +10% or
-          +₹1,000 a lot, whichever comes first. Nothing more.
+        - Liquidity: once the best open P&L reaches +₹1,000 a lot net, the stop moves to breakeven (the premium whose stop sale nets ₹0),
+          so breakeven at +10% or +₹1,000 a lot, whichever comes first. Nothing more.
+        - The levels are R186's (r186engine.lock_levels): net after the round trip's charges on the trade's entry quantity, per lot, and
+          the lock padded for the stop sale's slippage as R186 did (0.999 of the stop less two half-spread ticks; the app takes one tick).
         - The stop never moves down. No fixed target. R72 / R51 keep the R151 picker (the fourth exception). The arms' own exits all
           stay (ladder / L25, time stops, index exits, square-offs) and the first one wins. A live trade takes its own levels on its live
           fill and lots; its stop rests at Zerodha and is modified up (the app sells at the level itself when it cannot rest there), never
@@ -122,7 +124,8 @@ notes; match the surrounding code.
       - It only lowers risk (a higher stop, an earlier exit), so it acts on live through every existing live gate.
       - It is labelled "failed gates, Boss's exception" wherever it is shown, logged in the Autopilot change timeline, and one tap off
         (Bot settings). Off restores the arms' own exits for new trades (open trades keep the rule they entered with); it adds live
-        risk, so off and the Undo take the PIN.
+        risk, so off and the Undo take the PIN. The fourth version has its own switch under it, logged as V4 -> V5: its off and its
+        Undo go back to V4 alone (the +10% breakeven kept), with the PIN.
     - No other failed idea may use these exceptions.
   - Paper changes never carry over to live by themselves.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.

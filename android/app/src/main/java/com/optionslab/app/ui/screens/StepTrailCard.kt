@@ -38,24 +38,33 @@ internal fun StepTrailCard(model: AppModel) {
     fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
     StepTrailCardFlow(view, said, pinAsked = { com.optionslab.app.security.GuardPin.asks(true, s.live) },
         onOn = { save { StepTrailExits.set(true) } },
-        onOffConfirmed = { save { StepTrailExits.set(false, pinConfirmed = true) } }) { onOk, onCancel ->
+        onOffConfirmed = { save { StepTrailExits.set(false, pinConfirmed = true) } },
+        onLockOn = { save { StepTrailExits.setLock(true) } },
+        onLockOffConfirmed = { save { StepTrailExits.setLock(false, pinConfirmed = true) } }) { onOk, onCancel ->
         Reauth(model, onOk = onOk, onCancel = onCancel,
-            why = "Enter your app PIN to switch the step lock and breakeven off (Liquidity, R51 and R72 go back to their own exits alone, live too).")
+            why = "Enter your app PIN to switch this off (the stops it adds go away for new trades, live too).")
     }
 }
 
-/** The card and its PIN step ([pin]: shown only when switching off and [pinAsked] says a PIN is asked; tests give their own). */
+/**
+ * The card and its PIN step ([pin]: shown only when switching either switch off and [pinAsked] says a PIN is asked; tests give their own).
+ * 16 Nov: the fourth version's switch ([onLockOn], [onLockOffConfirmed]): off goes back to V4 alone, with the PIN as the rule's own off.
+ */
 @Composable
 internal fun StepTrailCardFlow(view: StepTrailExits.View, said: String?, pinAsked: () -> Boolean, onOn: () -> Unit, onOffConfirmed: () -> Unit,
+                                onLockOn: () -> Unit = {}, onLockOffConfirmed: () -> Unit = {},
                                 pin: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit) {
-    var askPin by remember { mutableStateOf(false) }
-    StepTrailCardContent(view, said) { on -> if (on) onOn() else if (pinAsked()) askPin = true else onOffConfirmed() }
-    if (askPin) pin({ askPin = false; onOffConfirmed() }, { askPin = false })
+    // Which off waits for the PIN: the rule's (false) or the fourth version's (true); null: none.
+    var askPin by remember { mutableStateOf<Boolean?>(null) }
+    StepTrailCardContent(view, said, onLock = { on -> if (on) onLockOn() else if (pinAsked()) askPin = true else onLockOffConfirmed() }) { on ->
+        if (on) onOn() else if (pinAsked()) askPin = false else onOffConfirmed()
+    }
+    askPin?.let { lockOff -> pin({ askPin = null; if (lockOff) onLockOffConfirmed() else onOffConfirmed() }, { askPin = null }) }
 }
 
 /** The card from plain state (tests drive it). */
 @Composable
-internal fun StepTrailCardContent(view: StepTrailExits.View, said: String?, onSwitch: (Boolean) -> Unit) {
+internal fun StepTrailCardContent(view: StepTrailExits.View, said: String?, onLock: (Boolean) -> Unit = {}, onSwitch: (Boolean) -> Unit) {
     LedgerCard(title = "Step lock and breakeven") {
         Note("Liquidity 15+5 (every index), R51 Donchian 20 and R72 Breadth Donchian: each new trade keeps its arm's own stop (its -15%). " +
             "Once the option is 10% above the fill, the stop moves to breakeven (the fill plus the charges) - never down. " +
@@ -65,11 +74,17 @@ internal fun StepTrailCardContent(view: StepTrailExits.View, said: String?, onSw
             "the arms' own exits (ladder, time stop, square-off) stay and the first one wins. Live, the stop rests at Zerodha on the live fill " +
             "and is moved up there.")
         if (!view.loaded) Note("Reading the switch...", Modifier.padding(top = 4.dp))
-        else ToggleRow(StepTrail.SWITCH_V5, if (view.on) "On: new trades of the three arms get the step lock or breakeven at +₹1,000, and the breakeven at +10%"
-            else "Off: new trades use the arms' own exits", view.on, keepSub = true, onChange = onSwitch)
+        else {
+            ToggleRow(StepTrail.SWITCH, if (view.on) "On: new trades of the three arms get the breakeven at +10%"
+                else "Off: new trades use the arms' own exits", view.on, keepSub = true, onChange = onSwitch)
+            // 16 Nov: the fourth version on top (only with the rule on); off goes back to V4 alone.
+            if (view.on) ToggleRow(StepTrail.SWITCH_LOCK, if (view.lock) "On: new R51 / R72 trades get the step lock, Liquidity the breakeven at +₹1,000 (V5)"
+                else "Off: new trades get the breakeven at +10% alone (V4)", view.lock, keepSub = true, onChange = onLock)
+        }
         Note("Failed gates, Boss's exception: ${StepTrail.LOCK_RECORD}. Before it (breakeven at +10% alone, V4): ${StepTrail.RECORD}. " +
-            "A trade keeps the rule it entered with (open trades from before keep the breakeven at +10% alone). Switching it off takes " +
-            "your PIN (the arms' own exits alone come back, live too); on again is at once. Every change is in the change timeline.",
+            "A trade keeps the rule it entered with (open trades from before keep the breakeven at +10% alone). Switching either off takes " +
+            "your PIN (the rule's off: the arms' own exits alone come back; the step lock's off: V4 alone, live too); on again is at once. " +
+            "Every change is in the change timeline.",
             Modifier.padding(top = 2.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }

@@ -31,11 +31,12 @@ import kotlin.math.floor
  *    +2,000 locks +1,500, ...).
  *  - Liquidity 15+5 ([Lock.BE1000], R186's L-BE1000): once the best open P&L reaches +₹1,000 a lot net, the stop moves to breakeven (the
  *    same level as the +10% breakeven), so breakeven at +10% or +₹1,000 a lot, whichever comes first. Nothing more.
- *  "Net" as r186engine.lock_levels: (premium - fill) x quantity - the round trip's charges on the whole quantity (the engine's F&O schedule,
- *  [SandboxCosts]), with the rupees x lots (lots = quantity / lot size); a step is reached when the best price is at or above the premium
- *  that nets it (on the tick, rounded up), and the lock is the premium whose sale nets the kept rupees (rounded up). Unlike the research,
- *  the lock has no stop-slippage pad (as V4's breakeven: the fill plus the charges): a stop order fills at the market, so a fast fall
- *  sells under it. Only ever raises the stop; the higher of the breakeven and the lock wins. Failed R186's gates ([LOCK_RECORD]).
+ *  The levels are r186engine.lock_levels' ([Ladder]): "net" is (premium - fill) x the entry quantity - the round trip's charges on that
+ *  whole quantity (the engine's F&O schedule, [SandboxCosts]), with the rupees x lots (lots = entry quantity / lot size); a step is
+ *  reached when the best price is at or above the premium that nets it (on the tick, rounded up), and the lock is the stop premium whose
+ *  stop sale nets the kept rupees after the research's stop slippage ([stopPrice]: Liquidity's ₹0 on the whole quantity; V4's +10%
+ *  breakeven is unchanged). A stop order fills at the market, so a fast fall can still sell under it. Only ever raises the stop; the
+ *  higher of the breakeven and the lock wins. Failed R186's gates ([LOCK_RECORD]).
  * Signal source: the arms' entries stay on the index; only the stop is on the premium (CLAUDE.md allows stops and locks on the option
  * premium). Pure: no I/O, no clock.
  */
@@ -69,7 +70,7 @@ object StepTrail {
         "39.2%, ₹1.18 L); it failed the gates (twin q 1.00; R72's final win rate 53.5%)"
 
     /**
-     * 16 Nov, fourth version: the rupee lock a trade entered with ON TOP of the breakeven at +10% (null on a trade: V4 alone, as it
+     * 16 Nov, fourth version: the rupee lock a trade entered with ON TOP of the breakeven at +10% (none on a trade: V4 alone, as it
      * entered). [L500]: R51 / R72's ₹500 step lock from +₹1,000 a lot; [BE1000]: Liquidity's breakeven at +₹1,000 a lot.
      */
     enum class Lock { L500, BE1000 }
@@ -80,16 +81,24 @@ object StepTrail {
     const val LOCK_STEP = 500.0
     const val LOCK_GAP = 500.0
 
-    /** An exit by [Lock.L500]'s step lock, as the trade record and the diagnostics say it ([Lock.BE1000]'s is [WHY_TRAIL]: the same breakeven). */
+    /**
+     * The stop sale's slippage the lock's premium is padded for, as R186 (r106engine.stop_price with r51 engine's SLIP: the sale fills at
+     * 0.999 of the stop less twice the half-spread). R186 took the half-spread from the option's 5-minute volume at the fill (1, 2 or 4
+     * ticks); the app has no volume at the fill on every path, so it takes [SLIP_TICKS] (1 tick: the liquid index options these arms buy).
+     */
+    const val SLIP_FILL = 0.999
+    const val SLIP_TICKS = 1.0
+
+    /** An exit by [Lock.L500]'s step lock, as the trade record and the diagnostics say it ([Lock.BE1000]'s is [WHY_TRAIL]: a breakeven). */
     const val WHY_LOCK = "step lock"
 
     /** The fourth version's labels, by lock (how the arms' rows and the trades name it). */
     const val LABEL_L500 = "breakeven at +10 percent and ₹500 step lock from +₹1,000 a lot (failed gates, Boss's exception)"
     const val LABEL_BE1000 = "breakeven at +10 percent or +₹1,000 a lot (failed gates, Boss's exception)"
-    /** Bot settings' switch, fourth version. */
-    const val SWITCH_V5 = "Step lock (R51, R72) and breakeven at +₹1,000 (Liquidity), on breakeven at +10 percent — failed gates, Boss's exception"
-    /** The diagnostics' name of the fourth version: no rupee sign and no grouped figure. */
-    const val DIAG_V5 = "breakeven at 10 percent plus the step lock (R51, R72) or breakeven at the first step (Liquidity) (failed gates, Boss's exception)"
+    /** Bot settings' second switch: the fourth version on top of the breakeven at +10% (off: V4 alone for new trades). */
+    const val SWITCH_LOCK = "Step lock (R51, R72) and breakeven at +₹1,000 (Liquidity) — failed gates, Boss's exception"
+    /** The diagnostics' name of the fourth version: no rupee sign and no grouped figure (the uploaded diagnostics hide every rupee figure). */
+    const val DIAG_LOCK = "step lock on R51 and R72, breakeven at the first step on Liquidity (failed gates, Boss's exception)"
     /** The fourth version in one line. */
     const val LOCK_RULE = "on top of the breakeven at +10%: R51 Donchian 20 and R72 Breadth Donchian lock +₹500 a lot (net after charges) once " +
         "the best open P&L is +₹1,000 a lot, then stay ₹500 a lot under each further ₹500 step (+1,500 locks +1,000, +2,000 locks +1,500, ...); " +
@@ -101,7 +110,6 @@ object StepTrail {
         "(less money than V4; twin BH q 1.00)"
 
     private const val EPS = 1e-9
-    private const val NET_EPS = 1e-6
     /** Steps a lock looks through at most (₹500 a lot each: far beyond any option's move). */
     private const val MAX_STEPS = 400
 
@@ -132,68 +140,93 @@ object StepTrail {
     fun netAt(entry: Double, exit: Double, qty: Int): Double = (exit - entry) * qty - roundTrip(entry, exit, qty)
 
     /**
-     * The premium on the [tick] (rounded up) whose sale nets at least [net] rupees for [qty] bought at [entry], after the round trip's
-     * charges (r106engine.target_price's fixed point, then up to the tick; checked so it really nets it, else null). Null: nothing can be
-     * told. Pure; remembered by its inputs ([netMemo]), so the full-cadence position watch never redoes the charge maths for a level.
+     * r106engine.target_price: the premium on the [tick] (rounded up) whose sale nets [net] rupees for [qty] bought at [entry] after the
+     * round trip's charges on the whole quantity - its 6 fixed-point passes, then up to the tick. Null: nothing can be told.
      */
     fun netPrice(entry: Double, qty: Int, net: Double, tick: Double = TICK): Double? {
         if (!entry.isFinite() || entry <= 0 || qty <= 0 || !net.isFinite() || !tick.isFinite() || tick <= 0) return null
-        val key = NetKey(entry, qty, net, tick)
-        netMemo[key]?.let { return it }
         var x = entry + net / qty
         repeat(6) { x = entry + (net + roundTrip(entry, x, qty)) / qty }
-        var p = up(x, tick)
-        var guard = 0
-        while (netAt(entry, p, qty) < net - NET_EPS && guard++ < 50) p = up(p + tick, tick)
-        if (netAt(entry, p, qty) < net - NET_EPS) return null
-        if (netMemo.size >= MEMO_MAX) netMemo.clear()
-        netMemo[key] = p
-        return p
+        return ceilTick(x, tick)
     }
 
-    private data class NetKey(val entry: Double, val qty: Int, val net: Double, val tick: Double)
-    /** [netPrice]'s levels by their inputs (memory only, bounded: cleared once it holds [MEMO_MAX]). */
-    private val netMemo = java.util.concurrent.ConcurrentHashMap<NetKey, Double>()
-    private const val MEMO_MAX = 4096
+    /**
+     * r106engine.stop_price with a kept [keep] (its loss -keep): the stop premium on the [tick] (rounded up) whose stop sale - at [SLIP_FILL]
+     * of the stop less twice [slipTicks] ticks - nets [keep] rupees for [qty] bought at [entry] after the round trip's charges. Null: the
+     * whole premium is worth less, or nothing can be told.
+     */
+    fun stopPrice(entry: Double, qty: Int, keep: Double, tick: Double = TICK, slipTicks: Double = SLIP_TICKS): Double? {
+        if (!entry.isFinite() || entry <= 0 || qty <= 0 || !keep.isFinite() || !tick.isFinite() || tick <= 0 || !(slipTicks >= 0)) return null
+        var rx = entry + keep / qty
+        repeat(6) { rx = entry + (roundTrip(entry, maxOf(rx, 0.0), qty) + keep) / qty }
+        if (rx <= 0) return null
+        return ceilTick((rx + 2.0 * slipTicks * tick) / SLIP_FILL, tick)
+    }
 
     /** [qty] in lots of [lot] (per-lot rupees scale by it); 0 when either is unusable. */
     private fun lotsOf(lot: Int, qty: Int): Double = if (lot > 0 && qty > 0) qty.toDouble() / lot else 0.0
 
-    /** The premium at which the lock's step [k] is reached: the sale there nets (+₹1,000 + ₹500 x [k]) a lot ([netPrice]). */
-    fun lockTrigger(entry: Double, lot: Int, qty: Int, k: Int, tick: Double = TICK): Double? =
-        lotsOf(lot, qty).takeIf { it > 0 && k >= 0 }?.let { netPrice(entry, qty, (LOCK_FROM + LOCK_STEP * k) * it, tick) }
-
     /**
-     * The highest step of the lock the best price [best] has reached (0: +₹1,000 a lot; null: none yet), for [qty] bought at [entry] on a
-     * contract of [lot]. [Lock.BE1000] has one step only (0).
+     * 16 Nov: one trade's lock levels, as r186engine.lock_levels builds them from the trade's fill [entry], its contract's [lot] and its
+     * ENTRY quantity [qty] (lots = [qty] / [lot]; a part sold later never moves them). Step k's trigger is the premium whose sale nets
+     * (+₹1,000 + ₹500 k) a lot ([netPrice]); [Lock.L500]'s lock there is the stop premium whose stop sale nets (+₹500 + ₹500 k) a lot
+     * ([stopPrice]); [Lock.BE1000] has one step, its lock the stop premium whose stop sale nets ₹0 on the whole quantity. Built once per
+     * trade by its host and kept: each level is worked out once, when first asked (thread-safe). Pure: no I/O.
      */
-    fun lockStep(entry: Double, lot: Int, qty: Int, best: Double?, lock: Lock?, tick: Double = TICK): Int? {
-        if (lock == null || best == null || !best.isFinite() || !usable(entry, lot, tick) || qty <= 0) return null
-        fun reached(k: Int): Boolean = lockTrigger(entry, lot, qty, k, tick)?.let { best >= it - EPS } == true
-        if (!reached(0)) return null
-        if (lock == Lock.BE1000) return 0
-        // Start from the step the net at the best points to, then settle on the exact one (the triggers are the research's: on the tick).
-        val lots = lotsOf(lot, qty)
-        var k = floor((netAt(entry, best, qty) / lots - LOCK_FROM) / LOCK_STEP).toInt().coerceIn(0, MAX_STEPS)
-        while (k > 0 && !reached(k)) k--
-        while (k < MAX_STEPS && reached(k + 1)) k++
-        return k
+    class Ladder(val entry: Double, val lot: Int, val qty: Int, val lock: Lock, val tick: Double = TICK, val slipTicks: Double = SLIP_TICKS) {
+        val lots: Double = lotsOf(lot, qty)
+        private val ok = usable(entry, lot, tick) && qty > 0 && lots > 0
+        private val triggers = HashMap<Int, Double?>()
+        private val keeps = HashMap<Int, Double?>()
+
+        /** Whether this ladder was built for these inputs (a host rebuilds it when the trade's fill or entry quantity is not these). */
+        fun isFor(entry: Double, lot: Int, qty: Int, lock: Lock, tick: Double): Boolean =
+            this.entry == entry && this.lot == lot && this.qty == qty && this.lock == lock && this.tick == tick
+
+        /** Step [k]'s trigger premium (null: none). */
+        fun trigger(k: Int): Double? = if (!ok || k < 0 || k > MAX_STEPS) null
+            else synchronized(triggers) { triggers.getOrPut(k) { netPrice(entry, qty, (LOCK_FROM + LOCK_STEP * k) * lots, tick) } }
+
+        /** Step [k]'s lock premium (null: none). */
+        fun keep(k: Int): Double? = if (!ok || k < 0 || k > MAX_STEPS || (lock == Lock.BE1000 && k > 0)) null
+            else synchronized(keeps) { keeps.getOrPut(k) {
+                stopPrice(entry, qty, if (lock == Lock.BE1000) 0.0 else (LOCK_FROM - LOCK_GAP + LOCK_STEP * k) * lots, tick, slipTicks) } }
+
+        private fun reached(k: Int, best: Double): Boolean = trigger(k)?.let { best >= it - EPS } == true
+
+        /** The highest step the best price [best] has reached (0: +₹1,000 a lot; null: none yet, or not a price). */
+        fun step(best: Double?): Int? {
+            if (!ok || best == null || !best.isFinite() || !reached(0, best)) return null
+            if (lock == Lock.BE1000) return 0
+            // From the step the net at the best points to, settled on the exact one (the triggers are on the tick).
+            var k = floor((netAt(entry, best, qty) / lots - LOCK_FROM) / LOCK_STEP).toInt().coerceIn(0, MAX_STEPS)
+            while (k > 0 && !reached(k, best)) k--
+            while (k < MAX_STEPS && reached(k + 1, best)) k++
+            return k
+        }
+
+        /** The lock now for the best price [best] (null: no step reached, or a level that would not sit under the best). */
+        fun level(best: Double?): Double? {
+            val k = step(best) ?: return null
+            return keep(k)?.takeIf { it < best!! - EPS }
+        }
+
+        /** What a stop resting at [trigger] is under this lock: [WHY_LOCK] at an L500 lock, [WHY_TRAIL] at BE1000's, within half a tick. */
+        fun why(trigger: Double?): String? {
+            if (!ok || trigger == null || !trigger.isFinite()) return null
+            if (lock == Lock.BE1000) return keep(0)?.takeIf { abs(trigger - it) < tick / 2 }?.let { WHY_TRAIL }
+            val k = Math.round((netAt(entry, trigger, qty) / lots - (LOCK_FROM - LOCK_GAP)) / LOCK_STEP).toInt()
+            for (j in (k - 2)..(k + 1)) keep(j)?.let { if (abs(trigger - it) < tick / 2) return WHY_LOCK }
+            return null
+        }
     }
 
-    /** The lock's stop at step [k]: [Lock.L500] the premium whose sale nets (+₹500 + ₹500 x [k]) a lot; [Lock.BE1000] the breakeven. */
-    fun lockKeep(entry: Double, lot: Int, qty: Int, k: Int, lock: Lock, tick: Double = TICK): Double? = when (lock) {
-        Lock.BE1000 -> breakevenLevel(entry, lot, tick)
-        Lock.L500 -> lotsOf(lot, qty).takeIf { it > 0 && k >= 0 }?.let { netPrice(entry, qty, (LOCK_FROM - LOCK_GAP + LOCK_STEP * k) * it, tick) }
-    }
+    /** Step [k]'s trigger for [qty] bought at [entry] on a contract of [lot] (a one-off ladder: the hosts keep one per trade). */
+    fun lockTrigger(entry: Double, lot: Int, qty: Int, k: Int, tick: Double = TICK): Double? = Ladder(entry, lot, qty, Lock.L500, tick).trigger(k)
 
-    /**
-     * The fourth version's lock for [qty] bought at [entry] on a contract of [lot] whose best price so far is [best] (null: no lock on the
-     * trade, or no step reached yet; or a level that would not sit under the best).
-     */
-    fun lockLevel(entry: Double, lot: Int, qty: Int, best: Double?, lock: Lock?, tick: Double = TICK): Double? {
-        val k = lockStep(entry, lot, qty, best, lock, tick) ?: return null
-        return lockKeep(entry, lot, qty, k, lock!!, tick)?.takeIf { it < best!! - EPS }
-    }
+    /** [lock]'s lock at step [k] (a one-off ladder). */
+    fun lockKeep(entry: Double, lot: Int, qty: Int, k: Int, lock: Lock, tick: Double = TICK): Double? = Ladder(entry, lot, qty, lock, tick).keep(k)
+
 
     /** The round trip's charges per unit for one lot of [lot] units bought at [entry] (the engine's F&O schedule). */
     fun chargesPerUnit(entry: Double, lot: Int): Double = ProfitLock.roundTripPerUnit(entry, lot).takeIf { it.isFinite() && it >= 0 } ?: 0.0
@@ -214,18 +247,18 @@ object StepTrail {
 
     /**
      * The premium the breakeven holds for a position filled at [entry] whose best price so far is [best]: null until the best has reached
-     * [breakevenTrigger] (or when the breakeven would not sit under the best, which would sell at once).
+     * [breakevenTrigger] (or when the breakeven would not sit under the best, which would sell at once). 16 Nov (fourth version): with the
+     * trade's [ladder], the higher of that and the lock ([Ladder.level]), each once earned.
      */
-    fun trailLevel(entry: Double, lot: Int, best: Double?, tick: Double = TICK, lock: Lock? = null, qty: Int = lot): Double? {
-        // 16 Nov (fourth version): with a [lock], the higher of the breakeven at +10% and the lock ([lockLevel]), each once earned.
-        val rupee = lockLevel(entry, lot, qty, best, lock, tick)
+    fun trailLevel(entry: Double, lot: Int, best: Double?, tick: Double = TICK, ladder: Ladder? = null): Double? {
+        val rupee = ladder?.level(best)
         if (!usable(entry, lot, tick) || best == null || !best.isFinite() || best < breakevenTrigger(entry) - EPS) return rupee
         return listOfNotNull(breakevenLevel(entry, lot, tick)?.takeIf { it < best - EPS }, rupee).maxOrNull()
     }
 
-    /** The rule's stop now: the breakeven (or, 16 Nov, the [lock]) once earned (null: not yet; the rule sets no entry stop, [stopLevel]). */
-    fun levelOf(entry: Double, lot: Int, best: Double?, tick: Double = TICK, lock: Lock? = null, qty: Int = lot): Double? =
-        listOfNotNull(stopLevel(entry, lot, tick), trailLevel(entry, lot, best, tick, lock, qty)).maxOrNull()
+    /** The rule's stop now: the breakeven (or, 16 Nov, the [ladder]'s lock) once earned (null: not yet; the rule sets no entry stop, [stopLevel]). */
+    fun levelOf(entry: Double, lot: Int, best: Double?, tick: Double = TICK, ladder: Ladder? = null): Double? =
+        listOfNotNull(stopLevel(entry, lot, tick), trailLevel(entry, lot, best, tick, ladder)).maxOrNull()
 
     /** The stop that applies: the higher (tighter, for a long) of the arm's [own] and the rule's [rule]; never a looser one. */
     fun tighterStop(own: Double?, rule: Double?): Double? = when {
@@ -241,18 +274,13 @@ object StepTrail {
     fun stopHit(ltp: Double?, stop: Double?): Boolean = stop != null && ltp != null && ltp.isFinite() && ltp > 0 && ltp <= stop + EPS
 
     /**
-     * What a stop resting at [trigger] is, for a position filled at [entry]: [WHY_TRAIL] at the breakeven, within half a [tick]; null: not
-     * the rule's (the arm's own stop or lock).
+     * What a stop resting at [trigger] is, for a position filled at [entry]: [WHY_TRAIL] at the breakeven, within half a [tick]; 16 Nov:
+     * the [ladder]'s ([Ladder.why]); null: not the rule's (the arm's own stop or lock).
      */
-    fun whyAt(trigger: Double?, entry: Double, lot: Int, tick: Double = TICK, lock: Lock? = null, qty: Int = lot): String? {
+    fun whyAt(trigger: Double?, entry: Double, lot: Int, tick: Double = TICK, ladder: Ladder? = null): String? {
         if (trigger == null || !usable(entry, lot, tick)) return null
         breakevenLevel(entry, lot, tick)?.let { if (abs(trigger - it) < tick / 2) return WHY_TRAIL }
-        // 16 Nov: one of [Lock.L500]'s steps ([Lock.BE1000]'s is the breakeven above). The net at the trigger points to the step.
-        if (lock == Lock.L500 && qty > 0 && trigger.isFinite()) {
-            val k = Math.round((netAt(entry, trigger, qty) / lotsOf(lot, qty) - (LOCK_FROM - LOCK_GAP)) / LOCK_STEP).toInt()
-            for (j in (k - 1)..(k + 1)) if (j in 0..MAX_STEPS) lockKeep(entry, lot, qty, j, lock, tick)?.let { if (abs(trigger - it) < tick / 2) return WHY_LOCK }
-        }
-        return null
+        return ladder?.why(trigger)
     }
 
     /** Whether [why] is one of the rule's exit words, any version's (older records too). */
@@ -265,6 +293,15 @@ object StepTrail {
     fun words(why: String): String = if (isRuleWhy(why)) "$why ($STATUS)" else why
 
     private fun usable(entry: Double, lot: Int, tick: Double): Boolean = entry.isFinite() && entry > 0 && lot > 0 && tick.isFinite() && tick > 0
+
+    /**
+     * r106engine._ceil_tick: [x] up to the [tick], the ticks rounded half-even to 6 decimals first (Python's round), so the lock's levels
+     * are the research's to the tick (V4's breakeven keeps [up]).
+     */
+    private fun ceilTick(x: Double, tick: Double): Double {
+        val n = ceil(Math.rint(x / tick * 1e6) / 1e6)
+        return java.math.BigDecimal.valueOf(tick).multiply(java.math.BigDecimal.valueOf(n.toLong())).toDouble()
+    }
 
     /** [x] up to the next [tick] (a value already on a tick stays), kept to the tick's decimals. */
     private fun up(x: Double, tick: Double): Double {

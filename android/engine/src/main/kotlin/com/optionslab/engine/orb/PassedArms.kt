@@ -148,7 +148,7 @@ object PassedArms {
     data class StepTrailOn(val lot: Int, val tick: Double = StepTrail.TICK,
                            /** 16 Nov (fourth version): the lock the trade entered with on top of the breakeven (null: V4 alone). */
                            val lock: StepTrail.Lock? = null,
-                           /** 16 Nov: the trade's quantity, for the lock's per-lot rupees (lots = qty / [lot]). */
+                           /** 16 Nov: the trade's ENTRY quantity, for the lock's per-lot rupees (lots = qty / [lot]). */
                            val qty: Int = lot)
 
     /**
@@ -232,12 +232,14 @@ object PassedArms {
         // AFTER the entry minute on, and on the price now: the entry minute's high may come from before the fill.
         val own = stopLevel(entry, x)
         val st = x.stepTrail
+        // 16 Nov: the trade's lock levels, built once for this walk (each level worked out once, [StepTrail.Ladder]); null: V4 alone.
+        val ladder = st?.lock?.let { StepTrail.Ladder(entry, st.lot, st.qty, it, st.tick) }
         val stop = own
         var stepPeak = entry
         // The exit kind of a stop at the stops [stopB] with [lock] earned: the rule's breakeven, the lock, or the arm's own stop.
         fun kindOf(stopB: Double?, lk: Double?): ExitKind = when {
             lk != null && lk >= (stopB ?: -1.0) ->
-                when (if (st != null) StepTrail.whyAt(lk, entry, st.lot, st.tick, st.lock, st.qty) else null) {
+                when (if (st != null) StepTrail.whyAt(lk, entry, st.lot, st.tick, ladder) else null) {
                     StepTrail.WHY_TRAIL -> ExitKind.STEP_TRAIL
                     StepTrail.WHY_LOCK -> ExitKind.STEP_LOCK
                     else -> ExitKind.LOCK
@@ -275,9 +277,10 @@ object PassedArms {
                 if (lock == null || l > lock) lock = l
             }
             // 15 Nov ([StepTrail]): the breakeven from the best high after the entry minute, from the next minute on (as the lock).
-            if (st != null && !first) {
-                if (b.high > stepPeak) stepPeak = b.high
-                StepTrail.trailLevel(entry, st.lot, stepPeak, st.tick, st.lock, st.qty)?.let { if (lock == null || it > lock!!) lock = it }
+            // 16 Nov (review): worked out only when the high is a new best (the level depends on the best alone).
+            if (st != null && !first && b.high > stepPeak) {
+                stepPeak = b.high
+                StepTrail.trailLevel(entry, st.lot, stepPeak, st.tick, ladder)?.let { if (lock == null || it > lock!!) lock = it }
             }
             if (npEnd != null && npLevel != null && !b.start.isAfter(npEnd)) {
                 npSeen++

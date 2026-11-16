@@ -34,9 +34,11 @@ class StepTrailCardTest {
 
     private fun shows(t: String, sub: Boolean = false) = compose.onAllNodesWithText(t, substring = sub).fetchSemanticsNodes().isNotEmpty()
 
-    private fun show(view: StepTrailExits.View, pinAsked: Boolean, on: () -> Unit, offConfirmed: () -> Unit) = compose.setContent {
+    private fun show(view: StepTrailExits.View, pinAsked: Boolean, on: () -> Unit, offConfirmed: () -> Unit,
+                     lockOn: () -> Unit = {}, lockOff: () -> Unit = {}) = compose.setContent {
         IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
-            StepTrailCardFlow(view, null, pinAsked = { pinAsked }, onOn = on, onOffConfirmed = offConfirmed) { ok, cancel ->
+            StepTrailCardFlow(view, null, pinAsked = { pinAsked }, onOn = on, onOffConfirmed = offConfirmed, onLockOn = lockOn,
+                onLockOffConfirmed = lockOff) { ok, cancel ->
                 Text("PIN asked")
                 androidx.compose.material3.TextButton(onClick = ok) { Text("PIN right") }
                 androidx.compose.material3.TextButton(onClick = cancel) { Text("PIN cancel") }
@@ -50,9 +52,12 @@ class StepTrailCardTest {
         show(StepTrailExits.View(on = true, loaded = true), pinAsked = true, { ons++ }, { offs++ })
         compose.waitForIdle()
         assertTrue(shows("Step lock and breakeven"))
-        assertTrue(shows(StepTrail.SWITCH_V5))
-        assertTrue(StepTrail.SWITCH_V5.contains("failed gates, Boss's exception"))
-        assertTrue(shows("On: new trades of the three arms get the step lock or breakeven at +₹1,000, and the breakeven at +10%"))
+        assertTrue(shows(StepTrail.SWITCH))
+        assertTrue(StepTrail.SWITCH.contains("failed gates, Boss's exception"))
+        assertTrue(shows("On: new trades of the three arms get the breakeven at +10%"))
+        // 16 Nov: the fourth version's own switch under it, labelled.
+        assertTrue(shows(StepTrail.SWITCH_LOCK)); assertTrue(StepTrail.SWITCH_LOCK.contains("failed gates, Boss's exception"))
+        assertTrue(shows("On: new R51 / R72 trades get the step lock, Liquidity the breakeven at +₹1,000 (V5)"))
         assertTrue(shows("Failed gates, Boss's exception", sub = true))
         assertTrue(shows("R179", sub = true))
         // 16 Nov: the fourth version's rules and R186's record.
@@ -63,18 +68,51 @@ class StepTrailCardTest {
         assertTrue(shows("open trades from before keep the breakeven at +10% alone", sub = true))
         assertTrue(shows("keeps its arm's own stop", sub = true))
         assertTrue(shows("10% above the fill, the stop moves to breakeven", sub = true))
-        compose.onNodeWithText(StepTrail.SWITCH_V5).performClick()
+        compose.onNodeWithText(StepTrail.SWITCH).performClick()
         compose.waitForIdle()
         assertTrue(shows("PIN asked"))
         assertEquals("not off before the PIN", 0, offs)
         compose.onNodeWithText("PIN cancel").performClick()
         compose.waitForIdle()
         assertEquals("cancelled: still on", 0, offs)
-        compose.onNodeWithText(StepTrail.SWITCH_V5).performClick()
+        compose.onNodeWithText(StepTrail.SWITCH).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("PIN right").performClick()
         compose.waitForIdle()
         assertEquals(1, offs); assertEquals(0, ons)
+    }
+
+    /** 16 Nov: the fourth version's switch - off (back to V4 alone) asks the PIN first; on again is one tap; never the rule's own off. */
+    @Test fun theStepLocksOffAsksThePinAndGoesBackToV4() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        var offs = 0; var lockOffs = 0; var lockOns = 0
+        show(StepTrailExits.View(on = true, loaded = true, lock = true), pinAsked = true, { }, { offs++ }, { lockOns++ }, { lockOffs++ })
+        compose.waitForIdle()
+        compose.onNodeWithText(StepTrail.SWITCH_LOCK).performClick()
+        compose.waitForIdle()
+        assertTrue(shows("PIN asked"))
+        assertEquals("not off before the PIN", 0, lockOffs)
+        compose.onNodeWithText("PIN right").performClick()
+        compose.waitForIdle()
+        assertEquals(1, lockOffs); assertEquals("the rule itself untouched", 0, offs); assertEquals(0, lockOns)
+    }
+
+    @Test fun theStepLockOnAgainIsOneTap() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        var lockOffs = 0; var lockOns = 0
+        show(StepTrailExits.View(on = true, loaded = true, lock = false), pinAsked = true, { }, { }, { lockOns++ }, { lockOffs++ })
+        compose.waitForIdle()
+        assertTrue(shows("Off: new trades get the breakeven at +10% alone (V4)"))
+        compose.onNodeWithText(StepTrail.SWITCH_LOCK).performClick()
+        compose.waitForIdle()
+        assertFalse(shows("PIN asked")); assertEquals(1, lockOns); assertEquals(0, lockOffs)
+    }
+
+    @Test fun withTheRuleOffTheStepLockSwitchIsNotShown() {
+        org.junit.Assume.assumeFalse(com.optionslab.app.BuildConfig.GOLD)
+        show(StepTrailExits.View(on = false, loaded = true), pinAsked = true, { }, { })
+        compose.waitForIdle()
+        assertFalse(shows(StepTrail.SWITCH_LOCK))
     }
 
     @Test fun withNoPinToAskOffIsOneTap() {
@@ -82,7 +120,7 @@ class StepTrailCardTest {
         var offs = 0
         show(StepTrailExits.View(on = true, loaded = true), pinAsked = false, { }, { offs++ })
         compose.waitForIdle()
-        compose.onNodeWithText(StepTrail.SWITCH_V5).performClick()
+        compose.onNodeWithText(StepTrail.SWITCH).performClick()
         compose.waitForIdle()
         assertFalse(shows("PIN asked"))
         assertEquals(1, offs)
@@ -94,7 +132,7 @@ class StepTrailCardTest {
         show(StepTrailExits.View(on = false, loaded = true), pinAsked = true, { ons++ }, { offs++ })
         compose.waitForIdle()
         assertTrue(shows("Off: new trades use the arms' own exits"))
-        compose.onNodeWithText(StepTrail.SWITCH_V5).performClick()
+        compose.onNodeWithText(StepTrail.SWITCH).performClick()
         compose.waitForIdle()
         assertFalse(shows("PIN asked"))
         assertEquals(1, ons); assertEquals(0, offs)
@@ -106,7 +144,7 @@ class StepTrailCardTest {
         show(StepTrailExits.View(), pinAsked = true, { taps++ }, { taps++ })
         compose.waitForIdle()
         assertTrue(shows("Reading the switch..."))
-        assertFalse(shows(StepTrail.SWITCH_V5))
+        assertFalse(shows(StepTrail.SWITCH))
         assertEquals(0, taps)
     }
 

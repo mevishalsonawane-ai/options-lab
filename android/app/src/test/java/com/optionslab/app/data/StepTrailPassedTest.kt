@@ -116,8 +116,8 @@ class StepTrailPassedTest : RobolectricTest() {
     private fun closed() = PassedArmsHost.view.value.closed.single { it.shadow == null }
 
     /** R51's 09:20 break bought at about [px] with the switch [on]. */
-    private fun bought(px: Double, on: Boolean = true): PassedArmsHost.Pos {
-        StepTrailExits.resetForTest(on = on)
+    private fun bought(px: Double, on: Boolean = true, lock: Boolean = true): PassedArmsHost.Pos {
+        StepTrailExits.resetForTest(on = on, lock = lock)
         market(LocalTime.of(9, 20)) { px }
         tick(LocalTime.of(9, 20))
         return open()
@@ -128,7 +128,7 @@ class StepTrailPassedTest : RobolectricTest() {
     private fun be(entry: Double, tick: Double = StepTrail.TICK): Double = StepTrail.breakevenLevel(entry, 65, tick)!!
     /** 16 Nov: the rule's stop of a one-lot fourth-version trade filled at [entry] whose best is [best] (the higher of the breakeven and the lock). */
     private fun lv(entry: Double, best: Double, tick: Double = StepTrail.TICK): Double =
-        StepTrail.levelOf(entry, 65, best, tick, StepTrail.Lock.L500, 65)!!
+        StepTrail.levelOf(entry, 65, best, tick, StepTrail.Ladder(entry, 65, 65, StepTrail.Lock.L500, tick))!!
     private fun trig(entry: Double, k: Int, tick: Double = StepTrail.TICK): Double = StepTrail.lockTrigger(entry, 65, 65, k, tick)!!
 
     private fun popupStop(p: PassedArmsHost.Pos): Double? = com.optionslab.ira.ArmExits.of(false, p.symbol).single().stop
@@ -221,7 +221,7 @@ class StepTrailPassedTest : RobolectricTest() {
         market(LocalTime.of(9, 27)) { t -> if (t.isBefore(LocalTime.of(9, 26))) up(t) else e - 3.0 }
         manage(LocalTime.of(9, 27))
         val sold = closed()
-        assertEquals(StepTrail.whyAt(held, e, 65, lock = StepTrail.Lock.L500, qty = 65), sold.why)
+        assertEquals(StepTrail.whyAt(held, e, 65, ladder = StepTrail.Ladder(e, 65, 65, StepTrail.Lock.L500)), sold.why)
         assertTrue("${sold.exit} between ${e * 0.85} and $held", sold.exit!! > e * 0.85 && sold.exit!! <= held + 1e-9)
     }
 
@@ -242,6 +242,9 @@ class StepTrailPassedTest : RobolectricTest() {
         val done = PassedArmsHost.view.value.closed.single { it.arm == BreadthDonchianArm.SOURCE }
         assertEquals(StepTrail.WHY_TRAIL, done.why)
         assertTrue("sold at the breakeven, not at a step lock", done.exit!! < StepTrail.lockKeep(200.0, 65, 65, 0, StepTrail.Lock.L500)!!)
+        // The diagnostics count it apart: on the breakeven alone (V4), not on the step lock.
+        val d = PassedArmsHost.diagLine()
+        assertTrue(d, d.contains("${StepTrail.DIAG_LOCK} on for new trades, 0 closed on it") && d.contains("1 on the breakeven alone"))
     }
 
     /** 16 Nov: the same R72 trade entered with the fourth version: its best (+₹1,000 a lot) locks +₹500 a lot, sold there as the step lock. */
@@ -258,6 +261,8 @@ class StepTrailPassedTest : RobolectricTest() {
         val done = PassedArmsHost.view.value.closed.single { it.arm == BreadthDonchianArm.SOURCE }
         assertEquals(StepTrail.WHY_LOCK, done.why)
         assertTrue("${done.exit} vs $keep", done.exit!! <= keep + 1e-9 && done.exit!! > be(200.0))
+        val d = PassedArmsHost.diagLine()
+        assertTrue(d, d.contains("${StepTrail.DIAG_LOCK} on for new trades, 1 closed on it") && d.contains("0 on the breakeven alone"))
     }
 
     @Test fun otherArmsNeverGetIt() {
@@ -349,6 +354,8 @@ class StepTrailPassedTest : RobolectricTest() {
         runBlocking { ArmLive.watch() }
         assertEquals(StepTrail.WHY_LOCK, ArmLive.view.value.closed.single().why)
         assertTrue(marketSells.isEmpty())
+        // The diary says it with its label (16 Nov review: never the bare word).
+        assertTrue(ArmLive.view.value.log.joinToString("\n"), ArmLive.view.value.log.any { it.contains("(step lock (failed gates, Boss's exception))") })
         // Later the paper trade's own exit: nothing more is sent (the live trade is closed already).
         market(LocalTime.of(9, 25)) { t -> if (t.isBefore(LocalTime.of(9, 24))) 200.0 else 150.0 }
         manage(LocalTime.of(9, 25))
@@ -423,7 +430,7 @@ class StepTrailPassedTest : RobolectricTest() {
         if (!Autopilot.enabled()) return
         // Both flips are in the change timeline as Boss's; the newest one's Undo (back off) takes the PIN.
         val end = System.currentTimeMillis() + 5_000
-        fun flips() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.STEP_LOCK_TARGET }
+        fun flips() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.BE10_TARGET }
         while (flips().size < 2 && System.currentTimeMillis() < end) Thread.sleep(20)
         assertEquals(listOf(AutoChange.SWITCHED_OFF, AutoChange.ON), flips().map { it.change.to })
         val newest = flips().last()
@@ -437,18 +444,61 @@ class StepTrailPassedTest : RobolectricTest() {
     @Test fun theUpdatesSwitchOnIsLoggedOnceAsBosss() {
         if (!Autopilot.enabled()) return
         SecurePrefs.put(StepTrailExits.K_ON, true)
+        SecurePrefs.put(StepTrailExits.K_LOCK, true)
         StepTrailExits.resetForTest(on = true, loaded = false)
         StepTrailExits.load()
         StepTrailExits.resetForTest(on = true, loaded = false)
         StepTrailExits.load()
         val end = System.currentTimeMillis() + 5_000
-        fun ons() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.STEP_LOCK_TARGET }
-        while (ons().isEmpty() && System.currentTimeMillis() < end) Thread.sleep(20)
+        fun ons() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.BE10_TARGET }
+        fun v5() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.STEP_LOCK_TARGET }
+        while ((ons().isEmpty() || v5().isEmpty()) && System.currentTimeMillis() < end) Thread.sleep(20)
         Thread.sleep(200)
         assertEquals("once", 1, ons().size)
         assertEquals(AutoChange.ON, ons().single().change.to)
-        assertTrue(ons().single().change.reason.contains("For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven at +₹1,000"))
+        assertTrue(ons().single().change.reason.contains("Switch to + picker + breakeven at +10% (V4)"))
+        // 16 Nov: the fourth version, logged once as what it is: V4 alone -> V5.
+        assertEquals("once", 1, v5().size)
+        assertEquals(AutoChange.V4_ONLY, v5().single().change.from); assertEquals(AutoChange.V5_LOCK, v5().single().change.to)
+        assertTrue(v5().single().change.reason.contains("For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven at +₹1,000"))
         assertNull(AutoChange.lastUndoable(Autopilot.book.value))
+        // When it took effect is kept (a rebuilt live trade is told apart by it).
+        assertNotNull(StepTrailExits.lockSince())
+        assertNotNull(SecurePrefs.getString(StepTrailExits.K_LOCK_SINCE))
+    }
+
+    /**
+     * 16 Nov (review): the fourth version's Undo goes back to V4 alone - the step lock off, the breakeven at +10% kept - and only with the
+     * PIN; new trades then enter without the lock; on again is one tap. The diagnostics line says each.
+     */
+    @Test fun theFourthVersionsUndoGoesBackToV4WithThePin() {
+        StepTrailExits.resetForTest(on = true)
+        assertTrue(StepTrailExits.line(), StepTrailExits.line().contains("on top") && StepTrailExits.line().contains(StepTrail.DIAG_LOCK))
+        val refused = StepTrailExits.setLock(false)
+        assertTrue(refused, refused.contains("PIN") && refused.contains("Nothing changed"))
+        assertTrue(StepTrailExits.lockOn())
+        assertTrue(StepTrailExits.setLock(false, pinConfirmed = true).startsWith("Back to V4"))
+        assertFalse(StepTrailExits.lockOn()); assertTrue("the breakeven at +10% stays", StepTrailExits.isOn())
+        assertFalse(SecurePrefs.getBoolean(StepTrailExits.K_LOCK, true))
+        assertTrue("Boss's switch-off kept with its time", SecurePrefs.getString(StepTrailExits.K_LOCK_HISTORY).orEmpty().endsWith("|0"))
+        assertTrue(StepTrailExits.holdsForErase())
+        assertTrue(StepTrailExits.line(), StepTrailExits.line().contains("off (V4 alone)"))
+        assertFalse("the diagnostics hide rupee figures", Regex("₹|Rs|\\d,\\d").containsMatchIn(StepTrailExits.line()))
+        // A new R51 trade now enters with V4 alone.
+        val p = bought(200.0, lock = false)
+        assertTrue(p.fx); assertFalse(p.sl)
+        assertTrue("on again: at once", StepTrailExits.setLock(true).startsWith("On"))
+        if (!Autopilot.enabled()) return
+        val end = System.currentTimeMillis() + 5_000
+        fun flips() = Autopilot.book.value.entries.filter { it.change.target == AutoChange.STEP_LOCK_TARGET }
+        while (flips().size < 2 && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertEquals(listOf(AutoChange.V4_ONLY, AutoChange.V5_LOCK), flips().map { it.change.to })
+        val newest = flips().last()
+        assertTrue(Autopilot.undoNeedsPin(newest.id))
+        assertFalse("never without the PIN", Autopilot.undo(newest.id).startsWith("Undone"))
+        assertTrue(StepTrailExits.lockOn())
+        assertTrue(Autopilot.undo(newest.id, pinConfirmed = true).startsWith("Undone"))
+        assertFalse("back to V4", StepTrailExits.lockOn()); assertTrue("the rule itself stays on", StepTrailExits.isOn())
     }
     /**
      * Review (CLAUDE.md: nothing on the order or tick path touches the settings vault). What this measures, exactly: with the rule on and a
@@ -484,6 +534,48 @@ class StepTrailPassedTest : RobolectricTest() {
         assertEquals(StepTrail.WHY_LOCK, ArmLive.view.value.closed.single().why)
     }
 
+    /**
+     * 16 Nov (review): the live trade's best price sees the option's closed-minute highs too (a spike between two looks), so its step
+     * lock rests at Zerodha at the level the minute high earned, on its own live fill and lots - and never from the paper trade's levels.
+     */
+    @Test fun liveTheStepLockSeesTheOptionsMinuteHighs() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val e = live.entry
+        // 09:22 trades up to 221 (its minute high) and back to 220; the stream is not looked at meanwhile.
+        market(LocalTime.of(9, 23)) { t -> if (t.isBefore(LocalTime.of(9, 22))) 200.0 else 220.0 }
+        manage(LocalTime.of(9, 23))
+        quoted(212.0)
+        val back = ArmLive.view.value.open.single()
+        assertEquals(221.0, back.best!!, 1e-9)
+        val expect = lv(e, 221.0, live.tick)
+        assertTrue("the +₹500 lock, above the breakeven: $expect", expect > be(e, live.tick))
+        assertEquals(expect, back.stopTrigger!!, 1e-9)
+        assertEquals(expect, kite.order(live.stopOrderId!!).trigger, 1e-9)
+        assertTrue(marketSells.isEmpty())
+    }
+
+    /**
+     * 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): a step lock whose stop Zerodha cancelled, with the price still
+     * above it, is put back at Zerodha at the lock (a new SL), never only watched in the app.
+     */
+    @Test fun liveACancelledStepLockIsRestedAgainAtZerodha() {
+        goLive()
+        bought(200.0)
+        val live = earnedLive()
+        val b = lockedLive(live)
+        kite.reject(live.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        val sls = kite.placed.count { it.form["order_type"] == "SL" }
+        kite.quote("NFO:$sym", b + 2.0, b + 1.95, b + 2.05)
+        runBlocking { ArmLive.watch() }
+        runBlocking { ArmLive.watch() }
+        assertTrue("no app sale while it can rest", marketSells.isEmpty())
+        assertEquals("rested again", sls + 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertEquals(b, kite.placed.last { it.form["order_type"] == "SL" }.form["trigger_price"]!!.toDouble(), 1e-9)
+        assertEquals(b, ArmLive.view.value.open.single().stopTrigger!!, 1e-9)
+    }
+
     /** A live book damaged and rebuilt from Zerodha keeps the paper trade's rule (its flag read from the paper book), whatever the switch says now. */
     @Test fun aRebuiltLiveTradeKeepsTheRule() {
         goLive()
@@ -510,17 +602,39 @@ class StepTrailPassedTest : RobolectricTest() {
         val live = ArmLive.view.value.open.single()
         assertFalse(live.fixed)
         StepTrailExits.resetForTest(on = true)
-        assertFalse("its paper trade, matched by contract", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, sym))
+        val r51 = com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!
+        assertEquals("its paper trade, matched by contract", false to false, ArmLive.rebuiltRule(r51, sym))
         // No confident match (a contract no paper trade holds): keeps the rule, the risk-lowering side, whatever the switch says now.
-        assertTrue(ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, "NIFTY26OCT99999CE"))
+        assertTrue(ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE").first)
         StepTrailExits.resetForTest(on = false)
-        assertTrue("off is for new trades only", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, "NIFTY26OCT99999CE"))
+        assertTrue("off is for new trades only", ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE").first)
         StepTrailExits.resetForTest(on = true)
-        assertFalse("never another arm", ArmLive.rebuiltFixed(com.optionslab.engine.orb.LiveMirror.spec(OovArm.SOURCE)!!, sym))
-        // 16 Nov: the step lock likewise - its paper trade's (none here), on with no confident match, never another arm.
-        assertFalse(ArmLive.rebuiltLock(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, sym))
-        assertTrue(ArmLive.rebuiltLock(com.optionslab.engine.orb.LiveMirror.spec(DonchianArm.SOURCE)!!, "NIFTY26OCT99999CE"))
-        assertFalse(ArmLive.rebuiltLock(com.optionslab.engine.orb.LiveMirror.spec(OovArm.SOURCE)!!, sym))
+        assertEquals("never another arm", false to false, ArmLive.rebuiltRule(com.optionslab.engine.orb.LiveMirror.spec(OovArm.SOURCE)!!, sym))
+        // 16 Nov (review): with no paper match, the step lock goes by when the trade was placed against when the fourth version took effect.
+        val since = day.atTime(9, 0)
+        StepTrailExits.resetForTest(on = true, since = since)
+        assertEquals("placed before V5: V4 alone", true to false, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(8, 59)))
+        assertEquals("placed after: the lock", true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(9, 30)))
+        // Boss switched the lock off at 10:00 and on again at 11:00: placed in between, V4 alone; after, the lock - whatever the switch now.
+        StepTrailExits.resetForTest(on = true, lock = false, since = since, offAt = day.atTime(10, 0))
+        assertEquals("placed while it was off: V4 alone", true to false, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(10, 30)))
+        assertEquals("placed before the switch-off: the lock, though it is off now", true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(9, 30)))
+        StepTrailExits.resetForTest(on = true, lock = true, since = since, offAt = day.atTime(10, 0), onAt = day.atTime(11, 0))
+        assertEquals(true to false, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(10, 30)))
+        assertEquals(true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(11, 30)))
+        assertEquals(true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(9, 30)))
+        // Off at 10:00, on at 11:00, off again at 12:00: a trade placed in the first off window is still V4 alone.
+        StepTrailExits.resetForTest(on = true, lock = false, since = since,
+            history = listOf(day.atTime(10, 0) to false, day.atTime(11, 0) to true, day.atTime(12, 0) to false))
+        assertEquals(true to false, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(10, 30)))
+        assertEquals(true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(11, 30)))
+        assertEquals(true to false, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(12, 30)))
+        // Truly unknown (no order time, or no record of when it took effect): the tighter side, logged.
+        StepTrailExits.resetForTest(on = true)
+        assertEquals(true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(9, 30)))
+        assertEquals(true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", null))
+        assertEquals(day.atTime(9, 20, 5), ArmLive.placedTime("${day} 09:20:05"))
+        assertNull(ArmLive.placedTime("")); assertNull(ArmLive.placedTime("not a time")); assertNull(ArmLive.placedTime(null))
     }
 
     /** A stop at the breakeven is booked "breakeven lock" whatever its kind (a rebuilt trade's safety stop moved there), run through or not. */

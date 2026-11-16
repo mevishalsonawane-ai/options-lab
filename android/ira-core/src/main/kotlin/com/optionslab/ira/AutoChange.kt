@@ -345,7 +345,10 @@ object AutoChange {
             // on raises paper risk, off takes those entries away.
             // 6 Nov: R150's W20 label on R51 ([W20_TARGET]) is a log only - it never skips or changes a trade, on or off. (R151's pickers,
             // [PICK_TARGET], act: an entry filter like the others.)
-            Kind.PAPER_FILTER -> if (c.target == W20_TARGET) Risk.NEUTRAL_SHADOW
+            // 16 Nov: the fourth version's lock ([STEP_LOCK_TARGET]) only raises stops: to V5 lowers risk, back to V4 alone raises it.
+            // (An entry the unmerged first build of 16 Nov wrote under this target with on / off reads as the switch it flipped: on lowers.)
+            Kind.PAPER_FILTER -> if (c.target == STEP_LOCK_TARGET) { if (c.to == V5_LOCK || c.to == ON) Risk.LOWER else Risk.RAISE }
+                else if (c.target == W20_TARGET) Risk.NEUTRAL_SHADOW
                 else if (c.target == BOOK_PRICE_TARGET) { if (c.to == ON) Risk.RAISE else Risk.LOWER } else if (c.to == ON) Risk.LOWER else Risk.RAISE
             // 18 Oct: an arm's own live switch on lets its live entries go (adds live risk); off keeps it on paper.
             Kind.ARM_LIVE -> if (c.to == ON) Risk.RAISE else Risk.LOWER
@@ -955,31 +958,48 @@ object AutoChange {
     const val BE10_TARGET = "exit:breakeven_10"
 
     /**
-     * 16 Nov 2026, fourth version: the target of the step lock (R51, R72) and the breakeven at +₹1,000 (Liquidity) on top of the breakeven
-     * at +10% ([stepTrail]), a target of its own so the update is logged once in the timeline; [STEP_TRAIL_TARGET]'s and [BE10_TARGET]'s
-     * older entries still undo the same switch ([superseded]).
+     * 16 Nov 2026, fourth version: the target of the step lock (R51, R72) and the breakeven at +₹1,000 (Liquidity) ON TOP of the breakeven at
+     * +10% ([stepLock]): its own switch under the rule's ([stepTrail]), so its Undo goes back to V4 alone, never the whole rule off.
      */
     const val STEP_LOCK_TARGET = "exit:step_lock_be1000"
+    /** [stepLock]'s two states, as the timeline shows them (no word the safety filter reads as a setting: [DENY]). */
+    const val V4_ONLY = "V4: breakeven at +10% alone"
+    const val V5_LOCK = "V5: step lock (R51, R72) and breakeven at +1,000 (Liquidity) on top"
 
-    /** Whether [target] is one of this one switch's targets, any version's. */
-    fun isStepTrailTarget(target: String): Boolean = target == STEP_TRAIL_TARGET || target == BE10_TARGET || target == STEP_LOCK_TARGET
+    /** Whether [target] is the rule's main switch, any version's entries ([STEP_TRAIL_TARGET], [BE10_TARGET]; not [STEP_LOCK_TARGET]). */
+    fun isStepTrailTarget(target: String): Boolean = target == STEP_TRAIL_TARGET || target == BE10_TARGET
 
     /**
-     * 16 Nov 2026, fourth version (Boss, after R186: "For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven
-     * at +₹1,000"; CLAUDE.md's fifth exception; on top of the third version, V4): every new trade of Liquidity 15+5, R51 Donchian 20 and
-     * R72 Breadth Donchian keeps its arm's own stop and moves it to breakeven once the option is 10% above the fill; R51 / R72 also lock
-     * +₹500 a lot at +₹1,000 a lot net and step it up ₹500 at a time, Liquidity moves to breakeven at +₹1,000 a lot if that comes first;
-     * paper and live - switched [on], or off again. Failed R179's and R186's gates. On only tightens stops (risk down); off puts the arms'
-     * own wider exits back (risk up, live scope: its Undo takes the PIN).
+     * 15 Nov 2026, third version (Boss: "Switch to + picker + breakeven at +10% (V4)"; CLAUDE.md's fifth exception; it replaced the
+     * morning's ₹500 step trail): the rule's main switch - every new trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian keeps
+     * its arm's own stop and moves it to breakeven once the option is 10% above the fill (16 Nov: plus the fourth version's lock while
+     * [stepLock] is on), on paper and live - switched [on], or off again. Failed R179's gates. On only tightens stops (risk down); off puts
+     * the arms' own wider exits back (risk up, live scope: its Undo takes the PIN).
      */
-    fun stepTrail(on: Boolean): Change = Change(Kind.PAPER_FILTER, STEP_LOCK_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
-        if (on) "your ask (16 Nov, \"For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven at +₹1,000\"): " +
-            "each new trade of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian keeps its arm's own stop and the breakeven at +10%; " +
-            "${com.optionslab.engine.orb.StepTrail.LOCK_RULE}; R72 / R51 keep the R151 picker. Failed gates, Boss's exception: " +
-            "${com.optionslab.engine.orb.StepTrail.LOCK_RECORD}. Before it: ${com.optionslab.engine.orb.StepTrail.RECORD}"
-        else "Liquidity 15+5, R51 and R72's new trades are back on their own exits (no step lock, no breakeven; live too)",
+    fun stepTrail(on: Boolean): Change = Change(Kind.PAPER_FILTER, BE10_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (15 Nov, \"Switch to + picker + breakeven at +10% (V4)\"): each new trade of Liquidity 15+5, R51 Donchian 20 and " +
+            "R72 Breadth Donchian keeps its arm's own stop; once the option is 10% above the fill the stop moves to breakeven (the fill plus " +
+            "the charges), never down; R72 / R51 keep the R151 picker; paper and live; the arms' own exits stay and the first one wins. It " +
+            "replaced the ₹500 step trail. Failed gates, Boss's exception: ${com.optionslab.engine.orb.StepTrail.RECORD}"
+        else "Liquidity 15+5, R51 and R72's new trades are back on their own exits (no breakeven at +10%, no step lock; live too)",
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
-        what = "step lock (R51, R72) and breakeven at +₹1,000 (Liquidity) on breakeven at +10%, paper and live (failed gates, Boss's exception)")
+        what = "breakeven at +10% on Liquidity, R51 and R72, paper and live (failed gates, Boss's exception)")
+
+    /**
+     * 16 Nov 2026, fourth version (Boss, after R186: "For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use
+     * Breakeven at +₹1,000"; CLAUDE.md's fifth exception): on top of V4 - R51 / R72 lock +₹500 a lot at +₹1,000 a lot net and step it up
+     * ₹500 at a time; Liquidity moves to breakeven at +₹1,000 a lot if that comes before +10% - for new trades, paper and live: [on] from
+     * V4 alone to V5, or back. Failed R186's gates. On only raises stops (risk down); back to V4 takes the lock away (risk up, live scope:
+     * its Undo takes the PIN). The rule's main switch ([stepTrail]) is not touched either way.
+     */
+    fun stepLock(on: Boolean): Change = Change(Kind.PAPER_FILTER, STEP_LOCK_TARGET, if (on) V4_ONLY else V5_LOCK, if (on) V5_LOCK else V4_ONLY,
+        if (on) "your ask (16 Nov, \"For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) And for liquidity use Breakeven at +₹1,000\"): " +
+            "new trades of Liquidity 15+5, R51 Donchian 20 and R72 Breadth Donchian keep their own stop and the breakeven at +10% (V4), and " +
+            "${com.optionslab.engine.orb.StepTrail.LOCK_RULE}; R72 / R51 keep the R151 picker. Failed gates, Boss's exception: " +
+            "${com.optionslab.engine.orb.StepTrail.LOCK_RECORD}"
+        else "Liquidity 15+5, R51 and R72's new trades are back on V4 alone (the breakeven at +10%; no step lock, no breakeven at +₹1,000; live too)",
+        Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
+        what = "step lock (R51, R72) and breakeven at +₹1,000 (Liquidity) on top of V4, paper and live (failed gates, Boss's exception)")
 
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"
@@ -1569,9 +1589,12 @@ object AutoChange {
         if (e.change.kind !in setOf(Kind.LIQ_TRAIL, Kind.ARM_HIDE, Kind.TREND_EXIT, Kind.PAPER_LOCK, Kind.PAPER_FILTER, Kind.ARM_LIVE,
                 Kind.ARM_SHADOW, Kind.SEGMENT_SPLIT, Kind.LIQ_BREAKEVEN, Kind.IDEA_RULE, Kind.DAY_STOP)) return false
         val i = book.entries.indexOfFirst { it.id == e.id }
-        // 15 Nov: the rule's first version (₹500 step trail), the third (breakeven at +10%) and, 16 Nov, the fourth (step lock) are one switch.
-        fun same(t: String) = if (isStepTrailTarget(t)) STEP_LOCK_TARGET else t
-        return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && same(it.change.target) == same(e.change.target) }
+        // 15 Nov: the rule's first version (₹500 step trail) and the third (breakeven at +10%) are one switch (16 Nov: the fourth
+        // version's lock is a switch of its own, [STEP_LOCK_TARGET]).
+        // (An on / off entry under [STEP_LOCK_TARGET], from the unmerged first build of 16 Nov, flipped the main switch: grouped with it.)
+        fun same(c: Change) = if (isStepTrailTarget(c.target) || (c.target == STEP_LOCK_TARGET && (c.to == ON || c.to == SWITCHED_OFF))) BE10_TARGET
+            else c.target
+        return i >= 0 && book.entries.drop(i + 1).any { it.change.kind == e.change.kind && same(it.change) == same(e.change) }
     }
 
     /** What Boss is told when he taps Undo on a [superseded] flip of his trail switch. */

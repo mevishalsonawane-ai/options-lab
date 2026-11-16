@@ -120,10 +120,12 @@ private fun r51PickerLine(closed: List<PassedArmsHost.Pos>): String {
  * 15 Nov (Boss's exception): the breakeven at +10% on [source]'s new trades in words, when it is [on] and covers it; else null. 16 Nov: with
  * the fourth version's lock for the arm (R51 / R72's step lock, Liquidity's breakeven at +₹1,000) and its R186 record.
  */
-internal fun stepTrailLine(source: String, on: Boolean): String? = if (!on || !com.optionslab.engine.orb.StepTrail.covers(source)) null
+internal fun stepTrailLine(source: String, on: Boolean, lock: Boolean = true): String? = if (!on || !com.optionslab.engine.orb.StepTrail.covers(source)) null
     else with(com.optionslab.engine.orb.StepTrail) {
-        "${labelOf(lockFor(source))} on: $RULE; $LOCK_RULE. $LOCK_RECORD. Before it: $RECORD. " +
+        // 16 Nov (review): the fourth version only while its own switch is on ([lock]); else V4 alone, as new trades get it.
+        if (lock) "${labelOf(lockFor(source))} on: $RULE; $LOCK_RULE. $LOCK_RECORD. Before it: $RECORD. " +
             "Live trades take their own on their live fill and lots; switch it off in Bot settings (PIN)."
+        else "$LABEL on: $RULE. $RECORD. Live trades take their own on their live fill and lots; switch it off in Bot settings (PIN)."
     }
 
 /** What the name's dialog says: the label, settings, research id and result, new trades' exits, the forward-test bar, the signal source. */
@@ -154,7 +156,7 @@ internal fun passedExplanation(source: String, v: PassedArmsHost.View): List<Str
     // 16 Oct: the premium exits NEW trades enter with (the 30-60-100 lock and R66's +5% once +25%, Boss's choices; paper only).
     com.optionslab.ira.PassedArmsTalk.exitsWords(v.lockOn, v.l25On) + ".",
     // 15 Nov (Boss's exception, CLAUDE.md): R51 / R72's breakeven rule, when on (Bot settings), with R152's record.
-    stepTrailLine(source, com.optionslab.app.data.StepTrailExits.isOn()),
+    stepTrailLine(source, com.optionslab.app.data.StepTrailExits.isOn(), com.optionslab.app.data.StepTrailExits.lockOn()),
     PassedArms.SIGNAL_INDEX + ".",
     (if (source == Solo2.SOURCE) Solo2.bar() else PassedArms.ForwardBar.BAR) + ".",
     v.forwardLine(source) + ".",

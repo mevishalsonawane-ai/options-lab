@@ -682,7 +682,7 @@ object PassedArmsHost {
         o.put("r72PickerShadow", b.pickOn)
         o.put("r51W20Shadow", b.w20On)
         o.put("recordOnly", JSONArray().apply { b.recordOnly.sorted().forEach { put(it) } })
-        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && lockKey(it) == k } }.forEach { (k, v) -> put(k, v) } })
+        o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && (lockKey(it) == k || ownLockKey(it) == k) } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
         // 19 Oct (order speed): written on this book's own writer thread ([writer]), never under [lock] on the caller's - an
         // entry booked here ([record]) used to wait for the vault write before the next index's entry, and the 15-second stop
@@ -1082,7 +1082,8 @@ object PassedArmsHost {
                     // 15 Nov (Boss's exception, failed gates): the breakeven rule - its closed trades apart from the arm's own exits.
                     // 16 Nov: the fourth version (the step lock) is the switch's now; its trades are counted with the rule's.
                     // Review: the two versions' closed trades counted apart (V4 alone; with the step lock).
-                    (if (StepTrail.covers(s)) " · ${StepTrail.DIAG_V5} ${if (StepTrailExits.isOn()) "on" else "off"} for new trades, " +
+                    (if (StepTrail.covers(s)) " · ${StepTrail.DIAG} ${if (StepTrailExits.isOn()) "on" else "off"}, ${StepTrail.DIAG_LOCK} " +
+                        "${if (StepTrailExits.isOn() && StepTrailExits.lockOn()) "on" else "off"} for new trades, " +
                         "${c.count { it.fx && it.sl }} closed on it ${m(c.filter { it.fx && it.sl }.sumOf { it.net ?: 0.0 })}, " +
                         "${c.count { it.fx && !it.sl }} on the breakeven alone ${m(c.filter { it.fx && !it.sl }.sumOf { it.net ?: 0.0 })}, " +
                         "${c.count { !it.fx }} on the arm's own exits " +
@@ -2036,8 +2037,8 @@ object PassedArmsHost {
                 val pos = Pos(arm, u, c.symbol, right.name, fill.quantity, fill.price, now, r.orderId, setup, ref, idx, atr, charges = charges, lock = b.lockOn,
                     l25 = b.lockOn && b.l25On, breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn,
                     np5 = arm == OovArm.SOURCE && b.np5On && !np5LiveCopy, fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 })
-                    // 16 Nov: a new trade with the rule takes its fourth version (the step lock) too: one read of the switch.
-                    .let { it.copy(sl = it.fx) }
+                    // 16 Nov: a new trade with the rule takes its fourth version (the step lock) too while that is on (Bot settings).
+                    .let { it.copy(sl = it.fx && StepTrailExits.lockOn()) }
                 b.positions += pos
                 b.marks[c.symbol] = fill.price
                 b.decided += keys
@@ -2109,7 +2110,7 @@ object PassedArmsHost {
         runCatching { Paper.rememberContract(c) }
         val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
             breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On,
-            fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 }).let { it.copy(sl = it.fx) }
+            fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 }).let { it.copy(sl = it.fx && StepTrailExits.lockOn()) }
         b.positions += pos
         if (c.symbol !in b.marks) b.marks[c.symbol] = ref
         b.decided += keys
@@ -2195,6 +2196,7 @@ object PassedArmsHost {
         // walk keeps the arm's own stop and takes the breakeven as a lock (up only), beside the arm's own exits.
         // 16 Nov: with the fourth version's step lock when it entered with it ([Pos.sl]), on its own quantity (per lot).
         .let { if (p.fx && StepTrail.covers(p.arm)) it.copy(stepTrail = PassedArms.StepTrailOn(lotOf(p), lock = lockOf(p), qty = p.qty.coerceAtLeast(1))) else it }
+        // (16 Nov: on the quantity bought - a paper R51 / R72 trade is never sold in part, so its quantity is its entry quantity.)
 
     /**
      * 15 Nov: [p]'s lot size (the breakeven rule is per lot): the one kept at its entry; else its paper contract's (the paper book,
@@ -2667,7 +2669,26 @@ object PassedArmsHost {
         // it would have taken is logged once, nothing sold ([np5Shadow]).
         val np5Noted = why == null && np5Shadow(b, p, bars, now, known)
         // 18 Oct: the stop or lock this trade's exits rest on now, for its live trade's Zerodha stop ([ArmLive]; memory only).
-        if (p.shadow == null) runCatching { ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()).maxOrNull()) }
+        // 16 Nov (review): a rule trade's live copy takes the rule's levels (breakeven, step lock) on its OWN live fill, lots and best
+        // ([ArmLive.ruleStop]): the paper level handed over is the arm's own exits alone - its stop and, with R64's lock, that lock walked
+        // without the rule - never the paper trade's own breakeven or step lock, worked out on the paper fill.
+        if (p.shadow == null) runCatching {
+            val paperLock = if (p.fx && StepTrail.covers(p.arm)) {
+                // Review: walked with the arm's own exits alone, its own earned level remembered apart ([ownLockKey]), so a restart or a
+                // short read never hands over less than it had.
+                if (p.lock) {
+                    val ownKnown = b.locks[ownLockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
+                    val own = PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p).copy(stepTrail = null), ownKnown, breakeven(p)).lock
+                    own?.let { lv -> if (ownKnown == null || lv > ownKnown.second) b.locks[ownLockKey(p)] = "$now|$lv" }
+                    listOfNotNull(own, ownKnown?.second).maxOrNull()
+                } else null
+            } else b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()
+            ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), paperLock).maxOrNull())
+            // 16 Nov (review): the same option's closed-minute highs, so the live trade's best price (and its rule's levels on its own
+            // fill and lots) sees a spike between two looks or while the phone was away, as the research's minute highs do.
+            if (p.fx && StepTrail.covers(p.arm)) ArmLive.highs(mirrorRef(p), bars.filter { it.high.isFinite() && !it.start.plusMinutes(1).isAfter(now) }
+                .map { it.start to it.high })
+        }
         if (why == null) return np5Noted || waitNoted
         val walkPx = walked?.takeIf { it.kind.why == why }?.price
         val next = if (p.shadow != null) sellWouldBe(b, p, why, ltp, overnight, walkPx) else sell(b, p, c, why, ltp, walkPx)
@@ -2806,6 +2827,9 @@ object PassedArmsHost {
     private fun lockKey(p: Pos): String = if (p.shadow != null) "${p.shadow}|${p.arm}|${p.symbol}"
         else if (p.arm == BreadthDonchianArm.SOURCE) "${p.arm}|${p.symbol}" else p.symbol
 
+    /** 16 Nov (review): the key of a rule trade's own R64 lock (walked without the rule), for its live copy's level. */
+    private fun ownLockKey(p: Pos): String = "own|" + lockKey(p)
+
     /**
      * 16 Oct (R72): R51 Donchian 20 and R72 Breadth Donchian may hold the same option at once - most of R72's breaks are R51's own,
      * and the two run side by side to be compared on the same days. Each holds its own lot on paper and sells only it; their
@@ -2815,7 +2839,7 @@ object PassedArmsHost {
 
     /** [p]'s lock and (when no other open trade here holds its option) its last price, forgotten. */
     private fun forget(b: Book, p: Pos) {
-        b.locks.remove(lockKey(p))
+        b.locks.remove(lockKey(p)); b.locks.remove(ownLockKey(p))
         if (b.positions.none { it.open && it.symbol == p.symbol && !same(it, p) }) b.marks.remove(p.symbol)
     }
 
