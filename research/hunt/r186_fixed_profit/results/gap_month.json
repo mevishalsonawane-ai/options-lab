@@ -1,0 +1,135 @@
+{
+ "window": "2026-10-20 .. 2026-11-13",
+ "check": {
+  "LIQ": {
+   "this": {
+    "2026-09": 33732,
+    "2026-10": -14576
+   },
+   "year_json": {
+    "2026-09": 33732,
+    "2026-10": -14576
+   },
+   "same": true
+  },
+  "R72": {
+   "this": {
+    "2026-09": 32131,
+    "2026-10": 59445
+   },
+   "year_json": {
+    "2026-09": 32131,
+    "2026-10": 58067
+   },
+   "same": false
+  },
+  "R51": {
+   "this": {
+    "2026-09": 5820,
+    "2026-10": 46802
+   },
+   "year_json": {
+    "2026-09": 5820,
+    "2026-10": 44422
+   },
+   "same": false
+  }
+ },
+ "giveback": {
+  "LIQ": {
+   "trades": 43,
+   "losers": 17,
+   "ge1000": {
+    "lost_after": 4,
+    "given_back": 10342,
+    "final_loss": -2958,
+    "reached": 24
+   },
+   "ge1500": {
+    "lost_after": 2,
+    "given_back": 5750,
+    "final_loss": -632,
+    "reached": 17
+   },
+   "ge2000": {
+    "lost_after": 1,
+    "given_back": 3776,
+    "final_loss": -617,
+    "reached": 13
+   },
+   "share_losers_were_1000": 0.2353,
+   "days_with_1000_then_loss": 3
+  },
+  "R72": {
+   "trades": 118,
+   "losers": 56,
+   "ge1000": {
+    "lost_after": 19,
+    "given_back": 54742,
+    "final_loss": -27047,
+    "reached": 75
+   },
+   "ge1500": {
+    "lost_after": 7,
+    "given_back": 25037,
+    "final_loss": -11374,
+    "reached": 53
+   },
+   "ge2000": {
+    "lost_after": 2,
+    "given_back": 5384,
+    "final_loss": -491,
+    "reached": 37
+   },
+   "share_losers_were_1000": 0.3393,
+   "days_with_1000_then_loss": 12
+  },
+  "R51": {
+   "trades": 124,
+   "losers": 45,
+   "ge1000": {
+    "lost_after": 14,
+    "given_back": 44743,
+    "final_loss": -24569,
+    "reached": 89
+   },
+   "ge1500": {
+    "lost_after": 4,
+    "given_back": 12650,
+    "final_loss": -4729,
+    "reached": 68
+   },
+   "ge2000": {
+    "lost_after": 2,
+    "given_back": 4696,
+    "final_loss": -97,
+    "reached": 52
+   },
+   "share_losers_were_1000": 0.3111,
+   "days_with_1000_then_loss": 11
+  }
+ },
+ "base": {
+  "LIQ": {
+   "trades": 43,
+   "net": 5247,
+   "win": 0.6047,
+   "days": 13,
+   "muhurat_8nov": 0
+  },
+  "R72": {
+   "trades": 118,
+   "net": -4445,
+   "win": 0.5254,
+   "days": 17,
+   "muhurat_8nov": 5
+  },
+  "R51": {
+   "trades": 124,
+   "net": 16108,
+   "win": 0.6371,
+   "days": 18,
+   "muhurat_8nov": 4
+  }
+ }
+}

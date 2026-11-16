@@ -1,0 +1,38 @@
+id: r186-l500
+title: 'R186 L500: Rs 500 step lock (+Rs 1,000 a lot net -> lock +Rs 500, then Rs 500 under each further Rs 500 step) on top
+  of today''s exit rule, Liquidity / R72 / R51 (last year, 1 lot)'
+family: trade-management
+date: '2026-11-16'
+doc: research/hunt/r186_fixed_profit/results/summary.md
+hypothesis: 'Boss: trades reach +Rs 1,000 / 1,500 / 2,000 a lot and then end negative; lock part of it.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted here; early part 2025-10-20..2026-03-31 (R151 picker in-sample)
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); year to 2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (entries unchanged; R151 picker on R72 / R51); the exit on the option premium'
+model_or_rule: Rs 500 step lock (+Rs 1,000 a lot net -> lock +Rs 500, then Rs 500 under each further Rs 500 step); on top
+  of own stop + R162 breakeven at +10% (+ R151 picker on R72 / R51); PREREG.md
+settings: research/hunt/r186_fixed_profit/r186study.py
+prereg: research/hunt/r186_fixed_profit/PREREG.md
+variants_tried: 3
+results:
+  summary: 'LIQ: year 690 trades win 48.7% Rs 19,404 (base Rs 100,222); final 357 trades -Rs 21,862 (base Rs 6,432); twin
+    p 1.0; failed: net below the base (year or final); not positive in every period; twin BH q 1.00 > 0.10; outside the account
+    stop rule in final, six, year | R72: year 1097 trades win 64.4% Rs 213,110 (base Rs 324,629); final 624 trades Rs 111,117
+    (base Rs 167,233); twin p 0.014; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside the account
+    stop rule in final, year | R51: year 1430 trades win 62.7% Rs 162,959 (base Rs 249,903); final 684 trades Rs 57,450 (base
+    Rs 144,802); twin p 0.008; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside the account stop
+    rule in final, year.'
+  costs: dated Zerodha charges on the whole quantity; R17 fills (locks sold as stops; a target fills at its price or at the
+    open of a minute that gaps above it)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4867. Nothing in the app changes.
