@@ -308,19 +308,6 @@ object ArmLive {
                    /** 16 Nov: and with the fourth version's step lock ([Pos.lock]). */
                    val lock: Boolean = false)
 
-    /**
-     * 16 Nov (review): the closed-minute highs ([highs]: minute start to high) of the option a rule trade's paper trade [ref] holds - the
-     * same contract its live copy holds - so the live best price ([withBest]) sees a spike between two looks or while the phone was away.
-     * Memory only; the stream's price still counts as before.
-     */
-    private val minuteHighs = java.util.concurrent.ConcurrentHashMap<String, List<Pair<LocalDateTime, Double>>>()
-
-    /** 16 Nov: the paper trade [ref]'s option's closed-minute highs, for its live copy's best price (memory only, never blocking). */
-    fun highs(ref: String, highs: List<Pair<LocalDateTime, Double>>) {
-        minuteHighs[ref] = highs
-        if (minuteHighs.size > NOTES_KEPT) minuteHighs.keys.retainAll(levels.keys)
-    }
-
     /** The paper trade [ref]'s stop or lock is at [paperLevel] now: the live stop follows on the next look (memory only). */
     fun level(ref: String, paperLevel: Double?) {
         if (paperLevel == null || !paperLevel.isFinite() || paperLevel <= 0) return
@@ -1067,20 +1054,13 @@ object ArmLive {
     /** 16 Nov: [p]'s lock of the fourth version (R51 / R72's ₹500 step lock), or null: V4 alone (entered before it, or not a rule trade). */
     private fun ruleLock(p: Pos): com.optionslab.engine.orb.StepTrail.Lock? = if (p.fixed && p.lock) com.optionslab.engine.orb.StepTrail.lockFor(p.key) else null
 
-    /** 16 Nov (review): each live trade's lock levels, built once per trade ([com.optionslab.engine.orb.StepTrail.Ladder]; memory only). */
-    private val ladders = java.util.concurrent.ConcurrentHashMap<String, com.optionslab.engine.orb.StepTrail.Ladder>()
 
     /**
      * 16 Nov: [p]'s lock levels (null: V4 alone), built once for the trade on its live fill, lot and entry quantity ([ruleQty]) and kept,
      * so the full-cadence watch never redoes the charge maths. Pure memory; a fill confirmed later gets its own. Bounded: a day's trades.
      */
-    private fun ladderOf(p: Pos): com.optionslab.engine.orb.StepTrail.Ladder? {
-        val lk = ruleLock(p) ?: return null
-        val lot = ruleLot(p); val q = ruleQty(p)
-        ladders[p.ref]?.takeIf { it.isFor(p.entry, lot, q, lk, p.tick) }?.let { return it }
-        if (ladders.size > 200) ladders.clear()
-        return com.optionslab.engine.orb.StepTrail.Ladder(p.entry, lot, q, lk, p.tick).also { ladders[p.ref] = it }
-    }
+    private fun ladderOf(p: Pos): com.optionslab.engine.orb.StepTrail.Ladder? =
+        ruleLock(p)?.let { com.optionslab.engine.orb.StepTrail.ladder(p.entry, ruleLot(p), ruleQty(p), it, p.tick) }
 
     /**
      * 16 Nov: [p]'s quantity at the entry in units, for the lock's per-lot rupees (lots = this / [ruleLot]). The entry's (review): a part
@@ -1103,7 +1083,7 @@ object ArmLive {
         val lv = if (p.fixed) com.optionslab.engine.orb.StepTrail.trailLevel(p.entry, ruleLot(p), p.best, p.tick, ladderOf(p)) else null
         return when {
             lv == null -> com.optionslab.engine.orb.StepTrail.WHY_STOP
-            com.optionslab.engine.orb.StepTrail.whyAt(lv, p.entry, ruleLot(p), p.tick, ladderOf(p)) ==
+            com.optionslab.engine.orb.StepTrail.whyAt(lv, p.entry, ruleLot(p), p.tick, ladderOf(p), p.best) ==
                 com.optionslab.engine.orb.StepTrail.WHY_LOCK -> com.optionslab.engine.orb.StepTrail.WHY_LOCK
             else -> com.optionslab.engine.orb.StepTrail.WHY_TRAIL
         }
@@ -1117,16 +1097,31 @@ object ArmLive {
     private fun changed(was: Pos, p: Pos): Boolean = p != was && (p.copy(best = was.best) != was || ruleStop(p) != ruleStop(was))
 
     /**
-     * 15 Nov: [p] with its best price raised to [ltp] (a rule trade only; never lowered). 16 Nov (review): or to the highest closed-minute
-     * high of the same option since the minute after its live entry ([highs]), whichever is higher - the research's minute highs.
+     * 15 Nov: [p] with its best price raised to [ltp] (a rule trade only; never lowered). 16 Nov (review): or to [high] - the highest the
+     * same option traded after its live entry minute ([highSince]: the stream's kept ticks, else the closed-minute candles' highs, as the
+     * research's minute highs) - whichever is higher.
      */
-    internal fun withBest(p: Pos, ltp: Double?): Pos {
+    internal fun withBest(p: Pos, ltp: Double?, high: Double? = null): Pos {
         if (!p.fixed) return p
-        val after = p.entryTime.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
-        val minute = minuteHighs[p.ref]?.filter { it.first.isAfter(after) && it.second.isFinite() && it.second > 0 }?.maxOfOrNull { it.second }
-        val top = listOfNotNull(ltp?.takeIf { it > 0 && it.isFinite() }, minute).maxOrNull() ?: return p
+        val top = listOfNotNull(ltp?.takeIf { it > 0 && it.isFinite() }, high?.takeIf { it > 0 && it.isFinite() }).maxOrNull() ?: return p
         return if (top <= (p.best ?: p.entry)) p else p.copy(best = top)
     }
+
+    /**
+     * 16 Nov (review): the highest [p]'s option traded after its live entry minute, for a rule trade's best price - one shared helper with
+     * the arms' paper books ([Paper.highSince]: the stream's kept ticks while it streams the contract, else the 1-minute candles after the
+     * entry minute). Only on the regular look ([fresh]): the stream's fast look reads nothing more than its price (the tick path stays
+     * memory only), the next regular look catches up. Null: not a rule trade, or no price. Never on the order path.
+     */
+    private fun highSince(p: Pos, fresh: Boolean): Double? {
+        if (!p.fixed || p.side <= 0) return null
+        // Review: never a read on the look itself - the read runs in the background ([RuleHighs]: one at a time per trade, the stream's
+        // kept ticks and the candles after the entry minute, so a spike while the phone was away or across a restart still counts) and
+        // the look takes the last high it found (memory). Asked on the regular look only.
+        if (fresh) (p.paperSymbol ?: p.symbol).let { runCatching { Paper.contractOf(it) }.getOrNull() }?.let { RuleHighs.ask("live:${p.ref}", it, p.entryTime) }
+        return RuleHighs.peek("live:${p.ref}")
+    }
+
 
     /**
      * 15 Nov: the open paper trade of the arm [spec] a live trade rebuilt from Zerodha's [symbol] copies: found by the same contract (index,
@@ -1155,6 +1150,9 @@ object ArmLive {
         val fixed = leg?.fixed ?: true
         if (!fixed || com.optionslab.engine.orb.StepTrail.lockFor(spec.key) == null) return fixed to false
         if (leg != null) return true to leg.lock
+        // Review: the history is read first when the start's background read has not landed yet (this is the rebuild's worker, after
+        // the open positions were restored and their stops watched) - never judged on an empty memory.
+        runCatching { StepTrailExits.ensureRead() }
         // Review: by the version in force when it was placed (the fourth version's start and Boss's switch-offs of it), never the switch now.
         val then = placedAt?.let { StepTrailExits.lockAt(it) }
         val lock = then ?: true.also { runCatching { Diag.record("arm-live", "${spec.label}: $symbol rebuilt with no paper match and no way to tell " +
@@ -1188,7 +1186,7 @@ object ArmLive {
         (if (p.fixed && p.stopKind != DISASTER) {
             val t = p.stopTrigger
             ruleStop(p)?.takeIf { t != null && kotlin.math.abs(it - t) < p.tick / 2 }?.let { ruleWhy(p) }
-                ?: com.optionslab.engine.orb.StepTrail.whyAt(t, p.entry, ruleLot(p), p.tick, ladderOf(p))
+                ?: com.optionslab.engine.orb.StepTrail.whyAt(t, p.entry, ruleLot(p), p.tick, ladderOf(p), p.best)
         } else null) ?: p.stopWord
 
     // ---- the stop at Zerodha -------------------------------------------------------------------------------------------------
@@ -1782,7 +1780,7 @@ object ArmLive {
                     val spec = LiveMirror.spec(p1.key)
                     val (pPaper, paperSell, paperWhy) = paperSide(p1, legsOf(spec, stream), fresh = !stream)
                     // 15 Nov: a stop-rule trade's best price raised to the price now (kept, so its stop never drops after a restart).
-                    val p = withBest(pPaper, ltpOf(pPaper))
+                    val p = withBest(pPaper, ltpOf(pPaper), highSince(pPaper, fresh = !stream))
                     val so = p.slId?.let { orders[it] }
                     val g = p.gttId?.let { gtts?.get(it) }
                     val exitSide = if (p.side > 0) "SELL" else "BUY"
@@ -1874,7 +1872,7 @@ object ArmLive {
                 line(b, "%s: %s%s %s %d @ %.2f (%s), %s after charges".format(Locale.ENGLISH, c.label, if (c.shadow) "SHADOW " else "",
                     if (c.side > 0) "sold" else "bought back", c.symbol, c.qty, c.exit ?: 0.0,
                     c.why?.let { com.optionslab.engine.orb.StepTrail.words(it) }, LiveMirror.rs(c.net ?: 0.0)))
-                if (b.positions.none { it.open && it.ref == c.ref }) { closedRefs.remove(c.ref); levels.remove(c.ref); minuteHighs.remove(c.ref) }
+                if (b.positions.none { it.open && it.ref == c.ref }) { closedRefs.remove(c.ref); levels.remove(c.ref); RuleHighs.forget("live:${c.ref}") }
             }
         }
         save(b)
@@ -2208,7 +2206,7 @@ object ArmLive {
         cache = null; unreadable = false; recoverDue = false; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L
         _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); handsOffUntil.clear(); levels.clear(); closedRefs.clear()
-        minuteHighs.clear()
+        com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear()
     }
 
     /** 26 Oct (Erase everything): [wipe], and the book's files deleted (a set-aside copy too). */
@@ -2229,5 +2227,5 @@ object ArmLive {
     }
 
     /** For tests: as after a restart - the memory gone, the book on disk. */
-    internal fun forgetMemoryForTest() { cache = null; legsKept.clear(); gttsKept = null; levels.clear(); minuteHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear() }
+    internal fun forgetMemoryForTest() { cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear() }
 }

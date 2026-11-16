@@ -115,6 +115,9 @@ notes; match the surrounding code.
           stay (ladder / L25, time stops, index exits, square-offs) and the first one wins. A live trade takes its own levels on its live
           fill and lots; its stop rests at Zerodha and is modified up (the app sells at the level itself when it cannot rest there), never
           two exits. A fast market can sell below a stop. Open trades keep the version they entered with; new trades take the new one.
+        - Boss, 16 Nov: "All the stops and profit locks should be on zerodha". Every live stop and lock of these three arms rests at
+          Zerodha; one the exchange or Zerodha's risk system ended is put back there (never beside a square-off's sale); one Boss
+          cancelled themselves is respected (never put back by the app, which then watches the level itself).
       - Its record: R186 on one year (20 Oct 2025 - 19 Oct 2026, 1 lot): R72 with the step lock 1,097 trades, 64.4% wins, ₹2.13 lakh
         (worst month -₹13,690); R51 1,430 trades, 62.7%, ₹1.63 lakh (worst month -₹29,871); Liquidity with breakeven at +₹1,000 688
         trades, 44.5%, ₹98,239 (worst month -₹32,670). V4 alone on the same year: R72 56.6%, ₹3.25 lakh; R51 55.5%, ₹2.50 lakh;

@@ -29,8 +29,10 @@ import kotlin.math.floor
  *  - R51 / R72 ([Lock.L500], R186's L500): once the best open P&L reaches +₹1,000 a lot net after the round trip's charges, the stop rises to
  *    the premium whose sale nets +₹500 a lot; then it stays ₹500 a lot under each further ₹500-a-lot step of the best (+1,500 locks +1,000,
  *    +2,000 locks +1,500, ...).
- *  - Liquidity 15+5 ([Lock.BE1000], R186's L-BE1000): once the best open P&L reaches +₹1,000 a lot net, the stop moves to breakeven (the
- *    same level as the +10% breakeven), so breakeven at +10% or +₹1,000 a lot, whichever comes first. Nothing more.
+ *  - Liquidity 15+5 ([Lock.BE1000], R186's L-BE1000): once the best open P&L reaches +₹1,000 a lot net, the stop moves to breakeven - R186's:
+ *    the stop premium whose stop sale nets ₹0 on the whole quantity after charges and the stop's slippage ([stopPrice]), a little above
+ *    V4's breakeven ([breakevenLevel]: the fill plus one lot's charges) - so breakeven at +10% or +₹1,000 a lot, whichever comes first;
+ *    once both are reached the higher of the two applies. Nothing more.
  *  The levels are r186engine.lock_levels' ([Ladder]): "net" is (premium - fill) x the entry quantity - the round trip's charges on that
  *  whole quantity (the engine's F&O schedule, [SandboxCosts]), with the rupees x lots (lots = entry quantity / lot size); a step is
  *  reached when the best price is at or above the premium that nets it (on the tick, rounded up), and the lock is the stop premium whose
@@ -211,21 +213,57 @@ object StepTrail {
             return keep(k)?.takeIf { it < best!! - EPS }
         }
 
-        /** What a stop resting at [trigger] is under this lock: [WHY_LOCK] at an L500 lock, [WHY_TRAIL] at BE1000's, within half a tick. */
-        fun why(trigger: Double?): String? {
+        /**
+         * What a stop resting at [trigger] is under this lock, for a trade whose best price so far is [best]: [WHY_LOCK] at an L500 lock,
+         * [WHY_TRAIL] at BE1000's, within half a tick - only a step the best has REACHED (review: a level of the arm's own lock that
+         * happens to sit near a step not reached is never named the step lock; a null [best]: not known, any step). Null: none.
+         */
+        fun why(trigger: Double?, best: Double?): String? {
             if (!ok || trigger == null || !trigger.isFinite()) return null
+            // (A null best: not known - a restart that lost the minutes - so any step may be named, as before.)
+            val reachedTo = if (best == null) MAX_STEPS else step(best) ?: return null
             if (lock == Lock.BE1000) return keep(0)?.takeIf { abs(trigger - it) < tick / 2 }?.let { WHY_TRAIL }
             val k = Math.round((netAt(entry, trigger, qty) / lots - (LOCK_FROM - LOCK_GAP)) / LOCK_STEP).toInt()
-            for (j in (k - 2)..(k + 1)) keep(j)?.let { if (abs(trigger - it) < tick / 2) return WHY_LOCK }
+            for (j in maxOf(0, k - 2)..minOf(reachedTo, k + 1)) keep(j)?.let { if (abs(trigger - it) < tick / 2) return WHY_LOCK }
             return null
         }
     }
 
-    /** Step [k]'s trigger for [qty] bought at [entry] on a contract of [lot] (a one-off ladder: the hosts keep one per trade). */
+    private data class LadderKey(val entry: Double, val lot: Int, val qty: Int, val lock: Lock, val tick: Double, val slipTicks: Double)
+    /** Every host's trade ladders ([ladder]), memory only; bounded ([LADDERS_KEPT]: cleared when full, each rebuilt on its next ask). */
+    private val ladders = java.util.concurrent.ConcurrentHashMap<LadderKey, Ladder>()
+    private const val LADDERS_KEPT = 512
+
+    /**
+     * 16 Nov (review): the one memoising Ladder factory the hosts on the full-cadence paths use (the arms' paper and live books, the passed
+     * arms' walk): one per trade - its fill [entry], contract [lot], ENTRY quantity [qty], [lock] and [tick] - each level worked out once.
+     * One-off readers (the trade explanations, a popup's words) build their own [Ladder] and never fill this.
+     */
+    fun ladder(entry: Double, lot: Int, qty: Int, lock: Lock, tick: Double = TICK, slipTicks: Double = SLIP_TICKS): Ladder {
+        val key = LadderKey(entry, lot, qty, lock, tick, slipTicks)
+        ladders[key]?.let { return it }
+        if (ladders.size >= LADDERS_KEPT) ladders.clear()
+        return ladders.getOrPut(key) { Ladder(entry, lot, qty, lock, tick, slipTicks) }
+    }
+
+    /** Forgets every kept ladder (erase, the tests' restart): each is rebuilt on its next ask. */
+    fun clearLadders() = ladders.clear()
+
+    /** How many ladders are kept (the tests). */
+    internal fun laddersKept(): Int = ladders.size
+
+    /** Step [k]'s trigger for [qty] bought at [entry] on a contract of [lot] (a one-off ladder, never kept: the hosts use [ladder]). */
     fun lockTrigger(entry: Double, lot: Int, qty: Int, k: Int, tick: Double = TICK): Double? = Ladder(entry, lot, qty, Lock.L500, tick).trigger(k)
 
-    /** [lock]'s lock at step [k] (a one-off ladder). */
+    /** [lock]'s lock at step [k] (a one-off ladder, never kept). */
     fun lockKeep(entry: Double, lot: Int, qty: Int, k: Int, lock: Lock, tick: Double = TICK): Double? = Ladder(entry, lot, qty, lock, tick).keep(k)
+
+    /**
+     * 16 Nov (review): where a stop sale at [px] fills as R186 books it (r51 engine's stop fill: 0.999 of the price, to the paisa, less
+     * twice [slipTicks] half-spread ticks; never under 0) - the step lock's paper record is booked there, never at the padded stop itself.
+     */
+    fun stopFill(px: Double, tick: Double = TICK, slipTicks: Double = SLIP_TICKS): Double =
+        maxOf(Math.rint(px * SLIP_FILL * 100) / 100 - 2.0 * slipTicks * tick, 0.0)
 
 
     /** The round trip's charges per unit for one lot of [lot] units bought at [entry] (the engine's F&O schedule). */
@@ -277,10 +315,10 @@ object StepTrail {
      * What a stop resting at [trigger] is, for a position filled at [entry]: [WHY_TRAIL] at the breakeven, within half a [tick]; 16 Nov:
      * the [ladder]'s ([Ladder.why]); null: not the rule's (the arm's own stop or lock).
      */
-    fun whyAt(trigger: Double?, entry: Double, lot: Int, tick: Double = TICK, ladder: Ladder? = null): String? {
+    fun whyAt(trigger: Double?, entry: Double, lot: Int, tick: Double = TICK, ladder: Ladder? = null, best: Double? = null): String? {
         if (trigger == null || !usable(entry, lot, tick)) return null
         breakevenLevel(entry, lot, tick)?.let { if (abs(trigger - it) < tick / 2) return WHY_TRAIL }
-        return ladder?.why(trigger)
+        return ladder?.why(trigger, best)
     }
 
     /** Whether [why] is one of the rule's exit words, any version's (older records too). */

@@ -85,7 +85,9 @@ object StepTrailExits {
                 if (!switchedLock) lock = savedLock
                 fun time(k: String) = SecurePrefs.getString(k)?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
                 since = time(K_LOCK_SINCE) ?: since
-                SecurePrefs.getString(K_LOCK_HISTORY)?.let { h -> historyOf(h).takeIf { it.isNotEmpty() }?.let { changes = it } }
+                // Review: merged with the flips Boss made in this process before the read landed (never overwritten by the older copy).
+                val savedHistory = SecurePrefs.getString(K_LOCK_HISTORY)?.let { historyOf(it) }.orEmpty()
+                changes = (savedHistory + changes).distinct().sortedBy { it.first }.takeLast(HISTORY_KEPT)
                 lockRead = true
                 loaded = true
             }
@@ -124,7 +126,7 @@ object StepTrailExits {
     fun lockAt(t: LocalDateTime): Boolean? {
         val s0 = since ?: return null
         if (t.isBefore(s0)) return false
-        // The switch as Boss last set it at or before [t] (on until his first change).
+        // The switch as Boss last set it at or before [t] (on until their first change).
         return changes.lastOrNull { !it.first.isAfter(t) }?.second ?: true
     }
 
@@ -167,6 +169,12 @@ object StepTrailExits {
 
     /** Whether a new trade of the arm [source] enters with the rule (memory only; never in IraGoldAlgo, never another arm). */
     fun forEntry(source: String): Boolean = !com.optionslab.app.BuildConfig.GOLD && StepTrail.covers(source) && on
+
+    /**
+     * 16 Nov (review): the saved switches and the fourth version's history read now if the start's read has not landed - a worker thread
+     * only (a live trade rebuilt from Zerodha decides its version by them, [ArmLive.rebuiltRule], after its stop is watched).
+     */
+    fun ensureRead() { if (!loaded || !lockRead) load() }
 
     /** Read once if the start's read has not landed (a worker thread only: Bot settings' card). */
     fun refresh() { if (!loaded || !lockRead) load() else publish() }

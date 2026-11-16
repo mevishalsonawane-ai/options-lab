@@ -86,6 +86,27 @@ class StepLockTest {
         assertNull(StepTrail.netPrice(300.0, 50, 1000.0, 0.0)); assertNull(StepTrail.netPrice(Double.NaN, 50, 1000.0)); assertNull(StepTrail.netPrice(300.0, 50, 1000.0, Double.NaN))
     }
 
+    @Test fun oneMemoisingLadderPerTrade() {
+        StepTrail.clearLadders()
+        val a = StepTrail.ladder(300.0, 50, 50, Lock.L500)
+        assertTrue(a === StepTrail.ladder(300.0, 50, 50, Lock.L500), "the same trade: the same ladder")
+        assertFalse(a === StepTrail.ladder(300.0, 50, 100, Lock.L500), "another entry quantity: its own")
+        assertFalse(a === StepTrail.ladder(300.0, 50, 50, Lock.BE1000))
+        for (i in 0 until 600) StepTrail.ladder(100.0 + i * 0.05, 75, 75, Lock.L500)
+        assertTrue(StepTrail.laddersKept() <= 512, "bounded")
+        assertEquals(312.1, StepTrail.ladder(300.0, 50, 50, Lock.L500).keep(0)!!, 1e-9)
+        StepTrail.clearLadders()
+        assertEquals(0, StepTrail.laddersKept())
+    }
+
+    @Test fun theStopSaleIsBookedAsR186BooksIt() {
+        // r51 engine's stop fill: round(px x 0.999, 2) - 2 x ticks x 0.05 (printed by the research's own formula).
+        assertEquals(311.69, StepTrail.stopFill(312.1), 1e-9)
+        assertEquals(304.6, StepTrail.stopFill(305.0), 1e-9)   // np.round(30469.5) = 30470 (half-even), as the research
+        assertEquals(311.59, StepTrail.stopFill(312.1, slipTicks = 2.0), 1e-9)
+        assertEquals(0.0, StepTrail.stopFill(0.05), 1e-9)
+    }
+
     @Test fun exactlyAtPlusOneThousandAndNotATickBefore() {
         val l = Ladder(300.0, 50, 50, Lock.L500)
         val tr = l.trigger(0)!!
@@ -133,7 +154,7 @@ class StepLockTest {
         assertFalse(l.isFor(300.0, 50, 50, Lock.L500, 0.05), "a different quantity is another ladder")
         assertEquals(2.0, l.lots, 1e-9)
         for (bad in listOf(Ladder(300.0, 0, 50, Lock.L500), Ladder(300.0, 50, 0, Lock.L500), Ladder(0.0, 50, 50, Lock.L500), Ladder(300.0, 50, 50, Lock.L500, 0.0))) {
-            assertNull(bad.trigger(0)); assertNull(bad.keep(0)); assertNull(bad.step(400.0)); assertNull(bad.why(312.1))
+            assertNull(bad.trigger(0)); assertNull(bad.keep(0)); assertNull(bad.step(400.0)); assertNull(bad.why(312.1, null))
         }
         assertNull(l.trigger(-1)); assertNull(l.keep(-1)); assertNull(l.trigger(401))
     }
@@ -167,15 +188,20 @@ class StepLockTest {
         val be = StepTrail.breakevenLevel(300.0, 50)!!
         val l = Ladder(300.0, 50, 150, Lock.L500)
         assertEquals(StepTrail.WHY_TRAIL, StepTrail.whyAt(be, 300.0, 50, ladder = l))
-        for (k in 0..6) assertEquals(StepTrail.WHY_LOCK, StepTrail.whyAt(l.keep(k), 300.0, 50, ladder = l), "k=$k")
+        for (k in 0..6) assertEquals(StepTrail.WHY_LOCK, StepTrail.whyAt(l.keep(k), 300.0, 50, ladder = l), "k=$k (best not known: any step)")
+        for (k in 0..6) assertEquals(StepTrail.WHY_LOCK, StepTrail.whyAt(l.keep(k), 300.0, 50, ladder = l, best = l.trigger(k)), "k=$k reached")
+        // Review: a level at step 1's lock when the best reached only step 0 (an R64 lock landing there) is never named the step lock.
+        assertNull(StepTrail.whyAt(l.keep(1), 300.0, 50, ladder = l, best = l.trigger(0)))
+        assertNull(StepTrail.whyAt(l.keep(0), 300.0, 50, ladder = l, best = l.trigger(0)!! - 0.05), "no step reached yet")
         assertNull(StepTrail.whyAt(312.1, 300.0, 50), "V4 trade: no lock to name")
         assertNull(StepTrail.whyAt(255.0, 300.0, 50, ladder = l), "the arm's own -15%")
         assertNull(StepTrail.whyAt(316.0, 300.0, 50, ladder = l), "between the levels")
         val b = Ladder(300.0, 50, 50, Lock.BE1000)
         assertEquals(StepTrail.WHY_TRAIL, StepTrail.whyAt(302.1, 300.0, 50, ladder = b), "Liquidity's +₹1,000 breakeven")
+        assertNull(StepTrail.whyAt(302.1, 300.0, 50, ladder = b, best = 321.65), "not reached yet")
         assertNull(StepTrail.whyAt(312.1, 300.0, 50, ladder = b), "Liquidity's lock is the breakeven only")
         assertNull(StepTrail.whyAt(Double.NaN, 300.0, 50, ladder = l))
-        assertNull(l.why(null))
+        assertNull(l.why(null, null))
     }
 
     // ---- Liquidity: breakeven at +10% or +₹1,000 a lot, whichever first ----------------------------------------------------
@@ -217,13 +243,30 @@ class StepLockTest {
         val fell = up1 + bar(10, 2, 330.0, 330.0, 325.0, 326.0) + bar(10, 3, 324.0, 324.0, 320.0, 320.5)
         val w = PassedArms.exitOnBars(300.0, t(10, 0), fell, null, t(10, 4), v5)
         assertEquals(PassedArms.ExitKind.STEP_LOCK, w.exit!!.kind); assertEquals(322.15, w.exit!!.price, 1e-9)
-        assertEquals(322.15, PassedArms.booked(PassedArms.ExitKind.STEP_LOCK, 318.0, null, 322.15), 1e-9)
+        // Booked where R186 books the stop sale (r51 engine: round(0.999 x 322.15, 2) - 2 x 1 tick = 321.73), never at the padded stop.
+        assertEquals(321.73, PassedArms.booked(PassedArms.ExitKind.STEP_LOCK, 318.0, null, 322.15), 1e-9)
+        assertTrue(StepTrail.netAt(300.0, 321.73, 50) >= 1000.0 - 0.5, "the booked sale nets the +₹1,000 it locked")
         val same = listOf(bar(10, 0, 300.0, 300.0, 300.0, 300.0), bar(10, 1, 300.0, 331.75, 300.0, 301.0))
         assertNull(PassedArms.exitOnBars(300.0, t(10, 0), same, null, t(10, 2), v5).exit)
         assertNull(PassedArms.exitOnBars(300.0, t(10, 0), listOf(bar(10, 0, 300.0, 340.0, 300.0, 300.0)), null, t(10, 1), v5).lock)
         // A lower high after a higher one changes nothing (the level is worked out only on a new best).
         val dip = up1 + bar(10, 2, 330.0, 330.5, 329.0, 330.0)
         assertEquals(322.15, PassedArms.exitOnBars(300.0, t(10, 0), dip, null, t(10, 3), v5).lock!!, 1e-9)
+    }
+
+    /** 16 Nov (review): one walk returns both the whole lock and the arm's own (R64's) lock alone, for the live copy ([PassedArms.Walk.ownLock]). */
+    @Test fun oneWalkGivesTheArmsOwnLockApart() {
+        val x = PassedArms.withLock(v5)
+        val bars = listOf(bar(10, 0, 300.0, 300.0, 300.0, 300.0), bar(10, 1, 300.0, 393.0, 300.0, 392.0))
+        val w = PassedArms.exitOnBars(300.0, t(10, 0), bars, null, t(10, 2), x, breakeven = 301.0)
+        assertEquals(301.0, w.ownLock!!, 1e-9, "R64's +30% rung: breakeven")
+        assertTrue(w.lock!! > w.ownLock!!, "the step lock is above it in the whole lock")
+        // Without R64's lock: no own lock at all, whatever the rule earned.
+        assertNull(PassedArms.exitOnBars(300.0, t(10, 0), bars, null, t(10, 2), v5).ownLock)
+        // A restart that lost the minutes keeps the own lock it had seen (knownOwn), apart from the whole lock.
+        val r = PassedArms.exitOnBars(300.0, t(10, 0), emptyList(), 330.0, t(10, 5), x, known = t(10, 2) to 330.0, breakeven = 301.0,
+            knownOwn = t(10, 2) to 301.0)
+        assertEquals(301.0, r.ownLock!!, 1e-9); assertEquals(330.0, r.lock!!, 1e-9)
     }
 
     @Test fun aGapBelowTheLockSellsAtTheOpen() {

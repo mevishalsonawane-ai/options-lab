@@ -467,6 +467,22 @@ class StepTrailPassedTest : RobolectricTest() {
         assertNotNull(SecurePrefs.getString(StepTrailExits.K_LOCK_SINCE))
     }
 
+    /** 16 Nov (review): a late start-up read merges the saved history with Boss's flips made in this process meanwhile, never overwrites them. */
+    @Test fun aLateReadMergesTheSwitchHistory() {
+        val since = day.atTime(9, 0)
+        SecurePrefs.put(StepTrailExits.K_LOCK_SINCE, since.toString())
+        SecurePrefs.put(StepTrailExits.K_LOCK_HISTORY, "${day.atTime(10, 0)}|0;${day.atTime(11, 0)}|1")
+        // Boss switched it off at 12:00 in this process before the read landed.
+        StepTrailExits.resetForTest(on = true, loaded = false, lock = false, since = since, history = listOf(day.atTime(12, 0) to false))
+        StepTrailExits.load()
+        assertEquals(false, StepTrailExits.lockAt(day.atTime(10, 30)))
+        assertEquals(true, StepTrailExits.lockAt(day.atTime(11, 30)))
+        assertEquals("their own flip kept", false, StepTrailExits.lockAt(day.atTime(12, 30)))
+        assertEquals(false, StepTrailExits.lockAt(day.atTime(8, 59)))
+        SecurePrefs.put(StepTrailExits.K_LOCK_SINCE, "")
+        SecurePrefs.put(StepTrailExits.K_LOCK_HISTORY, "")
+    }
+
     /**
      * 16 Nov (review): the fourth version's Undo goes back to V4 alone - the step lock off, the breakeven at +10% kept - and only with the
      * PIN; new trades then enter without the lock; on again is one tap. The diagnostics line says each.
@@ -546,6 +562,9 @@ class StepTrailPassedTest : RobolectricTest() {
         // 09:22 trades up to 221 (its minute high) and back to 220; the stream is not looked at meanwhile.
         market(LocalTime.of(9, 23)) { t -> if (t.isBefore(LocalTime.of(9, 22))) 200.0 else 220.0 }
         manage(LocalTime.of(9, 23))
+        // The first look asks for the option's highs in the background (never a read on the look itself); the next look takes them.
+        quoted(212.0)
+        runBlocking { RuleHighs.settleForTest() }
         quoted(212.0)
         val back = ArmLive.view.value.open.single()
         assertEquals(221.0, back.best!!, 1e-9)
@@ -554,6 +573,10 @@ class StepTrailPassedTest : RobolectricTest() {
         assertEquals(expect, back.stopTrigger!!, 1e-9)
         assertEquals(expect, kite.order(live.stopOrderId!!).trigger, 1e-9)
         assertTrue(marketSells.isEmpty())
+        // Kept per live trade; forgotten when it closes, and all of it released on memory pressure (the stop never depends on it).
+        assertEquals(1, RuleHighs.kept())
+        RuleHighs.trim()
+        assertEquals(0, RuleHighs.kept())
     }
 
     /**
@@ -629,6 +652,15 @@ class StepTrailPassedTest : RobolectricTest() {
         assertEquals(true to false, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(10, 30)))
         assertEquals(true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(11, 30)))
         assertEquals(true to false, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(12, 30)))
+        // Review: the start-up's read not landed yet (positions are restored first): the rebuild reads the saved history itself, never
+        // judging on an empty memory.
+        SecurePrefs.put(StepTrailExits.K_LOCK_SINCE, since.toString())
+        SecurePrefs.put(StepTrailExits.K_LOCK_HISTORY, "${day.atTime(10, 0)}|0")
+        StepTrailExits.resetForTest(on = true, loaded = false)
+        assertEquals("read first: placed while off", true to false, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(10, 30)))
+        assertEquals(since, StepTrailExits.lockSince())
+        SecurePrefs.put(StepTrailExits.K_LOCK_SINCE, "")
+        SecurePrefs.put(StepTrailExits.K_LOCK_HISTORY, "")
         // Truly unknown (no order time, or no record of when it took effect): the tighter side, logged.
         StepTrailExits.resetForTest(on = true)
         assertEquals(true to true, ArmLive.rebuiltRule(r51, "NIFTY26OCT99999CE", day.atTime(9, 30)))

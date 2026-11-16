@@ -266,6 +266,8 @@ class IraAlgoApp : Application() {
         // Memory audit (14 Oct): counted, and what [com.optionslab.ira.MemoryPlan] lists for the level freed on a background
         // thread - never the position watch, its prices, its checks or their cadence.
         runCatching { com.optionslab.app.data.AppHealth.trim(level) }
+        // 16 Nov (review): the live rule trades' option highs (a cache: each asked again on its next look; never the position watch).
+        runCatching { com.optionslab.app.data.RuleHighs.trim() }
         // 18 Oct, review: the settings still in memory go to disk first, on a background thread (a low-memory kill may follow).
         runCatching { SecurePrefs.flushSoon() }
         // 27 Oct (battery audit): the day's "Battery today" figures saved too, on a background thread (at most every 10 minutes).

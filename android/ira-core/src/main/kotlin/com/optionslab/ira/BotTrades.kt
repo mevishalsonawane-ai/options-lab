@@ -205,7 +205,7 @@ object BotTrades {
         // 16 Nov (fourth version): a trade that entered with the lock - Liquidity's breakeven at +10% or +₹1,000 a lot, whichever first.
         val lk = if (fx && t.lock) StepTrail.lockFor(arm?.source ?: t.source) else null
         // Its levels on its ENTRY quantity (review: a part sold later never moves them; [Trade.entryQty], else the quantity).
-        val ladder = lk?.let { StepTrail.Ladder(t.entry, lotSize, (t.entryQty ?: t.qty).coerceAtLeast(1), it) }
+        val ladder = lk?.let { StepTrail.Ladder(t.entry, lotSize, (t.entryQty ?: t.qty).coerceAtLeast(1), it) }   // one-off: never kept
         val ruleTrail = if (fx) StepTrail.trailLevel(t.entry, lotSize, t.peak, ladder = ladder) else null
         val ownLiq = if (arm?.liquidity == true) LiquidityRules.stopTrigger(t.entry) else null
         val ruleOn = fx && StepTrail.isTighter(ownLiq, listOfNotNull(ruleEntry, ruleTrail).maxOrNull())

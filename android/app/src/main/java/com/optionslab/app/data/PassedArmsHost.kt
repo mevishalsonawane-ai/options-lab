@@ -2644,6 +2644,10 @@ object PassedArmsHost {
             }
         }
         val known = b.locks[lockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
+        // 16 Nov (review): a rule trade's own R64 lock (without the rule), remembered apart, from the same one walk ([PassedArms.Walk.ownLock]).
+        val ownRule = p.fx && StepTrail.covers(p.arm)
+        val knownOwn = if (ownRule && p.lock) b.locks[ownLockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() } else null
+        var ownWalked: Double? = null
         // 20 Oct, review: the walk's own exit (its kind and price), so a stop or lock is never booked better than it ([sell]).
         var walked: PassedArms.Exit? = null
         val why: String? = when {
@@ -2660,8 +2664,9 @@ object PassedArmsHost {
                         walked = lw.exit
                     }.exit?.kind?.why else null
             }
-            else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known, if (p.lock) breakeven(p) else null).also { w ->
+            else -> PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p), known, if (p.lock) breakeven(p) else null, knownOwn).also { w ->
                 w.lock?.let { lv -> if (known == null || lv > known.second) b.locks[lockKey(p)] = "$now|$lv" }
+                if (ownRule && p.lock) w.ownLock?.let { lv -> ownWalked = lv; if (knownOwn == null || lv > knownOwn.second) b.locks[ownLockKey(p)] = "$now|$lv" }
                 walked = w.exit
             }.exit?.kind?.why
         } ?: if (stopped) "operator_stop" else null
@@ -2673,21 +2678,11 @@ object PassedArmsHost {
         // ([ArmLive.ruleStop]): the paper level handed over is the arm's own exits alone - its stop and, with R64's lock, that lock walked
         // without the rule - never the paper trade's own breakeven or step lock, worked out on the paper fill.
         if (p.shadow == null) runCatching {
-            val paperLock = if (p.fx && StepTrail.covers(p.arm)) {
-                // Review: walked with the arm's own exits alone, its own earned level remembered apart ([ownLockKey]), so a restart or a
-                // short read never hands over less than it had.
-                if (p.lock) {
-                    val ownKnown = b.locks[ownLockKey(p)]?.split('|')?.let { runCatching { LocalDateTime.parse(it[0]) to it[1].toDouble() }.getOrNull() }
-                    val own = PassedArms.exitOnBars(p.entry, p.entryMinute, bars, ltp, now, exitsOf(p).copy(stepTrail = null), ownKnown, breakeven(p)).lock
-                    own?.let { lv -> if (ownKnown == null || lv > ownKnown.second) b.locks[ownLockKey(p)] = "$now|$lv" }
-                    listOfNotNull(own, ownKnown?.second).maxOrNull()
-                } else null
-            } else b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()
+            // (Review: the arm's own lock comes from the same one walk ([PassedArms.Walk.ownLock]), remembered apart ([ownLockKey]) so a
+            // restart or a short read never hands over less than it had.)
+            val paperLock = if (ownRule) { if (p.lock) listOfNotNull(ownWalked, knownOwn?.second).maxOrNull() else null }
+                else b.locks[lockKey(p)]?.substringAfter('|')?.toDoubleOrNull()
             ArmLive.level(mirrorRef(p), listOfNotNull(premiumStop(p), paperLock).maxOrNull())
-            // 16 Nov (review): the same option's closed-minute highs, so the live trade's best price (and its rule's levels on its own
-            // fill and lots) sees a spike between two looks or while the phone was away, as the research's minute highs do.
-            if (p.fx && StepTrail.covers(p.arm)) ArmLive.highs(mirrorRef(p), bars.filter { it.high.isFinite() && !it.start.plusMinutes(1).isAfter(now) }
-                .map { it.start to it.high })
         }
         if (why == null) return np5Noted || waitNoted
         val walkPx = walked?.takeIf { it.kind.why == why }?.price

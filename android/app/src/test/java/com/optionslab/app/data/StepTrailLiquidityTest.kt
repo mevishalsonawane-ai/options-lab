@@ -378,6 +378,9 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
 
     private fun quoted(px: Double) { kite.quote("NFO:$sym", px, px - 0.05, px + 0.05); runBlocking { OrbArms.priceCheckOnly() } }
 
+    /** A cancel in the exchange's / Zerodha's risk system's words ([com.optionslab.ira.ManualCoverRule.endedByExchange]). */
+    private val EXCHANGE_CANCEL = "Cancelled by the exchange (RMS)"
+
     /** The rule's breakeven for a fill at [entry] (lot 30), and as Kite's forms carry it. */
     private fun be(entry: Double): Double = StepTrail.breakevenLevel(entry, 30)!!
     /** 16 Nov: the rule's stop for the live trade [p] whose best is [best] (the higher of V4's and R186's breakeven at +₹1,000, each once earned). */
@@ -487,7 +490,7 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
     @Test fun aMissingStopIsRestedAgainAtTheBreakeven() {
         val p = earned(2)
         AppSettings.save(AppSettings.load().copy(exchangeStops = true))
-        kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
         runBlocking { OrbArms.priceCheckOnly() }
         assertEquals(two(lvl(p, p.entry * 1.105)), kite.placed.last().form["trigger_price"])
         assertEquals(lvl(p, p.entry * 1.105), row().open!!.stopTrigger!!, 1e-9)
@@ -501,12 +504,119 @@ class StepTrailLiquidityLiveTest : RobolectricTest() {
         val p = earned(2)
         AppSettings.save(AppSettings.load().copy(exchangeStops = false))
         val sls = kite.placed.count { it.form["order_type"] == "SL" }
-        kite.reject(p.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
         runBlocking { OrbArms.priceCheckOnly() }
         assertEquals("rested again at Zerodha", sls + 1, kite.placed.count { it.form["order_type"] == "SL" })
         assertEquals(two(lvl(p, p.entry * 1.105)), kite.placed.last().form["trigger_price"])
         assertEquals(lvl(p, p.entry * 1.105), row().open!!.stopTrigger!!, 1e-9)
         assertTrue("no app sale while it can rest", marketSells.isEmpty())
+    }
+
+    /**
+     * 16 Nov (review): a stop Boss cancelled themselves (in Kite: no exchange words) is respected - never put back at Zerodha by itself, said
+     * so truthfully - and the app watches the level itself: it sells there when the price comes back to it.
+     */
+    @Test fun aStopBossCancelledIsNotPutBackAndTheAppWatchesIt() {
+        val p = earned(2)
+        val b = lvl(p, p.entry * 1.105)
+        val sls = kite.placed.count { it.form["order_type"] == "SL" }
+        kite.reject(p.stopOrderId!!, message = "", status = "CANCELLED")
+        runBlocking { OrbArms.priceCheckOnly() }
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("never put back", sls, kite.placed.count { it.form["order_type"] == "SL" })
+        assertTrue(row().open!!.stopByYou)
+        assertTrue(AutomationSupport.alerts().joinToString("\n"), AutomationSupport.alerts().any { it.contains("It looks cancelled by you (in Kite)") })
+        // Kept across a restart; and the app sells at the level itself.
+        AutomationSupport.reloadFromDisk(OrbArms)
+        assertTrue(row().open!!.stopByYou)
+        kite.quote("NFO:$sym", b - 0.5, b - 0.55, b - 0.45)
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals(1, marketSells.size)
+        assertEquals(sls, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
+    /** 16 Nov (review): ended by the exchange (its words), the alert says it goes back at Zerodha - and it does. */
+    @Test fun aStopTheExchangeCancelledIsSaidToGoBack() {
+        val p = earned(2)
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertTrue(AutomationSupport.alerts().joinToString("\n"), AutomationSupport.alerts().any { it.contains("again at Zerodha") })
+        assertFalse(row().open!!.stopByYou)
+    }
+
+    private fun slCount() = kite.placed.count { it.form["order_type"] == "SL" }
+
+    /** A working order of someone else's on the same contract (another book's stop, Boss's own): it never holds this stop back. */
+    @Test fun anotherBooksStopOnTheContractNeverHoldsTheReRestBack() {
+        val p = earned(2)
+        kite.orders["OTHER1"] = FakeKite.Order("OTHER1", sym, "NFO", "SELL", 30, "MIS", "SL", 500.0, 505.0, "iraorb", "TRIGGER PENDING")
+        runBlocking { Strategies.tagOwner("kite:OTHER1", "Another book · stop") }
+        val sls = slCount()
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("rested again beside another book's stop", sls + 1, slCount())
+    }
+
+    /** The 15:05 expiry square-off's order working on the contract (read between its cancel and its sale): no new stop beside it. */
+    @Test fun theExpirySquareOffsOrderHoldsTheReRestBack() {
+        val p = earned(2)
+        kite.orders["SQ1"] = FakeKite.Order("SQ1", sym, "NFO", "SELL", 60, "MIS", "MARKET", 0.0, 0.0, "iraalgoexpiry", "OPEN")
+        val sls = slCount()
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("never two exits", sls, slCount())
+    }
+
+    /**
+     * This position's own arm's exit sale still working (an earlier pass's sale, its reply lost - no label kept): no new stop beside it;
+     * another book's working sale (its own label) never holds it back.
+     */
+    @Test fun itsOwnExitSaleWorkingHoldsTheReRestBackAnotherBooksDoesNot() {
+        val p = earned(2)
+        kite.orders["MINE1"] = FakeKite.Order("MINE1", sym, "NFO", "SELL", 60, "MIS", "MARKET", 0.0, 0.0, "iraorb", "OPEN")
+        val sls = slCount()
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("never beside its own working sale", sls, slCount())
+        // That sale gone; another book's sale, labelled as that book's, working instead: the stop goes back.
+        kite.orders.remove("MINE1")
+        kite.orders["THEIRS1"] = FakeKite.Order("THEIRS1", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "iraorb", "OPEN")
+        runBlocking { Strategies.tagOwner("kite:THEIRS1", "Another book · exit") }
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals(sls + 1, slCount())
+    }
+
+    /** A resting stop of the arms' own with no other book's label (this position's own, its reply lost): no second stop beside it. */
+    @Test fun itsOwnOrphanStopHoldsTheReRestBack() {
+        val p = earned(2)
+        kite.orders["ORPHAN1"] = FakeKite.Order("ORPHAN1", sym, "NFO", "SELL", 60, "MIS", "SL", 600.0, 603.0, "iraorb", "TRIGGER PENDING")
+        val sls = slCount()
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals("never a second stop beside its own", sls, slCount())
+    }
+
+    /** With Stop for today on, no new stop: the operator's stop sells it at market on the same look. */
+    @Test fun stopForTodaySellsInsteadOfReResting() {
+        val p = earned(2)
+        val sls = slCount()
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals(sls, slCount())
+        assertEquals(1, marketSells.size)
+    }
+
+    /** At or after 15:10 no new stop: the session's square-off sells it at market on the same look. */
+    @Test fun atTheSquareOffItSellsInsteadOfReResting() {
+        val p = earned(2)
+        val sls = slCount()
+        kite.reject(p.stopOrderId!!, message = EXCHANGE_CANCEL, status = "CANCELLED")
+        OrbArms.testNow = now.toLocalDate().atTime(15, 11).atZone(IST)
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertEquals(sls, slCount())
+        assertEquals(1, marketSells.size)
+        assertEquals("session_end", row().today.single().why)
     }
 
     /** At or under the breakeven a missing stop is not re-rested (no -15% put back): the same look sells at the level. */

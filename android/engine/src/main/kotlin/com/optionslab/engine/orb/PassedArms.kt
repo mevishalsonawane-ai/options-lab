@@ -197,7 +197,9 @@ object PassedArms {
     data class Exit(val kind: ExitKind, val at: LocalDateTime, val price: Double)
 
     /** The walk's state for an open position: its best price so far and the level its lock holds (null: no lock yet). */
-    data class Walk(val exit: Exit?, val peak: Double, val lock: Double?)
+    data class Walk(val exit: Exit?, val peak: Double, val lock: Double?,
+                    /** 16 Nov (review): the lock of the arm's OWN exits alone (R64's ladder), without [StepTrail]'s levels (null: none). */
+                    val ownLock: Double? = null)
 
     private const val EPS = 1e-9
 
@@ -222,7 +224,9 @@ object PassedArms {
                    /** A lock level an earlier look saw earned by that time (it holds for the bars starting then or later, and now). */
                    known: Pair<LocalDateTime, Double>? = null,
                    /** The price a NaN-keep step locks (breakeven: the fill plus the round-trip charges); null: the fill + [ProfitLock.FALLBACK_COST_PCT]. */
-                   breakeven: Double? = null): Walk {
+                   breakeven: Double? = null,
+                   /** 16 Nov: the arm's OWN lock (without [StepTrail]'s levels) an earlier look saw earned, for [Walk.ownLock]. */
+                   knownOwn: Pair<LocalDateTime, Double>? = null): Walk {
         if (!(entry > 0)) return Walk(null, entry, null)
         // 16 Oct: a lock seen before this trade's entry minute belongs to an earlier trade on the same option (a re-entry):
         // never this one's.
@@ -233,13 +237,16 @@ object PassedArms {
         val own = stopLevel(entry, x)
         val st = x.stepTrail
         // 16 Nov: the trade's lock levels, built once for this walk (each level worked out once, [StepTrail.Ladder]); null: V4 alone.
-        val ladder = st?.lock?.let { StepTrail.Ladder(entry, st.lot, st.qty, it, st.tick) }
+        val ladder = st?.lock?.let { StepTrail.ladder(entry, st.lot, st.qty, it, st.tick) }
         val stop = own
         var stepPeak = entry
         // The exit kind of a stop at the stops [stopB] with [lock] earned: the rule's breakeven, the lock, or the arm's own stop.
         fun kindOf(stopB: Double?, lk: Double?): ExitKind = when {
             lk != null && lk >= (stopB ?: -1.0) ->
-                when (if (st != null) StepTrail.whyAt(lk, entry, st.lot, st.tick, ladder) else null) {
+                // (Named the step lock only for a step the best since the entry minute reached. A lock remembered from an earlier look
+                // ([known]) was earned by a best this walk may no longer see (a restart, a short read): its best is not known.)
+                when (if (st != null) StepTrail.whyAt(lk, entry, st.lot, st.tick, ladder,
+                        stepPeak.takeIf { known == null || kotlin.math.abs(lk - known.second) > 1e-9 }) else null) {
                     StepTrail.WHY_TRAIL -> ExitKind.STEP_TRAIL
                     StepTrail.WHY_LOCK -> ExitKind.STEP_LOCK
                     else -> ExitKind.LOCK
@@ -255,6 +262,9 @@ object PassedArms {
         val sq = entryMinute.toLocalDate().atTime(x.squareOff)
         var peak = entry
         var lock: Double? = null
+        // 16 Nov: the arm's own lock alone (R64's ladder), for a rule trade's live copy ([Walk.ownLock]); null: none earned.
+        val knownOwnHere = knownOwn?.takeIf { !it.first.isBefore(entryMinute) }
+        var ownLock: Double? = null
         val done = bars.filter { !it.start.isBefore(entryMinute) && !it.start.plusMinutes(1).isAfter(now) && it.start.isBefore(sq) }
             .sortedBy { it.start }.distinctBy { it.start }
         var npSeen = 0
@@ -262,19 +272,21 @@ object PassedArms {
         for (b in done) {
             if (!b.low.isFinite() || !b.high.isFinite()) continue
             known?.let { (at, lv) -> if (!b.start.isBefore(at) && (lock == null || lv > lock!!)) lock = lv }
+            knownOwnHere?.let { (at, lv) -> if (!b.start.isBefore(at) && (ownLock == null || lv > ownLock!!)) ownLock = lv }
             val first = b.start == entryMinute
             val stopB = if (first) own else stop
             val lv = maxOf(stopB ?: -1.0, lock ?: -1.0)
             if (lv > 0 && b.low <= lv + EPS) {
                 val px = if (b.open.isFinite() && b.open < lv) b.open else lv
-                return Walk(Exit(kindOf(stopB, lock), b.start, px), peak, lock)
+                return Walk(Exit(kindOf(stopB, lock), b.start, px), peak, lock, ownLock)
             }
-            if (tgt != null && b.high >= tgt - EPS) return Walk(Exit(ExitKind.TARGET, b.start, tgt), peak, lock)
+            if (tgt != null && b.high >= tgt - EPS) return Walk(Exit(ExitKind.TARGET, b.start, tgt), peak, lock, ownLock)
             if (b.high > peak) peak = b.high
             val g = peak / entry - 1
             for ((trig, keep) in x.steps) if (g >= trig - 1e-12) {
                 val l = if (keep.isNaN()) breakeven ?: (entry * (1 + ProfitLock.FALLBACK_COST_PCT / 100)) else entry * (1 + keep)
                 if (lock == null || l > lock) lock = l
+                if (ownLock == null || l > ownLock!!) ownLock = l
             }
             // 15 Nov ([StepTrail]): the breakeven from the best high after the entry minute, from the next minute on (as the lock).
             // 16 Nov (review): worked out only when the high is a new best (the level depends on the best alone).
@@ -287,22 +299,23 @@ object PassedArms {
                 if (b.high > npHigh) npHigh = b.high
                 // Every minute of the window seen and none reached the level: out at this minute's close (the research's next open).
                 if (b.start == npEnd && npSeen == npMinutes && npHigh < npLevel - EPS && b.close.isFinite())
-                    return Walk(Exit(ExitKind.NO_PROGRESS, b.start.plusMinutes(1), b.close), peak, lock)
+                    return Walk(Exit(ExitKind.NO_PROGRESS, b.start.plusMinutes(1), b.close), peak, lock, ownLock)
             }
-            if (tend != null && b.start == tend) return Walk(Exit(ExitKind.TIME, b.start.plusMinutes(1), b.close), peak, lock)
+            if (tend != null && b.start == tend) return Walk(Exit(ExitKind.TIME, b.start.plusMinutes(1), b.close), peak, lock, ownLock)
         }
         // Between bars: the price now against the same levels (and a lock seen earned before), then the clock.
         known?.let { (_, lv) -> if (lock == null || lv > lock!!) lock = lv }
+        knownOwnHere?.let { (_, lv) -> if (ownLock == null || lv > ownLock!!) ownLock = lv }
         val lv = maxOf(stop ?: -1.0, lock ?: -1.0)
         if (ltp != null && ltp > 0) {
             if (lv > 0 && ltp <= lv + EPS) return Walk(Exit(kindOf(stop, lock), now,
-                restingPx(lv, ltp, done.lastOrNull(), entry, entryMinute, now)), peak, lock)
-            if (tgt != null && ltp >= tgt - EPS) return Walk(Exit(ExitKind.TARGET, now, tgt), peak, lock)
+                restingPx(lv, ltp, done.lastOrNull(), entry, entryMinute, now)), peak, lock, ownLock)
+            if (tgt != null && ltp >= tgt - EPS) return Walk(Exit(ExitKind.TARGET, now, tgt), peak, lock, ownLock)
         }
         val last = ltp ?: done.lastOrNull()?.close ?: entry
-        tend?.let { if (!now.isBefore(it.plusMinutes(1))) return Walk(Exit(ExitKind.TIME, now, last), peak, lock) }
-        if (!now.isBefore(sq)) return Walk(Exit(ExitKind.SQUARE_OFF, now, last), peak, lock)
-        return Walk(null, peak, lock)
+        tend?.let { if (!now.isBefore(it.plusMinutes(1))) return Walk(Exit(ExitKind.TIME, now, last), peak, lock, ownLock) }
+        if (!now.isBefore(sq)) return Walk(Exit(ExitKind.SQUARE_OFF, now, last), peak, lock, ownLock)
+        return Walk(null, peak, lock, ownLock)
     }
 
     /**
@@ -338,6 +351,9 @@ object PassedArms {
      */
     fun booked(kind: ExitKind, fill: Double, target: Double?, walk: Double?): Double = when {
         kind == ExitKind.TARGET -> booked(kind, fill, target)
+        // 16 Nov (review): the step lock's stop is padded for the stop sale's slippage (R186's stop_price); it is booked where R186 books
+        // that sale ([StepTrail.stopFill]: 0.999 of the walk's price less the half-spread ticks), never at the padded stop itself.
+        kind == ExitKind.STEP_LOCK && walk != null && walk.isFinite() && walk > 0 -> StepTrail.stopFill(walk)
         (kind == ExitKind.STOP || kind == ExitKind.LOCK || kind == ExitKind.STEP_TRAIL || kind == ExitKind.STEP_LOCK) && walk != null && walk.isFinite() && walk > 0 -> walk
         else -> fill
     }
