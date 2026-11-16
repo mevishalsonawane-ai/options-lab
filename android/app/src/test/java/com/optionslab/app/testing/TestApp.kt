@@ -146,6 +146,8 @@ class TestApp : Application() {
         // 15 Nov: Boss's rule (breakeven at +10%) on Liquidity, R51 and R72 is on in the app, but OFF for every other test (their arms'
         // own exits are what they test, and stay covered); its own tests turn it on.
         com.optionslab.app.data.StepTrailExits.resetForTest(on = false)
+        // 16 Nov: no option-highs read or high left from an earlier test (its background read would reach the real feed).
+        com.optionslab.app.data.RuleHighs.clear()
         // 15 Nov: the funds check as on a fresh phone (off: shadow), with no would-be entry left from an earlier test.
         com.optionslab.app.data.FundsCheck.resetForTest(on = false)
         com.optionslab.app.data.OrderReviewHost.init(this)

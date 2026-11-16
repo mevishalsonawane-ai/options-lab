@@ -79,6 +79,8 @@ class StepTrailLiquidityTest : RobolectricTest() {
         StepTrailExits.resetForTest(on = false)
         AutomationSupport.realClocks()
         Market.testClock = null
+        // 16 Nov (main CI): the option-highs read finished while the fake feed still answers, then forgotten (no leaked real read).
+        kotlinx.coroutines.runBlocking { RuleHighs.settleForTest() }; RuleHighs.clear()
         upstox.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
