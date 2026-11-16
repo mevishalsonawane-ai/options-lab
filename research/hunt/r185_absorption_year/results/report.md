@@ -6,7 +6,7 @@
 
 **Trade:** 1 lot of the ATM option (nearest expiry: weekly for NIFTY / SENSEX; for BANKNIFTY, FINNIFTY and MIDCPNIFTY the nearest is the monthly since Nov 2024), bought at the open of the minute after the signal; -15% premium stop, breakeven (fill + charges) from the minute after +10%, index stop beyond the extreme, 15 / 30-minute time stop, 15:14 (15:04 on expiry). Real dated charges, liquidity slippage (2x shown).
 
-**Indices read:** NIFTY, BANKNIFTY, FINNIFTY (order fixed: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX). BH m = 4,852 (4,512 after R184 + 320 variants + 20 tests), q ranked over the 12 tests read so far.
+**Indices read:** NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY (order fixed: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX). BH m = 4,852 (4,512 after R184 + 320 variants + 20 tests), q ranked over the 16 tests read so far.
 
 ## Lots (Amendment A)
 
@@ -32,6 +32,8 @@ Every trade uses the true lot of the contract traded on its day (`r185lib.TRUE_L
   Dhan vs the phone's 1-second recordings (20 days, 15 Oct - 13 Nov 2026): 72,871 of 72,905 option-minutes matched; median |diff| Rs 0.1, 95th pct Rs 4.7; 95% within 1%, 100% within 5%, 68% within Rs 1; correlation 0.99994. (The phone records the nearest expiry, so this also confirms Dhan's expiry code 1 is the nearest.)
 - **FINNIFTY**: 490 trading days 20 Nov 2024 - 13 Nov 2026 with >= 300 index minutes (dropped: 2025-10-21, 2026-11-08); strike step [50.0, 100.0, nan]; selection halves H1 109 days, H2 118 days.
   Gap fetch from Dhan (20 Oct - 13 Nov 2026): 18 days (2026-10-21 - 2026-11-13; short: 2026-11-08), 237,274 option rows (ATM-10..+10, CE / PE), 6,445 index minutes, 12 empty series-days, 1786 missing near-ATM (+-2) option minutes. Raw files: `gdrive:IraAlgo-data-lake/dhan/FINNIFTY/ (and the lake folders options_rolling_1m/, index_1m/)`.
+- **MIDCPNIFTY**: 490 trading days 20 Nov 2024 - 13 Nov 2026 with >= 300 index minutes (dropped: 2025-10-21, 2026-11-08); strike step [25.0]; selection halves H1 109 days, H2 118 days.
+  Gap fetch from Dhan (20 Oct - 13 Nov 2026): 18 days (2026-10-21 - 2026-11-13; short: 2026-11-08), 267,652 option rows (ATM-10..+10, CE / PE), 6,445 index minutes, 1 empty series-days, 140 missing near-ATM (+-2) option minutes. Raw files: `gdrive:IraAlgo-data-lake/dhan/MIDCPNIFTY/ (and the lake folders options_rolling_1m/, index_1m/)`.
 
 ## NIFTY
 
@@ -381,10 +383,126 @@ Read at 2026-11-16T03:44:46.213348+00:00 after `FINAL_READ_FINNIFTY` (2026-11-16
 
 - Recent weeks (20 Oct - 13 Nov 2026, 17 days, descriptive): 56 trades, win 30%, Rs 12,340.
 
+## MIDCPNIFTY
+
+### Selection (20 Nov 2024 - 19 Oct 2025)
+
+**Absorption**: 32 versions, 6 with net > 0, **0 eligible** (both halves >= 30 trades, net > 0 and above the twins). Chosen: `ABS w3 k2 b6 none T15` (FALLBACK - nothing passed the selection): 208 trades, win 34%, Rs -16,752 (H1 78 trades Rs -10,054, mean Rs -129 vs twins Rs -142; H2 130 trades Rs -6,698, mean Rs -52 vs twins Rs -147); descriptive twin p 0.141 (biased by the choice).
+
+| version | trades | net | H1 trades / net / mean / twins | H2 trades / net / mean / twins | eligible |
+|---|---|---|---|---|---|
+| ABS w5 k3 b6 none T15 | 16 | Rs 3,269 | 5 / Rs 891 / Rs 178 / Rs -75 | 11 / Rs 2,378 / Rs 216 / Rs -170 |  |
+| ABS w3 k3 b3 none T15 | 5 | Rs 2,651 | 2 / Rs 4,148 / Rs 2,074 / Rs -208 | 3 / Rs -1,497 / Rs -499 / Rs -262 |  |
+| ABS w5 k3 b6 turn T15 | 7 | Rs 2,560 | 2 / Rs 731 / Rs 365 / Rs 14 | 5 / Rs 1,829 / Rs 366 / Rs -260 |  |
+| ABS w5 k3 b6 none T30 | 16 | Rs 1,633 | 5 / Rs -1,203 / Rs -241 / Rs -129 | 11 / Rs 2,836 / Rs 258 / Rs -259 |  |
+| ABS w3 k3 b3 none T30 | 5 | Rs 1,371 | 2 / Rs 2,868 / Rs 1,434 / Rs -173 | 3 / Rs -1,497 / Rs -499 / Rs -108 |  |
+| ABS w5 k3 b6 turn T30 | 7 | Rs 788 | 2 / Rs -557 / Rs -278 / Rs -74 | 5 / Rs 1,345 / Rs 269 / Rs -233 |  |
+| ABS w5 k3 b3 turn T15 | 2 | Rs -407 | 1 / Rs 574 / Rs 574 / Rs -151 | 1 / Rs -981 / Rs -981 / Rs 65 |  |
+| ABS w5 k2 b3 turn T15 | 4 | Rs -541 | 2 / Rs 176 / Rs 88 / Rs -101 | 2 / Rs -717 / Rs -359 / Rs -119 |  |
+| ABS w5 k3 b3 none T15 | 5 | Rs -1,270 | 2 / Rs 1,364 / Rs 682 / Rs -200 | 3 / Rs -2,634 / Rs -878 / Rs -198 |  |
+| ABS w3 k2 b3 none T15 | 17 | Rs -1,452 | 7 / Rs -3,485 / Rs -498 / Rs -137 | 10 / Rs 2,033 / Rs 203 / Rs -213 |  |
+| ABS w5 k2 b3 none T15 | 9 | Rs -1,767 | 3 / Rs 1,374 / Rs 458 / Rs -85 | 6 / Rs -3,141 / Rs -524 / Rs -192 |  |
+| ABS w5 k3 b3 turn T30 | 2 | Rs -1,944 | 1 / Rs -963 / Rs -963 / Rs -89 | 1 / Rs -981 / Rs -981 / Rs -77 |  |
+| ABS w3 k2 b3 turn T15 | 12 | Rs -2,802 | 4 / Rs -3,077 / Rs -769 / Rs -123 | 8 / Rs 275 / Rs 34 / Rs -146 |  |
+| ABS w5 k2 b3 turn T30 | 4 | Rs -2,857 | 2 / Rs -1,942 / Rs -971 / Rs -184 | 2 / Rs -915 / Rs -458 / Rs -30 |  |
+| ABS w3 k3 b3 turn T15 | 3 | Rs -3,211 | 1 / Rs -2,358 / Rs -2,358 / Rs -162 | 2 / Rs -853 / Rs -427 / Rs -174 |  |
+| ABS w3 k3 b3 turn T30 | 3 | Rs -3,409 | 1 / Rs -2,358 / Rs -2,358 / Rs -184 | 2 / Rs -1,051 / Rs -526 / Rs -241 |  |
+| ABS w5 k3 b3 none T30 | 5 | Rs -4,074 | 2 / Rs -1,440 / Rs -720 / Rs -84 | 3 / Rs -2,634 / Rs -878 / Rs -170 |  |
+| ABS w3 k3 b6 turn T30 | 31 | Rs -4,291 | 11 / Rs -3,676 / Rs -334 / Rs -123 | 20 / Rs -615 / Rs -31 / Rs -200 |  |
+| ABS w3 k2 b3 turn T30 | 12 | Rs -4,677 | 4 / Rs -3,443 / Rs -861 / Rs -146 | 8 / Rs -1,234 / Rs -154 / Rs -191 |  |
+| ABS w5 k2 b3 none T30 | 9 | Rs -5,553 | 3 / Rs -1,718 / Rs -572 / Rs -132 | 6 / Rs -3,835 / Rs -639 / Rs -183 |  |
+| ABS w5 k2 b6 turn T30 | 48 | Rs -5,709 | 12 / Rs -3,507 / Rs -292 / Rs -176 | 36 / Rs -2,202 / Rs -61 / Rs -165 |  |
+| ABS w5 k2 b6 none T15 | 85 | Rs -7,924 | 28 / Rs -3,702 / Rs -132 / Rs -151 | 57 / Rs -4,222 / Rs -74 / Rs -165 |  |
+| ABS w5 k2 b6 turn T15 | 50 | Rs -8,375 | 13 / Rs -1,225 / Rs -94 / Rs -102 | 37 / Rs -7,150 / Rs -193 / Rs -134 |  |
+| ABS w3 k2 b3 none T30 | 17 | Rs -9,430 | 7 / Rs -8,235 / Rs -1,176 / Rs -150 | 10 / Rs -1,195 / Rs -120 / Rs -239 |  |
+| ABS w3 k3 b6 turn T15 | 31 | Rs -9,645 | 11 / Rs -4,830 / Rs -439 / Rs -99 | 20 / Rs -4,815 / Rs -241 / Rs -208 |  |
+| ABS w3 k3 b6 none T30 | 57 | Rs -11,441 | 20 / Rs -3,949 / Rs -197 / Rs -156 | 37 / Rs -7,492 / Rs -202 / Rs -201 |  |
+| ABS w5 k2 b6 none T30 | 83 | Rs -11,822 | 27 / Rs -6,441 / Rs -239 / Rs -123 | 56 / Rs -5,381 / Rs -96 / Rs -158 |  |
+| ABS w3 k3 b6 none T15 | 57 | Rs -15,133 | 20 / Rs -3,428 / Rs -171 / Rs -176 | 37 / Rs -11,705 / Rs -316 / Rs -126 |  |
+| ABS w3 k2 b6 none T15 | 208 | Rs -16,752 | 78 / Rs -10,054 / Rs -129 / Rs -142 | 130 / Rs -6,698 / Rs -52 / Rs -147 |  |
+| ABS w3 k2 b6 turn T15 | 141 | Rs -18,001 | 49 / Rs -6,080 / Rs -124 / Rs -127 | 92 / Rs -11,921 / Rs -130 / Rs -156 |  |
+| ABS w3 k2 b6 turn T30 | 136 | Rs -19,403 | 48 / Rs -6,908 / Rs -144 / Rs -131 | 88 / Rs -12,495 / Rs -142 / Rs -175 |  |
+| ABS w3 k2 b6 none T30 | 202 | Rs -22,523 | 76 / Rs -17,274 / Rs -227 / Rs -150 | 126 / Rs -5,249 / Rs -42 / Rs -178 |  |
+
+**Exhaustion**: 32 versions, 0 with net > 0, **0 eligible** (both halves >= 30 trades, net > 0 and above the twins). Chosen: `EXH X15 k3 b3 flip+close T30` (FALLBACK - nothing passed the selection): 690 trades, win 31%, Rs -38,333 (H1 338 trades Rs -1,337, mean Rs -4 vs twins Rs -159; H2 352 trades Rs -36,996, mean Rs -105 vs twins Rs -174); descriptive twin p 0.005 (biased by the choice).
+
+| version | trades | net | H1 trades / net / mean / twins | H2 trades / net / mean / twins | eligible |
+|---|---|---|---|---|---|
+| EXH X15 k3 b3 flip+close T30 | 690 | Rs -38,333 | 338 / Rs -1,337 / Rs -4 / Rs -159 | 352 / Rs -36,996 / Rs -105 / Rs -174 |  |
+| EXH X15 k3 b3 flip T30 | 698 | Rs -44,223 | 344 / Rs -238 / Rs -1 / Rs -158 | 354 / Rs -43,985 / Rs -124 / Rs -169 |  |
+| EXH X30 k3 b3 flip+close T30 | 653 | Rs -45,190 | 312 / Rs -4,639 / Rs -15 / Rs -152 | 341 / Rs -40,551 / Rs -119 / Rs -169 |  |
+| EXH X30 k3 b3 flip T30 | 665 | Rs -47,646 | 320 / Rs -2,859 / Rs -9 / Rs -158 | 345 / Rs -44,787 / Rs -130 / Rs -177 |  |
+| EXH X15 k3 b3 flip+close T15 | 696 | Rs -47,946 | 340 / Rs -8,601 / Rs -25 / Rs -119 | 356 / Rs -39,345 / Rs -110 / Rs -174 |  |
+| EXH X30 k3 b3 flip+close T15 | 660 | Rs -53,799 | 316 / Rs -12,044 / Rs -38 / Rs -134 | 344 / Rs -41,755 / Rs -121 / Rs -163 |  |
+| EXH X15 k3 b6 flip+close T15 | 739 | Rs -56,132 | 361 / Rs -7,558 / Rs -21 / Rs -135 | 378 / Rs -48,574 / Rs -128 / Rs -171 |  |
+| EXH X15 k3 b3 flip T15 | 707 | Rs -57,429 | 347 / Rs -10,484 / Rs -30 / Rs -135 | 360 / Rs -46,945 / Rs -130 / Rs -167 |  |
+| EXH X30 k3 b3 flip T15 | 674 | Rs -58,978 | 325 / Rs -12,487 / Rs -38 / Rs -137 | 349 / Rs -46,491 / Rs -133 / Rs -162 |  |
+| EXH X30 k3 b6 flip+close T15 | 703 | Rs -60,074 | 339 / Rs -12,891 / Rs -38 / Rs -141 | 364 / Rs -47,183 / Rs -130 / Rs -168 |  |
+| EXH X30 k3 b6 flip T15 | 734 | Rs -61,683 | 355 / Rs -11,889 / Rs -34 / Rs -135 | 379 / Rs -49,794 / Rs -131 / Rs -172 |  |
+| EXH X15 k3 b6 flip T15 | 763 | Rs -65,200 | 372 / Rs -9,183 / Rs -25 / Rs -128 | 391 / Rs -56,017 / Rs -143 / Rs -176 |  |
+| EXH X15 k3 b6 flip+close T30 | 729 | Rs -75,254 | 356 / Rs -27,090 / Rs -76 / Rs -176 | 373 / Rs -48,164 / Rs -129 / Rs -187 |  |
+| EXH X30 k3 b6 flip+close T30 | 693 | Rs -83,214 | 333 / Rs -30,903 / Rs -93 / Rs -163 | 360 / Rs -52,311 / Rs -145 / Rs -180 |  |
+| EXH X30 k3 b6 flip T30 | 723 | Rs -91,807 | 348 / Rs -32,253 / Rs -93 / Rs -161 | 375 / Rs -59,554 / Rs -159 / Rs -187 |  |
+| EXH X15 k3 b6 flip T30 | 752 | Rs -93,123 | 367 / Rs -32,746 / Rs -89 / Rs -172 | 385 / Rs -60,377 / Rs -157 / Rs -186 |  |
+| EXH X30 k2 b6 flip+close T15 | 878 | Rs -106,417 | 428 / Rs -55,770 / Rs -130 / Rs -136 | 450 / Rs -50,647 / Rs -112 / Rs -154 |  |
+| EXH X30 k2 b3 flip+close T30 | 843 | Rs -108,409 | 410 / Rs -32,239 / Rs -79 / Rs -172 | 433 / Rs -76,170 / Rs -176 / Rs -166 |  |
+| EXH X30 k2 b6 flip T15 | 886 | Rs -109,308 | 431 / Rs -64,858 / Rs -150 / Rs -141 | 455 / Rs -44,450 / Rs -98 / Rs -152 |  |
+| EXH X30 k2 b3 flip+close T15 | 854 | Rs -109,640 | 415 / Rs -42,884 / Rs -103 / Rs -132 | 439 / Rs -66,756 / Rs -152 / Rs -161 |  |
+| EXH X15 k2 b6 flip T15 | 896 | Rs -110,321 | 435 / Rs -65,436 / Rs -150 / Rs -147 | 461 / Rs -44,885 / Rs -97 / Rs -160 |  |
+| EXH X30 k2 b3 flip T30 | 849 | Rs -113,372 | 412 / Rs -38,340 / Rs -93 / Rs -175 | 437 / Rs -75,032 / Rs -172 / Rs -162 |  |
+| EXH X15 k2 b6 flip+close T15 | 892 | Rs -113,829 | 434 / Rs -64,835 / Rs -149 / Rs -147 | 458 / Rs -48,994 / Rs -107 / Rs -157 |  |
+| EXH X30 k2 b3 flip T15 | 860 | Rs -118,041 | 418 / Rs -47,664 / Rs -114 / Rs -132 | 442 / Rs -70,377 / Rs -159 / Rs -165 |  |
+| EXH X15 k2 b3 flip+close T15 | 876 | Rs -123,152 | 426 / Rs -52,344 / Rs -123 / Rs -146 | 450 / Rs -70,808 / Rs -157 / Rs -159 |  |
+| EXH X15 k2 b3 flip T15 | 879 | Rs -129,351 | 427 / Rs -56,506 / Rs -132 / Rs -139 | 452 / Rs -72,845 / Rs -161 / Rs -168 |  |
+| EXH X15 k2 b3 flip+close T30 | 868 | Rs -132,021 | 423 / Rs -53,716 / Rs -127 / Rs -171 | 445 / Rs -78,305 / Rs -176 / Rs -164 |  |
+| EXH X15 k2 b3 flip T30 | 869 | Rs -134,624 | 423 / Rs -56,558 / Rs -134 / Rs -171 | 446 / Rs -78,066 / Rs -175 / Rs -172 |  |
+| EXH X30 k2 b6 flip+close T30 | 869 | Rs -144,288 | 424 / Rs -53,287 / Rs -126 / Rs -169 | 445 / Rs -91,001 / Rs -204 / Rs -172 |  |
+| EXH X30 k2 b6 flip T30 | 878 | Rs -148,104 | 427 / Rs -62,933 / Rs -147 / Rs -181 | 451 / Rs -85,171 / Rs -189 / Rs -158 |  |
+| EXH X15 k2 b6 flip+close T30 | 884 | Rs -163,601 | 430 / Rs -78,172 / Rs -182 / Rs -184 | 454 / Rs -85,429 / Rs -188 / Rs -152 |  |
+| EXH X15 k2 b6 flip T30 | 889 | Rs -169,434 | 432 / Rs -84,012 / Rs -194 / Rs -184 | 457 / Rs -85,422 / Rs -187 / Rs -145 |  |
+
+### Final year (20 Oct 2025 - 19 Oct 2026, read once)
+
+Read at 2026-11-16T03:48:18.228609+00:00 after `FINAL_READ_MIDCPNIFTY` (2026-11-16T03:47:40Z); 246 days.
+
+**Absorption `ABS w3 k2 b6 none T15`** - verdict: **no evidence (nothing passed the selection)**
+
+- Year: 445 trades on 177 days (1054 signals; unpriced none), win 38%, Rs -43,349 (2x slippage Rs -62,464), mean Rs -97 a trade (avg win Rs 704, avg loss Rs -598), worst day Rs -4,704, worst month Rs -10,880 (2026-09), max drawdown Rs 43,587.
+- Random twins (1,000 sets, same minute / side / stop distance on other days): mean Rs -134 a trade (10-90%: Rs -202 to Rs -64); p 0.240, BH q 1.00. Mean > 0 (day bootstrap): p 0.994, q 1.00.
+- Smallest edge detectable (80% power): Rs 96 a trade at 5%, Rs 191 at the BH level.
+- By side: calls 214 (Rs -42,611), puts 231 (Rs -738). By exit: breakeven 18 (Rs -1,048), index_stop 181 (Rs -135,337), prem_stop 10 (Rs -5,297), time 236 (Rs 98,333).
+- Gates: failed - nothing passed the selection; not positive in every period (or the year at 2x slippage); BH q twins 1.00 / zero 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in year.
+
+| period | trades | win | net | net 2x | mean | twins mean | worst month | max DD |
+|---|---|---|---|---|---|---|---|---|
+| early (20 Oct 2025 - 31 Mar 2026) | 146 | 38% | Rs -14,842 | Rs -20,963 | Rs -102 | Rs -128 | Rs -7,389 | Rs 20,020 |
+| final (1 Apr - 19 Oct 2026) | 299 | 38% | Rs -28,507 | Rs -41,501 | Rs -95 | Rs -135 | Rs -10,880 | Rs 30,861 |
+| last 6 months (20 Apr - 19 Oct 2026) | 285 | 39% | Rs -24,896 | Rs -36,942 | Rs -87 | Rs -136 | Rs -10,880 | Rs 30,861 |
+| year (20 Oct 2025 - 19 Oct 2026) | 445 | 38% | Rs -43,349 | Rs -62,464 | Rs -97 | Rs -132 | Rs -10,880 | Rs 43,587 |
+
+- Recent weeks (20 Oct - 13 Nov 2026, 17 days, descriptive): 27 trades, win 30%, Rs -10,886.
+
+**Exhaustion `EXH X15 k3 b3 flip+close T30`** - verdict: **no evidence (nothing passed the selection)**
+
+- Year: 834 trades on 243 days (1209 signals; unpriced none), win 30%, Rs -113,568 (2x slippage Rs -155,068), mean Rs -136 a trade (avg win Rs 1,401, avg loss Rs -779), worst day Rs -5,611, worst month Rs -29,435 (2025-12), max drawdown Rs 114,470.
+- Random twins (1,000 sets, same minute / side / stop distance on other days): mean Rs -143 a trade (10-90%: Rs -204 to Rs -84); p 0.443, BH q 1.00. Mean > 0 (day bootstrap): p 0.998, q 1.00.
+- Smallest edge detectable (80% power): Rs 114 a trade at 5%, Rs 226 at the BH level.
+- By side: calls 430 (Rs -71,352), puts 404 (Rs -42,216). By exit: breakeven 40 (Rs -1,280), index_stop 493 (Rs -420,063), prem_stop 13 (Rs -10,323), time 288 (Rs 318,098).
+- Gates: failed - nothing passed the selection; not positive in every period (or the year at 2x slippage); not above the twins in early, final and the year; BH q twins 1.00 / zero 1.00 > 0.10; outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in early, final, six, year.
+
+| period | trades | win | net | net 2x | mean | twins mean | worst month | max DD |
+|---|---|---|---|---|---|---|---|---|
+| early (20 Oct 2025 - 31 Mar 2026) | 364 | 29% | Rs -61,141 | Rs -79,309 | Rs -168 | Rs -145 | Rs -29,435 | Rs 74,485 |
+| final (1 Apr - 19 Oct 2026) | 470 | 30% | Rs -52,427 | Rs -75,759 | Rs -112 | Rs -141 | Rs -18,124 | Rs 55,239 |
+| last 6 months (20 Apr - 19 Oct 2026) | 438 | 30% | Rs -49,916 | Rs -70,810 | Rs -114 | Rs -142 | Rs -18,124 | Rs 51,346 |
+| year (20 Oct 2025 - 19 Oct 2026) | 834 | 30% | Rs -113,568 | Rs -155,068 | Rs -136 | Rs -142 | Rs -29,435 | Rs 114,470 |
+
+- Recent weeks (20 Oct - 13 Nov 2026, 17 days, descriptive): 56 trades, win 25%, Rs -11,126.
+
 ## What this does not show
 
 - True absorption (aggressive volume that fails to move price) needs real buy / sell volume; Dhan has neither futures minute volume for past years nor any second-level history. The phone's own recorder (R182 / R184) is the only source of tick-rule flow and covers weeks, not a year.
 - One lot, one index at a time; no portfolio of indices.
 
-- Indices not read yet: MIDCPNIFTY, SENSEX (same frozen rules; their tests count in m = 4,852 either way).
+- Indices not read yet: SENSEX (same frozen rules; their tests count in m = 4,852 either way).
 - Nothing in the app changes. Full write-up: `results/report.md`.

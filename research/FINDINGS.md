@@ -1975,5 +1975,8 @@ recordings (72,623 minutes, median gap Rs 0.30).
   clearly above zero (p 0.08): inconclusive, worth a forward test only. FINNIFTY exhaustion: nothing passed; final year
   819 trades, 31% won, Rs -45,338 (q 1.0), rejected. (FINNIFTY options were not recorded by the phone, so Dhan's
   FINNIFTY bars could not be cross-checked.)
-- Estimated flow from price cannot see true absorption (volume that fails to move price). MIDCPNIFTY and SENSEX follow
-  under the same frozen rules.
+- **MIDCPNIFTY: nothing passed the selection.** Final year, fallback versions: absorption 445 trades, 38% won, Rs -43,349
+  (worst month Rs -10,880); exhaustion 834 trades, 30% won, Rs -1,13,568 (worst month Rs -29,435, drawdown Rs 1.14 L);
+  q 1.0, both rejected.
+- Estimated flow from price cannot see true absorption (volume that fails to move price). SENSEX follows under the same
+  frozen rules.
