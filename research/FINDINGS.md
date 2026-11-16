@@ -1954,3 +1954,17 @@ time stop. 32 versions per setup chosen on 15 Oct - 3 Nov (13 days), holdout 4 -
   (8 NIFTY, 6 BANKNIFTY: under the pre-registered 10), twin p 0.39 / 0.25; calls in the rally made it (puts lost).
 - All 8 tests BH q 1.0 (m = 4,512). 20 days can only detect an edge of about Rs 850-1,950 a trade; most of the 128
   design versions lost. The 1-second recorder drops big unchanged-price prints (R182), the very prints absorption reads.
+
+## Absorption and exhaustion on a full year (R185, 16 Nov 2026) - NIFTY: both lose money, nothing passed selection
+`hunt/r185_absorption_year/results/report.md`. Boss asked for R184 re-tested on a year of Dhan minute data. Dhan has no
+index futures minute volume for past years and **no second-level history**, so the signal source is the index's own
+1-minute price with the ATM-2..+2 options' volume as context (BVC flow; labelled option-volume context). R184's rules,
+grid and exits unchanged; 1 lot ATM option; real charges; selected on 20 Nov 2024 - 19 Oct 2025 (both halves had to beat
+zero and random twins), final 20 Oct 2025 - 19 Oct 2026 read once. Dhan's option minutes matched the phone's 1-second
+recordings (72,623 minutes, median gap Rs 0.30).
+- **NIFTY: no version passed the selection** (absorption 1 of 32 net > 0, exhaustion 0 of 32).
+- Final year, fallback versions: **absorption 451 trades, 26% won, Rs -50,042** (twins Rs -105 a trade, p 0.54; worst
+  month Rs -13,085, drawdown Rs 51.8k - outside the account stop rule); **exhaustion 888 trades, 38% won, Rs -30,656**
+  (Rs -34 a trade, better than random entries' Rs -91, p 0.022, but below zero; BH q 1.0, m = 4,852).
+- Estimated flow from price cannot see true absorption (volume that fails to move price). BANKNIFTY, FINNIFTY,
+  MIDCPNIFTY and SENSEX follow under the same frozen rules.

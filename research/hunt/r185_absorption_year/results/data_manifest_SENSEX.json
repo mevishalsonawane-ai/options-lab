@@ -1,0 +1,207 @@
+{
+ "und": "SENSEX",
+ "source": "Dhan /v2/charts/rollingoption (WEEK, expiryCode 1, ATM-10..+10, 1-minute, one day a request) and /v2/charts/intraday (index, 1-minute)",
+ "days": 18,
+ "first": "2026-10-21",
+ "last": "2026-11-13",
+ "option_rows": 270134,
+ "index_rows": 6445,
+ "empty_series_days": 0,
+ "duplicate_rows_dropped": 0,
+ "short_days": [
+  "2026-11-08"
+ ],
+ "per_day": [
+  {
+   "day": "2026-10-21",
+   "index_minutes": 375,
+   "option_rows": 15750,
+   "series": 42,
+   "series_min_minutes": 375,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-22",
+   "index_minutes": 375,
+   "option_rows": 15750,
+   "series": 42,
+   "series_min_minutes": 375,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-23",
+   "index_minutes": 375,
+   "option_rows": 15729,
+   "series": 42,
+   "series_min_minutes": 359,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-26",
+   "index_minutes": 375,
+   "option_rows": 15739,
+   "series": 42,
+   "series_min_minutes": 367,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-27",
+   "index_minutes": 375,
+   "option_rows": 15749,
+   "series": 42,
+   "series_min_minutes": 374,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-28",
+   "index_minutes": 375,
+   "option_rows": 15750,
+   "series": 42,
+   "series_min_minutes": 375,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-29",
+   "index_minutes": 375,
+   "option_rows": 15750,
+   "series": 42,
+   "series_min_minutes": 375,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-30",
+   "index_minutes": 375,
+   "option_rows": 15750,
+   "series": 42,
+   "series_min_minutes": 375,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-02",
+   "index_minutes": 375,
+   "option_rows": 15746,
+   "series": 42,
+   "series_min_minutes": 373,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-03",
+   "index_minutes": 375,
+   "option_rows": 15739,
+   "series": 42,
+   "series_min_minutes": 364,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-04",
+   "index_minutes": 375,
+   "option_rows": 15745,
+   "series": 42,
+   "series_min_minutes": 370,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-05",
+   "index_minutes": 375,
+   "option_rows": 15709,
+   "series": 42,
+   "series_min_minutes": 357,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-06",
+   "index_minutes": 375,
+   "option_rows": 15732,
+   "series": 42,
+   "series_min_minutes": 359,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-08",
+   "index_minutes": 70,
+   "option_rows": 2922,
+   "series": 42,
+   "series_min_minutes": 64,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 70,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-09",
+   "index_minutes": 375,
+   "option_rows": 15750,
+   "series": 42,
+   "series_min_minutes": 375,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-11",
+   "index_minutes": 375,
+   "option_rows": 15325,
+   "series": 42,
+   "series_min_minutes": 262,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 372,
+   "near_atm2_missing_minutes": 30
+  },
+  {
+   "day": "2026-11-12",
+   "index_minutes": 375,
+   "option_rows": 15750,
+   "series": 42,
+   "series_min_minutes": 375,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-11-13",
+   "index_minutes": 375,
+   "option_rows": 15749,
+   "series": 42,
+   "series_min_minutes": 374,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  }
+ ],
+ "files": {
+  "opt_SENSEX_WEEK_2026_gap1113.parquet": {
+   "bytes": 5773492,
+   "sha256": "2c1ba02d7636aad301e5cb70eea519a8739485f8bbe9d3759960fd79591facca"
+  },
+  "index_1m_SENSEX_2026_gap1113.parquet": {
+   "bytes": 207938,
+   "sha256": "eb9c1fcbeb1454ef9ee1cac0d9e2bfd6106ca4516ffc8d9a31a92b7d53238dc1"
+  }
+ },
+ "drive": "gdrive:IraAlgo-data-lake/dhan/SENSEX/ (and the lake folders options_rolling_1m/, index_1m/)"
+}
