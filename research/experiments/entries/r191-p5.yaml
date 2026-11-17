@@ -1,0 +1,39 @@
+id: r191-p5
+title: 'R191 portfolio P5: P4 + drawdown brake at -Rs 25k'
+family: sizing-execution
+date: '2026-11-17'
+doc: research/hunt/r191_portfolio/results/report.md
+hypothesis: 'Portfolio P5 (P4 + drawdown brake at -Rs 25k) built from existing trade streams with risk rules that use only
+  closed P&L known at the time: profitable in eras A, B and C with 40+ trades, robust to the top 5 trades, beats month-block
+  random-side twins (p < 0.05) in each era, BH q <= 0.10 (m 4,770), and inside the account stop (DD < Rs 40k, every month
+  > -Rs 13k) in eras B and C?'
+data_version: 'R190''s priced trade streams (~/.cache/iraalgo/r190: Night via the R147 builder caches, arms_trades.pkl L1
+  / D2, rules_NIFTY.pkl VIX flag), from the Drive lake copy of 17 Nov 2026 plus the dhan-data NIFTY options of 2020-21'
+period:
+  design: era B 2021-12-01..2024-10-31 (rules fixed in advance; nothing fitted)
+  holdout: eras C 2024-11-01..2026-11-13 and A 2020-08-03..2021-07-30, read once after results/ERA_CA_READ.flag; both seen
+    by R190 at the stream level
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- NIFTY
+features:
+- 'Night: index close location, 59-stock breadth (option OI build-up as context)'
+- 'Liquidity 15+5: the index'
+- buy the option; R190's dated Zerodha charges and slippage; 1 lot per trade
+model_or_rule: P4 + drawdown brake at -Rs 25k
+settings: research/hunt/r191_portfolio/r191study.py VARIANTS; r191lib.py; PREREG.md section 4
+prereg: research/hunt/r191_portfolio/PREREG.md
+variants_tried: 1
+results:
+  summary: 'era A 66 tr, 57.6% win, 45% months up, Rs 18,086, DD Rs 15,034, worst month Rs -8,348, twin p 0.2269; era B 1046
+    tr, 35.0% win, 47% months up, Rs 49,741, DD Rs 59,244, worst month Rs -11,887, twin p 0.1204; era C 1045 tr, 41.6% win,
+    58% months up, Rs 259,358, DD Rs 56,902, worst month Rs -13,277, twin p 0.0050. BH q 1. Not reliable; failed: era A: net
+    without the top 5 trades -13,803 <= 0; era A: twin p 0.227 >= 0.05; era B: net without the top 5 trades -15,821 <= 0;
+    era B: twin p 0.120 >= 0.05; era B: max drawdown Rs 59,244 >= Rs 40k; era C: max drawdown Rs 56,902 >= Rs 40k; era C:
+    worst month Rs -13,277 <= -Rs 13k; BH q 1 > 0.1'
+  costs: 'R190''s: dated Zerodha charges; Night app +-5 bps + h24 half-spread; arms'' R17 fills'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying, option bought. Research only; nothing in the app changes.

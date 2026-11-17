@@ -1,0 +1,2421 @@
+{
+ "k4_filter": "F5",
+ "m_total": 4771,
+ "twins": 5000,
+ "seed": 192,
+ "ideas": {
+  "K1": {
+   "name": "Turn of the month: call, last session 15:20 -> 2nd session of the new month 15:20",
+   "timing": "CC2",
+   "eras": {
+    "S0": {
+     "trades": 91,
+     "win": 52.74725274725275,
+     "net": 52546.95999999999,
+     "per_trade": 577.4391208791208,
+     "avg_win": 4094.798541666667,
+     "avg_loss": -3348.915581395349,
+     "net_wo_top5": -8212.170000000013,
+     "worst_day": -9224.770000000002,
+     "worst_month": -9224.770000000002,
+     "max_dd": 16663.780000000002,
+     "months": 91,
+     "months_up": 48
+    },
+    "S": {
+     "trades": 32,
+     "win": 37.5,
+     "net": -18495.850000000013,
+     "per_trade": -577.9953125000004,
+     "avg_win": 6045.3308333333325,
+     "avg_loss": -4551.991,
+     "net_wo_top5": -70403.05,
+     "worst_day": -11205.29,
+     "worst_month": -11205.29,
+     "max_dd": 62549.15,
+     "months": 32,
+     "months_up": 12
+    },
+    "A": {
+     "trades": 11,
+     "win": 72.72727272727273,
+     "net": 71424.35999999999,
+     "per_trade": 6493.123636363635,
+     "avg_win": 11049.76375,
+     "avg_loss": -5657.916666666667,
+     "net_wo_top5": -1382.9400000000169,
+     "worst_day": -10911.830000000002,
+     "worst_month": -10911.830000000002,
+     "max_dd": 16973.75,
+     "months": 11,
+     "months_up": 8
+    },
+    "B": {
+     "trades": 28,
+     "win": 35.714285714285715,
+     "net": -31566.010000000006,
+     "per_trade": -1127.3575000000003,
+     "avg_win": 5812.384,
+     "avg_loss": -4982.769444444445,
+     "net_wo_top5": -78592.68000000001,
+     "worst_day": -12288.82,
+     "worst_month": -12288.82,
+     "max_dd": 61076.240000000005,
+     "months": 28,
+     "months_up": 10
+    },
+    "C": {
+     "trades": 19,
+     "win": 36.84210526315789,
+     "net": -46233.73,
+     "per_trade": -2433.354210526316,
+     "avg_win": 11552.315714285714,
+     "avg_loss": -10591.661666666665,
+     "net_wo_top5": -120149.31,
+     "worst_day": -20232.989999999998,
+     "worst_month": -20232.989999999998,
+     "max_dd": 100531.82,
+     "months": 19,
+     "months_up": 7
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 11,
+     "win": 72.72727272727273,
+     "net": 71179.72,
+     "per_trade": 6470.8836363636365,
+     "avg_win": 11024.6225,
+     "avg_loss": -5672.419999999999,
+     "net_wo_top5": -1494.6699999999837,
+     "worst_day": -10931.33,
+     "worst_month": -10931.33,
+     "max_dd": 17017.260000000002,
+     "months": 11,
+     "months_up": 8
+    },
+    "B": {
+     "trades": 28,
+     "win": 35.714285714285715,
+     "net": -31876.670000000002,
+     "per_trade": -1138.4525,
+     "avg_win": 5797.341999999999,
+     "avg_loss": -4991.671666666667,
+     "net_wo_top5": -78811.89,
+     "worst_day": -12299.83,
+     "worst_month": -12299.83,
+     "max_dd": 61340.42999999999,
+     "months": 28,
+     "months_up": 10
+    },
+    "C": {
+     "trades": 19,
+     "win": 36.84210526315789,
+     "net": -46606.56999999999,
+     "per_trade": -2452.9773684210522,
+     "avg_win": 11527.798571428573,
+     "avg_loss": -10608.429999999998,
+     "net_wo_top5": -120385.81,
+     "worst_day": -20249.239999999998,
+     "worst_month": -20249.239999999998,
+     "max_dd": 100816.39,
+     "months": 19,
+     "months_up": 7
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 91,
+     "win": 46.15384615384615,
+     "net": 33457.22,
+     "per_trade": 367.66175824175826,
+     "avg_win": 4312.571904761905,
+     "avg_loss": -3013.689795918367,
+     "net_wo_top5": -24155.21,
+     "worst_day": -9079.530000000002,
+     "worst_month": -9079.530000000002,
+     "max_dd": 17161.65,
+     "months": 91,
+     "months_up": 42
+    },
+    "S": {
+     "trades": 32,
+     "win": 37.5,
+     "net": -33654.369999999995,
+     "per_trade": -1051.6990624999999,
+     "avg_win": 5439.854166666667,
+     "avg_loss": -4946.630999999999,
+     "net_wo_top5": -82948.44,
+     "worst_day": -11307.02,
+     "worst_month": -11307.02,
+     "max_dd": 73357.55,
+     "months": 32,
+     "months_up": 12
+    }
+   },
+   "pooled_real": {
+    "trades": 58,
+    "win": 43.103448275862064,
+    "net": -6375.380000000019,
+    "per_trade": -109.92034482758653,
+    "avg_win": 9095.526399999999,
+    "avg_loss": -7083.743636363637,
+    "net_wo_top5": -105175.44000000002,
+    "worst_day": -20232.989999999998,
+    "worst_month": -20232.989999999998,
+    "max_dd": 123224.83000000002,
+    "months": 58,
+    "months_up": 25
+   },
+   "pooled_net": -6375.380000000012,
+   "twin_mean": -38788.26004,
+   "twin_sd": 57601.91654454308,
+   "p_emp": 0.28134373125374923,
+   "p_norm": 0.2868179273748064,
+   "exits": {
+    "time": 58
+   },
+   "need": [
+    "S0",
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 181,
+   "puts": 0,
+   "pool_days": {
+    "A": 196,
+    "B": 568,
+    "C": 392
+   },
+   "q": 1.0,
+   "fails": [
+    "era S: 32 trades < 40",
+    "era S: net -18,496 <= 0",
+    "era A: 11 trades < 40",
+    "era A: net without the top 5 trades -1,383 <= 0",
+    "era B: 28 trades < 40",
+    "era B: net -31,566 <= 0",
+    "era B: net without the top 5 trades -78,593 <= 0",
+    "era C: 19 trades < 40",
+    "era C: net -46,234 <= 0",
+    "era C: net without the top 5 trades -120,149 <= 0",
+    "pooled twin p 0.281 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [
+     "max drawdown Rs 61,076 > Rs 40k"
+    ],
+    "C": [
+     "max drawdown Rs 100,532 > Rs 40k",
+     "worst month Rs -20,233 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S: 32 trades < 40",
+    "era S: net -33,654 <= 0",
+    "era A: 11 trades < 40",
+    "era A: net without the top 5 trades -1,383 <= 0",
+    "era B: 28 trades < 40",
+    "era B: net -31,566 <= 0",
+    "era B: net without the top 5 trades -78,593 <= 0",
+    "era C: 19 trades < 40",
+    "era C: net -46,234 <= 0",
+    "era C: net without the top 5 trades -120,149 <= 0",
+    "pooled twin p 0.281 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K2": {
+   "name": "Pre-holiday: call, 15:20 the session before -> 15:20 on the pre-holiday session",
+   "timing": "CC1",
+   "eras": {
+    "S0": {
+     "trades": 117,
+     "win": 51.28205128205128,
+     "net": 46933.89,
+     "per_trade": 401.14435897435897,
+     "avg_win": 2532.6390000000006,
+     "avg_loss": -1842.5342105263162,
+     "net_wo_top5": 7539.32,
+     "worst_day": -6458.98,
+     "worst_month": -6458.98,
+     "max_dd": 15947.779999999999,
+     "months": 73,
+     "months_up": 36
+    },
+    "S": {
+     "trades": 36,
+     "win": 38.88888888888889,
+     "net": -15221.379999999997,
+     "per_trade": -422.816111111111,
+     "avg_win": 4952.900714285714,
+     "avg_loss": -3843.7268181818185,
+     "net_wo_top5": -69230.74999999999,
+     "worst_day": -10796.18,
+     "worst_month": -20937.98,
+     "max_dd": 55191.24,
+     "months": 25,
+     "months_up": 9
+    },
+    "A": {
+     "trades": 9,
+     "win": 44.44444444444444,
+     "net": 6072.189999999999,
+     "per_trade": 674.6877777777777,
+     "avg_win": 8211.582499999999,
+     "avg_loss": -5354.8279999999995,
+     "net_wo_top5": -26215.26,
+     "worst_day": -7987.950000000001,
+     "worst_month": -7987.950000000001,
+     "max_dd": 18227.309999999998,
+     "months": 7,
+     "months_up": 3
+    },
+    "B": {
+     "trades": 29,
+     "win": 48.275862068965516,
+     "net": 39159.93000000001,
+     "per_trade": 1350.3424137931038,
+     "avg_win": 5521.285000000001,
+     "avg_loss": -2542.537333333333,
+     "net_wo_top5": -18137.549999999996,
+     "worst_day": -5917.899999999999,
+     "worst_month": -5288.719999999999,
+     "max_dd": 16791.39,
+     "months": 21,
+     "months_up": 10
+    },
+    "C": {
+     "trades": 22,
+     "win": 18.181818181818183,
+     "net": -101925.88,
+     "per_trade": -4632.994545454546,
+     "avg_win": 7474.715000000001,
+     "avg_loss": -7323.596666666668,
+     "net_wo_top5": -131555.18,
+     "worst_day": -16140.019999999999,
+     "worst_month": -20685.690000000002,
+     "max_dd": 101925.88,
+     "months": 15,
+     "months_up": 2
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 9,
+     "win": 44.44444444444444,
+     "net": 5921.489999999999,
+     "per_trade": 657.9433333333332,
+     "avg_win": 8191.719999999999,
+     "avg_loss": -5369.0779999999995,
+     "net_wo_top5": -26270.76,
+     "worst_day": -8002.95,
+     "worst_month": -8002.95,
+     "max_dd": 18267.809999999998,
+     "months": 7,
+     "months_up": 3
+    },
+    "B": {
+     "trades": 29,
+     "win": 48.275862068965516,
+     "net": 38822.30999999999,
+     "per_trade": 1338.700344827586,
+     "avg_win": 5506.505714285714,
+     "avg_loss": -2551.2513333333336,
+     "net_wo_top5": -18390.220000000016,
+     "worst_day": -5929.39,
+     "worst_month": -5312.23,
+     "max_dd": 16908.100000000013,
+     "months": 21,
+     "months_up": 10
+    },
+    "C": {
+     "trades": 22,
+     "win": 18.181818181818183,
+     "net": -102258.46999999999,
+     "per_trade": -4648.112272727272,
+     "avg_win": 7455.69,
+     "avg_loss": -7337.84611111111,
+     "net_wo_top5": -131805.41999999998,
+     "worst_day": -16154.980000000001,
+     "worst_month": -20744.160000000003,
+     "max_dd": 102258.46999999999,
+     "months": 15,
+     "months_up": 2
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 117,
+     "win": 50.427350427350426,
+     "net": 35486.09000000001,
+     "per_trade": 303.29991452991464,
+     "avg_win": 2422.3703389830503,
+     "avg_loss": -1852.3062068965514,
+     "net_wo_top5": -2890.149999999994,
+     "worst_day": -6577.069999999999,
+     "worst_month": -6577.069999999999,
+     "max_dd": 15995.319999999996,
+     "months": 73,
+     "months_up": 36
+    },
+    "S": {
+     "trades": 36,
+     "win": 38.88888888888889,
+     "net": -25662.760000000002,
+     "per_trade": -712.8544444444445,
+     "avg_win": 4696.864999999999,
+     "avg_loss": -4155.403181818182,
+     "net_wo_top5": -79197.91,
+     "worst_day": -12648.080000000002,
+     "worst_month": -22988.760000000002,
+     "max_dd": 64881.35,
+     "months": 25,
+     "months_up": 9
+    }
+   },
+   "pooled_real": {
+    "trades": 60,
+    "win": 36.666666666666664,
+    "net": -56693.759999999995,
+    "per_trade": -944.896,
+    "avg_win": 6365.5990909090915,
+    "avg_loss": -5177.287894736843,
+    "net_wo_top5": -138544.58000000002,
+    "worst_day": -16140.019999999999,
+    "worst_month": -20685.690000000002,
+    "max_dd": 118717.26999999999,
+    "months": 43,
+    "months_up": 15
+   },
+   "pooled_net": -56693.75999999998,
+   "twin_mean": -24677.281951999998,
+   "twin_sd": 47158.75514824959,
+   "p_emp": 0.7450509898020395,
+   "p_norm": 0.7514020689532634,
+   "exits": {
+    "time": 60
+   },
+   "need": [
+    "S0",
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 213,
+   "puts": 0,
+   "pool_days": {
+    "A": 196,
+    "B": 568,
+    "C": 393
+   },
+   "q": 1.0,
+   "fails": [
+    "era S: 36 trades < 40",
+    "era S: net -15,221 <= 0",
+    "era A: 9 trades < 40",
+    "era A: net without the top 5 trades -26,215 <= 0",
+    "era B: 29 trades < 40",
+    "era B: net without the top 5 trades -18,138 <= 0",
+    "era C: 22 trades < 40",
+    "era C: net -101,926 <= 0",
+    "era C: net without the top 5 trades -131,555 <= 0",
+    "pooled twin p 0.745 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [],
+    "C": [
+     "max drawdown Rs 101,926 > Rs 40k",
+     "worst month Rs -20,686 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S: 36 trades < 40",
+    "era S: net -25,663 <= 0",
+    "era A: 9 trades < 40",
+    "era A: net without the top 5 trades -26,215 <= 0",
+    "era B: 29 trades < 40",
+    "era B: net without the top 5 trades -18,138 <= 0",
+    "era C: 22 trades < 40",
+    "era C: net -101,926 <= 0",
+    "era C: net without the top 5 trades -131,555 <= 0",
+    "pooled twin p 0.745 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K3": {
+   "name": "Overnight drift: call every night, 15:20 -> 09:16",
+   "timing": "ON",
+   "eras": {
+    "S0": {
+     "trades": 2111,
+     "win": 41.63903363334913,
+     "net": 57653.23000000007,
+     "per_trade": 27.31086215063954,
+     "avg_win": 1168.6920250284415,
+     "avg_loss": -787.0349512987011,
+     "net_wo_top5": 18923.05000000007,
+     "worst_day": -10406.36,
+     "worst_month": -19030.3,
+     "max_dd": 149768.22999999986,
+     "months": 109,
+     "months_up": 46
+    },
+    "S": {
+     "trades": 719,
+     "win": 53.546592489568845,
+     "net": 115217.94,
+     "per_trade": 160.2474826147427,
+     "avg_win": 2064.1971688311687,
+     "avg_loss": -2034.4250598802394,
+     "net_wo_top5": 20609.470000000016,
+     "worst_day": -20472.01,
+     "worst_month": -38224.58000000001,
+     "max_dd": 64130.75,
+     "months": 40,
+     "months_up": 23
+    },
+    "A": {
+     "trades": 196,
+     "win": 58.16326530612245,
+     "net": 61522.56000000001,
+     "per_trade": 313.890612244898,
+     "avg_win": 2436.9222807017545,
+     "avg_loss": -2637.6412195121948,
+     "net_wo_top5": 11295.220000000016,
+     "worst_day": -10332.06,
+     "worst_month": -10350.870000000003,
+     "max_dd": 20180.530000000006,
+     "months": 12,
+     "months_up": 7
+    },
+    "B": {
+     "trades": 568,
+     "win": 51.93661971830986,
+     "net": -50633.58,
+     "per_trade": -89.14362676056338,
+     "avg_win": 1592.7587118644067,
+     "avg_loss": -1906.583882783883,
+     "net_wo_top5": -87814.07,
+     "worst_day": -8416.74,
+     "worst_month": -20985.980000000003,
+     "max_dd": 70531.91000000006,
+     "months": 35,
+     "months_up": 15
+    },
+    "C": {
+     "trades": 393,
+     "win": 40.20356234096692,
+     "net": -341348.48000000004,
+     "per_trade": -868.5711959287532,
+     "avg_win": 3195.2980379746837,
+     "avg_loss": -3600.8747659574465,
+     "net_wo_top5": -420059.85000000003,
+     "worst_day": -17463.05,
+     "worst_month": -70917.88999999998,
+     "max_dd": 382040.60000000027,
+     "months": 25,
+     "months_up": 7
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 196,
+     "win": 57.6530612244898,
+     "net": 57810.600000000006,
+     "per_trade": 294.9520408163266,
+     "avg_win": 2439.147345132744,
+     "avg_loss": -2624.253614457831,
+     "net_wo_top5": 7711.450000000004,
+     "worst_day": -10348.56,
+     "worst_month": -10641.779999999997,
+     "max_dd": 20923.51000000001,
+     "months": 12,
+     "months_up": 7
+    },
+    "B": {
+     "trades": 568,
+     "win": 51.76056338028169,
+     "net": -57716.759999999966,
+     "per_trade": -101.61401408450698,
+     "avg_win": 1586.053231292517,
+     "avg_loss": -1912.4686496350364,
+     "net_wo_top5": -94816.81999999998,
+     "worst_day": -8434.73,
+     "worst_month": -21232.86,
+     "max_dd": 75517.99999999999,
+     "months": 35,
+     "months_up": 14
+    },
+    "C": {
+     "trades": 393,
+     "win": 40.20356234096692,
+     "net": -349841.17,
+     "per_trade": -890.1810941475827,
+     "avg_win": 3173.6075316455695,
+     "avg_loss": -3622.430468085106,
+     "net_wo_top5": -428385.1,
+     "worst_day": -17496.79,
+     "worst_month": -71306.98000000001,
+     "max_dd": 389978.27999999974,
+     "months": 25,
+     "months_up": 7
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 2111,
+     "win": 34.864992894362864,
+     "net": -489468.73,
+     "per_trade": -231.86581241117952,
+     "avg_win": 1134.5619429347828,
+     "avg_loss": -963.2773236363637,
+     "net_wo_top5": -525763.6799999999,
+     "worst_day": -11185.200000000003,
+     "worst_month": -23528.16,
+     "max_dd": 518552.2000000003,
+     "months": 109,
+     "months_up": 29
+    },
+    "S": {
+     "trades": 719,
+     "win": 46.03616133518776,
+     "net": -283130.58999999997,
+     "per_trade": -393.783852573018,
+     "avg_win": 1872.204592145015,
+     "avg_loss": -2326.8822422680414,
+     "net_wo_top5": -369523.12999999995,
+     "worst_day": -23689.0,
+     "worst_month": -67624.54000000001,
+     "max_dd": 312666.20999999996,
+     "months": 40,
+     "months_up": 13
+    }
+   },
+   "pooled_real": {
+    "trades": 1157,
+    "win": 49.00605012964564,
+    "net": -330459.49999999994,
+    "per_trade": -285.61754537597227,
+    "avg_win": 2209.0477072310405,
+    "avg_loss": -2683.03313559322,
+    "net_wo_top5": -417649.4199999999,
+    "worst_day": -17463.05,
+    "worst_month": -70917.88999999998,
+    "max_dd": 441847.9800000002,
+    "months": 72,
+    "months_up": 29
+   },
+   "pooled_net": -330459.5000000003,
+   "twin_mean": -304822.78736,
+   "twin_sd": 119021.11322258553,
+   "p_emp": 0.5836832633473306,
+   "p_norm": 0.5852708398876298,
+   "exits": {
+    "time": 1157
+   },
+   "need": [
+    "S0",
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 3987,
+   "puts": 0,
+   "pool_days": {
+    "A": 196,
+    "B": 568,
+    "C": 393
+   },
+   "q": 1.0,
+   "fails": [
+    "era B: net -50,634 <= 0",
+    "era B: net without the top 5 trades -87,814 <= 0",
+    "era C: net -341,348 <= 0",
+    "era C: net without the top 5 trades -420,060 <= 0",
+    "pooled twin p 0.584 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [
+     "max drawdown Rs 70,532 > Rs 40k",
+     "worst month Rs -20,986 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 382,041 > Rs 40k",
+     "worst month Rs -70,918 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S0: net -489,469 <= 0",
+    "era S: net -283,131 <= 0",
+    "era B: net -50,634 <= 0",
+    "era B: net without the top 5 trades -87,814 <= 0",
+    "era C: net -341,348 <= 0",
+    "era C: net without the top 5 trades -420,060 <= 0",
+    "pooled twin p 0.584 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K4": {
+   "name": "Night proxy (strong close) + one filter chosen on 2017-18, 15:20 -> 09:16 [filter F5]",
+   "timing": "ON",
+   "eras": {
+    "S0": {
+     "trades": 0,
+     "win": 0.0,
+     "net": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": 0.0,
+     "net_wo_top5": 0.0,
+     "worst_day": 0.0,
+     "worst_month": 0.0,
+     "max_dd": 0.0,
+     "per_trade": 0.0,
+     "months": 0,
+     "months_up": 0
+    },
+    "S": {
+     "trades": 150,
+     "win": 39.33333333333333,
+     "net": -21213.510000000002,
+     "per_trade": -141.42340000000002,
+     "avg_win": 3436.6354237288137,
+     "avg_loss": -2461.263736263736,
+     "net_wo_top5": -115641.10999999999,
+     "worst_day": -20472.01,
+     "worst_month": -29130.339999999997,
+     "max_dd": 59678.990000000005,
+     "months": 19,
+     "months_up": 9
+    },
+    "A": {
+     "trades": 95,
+     "win": 54.736842105263165,
+     "net": 28963.179999999993,
+     "per_trade": 304.87557894736835,
+     "avg_win": 2574.231923076923,
+     "avg_loss": -2439.462325581395,
+     "net_wo_top5": -7162.930000000008,
+     "worst_day": -7253.22,
+     "worst_month": -12312.870000000003,
+     "max_dd": 22399.590000000007,
+     "months": 12,
+     "months_up": 7
+    },
+    "B": {
+     "trades": 277,
+     "win": 51.624548736462096,
+     "net": 76487.38000000002,
+     "per_trade": 276.127725631769,
+     "avg_win": 2112.4234965034966,
+     "avg_loss": -1683.501343283582,
+     "net_wo_top5": 20622.96000000002,
+     "worst_day": -6311.1,
+     "worst_month": -13511.010000000002,
+     "max_dd": 33933.91,
+     "months": 35,
+     "months_up": 21
+    },
+    "C": {
+     "trades": 164,
+     "win": 45.73170731707317,
+     "net": 12238.129999999976,
+     "per_trade": 74.62274390243887,
+     "avg_win": 3867.2378666666664,
+     "avg_loss": -3121.4012359550566,
+     "net_wo_top5": -57500.79000000002,
+     "worst_day": -17463.05,
+     "worst_month": -32239.769999999997,
+     "max_dd": 52381.33000000003,
+     "months": 25,
+     "months_up": 15
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 95,
+     "win": 54.736842105263165,
+     "net": 27162.71,
+     "per_trade": 285.9232631578947,
+     "avg_win": 2554.164615384615,
+     "avg_loss": -2457.0662790697675,
+     "net_wo_top5": -8848.700000000004,
+     "worst_day": -7277.209999999999,
+     "worst_month": -12542.289999999997,
+     "max_dd": 23127.559999999998,
+     "months": 12,
+     "months_up": 6
+    },
+    "B": {
+     "trades": 277,
+     "win": 51.624548736462096,
+     "net": 73009.15000000002,
+     "per_trade": 263.57093862815896,
+     "avg_win": 2099.6392307692304,
+     "avg_loss": -1695.8153731343284,
+     "net_wo_top5": 17255.64000000002,
+     "worst_day": -6325.1,
+     "worst_month": -13636.51,
+     "max_dd": 34571.73000000001,
+     "months": 35,
+     "months_up": 21
+    },
+    "C": {
+     "trades": 164,
+     "win": 45.73170731707317,
+     "net": 8849.650000000009,
+     "per_trade": 53.961280487804935,
+     "avg_win": 3846.3211999999994,
+     "avg_loss": -3141.847640449438,
+     "net_wo_top5": -60739.29999999999,
+     "worst_day": -17496.79,
+     "worst_month": -32423.460000000003,
+     "max_dd": 54814.64000000003,
+     "months": 25,
+     "months_up": 15
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 0,
+     "win": 0.0,
+     "net": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": 0.0,
+     "net_wo_top5": 0.0,
+     "worst_day": 0.0,
+     "worst_month": 0.0,
+     "max_dd": 0.0,
+     "per_trade": 0.0,
+     "months": 0,
+     "months_up": 0
+    },
+    "S": {
+     "trades": 150,
+     "win": 32.0,
+     "net": -152360.39999999997,
+     "per_trade": -1015.7359999999998,
+     "avg_win": 3432.790833333334,
+     "avg_loss": -3109.1603921568626,
+     "net_wo_top5": -242019.45999999996,
+     "worst_day": -23689.0,
+     "worst_month": -44753.78,
+     "max_dd": 155710.45,
+     "months": 19,
+     "months_up": 4
+    }
+   },
+   "pooled_real": {
+    "trades": 536,
+    "win": 50.373134328358205,
+    "net": 117688.69,
+    "per_trade": 219.56845149253732,
+    "avg_win": 2688.812814814815,
+    "avg_loss": -2286.8074060150375,
+    "net_wo_top5": 39777.22,
+    "worst_day": -17463.05,
+    "worst_month": -32239.769999999997,
+    "max_dd": 52381.330000000125,
+    "months": 72,
+    "months_up": 43
+   },
+   "pooled_net": 117688.68999999992,
+   "twin_mean": -137644.164052,
+   "twin_sd": 79800.65757302506,
+   "p_emp": 0.0009998000399920016,
+   "p_norm": 0.0006880123157309084,
+   "exits": {
+    "time": 536
+   },
+   "need": [
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 396,
+   "puts": 290,
+   "pool_days": {
+    "A": 196,
+    "B": 568,
+    "C": 393
+   },
+   "q": 1.0,
+   "fails": [
+    "era S: net -21,214 <= 0",
+    "era A: net without the top 5 trades -7,163 <= 0",
+    "era C: net without the top 5 trades -57,501 <= 0",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [
+     "worst month Rs -13,511 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 52,381 > Rs 40k",
+     "worst month Rs -32,240 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S: net -152,360 <= 0",
+    "era A: net without the top 5 trades -7,163 <= 0",
+    "era C: net without the top 5 trades -57,501 <= 0",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K5": {
+   "name": "Gap fade 0.3-1.0% at 09:20, target the previous close, stop -30%, out 15:20",
+   "timing": "G5",
+   "eras": {
+    "S0": {
+     "trades": 0,
+     "win": 0.0,
+     "net": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": 0.0,
+     "net_wo_top5": 0.0,
+     "worst_day": 0.0,
+     "worst_month": 0.0,
+     "max_dd": 0.0,
+     "per_trade": 0.0,
+     "months": 0,
+     "months_up": 0
+    },
+    "S": {
+     "trades": 292,
+     "win": 48.63013698630137,
+     "net": -47503.94999999999,
+     "per_trade": -162.68476027397256,
+     "avg_win": 1813.065633802817,
+     "avg_loss": -2033.0618000000002,
+     "net_wo_top5": -81039.12999999999,
+     "worst_day": -5724.730000000001,
+     "worst_month": -15615.349999999997,
+     "max_dd": 60478.420000000006,
+     "months": 40,
+     "months_up": 16
+    },
+    "A": {
+     "trades": 128,
+     "win": 46.875,
+     "net": 28946.740000000005,
+     "per_trade": 226.14640625000004,
+     "avg_win": 3194.373,
+     "avg_loss": -2392.8770588235298,
+     "net_wo_top5": -11707.650000000001,
+     "worst_day": -6068.139999999999,
+     "worst_month": -7867.089999999998,
+     "max_dd": 23623.819999999996,
+     "months": 12,
+     "months_up": 5
+    },
+    "B": {
+     "trades": 310,
+     "win": 43.87096774193549,
+     "net": 52282.48000000002,
+     "per_trade": 168.65316129032263,
+     "avg_win": 2507.6462500000002,
+     "avg_loss": -1659.525344827586,
+     "net_wo_top5": 15409.950000000019,
+     "worst_day": -3625.4100000000003,
+     "worst_month": -15281.880000000001,
+     "max_dd": 30457.97999999999,
+     "months": 35,
+     "months_up": 23
+    },
+    "C": {
+     "trades": 147,
+     "win": 40.816326530612244,
+     "net": 3126.6999999999935,
+     "per_trade": 21.27006802721084,
+     "avg_win": 4386.362166666667,
+     "avg_loss": -2989.1382758620693,
+     "net_wo_top5": -48976.09000000001,
+     "worst_day": -6737.909999999999,
+     "worst_month": -20581.439999999995,
+     "max_dd": 53954.61,
+     "months": 25,
+     "months_up": 12
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 128,
+     "win": 46.875,
+     "net": 26846.270000000004,
+     "per_trade": 209.73648437500003,
+     "avg_win": 3176.016166666667,
+     "avg_loss": -2407.5691176470596,
+     "net_wo_top5": -13701.649999999994,
+     "worst_day": -6090.63,
+     "worst_month": -8086.759999999998,
+     "max_dd": 23929.759999999995,
+     "months": 12,
+     "months_up": 5
+    },
+    "B": {
+     "trades": 310,
+     "win": 43.87096774193549,
+     "net": 48982.09,
+     "per_trade": 158.00674193548386,
+     "avg_win": 2495.6957352941176,
+     "avg_loss": -1669.1524712643677,
+     "net_wo_top5": 12191.019999999997,
+     "worst_day": -3635.4100000000003,
+     "worst_month": -15448.859999999997,
+     "max_dd": 31108.329999999987,
+     "months": 35,
+     "months_up": 22
+    },
+    "C": {
+     "trades": 147,
+     "win": 40.816326530612244,
+     "net": 582.0299999999861,
+     "per_trade": 3.9593877551019463,
+     "avg_win": 4366.7328333333335,
+     "avg_loss": -3004.849885057471,
+     "net_wo_top5": -51400.970000000016,
+     "worst_day": -6758.700000000002,
+     "worst_month": -20748.390000000007,
+     "max_dd": 54853.45000000001,
+     "months": 25,
+     "months_up": 12
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 0,
+     "win": 0.0,
+     "net": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": 0.0,
+     "net_wo_top5": 0.0,
+     "worst_day": 0.0,
+     "worst_month": 0.0,
+     "max_dd": 0.0,
+     "per_trade": 0.0,
+     "months": 0,
+     "months_up": 0
+    },
+    "S": {
+     "trades": 292,
+     "win": 48.63013698630137,
+     "net": -15068.739999999983,
+     "per_trade": -51.60527397260268,
+     "avg_win": 1883.4301408450701,
+     "avg_loss": -1883.4387999999997,
+     "net_wo_top5": -50432.70999999998,
+     "worst_day": -5737.139999999999,
+     "worst_month": -14878.84,
+     "max_dd": 49484.41999999998,
+     "months": 40,
+     "months_up": 17
+    }
+   },
+   "pooled_real": {
+    "trades": 585,
+    "win": 43.76068376068376,
+    "net": 84355.92000000003,
+    "per_trade": 144.1981538461539,
+    "avg_win": 3108.921875,
+    "avg_loss": -2162.6993313069906,
+    "net_wo_top5": 31018.800000000017,
+    "worst_day": -6737.909999999999,
+    "worst_month": -20581.439999999995,
+    "max_dd": 53954.60999999998,
+    "months": 72,
+    "months_up": 40
+   },
+   "pooled_net": 84355.92000000011,
+   "twin_mean": -22095.969091999996,
+   "twin_sd": 73313.31312278047,
+   "p_emp": 0.07618476304739052,
+   "p_norm": 0.07324898511956324,
+   "exits": {
+    "stop": 272,
+    "time": 91,
+    "target": 222
+   },
+   "need": [
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 252,
+   "puts": 625,
+   "pool_days": {
+    "A": 248,
+    "B": 721,
+    "C": 499
+   },
+   "q": 1.0,
+   "fails": [
+    "era S: net -47,504 <= 0",
+    "era A: net without the top 5 trades -11,708 <= 0",
+    "era C: net without the top 5 trades -48,976 <= 0",
+    "pooled twin p 0.076 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [
+     "worst month Rs -15,282 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 53,955 > Rs 40k",
+     "worst month Rs -20,581 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S: net -15,069 <= 0",
+    "era A: net without the top 5 trades -11,708 <= 0",
+    "era C: net without the top 5 trades -48,976 <= 0",
+    "pooled twin p 0.076 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K6": {
+   "name": "Gap follow >= 0.5% confirmed at 09:30, stop -30%, out 15:20",
+   "timing": "G6",
+   "eras": {
+    "S0": {
+     "trades": 0,
+     "win": 0.0,
+     "net": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": 0.0,
+     "net_wo_top5": 0.0,
+     "worst_day": 0.0,
+     "worst_month": 0.0,
+     "max_dd": 0.0,
+     "per_trade": 0.0,
+     "months": 0,
+     "months_up": 0
+    },
+    "S": {
+     "trades": 69,
+     "win": 36.231884057971016,
+     "net": -2468.8999999999996,
+     "per_trade": -35.78115942028985,
+     "avg_win": 4711.0568,
+     "avg_loss": -2732.8481818181813,
+     "net_wo_top5": -65923.31999999999,
+     "worst_day": -12152.410000000002,
+     "worst_month": -10495.230000000001,
+     "max_dd": 61920.33,
+     "months": 25,
+     "months_up": 12
+    },
+    "A": {
+     "trades": 38,
+     "win": 28.947368421052634,
+     "net": -19914.79,
+     "per_trade": -524.0734210526316,
+     "avg_win": 3655.323636363636,
+     "avg_loss": -2226.790740740741,
+     "net_wo_top5": -52238.56,
+     "worst_day": -5363.6900000000005,
+     "worst_month": -7159.25,
+     "max_dd": 29694.34,
+     "months": 12,
+     "months_up": 4
+    },
+    "B": {
+     "trades": 84,
+     "win": 39.285714285714285,
+     "net": -27560.64,
+     "per_trade": -328.10285714285715,
+     "avg_win": 2398.859393939394,
+     "avg_loss": -2092.607843137255,
+     "net_wo_top5": -60680.58,
+     "worst_day": -4518.419999999998,
+     "worst_month": -12884.499999999998,
+     "max_dd": 30267.12999999999,
+     "months": 26,
+     "months_up": 9
+    },
+    "C": {
+     "trades": 42,
+     "win": 26.190476190476193,
+     "net": -40461.03000000001,
+     "per_trade": -963.3578571428575,
+     "avg_win": 6987.55727272727,
+     "avg_loss": -3784.650322580645,
+     "net_wo_top5": -104410.70000000001,
+     "worst_day": -7149.3499999999985,
+     "worst_month": -19691.639999999996,
+     "max_dd": 63258.5,
+     "months": 17,
+     "months_up": 3
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 38,
+     "win": 28.947368421052634,
+     "net": -20520.660000000007,
+     "per_trade": -540.0173684210528,
+     "avg_win": 3636.443636363637,
+     "avg_loss": -2241.5385185185187,
+     "net_wo_top5": -52740.96000000001,
+     "worst_day": -5384.689999999999,
+     "worst_month": -7200.499999999998,
+     "max_dd": 30230.47000000001,
+     "months": 12,
+     "months_up": 4
+    },
+    "B": {
+     "trades": 84,
+     "win": 39.285714285714285,
+     "net": -28585.640000000003,
+     "per_trade": -340.3052380952381,
+     "avg_win": 2385.1827272727273,
+     "avg_loss": -2103.856274509804,
+     "net_wo_top5": -61629.130000000005,
+     "worst_day": -4535.419999999999,
+     "worst_month": -12963.509999999998,
+     "max_dd": 30537.57,
+     "months": 26,
+     "months_up": 9
+    },
+    "C": {
+     "trades": 42,
+     "win": 26.190476190476193,
+     "net": -41281.32,
+     "per_trade": -982.8885714285714,
+     "avg_win": 6963.1154545454565,
+     "avg_loss": -3802.4383870967745,
+     "net_wo_top5": -105093.63,
+     "worst_day": -7174.0300000000025,
+     "worst_month": -19824.150000000005,
+     "max_dd": 63933.100000000006,
+     "months": 17,
+     "months_up": 3
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 0,
+     "win": 0.0,
+     "net": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": 0.0,
+     "net_wo_top5": 0.0,
+     "worst_day": 0.0,
+     "worst_month": 0.0,
+     "max_dd": 0.0,
+     "per_trade": 0.0,
+     "months": 0,
+     "months_up": 0
+    },
+    "S": {
+     "trades": 69,
+     "win": 34.78260869565217,
+     "net": -13718.459999999981,
+     "per_trade": -198.81826086956494,
+     "avg_win": 3982.2933333333335,
+     "avg_loss": -2428.744444444444,
+     "net_wo_top5": -59308.25999999998,
+     "worst_day": -12504.640000000001,
+     "worst_month": -22453.629999999997,
+     "max_dd": 47840.01999999999,
+     "months": 25,
+     "months_up": 10
+    }
+   },
+   "pooled_real": {
+    "trades": 164,
+    "win": 33.53658536585366,
+    "net": -87936.46,
+    "per_trade": -536.1979268292683,
+    "avg_win": 3567.8918181818176,
+    "avg_loss": -2607.0688990825684,
+    "net_wo_top5": -162105.84999999998,
+    "worst_day": -7149.3499999999985,
+    "worst_month": -19691.639999999996,
+    "max_dd": 87936.46,
+    "months": 55,
+    "months_up": 16
+   },
+   "pooled_net": -87936.46,
+   "twin_mean": -25028.429689999997,
+   "twin_sd": 47514.53013730923,
+   "p_emp": 0.9144171165766847,
+   "p_norm": 0.9072442572085353,
+   "exits": {
+    "stop": 87,
+    "time": 77
+   },
+   "need": [
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 157,
+   "puts": 76,
+   "pool_days": {
+    "A": 248,
+    "B": 721,
+    "C": 499
+   },
+   "q": 1.0,
+   "fails": [
+    "era S: net -2,469 <= 0",
+    "era A: 38 trades < 40",
+    "era A: net -19,915 <= 0",
+    "era A: net without the top 5 trades -52,239 <= 0",
+    "era B: net -27,561 <= 0",
+    "era B: net without the top 5 trades -60,681 <= 0",
+    "era C: net -40,461 <= 0",
+    "era C: net without the top 5 trades -104,411 <= 0",
+    "pooled twin p 0.914 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [],
+    "C": [
+     "max drawdown Rs 63,258 > Rs 40k",
+     "worst month Rs -19,692 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S: net -13,718 <= 0",
+    "era A: 38 trades < 40",
+    "era A: net -19,915 <= 0",
+    "era A: net without the top 5 trades -52,239 <= 0",
+    "era B: net -27,561 <= 0",
+    "era B: net without the top 5 trades -60,681 <= 0",
+    "era C: net -40,461 <= 0",
+    "era C: net without the top 5 trades -104,411 <= 0",
+    "pooled twin p 0.914 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K7": {
+   "name": "India VIX spike (+25% vs 10-day mean on a down day): call 09:20 -> next session 15:20",
+   "timing": "D2",
+   "eras": {
+    "S0": {
+     "trades": 28,
+     "win": 57.14285714285714,
+     "net": 30153.25,
+     "per_trade": 1076.9017857142858,
+     "avg_win": 5232.148125000001,
+     "avg_loss": -4463.426666666667,
+     "net_wo_top5": -14550.800000000003,
+     "worst_day": -9542.300000000001,
+     "worst_month": -9542.300000000001,
+     "max_dd": 18879.88,
+     "months": 18,
+     "months_up": 10
+    },
+    "S": {
+     "trades": 14,
+     "win": 28.57142857142857,
+     "net": -27294.270000000004,
+     "per_trade": -1949.5907142857145,
+     "avg_win": 15478.554999999998,
+     "avg_loss": -8920.849,
+     "net_wo_top5": -87546.67,
+     "worst_day": -22934.16,
+     "worst_month": -23028.510000000002,
+     "max_dd": 38874.450000000004,
+     "months": 3,
+     "months_up": 0
+    },
+    "A": {
+     "trades": 0,
+     "win": 0.0,
+     "net": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": 0.0,
+     "net_wo_top5": 0.0,
+     "worst_day": 0.0,
+     "worst_month": 0.0,
+     "max_dd": 0.0,
+     "per_trade": 0.0,
+     "months": 0,
+     "months_up": 0
+    },
+    "B": {
+     "trades": 8,
+     "win": 37.5,
+     "net": -8847.46,
+     "per_trade": -1105.9325,
+     "avg_win": 3246.0366666666673,
+     "avg_loss": -3717.113999999999,
+     "net_wo_top5": -13780.93,
+     "worst_day": -6469.529999999999,
+     "worst_month": -6327.91,
+     "max_dd": 11346.670000000002,
+     "months": 4,
+     "months_up": 2
+    },
+    "C": {
+     "trades": 7,
+     "win": 71.42857142857143,
+     "net": 6660.1100000000015,
+     "per_trade": 951.4442857142859,
+     "avg_win": 6074.226,
+     "avg_loss": -11855.509999999998,
+     "net_wo_top5": -23711.02,
+     "worst_day": -17287.0,
+     "worst_month": -13289.380000000001,
+     "max_dd": 17287.0,
+     "months": 2,
+     "months_up": 1
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 0,
+     "win": 0.0,
+     "net": 0.0,
+     "avg_win": 0.0,
+     "avg_loss": 0.0,
+     "net_wo_top5": 0.0,
+     "worst_day": 0.0,
+     "worst_month": 0.0,
+     "max_dd": 0.0,
+     "per_trade": 0.0,
+     "months": 0,
+     "months_up": 0
+    },
+    "B": {
+     "trades": 8,
+     "win": 37.5,
+     "net": -8924.159999999998,
+     "per_trade": -1115.5199999999998,
+     "avg_win": 3229.790000000001,
+     "avg_loss": -3722.7059999999997,
+     "net_wo_top5": -13797.91,
+     "worst_day": -6478.02,
+     "worst_month": -6345.649999999999,
+     "max_dd": 11374.89,
+     "months": 4,
+     "months_up": 2
+    },
+    "C": {
+     "trades": 7,
+     "win": 71.42857142857143,
+     "net": 6493.120000000006,
+     "per_trade": 927.5885714285723,
+     "avg_win": 6048.2880000000005,
+     "avg_loss": -11874.16,
+     "net_wo_top5": -23748.32,
+     "worst_day": -17303.51,
+     "worst_month": -13338.129999999996,
+     "max_dd": 17303.51,
+     "months": 2,
+     "months_up": 1
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 28,
+     "win": 64.28571428571429,
+     "net": 31965.68999999999,
+     "per_trade": 1141.6317857142853,
+     "avg_win": 4690.328333333333,
+     "avg_loss": -5246.022,
+     "net_wo_top5": -13296.870000000006,
+     "worst_day": -9634.36,
+     "worst_month": -9634.36,
+     "max_dd": 18197.120000000003,
+     "months": 18,
+     "months_up": 11
+    },
+    "S": {
+     "trades": 14,
+     "win": 28.57142857142857,
+     "net": -20308.33999999999,
+     "per_trade": -1450.5957142857135,
+     "avg_win": 16199.662500000002,
+     "avg_loss": -8510.699,
+     "net_wo_top5": -84365.38,
+     "worst_day": -24894.77,
+     "worst_month": -18002.889999999992,
+     "max_dd": 33250.91999999999,
+     "months": 3,
+     "months_up": 0
+    }
+   },
+   "pooled_real": {
+    "trades": 15,
+    "win": 53.333333333333336,
+    "net": -2187.349999999999,
+    "per_trade": -145.82333333333327,
+    "avg_win": 5013.655000000001,
+    "avg_loss": -6042.369999999998,
+    "net_wo_top5": -38725.50000000001,
+    "worst_day": -17287.0,
+    "worst_month": -13289.380000000001,
+    "max_dd": 28633.670000000002,
+    "months": 6,
+    "months_up": 3
+   },
+   "pooled_net": -2187.349999999999,
+   "twin_mean": -6961.462846000001,
+   "twin_sd": 27977.57095266569,
+   "p_emp": 0.4175164967006599,
+   "p_norm": 0.43225313884905286,
+   "exits": {
+    "time": 15
+   },
+   "need": [
+    "S0",
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 57,
+   "puts": 0,
+   "pool_days": {
+    "A": 248,
+    "B": 721,
+    "C": 498
+   },
+   "q": 1.0,
+   "fails": [
+    "era S0: 28 trades < 40",
+    "era S: 14 trades < 40",
+    "era S: net -27,294 <= 0",
+    "era A: no trades",
+    "era B: 8 trades < 40",
+    "era B: net -8,847 <= 0",
+    "era B: net without the top 5 trades -13,781 <= 0",
+    "era C: 7 trades < 40",
+    "era C: net without the top 5 trades -23,711 <= 0",
+    "pooled twin p 0.418 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [],
+    "C": [
+     "worst month Rs -13,289 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S0: 28 trades < 40",
+    "era S: 14 trades < 40",
+    "era S: net -20,308 <= 0",
+    "era A: no trades",
+    "era B: 8 trades < 40",
+    "era B: net -8,847 <= 0",
+    "era B: net without the top 5 trades -13,781 <= 0",
+    "era C: 7 trades < 40",
+    "era C: net without the top 5 trades -23,711 <= 0",
+    "pooled twin p 0.418 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K8": {
+   "name": "52-week closing high / low: call / put 15:20 -> next session 15:20",
+   "timing": "CC1",
+   "eras": {
+    "S0": {
+     "trades": 184,
+     "win": 42.934782608695656,
+     "net": 3871.5500000000065,
+     "per_trade": 21.041032608695687,
+     "avg_win": 2644.416835443038,
+     "avg_loss": -1952.7369523809525,
+     "net_wo_top5": -60629.81,
+     "worst_day": -8423.21,
+     "worst_month": -11162.130000000001,
+     "max_dd": 45826.26,
+     "months": 45,
+     "months_up": 13
+    },
+    "S": {
+     "trades": 83,
+     "win": 50.602409638554214,
+     "net": 71057.7,
+     "per_trade": 856.1168674698795,
+     "avg_win": 3960.6490476190484,
+     "avg_loss": -2324.135609756098,
+     "net_wo_top5": -38040.52000000002,
+     "worst_day": -7918.31,
+     "worst_month": -7919.209999999999,
+     "max_dd": 30768.21,
+     "months": 19,
+     "months_up": 6
+    },
+    "A": {
+     "trades": 43,
+     "win": 48.837209302325576,
+     "net": 25780.879999999994,
+     "per_trade": 599.5553488372092,
+     "avg_win": 4325.033333333334,
+     "avg_loss": -2956.582727272727,
+     "net_wo_top5": -10960.57000000001,
+     "worst_day": -8386.750000000002,
+     "worst_month": -4072.1299999999997,
+     "max_dd": 19245.77,
+     "months": 7,
+     "months_up": 4
+    },
+    "B": {
+     "trades": 68,
+     "win": 44.11764705882353,
+     "net": 18477.049999999996,
+     "per_trade": 271.7213235294117,
+     "avg_win": 2854.951,
+     "avg_loss": -1767.6705263157894,
+     "net_wo_top5": -20164.500000000007,
+     "worst_day": -5170.199999999999,
+     "worst_month": -4879.91,
+     "max_dd": 23938.139999999992,
+     "months": 14,
+     "months_up": 6
+    },
+    "C": {
+     "trades": 9,
+     "win": 11.11111111111111,
+     "net": -45472.429999999986,
+     "per_trade": -5052.49222222222,
+     "avg_win": 2809.340000000001,
+     "avg_loss": -6035.22125,
+     "net_wo_top5": -35087.499999999985,
+     "worst_day": -9875.83,
+     "worst_month": -25117.75,
+     "max_dd": 48281.77,
+     "months": 4,
+     "months_up": 0
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 43,
+     "win": 48.837209302325576,
+     "net": 25113.87,
+     "per_trade": 584.043488372093,
+     "avg_win": 4306.753333333334,
+     "avg_loss": -2969.4522727272724,
+     "net_wo_top5": -11524.100000000002,
+     "worst_day": -8399.499999999998,
+     "worst_month": -4081.12,
+     "max_dd": 19303.170000000002,
+     "months": 7,
+     "months_up": 4
+    },
+    "B": {
+     "trades": 68,
+     "win": 44.11764705882353,
+     "net": 17862.74,
+     "per_trade": 262.68735294117647,
+     "avg_win": 2844.7969999999996,
+     "avg_loss": -1775.8202631578952,
+     "net_wo_top5": -20701.329999999998,
+     "worst_day": -5178.71,
+     "worst_month": -4915.909999999999,
+     "max_dd": 24155.6,
+     "months": 14,
+     "months_up": 6
+    },
+    "C": {
+     "trades": 9,
+     "win": 11.11111111111111,
+     "net": -45619.91,
+     "per_trade": -5068.878888888889,
+     "avg_win": 2791.349999999998,
+     "avg_loss": -6051.4075,
+     "net_wo_top5": -35151.009999999995,
+     "worst_day": -9896.069999999998,
+     "worst_month": -25188.21,
+     "max_dd": 48411.259999999995,
+     "months": 4,
+     "months_up": 0
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 184,
+     "win": 42.934782608695656,
+     "net": -17821.14999999999,
+     "per_trade": -96.85407608695647,
+     "avg_win": 2481.8748101265824,
+     "avg_loss": -2037.0405714285712,
+     "net_wo_top5": -80599.84999999999,
+     "worst_day": -9109.28,
+     "worst_month": -11561.439999999999,
+     "max_dd": 61777.799999999996,
+     "months": 45,
+     "months_up": 13
+    },
+    "S": {
+     "trades": 83,
+     "win": 49.39759036144578,
+     "net": 61792.84999999998,
+     "per_trade": 744.4921686746985,
+     "avg_win": 3882.8799999999997,
+     "avg_loss": -2319.172142857143,
+     "net_wo_top5": -46555.54000000002,
+     "worst_day": -7994.06,
+     "worst_month": -8904.259999999998,
+     "max_dd": 35405.259999999995,
+     "months": 19,
+     "months_up": 5
+    }
+   },
+   "pooled_real": {
+    "trades": 120,
+    "win": 43.333333333333336,
+    "net": -1214.5000000000055,
+    "per_trade": -10.120833333333378,
+    "avg_win": 3447.7609615384617,
+    "avg_loss": -2654.383382352941,
+    "net_wo_top5": -48930.740000000005,
+    "worst_day": -9875.83,
+    "worst_month": -25117.75,
+    "max_dd": 61755.77999999998,
+    "months": 25,
+    "months_up": 10
+   },
+   "pooled_net": -1214.4999999999754,
+   "twin_mean": -37850.466953999996,
+   "twin_sd": 59977.769204326956,
+   "p_emp": 0.26454709058188364,
+   "p_norm": 0.27065746611066605,
+   "exits": {
+    "time": 120
+   },
+   "need": [
+    "S0",
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 345,
+   "puts": 42,
+   "pool_days": {
+    "A": 196,
+    "B": 568,
+    "C": 393
+   },
+   "q": 1.0,
+   "fails": [
+    "era A: net without the top 5 trades -10,961 <= 0",
+    "era B: net without the top 5 trades -20,165 <= 0",
+    "era C: 9 trades < 40",
+    "era C: net -45,472 <= 0",
+    "era C: net without the top 5 trades -35,087 <= 0",
+    "pooled twin p 0.265 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [],
+    "C": [
+     "max drawdown Rs 48,282 > Rs 40k",
+     "worst month Rs -25,118 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S0: net -17,821 <= 0",
+    "era A: net without the top 5 trades -10,961 <= 0",
+    "era B: net without the top 5 trades -20,165 <= 0",
+    "era C: 9 trades < 40",
+    "era C: net -45,472 <= 0",
+    "era C: net without the top 5 trades -35,087 <= 0",
+    "pooled twin p 0.265 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K9": {
+   "name": "200-day trend with a low-volatility filter: call / put 15:20 -> 09:16",
+   "timing": "ON",
+   "eras": {
+    "S0": {
+     "trades": 1203,
+     "win": 37.0739817123857,
+     "net": -53648.83999999997,
+     "per_trade": -44.59587697423106,
+     "avg_win": 1041.6571076233183,
+     "avg_loss": -684.5811228533685,
+     "net_wo_top5": -89298.19999999997,
+     "worst_day": -10406.36,
+     "worst_month": -16973.050000000003,
+     "max_dd": 119573.14000000006,
+     "months": 84,
+     "months_up": 28
+    },
+    "S": {
+     "trades": 318,
+     "win": 54.71698113207547,
+     "net": 37061.519999999975,
+     "per_trade": 116.54566037735842,
+     "avg_win": 1343.8156896551723,
+     "avg_loss": -1366.405625,
+     "net_wo_top5": 6989.79999999997,
+     "worst_day": -6142.9800000000005,
+     "worst_month": -13343.0,
+     "max_dd": 22294.80999999997,
+     "months": 28,
+     "months_up": 16
+    },
+    "A": {
+     "trades": 122,
+     "win": 56.557377049180324,
+     "net": 24147.540000000015,
+     "per_trade": 197.93065573770505,
+     "avg_win": 1984.3686956521744,
+     "avg_loss": -2127.809433962264,
+     "net_wo_top5": -6376.649999999983,
+     "worst_day": -7024.239999999999,
+     "worst_month": -10459.29,
+     "max_dd": 18366.870000000003,
+     "months": 10,
+     "months_up": 6
+    },
+    "B": {
+     "trades": 286,
+     "win": 47.9020979020979,
+     "net": -54983.97,
+     "per_trade": -192.25164335664337,
+     "avg_win": 1496.3365693430655,
+     "avg_loss": -1744.8461744966444,
+     "net_wo_top5": -82721.96,
+     "worst_day": -8416.74,
+     "worst_month": -12686.619999999999,
+     "max_dd": 69620.88999999996,
+     "months": 24,
+     "months_up": 9
+    },
+    "C": {
+     "trades": 177,
+     "win": 44.06779661016949,
+     "net": -55477.57,
+     "per_trade": -313.4325988700565,
+     "avg_win": 2714.885128205128,
+     "avg_loss": -2699.3798989898987,
+     "net_wo_top5": -102612.34999999999,
+     "worst_day": -6595.6,
+     "worst_month": -24950.339999999997,
+     "max_dd": 92722.90000000001,
+     "months": 18,
+     "months_up": 6
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 122,
+     "win": 55.73770491803278,
+     "net": 21951.500000000004,
+     "per_trade": 179.9303278688525,
+     "avg_win": 1995.1264705882354,
+     "avg_loss": -2105.8722222222223,
+     "net_wo_top5": -8473.709999999995,
+     "worst_day": -7041.49,
+     "worst_month": -10697.67,
+     "max_dd": 18687.72,
+     "months": 10,
+     "months_up": 6
+    },
+    "B": {
+     "trades": 286,
+     "win": 47.9020979020979,
+     "net": -58549.749999999985,
+     "per_trade": -204.71940559440554,
+     "avg_win": 1484.2648175182483,
+     "avg_loss": -1757.678053691275,
+     "net_wo_top5": -86208.28,
+     "worst_day": -8434.73,
+     "worst_month": -12846.83,
+     "max_dd": 72215.87999999999,
+     "months": 24,
+     "months_up": 9
+    },
+    "C": {
+     "trades": 177,
+     "win": 44.06779661016949,
+     "net": -59155.200000000004,
+     "per_trade": -334.21016949152545,
+     "avg_win": 2694.575512820513,
+     "avg_loss": -2720.526161616161,
+     "net_wo_top5": -106142.42000000001,
+     "worst_day": -6624.079999999999,
+     "worst_month": -25334.1,
+     "max_dd": 95714.78000000003,
+     "months": 18,
+     "months_up": 6
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 1203,
+     "win": 31.005818786367417,
+     "net": -331863.23,
+     "per_trade": -275.863034081463,
+     "avg_win": 1018.1364879356569,
+     "avg_loss": -857.3833012048194,
+     "net_wo_top5": -365222.64999999997,
+     "worst_day": -11185.200000000003,
+     "worst_month": -22086.99,
+     "max_dd": 359314.28999999975,
+     "months": 84,
+     "months_up": 21
+    },
+    "S": {
+     "trades": 318,
+     "win": 46.22641509433962,
+     "net": -93108.74999999999,
+     "per_trade": -292.79481132075466,
+     "avg_win": 1188.6027891156461,
+     "avg_loss": -1566.2769590643275,
+     "net_wo_top5": -121425.4,
+     "worst_day": -6679.210000000001,
+     "worst_month": -18329.680000000004,
+     "max_dd": 100358.99000000008,
+     "months": 28,
+     "months_up": 11
+    }
+   },
+   "pooled_real": {
+    "trades": 585,
+    "win": 48.547008547008545,
+    "net": -86313.99999999999,
+    "per_trade": -147.5452991452991,
+    "avg_win": 1949.579542253521,
+    "avg_loss": -2126.227873754153,
+    "net_wo_top5": -134937.18,
+    "worst_day": -8416.74,
+    "worst_month": -24950.339999999997,
+    "max_dd": 143722.35000000003,
+    "months": 52,
+    "months_up": 21
+   },
+   "pooled_net": -86314.00000000003,
+   "twin_mean": -151211.223236,
+   "twin_sd": 83932.16072106687,
+   "p_emp": 0.21955608878224356,
+   "p_norm": 0.21969892316878586,
+   "exits": {
+    "time": 585
+   },
+   "need": [
+    "S0",
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 1731,
+   "puts": 375,
+   "pool_days": {
+    "A": 196,
+    "B": 568,
+    "C": 393
+   },
+   "q": 1.0,
+   "fails": [
+    "era S0: net -53,649 <= 0",
+    "era A: net without the top 5 trades -6,377 <= 0",
+    "era B: net -54,984 <= 0",
+    "era B: net without the top 5 trades -82,722 <= 0",
+    "era C: net -55,478 <= 0",
+    "era C: net without the top 5 trades -102,612 <= 0",
+    "pooled twin p 0.220 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [],
+    "B": [
+     "max drawdown Rs 69,621 > Rs 40k"
+    ],
+    "C": [
+     "max drawdown Rs 92,723 > Rs 40k",
+     "worst month Rs -24,950 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S0: net -331,863 <= 0",
+    "era S: net -93,109 <= 0",
+    "era A: net without the top 5 trades -6,377 <= 0",
+    "era B: net -54,984 <= 0",
+    "era B: net without the top 5 trades -82,722 <= 0",
+    "era C: net -55,478 <= 0",
+    "era C: net without the top 5 trades -102,612 <= 0",
+    "pooled twin p 0.220 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K10": {
+   "name": "Reversal after a 1.5% day: opposite side 15:20 -> next session 15:20",
+   "timing": "CC1",
+   "eras": {
+    "S0": {
+     "trades": 441,
+     "win": 37.41496598639456,
+     "net": -194352.81,
+     "per_trade": -440.70931972789117,
+     "avg_win": 2864.552303030303,
+     "avg_loss": -2416.680942028985,
+     "net_wo_top5": -250487.72,
+     "worst_day": -9873.019999999999,
+     "worst_month": -22666.53,
+     "max_dd": 232038.01,
+     "months": 99,
+     "months_up": 31
+    },
+    "S": {
+     "trades": 67,
+     "win": 43.28358208955223,
+     "net": 118003.38999999998,
+     "per_trade": 1761.2446268656713,
+     "avg_win": 10835.334827586206,
+     "avg_loss": -5163.718947368421,
+     "net_wo_top5": -70552.12000000002,
+     "worst_day": -14624.34,
+     "worst_month": -5770.55,
+     "max_dd": 35165.64,
+     "months": 20,
+     "months_up": 10
+    },
+    "A": {
+     "trades": 26,
+     "win": 34.61538461538461,
+     "net": -47816.310000000005,
+     "per_trade": -1839.0888461538464,
+     "avg_win": 5227.636666666666,
+     "avg_loss": -5580.296470588235,
+     "net_wo_top5": -87464.56,
+     "worst_day": -10465.75,
+     "worst_month": -18441.67,
+     "max_dd": 56643.67000000001,
+     "months": 9,
+     "months_up": 2
+    },
+    "B": {
+     "trades": 54,
+     "win": 46.2962962962963,
+     "net": -2869.8800000000147,
+     "per_trade": -53.1459259259262,
+     "avg_win": 4909.514799999999,
+     "avg_loss": -4331.301724137931,
+     "net_wo_top5": -58279.16000000001,
+     "worst_day": -8235.16,
+     "worst_month": -21446.36,
+     "max_dd": 34131.990000000005,
+     "months": 22,
+     "months_up": 9
+    },
+    "C": {
+     "trades": 32,
+     "win": 43.75,
+     "net": -24207.84999999999,
+     "per_trade": -756.4953124999997,
+     "avg_win": 7387.592142857144,
+     "avg_loss": -7090.785555555554,
+     "net_wo_top5": -100717.40999999999,
+     "worst_day": -18007.91,
+     "worst_month": -27173.1,
+     "max_dd": 57957.31,
+     "months": 16,
+     "months_up": 6
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 26,
+     "win": 34.61538461538461,
+     "net": -48268.5,
+     "per_trade": -1856.4807692307693,
+     "avg_win": 5205.477777777778,
+     "avg_loss": -5595.164705882352,
+     "net_wo_top5": -87799.04999999999,
+     "worst_day": -10480.0,
+     "worst_month": -18479.92,
+     "max_dd": 57074.87999999999,
+     "months": 9,
+     "months_up": 2
+    },
+    "B": {
+     "trades": 54,
+     "win": 44.44444444444444,
+     "net": -3543.1400000000085,
+     "per_trade": -65.61370370370386,
+     "avg_win": 5098.326249999999,
+     "avg_loss": -4196.765666666667,
+     "net_wo_top5": -58860.48,
+     "worst_day": -8249.15,
+     "worst_month": -21496.36,
+     "max_dd": 34545.40000000001,
+     "months": 22,
+     "months_up": 9
+    },
+    "C": {
+     "trades": 32,
+     "win": 43.75,
+     "net": -24910.72999999999,
+     "per_trade": -778.4603124999996,
+     "avg_win": 7359.263571428572,
+     "avg_loss": -7107.801111111112,
+     "net_wo_top5": -101245.51999999999,
+     "worst_day": -18025.15,
+     "worst_month": -27202.979999999996,
+     "max_dd": 58189.219999999994,
+     "months": 16,
+     "months_up": 6
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 441,
+     "win": 37.641723356009074,
+     "net": -246751.95999999996,
+     "per_trade": -559.5282539682539,
+     "avg_win": 2723.5277710843375,
+     "avg_loss": -2541.300254545454,
+     "net_wo_top5": -301214.13999999996,
+     "worst_day": -11026.05,
+     "worst_month": -25916.309999999998,
+     "max_dd": 281139.42000000004,
+     "months": 99,
+     "months_up": 29
+    },
+    "S": {
+     "trades": 67,
+     "win": 43.28358208955223,
+     "net": 90552.26000000001,
+     "per_trade": 1351.5262686567166,
+     "avg_win": 10361.382758620688,
+     "avg_loss": -5524.416842105263,
+     "net_wo_top5": -89040.40000000002,
+     "worst_day": -14951.740000000002,
+     "worst_month": -6030.280000000001,
+     "max_dd": 35991.28,
+     "months": 20,
+     "months_up": 10
+    }
+   },
+   "pooled_real": {
+    "trades": 112,
+    "win": 42.857142857142854,
+    "net": -74894.04000000002,
+    "per_trade": -668.696785714286,
+    "avg_win": 5691.935208333333,
+    "avg_loss": -5439.170781250001,
+    "net_wo_top5": -158402.71000000002,
+    "worst_day": -18007.91,
+    "worst_month": -27173.1,
+    "max_dd": 83721.40000000002,
+    "months": 47,
+    "months_up": 17
+   },
+   "pooled_net": -74894.04000000002,
+   "twin_mean": -42990.840251999995,
+   "twin_sd": 63001.97298391586,
+   "p_emp": 0.6920615876824635,
+   "p_norm": 0.6937064959988671,
+   "exits": {
+    "time": 112
+   },
+   "need": [
+    "S0",
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 299,
+   "puts": 321,
+   "pool_days": {
+    "A": 196,
+    "B": 568,
+    "C": 393
+   },
+   "q": 1.0,
+   "fails": [
+    "era S0: net -194,353 <= 0",
+    "era A: 26 trades < 40",
+    "era A: net -47,816 <= 0",
+    "era A: net without the top 5 trades -87,465 <= 0",
+    "era B: net -2,870 <= 0",
+    "era B: net without the top 5 trades -58,279 <= 0",
+    "era C: 32 trades < 40",
+    "era C: net -24,208 <= 0",
+    "era C: net without the top 5 trades -100,717 <= 0",
+    "pooled twin p 0.692 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [
+     "max drawdown Rs 56,644 > Rs 40k",
+     "worst month Rs -18,442 < -Rs 13k"
+    ],
+    "B": [
+     "worst month Rs -21,446 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 57,957 > Rs 40k",
+     "worst month Rs -27,173 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S0: net -246,752 <= 0",
+    "era A: 26 trades < 40",
+    "era A: net -47,816 <= 0",
+    "era A: net without the top 5 trades -87,465 <= 0",
+    "era B: net -2,870 <= 0",
+    "era B: net without the top 5 trades -58,279 <= 0",
+    "era C: 32 trades < 40",
+    "era C: net -24,208 <= 0",
+    "era C: net without the top 5 trades -100,717 <= 0",
+    "pooled twin p 0.692 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  },
+  "K11": {
+   "name": "Continuation after a 1.5% day: same side 15:20 -> next session 15:20",
+   "timing": "CC1",
+   "eras": {
+    "S0": {
+     "trades": 441,
+     "win": 47.84580498866213,
+     "net": 89823.03000000003,
+     "per_trade": 203.6803401360545,
+     "avg_win": 2985.921516587678,
+     "avg_loss": -2348.72352173913,
+     "net_wo_top5": -11737.99999999997,
+     "worst_day": -11910.310000000001,
+     "worst_month": -25504.739999999998,
+     "max_dd": 43760.18,
+     "months": 99,
+     "months_up": 53
+    },
+    "S": {
+     "trades": 67,
+     "win": 40.298507462686565,
+     "net": 3807.7500000000055,
+     "per_trade": 56.83208955223889,
+     "avg_win": 8565.811481481483,
+     "avg_loss": -5686.728999999999,
+     "net_wo_top5": -121498.78,
+     "worst_day": -21958.33,
+     "worst_month": -15615.400000000001,
+     "max_dd": 56891.54999999999,
+     "months": 20,
+     "months_up": 6
+    },
+    "A": {
+     "trades": 26,
+     "win": 42.30769230769231,
+     "net": 16176.81,
+     "per_trade": 622.185,
+     "avg_win": 8198.205454545456,
+     "avg_loss": -4933.563333333333,
+     "net_wo_top5": -43377.73,
+     "worst_day": -11104.770000000002,
+     "worst_month": -16465.29,
+     "max_dd": 30218.090000000004,
+     "months": 9,
+     "months_up": 6
+    },
+    "B": {
+     "trades": 54,
+     "win": 35.18518518518518,
+     "net": -23680.589999999993,
+     "per_trade": -438.5294444444443,
+     "avg_win": 6040.793157894738,
+     "avg_loss": -3955.876,
+     "net_wo_top5": -83326.40999999999,
+     "worst_day": -9222.99,
+     "worst_month": -12887.689999999999,
+     "max_dd": 54542.59999999999,
+     "months": 22,
+     "months_up": 8
+    },
+    "C": {
+     "trades": 32,
+     "win": 34.375,
+     "net": -58411.700000000026,
+     "per_trade": -1825.3656250000008,
+     "avg_win": 11265.9,
+     "avg_loss": -8682.695238095237,
+     "net_wo_top5": -151595.7,
+     "worst_day": -17803.16,
+     "worst_month": -45669.92,
+     "max_dd": 117041.1,
+     "months": 16,
+     "months_up": 6
+    }
+   },
+   "stress": {
+    "A": {
+     "trades": 26,
+     "win": 42.30769230769231,
+     "net": 15708.169999999993,
+     "per_trade": 604.1603846153844,
+     "avg_win": 8176.873636363636,
+     "avg_loss": -4949.162666666667,
+     "net_wo_top5": -43728.68,
+     "worst_day": -11122.77,
+     "worst_month": -16535.8,
+     "max_dd": 30391.34,
+     "months": 9,
+     "months_up": 6
+    },
+    "B": {
+     "trades": 54,
+     "win": 35.18518518518518,
+     "net": -24330.53999999999,
+     "per_trade": -450.56555555555536,
+     "avg_win": 6025.586315789474,
+     "avg_loss": -3966.1908571428576,
+     "net_wo_top5": -83883.37999999999,
+     "worst_day": -9233.49,
+     "worst_month": -12942.189999999999,
+     "max_dd": 54937.32000000001,
+     "months": 22,
+     "months_up": 8
+    },
+    "C": {
+     "trades": 32,
+     "win": 34.375,
+     "net": -59056.85000000002,
+     "per_trade": -1845.5265625000006,
+     "avg_win": 11240.941818181818,
+     "avg_loss": -8700.343333333334,
+     "net_wo_top5": -152071.63,
+     "worst_day": -17824.16,
+     "worst_month": -45846.600000000006,
+     "max_dd": 117398.61,
+     "months": 16,
+     "months_up": 6
+    }
+   },
+   "eras_calendar_clock": {
+    "S0": {
+     "trades": 441,
+     "win": 46.71201814058957,
+     "net": 32945.57000000002,
+     "per_trade": 74.70650793650799,
+     "avg_win": 2885.179563106796,
+     "avg_loss": -2388.9422127659573,
+     "net_wo_top5": -65166.82999999996,
+     "worst_day": -12594.01,
+     "worst_month": -26870.31,
+     "max_dd": 51796.139999999985,
+     "months": 99,
+     "months_up": 48
+    },
+    "S": {
+     "trades": 67,
+     "win": 38.80597014925373,
+     "net": -23162.51,
+     "per_trade": -345.7091044776119,
+     "avg_win": 8472.05346153846,
+     "avg_loss": -5937.460975609757,
+     "net_wo_top5": -144938.49,
+     "worst_day": -24909.370000000003,
+     "worst_month": -22518.549999999996,
+     "max_dd": 64152.17,
+     "months": 20,
+     "months_up": 6
+    }
+   },
+   "pooled_real": {
+    "trades": 112,
+    "win": 36.607142857142854,
+    "net": -65915.48000000001,
+    "per_trade": -588.5310714285715,
+    "avg_win": 8021.469024390243,
+    "avg_loss": -5560.502957746479,
+    "net_wo_top5": -168996.0,
+    "worst_day": -17803.16,
+    "worst_month": -45669.92,
+    "max_dd": 163234.19,
+    "months": 47,
+    "months_up": 20
+   },
+   "pooled_net": -65915.48,
+   "twin_mean": -44462.242146000004,
+   "twin_sd": 62933.96464432651,
+   "p_emp": 0.6242751449710058,
+   "p_norm": 0.6334048812731621,
+   "exits": {
+    "time": 112
+   },
+   "need": [
+    "S0",
+    "S",
+    "A",
+    "B",
+    "C"
+   ],
+   "calls": 321,
+   "puts": 299,
+   "pool_days": {
+    "A": 196,
+    "B": 568,
+    "C": 393
+   },
+   "q": 1.0,
+   "fails": [
+    "era A: 26 trades < 40",
+    "era A: net without the top 5 trades -43,378 <= 0",
+    "era B: net -23,681 <= 0",
+    "era B: net without the top 5 trades -83,326 <= 0",
+    "era C: 32 trades < 40",
+    "era C: net -58,412 <= 0",
+    "era C: net without the top 5 trades -151,596 <= 0",
+    "pooled twin p 0.624 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "reliable": false,
+   "breach": {
+    "A": [
+     "worst month Rs -16,465 < -Rs 13k"
+    ],
+    "B": [
+     "max drawdown Rs 54,543 > Rs 40k"
+    ],
+    "C": [
+     "max drawdown Rs 117,041 > Rs 40k",
+     "worst month Rs -45,670 < -Rs 13k"
+    ]
+   },
+   "fails_calendar_clock": [
+    "era S: net -23,163 <= 0",
+    "era A: 26 trades < 40",
+    "era A: net without the top 5 trades -43,378 <= 0",
+    "era B: net -23,681 <= 0",
+    "era B: net without the top 5 trades -83,326 <= 0",
+    "era C: 32 trades < 40",
+    "era C: net -58,412 <= 0",
+    "era C: net without the top 5 trades -151,596 <= 0",
+    "pooled twin p 0.624 >= 0.05",
+    "BH q 1 > 0.1"
+   ]
+  }
+ },
+ "written": "2026-11-17T17:07:04+00:00"
+}
