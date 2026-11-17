@@ -179,3 +179,23 @@ by construction; they are run and reported for the record and will fail item 1. 
 replaced by noise), each rule on hand-made days, the calendars (month ends, holidays, synthetic expiries, holiday
 Thursdays), the gap rules on missing minutes, Black-76 (put-call parity, limits), the real multi-session pricer
 (missing minutes, expiry cut, stop), stats, twins, BH and the gate.
+
+## 10. Amendment 1 (17 Nov 2026, after the calibration, BEFORE any rule result)
+
+What was computed before this amendment: `results/calibration.json` only (premium fit `a` = 1.02 on 10,374 era A + B
+entries, median absolute premium error 10.8%, era C 13.8%; and the synthetic vs real net of every pool trade by hold
+type). No idea's trades, K4 choice, twin or gate number had been computed.
+
+**Finding.** The pre-registered calendar-time clock puts too much decay on nights and too little on trading hours:
+mean synthetic minus real net per pool trade in A + B: ON -Rs 771, CC1 -Rs 277, CC2 -Rs 261, D2 +Rs 318, G5 +Rs 89,
+G6 +Rs 264 (era C the same signs). So the pre-registered synthetic would be biased against the overnight ideas and
+for the intraday ones, by about the size of the edges being tested.
+
+**Amendment (pricing only; no rule changes).** The synthetic price uses a trading-time clock: T = (trading minutes
+left + w x non-trading minutes left) / (93,000 + w x 432,600) years (a year = 248 sessions x 375 minutes plus the rest
+of its 525,600 minutes at weight w; w = 1 is close to the calendar clock). Sessions come from the NIFTY calendar.
+`w` is chosen on the grid 0.00-1.00 (step 0.05) to minimise the sum over the six hold types of the squared mean net
+error on the era A + B pool trades, with `a` re-fitted (premium least squares, as before) for each w. Era C remains
+the out-of-sample check. **The gate's synthetic eras (S0, S) use the amended model.** The pre-registered calendar-clock
+results of every idea are also reported in `report.md` next to them, and any verdict that would differ is named.
+Nothing else changes.
