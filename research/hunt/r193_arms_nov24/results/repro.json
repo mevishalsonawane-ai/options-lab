@@ -1,0 +1,166 @@
+{
+ "_meta": {
+  "written": "2026-11-17T17:24:22.987302+00:00",
+  "stores": "R190's R51 clean stores (3 Aug 2020 - 13 Nov 2026), R190's lake copy"
+ },
+ "R186 A R72": {
+  "trades": 2279,
+  "net": 300426,
+  "win": 46.38,
+  "published": [
+   2281,
+   298253
+  ],
+  "gap_trades": -2,
+  "gap_net": 2173,
+  "reproduced": false
+ },
+ "R186 BASE R72": {
+  "trades": 1068,
+  "net": 326006,
+  "win": 56.65,
+  "published": [
+   1069,
+   324629
+  ],
+  "gap_trades": -1,
+  "gap_net": 1377,
+  "reproduced": false
+ },
+ "R186 L500 R72": {
+  "trades": 1096,
+  "net": 214487,
+  "win": 64.42,
+  "published": [
+   1097,
+   213110
+  ],
+  "gap_trades": -1,
+  "gap_net": 1377,
+  "reproduced": false
+ },
+ "units R72": [
+  "BANKNIFTY",
+  "FINNIFTY",
+  "MIDCPNIFTY",
+  "NIFTY",
+  "SENSEX"
+ ],
+ "R186 A R51": {
+  "trades": 3081,
+  "net": 224676,
+  "win": 45.15,
+  "published": [
+   3084,
+   221238
+  ],
+  "gap_trades": -3,
+  "gap_net": 3438,
+  "reproduced": false
+ },
+ "R186 BASE R51": {
+  "trades": 1365,
+  "net": 252282,
+  "win": 55.53,
+  "published": [
+   1367,
+   249903
+  ],
+  "gap_trades": -2,
+  "gap_net": 2379,
+  "reproduced": false
+ },
+ "R186 L500 R51": {
+  "trades": 1428,
+  "net": 165339,
+  "win": 62.82,
+  "published": [
+   1430,
+   162959
+  ],
+  "gap_trades": -2,
+  "gap_net": 2380,
+  "reproduced": false
+ },
+ "units R51": [
+  "BANKNIFTY",
+  "FINNIFTY",
+  "MIDCPNIFTY",
+  "NIFTY",
+  "SENSEX"
+ ],
+ "R186 A LIQ": {
+  "trades": 688,
+  "net": 117923,
+  "win": 39.24,
+  "published": [
+   688,
+   117923
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "R186 BASE LIQ": {
+  "trades": 688,
+  "net": 100222,
+  "win": 41.28,
+  "published": [
+   688,
+   100222
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "R186 LBE1000 LIQ": {
+  "trades": 688,
+  "net": 98239,
+  "win": 44.48,
+  "published": [
+   688,
+   98239
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "units LIQ": [
+  "BANKNIFTY",
+  "FINNIFTY",
+  "MIDCPNIFTY"
+ ],
+ "R190 D1": {
+  "trades": 4571,
+  "net": 390101,
+  "published": [
+   4571,
+   390101
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "R190 D3": {
+  "trades": 3721,
+  "net": 478594,
+  "published": [
+   3721,
+   478594
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "R190 L1": {
+  "trades": 1323,
+  "net": 255293,
+  "published": [
+   1323,
+   255293
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ }
+}
