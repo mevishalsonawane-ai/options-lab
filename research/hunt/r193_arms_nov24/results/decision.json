@@ -1,0 +1,164 @@
+{
+ "m_total": 4765,
+ "variants": {
+  "R72-P": {
+   "helps": true,
+   "fails": [],
+   "twin_p": 0.0005,
+   "q": 1.5618906455537684e-07,
+   "p_normal": 6.555679519638062e-11,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "R72-V4": {
+   "helps": true,
+   "fails": [],
+   "twin_p": 0.0005,
+   "q": 0.004408149267914297,
+   "p_normal": 6.475770173221423e-06,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "R72-V5": {
+   "helps": false,
+   "fails": [
+    "W1: net 237,089 not above A's 240,041",
+    "W2: net 120,989 not above A's 150,061",
+    "total: net without top 5 308,071 not above A's 390,101"
+   ],
+   "twin_p": 0.0005,
+   "q": 3.597562124584482e-08,
+   "p_normal": 7.549972979190939e-12,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "R72-V5A10": {
+   "helps": false,
+   "fails": [
+    "W1: net 186,197 not above A's 240,041",
+    "W2: net 116,717 not above A's 150,061",
+    "total: net without top 5 252,907 not above A's 390,101"
+   ],
+   "twin_p": 0.0005,
+   "q": 4.0499899193484933e-07,
+   "p_normal": 2.5498362556233956e-10,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "R51-P": {
+   "helps": true,
+   "fails": [],
+   "twin_p": 0.0005,
+   "q": 0.0005019343589406474,
+   "p_normal": 6.320264750564291e-07,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "R51-V4": {
+   "helps": false,
+   "fails": [
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.005,
+   "q": 1.0,
+   "p_normal": 0.004206183683419202,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "R51-V5": {
+   "helps": false,
+   "fails": [
+    "W2: net 78,794 not above A's 135,983",
+    "total: net without top 5 161,487 not above A's 191,394"
+   ],
+   "twin_p": 0.0005,
+   "q": 3.271721920699978e-05,
+   "p_normal": 3.4330765169989275e-08,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "R51-V5A10": {
+   "helps": false,
+   "fails": [
+    "W2: net 76,947 not above A's 135,983",
+    "total: net without top 5 177,601 not above A's 191,394"
+   ],
+   "twin_p": 0.0005,
+   "q": 2.809287908003119e-05,
+   "p_normal": 2.358268967893489e-08,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "LIQ-V4": {
+   "helps": false,
+   "fails": [
+    "W1: net 232,230 not above A's 249,576",
+    "W2: net 4,575 not above A's 5,717",
+    "W2: max drawdown 67,497 not below A's 61,062",
+    "total: net without top 5 149,615 not above A's 255,293",
+    "twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 1.0,
+   "q": 1.0,
+   "p_normal": 1.0,
+   "account_stop": {
+    "W1": true,
+    "W2": false,
+    "total": false
+   }
+  },
+  "LIQ-V5": {
+   "helps": false,
+   "fails": [
+    "W1: net 218,210 not above A's 249,576",
+    "W2: net 2,259 not above A's 5,717",
+    "total: net without top 5 133,279 not above A's 255,293",
+    "twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 1.0,
+   "q": 1.0,
+   "p_normal": 1.0,
+   "account_stop": {
+    "W1": true,
+    "W2": false,
+    "total": false
+   }
+  }
+ },
+ "helps": {
+  "R72": [
+   "R72-P",
+   "R72-V4"
+  ],
+  "R51": [
+   "R51-P"
+  ],
+  "LIQ": []
+ }
+}

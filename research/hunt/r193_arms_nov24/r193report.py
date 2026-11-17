@@ -60,8 +60,8 @@ def tables(r: dict, dec: dict, key: str = "windows") -> list:
                 if K.VARIANTS[v][0] != arm:
                     continue
                 d = dec["variants"][v]
-                verdict = ("HELPS" if d["helps"] else "no") if w == "total" else ""
-                fails = "; ".join(d["fails"]) if w == "total" else ""
+                verdict = ("HELPS" if d["helps"] else "no") if w == "total" and key == "windows" else ""
+                fails = "; ".join(d["fails"]) if w == "total" and key == "windows" else ""
                 out.append(row(f"{v}: {K.LABEL[v]}", r[v][key][w], verdict, fails))
     return out
 
@@ -73,6 +73,52 @@ def repro_lines(rp: dict) -> list:
             continue
         out.append(f"| {k} | {v['trades']:,} | {rs(v['net'])} | {v['published'][0]:,} / {rs(v['published'][1])} | "
                    f"{v['gap_trades']:+d} trades, {v['gap_net']:+,} | {'yes' if v['reproduced'] else 'NO'} |")
+    return out
+
+
+REPRO_NOTE = [
+    "",
+    "**Reproduction result.** R190's era C (R72 own exits D1, R72 + FB-R72-A10 D3, Liquidity L1) reproduced to the rupee, "
+    "which also checks R193's own A10 code. R186's Liquidity year (A, V4, V5) reproduced to the rupee. R186's R72 and R51 "
+    "year rows are 1-3 trades and Rs 1,377-3,438 off. The whole gap sits in 14-19 Oct 2026: every month from Oct 2025 to "
+    "Sep 2026 is identical to R186's published monthly nets, and R179's final (1 Apr - 13 Oct 2026: R72 A 1,200 trades / "
+    "Rs 1,70,336; R51 A 1,668 / Rs 1,31,546) reproduces exactly. Cause: R186 read stores built to 19 Oct from the lake as "
+    "it was then; R193 reads R190's stores, whose 2026 files are joined with the later 20 Oct - 13 Nov fill, so the last "
+    "days before 19 Oct carry minutes R186 did not have. The engine is the same; the gap is data on 3-4 sessions, smaller "
+    "than 1.2% of any row, and was not tuned away.",
+    "",
+    "**Run note.** The span's first run was stopped by the session's 30-minute background limit after R72 and most of "
+    "R51's pricing, before any results file was written (PREREG 7.5 allows that re-run). It was re-run unchanged with the "
+    "same seed; R72's five rows and twins came out identical to the first run's log.",
+]
+
+
+def plain(r: dict) -> list:
+    """Plain words for Boss, from the numbers."""
+    def n(v, w="total"):
+        return r[v]["windows"][w]["net"]
+    out = []
+    for a in ("R72", "R51"):
+        A = r["A:" + a]["windows"]
+        out.append(f"- **{a}**: the picker on its own made {rs(n(a + '-P'))} vs {rs(A['total']['net'])} with the arm's own "
+                   f"exits, and roughly halved the worst drawdown ({rs(r[a + '-P']['windows']['total']['max_dd'])} vs "
+                   f"{rs(A['total']['max_dd'])}). Most of the extra money is in W1, where the picker was trained; in W2 "
+                   f"(out-of-sample) it made {rs(n(a + '-P', 'W2'))} vs {rs(A['W2']['net'])}: about the same money with a "
+                   "much smaller drawdown.")
+        out.append(f"  - The +10% breakeven (V4) changed the net by {rs(n(a + '-V4') - n(a + '-P'))} over the span on top "
+                   f"of the picker; the Rs 500 step lock that is live now (V5) took away {rs(n(a + '-V4') - n(a + '-V5'))} "
+                   f"compared with V4 (win rate up to {r[a + '-V5']['windows']['total']['win']:.0f}%, but the average win "
+                   f"falls to {rs(r[a + '-V5']['windows']['total']['avg_win'])}). V5 made less than the arm's own exits "
+                   "with no picker in W2.")
+        out.append(f"  - FB-R72-A10 on top of V5 changed the net by {rs(n(a + '-V5A10') - n(a + '-V5'))} (the variant fails the gate).")
+    out.append(f"- **Liquidity 15+5**: its own exits made the most ({rs(r['A:LIQ']['windows']['total']['net'])}); the "
+               f"+10% breakeven made {rs(n('LIQ-V4'))} and today's rule (plus breakeven at +Rs 1,000) "
+               f"{rs(n('LIQ-V5'))}. Liquidity barely made money in W2 under any exit "
+               f"({rs(r['A:LIQ']['windows']['W2']['net'])} with its own exits).")
+    out.append("- **Account stop**: at 1 lot almost every row breaks the -Rs 40k drawdown or -Rs 13k month rule somewhere; "
+               "the picker shrinks the drawdowns but does not bring R72 / R51 inside the rule.")
+    out.append("- None of this changes the app. The live rules are Boss's own choices (CLAUDE.md's fourth and fifth "
+               "exceptions); R193 only reports what the data show.")
     return out
 
 
@@ -105,16 +151,16 @@ def main():
                "Research only; nothing in the app changes. Signal on the index; options bought; 1 lot; dated Zerodha "
                "charges and R17 slippage. Gate (PREREG section 6): vs the arm's own exits, higher net AND lower max "
                "drawdown in both W1 and W2, 40+ trades in each, net without the top 5 above A's net, twin p < 0.05, "
-               "BH q <= 0.10 (m = 4,765).", "", "## Outcome", "", *outcome, "",
-               "## Reproduction first", "", *repro_lines(rp), "",
+               "BH q <= 0.10 (m = 4,765).", "", "## Outcome", "", *outcome, "", *plain(r), "",
+               "## Reproduction first", "", *repro_lines(rp), *REPRO_NOTE, "",
                "## Per variant and window (1 lot)", *tables(r, dec), "",
                "## Twins and BH", "", *twin, ""]
     (K.RESULTS / "summary.md").write_text("\n".join(summary) + "\n")
     report = ["# R193 report: does recent research help R72, R51 and Liquidity 15+5 from Nov 2024?", "",
               "Boss asked whether recent research helps the live arms, and chose *\"Check only from nov 24\"*. "
               "Pre-registration: `PREREG.md` (committed before any number). Signal source of every rule: the index.", "",
-              "## Outcome", "", *outcome, "",
-              "## 1. Reproduction (before any new number)", "", *repro_lines(rp), "",
+              "## Outcome", "", *outcome, "", "## What it means (plain words)", "", *plain(r), "",
+              "## 1. Reproduction (before any new number)", "", *repro_lines(rp), *REPRO_NOTE, "",
               "## 2. Results at 1 lot", *tables(r, dec), "",
               "## 3. Twins and BH", "", *twin, "",
               "## 4. What the filters removed", "", *rem, "",
@@ -131,7 +177,14 @@ def main():
               "- V4's breakeven (R162 / R179) and V5's locks (R186) were designed on Oct 2025 - Oct 2026, inside this span.",
               "- Nov 2024 onward is the regime where R72 and R51 made all their money (R190: R72 lost Rs 4.07 lakh in "
               "Dec 2021 - Oct 2024). Nothing here speaks for older years.",
-              "- The funded table sizes each trade alone; R72 can hold several indices at once.", ""]
+              "- The funded table sizes each trade alone; R72 can hold several indices at once.",
+              "- With funded lots the picker's W2 edge disappears: in W2 R72-P made "
+              f"{rs(r['R72-P']['funded']['W2']['net'])} vs A's {rs(r['A:R72']['funded']['W2']['net'])}, R51-P "
+              f"{rs(r['R51-P']['funded']['W2']['net'])} vs {rs(r['A:R51']['funded']['W2']['net'])} (smaller drawdowns "
+              "still). The gate is at 1 lot only, as pre-registered.",
+              "- The exit twins (a random sale between the fill and the arm's own exit) are a weak benchmark for exits "
+              "that sell early: their mean was far below V5 on R72 / R51 and far above V4 / V5 on Liquidity. The verdicts "
+              "do not rest on them alone: every variant that failed the twin check also failed the net checks.", ""]
     (K.RESULTS / "report.md").write_text("\n".join(report) + "\n")
     for v in K.TESTS:
         arm = K.VARIANTS[v][0]

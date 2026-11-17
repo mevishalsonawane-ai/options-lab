@@ -1,0 +1,36 @@
+id: r193-liq-v4
+title: 'R193 arms from Nov 2024: Liquidity + breakeven at +10% (V4) vs the arm''s own exits'
+family: liquidity
+date: '2026-11-17'
+doc: research/hunt/r193_arms_nov24/results/report.md
+hypothesis: 'Liquidity + breakeven at +10% (V4) beats Liquidity 15+5''s own exits (no picker) on 1 Nov 2024 - 13 Nov 2026:
+  higher net and lower drawdown in W1 and W2, robust to the top 5, better than random twins, after BH'
+data_version: 'Drive lake copy of 17 Nov 2026 (R190''s flat folder ~/.cache/iraalgo/r190/lake: index_1m, options_rolling_1m
+  WEEK + BANKNIFTY MONTH, with the 20 Oct - 13 Nov 2026 fill); R51 clean stores 3 Aug 2020 - 13 Nov 2026 (R190)'
+period:
+  design: W1 2024-11-01..2026-03-31 (picker and FB-R72-A10 in-sample; nothing fitted here)
+  holdout: W2 2026-04-01..2026-11-13 (picker out-of-sample but read by R151-R190; A10 unseen only from 2026-10-14); read once
+    (results/SPAN_READ)
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the index (the arm''s own 5-minute breaks; picker / A10 read index features at or before the decision minute)'
+- buy the option; stops, breakevens and locks on the premium
+model_or_rule: Liquidity + breakeven at +10% (V4) (r186engine.price; r152picker; R140a A10 >= 1.3206)
+settings: research/hunt/r193_arms_nov24/r193cfg.py; PREREG.md section 3
+prereg: research/hunt/r193_arms_nov24/PREREG.md
+variants_tried: 1
+results:
+  summary: 'W1 908 tr, 45.5% win, Rs 232,230, DD Rs 28,622, worst month -Rs 10,140 (A: 908 tr, 43.1% win, Rs 249,576, DD Rs
+    32,537, worst month -Rs 17,360); W2 415 tr, 42.6% win, Rs 4,575, DD Rs 67,497, worst month -Rs 37,773 (A: 415 tr, 38.1%
+    win, Rs 5,717, DD Rs 61,062, worst month -Rs 37,821); total 1323 tr, 44.6% win, Rs 236,805, DD Rs 67,497, worst month
+    -Rs 37,773 (A: 1323 tr, 41.5% win, Rs 255,293, DD Rs 61,062, worst month -Rs 37,821); twin p 1.0000, BH q 1 (m = 4,765).
+    Does not help: W1: net 232,230 not above A''s 249,576; W2: net 4,575 not above A''s 5,717; W2: max drawdown 67,497 not
+    below A''s 61,062; total: net without top 5 149,615 not above A''s 255,293; twin p 1.0000 >= 0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot (funded-lots table descriptive)
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. The live rules are Boss's own exceptions (CLAUDE.md); this entry only records
+  whether the data show they help.

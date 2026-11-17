@@ -1,0 +1,37 @@
+id: r193-r51-p
+title: 'R193 arms from Nov 2024: R51 + picker vs the arm''s own exits'
+family: patterns-indicators
+date: '2026-11-17'
+doc: research/hunt/r193_arms_nov24/results/report.md
+hypothesis: 'R51 + picker beats R51 Donchian 20 + Supertrend''s own exits (no picker) on 1 Nov 2024 - 13 Nov 2026: higher
+  net and lower drawdown in W1 and W2, robust to the top 5, better than random twins, after BH'
+data_version: 'Drive lake copy of 17 Nov 2026 (R190''s flat folder ~/.cache/iraalgo/r190/lake: index_1m, options_rolling_1m
+  WEEK + BANKNIFTY MONTH, with the 20 Oct - 13 Nov 2026 fill); R51 clean stores 3 Aug 2020 - 13 Nov 2026 (R190)'
+period:
+  design: W1 2024-11-01..2026-03-31 (picker and FB-R72-A10 in-sample; nothing fitted here)
+  holdout: W2 2026-04-01..2026-11-13 (picker out-of-sample but read by R151-R190; A10 unseen only from 2026-10-14); read once
+    (results/SPAN_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s own 5-minute breaks; picker / A10 read index features at or before the decision minute)'
+- buy the option; stops, breakevens and locks on the premium
+model_or_rule: R51 + picker (r186engine.price; r152picker; R140a A10 >= 1.3206)
+settings: research/hunt/r193_arms_nov24/r193cfg.py; PREREG.md section 3
+prereg: research/hunt/r193_arms_nov24/PREREG.md
+variants_tried: 1
+results:
+  summary: 'W1 2099 tr, 49.0% win, Rs 348,262, DD Rs 72,535, worst month -Rs 36,937 (A: 4336 tr, 44.4% win, Rs 55,411, DD
+    Rs 214,239, worst month -Rs 69,428); W2 791 tr, 50.8% win, Rs 140,702, DD Rs 38,799, worst month -Rs 22,978 (A: 1933 tr,
+    45.7% win, Rs 135,983, DD Rs 81,683, worst month -Rs 54,587); total 2890 tr, 49.5% win, Rs 488,964, DD Rs 72,535, worst
+    month -Rs 36,937 (A: 6269 tr, 44.8% win, Rs 191,394, DD Rs 214,239, worst month -Rs 69,428); twin p 0.0005, BH q 0.000502
+    (m = 4,765). HELPS.'
+  costs: dated Zerodha charges, R17 fills, 1 lot (funded-lots table descriptive)
+holdout_read: true
+verdict: paper-only
+notes: Research only; nothing in the app changes. The live rules are Boss's own exceptions (CLAUDE.md); this entry only records
+  whether the data show they help.
