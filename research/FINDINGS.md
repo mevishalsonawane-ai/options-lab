@@ -1942,3 +1942,15 @@ ratio, TWAP crossings, range so far, Choppiness) on today's live rules (R179 V4)
   trades vs Rs 2.50 L on 1,367; random skips of 135 trades averaged Rs 2.25 L (p 0.60, BH q 1.00, m = 4,376).
 - Quiet-day filters (low range, ADX, efficiency) remove the big breakout winners these arms live on; on 9 - 13 Nov the
   chosen filter would have skipped none of R51's 23 checkable paper trades (descriptive).
+
+## Absorption and exhaustion as option-buying rules (R184, 16 Nov 2026) - exhaustion rejected, absorption too few trades
+`hunt/r184_absorption_exhaustion/results/report.md`. Boss: "Now check absorption and exhaustion technique in options
+buying." Signal source: the NIFTY / BANKNIFTY near index future's own minute price and 1-second tick-rule delta (day's
+own references); trade: 1 lot of the recorded ATM option; -15% premium stop, breakeven at +10%, index stop, 15 / 30-minute
+time stop. 32 versions per setup chosen on 15 Oct - 3 Nov (13 days), holdout 4 - 13 Nov (7 days) read once.
+- **Exhaustion** (climax at a new 15 / 30-minute extreme, then dry-up, stall and a delta flip): holdout 36 trades, 22%
+  won, Rs -5,800; no better than random entries at the same minutes (twin p 0.45 NIFTY, 0.24 BANKNIFTY).
+- **Absorption** (heavy w-minute delta while price holds within 3-6 bp, then a turn): holdout 14 trades, Rs +4,411
+  (8 NIFTY, 6 BANKNIFTY: under the pre-registered 10), twin p 0.39 / 0.25; calls in the rally made it (puts lost).
+- All 8 tests BH q 1.0 (m = 4,512). 20 days can only detect an edge of about Rs 850-1,950 a trade; most of the 128
+  design versions lost. The 1-second recorder drops big unchanged-price prints (R182), the very prints absorption reads.

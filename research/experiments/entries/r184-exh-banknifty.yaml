@@ -1,0 +1,41 @@
+id: r184-exh-banknifty
+title: R184 exhaustion on the BANKNIFTY future, buying the ATM option (EXH X30 k2 b3 flip+close T30)
+family: flow-oi
+date: '2026-11-16'
+doc: research/hunt/r184_absorption_exhaustion/results/report.md
+hypothesis: Order-flow exhaustion on the index future picks reversal entries whose ATM option trades beat random entries at
+  the same minutes (twins) and beat doing nothing, after real charges.
+data_version: 'phone recordings exported 15 Nov 2026: 1-second order flow 15 Oct - 13 Nov 2026 (20 days; NIFTY / BANKNIFTY
+  near futures, index and near-ATM options); daily diagnostics 19 Oct - 13 Nov (paper orders, overlap only); outside git'
+period:
+  design: '2026-10-15..2026-11-03 (13 days; 32 variants, 10 with net > 0; chosen: 39 trades, win 41%, Rs 2,925)'
+  holdout: 2026-11-04..2026-11-13 (7 days, read once after results/FINAL_READ)
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the BANKNIFTY near index future''s own 1-minute price and 1-second tick-rule delta (buy_vol - sell_vol,
+  the app''s recorder), references from the same day''s earlier minutes only; option prices only price the trade; premium
+  stop and breakeven lock on the option premium'
+- 'exhaustion: a climax minute at a new X-minute low with a selling spike (|D| >= k x the day''s mean |D| so far), then within
+  3 minutes selling under half the climax''s, no low beyond beta bp, and delta flips positive -> buy the ATM CALL (mirror
+  at a high -> PUT); ''flip+close'' also needs the close beyond the climax close'
+model_or_rule: 'EXH X30 k2 b3 flip+close T30: exhaustion: a climax minute at a new X-minute low with a selling spike (|D|
+  >= k x the day''s mean |D| so far), then within 3 minutes selling under half the climax''s, no low beyond beta bp, and delta
+  flips positive -> buy the ATM CALL (mirror at a high -> PUT); ''flip+close'' also needs the close beyond the climax close.
+  Exits: -15% premium stop, breakeven (fill + charges) once +10%, index stop beyond the extreme by beta bp, time stop T minutes,
+  15:15 (15:05 expiry). 1 lot.'
+settings: research/hunt/r184_absorption_exhaustion/PREREG.md sections 2-6; r184lib.py
+prereg: research/hunt/r184_absorption_exhaustion/PREREG.md
+variants_tried: 32
+results:
+  summary: 'Holdout 22 trades on 7 of 7 days, win 23%, Rs -2,072 (2x slippage Rs -2,765; bid/ask Rs -2,244), mean Rs -94 a
+    trade (avg win Rs 2,445, avg loss Rs -841), worst day Rs -3,559. Random-entry twins (1,000 sets) mean Rs -294: p 0.237,
+    BH q 1.00; mean > 0 day-bootstrap p 0.622, q 1.00 (m 4,512). Smallest edge detectable (80% power, 5%) Rs 922 a trade.
+    Pre-registered verdict: no evidence.'
+  costs: Costs('dated') charges both sides; Fills('liq') slippage by the option's recorded volume; 2x slippage and recorded
+    bid/ask sensitivities
+holdout_read: true
+verdict: rejected
+notes: 'Exploratory: 20 days, at most 39 design / 22 holdout trades a cell; cannot pass the gates. The 1-second recorder drops
+  big unchanged-price prints (R182), the very prints absorption is about. BH m = 4,512 (4,376 after R183 + 128 variants +
+  8 tests). Nothing in the app changes.'

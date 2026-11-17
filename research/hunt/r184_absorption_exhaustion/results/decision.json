@@ -1,0 +1,44 @@
+{
+ "ABS NIFTY": {
+  "vid": "ABS w3 k2 b6 turn T30",
+  "verdict": "too few trades",
+  "n": 8,
+  "p_twin": 0.3896,
+  "q_twin": 1.0,
+  "p_zero": 0.3235,
+  "q_zero": 1.0
+ },
+ "ABS BANKNIFTY": {
+  "vid": "ABS w5 k2 b6 turn T30",
+  "verdict": "too few trades",
+  "n": 6,
+  "p_twin": 0.2488,
+  "q_twin": 1.0,
+  "p_zero": 0.3071,
+  "q_zero": 1.0
+ },
+ "EXH NIFTY": {
+  "vid": "EXH X30 k3 b6 flip T30",
+  "verdict": "no evidence",
+  "n": 14,
+  "p_twin": 0.4535,
+  "q_twin": 1.0,
+  "p_zero": 0.8003,
+  "q_zero": 1.0
+ },
+ "EXH BANKNIFTY": {
+  "vid": "EXH X30 k2 b3 flip+close T30",
+  "verdict": "no evidence",
+  "n": 22,
+  "p_twin": 0.2368,
+  "q_twin": 1.0,
+  "p_zero": 0.622,
+  "q_zero": 1.0
+ },
+ "_m": {
+  "prior": 4376,
+  "selection": 128,
+  "tests": 8,
+  "total": 4512
+ }
+}
