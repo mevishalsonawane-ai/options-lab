@@ -1,0 +1,35 @@
+id: r188-cisd-st1500
+title: 'R188 CISD + network (R133 S3-V2-E3): ST1500 stop -Rs 1,500'
+family: trade-management
+date: '2026-11-17'
+doc: research/hunt/r188_s5_cisd/results/report.md
+hypothesis: ST1500 stop -Rs 1,500 on top of CISD as the app runs it raises net AND win rate and lowers the worst month or
+  drawdown, in design and final
+data_version: Drive lake (to 19 Oct 2026) + 16 Nov gap files (to 13 Nov 2026); R123's saved N1 walk-forward and holdout predictions
+  (derived/r123/cleaned); R134 nnlive for new days
+period:
+  design: 2023-01-02..2026-03-15 (R123 folds F1-F4)
+  holdout: 2026-04-01..2026-10-19 (the base already read there; new month 2026-10-21..2026-11-13 descriptive)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index''s 5-minute bars (R131 CISD), R123 N1''s EV as a filter; exits on the option premium (IDX and
+  CISD''s stop on the index); FT3PO reads the bought option''s price and OI as context'
+model_or_rule: research/hunt/r188_s5_cisd/r188sim.py
+settings: PREREG.md section 3 (ST1500); 1 lot
+prereg: research/hunt/r188_s5_cisd/PREREG.md
+variants_tried: 23
+results:
+  summary: '1 lot. Design (2023 - 15 Mar 2026): 431 trades, 59.9% won, net Rs 66,568, worst month Rs -6,490, max drawdown
+    Rs -16,532 vs base 413 trades, 67.6% won, net Rs 105,090, worst month Rs -7,491, max drawdown Rs -15,168. Final (1 Apr
+    - 19 Oct 2026): 36 trades, 58.3% won, net Rs -2,738, worst month Rs -2,446, max drawdown Rs -7,351 vs base 35 trades,
+    71.4% won, net Rs 3,150, worst month Rs -3,949, max drawdown Rs -10,002. New month (21 Oct - 13 Nov 2026): 8 trades, net
+    Rs 3,694 vs base 8, Rs 6,585. Twin p 1.000, BH q 1.00 (m 4,925). Fails: design net, design win, final net, final win,
+    twin BH q > 0.10.'
+  costs: Costs('dated') Zerodha charges + Fills('liq') slippage, 1 lot; 2x slippage reported
+holdout_read: true
+verdict: rejected

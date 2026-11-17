@@ -1,0 +1,9 @@
+{
+ "rows_rebuilt": 4080,
+ "rows_saved": 4080,
+ "matched": 4080,
+ "max_ev_diff": 0.0,
+ "ev_sign_agree": 1.0,
+ "max_pdir30_diff": 0.0,
+ "ok": true
+}

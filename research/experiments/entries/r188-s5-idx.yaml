@@ -1,0 +1,35 @@
+id: r188-s5-idx
+title: 'R188 S5 Trail (R123 N1-S5 + R128 T2-S5x1): IDX index lock'
+family: trade-management
+date: '2026-11-17'
+doc: research/hunt/r188_s5_cisd/results/report.md
+hypothesis: IDX index lock on top of S5 as the app runs it raises net AND win rate and lowers the worst month or drawdown,
+  in design and final
+data_version: Drive lake (to 19 Oct 2026) + 16 Nov gap files (to 13 Nov 2026); R123's saved N1 walk-forward and holdout predictions
+  (derived/r123/cleaned); R134 nnlive for new days
+period:
+  design: 2023-01-02..2026-03-15 (R123 folds F1-F4)
+  holdout: 2026-04-01..2026-10-19 (the base already read there; new month 2026-10-21..2026-11-13 descriptive)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: R123''s network N1 on the index, India VIX, breadth and option-chain context (the index); exits on the option
+  premium (IDX and CISD''s stop on the index); FT3PO reads the bought option''s price and OI as context'
+model_or_rule: research/hunt/r188_s5_cisd/r188sim.py
+settings: PREREG.md section 3 (IDX); 1 lot
+prereg: research/hunt/r188_s5_cisd/PREREG.md
+variants_tried: 23
+results:
+  summary: '1 lot. Design (2023 - 15 Mar 2026): 570 trades, 56.0% won, net Rs 124,760, worst month Rs -20,198, max drawdown
+    Rs -47,014 vs base 562 trades, 58.5% won, net Rs 128,731, worst month Rs -19,306, max drawdown Rs -49,469. Final (1 Apr
+    - 19 Oct 2026): 40 trades, 85.0% won, net Rs 23,554, worst month Rs -2,328, max drawdown Rs -5,112 vs base 40 trades,
+    85.0% won, net Rs 24,988, worst month Rs -2,328, max drawdown Rs -5,112. New month (21 Oct - 13 Nov 2026): 3 trades, net
+    Rs -2,429 vs base 3, Rs 3,849. Twin p 0.996, BH q 1.00 (m 4,925). Fails: design net, design win, final net, final win,
+    final risk, twin BH q > 0.10.'
+  costs: Costs('dated') Zerodha charges + Fills('liq') slippage, 1 lot; 2x slippage reported
+holdout_read: true
+verdict: rejected
