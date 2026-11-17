@@ -1,0 +1,35 @@
+id: r183-sideways-twap-crossings
+title: 'R183: skip R51 / R72 entries when the index is sideways by twap-crossings (on picker + breakeven, 1 lot)'
+family: daily-filters
+date: '2026-11-15'
+doc: research/hunt/r183_sideways_filter/results/report.md
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index the arm signals on (1-minute / 5-minute bars strictly before the signal bar); no option prices'
+settings: research/hunt/r183_sideways_filter/r183lib.py; PREREG.md section 3
+prereg: research/hunt/r183_sideways_filter/PREREG.md
+hypothesis: 'Boss: ''How could we ignore sideways markets''. Skipping new R51 / R72 entries when the index is sideways (crossings
+  of today''s running TWAP (5-minute closes) >= 3 / 5 / 7) improves today''s live rules (R179 V4).'
+period:
+  design: 2024-11-20..2025-10-19 (selection; halves to / from 1 May 2025)
+  holdout: 2025-10-20..2026-10-19 (read once for the chosen variant)
+model_or_rule: skip when crossings of today's running TWAP (5-minute closes) >= 3 / 5 / 7; a skipped entry still holds its
+  side (post-walk, as the app's picker)
+variants_tried: 6
+results:
+  summary: 'R72 (B Rs 299,254, 1043 trades): TX3 Rs 195,960 (623 trades; gain H1 -Rs 47,805 / H2 -Rs 55,489), TX5 Rs 223,841
+    (806 trades; gain H1 -Rs 31,005 / H2 -Rs 44,408), TX7 Rs 267,490 (904 trades; gain H1 -Rs 4,126 / H2 -Rs 27,639) | R51
+    (B Rs 224,212, 1352 trades): TX3 Rs 225,852 (956 trades; gain H1 Rs 1,479 / H2 Rs 160), TX5 Rs 234,473 (1119 trades; gain
+    H1 -Rs 7,633 / H2 Rs 17,894), TX7 Rs 249,124 (1236 trades; gain H1 Rs 10,098 / H2 Rs 14,813).'
+  costs: dated Zerodha charges on the whole quantity; R17 fills
+holdout_read: true
+verdict: rejected
+notes: BH m = 4,376 (32 selection comparisons + 1 test). Chosen for R51 (TX7) and failed the one test; see r183-r51-twap7-test.
+  Nothing in the app changes.

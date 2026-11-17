@@ -1,0 +1,336 @@
+{
+ "trades": 58,
+ "wins": 24,
+ "net": -54729,
+ "chosen": {
+  "R72": null,
+  "R51": "TX7"
+ },
+ "rebuild": {
+  "unclosed": 0,
+  "orphan_sell_qty": 0,
+  "bad_symbol": 0,
+  "buys": 179
+ },
+ "recorded_days": [
+  "2026-10-15",
+  "2026-10-16",
+  "2026-10-19",
+  "2026-10-21",
+  "2026-10-22",
+  "2026-10-23",
+  "2026-10-26",
+  "2026-10-27",
+  "2026-10-28",
+  "2026-10-29",
+  "2026-10-30",
+  "2026-11-02",
+  "2026-11-03",
+  "2026-11-04",
+  "2026-11-05",
+  "2026-11-06",
+  "2026-11-09",
+  "2026-11-11",
+  "2026-11-12",
+  "2026-11-13"
+ ],
+ "weekdays_not_recorded": [
+  "2026-10-20",
+  "2026-11-10"
+ ],
+ "by_source": {
+  "index": 19,
+  "near future (proxy)": 27,
+  "not recorded": 12
+ },
+ "by_variant": {
+  "R72:ADX15": {
+   "computable": 23,
+   "skipped": 1,
+   "skipped_wins": 0,
+   "skipped_net": -4486,
+   "kept": 22,
+   "kept_wins": 10,
+   "kept_net": -18666
+  },
+  "R51:ADX15": {
+   "computable": 23,
+   "skipped": 2,
+   "skipped_wins": 0,
+   "skipped_net": -6769,
+   "kept": 21,
+   "kept_wins": 11,
+   "kept_net": -9430
+  },
+  "R72:ADX20": {
+   "computable": 23,
+   "skipped": 6,
+   "skipped_wins": 1,
+   "skipped_net": -20002,
+   "kept": 17,
+   "kept_wins": 9,
+   "kept_net": -3150
+  },
+  "R51:ADX20": {
+   "computable": 23,
+   "skipped": 7,
+   "skipped_wins": 2,
+   "skipped_net": -16891,
+   "kept": 16,
+   "kept_wins": 9,
+   "kept_net": 692
+  },
+  "R72:ADX25": {
+   "computable": 23,
+   "skipped": 9,
+   "skipped_wins": 2,
+   "skipped_net": -22520,
+   "kept": 14,
+   "kept_wins": 8,
+   "kept_net": -632
+  },
+  "R51:ADX25": {
+   "computable": 23,
+   "skipped": 8,
+   "skipped_wins": 2,
+   "skipped_net": -18598,
+   "kept": 15,
+   "kept_wins": 9,
+   "kept_net": 2399
+  },
+  "R72:ER6_20": {
+   "computable": 23,
+   "skipped": 3,
+   "skipped_wins": 1,
+   "skipped_net": -11959,
+   "kept": 20,
+   "kept_wins": 9,
+   "kept_net": -11193
+  },
+  "R51:ER6_20": {
+   "computable": 23,
+   "skipped": 5,
+   "skipped_wins": 2,
+   "skipped_net": -10663,
+   "kept": 18,
+   "kept_wins": 9,
+   "kept_net": -5536
+  },
+  "R72:ER6_30": {
+   "computable": 23,
+   "skipped": 4,
+   "skipped_wins": 1,
+   "skipped_net": -13734,
+   "kept": 19,
+   "kept_wins": 9,
+   "kept_net": -9418
+  },
+  "R51:ER6_30": {
+   "computable": 23,
+   "skipped": 5,
+   "skipped_wins": 2,
+   "skipped_net": -10663,
+   "kept": 18,
+   "kept_wins": 9,
+   "kept_net": -5536
+  },
+  "R72:ER12_20": {
+   "computable": 23,
+   "skipped": 7,
+   "skipped_wins": 2,
+   "skipped_net": -19114,
+   "kept": 16,
+   "kept_wins": 8,
+   "kept_net": -4038
+  },
+  "R51:ER12_20": {
+   "computable": 23,
+   "skipped": 9,
+   "skipped_wins": 3,
+   "skipped_net": -18585,
+   "kept": 14,
+   "kept_wins": 8,
+   "kept_net": 2386
+  },
+  "R72:ER12_30": {
+   "computable": 23,
+   "skipped": 10,
+   "skipped_wins": 3,
+   "skipped_net": -21633,
+   "kept": 13,
+   "kept_wins": 7,
+   "kept_net": -1519
+  },
+  "R51:ER12_30": {
+   "computable": 23,
+   "skipped": 11,
+   "skipped_wins": 4,
+   "skipped_net": -18183,
+   "kept": 12,
+   "kept_wins": 7,
+   "kept_net": 1984
+  },
+  "R72:TX3": {
+   "computable": 23,
+   "skipped": 8,
+   "skipped_wins": 4,
+   "skipped_net": -5922,
+   "kept": 15,
+   "kept_wins": 6,
+   "kept_net": -17230
+  },
+  "R51:TX3": {
+   "computable": 23,
+   "skipped": 6,
+   "skipped_wins": 4,
+   "skipped_net": 920,
+   "kept": 17,
+   "kept_wins": 7,
+   "kept_net": -17119
+  },
+  "R72:TX5": {
+   "computable": 23,
+   "skipped": 6,
+   "skipped_wins": 2,
+   "skipped_net": -6861,
+   "kept": 17,
+   "kept_wins": 8,
+   "kept_net": -16291
+  },
+  "R51:TX5": {
+   "computable": 23,
+   "skipped": 3,
+   "skipped_wins": 1,
+   "skipped_net": -3245,
+   "kept": 20,
+   "kept_wins": 10,
+   "kept_net": -12954
+  },
+  "R72:TX7": {
+   "computable": 23,
+   "skipped": 3,
+   "skipped_wins": 1,
+   "skipped_net": -2868,
+   "kept": 20,
+   "kept_wins": 9,
+   "kept_net": -20284
+  },
+  "R51:TX7": {
+   "computable": 23,
+   "skipped": 0,
+   "skipped_wins": 0,
+   "skipped_net": 0,
+   "kept": 23,
+   "kept_wins": 11,
+   "kept_net": -16199
+  },
+  "R72:RF40": {
+   "computable": 23,
+   "skipped": 9,
+   "skipped_wins": 7,
+   "skipped_net": 8403,
+   "kept": 14,
+   "kept_wins": 3,
+   "kept_net": -31555
+  },
+  "R51:RF40": {
+   "computable": 23,
+   "skipped": 9,
+   "skipped_wins": 7,
+   "skipped_net": 8994,
+   "kept": 14,
+   "kept_wins": 4,
+   "kept_net": -25193
+  },
+  "R72:RF60": {
+   "computable": 23,
+   "skipped": 11,
+   "skipped_wins": 8,
+   "skipped_net": 6940,
+   "kept": 12,
+   "kept_wins": 2,
+   "kept_net": -30092
+  },
+  "R51:RF60": {
+   "computable": 23,
+   "skipped": 12,
+   "skipped_wins": 8,
+   "skipped_net": 6331,
+   "kept": 11,
+   "kept_wins": 3,
+   "kept_net": -22530
+  },
+  "R72:RT70": {
+   "computable": 23,
+   "skipped": 8,
+   "skipped_wins": 6,
+   "skipped_net": 7124,
+   "kept": 15,
+   "kept_wins": 4,
+   "kept_net": -30276
+  },
+  "R51:RT70": {
+   "computable": 23,
+   "skipped": 9,
+   "skipped_wins": 6,
+   "skipped_net": 5924,
+   "kept": 14,
+   "kept_wins": 5,
+   "kept_net": -22123
+  },
+  "R72:RT85": {
+   "computable": 23,
+   "skipped": 9,
+   "skipped_wins": 6,
+   "skipped_net": 5067,
+   "kept": 14,
+   "kept_wins": 4,
+   "kept_net": -28219
+  },
+  "R51:RT85": {
+   "computable": 23,
+   "skipped": 9,
+   "skipped_wins": 6,
+   "skipped_net": 5924,
+   "kept": 14,
+   "kept_wins": 5,
+   "kept_net": -22123
+  },
+  "R72:CH55": {
+   "computable": 23,
+   "skipped": 4,
+   "skipped_wins": 3,
+   "skipped_net": -189,
+   "kept": 19,
+   "kept_wins": 7,
+   "kept_net": -22963
+  },
+  "R51:CH55": {
+   "computable": 23,
+   "skipped": 2,
+   "skipped_wins": 2,
+   "skipped_net": 1451,
+   "kept": 21,
+   "kept_wins": 9,
+   "kept_net": -17650
+  },
+  "R72:CH62": {
+   "computable": 23,
+   "skipped": 2,
+   "skipped_wins": 1,
+   "skipped_net": -612,
+   "kept": 21,
+   "kept_wins": 9,
+   "kept_net": -22540
+  },
+  "R51:CH62": {
+   "computable": 23,
+   "skipped": 1,
+   "skipped_wins": 1,
+   "skipped_net": 1163,
+   "kept": 22,
+   "kept_wins": 10,
+   "kept_net": -17362
+  }
+ }
+}

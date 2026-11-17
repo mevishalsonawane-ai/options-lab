@@ -1,0 +1,23 @@
+{
+ "R51": {
+  "passed": false,
+  "fails": [
+   "net not above the baseline (V4) (early, final, year)",
+   "random-skip twin BH q 1.00 > 0.10",
+   "outside the account stop rule (-Rs 40k drawdown / -Rs 13k month) in final, six, year",
+   "empirical twin p 0.6032 >= 0.05"
+  ],
+  "q_all": 1.0,
+  "variant": "TX7",
+  "q_own": 0.5985,
+  "p_emp": 0.6032,
+  "p_norm": 0.598506,
+  "passed_except_account_stop": false
+ },
+ "_m": {
+  "tests": 1,
+  "selection": 32,
+  "prior": 4343,
+  "total": 4376
+ }
+}
