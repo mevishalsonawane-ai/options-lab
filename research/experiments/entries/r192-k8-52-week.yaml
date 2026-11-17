@@ -1,0 +1,39 @@
+id: r192-k8-52-week
+title: 'R192 long history K8: 52-week closing high / low: call / put 15:20 -> next session 15:20'
+family: daily-filters
+date: '2026-11-17'
+doc: research/hunt/r192_long_history/results/report.md
+hypothesis: '52-week closing high / low: call / put 15:20 -> next session 15:20 (published / replicated idea, PREREG section
+  4). Buying the NIFTY 1-ITM option on it makes money in every era (synthetic S0 / S as an underlying check, real A, B, C),
+  robust to the top 5 trades, beats random days and sides on the pooled real trades, after BH over the whole log.'
+data_version: 'R190''s copy of the Drive lake gdrive:IraAlgo-data-lake (17 Nov 2026): NIFTY 1-minute index 3 Apr 2017 - 13
+  Nov 2026, index_daily NIFTY 2006 on and INDIAVIX Nov 2007 on; R51''s clean NIFTY nearest-week option store (dhan-data branch
+  Aug 2020 - Jul 2021, the lake from Aug 2021). Synthetic option prices (Black-76, India VIX, trading-time clock w 0.15, a
+  0.89, fitted on eras A + B real entries) for S0 / S'
+period:
+  design: 'no parameter fitted (K4: its filter chosen on 2017-04-03..2018-12-31 synthetic only); S0 2008-01-01..2017-03-31
+    and S 2017-04-03..2020-07-31 synthetic'
+  holdout: 'none virgin: real eras A 2020-08-03..2021-07-30, B 2021-12-01..2024-10-31, C 2024-11-01..2026-11-13 run once,
+    all seen at the data level by earlier hunts'
+instruments:
+- NIFTY
+features:
+- 'signal source: NIFTY index (minutes / daily closes)'
+- buy the 1-ITM nearest-expiry option; dated Zerodha charges; R17 slippage; real 1-minute option prices in A / B / C
+model_or_rule: '52-week closing high / low: call / put 15:20 -> next session 15:20'
+settings: research/hunt/r192_long_history/r192cfg.py; PREREG.md section 4
+prereg: research/hunt/r192_long_history/PREREG.md
+variants_tried: 1
+results:
+  summary: 'era S0 (synthetic) 184 tr, 42.9% win, Rs 3,872, DD Rs 45,826, worst month -Rs 11,162; era S (synthetic) 83 tr,
+    50.6% win, Rs 71,058, DD Rs 30,768, worst month -Rs 7,919; era A 43 tr, 48.8% win, Rs 25,781, DD Rs 19,246, worst month
+    -Rs 4,072; era B 68 tr, 44.1% win, Rs 18,477, DD Rs 23,938, worst month -Rs 4,880; era C 9 tr, 11.1% win, -Rs 45,472,
+    DD Rs 48,282, worst month -Rs 25,118. Pooled real 120 tr, -Rs 1,214; twin p 0.2645 (normal 0.27), BH q 1 (m 4,771). Not
+    reliable: era A: net without the top 5 trades -10,961 <= 0; era B: net without the top 5 trades -20,165 <= 0; era C: 9
+    trades < 40; era C: net -45,472 <= 0; era C: net without the top 5 trades -35,087 <= 0; pooled twin p 0.265 >= 0.05; BH
+    q 1 > 0.1.'
+  costs: 'dated Zerodha charges; R17 liq fills (+-5 bps, 1/2/4 ticks by volume); 2x slippage stress in report.md; synthetic:
+    +-5 bps and 1 tick, lot 75'
+holdout_read: null
+verdict: rejected
+notes: Signal on the underlying, option bought. Research only; nothing in the app changes.

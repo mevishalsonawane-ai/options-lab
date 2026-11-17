@@ -151,12 +151,12 @@ def calib2():
 
 
 # ================================================================================================ trades
-def leg_of(r: dict, idea: str, side: int):
+def leg_of(r: dict, idea: str, side: int, syn_key: str = "syn"):
     t = K.TIMING[idea]
     p = r["pools"].get(t)
     if p is None:
         return None
-    return p[side].get("syn" if r["era"] in K.SYN_ERAS else "real")
+    return p[side].get(syn_key if r["era"] in K.SYN_ERAS else "real")
 
 
 def k4_side(r: dict, f: str) -> int:
@@ -194,7 +194,7 @@ def k4():
     print(json.dumps(out, indent=1))
 
 
-def idea_trades(rows: list, idea: str, k4f: str = "F0") -> list:
+def idea_trades(rows: list, idea: str, k4f: str = "F0", syn_key: str = "syn") -> list:
     out = []
     for r in rows:
         if idea == "K4":
@@ -209,7 +209,7 @@ def idea_trades(rows: list, idea: str, k4f: str = "F0") -> list:
             s = r["sides"][idea]
         if s == 0:
             continue
-        x = leg_of(r, idea, s)
+        x = leg_of(r, idea, s, syn_key)
         if x is None:
             continue
         out.append(dict(day=r["day"], era=r["era"], side=s, net=x["net"], stress=x["stress"], prem=x["prem"],
@@ -242,6 +242,8 @@ def run():
         tr = idea_trades(rows, idea, k4f)
         eras = {e: G.stats([t for t in tr if t["era"] == e]) for e in K.ERAS}
         stress = {e: G.stats([t for t in tr if t["era"] == e], "stress") for e in K.REAL_ERAS}
+        trc = idea_trades(rows, idea, k4f, "syn_cal")
+        eras_cal = {e: G.stats([t for t in trc if t["era"] == e]) for e in K.SYN_ERAS}
         real = [t for t in tr if t["era"] in K.REAL_ERAS]
         counts = {e: eras[e]["trades"] for e in K.REAL_ERAS}
         pools = twin_pools(rows, idea)
@@ -251,7 +253,7 @@ def run():
         why = {}
         for t in real:
             why[t["why"]] = why.get(t["why"], 0) + 1
-        res[idea] = dict(name=NAME(idea, k4f), timing=K.TIMING[idea], eras=eras, stress=stress,
+        res[idea] = dict(name=NAME(idea, k4f), timing=K.TIMING[idea], eras=eras, stress=stress, eras_calendar_clock=eras_cal,
                          pooled_real=G.stats(real), pooled_net=rule_net, twin_mean=float(twins.mean()),
                          twin_sd=float(twins.std(ddof=1)), p_emp=pe, p_norm=pn, exits=why,
                          need=list(("S0",) if idea in K.DAILY_OK else ()) + ["S", "A", "B", "C"],
@@ -264,6 +266,8 @@ def run():
         res[i]["fails"] = G.gate(res[i]["eras"], tuple(res[i]["need"]), res[i]["p_emp"], float(qq))
         res[i]["reliable"] = not res[i]["fails"]
         res[i]["breach"] = {e: G.account_breach(res[i]["eras"][e]) for e in K.REAL_ERAS}
+        alt = dict(res[i]["eras"], **res[i]["eras_calendar_clock"])
+        res[i]["fails_calendar_clock"] = G.gate(alt, tuple(res[i]["need"]), res[i]["p_emp"], float(qq))
     out = dict(k4_filter=k4f, m_total=K.M_TOTAL, twins=K.TWINS, seed=K.SEED, ideas=res,
                written=datetime.now(timezone.utc).isoformat(timespec="seconds"))
     RUNJ.write_text(json.dumps(out, indent=1, default=str))
