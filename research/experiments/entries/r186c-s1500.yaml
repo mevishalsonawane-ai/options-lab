@@ -1,0 +1,38 @@
+id: r186c-s1500
+title: 'R186 Amendment C S1500: entry stop at -Rs 1,500 a lot net (R179 M1 rule, only where tighter than -15%) on V5 (today''s
+  app exit rule), Liquidity / R72 / R51'
+family: trade-management
+date: '2026-11-16'
+doc: research/hunt/r186_fixed_profit/results/summary.md
+hypothesis: 'Boss: what if the stop loss were Rs 1,500 a lot on today''s app rule (V5)?'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted here; early part 2025-10-20..2026-03-31 (R151 picker in-sample)
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); year to 2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (entries; R151 picker); the exit on the option premium'
+model_or_rule: Stop at the premium whose stop sale nets -Rs 1,500 a lot after charges and expected stop slippage (r106engine.stop_price),
+  only where tighter than -15%, a real stop order (gaps fill below); on V5 = R151 picker + own stop + R162 breakeven at +10%
+  + R186 L500 (R72 / R51), own stop + breakeven + R186 LBE1000 (Liquidity); PREREG.md Amendment C
+settings: research/hunt/r186_fixed_profit/r186study.py run-c
+prereg: research/hunt/r186_fixed_profit/PREREG.md
+variants_tried: 2
+results:
+  summary: 'LIQ (1 lot): year 689 trades win 43.0% Rs 89,180 (V5 Rs 98,239); final Rs 17,752 (V5 Rs 6,424); stop closed 102,
+    V5 would have won 10; twin p 1.0; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside the account
+    stop rule in final, six, year | R72 (1 lot): year 1098 trades win 58.0% Rs 152,306 (V5 Rs 213,110); final Rs 100,492 (V5
+    Rs 111,117); stop closed 316, V5 would have won 70; twin p 1.0; failed: net below the base (year or final); twin BH q
+    1.00 > 0.10; outside the account stop rule in final, year | R51 (1 lot): year 1442 trades win 56.9% Rs 72,074 (V5 Rs 162,959);
+    final Rs 20,594 (V5 Rs 57,450); stop closed 402, V5 would have won 84; twin p 1.0; failed: net below the base (year or
+    final); twin BH q 1.00 > 0.10; outside the account stop rule in final, six, year.'
+  costs: dated Zerodha charges; R17 fills (the stop sold as a stop order with stop slippage; gaps at the open)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4882. Nothing in the app changes.

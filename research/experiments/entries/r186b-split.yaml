@@ -1,0 +1,37 @@
+id: r186b-split
+title: 'R186 Amendment B SPLIT: split exit at 3 lots: 1 lot sold at +Rs 1,000 net, the rest moved to net breakeven, on top
+  of today''s exit rule, Liquidity / R72 / R51'
+family: trade-management
+date: '2026-11-16'
+doc: research/hunt/r186_fixed_profit/results/summary.md
+hypothesis: 'Boss: other ways to stop trades that reach +Rs 1,000 / 1,500 / 2,000 a lot from ending negative.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted here; early part 2025-10-20..2026-03-31 (R151 picker in-sample)
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); year to 2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (entries; R151 picker); the exit on the option premium'
+model_or_rule: 'split exit at 3 lots: 1 lot sold at +Rs 1,000 net, the rest moved to net breakeven; on top of own stop + R162
+  breakeven at +10% (+ R151 picker); PREREG.md Amendment B'
+settings: research/hunt/r186_fixed_profit/r186study.py run-b
+prereg: research/hunt/r186_fixed_profit/PREREG.md
+variants_tried: 3
+results:
+  summary: 'LIQ (3 lots): year 688 trades win 49.1% Rs 205,658 (base Rs 358,180); final -Rs 2,157 (base Rs 47,831); twin p
+    0.0818; failed: net below the base (year or final); not positive in every period; twin BH q 1.00 > 0.10; outside the account
+    stop rule in final, six, year | R72 (3 lots): year 1076 trades win 65.1% Rs 737,573 (base Rs 1,080,773); final Rs 339,157
+    (base Rs 553,161); twin p 0.002; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside the account
+    stop rule in early, final, six, year | R51 (3 lots): year 1374 trades win 63.3% Rs 593,070 (base Rs 887,796); final Rs
+    256,800 (base Rs 488,815); twin p 0.002; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside the
+    account stop rule in early, final, six, year.'
+  costs: dated Zerodha charges; R17 fills (locks and the index exit sold as stops)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4876. Nothing in the app changes.

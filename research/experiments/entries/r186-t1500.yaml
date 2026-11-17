@@ -1,0 +1,38 @@
+id: r186-t1500
+title: 'R186 T1500: hard Rs 1,500 a lot net profit target on top of today''s exit rule, Liquidity / R72 / R51 (last year,
+  1 lot)'
+family: trade-management
+date: '2026-11-16'
+doc: research/hunt/r186_fixed_profit/results/summary.md
+hypothesis: 'Boss: ''check if i had a hard 1-1.5 fix profit what will be effect on liquidity,r51,r72''.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+period:
+  design: none fitted here; early part 2025-10-20..2026-03-31 (R151 picker in-sample)
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); year to 2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (entries unchanged; R151 picker on R72 / R51); the exit on the option premium'
+model_or_rule: hard Rs 1,500 a lot net profit target; on top of own stop + R162 breakeven at +10% (+ R151 picker on R72 /
+  R51); PREREG.md
+settings: research/hunt/r186_fixed_profit/r186study.py
+prereg: research/hunt/r186_fixed_profit/PREREG.md
+variants_tried: 3
+results:
+  summary: 'LIQ: year 691 trades win 45.1% Rs 11,998 (base Rs 100,222); final 358 trades -Rs 30,885 (base Rs 6,432); twin
+    p 0.8982; failed: net below the base (year or final); not positive in every period; twin BH q 1.00 > 0.10; outside the
+    account stop rule in final, six, year | R72: year 1105 trades win 60.3% Rs 151,578 (base Rs 324,629); final 629 trades
+    Rs 43,037 (base Rs 167,233); twin p 0.002; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside
+    the account stop rule in final, six, year | R51: year 1448 trades win 59.2% Rs 145,608 (base Rs 249,903); final 699 trades
+    Rs 41,302 (base Rs 144,802); twin p 0.002; failed: net below the base (year or final); twin BH q 1.00 > 0.10; outside
+    the account stop rule in final, year.'
+  costs: dated Zerodha charges on the whole quantity; R17 fills (locks sold as stops; a target fills at its price or at the
+    open of a minute that gaps above it)
+holdout_read: true
+verdict: rejected
+notes: BH m = 4867. Nothing in the app changes.

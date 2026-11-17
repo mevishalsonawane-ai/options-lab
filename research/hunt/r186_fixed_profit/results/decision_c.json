@@ -1,0 +1,104 @@
+{
+ "LIQ:S1500": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 89180,
+  "base_net_year": 98239,
+  "net_final": 17752,
+  "base_net_final": 6424
+ },
+ "R72:S1500": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 152306,
+  "base_net_year": 213110,
+  "net_final": 100492,
+  "base_net_final": 111117
+ },
+ "R51:S1500": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 72074,
+  "base_net_year": 162959,
+  "net_final": 20594,
+  "base_net_final": 57450
+ },
+ "LIQ:S1000": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 76543,
+  "base_net_year": 98239,
+  "net_final": 8410,
+  "base_net_final": 6424
+ },
+ "R72:S1000": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 136891,
+  "base_net_year": 213110,
+  "net_final": 76919,
+  "base_net_final": 111117
+ },
+ "R51:S1000": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in early, final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 49797,
+  "base_net_year": 162959,
+  "net_final": -7484,
+  "base_net_final": 57450
+ },
+ "_m": {
+  "tests": 6,
+  "prior": 4876,
+  "total": 4882
+ }
+}
