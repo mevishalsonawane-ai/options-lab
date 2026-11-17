@@ -63,7 +63,9 @@ notes; match the surrounding code.
     - One exception, chosen by Boss on 28 Oct ("add S5 trail to arms directly; if it does not perform I will turn it
       off"): R128's S5 Trail, R123's morning network pick (an ATM option, nearly always a put) with its cell's stop
       (−₹1,000 or −₹2,000 net) and a 60% profit lock after +₹1,000, runs as a PAPER arm although it failed the gates
-      (41 holdout trades, worst month −₹18.6k).
+      (555 walk-forward trades, worst month −₹18.6k in Sep 2024; 41 holdout trades, worst month −₹2,328 in Apr 2026.
+      Corrected 17 Nov by R188, which rebuilt R128 trade by trade: the −₹18.6k month is in the walk-forward period, not
+      the holdout).
       - It is labelled "failed gates, Boss's exception" wherever it is shown.
       - Boss can switch it off in one tap.
       - Live: like every arm since Boss's 30 Oct choice (below), only through the live gates.
