@@ -1,0 +1,31 @@
+{
+ "R144a fresh R72": {
+  "trades": 1169,
+  "net": -67223,
+  "published": [
+   1169,
+   -67223
+  ]
+ },
+ "R144a fresh LIQ": {
+  "trades": 244,
+  "net": -25503,
+  "published": null
+ },
+ "R143 unseen R72": {
+  "trades": 3395,
+  "net": -306931,
+  "published": [
+   3395,
+   -306931
+  ]
+ },
+ "R143 unseen LIQ": {
+  "trades": 894,
+  "net": 83307,
+  "published": [
+   894,
+   83000
+  ]
+ }
+}
