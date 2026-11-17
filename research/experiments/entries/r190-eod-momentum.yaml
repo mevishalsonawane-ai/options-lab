@@ -1,0 +1,40 @@
+id: r190-eod-momentum
+title: 'R190 best strategy hunt: End-of-day intraday momentum (Gao et al. 2018)'
+family: outside-strategies
+date: '2026-11-17'
+doc: research/hunt/r190_best_hunt/results/report.md
+hypothesis: 'End-of-day intraday momentum (Gao et al. 2018): r1 + r2 (and r2 alone) in the top 40% of 60 sessions, buy NIFTY
+  ATM CE / PE 14:50 -> 15:20, no expiry days. Is it profitable in all three eras (A Aug 2020 - Jul 2021, B Dec 2021 - Oct
+  2024, C Nov 2024 - 13 Nov 2026), robust to the top 5 trades, better than random entries in era A, after BH?'
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (copied 17 Nov 2026: index_1m, options_rolling_1m WEEK + BANKNIFTY MONTH,
+  equity_1m, index_daily, with the 20 Oct - 13 Nov 2026 fill) plus the dhan-data branch NIFTY WEEK options 3 Aug 2020 - 30
+  Jul 2021 (same Dhan endpoint, identical on the overlap)'
+period:
+  design: era B 2021-12-01..2024-10-31 (no parameter fitted); era C 2024-11-01..2026-11-13
+  holdout: 'era A 2020-08-03..2021-07-30, read once (results/ERA_A_READ.flag); NOT virgin: the Oct 2026 h-series hunt used
+    it for other rules'
+instruments:
+- NIFTY
+features:
+- 'signal source: NIFTY index returns'
+- buy the option; dated Zerodha charges; real 1-minute option prices
+model_or_rule: 'End-of-day intraday momentum (Gao et al. 2018): r1 + r2 (and r2 alone) in the top 40% of 60 sessions, buy
+  NIFTY ATM CE / PE 14:50 -> 15:20, no expiry days'
+settings: research/hunt/r190_best_hunt/r190cfg.py; PREREG.md section 3
+prereg: research/hunt/r190_best_hunt/PREREG.md
+variants_tried: 2
+results:
+  summary: 'M1 (End-of-day momentum (r1 + r2), NIFTY ATM, 14:50 -> 15:20): era A 65 tr, 43.1% win, -Rs 3,026, DD Rs 8,719;
+    era B 206 tr, 45.1% win, -Rs 20,878, DD Rs 30,613; era C 141 tr, 36.9% win, -Rs 27,783, DD Rs 31,593 -> not reliable |
+    M2 (End-of-day momentum (r2 alone), NIFTY ATM, 14:50 -> 15:20): era A 76 tr, 32.9% win, -Rs 15,802, DD Rs 15,802; era
+    B 212 tr, 42.9% win, -Rs 19,522, DD Rs 25,435; era C 169 tr, 40.2% win, -Rs 27,428, DD Rs 36,536 -> not reliable. BH m
+    = 4,762; failed items: M1: era A: net -3,026 <= 0; era A: net without the top 5 trades -20,665 <= 0; era B: net -20,878
+    <= 0; era B: net without the top 5 trades -36,793 <= 0; era C: net -27,783 <= 0; era C: net without the top 5 trades -49,655
+    <= 0; era A twin p 0.342 >= 0.05; BH q 1 > 0.1 / M2: era A: net -15,802 <= 0; era A: net without the top 5 trades -38,496
+    <= 0; era B: net -19,522 <= 0; era B: net without the top 5 trades -35,979 <= 0; era C: net -27,428 <= 0; era C: net without
+    the top 5 trades -47,410 <= 0; era A twin p 0.747 >= 0.05; BH q 1 > 0.1'
+  costs: 'dated Zerodha charges; intraday: R17 liq fills; Night: app +-5 bps + h24 half-spread; arms: their engines'' R17
+    fills; 2x slippage stress reported'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying, option bought. Research only; nothing in the app changes.

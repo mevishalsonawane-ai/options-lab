@@ -1,0 +1,44 @@
+id: r190-trend-vix-overlay
+title: 'R190 best strategy hunt: M1 / M2 / V1 with calls only above the 50-day average and puts only below, and no entry wh'
+family: daily-filters
+date: '2026-11-17'
+doc: research/hunt/r190_best_hunt/results/report.md
+hypothesis: M1 / M2 / V1 with calls only above the 50-day average and puts only below, and no entry when India VIX's previous
+  close is above its 1-year 90th percentile. Is it profitable in all three eras (A Aug 2020 - Jul 2021, B Dec 2021 - Oct 2024,
+  C Nov 2024 - 13 Nov 2026), robust to the top 5 trades, better than random entries in era A, after BH?
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (copied 17 Nov 2026: index_1m, options_rolling_1m WEEK + BANKNIFTY MONTH,
+  equity_1m, index_daily, with the 20 Oct - 13 Nov 2026 fill) plus the dhan-data branch NIFTY WEEK options 3 Aug 2020 - 30
+  Jul 2021 (same Dhan endpoint, identical on the overlap)'
+period:
+  design: era B 2021-12-01..2024-10-31 (no parameter fitted); era C 2024-11-01..2026-11-13
+  holdout: 'era A 2020-08-03..2021-07-30, read once (results/ERA_A_READ.flag); NOT virgin: the Oct 2026 h-series hunt used
+    it for other rules'
+instruments:
+- NIFTY
+features:
+- 'signal source: NIFTY index; daily closes and India VIX as filters'
+- buy the option; dated Zerodha charges; real 1-minute option prices
+model_or_rule: M1 / M2 / V1 with calls only above the 50-day average and puts only below, and no entry when India VIX's previous
+  close is above its 1-year 90th percentile
+settings: research/hunt/r190_best_hunt/r190cfg.py; PREREG.md section 3
+prereg: research/hunt/r190_best_hunt/PREREG.md
+variants_tried: 3
+results:
+  summary: 'O1 (M1 + trend (50-day average) + VIX overlay): era A 40 tr, 42.5% win, -Rs 1,530, DD Rs 8,214; era B 115 tr,
+    43.5% win, -Rs 12,679, DD Rs 20,402; era C 84 tr, 38.1% win, -Rs 4,725, DD Rs 18,564 -> not reliable | O2 (M2 + trend
+    (50-day average) + VIX overlay): era A 37 tr, 37.8% win, -Rs 5,058, DD Rs 10,546; era B 106 tr, 43.4% win, -Rs 13,269,
+    DD Rs 21,895; era C 77 tr, 39.0% win, -Rs 8,596, DD Rs 15,986 -> not reliable | O3 (V1 + trend (50-day average) + VIX
+    overlay): era A 127 tr, 30.7% win, Rs 15,428, DD Rs 21,897; era B 361 tr, 28.3% win, Rs 15,261, DD Rs 25,435; era C 286
+    tr, 30.8% win, Rs 9,532, DD Rs 36,081 -> not reliable. BH m = 4,762; failed items: O1: era A: net -1,530 <= 0; era A:
+    net without the top 5 trades -8,439 <= 0; era B: net -12,679 <= 0; era B: net without the top 5 trades -28,220 <= 0; era
+    C: net -4,725 <= 0; era C: net without the top 5 trades -26,598 <= 0; era A twin p 0.357 >= 0.05; BH q 1 > 0.1 / O2: era
+    A: 37 trades < 40; era A: net -5,058 <= 0; era A: net without the top 5 trades -14,421 <= 0; era B: net -13,269 <= 0;
+    era B: net without the top 5 trades -29,407 <= 0; era C: net -8,596 <= 0; era C: net without the top 5 trades -27,117
+    <= 0; era A twin p 0.554 >= 0.05; BH q 1 > 0.1 / O3: era A: net without the top 5 trades -37,762 <= 0; era B: net without
+    the top 5 trades -40,001 <= 0; era C: net without the top 5 trades -69,664 <= 0; era A twin p 0.163 >= 0.05; BH q 1 >
+    0.1'
+  costs: 'dated Zerodha charges; intraday: R17 liq fills; Night: app +-5 bps + h24 half-spread; arms: their engines'' R17
+    fills; 2x slippage stress reported'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying, option bought. Research only; nothing in the app changes.

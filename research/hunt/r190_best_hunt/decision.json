@@ -1,0 +1,823 @@
+{
+ "study": "R190 best strategy hunt",
+ "written": "2026-11-17T15:42:39.056178+00:00",
+ "era_a_read": true,
+ "m_total": 4762,
+ "reliable": [],
+ "candidates": {
+  "N1B": {
+   "name": "Night (R3) book: NIFTY + BANKNIFTY, 1 lot each",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era A twin p 0.073 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.07296351824087956,
+   "era_a_twin_p_norm": 0.06422202174921256,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [
+     "worst month Rs -31,592 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 80,780 > Rs 40k",
+     "worst month Rs -37,286 < -Rs 13k"
+    ]
+   },
+   "eras": {
+    "A": {
+     "trades": 66,
+     "win": 57.57575757575758,
+     "net": 18085.564010162354,
+     "per_trade": 274.02369712367204,
+     "avg_win": 2215.453158039294,
+     "avg_loss": -2360.773428404672,
+     "net_wo_top5": -13802.563989105223,
+     "worst_day": -4879.322000732421,
+     "worst_month": -7135.75,
+     "max_dd": 15034.447996520994,
+     "months": 12,
+     "months_up": 5
+    },
+    "B": {
+     "trades": 498,
+     "win": 55.020080321285135,
+     "net": 124989.96679999998,
+     "per_trade": 250.98386907630518,
+     "avg_win": 1975.361100729927,
+     "avg_loss": -1858.2989946428572,
+     "net_wo_top5": 70545.40079999997,
+     "worst_day": -15506.678000000004,
+     "worst_month": -31591.67000000001,
+     "max_dd": 34960.08400000002,
+     "months": 35,
+     "months_up": 22
+    },
+    "C": {
+     "trades": 351,
+     "win": 52.991452991452995,
+     "net": 192725.98880000002,
+     "per_trade": 549.0768911680913,
+     "avg_win": 3583.35972688172,
+     "avg_loss": -2871.3873963636365,
+     "net_wo_top5": 111547.92600000004,
+     "worst_day": -15105.8816,
+     "worst_month": -37286.17479999999,
+     "max_dd": 80779.97399999997,
+     "months": 25,
+     "months_up": 16
+    }
+   }
+  },
+  "N1N": {
+   "name": "Night (R3) on NIFTY alone",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era C: net without the top 5 trades -67 <= 0",
+    "era A twin p 0.070 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.06996501749125437,
+   "era_a_twin_p_norm": 0.06510679279531402,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [
+     "worst month Rs -17,341 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 41,709 > Rs 40k",
+     "worst month Rs -19,000 < -Rs 13k"
+    ]
+   },
+   "eras": {
+    "A": {
+     "trades": 66,
+     "win": 57.57575757575758,
+     "net": 18085.564010162354,
+     "per_trade": 274.02369712367204,
+     "avg_win": 2215.453158039294,
+     "avg_loss": -2360.773428404672,
+     "net_wo_top5": -13802.563989105223,
+     "worst_day": -4879.322000732421,
+     "worst_month": -7135.75,
+     "max_dd": 15034.447996520994,
+     "months": 12,
+     "months_up": 5
+    },
+    "B": {
+     "trades": 244,
+     "win": 56.557377049180324,
+     "net": 55126.473999999995,
+     "per_trade": 225.9281721311475,
+     "avg_win": 1867.505811594203,
+     "avg_loss": -1911.220075471698,
+     "net_wo_top5": 9505.561999999998,
+     "worst_day": -6828.718,
+     "worst_month": -17340.862,
+     "max_dd": 17340.861999999997,
+     "months": 35,
+     "months_up": 20
+    },
+    "C": {
+     "trades": 155,
+     "win": 52.903225806451616,
+     "net": 65249.95960000002,
+     "per_trade": 420.96748129032267,
+     "avg_win": 3532.1157073170734,
+     "avg_loss": -3073.7469643835616,
+     "net_wo_top5": -67.48519999999553,
+     "worst_day": -11340.9344,
+     "worst_month": -19000.278000000002,
+     "max_dd": 41709.46599999999,
+     "months": 25,
+     "months_up": 15
+    }
+   }
+  },
+  "N2": {
+   "name": "Night for Rs 56k: one position a night, month cap -Rs 13k",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era B: net without the top 5 trades -12,540 <= 0",
+    "era A twin p 0.074 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.07396301849075462,
+   "era_a_twin_p_norm": 0.06746746681210433,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [
+     "worst month Rs -19,233 < -Rs 13k"
+    ],
+    "C": [
+     "worst month Rs -15,503 < -Rs 13k"
+    ]
+   },
+   "eras": {
+    "A": {
+     "trades": 66,
+     "win": 57.57575757575758,
+     "net": 18085.564010162354,
+     "per_trade": 274.02369712367204,
+     "avg_win": 2215.453158039294,
+     "avg_loss": -2360.773428404672,
+     "net_wo_top5": -13802.563989105223,
+     "worst_day": -4879.322000732421,
+     "worst_month": -7135.75,
+     "max_dd": 15034.447996520994,
+     "months": 12,
+     "months_up": 5
+    },
+    "B": {
+     "trades": 336,
+     "win": 52.976190476190474,
+     "net": 35938.36799999999,
+     "per_trade": 106.95942857142853,
+     "avg_win": 1844.059,
+     "avg_loss": -1850.0261645569617,
+     "net_wo_top5": -12539.996000000014,
+     "worst_day": -9398.274000000001,
+     "worst_month": -19232.636000000002,
+     "max_dd": 27456.041999999987,
+     "months": 35,
+     "months_up": 17
+    },
+    "C": {
+     "trades": 238,
+     "win": 53.36134453781513,
+     "net": 132013.97520000004,
+     "per_trade": 554.6805680672271,
+     "avg_win": 3467.212138582677,
+     "avg_loss": -2777.6753729729735,
+     "net_wo_top5": 58201.65440000004,
+     "worst_day": -11340.9344,
+     "worst_month": -15502.728799999997,
+     "max_dd": 35389.8976,
+     "months": 25,
+     "months_up": 15
+    }
+   }
+  },
+  "L1": {
+   "name": "Liquidity 15+5 (BANKNIFTY, FINNIFTY, MIDCPNIFTY), as built",
+   "reliable": false,
+   "fails": [
+    "era A: untestable (no data)",
+    "era A twin p: untestable",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": null,
+   "era_a_twin_p_norm": 1.0,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "B": [
+     "max drawdown Rs 51,118 > Rs 40k",
+     "worst month Rs -13,213 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 61,062 > Rs 40k",
+     "worst month Rs -37,821 < -Rs 13k"
+    ]
+   },
+   "eras": {
+    "A": null,
+    "B": {
+     "trades": 1099,
+     "win": 31.028207461328485,
+     "net": 73740.78999999975,
+     "per_trade": 67.09808007279322,
+     "avg_win": 1571.5314662756598,
+     "avg_loss": -609.6984696569923,
+     "net_wo_top5": 10377.94999999975,
+     "worst_day": -5741.930000000001,
+     "worst_month": -13212.640000000021,
+     "max_dd": 51117.900000000074,
+     "months": 35,
+     "months_up": 16
+    },
+    "C": {
+     "trades": 1323,
+     "win": 41.49659863945578,
+     "net": 255293.19999999955,
+     "per_trade": 192.9653817082385,
+     "avg_win": 1884.7315482695808,
+     "avg_loss": -1007.0082945736436,
+     "net_wo_top5": 168103.62999999954,
+     "worst_day": -11404.8,
+     "worst_month": -37820.73000000003,
+     "max_dd": 61061.59999999998,
+     "months": 25,
+     "months_up": 12
+    }
+   }
+  },
+  "D1": {
+   "name": "R72 Breadth Donchian, today's rules",
+   "reliable": false,
+   "fails": [
+    "era A: untestable (no data)",
+    "era B: net -407,315 <= 0",
+    "era B: net without the top 5 trades -455,331 <= 0",
+    "era A twin p: untestable",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": null,
+   "era_a_twin_p_norm": 1.0,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "B": [
+     "max drawdown Rs 451,132 > Rs 40k",
+     "worst month Rs -54,175 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 199,077 > Rs 40k",
+     "worst month Rs -78,467 < -Rs 13k"
+    ]
+   },
+   "eras": {
+    "A": null,
+    "B": {
+     "trades": 4389,
+     "win": 39.849624060150376,
+     "net": -407315.360000001,
+     "per_trade": -92.8036819321032,
+     "avg_win": 888.0295082904513,
+     "avg_loss": -742.6056704545457,
+     "net_wo_top5": -455331.230000001,
+     "worst_day": -16756.890000000007,
+     "worst_month": -54174.86000000002,
+     "max_dd": 451131.7700000009,
+     "months": 35,
+     "months_up": 8
+    },
+    "C": {
+     "trades": 4571,
+     "win": 46.48873331874863,
+     "net": 390101.3899999986,
+     "per_trade": 85.34267993874396,
+     "avg_win": 1710.7795435294115,
+     "avg_loss": -1326.7805151267378,
+     "net_wo_top5": 326344.40999999864,
+     "worst_day": -58613.45000000002,
+     "worst_month": -78466.78000000012,
+     "max_dd": 199077.41000000015,
+     "months": 25,
+     "months_up": 16
+    }
+   }
+  },
+  "D2": {
+   "name": "R72 + R151 picker (live by Boss's exception)",
+   "reliable": false,
+   "fails": [
+    "era A: untestable (no data)",
+    "era B: net -184,515 <= 0",
+    "era B: net without the top 5 trades -232,531 <= 0",
+    "era A twin p: untestable",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": null,
+   "era_a_twin_p_norm": 1.0,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "B": [
+     "max drawdown Rs 247,894 > Rs 40k",
+     "worst month Rs -37,319 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 110,062 > Rs 40k",
+     "worst month Rs -19,993 < -Rs 13k"
+    ]
+   },
+   "eras": {
+    "A": null,
+    "B": {
+     "trades": 2503,
+     "win": 41.35037954454654,
+     "net": -184515.05000000063,
+     "per_trade": -73.7175589292851,
+     "avg_win": 973.3461256038644,
+     "avg_loss": -811.9402520435971,
+     "net_wo_top5": -232530.92000000062,
+     "worst_day": -13601.890000000003,
+     "worst_month": -37318.74000000001,
+     "max_dd": 247893.52000000054,
+     "months": 35,
+     "months_up": 11
+    },
+    "C": {
+     "trades": 2405,
+     "win": 51.85031185031185,
+     "net": 689639.0699999994,
+     "per_trade": 286.7522120582118,
+     "avg_win": 1953.1074578989571,
+     "avg_loss": -1507.6735146804838,
+     "net_wo_top5": 620864.1099999994,
+     "worst_day": -44106.09000000002,
+     "worst_month": -19993.150000000023,
+     "max_dd": 110062.33000000007,
+     "months": 25,
+     "months_up": 17
+    }
+   }
+  },
+  "D3": {
+   "name": "R72 + FB-R72-A10 (skip after a very wide day)",
+   "reliable": false,
+   "fails": [
+    "era A: untestable (no data)",
+    "era B: net -210,414 <= 0",
+    "era B: net without the top 5 trades -250,976 <= 0",
+    "era A twin p: untestable",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": null,
+   "era_a_twin_p_norm": 1.0,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "B": [
+     "max drawdown Rs 263,801 > Rs 40k",
+     "worst month Rs -34,263 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 147,672 > Rs 40k",
+     "worst month Rs -65,007 < -Rs 13k"
+    ]
+   },
+   "eras": {
+    "A": null,
+    "B": {
+     "trades": 3484,
+     "win": 41.50401836969001,
+     "net": -210413.5600000008,
+     "per_trade": -60.39424799081539,
+     "avg_win": 851.9825795297369,
+     "avg_loss": -707.7430667320904,
+     "net_wo_top5": -250975.6200000008,
+     "worst_day": -13601.890000000003,
+     "worst_month": -34262.79,
+     "max_dd": 263801.2200000007,
+     "months": 35,
+     "months_up": 11
+    },
+    "C": {
+     "trades": 3721,
+     "win": 47.56785810266058,
+     "net": 478593.67999999895,
+     "per_trade": 128.61963988175194,
+     "avg_win": 1690.8648192090393,
+     "avg_loss": -1288.6914659149156,
+     "net_wo_top5": 414836.69999999896,
+     "worst_day": -58613.45000000002,
+     "worst_month": -65007.26000000003,
+     "max_dd": 147671.87000000014,
+     "months": 25,
+     "months_up": 17
+    }
+   }
+  },
+  "M1": {
+   "name": "End-of-day momentum (r1 + r2), NIFTY ATM, 14:50 -> 15:20",
+   "reliable": false,
+   "fails": [
+    "era A: net -3,026 <= 0",
+    "era A: net without the top 5 trades -20,665 <= 0",
+    "era B: net -20,878 <= 0",
+    "era B: net without the top 5 trades -36,793 <= 0",
+    "era C: net -27,783 <= 0",
+    "era C: net without the top 5 trades -49,655 <= 0",
+    "era A twin p 0.342 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.3423288355822089,
+   "era_a_twin_p_norm": 0.3358118876664166,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [],
+    "C": []
+   },
+   "eras": {
+    "A": {
+     "trades": 65,
+     "win": 43.07692307692308,
+     "net": -3026.0499999999965,
+     "per_trade": -46.55461538461533,
+     "avg_win": 1137.2453571428573,
+     "avg_loss": -942.4032432432432,
+     "net_wo_top5": -20665.259999999995,
+     "worst_day": -3293.5399999999995,
+     "worst_month": -5434.02,
+     "max_dd": 8719.309999999998,
+     "months": 12,
+     "months_up": 5
+    },
+    "B": {
+     "trades": 206,
+     "win": 45.14563106796117,
+     "net": -20877.590000000004,
+     "per_trade": -101.34752427184468,
+     "avg_win": 707.988064516129,
+     "avg_loss": -767.437876106195,
+     "net_wo_top5": -36792.950000000004,
+     "worst_day": -4507.12,
+     "worst_month": -8605.71,
+     "max_dd": 30613.220000000016,
+     "months": 35,
+     "months_up": 12
+    },
+    "C": {
+     "trades": 141,
+     "win": 36.87943262411347,
+     "net": -27782.509999999995,
+     "per_trade": -197.03907801418435,
+     "avg_win": 1179.931923076923,
+     "avg_loss": -1001.5614606741573,
+     "net_wo_top5": -49655.09999999999,
+     "worst_day": -5021.010000000001,
+     "worst_month": -11298.66,
+     "max_dd": 31593.010000000006,
+     "months": 25,
+     "months_up": 8
+    }
+   }
+  },
+  "M2": {
+   "name": "End-of-day momentum (r2 alone), NIFTY ATM, 14:50 -> 15:20",
+   "reliable": false,
+   "fails": [
+    "era A: net -15,802 <= 0",
+    "era A: net without the top 5 trades -38,496 <= 0",
+    "era B: net -19,522 <= 0",
+    "era B: net without the top 5 trades -35,979 <= 0",
+    "era C: net -27,428 <= 0",
+    "era C: net without the top 5 trades -47,410 <= 0",
+    "era A twin p 0.747 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.7466266866566716,
+   "era_a_twin_p_norm": 0.7455053621415743,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [],
+    "C": []
+   },
+   "eras": {
+    "A": {
+     "trades": 76,
+     "win": 32.89473684210527,
+     "net": -15801.719999999998,
+     "per_trade": -207.9173684210526,
+     "avg_win": 1640.8192000000001,
+     "avg_loss": -1114.1607843137253,
+     "net_wo_top5": -38495.5,
+     "worst_day": -3560.66,
+     "worst_month": -5909.889999999999,
+     "max_dd": 15801.72,
+     "months": 12,
+     "months_up": 4
+    },
+    "B": {
+     "trades": 212,
+     "win": 42.924528301886795,
+     "net": -19521.799999999992,
+     "per_trade": -92.08396226415091,
+     "avg_win": 879.3592307692307,
+     "avg_loss": -822.6734710743802,
+     "net_wo_top5": -35979.479999999996,
+     "worst_day": -4507.12,
+     "worst_month": -7513.329999999998,
+     "max_dd": 25435.339999999993,
+     "months": 35,
+     "months_up": 14
+    },
+    "C": {
+     "trades": 169,
+     "win": 40.23668639053255,
+     "net": -27427.670000000006,
+     "per_trade": -162.29390532544383,
+     "avg_win": 1040.1248529411764,
+     "avg_loss": -971.8431683168319,
+     "net_wo_top5": -47409.51,
+     "worst_day": -4891.220000000002,
+     "worst_month": -11914.169999999998,
+     "max_dd": 36535.759999999995,
+     "months": 25,
+     "months_up": 11
+    }
+   }
+  },
+  "V1": {
+   "name": "Noise-area breakout over TWAP, NIFTY ATM, 30-min checks",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -22,691 <= 0",
+    "era B: net without the top 5 trades -30,538 <= 0",
+    "era C: net -74,700 <= 0",
+    "era C: net without the top 5 trades -159,141 <= 0",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.0079960019990005,
+   "era_a_twin_p_norm": 0.0033833473231017095,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [
+     "max drawdown Rs 66,874 > Rs 40k",
+     "worst month Rs -13,728 < -Rs 13k"
+    ],
+    "C": [
+     "max drawdown Rs 113,025 > Rs 40k",
+     "worst month Rs -32,005 < -Rs 13k"
+    ]
+   },
+   "eras": {
+    "A": {
+     "trades": 261,
+     "win": 27.203065134099617,
+     "net": 65303.110000000015,
+     "per_trade": 250.20348659003838,
+     "avg_win": 3750.472112676056,
+     "avg_loss": -1057.7916315789473,
+     "net_wo_top5": -22690.629999999976,
+     "worst_day": -6344.28,
+     "worst_month": -7820.419999999996,
+     "max_dd": 25908.089999999993,
+     "months": 12,
+     "months_up": 8
+    },
+    "B": {
+     "trades": 756,
+     "win": 27.513227513227513,
+     "net": 44150.0,
+     "per_trade": 58.3994708994709,
+     "avg_win": 2412.0446153846156,
+     "avg_loss": -834.954890510949,
+     "net_wo_top5": -30537.670000000013,
+     "worst_day": -4630.66,
+     "worst_month": -13727.73,
+     "max_dd": 66874.47,
+     "months": 35,
+     "months_up": 16
+    },
+    "C": {
+     "trades": 550,
+     "win": 30.363636363636363,
+     "net": -74700.40999999997,
+     "per_trade": -135.81892727272722,
+     "avg_win": 3310.2508383233535,
+     "avg_loss": -1638.4133159268931,
+     "net_wo_top5": -159141.36,
+     "worst_day": -11095.36,
+     "worst_month": -32004.7,
+     "max_dd": 113024.63999999994,
+     "months": 25,
+     "months_up": 9
+    }
+   }
+  },
+  "O1": {
+   "name": "M1 + trend (50-day average) + VIX overlay",
+   "reliable": false,
+   "fails": [
+    "era A: net -1,530 <= 0",
+    "era A: net without the top 5 trades -8,439 <= 0",
+    "era B: net -12,679 <= 0",
+    "era B: net without the top 5 trades -28,220 <= 0",
+    "era C: net -4,725 <= 0",
+    "era C: net without the top 5 trades -26,598 <= 0",
+    "era A twin p 0.357 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.3568215892053973,
+   "era_a_twin_p_norm": 0.36802874194792456,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [],
+    "C": []
+   },
+   "eras": {
+    "A": {
+     "trades": 40,
+     "win": 42.5,
+     "net": -1530.4700000000003,
+     "per_trade": -38.261750000000006,
+     "avg_win": 682.5617647058825,
+     "avg_loss": -571.044347826087,
+     "net_wo_top5": -8438.880000000001,
+     "worst_day": -2141.2300000000005,
+     "worst_month": -1946.2100000000028,
+     "max_dd": 8214.37,
+     "months": 11,
+     "months_up": 5
+    },
+    "B": {
+     "trades": 115,
+     "win": 43.47826086956522,
+     "net": -12678.510000000002,
+     "per_trade": -110.24791304347828,
+     "avg_win": 758.3790000000001,
+     "avg_loss": -778.4224615384616,
+     "net_wo_top5": -28219.800000000003,
+     "worst_day": -4507.12,
+     "worst_month": -7052.080000000001,
+     "max_dd": 20402.039999999997,
+     "months": 32,
+     "months_up": 12
+    },
+    "C": {
+     "trades": 84,
+     "win": 38.095238095238095,
+     "net": -4724.91000000001,
+     "per_trade": -56.24892857142869,
+     "avg_win": 1357.7775,
+     "avg_loss": -926.4190384615387,
+     "net_wo_top5": -26597.500000000007,
+     "worst_day": -5021.010000000001,
+     "worst_month": -8890.560000000001,
+     "max_dd": 18563.830000000005,
+     "months": 23,
+     "months_up": 8
+    }
+   }
+  },
+  "O2": {
+   "name": "M2 + trend (50-day average) + VIX overlay",
+   "reliable": false,
+   "fails": [
+    "era A: 37 trades < 40",
+    "era A: net -5,058 <= 0",
+    "era A: net without the top 5 trades -14,421 <= 0",
+    "era B: net -13,269 <= 0",
+    "era B: net without the top 5 trades -29,407 <= 0",
+    "era C: net -8,596 <= 0",
+    "era C: net without the top 5 trades -27,117 <= 0",
+    "era A twin p 0.554 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.5542228885557221,
+   "era_a_twin_p_norm": 0.5601477661137279,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [],
+    "C": []
+   },
+   "eras": {
+    "A": {
+     "trades": 37,
+     "win": 37.83783783783784,
+     "net": -5058.11,
+     "per_trade": -136.70567567567568,
+     "avg_win": 958.1857142857141,
+     "avg_loss": -803.1613043478261,
+     "net_wo_top5": -14421.279999999999,
+     "worst_day": -2141.2300000000005,
+     "worst_month": -2062.7300000000023,
+     "max_dd": 10546.050000000001,
+     "months": 12,
+     "months_up": 5
+    },
+    "B": {
+     "trades": 106,
+     "win": 43.39622641509434,
+     "net": -13269.379999999996,
+     "per_trade": -125.1828301886792,
+     "avg_win": 947.5158695652175,
+     "avg_loss": -947.5851666666666,
+     "net_wo_top5": -29406.809999999998,
+     "worst_day": -4507.12,
+     "worst_month": -6764.1399999999985,
+     "max_dd": 21894.6,
+     "months": 33,
+     "months_up": 15
+    },
+    "C": {
+     "trades": 77,
+     "win": 38.961038961038966,
+     "net": -8596.01000000001,
+     "per_trade": -111.63649350649362,
+     "avg_win": 1164.784,
+     "avg_loss": -926.3729787234042,
+     "net_wo_top5": -27117.290000000008,
+     "worst_day": -3101.530000000001,
+     "worst_month": -8890.560000000001,
+     "max_dd": 15986.220000000008,
+     "months": 22,
+     "months_up": 11
+    }
+   }
+  },
+  "O3": {
+   "name": "V1 + trend (50-day average) + VIX overlay",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -37,762 <= 0",
+    "era B: net without the top 5 trades -40,001 <= 0",
+    "era C: net without the top 5 trades -69,664 <= 0",
+    "era A twin p 0.163 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "era_a_twin_p": 0.1634182908545727,
+   "era_a_twin_p_norm": 0.1599550052680852,
+   "bh_q": 1.0,
+   "account_stop_breaches": {
+    "A": [],
+    "B": [],
+    "C": []
+   },
+   "eras": {
+    "A": {
+     "trades": 127,
+     "win": 30.708661417322837,
+     "net": 15428.060000000023,
+     "per_trade": 121.48078740157499,
+     "avg_win": 2659.789230769231,
+     "avg_loss": -1003.4513636363635,
+     "net_wo_top5": -37762.239999999976,
+     "worst_day": -4586.63,
+     "worst_month": -6616.419999999996,
+     "max_dd": 21896.549999999996,
+     "months": 12,
+     "months_up": 6
+    },
+    "B": {
+     "trades": 361,
+     "win": 28.254847645429365,
+     "net": 15261.370000000008,
+     "per_trade": 42.275263157894756,
+     "avg_win": 2203.267843137255,
+     "avg_loss": -808.7720077220076,
+     "net_wo_top5": -40001.479999999996,
+     "worst_day": -4630.66,
+     "worst_month": -7385.449999999999,
+     "max_dd": 25435.369999999995,
+     "months": 35,
+     "months_up": 15
+    },
+    "C": {
+     "trades": 286,
+     "win": 30.76923076923077,
+     "net": 9531.760000000004,
+     "per_trade": 33.327832167832184,
+     "avg_win": 3709.0298863636363,
+     "avg_loss": -1600.3175252525252,
+     "net_wo_top5": -69663.56999999998,
+     "worst_day": -11095.36,
+     "worst_month": -10711.830000000002,
+     "max_dd": 36081.34,
+     "months": 24,
+     "months_up": 9
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,43 @@
+id: r190-r72
+title: 'R190 best strategy hunt: R72 Breadth Donchian with its own exits; + R151''s frozen logistic picker (0.4656); + FB-R7'
+family: patterns-indicators
+date: '2026-11-17'
+doc: research/hunt/r190_best_hunt/results/report.md
+hypothesis: R72 Breadth Donchian with its own exits; + R151's frozen logistic picker (0.4656); + FB-R72-A10. Is it profitable
+  in all three eras (A Aug 2020 - Jul 2021, B Dec 2021 - Oct 2024, C Nov 2024 - 13 Nov 2026), robust to the top 5 trades,
+  better than random entries in era A, after BH?
+data_version: 'Drive lake gdrive:IraAlgo-data-lake (copied 17 Nov 2026: index_1m, options_rolling_1m WEEK + BANKNIFTY MONTH,
+  equity_1m, index_daily, with the 20 Oct - 13 Nov 2026 fill) plus the dhan-data branch NIFTY WEEK options 3 Aug 2020 - 30
+  Jul 2021 (same Dhan endpoint, identical on the overlap)'
+period:
+  design: era B 2021-12-01..2024-10-31 (no parameter fitted); era C 2024-11-01..2026-11-13
+  holdout: 'era A 2020-08-03..2021-07-30, read once (results/ERA_A_READ.flag); NOT virgin: the Oct 2026 h-series hunt used
+    it for other rules'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the five indices'' 5-minute Donchian breaks'
+- buy the option; dated Zerodha charges; real 1-minute option prices
+model_or_rule: R72 Breadth Donchian with its own exits; + R151's frozen logistic picker (0.4656); + FB-R72-A10
+settings: research/hunt/r190_best_hunt/r190cfg.py; PREREG.md section 3
+prereg: research/hunt/r190_best_hunt/PREREG.md
+variants_tried: 3
+results:
+  summary: 'D1 (R72 Breadth Donchian, today''s rules): era A: untestable; era B 4389 tr, 39.8% win, -Rs 407,315, DD Rs 451,132;
+    era C 4571 tr, 46.5% win, Rs 390,101, DD Rs 199,077 -> not reliable | D2 (R72 + R151 picker (live by Boss''s exception)):
+    era A: untestable; era B 2503 tr, 41.4% win, -Rs 184,515, DD Rs 247,894; era C 2405 tr, 51.9% win, Rs 689,639, DD Rs 110,062
+    -> not reliable | D3 (R72 + FB-R72-A10 (skip after a very wide day)): era A: untestable; era B 3484 tr, 41.5% win, -Rs
+    210,414, DD Rs 263,801; era C 3721 tr, 47.6% win, Rs 478,594, DD Rs 147,672 -> not reliable. BH m = 4,762; failed items:
+    D1: era A: untestable (no data); era B: net -407,315 <= 0; era B: net without the top 5 trades -455,331 <= 0; era A twin
+    p: untestable; BH q 1 > 0.1 / D2: era A: untestable (no data); era B: net -184,515 <= 0; era B: net without the top 5
+    trades -232,531 <= 0; era A twin p: untestable; BH q 1 > 0.1 / D3: era A: untestable (no data); era B: net -210,414 <=
+    0; era B: net without the top 5 trades -250,976 <= 0; era A twin p: untestable; BH q 1 > 0.1'
+  costs: 'dated Zerodha charges; intraday: R17 liq fills; Night: app +-5 bps + h24 half-spread; arms: their engines'' R17
+    fills; 2x slippage stress reported'
+holdout_read: true
+verdict: rejected
+notes: Signal on the underlying, option bought. Research only; nothing in the app changes.

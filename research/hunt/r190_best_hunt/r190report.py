@@ -59,7 +59,7 @@ def decide(bc, a) -> dict:
 
 
 ROW = "| {era} | {trades} | {win} | {net} | {aw} / {al} | {wo} | {wd} | {dd} | {wm} |"
-HEAD = ("| era | trades | win % | net (1 lot) | avg win / avg loss | net without top 5 | worst day | max drawdown | "
+HEAD = ("| era | trades | win % | net | avg win / avg loss | net without top 5 | worst day | max drawdown | "
         "worst month |\n|---|---|---|---|---|---|---|---|---|")
 
 
@@ -94,6 +94,42 @@ def verdict_line(d: dict, a) -> str:
     return "**Verdict: NOT RELIABLE.** Failed: " + "; ".join(d["fails"]) + "."
 
 
+def _s(dec, cid, e):
+    return dec[cid]["eras"].get(e) or {}
+
+
+def plain(dec) -> list:
+    """The plain reading for Boss (numbers from decision.json)."""
+    n = {e: _s(dec, "N1N", e) for e in ERAS}
+    b = {e: _s(dec, "N1B", e) for e in ERAS}
+    lq = {e: _s(dec, "L1", e) for e in ERAS}
+    d1, d2 = _s(dec, "D1", "B"), _s(dec, "D2", "B")
+    v = {e: _s(dec, "V1", e) for e in ERAS}
+    return [
+        "**What this means, in plain words:**", "",
+        f"- **Night (R3) is still the most consistent rule we have.** It made money in all three eras: on NIFTY alone "
+        f"{rs(n['A'].get('net'))} (era A, {n['A'].get('trades')} trades), {rs(n['B'].get('net'))} (B), "
+        f"{rs(n['C'].get('net'))} (C), winning {n['A'].get('win', 0):.0f}% / {n['B'].get('win', 0):.0f}% / "
+        f"{n['C'].get('win', 0):.0f}% of trades; the NIFTY + BANKNIFTY book made {rs(b['B'].get('net'))} (B) and "
+        f"{rs(b['C'].get('net'))} (C). But it is NOT proven: in era A it was not clearly better than random nights "
+        f"(twin p {dec['N1N']['era_a_twin_p']:.3f}), its profit there came from its 5 best nights, and after counting "
+        "the ~4,760 ideas tried it is not significant. Its drawdowns and worst months also break the account stop at 1 lot "
+        "each (the book's worst month in era C was " + rs(b['C'].get('worst_month')) + ").",
+        f"- **Liquidity 15+5 made money in both eras it can be tested on** ({rs(lq['B'].get('net'))} in B at "
+        f"{lq['B'].get('win', 0):.0f}% wins, {rs(lq['C'].get('net'))} in C at {lq['C'].get('win', 0):.0f}%), but era A "
+        "has no BANKNIFTY / FINNIFTY / MIDCPNIFTY option data, so it cannot meet the gate.",
+        f"- **The R72 Donchian arms lose before Nov 2024, again:** R72 {rs(d1.get('net'))} in era B "
+        f"({d1.get('trades')} trades), with R151's picker {rs(d2.get('net'))}. Their profit is a recent-regime story. "
+        "(The picker's era-C numbers are mostly in-sample: it was trained on Nov 2024 - Mar 2026.)",
+        f"- **The new outside ideas did not hold up on NIFTY options.** End-of-day momentum lost in every era. The "
+        f"noise-area breakout made {rs(v['A'].get('net'))} (A) and {rs(v['B'].get('net'))} (B) but lost "
+        f"{rs(v['C'].get('net'))} in the recent era, and wins only about {v['B'].get('win', 0):.0f}% of trades. The trend / VIX "
+        "overlay did not rescue either.",
+        "- **High win rate and reliable profit did not come together anywhere.** The best win rates (Night, 53-58%) come "
+        "with an average loss about as big as the average win.",
+    ]
+
+
 def summary(bc, a, dec) -> str:
     rel = [c for c in K.CANDIDATES if dec[c]["reliable"]]
     L = ["# R190 best strategy hunt: summary for Boss", "",
@@ -107,6 +143,8 @@ def summary(bc, a, dec) -> str:
     else:
         L += [f"**Outcome: none of the {len(K.CANDIDATES)} candidates passed the RELIABLE gate.** Nothing here is a "
               "\"great and reliable\" strategy by the rules we set before looking.", ""]
+    if a is not None:
+        L += plain(dec) + [""]
     L += ["The gate (fixed before any number): profit in ALL THREE eras with 40+ trades each, still profit without the "
           "best 5 trades, beats random entries in era A (p < 0.05), and survives the correction for the ~4,760 ideas "
           "logged so far (BH q <= 0.10).", "",
@@ -132,6 +170,27 @@ def report(bc, a, dec) -> str:
          "`r190rules.py` (new rules), `r190study.py` (eras, twins), `r190report.py` (this file).", "",
          f"BH family: m = {K.M_TOTAL:,} ({K.N_PRIOR:,} earlier entries + {len(K.CANDIDATES)} R190 candidates); "
          "R190's q uses each candidate's era-A normal-tail twin p (untestable = 1).", ""]
+    par = json.loads((K.RESULTS / "arms_parity.json").read_text()) if (K.RESULTS / "arms_parity.json").exists() else {}
+    L += ["## Data, checks and caveats", "",
+          "- Data: the Drive lake (copied 17 Nov 2026, incl. the 20 Oct - 13 Nov 2026 fill) plus dhan-data NIFTY WEEK "
+          "options 3 Aug 2020 - 30 Jul 2021 (same endpoint; 7,875 / 7,875 rows identical on 3 Aug 2021). Era A has NIFTY "
+          "only; BANKNIFTY / FINNIFTY options start Aug 2021, MIDCPNIFTY 2022, SENSEX 2023.",
+          "- Era A is not virgin: the Oct 2026 h-series hunt (h22-h47) used NIFTY options from Aug 2020 as design data, "
+          "including h31's close-following overnight rules that Night descends from. For Night, era A is a consistency "
+          "check, not out-of-sample proof. Era A was still locked here (flag committed in 823379785) and read once.",
+          "- Engine parity: Liquidity / R72 on R190's stores reproduce the published windows: "
+          + "; ".join(f"{k}: {v['trades']} trades {rs(v['net'])} (published {v['published']})" for k, v in par.items())
+          + ". Night NIFTY on 2022-24 reproduces R147's design exactly (247 trades, Rs 200 a trade at app costs); "
+          "BANKNIFTY gives 257 trades and Rs 306 a trade against R147's 256 and Rs 296 (one extra priced night; not chased).",
+          "- R72 + picker on Apr - 13 Oct 2026: 651 trades +Rs 2.20 lakh against R151's published 652 / +Rs 2.19 lakh "
+          "(R72 1,200 vs 1,202): the store now flags 13 Oct 2026 as an expiry day (the old lake end could not).",
+          "- D2's era-C numbers are mostly in-sample (the frozen picker was trained on Nov 2024 - Mar 2026 trades).",
+          "- V1 uses TWAP, not VWAP (no index volume; no futures volume history). Intraday fills: R17 liq; Night: app "
+          "bps + h24 half-spread; all with dated charges. Max-fit lots size each trade to Rs 56,000 of premium.",
+          "- Clarification of PREREG's ATM (no look-ahead): M / V buy the strike that was ATM on the decision minute "
+          "(14:49 for M; the minute before each mark for V), as R51's engine does, not the 14:50 label. The Night book's "
+          "max-fit column sizes each leg to Rs 56,000 on its own (two legs on one night would need more cash).",
+          "- Liquidity / R72 twins were not run (era A untestable; the gate's twin test is era A only).", ""]
     meta = bc.get("_meta", {})
     if meta.get("D2_note"):
         L += [f"D2 (picker): {meta['D2_note']}.", ""]
@@ -148,10 +207,11 @@ def report(bc, a, dec) -> str:
                 continue
             tw = blk.get("twin") or {}
             s = blk["one_lot"]
-            L.append(f"| {e} | {tw.get('p', '-') if not tw else f'{tw['p']:.4f}'} | "
-                     f"{'-' if not tw else f'{tw['p_norm']:.2e}'} | {'-' if not tw else rs(tw['mean'])} | "
-                     f"{', '.join(f'{y}: {rs(v)}' for y, v in blk.get('by_year', {}).items())} | "
-                     f"{s['months_up']} of {s['months']} |")
+            pe = "-" if not tw else "{:.4f}".format(tw["p"])
+            pn = "-" if not tw else "{:.2e}".format(tw["p_norm"])
+            tm = "-" if not tw else rs(tw["mean"])
+            yrs = ", ".join("{}: {}".format(y, rs(v)) for y, v in blk.get("by_year", {}).items())
+            L.append(f"| {e} | {pe} | {pn} | {tm} | {yrs} | {s['months_up']} of {s['months']} |")
         bi = {e: era_of(bc, a, cid, e).get("by_index") for e in ERAS if isinstance(era_of(bc, a, cid, e), dict)
               and era_of(bc, a, cid, e).get("by_index") and len(era_of(bc, a, cid, e)["by_index"]) > 1}
         if bi:
