@@ -2019,3 +2019,27 @@ and then end negative. Base = the app's rule (own stop + breakeven at +10%; R151
   halves the worst day on R72 but raises the max drawdown on R72 and R51. 21 Oct - 13 Nov 2026 (gap files, descriptive):
   R72 Rs 9,481 -> -Rs 12,107 -> -Rs 20,812; R51 Rs 25,448 -> Rs 17,164 -> Rs 11,239; Liquidity Rs 4,575 -> Rs 5,667 ->
   Rs 9,038. Keep V5 without a rupee stop.
+
+## A multi-layer network over the whole lake to skip trades and pick exits on the ORB family, Liquidity, R51 and R72 (R187, 16 Nov 2026) - 0 of 20 pass
+
+`research/hunt/r187_neural_meta/` (PREREG.md with Amendment A, results/summary.md, results/report.md). Boss: "create a
+neuro network of multiple layers with all the data we have ... make the orb family and other stratergies more profitable
+with more winrate and less loss". Signal source: the index (entries unchanged); option-chain data only as network inputs.
+
+- **The network:** a shared sklearn 3-hidden-layer perceptron (classifier: P(net > 0); regressor: expected net), about 105
+  inputs at the decision minute: the 7 indices' minute bars, India VIX, the rolling options' IV / OI / PCR, R151's 28
+  features and score, R169's ORB features, R183's sideways measures, the arm / index / exit identity. Walk-forward, refit
+  quarterly from Apr 2025 (4,337 - 11,018 training trades), frozen at 31 Mar 2026. Its validation log-loss was 0.69 - 0.81
+  (a constant guess: 0.69): **no skill at the entry minute.**
+- **Uses x arms, 1 lot, year 20 Oct 2025 - 19 Oct 2026** (base = the app today: V5 on R72 / R51, BE + LBE1000 on Liquidity,
+  R169's B0 on ORB): **0 of 20 pass** (BH m = 4,902).
+  - Liquidity U1 (skip): 564 trades, 46.8%, Rs 1,22,326 vs 688, 44.5%, Rs 98,239; worst month -Rs 24,346 vs -Rs 32,670.
+    Every gate but the twins' (p 0.024, q 1.0); it made less in the walk-forward year (Rs 1,80,326 vs Rs 1,94,985). A note.
+  - R51 U2 (exit choice): Rs 2,17,180 vs Rs 1,62,959 (1,410 vs 1,430 trades) but 60.4% vs 62.7% wins; random exits did as
+    well (p 0.30). It only re-finds R186's point that L500 costs R51 money.
+  - ORB / ORB Fresh U1 halved the year's loss (-Rs 11,967 on 88 vs -Rs 22,716 on 237) but lost in the final (-Rs 669 on 39);
+    random skips as good (p 0.72). ORB Sweep loses under every use. A network picker in place of R151's (U4) made far less.
+- **New month (21 Oct - 13 Nov 2026, descriptive):** no use changes the picture (e.g. Liquidity 40 trades Rs 4,658 vs 43 /
+  Rs 4,575; R51 U2 131 / Rs 28,793 vs 142 / Rs 25,448).
+- **Not simulated:** Range Fade, S5 Trail, CISD S3-V2-E3, FT3, Night, VIX divergence, Hero (reasons in the summary).
+- **Verdict:** nothing changes in the app. The ORB family stays parked; R151's picker and V5 stay.

@@ -1,0 +1,491 @@
+{
+ "window": "2026-10-21 .. 2026-11-13",
+ "R72": {
+  "BASE": {
+   "trades": 126,
+   "win": 0.619,
+   "net": 9481,
+   "avg_win": 1075,
+   "avg_loss": -1549,
+   "max_dd": 24005,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -6294
+   },
+   "months": {
+    "2026-10": 15775,
+    "2026-11": -6294
+   },
+   "account_stop_ok": true
+  },
+  "U1": {
+   "trades": 126,
+   "win": 0.619,
+   "net": 9481,
+   "avg_win": 1075,
+   "avg_loss": -1549,
+   "max_dd": 24005,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -6294
+   },
+   "months": {
+    "2026-10": 15775,
+    "2026-11": -6294
+   },
+   "account_stop_ok": true
+  },
+  "U2": {
+   "trades": 126,
+   "win": 0.619,
+   "net": 7493,
+   "avg_win": 1050,
+   "avg_loss": -1549,
+   "max_dd": 24005,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -6294
+   },
+   "months": {
+    "2026-10": 13787,
+    "2026-11": -6294
+   },
+   "account_stop_ok": true
+  },
+  "U3": {
+   "trades": 126,
+   "win": 0.619,
+   "net": 7493,
+   "avg_win": 1050,
+   "avg_loss": -1549,
+   "max_dd": 24005,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -6294
+   },
+   "months": {
+    "2026-10": 13787,
+    "2026-11": -6294
+   },
+   "account_stop_ok": true
+  },
+  "U4": {
+   "trades": 112,
+   "win": 0.6339,
+   "net": 10937,
+   "avg_win": 1129,
+   "avg_loss": -1688,
+   "max_dd": 24899,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -2755
+   },
+   "months": {
+    "2026-10": 13692,
+    "2026-11": -2755
+   },
+   "account_stop_ok": true
+  },
+  "NOPICK": {
+   "trades": 186,
+   "win": 0.6075,
+   "net": 7869,
+   "avg_win": 1065,
+   "avg_loss": -1541,
+   "max_dd": 30358,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -9399
+   },
+   "months": {
+    "2026-10": 17268,
+    "2026-11": -9399
+   },
+   "account_stop_ok": true
+  }
+ },
+ "R51": {
+  "BASE": {
+   "trades": 142,
+   "win": 0.6901,
+   "net": 25448,
+   "avg_win": 1121,
+   "avg_loss": -1917,
+   "max_dd": 15820,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 12216
+   },
+   "months": {
+    "2026-10": 12216,
+    "2026-11": 13232
+   },
+   "account_stop_ok": true
+  },
+  "U1": {
+   "trades": 142,
+   "win": 0.6901,
+   "net": 25448,
+   "avg_win": 1121,
+   "avg_loss": -1917,
+   "max_dd": 15820,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 12216
+   },
+   "months": {
+    "2026-10": 12216,
+    "2026-11": 13232
+   },
+   "account_stop_ok": true
+  },
+  "U2": {
+   "trades": 131,
+   "win": 0.6489,
+   "net": 28793,
+   "avg_win": 1343,
+   "avg_loss": -1855,
+   "max_dd": 19726,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 14338
+   },
+   "months": {
+    "2026-10": 14338,
+    "2026-11": 14455
+   },
+   "account_stop_ok": true
+  },
+  "U3": {
+   "trades": 131,
+   "win": 0.6489,
+   "net": 28793,
+   "avg_win": 1343,
+   "avg_loss": -1855,
+   "max_dd": 19726,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 14338
+   },
+   "months": {
+    "2026-10": 14338,
+    "2026-11": 14455
+   },
+   "account_stop_ok": true
+  },
+  "U4": {
+   "trades": 136,
+   "win": 0.6618,
+   "net": 16040,
+   "avg_win": 1162,
+   "avg_loss": -1925,
+   "max_dd": 16766,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 4807
+   },
+   "months": {
+    "2026-10": 4807,
+    "2026-11": 11233
+   },
+   "account_stop_ok": true
+  },
+  "NOPICK": {
+   "trades": 236,
+   "win": 0.6398,
+   "net": 6824,
+   "avg_win": 1037,
+   "avg_loss": -1761,
+   "max_dd": 22760,
+   "worst_month": {
+    "month": "2026-10",
+    "net": -5753
+   },
+   "months": {
+    "2026-10": -5753,
+    "2026-11": 12577
+   },
+   "account_stop_ok": true
+  }
+ },
+ "LIQ": {
+  "BASE": {
+   "trades": 43,
+   "win": 0.6279,
+   "net": 4575,
+   "avg_win": 901,
+   "avg_loss": -1235,
+   "max_dd": 7345,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 2014
+   },
+   "months": {
+    "2026-10": 2014,
+    "2026-11": 2562
+   },
+   "account_stop_ok": true
+  },
+  "U1": {
+   "trades": 40,
+   "win": 0.625,
+   "net": 4658,
+   "avg_win": 922,
+   "avg_loss": -1226,
+   "max_dd": 7263,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 2096
+   },
+   "months": {
+    "2026-10": 2096,
+    "2026-11": 2562
+   },
+   "account_stop_ok": true
+  },
+  "U2": {
+   "trades": 43,
+   "win": 0.6279,
+   "net": 4575,
+   "avg_win": 901,
+   "avg_loss": -1235,
+   "max_dd": 7345,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 2014
+   },
+   "months": {
+    "2026-10": 2014,
+    "2026-11": 2562
+   },
+   "account_stop_ok": true
+  },
+  "U3": {
+   "trades": 40,
+   "win": 0.625,
+   "net": 4658,
+   "avg_win": 922,
+   "avg_loss": -1226,
+   "max_dd": 7263,
+   "worst_month": {
+    "month": "2026-10",
+    "net": 2096
+   },
+   "months": {
+    "2026-10": 2096,
+    "2026-11": 2562
+   },
+   "account_stop_ok": true
+  }
+ },
+ "orb": {
+  "BASE": {
+   "trades": 18,
+   "win": 0.5,
+   "net": 2430,
+   "avg_win": 1112,
+   "avg_loss": -842,
+   "max_dd": 2318,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -1764
+   },
+   "months": {
+    "2026-10": 4194,
+    "2026-11": -1764
+   },
+   "account_stop_ok": true
+  },
+  "U1": {
+   "trades": 6,
+   "win": 0.5,
+   "net": 5397,
+   "avg_win": 2521,
+   "avg_loss": -722,
+   "max_dd": 1577,
+   "worst_month": {
+    "month": "2026-11",
+    "net": 1481
+   },
+   "months": {
+    "2026-10": 3916,
+    "2026-11": 1481
+   },
+   "account_stop_ok": true
+  },
+  "U2": {
+   "trades": 18,
+   "win": 0.5,
+   "net": 2430,
+   "avg_win": 1112,
+   "avg_loss": -842,
+   "max_dd": 2318,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -1764
+   },
+   "months": {
+    "2026-10": 4194,
+    "2026-11": -1764
+   },
+   "account_stop_ok": true
+  },
+  "U3": {
+   "trades": 12,
+   "win": 0.4167,
+   "net": 1960,
+   "avg_win": 1589,
+   "avg_loss": -855,
+   "max_dd": 3347,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -414
+   },
+   "months": {
+    "2026-10": 2374,
+    "2026-11": -414
+   },
+   "account_stop_ok": true
+  }
+ },
+ "orb_fresh": {
+  "BASE": {
+   "trades": 18,
+   "win": 0.5,
+   "net": 2430,
+   "avg_win": 1112,
+   "avg_loss": -842,
+   "max_dd": 2318,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -1764
+   },
+   "months": {
+    "2026-10": 4194,
+    "2026-11": -1764
+   },
+   "account_stop_ok": true
+  },
+  "U1": {
+   "trades": 6,
+   "win": 0.5,
+   "net": 5397,
+   "avg_win": 2521,
+   "avg_loss": -722,
+   "max_dd": 1577,
+   "worst_month": {
+    "month": "2026-11",
+    "net": 1481
+   },
+   "months": {
+    "2026-10": 3916,
+    "2026-11": 1481
+   },
+   "account_stop_ok": true
+  },
+  "U2": {
+   "trades": 18,
+   "win": 0.5,
+   "net": 2430,
+   "avg_win": 1112,
+   "avg_loss": -842,
+   "max_dd": 2318,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -1764
+   },
+   "months": {
+    "2026-10": 4194,
+    "2026-11": -1764
+   },
+   "account_stop_ok": true
+  },
+  "U3": {
+   "trades": 12,
+   "win": 0.4167,
+   "net": 1960,
+   "avg_win": 1589,
+   "avg_loss": -855,
+   "max_dd": 3347,
+   "worst_month": {
+    "month": "2026-11",
+    "net": -414
+   },
+   "months": {
+    "2026-10": 2374,
+    "2026-11": -414
+   },
+   "account_stop_ok": true
+  }
+ },
+ "orb_sweep": {
+  "BASE": {
+   "trades": 25,
+   "win": 0.24,
+   "net": -9033,
+   "avg_win": 1116,
+   "avg_loss": -828,
+   "max_dd": 12163,
+   "worst_month": {
+    "month": "2026-10",
+    "net": -6340
+   },
+   "months": {
+    "2026-10": -6340,
+    "2026-11": -2693
+   },
+   "account_stop_ok": true
+  },
+  "U1": {
+   "trades": 25,
+   "win": 0.24,
+   "net": -9033,
+   "avg_win": 1116,
+   "avg_loss": -828,
+   "max_dd": 12163,
+   "worst_month": {
+    "month": "2026-10",
+    "net": -6340
+   },
+   "months": {
+    "2026-10": -6340,
+    "2026-11": -2693
+   },
+   "account_stop_ok": true
+  },
+  "U2": {
+   "trades": 25,
+   "win": 0.24,
+   "net": -9033,
+   "avg_win": 1116,
+   "avg_loss": -828,
+   "max_dd": 12163,
+   "worst_month": {
+    "month": "2026-10",
+    "net": -6340
+   },
+   "months": {
+    "2026-10": -6340,
+    "2026-11": -2693
+   },
+   "account_stop_ok": true
+  },
+  "U3": {
+   "trades": 25,
+   "win": 0.24,
+   "net": -9033,
+   "avg_win": 1116,
+   "avg_loss": -828,
+   "max_dd": 12163,
+   "worst_month": {
+    "month": "2026-10",
+    "net": -6340
+   },
+   "months": {
+    "2026-10": -6340,
+    "2026-11": -2693
+   },
+   "account_stop_ok": true
+  }
+ }
+}
