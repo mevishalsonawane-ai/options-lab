@@ -38,7 +38,94 @@ VARIANTS = {
            "one Night a night + Liquidity + R72 picker + month halt + equity-curve filter"),
     "P8": (("N", "L"), L.Rules(one_night=True, month_halt=True, vix=True), "P4 + skip Night / Liquidity on high-VIX days"),
 }
-COMP_NAME = {"N": "Night (R3) book", "L": "Liquidity 15+5", "R": "R72 + R151 picker"}
+REPORT_HEAD = """# R191 report: a risk-capped portfolio of the existing trade streams
+
+Written 17 Nov 2026. Pre-registration: `PREREG.md` (commit debe7a4fc, before any portfolio number). Research only;
+nothing in the app changes.
+
+## Question
+
+Boss asked for "very good profitable strategies with good winrate ... great and reliable", then "Try more harder".
+R190 found no single rule that passes. R191 asks whether a PORTFOLIO of the streams we already have (Night R3,
+Liquidity 15+5, R72 + R151 picker), with one-position limits and loss caps that only use what is known at the time,
+can make money in every era AND stay inside the account stop (-Rs 40,000 drawdown, -Rs 13,000 a month; account about
+Rs 56,000). No new entry signal was invented.
+
+## Method in short
+
+- Streams: R190's priced trades (1 lot, dated Zerodha charges, R190's slippage, real 1-minute option prices). Signal
+  source: Night = index close location + 59-stock breadth (option OI build-up as context); Liquidity = the index;
+  R72 = the five indices' 5-minute Donchian breaks; VIX skip = India VIX's previous daily close. Options are bought.
+- Eight portfolios fixed before any number (P1-P8, PREREG section 4). Thresholds (month halt -Rs 8,000, drawdown brake
+  Rs 25,000, last-20 equity-curve filter) set from the account stop and era-B average losses; nothing fitted.
+- Timing (PREREG section 3): a cap reads only trades already closed: Night's P&L from the next 15:20, an intraday
+  trade's P&L only after that day's close. A look-ahead guard test confirms that randomising every later trade never
+  changes an earlier decision. Money is booked on each trade's close day.
+- Twins: 2,000 per variant and era; each calendar month's trades (all components together) get one random sign and the
+  rules are re-run. BH across m = 4,770 tests.
+- Order: era B first (committed; no variant passed, so no "B pick"), then the flag, then eras C and A read once.
+
+## Outcome
+
+**No portfolio passed: 0 of 8 are RELIABLE**, and none passed era B on its own, so no variant was picked before eras C
+and A were opened.
+
+- **Diversifying does not fix the drawdown.** Night + Liquidity (P1) made Rs 1.99 lakh in era B and Rs 4.48 lakh in
+  era C at 1 lot each, but its worst month was -Rs 25,323 (B) and -Rs 75,107 (C), and its drawdown Rs 47,794 / Rs 1.05
+  lakh. The two streams lose in the same months often enough that combining them adds the losses up.
+- **A month halt caps the month, not the drawdown.** Halting at -Rs 8,000 (P4) kept every era-B month above -Rs 13,000
+  (worst -Rs 11,887) but era C still had a -Rs 16,178 month (losses land after the halt). The era-B drawdown got WORSE
+  (Rs 60,100 vs Rs 34,757 without the halt, P3) because the halt also skips the recovery trades, and era-B profit fell
+  from Rs 1.10 lakh to Rs 53,502 and lost its top-5 robustness.
+- **The drawdown brake (P5) and the VIX skip (P8)** keep months near the line (P8: worst month -Rs 11,887 in B and
+  -Rs 12,454 in C, the only variant inside the month stop in both) but drawdowns stay Rs 53k-73k, and P8's era-B profit
+  is only Rs 14,248 and negative once its top 5 trades are removed.
+- **The equity-curve filter (P6, P7) hurt.** It switched streams off after losing runs and missed the rebounds: P6 lost
+  Rs 1,218 in era B; P7 (with the R72 picker) lost Rs 1.71 lakh in era B while making Rs 5.73 lakh in era C. The R72
+  picker is still a recent-regime stream (era B -Rs 1.85 lakh on its own, R190).
+- **Era A** (NIFTY Night only) made Rs 18,086 (66 trades) in every variant but P6 / P7 (Rs 10,875, 57 trades); in each
+  case that profit rests on its five best nights (without them -Rs 13,803), as R190 already showed. The month-block twin
+  p there is 0.23-0.29 (only 10-11 months).
+- **Win rates**: 34-49% of trades in eras B and C (Liquidity's 27-42% pulls Night's 49-55% down), 54-58% in era A;
+  winning months 20-61% in era B and 44-88% in era C. The average win is about 1.3-2x the average loss.
+- **Significance**: era C beats the twins for most variants (p 0.0005-0.0055; P6 0.11) but era B does not (only P1,
+  p 0.015) and era A never does. BH q = 1 for all.
+
+## What it means for Boss
+
+- There is still no strategy that is both profitable in every period and safe for a Rs 56,000 account with a
+  -Rs 40,000 / -Rs 13,000 stop. At 1 lot, these streams' drawdowns in a bad stretch (Rs 50k-1 lakh) are larger than
+  the account stop allows, however they are combined or capped.
+- The last two years (era C) look excellent for almost every combination; 2021-24 does not. Betting that era C
+  continues is a regime bet, not a proven edge.
+- The most useful risk rule found is the month halt with a VIX skip (P8): the only variant inside the -Rs 13,000 month
+  in both B and C. It still breaches the -Rs 40,000 drawdown and is NOT reliable, so it is a paper forward test only.
+
+## Caveats
+
+- Eras C and A were seen by R190 at the stream level; only the portfolio rules are new to them. There is no unseen
+  option history.
+- Intraday exit minutes are not in R190's cache, so intraday P&L is used only from the next session (conservative), and
+  no same-day loss cap could be tested.
+- Intraday premiums are not in the cache, so the Rs 56,000 fit is checked only for Night. Holding Liquidity and R72
+  positions at the same time could need more than Rs 56,000 on some days.
+- 1 lot is the smallest size; "halve the size" rules were replaced by halts.
+- The R72 picker's era-C numbers are mostly in-sample for the picker (trained Nov 2024 - Mar 2026).
+- Months and drawdowns are booked on each trade's close day (R190 used the entry day), so R190's and R191's worst
+  months differ slightly for Night.
+- The month-block twin has zero mean (stricter than random-entry twins, which lose the charges), but few blocks: era A
+  has only 10-11 months, so its p cannot be small.
+
+## Forward test from 17 Nov 2026 (PREREG section 9)
+
+No B pick, so P4 is followed on paper on new sessions from 17 Nov 2026 (1 lot, same rules), with P8 alongside for
+comparison: monthly checkpoints of net, worst month and drawdown against the account stop, and a first judgement after
+6 months or 150 portfolio trades, whichever is later. A forward test only reports; it changes no rule and nothing in
+the app.
+
+"""
+
+COMP_NAME = {"N":"Night (R3) book", "L": "Liquidity 15+5", "R": "R72 + R151 picker"}
 
 
 # ================================================================================================ the cut
@@ -133,7 +220,7 @@ def era_row(e: str, d: dict) -> str:
     s = d["stats"]
     return (f"| {e} | {s['trades']} | {s['win']:.1f}% | {s['months_up_pct']:.0f}% ({s['months_up']}/{s['months']}) | "
             f"{rs(s['net'])} | {rs(s['avg_win'])} / {rs(s['avg_loss'])} | {rs(s['net_wo_top5'])} | {rs(s['max_dd'])} | "
-            f"{rs(s['worst_month'])} | {d['p_emp']:.3f} |")
+            f"{rs(s['worst_month'])} | {d['p_emp']:.4f} |")
 
 
 HDR = ("| era | trades | win % | winning months | net | avg win / avg loss | net without top 5 | max drawdown | "
@@ -200,7 +287,7 @@ def write_report():
             x = eras[e][v]
             detail.append(f"| {v} | {e} | {x['candidates']} | {x['skipped']} | {rs(x['twin_mean'])} | "
                           f"{rs(x['twin_sd'])} | {x['p_emp']:.4f} | {x['p_norm']:.3g} |")
-    (RESULTS / "report.md").write_text((HERE / "report_head.md").read_text() + "\n".join(head[4:] + body + detail) + "\n")
+    (RESULTS / "report.md").write_text(REPORT_HEAD + "\n".join(head[4:] + body + detail) + "\n")
     print("written summary.md, report.md, decision.json; reliable:", n_rel)
 
 
