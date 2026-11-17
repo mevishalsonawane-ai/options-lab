@@ -1954,3 +1954,35 @@ time stop. 32 versions per setup chosen on 15 Oct - 3 Nov (13 days), holdout 4 -
   (8 NIFTY, 6 BANKNIFTY: under the pre-registered 10), twin p 0.39 / 0.25; calls in the rally made it (puts lost).
 - All 8 tests BH q 1.0 (m = 4,512). 20 days can only detect an edge of about Rs 850-1,950 a trade; most of the 128
   design versions lost. The 1-second recorder drops big unchanged-price prints (R182), the very prints absorption reads.
+
+## Absorption and exhaustion on a full year (R185, 16 Nov 2026) - 9 of 10 lose money; FINNIFTY absorption +Rs 20k is inconclusive
+`hunt/r185_absorption_year/results/report.md`. Boss asked for R184 re-tested on a year of Dhan minute data. Dhan has no
+index futures minute volume for past years and **no second-level history**, so the signal source is the index's own
+1-minute price with the ATM-2..+2 options' volume as context (BVC flow; labelled option-volume context). R184's rules,
+grid and exits unchanged; 1 lot ATM option; real charges; selected on 20 Nov 2024 - 19 Oct 2025 (both halves had to beat
+zero and random twins), final 20 Oct 2025 - 19 Oct 2026 read once. Dhan's option minutes matched the phone's 1-second
+recordings (72,623 minutes, median gap Rs 0.30).
+- **NIFTY: no version passed the selection** (absorption 1 of 32 net > 0, exhaustion 0 of 32).
+- Final year, fallback versions: **absorption 451 trades, 26% won, Rs -50,042** (twins Rs -105 a trade, p 0.54; worst
+  month Rs -13,085, drawdown Rs 51.8k - outside the account stop rule); **exhaustion 888 trades, 38% won, Rs -30,656**
+  (Rs -34 a trade, better than random entries' Rs -91, p 0.022, but below zero; BH q 1.0, m = 4,852).
+- **BANKNIFTY: no version passed the selection either** (true lot by day, Amendment A). Final year, fallback versions:
+  **absorption 203 trades, 46% won, Rs -21,339** (Rs -105 a trade vs random Rs -129, p 0.35); **exhaustion 980 trades,
+  36% won, Rs -1,00,340** (Rs -102 a trade vs random Rs -148, p 0.058; worst month Rs -23,061, drawdown Rs 1.03 L); q 1.0.
+- **FINNIFTY: absorption passed the selection** (ABS w5 k2 b6 turn T30: 118 trades, Rs 17,629, twin p 0.003) and in the
+  final year made **Rs 20,097 on 205 trades, 41% won** (Rs 98 a trade vs random entries' Rs -58, twin p 0.037; Rs 13,329
+  at 2x slippage; worst month Rs -7,854, drawdown Rs 12.7k) - but **BH q 1.0** across m = 4,852 and the mean is not
+  clearly above zero (p 0.08): inconclusive, worth a forward test only. FINNIFTY exhaustion: nothing passed; final year
+  819 trades, 31% won, Rs -45,338 (q 1.0), rejected. (FINNIFTY options were not recorded by the phone, so Dhan's
+  FINNIFTY bars could not be cross-checked.)
+- **MIDCPNIFTY: nothing passed the selection.** Final year, fallback versions: absorption 445 trades, 38% won, Rs -43,349
+  (worst month Rs -10,880); exhaustion 834 trades, 30% won, Rs -1,13,568 (worst month Rs -29,435, drawdown Rs 1.14 L);
+  q 1.0, both rejected.
+- **SENSEX: nothing passed the selection.** Final year, fallback versions: absorption 165 trades, 27% won, Rs -8,838;
+  exhaustion 891 trades, 31% won, Rs -2,711 (better than random entries' Rs -87 a trade, p 0.007, but not above zero);
+  q 1.0, both rejected.
+- **All five indices:** 9 of 10 setups lost money in the final year; only FINNIFTY absorption made money (Rs 20,097 on 205
+  trades), and it does not survive the multiple-testing correction - a frozen-rule forward test on new days is the only
+  honest next step. Estimated flow from price cannot see true absorption (volume that fails to move price): a real
+  order-flow test needs tick or second-level data (the phone's own recordings as they grow, or bought tick history).
+- NIFTY's selection re-run with the true lots (descriptive) still has no eligible version.

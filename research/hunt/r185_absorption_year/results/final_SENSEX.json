@@ -1,0 +1,997 @@
+{
+ "und": "SENSEX",
+ "read_at": "2026-11-16T03:58:12.522859+00:00",
+ "final_read_flag": "2026-11-16T03:57:40Z",
+ "prereg_sha256": "157a82109f304e6c3c0e0b1e5135a1fefe3523f76e3d5705a6b60c42962e3969",
+ "selection_sha256": "a665864d94afc892097b646ef678442df92f47243fa2aa5cb5f07152dcfff5e5",
+ "code_sha256": {
+  "r185.py": "7cbe981c33c552a0aa1e604e85a17bbd0a60ca50df7b770803a6a226179f70db",
+  "r185lib.py": "d9523678fe144fec0783c367a0ec9186383e130baccb632738f9b4c5f320655f",
+  "r185load.py": "e69566a9b2f7a646fb38d3f3d55b8b6f58d334d04e638540d82874cbd6e37e5e"
+ },
+ "final_days": [
+  "2025-10-20",
+  "2026-10-19",
+  246
+ ],
+ "recent_days": [
+  "2026-10-21",
+  "2026-11-13",
+  17
+ ],
+ "m_total": 4852,
+ "signal_source": "the index's own 1-minute price (the underlying); each minute's buy / sell split estimated by BVC from the index price change, sized by the summed volume of the ATM-2..ATM+2 calls and puts (option-volume context, OVC); no rule reads an option's own price chart",
+ "cells": {
+  "ABS SENSEX": {
+   "vid": "ABS w3 k3 b6 turn T30",
+   "params": {
+    "setup": "ABS",
+    "w": 3,
+    "k": 3,
+    "beta": 6,
+    "confirm": "turn",
+    "T": 30
+   },
+   "passed_selection": false,
+   "signals": 200,
+   "unpriced": {},
+   "year": {
+    "n": 165,
+    "win": 0.2727,
+    "net": -8838.0,
+    "net2": -10258.0,
+    "mean": -53.6,
+    "mean2": -62.2,
+    "avg_win": 760.0,
+    "avg_loss": -359.0,
+    "sd": 841.5,
+    "worst_day": -2452.0,
+    "best_day": 8561.0,
+    "days_traded": 85,
+    "worst_month": {
+     "month": "2026-08",
+     "net": -11142.0
+    },
+    "max_dd": 22919.0,
+    "months": {
+     "2025-11": 4315.0,
+     "2025-12": 612.0,
+     "2026-01": -526.0,
+     "2026-02": -640.0,
+     "2026-03": -4.0,
+     "2026-04": -486.0,
+     "2026-05": -1351.0,
+     "2026-06": -486.0,
+     "2026-07": -2503.0,
+     "2026-08": -11142.0,
+     "2026-09": 3378.0,
+     "2026-10": -4.0
+    },
+    "by_side": {
+     "L": {
+      "n": 86,
+      "net": -7120.0
+     },
+     "S": {
+      "n": 79,
+      "net": -1718.0
+     }
+    },
+    "by_exit": {
+     "index_stop": {
+      "n": 33,
+      "net": -24484.05
+     },
+     "time": {
+      "n": 63,
+      "net": 28802.85
+     },
+     "breakeven": {
+      "n": 36,
+      "net": -446.1
+     },
+     "prem_stop": {
+      "n": 33,
+      "net": -12710.97
+     }
+    }
+   },
+   "periods": {
+    "early": {
+     "n": 67,
+     "win": 0.2985,
+     "net": 3757.0,
+     "net2": 3270.0,
+     "mean": 56.1,
+     "mean2": 48.8,
+     "avg_win": 788.0,
+     "avg_loss": -255.0,
+     "worst_day": -1376.0,
+     "max_dd": 4989.0,
+     "worst_month": {
+      "month": "2026-02",
+      "net": -640.0
+     },
+     "twin_mean": -66.3
+    },
+    "final": {
+     "n": 98,
+     "win": 0.2551,
+     "net": -12595.0,
+     "net2": -13528.0,
+     "mean": -128.5,
+     "mean2": -138.0,
+     "avg_win": 738.0,
+     "avg_loss": -425.0,
+     "worst_day": -2452.0,
+     "max_dd": 18146.0,
+     "worst_month": {
+      "month": "2026-08",
+      "net": -11142.0
+     },
+     "twin_mean": -63.5
+    },
+    "six": {
+     "n": 97,
+     "win": 0.2577,
+     "net": -12453.0,
+     "net2": -13380.0,
+     "mean": -128.4,
+     "mean2": -137.9,
+     "avg_win": 738.0,
+     "avg_loss": -429.0,
+     "worst_day": -2452.0,
+     "max_dd": 18004.0,
+     "worst_month": {
+      "month": "2026-08",
+      "net": -11142.0
+     },
+     "twin_mean": -63.8
+    },
+    "year": {
+     "n": 165,
+     "win": 0.2727,
+     "net": -8838.0,
+     "net2": -10258.0,
+     "mean": -53.6,
+     "mean2": -62.2,
+     "avg_win": 760.0,
+     "avg_loss": -359.0,
+     "worst_day": -2452.0,
+     "max_dd": 22919.0,
+     "worst_month": {
+      "month": "2026-08",
+      "net": -11142.0
+     },
+     "twin_mean": -64.6
+    }
+   },
+   "per_full": {
+    "early": {
+     "n": 67,
+     "win": 0.2985,
+     "net": 3757.0,
+     "net2": 3270.0,
+     "mean": 56.1,
+     "mean2": 48.8,
+     "avg_win": 788.0,
+     "avg_loss": -255.0,
+     "sd": 953.4,
+     "worst_day": -1376.0,
+     "best_day": 8561.0,
+     "days_traded": 35,
+     "worst_month": {
+      "month": "2026-02",
+      "net": -640.0
+     },
+     "max_dd": 4989.0,
+     "months": {
+      "2025-11": 4315.0,
+      "2025-12": 612.0,
+      "2026-01": -526.0,
+      "2026-02": -640.0,
+      "2026-03": -4.0
+     },
+     "by_side": {
+      "L": {
+       "n": 36,
+       "net": -3256.0
+      },
+      "S": {
+       "n": 31,
+       "net": 7013.0
+      }
+     },
+     "by_exit": {
+      "index_stop": {
+       "n": 8,
+       "net": -5682.47
+      },
+      "time": {
+       "n": 23,
+       "net": 15441.0
+      },
+      "breakeven": {
+       "n": 19,
+       "net": -108.27
+      },
+      "prem_stop": {
+       "n": 17,
+       "net": -5893.52
+      }
+     },
+     "twin_mean": -66.3
+    },
+    "final": {
+     "n": 98,
+     "win": 0.2551,
+     "net": -12595.0,
+     "net2": -13528.0,
+     "mean": -128.5,
+     "mean2": -138.0,
+     "avg_win": 738.0,
+     "avg_loss": -425.0,
+     "sd": 751.5,
+     "worst_day": -2452.0,
+     "best_day": 5220.0,
+     "days_traded": 50,
+     "worst_month": {
+      "month": "2026-08",
+      "net": -11142.0
+     },
+     "max_dd": 18146.0,
+     "months": {
+      "2026-04": -486.0,
+      "2026-05": -1351.0,
+      "2026-06": -486.0,
+      "2026-07": -2503.0,
+      "2026-08": -11142.0,
+      "2026-09": 3378.0,
+      "2026-10": -4.0
+     },
+     "by_side": {
+      "L": {
+       "n": 50,
+       "net": -3864.0
+      },
+      "S": {
+       "n": 48,
+       "net": -8731.0
+      }
+     },
+     "by_exit": {
+      "breakeven": {
+       "n": 17,
+       "net": -337.83
+      },
+      "prem_stop": {
+       "n": 16,
+       "net": -6817.45
+      },
+      "index_stop": {
+       "n": 25,
+       "net": -18801.58
+      },
+      "time": {
+       "n": 40,
+       "net": 13361.85
+      }
+     },
+     "twin_mean": -63.5
+    },
+    "six": {
+     "n": 97,
+     "win": 0.2577,
+     "net": -12453.0,
+     "net2": -13380.0,
+     "mean": -128.4,
+     "mean2": -137.9,
+     "avg_win": 738.0,
+     "avg_loss": -429.0,
+     "sd": 755.4,
+     "worst_day": -2452.0,
+     "best_day": 5220.0,
+     "days_traded": 49,
+     "worst_month": {
+      "month": "2026-08",
+      "net": -11142.0
+     },
+     "max_dd": 18004.0,
+     "months": {
+      "2026-04": -345.0,
+      "2026-05": -1351.0,
+      "2026-06": -486.0,
+      "2026-07": -2503.0,
+      "2026-08": -11142.0,
+      "2026-09": 3378.0,
+      "2026-10": -4.0
+     },
+     "by_side": {
+      "L": {
+       "n": 49,
+       "net": -3722.0
+      },
+      "S": {
+       "n": 48,
+       "net": -8731.0
+      }
+     },
+     "by_exit": {
+      "breakeven": {
+       "n": 16,
+       "net": -196.13
+      },
+      "prem_stop": {
+       "n": 16,
+       "net": -6817.45
+      },
+      "index_stop": {
+       "n": 25,
+       "net": -18801.58
+      },
+      "time": {
+       "n": 40,
+       "net": 13361.85
+      }
+     },
+     "twin_mean": -63.8
+    },
+    "year": {
+     "n": 165,
+     "win": 0.2727,
+     "net": -8838.0,
+     "net2": -10258.0,
+     "mean": -53.6,
+     "mean2": -62.2,
+     "avg_win": 760.0,
+     "avg_loss": -359.0,
+     "sd": 841.5,
+     "worst_day": -2452.0,
+     "best_day": 8561.0,
+     "days_traded": 85,
+     "worst_month": {
+      "month": "2026-08",
+      "net": -11142.0
+     },
+     "max_dd": 22919.0,
+     "months": {
+      "2025-11": 4315.0,
+      "2025-12": 612.0,
+      "2026-01": -526.0,
+      "2026-02": -640.0,
+      "2026-03": -4.0,
+      "2026-04": -486.0,
+      "2026-05": -1351.0,
+      "2026-06": -486.0,
+      "2026-07": -2503.0,
+      "2026-08": -11142.0,
+      "2026-09": 3378.0,
+      "2026-10": -4.0
+     },
+     "by_side": {
+      "L": {
+       "n": 86,
+       "net": -7120.0
+      },
+      "S": {
+       "n": 79,
+       "net": -1718.0
+      }
+     },
+     "by_exit": {
+      "index_stop": {
+       "n": 33,
+       "net": -24484.05
+      },
+      "time": {
+       "n": 63,
+       "net": 28802.85
+      },
+      "breakeven": {
+       "n": 36,
+       "net": -446.1
+      },
+      "prem_stop": {
+       "n": 33,
+       "net": -12710.97
+      }
+     },
+     "twin_mean": -64.6
+    }
+   },
+   "twins": {
+    "p": 0.4125874125874126,
+    "mean": -67.8,
+    "p10": -164.2,
+    "p90": 37.2,
+    "n_sets": 1000,
+    "pooled_mean": -64.6
+   },
+   "p_twin": 0.4126,
+   "p_zero": 0.7732,
+   "power": {
+    "mde_5pct": 163.0,
+    "mde_bh": 324.0,
+    "z_bh": 4.1
+   },
+   "selection": {
+    "summary": {
+     "n": 175,
+     "win": 0.1429,
+     "net": -9714.0,
+     "net2": -10849.0,
+     "mean": -55.5,
+     "mean2": -62.0,
+     "avg_win": 746.0,
+     "avg_loss": -189.0,
+     "worst_day": -2103.0,
+     "max_dd": 13169.0,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -5426.0
+     }
+    },
+    "H1": {
+     "n": 62,
+     "net": 107.0,
+     "mean": 1.7,
+     "win": 0.1452,
+     "net2": -215.0,
+     "twin_mean": -101.5,
+     "signals": 95,
+     "unpriced": {}
+    },
+    "H2": {
+     "n": 113,
+     "net": -9821.0,
+     "mean": -86.9,
+     "win": 0.1416,
+     "net2": -10634.0,
+     "twin_mean": -114.0,
+     "signals": 171,
+     "unpriced": {}
+    }
+   },
+   "recent": {
+    "days": 17,
+    "signals": 0,
+    "unpriced": {},
+    "summary": {
+     "n": 0,
+     "win": null,
+     "net": 0.0,
+     "net2": 0.0,
+     "mean": null,
+     "mean2": null,
+     "avg_win": null,
+     "avg_loss": null,
+     "sd": null,
+     "worst_day": null,
+     "worst_month": {
+      "month": null,
+      "net": 0.0
+     },
+     "max_dd": 0.0,
+     "by_side": {},
+     "by_exit": {},
+     "days_traded": 0
+    }
+   },
+   "q_twin": 1.0,
+   "q_zero": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "nothing passed the selection",
+     "not positive in every period (or the year at 2x slippage)",
+     "not above the twins in early, final and the year",
+     "BH q twins 1.00 / zero 1.00 > 0.10"
+    ]
+   },
+   "verdict": "no evidence (nothing passed the selection)"
+  },
+  "EXH SENSEX": {
+   "vid": "EXH X15 k3 b6 flip+close T30",
+   "params": {
+    "setup": "EXH",
+    "X": 15,
+    "k": 3,
+    "beta": 6,
+    "confirm": "flip+close",
+    "T": 30
+   },
+   "passed_selection": false,
+   "signals": 1700,
+   "unpriced": {},
+   "year": {
+    "n": 891,
+    "win": 0.3143,
+    "net": -2711.0,
+    "net2": -13198.0,
+    "mean": -3.0,
+    "mean2": -14.8,
+    "avg_win": 1013.0,
+    "avg_loss": -469.0,
+    "sd": 935.4,
+    "worst_day": -4325.0,
+    "best_day": 8195.0,
+    "days_traded": 246,
+    "worst_month": {
+     "month": "2026-01",
+     "net": -11277.0
+    },
+    "max_dd": 32213.0,
+    "months": {
+     "2025-10": -569.0,
+     "2025-11": 10557.0,
+     "2025-12": 5689.0,
+     "2026-01": -11277.0,
+     "2026-02": 293.0,
+     "2026-03": 8653.0,
+     "2026-04": -4205.0,
+     "2026-05": -5869.0,
+     "2026-06": 11316.0,
+     "2026-07": 4227.0,
+     "2026-08": -8922.0,
+     "2026-09": -9696.0,
+     "2026-10": -2906.0
+    },
+    "by_side": {
+     "L": {
+      "n": 500,
+      "net": -17461.0
+     },
+     "S": {
+      "n": 391,
+      "net": 14750.0
+     }
+    },
+    "by_exit": {
+     "breakeven": {
+      "n": 183,
+      "net": -2403.62
+     },
+     "time": {
+      "n": 373,
+      "net": 254836.69
+     },
+     "index_stop": {
+      "n": 236,
+      "net": -196576.04
+     },
+     "prem_stop": {
+      "n": 99,
+      "net": -58567.55
+     }
+    }
+   },
+   "periods": {
+    "early": {
+     "n": 379,
+     "win": 0.3404,
+     "net": 13346.0,
+     "net2": 8825.0,
+     "mean": 35.2,
+     "mean2": 23.3,
+     "avg_win": 985.0,
+     "avg_loss": -455.0,
+     "worst_day": -4325.0,
+     "max_dd": 22737.0,
+     "worst_month": {
+      "month": "2026-01",
+      "net": -11277.0
+     },
+     "twin_mean": -88.2
+    },
+    "final": {
+     "n": 512,
+     "win": 0.2949,
+     "net": -16057.0,
+     "net2": -22023.0,
+     "mean": -31.4,
+     "mean2": -43.0,
+     "avg_win": 1037.0,
+     "avg_loss": -478.0,
+     "worst_day": -3727.0,
+     "max_dd": 32213.0,
+     "worst_month": {
+      "month": "2026-09",
+      "net": -9696.0
+     },
+     "twin_mean": -90.4
+    },
+    "six": {
+     "n": 470,
+     "win": 0.3,
+     "net": -16467.0,
+     "net2": -21767.0,
+     "mean": -35.0,
+     "mean2": -46.3,
+     "avg_win": 1001.0,
+     "avg_loss": -479.0,
+     "worst_day": -3727.0,
+     "max_dd": 32213.0,
+     "worst_month": {
+      "month": "2026-09",
+      "net": -9696.0
+     },
+     "twin_mean": -87.7
+    },
+    "year": {
+     "n": 891,
+     "win": 0.3143,
+     "net": -2711.0,
+     "net2": -13198.0,
+     "mean": -3.0,
+     "mean2": -14.8,
+     "avg_win": 1013.0,
+     "avg_loss": -469.0,
+     "worst_day": -4325.0,
+     "max_dd": 32213.0,
+     "worst_month": {
+      "month": "2026-01",
+      "net": -11277.0
+     },
+     "twin_mean": -89.5
+    }
+   },
+   "per_full": {
+    "early": {
+     "n": 379,
+     "win": 0.3404,
+     "net": 13346.0,
+     "net2": 8825.0,
+     "mean": 35.2,
+     "mean2": 23.3,
+     "avg_win": 985.0,
+     "avg_loss": -455.0,
+     "sd": 936.3,
+     "worst_day": -4325.0,
+     "best_day": 6021.0,
+     "days_traded": 109,
+     "worst_month": {
+      "month": "2026-01",
+      "net": -11277.0
+     },
+     "max_dd": 22737.0,
+     "months": {
+      "2025-10": -569.0,
+      "2025-11": 10557.0,
+      "2025-12": 5689.0,
+      "2026-01": -11277.0,
+      "2026-02": 293.0,
+      "2026-03": 8653.0
+     },
+     "by_side": {
+      "L": {
+       "n": 221,
+       "net": -17531.0
+      },
+      "S": {
+       "n": 158,
+       "net": 30877.0
+      }
+     },
+     "by_exit": {
+      "breakeven": {
+       "n": 86,
+       "net": -1271.49
+      },
+      "time": {
+       "n": 157,
+       "net": 117439.75
+      },
+      "index_stop": {
+       "n": 87,
+       "net": -76151.85
+      },
+      "prem_stop": {
+       "n": 49,
+       "net": -26670.35
+      }
+     },
+     "twin_mean": -88.2
+    },
+    "final": {
+     "n": 512,
+     "win": 0.2949,
+     "net": -16057.0,
+     "net2": -22023.0,
+     "mean": -31.4,
+     "mean2": -43.0,
+     "avg_win": 1037.0,
+     "avg_loss": -478.0,
+     "sd": 934.6,
+     "worst_day": -3727.0,
+     "best_day": 8195.0,
+     "days_traded": 137,
+     "worst_month": {
+      "month": "2026-09",
+      "net": -9696.0
+     },
+     "max_dd": 32213.0,
+     "months": {
+      "2026-04": -4205.0,
+      "2026-05": -5869.0,
+      "2026-06": 11316.0,
+      "2026-07": 4227.0,
+      "2026-08": -8922.0,
+      "2026-09": -9696.0,
+      "2026-10": -2906.0
+     },
+     "by_side": {
+      "L": {
+       "n": 279,
+       "net": 70.0
+      },
+      "S": {
+       "n": 233,
+       "net": -16127.0
+      }
+     },
+     "by_exit": {
+      "time": {
+       "n": 216,
+       "net": 137396.94
+      },
+      "index_stop": {
+       "n": 149,
+       "net": -120424.19
+      },
+      "breakeven": {
+       "n": 97,
+       "net": -1132.13
+      },
+      "prem_stop": {
+       "n": 50,
+       "net": -31897.2
+      }
+     },
+     "twin_mean": -90.4
+    },
+    "six": {
+     "n": 470,
+     "win": 0.3,
+     "net": -16467.0,
+     "net2": -21767.0,
+     "mean": -35.0,
+     "mean2": -46.3,
+     "avg_win": 1001.0,
+     "avg_loss": -479.0,
+     "sd": 922.4,
+     "worst_day": -3727.0,
+     "best_day": 8195.0,
+     "days_traded": 126,
+     "worst_month": {
+      "month": "2026-09",
+      "net": -9696.0
+     },
+     "max_dd": 32213.0,
+     "months": {
+      "2026-04": -4616.0,
+      "2026-05": -5869.0,
+      "2026-06": 11316.0,
+      "2026-07": 4227.0,
+      "2026-08": -8922.0,
+      "2026-09": -9696.0,
+      "2026-10": -2906.0
+     },
+     "by_side": {
+      "L": {
+       "n": 257,
+       "net": -1866.0
+      },
+      "S": {
+       "n": 213,
+       "net": -14602.0
+      }
+     },
+     "by_exit": {
+      "index_stop": {
+       "n": 135,
+       "net": -107488.47
+      },
+      "time": {
+       "n": 204,
+       "net": 122274.65
+      },
+      "prem_stop": {
+       "n": 47,
+       "net": -30248.83
+      },
+      "breakeven": {
+       "n": 84,
+       "net": -1004.38
+      }
+     },
+     "twin_mean": -87.7
+    },
+    "year": {
+     "n": 891,
+     "win": 0.3143,
+     "net": -2711.0,
+     "net2": -13198.0,
+     "mean": -3.0,
+     "mean2": -14.8,
+     "avg_win": 1013.0,
+     "avg_loss": -469.0,
+     "sd": 935.4,
+     "worst_day": -4325.0,
+     "best_day": 8195.0,
+     "days_traded": 246,
+     "worst_month": {
+      "month": "2026-01",
+      "net": -11277.0
+     },
+     "max_dd": 32213.0,
+     "months": {
+      "2025-10": -569.0,
+      "2025-11": 10557.0,
+      "2025-12": 5689.0,
+      "2026-01": -11277.0,
+      "2026-02": 293.0,
+      "2026-03": 8653.0,
+      "2026-04": -4205.0,
+      "2026-05": -5869.0,
+      "2026-06": 11316.0,
+      "2026-07": 4227.0,
+      "2026-08": -8922.0,
+      "2026-09": -9696.0,
+      "2026-10": -2906.0
+     },
+     "by_side": {
+      "L": {
+       "n": 500,
+       "net": -17461.0
+      },
+      "S": {
+       "n": 391,
+       "net": 14750.0
+      }
+     },
+     "by_exit": {
+      "breakeven": {
+       "n": 183,
+       "net": -2403.62
+      },
+      "time": {
+       "n": 373,
+       "net": 254836.69
+      },
+      "index_stop": {
+       "n": 236,
+       "net": -196576.04
+      },
+      "prem_stop": {
+       "n": 99,
+       "net": -58567.55
+      }
+     },
+     "twin_mean": -89.5
+    }
+   },
+   "twins": {
+    "p": 0.006993006993006993,
+    "mean": -86.9,
+    "p10": -128.3,
+    "p90": -45.3,
+    "n_sets": 1000,
+    "pooled_mean": -89.5
+   },
+   "p_twin": 0.007,
+   "p_zero": 0.5374,
+   "power": {
+    "mde_5pct": 78.0,
+    "mde_bh": 155.0,
+    "z_bh": 4.1
+   },
+   "selection": {
+    "summary": {
+     "n": 836,
+     "win": 0.2859,
+     "net": -65877.0,
+     "net2": -74733.0,
+     "mean": -78.8,
+     "mean2": -89.4,
+     "avg_win": 847.0,
+     "avg_loss": -449.0,
+     "worst_day": -6909.0,
+     "max_dd": 69788.0,
+     "worst_month": {
+      "month": "2025-01",
+      "net": -22013.0
+     }
+    },
+    "H1": {
+     "n": 401,
+     "net": -41457.0,
+     "mean": -103.4,
+     "win": 0.2768,
+     "net2": -45658.0,
+     "twin_mean": -83.2,
+     "signals": 729,
+     "unpriced": {}
+    },
+    "H2": {
+     "n": 435,
+     "net": -24419.0,
+     "mean": -56.1,
+     "win": 0.2943,
+     "net2": -29075.0,
+     "twin_mean": -94.9,
+     "signals": 864,
+     "unpriced": {
+      "no_exit_price": 1
+     }
+    }
+   },
+   "recent": {
+    "days": 17,
+    "signals": 109,
+    "unpriced": {},
+    "summary": {
+     "n": 65,
+     "win": 0.2462,
+     "net": -4328.0,
+     "net2": -5245.0,
+     "mean": -66.6,
+     "mean2": -80.7,
+     "avg_win": 1663.0,
+     "avg_loss": -631.0,
+     "sd": 1293.3,
+     "worst_day": -3196.0,
+     "best_day": 6148.0,
+     "days_traded": 17,
+     "worst_month": {
+      "month": "2026-11",
+      "net": -4733.0
+     },
+     "max_dd": 12178.0,
+     "months": {
+      "2026-10": 405.0,
+      "2026-11": -4733.0
+     },
+     "by_side": {
+      "L": {
+       "n": 32,
+       "net": -12663.0
+      },
+      "S": {
+       "n": 33,
+       "net": 8335.0
+      }
+     },
+     "by_exit": {
+      "breakeven": {
+       "n": 15,
+       "net": -128.54
+      },
+      "index_stop": {
+       "n": 24,
+       "net": -23917.21
+      },
+      "prem_stop": {
+       "n": 9,
+       "net": -6395.6
+      },
+      "time": {
+       "n": 17,
+       "net": 26113.34
+      }
+     }
+    }
+   },
+   "q_twin": 1.0,
+   "q_zero": 1.0,
+   "gates": {
+    "passed": false,
+    "fails": [
+     "nothing passed the selection",
+     "not positive in every period (or the year at 2x slippage)",
+     "BH q twins 1.00 / zero 1.00 > 0.10"
+    ]
+   },
+   "verdict": "no evidence (nothing passed the selection)"
+  }
+ }
+}
