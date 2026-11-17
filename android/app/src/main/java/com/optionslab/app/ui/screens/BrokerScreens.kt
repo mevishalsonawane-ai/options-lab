@@ -247,6 +247,17 @@ internal const val ONE_TAP_SUB = "In Live, one tap sends a real order with no PI
     "Turning it on asks for your PIN."
 
 /**
+ * 16 Nov 2026 (Boss: "All the stops and profit locks should be on zerodha"): Settings → Zerodha's words where the "Keep a stop-loss
+ * order at the exchange" switch was - it is always on now, for every arm it covered ([com.optionslab.app.data.OrbArms]'s re-rest).
+ */
+internal const val EXCHANGE_STOPS_NOTE = "Stops at Zerodha: always on. The ORB arms (ORB, ORB Fresh, ORB Sweep, Range Fade) and Liquidity " +
+    "15+5 rest each live position's stop at Zerodha after the buy and move it up there with its lock. A stop that could not be placed, " +
+    "or that the exchange or Zerodha refused or cancelled, is placed again at the arm's level on the next check, so Zerodha sells there even if the phone is slow or off (not with Stop for " +
+    "today, at the square-off, or while you are exiting by hand: those sell it). A stop you cancel yourself in Kite is not put back: " +
+    "the app watches that level and sells there. This was the \"Keep a stop-loss order at the exchange\" setting; since 16 Nov it is " +
+    "always on, so the switch is gone. Live only; paper keeps its own stops."
+
+/**
  * A fresh proof of identity before a real order: the fingerprint when it is
  * enabled and strong, the PIN otherwise. Being unlocked is not enough - the
  * phone may have been handed over unlocked.
@@ -1099,13 +1110,9 @@ fun BrokerPage(
                     ToggleRow("Type \"yes\" before a real order", TYPED_YES_SUB, s.typedYes, keepSub = true) { on ->
                         if (on) model.update { it.copy(typedYes = true) } else yesOffAuth = true
                     }
-                    ToggleRow("Keep a stop-loss order at the exchange for live positions",
-                        "The bots already rest each live position's stop at Zerodha after the buy. With this on, a stop that could not be " +
-                            "placed, or that Zerodha refused or cancelled, is placed again at the bot's own level on the next check, so " +
-                            "Zerodha sells at the stop even if the phone is slow or off. The app takes it out before any exit of its own. " +
-                            "Live only; paper keeps its own stops.", s.exchangeStops, keepSub = true) { on ->
-                        model.update { it.copy(exchangeStops = on) }
-                    }
+                    // 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): what the "Keep a stop-loss order at the exchange"
+                    // switch did is now always on for every arm it covered, so the switch is gone; this says what happens instead.
+                    Note(EXCHANGE_STOPS_NOTE)
                     ParamTokens("Product", listOf("NRML" to (s.orderProduct == "NRML"), "MIS" to (s.orderProduct == "MIS"))) { i -> model.update { it.copy(orderProduct = if (i == 0) "NRML" else "MIS") } }
                     if (s.orderProduct == "MIS") Note("MIS positions are squared off by Zerodha before the close. The expiry put holds to settlement, so its orders are refused under MIS.")
                     // Order limits live in one place (TODO A6): More -> Bot -> Bot settings.

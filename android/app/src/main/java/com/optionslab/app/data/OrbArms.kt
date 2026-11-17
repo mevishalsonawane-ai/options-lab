@@ -418,7 +418,7 @@ object OrbArms {
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
             return Book().also { it.gen = gen; it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
-                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR); cache = it; hints(it); wipedSince(it) }
+                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST); cache = it; hints(it); wipedSince(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -429,7 +429,7 @@ object OrbArms {
         if (wipedSince(b)) return b
         // A new book has nothing to change: it starts with every one-time change marked done (nothing is armed by itself).
         if (!existed) b.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN, LiquidityLots.ONE_LOT_MIGRATION,
-            ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR)
+            ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST)
         val restoring = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         // Each runs once, in this order: the 06 Oct switch-off, then the retirement that reverses it for Liquidity alone, then
         // the 07 Oct un-retirement (ORB, ORB Fresh, ORB Sweep and Range Fade back on, on paper); then the MIDCPNIFTY books
@@ -441,8 +441,9 @@ object OrbArms {
         // (15 Oct, Boss's cleanup: Liquidity's FINNIFTY and MIDCPNIFTY books are kept on by [keepLiquidityFour], run once by the
         // cleanup's worker after the start's positions step - never on this load.)
         // Then (15 Nov, Boss: Liquidity live by its own switch) the Liquidity books on now are cleared for Zerodha once ([clearBySwitch]).
+        // Then (16 Nov) an ORB-family live trade already open with no stop at Zerodha keeps being watched by the app ([keepOpenWatched]).
         if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b) or oneLot(b) or park(b) or
-            parkFamily(b) or clearBySwitch(b, restoring)) save(b)
+            parkFamily(b) or clearBySwitch(b, restoring) or keepOpenWatched(b)) save(b)
         return b
     }
 
@@ -653,6 +654,36 @@ object OrbArms {
         runCatching { Diag.record("orb", words) }
         runCatching { Notifier.post(app, LIQ_SWITCH_NOTICE, Notifier.SCHEDULE, "Liquidity: live by your switch", words, "almanac") }
         runCatching { com.optionslab.app.ira.Autopilot.logLiqSwitchCleared(names) }
+        return true
+    }
+
+    /** 16 Nov: the one-time mark of this update ([keepOpenWatched]): its key in [Book.migrated]. */
+    internal const val ORB_REREST = "orb_rerest_2026_11_16"
+
+    /**
+     * Once, on the 16 Nov update (review): an ORB-family live trade (not Liquidity 15+5, which already told the cases apart) open with no
+     * stop at Zerodha was left that way by the earlier build, which never noted whether Boss had cancelled it in Kite - so it is taken as
+     * their choice ([Position.stopByYou]) and keeps being watched by the app, as before, never put back by itself (said once); new trades
+     * and stops the exchange or Zerodha end from now on are put back ([restExchangeStop]). Not with "Keep a stop-loss order at the
+     * exchange" on: that build put them back already, and they still are. True when [b] changed.
+     */
+    private fun keepOpenWatched(b: Book): Boolean {
+        if (ORB_REREST in b.migrated) return false
+        b.migrated += ORB_REREST
+        // (Review: with "Keep a stop-loss order at the exchange" on, the earlier build was already putting these back: they still are.)
+        if (runCatching { AppSettings.load().exchangeStops }.getOrDefault(false)) return true
+        val kept = ArrayList<String>()
+        for (i in b.positions.indices) {
+            val p = b.positions[i]
+            if (!p.open || !p.live || p.unconfirmed || p.stopOrderId != null || p.stopByYou) continue
+            if (runCatching { armOf(p.arm).liquidity }.getOrDefault(true)) continue
+            b.positions[i] = p.copy(stopByYou = true)
+            kept += p.symbol
+        }
+        // (Review: told to Boss, not only noted - Settings now says stops are always put back, and these are not.)
+        if (kept.isNotEmpty()) runCatching { com.optionslab.app.work.Alerts.error("${kept.size} open live ORB trade(s) have no stop at Zerodha " +
+            "(${kept.joinToString(", ")}). In case you cancelled it in Kite, the app does not put it back: it watches the stop itself " +
+            "and sells there. Set a stop at Zerodha yourself if you want one there.", "ORB live") }
         return true
     }
 
@@ -3270,26 +3301,31 @@ object OrbArms {
             // ([com.optionslab.ira.ManualCoverRule.endedByExchange]) - ended by the exchange, its risk system or a rejection: a Liquidity
             // stop is placed again at Zerodha ([restExchangeStop]); cancelled by Boss (in Kite): respected, never put back by itself, and
             // the app watches the level itself. Each said as it is.
+            // 16 Nov (Boss: "yes" to the ORB arms too): the same for every arm here (ORB and ORB Fresh trade live; any live trade of
+            // the others too), not only Liquidity 15+5 - with the same guards, whatever "Keep a stop at the exchange" said.
             val ended = so != null && so.status in setOf("REJECTED", "CANCELLED")
             // (Review: a cancel the app made itself - an exit taking its stop out first - is never taken as Boss's.)
             // (Also any other of the app's own takers: a square-off's sale on the contract, Stop for today - never Boss's.)
             val appsOwn = ended && (ownCancel(so!!.id) || p.appCancelled || stopped ||
                 orders.values.any { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS })
             val byExchange = ended && (com.optionslab.ira.ManualCoverRule.endedByExchange(so!!.status, so.message) || appsOwn)
-            val liqArm = armOf(p.arm).liquidity
             val level = p.stopTrigger?.let { "the stop at %.2f".format(Locale.ENGLISH, it) } ?: "the stop"
-            if (ended && !expiryClosing(p.symbol, sym, t, orders.values) && !appsOwn) com.optionslab.app.work.Alerts.error(
+            // (Review: a stop Zerodha keeps refusing at each re-rest is said once, not at every try: said again only after a stop of
+            // this trade was seen resting at Zerodha since ([endedSaid]).)
+            if (so != null && so.working && so.id == p.stopOrderId) stopRested(p, sym)
+            if (ended && !expiryClosing(p.symbol, sym, t, orders.values) && !appsOwn &&
+                endedSaid.put(managerId(p), "${so!!.status}|${so.message}") != "${so.status}|${so.message}") com.optionslab.app.work.Alerts.error(
                 "${armOf(p.arm).label}: the stop at Zerodha was ${so!!.status.lowercase()} (${so.message.ifBlank { "no reason given" }}). " + when {
-                    liqArm && !byExchange -> "It looks cancelled by you (in Kite), so the app does not put it back: it watches $level " +
+                    !byExchange -> "It looks cancelled by you (in Kite), so the app does not put it back: it watches $level " +
                         "itself and sells there. Set a stop at Zerodha yourself if you want one there."
-                    liqArm -> "The app watches $level itself and places it again at Zerodha on its next check while the price allows it to rest " +
+                    // (Review: no level it could rest at - no trigger, no lock: nothing is placed again.)
+                    p.stopTrigger == null && !p.fixed && lockOrStop(p) == null -> "The app now watches the stop itself."
+                    else -> "The app watches $level itself and places it again at Zerodha on its next check while the price allows it to rest " +
                         "there (not with Stop for today, at the square-off, or while you are exiting it by hand: those sell it)."
-                    else -> "The app now watches $level itself."
                 }, "ORB live")
-            // (Liquidity 15+5 only: every other arm keeps its "Keep a stop at the exchange" behaviour as before.)
             // (Review: the app's own-cancel mark lasts only until Zerodha shows that stop again working - then a later cancel is Boss's to make.)
             val cur = if (ended) p.copy(stopOrderId = null, appCancelled = false,
-                stopByYou = p.stopByYou || (!byExchange && armOf(p.arm).liquidity)).also { b.positions[i] = it }
+                stopByYou = p.stopByYou || !byExchange).also { b.positions[i] = it }
                 else if (p.appCancelled && so != null && so.working) p.copy(appCancelled = false).also { b.positions[i] = it } else p
             val held = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
             val ltp = q["NFO:$sym"]?.last?.takeIf { it > 0 }
@@ -3320,10 +3356,10 @@ object OrbArms {
             }
             // The price ran through the stop's limit without it filling: sell at market instead.
             val tick = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(0.05)
-            // "Keep a stop-loss order at the exchange" (Settings → Zerodha, off unless chosen; 16 Nov: always for Liquidity 15+5, Boss's
-            // "All the stops and profit locks should be on zerodha"): a position whose stop is not resting at Zerodha (it could not be
-            // placed, or was refused or cancelled) gets it placed again at the highest level it may rest at on the regular pass - never
-            // on a fast look, at most once a minute - while the price is still above it.
+            // Always (16 Nov, Boss's "All the stops and profit locks should be on zerodha": Liquidity 15+5 first, then every arm here -
+            // it was the "Keep a stop-loss order at the exchange" setting, off unless chosen): a position whose stop is not resting at
+            // Zerodha (it could not be placed, or the exchange or Zerodha refused or cancelled it) gets it placed again at the highest
+            // level it may rest at on the regular pass - never on a fast look, at most once a minute - while the price is still above it.
             // (Review: never at or after the square-off or with Boss's Stop for today - those sell on this pass - and never beside another
             // sell working on the contract, a square-off's MARKET sale on its way: never two exits.)
             // (Review: held back only by this position's own exits - the 15:05 expiry square-off ([expiryClosing]), a working square-off
@@ -3430,30 +3466,56 @@ object OrbArms {
 
     private fun ownCancel(id: String): Boolean = synchronized(ownCancels) { id in ownCancels }
 
+    /**
+     * 16 Nov (review): by trade ([managerId]), how its stop's last end was said ("status|message"): the same end again is not said
+     * again until a stop of the trade was seen resting at Zerodha ([stopRested]). Memory only; the trades of a day.
+     */
+    private val endedSaid = java.util.concurrent.ConcurrentHashMap<String, String>()
+    /** 16 Nov (review): by [restKey], the re-rests tried since a stop of the trade was last seen resting (their back-off). Memory only. */
+    private val restTries = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    /** 16 Nov (review): by [restKey], a re-rest's refusal already said (once until a stop of the trade rests again). Memory only. */
+    private val restRefusedSaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** [p]'s key for its re-rests ([restExchangeStop]) on [sym]. */
+    private fun restKey(p: Position, sym: String): String = "${p.arm}|$sym|${p.entryTime}"
+
+    /** [p]'s stop seen resting at Zerodha: a later end, refusal or re-rest of it is a new one (said again, tried at once). */
+    private fun stopRested(p: Position, sym: String) {
+        endedSaid.remove(managerId(p))
+        val k = restKey(p, sym)
+        restTries.remove(k); restRefusedSaid.remove(k)
+    }
+
+    /** The memory of [endedSaid], [restTries] and [restRefusedSaid] dropped (a new process, an erase). */
+    private fun forgetStopSaid() { endedSaid.clear(); restTries.clear(); restRefusedSaid.clear() }
+
     /** Cancels the stop [id] as the app's own ([ownCancels]). */
     private suspend fun cancelOwnStop(id: String) {
         synchronized(ownCancels) { ownCancels += id }
         runCatching { Broker.cancel(id) }
     }
 
-    /** When each position's exchange stop was last placed again ([restExchangeStop]): at most once a minute each. */
+    /**
+     * When each position's exchange stop was last placed again ([restExchangeStop]): at most once a minute each (16 Nov review: then
+     * 2, 4, 8, at most 16 minutes apart while Zerodha keeps ending it before it is seen resting - [restTries]).
+     */
     private val restoppedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
     /**
-     * The exchange stop placed again for [p] (held [held] at Zerodha, price [ltp]) when the owner keeps one there
-     * ([AppSettings.exchangeStops]): at the lock its best price earned when above its own trigger, else its trigger; only
-     * while the price is above that level (a sell stop must rest below the price - at or under it the app's own check sells).
-     * Null when nothing was placed (the setting off, too soon, no level, or Zerodha refused: the app keeps watching it).
+     * The exchange stop placed again for [p] (held [held] at Zerodha, price [ltp]): at the lock its best price earned when above its own
+     * trigger, else its trigger; only while the price is above that level (a sell stop must rest below the price - at or under it the
+     * app's own check sells). Null when nothing was placed (too soon, no level, or Zerodha refused: the app keeps watching it).
      */
     private suspend fun restExchangeStop(b: Book, p: Position, sym: String, held: Int, ltp: Double, tick: Double): Position? {
-        // 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): a Liquidity 15+5 trade's stop - its -15%, the breakeven,
-        // the breakeven at +₹1,000, its lock - is always put back at Zerodha, the setting or not; every other arm as the setting says.
-        if (!armOf(p.arm).liquidity && !runCatching { AppSettings.load().exchangeStops }.getOrDefault(false)) return null
+        // 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): every arm's stop - the ORB family's own and its lock,
+        // Liquidity 15+5's -15%, the breakeven, the breakeven at +₹1,000, its lock - is always put back at Zerodha (Liquidity first; the
+        // ORB arms by Boss's "yes" the same day). [AppSettings.exchangeStops] is no longer read. The caller's guards decide when.
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no new stop beside his sale (asked again next look).
         if (ArmLive.handsOffNow("NFO", sym)) return null
-        val key = "${p.arm}|$sym|${p.entryTime}"
+        val key = restKey(p, sym)
         val now = System.currentTimeMillis()
-        if (now - (restoppedAt[key] ?: 0L) < 60_000L) return null
+        val tries = restTries[key] ?: 0
+        if (now - (restoppedAt[key] ?: 0L) < (60_000L shl tries.coerceAtMost(4))) return null
         restoppedAt[key] = now
         // 15 Nov: the highest level that can rest at the price now - the lock or the stop rule's stop ([lockOrStop]), its
         // trigger, else (a Liquidity trade) its own -15%: one too near the price never leaves the position with no stop at Zerodha
@@ -3465,8 +3527,12 @@ object OrbArms {
             else listOfNotNull(lockOrStop(p, tick), p.stopTrigger, LiquidityRules.stopTrigger(p.entry, liqParams(p).stopPct))
                 .filter { ltp > it + tick }.maxOrNull() ?: return null
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return null
-        val (id, trig) = placeStop(armOf(p.arm).label, sym, minOf(p.qty, held), spec.lotSize, spec.tickSize, p.entry, knownKite(b),
-            liquidity = armOf(p.arm).liquidity, at = level)
+        // (Review: a refusal said once until a stop of the trade rests again ([restRefusedSaid]), not at every try; each try counted
+        // for the back-off until one is seen resting ([stopRested]).)
+        restTries[key] = tries + 1
+        val (id, trig, refused) = placeStop(armOf(p.arm).label, sym, minOf(p.qty, held), spec.lotSize, spec.tickSize, p.entry, knownKite(b),
+            liquidity = armOf(p.arm).liquidity, at = level, alert = key !in restRefusedSaid)
+        if (id == null && refused) restRefusedSaid += key
         return if (id == null) null else p.copy(stopOrderId = id, stopTrigger = trig ?: level)
     }
 
@@ -4936,6 +5002,7 @@ object OrbArms {
         cache = null; writtenText = null; writtenStat = null
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         synchronized(ownCancels) { ownCancels.clear() }
+        forgetStopSaid()
     }
 
     /**
@@ -4946,6 +5013,7 @@ object OrbArms {
      */
     @Synchronized fun wipe() {
         synchronized(ownCancels) { ownCancels.clear() }
+        forgetStopSaid()
         wipeGen++
         cache = null; restoppedAt.clear(); writtenText = null; writtenStat = null
         forgetHints()
