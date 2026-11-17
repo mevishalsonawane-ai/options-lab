@@ -1,0 +1,136 @@
+{
+ "written": "2026-11-17T16:51:17.833377+00:00",
+ "m_total": 4770,
+ "b_pick": null,
+ "any_reliable": false,
+ "variants": {
+  "P1": {
+   "name": "Night book + Liquidity, 1 lot each, no caps",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era A: twin p 0.294 >= 0.05",
+    "era B: max drawdown Rs 47,794 >= Rs 40k",
+    "era B: worst month Rs -25,323 <= -Rs 13k",
+    "era C: max drawdown Rs 104,864 >= Rs 40k",
+    "era C: worst month Rs -75,107 <= -Rs 13k",
+    "BH q 1 > 0.1"
+   ],
+   "p_bh": 0.2348606427954169,
+   "q": 1.0
+  },
+  "P2": {
+   "name": "Night book + Liquidity + R72 picker, no caps",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era A: twin p 0.271 >= 0.05",
+    "era B: net without the top 5 trades -54,984 <= 0",
+    "era B: twin p 0.467 >= 0.05",
+    "era B: max drawdown Rs 132,420 >= Rs 40k",
+    "era B: worst month Rs -42,140 <= -Rs 13k",
+    "era C: max drawdown Rs 102,300 >= Rs 40k",
+    "era C: worst month Rs -72,408 <= -Rs 13k",
+    "BH q 1 > 0.1"
+   ],
+   "p_bh": 0.45961367647406426,
+   "q": 1.0
+  },
+  "P3": {
+   "name": "one Night a night + Liquidity",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era A: twin p 0.294 >= 0.05",
+    "era B: twin p 0.067 >= 0.05",
+    "era B: worst month Rs -18,222 <= -Rs 13k",
+    "era C: max drawdown Rs 84,372 >= Rs 40k",
+    "era C: worst month Rs -65,867 <= -Rs 13k",
+    "BH q 1 > 0.1"
+   ],
+   "p_bh": 0.23705289112714706,
+   "q": 1.0
+  },
+  "P4": {
+   "name": "P3 + month halt at -Rs 8k",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era A: twin p 0.233 >= 0.05",
+    "era B: net without the top 5 trades -12,059 <= 0",
+    "era B: twin p 0.117 >= 0.05",
+    "era B: max drawdown Rs 60,100 >= Rs 40k",
+    "era C: max drawdown Rs 57,749 >= Rs 40k",
+    "era C: worst month Rs -16,178 <= -Rs 13k",
+    "BH q 1 > 0.1"
+   ],
+   "p_bh": 0.20697708267671205,
+   "q": 1.0
+  },
+  "P5": {
+   "name": "P4 + drawdown brake at -Rs 25k",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era A: twin p 0.227 >= 0.05",
+    "era B: net without the top 5 trades -15,821 <= 0",
+    "era B: twin p 0.120 >= 0.05",
+    "era B: max drawdown Rs 59,244 >= Rs 40k",
+    "era C: max drawdown Rs 56,902 >= Rs 40k",
+    "era C: worst month Rs -13,277 <= -Rs 13k",
+    "BH q 1 > 0.1"
+   ],
+   "p_bh": 0.1993439875452589,
+   "q": 1.0
+  },
+  "P6": {
+   "name": "P4 + equity-curve filter (last 20 > 0)",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -18,149 <= 0",
+    "era A: twin p 0.275 >= 0.05",
+    "era B: net -1,218 <= 0",
+    "era B: net without the top 5 trades -55,080 <= 0",
+    "era B: twin p 0.346 >= 0.05",
+    "era B: max drawdown Rs 40,816 >= Rs 40k",
+    "era C: twin p 0.110 >= 0.05",
+    "era C: max drawdown Rs 41,151 >= Rs 40k",
+    "BH q 1 > 0.1"
+   ],
+   "p_bh": 0.3522959018759845,
+   "q": 1.0
+  },
+  "P7": {
+   "name": "one Night a night + Liquidity + R72 picker + month halt + equity-curve filter",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -18,149 <= 0",
+    "era A: twin p 0.276 >= 0.05",
+    "era B: net -170,900 <= 0",
+    "era B: net without the top 5 trades -216,123 <= 0",
+    "era B: twin p 0.973 >= 0.05",
+    "era B: max drawdown Rs 170,900 >= Rs 40k",
+    "era C: max drawdown Rs 86,135 >= Rs 40k",
+    "era C: worst month Rs -23,561 <= -Rs 13k",
+    "BH q 1 > 0.1"
+   ],
+   "p_bh": 0.9746425321436322,
+   "q": 1.0
+  },
+  "P8": {
+   "name": "P4 + skip Night / Liquidity on high-VIX days",
+   "reliable": false,
+   "fails": [
+    "era A: net without the top 5 trades -13,803 <= 0",
+    "era A: twin p 0.228 >= 0.05",
+    "era B: net without the top 5 trades -44,543 <= 0",
+    "era B: twin p 0.219 >= 0.05",
+    "era B: max drawdown Rs 72,852 >= Rs 40k",
+    "era C: max drawdown Rs 53,328 >= Rs 40k",
+    "BH q 1 > 0.1"
+   ],
+   "p_bh": 0.2214544556194582,
+   "q": 1.0
+  }
+ }
+}
