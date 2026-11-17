@@ -1,0 +1,226 @@
+{
+ "source": "NSE UDiFF F&O bhavcopy weekly sample (117 files, 2024-07-11 - 2026-10-07), NewBrdLotQty of the nearest index option expiry",
+ "indices": {
+  "NIFTY": {
+   "runs": [
+    {
+     "frm": "2024-11-20",
+     "to": "2024-11-27",
+     "true": 25,
+     "schedule": 25,
+     "days": 6
+    },
+    {
+     "frm": "2024-11-28",
+     "to": "2024-12-26",
+     "true": 25,
+     "schedule": 75,
+     "days": 21
+    },
+    {
+     "frm": "2024-12-27",
+     "to": "2025-01-23",
+     "true": 75,
+     "schedule": 75,
+     "days": 20
+    },
+    {
+     "frm": "2025-01-24",
+     "to": "2025-01-30",
+     "true": 25,
+     "schedule": 75,
+     "days": 5
+    },
+    {
+     "frm": "2025-01-31",
+     "to": "2025-12-30",
+     "true": 75,
+     "schedule": 75,
+     "days": 238
+    },
+    {
+     "frm": "2025-12-31",
+     "to": "2026-11-13",
+     "true": 65,
+     "schedule": 65,
+     "days": 228
+    }
+   ],
+   "wrong": [
+    {
+     "frm": "2024-11-28",
+     "to": "2024-12-26",
+     "true": 25,
+     "schedule": 75,
+     "days": 21
+    },
+    {
+     "frm": "2025-01-24",
+     "to": "2025-01-30",
+     "true": 25,
+     "schedule": 75,
+     "days": 5
+    }
+   ]
+  },
+  "BANKNIFTY": {
+   "runs": [
+    {
+     "frm": "2024-11-20",
+     "to": "2024-11-27",
+     "true": 15,
+     "schedule": 15,
+     "days": 6
+    },
+    {
+     "frm": "2024-11-28",
+     "to": "2025-01-30",
+     "true": 15,
+     "schedule": 30,
+     "days": 46
+    },
+    {
+     "frm": "2025-01-31",
+     "to": "2025-06-26",
+     "true": 30,
+     "schedule": 30,
+     "days": 105
+    },
+    {
+     "frm": "2025-06-27",
+     "to": "2025-12-30",
+     "true": 35,
+     "schedule": 35,
+     "days": 133
+    },
+    {
+     "frm": "2025-12-31",
+     "to": "2026-11-13",
+     "true": 30,
+     "schedule": 35,
+     "days": 228
+    }
+   ],
+   "wrong": [
+    {
+     "frm": "2024-11-28",
+     "to": "2025-01-30",
+     "true": 15,
+     "schedule": 30,
+     "days": 46
+    },
+    {
+     "frm": "2025-12-31",
+     "to": "2026-11-13",
+     "true": 30,
+     "schedule": 35,
+     "days": 228
+    }
+   ]
+  },
+  "FINNIFTY": {
+   "runs": [
+    {
+     "frm": "2024-11-20",
+     "to": "2024-11-27",
+     "true": 25,
+     "schedule": 25,
+     "days": 6
+    },
+    {
+     "frm": "2024-11-28",
+     "to": "2025-01-30",
+     "true": 25,
+     "schedule": 65,
+     "days": 46
+    },
+    {
+     "frm": "2025-01-31",
+     "to": "2025-12-30",
+     "true": 65,
+     "schedule": 65,
+     "days": 238
+    },
+    {
+     "frm": "2025-12-31",
+     "to": "2026-11-13",
+     "true": 60,
+     "schedule": 60,
+     "days": 228
+    }
+   ],
+   "wrong": [
+    {
+     "frm": "2024-11-28",
+     "to": "2025-01-30",
+     "true": 25,
+     "schedule": 65,
+     "days": 46
+    }
+   ]
+  },
+  "MIDCPNIFTY": {
+   "runs": [
+    {
+     "frm": "2024-11-20",
+     "to": "2024-11-27",
+     "true": 50,
+     "schedule": 75,
+     "days": 6
+    },
+    {
+     "frm": "2024-11-28",
+     "to": "2025-01-30",
+     "true": 50,
+     "schedule": 120,
+     "days": 46
+    },
+    {
+     "frm": "2025-01-31",
+     "to": "2025-06-26",
+     "true": 120,
+     "schedule": 120,
+     "days": 105
+    },
+    {
+     "frm": "2025-06-27",
+     "to": "2025-12-30",
+     "true": 140,
+     "schedule": 120,
+     "days": 133
+    },
+    {
+     "frm": "2025-12-31",
+     "to": "2026-11-13",
+     "true": 120,
+     "schedule": 120,
+     "days": 228
+    }
+   ],
+   "wrong": [
+    {
+     "frm": "2024-11-20",
+     "to": "2024-11-27",
+     "true": 50,
+     "schedule": 75,
+     "days": 6
+    },
+    {
+     "frm": "2024-11-28",
+     "to": "2025-01-30",
+     "true": 50,
+     "schedule": 120,
+     "days": 46
+    },
+    {
+     "frm": "2025-06-27",
+     "to": "2025-12-30",
+     "true": 140,
+     "schedule": 120,
+     "days": 133
+    }
+   ]
+  }
+ },
+ "note": "after the last file (7 Oct 2026) the last file's lot of the nearest expiry is carried"
+}

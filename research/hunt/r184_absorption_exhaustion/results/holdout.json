@@ -1,0 +1,793 @@
+{
+ "read_at": "2026-11-16T01:40:43.136991+00:00",
+ "final_read_flag": "2026-11-16T01:40:19.815528+00:00",
+ "prereg_sha256": "4d61e7d4f88ab2e592f333147328392d777931594ffad462165c15b095b6d52e",
+ "selection_sha256": "33b66f5a0caf4c2fecb590908f3d8b0fb53b39c329776aec48f4cd99b26c7856",
+ "code_sha256": {
+  "r184.py": "d8f9cbf3026b7e2e25475ff2f4fea19b61746954be52f4ce47afaa60702cd889",
+  "r184lib.py": "f6e8bd538f079e2b8a440a71923941d45e6f580b220f4cf93373a9922ebf1158",
+  "r184load.py": "dcc69c72fcc3d6b013233f689dfd01df8b6fd86db0194d345eb11954c66d2cf4"
+ },
+ "holdout_days": [
+  "2026-11-04",
+  "2026-11-05",
+  "2026-11-06",
+  "2026-11-09",
+  "2026-11-11",
+  "2026-11-12",
+  "2026-11-13"
+ ],
+ "m_total": 4512,
+ "cells": {
+  "ABS NIFTY": {
+   "vid": "ABS w3 k2 b6 turn T30",
+   "params": {
+    "setup": "ABS",
+    "w": 3,
+    "k": 2,
+    "beta": 6,
+    "confirm": "turn",
+    "T": 30
+   },
+   "signals": 12,
+   "unpriced": {},
+   "holdout": {
+    "n": 8,
+    "win": 0.25,
+    "net": 2153.0,
+    "net2": 1971.0,
+    "net_ba": 2521.0,
+    "n_ba": 8,
+    "mean": 269.2,
+    "mean2": 246.4,
+    "avg_win": 2582.0,
+    "avg_loss": -502.0,
+    "sd": 1643.2,
+    "worst_day": -2297.0,
+    "best_day": 3785.0,
+    "days_traded": 6,
+    "by_side": {
+     "L": {
+      "n": 5,
+      "net": 3471.0
+     },
+     "S": {
+      "n": 3,
+      "net": -1317.0
+     }
+    },
+    "by_exit": {
+     "breakeven": {
+      "n": 3,
+      "net": -167.05
+     },
+     "time": {
+      "n": 2,
+      "net": 5163.9
+     },
+     "index_stop": {
+      "n": 3,
+      "net": -2843.36
+     }
+    }
+   },
+   "design": {
+    "n": 24,
+    "win": 0.292,
+    "net": 4164.0,
+    "net2": 3734.0,
+    "net_ba": 3854.0,
+    "n_ba": 23,
+    "mean": 173.5,
+    "mean2": 155.6,
+    "avg_win": 1370.0,
+    "avg_loss": -319.0,
+    "sd": 888.2,
+    "worst_day": -713.0,
+    "best_day": 3470.0,
+    "days_traded": 12,
+    "by_side": {
+     "L": {
+      "n": 10,
+      "net": 1360.0
+     },
+     "S": {
+      "n": 14,
+      "net": 2803.0
+     }
+    },
+    "by_exit": {
+     "breakeven": {
+      "n": 10,
+      "net": -303.04
+     },
+     "index_stop": {
+      "n": 4,
+      "net": -3211.24
+     },
+     "prem_stop": {
+      "n": 3,
+      "net": -1913.83
+     },
+     "time": {
+      "n": 7,
+      "net": 9591.65
+     }
+    }
+   },
+   "twins": {
+    "p": 0.38961038961038963,
+    "mean": 188.4,
+    "p10": -237.4,
+    "p90": 630.1,
+    "n_sets": 1000,
+    "win": 0.435
+   },
+   "p_twin": 0.3896,
+   "p_zero": 0.3235,
+   "power": {
+    "mde_5pct": 1447.0,
+    "mde_bh": 2725.0
+   },
+   "day_sums": {
+    "2026-11-04": -60.0,
+    "2026-11-05": 3785.0,
+    "2026-11-06": -547.0,
+    "2026-11-09": -107.0,
+    "2026-11-11": -2297.0,
+    "2026-11-12": 0.0,
+    "2026-11-13": 1379.0
+   },
+   "q_twin": 1.0,
+   "q_zero": 1.0,
+   "verdict": "too few trades"
+  },
+  "ABS BANKNIFTY": {
+   "vid": "ABS w5 k2 b6 turn T30",
+   "params": {
+    "setup": "ABS",
+    "w": 5,
+    "k": 2,
+    "beta": 6,
+    "confirm": "turn",
+    "T": 30
+   },
+   "signals": 15,
+   "unpriced": {},
+   "holdout": {
+    "n": 6,
+    "win": 0.5,
+    "net": 2257.0,
+    "net2": 2079.0,
+    "net_ba": 1885.0,
+    "n_ba": 6,
+    "mean": 376.2,
+    "mean2": 346.6,
+    "avg_win": 1933.0,
+    "avg_loss": -1181.0,
+    "sd": 1907.9,
+    "worst_day": -2478.0,
+    "best_day": 2774.0,
+    "days_traded": 5,
+    "by_side": {
+     "L": {
+      "n": 4,
+      "net": 2658.0
+     },
+     "S": {
+      "n": 2,
+      "net": -401.0
+     }
+    },
+    "by_exit": {
+     "index_stop": {
+      "n": 2,
+      "net": -3055.55
+     },
+     "time": {
+      "n": 4,
+      "net": 5312.69
+     }
+    }
+   },
+   "design": {
+    "n": 12,
+    "win": 0.417,
+    "net": 3116.0,
+    "net2": 2860.0,
+    "net_ba": 2816.0,
+    "n_ba": 12,
+    "mean": 259.7,
+    "mean2": 238.3,
+    "avg_win": 2063.0,
+    "avg_loss": -1028.0,
+    "sd": 1958.5,
+    "worst_day": -3106.0,
+    "best_day": 4063.0,
+    "days_traded": 9,
+    "by_side": {
+     "L": {
+      "n": 7,
+      "net": 5334.0
+     },
+     "S": {
+      "n": 5,
+      "net": -2218.0
+     }
+    },
+    "by_exit": {
+     "time": {
+      "n": 7,
+      "net": 9229.78
+     },
+     "index_stop": {
+      "n": 1,
+      "net": -1154.65
+     },
+     "prem_stop": {
+      "n": 3,
+      "net": -4909.04
+     },
+     "breakeven": {
+      "n": 1,
+      "net": -49.81
+     }
+    }
+   },
+   "twins": {
+    "p": 0.24875124875124874,
+    "mean": -45.7,
+    "p10": -859.0,
+    "p90": 807.1,
+    "n_sets": 1000,
+    "win": 0.412
+   },
+   "p_twin": 0.2488,
+   "p_zero": 0.3071,
+   "power": {
+    "mde_5pct": 1939.0,
+    "mde_bh": 3653.0
+   },
+   "day_sums": {
+    "2026-11-04": -1065.0,
+    "2026-11-05": 2774.0,
+    "2026-11-06": 2362.0,
+    "2026-11-09": 0.0,
+    "2026-11-11": 664.0,
+    "2026-11-12": -2478.0,
+    "2026-11-13": 0.0
+   },
+   "q_twin": 1.0,
+   "q_zero": 1.0,
+   "verdict": "too few trades"
+  },
+  "EXH NIFTY": {
+   "vid": "EXH X30 k3 b6 flip T30",
+   "params": {
+    "setup": "EXH",
+    "X": 30,
+    "k": 3,
+    "beta": 6,
+    "confirm": "flip",
+    "T": 30
+   },
+   "signals": 18,
+   "unpriced": {},
+   "holdout": {
+    "n": 14,
+    "win": 0.214,
+    "net": -3728.0,
+    "net2": -4055.0,
+    "net_ba": -3326.0,
+    "n_ba": 14,
+    "mean": -266.3,
+    "mean2": -289.6,
+    "avg_win": 1793.0,
+    "avg_loss": -828.0,
+    "sd": 1267.7,
+    "worst_day": -3542.0,
+    "best_day": 1699.0,
+    "days_traded": 6,
+    "by_side": {
+     "L": {
+      "n": 8,
+      "net": -2939.0
+     },
+     "S": {
+      "n": 6,
+      "net": -789.0
+     }
+    },
+    "by_exit": {
+     "time": {
+      "n": 3,
+      "net": 5379.92
+     },
+     "index_stop": {
+      "n": 9,
+      "net": -9064.46
+     },
+     "breakeven": {
+      "n": 2,
+      "net": -43.16
+     }
+    }
+   },
+   "design": {
+    "n": 31,
+    "win": 0.226,
+    "net": 1369.0,
+    "net2": 794.0,
+    "net_ba": 1824.0,
+    "n_ba": 31,
+    "mean": 44.2,
+    "mean2": 25.6,
+    "avg_win": 1982.0,
+    "avg_loss": -521.0,
+    "sd": 1297.3,
+    "worst_day": -3529.0,
+    "best_day": 4208.0,
+    "days_traded": 13,
+    "by_side": {
+     "L": {
+      "n": 14,
+      "net": 4703.0
+     },
+     "S": {
+      "n": 17,
+      "net": -3334.0
+     }
+    },
+    "by_exit": {
+     "index_stop": {
+      "n": 11,
+      "net": -9777.79
+     },
+     "time": {
+      "n": 7,
+      "net": 13873.58
+     },
+     "breakeven": {
+      "n": 10,
+      "net": -311.56
+     },
+     "prem_stop": {
+      "n": 3,
+      "net": -2415.11
+     }
+    }
+   },
+   "twins": {
+    "p": 0.45354645354645357,
+    "mean": -281.6,
+    "p10": -558.6,
+    "p90": 0.5,
+    "n_sets": 1000,
+    "win": 0.227
+   },
+   "p_twin": 0.4535,
+   "p_zero": 0.8003,
+   "power": {
+    "mde_5pct": 844.0,
+    "mde_bh": 1589.0
+   },
+   "day_sums": {
+    "2026-11-04": 1699.0,
+    "2026-11-05": -2132.0,
+    "2026-11-06": 0.0,
+    "2026-11-09": -23.0,
+    "2026-11-11": 915.0,
+    "2026-11-12": -3542.0,
+    "2026-11-13": -645.0
+   },
+   "q_twin": 1.0,
+   "q_zero": 1.0,
+   "verdict": "no evidence"
+  },
+  "EXH BANKNIFTY": {
+   "vid": "EXH X30 k2 b3 flip+close T30",
+   "params": {
+    "setup": "EXH",
+    "X": 30,
+    "k": 2,
+    "beta": 3,
+    "confirm": "flip+close",
+    "T": 30
+   },
+   "signals": 24,
+   "unpriced": {},
+   "holdout": {
+    "n": 22,
+    "win": 0.227,
+    "net": -2072.0,
+    "net2": -2765.0,
+    "net_ba": -2244.0,
+    "n_ba": 22,
+    "mean": -94.2,
+    "mean2": -125.7,
+    "avg_win": 2445.0,
+    "avg_loss": -841.0,
+    "sd": 1736.2,
+    "worst_day": -3559.0,
+    "best_day": 4033.0,
+    "days_traded": 7,
+    "by_side": {
+     "L": {
+      "n": 4,
+      "net": 169.0
+     },
+     "S": {
+      "n": 18,
+      "net": -2241.0
+     }
+    },
+    "by_exit": {
+     "index_stop": {
+      "n": 11,
+      "net": -11472.07
+     },
+     "time": {
+      "n": 11,
+      "net": 9399.99
+     }
+    }
+   },
+   "design": {
+    "n": 39,
+    "win": 0.41,
+    "net": 2925.0,
+    "net2": 1925.0,
+    "net_ba": 2440.0,
+    "n_ba": 38,
+    "mean": 75.0,
+    "mean2": 49.4,
+    "avg_win": 1154.0,
+    "avg_loss": -676.0,
+    "sd": 1064.9,
+    "worst_day": -2298.0,
+    "best_day": 4742.0,
+    "days_traded": 13,
+    "by_side": {
+     "L": {
+      "n": 15,
+      "net": 1956.0
+     },
+     "S": {
+      "n": 24,
+      "net": 969.0
+     }
+    },
+    "by_exit": {
+     "index_stop": {
+      "n": 15,
+      "net": -14038.01
+     },
+     "time": {
+      "n": 18,
+      "net": 17320.36
+     },
+     "breakeven": {
+      "n": 6,
+      "net": -357.4
+     }
+    }
+   },
+   "twins": {
+    "p": 0.23676323676323677,
+    "mean": -293.8,
+    "p10": -655.1,
+    "p90": 71.8,
+    "n_sets": 1000,
+    "win": 0.264
+   },
+   "p_twin": 0.2368,
+   "p_zero": 0.622,
+   "power": {
+    "mde_5pct": 922.0,
+    "mde_bh": 1736.0
+   },
+   "day_sums": {
+    "2026-11-04": -3559.0,
+    "2026-11-05": -1898.0,
+    "2026-11-06": 4033.0,
+    "2026-11-09": 3563.0,
+    "2026-11-11": -1134.0,
+    "2026-11-12": -2743.0,
+    "2026-11-13": -334.0
+   },
+   "q_twin": 1.0,
+   "q_zero": 1.0,
+   "verdict": "no evidence"
+  }
+ },
+ "tests": [
+  {
+   "id": "ABS NIFTY T1 twins",
+   "p": 0.3896,
+   "q_all": 1.0,
+   "q_within": 0.6047
+  },
+  {
+   "id": "ABS NIFTY T2 zero",
+   "p": 0.3235,
+   "q_all": 1.0,
+   "q_within": 0.6047
+  },
+  {
+   "id": "ABS BANKNIFTY T1 twins",
+   "p": 0.2488,
+   "q_all": 1.0,
+   "q_within": 0.6047
+  },
+  {
+   "id": "ABS BANKNIFTY T2 zero",
+   "p": 0.3071,
+   "q_all": 1.0,
+   "q_within": 0.6047
+  },
+  {
+   "id": "EXH NIFTY T1 twins",
+   "p": 0.4535,
+   "q_all": 1.0,
+   "q_within": 0.6047
+  },
+  {
+   "id": "EXH NIFTY T2 zero",
+   "p": 0.8003,
+   "q_all": 1.0,
+   "q_within": 0.8003
+  },
+  {
+   "id": "EXH BANKNIFTY T1 twins",
+   "p": 0.2368,
+   "q_all": 1.0,
+   "q_within": 0.6047
+  },
+  {
+   "id": "EXH BANKNIFTY T2 zero",
+   "p": 0.622,
+   "q_all": 1.0,
+   "q_within": 0.7109
+  }
+ ],
+ "pooled": {
+  "ABS": {
+   "n": 14,
+   "win": 0.357,
+   "net": 4411.0,
+   "net2": 4050.0,
+   "net_ba": 4406.0,
+   "n_ba": 14,
+   "mean": 315.0,
+   "mean2": 289.3,
+   "avg_win": 2193.0,
+   "avg_loss": -728.0,
+   "sd": 1690.3,
+   "worst_day": -2478.0,
+   "best_day": 6559.0,
+   "days_traded": 7,
+   "by_side": {
+    "L": {
+     "n": 9,
+     "net": 6129.0
+    },
+    "S": {
+     "n": 5,
+     "net": -1719.0
+    }
+   },
+   "by_exit": {
+    "breakeven": {
+     "n": 3,
+     "net": -167.05
+    },
+    "time": {
+     "n": 6,
+     "net": 10476.59
+    },
+    "index_stop": {
+     "n": 5,
+     "net": -5898.91
+    }
+   }
+  },
+  "EXH": {
+   "n": 36,
+   "win": 0.222,
+   "net": -5800.0,
+   "net2": -6820.0,
+   "net_ba": -5570.0,
+   "n_ba": 36,
+   "mean": -161.1,
+   "mean2": -189.4,
+   "avg_win": 2200.0,
+   "avg_loss": -836.0,
+   "sd": 1553.3,
+   "worst_day": -6285.0,
+   "best_day": 4033.0,
+   "days_traded": 7,
+   "by_side": {
+    "L": {
+     "n": 12,
+     "net": -2770.0
+    },
+    "S": {
+     "n": 24,
+     "net": -3030.0
+    }
+   },
+   "by_exit": {
+    "time": {
+     "n": 14,
+     "net": 14779.91
+    },
+    "index_stop": {
+     "n": 20,
+     "net": -20536.53
+    },
+    "breakeven": {
+     "n": 2,
+     "net": -43.16
+    }
+   }
+  }
+ },
+ "quality": {
+  "2026-11-04": {
+   "NIFTY": {
+    "fut_minutes": 338,
+    "thin": 42,
+    "spot_minutes": 344,
+    "strikes": 9,
+    "option_rows": 185948
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 338,
+    "thin": 41,
+    "spot_minutes": 344,
+    "strikes": 9,
+    "option_rows": 172045
+   }
+  },
+  "2026-11-05": {
+   "NIFTY": {
+    "fut_minutes": 371,
+    "thin": 10,
+    "spot_minutes": 375,
+    "strikes": 9,
+    "option_rows": 206489
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 371,
+    "thin": 9,
+    "spot_minutes": 375,
+    "strikes": 15,
+    "option_rows": 192112
+   }
+  },
+  "2026-11-06": {
+   "NIFTY": {
+    "fut_minutes": 319,
+    "thin": 62,
+    "spot_minutes": 324,
+    "strikes": 16,
+    "option_rows": 180209
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 319,
+    "thin": 61,
+    "spot_minutes": 324,
+    "strikes": 20,
+    "option_rows": 167461
+   }
+  },
+  "2026-11-09": {
+   "NIFTY": {
+    "fut_minutes": 293,
+    "thin": 91,
+    "spot_minutes": 302,
+    "strikes": 9,
+    "option_rows": 160964
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 293,
+    "thin": 88,
+    "spot_minutes": 302,
+    "strikes": 12,
+    "option_rows": 149325
+   }
+  },
+  "2026-11-11": {
+   "NIFTY": {
+    "fut_minutes": 340,
+    "thin": 49,
+    "spot_minutes": 346,
+    "strikes": 11,
+    "option_rows": 184690
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 339,
+    "thin": 47,
+    "spot_minutes": 346,
+    "strikes": 14,
+    "option_rows": 175606
+   }
+  },
+  "2026-11-12": {
+   "NIFTY": {
+    "fut_minutes": 375,
+    "thin": 1,
+    "spot_minutes": 375,
+    "strikes": 9,
+    "option_rows": 211869
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 375,
+    "thin": 1,
+    "spot_minutes": 375,
+    "strikes": 10,
+    "option_rows": 198341
+   }
+  },
+  "2026-11-13": {
+   "NIFTY": {
+    "fut_minutes": 346,
+    "thin": 35,
+    "spot_minutes": 351,
+    "strikes": 9,
+    "option_rows": 192566
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 346,
+    "thin": 35,
+    "spot_minutes": 351,
+    "strikes": 9,
+    "option_rows": 178951
+   }
+  }
+ },
+ "overlap": {
+  "ABS BANKNIFTY": {
+   "trades_in_arm_days": 14,
+   "same_direction_within_15m": 2,
+   "opposite_within_15m": 0,
+   "same_by_arm": {
+    "R51": 1,
+    "R72": 1
+   }
+  },
+  "ABS NIFTY": {
+   "trades_in_arm_days": 26,
+   "same_direction_within_15m": 3,
+   "opposite_within_15m": 3,
+   "same_by_arm": {
+    "R72": 3
+   }
+  },
+  "EXH BANKNIFTY": {
+   "trades_in_arm_days": 53,
+   "same_direction_within_15m": 0,
+   "opposite_within_15m": 12,
+   "same_by_arm": {}
+  },
+  "EXH NIFTY": {
+   "trades_in_arm_days": 37,
+   "same_direction_within_15m": 0,
+   "opposite_within_15m": 9,
+   "same_by_arm": {}
+  },
+  "_arms": {
+   "arm_trades_nifty_banknifty": 77,
+   "arm_days": [
+    "2026-10-21",
+    "2026-11-13"
+   ],
+   "rebuild": {
+    "unclosed": 0,
+    "orphan_sell_qty": 0,
+    "bad_symbol": 0,
+    "buys": 179
+   }
+  }
+ }
+}

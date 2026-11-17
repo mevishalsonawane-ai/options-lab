@@ -1,0 +1,34 @@
+id: r186-giveback-count
+title: 'R186: how often a trade is +Rs 1,000 / 1,500 / 2,000 a lot and then ends with a loss (today''s rule)'
+family: diagnosis
+date: '2026-11-16'
+doc: research/hunt/r186_fixed_profit/results/summary.md
+hypothesis: 'Boss''s observation: a lot reaches +1,000, then ends negative; +1,500 then negative; +2,000 then negative.'
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post); plus the lake's 20 Oct - 13 Nov 2026 gap files (stores built outside git)
+period:
+  design: none fitted here; early part 2025-10-20..2026-03-31 (R151 picker in-sample)
+  holdout: 2026-04-01..2026-10-13 final (read again, data-led); year to 2026-10-19
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- best open P&L net on the option premium (highest premium from the fill to the minute before the exit)
+model_or_rule: descriptive count under the base (no test)
+settings: research/hunt/r186_fixed_profit/r186study.py
+prereg: research/hunt/r186_fixed_profit/PREREG.md
+variants_tried: null
+results:
+  summary: 'Year, 1 lot: LIQ: 688 trades, 404 losers; 253 reached +Rs 1,000 a lot, 56 of them then lost (gave back Rs 145,879);
+    13.9% of losers had been +Rs 1,000 first; after +1,500: 25, after +2,000: 13 | R72: 1069 trades, 464 losers; 621 reached
+    +Rs 1,000 a lot, 102 of them then lost (gave back Rs 297,821); 22.0% of losers had been +Rs 1,000 first; after +1,500:
+    44, after +2,000: 19 | R51: 1367 trades, 609 losers; 737 reached +Rs 1,000 a lot, 120 of them then lost (gave back Rs
+    341,454); 19.7% of losers had been +Rs 1,000 first; after +1,500: 51, after +2,000: 18. 21 Oct - 13 Nov 2026 (gap files):
+    LIQ 4 of 17 losers had been +Rs 1,000; R72 19 of 56 losers had been +Rs 1,000; R51 14 of 45 losers had been +Rs 1,000.'
+  costs: dated Zerodha charges; R17 fills
+holdout_read: true
+verdict: not-a-test
+notes: Descriptive only; not counted in BH.

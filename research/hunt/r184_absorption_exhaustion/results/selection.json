@@ -1,0 +1,3683 @@
+{
+ "prereg_sha256": "4d61e7d4f88ab2e592f333147328392d777931594ffad462165c15b095b6d52e",
+ "design_days": [
+  "2026-10-15",
+  "2026-10-16",
+  "2026-10-19",
+  "2026-10-21",
+  "2026-10-22",
+  "2026-10-23",
+  "2026-10-26",
+  "2026-10-27",
+  "2026-10-28",
+  "2026-10-29",
+  "2026-10-30",
+  "2026-11-02",
+  "2026-11-03"
+ ],
+ "m_total": 4512,
+ "quality": {
+  "2026-10-15": {
+   "NIFTY": {
+    "fut_minutes": 375,
+    "thin": 1,
+    "spot_minutes": 194,
+    "strikes": 13,
+    "option_rows": 211958
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 375,
+    "thin": 1,
+    "spot_minutes": 375,
+    "strikes": 11,
+    "option_rows": 197934
+   }
+  },
+  "2026-10-16": {
+   "NIFTY": {
+    "fut_minutes": 373,
+    "thin": 10,
+    "spot_minutes": 357,
+    "strikes": 10,
+    "option_rows": 207029
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 373,
+    "thin": 9,
+    "spot_minutes": 374,
+    "strikes": 9,
+    "option_rows": 194265
+   }
+  },
+  "2026-10-19": {
+   "NIFTY": {
+    "fut_minutes": 372,
+    "thin": 11,
+    "spot_minutes": 357,
+    "strikes": 11,
+    "option_rows": 204965
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 372,
+    "thin": 8,
+    "spot_minutes": 375,
+    "strikes": 9,
+    "option_rows": 192069
+   }
+  },
+  "2026-10-21": {
+   "NIFTY": {
+    "fut_minutes": 373,
+    "thin": 5,
+    "spot_minutes": 375,
+    "strikes": 14,
+    "option_rows": 210612
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 373,
+    "thin": 3,
+    "spot_minutes": 375,
+    "strikes": 17,
+    "option_rows": 202112
+   }
+  },
+  "2026-10-22": {
+   "NIFTY": {
+    "fut_minutes": 375,
+    "thin": 1,
+    "spot_minutes": 375,
+    "strikes": 9,
+    "option_rows": 211102
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 375,
+    "thin": 1,
+    "spot_minutes": 375,
+    "strikes": 11,
+    "option_rows": 203575
+   }
+  },
+  "2026-10-23": {
+   "NIFTY": {
+    "fut_minutes": 356,
+    "thin": 24,
+    "spot_minutes": 359,
+    "strikes": 13,
+    "option_rows": 200217
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 357,
+    "thin": 23,
+    "spot_minutes": 359,
+    "strikes": 15,
+    "option_rows": 194423
+   }
+  },
+  "2026-10-26": {
+   "NIFTY": {
+    "fut_minutes": 371,
+    "thin": 7,
+    "spot_minutes": 374,
+    "strikes": 12,
+    "option_rows": 207569
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 371,
+    "thin": 7,
+    "spot_minutes": 374,
+    "strikes": 11,
+    "option_rows": 205831
+   }
+  },
+  "2026-10-27": {
+   "NIFTY": {
+    "fut_minutes": 372,
+    "thin": 9,
+    "spot_minutes": 374,
+    "strikes": 8,
+    "option_rows": 206581
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 372,
+    "thin": 7,
+    "spot_minutes": 374,
+    "strikes": 11,
+    "option_rows": 210378
+   }
+  },
+  "2026-10-28": {
+   "NIFTY": {
+    "fut_minutes": 374,
+    "thin": 8,
+    "spot_minutes": 375,
+    "strikes": 10,
+    "option_rows": 208525
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 373,
+    "thin": 8,
+    "spot_minutes": 375,
+    "strikes": 12,
+    "option_rows": 188010
+   }
+  },
+  "2026-10-29": {
+   "NIFTY": {
+    "fut_minutes": 369,
+    "thin": 9,
+    "spot_minutes": 370,
+    "strikes": 11,
+    "option_rows": 204257
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 369,
+    "thin": 9,
+    "spot_minutes": 370,
+    "strikes": 13,
+    "option_rows": 186365
+   }
+  },
+  "2026-10-30": {
+   "NIFTY": {
+    "fut_minutes": 375,
+    "thin": 0,
+    "spot_minutes": 375,
+    "strikes": 9,
+    "option_rows": 216550
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 375,
+    "thin": 0,
+    "spot_minutes": 375,
+    "strikes": 9,
+    "option_rows": 196043
+   }
+  },
+  "2026-11-02": {
+   "NIFTY": {
+    "fut_minutes": 351,
+    "thin": 33,
+    "spot_minutes": 356,
+    "strikes": 8,
+    "option_rows": 191819
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 351,
+    "thin": 33,
+    "spot_minutes": 356,
+    "strikes": 9,
+    "option_rows": 176767
+   }
+  },
+  "2026-11-03": {
+   "NIFTY": {
+    "fut_minutes": 374,
+    "thin": 4,
+    "spot_minutes": 375,
+    "strikes": 10,
+    "option_rows": 205234
+   },
+   "BANKNIFTY": {
+    "fut_minutes": 374,
+    "thin": 4,
+    "spot_minutes": 375,
+    "strikes": 10,
+    "option_rows": 191025
+   }
+  }
+ },
+ "cells": {
+  "ABS NIFTY": {
+   "variants": [
+    {
+     "i": 0,
+     "vid": "ABS w3 k2 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 32,
+     "unpriced": {
+      "no_spot": 1
+     },
+     "n": 23,
+     "win": 0.261,
+     "net": 2007.0,
+     "net2": 1608.0,
+     "net_ba": 2217.0,
+     "mean": 87.2,
+     "mean2": 69.9,
+     "avg_win": 1309.0,
+     "avg_loss": -344.0,
+     "worst_day": -1350.0
+    },
+    {
+     "i": 1,
+     "vid": "ABS w3 k2 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 32,
+     "unpriced": {
+      "no_spot": 1
+     },
+     "n": 23,
+     "win": 0.217,
+     "net": 3424.0,
+     "net2": 3019.0,
+     "net_ba": 3677.0,
+     "mean": 148.9,
+     "mean2": 131.3,
+     "avg_win": 1862.0,
+     "avg_loss": -327.0,
+     "worst_day": -1350.0
+    },
+    {
+     "i": 2,
+     "vid": "ABS w3 k2 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 11,
+     "unpriced": {
+      "no_spot": 1
+     },
+     "n": 10,
+     "win": 0.6,
+     "net": 6023.0,
+     "net2": 5851.0,
+     "net_ba": 5920.0,
+     "mean": 602.3,
+     "mean2": 585.1,
+     "avg_win": 1198.0,
+     "avg_loss": -291.0,
+     "worst_day": -20.0
+    },
+    {
+     "i": 3,
+     "vid": "ABS w3 k2 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 11,
+     "unpriced": {
+      "no_spot": 1
+     },
+     "n": 10,
+     "win": 0.3,
+     "net": 4013.0,
+     "net2": 3823.0,
+     "net_ba": 4252.0,
+     "mean": 401.3,
+     "mean2": 382.3,
+     "avg_win": 1753.0,
+     "avg_loss": -178.0,
+     "worst_day": -40.0
+    },
+    {
+     "i": 4,
+     "vid": "ABS w3 k2 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 76,
+     "unpriced": {
+      "no_spot": 3
+     },
+     "n": 33,
+     "win": 0.364,
+     "net": 14.0,
+     "net2": -531.0,
+     "net_ba": 655.0,
+     "mean": 0.4,
+     "mean2": -16.1,
+     "avg_win": 807.0,
+     "avg_loss": -460.0,
+     "worst_day": -1736.0
+    },
+    {
+     "i": 5,
+     "vid": "ABS w3 k2 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 76,
+     "unpriced": {
+      "no_spot": 3
+     },
+     "n": 32,
+     "win": 0.219,
+     "net": -11.0,
+     "net2": -575.0,
+     "net_ba": -209.0,
+     "mean": -0.3,
+     "mean2": -18.0,
+     "avg_win": 1580.0,
+     "avg_loss": -443.0,
+     "worst_day": -1736.0
+    },
+    {
+     "i": 6,
+     "vid": "ABS w3 k2 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 31,
+     "unpriced": {
+      "no_spot": 3
+     },
+     "n": 24,
+     "win": 0.333,
+     "net": 3177.0,
+     "net2": 2783.0,
+     "net_ba": 3357.0,
+     "mean": 132.4,
+     "mean2": 116.0,
+     "avg_win": 1081.0,
+     "avg_loss": -342.0,
+     "worst_day": -713.0
+    },
+    {
+     "i": 7,
+     "vid": "ABS w3 k2 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 31,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 24,
+     "win": 0.292,
+     "net": 4164.0,
+     "net2": 3734.0,
+     "net_ba": 3854.0,
+     "mean": 173.5,
+     "mean2": 155.6,
+     "avg_win": 1370.0,
+     "avg_loss": -319.0,
+     "worst_day": -713.0
+    },
+    {
+     "i": 8,
+     "vid": "ABS w3 k3 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 7,
+     "unpriced": {},
+     "n": 7,
+     "win": 0.0,
+     "net": -1716.0,
+     "net2": -1851.0,
+     "net_ba": -1604.0,
+     "mean": -245.2,
+     "mean2": -264.5,
+     "avg_win": null,
+     "avg_loss": -245.0,
+     "worst_day": -617.0
+    },
+    {
+     "i": 9,
+     "vid": "ABS w3 k3 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 7,
+     "unpriced": {},
+     "n": 7,
+     "win": 0.0,
+     "net": -1716.0,
+     "net2": -1851.0,
+     "net_ba": -1604.0,
+     "mean": -245.2,
+     "mean2": -264.5,
+     "avg_win": null,
+     "avg_loss": -245.0,
+     "worst_day": -617.0
+    },
+    {
+     "i": 10,
+     "vid": "ABS w3 k3 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 2,
+     "unpriced": {},
+     "n": 2,
+     "win": 0.0,
+     "net": -80.0,
+     "net2": -119.0,
+     "net_ba": -48.0,
+     "mean": -40.1,
+     "mean2": -59.5,
+     "avg_win": null,
+     "avg_loss": -40.0,
+     "worst_day": -70.0
+    },
+    {
+     "i": 11,
+     "vid": "ABS w3 k3 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 2,
+     "unpriced": {},
+     "n": 2,
+     "win": 0.0,
+     "net": -80.0,
+     "net2": -119.0,
+     "net_ba": -48.0,
+     "mean": -40.1,
+     "mean2": -59.5,
+     "avg_win": null,
+     "avg_loss": -40.0,
+     "worst_day": -70.0
+    },
+    {
+     "i": 12,
+     "vid": "ABS w3 k3 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 23,
+     "unpriced": {},
+     "n": 14,
+     "win": 0.0,
+     "net": -5826.0,
+     "net2": -6087.0,
+     "net_ba": -5626.0,
+     "mean": -416.1,
+     "mean2": -434.8,
+     "avg_win": null,
+     "avg_loss": -416.0,
+     "worst_day": -2140.0
+    },
+    {
+     "i": 13,
+     "vid": "ABS w3 k3 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 23,
+     "unpriced": {},
+     "n": 14,
+     "win": 0.071,
+     "net": -5115.0,
+     "net2": -5385.0,
+     "net_ba": -4857.0,
+     "mean": -365.3,
+     "mean2": -384.7,
+     "avg_win": 1196.0,
+     "avg_loss": -485.0,
+     "worst_day": -1445.0
+    },
+    {
+     "i": 14,
+     "vid": "ABS w3 k3 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 6,
+     "unpriced": {},
+     "n": 6,
+     "win": 0.167,
+     "net": -778.0,
+     "net2": -887.0,
+     "net_ba": -714.0,
+     "mean": -129.7,
+     "mean2": -147.8,
+     "avg_win": 66.0,
+     "avg_loss": -169.0,
+     "worst_day": -670.0
+    },
+    {
+     "i": 15,
+     "vid": "ABS w3 k3 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 6,
+     "unpriced": {},
+     "n": 6,
+     "win": 0.167,
+     "net": 1524.0,
+     "net2": 1415.0,
+     "net_ba": 1589.0,
+     "mean": 254.1,
+     "mean2": 235.8,
+     "avg_win": 2368.0,
+     "avg_loss": -169.0,
+     "worst_day": -670.0
+    },
+    {
+     "i": 16,
+     "vid": "ABS w5 k2 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 23,
+     "unpriced": {
+      "no_spot": 3
+     },
+     "n": 16,
+     "win": 0.062,
+     "net": -3627.0,
+     "net2": -3893.0,
+     "net_ba": -3442.0,
+     "mean": -226.7,
+     "mean2": -243.3,
+     "avg_win": 1062.0,
+     "avg_loss": -313.0,
+     "worst_day": -3013.0
+    },
+    {
+     "i": 17,
+     "vid": "ABS w5 k2 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 23,
+     "unpriced": {
+      "no_spot": 3
+     },
+     "n": 16,
+     "win": 0.188,
+     "net": -2909.0,
+     "net2": -3184.0,
+     "net_ba": -2621.0,
+     "mean": -181.8,
+     "mean2": -199.0,
+     "avg_win": 708.0,
+     "avg_loss": -387.0,
+     "worst_day": -1413.0
+    },
+    {
+     "i": 18,
+     "vid": "ABS w5 k2 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 11,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 8,
+     "win": 0.0,
+     "net": -1997.0,
+     "net2": -2128.0,
+     "net_ba": -1798.0,
+     "mean": -249.6,
+     "mean2": -266.0,
+     "avg_win": null,
+     "avg_loss": -250.0,
+     "worst_day": -958.0
+    },
+    {
+     "i": 19,
+     "vid": "ABS w5 k2 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 11,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 8,
+     "win": 0.0,
+     "net": -2033.0,
+     "net2": -2164.0,
+     "net_ba": -1788.0,
+     "mean": -254.1,
+     "mean2": -270.5,
+     "avg_win": null,
+     "avg_loss": -254.0,
+     "worst_day": -958.0
+    },
+    {
+     "i": 20,
+     "vid": "ABS w5 k2 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 58,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 26,
+     "win": 0.192,
+     "net": -6097.0,
+     "net2": -6534.0,
+     "net_ba": -5749.0,
+     "mean": -234.5,
+     "mean2": -251.3,
+     "avg_win": 396.0,
+     "avg_loss": -385.0,
+     "worst_day": -3091.0
+    },
+    {
+     "i": 21,
+     "vid": "ABS w5 k2 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 58,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 25,
+     "win": 0.08,
+     "net": -6548.0,
+     "net2": -6994.0,
+     "net_ba": -6093.0,
+     "mean": -261.9,
+     "mean2": -279.8,
+     "avg_win": 1049.0,
+     "avg_loss": -376.0,
+     "worst_day": -2243.0
+    },
+    {
+     "i": 22,
+     "vid": "ABS w5 k2 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 27,
+     "unpriced": {
+      "no_spot": 3
+     },
+     "n": 20,
+     "win": 0.15,
+     "net": -4416.0,
+     "net2": -4751.0,
+     "net_ba": -4009.0,
+     "mean": -220.8,
+     "mean2": -237.5,
+     "avg_win": 46.0,
+     "avg_loss": -268.0,
+     "worst_day": -2093.0
+    },
+    {
+     "i": 23,
+     "vid": "ABS w5 k2 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 27,
+     "unpriced": {
+      "no_spot": 3
+     },
+     "n": 20,
+     "win": 0.1,
+     "net": -3478.0,
+     "net2": -3859.0,
+     "net_ba": -2916.0,
+     "mean": -173.9,
+     "mean2": -192.9,
+     "avg_win": 1597.0,
+     "avg_loss": -371.0,
+     "worst_day": -2128.0
+    },
+    {
+     "i": 24,
+     "vid": "ABS w5 k3 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 4,
+     "unpriced": {},
+     "n": 3,
+     "win": 0.0,
+     "net": -705.0,
+     "net2": -753.0,
+     "net_ba": -656.0,
+     "mean": -234.9,
+     "mean2": -251.1,
+     "avg_win": null,
+     "avg_loss": -235.0,
+     "worst_day": -655.0
+    },
+    {
+     "i": 25,
+     "vid": "ABS w5 k3 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 4,
+     "unpriced": {},
+     "n": 3,
+     "win": 0.333,
+     "net": 1146.0,
+     "net2": 1096.0,
+     "net_ba": 1242.0,
+     "mean": 382.1,
+     "mean2": 365.4,
+     "avg_win": 1196.0,
+     "avg_loss": -25.0,
+     "worst_day": -26.0
+    },
+    {
+     "i": 26,
+     "vid": "ABS w5 k3 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 2,
+     "unpriced": {},
+     "n": 2,
+     "win": 0.0,
+     "net": -472.0,
+     "net2": -505.0,
+     "net_ba": -437.0,
+     "mean": -236.1,
+     "mean2": -252.4,
+     "avg_win": null,
+     "avg_loss": -236.0,
+     "worst_day": -439.0
+    },
+    {
+     "i": 27,
+     "vid": "ABS w5 k3 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 2,
+     "unpriced": {},
+     "n": 2,
+     "win": 0.0,
+     "net": -472.0,
+     "net2": -505.0,
+     "net_ba": -437.0,
+     "mean": -236.1,
+     "mean2": -252.4,
+     "avg_win": null,
+     "avg_loss": -236.0,
+     "worst_day": -439.0
+    },
+    {
+     "i": 28,
+     "vid": "ABS w5 k3 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 16,
+     "unpriced": {},
+     "n": 10,
+     "win": 0.2,
+     "net": -2424.0,
+     "net2": -2598.0,
+     "net_ba": -2162.0,
+     "mean": -242.4,
+     "mean2": -259.8,
+     "avg_win": 346.0,
+     "avg_loss": -390.0,
+     "worst_day": -2301.0
+    },
+    {
+     "i": 29,
+     "vid": "ABS w5 k3 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 16,
+     "unpriced": {},
+     "n": 10,
+     "win": 0.1,
+     "net": -1751.0,
+     "net2": -1939.0,
+     "net_ba": -1316.0,
+     "mean": -175.1,
+     "mean2": -193.9,
+     "avg_win": 1196.0,
+     "avg_loss": -327.0,
+     "worst_day": -841.0
+    },
+    {
+     "i": 30,
+     "vid": "ABS w5 k3 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 7,
+     "unpriced": {},
+     "n": 6,
+     "win": 0.333,
+     "net": -1267.0,
+     "net2": -1363.0,
+     "net_ba": -1055.0,
+     "mean": -211.2,
+     "mean2": -227.1,
+     "avg_win": 68.0,
+     "avg_loss": -351.0,
+     "worst_day": -1093.0
+    },
+    {
+     "i": 31,
+     "vid": "ABS w5 k3 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 7,
+     "unpriced": {},
+     "n": 6,
+     "win": 0.167,
+     "net": -334.0,
+     "net2": -456.0,
+     "net_ba": -176.0,
+     "mean": -55.6,
+     "mean2": -76.0,
+     "avg_win": 2368.0,
+     "avg_loss": -540.0,
+     "worst_day": -1093.0
+    }
+   ],
+   "choice": {
+    "i": 7,
+    "vid": "ABS w3 k2 b6 turn T30",
+    "params": {
+     "setup": "ABS",
+     "w": 3,
+     "k": 2,
+     "beta": 6,
+     "confirm": "turn",
+     "T": 30
+    },
+    "signals": 31,
+    "unpriced": {
+     "no_spot": 2
+    },
+    "summary": {
+     "n": 24,
+     "win": 0.292,
+     "net": 4164.0,
+     "net2": 3734.0,
+     "net_ba": 3854.0,
+     "n_ba": 23,
+     "mean": 173.5,
+     "mean2": 155.6,
+     "avg_win": 1370.0,
+     "avg_loss": -319.0,
+     "sd": 888.2,
+     "worst_day": -713.0,
+     "best_day": 3470.0,
+     "days_traded": 12,
+     "by_side": {
+      "L": {
+       "n": 10,
+       "net": 1360.0
+      },
+      "S": {
+       "n": 14,
+       "net": 2803.0
+      }
+     },
+     "by_exit": {
+      "breakeven": {
+       "n": 10,
+       "net": -303.04
+      },
+      "index_stop": {
+       "n": 4,
+       "net": -3211.24
+      },
+      "prem_stop": {
+       "n": 3,
+       "net": -1913.83
+      },
+      "time": {
+       "n": 7,
+       "net": 9591.65
+      }
+     }
+    },
+    "twins_descriptive": {
+     "p": 0.1018981018981019,
+     "mean": -123.9,
+     "p10": -396.0,
+     "p90": 174.0,
+     "n_sets": 1000,
+     "win": 0.214
+    },
+    "any_with_12": true
+   }
+  },
+  "ABS BANKNIFTY": {
+   "variants": [
+    {
+     "i": 0,
+     "vid": "ABS w3 k2 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 25,
+     "unpriced": {},
+     "n": 15,
+     "win": 0.133,
+     "net": -9205.0,
+     "net2": -9510.0,
+     "net_ba": -8040.0,
+     "mean": -613.6,
+     "mean2": -634.0,
+     "avg_win": 336.0,
+     "avg_loss": -760.0,
+     "worst_day": -3823.0
+    },
+    {
+     "i": 1,
+     "vid": "ABS w3 k2 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 25,
+     "unpriced": {},
+     "n": 15,
+     "win": 0.133,
+     "net": -10401.0,
+     "net2": -10748.0,
+     "net_ba": -11007.0,
+     "mean": -693.4,
+     "mean2": -716.5,
+     "avg_win": 798.0,
+     "avg_loss": -923.0,
+     "worst_day": -3823.0
+    },
+    {
+     "i": 2,
+     "vid": "ABS w3 k2 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 13,
+     "unpriced": {},
+     "n": 11,
+     "win": 0.182,
+     "net": -5582.0,
+     "net2": -5809.0,
+     "net_ba": -3797.0,
+     "mean": -507.4,
+     "mean2": -528.1,
+     "avg_win": 358.0,
+     "avg_loss": -700.0,
+     "worst_day": -3032.0
+    },
+    {
+     "i": 3,
+     "vid": "ABS w3 k2 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 13,
+     "unpriced": {},
+     "n": 11,
+     "win": 0.182,
+     "net": -6668.0,
+     "net2": -6935.0,
+     "net_ba": -6745.0,
+     "mean": -606.2,
+     "mean2": -630.4,
+     "avg_win": 665.0,
+     "avg_loss": -889.0,
+     "worst_day": -3032.0
+    },
+    {
+     "i": 4,
+     "vid": "ABS w3 k2 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 68,
+     "unpriced": {},
+     "n": 33,
+     "win": 0.303,
+     "net": -7358.0,
+     "net2": -8094.0,
+     "net_ba": -6530.0,
+     "mean": -223.0,
+     "mean2": -245.3,
+     "avg_win": 1213.0,
+     "avg_loss": -847.0,
+     "worst_day": -2751.0
+    },
+    {
+     "i": 5,
+     "vid": "ABS w3 k2 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 68,
+     "unpriced": {},
+     "n": 31,
+     "win": 0.29,
+     "net": -13341.0,
+     "net2": -14087.0,
+     "net_ba": -14409.0,
+     "mean": -430.4,
+     "mean2": -454.4,
+     "avg_win": 1055.0,
+     "avg_loss": -1038.0,
+     "worst_day": -2728.0
+    },
+    {
+     "i": 6,
+     "vid": "ABS w3 k2 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 40,
+     "unpriced": {},
+     "n": 28,
+     "win": 0.286,
+     "net": -11277.0,
+     "net2": -11928.0,
+     "net_ba": -9746.0,
+     "mean": -402.7,
+     "mean2": -426.0,
+     "avg_win": 896.0,
+     "avg_loss": -922.0,
+     "worst_day": -4376.0
+    },
+    {
+     "i": 7,
+     "vid": "ABS w3 k2 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 40,
+     "unpriced": {},
+     "n": 26,
+     "win": 0.346,
+     "net": -3849.0,
+     "net2": -4514.0,
+     "net_ba": -8727.0,
+     "mean": -148.1,
+     "mean2": -173.6,
+     "avg_win": 1722.0,
+     "avg_loss": -1138.0,
+     "worst_day": -4376.0
+    },
+    {
+     "i": 8,
+     "vid": "ABS w3 k3 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 7,
+     "unpriced": {},
+     "n": 4,
+     "win": 0.0,
+     "net": -2021.0,
+     "net2": -2085.0,
+     "net_ba": -2297.0,
+     "mean": -505.2,
+     "mean2": -521.2,
+     "avg_win": null,
+     "avg_loss": -505.0,
+     "worst_day": -1803.0
+    },
+    {
+     "i": 9,
+     "vid": "ABS w3 k3 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 7,
+     "unpriced": {},
+     "n": 4,
+     "win": 0.25,
+     "net": -2897.0,
+     "net2": -2969.0,
+     "net_ba": -3155.0,
+     "mean": -724.3,
+     "mean2": -742.2,
+     "avg_win": 636.0,
+     "avg_loss": -1178.0,
+     "worst_day": -1803.0
+    },
+    {
+     "i": 10,
+     "vid": "ABS w3 k3 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 3,
+     "unpriced": {},
+     "n": 3,
+     "win": 0.333,
+     "net": -724.0,
+     "net2": -772.0,
+     "net_ba": -827.0,
+     "mean": -241.4,
+     "mean2": -257.2,
+     "avg_win": 117.0,
+     "avg_loss": -421.0,
+     "worst_day": -835.0
+    },
+    {
+     "i": 11,
+     "vid": "ABS w3 k3 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 3,
+     "unpriced": {},
+     "n": 3,
+     "win": 0.333,
+     "net": -554.0,
+     "net2": -601.0,
+     "net_ba": -589.0,
+     "mean": -184.5,
+     "mean2": -200.3,
+     "avg_win": 288.0,
+     "avg_loss": -421.0,
+     "worst_day": -835.0
+    },
+    {
+     "i": 12,
+     "vid": "ABS w3 k3 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 20,
+     "unpriced": {},
+     "n": 13,
+     "win": 0.231,
+     "net": -4601.0,
+     "net2": -4872.0,
+     "net_ba": -4719.0,
+     "mean": -353.9,
+     "mean2": -374.7,
+     "avg_win": 672.0,
+     "avg_loss": -662.0,
+     "worst_day": -2559.0
+    },
+    {
+     "i": 13,
+     "vid": "ABS w3 k3 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 20,
+     "unpriced": {},
+     "n": 12,
+     "win": 0.25,
+     "net": -7984.0,
+     "net2": -8241.0,
+     "net_ba": -8117.0,
+     "mean": -665.3,
+     "mean2": -686.8,
+     "avg_win": 295.0,
+     "avg_loss": -986.0,
+     "worst_day": -2559.0
+    },
+    {
+     "i": 14,
+     "vid": "ABS w3 k3 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 13,
+     "unpriced": {},
+     "n": 11,
+     "win": 0.455,
+     "net": -2568.0,
+     "net2": -2801.0,
+     "net_ba": -2551.0,
+     "mean": -233.5,
+     "mean2": -254.7,
+     "avg_win": 738.0,
+     "avg_loss": -1043.0,
+     "worst_day": -2717.0
+    },
+    {
+     "i": 15,
+     "vid": "ABS w3 k3 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 3,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 13,
+     "unpriced": {},
+     "n": 10,
+     "win": 0.4,
+     "net": -1053.0,
+     "net2": -1272.0,
+     "net_ba": -5752.0,
+     "mean": -105.3,
+     "mean2": -127.2,
+     "avg_win": 1408.0,
+     "avg_loss": -1114.0,
+     "worst_day": -2717.0
+    },
+    {
+     "i": 16,
+     "vid": "ABS w5 k2 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 15,
+     "unpriced": {},
+     "n": 9,
+     "win": 0.111,
+     "net": -4038.0,
+     "net2": -4220.0,
+     "net_ba": -4388.0,
+     "mean": -448.7,
+     "mean2": -468.9,
+     "avg_win": 2681.0,
+     "avg_loss": -840.0,
+     "worst_day": -2500.0
+    },
+    {
+     "i": 17,
+     "vid": "ABS w5 k2 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 15,
+     "unpriced": {},
+     "n": 9,
+     "win": 0.222,
+     "net": -6015.0,
+     "net2": -6204.0,
+     "net_ba": -6225.0,
+     "mean": -668.3,
+     "mean2": -689.3,
+     "avg_win": 1343.0,
+     "avg_loss": -1243.0,
+     "worst_day": -2500.0
+    },
+    {
+     "i": 18,
+     "vid": "ABS w5 k2 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 3,
+     "unpriced": {},
+     "n": 2,
+     "win": 0.5,
+     "net": 977.0,
+     "net2": 925.0,
+     "net_ba": 972.0,
+     "mean": 488.4,
+     "mean2": 462.3,
+     "avg_win": 2682.0,
+     "avg_loss": -1705.0,
+     "worst_day": -1705.0
+    },
+    {
+     "i": 19,
+     "vid": "ABS w5 k2 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 3,
+     "unpriced": {},
+     "n": 2,
+     "win": 0.5,
+     "net": 369.0,
+     "net2": 317.0,
+     "net_ba": 309.0,
+     "mean": 184.6,
+     "mean2": 158.7,
+     "avg_win": 2075.0,
+     "avg_loss": -1705.0,
+     "worst_day": -1705.0
+    },
+    {
+     "i": 20,
+     "vid": "ABS w5 k2 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 47,
+     "unpriced": {},
+     "n": 24,
+     "win": 0.25,
+     "net": -3040.0,
+     "net2": -3564.0,
+     "net_ba": -2877.0,
+     "mean": -126.7,
+     "mean2": -148.5,
+     "avg_win": 1558.0,
+     "avg_loss": -688.0,
+     "worst_day": -4133.0
+    },
+    {
+     "i": 21,
+     "vid": "ABS w5 k2 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 47,
+     "unpriced": {},
+     "n": 23,
+     "win": 0.261,
+     "net": -3809.0,
+     "net2": -4342.0,
+     "net_ba": -8139.0,
+     "mean": -165.6,
+     "mean2": -188.8,
+     "avg_win": 1972.0,
+     "avg_loss": -920.0,
+     "worst_day": -4133.0
+    },
+    {
+     "i": 22,
+     "vid": "ABS w5 k2 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 17,
+     "unpriced": {},
+     "n": 12,
+     "win": 0.25,
+     "net": -2495.0,
+     "net2": -2739.0,
+     "net_ba": -2550.0,
+     "mean": -207.9,
+     "mean2": -228.2,
+     "avg_win": 1658.0,
+     "avg_loss": -830.0,
+     "worst_day": -3106.0
+    },
+    {
+     "i": 23,
+     "vid": "ABS w5 k2 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 2,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 17,
+     "unpriced": {},
+     "n": 12,
+     "win": 0.417,
+     "net": 3116.0,
+     "net2": 2860.0,
+     "net_ba": 2816.0,
+     "mean": 259.7,
+     "mean2": 238.3,
+     "avg_win": 2063.0,
+     "avg_loss": -1028.0,
+     "worst_day": -3106.0
+    },
+    {
+     "i": 24,
+     "vid": "ABS w5 k3 b3 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 6,
+     "unpriced": {},
+     "n": 3,
+     "win": 0.0,
+     "net": -2452.0,
+     "net2": -2504.0,
+     "net_ba": -2606.0,
+     "mean": -817.4,
+     "mean2": -834.6,
+     "avg_win": null,
+     "avg_loss": -817.0,
+     "worst_day": -1803.0
+    },
+    {
+     "i": 25,
+     "vid": "ABS w5 k3 b3 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 6,
+     "unpriced": {},
+     "n": 3,
+     "win": 0.333,
+     "net": -1982.0,
+     "net2": -2034.0,
+     "net_ba": -2070.0,
+     "mean": -660.8,
+     "mean2": -678.1,
+     "avg_win": 174.0,
+     "avg_loss": -1078.0,
+     "worst_day": -1803.0
+    },
+    {
+     "i": 26,
+     "vid": "ABS w5 k3 b3 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 0,
+     "unpriced": {},
+     "n": 0,
+     "win": null,
+     "net": 0.0,
+     "net2": 0.0,
+     "net_ba": null,
+     "mean": null,
+     "mean2": null,
+     "avg_win": null,
+     "avg_loss": null,
+     "worst_day": null
+    },
+    {
+     "i": 27,
+     "vid": "ABS w5 k3 b3 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 3,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 0,
+     "unpriced": {},
+     "n": 0,
+     "win": null,
+     "net": 0.0,
+     "net2": 0.0,
+     "net_ba": null,
+     "mean": null,
+     "mean2": null,
+     "avg_win": null,
+     "avg_loss": null,
+     "worst_day": null
+    },
+    {
+     "i": 28,
+     "vid": "ABS w5 k3 b6 none T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 15
+     },
+     "signals": 18,
+     "unpriced": {},
+     "n": 7,
+     "win": 0.143,
+     "net": -2029.0,
+     "net2": -2169.0,
+     "net_ba": -1661.0,
+     "mean": -289.8,
+     "mean2": -309.9,
+     "avg_win": 1393.0,
+     "avg_loss": -570.0,
+     "worst_day": -2001.0
+    },
+    {
+     "i": 29,
+     "vid": "ABS w5 k3 b6 none T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "none",
+      "T": 30
+     },
+     "signals": 18,
+     "unpriced": {},
+     "n": 7,
+     "win": 0.286,
+     "net": -3068.0,
+     "net2": -3209.0,
+     "net_ba": -2649.0,
+     "mean": -438.3,
+     "mean2": -458.4,
+     "avg_win": 399.0,
+     "avg_loss": -773.0,
+     "worst_day": -2001.0
+    },
+    {
+     "i": 30,
+     "vid": "ABS w5 k3 b6 turn T15",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 15
+     },
+     "signals": 5,
+     "unpriced": {},
+     "n": 2,
+     "win": 0.5,
+     "net": -1757.0,
+     "net2": -1793.0,
+     "net_ba": -1856.0,
+     "mean": -878.6,
+     "mean2": -896.5,
+     "avg_win": 46.0,
+     "avg_loss": -1803.0,
+     "worst_day": -1803.0
+    },
+    {
+     "i": 31,
+     "vid": "ABS w5 k3 b6 turn T30",
+     "params": {
+      "setup": "ABS",
+      "w": 5,
+      "k": 3,
+      "beta": 6,
+      "confirm": "turn",
+      "T": 30
+     },
+     "signals": 5,
+     "unpriced": {},
+     "n": 2,
+     "win": 0.0,
+     "net": -2339.0,
+     "net2": -2375.0,
+     "net_ba": -2416.0,
+     "mean": -1169.6,
+     "mean2": -1187.4,
+     "avg_win": null,
+     "avg_loss": -1170.0,
+     "worst_day": -1803.0
+    }
+   ],
+   "choice": {
+    "i": 23,
+    "vid": "ABS w5 k2 b6 turn T30",
+    "params": {
+     "setup": "ABS",
+     "w": 5,
+     "k": 2,
+     "beta": 6,
+     "confirm": "turn",
+     "T": 30
+    },
+    "signals": 17,
+    "unpriced": {},
+    "summary": {
+     "n": 12,
+     "win": 0.417,
+     "net": 3116.0,
+     "net2": 2860.0,
+     "net_ba": 2816.0,
+     "n_ba": 12,
+     "mean": 259.7,
+     "mean2": 238.3,
+     "avg_win": 2063.0,
+     "avg_loss": -1028.0,
+     "sd": 1958.5,
+     "worst_day": -3106.0,
+     "best_day": 4063.0,
+     "days_traded": 9,
+     "by_side": {
+      "L": {
+       "n": 7,
+       "net": 5334.0
+      },
+      "S": {
+       "n": 5,
+       "net": -2218.0
+      }
+     },
+     "by_exit": {
+      "time": {
+       "n": 7,
+       "net": 9229.78
+      },
+      "index_stop": {
+       "n": 1,
+       "net": -1154.65
+      },
+      "prem_stop": {
+       "n": 3,
+       "net": -4909.04
+      },
+      "breakeven": {
+       "n": 1,
+       "net": -49.81
+      }
+     }
+    },
+    "twins_descriptive": {
+     "p": 0.1068931068931069,
+     "mean": -251.9,
+     "p10": -750.9,
+     "p90": 269.5,
+     "n_sets": 1000,
+     "win": 0.27
+    },
+    "any_with_12": true
+   }
+  },
+  "EXH NIFTY": {
+   "variants": [
+    {
+     "i": 0,
+     "vid": "EXH X15 k2 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 61,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 44,
+     "win": 0.205,
+     "net": -10323.0,
+     "net2": -11177.0,
+     "net_ba": -9305.0,
+     "mean": -234.6,
+     "mean2": -254.0,
+     "avg_win": 1057.0,
+     "avg_loss": -567.0,
+     "worst_day": -3807.0
+    },
+    {
+     "i": 1,
+     "vid": "EXH X15 k2 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 61,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 44,
+     "win": 0.159,
+     "net": -9806.0,
+     "net2": -10681.0,
+     "net_ba": -8488.0,
+     "mean": -222.9,
+     "mean2": -242.7,
+     "avg_win": 1707.0,
+     "avg_loss": -588.0,
+     "worst_day": -3807.0
+    },
+    {
+     "i": 2,
+     "vid": "EXH X15 k2 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 46,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 38,
+     "win": 0.211,
+     "net": -10808.0,
+     "net2": -11523.0,
+     "net_ba": -10075.0,
+     "mean": -284.4,
+     "mean2": -303.2,
+     "avg_win": 946.0,
+     "avg_loss": -613.0,
+     "worst_day": -3332.0
+    },
+    {
+     "i": 3,
+     "vid": "EXH X15 k2 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 46,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 37,
+     "win": 0.189,
+     "net": -10479.0,
+     "net2": -11192.0,
+     "net_ba": -9591.0,
+     "mean": -283.2,
+     "mean2": -302.5,
+     "avg_win": 1160.0,
+     "avg_loss": -620.0,
+     "worst_day": -2201.0
+    },
+    {
+     "i": 4,
+     "vid": "EXH X15 k2 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 67,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 48,
+     "win": 0.25,
+     "net": -7902.0,
+     "net2": -8787.0,
+     "net_ba": -7092.0,
+     "mean": -164.6,
+     "mean2": -183.1,
+     "avg_win": 996.0,
+     "avg_loss": -551.0,
+     "worst_day": -3636.0
+    },
+    {
+     "i": 5,
+     "vid": "EXH X15 k2 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 67,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 47,
+     "win": 0.234,
+     "net": -2703.0,
+     "net2": -3598.0,
+     "net_ba": -1659.0,
+     "mean": -57.5,
+     "mean2": -76.5,
+     "avg_win": 1628.0,
+     "avg_loss": -572.0,
+     "worst_day": -3864.0
+    },
+    {
+     "i": 6,
+     "vid": "EXH X15 k2 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 51,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 43,
+     "win": 0.209,
+     "net": -11008.0,
+     "net2": -11797.0,
+     "net_ba": -10255.0,
+     "mean": -256.0,
+     "mean2": -274.4,
+     "avg_win": 892.0,
+     "avg_loss": -560.0,
+     "worst_day": -2876.0
+    },
+    {
+     "i": 7,
+     "vid": "EXH X15 k2 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 51,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 41,
+     "win": 0.195,
+     "net": -8922.0,
+     "net2": -9690.0,
+     "net_ba": -9183.0,
+     "mean": -217.6,
+     "mean2": -236.3,
+     "avg_win": 1139.0,
+     "avg_loss": -546.0,
+     "worst_day": -2071.0
+    },
+    {
+     "i": 8,
+     "vid": "EXH X15 k3 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 37,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 30,
+     "win": 0.2,
+     "net": -7031.0,
+     "net2": -7603.0,
+     "net_ba": -7037.0,
+     "mean": -234.4,
+     "mean2": -253.4,
+     "avg_win": 1089.0,
+     "avg_loss": -565.0,
+     "worst_day": -3357.0
+    },
+    {
+     "i": 9,
+     "vid": "EXH X15 k3 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 37,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 29,
+     "win": 0.138,
+     "net": -4720.0,
+     "net2": -5282.0,
+     "net_ba": -4730.0,
+     "mean": -162.8,
+     "mean2": -182.1,
+     "avg_win": 2005.0,
+     "avg_loss": -510.0,
+     "worst_day": -3357.0
+    },
+    {
+     "i": 10,
+     "vid": "EXH X15 k3 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 28,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 22,
+     "win": 0.227,
+     "net": -6522.0,
+     "net2": -6941.0,
+     "net_ba": -6266.0,
+     "mean": -296.5,
+     "mean2": -315.5,
+     "avg_win": 942.0,
+     "avg_loss": -661.0,
+     "worst_day": -3332.0
+    },
+    {
+     "i": 11,
+     "vid": "EXH X15 k3 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 28,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 21,
+     "win": 0.19,
+     "net": -5149.0,
+     "net2": -5550.0,
+     "net_ba": -4948.0,
+     "mean": -245.2,
+     "mean2": -264.3,
+     "avg_win": 1176.0,
+     "avg_loss": -580.0,
+     "worst_day": -2165.0
+    },
+    {
+     "i": 12,
+     "vid": "EXH X15 k3 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 43,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 34,
+     "win": 0.235,
+     "net": -6663.0,
+     "net2": -7272.0,
+     "net_ba": -6274.0,
+     "mean": -196.0,
+     "mean2": -213.9,
+     "avg_win": 1000.0,
+     "avg_loss": -564.0,
+     "worst_day": -3636.0
+    },
+    {
+     "i": 13,
+     "vid": "EXH X15 k3 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 43,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 33,
+     "win": 0.242,
+     "net": 113.0,
+     "net2": -497.0,
+     "net_ba": 612.0,
+     "mean": 3.4,
+     "mean2": -15.1,
+     "avg_win": 1747.0,
+     "avg_loss": -555.0,
+     "worst_day": -3864.0
+    },
+    {
+     "i": 14,
+     "vid": "EXH X15 k3 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 32,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 26,
+     "win": 0.231,
+     "net": -7155.0,
+     "net2": -7631.0,
+     "net_ba": -6705.0,
+     "mean": -275.2,
+     "mean2": -293.5,
+     "avg_win": 861.0,
+     "avg_loss": -616.0,
+     "worst_day": -2876.0
+    },
+    {
+     "i": 15,
+     "vid": "EXH X15 k3 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 32,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 25,
+     "win": 0.2,
+     "net": -4980.0,
+     "net2": -5447.0,
+     "net_ba": -5426.0,
+     "mean": -199.2,
+     "mean2": -217.9,
+     "avg_win": 1139.0,
+     "avg_loss": -534.0,
+     "worst_day": -1106.0
+    },
+    {
+     "i": 16,
+     "vid": "EXH X30 k2 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 53,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 40,
+     "win": 0.225,
+     "net": -5900.0,
+     "net2": -6654.0,
+     "net_ba": -5381.0,
+     "mean": -147.5,
+     "mean2": -166.3,
+     "avg_win": 1057.0,
+     "avg_loss": -497.0,
+     "worst_day": -2998.0
+    },
+    {
+     "i": 17,
+     "vid": "EXH X30 k2 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 53,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 40,
+     "win": 0.175,
+     "net": -5454.0,
+     "net2": -6234.0,
+     "net_ba": -4645.0,
+     "mean": -136.4,
+     "mean2": -155.9,
+     "avg_win": 1707.0,
+     "avg_loss": -527.0,
+     "worst_day": -2998.0
+    },
+    {
+     "i": 18,
+     "vid": "EXH X30 k2 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 39,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 33,
+     "win": 0.273,
+     "net": -4694.0,
+     "net2": -5286.0,
+     "net_ba": -4314.0,
+     "mean": -142.3,
+     "mean2": -160.2,
+     "avg_win": 863.0,
+     "avg_loss": -519.0,
+     "worst_day": -2056.0
+    },
+    {
+     "i": 19,
+     "vid": "EXH X30 k2 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 39,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 33,
+     "win": 0.242,
+     "net": -4557.0,
+     "net2": -5176.0,
+     "net_ba": -4940.0,
+     "mean": -138.1,
+     "mean2": -156.9,
+     "avg_win": 1139.0,
+     "avg_loss": -547.0,
+     "worst_day": -1372.0
+    },
+    {
+     "i": 20,
+     "vid": "EXH X30 k2 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 58,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 43,
+     "win": 0.233,
+     "net": -5903.0,
+     "net2": -6689.0,
+     "net_ba": -5227.0,
+     "mean": -137.3,
+     "mean2": -155.6,
+     "avg_win": 1054.0,
+     "avg_loss": -498.0,
+     "worst_day": -3529.0
+    },
+    {
+     "i": 21,
+     "vid": "EXH X30 k2 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 58,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 42,
+     "win": 0.238,
+     "net": 383.0,
+     "net2": -404.0,
+     "net_ba": 1119.0,
+     "mean": 9.1,
+     "mean2": -9.6,
+     "avg_win": 1780.0,
+     "avg_loss": -544.0,
+     "worst_day": -3529.0
+    },
+    {
+     "i": 22,
+     "vid": "EXH X30 k2 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 43,
+     "unpriced": {
+      "no_spot": 2
+     },
+     "n": 37,
+     "win": 0.27,
+     "net": -5362.0,
+     "net2": -6015.0,
+     "net_ba": -4859.0,
+     "mean": -144.9,
+     "mean2": -162.6,
+     "avg_win": 822.0,
+     "avg_loss": -503.0,
+     "worst_day": -2159.0
+    },
+    {
+     "i": 23,
+     "vid": "EXH X30 k2 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 43,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 36,
+     "win": 0.222,
+     "net": -4802.0,
+     "net2": -5462.0,
+     "net_ba": -5293.0,
+     "mean": -133.4,
+     "mean2": -151.7,
+     "avg_win": 1139.0,
+     "avg_loss": -497.0,
+     "worst_day": -1540.0
+    },
+    {
+     "i": 24,
+     "vid": "EXH X30 k3 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 34,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 28,
+     "win": 0.214,
+     "net": -3912.0,
+     "net2": -4427.0,
+     "net_ba": -3996.0,
+     "mean": -139.7,
+     "mean2": -158.1,
+     "avg_win": 1089.0,
+     "avg_loss": -475.0,
+     "worst_day": -2523.0
+    },
+    {
+     "i": 25,
+     "vid": "EXH X30 k3 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 34,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 28,
+     "win": 0.179,
+     "net": -1651.0,
+     "net2": -2184.0,
+     "net_ba": -1735.0,
+     "mean": -59.0,
+     "mean2": -78.0,
+     "avg_win": 1787.0,
+     "avg_loss": -460.0,
+     "worst_day": -1356.0
+    },
+    {
+     "i": 26,
+     "vid": "EXH X30 k3 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 25,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 20,
+     "win": 0.3,
+     "net": -2962.0,
+     "net2": -3323.0,
+     "net_ba": -2782.0,
+     "mean": -148.1,
+     "mean2": -166.1,
+     "avg_win": 817.0,
+     "avg_loss": -562.0,
+     "worst_day": -2056.0
+    },
+    {
+     "i": 27,
+     "vid": "EXH X30 k3 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 25,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 20,
+     "win": 0.25,
+     "net": -2007.0,
+     "net2": -2381.0,
+     "net_ba": -2799.0,
+     "mean": -100.4,
+     "mean2": -119.0,
+     "avg_win": 1139.0,
+     "avg_loss": -513.0,
+     "worst_day": -1106.0
+    },
+    {
+     "i": 28,
+     "vid": "EXH X30 k3 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 39,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 31,
+     "win": 0.226,
+     "net": -4604.0,
+     "net2": -5158.0,
+     "net_ba": -4307.0,
+     "mean": -148.5,
+     "mean2": -166.4,
+     "avg_win": 1080.0,
+     "avg_loss": -507.0,
+     "worst_day": -3529.0
+    },
+    {
+     "i": 29,
+     "vid": "EXH X30 k3 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 39,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 31,
+     "win": 0.226,
+     "net": 1369.0,
+     "net2": 794.0,
+     "net_ba": 1824.0,
+     "mean": 44.2,
+     "mean2": 25.6,
+     "avg_win": 1982.0,
+     "avg_loss": -521.0,
+     "worst_day": -3529.0
+    },
+    {
+     "i": 30,
+     "vid": "EXH X30 k3 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 28,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 23,
+     "win": 0.304,
+     "net": -4004.0,
+     "net2": -4408.0,
+     "net_ba": -3680.0,
+     "mean": -174.1,
+     "mean2": -191.7,
+     "avg_win": 765.0,
+     "avg_loss": -585.0,
+     "worst_day": -2159.0
+    },
+    {
+     "i": 31,
+     "vid": "EXH X30 k3 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 28,
+     "unpriced": {
+      "no_spot": 4
+     },
+     "n": 23,
+     "win": 0.217,
+     "net": -3582.0,
+     "net2": -4006.0,
+     "net_ba": -4131.0,
+     "mean": -155.7,
+     "mean2": -174.2,
+     "avg_win": 1139.0,
+     "avg_loss": -515.0,
+     "worst_day": -1106.0
+    }
+   ],
+   "choice": {
+    "i": 29,
+    "vid": "EXH X30 k3 b6 flip T30",
+    "params": {
+     "setup": "EXH",
+     "X": 30,
+     "k": 3,
+     "beta": 6,
+     "confirm": "flip",
+     "T": 30
+    },
+    "signals": 39,
+    "unpriced": {
+     "no_spot": 4
+    },
+    "summary": {
+     "n": 31,
+     "win": 0.226,
+     "net": 1369.0,
+     "net2": 794.0,
+     "net_ba": 1824.0,
+     "n_ba": 31,
+     "mean": 44.2,
+     "mean2": 25.6,
+     "avg_win": 1982.0,
+     "avg_loss": -521.0,
+     "sd": 1297.3,
+     "worst_day": -3529.0,
+     "best_day": 4208.0,
+     "days_traded": 13,
+     "by_side": {
+      "L": {
+       "n": 14,
+       "net": 4703.0
+      },
+      "S": {
+       "n": 17,
+       "net": -3334.0
+      }
+     },
+     "by_exit": {
+      "index_stop": {
+       "n": 11,
+       "net": -9777.79
+      },
+      "time": {
+       "n": 7,
+       "net": 13873.58
+      },
+      "breakeven": {
+       "n": 10,
+       "net": -311.56
+      },
+      "prem_stop": {
+       "n": 3,
+       "net": -2415.11
+      }
+     }
+    },
+    "twins_descriptive": {
+     "p": 0.3246753246753247,
+     "mean": -39.5,
+     "p10": -303.1,
+     "p90": 227.8,
+     "n_sets": 1000,
+     "win": 0.231
+    },
+    "any_with_12": true
+   }
+  },
+  "EXH BANKNIFTY": {
+   "variants": [
+    {
+     "i": 0,
+     "vid": "EXH X15 k2 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 63,
+     "unpriced": {},
+     "n": 45,
+     "win": 0.356,
+     "net": -494.0,
+     "net2": -1593.0,
+     "net_ba": -1974.0,
+     "mean": -11.0,
+     "mean2": -35.4,
+     "avg_win": 909.0,
+     "avg_loss": -519.0,
+     "worst_day": -3211.0
+    },
+    {
+     "i": 1,
+     "vid": "EXH X15 k2 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 63,
+     "unpriced": {},
+     "n": 44,
+     "win": 0.364,
+     "net": 2712.0,
+     "net2": 1579.0,
+     "net_ba": 2391.0,
+     "mean": 61.6,
+     "mean2": 35.9,
+     "avg_win": 1287.0,
+     "avg_loss": -639.0,
+     "worst_day": -3568.0
+    },
+    {
+     "i": 2,
+     "vid": "EXH X15 k2 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 52,
+     "unpriced": {},
+     "n": 43,
+     "win": 0.395,
+     "net": 1525.0,
+     "net2": 487.0,
+     "net_ba": 189.0,
+     "mean": 35.5,
+     "mean2": 11.3,
+     "avg_win": 918.0,
+     "avg_loss": -542.0,
+     "worst_day": -1626.0
+    },
+    {
+     "i": 3,
+     "vid": "EXH X15 k2 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 52,
+     "unpriced": {},
+     "n": 42,
+     "win": 0.381,
+     "net": 1634.0,
+     "net2": 560.0,
+     "net_ba": 1136.0,
+     "mean": 38.9,
+     "mean2": 13.3,
+     "avg_win": 1154.0,
+     "avg_loss": -647.0,
+     "worst_day": -2298.0
+    },
+    {
+     "i": 4,
+     "vid": "EXH X15 k2 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 70,
+     "unpriced": {},
+     "n": 46,
+     "win": 0.304,
+     "net": -6327.0,
+     "net2": -7423.0,
+     "net_ba": -7150.0,
+     "mean": -137.5,
+     "mean2": -161.4,
+     "avg_win": 846.0,
+     "avg_loss": -568.0,
+     "worst_day": -3501.0
+    },
+    {
+     "i": 5,
+     "vid": "EXH X15 k2 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 70,
+     "unpriced": {},
+     "n": 45,
+     "win": 0.356,
+     "net": -484.0,
+     "net2": -1630.0,
+     "net_ba": -428.0,
+     "mean": -10.8,
+     "mean2": -36.2,
+     "avg_win": 1233.0,
+     "avg_loss": -697.0,
+     "worst_day": -3830.0
+    },
+    {
+     "i": 6,
+     "vid": "EXH X15 k2 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 54,
+     "unpriced": {},
+     "n": 43,
+     "win": 0.395,
+     "net": 943.0,
+     "net2": -51.0,
+     "net_ba": 1.0,
+     "mean": 21.9,
+     "mean2": -1.2,
+     "avg_win": 977.0,
+     "avg_loss": -603.0,
+     "worst_day": -2526.0
+    },
+    {
+     "i": 7,
+     "vid": "EXH X15 k2 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 54,
+     "unpriced": {},
+     "n": 41,
+     "win": 0.415,
+     "net": 272.0,
+     "net2": -754.0,
+     "net_ba": 144.0,
+     "mean": 6.6,
+     "mean2": -18.4,
+     "avg_win": 1133.0,
+     "avg_loss": -791.0,
+     "worst_day": -3198.0
+    },
+    {
+     "i": 8,
+     "vid": "EXH X15 k3 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 40,
+     "unpriced": {},
+     "n": 36,
+     "win": 0.306,
+     "net": -5201.0,
+     "net2": -6137.0,
+     "net_ba": -4406.0,
+     "mean": -144.5,
+     "mean2": -170.5,
+     "avg_win": 822.0,
+     "avg_loss": -570.0,
+     "worst_day": -1995.0
+    },
+    {
+     "i": 9,
+     "vid": "EXH X15 k3 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 40,
+     "unpriced": {},
+     "n": 34,
+     "win": 0.294,
+     "net": -6612.0,
+     "net2": -7560.0,
+     "net_ba": -6709.0,
+     "mean": -194.5,
+     "mean2": -222.4,
+     "avg_win": 1032.0,
+     "avg_loss": -705.0,
+     "worst_day": -2558.0
+    },
+    {
+     "i": 10,
+     "vid": "EXH X15 k3 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 33,
+     "unpriced": {},
+     "n": 31,
+     "win": 0.29,
+     "net": -4120.0,
+     "net2": -4930.0,
+     "net_ba": -3163.0,
+     "mean": -132.9,
+     "mean2": -159.0,
+     "avg_win": 907.0,
+     "avg_loss": -558.0,
+     "worst_day": -2493.0
+    },
+    {
+     "i": 11,
+     "vid": "EXH X15 k3 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 33,
+     "unpriced": {},
+     "n": 30,
+     "win": 0.333,
+     "net": -3225.0,
+     "net2": -4058.0,
+     "net_ba": -3136.0,
+     "mean": -107.5,
+     "mean2": -135.3,
+     "avg_win": 1056.0,
+     "avg_loss": -689.0,
+     "worst_day": -2298.0
+    },
+    {
+     "i": 12,
+     "vid": "EXH X15 k3 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 44,
+     "unpriced": {},
+     "n": 37,
+     "win": 0.27,
+     "net": -9099.0,
+     "net2": -9994.0,
+     "net_ba": -7737.0,
+     "mean": -245.9,
+     "mean2": -270.1,
+     "avg_win": 805.0,
+     "avg_loss": -635.0,
+     "worst_day": -2526.0
+    },
+    {
+     "i": 13,
+     "vid": "EXH X15 k3 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 44,
+     "unpriced": {},
+     "n": 35,
+     "win": 0.343,
+     "net": -8842.0,
+     "net2": -9764.0,
+     "net_ba": -8389.0,
+     "mean": -252.6,
+     "mean2": -279.0,
+     "avg_win": 971.0,
+     "avg_loss": -891.0,
+     "worst_day": -3525.0
+    },
+    {
+     "i": 14,
+     "vid": "EXH X15 k3 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 33,
+     "unpriced": {},
+     "n": 31,
+     "win": 0.323,
+     "net": -4227.0,
+     "net2": -4985.0,
+     "net_ba": -2839.0,
+     "mean": -136.4,
+     "mean2": -160.8,
+     "avg_win": 968.0,
+     "avg_loss": -662.0,
+     "worst_day": -2526.0
+    },
+    {
+     "i": 15,
+     "vid": "EXH X15 k3 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 15,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 33,
+     "unpriced": {},
+     "n": 30,
+     "win": 0.4,
+     "net": -3754.0,
+     "net2": -4558.0,
+     "net_ba": -3281.0,
+     "mean": -125.1,
+     "mean2": -151.9,
+     "avg_win": 1059.0,
+     "avg_loss": -915.0,
+     "worst_day": -3198.0
+    },
+    {
+     "i": 16,
+     "vid": "EXH X30 k2 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 57,
+     "unpriced": {},
+     "n": 44,
+     "win": 0.386,
+     "net": 1057.0,
+     "net2": 2.0,
+     "net_ba": -332.0,
+     "mean": 24.0,
+     "mean2": 0.0,
+     "avg_win": 886.0,
+     "avg_loss": -519.0,
+     "worst_day": -3211.0
+    },
+    {
+     "i": 17,
+     "vid": "EXH X30 k2 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 57,
+     "unpriced": {},
+     "n": 43,
+     "win": 0.349,
+     "net": -990.0,
+     "net2": -2087.0,
+     "net_ba": -1319.0,
+     "mean": -23.0,
+     "mean2": -48.5,
+     "avg_win": 1113.0,
+     "avg_loss": -631.0,
+     "worst_day": -3568.0
+    },
+    {
+     "i": 18,
+     "vid": "EXH X30 k2 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 47,
+     "unpriced": {},
+     "n": 40,
+     "win": 0.425,
+     "net": 2429.0,
+     "net2": 1465.0,
+     "net_ba": 1121.0,
+     "mean": 60.7,
+     "mean2": 36.6,
+     "avg_win": 918.0,
+     "avg_loss": -573.0,
+     "worst_day": -1626.0
+    },
+    {
+     "i": 19,
+     "vid": "EXH X30 k2 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 47,
+     "unpriced": {},
+     "n": 39,
+     "win": 0.41,
+     "net": 2925.0,
+     "net2": 1925.0,
+     "net_ba": 2440.0,
+     "mean": 75.0,
+     "mean2": 49.4,
+     "avg_win": 1154.0,
+     "avg_loss": -676.0,
+     "worst_day": -2298.0
+    },
+    {
+     "i": 20,
+     "vid": "EXH X30 k2 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 64,
+     "unpriced": {},
+     "n": 45,
+     "win": 0.356,
+     "net": -4220.0,
+     "net2": -5280.0,
+     "net_ba": -5108.0,
+     "mean": -93.8,
+     "mean2": -117.3,
+     "avg_win": 819.0,
+     "avg_loss": -597.0,
+     "worst_day": -3501.0
+    },
+    {
+     "i": 21,
+     "vid": "EXH X30 k2 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 64,
+     "unpriced": {},
+     "n": 44,
+     "win": 0.318,
+     "net": -5870.0,
+     "net2": -6992.0,
+     "net_ba": -5424.0,
+     "mean": -133.4,
+     "mean2": -158.9,
+     "avg_win": 1118.0,
+     "avg_loss": -717.0,
+     "worst_day": -3830.0
+    },
+    {
+     "i": 22,
+     "vid": "EXH X30 k2 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 49,
+     "unpriced": {},
+     "n": 41,
+     "win": 0.415,
+     "net": 1221.0,
+     "net2": 279.0,
+     "net_ba": 271.0,
+     "mean": 29.8,
+     "mean2": 6.8,
+     "avg_win": 977.0,
+     "avg_loss": -641.0,
+     "worst_day": -2526.0
+    },
+    {
+     "i": 23,
+     "vid": "EXH X30 k2 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 2,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 49,
+     "unpriced": {},
+     "n": 39,
+     "win": 0.41,
+     "net": 415.0,
+     "net2": -561.0,
+     "net_ba": 257.0,
+     "mean": 10.7,
+     "mean2": -14.4,
+     "avg_win": 1193.0,
+     "avg_loss": -812.0,
+     "worst_day": -3198.0
+    },
+    {
+     "i": 24,
+     "vid": "EXH X30 k3 b3 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 34,
+     "unpriced": {},
+     "n": 31,
+     "win": 0.323,
+     "net": -4775.0,
+     "net2": -5617.0,
+     "net_ba": -3951.0,
+     "mean": -154.0,
+     "mean2": -181.2,
+     "avg_win": 821.0,
+     "avg_loss": -618.0,
+     "worst_day": -2493.0
+    },
+    {
+     "i": 25,
+     "vid": "EXH X30 k3 b3 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 34,
+     "unpriced": {},
+     "n": 30,
+     "win": 0.333,
+     "net": -4424.0,
+     "net2": -5290.0,
+     "net_ba": -4506.0,
+     "mean": -147.5,
+     "mean2": -176.3,
+     "avg_win": 1032.0,
+     "avg_loss": -737.0,
+     "worst_day": -2558.0
+    },
+    {
+     "i": 26,
+     "vid": "EXH X30 k3 b3 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 28,
+     "unpriced": {},
+     "n": 27,
+     "win": 0.333,
+     "net": -3189.0,
+     "net2": -3917.0,
+     "net_ba": -2210.0,
+     "mean": -118.1,
+     "mean2": -145.1,
+     "avg_win": 907.0,
+     "avg_loss": -630.0,
+     "worst_day": -2493.0
+    },
+    {
+     "i": 27,
+     "vid": "EXH X30 k3 b3 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 3,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 28,
+     "unpriced": {},
+     "n": 26,
+     "win": 0.385,
+     "net": -1907.0,
+     "net2": -2658.0,
+     "net_ba": -1811.0,
+     "mean": -73.3,
+     "mean2": -102.2,
+     "avg_win": 1056.0,
+     "avg_loss": -779.0,
+     "worst_day": -2298.0
+    },
+    {
+     "i": 28,
+     "vid": "EXH X30 k3 b6 flip T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 15
+     },
+     "signals": 38,
+     "unpriced": {},
+     "n": 32,
+     "win": 0.312,
+     "net": -7308.0,
+     "net2": -8118.0,
+     "net_ba": -5997.0,
+     "mean": -228.4,
+     "mean2": -253.7,
+     "avg_win": 832.0,
+     "avg_loss": -711.0,
+     "worst_day": -2526.0
+    },
+    {
+     "i": 29,
+     "vid": "EXH X30 k3 b6 flip T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip",
+      "T": 30
+     },
+     "signals": 38,
+     "unpriced": {},
+     "n": 31,
+     "win": 0.355,
+     "net": -7915.0,
+     "net2": -8767.0,
+     "net_ba": -7026.0,
+     "mean": -255.3,
+     "mean2": -282.8,
+     "avg_win": 1043.0,
+     "avg_loss": -970.0,
+     "worst_day": -3525.0
+    },
+    {
+     "i": 30,
+     "vid": "EXH X30 k3 b6 flip+close T15",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 15
+     },
+     "signals": 28,
+     "unpriced": {},
+     "n": 27,
+     "win": 0.37,
+     "net": -3304.0,
+     "net2": -3992.0,
+     "net_ba": -1953.0,
+     "mean": -122.4,
+     "mean2": -147.9,
+     "avg_win": 968.0,
+     "avg_loss": -764.0,
+     "worst_day": -2526.0
+    },
+    {
+     "i": 31,
+     "vid": "EXH X30 k3 b6 flip+close T30",
+     "params": {
+      "setup": "EXH",
+      "X": 30,
+      "k": 3,
+      "beta": 6,
+      "confirm": "flip+close",
+      "T": 30
+     },
+     "signals": 28,
+     "unpriced": {},
+     "n": 26,
+     "win": 0.423,
+     "net": -3556.0,
+     "net2": -4290.0,
+     "net_ba": -3166.0,
+     "mean": -136.8,
+     "mean2": -165.0,
+     "avg_win": 1140.0,
+     "avg_loss": -1073.0,
+     "worst_day": -3198.0
+    }
+   ],
+   "choice": {
+    "i": 19,
+    "vid": "EXH X30 k2 b3 flip+close T30",
+    "params": {
+     "setup": "EXH",
+     "X": 30,
+     "k": 2,
+     "beta": 3,
+     "confirm": "flip+close",
+     "T": 30
+    },
+    "signals": 47,
+    "unpriced": {},
+    "summary": {
+     "n": 39,
+     "win": 0.41,
+     "net": 2925.0,
+     "net2": 1925.0,
+     "net_ba": 2440.0,
+     "n_ba": 38,
+     "mean": 75.0,
+     "mean2": 49.4,
+     "avg_win": 1154.0,
+     "avg_loss": -676.0,
+     "sd": 1064.9,
+     "worst_day": -2298.0,
+     "best_day": 4742.0,
+     "days_traded": 13,
+     "by_side": {
+      "L": {
+       "n": 15,
+       "net": 1956.0
+      },
+      "S": {
+       "n": 24,
+       "net": 969.0
+      }
+     },
+     "by_exit": {
+      "index_stop": {
+       "n": 15,
+       "net": -14038.01
+      },
+      "time": {
+       "n": 18,
+       "net": 17320.36
+      },
+      "breakeven": {
+       "n": 6,
+       "net": -357.4
+      }
+     }
+    },
+    "twins_descriptive": {
+     "p": 0.2727272727272727,
+     "mean": -38.9,
+     "p10": -291.9,
+     "p90": 214.9,
+     "n_sets": 1000,
+     "win": 0.273
+    },
+    "any_with_12": true
+   }
+  }
+ }
+}

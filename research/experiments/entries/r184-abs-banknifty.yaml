@@ -1,0 +1,41 @@
+id: r184-abs-banknifty
+title: R184 absorption on the BANKNIFTY future, buying the ATM option (ABS w5 k2 b6 turn T30)
+family: flow-oi
+date: '2026-11-16'
+doc: research/hunt/r184_absorption_exhaustion/results/report.md
+hypothesis: Order-flow absorption on the index future picks reversal entries whose ATM option trades beat random entries at
+  the same minutes (twins) and beat doing nothing, after real charges.
+data_version: 'phone recordings exported 15 Nov 2026: 1-second order flow 15 Oct - 13 Nov 2026 (20 days; NIFTY / BANKNIFTY
+  near futures, index and near-ATM options); daily diagnostics 19 Oct - 13 Nov (paper orders, overlap only); outside git'
+period:
+  design: '2026-10-15..2026-11-03 (13 days; 32 variants, 3 with net > 0; chosen: 12 trades, win 42%, Rs 3,116)'
+  holdout: 2026-11-04..2026-11-13 (7 days, read once after results/FINAL_READ)
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: the BANKNIFTY near index future''s own 1-minute price and 1-second tick-rule delta (buy_vol - sell_vol,
+  the app''s recorder), references from the same day''s earlier minutes only; option prices only price the trade; premium
+  stop and breakeven lock on the option premium'
+- 'absorption: heavy aggressive selling (w-minute futures delta <= -k x the day''s mean |w-minute delta| so far) while the
+  window''s low stays within beta bp of the close before it -> buy the ATM CALL (mirror: buying absorbed at a high -> PUT);
+  confirm ''turn'' = the next minute closes in the trade''s direction'
+model_or_rule: 'ABS w5 k2 b6 turn T30: absorption: heavy aggressive selling (w-minute futures delta <= -k x the day''s mean
+  |w-minute delta| so far) while the window''s low stays within beta bp of the close before it -> buy the ATM CALL (mirror:
+  buying absorbed at a high -> PUT); confirm ''turn'' = the next minute closes in the trade''s direction. Exits: -15% premium
+  stop, breakeven (fill + charges) once +10%, index stop beyond the extreme by beta bp, time stop T minutes, 15:15 (15:05
+  expiry). 1 lot.'
+settings: research/hunt/r184_absorption_exhaustion/PREREG.md sections 2-6; r184lib.py
+prereg: research/hunt/r184_absorption_exhaustion/PREREG.md
+variants_tried: 32
+results:
+  summary: 'Holdout 6 trades on 5 of 7 days, win 50%, Rs 2,257 (2x slippage Rs 2,079; bid/ask Rs 1,885), mean Rs 376 a trade
+    (avg win Rs 1,933, avg loss Rs -1,181), worst day Rs -2,478. Random-entry twins (1,000 sets) mean Rs -46: p 0.249, BH
+    q 1.00; mean > 0 day-bootstrap p 0.307, q 1.00 (m 4,512). Smallest edge detectable (80% power, 5%) Rs 1,939 a trade. Pre-registered
+    verdict: too few trades.'
+  costs: Costs('dated') charges both sides; Fills('liq') slippage by the option's recorded volume; 2x slippage and recorded
+    bid/ask sensitivities
+holdout_read: true
+verdict: inconclusive
+notes: 'Exploratory: 20 days, at most 39 design / 22 holdout trades a cell; cannot pass the gates. The 1-second recorder drops
+  big unchanged-price prints (R182), the very prints absorption is about. BH m = 4,512 (4,376 after R183 + 128 variants +
+  8 tests). Nothing in the app changes.'

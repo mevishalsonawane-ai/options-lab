@@ -1,0 +1,207 @@
+{
+ "und": "MIDCPNIFTY",
+ "source": "Dhan /v2/charts/rollingoption (WEEK, expiryCode 1, ATM-10..+10, 1-minute, one day a request) and /v2/charts/intraday (index, 1-minute)",
+ "days": 18,
+ "first": "2026-10-21",
+ "last": "2026-11-13",
+ "option_rows": 267652,
+ "index_rows": 6445,
+ "empty_series_days": 1,
+ "duplicate_rows_dropped": 0,
+ "short_days": [
+  "2026-11-08"
+ ],
+ "per_day": [
+  {
+   "day": "2026-10-21",
+   "index_minutes": 375,
+   "option_rows": 15705,
+   "series": 42,
+   "series_min_minutes": 365,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 374,
+   "near_atm2_missing_minutes": 1
+  },
+  {
+   "day": "2026-10-22",
+   "index_minutes": 375,
+   "option_rows": 15746,
+   "series": 42,
+   "series_min_minutes": 371,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-23",
+   "index_minutes": 375,
+   "option_rows": 15631,
+   "series": 42,
+   "series_min_minutes": 335,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-26",
+   "index_minutes": 375,
+   "option_rows": 15740,
+   "series": 42,
+   "series_min_minutes": 373,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 374,
+   "near_atm2_missing_minutes": 2
+  },
+  {
+   "day": "2026-10-27",
+   "index_minutes": 375,
+   "option_rows": 15737,
+   "series": 42,
+   "series_min_minutes": 368,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 375,
+   "near_atm2_missing_minutes": 0
+  },
+  {
+   "day": "2026-10-28",
+   "index_minutes": 375,
+   "option_rows": 15604,
+   "series": 42,
+   "series_min_minutes": 291,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 373,
+   "near_atm2_missing_minutes": 6
+  },
+  {
+   "day": "2026-10-29",
+   "index_minutes": 375,
+   "option_rows": 14730,
+   "series": 42,
+   "series_min_minutes": 95,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 367,
+   "near_atm2_missing_minutes": 14
+  },
+  {
+   "day": "2026-10-30",
+   "index_minutes": 375,
+   "option_rows": 15626,
+   "series": 42,
+   "series_min_minutes": 355,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 373,
+   "near_atm2_missing_minutes": 10
+  },
+  {
+   "day": "2026-11-02",
+   "index_minutes": 375,
+   "option_rows": 15292,
+   "series": 42,
+   "series_min_minutes": 283,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 371,
+   "near_atm2_missing_minutes": 9
+  },
+  {
+   "day": "2026-11-03",
+   "index_minutes": 375,
+   "option_rows": 15682,
+   "series": 42,
+   "series_min_minutes": 368,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 373,
+   "near_atm2_missing_minutes": 10
+  },
+  {
+   "day": "2026-11-04",
+   "index_minutes": 375,
+   "option_rows": 15636,
+   "series": 42,
+   "series_min_minutes": 350,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 373,
+   "near_atm2_missing_minutes": 9
+  },
+  {
+   "day": "2026-11-05",
+   "index_minutes": 375,
+   "option_rows": 15610,
+   "series": 42,
+   "series_min_minutes": 365,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 365,
+   "near_atm2_missing_minutes": 38
+  },
+  {
+   "day": "2026-11-06",
+   "index_minutes": 375,
+   "option_rows": 15723,
+   "series": 42,
+   "series_min_minutes": 374,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 374,
+   "near_atm2_missing_minutes": 6
+  },
+  {
+   "day": "2026-11-08",
+   "index_minutes": 70,
+   "option_rows": 2603,
+   "series": 41,
+   "series_min_minutes": 1,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 65,
+   "near_atm2_missing_minutes": 16
+  },
+  {
+   "day": "2026-11-09",
+   "index_minutes": 375,
+   "option_rows": 15554,
+   "series": 42,
+   "series_min_minutes": 334,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 374,
+   "near_atm2_missing_minutes": 6
+  },
+  {
+   "day": "2026-11-11",
+   "index_minutes": 375,
+   "option_rows": 15712,
+   "series": 42,
+   "series_min_minutes": 369,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 374,
+   "near_atm2_missing_minutes": 6
+  },
+  {
+   "day": "2026-11-12",
+   "index_minutes": 375,
+   "option_rows": 15662,
+   "series": 42,
+   "series_min_minutes": 357,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 374,
+   "near_atm2_missing_minutes": 4
+  },
+  {
+   "day": "2026-11-13",
+   "index_minutes": 375,
+   "option_rows": 15659,
+   "series": 42,
+   "series_min_minutes": 356,
+   "near_atm2_series": 10,
+   "near_atm2_min_minutes": 374,
+   "near_atm2_missing_minutes": 3
+  }
+ ],
+ "files": {
+  "opt_MIDCPNIFTY_WEEK_2026_gap1113.parquet": {
+   "bytes": 4465249,
+   "sha256": "7fe54f68731de1c170d58471a934f9d6229f8085c5d09c85a433a5e1d2a8dd88"
+  },
+  "index_1m_MIDCPNIFTY_2026_gap1113.parquet": {
+   "bytes": 183709,
+   "sha256": "cb497350116c52d6ca62b7ac1f7e467d5ed3a0a9baf10017cf17103fbd2dfb62"
+  }
+ },
+ "drive": "gdrive:IraAlgo-data-lake/dhan/MIDCPNIFTY/ (and the lake folders options_rolling_1m/, index_1m/)"
+}

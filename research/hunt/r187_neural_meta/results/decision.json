@@ -1,0 +1,251 @@
+{
+ "R72:U1": {
+  "passed": false,
+  "fails": [
+   "win rate not above the base (year)",
+   "neither drawdown nor worst month better (year)",
+   "win rate not above the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 1.0,
+  "q_own": 1.0
+ },
+ "R72:U2": {
+  "passed": false,
+  "fails": [
+   "win rate not above the base (year)",
+   "neither drawdown nor worst month better (year)",
+   "net below the base (final)",
+   "win rate not above the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.7085828343313373,
+  "q_own": 0.8982
+ },
+ "R72:U3": {
+  "passed": false,
+  "fails": [
+   "win rate not above the base (year)",
+   "neither drawdown nor worst month better (year)",
+   "net below the base (final)",
+   "win rate not above the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.7085828343313373,
+  "q_own": 0.8982
+ },
+ "R51:U1": {
+  "passed": false,
+  "fails": [
+   "net below the base (year)",
+   "win rate not above the base (year)",
+   "neither drawdown nor worst month better (year)",
+   "win rate not above the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.6686626746506986,
+  "q_own": 0.8982
+ },
+ "R51:U2": {
+  "passed": false,
+  "fails": [
+   "win rate not above the base (year)",
+   "win rate not above the base (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.3033932135728543,
+  "q_own": 0.8982
+ },
+ "R51:U3": {
+  "passed": false,
+  "fails": [
+   "win rate not above the base (year)",
+   "win rate not above the base (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.1497005988023952,
+  "q_own": 0.5988
+ },
+ "LIQ:U1": {
+  "passed": false,
+  "fails": [
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.023952095808383235,
+  "q_own": 0.2395
+ },
+ "LIQ:U2": {
+  "passed": false,
+  "fails": [
+   "net below the base (year)",
+   "win rate not above the base (year)",
+   "neither drawdown nor worst month better (year)",
+   "win rate not above the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.9141716566866267,
+  "q_own": 0.9623
+ },
+ "LIQ:U3": {
+  "passed": false,
+  "fails": [
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.041916167664670656,
+  "q_own": 0.2695
+ },
+ "orb:U1": {
+  "passed": false,
+  "fails": [
+   "net below the base (final)",
+   "win rate not above the base (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10",
+   "< 40 final trades"
+  ],
+  "q": 1.0,
+  "twin_p": 0.718562874251497,
+  "q_own": 0.8982
+ },
+ "orb:U2": {
+  "passed": false,
+  "fails": [
+   "net below the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.6367265469061876,
+  "q_own": 0.8982
+ },
+ "orb:U3": {
+  "passed": false,
+  "fails": [
+   "net below the base (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.7065868263473054,
+  "q_own": 0.8982
+ },
+ "orb_fresh:U1": {
+  "passed": false,
+  "fails": [
+   "net below the base (final)",
+   "win rate not above the base (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10",
+   "< 40 final trades"
+  ],
+  "q": 1.0,
+  "twin_p": 0.7125748502994012,
+  "q_own": 0.8982
+ },
+ "orb_fresh:U2": {
+  "passed": false,
+  "fails": [
+   "net below the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.6646706586826348,
+  "q_own": 0.8982
+ },
+ "orb_fresh:U3": {
+  "passed": false,
+  "fails": [
+   "net below the base (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.7005988023952096,
+  "q_own": 0.8982
+ },
+ "orb_sweep:U1": {
+  "passed": false,
+  "fails": [
+   "win rate not above the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.8283433133732535,
+  "q_own": 0.9623
+ },
+ "orb_sweep:U2": {
+  "passed": false,
+  "fails": [
+   "net below the base (year)",
+   "win rate not above the base (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.5708582834331337,
+  "q_own": 0.8982
+ },
+ "orb_sweep:U3": {
+  "passed": false,
+  "fails": [
+   "win rate not above the base (year)",
+   "win rate not above the base (final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.872255489021956,
+  "q_own": 0.9623
+ },
+ "R72:U4": {
+  "passed": false,
+  "fails": [
+   "net below the base (year)",
+   "win rate not above the base (year)",
+   "neither drawdown nor worst month better (year)",
+   "net below the base (final)",
+   "neither drawdown nor worst month better (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.001996007984031936,
+  "q_own": 0.0399
+ },
+ "R51:U4": {
+  "passed": false,
+  "fails": [
+   "net below the base (year)",
+   "win rate not above the base (year)",
+   "neither drawdown nor worst month better (year)",
+   "win rate not above the base (final)",
+   "twin BH q 1.00 > 0.10"
+  ],
+  "q": 1.0,
+  "twin_p": 0.05389221556886228,
+  "q_own": 0.2695
+ },
+ "_m": {
+  "tests": 20,
+  "prior": 4882,
+  "total": 4902
+ }
+}

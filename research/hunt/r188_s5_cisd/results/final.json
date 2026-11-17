@@ -1,0 +1,2419 @@
+{
+ "S5": {
+  "base": {
+   "design": {
+    "n": 562,
+    "win": 0.5854092526690391,
+    "total": 128731.20000000001,
+    "avg_net": 229.0590747330961,
+    "avg_win": 1701.293130699088,
+    "avg_loss": -1849.760686695279,
+    "worst_month": -19305.88,
+    "worst_month_name": "2024-04",
+    "max_dd": -49469.42,
+    "total_x2": 119475.50000000003,
+    "exits": {
+     "trail": 345,
+     "stop": 204,
+     "close": 13
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "final": {
+    "n": 40,
+    "win": 0.85,
+    "total": 24988.420000000006,
+    "avg_net": 624.7105000000001,
+    "avg_win": 1069.6426470588237,
+    "avg_loss": -1896.5716666666658,
+    "worst_month": -2328.42,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 24332.670000000013,
+    "exits": {
+     "trail": 35,
+     "stop": 5
+    },
+    "account_ok": true,
+    "days": 27
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": 3849.0500000000025,
+    "avg_net": 1283.0166666666676,
+    "avg_win": 3162.515,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": 3744.0500000000065,
+    "exits": {
+     "trail": 2,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   }
+  },
+  "BE10": {
+   "design": {
+    "n": 600,
+    "win": 0.6633333333333333,
+    "total": 99014.08000000002,
+    "avg_net": 165.0234666666667,
+    "avg_win": 1028.193768844221,
+    "avg_loss": -1535.6784158415837,
+    "worst_month": -12555.94,
+    "worst_month_name": "2024-04",
+    "max_dd": -37434.17,
+    "total_x2": 88442.13000000003,
+    "exits": {
+     "trail": 229,
+     "be10": 223,
+     "stop": 140,
+     "close": 8
+    },
+    "account_ok": true,
+    "days": 244
+   },
+   "final": {
+    "n": 41,
+    "win": 0.8536585365853658,
+    "total": 16318.750000000004,
+    "avg_net": 398.0182926829269,
+    "avg_win": 679.2751428571428,
+    "avg_loss": -1242.646666666666,
+    "worst_month": -2328.42,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 15574.900000000007,
+    "exits": {
+     "trail": 19,
+     "be10": 19,
+     "stop": 3
+    },
+    "account_ok": true,
+    "days": 27
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": -1914.2599999999961,
+    "avg_net": -638.0866666666653,
+    "avg_win": 280.8600000000006,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": -2021.6599999999903,
+    "exits": {
+     "be10": 1,
+     "trail": 1,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 1.0,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": true,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "L500": {
+   "design": {
+    "n": 584,
+    "win": 0.6643835616438356,
+    "total": 42250.660000000025,
+    "avg_net": 72.34702054794525,
+    "avg_win": 1070.9375257731958,
+    "avg_loss": -1904.4545918367346,
+    "worst_month": -17178.46,
+    "worst_month_name": "2024-04",
+    "max_dd": -44190.77999999999,
+    "total_x2": 29988.41000000002,
+    "exits": {
+     "l500": 384,
+     "stop": 178,
+     "trail": 17,
+     "close": 5
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "final": {
+    "n": 41,
+    "win": 0.8292682926829268,
+    "total": 32645.930000000008,
+    "avg_net": 796.2421951219515,
+    "avg_win": 1354.0000000000002,
+    "avg_loss": -1912.867142857142,
+    "worst_month": -2077.5000000000005,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 31747.330000000013,
+    "exits": {
+     "l500": 29,
+     "stop": 6,
+     "trail": 6
+    },
+    "account_ok": true,
+    "days": 27
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": -621.349999999996,
+    "avg_net": -207.11666666666534,
+    "avg_win": 927.3150000000006,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1122.6299999999967,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": -744.3499999999897,
+    "exits": {
+     "l500": 2,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 0.9700598802395209,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": true,
+     "win": false,
+     "risk": true
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "LBE1000": {
+   "design": {
+    "n": 573,
+    "win": 0.6474694589877836,
+    "total": 132517.86,
+    "avg_net": 231.27026178010468,
+    "avg_win": 1351.5788679245284,
+    "avg_loss": -1826.3262376237624,
+    "worst_month": -18649.48,
+    "worst_month_name": "2024-04",
+    "max_dd": -43367.51000000001,
+    "total_x2": 122499.11,
+    "exits": {
+     "trail": 275,
+     "stop": 174,
+     "lbe1000": 113,
+     "close": 11
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "final": {
+    "n": 40,
+    "win": 0.85,
+    "total": 22656.000000000007,
+    "avg_net": 566.4000000000002,
+    "avg_win": 1001.429705882353,
+    "avg_loss": -1898.7683333333325,
+    "worst_month": -2328.42,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 21966.35000000001,
+    "exits": {
+     "trail": 30,
+     "stop": 5,
+     "lbe1000": 5
+    },
+    "account_ok": true,
+    "days": 27
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": -1914.2599999999961,
+    "avg_net": -638.0866666666653,
+    "avg_win": 280.8600000000006,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": -2021.6599999999903,
+    "exits": {
+     "lbe1000": 1,
+     "trail": 1,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 1.0,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "IDX": {
+   "design": {
+    "n": 570,
+    "win": 0.5596491228070175,
+    "total": 124759.85000000003,
+    "avg_net": 218.87692982456147,
+    "avg_win": 1639.526394984326,
+    "avg_loss": -1586.6496812749,
+    "worst_month": -20198.19,
+    "worst_month_name": "2024-04",
+    "max_dd": -47013.880000000034,
+    "total_x2": 115079.70000000003,
+    "exits": {
+     "trail": 312,
+     "stop": 176,
+     "idx": 70,
+     "close": 12
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "final": {
+    "n": 40,
+    "win": 0.85,
+    "total": 23554.08000000001,
+    "avg_net": 588.8520000000002,
+    "avg_win": 1027.4561764705884,
+    "avg_loss": -1896.5716666666658,
+    "worst_month": -2328.42,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 22892.730000000014,
+    "exits": {
+     "trail": 34,
+     "stop": 5,
+     "idx": 1
+    },
+    "account_ok": true,
+    "days": 27
+   },
+   "new": {
+    "n": 3,
+    "win": 0.3333333333333333,
+    "total": -2428.6699999999964,
+    "avg_net": -809.5566666666655,
+    "avg_win": 560.4800000000001,
+    "avg_loss": -1494.5749999999982,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": -2535.469999999991,
+    "exits": {
+     "idx": 1,
+     "trail": 1,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 0.9960079840319361,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": false,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "LK500": {
+   "design": {
+    "n": 591,
+    "win": 0.637901861252115,
+    "total": 102704.33,
+    "avg_net": 173.78059221658208,
+    "avg_win": 1174.9549602122017,
+    "avg_loss": -1589.9705140186913,
+    "worst_month": -14524.299999999987,
+    "worst_month_name": "2024-06",
+    "max_dd": -40785.22999999998,
+    "total_x2": 93406.72999999998,
+    "exits": {
+     "trail": 428,
+     "stop": 154,
+     "close": 9
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "final": {
+    "n": 40,
+    "win": 0.875,
+    "total": 19280.750000000007,
+    "avg_net": 482.0187500000002,
+    "avg_win": 826.3777142857143,
+    "avg_loss": -1928.4939999999992,
+    "worst_month": -2824.8700000000013,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 18635.20000000001,
+    "exits": {
+     "trail": 36,
+     "stop": 4
+    },
+    "account_ok": true,
+    "days": 27
+   },
+   "new": {
+    "n": 3,
+    "win": 0.3333333333333333,
+    "total": -1926.8299999999967,
+    "avg_net": -642.2766666666656,
+    "avg_win": 560.4800000000001,
+    "avg_loss": -1243.6549999999984,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": -2025.8299999999917,
+    "exits": {
+     "trail": 2,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 1.0,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": true,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "ST1500": {
+   "design": {
+    "n": 579,
+    "win": 0.5284974093264249,
+    "total": 134375.02000000002,
+    "avg_net": 232.08120898100177,
+    "avg_win": 1726.2212418300653,
+    "avg_loss": -1442.6691575091577,
+    "worst_month": -22218.770000000004,
+    "worst_month_name": "2024-09",
+    "max_dd": -50905.72000000002,
+    "total_x2": 124561.56999999998,
+    "exits": {
+     "trail": 321,
+     "stop": 251,
+     "close": 7
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "final": {
+    "n": 40,
+    "win": 0.8,
+    "total": 22460.740000000005,
+    "avg_net": 561.5185000000001,
+    "avg_win": 1101.02625,
+    "avg_loss": -1596.5124999999996,
+    "worst_month": -2328.42,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 21797.190000000013,
+    "exits": {
+     "trail": 33,
+     "stop": 7
+    },
+    "account_ok": true,
+    "days": 27
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": 3849.0500000000025,
+    "avg_net": 1283.0166666666676,
+    "avg_win": 3162.515,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": 3744.0500000000065,
+    "exits": {
+     "trail": 2,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 1.0,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": false,
+     "risk": false
+    },
+    "final": {
+     "net": false,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "FT3PO": {
+   "design": {
+    "n": 560,
+    "win": 0.5875,
+    "total": 132725.34000000003,
+    "avg_net": 237.00953571428576,
+    "avg_win": 1701.293130699088,
+    "avg_loss": -1848.4852813852813,
+    "worst_month": -19305.88,
+    "worst_month_name": "2024-04",
+    "max_dd": -49469.42,
+    "total_x2": 123519.44000000003,
+    "exits": {
+     "trail": 345,
+     "stop": 202,
+     "close": 13
+    },
+    "account_ok": false,
+    "days": 243
+   },
+   "final": {
+    "n": 40,
+    "win": 0.85,
+    "total": 24988.420000000006,
+    "avg_net": 624.7105000000001,
+    "avg_win": 1069.6426470588237,
+    "avg_loss": -1896.5716666666658,
+    "worst_month": -2328.42,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 24332.670000000013,
+    "exits": {
+     "trail": 35,
+     "stop": 5
+    },
+    "account_ok": true,
+    "days": 27
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": 3849.0500000000025,
+    "avg_net": 1283.0166666666676,
+    "avg_win": 3162.515,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": 3744.0500000000065,
+    "exits": {
+     "trail": 2,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 0.08982035928143713,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": true,
+     "risk": false
+    },
+    "final": {
+     "net": true,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "VIX313": {
+   "design": {
+    "n": 511,
+    "win": 0.5909980430528375,
+    "total": 117405.22000000003,
+    "avg_net": 229.75581213307245,
+    "avg_win": 1677.8217549668875,
+    "avg_loss": -1862.664832535885,
+    "worst_month": -17510.059999999998,
+    "worst_month_name": "2024-09",
+    "max_dd": -36079.399999999994,
+    "total_x2": 109228.27,
+    "exits": {
+     "trail": 316,
+     "stop": 185,
+     "close": 10
+    },
+    "account_ok": false,
+    "days": 223
+   },
+   "final": {
+    "n": 31,
+    "win": 0.9032258064516129,
+    "total": 25496.60000000001,
+    "avg_net": 822.4709677419357,
+    "avg_win": 1099.5628571428572,
+    "avg_loss": -1763.7199999999984,
+    "worst_month": -3079.68,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 24999.200000000015,
+    "exits": {
+     "trail": 29,
+     "stop": 2
+    },
+    "account_ok": true,
+    "days": 20
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": 3849.0500000000025,
+    "avg_net": 1283.0166666666676,
+    "avg_win": 3162.515,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": 3744.0500000000065,
+    "exits": {
+     "trail": 2,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 0.437125748502994,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": true,
+     "win": true,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "EXP": {
+   "design": {
+    "n": 389,
+    "win": 0.6195372750642674,
+    "total": 119375.87000000002,
+    "avg_net": 306.8788431876607,
+    "avg_win": 1658.596929460581,
+    "avg_loss": -1894.2296621621622,
+    "worst_month": -11955.800000000001,
+    "worst_month_name": "2024-04",
+    "max_dd": -28871.509999999995,
+    "total_x2": 112144.22,
+    "exits": {
+     "trail": 246,
+     "stop": 134,
+     "close": 9
+    },
+    "account_ok": true,
+    "days": 195
+   },
+   "final": {
+    "n": 28,
+    "win": 0.8571428571428571,
+    "total": 22111.900000000005,
+    "avg_net": 789.7107142857145,
+    "avg_win": 1225.03,
+    "avg_loss": -1822.204999999999,
+    "worst_month": -2328.42,
+    "worst_month_name": "2026-04",
+    "max_dd": -5112.119999999996,
+    "total_x2": 21569.700000000008,
+    "exits": {
+     "trail": 25,
+     "stop": 3
+    },
+    "account_ok": true,
+    "days": 20
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": 3849.0500000000025,
+    "avg_net": 1283.0166666666676,
+    "avg_win": 3162.515,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": 3744.0500000000065,
+    "exits": {
+     "trail": 2,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 0.0998003992015968,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": true,
+     "risk": false
+    },
+    "final_n": false,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "ADX20": {
+   "design": {
+    "n": 370,
+    "win": 0.5405405405405406,
+    "total": -7739.989999999991,
+    "avg_net": -20.918891891891867,
+    "avg_win": 1507.4624,
+    "avg_loss": -1819.0145294117644,
+    "worst_month": -19268.51,
+    "worst_month_name": "2024-05",
+    "max_dd": -82617.63999999997,
+    "total_x2": -13883.64,
+    "exits": {
+     "trail": 215,
+     "stop": 144,
+     "close": 11
+    },
+    "account_ok": false,
+    "days": 184
+   },
+   "final": {
+    "n": 25,
+    "win": 0.88,
+    "total": 18847.29,
+    "avg_net": 753.8916,
+    "avg_win": 1099.9618181818184,
+    "avg_loss": -1783.9566666666663,
+    "worst_month": -2328.42,
+    "worst_month_name": "2026-04",
+    "max_dd": -3079.6799999999994,
+    "total_x2": 18433.340000000007,
+    "exits": {
+     "trail": 23,
+     "stop": 2
+    },
+    "account_ok": true,
+    "days": 17
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": 3849.0500000000025,
+    "avg_net": 1283.0166666666676,
+    "avg_win": 3162.515,
+    "avg_loss": -2475.9799999999973,
+    "worst_month": -1915.4999999999973,
+    "worst_month_name": "2026-11",
+    "max_dd": -2475.9799999999973,
+    "total_x2": 3744.0500000000065,
+    "exits": {
+     "trail": 2,
+     "stop": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 0.9960079840319361,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": false,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final_n": false,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "new_month_base_trades": [
+   {
+    "und": "FINNIFTY",
+    "day": "2026-10-23",
+    "entry": 5,
+    "side": -1,
+    "net": 5764.549999999999,
+    "why": "trail"
+   },
+   {
+    "und": "FINNIFTY",
+    "day": "2026-11-06",
+    "entry": 5,
+    "side": -1,
+    "net": 560.4800000000001,
+    "why": "trail"
+   },
+   {
+    "und": "FINNIFTY",
+    "day": "2026-11-11",
+    "entry": 10,
+    "side": -1,
+    "net": -2475.9799999999973,
+    "why": "stop"
+   }
+  ],
+  "COMBO": {
+   "not_formed": true,
+   "q": 1.0
+  }
+ },
+ "CISD": {
+  "base": {
+   "design": {
+    "n": 413,
+    "win": 0.6755447941888619,
+    "total": 105089.5,
+    "avg_net": 254.45399515738498,
+    "avg_win": 1004.2827956989248,
+    "avg_loss": -1306.7567164179106,
+    "worst_month": -7491.260000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -15167.66,
+    "total_x2": 96345.62999999996,
+    "exits": {
+     "lock": 269,
+     "time": 83,
+     "istop": 61
+    },
+    "account_ok": true,
+    "days": 247
+   },
+   "final": {
+    "n": 35,
+    "win": 0.7142857142857143,
+    "total": 3150.469999999996,
+    "avg_net": 90.01342857142846,
+    "avg_win": 937.2471999999999,
+    "avg_loss": -2028.071,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10001.800000000003,
+    "total_x2": 2197.9899999999907,
+    "exits": {
+     "lock": 25,
+     "time": 6,
+     "istop": 4
+    },
+    "account_ok": true,
+    "days": 25
+   },
+   "new": {
+    "n": 8,
+    "win": 0.875,
+    "total": 6585.309999999998,
+    "avg_net": 823.1637499999997,
+    "avg_win": 1123.512857142857,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 6312.35,
+    "exits": {
+     "lock": 7,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   }
+  },
+  "BE10": {
+   "design": {
+    "n": 427,
+    "win": 0.7377049180327869,
+    "total": 111104.95000000001,
+    "avg_net": 260.1989461358314,
+    "avg_win": 787.3946666666667,
+    "avg_loss": -1222.5390178571429,
+    "worst_month": -5111.800000000002,
+    "worst_month_name": "2023-12",
+    "max_dd": -7478.34,
+    "total_x2": 101933.11000000002,
+    "exits": {
+     "lock": 231,
+     "be10": 92,
+     "time": 58,
+     "istop": 46
+    },
+    "account_ok": true,
+    "days": 250
+   },
+   "final": {
+    "n": 35,
+    "win": 0.6857142857142857,
+    "total": 2071.509999999997,
+    "avg_net": 59.185999999999915,
+    "avg_win": 951.1220833333331,
+    "avg_loss": -1886.8563636363635,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10001.800000000003,
+    "total_x2": 1120.0299999999916,
+    "exits": {
+     "lock": 24,
+     "time": 6,
+     "istop": 4,
+     "be10": 1
+    },
+    "account_ok": true,
+    "days": 25
+   },
+   "new": {
+    "n": 8,
+    "win": 0.875,
+    "total": 6585.309999999998,
+    "avg_net": 823.1637499999997,
+    "avg_win": 1123.512857142857,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 6312.35,
+    "exits": {
+     "lock": 7,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 0.021956087824351298,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "L500": {
+   "design": {
+    "n": 413,
+    "win": 0.6755447941888619,
+    "total": 120728.62000000001,
+    "avg_net": 292.3211138014528,
+    "avg_win": 1060.336989247312,
+    "avg_loss": -1306.7567164179106,
+    "worst_month": -7253.750000000002,
+    "worst_month_name": "2023-12",
+    "max_dd": -14510.660000000002,
+    "total_x2": 111969.09999999999,
+    "exits": {
+     "lock": 172,
+     "l500": 98,
+     "time": 82,
+     "istop": 61
+    },
+    "account_ok": true,
+    "days": 247
+   },
+   "final": {
+    "n": 35,
+    "win": 0.7142857142857143,
+    "total": 6155.59,
+    "avg_net": 175.874,
+    "avg_win": 1057.452,
+    "avg_loss": -2028.071,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -9885.670000000002,
+    "total_x2": 5201.139999999997,
+    "exits": {
+     "lock": 16,
+     "l500": 9,
+     "time": 6,
+     "istop": 4
+    },
+    "account_ok": true,
+    "days": 25
+   },
+   "new": {
+    "n": 8,
+    "win": 0.875,
+    "total": 7630.529999999998,
+    "avg_net": 953.8162499999997,
+    "avg_win": 1272.8299999999995,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1138.1100000000001,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 7356.329999999996,
+    "exits": {
+     "lock": 4,
+     "l500": 3,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 0.001996007984031936,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": false,
+     "risk": true
+    },
+    "final": {
+     "net": true,
+     "win": false,
+     "risk": true
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "LBE1000": {
+   "design": {
+    "n": 413,
+    "win": 0.6755447941888619,
+    "total": 105089.5,
+    "avg_net": 254.45399515738498,
+    "avg_win": 1004.2827956989248,
+    "avg_loss": -1306.7567164179106,
+    "worst_month": -7491.260000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -15167.66,
+    "total_x2": 96345.62999999996,
+    "exits": {
+     "lock": 269,
+     "time": 83,
+     "istop": 61
+    },
+    "account_ok": true,
+    "days": 247
+   },
+   "final": {
+    "n": 35,
+    "win": 0.7142857142857143,
+    "total": 3150.469999999996,
+    "avg_net": 90.01342857142846,
+    "avg_win": 937.2471999999999,
+    "avg_loss": -2028.071,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10001.800000000003,
+    "total_x2": 2197.9899999999907,
+    "exits": {
+     "lock": 25,
+     "time": 6,
+     "istop": 4
+    },
+    "account_ok": true,
+    "days": 25
+   },
+   "new": {
+    "n": 8,
+    "win": 0.875,
+    "total": 6585.309999999998,
+    "avg_net": 823.1637499999997,
+    "avg_win": 1123.512857142857,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 6312.35,
+    "exits": {
+     "lock": 7,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 1.0,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": false,
+     "risk": false
+    },
+    "final": {
+     "net": true,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "IDX": {
+   "design": {
+    "n": 413,
+    "win": 0.6755447941888619,
+    "total": 105089.5,
+    "avg_net": 254.45399515738498,
+    "avg_win": 1004.2827956989248,
+    "avg_loss": -1306.7567164179106,
+    "worst_month": -7491.260000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -15167.66,
+    "total_x2": 96345.62999999996,
+    "exits": {
+     "lock": 266,
+     "time": 83,
+     "istop": 61,
+     "idx": 3
+    },
+    "account_ok": true,
+    "days": 247
+   },
+   "final": {
+    "n": 35,
+    "win": 0.7142857142857143,
+    "total": 3150.469999999996,
+    "avg_net": 90.01342857142846,
+    "avg_win": 937.2471999999999,
+    "avg_loss": -2028.071,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10001.800000000003,
+    "total_x2": 2197.9899999999907,
+    "exits": {
+     "lock": 25,
+     "time": 6,
+     "istop": 4
+    },
+    "account_ok": true,
+    "days": 25
+   },
+   "new": {
+    "n": 8,
+    "win": 0.875,
+    "total": 6585.309999999998,
+    "avg_net": 823.1637499999997,
+    "avg_win": 1123.512857142857,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 6312.35,
+    "exits": {
+     "lock": 7,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 1.0,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": false,
+     "risk": false
+    },
+    "final": {
+     "net": true,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "LK500": {
+   "design": {
+    "n": 437,
+    "win": 0.7597254004576659,
+    "total": 83177.70999999999,
+    "avg_net": 190.33800915331807,
+    "avg_win": 610.2000903614457,
+    "avg_loss": -1137.2259047619045,
+    "worst_month": -5163.109999999995,
+    "worst_month_name": "2024-04",
+    "max_dd": -6857.159999999993,
+    "total_x2": 73731.36,
+    "exits": {
+     "lock": 347,
+     "time": 46,
+     "istop": 44
+    },
+    "account_ok": true,
+    "days": 253
+   },
+   "final": {
+    "n": 35,
+    "win": 0.7142857142857143,
+    "total": -4936.499999999991,
+    "avg_net": -141.0428571428569,
+    "avg_win": 528.1920000000005,
+    "avg_loss": -1814.1300000000003,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10245.91,
+    "total_x2": -5907.769999999975,
+    "exits": {
+     "lock": 29,
+     "istop": 3,
+     "time": 3
+    },
+    "account_ok": true,
+    "days": 25
+   },
+   "new": {
+    "n": 8,
+    "win": 0.625,
+    "total": 80.40999999999849,
+    "avg_net": 10.051249999999811,
+    "avg_win": 308.0940000000004,
+    "avg_loss": -486.68666666666786,
+    "worst_month": -811.1899999999988,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": -192.45000000000698,
+    "exits": {
+     "lock": 7,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 0.001996007984031936,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "ST1500": {
+   "design": {
+    "n": 431,
+    "win": 0.5986078886310905,
+    "total": 66568.41,
+    "avg_net": 154.45106728538283,
+    "avg_win": 1041.8877519379846,
+    "avg_loss": -1169.0094219653179,
+    "worst_month": -6489.9400000000005,
+    "worst_month_name": "2023-12",
+    "max_dd": -16532.060000000005,
+    "total_x2": 57297.50000000003,
+    "exits": {
+     "lock": 245,
+     "pstop": 91,
+     "time": 67,
+     "istop": 28
+    },
+    "account_ok": true,
+    "days": 251
+   },
+   "final": {
+    "n": 36,
+    "win": 0.5833333333333334,
+    "total": -2738.4900000000043,
+    "avg_net": -76.06916666666679,
+    "avg_win": 967.0623809523806,
+    "avg_loss": -1536.4533333333334,
+    "worst_month": -2446.259999999999,
+    "worst_month_name": "2026-09",
+    "max_dd": -7350.67,
+    "total_x2": -3791.0800000000077,
+    "exits": {
+     "lock": 21,
+     "pstop": 14,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 26
+   },
+   "new": {
+    "n": 8,
+    "win": 0.75,
+    "total": 3693.919999999999,
+    "avg_net": 461.7399999999999,
+    "avg_win": 1227.028333333333,
+    "avg_loss": -1834.124999999999,
+    "worst_month": 251.2200000000014,
+    "worst_month_name": "2026-10",
+    "max_dd": -3157.799999999998,
+    "total_x2": 3411.310000000005,
+    "exits": {
+     "lock": 6,
+     "pstop": 2
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 1.0,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": false,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": false,
+     "risk": true
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "FT3PO": {
+   "design": {
+    "n": 405,
+    "win": 0.674074074074074,
+    "total": 100018.3,
+    "avg_net": 246.95876543209877,
+    "avg_win": 1001.9169230769231,
+    "avg_loss": -1314.4319696969699,
+    "worst_month": -7491.260000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -15826.420000000002,
+    "total_x2": 91473.16999999997,
+    "exits": {
+     "lock": 263,
+     "time": 81,
+     "istop": 61
+    },
+    "account_ok": true,
+    "days": 244
+   },
+   "final": {
+    "n": 35,
+    "win": 0.7142857142857143,
+    "total": 3150.469999999996,
+    "avg_net": 90.01342857142846,
+    "avg_win": 937.2471999999999,
+    "avg_loss": -2028.071,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10001.800000000003,
+    "total_x2": 2197.9899999999907,
+    "exits": {
+     "lock": 25,
+     "time": 6,
+     "istop": 4
+    },
+    "account_ok": true,
+    "days": 25
+   },
+   "new": {
+    "n": 8,
+    "win": 0.875,
+    "total": 6585.309999999998,
+    "avg_net": 823.1637499999997,
+    "avg_win": 1123.512857142857,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 6312.35,
+    "exits": {
+     "lock": 7,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 0.8083832335329342,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": false,
+     "risk": false
+    },
+    "final": {
+     "net": true,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "VIX313": {
+   "design": {
+    "n": 350,
+    "win": 0.6828571428571428,
+    "total": 103394.91000000002,
+    "avg_net": 295.4140285714286,
+    "avg_win": 1036.5541422594144,
+    "avg_loss": -1300.3741441441437,
+    "worst_month": -6144.750000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -13154.089999999998,
+    "total_x2": 95926.38999999997,
+    "exits": {
+     "lock": 234,
+     "time": 65,
+     "istop": 51
+    },
+    "account_ok": true,
+    "days": 213
+   },
+   "final": {
+    "n": 31,
+    "win": 0.7419354838709677,
+    "total": 5168.159999999998,
+    "avg_net": 166.71483870967737,
+    "avg_win": 927.7030434782606,
+    "avg_loss": -2021.1262499999998,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10001.800000000001,
+    "total_x2": 4290.119999999994,
+    "exits": {
+     "lock": 23,
+     "time": 5,
+     "istop": 3
+    },
+    "account_ok": true,
+    "days": 22
+   },
+   "new": {
+    "n": 3,
+    "win": 0.6666666666666666,
+    "total": 1005.7700000000011,
+    "avg_net": 335.25666666666706,
+    "avg_win": 1142.525,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 942.5600000000013,
+    "exits": {
+     "lock": 2,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 3
+   },
+   "twin_p": 0.059880239520958084,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": true,
+     "win": true,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "EXP": {
+   "design": {
+    "n": 366,
+    "win": 0.6912568306010929,
+    "total": 114080.29000000001,
+    "avg_net": 311.694781420765,
+    "avg_win": 1015.5428458498025,
+    "avg_loss": -1264.1774336283188,
+    "worst_month": -5260.420000000002,
+    "worst_month_name": "2023-12",
+    "max_dd": -12936.820000000002,
+    "total_x2": 106426.89999999998,
+    "exits": {
+     "lock": 242,
+     "time": 72,
+     "istop": 52
+    },
+    "account_ok": true,
+    "days": 233
+   },
+   "final": {
+    "n": 34,
+    "win": 0.7352941176470589,
+    "total": 3419.839999999997,
+    "avg_net": 100.58352941176462,
+    "avg_win": 937.2471999999999,
+    "avg_loss": -2223.482222222222,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10001.800000000001,
+    "total_x2": 2485.5599999999904,
+    "exits": {
+     "lock": 25,
+     "time": 5,
+     "istop": 4
+    },
+    "account_ok": true,
+    "days": 24
+   },
+   "new": {
+    "n": 8,
+    "win": 0.875,
+    "total": 6585.309999999998,
+    "avg_net": 823.1637499999997,
+    "avg_win": 1123.512857142857,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 6312.35,
+    "exits": {
+     "lock": 7,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 0.013972055888223553,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": true,
+     "win": true,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "ADX20": {
+   "design": {
+    "n": 290,
+    "win": 0.7137931034482758,
+    "total": 98613.54999999999,
+    "avg_net": 340.046724137931,
+    "avg_win": 1068.2312077294687,
+    "avg_loss": -1476.0278313253013,
+    "worst_month": -5906.06,
+    "worst_month_name": "2023-12",
+    "max_dd": -14373.730000000005,
+    "total_x2": 92257.60999999999,
+    "exits": {
+     "lock": 204,
+     "time": 46,
+     "istop": 40
+    },
+    "account_ok": true,
+    "days": 189
+   },
+   "final": {
+    "n": 26,
+    "win": 0.6923076923076923,
+    "total": 143.17999999999347,
+    "avg_net": 5.506923076922826,
+    "avg_win": 957.7888888888886,
+    "avg_loss": -2137.1275,
+    "worst_month": -3590.240000000001,
+    "worst_month_name": "2026-09",
+    "max_dd": -7087.480000000003,
+    "total_x2": -578.1200000000069,
+    "exits": {
+     "lock": 18,
+     "time": 5,
+     "istop": 3
+    },
+    "account_ok": true,
+    "days": 22
+   },
+   "new": {
+    "n": 4,
+    "win": 0.75,
+    "total": 4093.01,
+    "avg_net": 1023.2525,
+    "avg_win": 1790.763333333333,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 4005.600000000002,
+    "exits": {
+     "lock": 3,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 0.043912175648702596,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": false,
+     "risk": true
+    },
+    "final_n": false,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "NTHR": {
+   "design": {
+    "n": 158,
+    "win": 0.7721518987341772,
+    "total": 69710.56,
+    "avg_net": 441.20607594936706,
+    "avg_win": 1045.1081967213115,
+    "avg_loss": -1605.3511111111106,
+    "worst_month": -3429.8299999999995,
+    "worst_month_name": "2026-02",
+    "max_dd": -7040.669999999998,
+    "total_x2": 66145.16999999998,
+    "exits": {
+     "lock": 120,
+     "time": 22,
+     "istop": 16
+    },
+    "account_ok": true,
+    "days": 107
+   },
+   "final": {
+    "n": 10,
+    "win": 0.9,
+    "total": 7756.859999999998,
+    "avg_net": 775.6859999999998,
+    "avg_win": 974.6099999999996,
+    "avg_loss": -1014.6299999999989,
+    "worst_month": -452.5699999999986,
+    "worst_month_name": "2026-07",
+    "max_dd": -1014.6299999999992,
+    "total_x2": 7503.24999999999,
+    "exits": {
+     "lock": 9,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 9
+   },
+   "new": {
+    "n": 4,
+    "win": 1.0,
+    "total": 2242.87,
+    "avg_net": 560.7175,
+    "avg_win": 560.7175,
+    "avg_loss": 0.0,
+    "worst_month": 510.4500000000003,
+    "worst_month_name": "2026-10",
+    "max_dd": 0.0,
+    "total_x2": 2082.0700000000015,
+    "exits": {
+     "lock": 4
+    },
+    "account_ok": true,
+    "days": 2
+   },
+   "twin_p": 0.007984031936127744,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": false,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": true,
+     "win": true,
+     "risk": true
+    },
+    "final_n": false,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "COMBO": {
+   "design": {
+    "n": 379,
+    "win": 0.7598944591029023,
+    "total": 115837.38,
+    "avg_net": 305.6395250659631,
+    "avg_win": 783.6052083333333,
+    "avg_loss": -1207.043076923077,
+    "worst_month": -4227.920000000003,
+    "worst_month_name": "2023-12",
+    "max_dd": -6551.640000000003,
+    "total_x2": 107789.34000000001,
+    "exits": {
+     "lock": 206,
+     "be10": 85,
+     "time": 49,
+     "istop": 39
+    },
+    "account_ok": true,
+    "days": 236
+   },
+   "final": {
+    "n": 34,
+    "win": 0.7058823529411765,
+    "total": 2340.879999999996,
+    "avg_net": 68.84941176470576,
+    "avg_win": 951.1220833333331,
+    "avg_loss": -2048.605,
+    "worst_month": -3948.9100000000017,
+    "worst_month_name": "2026-10",
+    "max_dd": -10001.800000000003,
+    "total_x2": 1407.5999999999913,
+    "exits": {
+     "lock": 24,
+     "time": 5,
+     "istop": 4,
+     "be10": 1
+    },
+    "account_ok": true,
+    "days": 24
+   },
+   "new": {
+    "n": 8,
+    "win": 0.875,
+    "total": 6585.309999999998,
+    "avg_net": 823.1637499999997,
+    "avg_win": 1123.512857142857,
+    "avg_loss": -1279.2799999999993,
+    "worst_month": 1005.7700000000011,
+    "worst_month_name": "2026-10",
+    "max_dd": -1279.2799999999993,
+    "total_x2": 6312.35,
+    "exits": {
+     "lock": 7,
+     "time": 1
+    },
+    "account_ok": true,
+    "days": 4
+   },
+   "twin_p": 0.003992015968063872,
+   "q": 1.0,
+   "gates": {
+    "design": {
+     "net": true,
+     "win": true,
+     "risk": true
+    },
+    "final": {
+     "net": false,
+     "win": false,
+     "risk": false
+    },
+    "final_n": true,
+    "q": false
+   },
+   "passes_1_3": false,
+   "passes": false
+  },
+  "new_month_base_trades": [
+   {
+    "und": "BANKNIFTY",
+    "day": "2026-11-09",
+    "entry": 120,
+    "side": 1,
+    "net": 502.4199999999997,
+    "why": "lock"
+   },
+   {
+    "und": "BANKNIFTY",
+    "day": "2026-11-09",
+    "entry": 275,
+    "side": 1,
+    "net": 759.8799999999982,
+    "why": "lock"
+   },
+   {
+    "und": "FINNIFTY",
+    "day": "2026-10-21",
+    "entry": 45,
+    "side": -1,
+    "net": 1774.6000000000001,
+    "why": "lock"
+   },
+   {
+    "und": "FINNIFTY",
+    "day": "2026-10-22",
+    "entry": 255,
+    "side": -1,
+    "net": -1279.2799999999993,
+    "why": "time"
+   },
+   {
+    "und": "FINNIFTY",
+    "day": "2026-11-09",
+    "entry": 120,
+    "side": 1,
+    "net": 582.8799999999987,
+    "why": "lock"
+   },
+   {
+    "und": "FINNIFTY",
+    "day": "2026-11-09",
+    "entry": 300,
+    "side": 1,
+    "net": 647.1200000000013,
+    "why": "lock"
+   },
+   {
+    "und": "NIFTY",
+    "day": "2026-10-23",
+    "entry": 170,
+    "side": -1,
+    "net": 510.4500000000003,
+    "why": "lock"
+   },
+   {
+    "und": "SENSEX",
+    "day": "2026-11-09",
+    "entry": 135,
+    "side": 1,
+    "net": 3087.2399999999993,
+    "why": "lock"
+   }
+  ]
+ },
+ "_m": {
+  "tests": 23,
+  "prior": 4902,
+  "total": 4925
+ },
+ "_design": {
+  "S5": {
+   "base": {
+    "n": 562,
+    "win": 0.5854092526690391,
+    "total": 128731.20000000001,
+    "avg_net": 229.0590747330961,
+    "avg_win": 1701.293130699088,
+    "avg_loss": -1849.760686695279,
+    "worst_month": -19305.88,
+    "worst_month_name": "2024-04",
+    "max_dd": -49469.42,
+    "total_x2": 119475.50000000003,
+    "exits": {
+     "trail": 345,
+     "stop": 204,
+     "close": 13
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "BE10": {
+    "n": 600,
+    "win": 0.6633333333333333,
+    "total": 99014.08000000002,
+    "avg_net": 165.0234666666667,
+    "avg_win": 1028.193768844221,
+    "avg_loss": -1535.6784158415837,
+    "worst_month": -12555.94,
+    "worst_month_name": "2024-04",
+    "max_dd": -37434.17,
+    "total_x2": 88442.13000000003,
+    "exits": {
+     "trail": 229,
+     "be10": 223,
+     "stop": 140,
+     "close": 8
+    },
+    "account_ok": true,
+    "days": 244
+   },
+   "L500": {
+    "n": 584,
+    "win": 0.6643835616438356,
+    "total": 42250.660000000025,
+    "avg_net": 72.34702054794525,
+    "avg_win": 1070.9375257731958,
+    "avg_loss": -1904.4545918367346,
+    "worst_month": -17178.46,
+    "worst_month_name": "2024-04",
+    "max_dd": -44190.77999999999,
+    "total_x2": 29988.41000000002,
+    "exits": {
+     "l500": 384,
+     "stop": 178,
+     "trail": 17,
+     "close": 5
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "LBE1000": {
+    "n": 573,
+    "win": 0.6474694589877836,
+    "total": 132517.86,
+    "avg_net": 231.27026178010468,
+    "avg_win": 1351.5788679245284,
+    "avg_loss": -1826.3262376237624,
+    "worst_month": -18649.48,
+    "worst_month_name": "2024-04",
+    "max_dd": -43367.51000000001,
+    "total_x2": 122499.11,
+    "exits": {
+     "trail": 275,
+     "stop": 174,
+     "lbe1000": 113,
+     "close": 11
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "IDX": {
+    "n": 570,
+    "win": 0.5596491228070175,
+    "total": 124759.85000000003,
+    "avg_net": 218.87692982456147,
+    "avg_win": 1639.526394984326,
+    "avg_loss": -1586.6496812749,
+    "worst_month": -20198.19,
+    "worst_month_name": "2024-04",
+    "max_dd": -47013.880000000034,
+    "total_x2": 115079.70000000003,
+    "exits": {
+     "trail": 312,
+     "stop": 176,
+     "idx": 70,
+     "close": 12
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "LK500": {
+    "n": 591,
+    "win": 0.637901861252115,
+    "total": 102704.33,
+    "avg_net": 173.78059221658208,
+    "avg_win": 1174.9549602122017,
+    "avg_loss": -1589.9705140186913,
+    "worst_month": -14524.299999999987,
+    "worst_month_name": "2024-06",
+    "max_dd": -40785.22999999998,
+    "total_x2": 93406.72999999998,
+    "exits": {
+     "trail": 428,
+     "stop": 154,
+     "close": 9
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "ST1500": {
+    "n": 579,
+    "win": 0.5284974093264249,
+    "total": 134375.02000000002,
+    "avg_net": 232.08120898100177,
+    "avg_win": 1726.2212418300653,
+    "avg_loss": -1442.6691575091577,
+    "worst_month": -22218.770000000004,
+    "worst_month_name": "2024-09",
+    "max_dd": -50905.72000000002,
+    "total_x2": 124561.56999999998,
+    "exits": {
+     "trail": 321,
+     "stop": 251,
+     "close": 7
+    },
+    "account_ok": false,
+    "days": 244
+   },
+   "FT3PO": {
+    "n": 560,
+    "win": 0.5875,
+    "total": 132725.34000000003,
+    "avg_net": 237.00953571428576,
+    "avg_win": 1701.293130699088,
+    "avg_loss": -1848.4852813852813,
+    "worst_month": -19305.88,
+    "worst_month_name": "2024-04",
+    "max_dd": -49469.42,
+    "total_x2": 123519.44000000003,
+    "exits": {
+     "trail": 345,
+     "stop": 202,
+     "close": 13
+    },
+    "account_ok": false,
+    "days": 243
+   },
+   "VIX313": {
+    "n": 511,
+    "win": 0.5909980430528375,
+    "total": 117405.22000000003,
+    "avg_net": 229.75581213307245,
+    "avg_win": 1677.8217549668875,
+    "avg_loss": -1862.664832535885,
+    "worst_month": -17510.059999999998,
+    "worst_month_name": "2024-09",
+    "max_dd": -36079.399999999994,
+    "total_x2": 109228.27,
+    "exits": {
+     "trail": 316,
+     "stop": 185,
+     "close": 10
+    },
+    "account_ok": false,
+    "days": 223
+   },
+   "EXP": {
+    "n": 389,
+    "win": 0.6195372750642674,
+    "total": 119375.87000000002,
+    "avg_net": 306.8788431876607,
+    "avg_win": 1658.596929460581,
+    "avg_loss": -1894.2296621621622,
+    "worst_month": -11955.800000000001,
+    "worst_month_name": "2024-04",
+    "max_dd": -28871.509999999995,
+    "total_x2": 112144.22,
+    "exits": {
+     "trail": 246,
+     "stop": 134,
+     "close": 9
+    },
+    "account_ok": true,
+    "days": 195
+   },
+   "ADX20": {
+    "n": 370,
+    "win": 0.5405405405405406,
+    "total": -7739.989999999991,
+    "avg_net": -20.918891891891867,
+    "avg_win": 1507.4624,
+    "avg_loss": -1819.0145294117644,
+    "worst_month": -19268.51,
+    "worst_month_name": "2024-05",
+    "max_dd": -82617.63999999997,
+    "total_x2": -13883.64,
+    "exits": {
+     "trail": 215,
+     "stop": 144,
+     "close": 11
+    },
+    "account_ok": false,
+    "days": 184
+   },
+   "design_passing": [
+    "LBE1000"
+   ],
+   "COMBO_parts": []
+  },
+  "CISD": {
+   "base": {
+    "n": 413,
+    "win": 0.6755447941888619,
+    "total": 105089.5,
+    "avg_net": 254.45399515738498,
+    "avg_win": 1004.2827956989248,
+    "avg_loss": -1306.7567164179106,
+    "worst_month": -7491.260000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -15167.66,
+    "total_x2": 96345.62999999996,
+    "exits": {
+     "lock": 269,
+     "time": 83,
+     "istop": 61
+    },
+    "account_ok": true,
+    "days": 247
+   },
+   "BE10": {
+    "n": 427,
+    "win": 0.7377049180327869,
+    "total": 111104.95000000001,
+    "avg_net": 260.1989461358314,
+    "avg_win": 787.3946666666667,
+    "avg_loss": -1222.5390178571429,
+    "worst_month": -5111.800000000002,
+    "worst_month_name": "2023-12",
+    "max_dd": -7478.34,
+    "total_x2": 101933.11000000002,
+    "exits": {
+     "lock": 231,
+     "be10": 92,
+     "time": 58,
+     "istop": 46
+    },
+    "account_ok": true,
+    "days": 250
+   },
+   "L500": {
+    "n": 413,
+    "win": 0.6755447941888619,
+    "total": 120728.62000000001,
+    "avg_net": 292.3211138014528,
+    "avg_win": 1060.336989247312,
+    "avg_loss": -1306.7567164179106,
+    "worst_month": -7253.750000000002,
+    "worst_month_name": "2023-12",
+    "max_dd": -14510.660000000002,
+    "total_x2": 111969.09999999999,
+    "exits": {
+     "lock": 172,
+     "l500": 98,
+     "time": 82,
+     "istop": 61
+    },
+    "account_ok": true,
+    "days": 247
+   },
+   "LBE1000": {
+    "n": 413,
+    "win": 0.6755447941888619,
+    "total": 105089.5,
+    "avg_net": 254.45399515738498,
+    "avg_win": 1004.2827956989248,
+    "avg_loss": -1306.7567164179106,
+    "worst_month": -7491.260000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -15167.66,
+    "total_x2": 96345.62999999996,
+    "exits": {
+     "lock": 269,
+     "time": 83,
+     "istop": 61
+    },
+    "account_ok": true,
+    "days": 247
+   },
+   "IDX": {
+    "n": 413,
+    "win": 0.6755447941888619,
+    "total": 105089.5,
+    "avg_net": 254.45399515738498,
+    "avg_win": 1004.2827956989248,
+    "avg_loss": -1306.7567164179106,
+    "worst_month": -7491.260000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -15167.66,
+    "total_x2": 96345.62999999996,
+    "exits": {
+     "lock": 266,
+     "time": 83,
+     "istop": 61,
+     "idx": 3
+    },
+    "account_ok": true,
+    "days": 247
+   },
+   "LK500": {
+    "n": 437,
+    "win": 0.7597254004576659,
+    "total": 83177.70999999999,
+    "avg_net": 190.33800915331807,
+    "avg_win": 610.2000903614457,
+    "avg_loss": -1137.2259047619045,
+    "worst_month": -5163.109999999995,
+    "worst_month_name": "2024-04",
+    "max_dd": -6857.159999999993,
+    "total_x2": 73731.36,
+    "exits": {
+     "lock": 347,
+     "time": 46,
+     "istop": 44
+    },
+    "account_ok": true,
+    "days": 253
+   },
+   "ST1500": {
+    "n": 431,
+    "win": 0.5986078886310905,
+    "total": 66568.41,
+    "avg_net": 154.45106728538283,
+    "avg_win": 1041.8877519379846,
+    "avg_loss": -1169.0094219653179,
+    "worst_month": -6489.9400000000005,
+    "worst_month_name": "2023-12",
+    "max_dd": -16532.060000000005,
+    "total_x2": 57297.50000000003,
+    "exits": {
+     "lock": 245,
+     "pstop": 91,
+     "time": 67,
+     "istop": 28
+    },
+    "account_ok": true,
+    "days": 251
+   },
+   "FT3PO": {
+    "n": 405,
+    "win": 0.674074074074074,
+    "total": 100018.3,
+    "avg_net": 246.95876543209877,
+    "avg_win": 1001.9169230769231,
+    "avg_loss": -1314.4319696969699,
+    "worst_month": -7491.260000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -15826.420000000002,
+    "total_x2": 91473.16999999997,
+    "exits": {
+     "lock": 263,
+     "time": 81,
+     "istop": 61
+    },
+    "account_ok": true,
+    "days": 244
+   },
+   "VIX313": {
+    "n": 350,
+    "win": 0.6828571428571428,
+    "total": 103394.91000000002,
+    "avg_net": 295.4140285714286,
+    "avg_win": 1036.5541422594144,
+    "avg_loss": -1300.3741441441437,
+    "worst_month": -6144.750000000001,
+    "worst_month_name": "2023-12",
+    "max_dd": -13154.089999999998,
+    "total_x2": 95926.38999999997,
+    "exits": {
+     "lock": 234,
+     "time": 65,
+     "istop": 51
+    },
+    "account_ok": true,
+    "days": 213
+   },
+   "EXP": {
+    "n": 366,
+    "win": 0.6912568306010929,
+    "total": 114080.29000000001,
+    "avg_net": 311.694781420765,
+    "avg_win": 1015.5428458498025,
+    "avg_loss": -1264.1774336283188,
+    "worst_month": -5260.420000000002,
+    "worst_month_name": "2023-12",
+    "max_dd": -12936.820000000002,
+    "total_x2": 106426.89999999998,
+    "exits": {
+     "lock": 242,
+     "time": 72,
+     "istop": 52
+    },
+    "account_ok": true,
+    "days": 233
+   },
+   "ADX20": {
+    "n": 290,
+    "win": 0.7137931034482758,
+    "total": 98613.54999999999,
+    "avg_net": 340.046724137931,
+    "avg_win": 1068.2312077294687,
+    "avg_loss": -1476.0278313253013,
+    "worst_month": -5906.06,
+    "worst_month_name": "2023-12",
+    "max_dd": -14373.730000000005,
+    "total_x2": 92257.60999999999,
+    "exits": {
+     "lock": 204,
+     "time": 46,
+     "istop": 40
+    },
+    "account_ok": true,
+    "days": 189
+   },
+   "NTHR_grid": {
+    "-100.0": {
+     "n": 1403,
+     "win": 0.6429080541696365,
+     "total": 115124.19999999998
+    },
+    "-50.0": {
+     "n": 769,
+     "win": 0.6566970091027308,
+     "total": 112415.40999999999
+    },
+    "50.0": {
+     "n": 158,
+     "win": 0.7721518987341772,
+     "total": 69710.56
+    },
+    "100.0": {
+     "n": 82,
+     "win": 0.8292682926829268,
+     "total": 62720.66000000001
+    },
+    "150.0": {
+     "n": 52,
+     "win": 0.8461538461538461,
+     "total": 49634.64999999999
+    },
+    "200.0": {
+     "n": 33,
+     "win": 0.8787878787878788,
+     "total": 35998.83
+    }
+   },
+   "NTHR_chosen": 50.0,
+   "NTHR": {
+    "n": 158,
+    "win": 0.7721518987341772,
+    "total": 69710.56,
+    "avg_net": 441.20607594936706,
+    "avg_win": 1045.1081967213115,
+    "avg_loss": -1605.3511111111106,
+    "worst_month": -3429.8299999999995,
+    "worst_month_name": "2026-02",
+    "max_dd": -7040.669999999998,
+    "total_x2": 66145.16999999998,
+    "exits": {
+     "lock": 120,
+     "time": 22,
+     "istop": 16
+    },
+    "account_ok": true,
+    "days": 107
+   },
+   "design_passing": [
+    "BE10",
+    "EXP"
+   ],
+   "COMBO_parts": [
+    "BE10",
+    "EXP"
+   ],
+   "COMBO": {
+    "n": 379,
+    "win": 0.7598944591029023,
+    "total": 115837.38,
+    "avg_net": 305.6395250659631,
+    "avg_win": 783.6052083333333,
+    "avg_loss": -1207.043076923077,
+    "worst_month": -4227.920000000003,
+    "worst_month_name": "2023-12",
+    "max_dd": -6551.640000000003,
+    "total_x2": 107789.34000000001,
+    "exits": {
+     "lock": 206,
+     "be10": 85,
+     "time": 49,
+     "istop": 39
+    },
+    "account_ok": true,
+    "days": 236
+   }
+  }
+ },
+ "_regated": "gates re-derived from the stored numbers with the paisa comparison (17 Nov); no data re-read"
+}

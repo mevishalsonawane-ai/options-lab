@@ -135,6 +135,24 @@ Boss asked for data **from Nov 2024 only** (20 Oct), so every request this time 
   2026; `lake_fetch` now asks such windows again in 10-day pieces (`LAKE_SPLIT_FIRST=1` does so at once). MCX option
   history takes 15–30 s a request. The account was rate limited (DH-904) for several short spells.
 
+## Gap fill of 20 Oct - 13 Nov 2026 (R185, 16 Nov 2026)
+
+Fetched by `research/hunt/r185_absorption_year/r185fetch.py` for NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and SENSEX: the
+index 1-minute bars (`/charts/intraday`) and the rolling WEEK index options, expiry code 1, ATM-10..ATM+10, CALL and PUT
+(`/charts/rollingoption`, **one trading day per request**: since about 29 Oct 2026 longer windows answer DH-905;
+`fromDate = D, toDate = D + 1` answers both days, the fetcher keeps D). Same columns and timestamps as the lake files.
+
+* **Where:** `gdrive:IraAlgo-data-lake/options_rolling_1m/opt_<IDX>_WEEK_2026_gap1113.parquet` and
+  `gdrive:IraAlgo-data-lake/index_1m/index_1m_<IDX>_2026_gap1113.parquet` (next to the yearly files, which still end on
+  19 Oct 2026), and the raw per-request chunks plus a `MANIFEST.json` in `gdrive:IraAlgo-data-lake/dhan/<IDX>/`
+  (verified with `rclone check`). Not in git, not in `CATALOG.json`; the aggregate manifests (days, rows, gaps) are in
+  `research/hunt/r185_absorption_year/results/data_manifest_<IDX>.json`.
+* **Checked:** NIFTY option closes against the phone's 1-second recordings (15 Oct - 13 Nov 2026): 72,623 minutes,
+  median gap Rs 0.30, 87% within 1% (`research/hunt/r185_absorption_year/results/validation.json`); expiry code 1 is the
+  nearest expiry (code 0 is refused, code 2 is the next one).
+* **No second-level history at Dhan:** `/charts/intraday` with interval "1s" returns empty arrays and
+  `/charts/rollingoption` accepts 1, 5, 15 and 60 minutes only (checked 16 Nov 2026).
+
 ## Known gaps in this download (updated 2026-10-15)
 
 * **Index data, appended on 14/15 Oct.** Index daily (incl. INDIAVIX), index 1-minute (7 indices), continuous futures

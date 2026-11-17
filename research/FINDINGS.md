@@ -1932,3 +1932,132 @@ gates. C1 -Rs 2,000 stop + lock +Rs 1,000 once +Rs 2,000; C2 day cap (no new ent
   and lock never beat random exit minutes (best p 0.19). The day cap blocks afternoon recoveries.
 - **Lead:** the 10:00 cut alone beat random skips at 3 lots (p 0.025 R72, 0.033 R51), tested only with C1's exits.
 - **R151's picker (live) already cuts red days by about 40% at the same profit** (R72, 1 lot, second look).
+
+## Skipping "sideways" markets on R51 / R72 (R183, 15 Nov 2026) - no filter helps; keep picker + breakeven
+`hunt/r183_sideways_filter/results/report.md`. Boss: "How could we ignore sideways markets" (after 58 paper trades on
+9 - 13 Nov won 41%). Signal source: the arm's own index, bars strictly before the signal bar. 16 filters (ADX, efficiency
+ratio, TWAP crossings, range so far, Choppiness) on today's live rules (R179 V4), selected on 20 Nov 2024 - 19 Oct 2025.
+- **R72: none beat today's rules** on the selection year (each cut Rs 32k - Rs 1.62 L off Rs 2.99 L, 1,043 trades).
+- **R51: 7+ TWAP crossings chosen** (+Rs 24.9k there), then **failed** on 20 Oct 2025 - 19 Oct 2026: Rs 2.19 L on 1,232
+  trades vs Rs 2.50 L on 1,367; random skips of 135 trades averaged Rs 2.25 L (p 0.60, BH q 1.00, m = 4,376).
+- Quiet-day filters (low range, ADX, efficiency) remove the big breakout winners these arms live on; on 9 - 13 Nov the
+  chosen filter would have skipped none of R51's 23 checkable paper trades (descriptive).
+
+## Absorption and exhaustion as option-buying rules (R184, 16 Nov 2026) - exhaustion rejected, absorption too few trades
+`hunt/r184_absorption_exhaustion/results/report.md`. Boss: "Now check absorption and exhaustion technique in options
+buying." Signal source: the NIFTY / BANKNIFTY near index future's own minute price and 1-second tick-rule delta (day's
+own references); trade: 1 lot of the recorded ATM option; -15% premium stop, breakeven at +10%, index stop, 15 / 30-minute
+time stop. 32 versions per setup chosen on 15 Oct - 3 Nov (13 days), holdout 4 - 13 Nov (7 days) read once.
+- **Exhaustion** (climax at a new 15 / 30-minute extreme, then dry-up, stall and a delta flip): holdout 36 trades, 22%
+  won, Rs -5,800; no better than random entries at the same minutes (twin p 0.45 NIFTY, 0.24 BANKNIFTY).
+- **Absorption** (heavy w-minute delta while price holds within 3-6 bp, then a turn): holdout 14 trades, Rs +4,411
+  (8 NIFTY, 6 BANKNIFTY: under the pre-registered 10), twin p 0.39 / 0.25; calls in the rally made it (puts lost).
+- All 8 tests BH q 1.0 (m = 4,512). 20 days can only detect an edge of about Rs 850-1,950 a trade; most of the 128
+  design versions lost. The 1-second recorder drops big unchanged-price prints (R182), the very prints absorption reads.
+
+## Absorption and exhaustion on a full year (R185, 16 Nov 2026) - 9 of 10 lose money; FINNIFTY absorption +Rs 20k is inconclusive
+`hunt/r185_absorption_year/results/report.md`. Boss asked for R184 re-tested on a year of Dhan minute data. Dhan has no
+index futures minute volume for past years and **no second-level history**, so the signal source is the index's own
+1-minute price with the ATM-2..+2 options' volume as context (BVC flow; labelled option-volume context). R184's rules,
+grid and exits unchanged; 1 lot ATM option; real charges; selected on 20 Nov 2024 - 19 Oct 2025 (both halves had to beat
+zero and random twins), final 20 Oct 2025 - 19 Oct 2026 read once. Dhan's option minutes matched the phone's 1-second
+recordings (72,623 minutes, median gap Rs 0.30).
+- **NIFTY: no version passed the selection** (absorption 1 of 32 net > 0, exhaustion 0 of 32).
+- Final year, fallback versions: **absorption 451 trades, 26% won, Rs -50,042** (twins Rs -105 a trade, p 0.54; worst
+  month Rs -13,085, drawdown Rs 51.8k - outside the account stop rule); **exhaustion 888 trades, 38% won, Rs -30,656**
+  (Rs -34 a trade, better than random entries' Rs -91, p 0.022, but below zero; BH q 1.0, m = 4,852).
+- **BANKNIFTY: no version passed the selection either** (true lot by day, Amendment A). Final year, fallback versions:
+  **absorption 203 trades, 46% won, Rs -21,339** (Rs -105 a trade vs random Rs -129, p 0.35); **exhaustion 980 trades,
+  36% won, Rs -1,00,340** (Rs -102 a trade vs random Rs -148, p 0.058; worst month Rs -23,061, drawdown Rs 1.03 L); q 1.0.
+- **FINNIFTY: absorption passed the selection** (ABS w5 k2 b6 turn T30: 118 trades, Rs 17,629, twin p 0.003) and in the
+  final year made **Rs 20,097 on 205 trades, 41% won** (Rs 98 a trade vs random entries' Rs -58, twin p 0.037; Rs 13,329
+  at 2x slippage; worst month Rs -7,854, drawdown Rs 12.7k) - but **BH q 1.0** across m = 4,852 and the mean is not
+  clearly above zero (p 0.08): inconclusive, worth a forward test only. FINNIFTY exhaustion: nothing passed; final year
+  819 trades, 31% won, Rs -45,338 (q 1.0), rejected. (FINNIFTY options were not recorded by the phone, so Dhan's
+  FINNIFTY bars could not be cross-checked.)
+- **MIDCPNIFTY: nothing passed the selection.** Final year, fallback versions: absorption 445 trades, 38% won, Rs -43,349
+  (worst month Rs -10,880); exhaustion 834 trades, 30% won, Rs -1,13,568 (worst month Rs -29,435, drawdown Rs 1.14 L);
+  q 1.0, both rejected.
+- **SENSEX: nothing passed the selection.** Final year, fallback versions: absorption 165 trades, 27% won, Rs -8,838;
+  exhaustion 891 trades, 31% won, Rs -2,711 (better than random entries' Rs -87 a trade, p 0.007, but not above zero);
+  q 1.0, both rejected.
+- **All five indices:** 9 of 10 setups lost money in the final year; only FINNIFTY absorption made money (Rs 20,097 on 205
+  trades), and it does not survive the multiple-testing correction - a frozen-rule forward test on new days is the only
+  honest next step. Estimated flow from price cannot see true absorption (volume that fails to move price): a real
+  order-flow test needs tick or second-level data (the phone's own recordings as they grow, or bought tick history).
+- NIFTY's selection re-run with the true lots (descriptive) still has no eligible version.
+
+## A hard fixed profit (Rs 1,000 / 1,250 / 1,500 a lot) and a Rs 500 step lock on Liquidity, R51, R72 (R186, 16 Nov 2026) - 0 of 15 pass (+ 0 of 9, 0 of 6 in Amendments B, C); keep today's rule
+
+Boss asked what a hard Rs 1,000-1,500 a lot profit target would do, and noted trades that reach +Rs 1,000 / 1,500 / 2,000
+and then end negative. Base = the app's rule (own stop + breakeven at +10%; R151 picker on R72 / R51). Year 20 Oct 2025 -
+19 Oct 2026, 1 lot, after charges; signal source: the index; only the option exit changes. Details:
+`research/hunt/r186_fixed_profit/results/summary.md`.
+
+- **Every target cuts profit hard.** Year net, base -> Rs 1,000 / 1,250 / 1,500 target: R72 Rs 3.25 L (1,069 trades) ->
+  Rs 1.20 L / 1.38 L / 1.52 L; R51 Rs 2.50 L (1,367) -> Rs 81,803 / 1.03 L / 1.46 L; Liquidity Rs 1.00 L (688) ->
+  Rs 10,282 / 8,348 / 11,998. Win rate rises (R72 56.6% -> 65.6% at Rs 1,000) but the average win falls to about
+  Rs 1,000 while the average loss stays about Rs 1,500-1,600.
+- **About half the trades a target closes would have made more** (R72 Rs 1,000: 310 of 648, Rs 5.89 L given up vs
+  Rs 4.26 L saved on the rest).
+- **Rs 500 step lock (+1,000 -> lock +500, then Rs 500 under each step):** R72 Rs 2.13 L, R51 Rs 1.63 L, Liquidity
+  Rs 19,404. **Breakeven once +Rs 1,000:** R72 Rs 2.66 L, R51 Rs 2.06 L, Liquidity Rs 98,239. Both below the base.
+- **The give-back is real but pays for itself:** under the base, 102 of 621 R72 trades that reached +Rs 1,000 a lot ended in
+  a loss (22.0% of all 464 losers), R51 120 of 737 (19.7% of 609), Liquidity 56 of 253 (13.9% of 404). In 21 Oct - 13 Nov
+  2026 (the lake's gap files) it was higher: about a third of R72 / R51 losers (R72 19 of 56, R51 14 of 45).
+- All 15 tests fail (net below the base in the year and Apr - Oct 2026; twin BH q 1.00 with m = 4,867). Nothing changes.
+- **Amendment B (0 of 9 pass, m = 4,876):** 60% lock after +Rs 1,000 (P60): year R72 Rs 2.03 L, R51 Rs 1.64 L,
+  Liquidity Rs 15,313; index lock (sell when the index closes back through its entry level once +Rs 1,000; signal on the
+  index): R72 Rs 2.52 L, R51 Rs 1.91 L, Liquidity Rs 85,036; split exit at 3 lots (1 lot at +Rs 1,000, the rest to
+  breakeven): R72 Rs 7.38 L vs Rs 10.81 L, R51 Rs 5.93 L vs Rs 8.88 L, Liquidity Rs 2.06 L vs Rs 3.58 L.
+- **Amendment C (0 of 6 pass, m = 4,882): a Rs 1,000 or Rs 1,500 a lot stop on V5** (the app's rule now: picker + own
+  stop + breakeven at +10% + L500 on R72 / R51; own stop + breakeven + LBE1000 on Liquidity), as R179's M1 / M15 (net after
+  charges and expected slippage, only where tighter than -15%, a real stop order). Year, 1 lot, V5 -> +Rs 1,500 -> +Rs 1,000:
+  R72 Rs 2,13,110 (1,097 trades, 64.4%) -> Rs 1,52,306 (58.0%) -> Rs 1,36,891 (50.4%); R51 Rs 1,62,959 (1,430, 62.7%) ->
+  Rs 72,074 -> Rs 49,797 (and -Rs 7,484 in Apr - Oct 2026); Liquidity Rs 98,239 (688) -> Rs 89,180 -> Rs 76,543. The Rs 1,000
+  stop closed 479 R72 / 621 R51 / 222 Liquidity trades, of which 152 / 186 / 34 would have ended in profit under V5. It
+  halves the worst day on R72 but raises the max drawdown on R72 and R51. 21 Oct - 13 Nov 2026 (gap files, descriptive):
+  R72 Rs 9,481 -> -Rs 12,107 -> -Rs 20,812; R51 Rs 25,448 -> Rs 17,164 -> Rs 11,239; Liquidity Rs 4,575 -> Rs 5,667 ->
+  Rs 9,038. Keep V5 without a rupee stop.
+
+## A multi-layer network over the whole lake to skip trades and pick exits on the ORB family, Liquidity, R51 and R72 (R187, 16 Nov 2026) - 0 of 20 pass
+
+`research/hunt/r187_neural_meta/` (PREREG.md with Amendment A, results/summary.md, results/report.md). Boss: "create a
+neuro network of multiple layers with all the data we have ... make the orb family and other stratergies more profitable
+with more winrate and less loss". Signal source: the index (entries unchanged); option-chain data only as network inputs.
+
+- **The network:** a shared sklearn 3-hidden-layer perceptron (classifier: P(net > 0); regressor: expected net), about 105
+  inputs at the decision minute: the 7 indices' minute bars, India VIX, the rolling options' IV / OI / PCR, R151's 28
+  features and score, R169's ORB features, R183's sideways measures, the arm / index / exit identity. Walk-forward, refit
+  quarterly from Apr 2025 (4,337 - 11,018 training trades), frozen at 31 Mar 2026. Its validation log-loss was 0.69 - 0.81
+  (a constant guess: 0.69): **no skill at the entry minute.**
+- **Uses x arms, 1 lot, year 20 Oct 2025 - 19 Oct 2026** (base = the app today: V5 on R72 / R51, BE + LBE1000 on Liquidity,
+  R169's B0 on ORB): **0 of 20 pass** (BH m = 4,902).
+  - Liquidity U1 (skip): 564 trades, 46.8%, Rs 1,22,326 vs 688, 44.5%, Rs 98,239; worst month -Rs 24,346 vs -Rs 32,670.
+    Every gate but the twins' (p 0.024, q 1.0); it made less in the walk-forward year (Rs 1,80,326 vs Rs 1,94,985). A note.
+  - R51 U2 (exit choice): Rs 2,17,180 vs Rs 1,62,959 (1,410 vs 1,430 trades) but 60.4% vs 62.7% wins; random exits did as
+    well (p 0.30). It only re-finds R186's point that L500 costs R51 money.
+  - ORB / ORB Fresh U1 halved the year's loss (-Rs 11,967 on 88 vs -Rs 22,716 on 237) but lost in the final (-Rs 669 on 39);
+    random skips as good (p 0.72). ORB Sweep loses under every use. A network picker in place of R151's (U4) made far less.
+- **New month (21 Oct - 13 Nov 2026, descriptive):** no use changes the picture (e.g. Liquidity 40 trades Rs 4,658 vs 43 /
+  Rs 4,575; R51 U2 131 / Rs 28,793 vs 142 / Rs 25,448).
+- **Not simulated:** Range Fade, S5 Trail, CISD S3-V2-E3, FT3, Night, VIX divergence, Hero (reasons in the summary).
+- **Verdict:** nothing changes in the app. The ORB family stays parked; R151's picker and V5 stay.
+
+## S5 Trail and CISD + network: more money AND more wins? (R188, 17 Nov 2026) - 0 of 23 pass
+`hunt/r188_s5_cisd/results/report.md`. Boss: "Cam we make s5,csid more profitable and more winrate". 1 lot, dated
+charges, liquidity-aware fills. Signal source: the index (S5: R123's network; CISD: the index's 5-minute bars).
+- **Rebuilt exactly first.** R123's saved network outputs (Drive, `derived/r123/cleaned`) reproduce R128's S5 (555 /
+  41 trades, +Rs 240 / +Rs 561 a trade) and R133's CISD (413 of 3,291 setups, 69% won, +Rs 261; 35 seen-holdout
+  trades) trade by trade to the paisa; R134's rebuilt network reproduces R123's 1 - 19 Oct forecasts exactly.
+- **Base = the app** (out by 15:15): S5 design 562 trades, 58.5%, Rs 1.29 lakh (drawdown -Rs 49.5k, worst month
+  -Rs 19.3k: breaks the account stop); final (Apr - Oct 2026, base seen before) 40, 85.0%, Rs 25.0k. CISD design 413,
+  67.6%, Rs 1.05 lakh; final 35, 71.4%, Rs 3.2k.
+- **Exits** (+10% breakeven, R186's step lock, breakeven at +Rs 1,000, index lock, the 60% lock from +Rs 500, a
+  -Rs 1,500 stop): on both arms they raise the win rate and lower profit, or the reverse; none does both in design and
+  final. On CISD, breakeven at +Rs 1,000 and the index lock never act (the 60% lock always comes first).
+- **Entry skips** (price and OI fell, VIX down > 3.13%, expiry day, ADX < 20; CISD's network threshold, +50 chosen on
+  design): nearest miss **CISD skip expiry days** - design 366 trades, 69.1%, Rs 1.14 lakh; final 34, 73.5%,
+  Rs 3.4k - but its final worst month and drawdown equal the base's. The stricter network keeps 10 final trades.
+- **The twin gate cannot be met** with 500 twins at m 4,925 (said in PREREG). New month (21 Oct - 13 Nov): S5 3 trades
+  +Rs 3.8k, CISD 8 trades +Rs 6.6k with today's rules; too small to judge. Keep both arms as they are.

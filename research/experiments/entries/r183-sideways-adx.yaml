@@ -1,0 +1,35 @@
+id: r183-sideways-adx
+title: 'R183: skip R51 / R72 entries when the index is sideways by adx (on picker + breakeven, 1 lot)'
+family: daily-filters
+date: '2026-11-15'
+doc: research/hunt/r183_sideways_filter/results/report.md
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index the arm signals on (1-minute / 5-minute bars strictly before the signal bar); no option prices'
+settings: research/hunt/r183_sideways_filter/r183lib.py; PREREG.md section 3
+prereg: research/hunt/r183_sideways_filter/PREREG.md
+hypothesis: 'Boss: ''How could we ignore sideways markets''. Skipping new R51 / R72 entries when the index is sideways (ADX(14)
+  on 5-minute index bars below 15 / 20 / 25) improves today''s live rules (R179 V4).'
+period:
+  design: 2024-11-20..2025-10-19 (selection; halves to / from 1 May 2025)
+  holdout: '2025-10-20..2026-10-19 (not tested for this kind: not chosen)'
+model_or_rule: skip when ADX(14) on 5-minute index bars below 15 / 20 / 25; a skipped entry still holds its side (post-walk,
+  as the app's picker)
+variants_tried: 6
+results:
+  summary: 'R72 (B Rs 299,254, 1043 trades): ADX15 Rs 259,531 (906 trades; gain H1 -Rs 15,388 / H2 -Rs 24,335), ADX20 Rs 238,215
+    (698 trades; gain H1 -Rs 16,372 / H2 -Rs 44,667), ADX25 Rs 153,809 (459 trades; gain H1 Rs 842 / H2 -Rs 146,287) | R51
+    (B Rs 224,212, 1352 trades): ADX15 Rs 132,569 (1161 trades; gain H1 -Rs 39,458 / H2 -Rs 52,185), ADX20 Rs 166,108 (856
+    trades; gain H1 -Rs 21,162 / H2 -Rs 36,943), ADX25 Rs 157,179 (536 trades; gain H1 Rs 10,113 / H2 -Rs 77,146).'
+  costs: dated Zerodha charges on the whole quantity; R17 fills
+holdout_read: false
+verdict: rejected
+notes: BH m = 4,376 (32 selection comparisons + 1 test). No variant of this kind qualified (beat B in both halves). Nothing
+  in the app changes.

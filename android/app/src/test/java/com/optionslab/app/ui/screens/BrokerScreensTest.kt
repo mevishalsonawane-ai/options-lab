@@ -751,6 +751,21 @@ class BrokerScreensTest {
         assertFalse(shown("Confirm it is you"))
     }
 
+    /**
+     * 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): every arm now puts a missing live stop back at Zerodha, so
+     * the "Keep a stop-loss order at the exchange" switch is gone; Settings → Zerodha says so instead, with Boss's own cancel respected.
+     */
+    @Test fun theExchangeStopSwitchIsGoneAndThePageSaysStopsAreAlwaysAtZerodha() {
+        BrokerArea.saveKeys()
+        val m = model()
+        page(m)
+        node(EXCHANGE_STOPS_NOTE).assertExists()
+        assertTrue(EXCHANGE_STOPS_NOTE.contains("A stop you cancel yourself in Kite is not put back"))
+        assertTrue(EXCHANGE_STOPS_NOTE.contains("the exchange or Zerodha refused or cancelled"))
+        assertEquals("no switch left", 0, compose.onAllNodes(isToggleable() and hasText("Keep a stop-loss order", substring = true))
+            .fetchSemanticsNodes().size)
+    }
+
     // ---- static IP and the relay ------------------------------------------------------------------------
 
     private fun ipCard(m: AppModel) = show { StaticIpCard(m) { ipReads++; ipStatus } }

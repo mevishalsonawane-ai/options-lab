@@ -63,7 +63,9 @@ notes; match the surrounding code.
     - One exception, chosen by Boss on 28 Oct ("add S5 trail to arms directly; if it does not perform I will turn it
       off"): R128's S5 Trail, R123's morning network pick (an ATM option, nearly always a put) with its cell's stop
       (−₹1,000 or −₹2,000 net) and a 60% profit lock after +₹1,000, runs as a PAPER arm although it failed the gates
-      (41 holdout trades, worst month −₹18.6k).
+      (555 walk-forward trades, worst month −₹18.6k in Sep 2024; 41 holdout trades, worst month −₹2,328 in Apr 2026.
+      Corrected 17 Nov by R188, which rebuilt R128 trade by trade: the −₹18.6k month is in the walk-forward period, not
+      the holdout).
       - It is labelled "failed gates, Boss's exception" wherever it is shown.
       - Boss can switch it off in one tap.
       - Live: like every arm since Boss's 30 Oct choice (below), only through the live gates.
@@ -143,6 +145,10 @@ notes; match the surrounding code.
   - after any restart or low-memory kill, the open positions and their stops are restored and watched FIRST, before any
     other start-up work;
   - live stops and targets also rest at the broker where possible (SL/GTT), so a dead phone cannot miss them.
+    Boss, 16 Nov ("All the stops and profit locks should be on zerodha"): a live stop of Liquidity 15+5 or any ORB-family arm
+    that is missing at Zerodha (not placed, or cancelled or refused by the exchange or Zerodha) is always put back there on the
+    next check (no setting); never beside a square-off's or the arm's own working sale, at the 15:05 expiry square-off, from
+    15:10 or with Stop for today. A stop Boss cancelled in Kite is never put back: the app watches the level and sells there.
   Every change that touches background work must test this.
 - Nothing about the account is spoken on a locked phone.
 - Market times: NSE F&O closes 15:40, index/cash 15:30, expiry square-off 15:05.

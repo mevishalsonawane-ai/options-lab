@@ -1,0 +1,37 @@
+id: r183-sideways-range-so-far
+title: 'R183: skip R51 / R72 entries when the index is sideways by range-so-far (on picker + breakeven, 1 lot)'
+family: daily-filters
+date: '2026-11-15'
+doc: research/hunt/r183_sideways_filter/results/report.md
+data_version: Drive lake gdrive:IraAlgo-data-lake copied 15 Nov 2026, ending 19 Oct 2026; R51 Amendment A clean stores built
+  to 19 Oct (R106 clean_post)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index the arm signals on (1-minute / 5-minute bars strictly before the signal bar); no option prices'
+settings: research/hunt/r183_sideways_filter/r183lib.py; PREREG.md section 3
+prereg: research/hunt/r183_sideways_filter/PREREG.md
+hypothesis: 'Boss: ''How could we ignore sideways markets''. Skipping new R51 / R72 entries when the index is sideways (today''s
+  range so far below 40% / 60% of ADR20, or below 70% / 85% of the usual range by this time) improves today''s live rules
+  (R179 V4).'
+period:
+  design: 2024-11-20..2025-10-19 (selection; halves to / from 1 May 2025)
+  holdout: '2025-10-20..2026-10-19 (not tested for this kind: not chosen)'
+model_or_rule: skip when today's range so far below 40% / 60% of ADR20, or below 70% / 85% of the usual range by this time;
+  a skipped entry still holds its side (post-walk, as the app's picker)
+variants_tried: 8
+results:
+  summary: 'R72 (B Rs 299,254, 1043 trades): RF40 Rs 197,408 (792 trades; gain H1 -Rs 42,113 / H2 -Rs 59,733), RF60 Rs 168,056
+    (517 trades; gain H1 -Rs 6,013 / H2 -Rs 125,185), RT70 Rs 249,465 (863 trades; gain H1 -Rs 9,514 / H2 -Rs 40,276), RT85
+    Rs 247,607 (686 trades; gain H1 -Rs 1,845 / H2 -Rs 49,802) | R51 (B Rs 224,212, 1352 trades): RF40 Rs 64,985 (861 trades;
+    gain H1 -Rs 103,088 / H2 -Rs 56,140), RF60 Rs 42,870 (413 trades; gain H1 -Rs 79,729 / H2 -Rs 101,613), RT70 Rs 173,294
+    (1046 trades; gain H1 -Rs 43,956 / H2 -Rs 6,962), RT85 Rs 183,848 (804 trades; gain H1 -Rs 30,905 / H2 -Rs 9,459).'
+  costs: dated Zerodha charges on the whole quantity; R17 fills
+holdout_read: false
+verdict: rejected
+notes: BH m = 4,376 (32 selection comparisons + 1 test). No variant of this kind qualified (beat B in both halves). Nothing
+  in the app changes.

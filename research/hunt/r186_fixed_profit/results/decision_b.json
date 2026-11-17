@@ -1,0 +1,162 @@
+{
+ "LIQ:P60": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 1,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 15313,
+  "base_net_year": 100222,
+  "net_final": -27118,
+  "base_net_final": 6432
+ },
+ "R72:P60": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 1,
+  "q_own": 0.9925,
+  "twin_p": 0.4411,
+  "net_year": 202696,
+  "base_net_year": 324629,
+  "net_final": 101461,
+  "base_net_final": 167233
+ },
+ "R51:P60": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 1,
+  "q_own": 1.0,
+  "twin_p": 0.6447,
+  "net_year": 164016,
+  "base_net_year": 249903,
+  "net_final": 55093,
+  "base_net_final": 144802
+ },
+ "LIQ:IDX": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 1,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 85036,
+  "base_net_year": 100222,
+  "net_final": 14173,
+  "base_net_final": 6432
+ },
+ "R72:IDX": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 1,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 251893,
+  "base_net_year": 324629,
+  "net_final": 121942,
+  "base_net_final": 167233
+ },
+ "R51:IDX": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 1,
+  "q_own": 1.0,
+  "twin_p": 1.0,
+  "net_year": 191310,
+  "base_net_year": 249903,
+  "net_final": 95773,
+  "base_net_final": 144802
+ },
+ "LIQ:SPLIT": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "not positive in every period",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 3,
+  "q_own": 0.2454,
+  "twin_p": 0.0818,
+  "net_year": 205658,
+  "base_net_year": 358180,
+  "net_final": -2157,
+  "base_net_final": 47831
+ },
+ "R72:SPLIT": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in early, final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 3,
+  "q_own": 0.009,
+  "twin_p": 0.002,
+  "net_year": 737573,
+  "base_net_year": 1080773,
+  "net_final": 339157,
+  "base_net_final": 553161
+ },
+ "R51:SPLIT": {
+  "passed": false,
+  "fails": [
+   "net below the base (year or final)",
+   "twin BH q 1.00 > 0.10",
+   "outside the account stop rule in early, final, six, year"
+  ],
+  "q": 1.0,
+  "passed_except_account_stop": false,
+  "lots": 3,
+  "q_own": 0.009,
+  "twin_p": 0.002,
+  "net_year": 593070,
+  "base_net_year": 887796,
+  "net_final": 256800,
+  "base_net_final": 488815
+ },
+ "_m": {
+  "tests": 9,
+  "prior": 4867,
+  "total": 4876
+ }
+}
