@@ -1,0 +1,28 @@
+id: r197-g1-o0-s100-tn
+title: 'R197 80% win-rate grid (side study): G1-o0-s100-tN - NIFTY 09:20 short straddle, stop per leg at +100% of its fill,
+  no target'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R197_WINRATE80.md
+hypothesis: this setting wins >= 80% of trades AND makes money after costs (the selection rule takes the best such grid test)
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 Amendment A clean held contracts, 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 is a second look (R195 read it); forward window from 2026-11-16 not read
+instruments:
+- NIFTY
+features:
+- 'signal source: none directional (strikes from the index)'
+- stops and targets on the option premium
+model_or_rule: NIFTY 09:20 short straddle, stop per leg at +100% of its fill, no target
+settings: research/hunt/r197_winrate80/r197study.py; PREREG.md section 3
+prereg: research/hunt/r197_winrate80/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 1092 tr, win 58.9% (Wilson 55.9%-61.8%), net Rs 187,863, avg win Rs 1,955, avg loss Rs 2,382, break-even
+    win 54.9%; 2026 second look 214 tr, win 59.8%, net Rs 26,684; BH q 1.00 (m = 4,877). Not selected: below 80% wins in design
+    (no grid test reached 80%).'
+  costs: dated Zerodha charges, R103 'liq' slippage (stops doubled), today's lot every year
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''get me 80% winrate''). The app stays buy-only.'

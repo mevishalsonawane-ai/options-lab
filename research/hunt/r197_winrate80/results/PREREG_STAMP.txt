@@ -1,0 +1,1 @@
+PREREG.md sha256 c56dc22906ab3ddbd01d3f6d682f7a943dcd64cbcd99b0217dd011371f7a0482 at 2026-11-18T04:27:16Z (written before any R197 P&L)

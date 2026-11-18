@@ -18,11 +18,12 @@ import r195engine as E  # noqa: E402
 
 
 def run_short_pair(D, und, d, legs, decide, expiry, expiry_day, leg_stop=None, comb_stop=None, sl_to_cost=False,
-                   lock=None, mult=1.0, tag=""):
+                   lock=None, mult=1.0, tag="", target=None):
     """legs: [(side, strike), ...] all SOLD. leg_stop: a leg exits when its mark >= leg_stop x its fill. comb_stop: all
     exit when the open legs' marks summed >= comb_stop x their fills summed. sl_to_cost: after a leg is stopped, every
     other open leg's stop moves down to its own fill. lock = (arm, keep): once the pair's P&L (open legs at marks,
-    closed legs at their exit fills) reaches arm x credit, all exit if it falls to keep x credit."""
+    closed legs at their exit fills) reaches arm x credit, all exit if it falls to keep x credit. target (R197): all exit
+    once that P&L >= target x credit (off by default, so R196's trades are unchanged)."""
     q, bse = K.LOT[und], und in K.BSE
     L = [E.Leg(s, float(k), -1, i) for i, (s, k) in enumerate(legs)]
     er = decide + 1
@@ -73,6 +74,13 @@ def run_short_pair(D, und, d, legs, decide, expiry, expiry_day, leg_stop=None, c
             for i in range(len(L)):
                 if xrow[i] is None:
                     level[i] = min(level[i], entry[i])
+        if target is not None:
+            pnl_t = sum((entry[i] - (M[i, j] if xrow[i] is None else xpx[i])) * q for i in range(len(L)))
+            if pnl_t >= target * credit:
+                for i in range(len(L)):
+                    if xrow[i] is None:
+                        modelled += close(i, r_next, "target")
+                break
         if lock is not None:
             pnl = sum((entry[i] - (M[i, j] if xrow[i] is None else xpx[i])) * q for i in range(len(L)))
             if pnl >= lock[0] * credit:
