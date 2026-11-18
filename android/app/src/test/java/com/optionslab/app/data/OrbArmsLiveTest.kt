@@ -256,7 +256,20 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertNotNull("not confirmed yet: kept", arm().open)
         assertEquals("TRIGGER PENDING", kite.order(s1).status)
         assertTrue("nothing sent, nothing cancelled", kite.requests.none { it.method != "GET" })
-        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)                // 30 s of reads agreeing
+        // 18 Nov 2026 (review F3): 30 s of reads agreeing with no sale at all in the order book: still kept, its stop resting, Boss told once.
+        fun told() = AutomationSupport.alerts().count { "for 30 s" in it && sym in it }
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
+        pass()
+        assertNotNull("30 s with nothing sold: never dropped", arm().open)
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertEquals("Boss told", 1, told())
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(269)              // 4 min 59 s
+        pass()
+        assertNotNull(arm().open)
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertEquals("told once", 1, told())
+        assertTrue("nothing sent, nothing cancelled", kite.requests.none { it.method != "GET" })
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)                // five minutes of reads agreeing
         pass()
         assertEquals("closed_by_you", arm().today.single().why)
         assertTrue(kite.requests.any { it.method == "DELETE" && it.path == "/orders/regular/$s1" })
@@ -305,6 +318,71 @@ class OrbArmsLiveTest : RobolectricTest() {
         pass()
         assertNull("nothing is held", arm().open)
         assertTrue(kite.placed.isEmpty())
+    }
+
+    /**
+     * 18 Nov 2026 (review F1): Boss's sale of a lot this book already booked "closed_by_you" is no proof that the next lot on the contract
+     * closed: one read showing it gone then closes nothing and leaves its stop resting.
+     */
+    @Test fun aSaleAlreadyBookedClosedByYouNeverConfirmsTheNextLotGone() {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        val booked = position("orb", 30, 200.0, "E0").put("entryTime", ago(40).toString()).put("exit", 205.0)
+            .put("exitTime", ago(10).toString()).put("why", "closed_by_you")
+        state(positions = listOf(booked, position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.soldInKite(sym, 30, 205.0)                                   // Boss's sale of the lot already booked
+        kite.position(sym, 0, 0.0, product = "MIS")                       // then one bad read
+        kite.quote("NFO:$sym", 210.0)
+        kite.requests.clear()
+        pass()
+        assertNotNull("kept", arm().open)
+        assertEquals("its stop rests", "TRIGGER PENDING", kite.order(s1).status)
+        assertTrue("nothing sent, nothing cancelled", kite.requests.none { it.method != "GET" })
+    }
+
+    /** 18 Nov 2026 (review F1): Boss's own buy and sale of the contract in Kite (a round trip of his) never confirms the arm's lot gone. */
+    @Test fun bossesOwnRoundTripInKiteNeverConfirmsItGone() {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(positions = listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.boughtInKite(sym, 30, 201.0)
+        kite.soldInKite(sym, 30, 203.0)
+        kite.position(sym, 0, 0.0, product = "MIS")                       // one bad read
+        kite.quote("NFO:$sym", 210.0)
+        kite.requests.clear()
+        pass()
+        assertNotNull("kept", arm().open)
+        assertEquals("its stop rests", "TRIGGER PENDING", kite.order(s1).status)
+    }
+
+    /**
+     * 18 Nov 2026 (review F4): shown gone but not confirmed, with no stop resting at Zerodha: the arm's own stop exit still goes - it reads
+     * Zerodha again and sells what is really held (here the read was bad: the lot is still there).
+     */
+    @Test fun shownGoneWithNoStopRestingItsOwnStopExitStillGoes() {
+        state(positions = listOf(position("orb", 30, 200.0, "E1", stopId = null, stop = 160.0)))
+        kite.position(sym, 0, 0.0, product = "MIS")                       // the pass's read: gone (a bad read)
+        kite.afterNext("/portfolio/positions") { kite.position(sym, 30, 200.0, product = "MIS") }   // the exit's own read: held
+        kite.quote("NFO:$sym", 150.0, 149.95, 150.05)                     // under its stop
+        kite.requests.clear()
+        pass()
+        val sells = kite.placed.filter { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }
+        assertEquals("its own stop exit went", 1, sells.size)
+        assertEquals("30", sells.single().form["quantity"])
+        assertEquals(0, kite.positions["NFO:$sym:MIS"]?.first ?: 0)
+    }
+
+    /**
+     * 18 Nov 2026 (review F6): a lost buy still searched for (unconfirmed, no order id) is left out of the quantity the arms' live copies
+     * count as explained by this book; a confirmed one counts.
+     */
+    @Test fun aLostBuyStillSearchedForIsNotCountedAsHeldForTheOtherBook() {
+        state(positions = listOf(position("orb", 30, 200.0, entryId = null).put("unconfirmed", true)))
+        arm()
+        assertNull("not counted", OrbArms.liveQtyHint[sym])
+        state(positions = listOf(position("orb", 30, 200.0, "E1")))
+        arm()
+        assertEquals(30, OrbArms.liveQtyHint[sym])
     }
 
     // ---- the profit lock moves the stop at Zerodha (07 Oct, research/HUNT_H20.md F1-F3, F5) ------------------------

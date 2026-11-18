@@ -215,6 +215,33 @@ class FakeKite : Closeable {
         id
     }
 
+    /** 18 Nov 2026 (review F1): Boss buys [qty] of [symbol] himself in the Kite app at [price] (no tag), the position moved by it. Its id. */
+    fun boughtInKite(symbol: String, qty: Int, price: Double, product: String = "MIS", exchange: String = "NFO"): String = synchronized(lock) {
+        val id = (++seq).toString()
+        val o = Order(id, symbol, exchange, "BUY", qty, product, "MARKET", 0.0, 0.0, "", "COMPLETE", filled = qty, avg = price)
+        orders[id] = o
+        move(o, qty)
+        id
+    }
+
+    /**
+     * 18 Nov 2026 (review F2): an order Zerodha refused, in its book as REJECTED (nothing filled, no position moved), placed at [at] and
+     * listed just before order [before] (as Kite lists two orders of the same second: the older first). Its id.
+     */
+    fun rejectedInBook(symbol: String, side: String, qty: Int, tag: String, at: LocalDateTime, before: String? = null, type: String = "MARKET",
+                       product: String = "MIS", exchange: String = "NFO", message: String = "MIS MARKET orders are blocked"): String = synchronized(lock) {
+        val id = (++seq).toString()
+        val o = Order(id, symbol, exchange, side, qty, product, type, 0.0, 0.0, tag, "REJECTED", message = message, at = at)
+        val rest = orders.entries.map { it.key to it.value }
+        orders.clear()
+        for ((k, v) in rest) { if (k == before) orders[id] = o; orders[k] = v }
+        if (id !in orders) orders[id] = o
+        id
+    }
+
+    /** 18 Nov 2026 (review F2): every order trailing the book ([trailReads]) is shown in it from now. */
+    fun showInBook() = synchronized(lock) { trailing.clear() }
+
     /** 18 Nov 2026: the next this many order modifies are refused (Zerodha's InputException), as a stop Zerodha would not move. */
     @Volatile var modifyRefusals = 0
 

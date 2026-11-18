@@ -1533,11 +1533,133 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testNow = t0.plusMinutes(4).plusSeconds(39); watch()
         assertTrue("29 s of short reads: still held", view().closed.isEmpty())
         assertTrue(kite.order(sid).working)
-        // 30 s of reads agreeing: closed outside, its stop confirmed out first.
+        // 18 Nov 2026 (review F3): 30 s of reads agreeing, with no sale at all in the order book: still held, its stop resting, and Boss
+        // told once.
+        fun told() = AutomationSupport.alerts().count { "for 30 s" in it && sym in it }
+        assertEquals(0, told())
         ArmLive.testNow = t0.plusMinutes(4).plusSeconds(40); watch()
+        assertTrue("30 s with nothing sold: never dropped", view().closed.isEmpty())
+        assertTrue(kite.order(sid).working); assertEquals(30, kite.order(sid).qty)
+        assertEquals("Boss told", 1, told())
+        ArmLive.testNow = t0.plusMinutes(7); watch()
+        ArmLive.testNow = t0.plusMinutes(9).plusSeconds(9); watch()
+        assertTrue("4 min 59 s: still held", view().closed.isEmpty())
+        assertTrue(kite.order(sid).working)
+        assertEquals("told once", 1, told())
+        assertTrue("nothing sent or changed at Zerodha", kite.requests.none { it.method != "GET" })
+        // Five minutes of reads agreeing: closed outside, its stop confirmed out first.
+        ArmLive.testNow = t0.plusMinutes(9).plusSeconds(10); watch()
         assertEquals("closed_at_zerodha", view().closed.single().why)
         assertFalse(kite.order(sid).working)
         assertTrue(view().openReal.isEmpty())
+    }
+
+    /**
+     * 18 Nov 2026 (review F3): a sale of the app's own whose fill no book has taken yet (its reply lost) is a sale: then 30 s of short
+     * reads are enough, as before.
+     */
+    @Test fun aSaleNotBookedYetLetsThirtySecondsOfShortReadsCloseIt() {
+        ArmLive.entered(ask(donchian, "unbooked"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        val t0 = ArmLive.testNow!!
+        // An exit of the app's own (tagged, known as this path's) filled at Zerodha, its reply lost: no book has it.
+        val own = kite.soldInKite(sym, 30, 205.0)
+        runBlocking { Strategies.tagOwner("kite:$own", "test · live paper_exit") }
+        ArmLive.testNow = t0.plusMinutes(1); watch()
+        ArmLive.testNow = t0.plusMinutes(1).plusSeconds(29); watch()
+        assertTrue("not at once: the app's own sale is no proof", view().closed.isEmpty())
+        ArmLive.testNow = t0.plusMinutes(1).plusSeconds(30); watch()
+        assertEquals("closed_at_zerodha", view().closed.single().why)
+        assertFalse(kite.order(sid).working)
+        assertTrue("no alarm: a sale explains it", AutomationSupport.alerts().none { "for 30 s" in it })
+    }
+
+    /**
+     * 18 Nov 2026 (review F1): Boss's own buy and sale of the same contract in Kite (a round trip of his, untagged) is no proof that the
+     * arm's trade closed: one short read then closes nothing and leaves the stop resting.
+     */
+    @Test fun bossesOwnRoundTripInKiteNeverConfirmsAShortRead() {
+        ArmLive.entered(ask(donchian, "trip"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        kite.boughtInKite(sym, 30, 201.0)
+        kite.soldInKite(sym, 30, 203.0)
+        assertEquals("the arm's lot still held", 30, held())
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                    // then one bad read
+        watch()
+        assertTrue("kept", view().closed.isEmpty())
+        assertEquals(30, view().openReal.single().qty)
+        assertTrue("its stop rests", kite.order(sid).working); assertEquals(30, kite.order(sid).qty)
+    }
+
+    /**
+     * 18 Nov 2026 (review F1): Boss's sale of the ORB arm's own lot in Kite, already booked "closed_by_you" in the ORB book, is no proof that
+     * this book's trade on the same contract closed.
+     */
+    @Test fun aSaleTheOrbBookAlreadyBookedNeverConfirmsAShortReadHere() {
+        ArmLive.entered(ask(donchian, "orbsale"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        kite.soldInKite(sym, 30, 203.0)                              // Boss sells the ORB arm's lot (it was bought outside this book)
+        OrbArms.liveClosedHintForTest(listOf(LiveMirror.Booked("NFO", sym, "MIS", ArmLive.testNow!!.toLocalDateTime(), 30, outside = true)))
+        try {
+            kite.positions["NFO:$sym:MIS"] = 0 to 0.0
+            watch()
+            assertTrue("kept", view().closed.isEmpty())
+            assertTrue("its stop rests", kite.order(sid).working)
+        } finally { OrbArms.liveClosedHintForTest(emptyList()) }
+    }
+
+    /**
+     * 18 Nov 2026 (review F5): two trades of 30 on one contract and one read showing 30 (not confirmed): neither stop is shrunk or taken
+     * out on that read.
+     */
+    @Test fun aPartlyShortReadNeverShrinksASiblingsStop() {
+        ArmLive.entered(ask(donchian, "s1"))
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "s2"))
+        watch()
+        val stops = view().openReal.map { it.stopOrderId!! }
+        assertEquals(2, stops.size)
+        kite.positions["NFO:$sym:MIS"] = 30 to 200.0                 // one read short by a lot, no sale anywhere
+        watch()
+        assertEquals(2, view().openReal.size)
+        for (id in stops) { assertTrue("stop $id rests", kite.order(id).working); assertEquals(30, kite.order(id).qty) }
+    }
+
+    /**
+     * 18 Nov 2026 (review F2): the MARKET Zerodha refused and the LIMIT sent the same second: the search finds the refused one first, and
+     * the LIMIT still working is found too, cancelled and confirmed out - never left working to fill later unmanaged.
+     */
+    @Test fun aLostEntrysWorkingTryIsFoundAndCancelledNotLeftWorking() {
+        kite.trailReads = 1_000                                       // the order book does not list it while it is entered
+        kite.nextPlace(FakeKite.Scenario(reply = FakeKite.Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.OPEN))
+        ArmLive.entered(ask(donchian, "tries"))
+        assertTrue(view().openReal.single().unconfirmed)
+        val working = kite.orders.values.single { it.side == "BUY" && it.working }
+        kite.rejectedInBook(sym, "BUY", 30, LiveMirror.TAG, at = working.at, before = working.id)
+        kite.showInBook()
+        watch()
+        assertEquals("the working try cancelled", "CANCELLED", kite.order(working.id).status)
+        assertEquals("nothing held", 0, held())
+        assertTrue("nothing unmanaged: no trade, no stop", view().openReal.isEmpty() && kite.orders.values.none { it.side == "SELL" })
+    }
+
+    /** 18 Nov 2026 (review F2): the same, the LIMIT already filled: settled from that order (its id, its fill), with its stop. */
+    @Test fun aLostEntrysFilledTryIsSettledFromItsOwnOrder() {
+        kite.trailReads = 1_000
+        kite.nextPlace(FakeKite.Scenario(reply = FakeKite.Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.OPEN))
+        ArmLive.entered(ask(donchian, "tries2"))
+        val working = kite.orders.values.single { it.side == "BUY" && it.working }
+        kite.rejectedInBook(sym, "BUY", 30, LiveMirror.TAG, at = working.at, before = working.id)
+        kite.fill(working.id, 201.0)
+        kite.showInBook()
+        watch()
+        val p = view().openReal.single()
+        assertFalse(p.unconfirmed)
+        assertEquals("settled from its own order", working.id, p.entryOrderId)
+        assertEquals(30, p.qty); assertEquals(201.0, p.entry, 1e-9)
+        assertEquals(1, kite.orders.values.count { it.side == "SELL" && it.type == "SL" && it.working })
     }
 
     /** 18 Nov 2026: the app's own sale of another trade on the contract never confirms a short read of this one. */

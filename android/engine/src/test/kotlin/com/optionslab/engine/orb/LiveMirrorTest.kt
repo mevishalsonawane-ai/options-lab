@@ -361,17 +361,58 @@ class LiveMirrorTest {
      */
     @Test fun aShortPositionsReadClosesATradeOnlyOnceConfirmed() {
         // One read, no sale: never closed at once.
-        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 100_000))
-        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = null, nowMs = 100_000))
-        // Still short 29.9 s later: not yet; 30 s later: confirmed.
-        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 129_999))
-        assertTrue(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 130_000))
+        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 100_000, unbookedSale = true))
+        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = null, nowMs = 100_000, unbookedSale = true))
+        // A sale not booked yet: still short 29.9 s later, not yet; 30 s later, confirmed.
+        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 129_999, unbookedSale = true))
+        assertTrue(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 130_000, unbookedSale = true))
         // A sale in the order book (Boss's own in Kite) confirms at once.
-        assertTrue(LiveMirror.shortConfirmed(rowShown = true, saleSeen = true, firstShortMs = null, nowMs = 100_000))
+        assertTrue(LiveMirror.shortConfirmed(rowShown = true, saleSeen = true, firstShortMs = null, nowMs = 100_000, unbookedSale = false))
         // No row for the contract at all (an empty or failed read): never, even with a sale or minutes of such reads.
-        assertFalse(LiveMirror.shortConfirmed(rowShown = false, saleSeen = true, firstShortMs = 0, nowMs = 600_000))
-        assertFalse(LiveMirror.shortConfirmed(rowShown = false, saleSeen = false, firstShortMs = 0, nowMs = 600_000))
+        assertFalse(LiveMirror.shortConfirmed(rowShown = false, saleSeen = true, firstShortMs = 0, nowMs = 600_000, unbookedSale = true))
+        assertFalse(LiveMirror.shortConfirmed(rowShown = false, saleSeen = false, firstShortMs = 0, nowMs = 600_000, unbookedSale = true))
         assertEquals(30_000L, LiveMirror.SHORT_CONFIRM_MS)
+    }
+
+    /**
+     * 18 Nov 2026 (review F3): with no sale at all in Zerodha's order book left unbooked, 30 s of short reads never drop a held trade:
+     * five minutes of them, and Boss is told at 30 s.
+     */
+    @Test fun withNoSaleAnywhereAShortReadWaitsFiveMinutesAndBossIsTold() {
+        assertFalse(LiveMirror.shortConfirmed(true, false, 100_000, 130_000, unbookedSale = false), "30 s, nothing sold: kept")
+        assertFalse(LiveMirror.shortConfirmed(true, false, 100_000, 399_999, unbookedSale = false))
+        assertTrue(LiveMirror.shortConfirmed(true, false, 100_000, 400_000, unbookedSale = false), "five minutes of reads")
+        assertEquals(300_000L, LiveMirror.SHORT_CONFIRM_SLOW_MS)
+        assertEquals(30_000L, LiveMirror.shortWaitMs(true)); assertEquals(300_000L, LiveMirror.shortWaitMs(false))
+        assertFalse(LiveMirror.shortAlertDue(true, false, 100_000, 129_999, unbookedSale = false), "not before 30 s")
+        assertTrue(LiveMirror.shortAlertDue(true, false, 100_000, 130_000, unbookedSale = false))
+        assertFalse(LiveMirror.shortAlertDue(true, false, 100_000, 130_000, unbookedSale = true), "a sale explains it: no alarm")
+        assertFalse(LiveMirror.shortAlertDue(true, true, 100_000, 130_000, unbookedSale = false))
+        assertFalse(LiveMirror.shortAlertDue(false, false, 100_000, 900_000, unbookedSale = false), "no row: no reading")
+        assertFalse(LiveMirror.shortAlertDue(true, false, null, 900_000, unbookedSale = false))
+    }
+
+    /**
+     * 18 Nov 2026 (review F1): an outside sale proves a close only net of Boss's own buys of the contract and of the closes either book
+     * already booked from outside since the entry.
+     */
+    @Test fun anOutsideSaleCoversAShortReadOnlyNetOfRoundTripsAndOfClosesAlreadyBooked() {
+        assertTrue(LiveMirror.outsideSaleCovers(outsideSells = 30, outsideBuys = 0, bookedOutside = 0, missing = 30), "Boss sold it in Kite")
+        assertFalse(LiveMirror.outsideSaleCovers(30, outsideBuys = 30, bookedOutside = 0, missing = 30), "Boss's own buy and sell: a round trip")
+        assertFalse(LiveMirror.outsideSaleCovers(30, 0, bookedOutside = 30, missing = 30), "the ORB arm's lot he sold, already booked there")
+        assertTrue(LiveMirror.outsideSaleCovers(60, 0, bookedOutside = 30, missing = 30), "one booked, one still to book")
+        assertFalse(LiveMirror.outsideSaleCovers(30, 0, 0, missing = 60), "not enough")
+        assertFalse(LiveMirror.outsideSaleCovers(30, 0, 0, missing = 0), "nothing missing")
+        assertTrue(LiveMirror.outsideSaleCovers(30, outsideBuys = -5, bookedOutside = -5, missing = 30), "negatives count as none")
+    }
+
+    /** 18 Nov 2026 (review F3): an exit-side fill no book has taken, the app's own included, net of round trips. */
+    @Test fun aSaleNotBookedYetIsSeenNetOfRoundTripsAndBookedCloses() {
+        assertTrue(LiveMirror.unbookedSale(exitFills = 30, outsideBuys = 0, booked = 0))
+        assertFalse(LiveMirror.unbookedSale(30, 0, booked = 30), "the sibling's own exit, booked")
+        assertFalse(LiveMirror.unbookedSale(30, outsideBuys = 30, booked = 0), "Boss's round trip")
+        assertFalse(LiveMirror.unbookedSale(0, 0, 0), "nothing sold")
+        assertTrue(LiveMirror.unbookedSale(60, 0, 30))
     }
 
     /** 18 Nov 2026: a lost entry takes back only what no other trade explains, in whole lots, at most what it asked and what was bought today. */

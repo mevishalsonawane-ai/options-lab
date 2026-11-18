@@ -632,11 +632,56 @@ object LiveMirror {
      * own sale in Kite, Zerodha's square-off), or the reads have kept showing it short for [SHORT_CONFIRM_MS] since the first one
      * ([firstShortMs]; null: none yet) at [nowMs]. Until then the trade is kept, watched and its stop left resting. Pure.
      */
-    fun shortConfirmed(rowShown: Boolean, saleSeen: Boolean, firstShortMs: Long?, nowMs: Long): Boolean =
-        rowShown && (saleSeen || (firstShortMs != null && nowMs - firstShortMs >= SHORT_CONFIRM_MS))
+    fun shortConfirmed(rowShown: Boolean, saleSeen: Boolean, firstShortMs: Long?, nowMs: Long, unbookedSale: Boolean): Boolean =
+        rowShown && (saleSeen || (firstShortMs != null && nowMs - firstShortMs >= shortWaitMs(unbookedSale)))
+
+    /**
+     * 18 Nov 2026 (review F3): how long the reads must keep showing a trade short, with no outside sale that covers it, before it is
+     * booked closed: [SHORT_CONFIRM_MS] when some exit-side fill on the contract since the entry is not booked yet ([unbookedSale]: a
+     * sale did happen, the app's own included, whose fill no book has taken), else [SHORT_CONFIRM_SLOW_MS] - with no sale at all in
+     * Zerodha's order book, a held trade is never dropped on half a minute of reads. Pure.
+     */
+    fun shortWaitMs(unbookedSale: Boolean): Long = if (unbookedSale) SHORT_CONFIRM_MS else SHORT_CONFIRM_SLOW_MS
+
+    /**
+     * 18 Nov 2026 (review F3): whether Boss is told (once) that a trade's reads have shown it short for [SHORT_CONFIRM_MS] with no sale
+     * in Zerodha's order book to explain it ([saleSeen] false, [unbookedSale] false): kept with its stop resting until
+     * [SHORT_CONFIRM_SLOW_MS]. Pure.
+     */
+    fun shortAlertDue(rowShown: Boolean, saleSeen: Boolean, firstShortMs: Long?, nowMs: Long, unbookedSale: Boolean): Boolean =
+        rowShown && !saleSeen && !unbookedSale && firstShortMs != null && nowMs - firstShortMs >= SHORT_CONFIRM_MS
 
     /** 18 Nov 2026: how long the reads must keep showing a trade short (with no sale seen) before it is booked closed: two reads at least. */
     const val SHORT_CONFIRM_MS = 30_000L
+
+    /** 18 Nov 2026 (review F3): the same with no exit-side fill at all left unbooked on the contract (nothing sold it): five minutes. */
+    const val SHORT_CONFIRM_SLOW_MS = 300_000L
+
+    /**
+     * 18 Nov 2026 (review F1): one close a live book has booked on a contract ([exchange]:[symbol] [product]) at [at], [qty] of it;
+     * [outside]: booked as closed outside the app (Boss's own sale in Kite, Zerodha's square-off - "closed_at_zerodha",
+     * "closed_by_you", a square-off), else the app's own exit or a stop's fill. Both live books publish theirs (memory only), so
+     * neither takes a sale the other already booked as the proof of its own trade's close.
+     */
+    data class Booked(val exchange: String, val symbol: String, val product: String, val at: LocalDateTime, val qty: Int, val outside: Boolean)
+
+    /**
+     * 18 Nov 2026 (review F1): whether the sales outside the app in Zerodha's order book since the entry cover [missing] (the quantity a
+     * short positions read says is gone): [outsideSells] (exit-side fills of no order of the app's, the app's square-off counted) less
+     * [outsideBuys] (entry-side fills of no order of the app's: Boss's own buy and sell of the contract are a round trip, not a close of
+     * the app's trade) less [bookedOutside] (what either book already booked closed from outside since then: one sale is the proof of
+     * one close only). False when nothing is missing. Pure.
+     */
+    fun outsideSaleCovers(outsideSells: Int, outsideBuys: Int, bookedOutside: Int, missing: Int): Boolean =
+        missing > 0 && outsideSells - outsideBuys.coerceAtLeast(0) - bookedOutside.coerceAtLeast(0) >= missing
+
+    /**
+     * 18 Nov 2026 (review F3): whether an exit-side fill on the contract since the entry is not booked yet: every exit-side fill since then,
+     * the app's own included ([exitFills]), less the outside entry-side fills ([outsideBuys]: Boss's round trips) and less every close
+     * the books booked since then ([booked]). Pure.
+     */
+    fun unbookedSale(exitFills: Int, outsideBuys: Int, booked: Int): Boolean =
+        exitFills - outsideBuys.coerceAtLeast(0) - booked.coerceAtLeast(0) > 0
 
     /**
      * 18 Nov 2026: how much of what Zerodha holds on a contract ([held], as the entry's side sees it) a live entry Zerodha never confirmed
