@@ -73,7 +73,7 @@ def calm_ok(D, r):
 
 
 def entry_index(c, cyc):
-    return {"eve": len(cyc) - 2, "eve2": len(cyc) - 3, "xday": len(cyc) - 1}[c["entry"]]
+    return {"eve": len(cyc) - 2, "eve2": len(cyc) - 3, "xday": len(cyc) - 1, "after": 0}[c["entry"]]   # after: R200
 
 
 def run_carry(cid, cyc, di=None, dec=None, mult=1.0):

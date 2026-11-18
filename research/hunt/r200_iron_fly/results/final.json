@@ -1,0 +1,1387 @@
+{
+ "m": 4905,
+ "tests": {
+  "IF1-NIFTY": {
+   "design": {
+    "n": 857,
+    "win": 0.469,
+    "net": -196639,
+    "avg_win": 541,
+    "avg_loss": -910,
+    "max_dd": 196639,
+    "worst_month": -15528,
+    "worst_month_at": "2024-06",
+    "worst_day": -8007,
+    "worst_day_at": "2024-06-05",
+    "net_wo_top5": -217356,
+    "margin_mean": 68937,
+    "margin_p95": 86606,
+    "rom_year": -0.646,
+    "months_le_13k": 2,
+    "dd_over_40k_from": "2022-05-17",
+    "affordable_share": 0.089,
+    "why": {
+     "time": 797,
+     "stop": 60
+    },
+    "stale_trades": 0,
+    "first": "2021-08-02",
+    "last": "2025-12-31",
+    "credit_mean": 10268,
+    "charges_mean": 225
+   },
+   "post_regime": {
+    "n": 216,
+    "win": 0.505,
+    "net": -12636,
+    "avg_win": 889,
+    "avg_loss": -1023,
+    "max_dd": 27403,
+    "worst_month": -10134,
+    "worst_month_at": "2025-10",
+    "worst_day": -4025,
+    "worst_day_at": "2025-04-28",
+    "net_wo_top5": -31862,
+    "margin_mean": 80354,
+    "margin_p95": 90415,
+    "rom_year": -0.142,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "stop": 18,
+     "time": 198
+    },
+    "stale_trades": 0,
+    "first": "2024-11-22",
+    "last": "2025-12-31",
+    "credit_mean": 11210,
+    "charges_mean": 229
+   },
+   "second_look_2026": {
+    "n": 165,
+    "win": 0.436,
+    "net": -68821,
+    "avg_win": 453,
+    "avg_loss": -1091,
+    "max_dd": 71004,
+    "worst_month": -19021,
+    "worst_month_at": "2026-02",
+    "worst_day": -10991,
+    "worst_day_at": "2026-02-01",
+    "net_wo_top5": -74199,
+    "margin_mean": 81625,
+    "margin_p95": 93158,
+    "rom_year": -0.975,
+    "months_le_13k": 2,
+    "dd_over_40k_from": "2026-04-02",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 152,
+     "stop": 13
+    },
+    "stale_trades": 0,
+    "first": "2026-01-01",
+    "last": "2026-11-13",
+    "credit_mean": 12851,
+    "charges_mean": 245
+   },
+   "all": {
+    "n": 1022,
+    "win": 0.464,
+    "net": -265459,
+    "avg_win": 528,
+    "avg_loss": -941,
+    "max_dd": 267433,
+    "worst_month": -19021,
+    "worst_month_at": "2026-02",
+    "worst_day": -10991,
+    "worst_day_at": "2026-02-01",
+    "net_wo_top5": -286177,
+    "margin_mean": 70986,
+    "margin_p95": 88400,
+    "rom_year": -0.708,
+    "months_le_13k": 4,
+    "dd_over_40k_from": "2022-05-17",
+    "affordable_share": 0.074,
+    "why": {
+     "time": 949,
+     "stop": 73
+    },
+    "stale_trades": 0,
+    "first": "2021-08-02",
+    "last": "2026-11-13",
+    "credit_mean": 10685,
+    "charges_mean": 228
+   },
+   "design_ratio": {
+    "avg_win": 541,
+    "avg_loss": 910,
+    "loss_to_win": 1.68,
+    "breakeven_win": 0.627,
+    "wilson": [
+     0.436,
+     0.503
+    ]
+   },
+   "twin": {
+    "p_emp": 0.8841,
+    "p_norm": 0.8944481732219087
+   },
+   "boot_p": 1.0,
+   "net_2x_slip": -220661,
+   "exits": {
+    "time": 949,
+    "stop": 73
+   },
+   "years": {
+    "2021": {
+     "n": 82,
+     "net": -11239,
+     "win": 0.488
+    },
+    "2022": {
+     "n": 194,
+     "net": -59301,
+     "win": 0.443
+    },
+    "2023": {
+     "n": 192,
+     "net": -51550,
+     "win": 0.411
+    },
+    "2024": {
+     "n": 195,
+     "net": -63677,
+     "win": 0.497
+    },
+    "2025": {
+     "n": 194,
+     "net": -10871,
+     "win": 0.515
+    }
+   },
+   "bh_q": 1.0,
+   "fails": [
+    "1 design",
+    "2 2026",
+    "4 without top 5",
+    "5 twin",
+    "6 BH",
+    "7 account stop",
+    "8 2x slippage"
+   ],
+   "verdict": "fail",
+   "possible_at_56k": false
+  },
+  "IF2-NIFTY": {
+   "design": {
+    "n": 857,
+    "win": 0.471,
+    "net": -190280,
+    "avg_win": 546,
+    "avg_loss": -907,
+    "max_dd": 190280,
+    "worst_month": -15528,
+    "worst_month_at": "2024-06",
+    "worst_day": -8007,
+    "worst_day_at": "2024-06-05",
+    "net_wo_top5": -210985,
+    "margin_mean": 68937,
+    "margin_p95": 86606,
+    "rom_year": -0.625,
+    "months_le_13k": 2,
+    "dd_over_40k_from": "2022-05-17",
+    "affordable_share": 0.089,
+    "why": {
+     "time": 790,
+     "stop": 59,
+     "target": 8
+    },
+    "stale_trades": 0,
+    "first": "2021-08-02",
+    "last": "2025-12-31",
+    "credit_mean": 10268,
+    "charges_mean": 225
+   },
+   "post_regime": {
+    "n": 216,
+    "win": 0.505,
+    "net": -13143,
+    "avg_win": 884,
+    "avg_loss": -1023,
+    "max_dd": 27403,
+    "worst_month": -10134,
+    "worst_month_at": "2025-10",
+    "worst_day": -4025,
+    "worst_day_at": "2025-04-28",
+    "net_wo_top5": -32005,
+    "margin_mean": 80354,
+    "margin_p95": 90415,
+    "rom_year": -0.148,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "stop": 18,
+     "time": 193,
+     "target": 5
+    },
+    "stale_trades": 0,
+    "first": "2024-11-22",
+    "last": "2025-12-31",
+    "credit_mean": 11210,
+    "charges_mean": 229
+   },
+   "second_look_2026": {
+    "n": 165,
+    "win": 0.436,
+    "net": -68474,
+    "avg_win": 453,
+    "avg_loss": -1087,
+    "max_dd": 70657,
+    "worst_month": -19021,
+    "worst_month_at": "2026-02",
+    "worst_day": -10991,
+    "worst_day_at": "2026-02-01",
+    "net_wo_top5": -73852,
+    "margin_mean": 81625,
+    "margin_p95": 93158,
+    "rom_year": -0.97,
+    "months_le_13k": 2,
+    "dd_over_40k_from": "2026-04-02",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 151,
+     "stop": 13,
+     "target": 1
+    },
+    "stale_trades": 0,
+    "first": "2026-01-01",
+    "last": "2026-11-13",
+    "credit_mean": 12851,
+    "charges_mean": 245
+   },
+   "all": {
+    "n": 1022,
+    "win": 0.466,
+    "net": -258754,
+    "avg_win": 532,
+    "avg_loss": -938,
+    "max_dd": 260727,
+    "worst_month": -19021,
+    "worst_month_at": "2026-02",
+    "worst_day": -10991,
+    "worst_day_at": "2026-02-01",
+    "net_wo_top5": -279459,
+    "margin_mean": 70986,
+    "margin_p95": 88400,
+    "rom_year": -0.69,
+    "months_le_13k": 4,
+    "dd_over_40k_from": "2022-05-17",
+    "affordable_share": 0.074,
+    "why": {
+     "time": 941,
+     "stop": 72,
+     "target": 9
+    },
+    "stale_trades": 0,
+    "first": "2021-08-02",
+    "last": "2026-11-13",
+    "credit_mean": 10685,
+    "charges_mean": 228
+   },
+   "design_ratio": {
+    "avg_win": 546,
+    "avg_loss": 907,
+    "loss_to_win": 1.66,
+    "breakeven_win": 0.624,
+    "wilson": [
+     0.438,
+     0.505
+    ]
+   },
+   "twin": {
+    "p_emp": 0.7782,
+    "p_norm": 0.7779333217611777
+   },
+   "boot_p": 1.0,
+   "net_2x_slip": -214199,
+   "exits": {
+    "time": 941,
+    "stop": 72,
+    "target": 9
+   },
+   "years": {
+    "2021": {
+     "n": 82,
+     "net": -11239,
+     "win": 0.488
+    },
+    "2022": {
+     "n": 194,
+     "net": -59301,
+     "win": 0.443
+    },
+    "2023": {
+     "n": 192,
+     "net": -46751,
+     "win": 0.417
+    },
+    "2024": {
+     "n": 195,
+     "net": -61612,
+     "win": 0.503
+    },
+    "2025": {
+     "n": 194,
+     "net": -11378,
+     "win": 0.515
+    }
+   },
+   "bh_q": 1.0,
+   "fails": [
+    "1 design",
+    "2 2026",
+    "4 without top 5",
+    "5 twin",
+    "6 BH",
+    "7 account stop",
+    "8 2x slippage"
+   ],
+   "verdict": "fail",
+   "possible_at_56k": false
+  },
+  "IF3-NIFTY": {
+   "design": {
+    "n": 231,
+    "win": 0.316,
+    "net": -26800,
+    "avg_win": 2645,
+    "avg_loss": -1392,
+    "max_dd": 43225,
+    "worst_month": -8141,
+    "worst_month_at": "2025-05",
+    "worst_day": -3026,
+    "worst_day_at": "2025-01-02",
+    "net_wo_top5": -59006,
+    "margin_mean": 77651,
+    "margin_p95": 140075,
+    "rom_year": -0.078,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2023-09-07",
+    "affordable_share": 0.429,
+    "why": {
+     "stop": 147,
+     "time": 84
+    },
+    "stale_trades": 0,
+    "first": "2021-08-05",
+    "last": "2025-12-30",
+    "credit_mean": 4806,
+    "charges_mean": 205
+   },
+   "post_regime": {
+    "n": 59,
+    "win": 0.237,
+    "net": -18288,
+    "avg_win": 3377,
+    "avg_loss": -1457,
+    "max_dd": 28447,
+    "worst_month": -8141,
+    "worst_month_at": "2025-05",
+    "worst_day": -3026,
+    "worst_day_at": "2025-01-02",
+    "net_wo_top5": -44543,
+    "margin_mean": 135266,
+    "margin_p95": 141544,
+    "rom_year": -0.122,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "time": 17,
+     "stop": 42
+    },
+    "stale_trades": 0,
+    "first": "2024-11-21",
+    "last": "2025-12-30",
+    "credit_mean": 4984,
+    "charges_mean": 208
+   },
+   "second_look_2026": {
+    "n": 45,
+    "win": 0.289,
+    "net": -18585,
+    "avg_win": 1710,
+    "avg_loss": -1275,
+    "max_dd": 28490,
+    "worst_month": -7394,
+    "worst_month_at": "2026-05",
+    "worst_day": -2350,
+    "worst_day_at": "2026-04-07",
+    "net_wo_top5": -32726,
+    "margin_mean": 134192,
+    "margin_p95": 142740,
+    "rom_year": -0.165,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "time": 17,
+     "stop": 28
+    },
+    "stale_trades": 0,
+    "first": "2026-01-06",
+    "last": "2026-11-09",
+    "credit_mean": 6064,
+    "charges_mean": 214
+   },
+   "all": {
+    "n": 276,
+    "win": 0.312,
+    "net": -45386,
+    "avg_win": 2503,
+    "avg_loss": -1372,
+    "max_dd": 54612,
+    "worst_month": -8141,
+    "worst_month_at": "2025-05",
+    "worst_day": -3026,
+    "worst_day_at": "2025-01-02",
+    "net_wo_top5": -77592,
+    "margin_mean": 86869,
+    "margin_p95": 141180,
+    "rom_year": -0.099,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2023-09-07",
+    "affordable_share": 0.359,
+    "why": {
+     "stop": 175,
+     "time": 101
+    },
+    "stale_trades": 0,
+    "first": "2021-08-05",
+    "last": "2026-11-09",
+    "credit_mean": 5011,
+    "charges_mean": 206
+   },
+   "design_ratio": {
+    "avg_win": 2645,
+    "avg_loss": 1392,
+    "loss_to_win": 0.53,
+    "breakeven_win": 0.345,
+    "wilson": [
+     0.259,
+     0.379
+    ]
+   },
+   "twin": {
+    "p_emp": 0.8232,
+    "p_norm": 0.8150297012121042
+   },
+   "boot_p": 0.7964,
+   "net_2x_slip": -32556,
+   "exits": {
+    "stop": 175,
+    "time": 101
+   },
+   "years": {
+    "2021": {
+     "n": 22,
+     "net": -3212,
+     "win": 0.318
+    },
+    "2022": {
+     "n": 52,
+     "net": -9654,
+     "win": 0.346
+    },
+    "2023": {
+     "n": 52,
+     "net": -17590,
+     "win": 0.308
+    },
+    "2024": {
+     "n": 52,
+     "net": 21597,
+     "win": 0.385
+    },
+    "2025": {
+     "n": 53,
+     "net": -17943,
+     "win": 0.226
+    }
+   },
+   "bh_q": 1.0,
+   "fails": [
+    "1 design",
+    "2 2026",
+    "4 without top 5",
+    "5 twin",
+    "6 BH",
+    "7 account stop",
+    "8 2x slippage"
+   ],
+   "verdict": "fail",
+   "possible_at_56k": false
+  },
+  "IF4-NIFTY": {
+   "design": {
+    "n": 231,
+    "win": 0.468,
+    "net": -56097,
+    "avg_win": 1017,
+    "avg_loss": -1349,
+    "max_dd": 59861,
+    "worst_month": -6476,
+    "worst_month_at": "2023-08",
+    "worst_day": -3026,
+    "worst_day_at": "2025-01-02",
+    "net_wo_top5": -69040,
+    "margin_mean": 77651,
+    "margin_p95": 140075,
+    "rom_year": -0.164,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2024-10-03",
+    "affordable_share": 0.429,
+    "why": {
+     "target": 109,
+     "time": 6,
+     "stop": 116
+    },
+    "stale_trades": 0,
+    "first": "2021-08-05",
+    "last": "2025-12-30",
+    "credit_mean": 4806,
+    "charges_mean": 206
+   },
+   "post_regime": {
+    "n": 59,
+    "win": 0.458,
+    "net": -14536,
+    "avg_win": 1076,
+    "avg_loss": -1362,
+    "max_dd": 19872,
+    "worst_month": -4940,
+    "worst_month_at": "2025-09",
+    "worst_day": -3026,
+    "worst_day_at": "2025-01-02",
+    "net_wo_top5": -26678,
+    "margin_mean": 135266,
+    "margin_p95": 141544,
+    "rom_year": -0.097,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "target": 28,
+     "stop": 29,
+     "time": 2
+    },
+    "stale_trades": 0,
+    "first": "2024-11-21",
+    "last": "2025-12-30",
+    "credit_mean": 4984,
+    "charges_mean": 208
+   },
+   "second_look_2026": {
+    "n": 45,
+    "win": 0.467,
+    "net": -6118,
+    "avg_win": 1255,
+    "avg_loss": -1353,
+    "max_dd": 16202,
+    "worst_month": -4348,
+    "worst_month_at": "2026-04",
+    "worst_day": -2350,
+    "worst_day_at": "2026-04-07",
+    "net_wo_top5": -17018,
+    "margin_mean": 134192,
+    "margin_p95": 142740,
+    "rom_year": -0.054,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "target": 20,
+     "stop": 23,
+     "time": 2
+    },
+    "stale_trades": 0,
+    "first": "2026-01-06",
+    "last": "2026-11-09",
+    "credit_mean": 6064,
+    "charges_mean": 214
+   },
+   "all": {
+    "n": 276,
+    "win": 0.467,
+    "net": -62215,
+    "avg_win": 1056,
+    "avg_loss": -1350,
+    "max_dd": 66448,
+    "worst_month": -6476,
+    "worst_month_at": "2023-08",
+    "worst_day": -3026,
+    "worst_day_at": "2025-01-02",
+    "net_wo_top5": -76070,
+    "margin_mean": 86869,
+    "margin_p95": 141180,
+    "rom_year": -0.136,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2024-10-03",
+    "affordable_share": 0.359,
+    "why": {
+     "target": 129,
+     "time": 8,
+     "stop": 139
+    },
+    "stale_trades": 0,
+    "first": "2021-08-05",
+    "last": "2026-11-09",
+    "credit_mean": 5011,
+    "charges_mean": 207
+   },
+   "design_ratio": {
+    "avg_win": 1017,
+    "avg_loss": 1349,
+    "loss_to_win": 1.33,
+    "breakeven_win": 0.57,
+    "wilson": [
+     0.404,
+     0.532
+    ]
+   },
+   "twin": {
+    "p_emp": 0.7982,
+    "p_norm": 0.8052955096895327
+   },
+   "boot_p": 0.9983,
+   "net_2x_slip": -62326,
+   "exits": {
+    "target": 129,
+    "time": 8,
+    "stop": 139
+   },
+   "years": {
+    "2021": {
+     "n": 22,
+     "net": -1921,
+     "win": 0.545
+    },
+    "2022": {
+     "n": 52,
+     "net": -12391,
+     "win": 0.481
+    },
+    "2023": {
+     "n": 52,
+     "net": -19487,
+     "win": 0.442
+    },
+    "2024": {
+     "n": 52,
+     "net": -7515,
+     "win": 0.462
+    },
+    "2025": {
+     "n": 53,
+     "net": -14782,
+     "win": 0.453
+    }
+   },
+   "bh_q": 1.0,
+   "fails": [
+    "1 design",
+    "2 2026",
+    "4 without top 5",
+    "5 twin",
+    "6 BH",
+    "7 account stop",
+    "8 2x slippage"
+   ],
+   "verdict": "fail",
+   "possible_at_56k": false
+  },
+  "IF5-BANKNIFTY": {
+   "design": {
+    "n": 836,
+    "win": 0.469,
+    "net": -261010,
+    "avg_win": 600,
+    "avg_loss": -1118,
+    "max_dd": 264924,
+    "worst_month": -14810,
+    "worst_month_at": "2022-01",
+    "worst_day": -5251,
+    "worst_day_at": "2023-12-21",
+    "net_wo_top5": -281975,
+    "margin_mean": 76458,
+    "margin_p95": 97830,
+    "rom_year": -0.794,
+    "months_le_13k": 1,
+    "dd_over_40k_from": "2022-04-01",
+    "affordable_share": 0.008,
+    "why": {
+     "time": 752,
+     "stop": 79,
+     "target": 5
+    },
+    "stale_trades": 0,
+    "first": "2021-09-13",
+    "last": "2025-12-31",
+    "credit_mean": 14854,
+    "charges_mean": 248
+   },
+   "post_regime": {
+    "n": 232,
+    "win": 0.319,
+    "net": -74947,
+    "avg_win": 689,
+    "avg_loss": -797,
+    "max_dd": 79618,
+    "worst_month": -12892,
+    "worst_month_at": "2025-10",
+    "worst_day": -4783,
+    "worst_day_at": "2025-04-17",
+    "net_wo_top5": -90410,
+    "margin_mean": 92259,
+    "margin_p95": 100800,
+    "rom_year": -0.733,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2025-07-18",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 224,
+     "target": 3,
+     "stop": 5
+    },
+    "stale_trades": 0,
+    "first": "2024-11-21",
+    "last": "2025-12-31",
+    "credit_mean": 19989,
+    "charges_mean": 284
+   },
+   "second_look_2026": {
+    "n": 182,
+    "win": 0.357,
+    "net": -95787,
+    "avg_win": 464,
+    "avg_loss": -1076,
+    "max_dd": 96465,
+    "worst_month": -16131,
+    "worst_month_at": "2026-02",
+    "worst_day": -5001,
+    "worst_day_at": "2026-02-16",
+    "net_wo_top5": -102972,
+    "margin_mean": 96584,
+    "margin_p95": 102234,
+    "rom_year": -1.146,
+    "months_le_13k": 1,
+    "dd_over_40k_from": "2026-05-18",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 170,
+     "stop": 11,
+     "target": 1
+    },
+    "stale_trades": 0,
+    "first": "2026-01-01",
+    "last": "2026-11-13",
+    "credit_mean": 21702,
+    "charges_mean": 331
+   },
+   "all": {
+    "n": 1018,
+    "win": 0.449,
+    "net": -356797,
+    "avg_win": 581,
+    "avg_loss": -1109,
+    "max_dd": 359050,
+    "worst_month": -16131,
+    "worst_month_at": "2026-02",
+    "worst_day": -5251,
+    "worst_day_at": "2023-12-21",
+    "net_wo_top5": -377762,
+    "margin_mean": 80056,
+    "margin_p95": 99840,
+    "rom_year": -0.863,
+    "months_le_13k": 2,
+    "dd_over_40k_from": "2022-04-01",
+    "affordable_share": 0.007,
+    "why": {
+     "time": 922,
+     "stop": 90,
+     "target": 6
+    },
+    "stale_trades": 0,
+    "first": "2021-09-13",
+    "last": "2026-11-13",
+    "credit_mean": 16078,
+    "charges_mean": 263
+   },
+   "design_ratio": {
+    "avg_win": 600,
+    "avg_loss": 1118,
+    "loss_to_win": 1.86,
+    "breakeven_win": 0.651,
+    "wilson": [
+     0.435,
+     0.503
+    ]
+   },
+   "twin": {
+    "p_emp": 0.963,
+    "p_norm": 0.9615331556703947
+   },
+   "boot_p": 1.0,
+   "net_2x_slip": -273193,
+   "exits": {
+    "time": 922,
+    "stop": 90,
+    "target": 6
+   },
+   "years": {
+    "2021": {
+     "n": 55,
+     "net": -11423,
+     "win": 0.582
+    },
+    "2022": {
+     "n": 190,
+     "net": -68933,
+     "win": 0.479
+    },
+    "2023": {
+     "n": 191,
+     "net": -55183,
+     "win": 0.518
+    },
+    "2024": {
+     "n": 190,
+     "net": -52742,
+     "win": 0.547
+    },
+    "2025": {
+     "n": 210,
+     "net": -72729,
+     "win": 0.314
+    }
+   },
+   "bh_q": 1.0,
+   "fails": [
+    "1 design",
+    "2 2026",
+    "4 without top 5",
+    "5 twin",
+    "6 BH",
+    "7 account stop",
+    "8 2x slippage"
+   ],
+   "verdict": "fail",
+   "possible_at_56k": false
+  },
+  "IF6-SENSEX": {
+   "design": {
+    "n": 463,
+    "win": 0.445,
+    "net": -130881,
+    "avg_win": 626,
+    "avg_loss": -1011,
+    "max_dd": 132246,
+    "worst_month": -10519,
+    "worst_month_at": "2025-06",
+    "worst_day": -3937,
+    "worst_day_at": "2025-05-15",
+    "net_wo_top5": -143874,
+    "margin_mean": 76196,
+    "margin_p95": 85200,
+    "rom_year": -0.663,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2024-03-14",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 393,
+     "target": 9,
+     "stop": 61
+    },
+    "stale_trades": 0,
+    "first": "2023-05-30",
+    "last": "2025-12-31",
+    "credit_mean": 10458,
+    "charges_mean": 227
+   },
+   "post_regime": {
+    "n": 204,
+    "win": 0.436,
+    "net": -54325,
+    "avg_win": 744,
+    "avg_loss": -1048,
+    "max_dd": 58031,
+    "worst_month": -10519,
+    "worst_month_at": "2025-06",
+    "worst_day": -3937,
+    "worst_day_at": "2025-05-15",
+    "net_wo_top5": -66239,
+    "margin_mean": 80356,
+    "margin_p95": 85588,
+    "rom_year": -0.61,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2025-10-03",
+    "affordable_share": 0.0,
+    "why": {
+     "target": 5,
+     "time": 179,
+     "stop": 20
+    },
+    "stale_trades": 0,
+    "first": "2024-11-21",
+    "last": "2025-12-31",
+    "credit_mean": 10854,
+    "charges_mean": 229
+   },
+   "second_look_2026": {
+    "n": 159,
+    "win": 0.409,
+    "net": -81589,
+    "avg_win": 473,
+    "avg_loss": -1195,
+    "max_dd": 82083,
+    "worst_month": -11081,
+    "worst_month_at": "2026-06",
+    "worst_day": -3365,
+    "worst_day_at": "2026-03-16",
+    "net_wo_top5": -90957,
+    "margin_mean": 78494,
+    "margin_p95": 85168,
+    "rom_year": -1.205,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2026-05-20",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 138,
+     "stop": 20,
+     "target": 1
+    },
+    "stale_trades": 0,
+    "first": "2026-01-02",
+    "last": "2026-11-13",
+    "credit_mean": 11464,
+    "charges_mean": 243
+   },
+   "all": {
+    "n": 622,
+    "win": 0.436,
+    "net": -212469,
+    "avg_win": 590,
+    "avg_loss": -1061,
+    "max_dd": 213899,
+    "worst_month": -11081,
+    "worst_month_at": "2026-06",
+    "worst_day": -3937,
+    "worst_day_at": "2025-05-15",
+    "net_wo_top5": -227210,
+    "margin_mean": 76784,
+    "margin_p95": 85200,
+    "rom_year": -0.8,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2024-03-14",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 531,
+     "target": 10,
+     "stop": 81
+    },
+    "stale_trades": 0,
+    "first": "2023-05-30",
+    "last": "2026-11-13",
+    "credit_mean": 10715,
+    "charges_mean": 231
+   },
+   "design_ratio": {
+    "avg_win": 626,
+    "avg_loss": 1011,
+    "loss_to_win": 1.61,
+    "breakeven_win": 0.618,
+    "wilson": [
+     0.4,
+     0.49
+    ]
+   },
+   "twin": {
+    "p_emp": 0.9181,
+    "p_norm": 0.9200373555842241
+   },
+   "boot_p": 1.0,
+   "net_2x_slip": -138440,
+   "exits": {
+    "time": 531,
+    "target": 10,
+    "stop": 81
+   },
+   "years": {
+    "2023": {
+     "n": 98,
+     "net": -23116,
+     "win": 0.469
+    },
+    "2024": {
+     "n": 183,
+     "net": -60772,
+     "win": 0.443
+    },
+    "2025": {
+     "n": 182,
+     "net": -46993,
+     "win": 0.434
+    }
+   },
+   "bh_q": 1.0,
+   "fails": [
+    "1 design",
+    "2 2026",
+    "4 without top 5",
+    "5 twin",
+    "6 BH",
+    "7 account stop",
+    "8 2x slippage"
+   ],
+   "verdict": "fail",
+   "possible_at_56k": false
+  },
+  "IF7-NIFTY": {
+   "design": {
+    "n": 229,
+    "win": 0.271,
+    "net": -99944,
+    "avg_win": 4259,
+    "avg_loss": -2180,
+    "max_dd": 106998,
+    "worst_month": -16615,
+    "worst_month_at": "2025-04",
+    "worst_day": -10392,
+    "worst_day_at": "2025-04-04",
+    "net_wo_top5": -165364,
+    "margin_mean": 95866,
+    "margin_p95": 157560,
+    "rom_year": -0.238,
+    "months_le_13k": 3,
+    "dd_over_40k_from": "2022-06-10",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 26,
+     "stop": 203
+    },
+    "stale_trades": 0,
+    "first": "2021-08-06",
+    "last": "2025-12-24",
+    "credit_mean": 14791,
+    "charges_mean": 223
+   },
+   "post_regime": {
+    "n": 57,
+    "win": 0.263,
+    "net": -34595,
+    "avg_win": 3935,
+    "avg_loss": -2229,
+    "max_dd": 38202,
+    "worst_month": -16615,
+    "worst_month_at": "2025-04",
+    "worst_day": -10392,
+    "worst_day_at": "2025-04-04",
+    "net_wo_top5": -85647,
+    "margin_mean": 153272,
+    "margin_p95": 160992,
+    "rom_year": -0.208,
+    "months_le_13k": 1,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "stop": 52,
+     "time": 5
+    },
+    "stale_trades": 0,
+    "first": "2024-11-22",
+    "last": "2025-12-24",
+    "credit_mean": 15766,
+    "charges_mean": 235
+   },
+   "second_look_2026": {
+    "n": 44,
+    "win": 0.25,
+    "net": -27499,
+    "avg_win": 1544,
+    "avg_loss": -1348,
+    "max_dd": 27499,
+    "worst_month": -6248,
+    "worst_month_at": "2026-07",
+    "worst_day": -3765,
+    "worst_day_at": "2026-11-04",
+    "net_wo_top5": -40741,
+    "margin_mean": 151261,
+    "margin_p95": 159900,
+    "rom_year": -0.221,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "stop": 43,
+     "time": 1
+    },
+    "stale_trades": 0,
+    "first": "2026-01-07",
+    "last": "2026-11-04",
+    "credit_mean": 16475,
+    "charges_mean": 252
+   },
+   "all": {
+    "n": 273,
+    "win": 0.267,
+    "net": -127443,
+    "avg_win": 3850,
+    "avg_loss": -2042,
+    "max_dd": 134497,
+    "worst_month": -16615,
+    "worst_month_at": "2025-04",
+    "worst_day": -10392,
+    "worst_day_at": "2025-04-04",
+    "net_wo_top5": -192863,
+    "margin_mean": 104794,
+    "margin_p95": 159224,
+    "rom_year": -0.232,
+    "months_le_13k": 3,
+    "dd_over_40k_from": "2022-06-10",
+    "affordable_share": 0.0,
+    "why": {
+     "time": 27,
+     "stop": 246
+    },
+    "stale_trades": 0,
+    "first": "2021-08-06",
+    "last": "2026-11-04",
+    "credit_mean": 15062,
+    "charges_mean": 228
+   },
+   "design_ratio": {
+    "avg_win": 4259,
+    "avg_loss": 2180,
+    "loss_to_win": 0.51,
+    "breakeven_win": 0.339,
+    "wilson": [
+     0.217,
+     0.332
+    ]
+   },
+   "twin": {
+    "p_emp": 0.972,
+    "p_norm": 0.9752329019324556
+   },
+   "boot_p": 0.9478,
+   "net_2x_slip": -110925,
+   "exits": {
+    "time": 27,
+    "stop": 246
+   },
+   "years": {
+    "2021": {
+     "n": 22,
+     "net": -19100,
+     "win": 0.182
+    },
+    "2022": {
+     "n": 52,
+     "net": 12936,
+     "win": 0.385
+    },
+    "2023": {
+     "n": 52,
+     "net": -21786,
+     "win": 0.231
+    },
+    "2024": {
+     "n": 52,
+     "net": -35051,
+     "win": 0.269
+    },
+    "2025": {
+     "n": 51,
+     "net": -36943,
+     "win": 0.235
+    }
+   },
+   "bh_q": 1.0,
+   "fails": [
+    "1 design",
+    "2 2026",
+    "4 without top 5",
+    "5 twin",
+    "6 BH",
+    "7 account stop",
+    "8 2x slippage"
+   ],
+   "verdict": "fail",
+   "possible_at_56k": false
+  },
+  "IF8-SENSEX": {
+   "design": {
+    "n": 121,
+    "win": 0.355,
+    "net": -40909,
+    "avg_win": 811,
+    "avg_loss": -972,
+    "max_dd": 56250,
+    "worst_month": -7808,
+    "worst_month_at": "2024-01",
+    "worst_day": -7647,
+    "worst_day_at": "2024-01-05",
+    "net_wo_top5": -56061,
+    "margin_mean": 107579,
+    "margin_p95": 151040,
+    "rom_year": -0.158,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2025-05-21",
+    "affordable_share": 0.0,
+    "why": {
+     "stop": 120,
+     "time": 1
+    },
+    "stale_trades": 0,
+    "first": "2023-07-24",
+    "last": "2025-12-19",
+    "credit_mean": 11530,
+    "charges_mean": 239
+   },
+   "post_regime": {
+    "n": 56,
+    "win": 0.232,
+    "net": -33247,
+    "avg_win": 279,
+    "avg_loss": -857,
+    "max_dd": 33247,
+    "worst_month": -4653,
+    "worst_month_at": "2025-10",
+    "worst_day": -3054,
+    "worst_day_at": "2025-01-06",
+    "net_wo_top5": -35907,
+    "margin_mean": 144691,
+    "margin_p95": 152360,
+    "rom_year": -0.216,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "stop": 56
+    },
+    "stale_trades": 0,
+    "first": "2024-11-25",
+    "last": "2025-12-19",
+    "credit_mean": 11682,
+    "charges_mean": 242
+   },
+   "second_look_2026": {
+    "n": 44,
+    "win": 0.182,
+    "net": -29022,
+    "avg_win": 526,
+    "avg_loss": -923,
+    "max_dd": 29022,
+    "worst_month": -7798,
+    "worst_month_at": "2026-05",
+    "worst_day": -3057,
+    "worst_day_at": "2026-05-08",
+    "net_wo_top5": -32902,
+    "margin_mean": 139913,
+    "margin_p95": 149664,
+    "rom_year": -0.246,
+    "months_le_13k": 0,
+    "dd_over_40k_from": null,
+    "affordable_share": 0.0,
+    "why": {
+     "stop": 44
+    },
+    "stale_trades": 0,
+    "first": "2026-01-02",
+    "last": "2026-11-06",
+    "credit_mean": 12143,
+    "charges_mean": 265
+   },
+   "all": {
+    "n": 165,
+    "win": 0.309,
+    "net": -69932,
+    "avg_win": 767,
+    "avg_loss": -956,
+    "max_dd": 85273,
+    "worst_month": -7808,
+    "worst_month_at": "2024-01",
+    "worst_day": -7647,
+    "worst_day_at": "2024-01-05",
+    "net_wo_top5": -85083,
+    "margin_mean": 116201,
+    "margin_p95": 150848,
+    "rom_year": -0.183,
+    "months_le_13k": 0,
+    "dd_over_40k_from": "2025-05-21",
+    "affordable_share": 0.0,
+    "why": {
+     "stop": 164,
+     "time": 1
+    },
+    "stale_trades": 0,
+    "first": "2023-07-24",
+    "last": "2026-11-06",
+    "credit_mean": 11693,
+    "charges_mean": 246
+   },
+   "design_ratio": {
+    "avg_win": 811,
+    "avg_loss": 972,
+    "loss_to_win": 1.2,
+    "breakeven_win": 0.545,
+    "wilson": [
+     0.276,
+     0.444
+    ]
+   },
+   "twin": {
+    "p_emp": 0.8102,
+    "p_norm": 0.815984113281484
+   },
+   "boot_p": 0.9977,
+   "net_2x_slip": -43307,
+   "exits": {
+    "stop": 164,
+    "time": 1
+   },
+   "years": {
+    "2023": {
+     "n": 22,
+     "net": 11760,
+     "win": 0.682
+    },
+    "2024": {
+     "n": 49,
+     "net": -21436,
+     "win": 0.347
+    },
+    "2025": {
+     "n": 50,
+     "net": -31233,
+     "win": 0.22
+    }
+   },
+   "bh_q": 1.0,
+   "fails": [
+    "1 design",
+    "2 2026",
+    "4 without top 5",
+    "5 twin",
+    "6 BH",
+    "7 account stop",
+    "8 2x slippage"
+   ],
+   "verdict": "fail",
+   "possible_at_56k": false
+  }
+ }
+}

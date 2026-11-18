@@ -1,0 +1,27 @@
+id: r200-if6-sensex
+title: 'R200 iron fly (side study): IF6-SENSEX - SENSEX non-expiry 09:20 iron fly (wings = the straddle), stop at 50% of max
+  loss, target 25% of credit'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R200_IRON_FLY.md
+hypothesis: this iron fly makes money after costs in design and 2026, inside the account stop
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 clean held contracts 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 second look (R195 read it); forward from 2026-11-16 unread
+instruments:
+- SENSEX
+features:
+- 'signal source: none directional (strikes and wings from the index and the 09:20 straddle); the carried fly''s stop reads
+  the index'
+model_or_rule: SENSEX non-expiry 09:20 iron fly (wings = the straddle), stop at 50% of max loss, target 25% of credit
+settings: research/hunt/r200_iron_fly/r200study.py; PREREG.md section 3
+prereg: research/hunt/r200_iron_fly/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 463 tr, win 44.5%, net -Rs 130,881, DD Rs 132,246; 2026 159 tr, win 40.9%, net -Rs 81,589; twin p 0.9181,
+    BH q 1.00 (m = 4,905). fail: 1 design, 2 2026, 4 without top 5, 5 twin, 6 BH, 7 account stop, 8 2x slippage'
+  costs: dated charges, 'liq' slippage (stops doubled), today's lot
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''Check iron fly strategy''). The app stays buy-only.'
