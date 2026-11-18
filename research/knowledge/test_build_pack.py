@@ -329,7 +329,9 @@ def test_the_shared_section_is_capped_ordered_and_keeps_what_the_agents_cite(bui
     assert by_id["exp:r14"]["g"] == "pass" and by_id["open:s7-order-flow"]["g"] == "open"
     # Every passed or open entry is in; the fact index keeps every entry (the rejected cells of a sweep are one item here).
     exp_facts = {f["exp"]: f for f in built["facts"] if f["kind"] == "experiment"}
-    kept = {it["id"].split(":", 1)[1] for it in items if it["k"] == "experiment"}
+    # An app-version backtest's entry (id "app-...") is shared with source "app" (k "app"), still under its "exp:" id
+    # (18 Nov: the two from 28 Oct, app-s5-trail-paper and app-irathinker-flow-paper, made the k == "experiment" count miss them).
+    kept = {it["id"].split(":", 1)[1] for it in items if it["id"].startswith("exp:")}
     assert kept <= set(exp_facts)
     always = {e["id"] for e in (yaml.safe_load(p.read_text(encoding="utf-8")) for p in bp.EXPERIMENTS.glob("*.yaml"))
               if e.get("verdict") in bp.EXP_ALWAYS}
