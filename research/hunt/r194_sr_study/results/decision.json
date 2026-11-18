@@ -1,0 +1,432 @@
+{
+ "m_total": 4808,
+ "tests": {
+  "A-R72": {
+   "helps": false,
+   "fails": [
+    "W2: net 152,620 not above the baseline's 153,728"
+   ],
+   "twin_p": 0.0005,
+   "q": 0.002915398797583561,
+   "p_normal": 1.8190924277767642e-06,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "A-R51": {
+   "helps": false,
+   "fails": [
+    "W2: net 140,702 not above the baseline's 160,497",
+    "total: net without top 5 418,880 not above the baseline's 478,169",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.0365,
+   "q": 1.0,
+   "p_normal": 0.037307793779843834,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "B-R72": {
+   "helps": false,
+   "fails": [
+    "W1: max drawdown 99,586 not below the baseline's 86,909",
+    "W2: net 152,620 not above the baseline's 173,629",
+    "total: net without top 5 588,421 not above the baseline's 660,987",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.003,
+   "q": 1.0,
+   "p_normal": 0.0027982699360861894,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "B-R51": {
+   "helps": false,
+   "fails": [
+    "W2: net 140,702 not above the baseline's 160,119",
+    "total: net without top 5 418,880 not above the baseline's 483,954",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.0205,
+   "q": 1.0,
+   "p_normal": 0.02203035613806888,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-WALL15-R72-A": {
+   "helps": false,
+   "fails": [
+    "W1: net 169,079 not above the baseline's 240,041",
+    "W2: net 58,780 not above the baseline's 150,061",
+    "total: net without top 5 170,355 not above the baseline's 390,101",
+    "twin p 0.6102 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.6102,
+   "q": 1.0,
+   "p_normal": 0.6083844865643527,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-WALL15-R72-P": {
+   "helps": false,
+   "fails": [
+    "W1: net 369,230 not above the baseline's 499,387",
+    "W2: net 91,050 not above the baseline's 152,620",
+    "total: net without top 5 402,776 not above the baseline's 652,008",
+    "twin p 0.4968 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.4968,
+   "q": 1.0,
+   "p_normal": 0.5014818419433478,
+   "account_stop": {
+    "W1": false,
+    "W2": true,
+    "total": false
+   }
+  },
+  "C-WALL15-R51-A": {
+   "helps": false,
+   "fails": [
+    "W2: net 36,969 not above the baseline's 135,983",
+    "total: net without top 5 124,692 not above the baseline's 191,394",
+    "twin p 0.1789 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.1789,
+   "q": 1.0,
+   "p_normal": 0.17762655405310837,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-WALL15-R51-P": {
+   "helps": false,
+   "fails": [
+    "W1: net 249,860 not above the baseline's 348,262",
+    "W2: net 72,093 not above the baseline's 140,702",
+    "total: net without top 5 251,870 not above the baseline's 488,964",
+    "twin p 0.4963 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.4963,
+   "q": 1.0,
+   "p_normal": 0.5051283901112004,
+   "account_stop": {
+    "W1": false,
+    "W2": true,
+    "total": false
+   }
+  },
+  "C-WALL30-R72-A": {
+   "helps": false,
+   "fails": [
+    "W1: net 119,512 not above the baseline's 240,041",
+    "W2: net 14,516 not above the baseline's 150,061",
+    "total: net without top 5 82,620 not above the baseline's 390,101",
+    "twin p 0.4503 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.4503,
+   "q": 1.0,
+   "p_normal": 0.4639974661514437,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-WALL30-R72-P": {
+   "helps": false,
+   "fails": [
+    "W1: net 219,153 not above the baseline's 499,387",
+    "W2: net 63,962 not above the baseline's 152,620",
+    "total: net without top 5 231,706 not above the baseline's 652,008",
+    "twin p 0.6242 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.6242,
+   "q": 1.0,
+   "p_normal": 0.6217986327303857,
+   "account_stop": {
+    "W1": true,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-WALL30-R51-A": {
+   "helps": false,
+   "fails": [
+    "W2: net 34,608 not above the baseline's 135,983",
+    "total: net without top 5 56,027 not above the baseline's 191,394",
+    "twin p 0.2279 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.2279,
+   "q": 1.0,
+   "p_normal": 0.22300797879514106,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-WALL30-R51-P": {
+   "helps": false,
+   "fails": [
+    "W1: net 154,566 not above the baseline's 348,262",
+    "W2: net 72,212 not above the baseline's 140,702",
+    "total: net without top 5 166,700 not above the baseline's 488,964",
+    "twin p 0.2854 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.2854,
+   "q": 1.0,
+   "p_normal": 0.2861071578488993,
+   "account_stop": {
+    "W1": false,
+    "W2": true,
+    "total": false
+   }
+  },
+  "C-CROSS-R72-A": {
+   "helps": false,
+   "fails": [
+    "W1: net 84,941 not above the baseline's 240,041",
+    "W2: net 10,290 not above the baseline's 150,061",
+    "total: net without top 5 32,486 not above the baseline's 390,101",
+    "twin p 0.6127 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.6127,
+   "q": 1.0,
+   "p_normal": 0.6143690262279199,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-CROSS-R72-P": {
+   "helps": false,
+   "fails": [
+    "W1: net 125,608 not above the baseline's 499,387",
+    "W2: net 22,031 not above the baseline's 152,620",
+    "total: net without top 5 84,893 not above the baseline's 652,008",
+    "twin p 0.8246 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.8246,
+   "q": 1.0,
+   "p_normal": 0.8189587496476131,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-CROSS-R51-A": {
+   "helps": false,
+   "fails": [
+    "W1: net 23,051 not above the baseline's 55,411",
+    "W2: net -10,916 not above the baseline's 135,983",
+    "total: net without top 5 -55,975 not above the baseline's 191,394",
+    "twin p 0.7241 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.7241,
+   "q": 1.0,
+   "p_normal": 0.7246579499179007,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "C-CROSS-R51-P": {
+   "helps": false,
+   "fails": [
+    "W1: net 117,486 not above the baseline's 348,262",
+    "W2: net 16,511 not above the baseline's 140,702",
+    "total: net without top 5 70,743 not above the baseline's 488,964",
+    "twin p 0.4553 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.4553,
+   "q": 1.0,
+   "p_normal": 0.44215525933022437,
+   "account_stop": {
+    "W1": false,
+    "W2": true,
+    "total": false
+   }
+  },
+  "D-TGT-R72-P": {
+   "helps": false,
+   "fails": [
+    "W1: net 342,931 not above the baseline's 499,387",
+    "W1: max drawdown 101,616 not below the baseline's 99,586",
+    "W2: net 88,340 not above the baseline's 152,620",
+    "total: net without top 5 379,863 not above the baseline's 652,008",
+    "twin p 0.1324 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.1324,
+   "q": 1.0,
+   "p_normal": 0.12651245801219646,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "D-TGT-R72-V5": {
+   "helps": false,
+   "fails": [
+    "W1: net 205,975 not above the baseline's 237,089",
+    "W1: max drawdown 104,489 not below the baseline's 100,582",
+    "W2: net 71,491 not above the baseline's 120,989",
+    "W2: max drawdown 38,243 not below the baseline's 36,477",
+    "total: net without top 5 240,964 not above the baseline's 358,078"
+   ],
+   "twin_p": 0.0005,
+   "q": 2.8415897026471864e-13,
+   "p_normal": 1.1820256666585634e-16,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "D-TGT-R51-P": {
+   "helps": false,
+   "fails": [
+    "W1: net 134,584 not above the baseline's 348,262",
+    "W1: max drawdown 92,543 not below the baseline's 72,535",
+    "W2: net 75,131 not above the baseline's 140,702",
+    "total: net without top 5 158,791 not above the baseline's 488,964",
+    "twin p 0.0940 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.094,
+   "q": 1.0,
+   "p_normal": 0.08473266511286306,
+   "account_stop": {
+    "W1": false,
+    "W2": true,
+    "total": false
+   }
+  },
+  "D-TGT-R51-V5": {
+   "helps": false,
+   "fails": [
+    "W1: net 41,409 not above the baseline's 124,786",
+    "W1: max drawdown 104,495 not below the baseline's 85,937",
+    "W2: net 36,676 not above the baseline's 78,794",
+    "total: net without top 5 52,042 not above the baseline's 203,580"
+   ],
+   "twin_p": 0.0005,
+   "q": 3.2176548573550946e-23,
+   "p_normal": 6.692293796495621e-27,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "D-LQ-R0": {
+   "helps": false,
+   "fails": [
+    "W1: net 215,413 not above the baseline's 249,576",
+    "W1: max drawdown 43,754 not below the baseline's 32,537",
+    "W2: net -1,362 not above the baseline's 5,717",
+    "W2: max drawdown 62,100 not below the baseline's 61,062",
+    "total: net without top 5 126,861 not above the baseline's 255,293",
+    "twin p 0.9980 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.998,
+   "q": 1.0,
+   "p_normal": 0.9972985997263395,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "D-LQ-R05": {
+   "helps": false,
+   "fails": [
+    "W1: net 239,895 not above the baseline's 249,576",
+    "W1: max drawdown 35,566 not below the baseline's 32,537",
+    "W2: net -1,628 not above the baseline's 5,717",
+    "W2: max drawdown 62,231 not below the baseline's 61,062",
+    "total: net without top 5 151,077 not above the baseline's 255,293",
+    "twin p 0.9650 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.965,
+   "q": 1.0,
+   "p_normal": 0.9582757153678103,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "D-LQ-R2": {
+   "helps": false,
+   "fails": [
+    "W1: net 236,955 not above the baseline's 249,576",
+    "W1: max drawdown 32,920 not below the baseline's 32,537",
+    "total: net without top 5 156,481 not above the baseline's 255,293",
+    "twin p 0.1444 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.1444,
+   "q": 1.0,
+   "p_normal": 0.14792337063008604,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "D-LQ-NL0": {
+   "helps": false,
+   "fails": [
+    "W1: net 216,139 not above the baseline's 249,576",
+    "W1: max drawdown 32,537 not below the baseline's 32,537",
+    "total: net without top 5 140,099 not above the baseline's 255,293",
+    "twin p 0.1035 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.1035,
+   "q": 1.0,
+   "p_normal": 0.1041443947658684,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  }
+ },
+ "helps": []
+}

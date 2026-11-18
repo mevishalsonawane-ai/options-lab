@@ -1,0 +1,40 @@
+id: r194-c-cross-r72-a
+title: 'R194 S/R on R72 Breadth Donchian: own exits, no picker + take only breaks that crossed a 3+-touch level vs own exits,
+  no picker'
+family: patterns-indicators
+date: '2026-11-18'
+doc: research/hunt/r194_sr_study/results/summary.md
+hypothesis: 'own exits, no picker + take only breaks that crossed a 3+-touch level beats own exits, no picker on R72 Breadth
+  Donchian, 1 Nov 2024 - 13 Nov 2026: higher net and lower drawdown in W1 and W2, robust to the top 5, better than random
+  twins, after BH'
+data_version: Drive lake copy of 17 Nov 2026 (R190's flat folder ~/.cache/iraalgo/r190/lake, with the 20 Oct - 13 Nov 2026
+  fill); R51 clean stores 3 Aug 2020 - 13 Nov 2026 (R190), as R193
+period:
+  design: W1 2024-11-01..2026-03-31 (R151's pickers in-sample; nothing new fitted except family B's retrain on R151's own
+    design period 2024-11-20..2026-03-31)
+  holdout: 'W2 2026-04-01..2026-11-13 (out-of-sample for the pickers but read by R151-R193: not fresh); read once per family
+    (results/READ_*)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute index pivots grouped into 3+-touch levels, R150 / R151; Liquidity''s swing / pool zones
+  on 15 / 5-minute index bars)'
+- buy the option; the S/R target is an index touch, sold at the next minute's open
+model_or_rule: 'own exits, no picker + take only breaks that crossed a 3+-touch level (baseline: own exits, no picker)'
+settings: research/hunt/r194_sr_study/r194cfg.py; PREREG.md section 6
+prereg: research/hunt/r194_sr_study/PREREG.md
+variants_tried: 1
+results:
+  summary: 'W1 957 tr, 47.1% win, Rs 84,941, DD Rs 66,622 (baseline 3176 tr, 46.8% win, Rs 240,041, DD Rs 199,077); W2 389
+    tr, 45.0% win, Rs 10,290, DD Rs 31,003 (baseline 1395 tr, 45.8% win, Rs 150,061, DD Rs 61,884); total 1346 tr, 46.5% win,
+    Rs 95,232, DD Rs 66,622 (baseline 4571 tr, 46.5% win, Rs 390,101, DD Rs 199,077); twin p 0.6127, BH q 1 (m = 4,808). Does
+    not help: W1: net 84,941 not above the baseline''s 240,041; W2: net 10,290 not above the baseline''s 150,061; total: net
+    without top 5 32,486 not above the baseline''s 390,101; twin p 0.6127 >= 0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes.

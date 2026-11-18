@@ -1,0 +1,38 @@
+{
+ "written": "2026-11-18T03:17:32.158883+00:00",
+ "baselines": {
+  "A": {
+   "trades": 6269,
+   "net": 191394,
+   "r193": [
+    6269,
+    191394
+   ],
+   "gap_trades": 0,
+   "gap_net": 0,
+   "reproduced": true
+  },
+  "P": {
+   "trades": 2890,
+   "net": 488964,
+   "r193": [
+    2890,
+    488964
+   ],
+   "gap_trades": 0,
+   "gap_net": 0,
+   "reproduced": true
+  },
+  "V5": {
+   "trades": 3082,
+   "net": 203580,
+   "r193": [
+    3082,
+    203580
+   ],
+   "gap_trades": 0,
+   "gap_net": 0,
+   "reproduced": true
+  }
+ }
+}

@@ -29,9 +29,15 @@ R150 = K.HUNT / "r150_sr_levels"
 
 
 def _load(path: Path, name: str):
-    spec = importlib.util.spec_from_file_location(name, path)
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
+    """Load another study's module by path without writing its __pycache__ (h4's .pyc is tracked in git)."""
+    keep = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec = importlib.util.spec_from_file_location(name, path)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+    finally:
+        sys.dont_write_bytecode = keep
     return m
 
 
