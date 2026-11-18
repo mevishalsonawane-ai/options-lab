@@ -1,0 +1,27 @@
+id: r199-h7-nifty
+title: 'R199 expiry condor hunt (side study): H7-NIFTY - NIFTY condor 5 / 10 steps, entry xday at row 5, index stop 5 steps'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R199_EXPIRY_CONDOR_HUNT.md
+hypothesis: this expiry condor wins >= 80% and keeps its losses small enough to make money after costs
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 clean held contracts 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 second look (R195 read it); forward from 2026-11-16 unread
+instruments:
+- NIFTY
+features:
+- 'signal source: none directional (strikes from the index); index stops and the calm filter read the index; the VIX filter
+  reads India VIX'
+model_or_rule: NIFTY condor 5 / 10 steps, entry xday at row 5, index stop 5 steps
+settings: research/hunt/r199_expiry_condor_hunt/r199study.py; PREREG.md section 3
+prereg: research/hunt/r199_expiry_condor_hunt/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 217 tr, win 56.2% (Wilson 49.6%-62.7%), net -Rs 8,923, avg win Rs 478, avg loss Rs 707; 2026 41 tr, win
+    58.5%, net Rs 7,535; twin p 0.1628, BH q 1.00 (m = 4,897). fail: 1 design, 4 without top 5, 5 twin, 6 BH, 8 2x slippage,
+    9 win rate 80%'
+  costs: dated charges, 'liq' slippage (stops doubled), today's lot
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''Hunt. More''). The app stays buy-only.'
