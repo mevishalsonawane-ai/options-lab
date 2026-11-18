@@ -1,0 +1,27 @@
+id: r201-ev1-nifty
+title: 'R201 literature ideas (side study): EV1-NIFTY - hedged straddle sold 15:16 on the eve of RBI policy / Budget / election
+  days, out at 13:01'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R201_LITERATURE.md
+hypothesis: 'hedged straddle sold 15:16 on the eve of RBI policy / Budget / election days, out at 13:01 makes money after
+  costs in design and 2026, inside the account stop (the published finding behind it: PREREG.md section 1)'
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 clean held contracts 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 second look (R195 read it); forward from 2026-11-16 unread
+instruments:
+- NIFTY
+features:
+- 'signal source: none directional for the structure; VIX (VX1 / VX2), IV / RV (XS1) or a calendar (EV1) as filters'
+model_or_rule: hedged straddle sold 15:16 on the eve of RBI policy / Budget / election days, out at 13:01
+settings: research/hunt/r201_literature/r201study.py; PREREG.md section 3
+prereg: research/hunt/r201_literature/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 21 tr, win 47.6%, net Rs 13,302, DD Rs 11,377; 2026 3 tr, win 66.7%, net -Rs 603; gross Rs 749 vs costs
+    Rs 220 a trade; twin p 0.1239, BH q 1.00 (m = 4,912). fail: 2 2026, 3 trades, 4 without top 5, 5 twin, 6 BH'
+  costs: dated charges, 'liq' slippage (stops doubled), today's lot
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''find all the papers published for it''). The app stays buy-only.'

@@ -1,0 +1,27 @@
+id: r201-on3-sensex
+title: 'R201 literature ideas (side study): ON3-SENSEX - ON1 on SENSEX'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R201_LITERATURE.md
+hypothesis: 'ON1 on SENSEX makes money after costs in design and 2026, inside the account stop (the published finding behind
+  it: PREREG.md section 1)'
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 clean held contracts 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 second look (R195 read it); forward from 2026-11-16 unread
+instruments:
+- SENSEX
+features:
+- 'signal source: none directional for the structure; VIX (VX1 / VX2), IV / RV (XS1) or a calendar (EV1) as filters'
+model_or_rule: ON1 on SENSEX
+settings: research/hunt/r201_literature/r201study.py; PREREG.md section 3
+prereg: research/hunt/r201_literature/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 329 tr, win 43.8%, net -Rs 69,963, DD Rs 102,383; 2026 121 tr, win 50.4%, net -Rs 33,416; gross Rs 0 vs
+    costs Rs 230 a trade; twin p 0.7752, BH q 1.00 (m = 4,912). fail: 1 design, 2 2026, 4 without top 5, 5 twin, 6 BH, 7 account
+    stop, 8 2x slippage'
+  costs: dated charges, 'liq' slippage (stops doubled), today's lot
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''find all the papers published for it''). The app stays buy-only.'

@@ -1,0 +1,27 @@
+id: r201-on2-banknifty
+title: 'R201 literature ideas (side study): ON2-BANKNIFTY - ON1 on BANKNIFTY'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R201_LITERATURE.md
+hypothesis: 'ON1 on BANKNIFTY makes money after costs in design and 2026, inside the account stop (the published finding behind
+  it: PREREG.md section 1)'
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 clean held contracts 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 second look (R195 read it); forward from 2026-11-16 unread
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: none directional for the structure; VIX (VX1 / VX2), IV / RV (XS1) or a calendar (EV1) as filters'
+model_or_rule: ON1 on BANKNIFTY
+settings: research/hunt/r201_literature/r201study.py; PREREG.md section 3
+prereg: research/hunt/r201_literature/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 675 tr, win 43.0%, net -Rs 85,409, DD Rs 238,877; 2026 190 tr, win 24.2%, net -Rs 236,386; gross -Rs 106
+    vs costs Rs 266 a trade; twin p 0.3177, BH q 1.00 (m = 4,912). fail: 1 design, 2 2026, 4 without top 5, 5 twin, 6 BH,
+    7 account stop, 8 2x slippage'
+  costs: dated charges, 'liq' slippage (stops doubled), today's lot
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''find all the papers published for it''). The app stays buy-only.'

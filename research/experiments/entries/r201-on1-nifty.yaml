@@ -1,0 +1,28 @@
+id: r201-on1-nifty
+title: 'R201 literature ideas (side study): ON1-NIFTY - overnight hedged straddle (wings 10 steps) sold 15:16, out at the
+  next 09:15 open'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R201_LITERATURE.md
+hypothesis: 'overnight hedged straddle (wings 10 steps) sold 15:16, out at the next 09:15 open makes money after costs in
+  design and 2026, inside the account stop (the published finding behind it: PREREG.md section 1)'
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 clean held contracts 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 second look (R195 read it); forward from 2026-11-16 unread
+instruments:
+- NIFTY
+features:
+- 'signal source: none directional for the structure; VIX (VX1 / VX2), IV / RV (XS1) or a calendar (EV1) as filters'
+model_or_rule: overnight hedged straddle (wings 10 steps) sold 15:16, out at the next 09:15 open
+settings: research/hunt/r201_literature/r201study.py; PREREG.md section 3
+prereg: research/hunt/r201_literature/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 604 tr, win 49.8%, net -Rs 89,898, DD Rs 119,300; 2026 123 tr, win 50.4%, net -Rs 13,871; gross Rs 76 vs
+    costs Rs 219 a trade; twin p 0.7213, BH q 1.00 (m = 4,912). fail: 1 design, 2 2026, 4 without top 5, 5 twin, 6 BH, 7 account
+    stop, 8 2x slippage'
+  costs: dated charges, 'liq' slippage (stops doubled), today's lot
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''find all the papers published for it''). The app stays buy-only.'
