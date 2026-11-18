@@ -1,0 +1,34 @@
+id: r196-a7-banknifty
+title: 'R196 option selling, enhanced (side study): A7-BANKNIFTY - 09:20 straddle, 25% stop per leg + stop to cost + profit
+  lock, on days India VIX >= its 250-session median'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R196_SELLING_PLUS.md
+hypothesis: 09:20 straddle, 25% stop per leg + stop to cost + profit lock, on days India VIX >= its 250-session median beats
+  R195's base (more net, higher win rate, smaller drawdown) and makes money after costs in design and 2026, inside the account
+  stop
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 Amendment A clean held contracts, 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31 (no fitted parameter; trailing filters)
+  holdout: 2026-01-01..2026-11-13 is a second look (R195 read it once); the clean holdout is the forward window from 2026-11-16,
+    not read yet
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: none directional (strikes from the index); A6 the index; A7 / PS2 India VIX'
+- stops and locks on the option premium; stale legs marked by Black-Scholes (R195)
+model_or_rule: 09:20 straddle, 25% stop per leg + stop to cost + profit lock, on days India VIX >= its 250-session median
+settings: research/hunt/r196_selling_plus/r196study.py; PREREG.md section 4
+prereg: research/hunt/r196_selling_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 421 / 56% / Rs 167,849 / DD Rs 28,306 / worst month -Rs 16,303 / worst day -Rs 9,526; post-Nov-2024 100
+    / 58% / Rs 61,887 / DD Rs 21,841 / worst month -Rs 2,540 / worst day -Rs 7,481; 2026 second look 152 / 59% / Rs 3,790
+    / DD Rs 61,453 / worst month -Rs 23,518 / worst day -Rs 9,869; base on the same days 421 / 61% / Rs 221,087 / DD Rs 32,188
+    / worst month -Rs 13,326 / worst day -Rs 13,194; twin p 0.011, BH q 1 (m = 4,821); possible at Rs 56k: no. fail: 4 without
+    top 5, 6 BH, 7 account stop, 9 aims vs base'
+  costs: dated Zerodha charges, R103 'liq' slippage (stops doubled), today's lot every year
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''Enhance it more try internet''). The app stays buy-only. 2026 was already read
+  by R195; a pass would wait for the forward read.'

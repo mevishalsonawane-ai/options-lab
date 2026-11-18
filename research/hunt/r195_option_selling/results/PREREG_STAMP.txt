@@ -1,0 +1,1 @@
+PREREG.md sha256 8d25dd85541d8e1e0f2cfbeeb8125811533ec82a21c97ace08e2e4428cfc9eba at 2026-11-18T03:40:14Z (written before any R195 P&L; git commit was blocked by the session's permission check)

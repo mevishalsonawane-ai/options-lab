@@ -1,0 +1,37 @@
+id: r195-t1-nifty
+title: 'R195 option selling (side study): T1-NIFTY - 10:15 first-hour index move >= 0.25%: credit spread (short 1 step OTM,
+  4-step width) with the trend; index stop at the 09:15 open and a stop at 50% of max loss'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R195_OPTION_SELLING.md
+hypothesis: '10:15 first-hour index move >= 0.25%: credit spread (short 1 step OTM, 4-step width) with the trend; index stop
+  at the 09:15 open and a stop at 50% of max loss makes money after real charges and slippage, in walk-forward and in the
+  2026 holdout, inside Boss''s account stop at 1 lot'
+data_version: Drive lake copy of 18 Nov 2026 (index_1m five indices + INDIAVIX, options_rolling_1m WEEK ATM+-10 with the 20
+  Oct - 13 Nov 2026 parts); R51 Amendment A clean held-contract stores 2 Aug 2021 - 13 Nov 2026
+period:
+  design: walk-forward 2021-08-02..2025-12-31 (filters trailing-only; N1 refitted yearly, design 2023-2025)
+  holdout: 2026-01-01..2026-11-13, read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+features:
+- 'signal source: the index (first-hour return; index stop)'
+- stops on the option premium (T1 also on the index)
+- stale legs marked by Black-Scholes at the last print's implied vol
+model_or_rule: '10:15 first-hour index move >= 0.25%: credit spread (short 1 step OTM, 4-step width) with the trend; index
+  stop at the 09:15 open and a stop at 50% of max loss'
+settings: research/hunt/r195_option_selling/r195rules.py; PREREG.md section 4
+prereg: research/hunt/r195_option_selling/PREREG.md
+variants_tried: 1
+results:
+  summary: 'walk-forward 485 tr, 53.2% win, -Rs 58,181, DD Rs 98,169, worst month -Rs 11,135, worst day -Rs 5,957, margin
+    p95 Rs 72,826; post-Nov-2024 part 122 tr, 53.3% win, -Rs 28,012, DD Rs 43,807, worst month -Rs 10,452, worst day -Rs 4,372,
+    margin p95 Rs 78,644; holdout 109 tr, 44.0% win, -Rs 31,799, DD Rs 39,770, worst month -Rs 12,302, worst day -Rs 5,841,
+    margin p95 Rs 77,844; twin p 0.4426, boot p 0.938, BH q 1 (m = 4,807); 2x slippage -Rs 65,279; possible at Rs 56k: no.
+    Failed: 1 walk-forward, 2 holdout, 4 without top 5, 5 twin, 6 BH, 7 account stop, 8 2x slippage'
+  costs: dated Zerodha charges (STT on sales, 0.15% from Apr 2026; BSE rates for SENSEX), R103 'liq' slippage (doubled on
+    stops), today's lot every year; no exercise (all legs closed by order)
+holdout_read: true
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: a side study). The app stays buy-only; Boss chose no option selling on 21 Oct 2026.
+  A pass would only be a note for Boss.'

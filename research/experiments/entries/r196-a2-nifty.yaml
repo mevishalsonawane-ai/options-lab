@@ -1,0 +1,33 @@
+id: r196-a2-nifty
+title: 'R196 option selling, enhanced (side study): A2-NIFTY - 09:20 straddle with one combined stop at 1.20x the pair''s
+  entry (no per-leg stop)'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R196_SELLING_PLUS.md
+hypothesis: 09:20 straddle with one combined stop at 1.20x the pair's entry (no per-leg stop) beats R195's base (more net,
+  higher win rate, smaller drawdown) and makes money after costs in design and 2026, inside the account stop
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 Amendment A clean held contracts, 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31 (no fitted parameter; trailing filters)
+  holdout: 2026-01-01..2026-11-13 is a second look (R195 read it once); the clean holdout is the forward window from 2026-11-16,
+    not read yet
+instruments:
+- NIFTY
+features:
+- 'signal source: none directional (strikes from the index); A6 the index; A7 / PS2 India VIX'
+- stops and locks on the option premium; stale legs marked by Black-Scholes (R195)
+model_or_rule: 09:20 straddle with one combined stop at 1.20x the pair's entry (no per-leg stop)
+settings: research/hunt/r196_selling_plus/r196study.py; PREREG.md section 4
+prereg: research/hunt/r196_selling_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 1092 / 54% / Rs 161,748 / DD Rs 43,241 / worst month -Rs 21,724 / worst day -Rs 9,490; post-Nov-2024 276
+    / 55% / Rs 105,834 / DD Rs 25,290 / worst month -Rs 6,470 / worst day -Rs 7,919; 2026 second look 214 / 56% / -Rs 9,429
+    / DD Rs 55,921 / worst month -Rs 19,109 / worst day -Rs 7,390; base on the same days 1092 / 60% / Rs 197,065 / DD Rs 35,628
+    / worst month -Rs 12,318 / worst day -Rs 9,192; twin p 0.0779, BH q 1 (m = 4,821); possible at Rs 56k: no. fail: 2 2026,
+    4 without top 5, 5 twin, 6 BH, 7 account stop, 9 aims vs base'
+  costs: dated Zerodha charges, R103 'liq' slippage (stops doubled), today's lot every year
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''Enhance it more try internet''). The app stays buy-only. 2026 was already read
+  by R195; a pass would wait for the forward read.'

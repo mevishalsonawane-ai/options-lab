@@ -1,0 +1,32 @@
+id: r196-ps2-nifty
+title: 'R196 option selling, enhanced (side study): PS2-NIFTY - PS1 on days India VIX >= its 250-session median'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R196_SELLING_PLUS.md
+hypothesis: PS1 on days India VIX >= its 250-session median beats R195's base (more net, higher win rate, smaller drawdown)
+  and makes money after costs in design and 2026, inside the account stop
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 Amendment A clean held contracts, 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31 (no fitted parameter; trailing filters)
+  holdout: 2026-01-01..2026-11-13 is a second look (R195 read it once); the clean holdout is the forward window from 2026-11-16,
+    not read yet
+instruments:
+- NIFTY
+features:
+- 'signal source: none directional (strikes from the index); A6 the index; A7 / PS2 India VIX'
+- stops and locks on the option premium; stale legs marked by Black-Scholes (R195)
+model_or_rule: PS1 on days India VIX >= its 250-session median
+settings: research/hunt/r196_selling_plus/r196study.py; PREREG.md section 4
+prereg: research/hunt/r196_selling_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 338 / 58% / -Rs 34,448 / DD Rs 49,851 / worst month -Rs 11,759 / worst day -Rs 6,638; post-Nov-2024 80
+    / 57% / -Rs 12,225 / DD Rs 27,445 / worst month -Rs 7,249 / worst day -Rs 6,638; 2026 second look 120 / 55% / -Rs 11,201
+    / DD Rs 29,016 / worst month -Rs 9,949 / worst day -Rs 5,831; base on the same days 338 / 55% / -Rs 46,825 / DD Rs 57,613
+    / worst month -Rs 15,777 / worst day -Rs 5,495; twin p 0.4236, BH q 1 (m = 4,821); possible at Rs 56k: yes. fail: 1 design,
+    2 2026, 4 without top 5, 5 twin, 6 BH, 7 account stop, 8 2x slippage'
+  costs: dated Zerodha charges, R103 'liq' slippage (stops doubled), today's lot every year
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''Enhance it more try internet''). The app stays buy-only. 2026 was already read
+  by R195; a pass would wait for the forward read.'

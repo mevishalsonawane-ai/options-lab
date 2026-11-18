@@ -1,0 +1,32 @@
+id: r196-ps3-banknifty
+title: 'R196 option selling, enhanced (side study): PS3-BANKNIFTY - PS1 on BANKNIFTY'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R196_SELLING_PLUS.md
+hypothesis: PS1 on BANKNIFTY beats R195's base (more net, higher win rate, smaller drawdown) and makes money after costs in
+  design and 2026, inside the account stop
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 Amendment A clean held contracts, 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31 (no fitted parameter; trailing filters)
+  holdout: 2026-01-01..2026-11-13 is a second look (R195 read it once); the clean holdout is the forward window from 2026-11-16,
+    not read yet
+instruments:
+- BANKNIFTY
+features:
+- 'signal source: none directional (strikes from the index); A6 the index; A7 / PS2 India VIX'
+- stops and locks on the option premium; stale legs marked by Black-Scholes (R195)
+model_or_rule: PS1 on BANKNIFTY
+settings: research/hunt/r196_selling_plus/r196study.py; PREREG.md section 4
+prereg: research/hunt/r196_selling_plus/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 880 / 57% / -Rs 68,391 / DD Rs 79,286 / worst month -Rs 18,896 / worst day -Rs 5,813; post-Nov-2024 262
+    / 50% / -Rs 32,102 / DD Rs 37,371 / worst month -Rs 7,053 / worst day -Rs 4,908; 2026 second look 204 / 46% / -Rs 53,584
+    / DD Rs 60,302 / worst month -Rs 12,116 / worst day -Rs 4,731; base on the same days 880 / 58% / -Rs 71,378 / DD Rs 81,739
+    / worst month -Rs 20,411 / worst day -Rs 7,322; twin p 0.0829, BH q 1 (m = 4,821); possible at Rs 56k: yes. fail: 1 design,
+    2 2026, 4 without top 5, 5 twin, 6 BH, 7 account stop, 8 2x slippage, 9 aims vs base'
+  costs: dated Zerodha charges, R103 'liq' slippage (stops doubled), today's lot every year
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''Enhance it more try internet''). The app stays buy-only. 2026 was already read
+  by R195; a pass would wait for the forward read.'

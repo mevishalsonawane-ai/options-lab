@@ -1,0 +1,34 @@
+id: r195-e3-sensex
+title: 'R195 option selling (side study): E3-SENSEX - SENSEX expiry-day 09:20 iron fly (wings 4 steps), 1.5x premium stop'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R195_OPTION_SELLING.md
+hypothesis: SENSEX expiry-day 09:20 iron fly (wings 4 steps), 1.5x premium stop makes money after real charges and slippage,
+  in walk-forward and in the 2026 holdout, inside Boss's account stop at 1 lot
+data_version: Drive lake copy of 18 Nov 2026 (index_1m five indices + INDIAVIX, options_rolling_1m WEEK ATM+-10 with the 20
+  Oct - 13 Nov 2026 parts); R51 Amendment A clean held-contract stores 2 Aug 2021 - 13 Nov 2026
+period:
+  design: walk-forward 2021-08-02..2025-12-31 (filters trailing-only; N1 refitted yearly, design 2023-2025)
+  holdout: 2026-01-01..2026-11-13, read once (results/HOLDOUT_READ)
+instruments:
+- SENSEX
+features:
+- 'signal source: none directional'
+- stops on the option premium (T1 also on the index)
+- stale legs marked by Black-Scholes at the last print's implied vol
+model_or_rule: SENSEX expiry-day 09:20 iron fly (wings 4 steps), 1.5x premium stop
+settings: research/hunt/r195_option_selling/r195rules.py; PREREG.md section 4
+prereg: research/hunt/r195_option_selling/PREREG.md
+variants_tried: 1
+results:
+  summary: 'walk-forward 134 tr, 41.0% win, -Rs 9,459, DD Rs 24,320, worst month -Rs 7,992, worst day -Rs 4,848, margin p95
+    Rs 143,096; post-Nov-2024 part 57 tr, 42.1% win, Rs 6,475, DD Rs 14,958, worst month -Rs 7,423, worst day -Rs 4,848, margin
+    p95 Rs 144,128; holdout 45 tr, 42.2% win, -Rs 4,845, DD Rs 11,645, worst month -Rs 4,905, worst day -Rs 4,715, margin
+    p95 Rs 142,240; twin p 0.8202, boot p 0.636, BH q 1 (m = 4,807); 2x slippage -Rs 10,684; possible at Rs 56k: no. Failed:
+    1 walk-forward, 2 holdout, 4 without top 5, 5 twin, 6 BH, 8 2x slippage'
+  costs: dated Zerodha charges (STT on sales, 0.15% from Apr 2026; BSE rates for SENSEX), R103 'liq' slippage (doubled on
+    stops), today's lot every year; no exercise (all legs closed by order)
+holdout_read: true
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: a side study). The app stays buy-only; Boss chose no option selling on 21 Oct 2026.
+  A pass would only be a note for Boss.'
