@@ -3312,7 +3312,8 @@ object OrbArms {
             val held = minOf(rows.sumOf { it.qty }, lagFree)
             val today = com.optionslab.engine.orb.LiveMirror.boughtTodayCap(rows.map { it.dayBuyQty }, rows.sumOf { it.overnight }, held,
                 orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "BUY" && it.tag != "iraorb" }.sumOf { it.filled })
-            val q = com.optionslab.engine.orb.LiveMirror.unexplainedQty(held, today, others, p.qty, lot)
+            // (Review: what a lost entry of the arms' live copies took back a moment ago counts too - never one fill taken twice.)
+            val q = ArmLive.takeLost("orb", "NFO", sym, "MIS") { other -> com.optionslab.engine.orb.LiveMirror.unexplainedQty(held, today, others + other, p.qty, lot) }
             val fill = rows.singleOrNull()?.avg?.takeIf { it > 0 && others == 0 } ?: p.entry
             if (q > 0) {
                 com.optionslab.app.work.Alerts.error("$label: Zerodha did not confirm the buy of $sym and its order was not found, but Zerodha holds " +
@@ -3559,20 +3560,18 @@ object OrbArms {
     /** 18 Nov 2026 (review F3): the trades shown gone with no sale anywhere that Boss was told of (once until seen held or booked). Memory only. */
     private val goneAlertSaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
-    /** 18 Nov 2026 (review F1): the order tags of the app's own entries (this book's and the arms' live copies'): never Boss's buy. */
-    private val OWN_ENTRY_TAGS = setOf("iraorb", com.optionslab.engine.orb.LiveMirror.TAG)
-
     /**
      * 18 Nov 2026: whether live trade [p] of book [b] on [sym], which the positions read [net] shows gone, is confirmed gone
      * ([com.optionslab.engine.orb.LiveMirror.shortConfirmed]): Zerodha lists a row for the contract, and its order book ([orders]) shows
      * sales of it since the entry outside the app (Boss's own in Kite, Zerodha's square-off, the app's square-off - never another of the
      * app's own exits, which explains nothing here) that cover this trade, or the reads have shown it gone long enough. Said once when it
      * is not (yet). The reads the pass already made, and the order labels only when it is shown gone.
-     * 18 Nov 2026 (review F1): those sales are netted ([com.optionslab.engine.orb.LiveMirror.outsideSaleCovers]): less Boss's own buys of
-     * the contract since the entry (his buy and sale are a round trip, not this trade's close) and less what either live book - this one
-     * and the arms' live copies ([ArmLive]) - already booked closed from outside since then (one sale proves one close only).
-     * 18 Nov 2026 (review F3): "long enough" is 30 s only while some exit-side fill on the contract since the entry, the app's own
-     * included, is not booked by either book; with none, five minutes, and Boss is told once at 30 s (its stop rests meanwhile).
+     * 18 Nov 2026 (review F1): those sales are netted over the day ([com.optionslab.engine.orb.LiveMirror.outsideSaleCovers]): less Boss's
+     * own buys of the contract today and what was carried (his buy and sale are a round trip, not this trade's close) and less what either
+     * live book - this one and the arms' live copies ([ArmLive]) - already booked closed from outside today (one sale proves one close only).
+     * 18 Nov 2026 (review F3): "long enough" is 30 s only while some exit-side fill on the contract today, the app's own included, is
+     * not booked by either book (or another product's row holds it: a conversion); with none, five minutes, and Boss is told once at 30 s
+     * (its stop rests meanwhile).
      */
     private suspend fun goneConfirmed(b: Book, p: Position, sym: String, net: List<Broker.Position>, orders: Collection<Broker.OrderRow>,
                                       t: LocalDateTime): Boolean {
@@ -3583,19 +3582,26 @@ object OrbArms {
         val ms = epochMs(t)
         // (A trade from an earlier day that Zerodha squared off has no row any more: no row counts as a reading for it.)
         val rowShown = net.any { it.symbol == sym && it.exchange == "NFO" } || p.day.isBefore(t.toLocalDate())
-        val since = p.entryTime
-        val booked = (b.positions.filter { !it.open && it.live && it.kite == sym && it.exitTime != null }
+        // (Review: over the whole day - Boss's buy before this entry and his sale after it are his own round trip - and Boss's own orders
+        // told by having no tag: the order labels are read only when such an order is on the contract, never on every tick of a quiet one.)
+        val today = t.toLocalDate()
+        val booked = (b.positions.filter { !it.open && it.live && it.kite == sym && it.exitTime?.toLocalDate() == today }
             .map { com.optionslab.engine.orb.LiveMirror.Booked("NFO", sym, "MIS", it.exitTime!!, it.qty, it.why in OUTSIDE_WHYS) } +
-            ArmLive.view.value.closed.filter { it.exchange == "NFO" && it.symbol == sym && it.product == "MIS" && it.exitTime != null }
+            ArmLive.view.value.closed.filter { it.exchange == "NFO" && it.symbol == sym && it.product == "MIS" && it.exitTime?.toLocalDate() == today }
                 .map { com.optionslab.engine.orb.LiveMirror.Booked(it.exchange, it.symbol, it.product, it.exitTime!!, it.qty, it.why == "closed_at_zerodha") })
-            .filter { !it.at.isBefore(since) }
-        val onIt = orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.filled > 0 &&
-            com.optionslab.engine.orb.LiveMirror.placedSince(it.placedAt, since) }
-        val mine = if (onIt.isEmpty()) emptySet() else knownKite(b).toSet()
-        val outsideSells = onIt.filter { it.side == "SELL" && (it.id !in mine || it.tag in SquareOffExit.TAGS) }.sumOf { it.filled }
-        val outsideBuys = onIt.filter { it.side == "BUY" && it.id !in mine && it.tag !in OWN_ENTRY_TAGS }.sumOf { it.filled }
+        val onIt = orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.filled > 0 }
+        val mine: Set<String> = if (onIt.none { it.tag.isBlank() }) emptySet() else knownKite(b).toSet()
+        val outsideSells = onIt.filter { it.side == "SELL" && ((it.tag.isBlank() && it.id !in mine) || it.tag in SquareOffExit.TAGS) }.sumOf { it.filled }
+        // (And what was carried from an earlier day: Boss's own carried lot sold today proves nothing about this trade.)
+        val carried = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.overnight } -
+            (if (p.day.isBefore(today)) p.qty else 0)
+        val outsideBuys = onIt.filter { it.side == "BUY" && it.tag.isBlank() && it.id !in mine }.sumOf { it.filled } + carried.coerceAtLeast(0)
         val sold = com.optionslab.engine.orb.LiveMirror.outsideSaleCovers(outsideSells, outsideBuys, booked.filter { it.outside }.sumOf { it.qty }, p.qty)
-        val unbooked = com.optionslab.engine.orb.LiveMirror.unbookedSale(onIt.filter { it.side == "SELL" }.sumOf { it.filled }, outsideBuys, booked.sumOf { it.qty })
+        // (A conversion in Kite - another product's row now holding it - counts as a sale for the wait: 30 s, not five minutes.)
+        val converted = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product != "MIS" }.sumOf { it.qty } -
+            ArmLive.view.value.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product != "MIS" && it.side > 0 }.sumOf { it.qty } >= p.qty
+        val unbooked = converted ||
+            com.optionslab.engine.orb.LiveMirror.unbookedSale(onIt.filter { it.side == "SELL" }.sumOf { it.filled }, outsideBuys, booked.sumOf { it.qty })
         // (A read with no row for it starts no count: it is no reading at all.)
         val first = if (rowShown) goneSince.putIfAbsent(key, ms) else goneSince[key]
         if (com.optionslab.engine.orb.LiveMirror.shortConfirmed(rowShown, sold, first ?: ms, ms, unbooked)) {

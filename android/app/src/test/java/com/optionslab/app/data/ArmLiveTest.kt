@@ -1662,6 +1662,58 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(1, kite.orders.values.count { it.side == "SELL" && it.type == "SL" && it.working })
     }
 
+    /**
+     * 18 Nov 2026 (second review): Boss's own lot bought in Kite BEFORE the arm's entry and sold after it is his round trip, not the arm's
+     * close: one short read then closes nothing.
+     */
+    @Test fun bossesLotBoughtBeforeTheEntryAndSoldAfterNeverConfirmsAShortRead() {
+        val t0 = ArmLive.testNow!!.toLocalDateTime()
+        kite.orders["B0"] = FakeKite.Order("B0", sym, "NFO", "BUY", 30, "MIS", "MARKET", 0.0, 0.0, "", "COMPLETE", filled = 30, avg = 190.0,
+            at = t0.minusMinutes(20))
+        kite.positions["NFO:$sym:MIS"] = 30 to 190.0                  // his own lot, from before
+        ArmLive.entered(ask(donchian, "after"))
+        watch()
+        assertEquals(60, held())
+        val sid = view().openReal.single().stopOrderId!!
+        kite.soldInKite(sym, 30, 205.0)                              // he sells his own lot
+        watch()
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                    // then one bad read
+        watch()
+        assertTrue("kept", view().closed.isEmpty())
+        assertTrue("its stop rests", kite.order(sid).working); assertEquals(30, kite.order(sid).qty)
+    }
+
+    /**
+     * 18 Nov 2026 (second review): Boss converting the arm's MIS lot to NRML in Kite leaves no sale, but the NRML row holds it: booked after
+     * 30 s, not left five minutes with its MIS stop on a flat MIS position.
+     */
+    @Test fun aConversionInKiteIsBookedAfterThirtySecondsNotFiveMinutes() {
+        ArmLive.entered(ask(donchian, "conv"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        val t0 = ArmLive.testNow!!
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0
+        kite.positions["NFO:$sym:NRML"] = 30 to 200.0
+        ArmLive.testNow = t0.plusMinutes(1); watch()
+        assertTrue(view().closed.isEmpty())
+        ArmLive.testNow = t0.plusMinutes(1).plusSeconds(30); watch()
+        assertEquals("closed_at_zerodha", view().closed.single().why)
+        assertFalse("its MIS stop taken out", kite.order(sid).working)
+    }
+
+    /**
+     * 18 Nov 2026 (second review): a lost entry one book took back a moment ago counts for the other book's lost entry on the same
+     * contract (never one fill taken twice); a book's own earlier claims never block it; another contract is apart.
+     */
+    @Test fun aLostEntryTakenBackByOneBookCountsForTheOther() {
+        assertEquals(30, ArmLive.takeLost("arm", "NFO", sym, "MIS") { other -> (30 - other).coerceAtLeast(0) })
+        assertEquals("the ORB book sees the arms' claim", 0, ArmLive.takeLost("orb", "NFO", sym, "MIS") { other -> (30 - other).coerceAtLeast(0) })
+        assertEquals("its own claims never count", 30, ArmLive.takeLost("arm", "NFO", sym, "MIS") { other -> (30 - other).coerceAtLeast(0) })
+        assertEquals("another product apart", 30, ArmLive.takeLost("orb", "NFO", sym, "NRML") { other -> (30 - other).coerceAtLeast(0) })
+        ArmLive.wipe()
+        assertEquals("forgotten with the erase", 30, ArmLive.takeLost("orb", "NFO", sym, "MIS") { other -> (30 - other).coerceAtLeast(0) })
+    }
+
     /** 18 Nov 2026: the app's own sale of another trade on the contract never confirms a short read of this one. */
     @Test fun anotherTradesOwnExitNeverConfirmsAShortRead() {
         ArmLive.entered(ask(donchian, "x1"))
