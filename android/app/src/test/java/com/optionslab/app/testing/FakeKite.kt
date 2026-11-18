@@ -203,6 +203,21 @@ class FakeKite : Closeable {
     fun position(symbol: String, qty: Int, avg: Double, product: String = "NRML", exchange: String = "NFO") =
         synchronized(lock) { positions["$exchange:$symbol:$product"] = qty to avg }
 
+    /**
+     * 18 Nov 2026: Boss sells [qty] of [symbol] himself in the Kite app at [price]: a COMPLETE sale with no tag in the order book (as
+     * Zerodha shows it), the position moved by it. The order's id.
+     */
+    fun soldInKite(symbol: String, qty: Int, price: Double, product: String = "MIS", exchange: String = "NFO"): String = synchronized(lock) {
+        val id = (++seq).toString()
+        val o = Order(id, symbol, exchange, "SELL", qty, product, "MARKET", 0.0, 0.0, "", "COMPLETE", filled = qty, avg = price)
+        orders[id] = o
+        move(o, qty)
+        id
+    }
+
+    /** 18 Nov 2026: the next this many order modifies are refused (Zerodha's InputException), as a stop Zerodha would not move. */
+    @Volatile var modifyRefusals = 0
+
     /** Mark an order filled now (e.g. the stop of a protection triggered). */
     fun fill(id: String, price: Double? = null) = synchronized(lock) {
         val o = orders.getValue(id)
@@ -546,6 +561,7 @@ class FakeKite : Closeable {
     private fun modify(id: String, f: Map<String, String>): MockResponse {
         val o = orders[id] ?: return error(400, "InputException", "Couldn't find that `order_id`.")
         if (!o.working) return error(400, "InputException", "Order cannot be modified as it is being processed.")
+        if (modifyRefusals > 0) { modifyRefusals--; return error(400, "InputException", "Trigger price for stoploss sell orders should be lower than the last traded price.") }
         f["quantity"]?.let { o.qty = it.toInt() }
         f["order_type"]?.let { o.type = it }
         f["price"]?.let { o.price = it.toDouble() }

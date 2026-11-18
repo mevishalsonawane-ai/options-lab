@@ -354,6 +354,56 @@ class LiveMirrorTest {
         assertTrue(LiveMirror.zeroLongEnough(40_000, 100_000))
     }
 
+    /**
+     * 18 Nov 2026 (live: R51's FINNIFTY lot and a Liquidity lot booked closed on one positions read while Zerodha still held them):
+     * a short read closes a trade only once confirmed - a row for the contract and a sale seen, or 30 s of short reads; a read with
+     * no row (a bad or empty read) never counts, whatever else.
+     */
+    @Test fun aShortPositionsReadClosesATradeOnlyOnceConfirmed() {
+        // One read, no sale: never closed at once.
+        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 100_000))
+        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = null, nowMs = 100_000))
+        // Still short 29.9 s later: not yet; 30 s later: confirmed.
+        assertFalse(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 129_999))
+        assertTrue(LiveMirror.shortConfirmed(rowShown = true, saleSeen = false, firstShortMs = 100_000, nowMs = 130_000))
+        // A sale in the order book (Boss's own in Kite) confirms at once.
+        assertTrue(LiveMirror.shortConfirmed(rowShown = true, saleSeen = true, firstShortMs = null, nowMs = 100_000))
+        // No row for the contract at all (an empty or failed read): never, even with a sale or minutes of such reads.
+        assertFalse(LiveMirror.shortConfirmed(rowShown = false, saleSeen = true, firstShortMs = 0, nowMs = 600_000))
+        assertFalse(LiveMirror.shortConfirmed(rowShown = false, saleSeen = false, firstShortMs = 0, nowMs = 600_000))
+        assertEquals(30_000L, LiveMirror.SHORT_CONFIRM_MS)
+    }
+
+    /** 18 Nov 2026: a lost entry takes back only what no other trade explains, in whole lots, at most what it asked and what was bought today. */
+    @Test fun aLostEntryTakesBackOnlyTheUnexplainedLots() {
+        assertEquals(60, LiveMirror.unexplainedQty(held = 60, today = 60, others = 0, asked = 60, lot = 60))
+        assertEquals(0, LiveMirror.unexplainedQty(60, 60, others = 60, asked = 60, lot = 60), "another trade explains it")
+        assertEquals(30, LiveMirror.unexplainedQty(90, null, 0, asked = 30, lot = 30), "never more than asked")
+        assertEquals(0, LiveMirror.unexplainedQty(60, today = 0, others = 0, asked = 60, lot = 60), "carried from an earlier day")
+        assertEquals(30, LiveMirror.unexplainedQty(50, null, 0, 60, lot = 30), "whole lots only")
+        assertEquals(0, LiveMirror.unexplainedQty(0, null, 30, 30, 30), "nothing held")
+        assertEquals(7, LiveMirror.unexplainedQty(7, null, 0, 10, 0), "a lot of 0 counts as 1")
+    }
+
+    /** 18 Nov 2026 (review): only what was bought today by no other owner, and held beyond what was carried, can be a lost entry's. */
+    @Test fun whatALostEntryCanHaveBoughtToday() {
+        assertEquals(60, LiveMirror.boughtTodayCap(listOf(60), overnight = 0, held = 60, otherOwners = 0))
+        assertEquals(0, LiveMirror.boughtTodayCap(listOf(60), overnight = 60, held = 60, otherOwners = 0), "carried; today's 60 was a round trip")
+        assertEquals(0, LiveMirror.boughtTodayCap(listOf(60), overnight = 0, held = 60, otherOwners = 60), "Boss's own buy in Kite")
+        assertEquals(60, LiveMirror.boughtTodayCap(listOf(null), overnight = 0, held = 60, otherOwners = 0), "day quantity not given")
+        assertEquals(60, LiveMirror.boughtTodayCap(emptyList(), overnight = -5, held = 60, otherOwners = 0))
+        assertEquals(0, LiveMirror.boughtTodayCap(listOf(30, 30), overnight = 0, held = 60, otherOwners = 90), "never below 0")
+    }
+
+    @Test fun anOrderTimeAtOrAfterTheEntryOnlyAndAnUnreadableOneNever() {
+        val since = LocalDateTime.of(2026, 11, 18, 9, 38, 0)
+        assertTrue(LiveMirror.placedSince("2026-11-18 09:38:00", since))
+        assertTrue(LiveMirror.placedSince(" 2026-11-18 09:50:12 ", since))
+        assertFalse(LiveMirror.placedSince("2026-11-18 09:37:59", since))
+        assertFalse(LiveMirror.placedSince("", since))
+        assertFalse(LiveMirror.placedSince("18 Nov 09:50", since))
+    }
+
     @Test fun throughAFiredGttsOwnLimit() {
         // A GTT's leg is 5% under its trigger: 170 -> 161.5; through it below that.
         assertTrue(LiveMirror.throughLimit(161.0, 170.0, 161.5, 0.05, 1))

@@ -226,13 +226,85 @@ class OrbArmsLiveTest : RobolectricTest() {
     @Test fun closedByHandTheStopComesOutAndNothingIsSold() {
         val s1 = stopOrder(30, 160.0, 152.0)
         state(positions = listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
-        kite.position(sym, 0, 0.0, product = "MIS")                       // sold in the Kite app
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.soldInKite(sym, 30, 210.0)                                   // sold in the Kite app (18 Nov: its sale is in the book)
         kite.quote("NFO:$sym", 210.0)
         kite.requests.clear()
         pass()
         assertTrue(kite.requests.any { it.method == "DELETE" && it.path == "/orders/regular/$s1" })
         assertTrue("a sell now would open a short", kite.placed.isEmpty())
         assertEquals("closed_by_you", arm().today.single().why)
+    }
+
+    /**
+     * 18 Nov 2026 (Boss, live: the Liquidity BANKNIFTY lot was booked closed on one positions read while Zerodha still held it - its
+     * stop cancelled, nothing watching it): a read with no row for the contract never counts; a row at 0 with no sale in Zerodha's
+     * order book closes nothing and leaves the stop resting (no sale, no new stop) until reads 30 s apart agree.
+     */
+    @Test fun oneReadShowingItGoneNeverClosesItOrTakesItsStopOut() {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(positions = listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.quote("NFO:$sym", 210.0)
+        kite.requests.clear()
+        pass()                                                            // no row at all (an empty read)
+        assertNotNull("kept", arm().open)
+        assertEquals("its stop rests", "TRIGGER PENDING", kite.order(s1).status)
+        kite.position(sym, 0, 0.0, product = "MIS")                       // a row at 0, no sale in the book
+        pass()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(29)
+        pass()
+        assertNotNull("not confirmed yet: kept", arm().open)
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertTrue("nothing sent, nothing cancelled", kite.requests.none { it.method != "GET" })
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)                // 30 s of reads agreeing
+        pass()
+        assertEquals("closed_by_you", arm().today.single().why)
+        assertTrue(kite.requests.any { it.method == "DELETE" && it.path == "/orders/regular/$s1" })
+        assertTrue("a sell now would open a short", kite.placed.isEmpty())
+    }
+
+    /**
+     * 18 Nov 2026: an unconfirmed buy whose order the book does not show, while Zerodha holds it, is kept as the arm's trade with its
+     * stop at once - never dropped as "no buy reached Zerodha".
+     */
+    @Test fun anUnconfirmedBuyZerodhaHoldsIsKeptWithItsStop() {
+        val p = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true)
+        state(positions = listOf(p))
+        kite.position(sym, 30, 201.0, product = "MIS")
+        kite.dayBought["NFO:$sym:MIS"] = 30                              // bought today (Zerodha's day_buy_quantity)
+        runBlocking { ArmLive.refresh() }                                 // the arms' live copies' book read (none of them holds it)
+        pass()
+        val kept = arm().open!!
+        assertFalse(kept.unconfirmed)
+        assertEquals(30, kept.qty); assertEquals("Zerodha's average", 201.0, kept.entry, 0.0)
+        val stop = kite.placed.single()
+        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "quantity" to "30"),
+            stop.form.filterKeys { it in setOf("transaction_type", "order_type", "quantity") })
+        assertEquals(kite.orders.keys.last(), kept.stopOrderId)
+        assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "managed as this arm's trade" in it })
+    }
+
+    /** 18 Nov 2026: a position carried from an earlier day (nothing bought today) is never taken for a lost buy's fill. */
+    @Test fun anUnconfirmedBuyNeverTakesAPositionCarriedFromAnEarlierDay() {
+        val p = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true)
+        state(positions = listOf(p))
+        kite.overnight(sym, 30, 180.0, product = "MIS")
+        runBlocking { ArmLive.refresh() }
+        pass()
+        assertNull("dropped, the carried position left alone", arm().open)
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    /** 18 Nov 2026: one whose order is not found and nothing is held waits three minutes from its entry (the book can trail), then goes. */
+    @Test fun anUnconfirmedBuyNotFoundWaitsThreeMinutesThenIsDropped() {
+        val p = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true).put("entryTime", now.toString())
+        state(positions = listOf(p))
+        pass()
+        assertTrue("kept waiting", arm().open?.unconfirmed == true)
+        OrbArms.testNow = OrbArms.testNow!!.plusMinutes(4)
+        pass()
+        assertNull("nothing is held", arm().open)
+        assertTrue(kite.placed.isEmpty())
     }
 
     // ---- the profit lock moves the stop at Zerodha (07 Oct, research/HUNT_H20.md F1-F3, F5) ------------------------

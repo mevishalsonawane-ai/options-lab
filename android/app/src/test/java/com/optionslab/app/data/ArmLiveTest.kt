@@ -1009,13 +1009,13 @@ class ArmLiveTest : RobolectricTest() {
         val sid = view().open.single().stopOrderId!!
         assertEquals(60, kite.order(sid).qty)
         watch()
-        kite.positions["NFO:$sym:MIS"] = 30 to 200.0               // Boss sold one of the two lots in Kite
+        kite.soldInKite(sym, 30, 200.0)                            // Boss sold one of the two lots in Kite (18 Nov: its sale is in the book)
         watch()
         assertEquals(30, kite.order(sid).qty)
         assertTrue(kite.order(sid).working)
         assertEquals(30, view().open.single().qty)
         assertEquals("closed_at_zerodha", view().closed.single().why)
-        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                  // and then the rest
+        kite.soldInKite(sym, 30, 200.0)                            // and then the rest
         watch()
         assertFalse("taken out on a flat position", kite.order(sid).working)
         assertTrue(view().open.isEmpty())
@@ -1122,7 +1122,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "b2"))
         watch()
         val bStop = view().openReal.single { it.ref == "b2" }.stopOrderId!!
-        kite.positions["NFO:$sym:MIS"] = 30 to 200.0             // Boss sold 30 by hand: the oldest trade's (the paper rule)
+        kite.soldInKite(sym, 30, 200.0)                          // Boss sold 30 by hand: the oldest trade's (the paper rule)
         watch()
         assertEquals("closed_at_zerodha", view().closed.single().why)
         assertEquals("a2", view().closed.single().ref)
@@ -1452,5 +1452,197 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(10.0, ArmLive.pct(100.0, 90.0, side = -1)!!, 1e-9)     // a sale (MCX short) that fell
         assertNull(ArmLive.pct(100.0, null)); assertNull(ArmLive.pct(0.0, 5.0)); assertNull(ArmLive.pct(Double.NaN, 5.0))
         assertNull(ArmLive.pct(null, 5.0))
+    }
+
+    // ---- 18 Nov 2026: live trades lost from the book while Zerodha still held them ----------------------------------------------
+
+    /**
+     * 18 Nov 2026 (Boss, live: R51's FINNIFTY lot, its buy's reply lost, was dropped as "never placed" three minutes on while Zerodha
+     * held it - no stop, no step lock, nothing watching it): an unconfirmed entry whose order the search cannot find, while Zerodha's
+     * positions hold it, is taken back at once - its stop rested at Zerodha, its rule and step lock as it entered, its best from the
+     * fill - and never dropped afterwards.
+     */
+    @Test fun anUnconfirmedEntryZerodhaHoldsIsTakenBackWithItsStopAndNeverDropped() {
+        kite.trailReads = 1_000                                       // the order book never lists the buy (as on the phone)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)      // and its reply is lost
+        ArmLive.entered(ask(donchian, "lost").copy(fixed = true, lock = true))
+        val waiting = view().openReal.single()
+        assertTrue("held as unconfirmed", waiting.unconfirmed)
+        assertEquals("bought at Zerodha", 30, held())
+        assertTrue("no stop yet", kite.orders.values.none { it.side == "SELL" })
+        watch()
+        val p = view().openReal.single()
+        assertFalse("taken back from Zerodha's positions", p.unconfirmed)
+        assertEquals(30, p.qty); assertEquals("Zerodha's average", 200.0, p.entry, 1e-9)
+        assertTrue("its rule as it entered", p.fixed); assertTrue("and its step lock", p.lock)
+        assertTrue(p.heldSeen)
+        val stop = kite.orders.values.single { it.side == "SELL" && it.type == "SL" }
+        assertEquals(p.stopOrderId, stop.id)
+        assertEquals(30, stop.qty); assertEquals("the arm's own -15% on the fill", 170.0, stop.trigger, 1e-9)
+        assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "managed as this arm's trade" in it })
+        // Past the three minutes' grace, still held at Zerodha: kept and watched, never dropped as "never placed".
+        ArmLive.testNow = ArmLive.testNow!!.plusMinutes(5)
+        watch(); watch()
+        assertEquals(1, view().openReal.size); assertTrue(view().closed.isEmpty())
+        assertTrue(kite.order(stop.id).working)
+        assertTrue("watched by every stop lane", ArmLive.holdingHint)
+    }
+
+    /** 18 Nov 2026: a position another trade of the book explains is never taken for a lost entry's fill (no second stop on it). */
+    @Test fun aLostEntryNeverTakesAnotherTradesPosition() {
+        ArmLive.entered(ask(donchian, "first"))
+        watch()
+        kite.trailReads = 1_000
+        kite.nextPlace(FakeKite.Scenario(reply = FakeKite.Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.REJECT))   // nothing bought
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "second"))
+        assertEquals("only the first trade's lot", 30, held())
+        watch()
+        val second = view().openReal.single { it.ref == "second" }
+        assertTrue("still waiting for its order, never adopted", second.unconfirmed)
+        assertEquals("one stop, the first trade's", 1, kite.orders.values.count { it.side == "SELL" && it.type == "SL" })
+    }
+
+    /**
+     * 18 Nov 2026 (the same morning: the trade booked "closed_at_zerodha" on one positions read, its stop cancelled): a read with no row
+     * for the contract never counts; a read short of what is held, with no sale in Zerodha's order book, closes nothing and leaves the
+     * stop resting until reads 30 s apart agree; a read showing it held again starts the count over.
+     */
+    @Test fun oneShortPositionsReadNeverClosesTheTradeOrTakesItsStopOut() {
+        ArmLive.entered(ask(donchian, "short"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        val t0 = ArmLive.testNow!!
+        kite.requests.clear()
+        // An empty read (no row at all), again minutes later: nothing.
+        kite.positions.remove("NFO:$sym:MIS")
+        watch(); ArmLive.testNow = t0.plusMinutes(2); watch()
+        assertTrue(view().closed.isEmpty()); assertEquals(30, view().openReal.single().qty)
+        assertTrue("its stop rests", kite.order(sid).working); assertEquals(30, kite.order(sid).qty)
+        // A row at 0 with no sale in the order book: not booked within 30 s, nothing sent, the stop never touched.
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0
+        ArmLive.testNow = t0.plusMinutes(3); watch()
+        ArmLive.testNow = t0.plusMinutes(3).plusSeconds(20); watch()
+        assertTrue(view().closed.isEmpty())
+        assertTrue(kite.order(sid).working)
+        assertTrue("nothing sent or changed at Zerodha", kite.requests.none { it.method != "GET" })
+        // Held again: the count starts over.
+        kite.positions["NFO:$sym:MIS"] = 30 to 200.0
+        ArmLive.testNow = t0.plusMinutes(4); watch()
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0
+        ArmLive.testNow = t0.plusMinutes(4).plusSeconds(10); watch()
+        ArmLive.testNow = t0.plusMinutes(4).plusSeconds(39); watch()
+        assertTrue("29 s of short reads: still held", view().closed.isEmpty())
+        assertTrue(kite.order(sid).working)
+        // 30 s of reads agreeing: closed outside, its stop confirmed out first.
+        ArmLive.testNow = t0.plusMinutes(4).plusSeconds(40); watch()
+        assertEquals("closed_at_zerodha", view().closed.single().why)
+        assertFalse(kite.order(sid).working)
+        assertTrue(view().openReal.isEmpty())
+    }
+
+    /** 18 Nov 2026: the app's own sale of another trade on the contract never confirms a short read of this one. */
+    @Test fun anotherTradesOwnExitNeverConfirmsAShortRead() {
+        ArmLive.entered(ask(donchian, "x1"))
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "x2"))
+        watch()
+        legs["x1"] = donchian to 0                                   // x1's paper exit: the app sells its 30
+        watch()
+        assertEquals("paper_exit", view().closed.single().why)
+        assertEquals(30, held())
+        val sid = view().openReal.single().stopOrderId!!
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                  // then one read short of x2's 30
+        watch()
+        assertEquals("x2 kept", "x2", view().openReal.single().ref)
+        assertEquals(1, view().closed.size)
+        assertTrue("its stop rests", kite.order(sid).working)
+    }
+
+    /** 18 Nov 2026 (review): a part Boss sold earlier, already booked, never confirms a later short read of the rest. */
+    @Test fun anEarlierHandSaleAlreadyBookedNeverConfirmsALaterShortRead() {
+        ArmLive.testLotCap = 0
+        ArmLive.entered(ask(donchian, "part", qty = 60))
+        watch()
+        kite.soldInKite(sym, 30, 205.0)                                  // Boss sells one lot in Kite
+        ArmLive.testNow = Market.now().plusMinutes(1)                    // booked a moment after his sale
+        watch()
+        assertEquals("closed_at_zerodha", view().closed.single().why)
+        val sid = view().openReal.single().stopOrderId!!
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                      // later, one read short of the rest
+        ArmLive.testNow = ArmLive.testNow!!.plusMinutes(5)
+        watch()
+        assertEquals("the rest kept", 30, view().openReal.single().qty)
+        assertEquals(1, view().closed.size)
+        assertTrue("its stop rests", kite.order(sid).working)
+    }
+
+    /** A FINNIFTY option (lot 60) at 309, as on 18 Nov. */
+    private fun finnifty(): Pair<Paper.Contract, String> {
+        val s = "FINNIFTY26NOV28100PE"
+        kite.instruments += FakeKite.Ins(22_000_777, s, "FINNIFTY", expiry, 28_100.0, "PE", 60)
+        kite.quote("NFO:$s", 309.0, 308.95, 309.05)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        return Paper.Contract("FINNIFTY-TEST-28100PE", "FINNIFTY", expiry, 28_100.0, Right.PE, 60, "NSE_FO|FINPE") to s
+    }
+
+    /**
+     * 18 Nov 2026 (Boss's live R51 FINNIFTY 28100 PE, 60 @ 309.00): the full step lock on its own fill and lot - each +₹500 a lot of
+     * its best from +₹1,000 MODIFIES the same Zerodha stop up (never down, never a second one), up to +₹4,000 a lot at 377.35 (the
+     * +₹3,500 lock, 369.45); falling back, Zerodha's stop sells it there - the step lock's exit, no sale of the app's own.
+     */
+    @Test fun aLiveFinniftyLotsStepLockIsMovedUpStepByStepAndSoldAtTheThreeAndAHalfThousandLock() {
+        val (c, s) = finnifty()
+        legs["fin"] = donchian to 60
+        ArmLive.entered(ArmLive.Ask(donchian, "fin", c, 1, 60, 309.0, stop = 262.65, fixed = true, lock = true))
+        val p0 = view().openReal.singleOrNull() ?: error("not bought: ${view().refused} ${view().notMirrored}")
+        assertEquals(60, p0.qty); assertEquals(309.0, p0.entry, 1e-9); assertTrue(p0.fixed && p0.lock)
+        val id = p0.stopOrderId!!
+        assertEquals("its own -15%", 262.65, kite.order(id).trigger, 1e-9)
+        val ladder = com.optionslab.engine.orb.StepTrail.Ladder(309.0, 60, 60, com.optionslab.engine.orb.StepTrail.Lock.L500, 0.05)
+        assertEquals("+₹4,000 a lot", 377.35, ladder.trigger(6)!!, 1e-9)
+        assertEquals("+₹3,500 a lot locked", 369.45, ladder.keep(6)!!, 1e-9)
+        fun at(px: Double) { kite.quote("NFO:$s", px, px - 0.05, px + 0.05); watch() }
+        for (k in 0..6) {
+            at(ladder.trigger(k)!!)
+            assertEquals("step $k", ladder.keep(k)!!, kite.order(id).trigger, 1e-9)
+            assertEquals(ladder.keep(k)!!, view().openReal.single().stopTrigger!!, 1e-9)
+            at(ladder.keep(k)!! + 1.0)                                       // a dip above it: never down
+            assertEquals(ladder.keep(k)!!, kite.order(id).trigger, 1e-9)
+        }
+        assertEquals("the same order each time: never a second stop", 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertEquals("never a sale of its own", 0, kite.placed.count { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" })
+        // Down through the lock: Zerodha's stop sells it at 369.40.
+        kite.fill(id, 369.40)
+        watch()
+        val done = view().closed.single()
+        assertEquals(com.optionslab.engine.orb.StepTrail.WHY_LOCK, done.why)
+        assertEquals(369.40, done.exit!!, 1e-9)
+        assertTrue("about +₹3,500 after charges: ${done.net}", done.net!! > 3_400 && done.net!! < 3_700)
+        assertEquals("no second exit", 0, kite.placed.count { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" })
+        assertEquals(0, kite.positions["NFO:$s:MIS"]?.first ?: 0)
+    }
+
+    /**
+     * 18 Nov 2026: the last step's modify refused by Zerodha - the stop stays one step lower at Zerodha, and the app sells itself (its
+     * stop out first, one MARKET sale) when the price comes back to the +₹3,500 lock.
+     */
+    @Test fun aRefusedStepLockModifyIsSoldByTheAppAtItsLevel() {
+        val (c, s) = finnifty()
+        legs["fin2"] = donchian to 60
+        ArmLive.entered(ArmLive.Ask(donchian, "fin2", c, 1, 60, 309.0, stop = 262.65, fixed = true, lock = true))
+        val id = view().openReal.single().stopOrderId!!
+        val ladder = com.optionslab.engine.orb.StepTrail.Ladder(309.0, 60, 60, com.optionslab.engine.orb.StepTrail.Lock.L500, 0.05)
+        fun at(px: Double) { kite.quote("NFO:$s", px, px - 0.05, px + 0.05); watch() }
+        for (k in 0..5) at(ladder.trigger(k)!!)
+        assertEquals(361.1, kite.order(id).trigger, 1e-9)
+        kite.modifyRefusals = 1
+        at(377.35)
+        assertEquals("refused: still one step lower at Zerodha", 361.1, kite.order(id).trigger, 1e-9)
+        assertEquals("its best is kept", 377.35, view().openReal.single().best!!, 1e-9)
+        at(369.40)                                                          // at or under the +₹3,500 lock (369.45)
+        val sells = kite.placed.filter { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" }
+        assertEquals("one sale of the app's own", 1, sells.size); assertEquals("60", sells.single().form["quantity"])
+        assertEquals("its stop taken out first", "CANCELLED", kite.order(id).status)
+        assertEquals(com.optionslab.engine.orb.StepTrail.WHY_LOCK, view().closed.single().why)
+        assertEquals(0, kite.positions["NFO:$s:MIS"]?.first ?: 0)
     }
 }

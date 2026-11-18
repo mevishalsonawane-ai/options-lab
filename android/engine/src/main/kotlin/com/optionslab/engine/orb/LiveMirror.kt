@@ -624,6 +624,51 @@ object LiveMirror {
 
     const val GRACE_MS = 60_000L
 
+    /**
+     * 18 Nov 2026 (Boss, live: R51's FINNIFTY lot and a Liquidity BANKNIFTY lot were booked closed while both were still held at
+     * Zerodha, their stops taken out and nothing watching them): a positions read showing LESS than a live trade holds closes it only
+     * once that is confirmed. Confirmed: Zerodha's positions show a row for the contract ([rowShown]: a read with no row for a
+     * contract traded today is a bad read and never counts) and either an exit-side fill on it is in the order book ([saleSeen]: Boss's
+     * own sale in Kite, Zerodha's square-off), or the reads have kept showing it short for [SHORT_CONFIRM_MS] since the first one
+     * ([firstShortMs]; null: none yet) at [nowMs]. Until then the trade is kept, watched and its stop left resting. Pure.
+     */
+    fun shortConfirmed(rowShown: Boolean, saleSeen: Boolean, firstShortMs: Long?, nowMs: Long): Boolean =
+        rowShown && (saleSeen || (firstShortMs != null && nowMs - firstShortMs >= SHORT_CONFIRM_MS))
+
+    /** 18 Nov 2026: how long the reads must keep showing a trade short (with no sale seen) before it is booked closed: two reads at least. */
+    const val SHORT_CONFIRM_MS = 30_000L
+
+    /**
+     * 18 Nov 2026: how much of what Zerodha holds on a contract ([held], as the entry's side sees it) a live entry Zerodha never confirmed
+     * (its order not found) may take back as its own fill: what [others] (the open trades that already explain it) leave, never more than
+     * the entry asked for ([asked]) nor than Zerodha says was bought today that way ([today]; null: not said), in whole [lot]s. 0: none. Pure.
+     */
+    fun unexplainedQty(held: Int, today: Int?, others: Int, asked: Int, lot: Int): Int {
+        val l = lot.coerceAtLeast(1)
+        return (minOf(held - others, asked, today ?: Int.MAX_VALUE) / l * l).coerceAtLeast(0)
+    }
+
+    /**
+     * 18 Nov 2026 (review): the most of a held position ([held], as the entry's side sees it) that today's lost entry can have bought: what
+     * is held beyond what was carried from an earlier day ([overnight]), and - when Zerodha gives every row's day quantity that way
+     * ([dayQtys]; a null: not said) - what was bought today less what orders of other owners filled today ([otherOwners]: Boss's own in
+     * Kite, another bot's). Never below 0. Pure.
+     */
+    fun boughtTodayCap(dayQtys: List<Int?>, overnight: Int, held: Int, otherOwners: Int): Int {
+        val beyondCarried = held - overnight.coerceAtLeast(0)
+        val day = if (dayQtys.isNotEmpty() && dayQtys.all { it != null }) dayQtys.sumOf { it!! } - otherOwners else null
+        return minOf(beyondCarried, day ?: Int.MAX_VALUE).coerceAtLeast(0)
+    }
+
+    private val KITE_TIME = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+    /**
+     * 18 Nov 2026: whether Zerodha's order time [placedAt] ("yyyy-MM-dd HH:mm:ss") is at or after [since]; false when it cannot be
+     * read (an unknown time never confirms a close). Pure.
+     */
+    fun placedSince(placedAt: String, since: LocalDateTime): Boolean =
+        runCatching { !LocalDateTime.parse(placedAt.trim(), KITE_TIME).isBefore(since) }.getOrDefault(false)
+
     /** Why a live entry may not go at [t] although the gate allows it: too late for an intraday trade (or its expiry square-off). */
     fun tooLate(t: LocalDateTime, exchange: String, product: String, expiry: LocalDate?): String? =
         if (squareOffDue(t, exchange, product, expiry, t.toLocalDate())) "too late in the day for a new live entry (its square-off is due)" else null
