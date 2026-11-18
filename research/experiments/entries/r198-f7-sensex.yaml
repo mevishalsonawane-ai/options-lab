@@ -1,0 +1,29 @@
+id: r198-f7-sensex
+title: 'R198 far-OTM hedged strangle to expiry (side study): F7-SENSEX - SENSEX iron condor: shorts 7 steps out, hedges 10
+  steps out, entry 09:20 the session after an expiry, exit 15:05 on expiry day'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R198_FAR_OTM_EXPIRY.md
+hypothesis: a far-OTM hedged short strangle carried to the weekly expiry wins >= 80% of cycles and makes money after costs
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 clean held contracts 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 second look (R195 read it); forward from 2026-11-16 unread
+instruments:
+- SENSEX
+features:
+- 'signal source: none directional (strikes from the index at entry)'
+- no stop; the hedge is the loss cap
+model_or_rule: 'SENSEX iron condor: shorts 7 steps out, hedges 10 steps out, entry 09:20 the session after an expiry, exit
+  15:05 on expiry day'
+settings: research/hunt/r198_far_otm_expiry/r198study.py; PREREG.md section 3
+prereg: research/hunt/r198_far_otm_expiry/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 98 cycles, win 49.0% (Wilson 39.3%-58.7%), net -Rs 36,484, avg win Rs 2,545, avg loss Rs 3,173, worst -Rs
+    5,581; 2026 34 cycles, win 55.9%, net Rs 7,735; twin p 0.4765, BH q 1.00 (m = 4,885). fail: 1 design, 3 trades, 4 without
+    top 5, 5 twin, 6 BH, 7 account stop, 8 2x slippage, 9 win rate 80%'
+  costs: dated charges, 'liq' slippage, exercise STT on settled ITM long legs, today's lot
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''try far OTM strangle hold to expiry with hedge for 80%''). The app stays buy-only.'

@@ -1,0 +1,29 @@
+id: r198-f8-nifty
+title: 'R198 far-OTM hedged strangle to expiry (side study): F8-NIFTY - NIFTY put spread: shorts 5 steps out, hedges 10 steps
+  out, entry 09:20 the session after an expiry, exit 15:10 the session before expiry'
+family: option-structure
+date: '2026-11-18'
+doc: research/HUNT_R198_FAR_OTM_EXPIRY.md
+hypothesis: a far-OTM hedged short strangle carried to the weekly expiry wins >= 80% of cycles and makes money after costs
+data_version: R195's stores (Drive lake copy of 18 Nov 2026; R51 clean held contracts 2 Aug 2021 - 13 Nov 2026)
+period:
+  design: 2021-08-02..2025-12-31
+  holdout: 2026 second look (R195 read it); forward from 2026-11-16 unread
+instruments:
+- NIFTY
+features:
+- 'signal source: none directional (strikes from the index at entry)'
+- no stop; the hedge is the loss cap
+model_or_rule: 'NIFTY put spread: shorts 5 steps out, hedges 10 steps out, entry 09:20 the session after an expiry, exit 15:10
+  the session before expiry'
+settings: research/hunt/r198_far_otm_expiry/r198study.py; PREREG.md section 3
+prereg: research/hunt/r198_far_otm_expiry/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 215 cycles, win 74.9% (Wilson 68.7%-80.2%), net Rs 45,916, avg win Rs 1,485, avg loss Rs 3,577, worst -Rs
+    12,271; 2026 44 cycles, win 59.1%, net -Rs 32,514; twin p 0.1678, BH q 1.00 (m = 4,885). fail: 2 2026, 4 without top 5,
+    5 twin, 6 BH, 7 account stop, 9 win rate 80%'
+  costs: dated charges, 'liq' slippage, exercise STT on settled ITM long legs, today's lot
+holdout_read: false
+verdict: rejected
+notes: 'Research only (Boss, 18 Nov 2026: ''try far OTM strangle hold to expiry with hedge for 80%''). The app stays buy-only.'
