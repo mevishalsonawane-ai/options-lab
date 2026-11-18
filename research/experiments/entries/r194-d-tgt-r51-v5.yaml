@@ -1,0 +1,41 @@
+id: r194-d-tgt-r51-v5
+title: 'R194 S/R on R51 Donchian 20 + Supertrend: live rule (picker + breakeven +10% + Rs 500 step lock) + S/R target: sell
+  when the index touches the next 3+-touch level ahead vs live rule (picker + breakeven +10% + Rs 500 step lock)'
+family: trade-management
+date: '2026-11-18'
+doc: research/hunt/r194_sr_study/results/summary.md
+hypothesis: 'live rule (picker + breakeven +10% + Rs 500 step lock) + S/R target: sell when the index touches the next 3+-touch
+  level ahead beats live rule (picker + breakeven +10% + Rs 500 step lock) on R51 Donchian 20 + Supertrend, 1 Nov 2024 - 13
+  Nov 2026: higher net and lower drawdown in W1 and W2, robust to the top 5, better than random twins, after BH'
+data_version: Drive lake copy of 17 Nov 2026 (R190's flat folder ~/.cache/iraalgo/r190/lake, with the 20 Oct - 13 Nov 2026
+  fill); R51 clean stores 3 Aug 2020 - 13 Nov 2026 (R190), as R193
+period:
+  design: W1 2024-11-01..2026-03-31 (R151's pickers in-sample; nothing new fitted except family B's retrain on R151's own
+    design period 2024-11-20..2026-03-31)
+  holdout: 'W2 2026-04-01..2026-11-13 (out-of-sample for the pickers but read by R151-R193: not fresh); read once per family
+    (results/READ_*)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute index pivots grouped into 3+-touch levels, R150 / R151; Liquidity''s swing / pool zones
+  on 15 / 5-minute index bars)'
+- buy the option; the S/R target is an index touch, sold at the next minute's open
+model_or_rule: 'live rule (picker + breakeven +10% + Rs 500 step lock) + S/R target: sell when the index touches the next
+  3+-touch level ahead (baseline: live rule (picker + breakeven +10% + Rs 500 step lock))'
+settings: research/hunt/r194_sr_study/r194cfg.py; PREREG.md section 6
+prereg: research/hunt/r194_sr_study/PREREG.md
+variants_tried: 1
+results:
+  summary: 'W1 2286 tr, 61.6% win, Rs 41,409, DD Rs 104,495 (baseline 2240 tr, 61.9% win, Rs 124,786, DD Rs 85,937); W2 854
+    tr, 60.9% win, Rs 36,676, DD Rs 39,773 (baseline 842 tr, 62.0% win, Rs 78,794, DD Rs 45,825); total 3140 tr, 61.4% win,
+    Rs 78,085, DD Rs 104,495 (baseline 3082 tr, 61.9% win, Rs 203,580, DD Rs 85,937); twin p 0.0005, BH q 3.22e-23 (m = 4,808).
+    Does not help: W1: net 41,409 not above the baseline''s 124,786; W1: max drawdown 104,495 not below the baseline''s 85,937;
+    W2: net 36,676 not above the baseline''s 78,794; total: net without top 5 52,042 not above the baseline''s 203,580'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes.

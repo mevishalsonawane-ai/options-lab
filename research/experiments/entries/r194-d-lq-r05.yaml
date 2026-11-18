@@ -1,0 +1,39 @@
+id: r194-d-lq-r05
+title: 'R194 S/R on Liquidity 15+5: Liquidity, room 0.5 index stop vs Liquidity as live (room 1 index stop, new-level exit
+  on)'
+family: liquidity
+date: '2026-11-18'
+doc: research/hunt/r194_sr_study/results/summary.md
+hypothesis: 'Liquidity, room 0.5 index stop beats Liquidity as live (room 1 index stop, new-level exit on) on Liquidity 15+5,
+  1 Nov 2024 - 13 Nov 2026: higher net and lower drawdown in W1 and W2, robust to the top 5, better than random twins, after
+  BH'
+data_version: Drive lake copy of 17 Nov 2026 (R190's flat folder ~/.cache/iraalgo/r190/lake, with the 20 Oct - 13 Nov 2026
+  fill); R51 clean stores 3 Aug 2020 - 13 Nov 2026 (R190), as R193
+period:
+  design: W1 2024-11-01..2026-03-31 (R151's pickers in-sample; nothing new fitted except family B's retrain on R151's own
+    design period 2024-11-20..2026-03-31)
+  holdout: 'W2 2026-04-01..2026-11-13 (out-of-sample for the pickers but read by R151-R193: not fresh); read once per family
+    (results/READ_*)'
+instruments:
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+features:
+- 'signal source: the index (5-minute index pivots grouped into 3+-touch levels, R150 / R151; Liquidity''s swing / pool zones
+  on 15 / 5-minute index bars)'
+- buy the option; the S/R target is an index touch, sold at the next minute's open
+model_or_rule: 'Liquidity, room 0.5 index stop (baseline: Liquidity as live (room 1 index stop, new-level exit on))'
+settings: research/hunt/r194_sr_study/r194cfg.py; PREREG.md section 6
+prereg: research/hunt/r194_sr_study/PREREG.md
+variants_tried: 1
+results:
+  summary: 'W1 1100 tr, 44.5% win, Rs 239,895, DD Rs 35,566 (baseline 908 tr, 43.1% win, Rs 249,576, DD Rs 32,537); W2 507
+    tr, 40.0% win, -Rs 1,628, DD Rs 62,231 (baseline 415 tr, 38.1% win, Rs 5,717, DD Rs 61,062); total 1607 tr, 43.1% win,
+    Rs 238,266, DD Rs 62,231 (baseline 1323 tr, 41.5% win, Rs 255,293, DD Rs 61,062); twin p 0.9650, BH q 1 (m = 4,808). Does
+    not help: W1: net 239,895 not above the baseline''s 249,576; W1: max drawdown 35,566 not below the baseline''s 32,537;
+    W2: net -1,628 not above the baseline''s 5,717; W2: max drawdown 62,231 not below the baseline''s 61,062; total: net without
+    top 5 151,077 not above the baseline''s 255,293; twin p 0.9650 >= 0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes.
