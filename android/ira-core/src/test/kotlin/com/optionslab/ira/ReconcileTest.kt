@@ -47,6 +47,17 @@ class ReconcileTest {
         assertEquals(f, t.step(540_000L, f, true))
     }
 
+    @Test fun oneWithAnExitStopRestingIsToldOnceWhileItLasts() {
+        val t = Reconcile.Tracker()
+        val f = listOf(Reconcile.Finding(ce, 75, true))
+        t.step(0L, f, true)
+        assertEquals(f, t.step(60_000L, f, true))
+        assertTrue(t.step(360_000L, f, true).isEmpty(), "a stop rests: not every 5 minutes")
+        assertTrue(t.step(3_600_000L, f, true).isEmpty())
+        val unprotected = listOf(Reconcile.Finding(ce, 75, false))
+        assertEquals(unprotected, t.step(3_660_000L, unprotected, true), "its stop gone: told again at once")
+    }
+
     @Test fun twoReadsCloseTogetherWaitForTheMinute() {
         val t = Reconcile.Tracker()
         val f = listOf(Reconcile.Finding(ce, 75, null))

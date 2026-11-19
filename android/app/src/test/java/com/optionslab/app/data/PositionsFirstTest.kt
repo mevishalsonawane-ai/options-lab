@@ -287,8 +287,8 @@ class PositionsFirstTest : RobolectricTest() {
 
     /**
      * 19 Nov 2026 (audit batch 2: "positions +18-29 s"): at a restart with a live position, the books that can hold a LIVE position
-     * are read first and the watch's stop lane makes its first look (its market from the clock) before the slow paper books are read
-     * and before the large settings are decrypted; the stream connects beside the restore.
+     * are read first and the watch's stop lane makes its first look (its market from the clock) before the slow paper books are read;
+     * the large settings are decrypted only after every position book; the stream connects beside the restore.
      */
     @Test fun theStopLanesFirstLookComesBeforeTheSlowBooksAndTheLargeSettings() {
         PositionsFirst.resetForTest(started = true)
@@ -316,8 +316,9 @@ class PositionsFirstTest : RobolectricTest() {
         }
         val e = events.toList()
         assertTrue(e.toString(), e.indexOf("first look") in 0 until e.indexOf("slow books"))
-        assertTrue(e.toString(), e.indexOf("live books") in 0 until e.indexOf("large settings"))
-        assertTrue(e.toString(), e.indexOf("large settings") < e.indexOf("slow books"))
+        assertTrue(e.toString(), e.indexOf("live books") in 0 until e.indexOf("slow books"))
+        // The large settings only once every position book (paper ones too) is read.
+        assertTrue(e.toString(), e.indexOf("slow books") in 0 until e.indexOf("large settings"))
         assertTrue(e.toString(), e.indexOf("stream connects") in 0 until e.indexOf("slow books"))
         assertEquals("the stream asked again once every book is read", "stream", e.last())
         assertEquals(true, PositionsFirst.foundOpen)

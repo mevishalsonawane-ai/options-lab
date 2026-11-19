@@ -1841,7 +1841,8 @@ class WatchService : Service() {
                 // minutes): a pass hung on one call with nothing open no longer keeps the processor awake for ever - the hold
                 // lapses by itself, and the dead-man alarm finds the watch stuck. A slow pass moves step by step and keeps it.
                 // With a position or order open it is renewed whatever the loop is doing: open positions come first.
-                val progressing = Heartbeat.keepsAwake(runStartEl) || holdingAny()
+                val held = holdingAny()
+                val progressing = Heartbeat.keepsAwake(runStartEl) || held
                 // 26 Oct: the hold is also renewed while the ntfy reader is reading in its hours (memory only) - but a hung loop is
                 // still told below as before.
                 val reader = !com.optionslab.app.BuildConfig.GOLD && runCatching {
@@ -1849,7 +1850,7 @@ class WatchService : Service() {
                 // 19 Nov 2026 (audit batch 2: the hold lapsed between the steps of a slow pass): renewed whatever the loop is doing
                 // during NSE's hours (a hung loop is still told below, and the dead-man still finds it).
                 val nseHours = runCatching { Market.isTradingDay() && Jobs.nseHoursAt(Market.minuteNow(), Market.foClose()) { false } }.getOrDefault(true)
-                if (run == watchRun && com.optionslab.ira.WatchHealth.holdAwake(progressing, reader, nseHours, held = false)) WatchWake.hold(me)
+                if (run == watchRun && com.optionslab.ira.WatchHealth.holdAwake(progressing, reader, nseHours, held)) WatchWake.hold(me)
                 if (run == watchRun && progressing) hungTold = false
                 else if (run == watchRun && !hungTold) {
                     hungTold = true
@@ -1966,7 +1967,7 @@ class WatchService : Service() {
                 }
                 // 19 Nov 2026 (audit batch 2): the side lane - the reconciler (Zerodha against every book, report only), the late
                 // completed-check RISK and the plain "anything held" mark ([StopLane.sideLane]).
-                val sideJob = launch(WatchLanes.dispatcher) {
+                val sideJob = launch(kotlinx.coroutines.Dispatchers.IO) {
                     StopLane.sideLane(me, stop = { lane.ended }, mode = { lane.mode }, heldAny = { holdingAny() })
                 }
                 try {
@@ -2299,9 +2300,10 @@ class WatchService : Service() {
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
         // The non-blocking hints, never the locks: a strategy pass may hold its lock across network calls.
-        // 19 Nov 2026 (audit batch 2, item 5): every book's hint (the arms' live trades, the protections, Pine, paper, MCX, and
-        // Zerodha's own positions at the reconciler's last read), not only the strategies' and ORB's. Memory only (the main thread).
-        if (runCatching { com.optionslab.app.data.HeldNow.any(mcxLive = true) }.getOrDefault(true))
+        // 19 Nov 2026 (audit batch 2, item 5): every book's hint (the arms' live trades, the protections, Pine, the paper book with its
+        // MCX positions, the MCX arms, and Zerodha's own positions at the reconciler's last read), not only the strategies' and ORB's.
+        // Memory only (the main thread): Zerodha's MCX book is left out here (its calendar may be a file read).
+        if (runCatching { com.optionslab.ira.Held.any(com.optionslab.app.data.HeldNow.sources(mcx = false)) }.getOrDefault(true))
             Notifier.post(this, 2013, Notifier.APPROVAL, "Open positions are no longer being watched",
                 "A position, order or strategy run is open. Its stops and targets are only checked while the watch is running " +
                     "(live stops resting at Zerodha still stand).", "strategy")
@@ -2341,6 +2343,8 @@ class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 
     override suspend fun doWork(): Result {
         val k = kind() ?: return Result.failure()
+        // 19 Nov 2026 (audit batch 2, the quiet start): a scheduled job (the ticket, the settle, the harvest) may need the books.
+        com.optionslab.app.data.StartGate.open("a scheduled job (${k.name.lowercase()})")
         val s = AppSettings.load()
         val session = inputData.getString(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
         if (k == Jobs.Kind.HARVEST) {

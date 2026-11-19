@@ -130,8 +130,14 @@ object Heartbeat {
     // judged in NSE's hours only, so a watch dead in MCX's evening was brought back but never told. Off the main thread (the alarm).
     fun stale(): Boolean = com.optionslab.ira.WatchHealth.staleJudged(inHours(), mcxWatchDue()) && System.currentTimeMillis() - last() > STALE_MS
 
-    /** MCX's watch should run now (its calendar, what is held there, its armed arms); a read that fails is no. */
-    private fun mcxWatchDue(): Boolean = runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
+    /**
+     * MCX's watch should run now (its calendar, what is held there, its armed arms), from 2 minutes after MCX's open (review: as NSE's
+     * [inHours], so a watch just started for MCX beats first); a read that fails is no.
+     */
+    private fun mcxWatchDue(): Boolean = runCatching {
+        val w = com.optionslab.app.data.McxMarket.todayWindow() ?: return@runCatching false
+        Market.minuteNow() >= w.open.hour * 60 + w.open.minute + 2 && com.optionslab.app.data.McxMarket.watchDue()
+    }.getOrDefault(false)
 
     /**
      * 19 Nov 2026 (audit batch 2): a LIVE position is held now (memory hints only): the arms' live copies, the ORB family's live

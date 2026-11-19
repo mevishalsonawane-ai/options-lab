@@ -69,7 +69,7 @@ object PositionsFirst {
             if (quiet) {
                 runCatching { Diag.record("start", "quiet start (no market open or opening within ${com.optionslab.ira.QuietStart.NEAR_MIN} min, " +
                     "nothing held at the last mark): the books, the large settings and the warm-ups wait for the screen, the watch or a job") }
-                runBlocking { StartGate.await() }
+                runBlocking { if (withTimeoutOrNull(QUIET_WAIT_MS) { StartGate.await() } == null) StartGate.open("a quiet start still running after ${QUIET_WAIT_MS / 60_000} min") }
                 quietStart = false
                 startedAt = android.os.SystemClock.uptimeMillis()
             }
@@ -77,8 +77,8 @@ object PositionsFirst {
                 steps(::restoreLive, { runCatching { com.optionslab.app.work.Jobs.ensureWatch(app) } }, { runCatching { KiteStream.ensure() } }, ::restoreLate,
                     rest = ::restoreRest,
                     // 19 Nov 2026 (audit batch 2): the stream asked beside the restore (it connects while the books are read; it is
-                    // asked again once they are, for the contracts they hold), and the large settings decrypted only once the books
-                    // that can hold a LIVE position are read (they queued on the Keystore ahead of them).
+                    // asked again once they are, for the contracts they hold), and the large settings decrypted only once every
+                    // position book is read, the live ones first (they queued on the Keystore ahead of them).
                     early = { runCatching { KiteStream.ensure() } },
                     afterLive = { runCatching { com.optionslab.app.security.SecurePrefs.prefetchSoon() } })
             }
@@ -127,9 +127,9 @@ object PositionsFirst {
     // 19 Nov 2026 (audit batch 2: "positions +18-29 s" - the books that can hold a LIVE position waited behind ~20 others, 4 at a time,
     // with Jarvis's large settings decrypting beside them): [restore] is now the books that can hold a LIVE position (the arms' live
     // copies, the ORB family, the protections, Pine, the Strategy Module, the ticket, MCX's live book), read first; once they are, the
-    // live positions are marked watched ([liveWatchedAt]) and [afterLive] runs (the large settings' decryption); then [rest] (every
-    // other book) before "all books read" ([StartOrder.Step.POSITIONS]) as before. [early] runs as soon as the watch was asked, beside
-    // the restore (the price stream connects meanwhile).
+    // live positions are marked watched ([liveWatchedAt]); then [rest] (every other book), then [afterLive] (the large settings'
+    // decryption, which queued on the Keystore ahead of the books before) and "all books read" ([StartOrder.Step.POSITIONS]) as
+    // before. [early] runs as soon as the watch was asked, beside the restore (the price stream connects meanwhile).
     internal suspend fun steps(restore: suspend () -> Boolean, watch: () -> Unit, stream: () -> Unit, late: suspend () -> Boolean = { false },
                                clock: () -> Long = { android.os.SystemClock.uptimeMillis() }, rest: suspend () -> Boolean = { false },
                                early: () -> Unit = {}, afterLive: () -> Unit = {}): Unit = kotlinx.coroutines.coroutineScope {
@@ -151,8 +151,9 @@ object PositionsFirst {
         liveWatchedAt = clock()
         runCatching { Diag.record("start", "live positions read and watched: ${if (liveOpen) "a live position, order or run may be open" else "none open"} " +
             "(${liveWatchedAt - startedAt} ms after the start)") }
-        runCatching { afterLive() }
         val open = liveOpen or runCatching { rest() }.getOrDefault(true)
+        // Review: once every position book is read (paper ones too: CLAUDE.md's "paper or live"), before the stream and the rest.
+        runCatching { afterLive() }
         foundOpen = open
         order.done(StartOrder.Step.POSITIONS, clock())
         runCatching { Diag.record("start", "positions first: ${if (open) "open positions or orders found, watch started" else "nothing open"} " +
@@ -305,8 +306,14 @@ object PositionsFirst {
      */
     private suspend fun awaitQuiet() {
         val quiet = withTimeoutOrNull(WAIT_MS) { decided.await() } ?: false
-        if (quiet && quietStart) StartGate.await()
+        if (!quiet || !quietStart) return
+        // Review: never forever - a process still alive [QUIET_WAIT_MS] later is doing real work: the full start runs (positions
+        // first), then the warm-ups.
+        if (withTimeoutOrNull(QUIET_WAIT_MS) { StartGate.await() } == null) StartGate.open("a quiet start still running after ${QUIET_WAIT_MS / 60_000} min")
     }
+
+    /** 19 Nov 2026 (audit batch 2): the longest a quiet start's waiting work waits for the gate. */
+    private const val QUIET_WAIT_MS = 10 * 60_000L
 
     /** The diagnostics' line: the start-up's steps and when each ended. */
     fun diagLine(): String {

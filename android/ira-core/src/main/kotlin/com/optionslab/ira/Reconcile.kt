@@ -13,7 +13,7 @@ import java.util.Locale
  *  - [find]: each position Zerodha holds that no book owns, with whether an exit stop rests for it at Zerodha (a working SL / SL-M
  *    order on the closing side, or an active GTT with a closing leg; null: the order book and the GTTs could not be read);
  *  - [Tracker]: said only once two reads in a row agree and it has lasted [ALERT_AFTER_MS], then again every [REPEAT_MS] while it
- *    lasts. A failed read changes nothing (it never reads as "flat", never clears and never alerts). "Zerodha holds something"
+ *    lasts (one with an exit stop resting at Zerodha: once while it lasts). A failed read changes nothing (it never reads as "flat", never clears and never alerts). "Zerodha holds something"
  *    ([Tracker.heldHint]) is kept for the watch's "is anything held?" so the watch and the dead-man never sleep while Zerodha holds
  *    anything; it turns false only after two flat reads in a row, and lapses [HINT_MS] after the last good read.
  *
@@ -105,7 +105,9 @@ object Reconcile {
                 val agreed = last != null && last[f.symbol]?.let { Integer.signum(it) == Integer.signum(f.qty) } == true
                 if (!agreed || nowMs - first < ALERT_AFTER_MS - SLACK_MS) continue
                 val told = toldAt[f.symbol]
-                if (told != null && nowMs - told in 0 until REPEAT_MS) continue
+                // Review: one with an exit stop resting at Zerodha (Boss's own position with his own stop, say) is told once while it
+                // lasts, not every 5 minutes, so the unprotected ones are never lost in the noise.
+                if (told != null && (f.stop == true || nowMs - told in 0 until REPEAT_MS)) continue
                 toldAt[f.symbol] = nowMs
                 out += f
             }

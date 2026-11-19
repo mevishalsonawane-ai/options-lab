@@ -143,7 +143,8 @@ object Reconciler {
         val v = if (held) com.optionslab.ira.QuietStart.HELD else com.optionslab.ira.QuietStart.FLAT
         if (markKept == v) return
         runCatching { com.optionslab.app.work.NightMarks.put(context, HELD_MARK, v) }
-        markKept = v
+        // Review: kept only once it reads back (a write skipped on the main thread, or failed, is tried again next time).
+        if (runCatching { com.optionslab.app.work.NightMarks.get(context, HELD_MARK) }.getOrNull() == v) markKept = v
     }
 
     @Volatile private var markKept: String? = null

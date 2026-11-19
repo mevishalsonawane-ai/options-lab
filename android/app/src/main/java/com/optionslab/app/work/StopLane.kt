@@ -175,7 +175,8 @@ internal object StopLane {
         if (q { com.optionslab.app.data.ArmLive.holdingHint }) out[B_ARMS_LIVE] = true
         if (q { com.optionslab.app.data.PineAuto.held.value.values.any { it.live } }) out[B_PINE] = true
         else if (q { com.optionslab.app.data.PineAuto.holding() }) out[B_PINE] = false
-        if (q { com.optionslab.app.data.Strategies.runningHint }) out[B_STRATEGIES] = true
+        // Review: the Strategy Module's hint is paper and live runs alike (no live-only hint in memory): measured, never a live RISK.
+        if (q { com.optionslab.app.data.Strategies.runningHint }) out[B_STRATEGIES] = false
         if (q { com.optionslab.app.data.Protections.liveKeysHint.isNotEmpty() }) out[B_PROTECTIONS] = true
         else if (runCatching { com.optionslab.app.data.Protections.activeHint }.getOrNull() != false) out[B_PROTECTIONS] = false
         if (runCatching { com.optionslab.app.data.HeldNow.sources().paperBook }.getOrNull() != false) out[B_PAPER] = false
@@ -239,8 +240,11 @@ internal object StopLane {
         val startEl = android.os.SystemClock.elapsedRealtime()
         try {
             while (!stop()) {
-                runCatching { completedCheck(context, mode()) }
-                runCatching { com.optionslab.app.data.Reconciler.markHeld(context, heldAny()) }
+                // Review: a notice, the diary and the plain mark's file are small blocking calls - on IO, as everything blocking.
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { completedCheck(context, mode()) }
+                    runCatching { com.optionslab.app.data.Reconciler.markHeld(context, heldAny()) }
+                }
                 val settled = android.os.SystemClock.elapsedRealtime() - startEl >= FIRST_RECONCILE_MS
                 if (settled && reconcile?.isActive != true && runCatching { com.optionslab.app.data.Reconciler.due() }.getOrDefault(false)) {
                     reconcile = launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -348,7 +352,7 @@ internal object StopLane {
 /**
  * 19 Nov 2026 (audit batch 2: the stop lane and the pulse shared Dispatchers.IO with the blocking work - Keystore, disk, Zerodha
  * reads - so a burst of it could leave them waiting for a thread): a small pool of their own for the watch's clocks - the pulse, the
- * stop lane's loop, the clock lane's loop and the side lane. Their looks and rounds still run their book steps on Dispatchers.IO
+ * stop lane's loop and the clock lane's loop. Their looks and rounds still run their book steps on Dispatchers.IO
  * exactly as before (the caller switches), so nothing blocking sits on these threads. Daemon threads at the foreground priority;
  * made once per process.
  */
