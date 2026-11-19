@@ -242,6 +242,17 @@ class FakeKite : Closeable {
     /** 18 Nov 2026 (review F2): every order trailing the book ([trailReads]) is shown in it from now. */
     fun showInBook() = synchronized(lock) { trailing.clear() }
 
+    /**
+     * 18 Nov 2026 (audit: B2): an order resting at Zerodha that no test path sent - Boss's own LIMIT sell in Kite ([tag] blank), or a stop of
+     * the arms whose reply was lost ([type] "SL", [tag] "iraorb"): OPEN (a stop: TRIGGER PENDING), nothing filled, no position moved. Its id.
+     */
+    fun restingInKite(symbol: String, side: String, qty: Int, price: Double, type: String = "LIMIT", trigger: Double = 0.0, tag: String = "",
+                      product: String = "MIS", exchange: String = "NFO"): String = synchronized(lock) {
+        val id = (++seq).toString()
+        orders[id] = Order(id, symbol, exchange, side, qty, product, type, price, trigger, tag, if (type == "SL" || type == "SL-M") "TRIGGER PENDING" else "OPEN")
+        id
+    }
+
     /** 18 Nov 2026: the next this many order modifies are refused (Zerodha's InputException), as a stop Zerodha would not move. */
     @Volatile var modifyRefusals = 0
 
