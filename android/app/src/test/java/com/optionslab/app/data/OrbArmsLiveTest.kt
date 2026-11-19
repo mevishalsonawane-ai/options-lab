@@ -343,6 +343,18 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals("30", kite.placed.single { it.form["order_type"] == "SL" }.form["quantity"])
     }
 
+    /** 19 Nov 2026 (review): the start-up sweep never cancels a working buy that another book's label names - it is not these arms'. */
+    @Test fun theSweepLeavesAnotherBooksWorkingBuyAlone() {
+        state()
+        val id = kite.restingInKite(sym, "BUY", 30, 190.0, tag = "iraorb")
+        runBlocking { Strategies.tagOwner("kite:$id", "Iron fly · entry") }
+        restart()
+        kite.requests.clear()
+        pass()
+        assertEquals("left working", "OPEN", kite.order(id).status)
+        assertTrue("nothing cancelled", kite.requests.none { it.method == "DELETE" })
+    }
+
     /**
      * 19 Nov 2026 (review): a lost entry about to be kept from the positions alone while a buy of these arms that no row claims still works
      * on the contract: that buy is cancelled and the entry stays unconfirmed (settled next look from what that order ended with).

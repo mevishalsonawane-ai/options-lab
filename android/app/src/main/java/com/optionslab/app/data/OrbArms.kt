@@ -425,7 +425,8 @@ object OrbArms {
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
             return Book().also { it.gen = gen; it.sweepFrom = erasedAt; it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
-                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST); cache = it; hints(it); wipedSince(it) }
+                LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST); cache = it; hints(it)
+                if (!wipedSince(it) && it.sweepFrom != null) runCatching { saveSoon(it) } }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -3254,6 +3255,7 @@ object OrbArms {
         // that is only logged in SHADOW ("would have waited") and said once; the sweep keeps trying on later looks.
         if (!coldSwept) {
             val rows = b.positions.size
+            coldSafety.clear()                                                       // (only this call's safety candidates count below)
             val t0 = now()
             val done = runCatching { coldSweep(b, t0, Strategies.stoppedToday()) }.getOrDefault(false)
             if (done) coldSwept = true else coldFailed(t0)
@@ -3451,7 +3453,7 @@ object OrbArms {
             // a filled lot left unwatched.)
             when (val o = orphanStop(b, label, sym, p.entryTime, filled, spec?.tickSize ?: 0.05, null, settling = true, entryOid = oid)) {
                 is Orphan.Wait -> return p
-                Orphan.Unread -> {
+                Orphan.Unread, Orphan.Other -> {
                     Notifier.orderFilled(app, "BUY", filled, sym, fill, "Live", label, oid)
                     val level = if (liq) firstStop(LiquidityRules.stopTrigger(fill, pct0), fill, lotOf(p), p.fixed) else OrbRules.stopTrigger(fill, pts0)
                     return p.copy(qty = filled, entry = fill, entryOrderId = oid, stopOrderId = null, stopTrigger = level,
@@ -3826,6 +3828,8 @@ object OrbArms {
         // (An order time that cannot be read after an erase today is not counted - never a lot from before it taken back.)
         fun counts(o: Broker.OrderRow) = o.tag == "iraorb" && o.exchange == "NFO" && o.product == "MIS" &&
             (from == null || runCatching { !LocalDateTime.parse(o.placedAt, fmt).isBefore(from) }.getOrDefault(false))
+        val claimed0 = b.positions.mapNotNull { it.entryOrderId }.toSet()
+        if (orders.none { counts(it) && it.side == "BUY" && it.id !in claimed0 && (it.filled > 0 || it.working) }) return true
         val owners = runCatching { Strategies.owners() }.getOrNull() ?: return false
         val armLive = ArmLive.view.value
         val byLabel = ALL_ARMS.associateBy { it.label }
@@ -3906,7 +3910,7 @@ object OrbArms {
                 var covered = qty
                 when (val so = orphanStop(b, a.label, sym, at, qty, ins.tickSize, orders, at = if (mayRest) trig else null, entryOid = o.id)) {
                     is Orphan.Took -> { stopId = so.id; stopAt = so.trigger }
-                    Orphan.None -> if (mayRest) {
+                    Orphan.None, Orphan.Other -> if (mayRest) {
                         // (19 Nov 2026, review: never a stop for more than is held less every other working sale on the contract, as
                         // [restExchangeStop]; the trade split when less; none left: no stop, said each minute.)
                         val others = orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.working && !ownCancel(it.id) }
@@ -4253,11 +4257,12 @@ object OrbArms {
      * 19 Nov 2026 (review): before a lost entry is looked for in Zerodha's positions ([settleEntry], no order found for it), a buy of these
      * arms on [sym] still working that no trade claims and no other arm's or book's label names - it may be this very entry, still filling -
      * is cancelled as the app's own, and true is returned: the entry stays unconfirmed and is judged again on the next look from what
-     * Zerodha then holds. The orders or labels unreadable: true (asked again). False: none working.
+     * Zerodha then holds. The orders unreadable: true (asked again). False: none working, or the labels unreadable (nothing cancelled).
      */
     private suspend fun strayBuyWorking(b: Book, sym: String): Boolean {
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return true
-        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return true
+        // (The labels unreadable: nothing is cancelled - it could be another arm's - and the entry is judged from the positions as before.)
+        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return false
         val claimed = b.positions.mapNotNull { it.entryOrderId }.toSet()
         val working = orders.filter { it.symbol == sym && it.tag == "iraorb" && it.side == "BUY" && it.exchange == "NFO" && it.product == "MIS" &&
             it.working && it.id !in claimed && owners["kite:${it.id}"] == null }
@@ -4271,6 +4276,8 @@ object OrbArms {
         object Wait : Orphan()
         /** The orders or the owner labels could not be read: nothing is known either way. */
         object Unread : Orphan()
+        /** 19 Nov 2026 (review): an unclaimed stop that may be another trade's (the wide window, another quantity): never taken. */
+        object Other : Orphan()
         class Took(val id: String, val trigger: Double) : Orphan()
     }
 
@@ -4321,7 +4328,7 @@ object OrbArms {
         val rem = com.optionslab.engine.risk.ExitQty.remaining(o.qty, o.filled, o.pending)
         // (The wide window - the entry's own Zerodha time not known - takes only a stop placed for exactly this quantity: another trade's
         // lost stop on the contract from shortly before is never taken and resized.)
-        if (exact == null && rem != qty) return Orphan.Wait
+        if (exact == null && rem != qty) return Orphan.Other
         if (rem < qty && !grow) return Orphan.Wait
         val trig = maxOf(own, at ?: own)
         val resize = rem != qty
@@ -4400,7 +4407,7 @@ object OrbArms {
             entryOid = p.entryOrderId)) {
             is Orphan.Wait, Orphan.Unread -> return null
             is Orphan.Took -> return p.copy(stopOrderId = o.id, stopTrigger = o.trigger) to null
-            Orphan.None -> if (adoptOnly) return null
+            Orphan.None, Orphan.Other -> if (adoptOnly) return null
         }
         // 19 Nov 2026 (coordinator): never a stop for more than Zerodha holds less every other working sale on the contract (from this
         // pass's read; none given: what is held, as before). None left: no stop - the other sales are its only cover, said each minute.
