@@ -57,6 +57,9 @@ object PositionCards {
     /** 15 Nov: bumped by [resetForTest]; a refresh started before it never sets [anyOpen] after it. */
     @Volatile private var resetGen = 0
 
+    /** The cards' generation ([resetGen]): moves only when they are reset (a test's start). */
+    internal fun generation(): Int = resetGen
+
     /**
      * TEST SEAM (15 Nov, CI: BatteryAuditTest found "Zerodha positions" held, left by an earlier test's fill card): every card,
      * the last Zerodha book and the "open" flag forgotten, as a new process. A refresh already running from an earlier test
