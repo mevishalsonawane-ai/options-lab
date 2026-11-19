@@ -149,6 +149,25 @@ notes; match the surrounding code.
     - No other failed idea may use these exceptions.
   - Paper changes never carry over to live by themselves.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.
+- LIVE GATES ADDED BY THE 19-20 NOV AUDIT (batch 2). Each one only refuses an entry or a loosening, never an exit:
+  - Lifting Stop for today in Live takes the PIN. The quick tile and voice cannot lift it; the tile tells Boss to open the app.
+  - A saved strategy's automatic live entries (scheduler runs) need Live and "AI trades go live". A run Boss started himself does not.
+  - Switching off a live risk rule (account stop, exposure cap, Boss's risk rules) takes the PIN, even before the saved switch is
+    read. Raising Liquidity's lots in Live takes the PIN.
+  - Trade-manager exits of a paper trade with a real live copy are held back (shadow) unless that family's live mode is ACT (PIN).
+  - Voice "cancel all" keeps protective SL / SL-M orders.
+  - ntfy alerts: its Trade live starts off and is switched off while neither an access token nor Boss's own ntfy server is set
+    (anyone who learns a public topic can post). The phones where it was on by the old default were switched off once, logged in the
+    change timeline. Awaiting Boss's confirmation (asked 19 Nov).
+- PAPER ENDS AND LIVE COPIES (20 Nov audit). Every automatic paper end (square-off, loss limit, sweeper, expiry exit, an unreadable book)
+  sells the live copy, as before. Only Boss's own paper reset or hand close leaves a live copy running, and only an NSE intraday (MIS)
+  copy, which keeps its own Zerodha stop, its rule exits and the 15:15 square-off; Night (NRML) and MCX copies are sold with the paper.
+  A paper-only refusal (another arm holds the option on paper, the paper guard, no paper price) still skips live: it is logged "would
+  have gone live", and its Bot settings switch (off by default, on takes the PIN) would send the live copy.
+- WHO CANCELLED A STOP (20 Nov audit, Boss's 16 Nov rule). An SL that comes back cancelled during market hours with no mark of the app's
+  own cancel, and with blank or unrecognised words, is Boss's: never put back, the app sells at the level. Exchange / RMS / market
+  protection words, or a cancel outside market hours, are Zerodha's: put back. A GTT "deleted" with no app mark is Boss's. The app's own
+  cancels (arm exits and Boss's manual exit from the app) are marked before they go and saved in the book, so a restart never misreads them.
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
   No main-thread I/O.
 - OPEN POSITIONS AND ORDERS COME FIRST (Boss, 14 Oct: "whenever an order is placed it must be pulled on priority, so we
