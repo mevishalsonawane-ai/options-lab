@@ -3707,7 +3707,9 @@ object OrbArms {
             // order never holds this position's stop back. Never a stop Boss cancelled themselves ([Position.stopByYou]).)
             if (regular && cur.stopOrderId == null && held > 0 && !stopped && !cur.stopByYou && t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) &&
                 !expiryClosing(cur.symbol, sym, t, orders.values) &&
-                orders.values.none { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS }) {
+                orders.values.none { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } &&
+                // (19 Nov 2026, final check: nor in the gap after a square-off's exit on it - a read can miss an order placed a moment ago.)
+                !SquareOffExit.inGap("NFO", sym, "MIS")) {
                 // (19 Nov 2026, second review: beside its own working sale - or a stop of these arms resting unclaimed - nothing new rests,
                 // but an unclaimed stop placed since its entry is still taken as its own: [restExchangeStop] with adoptOnly.)
                 // (19 Nov 2026, review: a stop of these arms resting unclaimed is [orphanStop]'s to judge - taken, waited on, or a stop capped
@@ -3947,7 +3949,8 @@ object OrbArms {
                     com.optionslab.engine.fmtG(ins.strike) + ins.right.name
                 // Its stop: an unclaimed one of these arms taken first (always - so a sale this pass takes it out as its own); else placed,
                 // never from 15:10, with Stop for today or at the expiry square-off (the same pass sells it); unclear: none now, watched.
-                val mayRest = !stopped && t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) && !expiryClosing(paperSym, sym, t, orders)
+                val mayRest = !stopped && t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) && !expiryClosing(paperSym, sym, t, orders) &&
+                    !SquareOffExit.inGap("NFO", sym, "MIS")
                 var stopId: String? = null
                 var stopAt: Double = trig
                 // (19 Nov 2026, review / final check: never a stop - taken or placed - for more than is held less every other working sale on
@@ -4706,7 +4709,8 @@ object OrbArms {
                 p.stopByYou -> "you cancelled its stop yourself"
                 runCatching { Strategies.stoppedToday() }.getOrDefault(false) -> "Stop for today"
                 !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "the square-off time"
-                expiryClosing(p.symbol, sym, t, list) || list.any { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } -> "a square-off is selling it"
+                expiryClosing(p.symbol, sym, t, list) || list.any { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } ||
+                    SquareOffExit.inGap("NFO", sym, "MIS") -> "a square-off is selling it"
                 ownSale -> "its own sale is still working"
                 qty <= 0 -> "nothing it may cover"
                 else -> null

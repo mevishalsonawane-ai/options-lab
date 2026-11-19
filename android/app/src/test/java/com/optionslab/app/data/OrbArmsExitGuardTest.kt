@@ -612,4 +612,23 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         pass()
         assertEquals("one stop for the 30 the other sale leaves", listOf("30"), kite.placed.filter { it.form["order_type"] == "SL" }.map { it.form["quantity"] })
     }
+
+    /**
+     * 19 Nov 2026 (final check): a square-off's exit went on the contract a moment ago (the pass's order read does not show it yet): the
+     * re-rest puts no stop beside it while its gap lasts.
+     */
+    @Test fun noStopIsRestedInTheGapAfterASquareOffsExit() {
+        SquareOffExit.resetForTest()                                       // the app's own gap (the test default is none)
+        state(listOf(position("orb", 30, 200.0, "E1", stopId = null, stop = 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        SquareOffExit.notePlaced("NFO", sym, "MIS")
+        kite.requests.clear()
+        try {
+            pass()
+            assertTrue("no stop in the gap: ${kite.placed.map { it.form }}", kite.placed.none { it.form["order_type"] == "SL" })
+        } finally { SquareOffExit.resetForTest(gap = 0L) }
+        pass()
+        assertEquals("rested once the gap is over (none here)", 1, kite.placed.count { it.form["order_type"] == "SL" })
+    }
 }
