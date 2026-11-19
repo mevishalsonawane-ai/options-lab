@@ -2145,23 +2145,25 @@ class ArmLiveTest : RobolectricTest() {
         java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
         com.optionslab.app.security.Vault.testWriteDelayMs = 1_500
         try {
-            val atPost = java.util.concurrent.CountDownLatch(1)
-            val release = java.util.concurrent.CountDownLatch(1)
-            var postMs = -1L
+            // (Zerodha's reply to the buy comes 2 s late, so the entry waits there while its intent is written; the fake's server is
+            // never held up, unlike a hook that blocks.)
+            kite.slowMs["/orders/regular"] = 2_000L
+            kite.requests.clear()
             val t0 = System.nanoTime()
-            kite.afterNext("/orders/regular") {
-                postMs = (System.nanoTime() - t0) / 1_000_000
-                atPost.countDown()
-                release.await(20, java.util.concurrent.TimeUnit.SECONDS)
-            }
             val entry = Thread { ArmLive.entered(ask(donchian, "second", c = c2)) }.apply { start() }
-            assertTrue("its order went", atPost.await(20, java.util.concurrent.TimeUnit.SECONDS))
+            var postMs = -1L
+            val until = System.nanoTime() + 20_000_000_000L
+            while (System.nanoTime() < until) {
+                if (kite.requests.toList().any { it.method == "POST" && it.path == "/orders/regular" }) { postMs = (System.nanoTime() - t0) / 1_000_000; break }
+                Thread.sleep(5)
+            }
+            kite.slowMs.clear()                                              // only the buy's reply is late
+            assertTrue("its order went", postMs >= 0)
             val l0 = System.nanoTime()
             watch()                                                          // the first trade's look, while the intent is written
             val lookMs = (System.nanoTime() - l0) / 1_000_000
-            release.countDown()
             entry.join(30_000)
-            assertTrue("the order was not held up by the intent's write: $postMs ms", postMs in 0 until 1_200)
+            assertTrue("the order was not held up by the intent's write: $postMs ms", postMs < 1_200)
             assertTrue("another trade's look was not held up by it: $lookMs ms", lookMs < 1_200)
             assertEquals(2, view().openReal.size)
         } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0 }
@@ -2189,7 +2191,6 @@ class ArmLiveTest : RobolectricTest() {
         runBlocking { ArmLive.watch(stream = true) }
         assertEquals("held within its 10 s", 0, posted("was not found in Zerodha's order book"))
         ArmLive.testNow = ArmLive.testNow!!.plusSeconds(6)
-        kite.requests.clear()
         runBlocking { ArmLive.watch(stream = true) }
         watch()
         assertEquals("searched once, not found: said once", 1, posted("was not found in Zerodha's order book"))
