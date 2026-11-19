@@ -240,8 +240,8 @@ object LossBreaker {
 
     /**
      * 19 Nov 2026 (final review): whether today is past the OTHER daily loss limit ([limit]'s other one, as it is set now): Zerodha's
-     * m2m against Zerodha's limit, or the paper day - whole or NSE part, whichever is worse - against the paper bots' limit. A figure
-     * not read is not past (the next look decides, as ever).
+     * m2m against Zerodha's limit, or the paper day against the paper bots' limit - its NSE part while the loss limits split, else the
+     * whole day, as the look reads it. A figure not read is not past (the next look decides, as ever).
      */
     private suspend fun otherPast(limit: Limit): Boolean {
         val s = AppSettings.load()
@@ -254,8 +254,10 @@ object LossBreaker {
                     PaperDay(snap.dayPnl, snap.positions.positions.map { it.exchange to it.totalPnlToday }, snap.trades.map { it.exchange to it.charges })
                 }
                 // The figure the look reads ([checkOnce]): the NSE part while the loss limits split (nothing can trade live), else the
-                // whole day. A Zerodha session counts as live (as an unread book does there).
-                val liveActive = Broker.loggedIn || (s.live && s.allowRealOrders) || runCatching { Strategies.anyLiveRunning() }.getOrDefault(true)
+                // whole day. A live position open counts as live (an unread book too), as there.
+                val book = if (Broker.loggedIn) Broker.within(Broker.READ_BUDGET_MS) { Broker.positionBook() } else null
+                val liveOpen = book?.net?.any { it.open } ?: Broker.loggedIn
+                val liveActive = liveOpen || (s.live && s.allowRealOrders) || runCatching { Strategies.anyLiveRunning() }.getOrDefault(true)
                 val split = com.optionslab.ira.SegmentLock.lossSplit(s.mcxOwnLimits, liveActive)
                 val figure = if (split) day?.let { d -> runCatching { com.optionslab.ira.SegmentLock.split(d.total, d.rows, d.charges)?.nse }.getOrNull() } ?: day?.total
                     else day?.total

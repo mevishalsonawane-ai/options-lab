@@ -1012,15 +1012,15 @@ object Strategies {
         return index.removeSuffix(" The commodity bots keep trading.") + " " + mcx.removeSuffix(" The index bots keep trading.")
     }
 
+    /** The day's stop's one wait for the turn ([stopForToday]): the time by which its strategies go without it. */
+    class TurnWait(@Volatile var deadline: Long)
+
     /**
      * Stop strategy [id], selling what it holds. 19 Nov 2026 (third review of the clock lane): [salesInTurn] (the daily loss limit's
      * stop) - its exit sends in the square-offs' turn ([com.optionslab.app.work.ClockLane.sales]), with this book's lock had inside
      * it; the turn is never held while waiting for this lock, nor this lock while waiting for the turn (the square-offs never wait
      * for it either: [tagOwnerSoon]).
      */
-    /** The day's stop's one wait for the turn ([stopForToday]): the time by which its strategies go without it. */
-    class TurnWait(@Volatile var deadline: Long)
-
     suspend fun stop(id: Long, reason: String, compromised: Boolean, salesInTurn: Boolean = false, wait: TurnWait? = null): String {
         if (!salesInTurn) return lock.withLock { stopHeld(id, reason, compromised) }
         // 19 Nov 2026 (third review): neither held while waiting for the other - in the turn this lock is only tried; busy, the turn

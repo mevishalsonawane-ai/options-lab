@@ -352,11 +352,13 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
         assertEquals("OPEN", kite.order(id).status)
         assertTrue("nothing more sent", kite.placed.isEmpty())
-        // Resting longer than its closing takes (a protected MARKET left behind): cancelled and sold, as before - never cover to the close.
-        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(Market.now().toInstant().plusSeconds(60), com.optionslab.engine.IST)
+        // Resting long (a protected MARKET left behind): still never cancelled (the strategy would sell again), told to Boss once.
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(Market.now().toInstant().plusSeconds(90), com.optionslab.engine.IST)
         try {
-            at(15, 7); pass()
-            assertTrue("cancelled once it is stale", kite.requests.any { it.method == "DELETE" })
+            at(15, 7); pass(); pass()
+            assertTrue("never cancelled", kite.requests.none { it.method == "DELETE" })
+            assertTrue("nothing sold beside it", kite.placed.isEmpty())
+            assertEquals("told once", 1, texts().count { it.contains("a strategy's exit sale for it is still resting") })
         } finally {
             com.optionslab.app.data.Market.testClock = null
         }

@@ -22,15 +22,14 @@ internal object SquareOffExit {
     private val DONE = setOf("COMPLETE", "REJECTED", "CANCELLED")
     /** The Strategy Module's orders' tag ([Strategies]). */
     private const val STRATEGY_TAG = "iraalgostrat"
-    /** 19 Nov 2026 (final review): how long a strategy's exit sale counts as its closing in progress (cover). */
-    private const val STRATEGY_COVER_MS = 30_000L
+    /** 19 Nov 2026 (final review): a strategy's exit sale resting longer than this is told to Boss (it stays cover). */
+    private const val STRATEGY_COVER_MS = 60_000L
     private val STAMP = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-    /** Placed within [STRATEGY_COVER_MS] by the market's clock (Zerodha's stamps are IST); a stamp not read is not fresh. */
-    private fun fresh(o: Broker.OrderRow): Boolean = runCatching {
+    /** Resting longer than [STRATEGY_COVER_MS] by the market's clock (Zerodha's stamps are IST; a phone behind it reads young). */
+    private fun stale(o: Broker.OrderRow): Boolean = runCatching {
         val at = java.time.LocalDateTime.parse(o.placedAt, STAMP).atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
-        val now = Market.now().toInstant().toEpochMilli()
-        now - at in 0..STRATEGY_COVER_MS
+        Market.now().toInstant().toEpochMilli() - at > STRATEGY_COVER_MS
     }.getOrDefault(false)
 
     /**
@@ -96,10 +95,13 @@ internal object SquareOffExit {
             // nothing more this pass, the next reads the books again; one not yet out: the exit waits for the next pass too.
             // 19 Nov 2026 (final review): a strategy's own exit sale working ([STRATEGY_TAG], not its resting stop) is cover too - cancelled,
             // the Strategy Module sends its exit again from its own book (it never reads Zerodha's positions first), beside this one's.
-            // Only a fresh one ([STRATEGY_COVER_MS]): one resting longer (a protected MARKET left behind as the price moved) is
-            // cancelled and sold as before, so it never holds the square-off back to the close.
-            val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) ||
-                (it.tag == STRATEGY_TAG && !isStop(it) && fresh(it)) }
+            // Whatever its age: cancelled and sold here, the strategy sends it again and the leg is sold twice. One resting long (a
+            // protected MARKET left behind as the price moved) is told to Boss once instead ([STRATEGY_COVER_MS]).
+            val cover = same.filter { it.tag == tag || it.tag in TAGS || ((it.tag == com.optionslab.engine.orb.LiveMirror.TAG || it.tag == STRATEGY_TAG) && !isStop(it)) }
+            same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && stale(it) }?.let {
+                tell("strategy exit resting ${p.symbol}", "${p.symbol} $aboutIt and a strategy's exit sale for it is still resting at Zerodha. The $exitName " +
+                    "leaves it there (selling beside it could sell the position twice): check it in Trade, and modify or cancel it yourself if it is not filling.")
+            }
             val others = same.filter { it !in cover }
             if (others.isNotEmpty()) {
                 var filled = false; var allOut = true

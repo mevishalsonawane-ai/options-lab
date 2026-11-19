@@ -236,6 +236,37 @@ class ClockLaneSquareOffTest : RobolectricTest() {
     }
 
     /**
+     * Final review: the shared wait counts only waiting - once the square-off lets the turn go, every strategy's exits go in the turn
+     * (each had it), none without it.
+     */
+    @Test fun aTurnFreedPartwayLetsEveryStrategySellInIt() = runBlocking {
+        AutomationSupport.liveSettings()
+        runningStrategy()
+        anotherStrategy("Clock lane test 2", com.optionslab.engine.strategy.OptionType.PE)
+        ClockLane.salesTurnWaitMs = 3_000L
+        val release = CompletableDeferred<Unit>()
+        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
+        try {
+            Background.await("a square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
+            val before = com.optionslab.app.data.Diag.lines().size
+            val stop = launch(Dispatchers.IO) {
+                Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true)
+            }
+            Thread.sleep(500)
+            release.complete(Unit)
+            stop.join()
+            val said = com.optionslab.app.data.Diag.lines().drop(before)
+            assertTrue(said.joinToString("\n"), said.none { it.contains("went without it") || it.contains("the turn not had") })
+            val bought = kite.placed.filter { it.form["transaction_type"] == "BUY" }.groupingBy { it.form["tradingsymbol"] }.eachCount()
+            val sold = kite.placed.filter { it.form["transaction_type"] == "SELL" }.groupingBy { it.form["tradingsymbol"] }.eachCount()
+            assertEquals("every leg bought is sold", bought, sold)
+        } finally {
+            release.complete(Unit)
+            hold.join()
+        }
+    }
+
+    /**
      * Item 1 (c), third review: tripped with no strategy running there is nothing to sell, so the turn is never waited for - the day's
      * stop is written at once even while a square-off holds the turn (before, the whole stop waited up to 30 s for it).
      */
