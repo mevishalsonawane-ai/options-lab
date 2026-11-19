@@ -334,6 +334,17 @@ object LiveMirror {
     /** Whether a live entry on [underlying] may go: an index only when Boss selected it; anything else (MCX) is not decided here. */
     fun marketOn(underlying: String, selected: Set<String>): Boolean = underlying.uppercase() !in INDEX_MARKETS || underlying.uppercase() in selected
 
+    /**
+     * 19 Nov 2026 (Boss: "Go"; Zerodha blocks margin for a MARKET option buy at a protective price far above the premium): the price an
+     * arm's live buy goes at as a marketable LIMIT - the offer ([ask], else [last] when the book has no offer) plus max(2 ticks, 0.5%),
+     * rounded up to the [tick]. NaN when there is no usable price (the order's own checks then refuse it). Pure.
+     */
+    fun entryLimit(last: Double, ask: Double?, tick: Double): Double {
+        val base = ask?.takeIf { it.isFinite() && it > 0 } ?: last.takeIf { it.isFinite() && it > 0 } ?: return Double.NaN
+        val t = if (tick.isFinite() && tick > 0) tick else 0.05
+        return Kite.onTick(base + maxOf(2 * t, base * 0.005), t, Kite.Side.BUY)
+    }
+
     /** 3 Nov (live): Zerodha's refusal of a MARKET order on a contract with little open interest (it takes a LIMIT). */
     fun marketBlocked(message: String?): Boolean = message?.contains("MARKET orders are blocked", ignoreCase = true) == true
 

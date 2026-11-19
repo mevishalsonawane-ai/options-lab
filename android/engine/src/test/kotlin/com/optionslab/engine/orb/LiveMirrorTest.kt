@@ -602,4 +602,16 @@ class LiveMirrorTest {
         assertNull(LiveMirror.sameContractWords("R72 Breadth Donchian", "X", listOf("R72 Breadth Donchian", " ")), "its own or a blank label is not another arm")
         assertTrue(LiveMirror.sameContractWords("A", "X", listOf("B", "C"))!!.contains("held live by B, C"))
     }
+
+    /** 19 Nov 2026 (Boss: "Go"): a live buy's marketable LIMIT - the offer plus max(2 ticks, 0.5%), up to the tick. */
+    @Test fun anEntryLimitIsTheOfferPlusTheBufferOnTheTick() {
+        assertEquals(201.10, LiveMirror.entryLimit(200.0, 200.05, 0.05), 1e-9)          // 0.5% (1.00) beats 2 ticks
+        assertEquals(10.15, LiveMirror.entryLimit(10.0, 10.05, 0.05), 1e-9)             // 2 ticks (0.10) beat 0.5% (0.05)
+        assertEquals(201.00, LiveMirror.entryLimit(200.0, null, 0.05), 1e-9)            // no offer: the last price
+        assertEquals(201.00, LiveMirror.entryLimit(200.0, 0.0, 0.05), 1e-9)             // an empty offer is no offer
+        assertEquals(201.00, LiveMirror.entryLimit(200.0, Double.NaN, 0.05), 1e-9)
+        assertEquals(201.00, LiveMirror.entryLimit(200.0, null, 0.0), 1e-9)             // no tick known: 0.05
+        assertTrue(LiveMirror.entryLimit(0.0, null, 0.05).isNaN())                      // no price at all
+        assertTrue(LiveMirror.entryLimit(Double.NaN, -1.0, 0.05).isNaN())
+    }
 }

@@ -544,7 +544,13 @@ class FakeKite : Closeable {
         val o = Order(id, f["tradingsymbol"] ?: "", f["exchange"] ?: "NFO", f["transaction_type"] ?: "BUY", f["quantity"]?.toInt() ?: 0,
             f["product"] ?: "NRML", type, f["price"]?.toDouble() ?: 0.0, f["trigger_price"]?.toDouble() ?: 0.0, f["tag"] ?: "",
             status = if (type == "SL" || type == "SL-M") "TRIGGER PENDING" else "OPEN")
-        val px = s.fillPrice ?: o.price.takeIf { it > 0 } ?: quotes["${o.exchange}:${o.symbol}"]?.first ?: 0.0
+        // 19 Nov 2026: a LIMIT strictly through the touch (a buy above the offer, a sale below the bid: a marketable LIMIT entry) fills
+        // as a MARKET order does here, at the last price - never through its limit; one at the touch or away from it as before.
+        val q0 = quotes["${o.exchange}:${o.symbol}"]
+        val through = type == "LIMIT" && q0 != null && o.price > 0 &&
+            (if (o.side == "BUY") o.price > (q0.third ?: q0.first) + 1e-9 else o.price < (q0.second ?: q0.first) - 1e-9)
+        val px = s.fillPrice ?: (if (through) (if (o.side == "BUY") minOf(o.price, q0!!.first) else maxOf(o.price, q0!!.first)) else null)
+            ?: o.price.takeIf { it > 0 } ?: q0?.first ?: 0.0
         o.fillPrice = px
         orders[id] = o
         if (trailReads > 0) { trailing[id] = trailReads; trailReads = 0 }

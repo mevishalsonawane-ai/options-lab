@@ -363,8 +363,9 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
         val (buy, stop) = kite.placed
         val keys = setOf("tradingsymbol", "transaction_type", "order_type", "quantity", "product", "price", "trigger_price")
-        assertEquals(mapOf("tradingsymbol" to sym, "transaction_type" to "BUY", "order_type" to "MARKET", "quantity" to "30", "product" to "MIS"),
-            buy.form.filterKeys { it in keys })
+        // 19 Nov 2026 (Boss: "Go"): a marketable LIMIT at the offer plus 0.5%, up to the tick.
+        assertEquals(mapOf("tradingsymbol" to sym, "transaction_type" to "BUY", "order_type" to "LIMIT", "quantity" to "30", "product" to "MIS",
+            "price" to "201.10"), buy.form.filterKeys { it in keys })
         // 15% below the 200 fill: trigger 170, limit 5% under it (as the ORB's stop order).
         assertEquals(mapOf("tradingsymbol" to sym, "transaction_type" to "SELL", "order_type" to "SL", "quantity" to "30", "product" to "MIS",
             "price" to "161.50", "trigger_price" to "170.00"), stop.form.filterKeys { it in keys })
@@ -467,6 +468,51 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("60", kite.placed.first().form["quantity"])
         val r = FundsCheck.recsOf().single()
         assertFalse("logged only", r.applied); assertEquals(2, r.lots)
+    }
+
+    /**
+     * 19 Nov 2026 (Boss: "Go"): the lots cut prices at the LIMIT the buy goes at (201.10), not the offer: Rs 12,400 fits two lots at the
+     * 200.05 offer (with the 3% room) but only one at the LIMIT - one lot is bought.
+     */
+    @Test fun theLotsCutPricesAtTheLimit() {
+        kite.cash = 12_400.0
+        state(lots = 2)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        val buy = kite.placed.first()
+        assertEquals("LIMIT", buy.form["order_type"]); assertEquals("201.10", buy.form["price"])
+        assertEquals("30", buy.form["quantity"])
+        assertEquals(30, row().open!!.qty)
+    }
+
+    /**
+     * 19 Nov 2026 (Boss: "Go"): a LIMIT buy that does not fill in the wait is cancelled - nothing booked, no stop, never chased with
+     * another order; the approval is used up as before.
+     */
+    @Test fun anUnfilledLimitBuyIsCancelledAndNothingIsBooked() {
+        state()
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertTrue(msg, msg.contains("did not fill"))
+        val buy = kite.placed.single()
+        assertEquals("LIMIT", buy.form["order_type"])
+        assertEquals("cancelled by the app", "CANCELLED", kite.orders.values.single { it.side == "BUY" }.status)
+        assertNull("nothing booked", row().open)
+        assertTrue(row().today.isEmpty())
+        assertTrue("no stop, no second buy", kite.placed.size == 1)
+        assertNull("the approval used up", row().pending)
+    }
+
+    /** 19 Nov 2026 (Boss: "Go"): a LIMIT buy part filled in the wait: the rest is cancelled; what filled is booked with its stop. */
+    @Test fun aPartFilledLimitBuyBooksWhatFilledWithItsStop() {
+        state(lots = 2)
+        kite.nextPlace(outcome = FakeKite.Outcome.PARTIAL, partialQty = 30)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        val (buy, stop) = kite.placed
+        assertEquals("60", buy.form["quantity"]); assertEquals("LIMIT", buy.form["order_type"])
+        val o = kite.orders.values.single { it.side == "BUY" }
+        assertEquals("the rest cancelled", "CANCELLED", o.status); assertEquals(30, o.filled)
+        assertEquals("SL", stop.form["order_type"]); assertEquals("30", stop.form["quantity"])
+        assertEquals(30, row().open!!.qty)
     }
 
     @Test fun aBookSavedBeforeTheSizeTradesOneLot() {

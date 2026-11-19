@@ -100,8 +100,9 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals("Entered at Zerodha (live).", approve())
         val (buy, stop) = kite.placed
         val keys = setOf("tradingsymbol", "exchange", "transaction_type", "order_type", "quantity", "product", "tag", "price", "trigger_price")
-        assertEquals(mapOf("tradingsymbol" to sym, "exchange" to "NFO", "transaction_type" to "BUY", "order_type" to "MARKET",
-            "quantity" to "30", "product" to "MIS", "tag" to "iraorb"), buy.form.filterKeys { it in keys })
+        // 19 Nov 2026 (Boss: "Go"): a marketable LIMIT at the 200.05 offer plus 0.5%, up to the tick (filled at the market here).
+        assertEquals(mapOf("tradingsymbol" to sym, "exchange" to "NFO", "transaction_type" to "BUY", "order_type" to "LIMIT",
+            "quantity" to "30", "product" to "MIS", "tag" to "iraorb", "price" to "201.10"), buy.form.filterKeys { it in keys })
         assertEquals(mapOf("tradingsymbol" to sym, "exchange" to "NFO", "transaction_type" to "SELL", "order_type" to "SL",
             "quantity" to "30", "product" to "MIS", "tag" to "iraorb", "price" to "152.00", "trigger_price" to "160.00"), stop.form.filterKeys { it in keys })
         val a = arm()
