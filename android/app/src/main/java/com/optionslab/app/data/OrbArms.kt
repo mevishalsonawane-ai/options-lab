@@ -3456,7 +3456,7 @@ object OrbArms {
                 // included (Zerodha's MIS auto square-off and the resting SL were then all that remained). Those go at market.
                 val due = noPriceExit(armOf(cur.arm).hero, stopped, t.toLocalTime(), cur.day.isBefore(t.toLocalDate())) ?: continue
                 if (goneUnsure && cur.stopOrderId != null && due !in ALWAYS_EXITS) continue
-                val (done, rest) = exitLive(b, cur, sym, due)
+                val (done, rest) = exitLive(b, cur, sym, due, Pre(orders.values, net))
                 b.positions[i] = done
                 rest?.let { b.positions += it }
                 continue
@@ -3525,7 +3525,7 @@ object OrbArms {
             // review F4: so does every exit of its own while no stop rests at Zerodha - there is no stop to take out, and nothing else would
             // sell it at its level; [exitLive] reads Zerodha again through the exit coordinator and sells only what is held, nothing if gone.)
             if (goneUnsure && cur.stopOrderId != null && why !in ALWAYS_EXITS) { b.positions[i] = raiseLiveStop(seen, sym, so, ltp, tick); continue }
-            val (done, rest) = exitLive(b, seen, sym, why)
+            val (done, rest) = exitLive(b, seen, sym, why, Pre(orders.values, net))
             b.positions[i] = done
             rest?.let { b.positions += it }
         }
@@ -3759,15 +3759,27 @@ object OrbArms {
         return p
     }
 
+    /** 18 Nov 2026 (audit: B1): Zerodha's orders and positions as the pass that decided an exit already read them ([exitLive]). */
+    private class Pre(val orders: Collection<Broker.OrderRow>, val net: List<Broker.Position>)
+
     /**
      * Take the resting stop out first, then MARKET SELL what is held; if the stop filled meanwhile, that is the exit.
      * Returns the position, and (when only part sold) the rest, still open, to be sold on the next pass.
      */
-    private suspend fun exitLive(b: Book, p: Position, sym: String, why: String): Pair<Position, Position?> {
+    private suspend fun exitLive(b: Book, p: Position, sym: String, why: String, pre: Pre? = null): Pair<Position, Position?> {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): the arm's own sale waits (his covers it; next pass).
         if (ArmLive.handsOffNow("NFO", sym)) return p to null
         runCatching { OrderTiming.decided() }
         val label = armOf(p.arm).label
+        // 18 Nov 2026 (audit: B1, Liquidity's index and time exits skipped the "shown gone but not confirmed" guard - they took the
+        // resting stop out, read nothing held on the same bad read and left the lot with no stop): with a stop resting at Zerodha, what
+        // is held is read BEFORE that stop is touched - the pass's own reads ([pre]) when the caller has them, else read now. Shown gone
+        // (no row, or a row at 0), or not readable, the exit waits with its stop resting (the price check books it closed only once that
+        // is confirmed, [goneConfirmed]); Boss's Stop for today and 15:10 ([ALWAYS_EXITS]) still go on, as in [priceCheckLive].
+        if (p.stopOrderId != null && why !in ALWAYS_EXITS) {
+            val net = pre?.net ?: (runCatching { Broker.positionBook().net }.getOrNull() ?: return p to null)
+            if (net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } <= 0) return p to null
+        }
         // The sell certainly did not go: a stop that was taken out is placed again so the position is never left unprotected.
         // F3: back at the lock its best price has earned when that is above its own trigger - never the -40 once a rung is
         // earned; if Zerodha refuses that (a sell stop must rest below the price), at its own trigger as before.
