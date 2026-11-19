@@ -163,7 +163,8 @@ class ClockLaneTest : RobolectricTest() {
         val run = WatchWorkers.begin(this)
         try {
             val s = com.optionslab.app.data.AppSettings.load()
-            WatchWorkers.supervisor!!.kick(ClockLane.GROUP, listOf(ClockLane.step(context, ClockLane.EXPIRY, s)))
+            // Kicked from a worker thread, as the lane does (a kicked step keeps its caller's dispatcher: never this blocked thread's).
+            kotlinx.coroutines.withContext(Dispatchers.IO) { WatchWorkers.supervisor!!.kick(ClockLane.GROUP, listOf(ClockLane.step(context, ClockLane.EXPIRY, s))) }
             Background.await("the lane's run", 5_000) { runs.get() == 1 }
             val pass = launch(Dispatchers.IO) { Tasks.clockStep(context, s, ClockLane.EXPIRY, inOrder = false) }
             Thread.sleep(500)
