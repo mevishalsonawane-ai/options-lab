@@ -289,18 +289,18 @@ class OrbArmsExitGuardTest : RobolectricTest() {
 
     /**
      * 19 Nov 2026 (second review): an unconfirmed row on the contract (an entry written down before its order went) never counts as the
-     * app's lots when deciding whether Boss's own sell may be cancelled: Zerodha holds his lot beside the arm's, so it is left alone.
+     * app's lots when deciding whether Boss's own sell may be cancelled: Zerodha holds Boss's own lot beside the arm's, so it is left alone.
      */
     @Test fun anUnconfirmedRowNeverLetsTheAppCancelBosssSell() {
         val s1 = stopOrder(30, 160.0, 152.0)
         state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0),
             position("orb", 30, 200.0, entryId = null, stopId = null, stop = null).put("arm", "orb_fresh").put("unconfirmed", true)))
         kite.position(sym, 60, 200.0, product = "MIS")                      // the arm's lot and Boss's own
-        val his = kite.restingInKite(sym, "SELL", 60, 250.0)
+        val bosss = kite.restingInKite(sym, "SELL", 60, 250.0)
         kite.quote("NFO:$sym", 150.0, 149.95, 150.05)                       // through the stop's limit
         kite.requests.clear()
         pass()
-        assertEquals("his order left alone", "OPEN", kite.order(his).status)
+        assertEquals("Boss's order left alone", "OPEN", kite.order(bosss).status)
         assertEquals("TRIGGER PENDING", kite.order(s1).status)
         assertTrue("nothing cancelled, nothing sold: ${kite.requests.filter { it.method != "GET" }.map { it.method + " " + it.path }}",
             kite.requests.none { it.method == "DELETE" } && marketSells().isEmpty())
@@ -390,5 +390,59 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         val again = kite.placed.single { it.form["order_type"] == "SL" }
         assertEquals("30", again.form["quantity"]); assertEquals("160.00", again.form["trigger_price"])
         assertEquals(kite.orders.keys.last(), open("orb")!!.stopOrderId)
+    }
+
+    // ---- second review: a stop of these arms resting unclaimed is taken, never a second beside it ------------------------------
+
+    /**
+     * 19 Nov 2026 (second review): a trade with no stop of its own while a stop of these arms rests on its contract since its entry, no
+     * trade claiming it (placed just before the app stopped): the price check takes that stop - raised to the trade's own level - and
+     * places no second one.
+     */
+    @Test fun theReRestTakesAnUnclaimedStopRaisedToTheTradesLevelNeverASecond() {
+        state(listOf(position("orb", 30, 200.0, "E1", stopId = null, stop = 160.0)))
+        val orphan = stopOrder(30, 150.0, 142.0)                            // its stop, lower than its level, no trade holding its id
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.requests.clear()
+        pass()
+        assertTrue("no second stop: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+        val p = open("orb")!!
+        assertEquals(orphan, p.stopOrderId)
+        assertEquals("raised to its level", 160.0, kite.order(orphan).trigger, 1e-9)
+        assertEquals(160.0, p.stopTrigger!!, 1e-9)
+        assertEquals("TRIGGER PENDING", kite.order(orphan).status)
+    }
+
+    /** 19 Nov 2026 (second review): a stop labelled for another arm is never taken: this trade gets its own, the other's left alone. */
+    @Test fun theReRestNeverTakesAStopLabelledForAnotherArm() {
+        state(listOf(position("orb", 30, 200.0, "E1", stopId = null, stop = 160.0)))
+        val theirs = stopOrder(30, 160.0, 152.0)
+        runBlocking { Strategies.tagOwner("kite:$theirs", "ORB Fresh · stop") }
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.dayBought["NFO:$sym:MIS"] = 60
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.requests.clear()
+        pass()
+        assertEquals("the other arm's stop untouched", "TRIGGER PENDING", kite.order(theirs).status)
+        assertEquals(30, kite.order(theirs).qty)
+        val own = kite.placed.single { it.form["order_type"] == "SL" }
+        assertEquals("30", own.form["quantity"])
+        assertEquals(kite.orders.keys.last(), open("orb")!!.stopOrderId)
+    }
+
+    /** 19 Nov 2026 (second review): two unclaimed stops of these arms on the contract: neither is taken and no third is placed. */
+    @Test fun theReRestPlacesNothingBesideTwoUnclaimedStops() {
+        state(listOf(position("orb", 30, 200.0, "E1", stopId = null, stop = 160.0)))
+        val a = stopOrder(30, 160.0, 152.0)
+        val c = stopOrder(30, 160.0, 152.0)
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.requests.clear()
+        pass()
+        assertTrue("nothing placed", kite.placed.isEmpty())
+        assertEquals(null, open("orb")!!.stopOrderId)
+        assertEquals("TRIGGER PENDING", kite.order(a).status); assertEquals("TRIGGER PENDING", kite.order(c).status)
     }
 }
