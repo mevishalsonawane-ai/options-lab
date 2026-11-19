@@ -2764,6 +2764,11 @@ class ArmLiveTest : RobolectricTest() {
         val hit = ArmLive.detachAll("paper reset")
         assertEquals(listOf("reset"), hit.map { it.ref })
         assertTrue(ArmLive.liveCopyWords(hit)!!.startsWith("A live copy is open at Zerodha (${LiveMirror.spec(donchian)!!.label} $sym)"))
+        // Written at once (before the paper book is emptied): a kill right after the reset still finds it detached.
+        runBlocking { ArmLive.applyDetached() }
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        assertTrue(runBlocking { ArmLive.refresh() }.openReal.single().detached)
         legs.clear()                                               // the reset empties every paper book
         watch(); watch()
         assertEquals(0, marketSells())
@@ -2782,8 +2787,11 @@ class ArmLiveTest : RobolectricTest() {
         val hit = ArmLive.detachPaperSymbol(contract.symbol, "paper row closed by hand")
         assertEquals(listOf("hand-close"), hit.map { it.ref })
         assertTrue("another contract's copies are not touched", ArmLive.detachPaperSymbol("NIFTY-OTHER", "x").isEmpty())
-        // The close did not go: given back before any look marked it.
-        ArmLive.undetach("hand-close")
+        // The close did not go: given back (the mark taken off the book too, once written).
+        runBlocking { ArmLive.applyDetached() }
+        assertTrue(view().openReal.single().detached)
+        runBlocking { ArmLive.undetach("hand-close") }
+        assertFalse(view().openReal.single().detached)
         legs["hand-close"] = donchian to 0                          // later, the arm's own paper exit
         watch()
         assertEquals("its paper exit still sells it", 1, marketSells())
@@ -2791,7 +2799,8 @@ class ArmLiveTest : RobolectricTest() {
         // A second trade, and a close that went: never sold.
         ArmLive.entered(ask(donchian, "hand-close-2"))
         watch()
-        ArmLive.detachPaperSymbol(contract.symbol, "paper row closed by hand")
+        assertTrue("another product's copies are not touched", ArmLive.detachPaperSymbol(contract.symbol, "x", product = "NRML").isEmpty())
+        ArmLive.detachPaperSymbol(contract.symbol, "paper row closed by hand", product = "MIS")
         legs.remove("hand-close-2")
         watch()
         assertEquals(1, marketSells())

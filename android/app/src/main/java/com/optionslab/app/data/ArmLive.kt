@@ -398,17 +398,44 @@ object ArmLive {
      * 19 Nov 2026 (audit batch 2: closing a paper row by hand in Trade sold its live copy at market): the open live (and shadow) trades
      * copying the paper contract [paperSymbol] detached ([detach]) before the paper row is closed; those trades returned (memory only).
      */
-    fun detachPaperSymbol(paperSymbol: String, why: String): List<Pos> {
-        val hit = _view.value.open.filter { it.paperSymbol == paperSymbol && !it.detached }
+    fun detachPaperSymbol(paperSymbol: String, why: String, product: String? = null): List<Pos> {
+        val hit = _view.value.open.filter { it.paperSymbol == paperSymbol && !it.detached && (product == null || it.product == product) }
         hit.forEach { detach(it.ref, why) }
         return hit
     }
 
     /**
      * 19 Nov 2026 (audit batch 2): [detach] taken back for [ref] - the paper row Boss closed by hand did not close, so its live copy follows
-     * its paper trade again (only while the next look has not marked it detached yet; once marked it keeps its own stop and exits).
+     * its paper trade again (the mark taken off the book too, if a look already wrote it). A worker (it may write the book), never the tick
+     * path; under the looks' own lock, so no look's changes are lost.
      */
-    fun undetach(ref: String) { detachNotes.remove(ref) }
+    suspend fun undetach(ref: String) {
+        detachNotes.remove(ref); detachSaid.remove(ref)
+        if (!ready()) return
+        runCatching { opLock.withLock { lock.withLock {
+            val b = book()
+            val i = b.positions.indexOfFirst { it.ref == ref && it.open && it.detached }
+            if (i >= 0) { b.positions[i] = b.positions[i].copy(detached = false); save(b) }
+        } } }
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2: a reset or a hand close followed by a kill before the next look could still sell a live copy): the live
+     * trades [detach] noted are marked detached in the book and written now, Boss told once each. A worker (it writes the book), never the
+     * tick path; under the looks' own lock, so no look's changes are lost.
+     */
+    suspend fun applyDetached() {
+        if (!ready() || detachNotes.isEmpty()) return
+        runCatching { opLock.withLock { lock.withLock {
+            val b = book()
+            val hit = ArrayList<Pos>()
+            for (i in b.positions.indices) {
+                val p = b.positions[i]
+                if (p.open && !p.detached && detachNotes.containsKey(p.ref)) { b.positions[i] = p.copy(detached = true); hit += b.positions[i] }
+            }
+            if (hit.isNotEmpty()) { save(b); hit.forEach { if (!it.shadow) saidDetached(it) } }
+        } } }
+    }
 
     /**
      * 19 Nov 2026 (audit batch 2: "Reset paper" emptied the paper book while saying nothing about Zerodha is touched, and every mirrored
@@ -2574,8 +2601,11 @@ object ArmLive {
                     p = p.copy(stopOrderId = null, stopQty = null, stopByYou = p.stopByYou || byYou)
                 }
                 if (p.slId != null && so == null && p.day.isBefore(t.toLocalDate())) p = p.copy(stopOrderId = null, stopQty = null)
-                if (p.gttId != null && gtts != null && gttsFresh && (g == null || g.status.lowercase() in setOf("deleted", "cancelled", "expired", "rejected", "disabled")))
+                if (p.gttId != null && gtts != null && gttsFresh && (g == null || g.status.lowercase() in setOf("deleted", "cancelled", "expired", "rejected", "disabled"))) {
+                    // (19 Nov 2026, audit batch 2: a GTT Zerodha rejected or disabled is a refusal too: rested again after its back-off.)
+                    if (g != null && g.status.lowercase() in setOf("rejected", "disabled")) refusedStop(p, p.stopTrigger, "the GTT was ${g.status.lowercase()} at Zerodha")
                     p = p.copy(stopOrderId = null, stopQty = null)
+                }
                 if (g?.status?.lowercase() == "triggered") {
                     // A fired GTT: its own orders are the stop. All filled: that was the stop; refused or cancelled: rested again.
                     val st = g.orderIds.mapNotNull { orders[it] }
@@ -3229,8 +3259,12 @@ object ArmLive {
     /** 19 Nov 2026: what one start sweep did: all decided, some left after reading Zerodha's books, or its books not read (tried again). */
     private enum class Swept { DONE, UNDECIDED, NOT_READ }
 
-    /** 19 Nov 2026 (audit batch 2): the contracts this start's sweep already decided ([sweepUnowned]); dropped when the sweep ends. Memory. */
-    private val coldDecided: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    /**
+     * 19 Nov 2026 (audit batch 2): the contracts this start's sweep already decided ([sweepUnowned]), each with the buys it decided on
+     * ("id:filled", [buysSeen]) - a new or further filled buy there is decided again. Dropped when the sweep ends. Memory only.
+     */
+    private val coldDecided = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun buysSeen(buys: List<Broker.OrderRow>): String = buys.sortedBy { it.id }.joinToString(",") { "${it.id}:${it.filled}" }
 
     private suspend fun sweepUnowned(): Swept {
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return Swept.NOT_READ
@@ -3266,10 +3300,11 @@ object ArmLive {
             if (contract in staleOn) continue
             // 19 Nov 2026 (audit batch 2: while another contract stayed undecided, the sweep ran again on each look for five minutes and
             // said a decided contract's "unexplained lot" again each time): a contract decided once in this start's sweep is not again.
-            if (contract in coldDecided) continue
+            val seen = buysSeen(buys)
+            if (coldDecided[contract] == seen) continue
             val decided = try { sweepOne(contract, buys, orders, counted, pb, owners, today) } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Exception) { false }
-            if (!decided) undecided++ else { if (coldDecided.size > 500) coldDecided.clear(); coldDecided += contract }
+            if (!decided) undecided++ else { if (coldDecided.size > 500) coldDecided.clear(); coldDecided[contract] = seen }
         }
         return if (undecided == 0) Swept.DONE else Swept.UNDECIDED
     }

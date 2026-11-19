@@ -166,7 +166,8 @@ object Paper {
         val nowMs = System.currentTimeMillis()
         if (readFails > 0 && nowMs - lastReadFailMs in 0 until readRetryGapMs) throw java.io.IOException("the paper book could not be read now; read again shortly")
         val bytes: ByteArray? = try {
-            (testRead?.invoke() ?: Vault.readFileSteady(file)).also { readFails = 0; firstReadFailMs = 0L }
+            // (Five tries, ~1.5 s, before a read counts as failed: most Keystore hiccups clear within it, so its callers rarely see one.)
+            (testRead?.invoke() ?: Vault.readFileSteady(file, attempts = 5)).also { readFails = 0; firstReadFailMs = 0L }
         } catch (e: Vault.Tampered) {
             readFails = 0; firstReadFailMs = 0L
             null

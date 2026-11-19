@@ -2102,9 +2102,11 @@ object PassedArmsHost {
             // 19 Oct: the same-direction cap refused it: nothing was bought; kept as a would-be trade at the price seen.
             // Priced at the ask when the quote has one (a buyer pays it), else the last price.
             // 25 Oct: one of Boss's new risk rules refused it ([BossRiskHost]): kept the same way, labelled with that rule.
-            // 19 Nov 2026 (audit batch 2): a paper cap or rule never skips the live trade either ([askLive]).
+            // (19 Nov 2026, audit batch 2: kept as it was. While the entry may be copied live the cap and Boss's paper rules only log
+            // ([ExposureCapHost.liveMirrorPossible] in [Paper.place] and [BossRiskHost.paperSize]), so they never skip its live trade; one
+            // they refuse now was priced on the book alone, which is never mirrored live (28 Oct).)
             if (r.capped) return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth,
-                if (r.rule != null) SHADOW_RULE else SHADOW_CAP, r.message, copied = liveCopy).also { if (liveCopy) askLive(arm, c, it) }, r.message, true)
+                if (r.rule != null) SHADOW_RULE else SHADOW_CAP, r.message), r.message, true)
             val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
             if (fill == null) {
                 r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }

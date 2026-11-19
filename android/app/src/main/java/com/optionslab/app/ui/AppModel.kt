@@ -2537,14 +2537,20 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // 19 Nov 2026 (audit batch 2: closing a paper row by hand sold its live copy at market): a live copy of this paper row stops
         // following it first and keeps its own stop and exits - nothing at Zerodha is sold - and the answer says so.
         runCatching { com.optionslab.app.data.ArmLive.refresh() }
-        val copies = runCatching { com.optionslab.app.data.ArmLive.detachPaperSymbol(symbol, "paper row closed by hand") }.getOrDefault(emptyList())
+        val copies = runCatching { com.optionslab.app.data.ArmLive.detachPaperSymbol(symbol, "paper row closed by hand", product) }.getOrDefault(emptyList())
         val words = com.optionslab.app.data.ArmLive.liveCopyWords(copies)
+        // (A close that did not go - it threw, or the paper row is still held - gives the live copies back to their paper trade.)
+        suspend fun giveBack() = copies.forEach { runCatching { com.optionslab.app.data.ArmLive.undetach(it.ref) } }
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
-        com.optionslab.app.data.Paper.close(symbol, product).let { r ->
-            // (A close that did not go - the paper row still held - gives the live copies back to their paper trade.)
-            if (!r.ok && runCatching { com.optionslab.app.data.Paper.state.positions.any { it.symbol == symbol && it.product == product && it.quantity != 0 } }.getOrDefault(false)) {
-                copies.forEach { runCatching { com.optionslab.app.data.ArmLive.undetach(it.ref) } }; r
-            } else if (words == null) r else r.copy(message = "${r.message} $words")
+        val closed = try { com.optionslab.app.data.Paper.close(symbol, product) } catch (e: Exception) { giveBack(); throw e }
+        closed.let { r ->
+            if (!r.ok && runCatching { com.optionslab.app.data.Paper.state.positions.any { it.symbol == symbol && it.product == product && it.quantity != 0 } }.getOrDefault(true)) {
+                giveBack(); r
+            } else {
+                // (Closed: the live copies' mark written now, so a kill before the next look never sells them.)
+                if (copies.isNotEmpty()) runCatching { com.optionslab.app.data.ArmLive.applyDetached() }
+                if (words == null) r else r.copy(message = "${r.message} $words")
+            }
         }.also { r ->
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }
             r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.let { fl ->
@@ -2558,8 +2564,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     private suspend fun liveCopiesKept(): String? {
         runCatching { com.optionslab.app.data.ArmLive.refresh() }
-        return com.optionslab.app.data.ArmLive.liveCopyWords(
-            runCatching { com.optionslab.app.data.ArmLive.detachAll("paper reset") }.getOrDefault(emptyList()))
+        val hit = runCatching { com.optionslab.app.data.ArmLive.detachAll("paper reset") }.getOrDefault(emptyList())
+        // (Written before the paper book is emptied: a kill right after the reset still never sells them.)
+        if (hit.isNotEmpty()) runCatching { com.optionslab.app.data.ArmLive.applyDetached() }
+        return com.optionslab.app.data.ArmLive.liveCopyWords(hit)
     }
 
     fun paperReset(capital: Double) {
