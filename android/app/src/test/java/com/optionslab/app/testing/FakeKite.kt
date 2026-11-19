@@ -556,8 +556,8 @@ class FakeKite : Closeable {
         // 19 Nov 2026: the arms' marketable LIMIT buy (the offer plus a buffer) fills at the market, as a MARKET buy did here: at the last
         // price when its limit is at or above it; otherwise a LIMIT fills at its own price, as before.
         val lastPx = quotes["${o.exchange}:${o.symbol}"]?.first
-        val marketable = o.type == "LIMIT" && o.side == "BUY" && o.tag == "iraarm" && lastPx != null && lastPx > 0 && o.price >= lastPx
-        val px = s.fillPrice ?: (if (marketable) lastPx else null) ?: o.price.takeIf { it > 0 } ?: lastPx ?: 0.0
+        val armBuyAtMarket = o.type == "LIMIT" && o.side == "BUY" && o.tag == "iraarm" && lastPx != null && lastPx > 0 && o.price >= lastPx
+        val px = s.fillPrice ?: (if (armBuyAtMarket) lastPx else null) ?: o.price.takeIf { it > 0 } ?: lastPx ?: 0.0
         o.fillPrice = px
         orders[id] = o
         if (trailReads > 0) { trailing[id] = trailReads; trailReads = 0 }
