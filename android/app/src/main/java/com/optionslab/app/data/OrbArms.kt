@@ -4022,7 +4022,7 @@ object OrbArms {
             return Orphan.Wait
         }
         val own = o.trigger.takeIf { it > 0 } ?: return Orphan.Wait
-        fun took(trig: Double): Orphan {
+        suspend fun took(trig: Double): Orphan {
             runCatching { Strategies.tagOwner("kite:${o.id}", "$label · stop") }
             runCatching { Diag.record("orb", "$label: a stop on $sym that no trade claimed (order ${o.id}, placed ${o.placedAt}) is taken as its stop for $qty") }
             return Orphan.Took(o.id, trig)
