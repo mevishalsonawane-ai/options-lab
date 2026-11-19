@@ -2173,7 +2173,8 @@ class ArmLiveTest : RobolectricTest() {
 
     /**
      * Review item 3: the lost exit's hold ends on time on the live lane too (no read of the order book there): past its 10 s the stream
-     * look forgets it and says it was not found; the exit then goes once, never twice.
+     * look lets the contract go; the book is searched once before anything is sold (never found here: said), and the exit goes once more,
+     * never twice.
      */
     @Test fun aLostExitsHoldEndsOnTimeOnTheLiveLane() {
         com.optionslab.app.work.Alerts.forgetPosted()
@@ -2190,8 +2191,8 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testNow = ArmLive.testNow!!.plusSeconds(6)
         kite.requests.clear()
         runBlocking { ArmLive.watch(stream = true) }
-        assertEquals("the hold ended on the live lane", 1, posted("was not found in Zerodha's order book"))
         watch()
+        assertEquals("searched once, not found: said once", 1, posted("was not found in Zerodha's order book"))
         assertEquals("sold once more, never twice", 2, marketSells())
         assertEquals(0, held())
         assertEquals("paper_exit", view().closed.single().why)
