@@ -145,19 +145,20 @@ class ReconcilerTest : RobolectricTest() {
         assertNull(risk())
     }
 
-    /** 19 Nov 2026 (second review): Zerodha holding more than the books own (a duplicate fill) is said; less (a partial exit) never. */
-    @Test fun moreAtZerodhaThanTheBooksOwnIsSaidLessNever() {
+    /**
+     * 19 Nov 2026 (second review): a protection guards what Boss holds - he may add to it himself, or sell part - so a protected
+     * position larger or smaller than its protection is never called a duplicate fill (the books' own sizes are judged in ira-core's
+     * ReconcileTest).
+     */
+    @Test fun bossAddingToHisProtectedPositionIsNoDuplicateFill() {
         kite.position(sym, 75, 100.0)
         val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 100.0, 90.0, null, null) }
         assertTrue(msg, msg.startsWith("Protected"))
         kite.position(sym, 150, 100.0)
-        runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L) }
-        val text = Background.text(risk()!!).orEmpty()
-        assertTrue(text, text.contains("Zerodha holds 150 $sym, more than the 75"))
-        cancelAll()
-        Reconciler.resetForTest()
-        kite.position(sym, 50, 100.0)
         runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L); Reconciler.step(context, t0 + 120_000L) }
+        assertNull(risk())
+        kite.position(sym, 50, 100.0)
+        runBlocking { Reconciler.step(context, t0 + 180_000L); Reconciler.step(context, t0 + 240_000L) }
         assertNull("a partial exit is never one", risk())
     }
 
@@ -187,6 +188,20 @@ class ReconcilerTest : RobolectricTest() {
         }
         Reconciler.markHeld(context, Reconciler.markFor(false))
         assertEquals("flat at Zerodha again: nothing held", com.optionslab.ira.QuietStart.FLAT, NightMarks.get(context, Reconciler.HELD_MARK))
+    }
+
+    @Test fun aFailedMcxReadCountsAsHeldForTheMark() {
+        assertTrue(Reconciler.markFor(false) { throw IllegalStateException("vault") })
+        assertFalse(Reconciler.markFor(false) { false })
+        assertTrue(Reconciler.markFor(true) { false })
+    }
+
+    @Test fun theManualPositionsSwitchKnowsNothingUntilItsSwitchIsRead() {
+        ManualCover.leftAloneForTest("NFO:$other")
+        assertEquals(setOf(other), ManualCover.knownSymbols())
+        ManualCover.resetForTest(loaded = false)
+        assertTrue(ManualCover.knownSymbols().isEmpty())
+        ManualCover.resetForTest()
     }
 
     @Test fun theQuietStartsHeldMarkIsWrittenOnChangeOnly() {

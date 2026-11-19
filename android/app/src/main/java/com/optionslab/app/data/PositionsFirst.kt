@@ -80,7 +80,7 @@ object PositionsFirst {
         if (q) {
             runCatching { Diag.record("start", "quiet start (no market open or opening within ${com.optionslab.ira.QuietStart.NEAR_MIN} min, " +
                 "nothing held at the last mark): the books, the large settings and the warm-ups wait for the screen, the watch or a job") }
-            runBlocking { if (withTimeoutOrNull(capMs) { StartGate.await() } == null) StartGate.open("a quiet start still running after ${capMs / 1000} s") }
+            runBlocking { if (withTimeoutOrNull(capMs) { StartGate.await() } == null) StartGate.open("a quiet start still running after ${capText(capMs)}") }
             quietStart = false
             startedAt = android.os.SystemClock.uptimeMillis()
         }
@@ -321,8 +321,11 @@ object PositionsFirst {
         if (!quiet || !quietStart) return
         // Review: never forever - a process still alive [QUIET_WAIT_MS] later is doing real work: the full start runs (positions
         // first), then the warm-ups.
-        if (withTimeoutOrNull(QUIET_WAIT_MS) { StartGate.await() } == null) StartGate.open("a quiet start still running after ${QUIET_WAIT_MS / 60_000} min")
+        if (withTimeoutOrNull(QUIET_WAIT_MS) { StartGate.await() } == null) StartGate.open("a quiet start still running after ${capText(QUIET_WAIT_MS)}")
     }
+
+    /** The cap in words, the same from both waits: "10 min", or seconds under a minute. */
+    private fun capText(ms: Long): String = if (ms >= 60_000L) "${ms / 60_000} min" else "${ms / 1000} s"
 
     /** 19 Nov 2026 (audit batch 2): the longest a quiet start's waiting work waits for the gate. */
     private const val QUIET_WAIT_MS = 10 * 60_000L

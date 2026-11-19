@@ -72,7 +72,7 @@ object Reconciler {
             // On the always-shown channel (as the dead-man's "Order watch stopped"): the risk channel reaches the shade only with
             // "other alerts" on, and this must never be missed. Red in the app.
             runCatching { com.optionslab.app.work.Notifier.post(context, NOTE_ID, com.optionslab.app.work.Notifier.APPROVAL,
-                "RISK: a Zerodha position no book follows", text, "broker", banner = com.optionslab.app.work.Alerts.Kind.ERROR) }
+                Reconcile.title(alerts), text, "broker", banner = com.optionslab.app.work.Alerts.Kind.ERROR) }
         } else if (told && found.isEmpty()) {
             told = false
             runCatching { androidx.core.app.NotificationManagerCompat.from(context).cancel(NOTE_ID) }
@@ -106,12 +106,20 @@ object Reconciler {
      * on purpose by "Stop and target on my manual positions", or any at all while the app is in Paper mode (no automatic live trade
      * can be open then). Told once while they last, not every 5 minutes.
      */
+    // Review: Paper mode counts only while no live book holds anything (an arm's live trade, a live protection, Pine's live holding, a
+    // live MCX position, or one being recovered): live positions outlive a switch to Paper, and an orphan of theirs must repeat.
     private fun known(unowned: Set<String>): Set<String> {
         if (unowned.isEmpty()) return emptySet()
         val paper = runCatching { !AppSettings.load().live }.getOrDefault(false)
-        if (paper) return unowned
+        if (paper && !liveBookHolds()) return unowned
         return unowned intersect runCatching { ManualCover.knownSymbols() }.getOrDefault(emptySet())
     }
+
+    /** Any live book holds (or is recovering) something (memory hints; a failure counts as yes). */
+    private fun liveBookHolds(): Boolean = runCatching {
+        ArmLive.holdingHint || ArmLive.recoverHint || OrbArms.liveHint || Protections.liveKeysHint.isNotEmpty() ||
+            PineAuto.held.value.values.any { it.live } || McxMarket.liveExposureOrThrow()
+    }.getOrDefault(true)
 
     /**
      * Every book's claim on a Zerodha symbol now (memory and each book's own bounded read), with its quantity where the book gives one
@@ -175,7 +183,8 @@ object Reconciler {
      * no read has seen closed since, whether MCX is open or not (the books' "MCX live" hint counts only while MCX trades, so a position
      * carried overnight read as nothing held after the close). A failure counts as held.
      */
-    fun markFor(heldAny: Boolean): Boolean = heldAny || runCatching { McxMarket.liveExposure() }.getOrDefault(true)
+    fun markFor(heldAny: Boolean, mcxLive: () -> Boolean = { McxMarket.liveExposureOrThrow() }): Boolean =
+        heldAny || runCatching(mcxLive).getOrDefault(true)
 
     /** The plain mark's key ([com.optionslab.app.work.NightMarks]). */
     internal const val HELD_MARK = "held.mark"

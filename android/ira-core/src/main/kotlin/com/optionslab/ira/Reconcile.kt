@@ -41,7 +41,8 @@ object Reconcile {
      * 19 Nov 2026 (second review): what was found. [UNOWNED]: no book owns the position; [OVERSIZE]: Zerodha's net quantity is larger
      * than the books' owned quantity together (a duplicate or oversized fill; less is never one - partial exits are normal).
      */
-    enum class Kind { UNOWNED, OVERSIZE }
+    // [WRONG_SIDE]: Zerodha holds the symbol on the other side from the books (an exit sent twice, say).
+    enum class Kind { UNOWNED, OVERSIZE, WRONG_SIDE }
 
     /**
      * A position Zerodha holds ([qty] signed units, + long) that no book of the app owns ([Kind.UNOWNED]), or holds more of than the
@@ -76,47 +77,65 @@ object Reconcile {
      * The positions in [positions] (tradingsymbol -> net units, nonzero) that no book owns ([owned]: every symbol any book follows,
      * holds or protects), sorted by symbol, each with [hasStop].
      */
-    // 19 Nov 2026 (second review): [ownedQty] - the books' owned units by symbol, absolute and summed (a symbol missing, or null: a book
-    // gave no quantity, so only "owned or not" is judged for it); [known] - Boss's own manual positions as the app knows them.
+    // 19 Nov 2026 (second review): [ownedQty] - the books' owned units by symbol, signed and summed (a symbol missing, or null: a book
+    // gave no quantity, or only protections claim it, so only "owned or not" is judged for it); [known] - Boss's own manual positions
+    // as the app knows them. An oversized or wrong-side position is judged on its size and side only (its stop is not: the arm's own stop
+    // covers the arm's units, never the extra ones).
     fun find(positions: Map<String, Int>, owned: Set<String>, orders: List<Order>?, gtts: List<Gtt>?,
              ownedQty: Map<String, Int?> = emptyMap(), known: Set<String> = emptySet()): List<Finding> {
         val out = ArrayList<Finding>()
         for ((s, q) in positions.toSortedMap()) {
             if (q == 0 || s.isBlank()) continue
             if (s !in owned) { out += Finding(s, q, hasStop(s, q, orders, gtts), known = s in known); continue }
-            val app = ownedQty[s] ?: continue
-            if (kotlin.math.abs(q) > app) out += Finding(s, q, hasStop(s, q, orders, gtts), Kind.OVERSIZE, app)
+            mismatch(q, ownedQty[s])?.let { out += Finding(s, q, null, it, ownedQty[s]) }
         }
         return out
     }
 
+    /** [q] at Zerodha against the books' signed [app] units: on the other side, larger, or (null) neither; less is never one. */
+    private fun mismatch(q: Int, app: Int?): Kind? = when {
+        app == null || q == 0 -> null
+        app != 0 && Integer.signum(q) != Integer.signum(app) -> Kind.WRONG_SIDE
+        kotlin.math.abs(q) > kotlin.math.abs(app) -> Kind.OVERSIZE
+        else -> null
+    }
+
     /**
-     * 19 Nov 2026 (second review): one book's claim on a Zerodha symbol - [qty] its units (sign ignored; null: the book gives no quantity,
-     * or its fill is not confirmed yet), [holds] false for a protection (an overlay on a position, not a holding of its own).
+     * 19 Nov 2026 (second review): one book's claim on a Zerodha symbol - [qty] its signed units (null: the book gives no quantity, or its
+     * fill is not confirmed yet), [holds] false for a protection (an overlay on a position, not a holding of its own).
      */
     data class Claim(val symbol: String, val qty: Int?, val holds: Boolean = true)
 
     /**
-     * The books' owned units by symbol: the holders' quantities summed; a symbol only protections claim, the largest protection; null
-     * when any claim on it gives no quantity (then only "owned or not" is judged for it).
+     * The books' owned units by symbol: the holders' signed quantities summed. Null when a holder gives no quantity, or only protections
+     * claim the symbol (a protection guards what Boss holds; he may add to it himself): then only "owned or not" is judged for it.
      */
     fun ownedQty(claims: List<Claim>): Map<String, Int?> = claims.groupBy { it.symbol }.mapValues { (_, cs) ->
-        if (cs.any { it.qty == null }) null
-        else cs.filter { it.holds }.takeIf { it.isNotEmpty() }?.sumOf { kotlin.math.abs(it.qty!!) } ?: cs.maxOf { kotlin.math.abs(it.qty!!) }
+        val holders = cs.filter { it.holds }
+        if (holders.isEmpty() || holders.any { it.qty == null }) null else holders.sumOf { it.qty!! }
     }
 
-    /** Whether any position is unowned or oversized (the order book and the GTTs are read only then). */
+    /** Whether any position is unowned, oversized or on the wrong side (the order book and the GTTs are read only then). */
     fun unownedOrOversized(positions: Map<String, Int>, owned: Set<String>, ownedQty: Map<String, Int?>): Boolean =
-        positions.any { (s, q) -> q != 0 && s.isNotBlank() && (s !in owned || ownedQty[s]?.let { kotlin.math.abs(q) > it } == true) }
+        positions.any { (s, q) -> q != 0 && s.isNotBlank() && (s !in owned || mismatch(q, ownedQty[s]) != null) }
 
     /** The RISK notice's words (names and quantities only, never rupees). */
     fun say(f: Finding): String = when (f.kind) {
-        Kind.UNOWNED -> "Zerodha holds ${f.qty} ${f.symbol}, which no book of the app follows" + if (f.known) " (your own position, as the app knows it)" else ""
+        Kind.UNOWNED -> "Zerodha holds ${f.qty} ${f.symbol}, which no book of the app follows" + (if (f.known) " (your own position, as the app knows it)" else "") +
+            when (f.stop) {
+                true -> " (an exit stop rests at Zerodha)"
+                false -> ", and no exit stop rests at Zerodha"
+                null -> " (whether an exit stop rests there could not be read)"
+            }
         Kind.OVERSIZE -> "Zerodha holds ${f.qty} ${f.symbol}, more than the ${f.appQty} the app's books own (a duplicate or oversized fill?)"
-    } + when (f.stop) {
-        true -> " (an exit stop rests at Zerodha)"
-        false -> ", and no exit stop rests at Zerodha"
-        null -> " (whether an exit stop rests there could not be read)"
+        Kind.WRONG_SIDE -> "Zerodha holds ${f.qty} ${f.symbol}, but the app's books hold ${f.appQty} (the other side: an exit sent twice?)"
+    }
+
+    /** The notice's title for [fs]. */
+    fun title(fs: List<Finding>): String = when {
+        fs.all { it.kind == Kind.UNOWNED } -> "RISK: a Zerodha position no book follows"
+        fs.none { it.kind == Kind.UNOWNED } -> "RISK: Zerodha holds more than, or other than, the app's books"
+        else -> "RISK: Zerodha's positions differ from the app's books"
     }
 
     /** The notice's text for [fs]. */
@@ -154,7 +173,9 @@ object Reconcile {
                 val told = toldAt[f.key]
                 // Review: one with an exit stop resting at Zerodha, or Boss's own manual position as the app knows it, is told once
                 // while it lasts, not every 5 minutes, so the unprotected ones are never lost in the noise.
-                if (told != null && (f.stop == true || f.known || nowMs - told in 0 until REPEAT_MS)) continue
+                // An oversized or wrong-side position always repeats (a stop on the books' units never covers the extra ones).
+                val once = f.kind == Kind.UNOWNED && (f.stop == true || f.known)
+                if (told != null && (once || nowMs - told in 0 until REPEAT_MS)) continue
                 toldAt[f.key] = nowMs
                 out += f
             }
