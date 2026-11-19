@@ -3530,6 +3530,110 @@ object OrbArms {
             rest?.let { b.positions += it }
         }
         drop.sortedDescending().forEach { b.positions.removeAt(it) }
+        // 18 Nov 2026 (audit: B3): on the regular pass, a contract Zerodha holds LESS of than the live trades on it (confirmed) has its
+        // trades and resting stops cut down to what is held ([shrinkToHeld]) - after the exits above, from this pass's reads.
+        if (regular) runCatching { shrinkToHeld(b, t, net, orders, q) }
+    }
+
+    /**
+     * 18 Nov 2026 (audit: B3): by contract, when (market-clock ms) Zerodha's positions first showed it holding less than the live trades on
+     * it with no sale yet seen to explain it ([shrinkToHeld]). Memory only (a restart starts the count again: later, never sooner); bounded.
+     */
+    private val shortSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * 18 Nov 2026 (audit: B3, the resting stop was never shrunk when Zerodha held less than the book's quantity on a contract - only "held
+     * at 0" was ever looked at): Zerodha's holding of each contract (MIS, a row listed and above 0: nothing held is [goneConfirmed]'s) is
+     * compared with this book's open live trades on it plus the arms' live copies' open buys of it ([ArmLive.view], memory). When it is
+     * smaller and that is CONFIRMED - as for a trade shown gone: sales outside the app in the order book that cover the difference, or the
+     * reads agreeing for 30 s (some exit fill not booked yet) or five minutes (none) - this book's trades are cut, newest first, to what
+     * Zerodha leaves them: each cut trade's resting stop is first modified down to what it keeps ([com.optionslab.engine.risk.ExitQty.shrinkTo],
+     * as [Protections] does; one Zerodha will not reduce is taken out and confirmed out - the price check rests it again for what is held,
+     * [restExchangeStop]), then the part gone is booked closed as a trade closed outside the app ([goneWhy]) and the rest stays open with
+     * its stop. Never a cut while its stop's state is unknown or not yet out; never one that would close every trade of this book on the
+     * contract (the other book may be the one short: the gone check and Boss decide that). The pass's reads only; no read on a quiet contract.
+     */
+    private suspend fun shrinkToHeld(b: Book, t: LocalDateTime, net: List<Broker.Position>, orders: Map<String, Broker.OrderRow>,
+                                     q: Map<String, Broker.Quote>) {
+        // (Only once the arms' live copies' book is read: what they hold on a contract counts as explained.)
+        val armLive = ArmLive.view.value
+        if (!armLive.loaded) return
+        if (shortSince.size > 200) shortSince.clear()
+        val today = t.toLocalDate()
+        val mine = b.positions.withIndex().filter { it.value.open && it.value.live && !it.value.unconfirmed && it.value.kite != null }.groupBy { it.value.kite!! }
+        for ((sym, list) in mine) {
+            val rows = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }
+            val held = rows.sumOf { it.qty }
+            if (rows.isEmpty() || held <= 0) { shortSince.remove(sym); continue }
+            // (The other book's open buys of it, still settling ones left out: fewer explained here only ever cuts less.)
+            val others = armLive.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side > 0 && !it.unconfirmed }.sumOf { it.qty }
+            val ours = list.sumOf { it.value.qty }
+            val short = ours + others - held
+            val share = held - others
+            if (short <= 0 || share <= 0) { shortSince.remove(sym); continue }
+            // Confirmed as a trade shown gone is ([goneConfirmed]): the order book's sales outside the app, netted over the day.
+            val onIt = orders.values.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.filled > 0 }
+            val known: Set<String> = if (onIt.none { it.tag.isBlank() }) emptySet() else knownKite(b).toSet()
+            val outsideSells = onIt.filter { it.side == "SELL" && ((it.tag.isBlank() && it.id !in known) || it.tag in SquareOffExit.TAGS) }.sumOf { it.filled }
+            val carried = rows.sumOf { it.overnight } - list.filter { it.value.day.isBefore(today) }.sumOf { it.value.qty }
+            val outsideBuys = onIt.filter { it.side == "BUY" && it.tag.isBlank() && it.id !in known }.sumOf { it.filled } + carried.coerceAtLeast(0)
+            val booked = b.positions.filter { !it.open && it.live && it.kite == sym && it.exitTime?.toLocalDate() == today }.map { it.qty to (it.why in OUTSIDE_WHYS) } +
+                armLive.closed.filter { it.exchange == "NFO" && it.symbol == sym && it.product == "MIS" && it.exitTime?.toLocalDate() == today }
+                    .map { it.qty to (it.why == "closed_at_zerodha") }
+            val sold = com.optionslab.engine.orb.LiveMirror.outsideSaleCovers(outsideSells, outsideBuys, booked.filter { it.second }.sumOf { it.first }, short)
+            val unbooked = com.optionslab.engine.orb.LiveMirror.unbookedSale(onIt.filter { it.side == "SELL" }.sumOf { it.filled }, outsideBuys, booked.sumOf { it.first })
+            val ms = epochMs(t)
+            val first = shortSince.putIfAbsent(sym, ms)
+            if (!com.optionslab.engine.orb.LiveMirror.shortConfirmed(true, sold, first ?: ms, ms, unbooked)) {
+                if (first == null) runCatching { Diag.record("orb", "Zerodha's positions show $held of $sym, less than the ${ours + others} its live trades hold: " +
+                    "nothing is changed until that is confirmed; the stops rest as they are") }
+                continue
+            }
+            shortSince.remove(sym)
+            val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: continue
+            val lot = spec.lotSize.coerceAtLeast(1)
+            val px = q["NFO:$sym"]?.last?.takeIf { it > 0 }
+            var excess = ours - share
+            for (iv in list.sortedByDescending { it.value.entryTime }) {
+                if (excess <= 0) break
+                val i = iv.index
+                val p = b.positions[i]
+                if (p !== iv.value) continue
+                val cut = minOf(excess, p.qty)
+                val keep = p.qty - cut
+                var stopId = p.stopOrderId
+                if (stopId != null) {
+                    val so = orders[stopId]
+                    var out = keep <= 0
+                    if (!out) {
+                        // (Its stop's state not in this read: asked again next pass.)
+                        if (so == null || !so.working) continue
+                        val to = com.optionslab.engine.risk.ExitQty.shrinkTo(so.qty, so.filled, keep, lot)
+                        // (At the trade's own trigger now - this pass may have moved it up - with its limit under it, as [raiseLiveStop].)
+                        val trig = p.stopTrigger ?: so.trigger
+                        if (to != null && runCatching {
+                                if (so.type == "SL-M") Broker.modify(so, to, "SL-M", null, trig) else Broker.modify(so, to, "SL", stopLimit(trig, spec.tickSize), trig)
+                            }.isFailure) out = true
+                    }
+                    if (out) {
+                        cancelOwnStop(stopId)
+                        val st = runCatching { Broker.orderState(stopId)?.status }.getOrNull()
+                        // (Filled meanwhile - booked from its fill next pass - or not out yet: nothing changed now.)
+                        if (st != "CANCELLED" && st != "REJECTED") continue
+                        stopId = null
+                    }
+                }
+                val at = px ?: p.entry
+                val part = cut.toDouble() / p.qty
+                b.positions[i] = p.copy(qty = cut, exit = at, exitTime = t, why = goneWhy(p.day, t, expiryClose = false), stopOrderId = null,
+                    charges = p.charges * part + kiteCharge("SELL", at, cut))
+                if (keep > 0) b.positions += p.copy(qty = keep, stopOrderId = stopId, charges = p.charges * (1 - part))
+                excess -= cut
+                com.optionslab.app.work.Alerts.error("${armOf(p.arm).label}: Zerodha holds $held of $sym, less than its trades here (sold outside the app). " +
+                    "$cut booked closed; " + (if (keep > 0) "$keep kept, " + (if (stopId != null) "its stop at Zerodha now covering $keep." else
+                    "its stop taken out (Zerodha would not reduce it) and placed again for what is held on the next check.") else "its stop taken out."), "ORB live")
+            }
+        }
     }
 
     /**
@@ -3691,7 +3795,7 @@ object OrbArms {
     }
 
     /** The memory of [endedSaid], [restTries] and [restRefusedSaid] dropped (a new process, an erase). */
-    private fun forgetStopSaid() { endedSaid.clear(); restTries.clear(); restRefusedSaid.clear(); goneSince.clear(); goneNoRowSaid.clear(); settleAsked.clear(); goneAlertSaid.clear() }
+    private fun forgetStopSaid() { endedSaid.clear(); restTries.clear(); restRefusedSaid.clear(); goneSince.clear(); goneNoRowSaid.clear(); settleAsked.clear(); goneAlertSaid.clear(); shortSince.clear() }
 
     /** Cancels the stop [id] as the app's own ([ownCancels]). */
     private suspend fun cancelOwnStop(id: String) {

@@ -222,4 +222,72 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertTrue("no stop placed again", kite.placed.none { it.form["order_type"] == "SL" })
         assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "was not put back (the square-off time)" in it })
     }
+
+    // ---- B3: the resting stop never sells more than Zerodha holds ------------------------------------------------------------
+
+    /** Two lots held with one stop for both; the arms' live copies' book read (they hold none of it). */
+    private fun twoLots(): String {
+        val s1 = stopOrder(60, 160.0, 152.0)
+        state(listOf(position("orb", 60, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.dayBought["NFO:$sym:MIS"] = 60
+        runBlocking { ArmLive.refresh() }
+        kite.quote("NFO:$sym", 210.0, 209.95, 210.05)                       // no exit due
+        kite.requests.clear()
+        return s1
+    }
+
+    /**
+     * 18 Nov 2026 (audit: B3): Boss sells one of the trade's two lots in Kite: Zerodha holds 30 of the 60 the trade has, and his sale is in
+     * the order book - its resting stop is modified down to 30 and the trade split: 30 booked closed by him, 30 kept with its stop.
+     */
+    @Test fun aLotSoldInKiteShrinksTheStopToWhatIsHeldAndSplitsTheTrade() {
+        val s1 = twoLots()
+        kite.soldInKite(sym, 30, 211.0)
+        kite.requests.clear()
+        pass()
+        assertEquals("the same stop, still resting", "TRIGGER PENDING", kite.order(s1).status)
+        assertEquals("now for what is held", 30, kite.order(s1).qty)
+        assertEquals(160.0, kite.order(s1).trigger, 1e-9)
+        assertTrue("nothing sold", kite.placed.isEmpty())
+        val kept = open("orb")!!
+        assertEquals(30, kept.qty); assertEquals(s1, kept.stopOrderId)
+        val closed = today("orb").single { !it.open }
+        assertEquals(30, closed.qty); assertEquals("closed_by_you", closed.why)
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "Zerodha holds 30 of $sym" in it })
+    }
+
+    /** 18 Nov 2026 (audit: B3): one read showing less with no sale anywhere changes nothing; five minutes of reads agreeing do. */
+    @Test fun oneReadShowingLessNeverShrinksTheStop() {
+        val s1 = twoLots()
+        kite.position(sym, 30, 200.0, product = "MIS")                      // a short read: no sale in the order book
+        pass()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(31)
+        pass()
+        assertEquals(60, kite.order(s1).qty)
+        assertEquals(60, open("orb")!!.qty)
+        assertTrue("nothing sent: ${kite.writes.map { it.method + " " + it.path }}", kite.writes.isEmpty())
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(270)               // five minutes of reads agreeing
+        pass()
+        assertEquals(30, kite.order(s1).qty)
+        assertEquals(30, open("orb")!!.qty)
+    }
+
+    /**
+     * 18 Nov 2026 (audit: B3): a stop Zerodha will not reduce is taken out (never a resting sell for more than is held) and placed again
+     * for what is held on the next check.
+     */
+    @Test fun aStopZerodhaWillNotReduceIsTakenOutAndPlacedAgainForWhatIsHeld() {
+        val s1 = twoLots()
+        kite.soldInKite(sym, 30, 211.0)
+        kite.modifyRefusals = 1
+        pass()
+        assertEquals("CANCELLED", kite.order(s1).status)
+        val kept = open("orb")!!
+        assertEquals(30, kept.qty); assertEquals(null, kept.stopOrderId)
+        pass()
+        val again = kite.placed.single { it.form["order_type"] == "SL" }
+        assertEquals("30", again.form["quantity"]); assertEquals("160.00", again.form["trigger_price"])
+        assertEquals(kite.orders.keys.last(), open("orb")!!.stopOrderId)
+    }
 }
