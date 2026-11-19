@@ -424,14 +424,15 @@ object OrbArms {
             if (file.exists()) Vault.setAside(file)
             Notifier.post(app, 2016, Notifier.APPROVAL, "ORB arms could not be read",
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
-            return Book().also { it.gen = gen; it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
+            return Book().also { it.gen = gen; it.sweepFrom = erasedAt; it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
                 LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST); cache = it; hints(it); wipedSince(it) }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
             b.armed.clear(); b.auto.clear(); b.liveOk.clear(); b.pending.clear()
         }
-        if (!existed && b.sweepFrom == null) erasedAt?.let { b.sweepFrom = it }
+        val afterErase = !existed && b.sweepFrom == null && erasedAt != null
+        if (afterErase) b.sweepFrom = erasedAt
         cache = b
         hints(b)
         if (wipedSince(b)) return b
@@ -452,6 +453,8 @@ object OrbArms {
         // Then (16 Nov) an ORB-family live trade already open with no stop at Zerodha keeps being watched by the app ([keepOpenWatched]).
         if (switchOffLosers(b) or retire(b, restoring) or unretire(b, restoring) or joinMidcp(b, restoring) or sizeLiquidity(b) or oneLot(b) or park(b) or
             parkFamily(b) or clearBySwitch(b, restoring) or keepOpenWatched(b)) save(b)
+        // (19 Nov 2026, review: the first book after an erase is written at once with the erase's time, so a restart today still knows it.)
+        else if (afterErase) runCatching { saveSoon(b) }
         return b
     }
 
@@ -3257,7 +3260,7 @@ object OrbArms {
             // (19 Nov 2026, review: only when a lot taken back is THIS arm's on this index - that trade already exists; another arm's or
             // another index's lets this entry go on.)
             val sameIndex = Regex("^${Regex.escape(c.underlying)}\\d")
-            if (b.positions.drop(rows).any { it.arm == arm.source && sameIndex.containsMatchIn(it.symbol) })
+            if (b.positions.drop(rows).any { sameIndex.containsMatchIn(it.symbol) && (it.arm == arm.source || arm.source in coldSafety) })
                 return "refused: a lot from before the restart was taken back at Zerodha; nothing more bought now"
             if (!done) {
                 runCatching { Diag.record("orb", "${arm.label}: shadow - would have waited for the start-up sweep of Zerodha's orders (not run yet); the entry goes") }
@@ -3534,8 +3537,9 @@ object OrbArms {
                 .keys.map { it.removePrefix("kite:") }.filter { it !in claimed }.toSet() }.getOrDefault(emptySet())
             val row = runCatching { Broker.latestTagged(sym, "BUY", "iraorb", p.entryTime, known.filter { it !in ownEntries }) }.getOrElse { return p }
                 ?: run {
+                    if (strayBuyWorking(b, sym)) return p
                     val (q, fill) = unexplained() ?: return p
-                    if (q > 0) return if (strayBuyWorking(b, sym)) p else kept(null, q, fill)
+                    if (q > 0) return kept(null, q, fill)
                     // (18 Nov 2026: as the arms' live copies, kept unconfirmed - the arm buys nothing more - for three minutes from the
                     // entry while the order book may trail it, then called never bought; before, one read that missed it dropped it.)
                     if (ArmLive.unconfirmedWaits(p.entryTime, now())) return p
@@ -3555,8 +3559,9 @@ object OrbArms {
             // 18 Nov 2026: an order found only by the search that filled nothing may be another try of the same entry: a position no
             // other trade here explains is still kept; not held either, it waits the same three minutes (the positions can trail).
             if (searched) {
+                if (strayBuyWorking(b, sym)) return p
                 val (q, fill) = unexplained() ?: return p
-                if (q > 0) return if (strayBuyWorking(b, sym)) p else kept(null, q, fill)
+                if (q > 0) return kept(null, q, fill)
                 if (ArmLive.unconfirmedWaits(p.entryTime, now())) return p
             }
             com.optionslab.app.work.Alerts.post("$label: the unconfirmed buy of $sym did not fill (${st.status.lowercase()}); nothing is held.",
@@ -3762,6 +3767,12 @@ object OrbArms {
 
     /** 19 Nov 2026 (review): the sweep on the looks is not asked again before this (market-clock ms) after one that could not finish. */
     @Volatile private var coldNextAt = 0L
+
+    /**
+     * 19 Nov 2026 (review): the arms a lot taken back with no arm known could have been ([coldSweep]'s safety candidates): an entry of any
+     * of them on that index right after is refused too - the lot may be its own. Memory only.
+     */
+    private val coldSafety: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
     private const val COLD_RETRY_MS = 30_000L
 
     /** 19 Nov 2026 (coordinator): an entry went before the sweep could run - said once per process ([enterLiveNow]). */
@@ -3812,14 +3823,22 @@ object OrbArms {
         val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         // (19 Nov 2026, review: after "Erase everything" today, only these arms' orders placed after it count - never a lot from before.)
         val from = b.sweepFrom?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }?.takeIf { it.toLocalDate() == t.toLocalDate() }
+        // (An order time that cannot be read after an erase today is not counted - never a lot from before it taken back.)
         fun counts(o: Broker.OrderRow) = o.tag == "iraorb" && o.exchange == "NFO" && o.product == "MIS" &&
-            (from == null || runCatching { !LocalDateTime.parse(o.placedAt, fmt).isBefore(from) }.getOrDefault(true))
+            (from == null || runCatching { !LocalDateTime.parse(o.placedAt, fmt).isBefore(from) }.getOrDefault(false))
+        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return false
+        val armLive = ArmLive.view.value
+        val byLabel = ALL_ARMS.associateBy { it.label }
+        fun ours(o: Broker.OrderRow) = owners["kite:${o.id}"]?.let { it.endsWith(" · entry") && byLabel[it.removeSuffix(" · entry")] != null } ?: true
         val claimed = b.positions.mapNotNull { it.entryOrderId }.toSet()
         val lostOn = b.positions.filter { it.open && it.live && it.unconfirmed && it.entryOrderId == null }.mapNotNull { it.kite }.toSet()
         var again = false
         // (19 Nov 2026, review: one still working - part filled or not at all - is cancelled as the app's own and its end confirmed, then
         // what filled is judged; not ended yet: asked again (backed off). Never on a contract where a lost-id row's own order may be it.)
-        val mine = orders.filter { counts(it) && it.side == "BUY" && it.id !in claimed && (it.filled > 0 || it.working) }.mapNotNull { o ->
+        val candidatesAll = orders.filter { counts(it) && it.side == "BUY" && it.id !in claimed && (it.filled > 0 || it.working) && ours(it) }
+        if (candidatesAll.isEmpty()) return true
+        if (!armLive.loaded || armLive.unreadable || ArmLive.entryInFlight) return false
+        val mine = candidatesAll.mapNotNull { o ->
             if (o.symbol in lostOn) { again = true; return@mapNotNull null }
             if (!o.working) return@mapNotNull o
             runCatching { Broker.cancel(o.id, o.variety) }
@@ -3828,30 +3847,32 @@ object OrbArms {
         }
         val buys = mine.filter { it.filled > 0 }
         if (buys.isEmpty()) return !again
-        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return false
-        val armLive = ArmLive.view.value
-        if (!armLive.loaded || armLive.unreadable || ArmLive.entryInFlight) return false
+        // (The orders as they are now: a cancelled one's last fill counted, not the read's.)
+        val latest = mine.associateBy { it.id }
+        val ordersNow = orders.map { latest[it.id] ?: it }
         val pb = runCatching { Broker.positionBook() }.getOrNull() ?: return false
         val net = pb.net
         val instruments = Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull() ?: return false
         val today = t.toLocalDate()
-        val byLabel = ALL_ARMS.associateBy { it.label }
         var changed = false
         for ((sym, list) in buys.groupBy { it.symbol }) {
             val ins = instruments.firstOrNull { it.tradingSymbol == sym } ?: run { again = true; null } ?: continue
             val lot = ins.lotSize.coerceAtLeast(1)
             val rows = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }
-            val lagFree = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "ORB live", orders, first = pb) }.getOrNull() ?: run { again = true; null } ?: continue
+            val lagFree = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "ORB live", ordersNow, first = pb) }.getOrNull() ?: run { again = true; null } ?: continue
             val held = minOf(rows.sumOf { it.qty }, lagFree)
             if (held <= 0) continue
             val boughtToday = com.optionslab.engine.orb.LiveMirror.boughtTodayCap(rows.map { it.dayBuyQty }, rows.sumOf { it.overnight }, held,
-                orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "BUY" && it.tag != "iraorb" }.sumOf { it.filled })
+                ordersNow.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "BUY" && it.tag != "iraorb" }.sumOf { it.filled })
             // (19 Nov 2026, review: never more than these arms' own net on it today - their buys less their sales, after an erase only its
             // own - less what this book's open trades hold and what its trades closed outside the app today took: Boss's, Pine's or a
             // strategy's lot on the contract is never taken for one of these arms'.)
-            var net = orders.filter { it.symbol == sym && counts(it) }.sumOf { if (it.side == "BUY") it.filled else -it.filled } -
-                b.positions.filter { it.open && it.live && it.kite == sym }.sumOf { it.qty } -
-                b.positions.filter { !it.open && it.live && it.kite == sym && it.exitTime?.toLocalDate() == today && it.why in OUTSIDE_WHYS }.sumOf { it.qty }
+            // (Trades closed outside the app count only for what sales outside these arms explain - one whose own sale filled while the app
+            // was down, booked as closed outside, is already in their sales.)
+            val outsideSold = ordersNow.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.tag != "iraorb" }.sumOf { it.filled }
+            val closedOutside = b.positions.filter { !it.open && it.live && it.kite == sym && it.exitTime?.toLocalDate() == today && it.why in OUTSIDE_WHYS }.sumOf { it.qty }
+            var net = ordersNow.filter { it.symbol == sym && counts(it) }.sumOf { if (it.side == "BUY") it.filled else -it.filled } -
+                b.positions.filter { it.open && it.live && it.kite == sym }.sumOf { it.qty } - minOf(closedOutside, outsideSold)
             var explained = b.positions.filter { it.open && it.live && it.kite == sym }.sumOf { it.qty } +
                 // (Review F6, as the settle: never a lost entry of theirs still searched for - it may hold nothing, and must not hide this.)
                 armLive.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side > 0 && !(it.unconfirmed && it.entryOrderId == null) }.sumOf { it.qty }
@@ -3909,6 +3930,7 @@ object OrbArms {
                 } else b.positions += row
                 if (mayRest && stopId == null && covered <= 0) coverSay(row, "${a.label}: no stop can rest at Zerodha for $sym taken back at the start - other " +
                     "working sales already cover all it holds; they are its only cover, and the app watches its level. Check $sym in Kite.")
+                if (safety) coldSafety += candidates.map { it.source }
                 for (d in (if (safety) candidates + a else listOf(a)).distinct()) {
                     val spent = b.decided.getOrPut("${d.source}|$today") { HashSet() }
                     var m = at.withSecond(0).withNano(0).minusMinutes(60)
@@ -4053,7 +4075,7 @@ object OrbArms {
      */
     private val TAKE_EXITS = setOf("target", "time_stop", "failed_break", "new_liquidity", "next_liquidity")
 
-    /** 19 Nov 2026 (review): by trade ([managerId]), when (market-clock ms) Stop for today's or 15:10's sale was last refused. Memory only. */
+    /** 19 Nov 2026 (review): by the stop put back after a refused Stop-for-today or 15:10 sale, when (market-clock ms). Memory only. */
     private val refusedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private const val REFUSED_RETRY_MS = 45_000L
 
@@ -4228,16 +4250,17 @@ object OrbArms {
     }
 
     /**
-     * 19 Nov 2026 (review): before a lost entry is kept from Zerodha's positions alone ([settleEntry], no order found for it), a buy of these
-     * arms on [sym] still working that no trade claims - it may be this very entry, still filling - is cancelled as the app's own, and
-     * true is returned: the entry stays unconfirmed and is settled on the next look from what that order ended with. The orders unreadable:
-     * true (asked again). False: none working.
+     * 19 Nov 2026 (review): before a lost entry is looked for in Zerodha's positions ([settleEntry], no order found for it), a buy of these
+     * arms on [sym] still working that no trade claims and no other arm's or book's label names - it may be this very entry, still filling -
+     * is cancelled as the app's own, and true is returned: the entry stays unconfirmed and is judged again on the next look from what
+     * Zerodha then holds. The orders or labels unreadable: true (asked again). False: none working.
      */
     private suspend fun strayBuyWorking(b: Book, sym: String): Boolean {
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return true
+        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return true
         val claimed = b.positions.mapNotNull { it.entryOrderId }.toSet()
         val working = orders.filter { it.symbol == sym && it.tag == "iraorb" && it.side == "BUY" && it.exchange == "NFO" && it.product == "MIS" &&
-            it.working && it.id !in claimed }
+            it.working && it.id !in claimed && owners["kite:${it.id}"] == null }
         working.forEach { o -> runCatching { Broker.cancel(o.id, o.variety) } }
         return working.isNotEmpty()
     }
@@ -4273,8 +4296,8 @@ object OrbArms {
         val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         // (19 Nov 2026, review: from the entry order's own Zerodha time when it is known - both on Zerodha's clock; else the entry's own time
         // less 120 s, the phone's clock and Zerodha's may differ.)
-        val from = entryOid?.let { id -> list.firstOrNull { it.id == id }?.placedAt }?.let { runCatching { LocalDateTime.parse(it, fmt) }.getOrNull() }?.minusSeconds(5)
-            ?: since.minusSeconds(120)
+        val exact = entryOid?.let { id -> list.firstOrNull { it.id == id }?.placedAt }?.let { runCatching { LocalDateTime.parse(it, fmt) }.getOrNull() }?.minusSeconds(5)
+        val from = exact ?: since.minusSeconds(120)
         val stops = list.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" &&
             (it.working || (settling && it.status == "COMPLETE" && it.filled > 0)) &&
             it.tag == "iraorb" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed && !ownCancel(it.id) &&
@@ -4296,6 +4319,9 @@ object OrbArms {
         // (One that sold already: taken as it is only when placed for exactly this trade's quantity - never resized or raised.)
         if (o.filled > 0) return if (settling && o.qty == qty) took(own) else Orphan.Wait
         val rem = com.optionslab.engine.risk.ExitQty.remaining(o.qty, o.filled, o.pending)
+        // (The wide window - the entry's own Zerodha time not known - takes only a stop placed for exactly this quantity: another trade's
+        // lost stop on the contract from shortly before is never taken and resized.)
+        if (exact == null && rem != qty) return Orphan.Wait
         if (rem < qty && !grow) return Orphan.Wait
         val trig = maxOf(own, at ?: own)
         val resize = rem != qty
@@ -4436,7 +4462,7 @@ object OrbArms {
         if (ArmLive.handsOffNow("NFO", sym)) return p0 to null
         // 19 Nov 2026 (review): Stop for today or the session's end refused a moment ago: its stop was put back; not taken out and sold
         // again every look - once every [REFUSED_RETRY_MS] (the stop rests meanwhile).
-        if (why in ALWAYS_EXITS && refusedAt[managerId(p0)]?.let { epochMs(now()) - it < REFUSED_RETRY_MS } == true) return p0 to null
+        if (why in ALWAYS_EXITS && p0.stopOrderId?.let { refusedAt[it] }?.let { epochMs(now()) - it < REFUSED_RETRY_MS } == true) return p0 to null
         runCatching { OrderTiming.decided() }
         val label = armOf(p0.arm).label
         // 18 Nov 2026 (audit: B1, Liquidity's index and time exits skipped the "shown gone but not confirmed" guard - they took the
@@ -4545,7 +4571,9 @@ object OrbArms {
             val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
             val ownSale = list.any { it.symbol == sym && it.working && it.side == "SELL" && it.id != p.stopOrderId && it.tag == "iraorb" &&
                 it.type != "SL" && it.type != "SL-M" && (owners["kite:${it.id}"]?.substringBefore(" · ")?.let { l -> l == label } ?: true) }
-            if (refused && why in ALWAYS_EXITS) { if (refusedAt.size > 200) refusedAt.clear(); refusedAt[managerId(p)] = epochMs(t) }
+            // (A refused Stop-for-today or 15:10 sale: the stop put back is not taken out again for [REFUSED_RETRY_MS] - by that stop's id,
+            // so a part left with none is never held back.)
+            fun putBack(id: String?) { if (refused && why in ALWAYS_EXITS && id != null) { if (refusedAt.size > 200) refusedAt.clear(); refusedAt[id] = epochMs(t) } }
             if (refused && qty <= 0) {
                 coverSay(p, "$label: the exit of $sym was refused and no stop was put back: other working sales already cover all Zerodha holds " +
                     "of it - they are its only cover. Check $sym in Kite.")
@@ -4577,9 +4605,10 @@ object OrbArms {
             val lock = lockOrStop(p, spec.tickSize)?.takeIf { l -> ladderTarget(p) != null && l > (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 }
             if (lock != null) {
                 val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock)
-                if (id != null) return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock))
+                if (id != null) { putBack(id); return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock)) }
             }
             val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger)
+            putBack(id)
             return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger))
         }
         p.stopOrderId?.let { id ->
@@ -6008,6 +6037,7 @@ object OrbArms {
     @Synchronized internal fun forgetMemoryForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
         cache = null; writtenText = null; writtenStat = null; coldSwept = false; coldGateSaid = false; coldFailSince = null; coldFailSaid = false; coldNextAt = 0L
+        erasedAt = null; coldSafety.clear()
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         synchronized(ownCancels) { ownCancels.clear() }
         forgetStopSaid()
@@ -6025,7 +6055,7 @@ object OrbArms {
         // (19 Nov 2026: a pending write is dropped; never a wait on one running - the screen may erase - which deletes the file again
         // itself if it finishes after this erase ([flushSoon]).)
         synchronized(writeOrder) { wipeGen++; pendingWrite = null; saveSeq++ }
-        coldSwept = false; coldGateSaid = false; coldFailSince = null; coldFailSaid = false; coldNextAt = 0L
+        coldSwept = false; coldGateSaid = false; coldFailSince = null; coldFailSaid = false; coldNextAt = 0L; coldSafety.clear()
         erasedAt = runCatching { now().withNano(0).toString() }.getOrNull()
         cache = null; restoppedAt.clear(); writtenText = null; writtenStat = null
         forgetHints()

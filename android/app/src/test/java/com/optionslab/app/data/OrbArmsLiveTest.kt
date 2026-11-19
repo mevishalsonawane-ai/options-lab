@@ -76,9 +76,11 @@ class OrbArmsLiveTest : RobolectricTest() {
             .put("entryOrderId", entryId ?: "").put("stopOrderId", stopId ?: "").apply { stop?.let { put("stopTrigger", it) } }
             .put("exitTime", "").put("why", "").put("charges", 0.0).put("live", true).put("kite", sym).put("unconfirmed", false)
 
-    private fun state(armed: Boolean = true, pending: Boolean = false, expires: LocalDateTime = now.plusMinutes(9), positions: List<JSONObject> = emptyList()) {
+    private fun state(armed: Boolean = true, pending: Boolean = false, expires: LocalDateTime = now.plusMinutes(9), positions: List<JSONObject> = emptyList(),
+                      alsoLive: List<String> = emptyList()) {
+        val on = JSONObject().put("orb", armed).apply { alsoLive.forEach { put(it, true) } }
         val o = JSONObject()
-            .put("armed", JSONObject().put("orb", armed)).put("auto", JSONObject().put("orb", true)).put("liveOk", JSONObject().put("orb", armed))
+            .put("armed", on).put("auto", JSONObject().put("orb", true)).put("liveOk", JSONObject(on.toString()))
             .put("legs", JSONObject().put("day", now.toLocalDate().toString()).put("strike", 52_000).put("expiry", expiry.toString())
                 .put("ce", contract(paperCe, "CE")).put("pe", contract(paperPe, "PE")))
             .put("positions", JSONArray(positions))
@@ -288,6 +290,27 @@ class OrbArmsLiveTest : RobolectricTest() {
         pass()
         assertNull("nothing taken back", runBlocking { OrbArms.view() }.arms.firstNotNullOfOrNull { it.open })
         assertTrue("no stop placed: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+        // A restart the same day still knows the erase (written with the first book after it).
+        assertTrue(OrbArms.awaitWrites())
+        restart()
+        pass()
+        assertNull("nothing taken back after a restart", runBlocking { OrbArms.view() }.arms.firstNotNullOfOrNull { it.open })
+        assertTrue("no stop placed: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+    }
+
+    /**
+     * 19 Nov 2026 (review): a lot with no arm known taken back at the first entry after a restart (ORB and Liquidity 15m both live on its
+     * index - it may be either's): an entry of any arm it could be is refused, never a second buy of the same signal.
+     */
+    @Test fun aSafetyLotTakenBackAtTheFirstEntryStopsTheArmsItCouldBe() {
+        kite.boughtInKite(sym, 30, 200.0, tag = "iraorb")                 // no owner label: the app died before it was written
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        state(pending = true, alsoLive = listOf("liquidity15"))
+        restart()
+        val msg = approve()
+        assertTrue(msg, msg.contains("taken back"))
+        assertEquals("no second buy", 1, kite.orders.values.count { it.side == "BUY" })
+        assertEquals("taken back with a safety stop", 1, runBlocking { OrbArms.view() }.arms.count { it.open != null })
     }
 
     /** 19 Nov 2026 (review): another arm's lot taken back at the first entry after a restart never stops this arm's entry. */
@@ -325,10 +348,10 @@ class OrbArmsLiveTest : RobolectricTest() {
      * on the contract: that buy is cancelled and the entry stays unconfirmed (settled next look from what that order ended with).
      */
     @Test fun aLostEntryIsNotKeptFromThePositionsWhileAnUnclaimedBuyStillWorks() {
-        val lost = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true)
+        // (Its entry time set after the buy's, so the lost-id search - by time - does not find that buy.)
+        val lost = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true).put("entryTime", now.plusMinutes(5).toString())
         state(positions = listOf(lost))
         val id = kite.restingInKite(sym, "BUY", 60, 201.0, tag = "iraorb")
-        runBlocking { Strategies.tagOwner("kite:$id", "ORB Fresh · entry") }   // labelled for another arm: the search leaves it out
         kite.orders.getValue(id).apply { filled = 30; avg = 200.0 }
         kite.position(sym, 30, 200.0, product = "MIS")
         kite.dayBought["NFO:$sym:MIS"] = 30
