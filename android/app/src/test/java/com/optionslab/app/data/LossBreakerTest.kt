@@ -175,4 +175,201 @@ class LossBreakerTest : RobolectricTest() {
         assertTrue(LossBreaker.trippedToday())
         assertTrue(runBlocking { Strategies.stoppedToday() })
     }
+
+    // ---- 19 Nov 2026 (Boss's choice, "Go"): a loss limit switched off or raised with the PIN lifts the stop it made today ----
+
+    private fun limit(rupees: Double) = SecurePrefs.put("g.loss", rupees)
+    private fun lift(old: Double, new: Double, pin: Boolean) = runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, old, new, pin) } == LossBreaker.Lift.LIFTED
+    private fun startAgain() = runBlocking { Strategies.startAgain() }
+    private fun trippedAt5k(loss: Double) {
+        kite.login()
+        AutomationSupport.liveSettings()
+        limit(5_000.0)
+        losing(loss)
+        check()
+        assertTrue(LossBreaker.trippedToday())
+        val said = startAgain()
+        assertTrue(said, said.startsWith("Not started"))
+    }
+
+    @Test fun switchedOffWithThePinTodaysStopIsLiftedAndStartWorks() {
+        trippedAt5k(6_000.0)
+        limit(0.0)                                              // the switch, then the lift (the settings page's order)
+        assertTrue(lift(5_000.0, 0.0, pin = true))
+        assertFalse(LossBreaker.trippedToday())
+        val said = startAgain()
+        assertTrue(said, said.contains("running"))
+        check()
+        assertFalse("off: the next look never stops them again", LossBreaker.trippedToday())
+    }
+
+    @Test fun withoutThePinNothingIsLifted() {
+        trippedAt5k(6_000.0)
+        assertEquals(LossBreaker.Lift.NO_PIN, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, false) })
+        assertTrue(LossBreaker.trippedToday())
+        assertTrue(startAgain().startsWith("Not started"))
+    }
+
+    @Test fun raisedPastTodaysLossItIsLifted() {
+        trippedAt5k(9_000.0)
+        limit(10_000.0)
+        assertTrue(lift(5_000.0, 10_000.0, pin = true))
+        val said = startAgain()
+        assertTrue(said, said.contains("running"))
+        check()
+        assertFalse("inside the new limit: not stopped again", LossBreaker.trippedToday())
+    }
+
+    @Test fun raisedButTodaysLossIsStillPastItTheStopStays() {
+        trippedAt5k(12_000.0)
+        limit(10_000.0)
+        assertEquals(LossBreaker.Lift.STILL_PAST, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 10_000.0, true) })
+        assertTrue(LossBreaker.trippedToday())
+        assertTrue(startAgain().startsWith("Not started"))
+    }
+
+    @Test fun loweredOrSwitchedOnNeverLiftsAnything() {
+        trippedAt5k(6_000.0)
+        assertFalse(lift(5_000.0, 2_000.0, pin = true))
+        assertFalse(lift(0.0, 10_000.0, pin = true))
+        // Another limit's change (the paper bots') never lifts Zerodha's stop while Zerodha's own limit is on.
+        assertEquals(LossBreaker.Lift.OTHER_LIMIT, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+        // The settings page's memory-only look: may lift when this limit is loosened, never when lowered or another limit.
+        assertTrue(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0))
+        assertTrue(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 10_000.0))
+        assertFalse(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 2_000.0))
+        // The other limit loosened may lift too, once this stop's own limit is off ([liftForLoosened] decides): the PIN is asked.
+        assertTrue(LossBreaker.mayLift(LossBreaker.Limit.PAPER, 10_000.0, 0.0))
+        assertTrue(LossBreaker.trippedToday())
+    }
+
+    /**
+     * The paper bots' limit: a stop made on the NSE paper day (commodities on their own limits) lifts when the limit is raised past
+     * that day, not when it is raised short of it.
+     */
+    @Test fun thePaperBotsLimitRaisedPastTheNsePaperDayLiftsItsStop() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), listOf(other to -12_000.0)) }
+        LossBreaker.testDayFigure = { if (it == LossBreaker.Limit.PAPER) -12_000.0 else null }
+        try {
+            check()
+            assertTrue(LossBreaker.trippedToday())
+            assertTrue("${LossBreaker.tripToday()}", LossBreaker.tripToday() in setOf(com.optionslab.ira.SegmentLock.Trip.PAPER, com.optionslab.ira.SegmentLock.Trip.SHARED))
+            assertEquals("-12k is still past 11k", LossBreaker.Lift.STILL_PAST, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 11_000.0, true) })
+            assertFalse("Zerodha's limit is not the one that made it", lift(2_000.0, 0.0, pin = true))
+            SecurePrefs.put("g.pLoss", 20_000.0)
+            assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 20_000.0, true) })
+            val said = startAgain()
+            assertTrue(said, said.contains("running"))
+        } finally {
+            LossBreaker.testPaperDay = null
+            LossBreaker.testDayFigure = null
+        }
+    }
+
+    /**
+     * 19 Nov 2026 (final review, items 2 and 3): a Zerodha stop whose stop of the bots never reached their book (its write failed) - the
+     * lift writes Boss's own stop, so nothing runs before he starts it; the commodities, which that stop reached, stay stopped too.
+     */
+    @Test fun aLiftWithNoLossStopInTheBookStillLeavesTheBotsStoppedAsBosss() {
+        kite.login()
+        AutomationSupport.liveSettings()
+        limit(5_000.0)
+        val today = com.optionslab.app.data.Market.today()
+        SecurePrefs.put("breaker.day.kind", com.optionslab.ira.SegmentLock.encodeTrip(today, com.optionslab.ira.SegmentLock.Trip.LIVE))
+        SecurePrefs.put("breaker.day", today.toString())
+        LossBreaker.forgetForTest()
+        assertEquals(null, runBlocking { Strategies.stoppedWhy() })
+        limit(0.0)
+        assertTrue(lift(5_000.0, 0.0, pin = true))
+        assertEquals("stopped as yours", com.optionslab.ira.DayStop.Why.BOSS, runBlocking { Strategies.stoppedWhy() })
+        assertEquals("the commodities stay stopped", com.optionslab.ira.DayStop.Why.BOSS, runBlocking { Strategies.mcxStoppedWhy() })
+        val said = startAgain()
+        assertTrue(said, said.contains("running"))
+    }
+
+    /** Item 3: a commodity stop already there (the tile's, Jarvis's) keeps its reason and its selling after a lift. */
+    @Test fun anEarlierCommodityStopKeepsItsReasonAndSelling() {
+        trippedAt5k(6_000.0)
+        runBlocking { Strategies.stopCommodities(sell = true, why = com.optionslab.ira.DayStop.Why.TILE, log = false) }
+        limit(0.0)
+        assertTrue(lift(5_000.0, 0.0, pin = true))
+        assertEquals(com.optionslab.ira.DayStop.Why.TILE, runBlocking { Strategies.mcxStoppedWhy() })
+        assertTrue("still selling", runBlocking { Strategies.mcxStopSells() })
+    }
+
+    /** Item 4: today past the OTHER limit too (the paper bots'): not lifted - the next look would stop the bots again at once. */
+    @Test fun noLiftWhileTheOtherLimitIsPastToo() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        try {
+            trippedAt5k(6_000.0)
+            limit(0.0)
+            assertEquals(LossBreaker.Lift.OTHER_PAST, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, true) })
+            assertTrue(LossBreaker.trippedToday())
+        } finally {
+            LossBreaker.testPaperDay = null
+        }
+    }
+
+    /** Item 4, the other way: the paper bots' limit raised while Zerodha's day is past Zerodha's limit - not lifted; unread - lifted. */
+    @Test fun noPaperLiftWhileZerodhasLimitIsPast() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        var zerodha: Double? = -6_000.0
+        LossBreaker.testDayFigure = { if (it == LossBreaker.Limit.PAPER) -12_000.0 else zerodha }
+        try {
+            check()
+            assertTrue(LossBreaker.trippedToday())
+            SecurePrefs.put("g.pLoss", 20_000.0)
+            assertEquals(LossBreaker.Lift.OTHER_PAST, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 20_000.0, true) })
+            zerodha = null                                          // Zerodha's day not read: not past (the next look decides)
+            assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 20_000.0, true) })
+        } finally {
+            LossBreaker.testPaperDay = null
+            LossBreaker.testDayFigure = null
+        }
+    }
+
+    /**
+     * Final check (L1): today past both limits. Zerodha's switched off first is refused (the paper one would stop them again), and
+     * says to loosen that one too; then the paper limit switched off lifts the stop. In the other order: the paper one first leaves the
+     * stop (Zerodha's still on and past), then Zerodha's off lifts it.
+     */
+    @Test fun pastBothLimitsTheStopLiftsOnceBothAreLoosenedInEitherOrder() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        try {
+            trippedAt5k(6_000.0)
+            limit(0.0)
+            val first = runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, true) }
+            assertEquals(LossBreaker.Lift.OTHER_PAST, first)
+            assertTrue(first.words, first.words.contains("Loosen that one too"))
+            SecurePrefs.put("g.pLoss", 0.0)
+            assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+            val said = startAgain()
+            assertTrue(said, said.contains("running"))
+        } finally {
+            LossBreaker.testPaperDay = null
+        }
+    }
+
+    @Test fun pastBothLimitsThePaperOneFirstThenZerodhasLiftsIt() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        try {
+            trippedAt5k(6_000.0)
+            SecurePrefs.put("g.pLoss", 0.0)
+            assertEquals("Zerodha's limit still on and past", LossBreaker.Lift.OTHER_LIMIT,
+                runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+            assertTrue(LossBreaker.trippedToday())
+            limit(0.0)
+            assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, true) })
+        } finally {
+            LossBreaker.testPaperDay = null
+        }
+    }
+
+    /** Final check: the day recovered inside Zerodha's limit, still on - loosening the paper bots' limit never lifts Zerodha's stop. */
+    @Test fun aRecoveredDayAndTheOtherLimitLoosenedNeverLiftTheStop() {
+        trippedAt5k(6_000.0)
+        losing(4_000.0)                                         // recovered inside ₹5k; Zerodha's limit untouched
+        assertEquals(LossBreaker.Lift.OTHER_LIMIT, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+        assertTrue(LossBreaker.trippedToday())
+    }
 }

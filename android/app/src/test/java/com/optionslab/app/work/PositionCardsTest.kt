@@ -79,6 +79,24 @@ class PositionCardsTest : RobolectricTest() {
         assertEquals("P&L −₹600", PositionCards.pnlLine(30, 1028.40, null, -600.0))
     }
 
+    /**
+     * 19 Nov 2026 (second review of the clock lane, item 7): the watch pass now gives the cards' refresh 20 s and then cancels it. The
+     * refresh's reads swallowed that cancellation and went on as if nothing were open: every card was taken down and the watch's
+     * "anything open" (its 15 s stop checks) cleared. Cut short, it now leaves both as they were.
+     */
+    @Test fun aRefreshCutShortLeavesTheCardsAndTheOpenFlagAsTheyWere() = kotlinx.coroutines.runBlocking {
+        PositionCards.card(context, "Paper", "X", 75, 100.0, 98.0, -150.0)
+        PositionCards.markOpenForTest()
+        PositionCards.testBeforeRead = { kotlinx.coroutines.delay(10_000) }
+        try {
+            kotlinx.coroutines.withTimeoutOrNull(300) { PositionCards.refresh(context) }
+            assertNotNull("the card stays", posted("Paper", "X"))
+            assertTrue("the watch still counts it open", PositionCards.anyOpen)
+        } finally {
+            PositionCards.testBeforeRead = null
+        }
+    }
+
     @Test fun aClosedPositionsCardIsTakenDown() {
         PositionCards.card(context, "Paper", "X", 75, 100.0, 98.0, -150.0)
         assertNotNull(posted("Paper", "X"))

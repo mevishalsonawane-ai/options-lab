@@ -2024,6 +2024,27 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     fun startBotAgain() = strategyDo { com.optionslab.app.data.Strategies.startAgain() }
 
+    /**
+     * 19 Nov 2026 (Boss's choice): [limit] loosened from [old] to [new] in Account guard or Bot settings, after Boss's PIN
+     * ([pinVerified]): today's stop that limit made is lifted when it may be ([com.optionslab.app.data.LossBreaker.liftForLoosened]),
+     * once the settings change queued just before has been written (so the next look reads the new limit).
+     */
+    fun liftLossStop(limit: com.optionslab.app.data.LossBreaker.Limit, old: Double, new: Double, pinVerified: Boolean) {
+        viewModelScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            settingsWriter.lock(); settingsWriter.unlock()
+            val r = withContext(Dispatchers.IO) {
+                runCatching { com.optionslab.app.data.LossBreaker.liftForLoosened(limit, old, new, pinVerified) }.getOrDefault(com.optionslab.app.data.LossBreaker.Lift.FAILED)
+            }
+            runCatching {
+                when (r) {
+                    com.optionslab.app.data.LossBreaker.Lift.LIFTED -> com.optionslab.app.work.Alerts.success(r.words)
+                    com.optionslab.app.data.LossBreaker.Lift.NO_STOP -> Unit
+                    else -> com.optionslab.app.work.Alerts.error(r.words)
+                }
+            }
+        }
+    }
+
     /** The index side's stop time today ("10:42"), when known; null when it is not stopped. */
     val botStopAt = MutableStateFlow<String?>(null)
 

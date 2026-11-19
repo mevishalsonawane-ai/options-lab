@@ -1036,6 +1036,9 @@ object IraHub {
     private val unguardedSince = HashMap<String, Instant>()
     private val rescueAsked = HashSet<String>()
 
+    /** 18 Nov 2026 (audit): the longest [rescueWatch] waits for another module's lock (a read; nothing is cut mid-order). */
+    internal const val RESCUE_LOCK_WAIT_MS = 5_000L
+
     /**
      * A bought option open two minutes with no stop: Jarvis offers one 15% under the price paid (asked, never set alone).
      */
@@ -1045,13 +1048,22 @@ object IraHub {
         val guard = Automations.on(Automations.Auto.GUARD)
         if (!Automations.on(Automations.Auto.RESCUE) && !guard) return
         // Guarded: a protection with a stop (or a trail), or a stop order the owner placed directly (ticket, Kite web).
-        val guarded = runCatching { com.optionslab.app.data.Protections.active() }.getOrNull()?.filter { it.stop != null || it.trail != null }
+        // 18 Nov 2026 (audit: "stop rescue max 8 min 45 s" - it waited on other modules' locks with no limit): each lock read below
+        // waits [RESCUE_LOCK_WAIT_MS] at most; not had in time, nothing is offered or set this pass (never a stop on a position
+        // whose owner could not be told), and the next pass looks again.
+        val guarded = runCatching { kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) { com.optionslab.app.data.Protections.active() } }.getOrNull()
+            ?.filter { it.stop != null || it.trail != null }
             ?.map { (if (it.live) "L:" else "P:") + it.symbol }?.toMutableSet() ?: return
         val open = ArrayList<Pair<com.optionslab.ira.Rescue.Open, String>>()
         // Battery (round 7): the paper account read once, fresh, for both its positions here and its stop orders below (they
         // read it twice, moments apart: each read downloads every held contract's day of candles without a Zerodha session).
         // The stop priced from it and the "set alone" check further down read as before.
-        val paperBook = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()
+        // 18 Nov 2026 (review): a paper read not had in time ends this pass (the paper positions' first-seen times are kept, so their
+        // two-minute grace is never started again by a slow lock); a read that fails is no paper book, as before.
+        val paperRead = kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) {
+            try { Result.success(com.optionslab.app.data.Paper.snapshot()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { Result.failure(e) }
+        } ?: return
+        val paperBook = paperRead.getOrNull()
         runCatching { paperBook?.positions?.positions?.filter { it.quantity != 0 }
             ?.forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
         // Zerodha reads with a deadline (this runs in the risk pass): slow or failed, the live positions wait for the next pass.
@@ -1094,9 +1106,21 @@ object IraHub {
         }
         // The bots (ORB arms, Pine scripts, strategy runs) manage their own exits: only positions they do not hold.
         val bots = HashSet<String>()
-        runCatching { com.optionslab.app.data.OrbArms.view().arms.mapNotNull { it.open?.symbol }.forEach { bots += it } }
+        // 18 Nov 2026 (audit): ORB's and the strategies' books each waited on [RESCUE_LOCK_WAIT_MS] at most; not read in time, this
+        // pass stops here (a bot's position must never be taken for Boss's own). A read that fails is skipped, as before.
+        val orbOpen: List<String>? = try {
+            kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) { com.optionslab.app.data.OrbArms.view().arms.mapNotNull { it.open?.symbol } }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) { emptyList() }
+        if (orbOpen == null) return
+        bots += orbOpen
         runCatching { com.optionslab.app.data.PineAuto.held.value.values.forEach { bots += it.symbol } }
-        runCatching { com.optionslab.app.data.Strategies.all().mapNotNull { it.run }.forEach { r -> r.openLegs().forEach { bots += it.symbol } } }
+        val strategyLegs: List<String>? = try {
+            kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) {
+                com.optionslab.app.data.Strategies.all().mapNotNull { it.run }.flatMap { r -> r.openLegs().map { it.symbol } }
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) { emptyList() }
+        if (strategyLegs == null) return
+        bots += strategyLegs
         // Jarvis's own trades keep their own exits too (none was ever bare long enough to matter, but never doubled).
         runCatching { IraNewsTrades.all().filter { !it.closed }.forEach { bots += it.symbol } }
         // Solo's paper trade keeps its own exits (the index stop, the breakeven lock, 14:30): never a premium stop set on it
@@ -1111,7 +1135,8 @@ object IraHub {
         runCatching { com.optionslab.app.data.HeroTicketArm.view.value.open.forEach { bots += it.symbol } }
         runCatching { com.optionslab.app.data.Ft3Arm.view.value.open.forEach { bots += it.symbol } }
         runCatching {
-            val owners = com.optionslab.app.data.Strategies.owners()
+            // 18 Nov 2026 (audit): the strategies' lock waited on [RESCUE_LOCK_WAIT_MS] at most (not had: the pass ends below).
+            val owners = kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) { com.optionslab.app.data.Strategies.owners() } ?: return
             val trades = com.optionslab.app.data.Paper.state.trades
             for ((p, product) in open) {
                 if (p.live || p.symbol in bots) continue

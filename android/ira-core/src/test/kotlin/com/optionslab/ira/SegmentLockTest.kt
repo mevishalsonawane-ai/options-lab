@@ -213,4 +213,23 @@ class SegmentLockTest {
         assertFalse(seg.upgrade(SegmentLock.Trip.LIVE, SegmentLock.Trip.SHARED))
         assertEquals(SegmentLock.Trip.SHARED, seg.decodeTrip(seg.encodeTrip(day, SegmentLock.Trip.SHARED), day))
     }
+
+    /** 19 Nov 2026 (Boss's choice): loosening a daily loss limit lifts the stop it made today - off, or raised past today's loss. */
+    @Test fun aLoosenedLimitLiftsOnlyItsOwnStopAndOnlyWhenTheDayIsInside() {
+        val live = SegmentLock.Trip.LIVE
+        // Zerodha's ₹5k stop: switched off lifts it; raised to ₹10k lifts it at -₹9k, not at -₹12k (nor when the figure is unknown).
+        assertTrue(SegmentLock.liftsOnLoosen(live, zerodha = true, old = 5_000.0, new = 0.0, pnl = -12_000.0))
+        assertTrue(SegmentLock.liftsOnLoosen(live, zerodha = true, old = 5_000.0, new = 10_000.0, pnl = -9_000.0))
+        assertFalse(SegmentLock.liftsOnLoosen(live, zerodha = true, old = 5_000.0, new = 10_000.0, pnl = -12_000.0))
+        assertFalse(SegmentLock.liftsOnLoosen(live, zerodha = true, old = 5_000.0, new = 10_000.0, pnl = null))
+        // Lowered, or switched on: never.
+        assertFalse(SegmentLock.liftsOnLoosen(live, zerodha = true, old = 5_000.0, new = 2_000.0, pnl = -1_000.0))
+        assertFalse(SegmentLock.liftsOnLoosen(live, zerodha = true, old = 0.0, new = 10_000.0, pnl = -1_000.0))
+        // Another limit's stop: never (the paper limit off leaves Zerodha's stop; Zerodha's off leaves the paper one).
+        assertFalse(SegmentLock.liftsOnLoosen(live, zerodha = false, old = 10_000.0, new = 0.0, pnl = 0.0))
+        assertFalse(SegmentLock.liftsOnLoosen(SegmentLock.Trip.PAPER, zerodha = true, old = 5_000.0, new = 0.0, pnl = 0.0))
+        assertTrue(SegmentLock.liftsOnLoosen(SegmentLock.Trip.SHARED, zerodha = false, old = 10_000.0, new = 0.0, pnl = -11_000.0))
+        // No stop today (or an older build's without its kind): nothing to lift.
+        assertFalse(SegmentLock.liftsOnLoosen(null, zerodha = true, old = 5_000.0, new = 0.0, pnl = 0.0))
+    }
 }

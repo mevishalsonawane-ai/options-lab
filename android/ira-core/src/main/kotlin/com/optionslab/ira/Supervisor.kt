@@ -220,22 +220,44 @@ class Supervisor(
      */
     suspend fun group(group: String, steps: List<Step>, waitMs: Long): List<String> {
         val inherited = currentCoroutineContext().minusKey(Job)
-        val jobs = ArrayList<Job>()
-        for (s in steps) {
-            if (inFlight[s.name]?.isActive == true) {
-                update(s.name, group) { it.copy(state = State.OVERRUN) }
-                continue
-            }
-            val job = scope.launch(inherited, start = CoroutineStart.LAZY) { runStep(group, s) }
-            inFlight[s.name] = job
-            job.invokeOnCompletion { inFlight.remove(s.name, job) }
-            job.start()
-            jobs += job
-        }
+        val jobs = steps.mapNotNull { launchStep(group, it, inherited) }
         withTimeoutOrNull(waitMs) { jobs.joinAll() }
         val late = steps.map { it.name }.filter { inFlight[it]?.isActive == true }
         for (n in late) update(n, group) { it.copy(state = State.OVERRUN) }
         return late
+    }
+
+    /**
+     * 18 Nov 2026 (audit: the 15:05 expiry square-off waited minutes behind a stuck watch pass): [steps] started side by side
+     * exactly as [group] starts them (each in its own try, the caller's context, one at a time per name), but never waited
+     * for: the caller goes on at once. A step whose previous run is still going is not started again and is shown as
+     * [State.OVERRUN]. Returns the names started now.
+     */
+    suspend fun kick(group: String, steps: List<Step>): List<String> {
+        val inherited = currentCoroutineContext().minusKey(Job)
+        return steps.filter { launchStep(group, it, inherited) != null }.map { it.name }
+    }
+
+    /**
+     * One step's run started, or null when its previous run is still going (then marked [State.OVERRUN]). 18 Nov 2026 (audit):
+     * the look and the claim are one atomic step ([ConcurrentHashMap.compute]): two callers on two threads (the watch pass
+     * and the clock lane) can never both start the same step - a square-off never runs twice at once.
+     */
+    private fun launchStep(group: String, s: Step, inherited: kotlin.coroutines.CoroutineContext): Job? {
+        var started: Job? = null
+        inFlight.compute(s.name) { _, old ->
+            // Not completed, not merely active: a run just claimed by another caller and not started yet counts as running.
+            if (old != null && !old.isCompleted) old
+            else scope.launch(inherited, start = CoroutineStart.LAZY) { runStep(group, s) }.also { started = it }
+        }
+        val job = started
+        if (job == null) {
+            update(s.name, group) { it.copy(state = State.OVERRUN) }
+            return null
+        }
+        job.invokeOnCompletion { inFlight.remove(s.name, job) }
+        job.start()
+        return job
     }
 
     private suspend fun runStep(group: String, s: Step) {
