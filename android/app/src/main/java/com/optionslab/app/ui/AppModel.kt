@@ -1106,7 +1106,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         runCatching { com.optionslab.app.data.Protections.noteTakenOver(rest.map { it.id }) }
         // 19 Nov 2026 (audit batch 2, final review): and the arms' live book, so a restart after an exit that did not go never reads these
         // cancels as Boss's own in Kite (his 16 Nov rule) - an arm's stop is put back as before (memory at once; written off this path).
-        runCatching { com.optionslab.app.data.ArmLive.markOwnCancels(rest.map { it.id }) }
+        // (Only the arms' own stops - every id while the arms' book is not read yet; taken back below for any still working.)
+        val armIds = rest.map { it.id }.filter { id -> com.optionslab.app.data.ArmLive.view.value.let { v -> !v.loaded || v.open.any { it.stopOrderId == id } } }
+        runCatching { com.optionslab.app.data.ArmLive.markOwnCancels(armIds) }
         taken?.addAll(rest.map { it.id })
         for (r in rest) runCatching { b.cancel(r.id, r.variety) }
         // The cancels confirmed (or the check that follows sees what still works and says so).
@@ -1122,6 +1124,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (failed >= 2) break
             kotlinx.coroutines.delay(300)
         }
+        // (19 Nov 2026, audit batch 2: a stop whose cancel did not take is still the arm's - its mark taken back, so Boss's own later cancel
+        // of it in Kite is respected.)
+        runCatching { b.orders().filter { it.working && it.id in armIds }.map { it.id } }.getOrNull()?.takeIf { it.isNotEmpty() }
+            ?.let { still -> runCatching { com.optionslab.app.data.ArmLive.unmarkOwnCancels(still) } }
         runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: the cancel of its resting exits could not be confirmed (the order book did not answer); checked again before the leg goes") }
         return Took.Cleared
     }

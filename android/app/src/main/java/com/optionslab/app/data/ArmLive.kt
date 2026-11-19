@@ -1761,9 +1761,33 @@ object ArmLive {
         if (!ready()) { ownCancelsDue += ids; return }
         if (lock.tryLock()) try {
             val b = cache
-            if (b != null) { var add = false; for (id in ids) if (id !in b.ownCancels) { b.ownCancels += id; add = true }; if (add) saveAsync(b) } else ownCancelsDue += ids
+            if (b != null) { var add = false; for (id in ids) if (id !in b.ownCancels) { b.ownCancels += id; add = true }; if (add) saveAsync(b) }
+            else { ownCancelsDue += ids; askOwnCancelsWrite() }
         } finally { lock.unlock() }
-        else { ownCancelsDue += ids; scope.launch { runCatching { lock.withLock { cache?.let { saveAsync(it) } } } } }
+        else { ownCancelsDue += ids; askOwnCancelsWrite() }
+    }
+
+    /** 19 Nov 2026 (final review): one write of the book asked on this object's own worker for the marks still due (never more than one queued). */
+    private val ownCancelsWriteAsked = java.util.concurrent.atomic.AtomicBoolean(false)
+    private fun askOwnCancelsWrite() {
+        if (!ownCancelsWriteAsked.compareAndSet(false, true)) return
+        scope.launch {
+            try { runCatching { lock.withLock { runCatching { book() }; cache?.let { if (ownCancelsDue.isNotEmpty()) saveAsync(it) } } } }
+            finally { ownCancelsWriteAsked.set(false) }
+        }
+    }
+
+    /**
+     * 19 Nov 2026 (final review): [ids] the app marked its own ([markOwnCancels]) whose cancel did not take (still working at Zerodha): the
+     * marks taken back, so a later cancel of them by Boss in Kite is his. Memory at once; the book on its next write.
+     */
+    internal suspend fun unmarkOwnCancels(ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        synchronized(ownCancels) { ownCancels.removeAll(ids.toSet()) }
+        ownCancelsDue.removeAll(ids.toSet())
+        if (!ready()) return
+        if (lock.tryLock()) try { cache?.let { b -> if (b.ownCancels.removeAll(ids.toSet())) saveAsync(b) } } finally { lock.unlock() }
+        else scope.launch { runCatching { lock.withLock { cache?.let { b -> if (b.ownCancels.removeAll(ids.toSet())) saveAsync(b) } } } }
     }
     /** 19 Nov 2026 (B2-B): own-cancel marks still to be written (the book's lock was busy): folded into the next write ([bytesOf]). */
     private val ownCancelsDue: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
@@ -3779,6 +3803,7 @@ object ArmLive {
     /** 19 Nov 2026 (audit batch 2): its memory notes dropped (a new process, an erase, the tests). */
     private fun forgetBatch2() {
         detachNotes.clear(); detachSaid.clear(); restBackoff.clear(); restRefusedSaid.clear(); endedSaid.clear(); handsOffLast.clear(); coldDecided.clear()
+        ownCancelsDue.clear()
         synchronized(ownCancels) { ownCancels.clear() }
     }
 

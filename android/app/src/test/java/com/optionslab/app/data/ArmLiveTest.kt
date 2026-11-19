@@ -2912,7 +2912,28 @@ class ArmLiveTest : RobolectricTest() {
         fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/$f"), java.io.File("app/src/main/java/com/optionslab/app/$f")).first { it.isFile }.readText()
         val t = src("ui/AppModel.kt")
         val take = t.substring(t.indexOf("private suspend fun takeOverLeg"))
-        assertTrue(take.indexOf("ArmLive.markOwnCancels(rest.map { it.id })") in 1 until take.indexOf("for (r in rest) runCatching { b.cancel(r.id, r.variety) }"))
+        assertTrue(take.indexOf("ArmLive.markOwnCancels(armIds)") in 1 until take.indexOf("for (r in rest) runCatching { b.cancel(r.id, r.variety) }"))
+        assertTrue("a cancel that did not take is given back", take.contains("ArmLive.unmarkOwnCancels(still)"))
+    }
+
+    /**
+     * Final review: a stop whose manual-exit cancel did not take has its mark taken back - Boss's own later cancel of it in Kite (blank words,
+     * in hours), after a restart, is his: never put back.
+     */
+    @Test fun aMarkTakenBackLeavesBossesLaterCancelHis() {
+        Market.testOrdersAnyTime = true
+        ArmLive.entered(ask(donchian, "unmarked"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.markOwnCancels(listOf(sid)); ArmLive.unmarkOwnCancels(listOf(sid)) }   // its cancel did not take
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.refresh() }
+        kite.orders.getValue(sid).status = "CANCELLED"                   // later, Boss in Kite
+        kite.requests.clear()
+        watch()
+        assertTrue(view().openReal.single().stopByYou)
+        assertEquals("never put back", 0, slPosts())
     }
 
     /** B2-B (6): an active GTT seen at Zerodha ends its re-rest back-off (as a working SL does). */
