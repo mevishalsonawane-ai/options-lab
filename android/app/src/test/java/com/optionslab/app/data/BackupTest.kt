@@ -110,6 +110,9 @@ class BackupTest : RobolectricTest() {
         assertTrue("restored state must start disarmed", SecurePrefs.getBoolean(Backup.DISARM, false))
         // 19 Nov (review): a restore's books never run Boss's one-time automatic-stops choice (it would switch his stops off with no PIN).
         assertTrue(SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false))
+        // 20 Nov 2026: and the card is told why the choice was not applied here (it had not run on this "new phone").
+        assertEquals(com.optionslab.ira.ArmAutoStops.NotApplied.RESTORE.key, SecurePrefs.getString(com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY))
+        assertEquals(com.optionslab.ira.ArmAutoStops.NotApplied.RESTORE, ArmAutoStopsHost.view.value.notApplied)
         val orb = JSONObject(String(Vault.readFile(orbFile())!!))
         assertEquals(0, orb.getJSONObject("armed").length())
         assertEquals(0, orb.getJSONObject("auto").length())
@@ -119,6 +122,17 @@ class BackupTest : RobolectricTest() {
         assertEquals(30.0, pine.getJSONObject(0).getJSONObject("auto").getDouble("stopPts"), 0.0)
         assertEquals(60.0, pine.getJSONObject(0).getJSONObject("auto").getDouble("targetPts"), 0.0)
         assertTrue(pine.getJSONObject(0).getJSONObject("auto").getBoolean("profitLock"))
+    }
+
+    /** 20 Nov 2026: a restore on a phone where Boss's automatic-stops choice had run says nothing (his switches stand). */
+    @Test fun aRestoreWhereTheChoiceHadRunLeavesNoNotice() = runBlocking {
+        seedPhone()
+        val bytes = Backup.create(context, pass.copyOf())
+        SecurePrefs.putAll(mapOf(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY to true, com.optionslab.ira.ArmAutoStops.CUTOFF_MIGRATION_KEY to true))
+        ArmAutoStopsHost.resetForTest()
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertNull(SecurePrefs.getString(com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY))
+        assertNull(ArmAutoStopsHost.view.value.notApplied)
     }
 
     @Test fun aRestoreNeverBringsBackAPineScriptWithoutItsStopTargetOrLock() {

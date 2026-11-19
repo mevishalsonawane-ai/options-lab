@@ -408,6 +408,25 @@ class S5ArmTest : RobolectricTest() {
         assertTrue(done!!.why, done.why!!.contains("square-off") || done.why == "closed_elsewhere")
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2, B2-B): its 15:15 square-off finds the paper book already flat (another paper close got there first, the
+     * real race): paper books it closed elsewhere, and its live copy is told the arm's own exit - once.
+     */
+    @Test fun aSquareOffThatLosesTheRaceToAPaperCloseStillTellsItsLiveCopyItsExit() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        try {
+            val p = boughtAt0920()
+            option(peToken, 105.0)
+            Paper.testBeforeExit = { c -> Paper.close(c.symbol, "MIS") }
+            at(LocalTime.of(15, 15), 1); runBlocking { S5Arm.manageOnly() }
+            assertEquals("closed_elsewhere", view().closed.single().why)
+            val told = heard.filter { it.startsWith("rule_exit|${p.ref}|") }
+            assertEquals(heard.toString(), 1, told.size)
+            assertTrue(told.single(), told.single().contains("square-off"))
+        } finally { ArmLive.testHeard = null; Paper.testBeforeExit = null }
+    }
+
     @Test fun aRestartRestoresTheTradeFirstAndItsExitsKeepRunning() {
         val p = boughtAt0920()
         AutomationSupport.reloadFromDisk(S5Arm)

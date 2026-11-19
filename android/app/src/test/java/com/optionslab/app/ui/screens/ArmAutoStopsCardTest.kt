@@ -132,4 +132,26 @@ class ArmAutoStopsCardTest {
         assertTrue(compose.onAllNodesWithText("the live stop rule, the self-review park and pause, the paper account stop, Jarvis's losing-arm cutoff no longer stop it",
             substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
     }
+
+    /** 20 Nov 2026 (minor fixes, item 3): Boss's choice not applied here - the card says why and how to switch one off (PIN). */
+    @Test fun aChoiceNotAppliedIsExplainedOnTheCard() {
+        show(ArmAutoStopsHost.View(loaded = true, state = ArmAutoStops.State(migrated = true), notApplied = ArmAutoStops.NotApplied.RESTORE), {}, {})
+        compose.waitForIdle()
+        assertTrue(shows("was not applied on this phone: a backup was restored", sub = true))
+        assertTrue(shows("tap its switch below and enter your PIN", sub = true))
+    }
+
+    @Test fun anUnreadableVaultSaysSoInsteadOfReadingForEver() {
+        show(ArmAutoStopsHost.View(readFailed = true), {}, {})
+        compose.waitForIdle()
+        assertFalse(shows("Reading the switches..."))
+        assertTrue(shows("have not been read yet", sub = true))
+        assertTrue(shows("Once they are read, you can switch one off here with your PIN", sub = true))
+    }
+
+    @Test fun anAppliedChoiceShowsNoNotice() {
+        show(ArmAutoStopsHost.View(loaded = true, state = allOff), {}, {})
+        compose.waitForIdle()
+        assertFalse(shows("not applied on this phone", sub = true))
+    }
 }

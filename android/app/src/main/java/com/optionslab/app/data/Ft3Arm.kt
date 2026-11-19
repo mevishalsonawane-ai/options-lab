@@ -862,6 +862,9 @@ object Ft3Arm {
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
             val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            // 19 Nov 2026 (audit batch 2): the arm's own exit ([why]) decided this sale and lost the race to another paper close: its live copy
+            // is still sold by that exit ([ArmLive.ruleExit]), never only detached as a plain "closed elsewhere" is.
+            runCatching { ArmLive.ruleExit(mirrorRef(p), why) }
             val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: Market.now().toLocalDateTime().withNano(0),
                 why = "closed_elsewhere", charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
             b.marks.remove(p.symbol)

@@ -125,7 +125,9 @@ class NightArmClosedElsewhereTest : RobolectricTest() {
             runBlocking { NightArm.tick() }
             val heard = ArmLive.testHeard!!.toList()
             assertEquals("closed_elsewhere", NightArm.view.value.closed.single().why)
-            assertTrue(heard.toString(), heard.contains("closed|$ref|closed_elsewhere"))
+            // (19 Nov 2026, audit batch 2: "closed elsewhere" alone no longer sells a live copy; at 09:16 the rule's own exit is due, so its
+            // live copy is told that exit and is still sold by it.)
+            assertTrue(heard.toString(), heard.contains("closed|$ref|night_exit_0916"))
             assertTrue(ArmLive.legsForTest(LiveMirror.NIGHT).orEmpty().none { it.ref == ref && it.qty > 0 })
             assertEquals(0, Paper.state.positions.filter { it.symbol == c.symbol }.sumOf { it.quantity })
         } finally {

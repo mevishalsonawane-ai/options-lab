@@ -18,4 +18,7 @@ import org.junit.runner.RunWith
 abstract class RobolectricTest {
     @get:Rule val marketClock = MarketClockRule()
     protected val context: Context get() = ApplicationProvider.getApplicationContext()
+
+    /** 20 Nov 2026: the network guard's lists forgotten after each test (JUnit runs the test's own @After, and its assertions, first). */
+    @org.junit.After fun forgetNetworkGuard() { NetworkGuard.reset() }
 }

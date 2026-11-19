@@ -67,6 +67,7 @@ class ArmLiveTest : RobolectricTest() {
     @After fun down() {
         ArmLive.testSync = false
         ArmLive.testNow = null
+        Market.testOrdersAnyTime = true                                   // (the test app's own setting: TestApp)
         ArmLive.testReadFails = null; ArmLive.testAccountFails = false; ArmLive.testSecurityFails = false; ArmLive.testHeard = null
         ArmLive.testLotCap = null; ArmLive.testWriteFails = null; ArmLive.testEntryWaitMs = null; ArmLive.testMeasured = null
         kite.close()
@@ -423,6 +424,7 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("exactly what is held", 60, stops.sumOf { it.qty })
         // A third resting exit would pass what is held: an arm's stop that went missing is not rested beside Boss's own sell.
         kite.orders.getValue(stops.first().id).status = "CANCELLED"
+        kite.orders.getValue(stops.first().id).message = "Cancelled by the exchange (RMS)"   // (B2-B: Zerodha's, so the put-back guard runs)
         runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "LIMIT", 260.0, 0.05,
             "NFO", "manual"), exit = true) }
         watch()
@@ -2702,5 +2704,404 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("only this path's own net", 30, p.qty)
         assertEquals("its stop brought down to it", 30, kite.order(sid).qty)
         assertEquals(sid, p.stopOrderId)
+    }
+
+    // ---- 19 Nov 2026 (audit batch 2, Boss: "Go") ---------------------------------------------------------------------------------
+
+    private fun slPosts() = kite.placed.count { it.form["order_type"] == "SL" }
+
+    /**
+     * B2-B (coordinator's decision 1a): every automatic paper end - closed elsewhere (the paper square-off, loss limit, sweeper, a paper book
+     * set aside) and closed outside - still sells the live copy exactly as before; nothing is detached and nothing "kept open" is said.
+     */
+    @Test fun anAutomaticPaperEndStillSellsTheLiveCopy() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        val (c2, _) = other(3)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        ArmLive.entered(ask(donchian, "elsewhere"))
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "outside", c = c2))
+        watch()
+        ArmLive.closed("elsewhere", "closed_elsewhere")
+        ArmLive.closed("outside", "closed_outside")
+        legs.remove("elsewhere"); legs.remove("outside")
+        watch()
+        assertEquals("both sold, once each", 2, marketSells())
+        assertEquals(setOf("closed_elsewhere", "closed_outside"), view().closed.map { it.why }.toSet())
+        assertTrue(view().openReal.isEmpty())
+        assertEquals(0, held())
+        assertEquals(0, posted("is NOT sold"))
+        watch()
+        assertEquals("never sold twice", 2, marketSells())
+    }
+
+    /**
+     * B2-B (1b, 1c): a carried (NRML: Night) or MCX live copy has no square-off of its own, so Boss's reset or hand close never detaches it -
+     * it is sold with its paper trade as before, and the words say so (never "nothing at Zerodha is sold").
+     */
+    @Test fun aCarriedOrMcxLiveCopyIsNeverDetachedAndTheWordsSaySoldWithThePaperTrade() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "night-copy"))
+        watch()
+        val night = view().openReal.single()
+        assertEquals("NRML", night.product)
+        assertTrue("never detached by the reset", ArmLive.detachAll("paper reset").isEmpty())
+        assertTrue("nor by a hand close", ArmLive.detachPaperSymbol(contract.symbol, "paper row closed by hand").isEmpty())
+        val w = ArmLive.liveCopyWords(ArmLive.liveCopiesOpen())!!
+        assertTrue(w, w.contains("sold at Zerodha with the paper trade") && !w.contains("nothing at Zerodha is sold"))
+        legs.remove("night-copy")                                   // the reset emptied its paper book
+        watch()
+        assertEquals(0, nrmlHeld())
+        assertTrue(view().openReal.isEmpty())
+        // MCX: the same (a copy on MCX has no square-off of its own).
+        val mcx = night.copy(ref = "mcx-copy", exchange = "MCX", symbol = "CRUDEOIL26NOVFUT", product = "NRML", paperSymbol = "CRUDE-X")
+        ArmLive.viewForTest(ArmLive.View(open = listOf(mcx), loaded = true))
+        assertTrue(ArmLive.detachAll("paper reset").isEmpty())
+        assertTrue(ArmLive.liveCopyWords(ArmLive.liveCopiesOpen())!!.contains("with no square-off of its own"))
+    }
+
+    /**
+     * Item 1: "Reset paper" detaches every live copy first (the dialog and the answer say so); the emptied paper books then sell nothing at
+     * Zerodha - each live copy keeps its own stop.
+     */
+    @Test fun aPaperResetNeverSellsALiveCopy() {
+        ArmLive.entered(ask(donchian, "reset"))
+        watch()
+        assertEquals(true, ArmLive.liveCopyWords(ArmLive.liveCopiesOpen())?.contains("stays open with its own stop"))
+        val hit = ArmLive.detachAll("paper reset")
+        assertEquals(listOf("reset"), hit.map { it.ref })
+        assertTrue(ArmLive.liveCopyWords(hit)!!.startsWith("A live copy is open at Zerodha (${LiveMirror.spec(donchian)!!.label} $sym)"))
+        // Written at once (before the paper book is emptied): a kill right after the reset still finds it detached.
+        runBlocking { ArmLive.applyDetached() }
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        assertTrue(runBlocking { ArmLive.refresh() }.openReal.single().detached)
+        legs.clear()                                               // the reset empties every paper book
+        watch()
+        ArmLive.closed("reset", "closed_elsewhere")                // its arm then books it closed elsewhere: still never sold
+        watch()
+        assertEquals(0, marketSells())
+        assertTrue(view().openReal.single().detached)
+        assertNull("none follows a paper trade any more", ArmLive.liveCopyWords(ArmLive.liveCopiesOpen()))
+        assertNull(ArmLive.liveCopyWords(emptyList()))
+    }
+
+    /**
+     * Item 1: closing a paper row by hand detaches the live copies of that paper contract first (never sold for it); a close that did not
+     * go gives them back to their paper trade, whose own exit then sells them as before.
+     */
+    @Test fun aPaperRowClosedByHandNeverSellsItsLiveCopyAndAFailedCloseGivesItBack() {
+        ArmLive.entered(ask(donchian, "hand-close"))
+        watch()
+        val hit = ArmLive.detachPaperSymbol(contract.symbol, "paper row closed by hand")
+        assertEquals(listOf("hand-close"), hit.map { it.ref })
+        assertTrue("another contract's copies are not touched", ArmLive.detachPaperSymbol("NIFTY-OTHER", "x").isEmpty())
+        // The close did not go: given back (the mark taken off the book too, once written).
+        runBlocking { ArmLive.applyDetached() }
+        assertTrue(view().openReal.single().detached)
+        runBlocking { ArmLive.undetach("hand-close") }
+        assertFalse(view().openReal.single().detached)
+        legs["hand-close"] = donchian to 0                          // later, the arm's own paper exit
+        watch()
+        assertEquals("its paper exit still sells it", 1, marketSells())
+        assertEquals("paper_exit", view().closed.single().why)
+        // A second trade, and a close that went: never sold.
+        ArmLive.entered(ask(donchian, "hand-close-2"))
+        watch()
+        assertTrue("another product's copies are not touched", ArmLive.detachPaperSymbol(contract.symbol, "x", product = "NRML").isEmpty())
+        ArmLive.detachPaperSymbol(contract.symbol, "paper row closed by hand", product = "MIS")
+        legs.remove("hand-close-2")
+        watch()
+        assertEquals(1, marketSells())
+        assertTrue(view().openReal.single().detached)
+    }
+
+    /**
+     * Item 2: a stop Boss cancelled himself in Kite (CANCELLED, no exchange words, not the app's) is never put back: the app watches the
+     * level itself (across a restart) and sells there.
+     */
+    @Test fun aStopBossCancelledIsNeverPutBackAndTheAppSellsAtItsLevel() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        Market.testOrdersAnyTime = true                                  // (B2-B: his cancel counts only while the market takes orders)
+        ArmLive.entered(ask(donchian, "boss-cancel"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        kite.orders.getValue(sid).status = "CANCELLED"                   // Boss cancelled it in Kite (blank words, in market hours)
+        kite.requests.clear()
+        watch(); watch()
+        assertEquals("never put back", 0, slPosts())
+        val p = view().openReal.single()
+        assertTrue(p.stopByYou); assertNull(p.stopOrderId); assertEquals(170.0, p.stopTrigger!!, 1e-9)
+        assertEquals("said once", 1, posted("looks cancelled by you"))
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        assertTrue(runBlocking { ArmLive.refresh() }.openReal.single().stopByYou)
+        watch()
+        assertEquals("not after a restart either", 0, slPosts())
+        kite.quote("NFO:$sym", 169.0, 168.95, 169.05)                  // at its level: the app sells there itself
+        watch()
+        assertEquals(1, marketSells())
+        assertEquals("stop", view().closed.single().why)
+        assertEquals(0, held())
+    }
+
+    /**
+     * B2-B (5): a stop CANCELLED outside market hours (the day's end) with no exchange words is Zerodha's, not Boss's - put back at Zerodha
+     * after a back-off (5 s), never left only app-watched.
+     */
+    @Test fun aCancelOutsideMarketHoursIsPutBackAfterABackOff() {
+        ArmLive.entered(ask(donchian, "late-cancel"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        try {
+            val late = Market.today().atTime(20, 0)
+            Market.testOrdersAnyTime = false                              // (the test app takes orders at any time: not here)
+            Market.testClock = java.time.Clock.fixed(late.atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+            assertFalse(Market.acceptsOrders())
+            kite.orders.getValue(sid).status = "CANCELLED"
+            kite.orders.getValue(sid).updated = late                       // Zerodha's own time of the cancel
+            kite.requests.clear()
+            val t0 = ArmLive.testNow!!
+            watch()
+            assertEquals("not in the same look (its back-off)", 0, slPosts())
+            assertFalse(view().openReal.single().stopByYou)
+            ArmLive.testNow = t0.plusSeconds(6)
+            watch()
+            assertEquals("put back at Zerodha", 1, slPosts())
+            assertNotNull(view().openReal.single().stopOrderId)
+        } finally { Market.testClock = null; Market.testOrdersAnyTime = true }
+    }
+
+    /**
+     * B2-B (5): the app's own cancel marks are written with the book, so after a restart a stop the app itself took out is never read as
+     * Boss's (even when Zerodha's words name a user) - it is put back.
+     */
+    @Test fun theAppsOwnCancelSurvivesARestartAndIsNeverTakenForBosses() {
+        Market.testOrdersAnyTime = true
+        ArmLive.entered(ask(donchian, "own-mark"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.markOwnCancelForTest(sid) }               // the app's exit was taking it out
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()                                     // killed before the exit was booked
+        runBlocking { ArmLive.refresh() }
+        kite.orders.getValue(sid).status = "CANCELLED"                   // blank words, in hours: Boss's - were it not the app's own
+        kite.requests.clear()
+        watch()
+        assertFalse("the app's own cancel", view().openReal.single().stopByYou)
+        assertEquals("put back at once", 1, slPosts())
+    }
+
+    /**
+     * Final review (1): Boss's manual exit from the app takes the arm's resting SL out (AppModel's takeOverLeg marks it the app's own before
+     * its cancel). The sale does not go and the app restarts: the blank, in-hours CANCELLED is the app's own - put back, never Boss's.
+     */
+    @Test fun aManualExitsCancelThenARestartIsTheAppsOwnAndPutBack() {
+        Market.testOrdersAnyTime = true
+        ArmLive.entered(ask(donchian, "manual-exit"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.markOwnCancels(listOf(sid)) }               // as takeOverLeg does, right before its cancel
+        kite.orders.getValue(sid).status = "CANCELLED"                   // its cancel (blank words, in hours); the sale did not go
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()                                     // a restart
+        runBlocking { ArmLive.refresh() }
+        kite.requests.clear()
+        watch()
+        assertFalse("the app's own cancel", view().openReal.single().stopByYou)
+        assertEquals("put back at Zerodha", 1, slPosts())
+        // The manual exit marks the cancels before they go.
+        fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/$f"), java.io.File("app/src/main/java/com/optionslab/app/$f")).first { it.isFile }.readText()
+        val t = src("ui/AppModel.kt")
+        val take = t.substring(t.indexOf("private suspend fun takeOverLeg"))
+        assertTrue(take.indexOf("ArmLive.markOwnCancels(armIds)") in 1 until take.indexOf("for (r in rest) runCatching { b.cancel(r.id, r.variety) }"))
+        assertTrue("a cancel that did not take is given back", take.contains("ArmLive.unmarkOwnCancels(still)"))
+    }
+
+    /**
+     * Final review: a stop whose manual-exit cancel did not take has its mark taken back - Boss's own later cancel of it in Kite (blank words,
+     * in hours), after a restart, is his: never put back.
+     */
+    @Test fun aMarkTakenBackLeavesBossesLaterCancelHis() {
+        Market.testOrdersAnyTime = true
+        ArmLive.entered(ask(donchian, "unmarked"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.markOwnCancels(listOf(sid)); ArmLive.unmarkOwnCancels(listOf(sid)) }   // its cancel did not take
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.refresh() }
+        kite.orders.getValue(sid).status = "CANCELLED"                   // later, Boss in Kite
+        kite.requests.clear()
+        watch()
+        assertTrue(view().openReal.single().stopByYou)
+        assertEquals("never put back", 0, slPosts())
+    }
+
+    /** B2-B (6): an active GTT seen at Zerodha ends its re-rest back-off (as a working SL does). */
+    @Test fun anActiveGttEndsTheBackOff() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "gtt-backoff"))
+        watch()
+        val gid = kite.gtts.keys.single()
+        kite.gtts.getValue(gid).put("status", "rejected")              // refused: backed off, said once
+        watch()
+        assertEquals(1, posted("Zerodha refused its live"))
+        val t0 = ArmLive.testNow!!
+        ArmLive.testNow = t0.plusSeconds(6)
+        watch()                                                          // rested again: a new active GTT
+        val gid2 = kite.gtts.entries.single { it.value.optString("status") == "active" }.key
+        watch()                                                          // seen active: the back-off and its words end
+        kite.gtts.getValue(gid2).put("status", "rejected")
+        watch()
+        assertEquals("a new refusal is said again", 2, posted("Zerodha refused its live"))
+    }
+
+    /** Item 2: a stop the exchange (its risk system) cancelled is put back at Zerodha as before. */
+    @Test fun aStopTheExchangeCancelledIsPutBack() {
+        ArmLive.entered(ask(donchian, "exch-cancel"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        kite.reject(sid, message = "Order cancelled by the exchange (RMS)", status = "CANCELLED")
+        kite.requests.clear()
+        watch()
+        assertEquals("put back at Zerodha", 1, slPosts())
+        assertFalse(view().openReal.single().stopByYou)
+        assertNotNull(view().openReal.single().stopOrderId)
+    }
+
+    /**
+     * Item 3: a stop Zerodha keeps refusing is tried again only after 5 s, then 10 s (doubling to 60 s) - no order on the looks between,
+     * the live lane's included - and Boss is told once, with the reason; the app watches the level meanwhile.
+     */
+    @Test fun aStopZerodhaKeepsRefusingIsTriedAgainWithABackOffAndSaidOnce() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "refused-stop"))
+        watch()
+        kite.reject(view().openReal.single().stopOrderId!!)           // RMS: outside the circuit
+        repeat(3) { kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "RMS:Trigger price is outside the circuit limit") }
+        kite.requests.clear()
+        val t0 = ArmLive.testNow!!
+        watch()
+        assertEquals("not sent again in the same look", 0, slPosts())
+        watch(); runBlocking { ArmLive.watch(stream = true) }
+        assertEquals("nothing inside the back-off, the live lane included", 0, slPosts())
+        assertEquals(1, posted("Zerodha refused its live"))
+        assertTrue(com.optionslab.app.work.Alerts.posted.any { "outside the circuit" in it.text })
+        ArmLive.testNow = t0.plusSeconds(6)
+        watch()
+        assertEquals("tried again after 5 s (refused)", 1, slPosts())
+        ArmLive.testNow = t0.plusSeconds(12)
+        watch()
+        assertEquals("then 10 s", 1, slPosts())
+        ArmLive.testNow = t0.plusSeconds(17)
+        watch()
+        assertEquals(2, slPosts())
+        assertEquals("said once", 1, posted("Zerodha refused its live"))
+        assertNull(view().openReal.single().stopOrderId)
+        assertEquals(170.0, view().openReal.single().stopTrigger!!, 1e-9)
+        assertEquals("never sold while it can rest", 0, marketSells())
+    }
+
+    /**
+     * Item 5: the start's sweep decides a contract once - its "unexplained lot" is said once, though another contract (a stale buy here)
+     * kept the sweep running for another look.
+     */
+    @Test fun theStartsSweepSaysAnUnexplainedLotOnce() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "sweep-a"))
+        // A filled stop-type buy of this path no trade explains (a short's buy-back whose row is gone): unexplained, no order stands for it.
+        val x = kite.boughtInKite(sym, 30, 200.0, tag = LiveMirror.TAG)
+        kite.orders.getValue(x).type = "SL"
+        val (_, s2) = other(7)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        val stale = kite.restsInKite(s2, "BUY", 30, 190.0, tag = LiveMirror.TAG)
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
+        assertEquals("CANCELLED", kite.order(stale).status)
+        assertEquals(1, posted("does not explain and no order of the arms stands for it"))
+        watch()                                                    // the sweep runs again (the stale buy kept it undecided)
+        watch()
+        assertEquals("said once", 1, posted("does not explain and no order of the arms stands for it"))
+    }
+
+    /**
+     * Coordinator's decision (3): an exit of the arm's own rules whose paper sale lost the race to another paper close (booked "closed
+     * elsewhere" on paper) still sells the live copy with that exit - before and after the copy was detached - never only detaches it.
+     */
+    @Test fun aRuleExitThatLostTheRaceToAPaperCloseStillSellsTheLiveCopy() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "race"))
+        watch()
+        ArmLive.ruleExit("race", "square-off 15:15")
+        ArmLive.closed("race", "closed_elsewhere")
+        legs.remove("race")
+        watch()
+        assertEquals(1, marketSells())
+        assertEquals("square-off 15:15", view().closed.single().why)
+        assertEquals("never said kept open", 0, posted("is NOT sold"))
+        // Detached by Boss's reset first (and its paper's "closed elsewhere" ignored), then the arm's own exit: still sold by it.
+        ArmLive.entered(ask(donchian, "race-2"))
+        watch()
+        ArmLive.detachAll("paper reset")
+        ArmLive.closed("race-2", "closed_elsewhere")
+        legs.remove("race-2")
+        watch()
+        assertEquals(1, marketSells())
+        assertTrue(view().openReal.single().detached)
+        ArmLive.ruleExit("race-2", "closed_elsewhere")                    // a plain "closed elsewhere" word is never taken as an exit's
+        watch()
+        assertEquals("exit", view().closed.single { it.ref == "race-2" }.why)
+        assertEquals(2, marketSells())
+        assertEquals(0, held())
+        // Every paper host with an exit sale that can lose that race tells its own exit.
+        fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/data/$f"), java.io.File("app/src/main/java/com/optionslab/app/data/$f")).first { it.isFile }.readText()
+        for (f in listOf("S5Arm.kt", "CisdArm.kt", "NtfyArm.kt", "FlowArm.kt", "Ft3Arm.kt", "VixDivArm.kt", "HeroTicketArm.kt", "McxPaperArms.kt",
+                "PassedArmsHost.kt", "ShadowArms.kt"))
+            assertTrue("$f tells its own exit", src(f).contains("ArmLive.ruleExit("))
+    }
+
+    /**
+     * Coordinator's decision (7): a GTT stop Boss deleted himself in Kite is respected like a cancelled SL - never put back, the app watches
+     * its level and sells there; one Zerodha expired is put back as before.
+     */
+    @Test fun aGttStopBossDeletedIsNeverPutBackAndAnExpiredOneIs() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        fun gttPosts() = kite.requests.count { it.method == "POST" && it.path == "/gtt/triggers" }
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "gtt-boss"))
+        watch()
+        val gid = kite.gtts.keys.single()
+        kite.gtts.getValue(gid).put("status", "deleted")               // Boss deleted it in Kite
+        kite.requests.clear()
+        watch(); watch()
+        assertEquals("never put back", 0, gttPosts())
+        val p = view().openReal.single()
+        assertTrue(p.stopByYou); assertNull(p.stopOrderId)
+        assertEquals("said once", 1, posted("looks deleted by you"))
+        kite.quote("NFO:$sym", 130.0, 129.95, 130.05)                  // through its level: the app sells there itself
+        watch()
+        assertTrue(view().closed.single().why!!.contains("stop"))
+        assertEquals(0, nrmlHeld())
+        // Expired at Zerodha: put back.
+        kite.quote("NFO:$sym", 200.0, 199.95, 200.05)
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "gtt-expired"))
+        watch()
+        val gid2 = kite.gtts.entries.single { it.value.optString("status") == "active" }.key
+        kite.gtts.getValue(gid2).put("status", "expired")
+        kite.requests.clear()
+        watch()
+        assertEquals("put back at Zerodha", 1, gttPosts())
+        assertFalse(view().openReal.single().stopByYou)
+    }
+
+    /** Item 1 (the dialog): the paper reset dialogs say an open live copy stays open with its own stop. */
+    @Test fun thePaperResetWordsNameEachLiveCopy() {
+        ArmLive.entered(ask(donchian, "w1"))
+        val (c2, s2) = other(4)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "w2", c = c2))
+        val w = ArmLive.liveCopyWords(ArmLive.liveCopiesOpen())!!
+        assertTrue(w, w.startsWith("2 live copies are open at Zerodha"))
+        assertTrue(w, w.contains(sym) && w.contains(s2) && w.contains("they stay open with their own stops"))
+        assertEquals(1, ArmLive.liveCopiesOpen(contract.symbol).size)
     }
 }

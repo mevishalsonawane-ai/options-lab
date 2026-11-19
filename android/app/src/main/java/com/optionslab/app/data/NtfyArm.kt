@@ -1046,7 +1046,13 @@ object NtfyArm {
             var sold = 0; var value = 0.0; var ch = 0.0
             if (half > 0) {
                 val r = Paper.place(c, "SELL", half, "MARKET", "MIS", null, null, exit = true)
-                val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: return p
+                val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: run {
+                    // 19 Nov 2026 (audit batch 2, B2-B): its T1 sale found the paper book already flat (another paper close got there first):
+                    // the arm meant to sell, so its live copy is sold by this exit ([ArmLive.ruleExit]); the next look books it closed elsewhere.
+                    if (!r.ok && runCatching { Paper.state.positions.filter { it.symbol == p.symbol && it.product == "MIS" }.sumOf { it.quantity } <= 0 }.getOrDefault(false))
+                        runCatching { ArmLive.ruleExit(p.ref, "target T1") }
+                    return p
+                }
                 sold = f.quantity; value = f.price * f.quantity; ch = chargesOf(r.orderId)
             }
             p.stopOrderId?.let { runCatching { Paper.modify(it, p.qty - sold, null, p.entry) } }
@@ -1073,6 +1079,9 @@ object NtfyArm {
             // Already flat in the paper book (the square-off, the sweeper or Boss): closed elsewhere, at that sale's price.
             if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
                 val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                // 19 Nov 2026 (audit batch 2): the arm's own exit ([why]) decided this sale and lost the race to another paper close: its live copy
+                // is still sold by that exit ([ArmLive.ruleExit]), never only detached as a plain "closed elsewhere" is.
+                runCatching { ArmLive.ruleExit(p.ref, why) }
                 return closed(p.copy(stopOrderId = null), t?.price?.toDouble() ?: p.entry, t?.timestamp ?: now(), "closed_elsewhere", t?.charges?.toDouble() ?: 0.0)
             }
             // Not filled (no fresh price): the stop goes back into the paper book at once, and the exit is tried next pass.

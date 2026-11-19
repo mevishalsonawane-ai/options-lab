@@ -110,7 +110,7 @@ internal object ArmLiquiditySource : LiquiditySource {
     fun tradeOf(p: com.optionslab.app.data.OrbArms.Position, underlying: String): LiquidityOverlay.Trade? {
         val arm = LiquidityRules.BOOKS.firstOrNull { it.source == p.arm } ?: return null
         if (LiquidityRules.underlyingOf(arm) != underlying) return null
-        val c = runCatching { com.optionslab.app.data.Paper.contractOf(p.symbol) }.getOrNull()
+        val c = com.optionslab.app.data.Paper.contractIfLoaded(p.symbol)   // (19 Nov 2026: memory only - never the vault on the screen's thread)
         val strike = c?.let { "${String.format(Locale.ENGLISH, "%.0f", it.strike)} ${p.right}" } ?: p.symbol
         return LiquidityOverlay.Trade(p.arm, LiquidityRules.minutesOf(arm), if (p.right == "CE") 1 else -1, p.signalBar, p.entryTime,
             p.entry, p.qty + p.sold, strike, p.exit, p.exitTime, p.why, p.level, p.target, p.grossPnl?.let { it - p.charges },

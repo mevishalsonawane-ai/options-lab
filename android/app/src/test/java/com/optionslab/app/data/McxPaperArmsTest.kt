@@ -384,6 +384,29 @@ class McxPaperArmsTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (audit batch 2, B2-B): its target sale finds the paper book already flat (another paper close got there first): paper books
+     * it closed elsewhere, and its live copy is told the arm's own exit (target) - once.
+     */
+    @Test fun aTargetThatLosesTheRaceToAPaperCloseStillTellsItsLiveCopyItsExit() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        try {
+            runBlocking { McxPaperArms.setArmed(McxEveRules.SOURCE, true) }
+            futureMinutes(LocalTime.of(19, 32)) { 311.0 }
+            optionMinutes(LocalTime.of(19, 32)) { 20.0 }
+            tick(LocalTime.of(19, 32))
+            val pos = McxPaperArms.view.value.open.single()
+            val ref = "mcx:${pos.arm}:${pos.orderId ?: pos.entryTime}"
+            futureMinutes(LocalTime.of(19, 36)) { t -> if (t.isBefore(LocalTime.of(19, 35))) 312.0 else 321.0 }
+            optionMinutes(LocalTime.of(19, 36)) { t -> if (t.isBefore(LocalTime.of(19, 35))) 21.0 else 26.0 }
+            Paper.testBeforeExit = { c -> Paper.close(c.symbol, "NRML") }
+            tick(LocalTime.of(19, 36))
+            assertEquals("closed_elsewhere", McxPaperArms.view.value.closed.single().why)
+            assertEquals(heard.toString(), listOf("rule_exit|$ref|target"), heard.filter { it.startsWith("rule_exit|") })
+        } finally { ArmLive.testHeard = null; Paper.testBeforeExit = null }
+    }
+
+    /**
      * 18 Oct, review D8: its paper trades reach the live path. The evening break's paper buy tells [ArmLive] it entered (its own
      * arm key, its paper quantity) and its paper target exit tells it the trade closed; the registered MCX book shows it at 0.
      */

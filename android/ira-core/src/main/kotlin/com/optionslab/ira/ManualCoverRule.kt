@@ -66,7 +66,7 @@ object ManualCoverRule {
     /**
      * 15 Nov, review: whether a stop that ended [status] with Zerodha's words [message] was ended by the exchange or the broker's
      * risk system rather than by Boss: REJECTED, or CANCELLED with words that clearly name them ([EXCHANGE_WORDS]: the exchange,
-     * RMS, a circuit, the freeze quantity, risk, validity, expiry, margin). Everything else - a blank message included - is Boss's:
+     * RMS, a circuit, the freeze quantity, risk, validity, expiry, margin, Zerodha's market protection). Everything else - a blank message included - is Boss's:
      * respected, never put back by itself, and said loudly. Boss's diagnostics show every CANCELLED live order (the app's own and
      * his own alike) with an empty message, and no wording of an exchange's cancel at all: those words are an UNVERIFIED
      * assumption, and anything not recognised defaults to Boss's.
@@ -79,7 +79,9 @@ object ManualCoverRule {
     }
 
     /** The words that make a cancel's message the exchange's or the broker's ([endedByExchange]). */
-    private val EXCHANGE_WORDS = listOf("exchange", "rms", "circuit", "freeze", "risk", "validity", "expired", "margin")
+    // 19 Nov 2026 (audit batch 2, final review): + "market protection" - Zerodha's own cancel of a resting order for its market protection
+    // ("Your order has been cancelled because of market protection.", as the app's order tests model Zerodha), never Boss's.
+    private val EXCHANGE_WORDS = listOf("exchange", "rms", "circuit", "freeze", "risk", "validity", "expired", "margin", "market protection")
 
     /**
      * 15 Nov: the note of one slice of a protection rested in slices (a quantity above the exchange's freeze quantity) that ended
