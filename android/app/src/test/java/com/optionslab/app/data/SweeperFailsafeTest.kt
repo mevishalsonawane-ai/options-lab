@@ -273,6 +273,17 @@ class SweeperFailsafeTest : RobolectricTest() {
         assertEquals(30, kite.order(swept.single()).qty)
     }
 
+    /** 19 Nov 2026 (second review, 6b): the arm's own exit sale already selling what is held: the stop is left, and Boss is not alarmed. */
+    @Test fun aThroughStopBesideTheArmsOwnWorkingExitIsLeftQuietly() {
+        kite.position(nfo, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$nfo", 200.0, 199.95, 200.05)
+        kite.orders["1"] = FakeKite.Order("1", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "irapine", "TRIGGER PENDING")
+        kite.orders["2"] = FakeKite.Order("2", nfo, "NFO", "SELL", 30, "MIS", "LIMIT", 199.0, 0.0, "irapine", "OPEN")
+        pass(10, 0)
+        assertTrue("not turned into a second sell", kite.requests.none { it.method == "PUT" })
+        assertTrue(Alerts.posted.joinToString { it.text }, Alerts.posted.none { it.title == "Missed lock" })
+    }
+
     /** The paper book's positions as [Paper.sweepMissedStops] hands them over: keyed as its prices are, judged on the app's calendars. */
     @Test fun paperPositionsAreJudgedOnTheAppsCalendars() {
         val contracts = mapOf(

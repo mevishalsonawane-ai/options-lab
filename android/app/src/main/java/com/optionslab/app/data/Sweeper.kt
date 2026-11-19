@@ -148,17 +148,24 @@ object Sweeper {
             // (Less every other sale already working on it that can fill at this price - a market sale, a limit at or under it: an
             // exit's, Boss's own, a stop swept on an earlier pass - never more than is held in all. A limit above the price could not
             // fill before the stop itself would, so the sweep adds nothing to it.)
-            val selling = orders.orEmpty().filter { it.working && it.side == "SELL" && it.id != so.id && it.exchange == so.exchange &&
+            val sales = orders.orEmpty().filter { it.working && it.side == "SELL" && it.id != so.id && it.exchange == so.exchange &&
                 it.symbol == so.symbol && it.product == so.product && it.type != "SL" && it.type != "SL-M" &&
                 (it.type == "MARKET" || it.price <= px + 1e-9) }
-                .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-            val have = book.filter { it.exchange == so.exchange && it.symbol == so.symbol && it.product == so.product }.sumOf { it.qty } -
-                selling - (used[pk] ?: 0)
+            val selling = sales.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            val heldHere = book.filter { it.exchange == so.exchange && it.symbol == so.symbol && it.product == so.product }.sumOf { it.qty }
+            val have = heldHere - selling - (used[pk] ?: 0)
             val left = com.optionslab.engine.risk.ExitQty.remaining(so.qty, so.filled, so.pending)
             val send = minOf(left, have)
             if (send <= 0) {
                 if (notSwept.size > 200) notSwept.clear()
-                if (notSwept.add(so.id)) {
+                // (19 Nov 2026, second review: the app's own exit sale already selling all that is held - an arm's exit under way - is
+                // the normal case: noted, Boss not alarmed.)
+                val appSelling = sales.filter { ours(it.tag) }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
+                    (used[pk] ?: 0)
+                if (heldHere > 0 && appSelling >= heldHere) {
+                    if (notSwept.add(so.id)) runCatching { Diag.record("risk", "Zerodha: ${so.symbol} is through its stop %.2f at %.2f; the app's own exit sale already sells what is held: the stop was left as it is"
+                        .format(Locale.ENGLISH, so.trigger, px)) }
+                } else if (notSwept.add(so.id)) {
                     val text = "Zerodha: ${so.symbol} is through its stop %.2f at %.2f, but nothing of it in %s is left to sell (other orders already sell what is held there): the stop was not turned into a sell. Check it in Trade."
                         .format(Locale.ENGLISH, so.trigger, px, so.product.ifBlank { "its product" })
                     runCatching { Diag.record("risk", text) }
