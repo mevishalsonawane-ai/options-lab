@@ -2820,8 +2820,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(donchian, "boss-cancel"))
         watch()
         val sid = view().openReal.single().stopOrderId!!
-        kite.orders.getValue(sid).status = "CANCELLED"                   // Boss cancelled it in Kite: Zerodha's words name the user
-        kite.orders.getValue(sid).message = "Order cancelled by user"
+        kite.orders.getValue(sid).status = "CANCELLED"                   // Boss cancelled it in Kite (blank words, in market hours)
         kite.requests.clear()
         watch(); watch()
         assertEquals("never put back", 0, slPosts())
@@ -2841,24 +2840,27 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     /**
-     * B2-B (5): a stop CANCELLED with a blank (or unrecognised) message is Zerodha's, not Boss's - put back at Zerodha, after a back-off
-     * (5 s), never left only app-watched.
+     * B2-B (5): a stop CANCELLED outside market hours (the day's end) with no exchange words is Zerodha's, not Boss's - put back at Zerodha
+     * after a back-off (5 s), never left only app-watched.
      */
-    @Test fun aBlankCancelledStopIsPutBackAfterABackOff() {
-        Market.testOrdersAnyTime = true
-        ArmLive.entered(ask(donchian, "blank-cancel"))
+    @Test fun aCancelOutsideMarketHoursIsPutBackAfterABackOff() {
+        ArmLive.entered(ask(donchian, "late-cancel"))
         watch()
         val sid = view().openReal.single().stopOrderId!!
-        kite.orders.getValue(sid).status = "CANCELLED"                   // no message: never taken for Boss's
-        kite.requests.clear()
-        val t0 = ArmLive.testNow!!
-        watch()
-        assertEquals("not in the same look (its back-off)", 0, slPosts())
-        assertFalse(view().openReal.single().stopByYou)
-        ArmLive.testNow = t0.plusSeconds(6)
-        watch()
-        assertEquals("put back at Zerodha", 1, slPosts())
-        assertNotNull(view().openReal.single().stopOrderId)
+        try {
+            Market.testClock = java.time.Clock.fixed(Market.today().atTime(20, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+            assertFalse(Market.acceptsOrders())
+            kite.orders.getValue(sid).status = "CANCELLED"
+            kite.requests.clear()
+            val t0 = ArmLive.testNow!!
+            watch()
+            assertEquals("not in the same look (its back-off)", 0, slPosts())
+            assertFalse(view().openReal.single().stopByYou)
+            ArmLive.testNow = t0.plusSeconds(6)
+            watch()
+            assertEquals("put back at Zerodha", 1, slPosts())
+            assertNotNull(view().openReal.single().stopOrderId)
+        } finally { Market.testClock = null }
     }
 
     /**
@@ -2874,8 +2876,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.drainWritesForTest()
         ArmLive.forgetMemoryForTest()                                     // killed before the exit was booked
         runBlocking { ArmLive.refresh() }
-        kite.orders.getValue(sid).status = "CANCELLED"
-        kite.orders.getValue(sid).message = "Order cancelled by user"
+        kite.orders.getValue(sid).status = "CANCELLED"                   // blank words, in hours: Boss's - were it not the app's own
         kite.requests.clear()
         watch()
         assertFalse("the app's own cancel", view().openReal.single().stopByYou)

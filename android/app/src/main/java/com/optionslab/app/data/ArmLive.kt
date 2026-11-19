@@ -1758,12 +1758,6 @@ object ArmLive {
     /** TEST ONLY (19 Nov 2026): [markOwnCancel], as the app's own exit does before a cancel. Debug builds only. */
     internal suspend fun markOwnCancelForTest(id: String) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; markOwnCancel(id) }
 
-    /**
-     * 19 Nov 2026 (audit batch 2, B2-B): a positive sign that Boss cancelled an SL himself - Zerodha's words name a user's cancel - while the
-     * market takes orders. A blank or unrecognised message is never enough (Zerodha's own cancels come blank too): such a stop is put back.
-     */
-    private fun bossCancelWords(message: String): Boolean = message.lowercase().let { m -> BOSS_CANCEL_WORDS.any { it in m } }
-    private val BOSS_CANCEL_WORDS = listOf("by user", "by the user", "user cancel", "cancelled by you", "canceled by user")
 
     /**
      * 19 Nov 2026 (audit batch 2): when the app's own manual exit last took a contract in hand ([handsOff]; "EXCHANGE:SYMBOL" -> wall ms):
@@ -2655,12 +2649,14 @@ object ArmLive {
                     val opStop = if (p.exchange == "MCX") mcxStopped else stopped
                     val appsOwn = ownCancel(so.id) || opStop || SquareOffExit.inGap(p.exchange, p.symbol, p.product) || handsOffRecently(p.exchange, p.symbol) ||
                         orders.values.any { it.symbol == p.symbol && it.exchange == p.exchange && it.working && it.tag in SquareOffExit.TAGS }
-                    // (B2-B: Boss's only on a positive sign - Zerodha's words name a user's cancel, while the market takes orders, and no mark of
-                    // the app's own (kept in the book across a restart). A blank or unrecognised cancel is Zerodha's: put back, after a back-off.)
+                    // (B2-B, Boss's 16 Nov rule: a cancel with no mark of the app's own - kept in the book across a restart - made while the market
+                    // takes orders (MCX by its own hours) is Boss's when Zerodha's words are blank or unrecognised: never put back, the app sells at
+                    // the level itself. Exchange / RMS words are Zerodha's: put back at once. One outside market hours (the day's end) is Zerodha's
+                    // too: put back after a back-off.)
                     val byExchange = com.optionslab.ira.ManualCoverRule.endedByExchange(so.status, so.message)
-                    val byYou = !appsOwn && !byExchange && so.status == "CANCELLED" && bossCancelWords(so.message) &&
-                        runCatching { if (p.exchange == "MCX") McxMarket.acceptsOrders() else Market.acceptsOrders() }.getOrDefault(false)
-                    if (so.status == "CANCELLED" && !appsOwn && !byExchange && !byYou) backOff(p)
+                    val inHours = runCatching { if (p.exchange == "MCX") McxMarket.acceptsOrders() else Market.acceptsOrders() }.getOrDefault(true)
+                    val byYou = !appsOwn && !byExchange && inHours
+                    if (so.status == "CANCELLED" && !appsOwn && !byExchange && !inHours) backOff(p)
                     val level = p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "its level"
                     // (Said once for each stop that ended; a refusal's back-off and its words: [refusedStop].)
                     if (so.status == "REJECTED") refusedStop(p, p.stopTrigger, so.message.ifBlank { "no reason given" })
