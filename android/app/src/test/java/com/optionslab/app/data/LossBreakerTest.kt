@@ -266,7 +266,7 @@ class LossBreakerTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (final review, items 2 and 3): a Zerodha stop whose stop of the bots never reached their book (its write failed) - the
+     * 19 Nov 2026 (final review, items 2 and 3): a Zerodha stop whose stop of the bots never reached their book (its write failed) - the
      * lift writes Boss's own stop, so nothing runs before he starts it; the commodities, which that stop reached, stay stopped too.
      */
     @Test fun aLiftWithNoLossStopInTheBookStillLeavesTheBotsStoppedAsBosss() {
@@ -306,6 +306,24 @@ class LossBreakerTest : RobolectricTest() {
             assertTrue(LossBreaker.trippedToday())
         } finally {
             LossBreaker.testPaperDay = null
+        }
+    }
+
+    /** Item 4, the other way: the paper bots' limit raised while Zerodha's day is past Zerodha's limit - not lifted; unread - lifted. */
+    @Test fun noPaperLiftWhileZerodhasLimitIsPast() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        var zerodha: Double? = -6_000.0
+        LossBreaker.testDayFigure = { if (it == LossBreaker.Limit.PAPER) -12_000.0 else zerodha }
+        try {
+            check()
+            assertTrue(LossBreaker.trippedToday())
+            SecurePrefs.put("g.pLoss", 20_000.0)
+            assertEquals(LossBreaker.Lift.OTHER_PAST, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 20_000.0, true) })
+            zerodha = null                                          // Zerodha's day not read: not past (the next look decides)
+            assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 20_000.0, true) })
+        } finally {
+            LossBreaker.testPaperDay = null
+            LossBreaker.testDayFigure = null
         }
     }
 }

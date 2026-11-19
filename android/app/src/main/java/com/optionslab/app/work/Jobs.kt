@@ -683,7 +683,7 @@ object Tasks {
      */
     internal suspend fun awaitLossLimit(maxMs: Long = LOSS_BEFORE_ARMS_MS): Boolean {
         val sup = WatchWorkers.supervisor ?: return true
-        // 20 Nov 2026 (third review): already tripped today, nothing to wait for - the arms' gates read the stop (memory), and the
+        // 19 Nov 2026 (third review): already tripped today, nothing to wait for - the arms' gates read the stop (memory), and the
         // groups also run the exits of positions still open, which must never wait on the limit's sales.
         if (runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false)) return true
         var waited = 0L
@@ -707,7 +707,7 @@ object Tasks {
     /**
      * 19 Nov 2026 (second review: the stop rescue now runs on its own, beside the square-offs): [body] once no square-off holds the
      * turn ([ClockLane.squareOffRunning]), waited for [maxMs] at most (counted in waits); still held then, skipped - the next pass
-     * looks again. True when [body] ran. 20 Nov 2026 (third review): a look, then the run - not a lock: a square-off that starts just
+     * looks again. True when [body] ran. 19 Nov 2026 (third review): a look, then the run - not a lock: a square-off that starts just
      * after the look can run beside the rescue (the square-off cancels a stop resting on what it sells, and the rescue's next read sees
      * the position gone).
      */

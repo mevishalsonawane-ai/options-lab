@@ -112,7 +112,7 @@ object ClockSteps {
             take({ waitMs }, who, first, block)
 
         /**
-         * As [take], with the longest wait worked out afresh at every look ([waitMs]): 20 Nov 2026 (third review) - a square-off waits
+         * As [take], with the longest wait worked out afresh at every look ([waitMs]): 19 Nov 2026 (third review) - a square-off waits
          * longer while the loss limit's sales hold or wait for the turn, also when they queue after it began to wait.
          */
         suspend fun <T> take(waitMs: () -> Long, who: String? = null, first: Boolean = false, block: suspend () -> T): T? {

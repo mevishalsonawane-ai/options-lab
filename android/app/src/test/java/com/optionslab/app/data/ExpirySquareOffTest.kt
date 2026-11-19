@@ -285,7 +285,7 @@ class ExpirySquareOffTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (third review, item 3): the blocked-MARKET exit's LIMIT whose reply is lost (accepted at Zerodha, the connection
+     * 19 Nov 2026 (third review, item 3): the blocked-MARKET exit's LIMIT whose reply is lost (accepted at Zerodha, the connection
      * dropped). It was taken as refused - said so, and no gap - although it was out. Now it is looked for as the MARKET path does:
      * found, it is the exit (filled here); never said refused; nothing more is sent.
      */
@@ -303,7 +303,7 @@ class ExpirySquareOffTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (third review, item 4): the contract's gap starts with the order placed (each slice), not once the whole loop has
+     * 19 Nov 2026 (third review, item 4): the contract's gap starts with the order placed (each slice), not once the whole loop has
      * ended: here the first freeze slice goes, the clock moves on 20 s before the second is refused, and a pass 10 s after the first
      * slice still finds the contract in its gap (before, the gap was dated from the loop's end and this pass sent the rest again).
      */
@@ -324,7 +324,7 @@ class ExpirySquareOffTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (final review, item 5): the blocked-MARKET exit's LIMIT confirmed cancelled unfilled leaves no gap - nothing of it is
+     * 19 Nov 2026 (final review, item 5): the blocked-MARKET exit's LIMIT confirmed cancelled unfilled leaves no gap - nothing of it is
      * out, so the next pass tries again at once (near 15:05 a 15 s hold is a long time).
      */
     @Test fun aLimitCancelledUnfilledLeavesNoGap() {
@@ -340,7 +340,7 @@ class ExpirySquareOffTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (final review, the Strategy Module): a strategy's own exit sale working on the contract is cover - never cancelled
+     * 19 Nov 2026 (final review, the Strategy Module): a strategy's own exit sale working on the contract is cover - never cancelled
      * (the strategy would send its exit again from its own book, beside this square-off's, and the account would end short).
      */
     @Test fun aStrategysWorkingExitSaleIsCoverNeverCancelled() {
@@ -352,6 +352,14 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
         assertEquals("OPEN", kite.order(id).status)
         assertTrue("nothing more sent", kite.placed.isEmpty())
+        // Resting longer than its closing takes (a protected MARKET left behind): cancelled and sold, as before - never cover to the close.
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(Market.now().toInstant().plusSeconds(60), com.optionslab.engine.IST)
+        try {
+            at(15, 7); pass()
+            assertTrue("cancelled once it is stale", kite.requests.any { it.method == "DELETE" })
+        } finally {
+            com.optionslab.app.data.Market.testClock = null
+        }
     }
 
     @Test fun anExitTheAppWillNotSendIsSaidOnce() {

@@ -126,11 +126,11 @@ internal object ClockLane {
      */
     private fun salesQueued(): Boolean = turn.holder == LOSS || turn.firstWaiting > 0 || (turn.held && turn.holder == null)
 
-    /** 20 Nov 2026 (third review): how long the sales and the square-offs wait for each other ([SALES_TURN_WAIT_MS]; a test's shorter). */
+    /** 19 Nov 2026 (third review): how long the sales and the square-offs wait for each other ([SALES_TURN_WAIT_MS]; a test's shorter). */
     @Volatile internal var salesTurnWaitMs = SALES_TURN_WAIT_MS
 
     /**
-     * A square-off's [body] in the turn. 20 Nov 2026 (third review): the wait is worked out at every look - long ([salesTurnWaitMs])
+     * A square-off's [body] in the turn. 19 Nov 2026 (third review): the wait is worked out at every look - long ([salesTurnWaitMs])
      * while the loss limit's sales hold or wait for the turn, else [ClockSteps.TURN_WAIT_MS] - so a square-off later in the sequence is
      * never left out because a sale queued after it began to wait. Waited that long behind the sales (a sale stuck at Zerodha), it goes
      * anyway, as the sales do behind a square-off ([sales]), and the diary says so: a stuck sale never keeps the 15:05 square-off or
@@ -148,7 +148,7 @@ internal object ClockLane {
     /**
      * The square-offs of [mode]'s look, one after another in the pass's order ([SQUARE_OFFS]): after a loss-limit run under way has
      * ended ([LOSS_FIRST_WAIT_MS] at most, so a hung one never holds them for ever), each in the turn for its own run (so a tripped
-     * loss limit's sales, first in line, slot in between; 20 Nov 2026: behind a sale stuck past [salesTurnWaitMs] a square-off goes
+     * loss limit's sales, first in line, slot in between; 19 Nov 2026: behind a sale stuck past [salesTurnWaitMs] a square-off goes
      * anyway, [inTurn]); a turn not had from another square-off, the rest of the sequence is left to the next round, in order. Stamps [SQUARE_OFFS] only when every one completed; each stamps its own name ([runOne]).
      */
     suspend fun runSquareOffs(context: Context, s: AppSettings, mode: StopLane.Mode) {
@@ -209,7 +209,7 @@ internal object ClockLane {
     /**
      * 19 Nov 2026 (second review: the loss limit's sales could overlap a square-off's on the same legs): [block] - the loss limit's
      * sales - in the square-offs' turn, waited for [SALES_TURN_WAIT_MS] at most; not had by then (a square-off hung), they go
-     * anyway (a tripped limit always sells) and the diary says so. 20 Nov 2026 (third review): called around the exit sends only, with
+     * anyway (a tripped limit always sells) and the diary says so. 19 Nov 2026 (third review): called around the exit sends only, with
      * the strategies' lock already held ([com.optionslab.app.data.Strategies.stop]) - never while waiting for that lock, and not at
      * all when nothing is running.
      */

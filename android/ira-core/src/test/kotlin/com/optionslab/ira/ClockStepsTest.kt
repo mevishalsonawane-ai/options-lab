@@ -159,7 +159,7 @@ class ClockStepsTest {
     }
 
     /**
-     * 20 Nov 2026 (third review): the wait is worked out at every look, not once at the start - a square-off that began to wait while
+     * 19 Nov 2026 (third review): the wait is worked out at every look, not once at the start - a square-off that began to wait while
      * another square-off held the turn (a short wait) waits long once the loss limit's sales queue behind it, so it is not left out.
      */
     @Test fun theWaitIsWorkedOutAfreshAtEveryLook() = runBlocking {

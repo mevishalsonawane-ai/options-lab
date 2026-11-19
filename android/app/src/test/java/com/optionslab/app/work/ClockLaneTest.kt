@@ -254,7 +254,7 @@ class ClockLaneTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (third review, review round): a square-off goes without the turn only behind the loss limit's sales HOLDING it -
+     * 19 Nov 2026 (third review, review round): a square-off goes without the turn only behind the loss limit's sales HOLDING it -
      * behind another square-off (the sales merely queued there too) it never does: two square-offs never run at once.
      */
     @Test fun aSquareOffNeverGoesWithoutTheTurnBehindAnotherSquareOff() = runBlocking {
@@ -279,7 +279,7 @@ class ClockLaneTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (third review, item B): once the limit has tripped today the arms never wait for a loss-limit run (their gates read
+     * 19 Nov 2026 (third review, item B): once the limit has tripped today the arms never wait for a loss-limit run (their gates read
      * the stop, and the groups also run the exits of positions still open, which must not wait on the limit's sales).
      */
     @Test fun theArmsNeverWaitForTheLossLimitOnceItTripped() = runBlocking {

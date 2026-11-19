@@ -209,7 +209,7 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         runningStrategy()
         anotherStrategy("Clock lane test 2")
         anotherStrategy("Clock lane test 3")
-        ClockLane.salesTurnWaitMs = 2_000L
+        ClockLane.salesTurnWaitMs = 3_000L
         val release = CompletableDeferred<Unit>()
         val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
         try {
@@ -219,7 +219,8 @@ class ClockLaneSquareOffTest : RobolectricTest() {
                 Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true)
             }
             val ms = System.currentTimeMillis() - t0
-            assertTrue("one wait for all three: $ms ms", ms < 4_500L)
+            // One 3 s wait in all, then the exits (before: one each, 9 s of waits and more).
+            assertTrue("one wait for all three: $ms ms", ms < 7_500L)
             assertEquals("each strategy's leg sold", 3, kite.placed.count { it.form["tradingsymbol"] == legSymbol && it.form["transaction_type"] == "SELL" })
             assertTrue(com.optionslab.app.data.Diag.lines().takeLast(40).joinToString("\n"),
                 com.optionslab.app.data.Diag.lines().any { it.contains("exits went without it") })
@@ -340,7 +341,7 @@ class ClockLaneSquareOffTest : RobolectricTest() {
      * and the diary says so. (Before, each round gave up at once behind it.)
      */
     @Test fun aStuckLossSaleNeverKeepsTheSquareOffsBackPastItsWait() = runBlocking {
-        ClockLane.salesTurnWaitMs = 2_000L
+        ClockLane.salesTurnWaitMs = 3_000L
         at(15, 25)
         kite.position(ce, 75, 20.0)
         kite.position(mis, 75, 20.0, product = "MIS")

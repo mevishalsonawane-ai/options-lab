@@ -144,7 +144,7 @@ object LossBreaker {
             // Tripped: keep asking until every running strategy has actually stopped (a stop that
             // could not be requested, e.g. contracts not loaded, is retried on the next pass).
             // The day's stop is put back too if it was lifted (plans only lower risk: the limit holds until tomorrow).
-            // 19 Nov 2026 (second review of the clock lane): its sales in the square-offs' turn. 20 Nov 2026 (third review): around the
+            // 19 Nov 2026 (second review of the clock lane): its sales in the square-offs' turn. 19 Nov 2026 (third review): around the
             // exit sends only, with the strategies' lock held, and only for a strategy still running ([Strategies.stop] salesInTurn).
             if (Strategies.anyRunning() || !Strategies.stoppedToday())
                 runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true) }
@@ -207,7 +207,7 @@ object LossBreaker {
         kept = null
         // Kept as the loss limit's stop (never "by you"): "start all" and Start bot do not lift it today.
         // 19 Nov 2026 (second review of the clock lane: the loss limit's sales could overlap a square-off's on the same legs): sold in
-        // the square-offs' turn, never beside the expiry square-off, the MCX expiry exit or the flat-by. 20 Nov 2026 (third review):
+        // the square-offs' turn, never beside the expiry square-off, the MCX expiry exit or the flat-by. 19 Nov 2026 (third review):
         // the turn only around the exit sends, with the strategies' lock held, and only for a strategy still running.
         val msg = runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true) }.getOrElse { it.message ?: "" }
         val text = "Today's %s P&L Rs %,.0f reached the Rs %,.0f daily loss limit. The bot sold what it held and stopped for today. %s"
@@ -239,7 +239,7 @@ object LossBreaker {
     }
 
     /**
-     * 20 Nov 2026 (final review): whether today is past the OTHER daily loss limit ([limit]'s other one, as it is set now): Zerodha's
+     * 19 Nov 2026 (final review): whether today is past the OTHER daily loss limit ([limit]'s other one, as it is set now): Zerodha's
      * m2m against Zerodha's limit, or the paper day - whole or NSE part, whichever is worse - against the paper bots' limit. A figure
      * not read is not past (the next look decides, as ever).
      */
@@ -253,8 +253,13 @@ object LossBreaker {
                 val day = testPaperDay?.invoke() ?: runCatching { Paper.snapshot() }.getOrNull()?.let { snap ->
                     PaperDay(snap.dayPnl, snap.positions.positions.map { it.exchange to it.totalPnlToday }, snap.trades.map { it.exchange to it.charges })
                 }
-                val nse = day?.let { d -> runCatching { com.optionslab.ira.SegmentLock.split(d.total, d.rows, d.charges)?.nse }.getOrNull() }
-                listOfNotNull(day?.total, nse).any { it <= -l }
+                // The figure the look reads ([checkOnce]): the NSE part while the loss limits split (nothing can trade live), else the
+                // whole day. A Zerodha session counts as live (as an unread book does there).
+                val liveActive = Broker.loggedIn || (s.live && s.allowRealOrders) || runCatching { Strategies.anyLiveRunning() }.getOrDefault(true)
+                val split = com.optionslab.ira.SegmentLock.lossSplit(s.mcxOwnLimits, liveActive)
+                val figure = if (split) day?.let { d -> runCatching { com.optionslab.ira.SegmentLock.split(d.total, d.rows, d.charges)?.nse }.getOrNull() } ?: day?.total
+                    else day?.total
+                figure != null && figure <= -l
             }
         }
     }
@@ -303,7 +308,7 @@ object LossBreaker {
                 val figure = dayFigure(limit, trip) ?: return Lift.UNREAD
                 if (!com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, figure)) return Lift.STILL_PAST
             }
-            // 20 Nov 2026 (final review): never when the other limit is past today too - the next look would stop the bots again at once.
+            // 19 Nov 2026 (final review): never when the other limit is past today too - the next look would stop the bots again at once.
             if (otherPast(limit)) return Lift.OTHER_PAST
             // The bots' day stops kept as Boss's own first (they stay stopped; Start works today); failing, nothing is lifted. Under the
             // looks' lock: no look puts the loss stop back in between.
