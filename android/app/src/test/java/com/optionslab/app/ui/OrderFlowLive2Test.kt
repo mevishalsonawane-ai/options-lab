@@ -690,7 +690,8 @@ class OrderReviewLiveGateTest {
         val sent = kite.placed.single()
         assertEquals(mapOf("tradingsymbol" to ce, "exchange" to "NFO", "transaction_type" to "BUY", "order_type" to "LIMIT",
             "quantity" to "75", "product" to "NRML", "price" to "100.05", "validity" to "DAY", "tag" to "iraalgo"), sent.form)
-        until("the fill shown") { shown("COMPLETE 75 @ 100.05") }
+        // (19 Nov 2026: the fake's one BUY LIMIT rule - at or above the last price it fills at the last price.)
+        until("the fill shown") { shown("COMPLETE 75 @ 100.00") }
         assertFalse("the send control is gone once sent", shown(send))
         assertEquals(1, kite.placed.size)
     }
