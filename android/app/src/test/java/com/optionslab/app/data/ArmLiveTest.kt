@@ -712,7 +712,8 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.wipe(); java.io.File(context.noBackupFilesDir, "arm_live.vault").delete()
         SecurePrefs.put(ArmLive.K_SHADOW, null); SecurePrefs.put(ArmLive.K_SWITCHES, null)
         runBlocking { ArmLive.refresh() }
-        for (a in LiveMirror.ARMS) { assertEquals(a.key, a.key == LiveMirror.SOLO_MIDDAY, view().shadowOn(a.key)); assertTrue(a.key, view().on(a.key)) }
+        // 19 Nov 2026 (audit batch 2: ntfy's live gate): ntfy alerts alone starts with Trade live off (only its topic protects it).
+        for (a in LiveMirror.ARMS) { assertEquals(a.key, a.key == LiveMirror.SOLO_MIDDAY, view().shadowOn(a.key)); assertEquals(a.key, a.key != LiveMirror.NTFY_ALERTS, view().on(a.key)) }
         ArmLive.entered(ask(donchian, "fresh"))
         assertEquals("the entry and its stop", 2, kite.placed.size)
         assertEquals(1, view().openReal.size); assertEquals(0, view().openShadow.size)
