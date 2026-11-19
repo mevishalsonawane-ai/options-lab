@@ -751,8 +751,11 @@ class OrbArmsDayTest : RobolectricTest() {
         val off = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }
         assertTrue("left alone", off.none { it.first.name == "Liquidity 15+5" })
         assertTrue("another arm is still judged", off.any { it.first.name == "ORB" })
+        // (The vault unreadable here, so the background re-read it starts changes nothing while the test goes on.)
         ArmAutoStopsHost.resetForTest(com.optionslab.ira.ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.testReadFails = true
         assertTrue("not read yet: waits", runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }.none { it.first.name == "Liquidity 15+5" })
+        Thread.sleep(500)                                       // the background re-read (it fails) has run
         ArmAutoStopsHost.resetForTest()
         assertTrue(ArmAutoStopsHost.set(rule, true, log = false).contains("already on"))
         assertTrue(runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }.any { it.first.name == "Liquidity 15+5" })
