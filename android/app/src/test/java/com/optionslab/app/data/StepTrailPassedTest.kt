@@ -584,14 +584,15 @@ class StepTrailPassedTest : RobolectricTest() {
 
     /**
      * 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): a step lock whose stop Zerodha cancelled, with the price still
-     * above it, is put back at Zerodha at the lock (a new SL), never only watched in the app.
+     * above it, is put back at Zerodha at the lock (a new SL), never only watched in the app. 19 Nov 2026 (audit batch 2): Zerodha's own
+     * words name the exchange's cancel - one Boss made himself in Kite is respected instead ([ArmLiveTest]).
      */
     @Test fun liveACancelledStepLockIsRestedAgainAtZerodha() {
         goLive()
         bought(200.0)
         val live = earnedLive()
         val b = lockedLive(live)
-        kite.reject(live.stopOrderId!!, message = "cancelled", status = "CANCELLED")
+        kite.reject(live.stopOrderId!!, message = "Order cancelled by the exchange (RMS)", status = "CANCELLED")
         val sls = kite.placed.count { it.form["order_type"] == "SL" }
         kite.quote("NFO:$sym", b + 2.0, b + 1.95, b + 2.05)
         runBlocking { ArmLive.watch() }

@@ -55,7 +55,7 @@ internal object LiquidityReplayData {
         val und = LiquidityRules.underlyingOf(arm)
         val now = com.optionslab.app.data.Market.now().toLocalDateTime()
         val today = p.day == now.toLocalDate()
-        val c = runCatching { com.optionslab.app.data.Paper.contractOf(p.symbol) }.getOrNull()
+        val c = com.optionslab.app.data.Paper.contractIfLoaded(p.symbol)   // (19 Nov 2026: memory only - never the vault on the screen's thread)
         val index = if (!today) emptyList()
             else OrbArms.liquidityMinutesKept(und, now) ?: runCatching { OrbArms.liquidityMinutesFor(und, now) }.getOrDefault(emptyList())
         val option = if (!today || c == null) emptyList()

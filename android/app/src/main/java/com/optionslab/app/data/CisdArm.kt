@@ -847,6 +847,9 @@ object CisdArm {
         val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: run {
             if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
                 val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                // 19 Nov 2026 (audit batch 2): the arm's own exit ([why]) decided this sale and lost the race to another paper close: its live copy
+                // is still sold by that exit ([ArmLive.ruleExit]), never only detached as a plain "closed elsewhere" is.
+                runCatching { ArmLive.ruleExit(p.key, why) }
                 return closed(p.copy(lockOrderId = null), t?.price?.toDouble() ?: p.entry, t?.timestamp ?: now(), "closed_elsewhere", t?.charges?.toDouble() ?: 0.0)
             }
             // Not filled (no fresh price): the lock goes back into the paper book at once, and the exit is tried again next look.

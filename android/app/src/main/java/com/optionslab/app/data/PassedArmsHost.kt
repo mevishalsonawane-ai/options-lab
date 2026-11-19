@@ -99,7 +99,8 @@ object PassedArmsHost {
     private fun mirrorLegs(): List<ArmLive.PaperLeg>? {
         if (cache == null) return null
         val v = _view.value
-        return (v.open + v.today.filter { !it.open }).filter { it.shadow == null }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0, fixed = it.fx, symbol = it.symbol, lock = it.fx && it.sl) }
+        // (19 Nov 2026, audit batch 2: a would-be trade whose live copy was asked is that copy's paper trade too: [Pos.copied].)
+        return (v.open + v.today.filter { !it.open }).filter { it.mirrored }.map { ArmLive.PaperLeg(mirrorRef(it), it.arm, if (it.open) it.qty else 0, fixed = it.fx, symbol = it.symbol, lock = it.fx && it.sl) }
     }
 
     /** [p]'s own stop on the premium at its entry (-15% and the like); null for S1 (its stop is on the index). */
@@ -271,10 +272,19 @@ object PassedArmsHost {
          * ([StepTrail.Lock.L500]); false: V4 alone, as it entered. Persisted; its lock is kept with its lock ([Book.locks]) as the breakeven is.
          */
         val sl: Boolean = false,
+        /**
+         * 19 Nov 2026 (audit batch 2: a live trade was silently skipped because a paper-only rule refused its paper trade): a would-be trade
+         * ([shadow]) whose live copy was asked all the same - the paper account refused or could not price the entry (another arm held the
+         * option on paper, the paper account guard, a paper cap or rule, no fresh paper price) while the entry could be copied live. Its live
+         * copy follows it (its own exits) exactly as a real paper trade's; every live gate still applies. Persisted.
+         */
+        val copied: Boolean = false,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
         val side: Int get() = if (right == "CE") 1 else -1
+        /** 19 Nov 2026 (audit batch 2): a real paper trade, or a would-be one whose live copy was asked ([copied]): it has a live path. */
+        val mirrored: Boolean get() = shadow == null || copied
         val net: Double? get() = exit?.let { (it - entry) * qty - charges }
         /** The spread and slippage this round trip paid (the forward bar's "twice the spread"). */
         val spread: Double get() = PassedArms.spreadPaid(qty, entry, entryRef, exit ?: entry, exitRef,
@@ -323,10 +333,17 @@ object PassedArmsHost {
         var pickOn: Boolean = false,
         /** 6 Nov: R150 B's W20 labels each R51 break (shadow log only, [setW20]). */
         var w20On: Boolean = false,
+        /**
+         * 19 Nov 2026 (audit batch 2, coordinator's decision B2-B): a paper-only refusal (another arm holds the option on paper, the paper
+         * account guard, no fresh paper price) also sends the live copy ([setRefusalLive]). Off (the default): shadow - the refusal skips
+         * live as before and each "would have gone live" is logged ([REFUSAL_MARK]). On adds live entries, so it takes the PIN.
+         */
+        var refusalLiveOn: Boolean = false,
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), status.copyMap(), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On, pickOn, w20On)
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On, pickOn, w20On,
+            refusalLiveOn)
 
         /**
          * [source]'s entries run this pass. 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record
@@ -363,6 +380,12 @@ object PassedArmsHost {
         val pickOn: Boolean = false,
         /** 6 Nov: R150 B's W20 labels each R51 break (failed gates; a shadow log only). */
         val w20On: Boolean = false,
+        /** 19 Nov 2026 (audit batch 2, B2-B): a paper-only refusal also sends the live copy ([setRefusalLive]; off: shadow, logged only). */
+        val refusalLiveOn: Boolean = false,
+        /** 19 Nov 2026 (audit batch 2, B2-B): today's paper-only refusals that would have gone live (logged in shadow, [REFUSAL_MARK]). */
+        val refusalShadowToday: Int = 0,
+        /** 19 Nov 2026 (audit batch 2, B2-B): the book has been read (its switches are known; the card says "reading" before). */
+        val loaded: Boolean = false,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         /**
@@ -460,6 +483,7 @@ object PassedArmsHost {
             b.np5On = o.optBoolean("r52NoProgress", false)
             b.pickOn = o.optBoolean("r72PickerShadow", false)
             b.w20On = o.optBoolean("r51W20Shadow", false)
+            b.refusalLiveOn = o.optBoolean("refusalLive", false)
             // 19 Oct: absent in an older book (no arm record only); never beside "on" (on wins).
             o.optJSONArray("recordOnly")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { it in SOURCES && b.armed[it] != true }?.let { b.recordOnly += it } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
@@ -630,7 +654,7 @@ object PassedArmsHost {
             p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false),
             p.optString("shadow").ifEmpty { null }, p.optBoolean("np5", false), d("pick"),
             if (p.has("w20")) p.getBoolean("w20") else null, p.optBoolean("step500", false),
-                p.optInt("lot500", 0).takeIf { it > 0 }, p.optBoolean("stepLock", false))
+                p.optInt("lot500", 0).takeIf { it > 0 }, p.optBoolean("stepLock", false), p.optBoolean("copied", false))
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -651,6 +675,7 @@ object PassedArmsHost {
             if (p.fx) put("step500", true)
             p.lot?.let { put("lot500", it) }
             if (p.sl) put("stepLock", true)
+            if (p.copied) put("copied", true)
         }
 
     private val written = Vault.LastWrite()
@@ -681,6 +706,7 @@ object PassedArmsHost {
         o.put("r52NoProgress", b.np5On)
         o.put("r72PickerShadow", b.pickOn)
         o.put("r51W20Shadow", b.w20On)
+        o.put("refusalLive", b.refusalLiveOn)
         o.put("recordOnly", JSONArray().apply { b.recordOnly.sorted().forEach { put(it) } })
         o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && (lockKey(it) == k || ownLockKey(it) == k) } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
@@ -731,7 +757,8 @@ object PassedArmsHost {
         _view.value = View(b.armed.toMap(), b.status.shown({ k, _ -> k == ST_UNJUDGED_KEY }), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
             model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet(),
-            wideOn = b.wideOn, np5On = b.np5On, pickOn = b.pickOn, w20On = b.w20On)
+            wideOn = b.wideOn, np5On = b.np5On, pickOn = b.pickOn, w20On = b.w20On, refusalLiveOn = b.refusalLiveOn,
+            refusalShadowToday = b.log.count { it.startsWith(today.toString()) && REFUSAL_MARK in it }, loaded = true)
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open && it.shadow == null }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
@@ -803,7 +830,7 @@ object PassedArmsHost {
      * has real work - switched on, or holding (or a book not read yet; [ensureRead] reads it first). Switched off and flat it only decides for the switched-off
      * shadow ([OffShadow]), which the pass leaves to its own job after the stops ([OffShadow.runLate]). Memory only.
      */
-    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed.values.any { it } || _view.value.open.any { it.shadow == null })
+    fun realDue(): Boolean = ready() && (cache == null || _view.value.armed.values.any { it } || _view.value.open.any { it.mirrored })
 
     /** 30 Oct: the book read once (a restart), on the watch's worker, so [realDue] knows the switch and what is held. */
     suspend fun ensureRead() { if (ready() && cache == null) refresh() }
@@ -975,6 +1002,30 @@ object PassedArmsHost {
             else "The R72 and R51 pickers are off: their breaks are taken without them."
         }
     }
+
+    /**
+     * 19 Nov 2026 (audit batch 2, coordinator's decision B2-B; Bot settings): a paper-only refusal of an entry that could go live - another
+     * arm holds the option on paper, the paper account guard, no fresh paper price - also sends its live copy, through every live gate.
+     * Off (the default) is shadow: the refusal skips live as it always did and each such entry is logged "would have gone live". On adds
+     * live entries (live risk up), so it takes [pinConfirmed]; off only lowers risk (one tap).
+     */
+    suspend fun setRefusalLive(on: Boolean, pinConfirmed: Boolean = false): String {
+        if (!ready()) return "The passed arms are not ready yet."
+        if (on && !pinConfirmed) return "Switching this on adds live entries: it needs your PIN. Nothing changed."
+        return lock.withLock {
+            val b = book()
+            if (b.refusalLiveOn == on) return@withLock "Paper refusals going live is already ${if (on) "on" else "off"}."
+            b.refusalLiveOn = on
+            note(b, if (on) "paper refusals go live ON (Boss's PIN): an entry the paper book refused that could go live is sent live through every live gate"
+                else "paper refusals go live OFF: such entries skip live as before (each logged in shadow)")
+            save(b)
+            if (on) "On: an entry the paper book refuses (held on paper, the paper guard, no paper price) still goes live through every live gate."
+            else "Off (shadow): such entries skip live as before; each is logged as would have gone live."
+        }
+    }
+
+    /** 19 Nov 2026 (audit batch 2, B2-B): the words of a paper refusal that would have gone live (shadow), counted on the Bot settings card. */
+    const val REFUSAL_MARK = "would have gone live"
 
     /**
      * 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20 label on or off. On, each new R51 break is labelled "W20 would skip
@@ -1965,6 +2016,8 @@ object PassedArmsHost {
         if (stoppedToday()) return null to "refused: the bot is stopped for today"
         runCatching { DayLockGuard.refusal(false) }.getOrNull()?.let { return null to "refused: $it" }
         var why = "no listed strike"
+        // 19 Nov 2026 (audit batch 2): the first strike the paper side could not price or fill ([liveNoPrice]).
+        var unpriced: Paper.Contract? = null
         for (k in strikes) {
             val c = Paper.ticketContract(u, expiry, k.toDouble(), right) ?: run { why = "$k ${right.name} not listed"; null } ?: continue
             if (c.lotSize <= 0) { why = "lot size unknown"; continue }
@@ -1987,14 +2040,41 @@ object PassedArmsHost {
             val step = OrderTiming.ownDecision { buyOne(b, arm, u, c, right, now, setup, idx, atr, keys, breadth, twin, held, pickSkip) }
             why = step.why
             if (step.pos != null || step.stop) return step.pos to step.why
+            if (step.noPrice && unpriced == null) unpriced = c
             // Held by another arm and no price for its would-be: never another strike instead (as before), said with the holder.
-            if (held != null) return null to "${c.symbol} is held by ${label(held.arm)} (${step.why})"
+            if (held != null) {
+                liveNoPrice(b, arm, u, c.takeIf { step.noPrice }, right, now, setup, idx, atr, keys, breadth, pickSkip,
+                    "${c.symbol} is held by ${label(held.arm)} (${step.why})")?.let { return it to "would-be" }
+                return null to "${c.symbol} is held by ${label(held.arm)} (${step.why})"
+            }
         }
+        liveNoPrice(b, arm, u, unpriced, right, now, setup, idx, atr, keys, breadth, pickSkip, why)?.let { return it to "would-be" }
         return null to why
     }
 
-    /** One strike's try ([buyOne]): the trade (a real one, or a would-be one), why not, and whether to stop trying strikes. */
-    private class BuyStep(val pos: Pos?, val why: String, val stop: Boolean)
+    /**
+     * 19 Nov 2026 (audit batch 2: a live trade was silently skipped when the paper side had no fresh price): while the entry could be copied
+     * live, the first strike the paper side could not price or fill ([c]) is kept as a would-be trade at Zerodha's last price
+     * ([SHADOW_NOPRICE], [because] why) and its live copy asked ([askLive]; every live gate applies). Null: nothing asked (no such strike,
+     * the arm off or skipped by the picker - those stay would-be only - no live path now, or no Zerodha price either). 19 Nov 2026 (B2-B):
+     * only with Bot settings' switch on ([setRefusalLive]); off, logged in shadow ([refusalShadow]).
+     */
+    private suspend fun liveNoPrice(b: Book, arm: String, u: String, c: Paper.Contract?, right: Right, now: LocalDateTime, setup: String?, idx: Double?,
+                                    atr: Double?, keys: List<String>, breadth: Boolean?, pickSkip: String?, because: String): Pos? {
+        if (c == null || pickSkip != null || b.armed[arm] != true || !ExposureCapHost.liveMirrorPossible(arm)) return null
+        // (B2-B: off - the default - shadow: skipped live as before, logged once.)
+        if (!b.refusalLiveOn) { refusalShadow(b, arm, c.symbol, "no fresh paper price"); return null }
+        val px = runCatching { ArmLive.liveLast(c) }.getOrNull() ?: return null
+        val p = wouldBe(b, arm, u, c, right, px, now, setup, idx, atr, keys, breadth, SHADOW_NOPRICE, because, copied = true)
+        askLive(arm, c, p)
+        return p
+    }
+
+    /**
+     * One strike's try ([buyOne]): the trade (a real one, or a would-be one), why not, and whether to stop trying strikes. 19 Nov 2026
+     * (audit batch 2): [noPrice] - the paper side had no fresh price for it, or its paper buy did not fill.
+     */
+    private class BuyStep(val pos: Pos?, val why: String, val stop: Boolean, val noPrice: Boolean = false)
 
     /**
      * [c] for [arm]: its price, a would-be trade when [twin] holds it, the account guard, the MARKET buy (the same-direction cap
@@ -2008,7 +2088,7 @@ object PassedArmsHost {
         // 28 Oct (Boss: "Yes fix finnifty"): an option with a live bid and ask but no last price (an untraded FINNIFTY strike) is
         // priced at the ask a buyer pays, on a sane book only ([Paper.entryPrice]); otherwise the line says why there is no price.
         val ref = Paper.entryPrice(c, q) ?: return BuyStep(null, "${c.symbol}: no fresh price" +
-            (Paper.noPriceWhy(c.symbol)?.let { " ($it)" } ?: ""), false)
+            (Paper.noPriceWhy(c.symbol)?.let { " ($it)" } ?: ""), false, noPrice = true)
         // 19 Oct (Boss: "Yes, keep only breadth donchain"): an arm set to record only buys nothing - its entry is a would-be trade,
         // priced at the ask when the quote has one (a buyer pays it), else the last price, as the cap's. Never mirrored live, never
         // on the account (so never counted by the same-direction cap and never a twin for R72), no notice.
@@ -2023,9 +2103,15 @@ object PassedArmsHost {
                 "would-be", true)
         // 22 Oct: another of these arms holds this option (not R51 / R72's twin): a would-be trade at the ask (a buyer pays it), else
         // the last price, as the cap's; the line names the arm.
+        // 19 Nov 2026 (audit batch 2): while the entry could be copied live, a paper-only refusal never skips the live trade - the paper
+        // side is kept as a would-be trade and its live copy is asked ([askLive]; every live gate still applies).
+        // (B2-B: only with Bot settings' switch on, Boss's PIN - [setRefusalLive]; off, shadow: skipped live as before and logged.)
+        val canLive = ExposureCapHost.liveMirrorPossible(arm)
+        val liveCopy = b.refusalLiveOn && canLive
         if (held != null) {
             val p = wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_HELD,
-                "${c.symbol} is held by ${label(held.arm)}")
+                "${c.symbol} is held by ${label(held.arm)}", copied = liveCopy)
+            if (liveCopy) askLive(arm, c, p) else if (canLive) refusalShadow(b, arm, c.symbol, "held on paper by ${label(held.arm)}")
             return BuyStep(p, "would-be", true)
         }
         if (twin != null) {
@@ -2041,7 +2127,17 @@ object PassedArmsHost {
         // symbol before each entry); the fill itself is priced fresh in Paper.place (2 s at most).
         val snap = runCatching { Paper.snapshot(reuseQuotesMs = Paper.SHARED_QUOTE_MS) }.getOrNull()
         val refusals = Guard.check(Guard.paperOrder(c, "BUY", 1, ref), snap?.let { Guard.paperAccount(it) }, paper = true)
-        if (refusals.isNotEmpty()) return BuyStep(null, "refused by the account guard: " + refusals.joinToString(" "), true)
+        if (refusals.isNotEmpty()) {
+            // 19 Nov 2026 (audit batch 2): the PAPER account's guard never skips the live trade ([askLive]; the live order has its own guard).
+            if (liveCopy) {
+                val p = wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_GUARD,
+                    "refused by the paper account guard: " + refusals.joinToString(" "), copied = true)
+                askLive(arm, c, p)
+                return BuyStep(p, "would-be", true)
+            }
+            if (canLive) refusalShadow(b, arm, c.symbol, "refused by the paper account guard")
+            return BuyStep(null, "refused by the account guard: " + refusals.joinToString(" "), true)
+        }
         // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]; the premium stop rests on the fill).
         val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", 1, "MARKET", "MIS", null, null, now.toLocalDate(), arm), refusals, "paper guard")
         runCatching { LiveRecorder.signal(label(arm), c.symbol, u, right.name, ref, paper = true) }
@@ -2052,6 +2148,9 @@ object PassedArmsHost {
             // 19 Oct: the same-direction cap refused it: nothing was bought; kept as a would-be trade at the price seen.
             // Priced at the ask when the quote has one (a buyer pays it), else the last price.
             // 25 Oct: one of Boss's new risk rules refused it ([BossRiskHost]): kept the same way, labelled with that rule.
+            // (19 Nov 2026, audit batch 2: kept as it was. While the entry may be copied live the cap and Boss's paper rules only log
+            // ([ExposureCapHost.liveMirrorPossible] in [Paper.place] and [BossRiskHost.paperSize]), so they never skip its live trade; one
+            // they refuse now was priced on the book alone, which is never mirrored live (28 Oct).)
             if (r.capped) return BuyStep(wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth,
                 if (r.rule != null) SHADOW_RULE else SHADOW_CAP, r.message), r.message, true)
             val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
@@ -2091,7 +2190,7 @@ object PassedArmsHost {
                 runCatching { Notifier.orderFilled(app, "BUY", fill.quantity, fill.symbol, fill.price, "Paper", "${label(arm)} · entry", r.orderId) }
                 pos
             }
-        } finally { inFlight -= c.symbol }) ?: return BuyStep(null, why, false)
+        } finally { inFlight -= c.symbol }) ?: return BuyStep(null, why, false, noPrice = true)   // (19 Nov 2026, audit batch 2: not filled on paper: [liveNoPrice])
         runCatching { Notifier.post(app, NOTICE + SOURCES.indexOf(arm) * 5 + ALL_INDICES.indexOf(u).coerceAtLeast(0), Notifier.BUY,
             "${label(arm)} bought ${c.symbol} · Paper",
             "Bought %d @ %s. %s. %s.".format(Locale.ENGLISH, p.qty, px(p.entry), exitWords(p), PassedArms.PASSED), "almanac") }
@@ -2116,9 +2215,19 @@ object PassedArmsHost {
      * never copied live; kept as a would-be trade so the skips' own record shows what they saved or cost.
      */
     const val SHADOW_PICK = "pick"
+    /** 19 Nov 2026 (audit batch 2): the paper account guard refused the paper entry (a would-be trade; its live copy asked: [Pos.copied]). */
+    const val SHADOW_GUARD = "guard"
+    /** 19 Nov 2026 (audit batch 2): no fresh paper price for the entry (a would-be trade at Zerodha's price; its live copy asked). */
+    const val SHADOW_NOPRICE = "noprice"
 
     /** Why a would-be trade was not bought, in words. */
-    fun shadowWords(p: Pos): String = when (p.shadow) {
+    fun shadowWords(p: Pos): String = (when (p.shadow) {
+        SHADOW_GUARD -> "would-be: refused by the paper account guard"
+        SHADOW_NOPRICE -> "would-be: no fresh paper price (priced at Zerodha's last price)"
+        else -> shadowWordsBefore(p)
+    }) + if (p.copied) " · its live copy was asked (every live gate applies)" else ""
+
+    private fun shadowWordsBefore(p: Pos): String = when (p.shadow) {
         SHADOW_TWIN -> "would-be: the other Donchian arm already held this option"
         SHADOW_CAP -> "would-be: refused by the same-direction cap"
         SHADOW_OFF -> "would-be: switched off, it runs in shadow"
@@ -2133,17 +2242,39 @@ object PassedArmsHost {
      * (its decision made, its caps counted, its exits run on the prices seen), never mirrored live, no notice. [because]: why.
      */
     private suspend fun wouldBe(b: Book, arm: String, u: String, c: Paper.Contract, right: Right, ref: Double, now: LocalDateTime, setup: String?,
-                                idx: Double?, atr: Double?, keys: List<String>, breadth: Boolean?, kind: String, because: String): Pos {
+                                idx: Double?, atr: Double?, keys: List<String>, breadth: Boolean?, kind: String, because: String,
+                                /** 19 Nov 2026 (audit batch 2): its live copy is asked ([Pos.copied]; no R52 09:25 exit then, as a real copied trade). */
+                                copied: Boolean = false): Pos {
         runCatching { Paper.rememberContract(c) }
         val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
-            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On,
-            fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 }).let { it.copy(sl = it.fx && StepTrailExits.lockOn()) }
+            breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On && !copied,
+            fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 }, copied = copied).let { it.copy(sl = it.fx && StepTrailExits.lockOn()) }
         b.positions += pos
         if (c.symbol !in b.marks) b.marks[c.symbol] = ref
         b.decided += keys
         kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { record(pos, keys) }
         note(b, "${label(arm)} would-be ${c.symbol} ${pos.qty} @ ${px(ref)} (not bought: $because) · labelled apart")
         return pos
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2: a live R51 / R72 trade was silently skipped because another arm held the option on paper, or a paper-only
+     * rule refused the paper trade): the live copy of the would-be trade [pos] ([Pos.copied]) asked exactly as a paper fill asks it - the
+     * same signal and strike, through every live gate ([ArmLive.entered]: Live, AI trades go live, the arm's own switch and shadow, the entry
+     * door, the guards, the funds check). Not a new skip: it removes one. Memory only here (the order goes on a worker).
+     */
+    private fun askLive(arm: String, c: Paper.Contract, pos: Pos) {
+        runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos), fixed = pos.fx, lock = pos.fx && pos.sl)) }
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2, B2-B): a paper-only refusal of [arm]'s entry on [symbol] ([why]) that could have gone live, logged in shadow
+     * (the switch off: [setRefusalLive]) - once a day for the arm and option. Nothing is sent.
+     */
+    private fun refusalShadow(b: Book, arm: String, symbol: String, why: String) {
+        val day = now0().toLocalDate().toString()
+        val line = "${label(arm)}: $symbol $REFUSAL_MARK ($why; switch off, shadow - nothing sent)"
+        if (b.log.none { it.startsWith(day) && it.endsWith(line) }) note(b, line)
     }
 
     /** What the arm's status says for a trade it just took (a would-be one labelled as such). */
@@ -2704,7 +2835,7 @@ object PassedArmsHost {
         // 16 Nov (review): a rule trade's live copy takes the rule's levels (breakeven, step lock) on its OWN live fill, lots and best
         // ([ArmLive.ruleStop]): the paper level handed over is the arm's own exits alone - its stop and, with R64's lock, that lock walked
         // without the rule - never the paper trade's own breakeven or step lock, worked out on the paper fill.
-        if (p.shadow == null) runCatching {
+        if (p.mirrored) runCatching {             // (19 Nov 2026, audit batch 2: and a would-be trade's live copy: [Pos.copied])
             // (Review: the arm's own lock comes from the same one walk ([PassedArms.Walk.ownLock]), remembered apart ([ownLockKey]) so a
             // restart or a short read never hands over less than it had.)
             val paperLock = if (ownRule) { if (p.lock) listOfNotNull(ownWalked, knownOwn?.second).maxOrNull() else null }
@@ -2802,7 +2933,12 @@ object PassedArmsHost {
         // there first between the held read and this sale), the trade is booked closed elsewhere on the next look, never sold short.
         val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
-        if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) return p
+        if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
+            // 19 Nov 2026 (audit batch 2, coordinator's decision): the arm's own exit ([why]) lost the race to another paper close - the next
+            // look books it closed elsewhere, but its live copy is still sold by this exit ([ArmLive.ruleExit]), never only detached.
+            if (p.mirrored) runCatching { ArmLive.ruleExit(mirrorRef(p), why) }
+            return p
+        }
         if (fill == null) {
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
             val k = "${p.arm}|exit"
@@ -2872,7 +3008,9 @@ object PassedArmsHost {
         val retryKey = "${p.arm}|exit"
         if (com.optionslab.ira.ArmStatus.exitRetryOf(b.status[retryKey], p.symbol)) b.status.remove(retryKey)
         if (p.shadow != null) {
-            // 19 Oct: a would-be trade closed - its record only (never live, no notice).
+            // 19 Oct: a would-be trade closed - its record only (never live, no notice). 19 Nov 2026 (audit batch 2): one whose live copy
+            // was asked ([Pos.copied]) tells it, as a real paper trade does: its own exit is the live copy's exit too.
+            if (p.copied) runCatching { ArmLive.closed(mirrorRef(p), p.why ?: "exit", ArmLive.pct(p.entry, p.exit)) }
             b.status["${p.arm}|${p.index}"] = "would-be ${p.symbol} closed: ${p.why}"
             note(b, "%s: would-be %s closed (%s) @ %s, %s after estimated charges (%s)".format(Locale.ENGLISH, label(p.arm), p.symbol, p.why,
                 px(p.exit ?: 0.0), rs(p.net ?: 0.0), shadowWords(p)))
