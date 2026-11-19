@@ -71,6 +71,7 @@ class PineAutoLiveTest : RobolectricTest() {
     }
 
     @After fun down() {
+        PineAuto.testOwners = null
         AutomationSupport.realClocks()
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -629,6 +630,46 @@ class PineAutoLiveTest : RobolectricTest() {
         // (What filled is not known to be the close or a later sale: Boss is asked to look, without a short alarm.)
         assertEquals(said.joinToString(), 1, said.count { it.contains("not known whether before or after the position was closed") })
         assertFalse(PineAuto.holding())
+    }
+
+    /**
+     * 19 Nov 2026 (third review, C1): the order labels cannot be read; Boss bought a lot through the Trade tab ("iraalgo") and sold one
+     * in Kite - his own round trip - and one positions read shows the script's holding at 0: kept, its stop resting.
+     */
+    @Test fun withTheLabelsUnreadableBosssTradeTabBuyAndKiteSaleNeverCloseTheHolding() {
+        bought()
+        val stop = held()!!.stop!!
+        kite.orders["9101"] = FakeKite.Order("9101", ce, "NFO", "BUY", 30, "MIS", "MARKET", 0.0, 0.0, "iraalgo", "COMPLETE", filled = 30, avg = 300.0)
+        kite.soldInKite(ce, 30, 305.0)
+        kite.position(ce, 0, 0.0, product = "MIS")                // one bad read
+        PineAuto.testOwners = { throw IllegalStateException("labels unreadable") }
+        pass(52_010.0, minutes = 1)
+        assertNotNull("kept as held", held())
+        assertEquals("TRIGGER PENDING", kite.order(stop).status)
+    }
+
+    /**
+     * 19 Nov 2026 (third review, C3): before a buy again on the contract, every earlier stop still being taken out is tried again - one
+     * Zerodha now accepts to cancel is gone before the buy, and nothing is left to wait for.
+     */
+    @Test fun aBuyAgainFirstTriesEveryEarlierStopStillBeingTakenOut() {
+        val stop = removalPending()
+        pass(51_900.0)
+        kite.down.clear()                                          // Zerodha accepts the cancel again
+        pass(52_010.0)                                             // BUY again
+        assertEquals(2, side("BUY").size)
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertFalse(log(), log().contains("would have waited"))
+    }
+
+    /** 19 Nov 2026 (third review, C4): an entry tried before the buy is not tried again from the pass's older copy (one try a pass). */
+    @Test fun anEntryTriedBeforeTheBuyIsNotTriedAgainOnTheSamePass() {
+        val stop = removalPending()
+        pass(51_900.0)
+        val before = kite.requests.count { it.method == "DELETE" && it.path == "/orders/regular/$stop" }
+        pass(52_010.0)                                             // BUY again, the cancel still refused
+        val tries = kite.requests.count { it.method == "DELETE" && it.path == "/orders/regular/$stop" } - before
+        assertEquals("one try this pass", 1, tries)
     }
 
     /**

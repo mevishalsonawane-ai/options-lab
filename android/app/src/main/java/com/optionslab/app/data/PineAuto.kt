@@ -1330,10 +1330,11 @@ object PineAuto {
         // logged as what a wait would have done, and Boss told once a day; the removal still cancels only the earlier holding's orders.
         // (Its own exits not yet looked for - a close on a stream look - are looked for and taken out first: once this buy is held, the
         // removal no longer scans the contract.)
-        b.removing.filter { it.kite == sym && !it.scanned }.takeIf { it.isNotEmpty() }?.let { removeExits(b, it) }
-        b.removing.firstOrNull { it.kite == sym }?.let { r ->
-            val what = if (r.ids.isEmpty()) "own exits (not yet looked for in Zerodha's order book)" else
-                "stop (order ${r.ids.keys.joinToString(", ")})"
+        // (19 Nov 2026, third review: every one on this contract is tried again first, not only those not yet looked for.)
+        b.removing.filter { it.kite == sym }.takeIf { it.isNotEmpty() }?.let { removeExits(b, it) }
+        b.removing.filter { it.kite == sym }.takeIf { it.isNotEmpty() }?.let { rs ->
+            val what = listOfNotNull(rs.flatMap { it.ids.keys }.takeIf { it.isNotEmpty() }?.let { "stop (order ${it.joinToString(", ")})" },
+                if (rs.any { !it.scanned }) "own exits (not yet looked for in Zerodha's order book)" else null).joinToString(" and ")
             note(b, id, "Shadow (logged only): would have waited - the earlier holding's $what on $sym is still being taken out at " +
                 "Zerodha; buying as before")
             if (reentrySaid.add("${todayIst()}|$sym")) com.optionslab.app.work.Alerts.error("${label(item)}: buying $sym again while the " +
@@ -1579,6 +1580,13 @@ object PineAuto {
     /** 19 Nov 2026 (second review): the contracts bought again while an earlier stop was being taken out, already told ("day|symbol"). */
     private val reentrySaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
+    /**
+     * TEST ONLY: the order labels as [flatConfirmed] reads them (a test makes the read fail). Null in the app, always: the labels are then
+     * [Strategies.owners]. Its setter throws unless BuildConfig.DEBUG (as [testNow]); no app code sets it.
+     */
+    @Volatile internal var testOwners: (suspend () -> Map<String, String>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test labels exist only in debug builds" }; field = v }
+
     /** 19 Nov 2026 (second review): a [Removing] order's fill when it was recorded, not known (neither read answered). */
     private const val UNKNOWN_FILL = -1
 
@@ -1624,7 +1632,7 @@ object PineAuto {
         // notification's Close) with no book's label: the order labels are read only when such an order is on the contract - never on
         // a stream look, which waits on no other book: there such an order is not taken as Boss's sale, the careful side.)
         val hand = { o: Broker.OrderRow -> o.tag.isBlank() || o.tag == "iraalgo" }
-        val read = if (onIt.none(hand) || streamLook) null else runCatching { Strategies.owners() }
+        val read = if (onIt.none(hand) || streamLook) null else runCatching { testOwners?.invoke() ?: Strategies.owners() }
         // (The labels not read: an order with no tag is still Boss's (none of the app's goes without one), the app's hand tag unknown.)
         val owners: Map<String, String>? = if (onIt.none(hand)) emptyMap() else if (streamLook) null else read?.getOrNull() ?: emptyMap()
         val labelsRead = read?.isSuccess != false
@@ -1633,7 +1641,9 @@ object PineAuto {
             owners["kite:${o.id}"].let { l -> if (o.tag.isBlank()) l == null else labelsRead && (l == null || l.startsWith(Origins.MANUAL)) } }
         val outsideSells = onIt.filter { it.side == "SELL" && (boss(it) || it.tag in SquareOffExit.TAGS) }.sumOf { it.filled }
         val carried = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.overnight }
-        val outsideBuys = onIt.filter { it.side == "BUY" && hand(it) && (owners == null || boss(it)) }.sumOf { it.filled } +
+        // (19 Nov 2026, third review: a hand buy whose label is not known - not read, or a stream look - counts as Boss's buy, the careful
+        // side: his buy and sale are a round trip, never proof that the script's holding closed.)
+        val outsideBuys = onIt.filter { it.side == "BUY" && hand(it) && (owners == null || !labelsRead || boss(it)) }.sumOf { it.filled } +
             carried.coerceAtLeast(0)
         val day = today.toString()
         val orb = runCatching { OrbArms.liveClosedHint.filter { it.exchange == "NFO" && it.symbol == sym && it.product == "MIS" && it.at.toLocalDate() == today } }
@@ -1649,8 +1659,11 @@ object PineAuto {
         val first = if (rowShown) flatSince.putIfAbsent(key, ms) else flatSince[key]
         if (com.optionslab.engine.orb.LiveMirror.shortConfirmed(rowShown, sold, first ?: ms, ms, unbooked)) {
             flatSince.remove(key); flatAlertSaid.remove(key)
-            // (Closed from outside only when an outside sale proved it: a close on agreeing reads alone uses up no sale of Boss's.)
-            bookClose(b, sym, h.qty, outside = sold)
+            // (Closed from outside only when an outside sale proved it, or when hand sales whose labels were not known cover it (19 Nov
+            // 2026, third review: that sale is then used up): a close on agreeing reads alone uses up no sale of Boss's.)
+            val handSells = onIt.filter { it.side == "SELL" && (hand(it) || it.tag in SquareOffExit.TAGS) }.sumOf { it.filled }
+            bookClose(b, sym, h.qty, outside = sold ||
+                com.optionslab.engine.orb.LiveMirror.outsideSaleCovers(handSells, outsideBuys, bookedOutside, h.qty))
             return true
         }
         if (rowShown && first == null) note(b, id, "$sym: Zerodha's positions show it at 0 with no sale outside the app to explain it: " +
@@ -1676,8 +1689,9 @@ object PineAuto {
         // scanned on the next 15-second check ([Removing.scanned] false); the stop itself is taken out now.)
         val orders = if (streamLook) null else runCatching { Broker.orders() }.getOrNull()
         val ids = LinkedHashMap<String, Int>()
-        // (What of the stop had filled: from the orders read (on a stream look, the kept one), else its own state read (never on a
-        // stream look); not read: unknown ([UNKNOWN_FILL]), so a stop's own fill is never told as a short.)
+        // (What of the stop had filled: from the orders read (on a stream look, the kept one - [Broker.ordersRecon] reads afresh only
+        // when none may stand for it), else its own state read (not on a stream look); not read: unknown ([UNKNOWN_FILL]), so a stop's
+        // own fill is never told as a short.)
         h.stop?.let { sid -> ids[sid] = (orders ?: if (streamLook) runCatching { Broker.ordersRecon() }.getOrNull() else null)
             ?.firstOrNull { it.id == sid }?.filled
             ?: (if (streamLook) null else runCatching { Broker.orderState(sid) }.getOrNull()?.filled) ?: UNKNOWN_FILL }
@@ -1703,6 +1717,8 @@ object PineAuto {
         // (Not logged in to Zerodha: nothing can be cancelled - each entry still counts a try, so Boss is told to cancel it in Kite.)
         val loggedIn = Broker.loggedIn
         for (r0 in (only ?: b.removing.toList())) {
+            // (19 Nov 2026, third review: an entry handed in that is no longer the book's - replaced or done since - is skipped.)
+            if (only != null && r0 !in b.removing) continue
             var r = r0
             if (r.day < today) { b.removing.remove(r0); continue }
             if (!loggedIn) {
@@ -1711,13 +1727,13 @@ object PineAuto {
                 continue
             }
             // (Not on a stream look, which reads no order book over REST: the next 15-second check scans it.)
-            if (!r.scanned && !streamLook) {
-                if (b.held.values.any { it.live && it.kite == r.kite }) r = r.copy(scanned = true)
-                else {
-                    val orders = runCatching { Broker.orders() }.getOrNull()
-                    if (orders != null) r = r.copy(scanned = true, ids = r.ids + orders.filter { it.working && it.symbol == r.kite &&
-                        it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" && it.id !in r.ids }.associate { it.id to it.filled })
-                }
+            // (19 Nov 2026, third review: never marked looked for without a real look. Held again, the contract's own exits are the new
+            // holding's too: looked for once it is closed; Boss was told at the buy.)
+            val heldAgain = !r.scanned && b.held.values.any { it.live && it.kite == r.kite }
+            if (!r.scanned && !streamLook && !heldAgain) {
+                val orders = runCatching { Broker.orders() }.getOrNull()
+                if (orders != null) r = r.copy(scanned = true, ids = r.ids + orders.filter { it.working && it.symbol == r.kite &&
+                    it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" && it.id !in r.ids }.associate { it.id to it.filled })
             }
             val left = LinkedHashMap<String, Int>()
             for ((oid, base0) in r.ids) {
@@ -1749,8 +1765,8 @@ object PineAuto {
                 note(b, r.script, "${r.kite}: its stop and exits at Zerodha are taken out (the position is closed)")
                 continue
             }
-            // (Only the scan left, put off on a stream look: not a failed try.)
-            val tried = if (left.isEmpty() && streamLook) 0 else 1
+            // (Only the scan left, put off on a stream look or while held again: not a failed try.)
+            val tried = if (left.isEmpty() && (streamLook || heldAgain)) 0 else 1
             b.removing[i] = tellOnce(b, r.copy(ids = left, tries = r.tries + tried), left.keys,
                 if (left.isEmpty()) "Zerodha's orders could not be read to find its exits" else null)
         }

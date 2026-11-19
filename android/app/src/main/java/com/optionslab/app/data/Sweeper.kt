@@ -53,7 +53,7 @@ object Sweeper {
     @Volatile private var lastLive: List<PriceWatch.Held> = emptyList()
 
     /** Tests: the failsafe starts afresh. */
-    internal fun resetForTest() { watch = PriceWatch.Failsafe(); lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear(); notSwept.clear(); quietSwept.clear() }
+    internal fun resetForTest() { watch = PriceWatch.Failsafe(); lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear(); notSwept.clear(); quietSwept.clear(); quietSince.clear() }
 
     /**
      * 26 Oct (erase everything): the positions each book last showed dropped (the books themselves are erased; the next sweep
@@ -61,7 +61,7 @@ object Sweeper {
      * still said on time. The backup GTTs' list is a settings key, wiped with the settings. Never waits for a sweep: one under
      * way sets the lists again from the books it read.
      */
-    fun wipe() { lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear(); notSwept.clear(); quietSwept.clear() }
+    fun wipe() { lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear(); notSwept.clear(); quietSwept.clear(); quietSince.clear() }
 
     /** Positions in memory (the erase's test; memory only). */
     internal fun holdsForErase(): Boolean = lastPaper.isNotEmpty() || lastLive.isNotEmpty()
@@ -129,8 +129,8 @@ object Sweeper {
         val keys = (held.map { "${it.exchange}:${it.symbol}" } + stops.map { "${it.exchange}:${it.symbol}" }).distinct()
         // REST quotes, whatever the stream says (item 8): a silent stream never leaves the stops unread. 18 Oct: a tick only
         // while 2 s fresh ([Broker.stopQuotes]); [Broker.quotes] answered from one up to 5 s old.
-        val ltp = if (keys.isEmpty()) emptyMap() else runCatching { Broker.stopQuotes(keys) }.getOrDefault(emptyMap())
-            .mapValues { it.value.last }.filterValues { it > 0 }
+        val quotes = if (keys.isEmpty()) emptyMap() else runCatching { Broker.stopQuotes(keys) }.getOrDefault(emptyMap())
+        val ltp = quotes.mapValues { it.value.last }.filterValues { it > 0 }
         // Item 7: a resting stop the price is already through is turned into a sell at a protected limit (the same order).
         // 19 Nov 2026 (audit: a Pine stop left resting after its position closed could open a naked short): only for what is held. A
         // stop on a contract held long nowhere is never turned into a sell; a Pine script's ("irapine") is cancelled once confirmed
@@ -159,11 +159,16 @@ object Sweeper {
             if (send <= 0) {
                 if (notSwept.size > 200) notSwept.clear()
                 if (quietSwept.size > 200) quietSwept.clear()
+                if (quietSince.size > 200) quietSince.clear()
                 // (19 Nov 2026, second review: the app's own exit sale already selling all that is held - an arm's exit under way - is
-                // the normal case: noted, Boss not alarmed.)
-                val appSelling = sales.filter { ours(it.tag) && it.tag != "iraalgo" }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } +
-                    (used[pk] ?: 0)
-                if (heldHere > 0 && appSelling >= heldHere) {
+                // the normal case: noted, Boss not alarmed. Third review: only a market sale or a limit at or under the bid, which fills
+                // now - with no bid known, or such a sale still not done after 30 s, Boss is told as below.)
+                val bid = quotes["${so.exchange}:${so.symbol}"]?.bid?.takeIf { it > 0 }
+                val appSelling = sales.filter { ours(it.tag) && it.tag != "iraalgo" && (it.type == "MARKET" || (bid != null && it.price <= bid + 1e-9)) }
+                    .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } + (used[pk] ?: 0)
+                val quiet = heldHere > 0 && appSelling >= heldHere
+                val quietFrom = if (quiet) quietSince.putIfAbsent(so.id, nowMs) ?: nowMs else { quietSince.remove(so.id); null }
+                if (quiet && nowMs - (quietFrom ?: nowMs) <= QUIET_MS) {
                     if (quietSwept.add(so.id)) runCatching { Diag.record("risk", "Zerodha: ${so.symbol} is through its stop %.2f at %.2f; the app's own exit sale already sells what is held: the stop was left as it is"
                         .format(Locale.ENGLISH, so.trigger, px)) }
                 } else if (notSwept.add(so.id)) {
@@ -192,6 +197,10 @@ object Sweeper {
     private val notSwept: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     /** 19 Nov 2026 (second review): the same, left quietly beside the app's own exit sale (said once each, apart from [notSwept]). */
     private val quietSwept: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    /** 19 Nov 2026 (third review): since when each stop has been left quietly beside the app's own exit sale (market-clock ms). Memory only. */
+    private val quietSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** 19 Nov 2026 (third review): how long a stop is left quietly beside the app's own exit sale before Boss is told. */
+    private const val QUIET_MS = 30_000L
 
     /**
      * 19 Nov 2026 (audit): a Pine script's stop [so], whose contract the positions read [book] shows held long nowhere: never turned into a sell

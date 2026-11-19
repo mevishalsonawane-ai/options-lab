@@ -284,6 +284,33 @@ class SweeperFailsafeTest : RobolectricTest() {
         assertTrue(Alerts.posted.joinToString { it.text }, Alerts.posted.none { it.title == "Missed lock" })
     }
 
+    /**
+     * 19 Nov 2026 (third review, C2): beside the arm's own exit LIMIT above the bid (an illiquid option: it may never fill), Boss is told;
+     * at or under the bid it is left quietly - and told once it is still so after 30 s.
+     */
+    @Test fun aThroughStopBesideAnOwnExitThatMayNotFillIsToldToBoss() {
+        kite.position(nfo, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$nfo", 200.0, 198.5, 200.05)          // the bid under the exit's limit
+        kite.orders["1"] = FakeKite.Order("1", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "irapine", "TRIGGER PENDING")
+        kite.orders["2"] = FakeKite.Order("2", nfo, "NFO", "SELL", 30, "MIS", "LIMIT", 199.0, 0.0, "irapine", "OPEN")
+        pass(10, 0)
+        assertTrue(kite.requests.none { it.method == "PUT" })
+        assertEquals(Alerts.posted.joinToString { it.text }, 1, Alerts.posted.count { it.title == "Missed lock" })
+    }
+
+    @Test fun aThroughStopLeftQuietlyForMoreThanThirtySecondsIsToldToBoss() {
+        kite.position(nfo, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$nfo", 200.0, 199.95, 200.05)
+        kite.orders["1"] = FakeKite.Order("1", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "irapine", "TRIGGER PENDING")
+        kite.orders["2"] = FakeKite.Order("2", nfo, "NFO", "SELL", 30, "MIS", "LIMIT", 199.0, 0.0, "irapine", "OPEN")
+        pass(10, 0)
+        pass(10, 0, 30)
+        assertTrue("30 s: still quiet", Alerts.posted.none { it.title == "Missed lock" })
+        pass(10, 0, 45)
+        assertEquals(Alerts.posted.joinToString { it.text }, 1, Alerts.posted.count { it.title == "Missed lock" })
+        assertTrue(kite.requests.none { it.method == "PUT" })
+    }
+
     /** The paper book's positions as [Paper.sweepMissedStops] hands them over: keyed as its prices are, judged on the app's calendars. */
     @Test fun paperPositionsAreJudgedOnTheAppsCalendars() {
         val contracts = mapOf(
