@@ -172,10 +172,12 @@ object Sweeper {
                     if (quietSwept.add(so.id)) runCatching { Diag.record("risk", "Zerodha: ${so.symbol} is through its stop %.2f at %.2f; the app's own exit sale already sells what is held: the stop was left as it is"
                         .format(Locale.ENGLISH, so.trigger, px)) }
                 } else if (notSwept.add(so.id)) {
-                    // (Third review: why Boss is told - the app's own exit has not filled in 30 s, or may not fill at the bid.)
+                    // (19 Nov 2026, third review: why Boss is told - the app's own exit has not filled in 30 s, or a limit of it may not
+                    // fill at the bid.)
                     val why = when {
                         quiet -> "the app's own exit sale has not filled in 30 s"
-                        sales.any { ours(it.tag) && it.tag != "iraalgo" } -> "the app's own exit sale is above the bid" + (bid?.let { " %.2f".format(Locale.ENGLISH, it) } ?: " (no bid known)") +
+                        sales.any { ours(it.tag) && it.tag != "iraalgo" && it.type != "MARKET" && (bid == null || it.price > bid + 1e-9) } ->
+                            "the app's own exit sale is above the bid" + (bid?.let { " %.2f".format(Locale.ENGLISH, it) } ?: " (no bid known)") +
                             " and may not fill"
                         else -> "other orders already sell what is held there"
                     }

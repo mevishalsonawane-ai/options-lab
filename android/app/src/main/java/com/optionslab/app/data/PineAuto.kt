@@ -58,9 +58,10 @@ object PineAuto {
      * Kept (saved with the book) and tried again on every check until Zerodha shows each one cancelled, rejected or complete; Boss is
      * told once after [REMOVE_TRIES] tries ([told]). [script]: whose holding it was; [day]: the session (a DAY order ends with it).
      * [scanned] false: Zerodha's orders could not be read when it closed, so its contract's other own exits are still to be looked for.
+     * [at]: when its removal began (epoch ms; 19 Nov 2026, third review: what Boss was told of it is keyed on this, which never changes).
      */
     data class Removing(val script: Long, val kite: String, val ids: Map<String, Int>, val day: String, val scanned: Boolean = true,
-                        val tries: Int = 0, val told: Boolean = false)
+                        val tries: Int = 0, val told: Boolean = false, val at: Long = 0L)
 
     private class Book(
         val held: HashMap<Long, Held> = HashMap(),
@@ -141,7 +142,7 @@ object PineAuto {
             o.optJSONArray("removing")?.let { a -> for (i in 0 until a.length()) { val r = a.getJSONObject(i)
                 val ids = LinkedHashMap<String, Int>().apply { r.optJSONObject("ids")?.let { m -> m.keys().forEach { k -> put(k, m.getInt(k)) } } }
                 bk.removing += Removing(r.getLong("script"), r.getString("kite"), ids, r.optString("day"), r.optBoolean("scanned", true),
-                    r.optInt("tries"), r.optBoolean("told")) } }
+                    r.optInt("tries"), r.optBoolean("told"), r.optLong("at", 0L)) } }
             o.optJSONObject("closed")?.let { m -> m.keys().forEach { k -> bk.closed[k] = m.getInt(k) } }
             // A restore not yet disarmed (the app clears the flag once it has): no script may trade live on restored approvals.
             if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) bk.liveOk.clear()
@@ -177,7 +178,7 @@ object PineAuto {
         o.put("autoSaved", JSONArray(b.autoSaved.sorted()))
         o.put("removing", JSONArray().apply { b.removing.forEach { r -> put(JSONObject().put("script", r.script).put("kite", r.kite)
             .put("ids", JSONObject().apply { r.ids.forEach { (k, v) -> put(k, v) } }).put("day", r.day).put("scanned", r.scanned)
-            .put("tries", r.tries).put("told", r.told)) } })
+            .put("tries", r.tries).put("told", r.told).put("at", r.at)) } })
         o.put("closed", JSONObject().apply { b.closed.forEach { (k, v) -> put(k, v) } })
         written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         synchronized(this) {
@@ -1312,6 +1313,11 @@ object PineAuto {
         } ?: run { note(b, id, "${c.symbol} is not listed on Zerodha: nothing sent"); return }
         val sym = ins.tradingSymbol
         val key = "NFO:$sym"
+        // 3 Nov (Boss): only the indices ticked in Bot settings → Indices get live orders. (19 Nov 2026, third review: asked before the
+        // retry below, so an entry refused here pays for no Zerodha calls; it reads only what it read before.)
+        if (!com.optionslab.engine.orb.LiveMirror.marketOn(c.underlying, AppSettings.load().liveMarkets)) {
+            note(b, id, "${c.underlying} is not one of your live indices (Bot settings → Indices): nothing sent"); return
+        }
         // 19 Nov 2026 (third review): an earlier holding's stop or own exits on this contract still being taken out ([Book.removing]) -
         // every one is tried again first (not only those not yet looked for), before the quote and the checks this buy goes on.
         b.removing.filter { it.kite == sym }.takeIf { it.isNotEmpty() }?.let { removeExits(b, it) }
@@ -1319,10 +1325,6 @@ object PineAuto {
             ?: run { note(b, id, "No Zerodha quote for $sym: nothing sent"); return }
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, lots * ins.lotSize, ins.lotSize, "MIS", "MARKET", null,
             ins.tickSize, "NFO", "irapine")
-        // 3 Nov (Boss): only the indices ticked in Bot settings → Indices get live orders.
-        if (!com.optionslab.engine.orb.LiveMirror.marketOn(c.underlying, AppSettings.load().liveMarkets)) {
-            note(b, id, "${c.underlying} is not one of your live indices (Bot settings → Indices): nothing sent"); return
-        }
         val acct = Broker.accountNow()      // positions, funds and orders read in parallel
         val refusals = Guard.check(Guard.liveOrder(o).copy(price = quote), acct)
         if (refusals.isNotEmpty()) { note(b, id, "Guard refused: ${refusals.joinToString(" ")}"); return }
@@ -1338,9 +1340,14 @@ object PineAuto {
             note(b, id, "Shadow (logged only): would have waited - the earlier holding's $what on $sym is still being taken out at " +
                 "Zerodha; buying as before")
             if (reentrySaid.size > 200) reentrySaid.clear()
-            if (reentrySaid.add("${todayIst()}|$sym|${rs.joinToString(",") { it.ids.keys.joinToString("+").ifEmpty { "scan" } }}")) com.optionslab.app.work.Alerts.error("${label(item)}: buying $sym again while the " +
-                "earlier holding's $what is not yet cancelled at Zerodha. It may sell the new lots: check the sells of $sym in Kite.",
-                "Pine live")
+            // (Told once for each earlier holding: keyed on when its removal began, which never changes.)
+            val untold = rs.filter { reentrySaid.add("${it.script}|${it.kite}|${it.at}") }
+            if (untold.isNotEmpty()) {
+                val news = listOfNotNull(untold.flatMap { it.ids.keys }.takeIf { it.isNotEmpty() }?.let { "stop (order ${it.joinToString(", ")})" },
+                    if (untold.any { !it.scanned }) "own exits (not yet looked for in Zerodha's order book)" else null).joinToString(" and ")
+                com.optionslab.app.work.Alerts.error("${label(item)}: buying $sym again while the earlier holding's $news is not yet " +
+                    "cancelled at Zerodha. It may sell the new lots: check the sells of $sym in Kite.", "Pine live")
+            }
         }
         val known = knownKite()
         // 22 Oct: the checks above cleared this order: stamped with its fingerprint, recomputed at the door ([OrderVerdicts]).
@@ -1703,7 +1710,7 @@ object PineAuto {
         orders.orEmpty().filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" }
             .forEach { ids[it.id] = it.filled }
         if (ids.isEmpty() && orders != null) return
-        val r = Removing(id, sym, ids, today.toString(), scanned = orders != null)
+        val r = Removing(id, sym, ids, today.toString(), scanned = orders != null, at = System.currentTimeMillis())
         b.removing += r
         removeExits(b, listOf(r))
     }

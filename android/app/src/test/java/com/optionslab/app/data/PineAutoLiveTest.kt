@@ -649,6 +649,28 @@ class PineAutoLiveTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (third review, follow-up): Boss is told once for each earlier holding still being taken out - a second one on the same
+     * contract the same day is told too, the first never again.
+     */
+    @Test fun eachEarlierHoldingStillBeingTakenOutIsToldOnce() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        val stop1 = removalPending()
+        pass(51_900.0)
+        pass(52_010.0)                                             // buy again: told of stop1
+        val stop2 = held()!!.stop!!
+        kite.soldInKite(ce, 30, 310.0)                             // the second holding sold in Kite too
+        kite.down += "/orders/regular/$stop2"
+        pass(52_010.0)
+        assertNull(held())
+        pass(51_900.0)
+        pass(52_010.0)                                             // buy again: told of stop2 only
+        val told = com.optionslab.app.work.Alerts.posted.map { it.text }.filter { it.contains("again while the earlier holding's") }
+        assertEquals(told.joinToString("\n"), 2, told.size)
+        assertTrue(told[0], told[0].contains(stop1))
+        assertTrue(told[1], told[1].contains(stop2) && !told[1].contains(stop1))
+    }
+
+    /**
      * 19 Nov 2026 (third review, C3): before a buy again on the contract, every earlier stop still being taken out is tried again - one
      * Zerodha now accepts to cancel is gone before the buy, and nothing is left to wait for.
      */
