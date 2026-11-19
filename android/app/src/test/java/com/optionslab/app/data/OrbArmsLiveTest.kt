@@ -234,6 +234,43 @@ class OrbArmsLiveTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (review): a new process whose first act is a live entry - before any look has swept - takes back the arm's lot from
+     * before the restart (its buy at Zerodha, no row here) and buys nothing more on that signal: one buy, one stop, the lot the arm's.
+     */
+    @Test fun aFirstEntryAfterARestartTakesBackTheLostLotAndBuysNothingMore() {
+        state(pending = true)
+        assertEquals("Entered at Zerodha (live).", approve())
+        val buyId = kite.orders.values.single { it.side == "BUY" }.id
+        kite.orders.remove(arm().open!!.stopOrderId!!)                    // the phone died before its stop went and its row was saved
+        assertTrue(OrbArms.awaitWrites())
+        state(pending = true)                                              // a new process: no row, a new signal waiting
+        OrbArms.forgetMemoryForTest()
+        runBlocking { ArmLive.refresh() }
+        kite.requests.clear()
+        val msg = approve()
+        assertTrue(msg, msg.contains("taken back"))
+        assertEquals("no second buy", 1, kite.orders.values.count { it.side == "BUY" })
+        val p = arm().open!!
+        assertEquals(buyId, p.entryOrderId); assertEquals(30, p.qty)
+        assertEquals("exactly one stop", 1, kite.orders.values.count { it.side == "SELL" && it.working })
+        assertEquals(kite.orders.keys.last(), p.stopOrderId)
+    }
+
+    /**
+     * 19 Nov 2026 (review): an entry whose reply was lost and that the order book does not show yet is kept unconfirmed with no order id
+     * (a LIMIT may still rest and fill) - never dropped as unsent; the settle's lost-id search follows it.
+     */
+    @Test fun aLostReplyNotFoundYetIsKeptUnconfirmedNotDropped() {
+        state(pending = true)
+        kite.nextPlace(reply = Reply.NETWORK_EXCEPTION)
+        val msg = approve()
+        assertFalse(msg, msg.contains("refused"))
+        val p = arm().open!!
+        assertTrue(p.unconfirmed); assertNull(p.entryOrderId); assertNull(p.stopOrderId)
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "did not confirm the buy of $sym" in it })
+    }
+
+    /**
      * 19 Nov 2026 (coordinator): "Erase everything" while the intent's write is still running never leaves the arms' book on disk: the
      * write that ends after the erase deletes the file again, and the erase itself never waits on it.
      */
@@ -755,6 +792,7 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals("Waits for the market watch.", OrbArms.describe(""))
         assertEquals("Refused by Bot settings: max open", OrbArms.describe("guard_refused: max open"))
         assertEquals("The order was refused: x", OrbArms.describe("order_refused: x"))
+        assertEquals("Not bought: x.", OrbArms.describe("unfilled: x"))
         assertEquals("Could not check: y", OrbArms.describe("error: y"))
         assertEquals("Breakout: waiting for your approval with PIN (live).", OrbArms.describe("awaiting_approval"))
         assertEquals("something new", OrbArms.describe("something new"))

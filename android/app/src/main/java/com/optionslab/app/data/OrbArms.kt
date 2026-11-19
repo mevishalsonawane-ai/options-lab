@@ -3236,8 +3236,11 @@ object OrbArms {
         // 19 Nov 2026 (coordinator): no live entry before this process's cold-start sweep has run to its end - an arm whose lot from before
         // the restart is not taken back yet would buy again ([coldSweep]; run here when no look has run it yet, once per process).
         if (!coldSwept) {
+            val rows = b.positions.size
             if (runCatching { coldSweep(b, now(), Strategies.stoppedToday()) }.getOrDefault(false)) coldSwept = true
             else return "refused: the arms' start-up check of Zerodha's orders has not finished (asked again next signal)"
+            // (It took a lot back: this entry's checks ran before that trade was here - no buy now; the next signal checks again.)
+            if (b.positions.size != rows) return "refused: a lot from before the restart was taken back at Zerodha; nothing more bought now"
         }
         val ins = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull())?.firstOrNull {
             it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6
@@ -3332,8 +3335,9 @@ object OrbArms {
             if (ArmOrderLabels.zerodhaRefused(e)) ArmOrderLabels.refused(sent)
             if (Broker.definite(e)) { dropIntent(); return "order_refused: " + (e.message ?: "Zerodha refused the order") }
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
-            try { Broker.findRecentRetrying(o, known) ?: run { dropIntent(); return "order_refused: ${e.message}; no matching order found at Zerodha" } }
-            catch (_: Exception) { null }                                          // the order book could not be read either
+            // (19 Nov 2026: not found is not proof it was never placed - a LIMIT may rest and fill later. The intent stays unconfirmed with no
+            // order id: the settle's lost-id search finds it, cancels what still works and keeps what filled, or drops it after its wait.)
+            try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }   // null: not found yet, or the book unreadable
         }
         // (B5: its order id written down at once on the writer thread - never a disk wait before its stop goes; a restart before that write
         // finds the order by the search, which takes this arm's own unclaimed entry orders too, [settleEntry]. The labels after it never
@@ -3342,10 +3346,12 @@ object OrbArms {
         id?.let { runCatching { ArmOrderLabels.answered(it, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis())) } }
         id?.let { runCatching { Strategies.tagOwner("kite:$it", owner) } }
         var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
+        var cancelledByApp = false
         if (id != null && f?.status !in DONE) {
             // Not finished in 15 s: the unfilled rest is cancelled so it can never fill later untracked; only what filled is booked.
-            runCatching { Broker.cancel(id) }
-            f = runCatching { Broker.orderState(id) }.getOrNull()
+            // (19 Nov 2026: then its end waited for, a few seconds - Kite shows a cancel as pending for a moment.)
+            cancelledByApp = runCatching { Broker.cancel(id) }.isSuccess
+            f = runCatching { Broker.awaitOrder(id, 3_000) }.getOrNull()?.takeIf { it.status in DONE } ?: runCatching { Broker.orderState(id) }.getOrNull()
         }
         if (f == null || f.status !in DONE) {
             // Zerodha has not said how it ended: held as unconfirmed (so the arm buys nothing more) until the books settle it.
@@ -3358,7 +3364,7 @@ object OrbArms {
         if (f.filled <= 0) {
             dropIntent()
             // (19 Nov 2026: the LIMIT not filled in the wait and cancelled by the app: nothing bought, never chased - said as such.)
-            if (f.status == "CANCELLED" && f.message.isBlank()) {
+            if (cancelledByApp && f.status == "CANCELLED") {
                 runCatching { Diag.record("orb", "${arm.label}: the LIMIT buy of $sym at %.2f did not fill in 15 s; cancelled, nothing bought".format(Locale.ENGLISH, limitPx)) }
                 return "unfilled: the LIMIT buy at %.2f did not fill in 15 s; cancelled, nothing bought".format(Locale.ENGLISH, limitPx)
             }
@@ -3769,7 +3775,8 @@ object OrbArms {
             val boughtToday = com.optionslab.engine.orb.LiveMirror.boughtTodayCap(rows.map { it.dayBuyQty }, rows.sumOf { it.overnight }, held,
                 orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "BUY" && it.tag != "iraorb" }.sumOf { it.filled })
             var explained = b.positions.filter { it.open && it.live && it.kite == sym }.sumOf { it.qty } +
-                armLive.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side > 0 }.sumOf { it.qty }
+                // (Review F6, as the settle: never a lost entry of theirs still searched for - it may hold nothing, and must not hide this.)
+                armLive.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side > 0 && !(it.unconfirmed && it.entryOrderId == null) }.sumOf { it.qty }
             for (o in list.sortedByDescending { it.placedAt }) {
                 val owner = owners["kite:${o.id}"]
                 if (owner != null && !owner.endsWith(" · entry")) continue                 // another book's
@@ -5865,6 +5872,7 @@ object OrbArms {
         s.startsWith("guard_refused: ") -> "Refused by Bot settings: " + s.removePrefix("guard_refused: ")
         s.startsWith("refused: ") -> "Refused: " + s.removePrefix("refused: ")
         s.startsWith("order_refused: ") -> "The order was refused: " + s.removePrefix("order_refused: ")
+        s.startsWith("unfilled: ") -> "Not bought: " + s.removePrefix("unfilled: ") + "."
         s.startsWith("account_changed: ") -> "Not bought: " + s.removePrefix("account_changed: ") + "."
         s.startsWith("error: ") -> "Could not check: " + s.removePrefix("error: ")
         // Boss's 06 Oct rule: the refusal as it is ("opposite_position_open: ORB Sweep holds ..."), then in words.
