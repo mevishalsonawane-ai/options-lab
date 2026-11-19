@@ -3202,22 +3202,40 @@ object OrbArms {
         // 15 Nov (audit: rejected live orders shown with no arm): the arm's label noted before the order goes, memory only
         // ([ArmOrderLabels]), so an order Zerodha refuses but still keeps as REJECTED is shown with its arm. Nothing else changes.
         val owner = "${arm.label} · entry"
+        // 18 Nov 2026 (audit: B5, a crash between the POST and the booking left an unowned lot with no stop, and the same bar could be
+        // bought again): BEFORE the order goes, the entry is written down as an unconfirmed trade with no order id yet (its "intent") and
+        // the book is saved with it - the decided bar too ([Book.decided], taken before this). After a restart the unconfirmed-entry
+        // settle ([settleEntry]) looks for its order and what Zerodha holds: found or held, kept with its stop; else dropped with a word.
+        // Here the intent row becomes the trade: dropped when nothing went, kept unconfirmed (its order id in) when Zerodha has not said.
+        val intent = stamped(Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, null, null, null,
+            live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ladderOn(arm, today0, true),
+            near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew))
+        b.positions += intent
+        runCatching { save(b) }
+        // (The row as it now stands in the book, found by identity: the book's lock is held for the whole entry.)
+        var row = intent
+        fun dropIntent() { val r = row; b.positions.removeAll { it === r }; runCatching { save(b) } }
+        fun putIntent(p: Position) { val r = row; val i = b.positions.indexOfFirst { it === r }; if (i >= 0) b.positions[i] = p else b.positions += p; row = p }
         val sent = ArmOrderLabels.sending(o, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis()))
         val id: String? = try {
             // The arm's key as its entry check asked the portfolio guard (the door refuses only this arm's blocked entry).
             // [last]: the price this entry decided on (its slippage is measured from it once it fills; nothing else changes).
             Broker.placeOrder(o, arm = armKey, intended = last, verdict = verdict, stop = liveStop)
         } catch (e: Broker.NotLoggedIn) {
+            dropIntent()
             return "refused: not logged in to Zerodha today"
         } catch (e: Exception) {
             if (ArmOrderLabels.zerodhaRefused(e)) ArmOrderLabels.refused(sent)
-            if (Broker.definite(e)) return "order_refused: " + (e.message ?: "Zerodha refused the order")
+            if (Broker.definite(e)) { dropIntent(); return "order_refused: " + (e.message ?: "Zerodha refused the order") }
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
-            try { Broker.findRecentRetrying(o, known) ?: return "order_refused: ${e.message}; no matching order found at Zerodha" }
+            try { Broker.findRecentRetrying(o, known) ?: run { dropIntent(); return "order_refused: ${e.message}; no matching order found at Zerodha" } }
             catch (_: Exception) { null }                                          // the order book could not be read either
         }
-        id?.let { ArmOrderLabels.answered(it, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis())) }
-        id?.let { Strategies.tagOwner("kite:$it", owner) }
+        // (B5: the labels after the order went never stop its booking - a failure there is a missing label, not a lost trade.)
+        id?.let { runCatching { ArmOrderLabels.answered(it, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis())) } }
+        id?.let { runCatching { Strategies.tagOwner("kite:$it", owner) } }
+        // (B5: its order id kept on the row in memory; written with the row's next save - a restart before it settles by the search.)
+        if (id != null) putIntent(intent.copy(entryOrderId = id))
         var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
         if (id != null && f?.status !in DONE) {
             // Not finished in 15 s: the unfilled rest is cancelled so it can never fill later untracked; only what filled is booked.
@@ -3226,27 +3244,30 @@ object OrbArms {
         }
         if (f == null || f.status !in DONE) {
             // Zerodha has not said how it ended: held as unconfirmed (so the arm buys nothing more) until the books settle it.
-            b.positions += stamped(Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, id, null, null,
-                live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ladderOn(arm, today0, true),
-                near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew))
+            putIntent(intent.copy(entryOrderId = id))
             runCatching { save(b) }
             com.optionslab.app.work.Alerts.error("${arm.label}: Zerodha did not confirm the buy of $sym. It is treated as held (no stop yet) " +
                 "until the order book shows what filled.", "ORB live")
             return "entered_unconfirmed"
         }
-        if (f.filled <= 0) return "order_refused: Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
+        if (f.filled <= 0) {
+            dropIntent()
+            return "order_refused: Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
+        }
         val fill = f.avgPrice.takeIf { it > 0 } ?: last
-        Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", "${arm.label} · entry", f.orderId)
         // 15 Nov (Boss's exception): a Liquidity live entry's stop rests at Zerodha at its -15% ([firstLiveStop]; the rule sets no entry stop since
         // V4, its breakeven moves the stop up later), so a dead phone still sells there.
         val (stopId, trigger) = if (liquidity != null) firstLiveStop(arm.label, sym, f.filled, ins.lotSize, ins.tickSize, fill, known + listOfNotNull(id),
                 fixed, lp.stopPoints, lq.stopPct)
             else placeStop(arm.label, sym, f.filled, ins.lotSize, ins.tickSize, fill, known + listOfNotNull(id), liquidity = false,
                 points = lp.stopPoints, pct = lq.stopPct).let { (a, b, _) -> a to b }
-        b.positions += stamped(Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
+        // (B5: the stop placed and the trade booked first - in the intent's place - then the fill's notice, which can never stop either.)
+        putIntent(stamped(Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
             ladder = ladderOn(arm, today0, true), near = near, volSkip = volSkip, strong = strong,
-            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew, entryQty = f.filled))
+            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew, entryQty = f.filled)))
+        runCatching { save(b) }
+        runCatching { Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", "${arm.label} · entry", f.orderId) }
         // 22 Oct: the time machine's reality check on the live entry too (shadow only; background).
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(arm.source, arm.label, "orb:${arm.source}:$id", c.underlying, if (c.right == Right.CE) 1 else -1,
             signalBar.plusMinutes(5), if (liquidity == null) lp.stopPoints else LiquidityRules.indexStopPoints(c.underlying),

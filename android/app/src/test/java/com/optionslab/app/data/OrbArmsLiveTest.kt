@@ -113,6 +113,54 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals("TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
     }
 
+    /**
+     * 18 Nov 2026 (audit: B5, a crash between the POST and the booking): the entry is on disk as an unconfirmed trade BEFORE its order goes.
+     * The phone "dies" right after the POST (the book on disk is the one written before it, the stop never placed); after the restart the
+     * settle takes the lot Zerodha holds back as the arm's trade, with its stop - never an unowned lot with no stop, and no second buy.
+     */
+    @Test fun anEntryIsWrittenDownBeforeItsOrderGoesAndARestartSettlesIt() {
+        state(pending = true)
+        val file = java.io.File(context.filesDir, "orb.vault")
+        val atPost = java.util.concurrent.atomic.AtomicReference<ByteArray?>()
+        kite.afterNext("/orders/regular") { atPost.set(com.optionslab.app.security.Vault.readFile(file)) }
+        assertEquals("Entered at Zerodha (live).", approve())
+        val snap = atPost.get()!!
+        val saved = JSONObject(String(snap, Charsets.UTF_8))
+        val row = saved.getJSONArray("positions").getJSONObject(0)
+        assertTrue("on disk before the order went", row.getBoolean("unconfirmed"))
+        assertEquals("", row.getString("entryOrderId")); assertEquals("", row.getString("stopOrderId"))
+        assertEquals(sym, row.getString("kite")); assertEquals(30, row.getInt("qty"))
+        assertFalse("the approval used up on disk too", saved.optJSONObject("pending")?.has("orb") == true)
+        // The phone dies right after the POST: the book on disk is that one, and no stop was ever placed.
+        val buyId = kite.orders.keys.first()
+        val stopId = arm().open!!.stopOrderId!!
+        kite.orders.remove(stopId)
+        com.optionslab.app.security.Vault.writeFile(file, snap)
+        com.optionslab.app.testing.AutomationSupport.reloadFromDisk(OrbArms)
+        assertTrue("held as unconfirmed after the restart", arm().open!!.unconfirmed)
+        runBlocking { ArmLive.refresh() }
+        kite.requests.clear()
+        pass()
+        val p = arm().open!!
+        assertFalse(p.unconfirmed)
+        assertEquals(30, p.qty)
+        val stop = kite.placed.single()
+        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "quantity" to "30"),
+            stop.form.filterKeys { it in setOf("transaction_type", "order_type", "quantity") })
+        assertEquals(kite.orders.keys.last(), p.stopOrderId)
+        assertEquals("still one buy", listOf(buyId), kite.orders.values.filter { it.side == "BUY" }.map { it.id })
+    }
+
+    /** 18 Nov 2026 (audit: B5): an entry Zerodha refuses outright leaves no unconfirmed row behind (the arm is free for the next signal). */
+    @Test fun aRefusedEntryLeavesNoRowBehind() {
+        state(pending = true)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "Insufficient funds")
+        val msg = approve()
+        assertTrue(msg, msg.contains("Insufficient funds"))
+        assertNull(arm().open)
+        assertTrue(arm().today.isEmpty())
+    }
+
     @Test fun inLiveAnApprovalWithoutThePinSendsNothing() {
         state(pending = true)
         assertEquals("The app is in Live: approve with your PIN on Home → Strategies.", approve(pin = false))
