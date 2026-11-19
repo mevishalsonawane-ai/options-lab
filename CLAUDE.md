@@ -52,10 +52,23 @@ notes; match the surrounding code.
     plan, the change timeline, an unpark, a restore), it stays on paper until he switches it on himself on Home; every switch-off
     clears it. Every other gate still applies: the app in Live
     (which takes Boss's PIN), "AI trades go live", the switch itself (and each index's parking), every guard, the kill switch, the
-    day stop and the day lock, its own live stop rule and its self-review's park to paper and pause (in Live lifted only with the
-    PIN; his switch lifts the pause only in Paper). Off stays one
+    day stop and the day lock, and - only while their switches are on (off by Boss's choice since 19 Nov, below) - its own live stop
+    rule and its self-review's park to paper and pause (a park or pause already in place is lifted in Live only with the PIN; his
+    switch lifts the pause only in Paper). Off stays one
     tap. Every other arm is unchanged (armed in Live with its own PIN).
   - Jarvis's own trades still stay on paper (the rule above).
+- R51, R72 AND LIQUIDITY RUN UNTIL BOSS STOPS THEM (Boss, 19 Nov: "remove the stop trades after the max loss for all r51,r72 and
+  liquidity strategy, i want it to run until i stop them"; he chose all four, each a switch turned off by PIN). Four automatic stops
+  no longer act on R51 Donchian 20, R72 Breadth Donchian and Liquidity 15+5 (every book): the forward-test switch-off (40 paper
+  trades), Liquidity's live stop rule (−₹40k / −₹13k a month on its own live trades), its self-review's (and Autopilot's) park to
+  paper and pause, and the paper account stop.
+  - Each is a Bot settings switch ("... applies to R51, R72 and Liquidity"), on in code; Boss's one-time choice switched all four off,
+    logged in the Autopilot change timeline. Off takes his PIN and never comes from Jarvis or voice; on is one tap (no PIN).
+  - Nothing was switched back on by it: an arm a stop had already switched off, parked or paused, and a live or paper stop already
+    reached, waits for Boss (his own switch, or his PIN as before).
+  - Every other arm keeps all four. The kill switch, the day lock, the guard and daily loss limit, Stop for today, every live gate
+    (PIN, Live, "AI trades go live", each arm's Trade live switch), every exit, the whole-account stop rule's own switch, the funds
+    check, the R151 picker and Boss's exit rule V4/V5 still apply to these three.
 - PAPER (Boss, 13 Oct): an idea that has PASSED the research gates (below) may act on paper arms straight away, with no
   shadow phase.
   - Every change is logged in the Autopilot change timeline, undoable in one tap, and shown to Boss.

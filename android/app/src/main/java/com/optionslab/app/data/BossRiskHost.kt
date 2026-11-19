@@ -236,7 +236,12 @@ object BossRiskHost {
             note(rule, owner, symbol, live = false, applied = applied, why = if (applied) why else "$why (logged only: this entry may also go live)")
             return if (applied) "refused: $why" else null
         }
-        hit(Rule.ACCOUNT, AccountStop.refusal(acctStatus)?.removePrefix("refused: ")?.let { "$it on paper" })?.let { return@runCatching it }
+        // 19 Nov (Boss's choice, [ArmAutoStopsHost]): with its switch off the account stop no longer refuses R51, R72 or Liquidity 15+5's
+        // entries (one it had reached as the switch went off still does, until Boss restarts its count); every other arm as before.
+        val acctWhy = AccountStop.refusal(acctStatus)?.removePrefix("refused: ")?.let { "$it on paper" }
+        if (acctWhy != null && paperOn[Rule.ACCOUNT] == true && !ArmAutoStopsHost.paperAccountActs(owner, accountKeyNow()))
+            note(Rule.ACCOUNT, owner, symbol, live = false, applied = false, why = "$acctWhy (not applied: ${com.optionslab.ira.ArmAutoStops.CHOICE})")
+        else hit(Rule.ACCOUNT, acctWhy)?.let { return@runCatching it }
         // The week worked out now from the days in memory (review: on a Monday last week's "reached" never holds an entry made
         // before the first watch pass of the day).
         hit(Rule.WEEKLY, BossRisk.weeklyRefusal(BossRisk.weekly(synchronized(lock) { paperDays }, today(), weekLimit, weekReachedOn)))?.let { return@runCatching it }
@@ -502,6 +507,15 @@ object BossRiskHost {
         return if (on) "${rule.words.replaceFirstChar { it.uppercase() }} on live: the bots' live entries past it are refused (your own orders never)."
         else "${rule.words.replaceFirstChar { it.uppercase() }} on live: in shadow - what it would refuse is logged, nothing changes."
     }
+
+    /**
+     * 19 Nov: the paper account stop as reached now - the day its count started and the reach saved ([com.optionslab.ira.ArmAutoStops.accountKey]);
+     * null when not reached. Memory only.
+     */
+    fun accountKeyNow(): String? = com.optionslab.ira.ArmAutoStops.accountKey(acctSince, AccountStop.encodeReached(acctReached))
+
+    /** 19 Nov: the paper account stop's reach in words ("2026-11-10 (drawdown ...)"), when it is reached now; else null. Memory only. */
+    fun accountReachedWords(): String? = acctStatus.takeIf { it.stopped }?.let { "${it.day} (${it.why})" }
 
     /** Boss restarts the paper account stop's count after it was reached (the Account guard page, with the PIN). */
     fun restartAccount(pinConfirmed: Boolean): String {

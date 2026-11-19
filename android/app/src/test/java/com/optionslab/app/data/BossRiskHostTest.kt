@@ -92,6 +92,39 @@ class BossRiskHostTest : RobolectricTest() {
         assertTrue(buy(contract("NIFTY", 25_000, Right.CE), "R72 Breadth Donchian").ok)
     }
 
+    /**
+     * 19 Nov (Boss's choice, [ArmAutoStopsHost]): with the paper account stop's switch off for R51, R72 and Liquidity, a stop reached
+     * afterwards no longer refuses their entries (logged, not applied); any other arm is refused as before. One already reached when the
+     * switch went off still holds them until Boss restarts its count.
+     */
+    @Test fun theAccountStopOffNoLongerRefusesTheThreeArmsButStillRefusesAnother() {
+        val rule = com.optionslab.ira.ArmAutoStops.Rule.PAPER_ACCOUNT
+        assertTrue(ArmAutoStopsHost.set(rule, false, pinConfirmed = true, log = false).startsWith("Off"))
+        val today = Market.today()
+        BossRiskHost.setPaperDaysForTest(listOf(AccountStop.Day(today, -13_500.0)), since = today.withDayOfMonth(1))
+        assertTrue(BossRiskHost.view.value.accountReached)
+        assertTrue("R72 runs", buy(contract("NIFTY", 25_000, Right.CE), "R72 Breadth Donchian").ok)
+        assertTrue("R51 runs", buy(contract("NIFTY", 25_100, Right.CE), "R51 Donchian 20").ok)
+        assertTrue("a Liquidity book runs", buy(contract("BANKNIFTY", 56_000, Right.PE), "Liquidity 5m").ok)
+        val other = buy(contract("FINNIFTY", 26_500, Right.CE), "R52 Open outside value")
+        assertFalse("another arm is still refused", other.ok); assertEquals(BossRiskHost.Rule.ACCOUNT, other.rule)
+        val recs = BossRiskHost.recordsToday(BossRiskHost.Rule.ACCOUNT)
+        assertTrue(recs.toString(), recs.any { !it.applied && it.why.contains(com.optionslab.ira.ArmAutoStops.CHOICE) && it.owner == "R72 Breadth Donchian" })
+        assertTrue(recs.any { it.applied && it.owner == "R52 Open outside value" })
+        // On again (no PIN): it refuses them as before.
+        assertTrue(ArmAutoStopsHost.set(rule, true, log = false).startsWith("On"))
+        assertFalse(buy(contract("NIFTY", 25_200, Right.CE), "R72 Breadth Donchian").ok)
+        // Off while it is reached: nothing is switched back on - it still holds them until Boss restarts its count with his PIN.
+        ArmAutoStopsHost.set(rule, false, pinConfirmed = true, log = false)
+        assertFalse("held", buy(contract("NIFTY", 25_300, Right.CE), "R72 Breadth Donchian").ok)
+        assertTrue(BossRiskHost.restartAccount(pinConfirmed = true).startsWith("The paper account stop rule counts again from"))
+        // Reached again in the new count: no longer holds them (the switch is off), still holds another arm.
+        BossRiskHost.setPaperDaysForTest(listOf(AccountStop.Day(today, -14_000.0)), since = today)
+        assertTrue(BossRiskHost.view.value.accountReached)
+        assertTrue(buy(contract("NIFTY", 25_400, Right.CE), "R72 Breadth Donchian").ok)
+        assertFalse(buy(contract("FINNIFTY", 26_600, Right.CE), "R52 Open outside value").ok)
+    }
+
     @Test fun emptyDaysAndAnUnreadBookNeverRefuse() {
         BossRiskHost.setPaperDaysForTest(emptyList(), since = Market.today())
         assertTrue(buy(contract("NIFTY", 25_000, Right.CE), "R72 Breadth Donchian").ok)

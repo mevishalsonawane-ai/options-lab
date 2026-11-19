@@ -1872,6 +1872,10 @@ object PassedArmsHost {
         var changed = false
         for (s in SOURCES) {
             if (b.armed[s] != true) continue
+            // 19 Nov (Boss's choice, [ArmAutoStopsHost]): with its switch off the bar no longer switches R51 or R72 off ("run until i stop
+            // them"); R52 and Solo 2.0 keep theirs. Before the switch is read it waits for a later pass (a switch-off is never undone by
+            // itself). Memory only.
+            if (!ArmAutoStopsHost.mayLatch(com.optionslab.ira.ArmAutoStops.Rule.FORWARD_BAR, s)) continue
             // 22 Oct (arms audit): only the trades really bought count toward the 40-trade bar and its twice-the-spread test; a
             // would-be trade (the cap, a twin, record only) was never bought and books no entry spread, so it could neither
             // switch the arm off nor pass it. They stay in the record, labelled.
@@ -1906,6 +1910,27 @@ object PassedArmsHost {
             changed = true
         }
         return changed
+    }
+
+    /**
+     * 19 Nov ([ArmAutoStopsHost]'s timeline entry): R51 and R72 when their forward bar switched them off and they are still off, with why;
+     * null while the book is not ready. Reads only (a worker thread).
+     */
+    internal suspend fun forwardBarStopped(): List<String>? {
+        if (!ready()) return null
+        return lock.withLock {
+            val b = book()
+            listOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE).filter { b.armed[it] != true && b.paused[it] != null }
+                .map { "${label(it)} switched itself off on its forward-test bar (${b.paused[it]})" }
+        }
+    }
+
+    /** 19 Nov ([ArmAutoStopsHost]): whether R51 or R72 has a trade closed before [day]; null while the book is not ready. Reads only. */
+    internal suspend fun tradedBefore(day: LocalDate): Boolean? {
+        if (!ready()) return null
+        return lock.withLock {
+            book().positions.any { (it.arm == DonchianArm.SOURCE || it.arm == BreadthDonchianArm.SOURCE) && it.exitTime?.toLocalDate()?.isBefore(day) == true }
+        }
     }
 
     // ---- entries -------------------------------------------------------------------------------------------------------

@@ -672,6 +672,13 @@ class PersonalStoresTest {
             check(com.optionslab.app.data.FundsCheck.holdsForErase())
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("ArmAutoStopsHost") {
+            // 19 Nov: on by default (TestApp starts it all on): one switched off by Boss (with his PIN), a setting to erase.
+            com.optionslab.app.data.ArmAutoStopsHost.resetForTest()
+            com.optionslab.app.data.ArmAutoStopsHost.set(com.optionslab.ira.ArmAutoStops.Rule.FORWARD_BAR, false, pinConfirmed = true, log = false)
+            check(com.optionslab.app.data.ArmAutoStopsHost.holdsForErase())
+            com.optionslab.app.security.SecurePrefs.flush()
+        },
         s("HealthReport") {
             com.optionslab.app.data.HealthReport.write(app)             // cache/exports/health/*.zip (holds() stays false: files only)
         },

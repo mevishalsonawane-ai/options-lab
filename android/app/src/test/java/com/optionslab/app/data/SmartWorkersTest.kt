@@ -160,6 +160,43 @@ class SmartWorkersTest : RobolectricTest() {
         assertTrue(SmartWorkers.reviewAnswer().contains("No review yet") || SmartWorkers.reviewAnswer().contains("Against their backtests"))
     }
 
+    /**
+     * 19 Nov (Boss's choice, [ArmAutoStopsHost]): with the self-review's switch off, a drifting Liquidity is neither parked to paper nor
+     * paused (warned only), and Autopilot's own park or pause of it does nothing (Boss's yes still does); another strategy is parked as
+     * before; on again, Liquidity is parked as before.
+     */
+    @Test fun theSelfReviewSwitchOffNeverParksOrPausesLiquidityButStillParksAnother() {
+        SmartWorkers.ensureLoaded()
+        SmartWorkers.setPaperDrift(com.optionslab.ira.DriftReview.PaperPolicy.PAUSE)
+        val rule = com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW
+        assertTrue(ArmAutoStopsHost.set(rule, false, pinConfirmed = true, log = false).startsWith("Off"))
+        val liqLive = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.LIQUIDITY, List(30) { -2_000.0 }, live = true)
+        val liqPaper = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.LIQUIDITY, List(30) { -2_000.0 }, live = false)
+        val hero = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.HERO, List(20) { -5_000.0 }, live = true)
+        assertEquals(com.optionslab.ira.DriftReview.Verdict.DRIFTING, liqLive.verdict)
+        assertEquals(com.optionslab.ira.DriftReview.Verdict.DRIFTING, hero.verdict)
+        SmartWorkers.actForTest(listOf(liqLive, liqPaper, hero))
+        assertFalse("not parked", "liquidity" in SmartWorkers.settings.value.parked)
+        assertFalse("not paused", "liquidity" in SmartWorkers.settings.value.paused)
+        assertTrue("another strategy keeps its review", "hero" in SmartWorkers.settings.value.parked)
+        val words = "not parked or paused: ${com.optionslab.ira.ArmAutoStops.CHOICE}"
+        val end = System.currentTimeMillis() + 10_000
+        while (Diag.lines().none { it.contains(words) } && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertTrue(Diag.lines().any { it.contains(words) })
+        // Autopilot's own park or pause: nothing; Boss's yes to it: done.
+        assertNull(SmartWorkers.parkByAutopilot("liquidity"))
+        assertNull(SmartWorkers.pausePaperByAutopilot("liquidity"))
+        assertFalse("liquidity" in SmartWorkers.settings.value.parked)
+        assertTrue(SmartWorkers.pausePaperByAutopilot("liquidity", byBoss = true) != null)
+        assertTrue("liquidity" in SmartWorkers.settings.value.paused)
+        SmartWorkers.ownerRearmed("liquidity")
+        assertTrue(SmartWorkers.parkByAutopilot("hero2") != null)
+        // On again (one tap): parked as before.
+        assertTrue(ArmAutoStopsHost.set(rule, true, log = false).startsWith("On"))
+        SmartWorkers.actForTest(listOf(liqLive))
+        assertTrue("liquidity" in SmartWorkers.settings.value.parked)
+    }
+
     // ---- the line-by-line review's G8 fixes ------------------------------------------------------------------------------
 
     private val ist = java.time.ZoneId.of("Asia/Kolkata")

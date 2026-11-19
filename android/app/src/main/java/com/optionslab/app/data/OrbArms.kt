@@ -555,7 +555,10 @@ object OrbArms {
     private fun stopHints(b: Book) {
         val st = runCatching { LiquidityTest.state.value }.getOrDefault(com.optionslab.ira.LiquidityFreeze.State())
         val day = today()
-        val live = com.optionslab.ira.LiquidityStopRule.check(bnClosed(b, true), day, st.stopResetAtMs)
+        // 19 Nov (Boss's choice, [ArmAutoStopsHost]): with its switch off the rule stops no book (one reached before it went off still
+        // does, until Boss re-enables it with his PIN). Memory only.
+        val trades = bnClosed(b, true)
+        val live = ArmAutoStopsHost.liveStatus(com.optionslab.ira.LiquidityStopRule.check(trades, day, st.stopResetAtMs), trades, day, st.stopResetAtMs)
         liquidityStopHint = live
         liquidityStopPaperHint = com.optionslab.ira.LiquidityStopRule.check(bnClosed(b, false), day)
         // Reached: told once (a notification with no amount, a line in Jarvis's chat), in the background - never on this path.
@@ -579,6 +582,9 @@ object OrbArms {
         runCatching { Diag.record("orb", "Liquidity BANKNIFTY: live entries re-enabled by Boss with his PIN; the stop rule counts from now") }
         return "Liquidity BANKNIFTY may take live entries again; its stop rule counts from now (-Rs 40,000 from its best, -Rs 13,000 a month)."
     }
+
+    /** 19 Nov: the live stop rule worked out again now (its switch changed in Bot settings: [ArmAutoStopsHost]). A worker thread. */
+    suspend fun refreshStopHints() { lock.withLock { stopHints(book()) } }
 
     private fun hints(b: Book) {
         runCatching { stopHints(b) }
