@@ -67,7 +67,7 @@ class ArmLiveTest : RobolectricTest() {
     @After fun down() {
         ArmLive.testSync = false
         ArmLive.testNow = null
-        Market.testOrdersAnyTime = false
+        Market.testOrdersAnyTime = true                                   // (the test app's own setting: TestApp)
         ArmLive.testReadFails = null; ArmLive.testAccountFails = false; ArmLive.testSecurityFails = false; ArmLive.testHeard = null
         ArmLive.testLotCap = null; ArmLive.testWriteFails = null; ArmLive.testEntryWaitMs = null; ArmLive.testMeasured = null
         kite.close()
@@ -2853,6 +2853,7 @@ class ArmLiveTest : RobolectricTest() {
         val sid = view().openReal.single().stopOrderId!!
         try {
             val late = Market.today().atTime(20, 0)
+            Market.testOrdersAnyTime = false                              // (the test app takes orders at any time: not here)
             Market.testClock = java.time.Clock.fixed(late.atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
             assertFalse(Market.acceptsOrders())
             kite.orders.getValue(sid).status = "CANCELLED"
@@ -2866,7 +2867,7 @@ class ArmLiveTest : RobolectricTest() {
             watch()
             assertEquals("put back at Zerodha", 1, slPosts())
             assertNotNull(view().openReal.single().stopOrderId)
-        } finally { Market.testClock = null }
+        } finally { Market.testClock = null; Market.testOrdersAnyTime = true }
     }
 
     /**
