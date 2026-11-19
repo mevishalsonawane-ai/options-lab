@@ -2141,32 +2141,38 @@ class ArmLiveTest : RobolectricTest() {
     @Test fun theIntentsWriteDelaysNeitherTheOrderNorAnotherTradesLook() {
         ArmLive.entered(ask(donchian, "first"))
         watch()
-        val (c2, _) = other(5)
+        val (c2, s2) = other(5)
         java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
         com.optionslab.app.security.Vault.testWriteDelayMs = 1_500
         try {
-            // (Zerodha's reply to the buy comes 2 s late, so the entry waits there while its intent is written; the fake's server is
-            // never held up, unlike a hook that blocks.)
+            // 19 Nov 2026: Zerodha's reply to the buy comes 2 s late, so the entry waits there after its POST; the fake's server is never
+            // held up (a hook that blocks would hold it). The other trade's look starts 100 ms into the entry - while the intent's 1.5 s
+            // write runs, wherever it runs - and the buy's POST is timed on its own thread.
             kite.slowMs["/orders/regular"] = 2_000L
             kite.requests.clear()
             val t0 = System.nanoTime()
+            val postMs = java.util.concurrent.atomic.AtomicLong(-1L)
             val entry = Thread { ArmLive.entered(ask(donchian, "second", c = c2)) }.apply { start() }
-            var postMs = -1L
-            val until = System.nanoTime() + 20_000_000_000L
-            while (System.nanoTime() < until) {
-                if (kite.requests.toList().any { it.method == "POST" && it.path == "/orders/regular" }) { postMs = (System.nanoTime() - t0) / 1_000_000; break }
-                Thread.sleep(5)
-            }
-            kite.slowMs.clear()                                              // only the buy's reply is late
-            assertTrue("its order went", postMs >= 0)
+            val poller = Thread {
+                val until = System.nanoTime() + 20_000_000_000L
+                while (System.nanoTime() < until && postMs.get() < 0) {
+                    if (kite.requests.toList().any { it.method == "POST" && it.path == "/orders/regular" && it.form["transaction_type"] == "BUY" &&
+                            it.form["tradingsymbol"] == s2 }) postMs.set((System.nanoTime() - t0) / 1_000_000)
+                    else Thread.sleep(2)
+                }
+            }.apply { start() }
+            Thread.sleep(100)
             val l0 = System.nanoTime()
-            watch()                                                          // the first trade's look, while the intent is written
+            watch()                                                          // the first trade's look, during the entry
             val lookMs = (System.nanoTime() - l0) / 1_000_000
-            entry.join(30_000)
-            assertTrue("the order was not held up by the intent's write: $postMs ms", postMs < 1_200)
+            entry.join(30_000); poller.join(30_000)
+            assertFalse("the entry finished", entry.isAlive)
+            kite.slowMs.clear()
+            assertTrue("its order went", postMs.get() >= 0)
+            assertTrue("the order was not held up by the intent's write: ${postMs.get()} ms", postMs.get() < 1_200)
             assertTrue("another trade's look was not held up by it: $lookMs ms", lookMs < 1_200)
             assertEquals(2, view().openReal.size)
-        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0 }
+        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0; kite.slowMs.clear() }
         // The book on disk holds both after the writes (no older write landed over a newer one).
         ArmLive.drainWritesForTest()
         ArmLive.forgetMemoryForTest()
