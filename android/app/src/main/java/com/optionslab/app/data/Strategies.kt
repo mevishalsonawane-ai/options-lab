@@ -884,7 +884,9 @@ object Strategies {
         if (log && loggedAt != null) logSide(com.optionslab.ira.DayStop.Side.INDEX, true, com.optionslab.ira.DayStop.by(why), loggedAt)
         if (!stopRunning || running.isEmpty()) return "Index bots stopped for today: armed strategies will not start." +
             (if (running.isNotEmpty()) " ${running.size} running strategy(ies) keep managing their exits." else "") + " The commodity bots keep trading."
-        val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised, salesInTurn) }.getOrElse { e -> "${e.message}" } }
+        // 20 Nov 2026 (final review): one wait for the turn for all of them, not one each (three strategies waited 30, 60 and 90 s).
+        val deadline = if (salesInTurn) System.currentTimeMillis() + com.optionslab.app.work.ClockLane.salesTurnWaitMs else 0L
+        val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised, salesInTurn, deadline) }.getOrElse { e -> "${e.message}" } }
         return "Index bots stopped for today. " + results.joinToString(" ") + " The commodity bots keep trading."
     }
 
@@ -895,10 +897,30 @@ object Strategies {
     suspend fun liftLossStop(): Boolean = lock.withLock {
         val b = book()
         val today = Market.today().toString()
-        if (b.stoppedDay != today || com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) != com.optionslab.ira.DayStop.Why.LOSS) return@withLock false
+        // 20 Nov 2026 (final review): no stop in the book (the loss stop's write had failed): Boss's own written now, so the bots never
+        // run before he starts them. Another reason already there (his own, the tile's, Jarvis's on his word) is kept as it is.
+        if (b.stoppedDay != today) {
+            b.stoppedDay = today; b.stoppedAt = nowHm(); b.stoppedWhy = com.optionslab.ira.DayStop.Why.BOSS.wire; b.pending.clear()
+            save(b)
+            return@withLock true
+        }
+        if (com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) != com.optionslab.ira.DayStop.Why.LOSS) return@withLock false
         b.stoppedWhy = com.optionslab.ira.DayStop.Why.BOSS.wire
         save(b)
         true
+    }
+
+    /**
+     * 20 Nov 2026 (final review, [LossBreaker.liftForLoosened]): the commodity side kept stopped after a lift of a stop that reached it -
+     * a stop already there keeps its reason and selling (selling the more, with [sell]: what the loss stop did); none: Boss's own,
+     * selling as the loss stop did.
+     */
+    suspend fun keepCommoditiesStopped(sell: Boolean) = lock.withLock {
+        val b = book()
+        val today = Market.today().toString()
+        if (b.mcxStoppedDay == today) b.mcxStopSells = b.mcxStopSells || sell
+        else { b.mcxStoppedDay = today; b.mcxStoppedAt = nowHm(); b.mcxStoppedWhy = com.optionslab.ira.DayStop.Why.BOSS.wire; b.mcxStopSells = sell }
+        save(b)
     }
 
     /**
@@ -995,7 +1017,7 @@ object Strategies {
      * it; the turn is never held while waiting for this lock, nor this lock while waiting for the turn (the square-offs never wait
      * for it either: [tagOwnerSoon]).
      */
-    suspend fun stop(id: Long, reason: String, compromised: Boolean, salesInTurn: Boolean = false): String {
+    suspend fun stop(id: Long, reason: String, compromised: Boolean, salesInTurn: Boolean = false, deadlineMs: Long = 0L): String {
         if (!salesInTurn) return lock.withLock { stopHeld(id, reason, compromised) }
         // 20 Nov 2026 (third review): neither held while waiting for the other - in the turn this lock is only tried; busy, the turn
         // is let go and the lock waited for outside it, then both tried again. The contracts' list is read first, outside both (a
@@ -1003,15 +1025,21 @@ object Strategies {
         // wait for the turn; past it, the sales go with the lock alone, as the sales do behind a stuck square-off.
         runCatching { lock.withLock { book().runs[id]?.mode } }.getOrNull()?.let { m -> runCatching { venue(m) } }
         val lane = com.optionslab.app.work.ClockLane
-        val deadline = System.currentTimeMillis() + lane.salesTurnWaitMs
+        // [deadlineMs]: the stop of the day's one wait for all its strategies ([stopForToday]); 0: this one's own.
+        val deadline = if (deadlineMs > 0L) deadlineMs else System.currentTimeMillis() + lane.salesTurnWaitMs
         while (true) {
             val left = deadline - System.currentTimeMillis()
             if (left <= 0L) break
-            val r = lane.sales(lane.LOSS, waitMs = left, quiet = true) {
+            var outside = false
+            val r = lane.sales(lane.LOSS, waitMs = left, quiet = true, outside = { outside = true }) {
                 if (lock.tryLock()) try { Result.success(stopHeld(id, reason, compromised)) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { Result.failure(e) } finally { lock.unlock() }
                 else null
             }
-            if (r != null) return r.getOrThrow()
+            if (r != null) {
+                // 20 Nov 2026 (final review): its exits went without the turn (a square-off held it past the wait): said.
+                if (outside) runCatching { com.optionslab.app.work.Heartbeat.diary("daily loss limit: a square-off held the turn past the wait; strategy $id's exits went without it") }
+                return r.getOrThrow()
+            }
             lock.withLock { }
         }
         runCatching { com.optionslab.app.work.Heartbeat.diary("daily loss limit: the turn not had in ${lane.salesTurnWaitMs / 1000} s; the stop of strategy $id goes now") }

@@ -248,7 +248,7 @@ class LossBreakerTest : RobolectricTest() {
      */
     @Test fun thePaperBotsLimitRaisedPastTheNsePaperDayLiftsItsStop() {
         LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), listOf(other to -12_000.0)) }
-        LossBreaker.testDayFigure = { -12_000.0 }
+        LossBreaker.testDayFigure = { if (it == LossBreaker.Limit.PAPER) -12_000.0 else null }
         try {
             check()
             assertTrue(LossBreaker.trippedToday())
@@ -262,6 +262,50 @@ class LossBreakerTest : RobolectricTest() {
         } finally {
             LossBreaker.testPaperDay = null
             LossBreaker.testDayFigure = null
+        }
+    }
+
+    /**
+     * 20 Nov 2026 (final review, items 2 and 3): a Zerodha stop whose stop of the bots never reached their book (its write failed) - the
+     * lift writes Boss's own stop, so nothing runs before he starts it; the commodities, which that stop reached, stay stopped too.
+     */
+    @Test fun aLiftWithNoLossStopInTheBookStillLeavesTheBotsStoppedAsBosss() {
+        kite.login()
+        AutomationSupport.liveSettings()
+        limit(5_000.0)
+        val today = com.optionslab.app.data.Market.today()
+        SecurePrefs.put("breaker.day.kind", com.optionslab.ira.SegmentLock.encodeTrip(today, com.optionslab.ira.SegmentLock.Trip.LIVE))
+        SecurePrefs.put("breaker.day", today.toString())
+        LossBreaker.forgetForTest()
+        assertEquals(null, runBlocking { Strategies.stoppedWhy() })
+        limit(0.0)
+        assertTrue(lift(5_000.0, 0.0, pin = true))
+        assertEquals("stopped as yours", com.optionslab.ira.DayStop.Why.BOSS, runBlocking { Strategies.stoppedWhy() })
+        assertEquals("the commodities stay stopped", com.optionslab.ira.DayStop.Why.BOSS, runBlocking { Strategies.mcxStoppedWhy() })
+        val said = startAgain()
+        assertTrue(said, said.contains("running"))
+    }
+
+    /** Item 3: a commodity stop already there (the tile's, Jarvis's) keeps its reason and its selling after a lift. */
+    @Test fun anEarlierCommodityStopKeepsItsReasonAndSelling() {
+        trippedAt5k(6_000.0)
+        runBlocking { Strategies.stopCommodities(sell = true, why = com.optionslab.ira.DayStop.Why.TILE, log = false) }
+        limit(0.0)
+        assertTrue(lift(5_000.0, 0.0, pin = true))
+        assertEquals(com.optionslab.ira.DayStop.Why.TILE, runBlocking { Strategies.mcxStoppedWhy() })
+        assertTrue("still selling", runBlocking { Strategies.mcxStopSells() })
+    }
+
+    /** Item 4: today past the OTHER limit too (the paper bots'): not lifted - the next look would stop the bots again at once. */
+    @Test fun noLiftWhileTheOtherLimitIsPastToo() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        try {
+            trippedAt5k(6_000.0)
+            limit(0.0)
+            assertEquals(LossBreaker.Lift.OTHER_PAST, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, true) })
+            assertTrue(LossBreaker.trippedToday())
+        } finally {
+            LossBreaker.testPaperDay = null
         }
     }
 }

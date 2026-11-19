@@ -165,6 +165,14 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         id
     }
     private var legSymbol = ""
+
+    /** Another running LIVE strategy named [name] (its BUY placed). */
+    private fun anotherStrategy(name: String) = runBlocking {
+        assertEquals(null, Strategies.save(AutomationSupport.strategy(name, com.optionslab.engine.strategy.Position.B to com.optionslab.engine.strategy.OptionType.CE)))
+        val id = Strategies.all().single { it.def.name == name }.def.id
+        Strategies.setLiveEnabled(id, true)
+        Strategies.start(id, com.optionslab.engine.strategy.RunMode.LIVE, "manual", confirmedByOwner = true, compromised = false)
+    }
     private fun strategySells() = kite.placed.count { it.form["tradingsymbol"] == legSymbol && it.form["transaction_type"] == "SELL" }
 
     /**
@@ -186,6 +194,35 @@ class ClockLaneSquareOffTest : RobolectricTest() {
             release.complete(Unit)
             check.join()
             assertEquals("then it goes, once", 1, strategySells())
+        } finally {
+            release.complete(Unit)
+            hold.join()
+        }
+    }
+
+    /**
+     * Final review, items 1 and 6: the loss limit's stop of three running strategies waits for a turn held by a hung square-off once
+     * in all (not once each: 30, 60, 90 s), then their exits go - and the diary says they went without the turn.
+     */
+    @Test fun threeStrategiesShareOneWaitForTheTurn() = runBlocking {
+        AutomationSupport.liveSettings()
+        runningStrategy()
+        anotherStrategy("Clock lane test 2")
+        anotherStrategy("Clock lane test 3")
+        ClockLane.salesTurnWaitMs = 2_000L
+        val release = CompletableDeferred<Unit>()
+        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
+        try {
+            Background.await("a square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
+            val t0 = System.currentTimeMillis()
+            withContext(Dispatchers.IO) {
+                Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true)
+            }
+            val ms = System.currentTimeMillis() - t0
+            assertTrue("one wait for all three: $ms ms", ms < 4_500L)
+            assertEquals("each strategy's leg sold", 3, kite.placed.count { it.form["tradingsymbol"] == legSymbol && it.form["transaction_type"] == "SELL" })
+            assertTrue(com.optionslab.app.data.Diag.lines().takeLast(40).joinToString("\n"),
+                com.optionslab.app.data.Diag.lines().any { it.contains("exits went without it") })
         } finally {
             release.complete(Unit)
             hold.join()

@@ -20,6 +20,8 @@ internal object SquareOffExit {
     /** The two square-offs' tags: each counts the other's working exit as cover and never cancels it (25 Oct review). */
     val TAGS = setOf("iraalgoexpiry", "iraalgoflat")
     private val DONE = setOf("COMPLETE", "REJECTED", "CANCELLED")
+    /** The Strategy Module's orders' tag ([Strategies]). */
+    private const val STRATEGY_TAG = "iraalgostrat"
 
     /**
      * 19 Nov 2026 (second review of the clock lane: a square-off can now run twice back to back, the lane's run and the pass's):
@@ -45,6 +47,9 @@ internal object SquareOffExit {
 
     /** A square-off exit was placed on [exchange]:[symbol] [product] now. */
     fun notePlaced(exchange: String, symbol: String, product: String) { placedAt["$exchange:$symbol:$product"] = clock() }
+
+    /** 20 Nov 2026 (final review): nothing of it is out after all (a LIMIT confirmed cancelled unfilled): the gap is not kept. */
+    private fun clearPlaced(exchange: String, symbol: String, product: String) { placedAt.remove("$exchange:$symbol:$product") }
 
     /** Whether the diary was told this process that the square-offs always use the lag guard (Boss's choice). Memory only. */
     private val choiceSaid = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -79,7 +84,9 @@ internal object SquareOffExit {
             // pass; the arm put its stop back in between and this cancelled it again, every minute until the close, with the
             // position never flat and its stop gone most of the time.) A cancelled order found filled sold the position meanwhile:
             // nothing more this pass, the next reads the books again; one not yet out: the exit waits for the next pass too.
-            val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) }
+            // 20 Nov 2026 (final review): a strategy's own exit sale working ([STRATEGY_TAG], not its resting stop) is cover too - cancelled,
+            // the Strategy Module sends its exit again from its own book (it never reads Zerodha's positions first), beside this one's.
+            val cover = same.filter { it.tag == tag || it.tag in TAGS || ((it.tag == com.optionslab.engine.orb.LiveMirror.TAG || it.tag == STRATEGY_TAG) && !isStop(it)) }
             val others = same.filter { it !in cover }
             if (others.isNotEmpty()) {
                 var filled = false; var allOut = true
@@ -150,6 +157,8 @@ internal object SquareOffExit {
                                 if (f?.status !in DONE) { runCatching { Broker.cancel(sent) }; f = runCatching { Broker.orderState(sent) }.getOrNull() ?: f }
                                 // Counted as placed when any of it filled or it may still be working; cancelled unfilled: said, next pass.
                                 if (f == null || f.filled > 0 || f.status !in DONE) { placed += sent; continue }
+                                // Confirmed cancelled, nothing filled, nothing else out this time: no gap (the retry near 15:05 is not held).
+                                if (placed.isEmpty()) clearPlaced(p.exchange, p.symbol, p.product)
                                 tell("unfilled ${p.symbol}", "Zerodha blocks MARKET orders on ${p.symbol} (low open interest), and its $exitName exit as a LIMIT at " +
                                     "%.2f did not fill in 10 s, so it was cancelled. Retrying every pass until the close; close it yourself if it keeps failing."
                                         .format(java.util.Locale.ENGLISH, limit?.price ?: 0.0))

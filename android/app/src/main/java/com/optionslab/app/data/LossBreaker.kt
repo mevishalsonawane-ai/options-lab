@@ -238,6 +238,27 @@ object LossBreaker {
         return com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, pnl = 0.0)
     }
 
+    /**
+     * 20 Nov 2026 (final review): whether today is past the OTHER daily loss limit ([limit]'s other one, as it is set now): Zerodha's
+     * m2m against Zerodha's limit, or the paper day - whole or NSE part, whichever is worse - against the paper bots' limit. A figure
+     * not read is not past (the next look decides, as ever).
+     */
+    private suspend fun otherPast(limit: Limit): Boolean {
+        val s = AppSettings.load()
+        return if (limit == Limit.PAPER) {
+            s.guardDailyLoss > 0.0 && (dayFigure(Limit.ZERODHA, com.optionslab.ira.SegmentLock.Trip.LIVE)?.let { it <= -s.guardDailyLoss } ?: false)
+        } else {
+            val l = s.guardPaperDailyLoss
+            if (l <= 0.0) false else {
+                val day = testPaperDay?.invoke() ?: runCatching { Paper.snapshot() }.getOrNull()?.let { snap ->
+                    PaperDay(snap.dayPnl, snap.positions.positions.map { it.exchange to it.totalPnlToday }, snap.trades.map { it.exchange to it.charges })
+                }
+                val nse = day?.let { d -> runCatching { com.optionslab.ira.SegmentLock.split(d.total, d.rows, d.charges)?.nse }.getOrNull() }
+                listOfNotNull(day?.total, nse).any { it <= -l }
+            }
+        }
+    }
+
     /** TEST SEAM: today's figure a raised [Limit] is judged on, instead of a fresh read. */
     @Volatile internal var testDayFigure: ((Limit) -> Double?)? = null
 
@@ -267,6 +288,7 @@ object LossBreaker {
         NO_STOP("No loss-limit stop of today to lift."),
         OTHER_LIMIT("Today's loss-limit stop stays: another limit made it."),
         STILL_PAST("Today's loss-limit stop stays: today's loss is still past the new limit."),
+        OTHER_PAST("Today's loss-limit stop stays: today's loss is past your other daily loss limit too, which would stop the bots again at once."),
         UNREAD("Today's loss-limit stop stays: today's P&L could not be read just now. Try again in a moment."),
         FAILED("Today's loss-limit stop stays: the bots' book could not be changed just now. Try again in a moment."),
     }
@@ -281,13 +303,18 @@ object LossBreaker {
                 val figure = dayFigure(limit, trip) ?: return Lift.UNREAD
                 if (!com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, figure)) return Lift.STILL_PAST
             }
+            // 20 Nov 2026 (final review): never when the other limit is past today too - the next look would stop the bots again at once.
+            if (otherPast(limit)) return Lift.OTHER_PAST
             // The bots' day stops kept as Boss's own first (they stay stopped; Start works today); failing, nothing is lifted. Under the
             // looks' lock: no look puts the loss stop back in between.
             try {
+                // Whether the loss stop was selling what the MCX arms hold, read before it goes (kept so after the lift).
+                val mcxSold = if (trip == com.optionslab.ira.SegmentLock.Trip.PAPER) false
+                    else runCatching { mcxExitStop(Strategies.stoppedWhy(), Strategies.mcxStopSells()) }.getOrDefault(true)
                 Strategies.liftLossStop()
-                // A stop that reached the commodities (Zerodha's, or the one shared paper figure) keeps them stopped too, as Boss's.
-                if (trip != com.optionslab.ira.SegmentLock.Trip.PAPER)
-                    Strategies.stopCommodities(sell = false, why = com.optionslab.ira.DayStop.Why.BOSS, log = false)
+                // A stop that reached the commodities (Zerodha's, or the one shared paper figure) keeps them stopped too: an earlier
+                // stop of theirs keeps its reason; none, Boss's own - selling as the loss stop did.
+                if (trip != com.optionslab.ira.SegmentLock.Trip.PAPER) Strategies.keepCommoditiesStopped(mcxSold)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) { return Lift.FAILED }
             SecurePrefs.put(K_DAY, "")
             SecurePrefs.put(K_KIND, "")

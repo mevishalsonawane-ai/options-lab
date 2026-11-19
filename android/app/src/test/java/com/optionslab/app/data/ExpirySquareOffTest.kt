@@ -323,6 +323,37 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals("nothing sent inside the first slice's gap", 2, kite.placed.size)
     }
 
+    /**
+     * 20 Nov 2026 (final review, item 5): the blocked-MARKET exit's LIMIT confirmed cancelled unfilled leaves no gap - nothing of it is
+     * out, so the next pass tries again at once (near 15:05 a 15 s hold is a long time).
+     */
+    @Test fun aLimitCancelledUnfilledLeavesNoGap() {
+        SquareOffExit.resetForTest()
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "NRML MARKET orders are blocked for this NIFTY contract due to its open interest (OI) being less than 100 lots.")
+        kite.nextPlace(outcome = Outcome.OPEN)                          // the LIMIT rests and is cancelled after its 10 s
+        pass()
+        assertEquals(listOf("MARKET", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals("CANCELLED", kite.orders.values.single { it.type == "LIMIT" }.status)
+        at(15, 7); pass()
+        assertEquals("tried again at once", listOf("MARKET", "LIMIT", "MARKET"), kite.placed.map { it.form["order_type"] })
+    }
+
+    /**
+     * 20 Nov 2026 (final review, the Strategy Module): a strategy's own exit sale working on the contract is cover - never cancelled
+     * (the strategy would send its exit again from its own book, beside this square-off's, and the account would end short).
+     */
+    @Test fun aStrategysWorkingExitSaleIsCoverNeverCancelled() {
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val id = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
+        kite.requests.clear()
+        pass()
+        assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(id).status)
+        assertTrue("nothing more sent", kite.placed.isEmpty())
+    }
+
     @Test fun anExitTheAppWillNotSendIsSaidOnce() {
         kite.position(ce, 75, 20.0, product = "CO")                   // a cover order position: not a product the app sends
         pass(); pass()
