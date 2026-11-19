@@ -1328,12 +1328,17 @@ object PineAuto {
         // 19 Nov 2026 (second review): an earlier holding's stop on this contract is still being taken out at Zerodha ([Book.removing]):
         // with this buy both could rest against the new lots. Never skipped here (a new skip of a live entry starts in shadow, CLAUDE.md):
         // logged as what a wait would have done, and Boss told once a day; the removal still cancels only the earlier holding's orders.
+        // (Its own exits not yet looked for - a close on a stream look - are looked for and taken out first: once this buy is held, the
+        // removal no longer scans the contract.)
+        b.removing.filter { it.kite == sym && !it.scanned }.takeIf { it.isNotEmpty() }?.let { removeExits(b, it) }
         b.removing.firstOrNull { it.kite == sym }?.let { r ->
-            note(b, id, "Shadow (logged only): would have waited - the earlier stop on $sym (order ${r.ids.keys.joinToString(", ")}) is " +
-                "still being taken out at Zerodha; bought as before")
-            if (reentrySaid.add("${todayIst()}|$sym")) com.optionslab.app.work.Alerts.error("${label(item)}: $sym bought again while its " +
-                "earlier stop (order ${r.ids.keys.joinToString(", ")}) is still resting at Zerodha, not yet cancelled. Both stops may rest " +
-                "against the new lots: cancel the earlier one in Kite.", "Pine live")
+            val what = if (r.ids.isEmpty()) "own exits (not yet looked for in Zerodha's order book)" else
+                "stop (order ${r.ids.keys.joinToString(", ")})"
+            note(b, id, "Shadow (logged only): would have waited - the earlier holding's $what on $sym is still being taken out at " +
+                "Zerodha; buying as before")
+            if (reentrySaid.add("${todayIst()}|$sym")) com.optionslab.app.work.Alerts.error("${label(item)}: buying $sym again while the " +
+                "earlier holding's $what is not yet cancelled at Zerodha. It may sell the new lots: check the sells of $sym in Kite.",
+                "Pine live")
         }
         val known = knownKite()
         // 22 Oct: the checks above cleared this order: stamped with its fingerprint, recomputed at the door ([OrderVerdicts]).
@@ -1619,11 +1624,13 @@ object PineAuto {
         // notification's Close) with no book's label: the order labels are read only when such an order is on the contract - never on
         // a stream look, which waits on no other book: there such an order is not taken as Boss's sale, the careful side.)
         val hand = { o: Broker.OrderRow -> o.tag.isBlank() || o.tag == "iraalgo" }
-        val owners: Map<String, String>? = if (onIt.none(hand)) emptyMap() else if (streamLook) null
-            else runCatching { Strategies.owners() }.getOrNull()
+        val read = if (onIt.none(hand) || streamLook) null else runCatching { Strategies.owners() }
+        // (The labels not read: an order with no tag is still Boss's (none of the app's goes without one), the app's hand tag unknown.)
+        val owners: Map<String, String>? = if (onIt.none(hand)) emptyMap() else if (streamLook) null else read?.getOrNull() ?: emptyMap()
+        val labelsRead = read?.isSuccess != false
         // (19 Nov 2026, second review: a hand order of the app's - its own label "Manual ...", or none - counts as Boss's, as one in Kite.)
         val boss = { o: Broker.OrderRow -> owners != null && hand(o) &&
-            owners["kite:${o.id}"].let { l -> if (o.tag.isBlank()) l == null else l == null || l.startsWith(Origins.MANUAL) } }
+            owners["kite:${o.id}"].let { l -> if (o.tag.isBlank()) l == null else labelsRead && (l == null || l.startsWith(Origins.MANUAL)) } }
         val outsideSells = onIt.filter { it.side == "SELL" && (boss(it) || it.tag in SquareOffExit.TAGS) }.sumOf { it.filled }
         val carried = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.overnight }
         val outsideBuys = onIt.filter { it.side == "BUY" && hand(it) && (owners == null || boss(it)) }.sumOf { it.filled } +
@@ -1669,10 +1676,11 @@ object PineAuto {
         // scanned on the next 15-second check ([Removing.scanned] false); the stop itself is taken out now.)
         val orders = if (streamLook) null else runCatching { Broker.orders() }.getOrNull()
         val ids = LinkedHashMap<String, Int>()
-        // (What of the stop had filled: from the orders read, else its own state read; neither read: unknown ([UNKNOWN_FILL]) until
-        // one is, so a stop's own fill is never told as a short.)
-        h.stop?.let { sid -> ids[sid] = orders?.firstOrNull { it.id == sid }?.filled
-            ?: runCatching { Broker.orderState(sid) }.getOrNull()?.filled ?: UNKNOWN_FILL }
+        // (What of the stop had filled: from the orders read (on a stream look, the kept one), else its own state read (never on a
+        // stream look); not read: unknown ([UNKNOWN_FILL]), so a stop's own fill is never told as a short.)
+        h.stop?.let { sid -> ids[sid] = (orders ?: if (streamLook) runCatching { Broker.ordersRecon() }.getOrNull() else null)
+            ?.firstOrNull { it.id == sid }?.filled
+            ?: (if (streamLook) null else runCatching { Broker.orderState(sid) }.getOrNull()?.filled) ?: UNKNOWN_FILL }
         orders.orEmpty().filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" }
             .forEach { ids[it.id] = it.filled }
         if (ids.isEmpty() && orders != null) return
@@ -1722,9 +1730,13 @@ object PineAuto {
                     st = runCatching { Broker.orderState(oid) }.getOrNull()
                 }
                 if (st == null || st.status !in DONE) { left[oid] = base; continue }
-                if (base != UNKNOWN_FILL && st.filled > base) {
-                    val text = "Pine #${r.script}: its exit order $oid on ${r.kite} filled ${st.filled - base} after the position was closed. " +
-                        "A short of ${r.kite} may be open at Zerodha: check it in Kite now."
+                val text = if (base != UNKNOWN_FILL && st.filled > base) "Pine #${r.script}: its exit order $oid on ${r.kite} filled " +
+                        "${st.filled - base} after the position was closed. A short of ${r.kite} may be open at Zerodha: check it in Kite now."
+                    // (Its fill not known when it was recorded: what filled may have been the close itself, or a sale after it.)
+                    else if (base0 == UNKNOWN_FILL && st.filled > 0) "Pine #${r.script}: its exit order $oid on ${r.kite} shows ${st.filled} " +
+                        "filled; it is not known whether before or after the position was closed. Check the position of ${r.kite} in Kite."
+                    else null
+                if (text != null) {
                     runCatching { Diag.record("pine", text) }
                     com.optionslab.app.work.Alerts.error(text, "Pine live")
                     note(b, r.script, text)

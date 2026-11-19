@@ -574,7 +574,7 @@ class PineAutoLiveTest : RobolectricTest() {
         pass(52_010.0)                                             // BUY again: the same call
         assertEquals("bought as before", 2, side("BUY").size)
         assertTrue(log(), log().contains("Shadow (logged only): would have waited"))
-        val told = com.optionslab.app.work.Alerts.posted.filter { it.text.contains("bought again while its earlier stop") }
+        val told = com.optionslab.app.work.Alerts.posted.filter { it.text.contains("again while the earlier holding's stop (order $stop)") }
         assertEquals(1, told.size)
         val newStop = held()!!.stop!!
         assertTrue(newStop != stop)
@@ -624,7 +624,10 @@ class PineAutoLiveTest : RobolectricTest() {
         assertNull(held())
         kite.down.clear()
         runBlocking { PineAuto.watchOnly() }
-        assertTrue(com.optionslab.app.work.Alerts.posted.joinToString { it.text }, com.optionslab.app.work.Alerts.posted.none { it.text.contains("may be open") })
+        val said = com.optionslab.app.work.Alerts.posted.map { it.text }
+        assertTrue(said.joinToString(), said.none { it.contains("may be open") })
+        // (What filled is not known to be the close or a later sale: Boss is asked to look, without a short alarm.)
+        assertEquals(said.joinToString(), 1, said.count { it.contains("not known whether before or after the position was closed") })
         assertFalse(PineAuto.holding())
     }
 
