@@ -276,6 +276,20 @@ class LiveMirrorTest {
         assertFalse(LiveMirror.paperGone(seen = true, paperOpen = true))
     }
 
+    /** 19 Nov 2026 (audit batch 2): only an end that is no decision of the arm's own rules leaves the live copy alone. */
+    @Test fun aPaperTradeClosedElsewhereOrOutsideKeepsItsLiveCopy() {
+        assertTrue(LiveMirror.paperEndKeepsLive("closed_elsewhere"))
+        assertTrue(LiveMirror.paperEndKeepsLive("closed_outside"))
+        for (w in listOf("stop", "target", "lock", "paper_exit", "time_exit", "square-off 15:15", "exit", "", null))
+            assertFalse(LiveMirror.paperEndKeepsLive(w), "the arm's own exit ($w) is still mirrored")
+    }
+
+    /** 19 Nov 2026 (audit batch 2): a refused stop is tried again after 5 s, doubling to 60 s at most. */
+    @Test fun aRefusedStopIsTriedAgainAfter5sDoublingTo60s() {
+        assertEquals(listOf(5_000L, 5_000L, 10_000L, 20_000L, 40_000L, 60_000L, 60_000L, 60_000L),
+            listOf(0, 1, 2, 3, 4, 5, 6, 40).map { LiveMirror.restBackoffMs(it) })
+    }
+
     @Test fun rupees() {
         assertEquals("Rs 1,234", LiveMirror.rs(1234.4))
         assertEquals("-Rs 40,000", LiveMirror.rs(-40_000.0))

@@ -62,6 +62,55 @@ class PaperTest : RobolectricTest() {
         assertTrue(context.filesDir.listFiles()!!.any { it.name.startsWith("paper.unreadable.") })
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2: after a restart with a Keystore hiccup the account was set aside and an empty one started, so every arm
+     * booked its paper trades "closed_elsewhere"): a read that fails for a moment keeps the file and is read again - the account as it was.
+     */
+    @Test fun aReadThatFailsForAMomentKeepsTheAccountAndReadsItAgain() {
+        try {
+            Paper.reset(BigDecimal("250000"))
+            Paper.awaitWrites()
+            restart()
+            Paper.readRetryGapMs = 0L
+            Paper.testRead = { throw java.io.IOException("Keystore busy") }
+            repeat(3) { assertTrue(runCatching { Paper.capital }.exceptionOrNull() is java.io.IOException) }
+            assertTrue("kept", file().exists())
+            assertFalse("never set aside", context.filesDir.listFiles()!!.any { it.name.startsWith("paper.unreadable.") })
+            Paper.testRead = null
+            assertEquals("the account as it was", 0, Paper.capital.compareTo(BigDecimal("250000")))
+        } finally { Paper.testRead = null; Paper.readRetryGapMs = 2_000L; Paper.readAsideAfterMs = 5 * 60_000L }
+    }
+
+    /** 19 Nov 2026 (audit batch 2): between two failed reads the vault is not read again for a moment (no Keystore hammering). */
+    @Test fun aFailedReadIsNotTriedAgainAtOnce() {
+        try {
+            Paper.reset(BigDecimal("250000")); Paper.awaitWrites(); restart()
+            var reads = 0
+            Paper.testRead = { reads++; throw java.io.IOException("Keystore busy") }
+            repeat(3) { runCatching { Paper.capital } }
+            assertEquals("one read in the gap", 1, reads)
+        } finally { Paper.testRead = null; Paper.forgetForTest() }
+    }
+
+    /** 19 Nov 2026 (audit batch 2): a read that keeps failing is set aside at last (never unreadable for good); bytes that do not parse at once. */
+    @Test fun aReadThatKeepsFailingOrDoesNotParseIsSetAside() {
+        try {
+            Paper.reset(BigDecimal("250000")); Paper.awaitWrites(); restart()
+            Paper.readRetryGapMs = 0L; Paper.readAsideAfterMs = 0L
+            Paper.testRead = { throw java.io.IOException("Keystore gone") }
+            repeat(Paper.READ_FAILS_BEFORE_ASIDE - 1) { assertTrue(runCatching { Paper.capital }.isFailure) }
+            assertEquals("the fifth sets it aside: a fresh account", 0, Paper.capital.compareTo(SandboxConfig().startingCapital))
+            assertTrue(context.filesDir.listFiles()!!.any { it.name.startsWith("paper.unreadable.") })
+            // Bytes that pass the vault but do not parse: set aside at once.
+            Paper.testRead = null
+            context.filesDir.listFiles()!!.filter { it.name.startsWith("paper.unreadable.") }.forEach { it.delete() }
+            com.optionslab.app.security.Vault.writeFile(file(), "{}".toByteArray())
+            restart()
+            assertEquals(0, Paper.capital.compareTo(SandboxConfig().startingCapital))
+            assertTrue(context.filesDir.listFiles()!!.any { it.name.startsWith("paper.unreadable.") })
+        } finally { Paper.testRead = null; Paper.readRetryGapMs = 2_000L; Paper.readAsideAfterMs = 5 * 60_000L }
+    }
+
     @Test fun modifyingAnUnknownOrderIsRefused() {
         val r = Paper.modify("no-such-order", 75, 10.0, null)
         assertFalse(r.ok)

@@ -363,6 +363,10 @@ fun PaperDefaultDialog(model: AppModel, onClose: () -> Unit) {
                 Text("The paper account starts again with ${rs(default)}. Every paper order, trade and position is cleared, " +
                     "the paper P&L calendar is emptied, and the arms, strategies, Pine scripts, stops and journal notes " +
                     "forget their paper trades. ORB arms not armed for Zerodha are switched off.", style = Type.bodySmall)
+                // 19 Nov 2026 (audit batch 2): an arm's live copy open at Zerodha is said, and never sold for the reset (memory only).
+                com.optionslab.app.data.ArmLive.liveCopyWords(com.optionslab.app.data.ArmLive.liveCopiesOpen())?.let {
+                    Spacer(Modifier.height(6.dp)); Text(it, style = Type.bodySmall)
+                }
             }
         },
         confirmButton = { TextButton({ model.paperResetAll(); onClose() }) { Text("Reset paper") } },
@@ -386,6 +390,8 @@ fun PaperResetDialog(model: AppModel, onClose: () -> Unit) {
         text = {
             Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {  // scrolls at a large font / in landscape
                 Text("The paper account starts again with this amount. Every paper order, trade and position is cleared.", style = Type.bodySmall)
+                // 19 Nov 2026 (audit batch 2): an arm's live copy open at Zerodha is said, and never sold for the reset (memory only).
+                com.optionslab.app.data.ArmLive.liveCopyWords(com.optionslab.app.data.ArmLive.liveCopiesOpen())?.let { Text(it, style = Type.bodySmall) }
                 ParamTokens("Amount", choices.map { rs(it) to (typed.isEmpty() && it == pick) }) { pick = choices[it]; typed = "" }
                 OutlinedTextField(typed, { typed = it.filter(Char::isDigit).take(10) }, label = { Text("Or type an amount (Rs)") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))

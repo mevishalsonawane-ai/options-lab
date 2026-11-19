@@ -158,8 +158,33 @@ object Paper {
 
     /** Read the book from its vault file (or a fresh account); called under the lock by [book]. */
     private fun load(): Book {
-        val loaded = runCatching {
-            val o = JSONObject(String(Vault.readFileSteady(file) ?: return@runCatching null, Charsets.UTF_8))
+        // 19 Nov 2026 (audit batch 2: after a restart with a Keystore hiccup the book was set aside and an empty account started, so every
+        // arm booked its paper trades "closed_elsewhere"): a read that failed for a moment is not a damaged file. It is thrown, nothing is
+        // cached and the file is kept, so a later call reads again (as the passed arms' book does) - at most every [readRetryGapMs]. Only
+        // bytes that fail authentication or do not parse are set aside at once; a read that keeps failing [READ_FAILS_BEFORE_ASIDE] times
+        // over [readAsideAfterMs] is set aside as before (the account cannot stay unreadable for good).
+        val nowMs = System.currentTimeMillis()
+        if (readFails > 0 && nowMs - lastReadFailMs in 0 until readRetryGapMs) throw java.io.IOException("the paper book could not be read now; read again shortly")
+        val bytes: ByteArray? = try {
+            (testRead?.invoke() ?: Vault.readFileSteady(file)).also { readFails = 0; firstReadFailMs = 0L }
+        } catch (e: Vault.Tampered) {
+            readFails = 0; firstReadFailMs = 0L
+            null
+        } catch (e: Vault.Erasing) {
+            throw java.io.IOException("the paper book is being erased", e)
+        } catch (e: Exception) {
+            readFails += 1; lastReadFailMs = nowMs
+            if (firstReadFailMs == 0L) firstReadFailMs = nowMs
+            if (readFails < READ_FAILS_BEFORE_ASIDE || nowMs - firstReadFailMs < readAsideAfterMs) {
+                runCatching { Diag.record("paper", "the paper book could not be read now (${e.javaClass.simpleName}, $readFails in a row); kept, read again shortly") }
+                throw java.io.IOException("the paper book could not be read now", e)
+            }
+            runCatching { Diag.record("paper", "the paper book could not be read $readFails times in a row (${e.javaClass.simpleName}): set aside; a fresh account starts") }
+            readFails = 0; firstReadFailMs = 0L
+            null
+        }
+        val loaded = if (bytes == null) null else runCatching {
+            val o = JSONObject(String(bytes, Charsets.UTF_8))
             val cs = o.optJSONArray("contracts") ?: JSONArray()
             val contracts = (0 until cs.length()).map { cs.getJSONArray(it) }.associate {
                 it.getString(0) to Contract(it.getString(0), it.getString(1), LocalDate.parse(it.getString(2)), it.getDouble(3),
@@ -1625,15 +1650,30 @@ object Paper {
     @Volatile internal var loadInlineForTest = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
 
+    /** 19 Nov 2026 (audit batch 2): reads of the book that failed in a row ([load]), when the first and the last of them failed (wall ms). */
+    @Volatile private var readFails = 0
+    @Volatile private var firstReadFailMs = 0L
+    @Volatile private var lastReadFailMs = 0L
+    /** 19 Nov 2026 (audit batch 2): a read failing this many times in a row, over [readAsideAfterMs] at least, is set aside ([load]). */
+    internal const val READ_FAILS_BEFORE_ASIDE = 5
+    /** 19 Nov 2026 (audit batch 2): how long a failing read keeps the file before it is set aside, and the least gap between two tries. */
+    @Volatile internal var readAsideAfterMs = 5 * 60_000L
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+    @Volatile internal var readRetryGapMs = 2_000L
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+    /** TEST ONLY (19 Nov 2026): the vault read replaced (a Keystore hiccup). Debug builds only. */
+    @Volatile internal var testRead: (() -> ByteArray?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     /** TEST SEAM: forget the book in memory (its file kept), as a new process starts. */
-    internal fun forgetForTest() { awaitWrites(); synchronized(this) { cache = null; savedAtMs = 0L }; follow(emptySet()) }
+    internal fun forgetForTest() { awaitWrites(); synchronized(this) { cache = null; savedAtMs = 0L; readFails = 0; firstReadFailMs = 0L; lastReadFailMs = 0L }; follow(emptySet()) }
 
     fun wipe() {
         // The write lock first (as [flush] takes it): a write on its way never puts the file back after the delete.
         // 26 Oct ("Erase everything", [PersonalStores]): safe before [init] (no file yet), and the books set aside as unreadable
         // go too. Every save reads the book again under this lock ([locked]), so none can write the old one back after this.
         synchronized(writeLock) { synchronized(this) {
-            pending = null; cache = null; savedAtMs = 0L
+            pending = null; cache = null; savedAtMs = 0L; readFails = 0; firstReadFailMs = 0L; lastReadFailMs = 0L
             filesForErase().forEach { runCatching { it.delete() } }
         } }
         lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear()

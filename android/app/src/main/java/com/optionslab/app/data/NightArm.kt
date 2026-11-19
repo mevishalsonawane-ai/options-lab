@@ -399,7 +399,10 @@ object NightArm {
             val gone = closedElsewhere(p, held, Paper.state.trades, now)
             if (gone != null) {
                 b.positions[i] = gone
-                runCatching { ArmLive.closed(mirrorRef(p), "closed_elsewhere", ArmLive.pct(p.entry, gone.exit)) }
+                // 19 Nov 2026 (audit batch 2: a paper trade closed elsewhere no longer sells its live copy): at its own 09:16 exit the rule's
+                // exit is due all the same, so the live copy (carried overnight, no square-off of its own) is still sold by it, as before.
+                runCatching { ArmLive.closed(mirrorRef(p), if (NightRules.exitDue(p.entryDay, now)) "night_exit_0916" else "closed_elsewhere",
+                    ArmLive.pct(p.entry, gone.exit)) }
                 b.status[p.index] = "closed elsewhere"
                 note(b, "${p.symbol}: no longer held on paper (closed elsewhere), %s after charges".format(Locale.ENGLISH, rs(gone.net ?: 0.0)))
                 changed = true

@@ -801,6 +801,29 @@ object LiveMirror {
      */
     fun paperGone(seen: Boolean, paperOpen: Boolean?): Boolean = seen && paperOpen == false
 
+    /**
+     * 19 Nov 2026 (audit batch 2: a paper-side event sold every live copy at market): whether a paper trade that ended with [why] ended
+     * WITHOUT an exit decision of its arm's own rules - closed elsewhere (the paper book holds none of it, or no longer knows its
+     * contract: a reset, a paper row closed by hand, the paper square-off or loss limit, a paper book read afresh) or closed outside. Such
+     * an end never sells the live copy: it keeps its own stop and exits (its stop at Zerodha, its square-offs, Boss's hand). Every other
+     * reason (the arm's stop, target, lock, time or its own exit) is mirrored to live as before. Pure.
+     */
+    fun paperEndKeepsLive(why: String?): Boolean = why == PAPER_CLOSED_ELSEWHERE || why == PAPER_CLOSED_OUTSIDE
+
+    /** 19 Nov 2026 (audit batch 2): the paper arms' words for a paper trade closed by something other than their own rules. */
+    const val PAPER_CLOSED_ELSEWHERE = "closed_elsewhere"
+    const val PAPER_CLOSED_OUTSIDE = "closed_outside"
+
+    /**
+     * 19 Nov 2026 (audit batch 2: Zerodha refusing an arm's stop was asked again on every look, the live lane's included): how long the
+     * app waits before it tries to rest a live trade's stop again after the [tries]-th refusal in a row - 5 s, doubling to 60 s at most.
+     * The app watches the level itself meanwhile. Pure.
+     */
+    fun restBackoffMs(tries: Int): Long = (REST_BACKOFF_MS shl (tries - 1).coerceIn(0, 4)).coerceAtMost(REST_BACKOFF_MAX_MS)
+
+    const val REST_BACKOFF_MS = 5_000L
+    const val REST_BACKOFF_MAX_MS = 60_000L
+
     private val SHADOW_ASK = Regex("(?i)\\b(in|on) shadow\\b|\\bshadow (record|trades?|p&?l|net)\\b|\\blive (record|trades?|copy|path)\\b|\\bdoing live\\b")
     private val SHADOW_ACT = Regex("(?i)\\b(turn|switch|put|take|make|set)\\b.*\\b(on|off|out|into)\\b")
 

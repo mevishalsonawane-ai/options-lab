@@ -2700,4 +2700,210 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("its stop brought down to it", 30, kite.order(sid).qty)
         assertEquals(sid, p.stopOrderId)
     }
+
+    // ---- 19 Nov 2026 (audit batch 2, Boss: "Go") ---------------------------------------------------------------------------------
+
+    private fun slPosts() = kite.placed.count { it.form["order_type"] == "SL" }
+
+    /**
+     * Item 1: a paper trade closed elsewhere (the paper book read afresh after a Keystore hiccup, a contract it forgot, the paper square-off)
+     * never sells its live copy: it keeps its own stop at Zerodha, across a restart too, and its own exits (here the 15:15 square-off).
+     */
+    @Test fun aPaperTradeClosedElsewhereNeverSellsItsLiveCopy() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "elsewhere"))
+        watch()                                                    // seen open on paper
+        val sid = view().openReal.single().stopOrderId!!
+        ArmLive.closed("elsewhere", "closed_elsewhere")
+        legs.remove("elsewhere")                                    // gone from its paper book
+        watch(); watch()
+        assertEquals("never sold for it", 0, marketSells())
+        assertEquals(30, held())
+        val p = view().openReal.single()
+        assertTrue(p.detached)
+        assertEquals(sid, p.stopOrderId)
+        assertTrue("its own stop still rests at Zerodha", kite.order(sid).working)
+        assertEquals("Boss told once", 1, posted("is NOT sold"))
+        // A restart: still its own (persisted), still never sold for the missing paper trade.
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        assertTrue(runBlocking { ArmLive.refresh() }.openReal.single().detached)
+        watch()
+        assertEquals(0, marketSells())
+        // Its own exits remain: the 15:15 square-off sells it (its stop out first).
+        ArmLive.testNow = Market.today().atTime(15, 15).atZone(com.optionslab.engine.IST)
+        watch()
+        assertEquals("square_off", view().closed.single().why)
+        assertEquals(0, held())
+    }
+
+    /** Item 1: closed outside (the Shadow arms' word) is the same; an exit of the arm's own rules is still mirrored and sold. */
+    @Test fun closedOutsideKeepsTheLiveCopyAndTheArmsOwnExitStillSellsIt() {
+        val (c2, _) = other(3)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        ArmLive.entered(ask(donchian, "outside"))
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "own", c = c2))
+        watch()
+        ArmLive.closed("outside", "closed_outside")
+        ArmLive.closed("own", "stop")
+        watch()
+        assertEquals("only the arm's own exit sold", 1, marketSells())
+        assertEquals("stop", view().closed.single().why)
+        assertEquals("own", view().closed.single().ref)
+        assertTrue(view().openReal.single { it.ref == "outside" }.detached)
+    }
+
+    /**
+     * Item 1: "Reset paper" detaches every live copy first (the dialog and the answer say so); the emptied paper books then sell nothing at
+     * Zerodha - each live copy keeps its own stop.
+     */
+    @Test fun aPaperResetNeverSellsALiveCopy() {
+        ArmLive.entered(ask(donchian, "reset"))
+        watch()
+        assertEquals(true, ArmLive.liveCopyWords(ArmLive.liveCopiesOpen())?.contains("stays open with its own stop"))
+        val hit = ArmLive.detachAll("paper reset")
+        assertEquals(listOf("reset"), hit.map { it.ref })
+        assertTrue(ArmLive.liveCopyWords(hit)!!.startsWith("A live copy is open at Zerodha (${LiveMirror.spec(donchian)!!.label} $sym)"))
+        legs.clear()                                               // the reset empties every paper book
+        watch(); watch()
+        assertEquals(0, marketSells())
+        assertTrue(view().openReal.single().detached)
+        assertNull("none follows a paper trade any more", ArmLive.liveCopyWords(ArmLive.liveCopiesOpen()))
+        assertNull(ArmLive.liveCopyWords(emptyList()))
+    }
+
+    /**
+     * Item 1: closing a paper row by hand detaches the live copies of that paper contract first (never sold for it); a close that did not
+     * go gives them back to their paper trade, whose own exit then sells them as before.
+     */
+    @Test fun aPaperRowClosedByHandNeverSellsItsLiveCopyAndAFailedCloseGivesItBack() {
+        ArmLive.entered(ask(donchian, "hand-close"))
+        watch()
+        val hit = ArmLive.detachPaperSymbol(contract.symbol, "paper row closed by hand")
+        assertEquals(listOf("hand-close"), hit.map { it.ref })
+        assertTrue("another contract's copies are not touched", ArmLive.detachPaperSymbol("NIFTY-OTHER", "x").isEmpty())
+        // The close did not go: given back before any look marked it.
+        ArmLive.undetach("hand-close")
+        legs["hand-close"] = donchian to 0                          // later, the arm's own paper exit
+        watch()
+        assertEquals("its paper exit still sells it", 1, marketSells())
+        assertEquals("paper_exit", view().closed.single().why)
+        // A second trade, and a close that went: never sold.
+        ArmLive.entered(ask(donchian, "hand-close-2"))
+        watch()
+        ArmLive.detachPaperSymbol(contract.symbol, "paper row closed by hand")
+        legs.remove("hand-close-2")
+        watch()
+        assertEquals(1, marketSells())
+        assertTrue(view().openReal.single().detached)
+    }
+
+    /**
+     * Item 2: a stop Boss cancelled himself in Kite (CANCELLED, no exchange words, not the app's) is never put back: the app watches the
+     * level itself (across a restart) and sells there.
+     */
+    @Test fun aStopBossCancelledIsNeverPutBackAndTheAppSellsAtItsLevel() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "boss-cancel"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        kite.orders.getValue(sid).status = "CANCELLED"                   // Boss cancelled it in Kite
+        kite.requests.clear()
+        watch(); watch()
+        assertEquals("never put back", 0, slPosts())
+        val p = view().openReal.single()
+        assertTrue(p.stopByYou); assertNull(p.stopOrderId); assertEquals(170.0, p.stopTrigger!!, 1e-9)
+        assertEquals("said once", 1, posted("looks cancelled by you"))
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        assertTrue(runBlocking { ArmLive.refresh() }.openReal.single().stopByYou)
+        watch()
+        assertEquals("not after a restart either", 0, slPosts())
+        kite.quote("NFO:$sym", 169.0, 168.95, 169.05)                  // at its level: the app sells there itself
+        watch()
+        assertEquals(1, marketSells())
+        assertEquals("stop", view().closed.single().why)
+        assertEquals(0, held())
+    }
+
+    /** Item 2: a stop the exchange (its risk system) cancelled is put back at Zerodha as before. */
+    @Test fun aStopTheExchangeCancelledIsPutBack() {
+        ArmLive.entered(ask(donchian, "exch-cancel"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        kite.reject(sid, message = "Order cancelled by the exchange (RMS)", status = "CANCELLED")
+        kite.requests.clear()
+        watch()
+        assertEquals("put back at Zerodha", 1, slPosts())
+        assertFalse(view().openReal.single().stopByYou)
+        assertNotNull(view().openReal.single().stopOrderId)
+    }
+
+    /**
+     * Item 3: a stop Zerodha keeps refusing is tried again only after 5 s, then 10 s (doubling to 60 s) - no order on the looks between,
+     * the live lane's included - and Boss is told once, with the reason; the app watches the level meanwhile.
+     */
+    @Test fun aStopZerodhaKeepsRefusingIsTriedAgainWithABackOffAndSaidOnce() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "refused-stop"))
+        watch()
+        kite.reject(view().openReal.single().stopOrderId!!)           // RMS: outside the circuit
+        repeat(3) { kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "RMS:Trigger price is outside the circuit limit") }
+        kite.requests.clear()
+        val t0 = ArmLive.testNow!!
+        watch()
+        assertEquals("not sent again in the same look", 0, slPosts())
+        watch(); runBlocking { ArmLive.watch(stream = true) }
+        assertEquals("nothing inside the back-off, the live lane included", 0, slPosts())
+        assertEquals(1, posted("Zerodha refused its live"))
+        assertTrue(com.optionslab.app.work.Alerts.posted.any { "outside the circuit" in it.text })
+        ArmLive.testNow = t0.plusSeconds(6)
+        watch()
+        assertEquals("tried again after 5 s (refused)", 1, slPosts())
+        ArmLive.testNow = t0.plusSeconds(12)
+        watch()
+        assertEquals("then 10 s", 1, slPosts())
+        ArmLive.testNow = t0.plusSeconds(17)
+        watch()
+        assertEquals(2, slPosts())
+        assertEquals("said once", 1, posted("Zerodha refused its live"))
+        assertNull(view().openReal.single().stopOrderId)
+        assertEquals(170.0, view().openReal.single().stopTrigger!!, 1e-9)
+        assertEquals("never sold while it can rest", 0, marketSells())
+    }
+
+    /**
+     * Item 5: the start's sweep decides a contract once - its "unexplained lot" is said once, though another contract (a stale buy here)
+     * kept the sweep running for another look.
+     */
+    @Test fun theStartsSweepSaysAnUnexplainedLotOnce() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "sweep-a"))
+        // A filled stop-type buy of this path no trade explains (a short's buy-back whose row is gone): unexplained, no order stands for it.
+        val x = kite.boughtInKite(sym, 30, 200.0, tag = LiveMirror.TAG)
+        kite.orders.getValue(x).type = "SL"
+        val (_, s2) = other(7)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        val stale = kite.restsInKite(s2, "BUY", 30, 190.0, tag = LiveMirror.TAG)
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
+        assertEquals("CANCELLED", kite.order(stale).status)
+        assertEquals(1, posted("does not explain and no order of the arms stands for it"))
+        watch()                                                    // the sweep runs again (the stale buy kept it undecided)
+        watch()
+        assertEquals("said once", 1, posted("does not explain and no order of the arms stands for it"))
+    }
+
+    /** Item 1 (the dialog): the paper reset dialogs say an open live copy stays open with its own stop. */
+    @Test fun thePaperResetWordsNameEachLiveCopy() {
+        ArmLive.entered(ask(donchian, "w1"))
+        val (c2, s2) = other(4)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "w2", c = c2))
+        val w = ArmLive.liveCopyWords(ArmLive.liveCopiesOpen())!!
+        assertTrue(w, w.startsWith("2 live copies are open at Zerodha"))
+        assertTrue(w, w.contains(sym) && w.contains(s2) && w.contains("they stay open with their own stops"))
+        assertEquals(1, ArmLive.liveCopiesOpen(contract.symbol).size)
+    }
 }

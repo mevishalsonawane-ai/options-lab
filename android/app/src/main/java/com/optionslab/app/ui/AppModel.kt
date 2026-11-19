@@ -2534,19 +2534,42 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             com.optionslab.app.data.Paper.modify(id, qty, price, trigger)
         }
     fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo(mcx = com.optionslab.app.data.Paper.contractIfLoaded(symbol)?.isMcx == true) {
+        // 19 Nov 2026 (audit batch 2: closing a paper row by hand sold its live copy at market): a live copy of this paper row stops
+        // following it first and keeps its own stop and exits - nothing at Zerodha is sold - and the answer says so.
+        runCatching { com.optionslab.app.data.ArmLive.refresh() }
+        val copies = runCatching { com.optionslab.app.data.ArmLive.detachPaperSymbol(symbol, "paper row closed by hand") }.getOrDefault(emptyList())
+        val words = com.optionslab.app.data.ArmLive.liveCopyWords(copies)
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
-        com.optionslab.app.data.Paper.close(symbol, product).also { r ->
+        com.optionslab.app.data.Paper.close(symbol, product).let { r ->
+            // (A close that did not go - the paper row still held - gives the live copies back to their paper trade.)
+            if (!r.ok && runCatching { com.optionslab.app.data.Paper.state.positions.any { it.symbol == symbol && it.product == product && it.quantity != 0 } }.getOrDefault(false)) {
+                copies.forEach { runCatching { com.optionslab.app.data.ArmLive.undetach(it.ref) } }; r
+            } else if (words == null) r else r.copy(message = "${r.message} $words")
+        }.also { r ->
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }
             r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.let { fl ->
                 com.optionslab.app.ira.BossTradeLog.filled("paper:${fl.orderId}", symbol, fl.action.equals("BUY", true), live = false, entry = fl.price, closing = true) }
         }
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2): before a paper reset, every open live copy of an arm stops following its paper trade and keeps its own
+     * stop and exits ([com.optionslab.app.data.ArmLive.detachAll]); the words saying so (null: none open). A worker thread (reads the book).
+     */
+    private suspend fun liveCopiesKept(): String? {
+        runCatching { com.optionslab.app.data.ArmLive.refresh() }
+        return com.optionslab.app.data.ArmLive.liveCopyWords(
+            runCatching { com.optionslab.app.data.ArmLive.detachAll("paper reset") }.getOrDefault(emptyList()))
+    }
+
     fun paperReset(capital: Double) {
         viewModelScope.launch(Dispatchers.IO) {
+            // 19 Nov 2026 (audit batch 2: a paper reset made every mirrored arm sell its live copy at market): every live copy stops
+            // following its paper trade first and keeps its own stop and exits - nothing at Zerodha is sold - and the answer says so.
+            val words = liveCopiesKept()
             com.optionslab.app.data.Paper.reset(java.math.BigDecimal.valueOf(capital).setScale(2))
             com.optionslab.app.data.Guard.resetPeak(live = false)   // the drawdown peak starts again with the new capital
-            say("Paper account reset to ${rs(capital)}.")
+            say("Paper account reset to ${rs(capital)}." + (words?.let { " $it" } ?: ""))
             loadPaper()
         }
     }
@@ -2559,6 +2582,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun paperResetAll() {
         viewModelScope.launch(Dispatchers.IO) {
             val default = com.optionslab.engine.sandbox.SandboxConfig().startingCapital
+            // 19 Nov 2026 (audit batch 2): every live copy keeps its own stop and exits - never sold for the paper reset ([paperReset]).
+            val words = liveCopiesKept()
             com.optionslab.app.data.Paper.reset(default)
             runCatching { com.optionslab.app.data.OrbArms.resetPaper() }
             runCatching { com.optionslab.app.data.PineAuto.resetPaper() }
@@ -2568,7 +2593,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             com.optionslab.app.data.DailyPnl.resetPaper()   // bumps pnlDays through DailyPnl.changes
             com.optionslab.app.data.Guard.resetPeak(live = false)
             runCatching { com.optionslab.app.work.PositionCards.dismissAll(ctx, "Paper") }
-            say("Paper reset to default: ${rs(default.toDouble())}, nothing held, no history.")
+            say("Paper reset to default: ${rs(default.toDouble())}, nothing held, no history." + (words?.let { " $it" } ?: ""))
             loadPaper()
             runCatching { refreshStrategies() }
         }
