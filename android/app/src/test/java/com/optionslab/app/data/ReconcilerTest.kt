@@ -157,6 +157,21 @@ class ReconcilerTest : RobolectricTest() {
         assertNull("a stop rests: told once", risk())
     }
 
+    /** 20 Nov 2026 (delta review): in Paper mode while a live book still holds something, an orphan is said as any other and repeats. */
+    @Test fun inPaperModeWithALiveBookHoldingAnOrphanIsSaidAsAnyOther() {
+        kite.position(sym, 75, 100.0)
+        val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 100.0, 90.0, null, null) }
+        assertTrue(msg, msg.startsWith("Protected"))
+        AutomationSupport.liveSettings(live = false)
+        kite.position(other, -30, 210.0, product = "NRML")
+        runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L) }
+        val text = Background.text(risk()!!).orEmpty()
+        assertTrue(text, text.contains("which no book of the app follows") && !text.contains("app in Paper"))
+        cancelAll()
+        runBlocking { Reconciler.step(context, t0 + 360_000L) }
+        assertNotNull("repeats every 5 minutes", risk())
+    }
+
     /**
      * 19 Nov 2026 (second review): a protection guards what Boss holds - he may add to it himself, or sell part - so a protected
      * position larger or smaller than its protection is never called a duplicate fill (the books' own sizes are judged in ira-core's

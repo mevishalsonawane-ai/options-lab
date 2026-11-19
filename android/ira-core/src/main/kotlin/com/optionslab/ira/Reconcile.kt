@@ -47,8 +47,8 @@ object Reconcile {
     /**
      * A position Zerodha holds ([qty] signed units, + long) that no book of the app owns ([Kind.UNOWNED]), or holds more of than the
      * books own ([Kind.OVERSIZE], [appQty] the books' units); [stop]: an exit stop rests at Zerodha; [known]: Boss's own manual position
-     * as the app knows it (seen by "Stop and target on my manual positions", left alone by it on purpose, or any position the app does
-     * not own while it is in Paper mode) - told once while it lasts, like one with a resting stop.
+     * as the app knows it (seen by "Stop and target on my manual positions", or left alone by it on purpose) - told once while it lasts,
+     * like one with a resting stop. (Paper mode's unowned positions are [paper], not known: they repeat unless a stop rests.)
      */
     data class Finding(val symbol: String, val qty: Int, val stop: Boolean?, val kind: Kind = Kind.UNOWNED, val appQty: Int? = null,
                        val known: Boolean = false,
