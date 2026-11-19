@@ -57,13 +57,16 @@ internal object ClockLane {
     private val turn = ClockSteps.Turn()
     /** Each step's last COMPLETED run, by its start (wall-clock ms; memory only). */
     private val done = ConcurrentHashMap<String, Long>()
-    private val told = ClockSteps.Once()
+    @Volatile private var told = ClockSteps.Once()
 
     /** The lane of the watch running now (a new run's lane replaces an old one's; [poke] reaches the newest). */
     @Volatile private var lane: ClockSteps.Lane? = null
 
     /** When [name] last completed (its start, wall-clock ms), 0: not yet in this process. */
     fun lastDone(name: String): Long = done[name] ?: 0L
+
+    /** The wall clock the stamps and the lane read (the app's own; a test's fake clock). */
+    @Volatile internal var clock: () -> Long = System::currentTimeMillis
 
     /** TEST SEAM: a step's work instead of the real one ([name], the settings). Null in the app, always. */
     @Volatile internal var testWork: (suspend (String) -> Unit)? = null
@@ -73,7 +76,7 @@ internal object ClockLane {
      * turn. A run that completes stamps its start ([lastDone]); one that throws, or could not have its turn, stamps nothing.
      */
     suspend fun run(context: Context, name: String, s: AppSettings) {
-        val t0 = System.currentTimeMillis()
+        val t0 = clock()
         val ok = Tasks.safely {
             val work: suspend () -> Unit = testWork?.let { w -> suspend { w(name) } } ?: when (name) {
                 LOSS -> suspend {
@@ -90,8 +93,15 @@ internal object ClockLane {
             if (name == LOSS) { work(); true } else turn.take { work(); true } ?: false
         }
         if (ok) done.merge(name, t0, ::maxOf)
-        else runCatching { Heartbeat.diary("$name waited ${ClockSteps.TURN_WAIT_MS / 1000} s for another square-off to finish; the next round tries again") }
+        else if (t0 - turnToldAt >= 60_000L || t0 < turnToldAt) {
+            // One diary line a minute at most (a hung square-off keeps the turn every round).
+            turnToldAt = t0
+            runCatching { Heartbeat.diary("$name waited ${ClockSteps.TURN_WAIT_MS / 1000} s for another square-off to finish; the next round tries again") }
+        }
     }
+
+    /** When a square-off last told the diary it could not have its turn (wall-clock ms; memory only). */
+    @Volatile private var turnToldAt = 0L
 
     /** [name] as a supervisor step (the lane's and the pass's: one name, so never two runs at once). */
     fun step(context: Context, name: String, s: AppSettings): Supervisor.Step = Supervisor.Step(name) { run(context, name, s) }
@@ -104,7 +114,7 @@ internal object ClockLane {
      * anything is held (memory only, unknown counts as held); [supervisor] the watch's workers. The clock is the tests' seam.
      */
     suspend fun runLane(context: Context, stop: () -> Boolean, mode: () -> StopLane.Mode, held: () -> Boolean,
-                    supervisor: () -> Supervisor?, now: () -> Long = System::currentTimeMillis) {
+                    supervisor: () -> Supervisor?, now: () -> Long = { clock() }) {
         val l = ClockSteps.Lane(now = now)
         lane = l
         try {
@@ -171,7 +181,7 @@ internal object ClockLane {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { done.clear(); testWork = null; lane = null }
+    internal fun resetForTest() { done.clear(); testWork = null; lane = null; clock = System::currentTimeMillis; told = ClockSteps.Once() }
 }
 
 /**
