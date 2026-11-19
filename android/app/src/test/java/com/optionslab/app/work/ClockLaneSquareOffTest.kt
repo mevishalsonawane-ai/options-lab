@@ -45,6 +45,9 @@ class ClockLaneSquareOffTest : RobolectricTest() {
     private val ce = "NIFTY26SEP24500CE"
     /** A week out, MIS, an arm's: the flat-by's at 15:25. */
     private val mis = "NIFTY26NOV24600CE"
+    /** Expire today: the other strategies' weekly legs. */
+    private val pe = "NIFTY26SEP24500PE"
+    private val ce2 = "NIFTY26SEP24600CE"
     /** A week out, NRML, Boss's own: what makes the day's loss. */
     private val other = "NIFTY26NOV24000PE"
 
@@ -55,8 +58,11 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         kite.instruments += FakeKite.Ins(1_101, ce, "NIFTY", today, 24_500.0, "CE", 75)
         kite.instruments += FakeKite.Ins(1_102, mis, "NIFTY", today.plusDays(7), 24_600.0, "CE", 75)
         kite.instruments += FakeKite.Ins(1_103, other, "NIFTY", today.plusDays(7), 24_000.0, "PE", 75)
+        // Today's 24500 PE and 24600 CE too: the weekly legs of the other strategies (each on a contract of its own).
+        kite.instruments += FakeKite.Ins(1_104, pe, "NIFTY", today, 24_500.0, "PE", 75)
+        kite.instruments += FakeKite.Ins(1_105, ce2, "NIFTY", today, 24_600.0, "CE", 75)
         AutomationSupport.niftyOptions(kite)           // a strategy's leg (a week and more out)
-        listOf(ce, mis, other).forEach { kite.quote("NFO:$it", 20.0, 19.95, 20.05) }
+        listOf(ce, mis, other, pe, ce2).forEach { kite.quote("NFO:$it", 20.0, 19.95, 20.05) }
         kite.quote("NFO:${AutomationSupport.NIFTY_CE}", 100.0, 99.95, 100.05)
         runBlocking { Broker.instruments() }
         kite.requests.clear()
@@ -82,6 +88,9 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         ExitCoordinator.resetForTest()
         SquareOffExit.resetForTest(gap = 0L)
         AutomationSupport.realClocks()
+        // A live fill's notice reads the positions again 2 s later ([com.optionslab.app.work.Notifier]): let it land on this fake
+        // Zerodha, never on the real one once it is closed.
+        if (kite.placed.isNotEmpty()) Thread.sleep(2_500)
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
