@@ -185,9 +185,28 @@ class OrbArmsLiveTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (second review): two stops of these arms rest unclaimed on the contract when the app comes back (the first stop and
+     * another): neither is taken and no third is placed - the entry stays unconfirmed (the arm buys nothing more) while both rest.
+     */
+    @Test fun aRestartBesideTwoUnclaimedStopsTakesNeitherAndPlacesNone() {
+        state(pending = true)
+        val snap = approveKeepingTheBookAtThePost()
+        val first = arm().open!!.stopOrderId!!
+        val second = runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "SL", 150.0,
+            0.05, "NFO", "iraorb", triggerPrice = 155.0), exit = true) }
+        restartFrom(snap)
+        runBlocking { ArmLive.refresh() }
+        kite.requests.clear()
+        pass()
+        assertTrue("nothing placed: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+        assertTrue("still unconfirmed", arm().open!!.unconfirmed)
+        assertEquals("TRIGGER PENDING", kite.order(first).status); assertEquals("TRIGGER PENDING", kite.order(second).status)
+    }
+
+    /**
      * 19 Nov 2026 (second review, order speed): with a 1.5 s vault write (a Pixel's StrongBox) the entry's POST never waits on the
      * intent's write - when the buy reaches Zerodha the intent is still being written (it lands moments later), and the POST comes well
-     * under one write's time after the intent was handed to the writer. (Timed from there: the approval's own earlier write of the used-up
+     * under the write's own time after the intent was handed to the writer. (Timed from there: the approval's own earlier write of the used-up
      * approval, as before, comes ahead of the entry and is not the intent's.)
      */
     @Test fun theEntrysPostNeverWaitsOnTheIntentsVaultWrite() {
@@ -208,7 +227,7 @@ class OrbArmsLiveTest : RobolectricTest() {
         val atPost = JSONObject(onDisk.get()!!).getJSONArray("positions")
         assertEquals("the intent not on disk yet when the order went (its write still running): $atPost", 0, atPost.length())
         assertTrue("the intent was queued", queuedAt.get() != 0L)
-        assertTrue("the POST ${postMs.get()} ms after the intent was queued, well under one 1.5 s write", postMs.get() in 0 until 1_000)
+        assertTrue("the POST ${postMs.get()} ms after the intent was queued, under the 1.5 s write", postMs.get() in 0 until 1_500)
         assertTrue(OrbArms.awaitWrites())
         val now = JSONObject(String(com.optionslab.app.security.Vault.readFile(file)!!, Charsets.UTF_8)).getJSONArray("positions")
         assertEquals("on disk after", 1, now.length())

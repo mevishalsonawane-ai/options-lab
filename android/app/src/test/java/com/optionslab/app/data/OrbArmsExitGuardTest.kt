@@ -234,7 +234,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         val s1 = stopOrder(60, 160.0, 152.0)
         state(listOf(position("orb", 60, 200.0, "E1", s1, 160.0)))
         kite.position(sym, 90, 200.0, product = "MIS")
-        kite.restingInKite(sym, "SELL", 60, 260.0, tag = "iraalgo")         // another book's sale covers 60 of the 90 held
+        kite.restingInKite(sym, "SELL", 60, 260.0, tag = "iraalgostrat")    // another book's sale covers 60 of the 90 held
         kite.quote("NFO:$sym", 245.0, 244.95, 245.05)                       // the ORB's target
         kite.afterNext("/orders/regular/$s1") { kite.down += "/orders" }   // the order book fails from the stop's cancel on
         kite.requests.clear()
@@ -356,6 +356,20 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals("TRIGGER PENDING", kite.order(s1).status)
         assertEquals(60, open("orb")!!.qty)
         assertTrue(today("orb").none { !it.open })
+    }
+
+    /**
+     * 19 Nov 2026 (second review): Boss sells one of the two lots from the app's own Trade screen ("iraalgo", a hand order): that sale is
+     * the proof, as one in Kite is - the stop is shrunk to what is held at once, never held back as another book's trade.
+     */
+    @Test fun aLotSoldFromTheAppsTradeScreenShrinksTheStopAsOneSoldInKite() {
+        val s1 = twoLots()
+        kite.soldInKite(sym, 30, 211.0, tag = "iraalgo")
+        pass()
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertEquals("now for what is held", 30, kite.order(s1).qty)
+        assertEquals(30, open("orb")!!.qty)
+        assertEquals("closed_by_you", today("orb").single { !it.open }.why)
     }
 
     /** 18 Nov 2026 (audit: B3): one read showing less with no sale anywhere changes nothing; five minutes of reads agreeing do. */
