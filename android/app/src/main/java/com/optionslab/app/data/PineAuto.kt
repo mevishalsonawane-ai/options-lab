@@ -461,7 +461,7 @@ object PineAuto {
         synchronized(this) {
             wipes++
             cache = null; written.forget(); _held.value = emptyMap(); _log.value = emptyList()
-            stopNoted.clear(); removingHint = false; flatSince.clear(); flatAlertSaid.clear()
+            stopNoted.clear(); removingHint = false; flatSince.clear(); flatAlertSaid.clear(); reentrySaid.clear()
         }
         if (::file.isInitialized) file.delete()
     }
