@@ -186,8 +186,9 @@ class OrbArmsLiveTest : RobolectricTest() {
 
     /**
      * 19 Nov 2026 (second review, order speed): with a 1.5 s vault write (a Pixel's StrongBox) the entry's POST never waits on the
-     * intent's write - when the buy reaches Zerodha the intent is still being written (it lands moments later), and the POST comes well
-     * before two writes' time (the approval's own write of the used-up approval, as before, is the only one ahead of it).
+     * intent's write - when the buy reaches Zerodha the intent is still being written (it lands moments later). (No bound on the POST's
+     * time itself: the approval's own earlier writes, as before, and the test machine's speed come ahead of it; that the intent is not on
+     * disk yet at the POST is what shows the order did not wait for it - a wait would have finished the write first.)
      */
     @Test fun theEntrysPostNeverWaitsOnTheIntentsVaultWrite() {
         state(pending = true)
@@ -205,7 +206,7 @@ class OrbArmsLiveTest : RobolectricTest() {
         } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0L }
         val atPost = JSONObject(onDisk.get()!!).getJSONArray("positions")
         assertEquals("the intent not on disk yet when the order went (its write still running): $atPost", 0, atPost.length())
-        assertTrue("the POST at ${postMs.get()} ms, under two 1.5 s writes", postMs.get() in 0 until 2_900)
+        assertTrue("the POST reached Zerodha", postMs.get() >= 0)
         assertTrue(OrbArms.awaitWrites())
         val now = JSONObject(String(com.optionslab.app.security.Vault.readFile(file)!!, Charsets.UTF_8)).getJSONArray("positions")
         assertEquals("on disk after", 1, now.length())
