@@ -253,6 +253,31 @@ class ClockLaneTest : RobolectricTest() {
         }
     }
 
+    /**
+     * 19 Nov 2026 (second review, item 6): the stop rescue, now on its own beside the square-offs, never runs while a square-off holds
+     * the turn (it may be closing the very contract): it waits, bounded, then is left to the next pass; it runs once the turn is free.
+     * (The rescue itself is Jarvis's: this is its gate in the pass, [Tasks.afterSquareOffs].)
+     */
+    @Test fun theStopRescueWaitsWhileASquareOffHoldsTheTurn() = runBlocking {
+        val ran = java.util.concurrent.atomic.AtomicInteger()
+        val release = CompletableDeferred<Unit>()
+        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
+        try {
+            Background.await("a square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
+            assertFalse("bounded: left to the next pass", Tasks.afterSquareOffs(300) { ran.incrementAndGet() })
+            assertEquals("never beside the square-off", 0, ran.get())
+            val waiting = async(Dispatchers.IO) { Tasks.afterSquareOffs(20_000) { ran.incrementAndGet() } }
+            Thread.sleep(300)
+            assertEquals(0, ran.get())
+            release.complete(Unit)
+            assertTrue(waiting.await())
+            assertEquals("then it runs", 1, ran.get())
+        } finally {
+            release.complete(Unit)
+            hold.join()
+        }
+    }
+
     // ---- the clock alarm ------------------------------------------------------------------------------
 
     @Test fun theAlarmIsArmedFor1504OnAnExpiryDayOnly() {

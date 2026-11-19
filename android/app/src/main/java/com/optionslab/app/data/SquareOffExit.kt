@@ -25,7 +25,8 @@ internal object SquareOffExit {
      * 19 Nov 2026 (second review of the clock lane: a square-off can now run twice back to back, the lane's run and the pass's):
      * after a square-off exit was placed on a contract (by any square-off: this object's two and the MCX expiry exit), none is sent
      * on it again for [GAP_MS], whatever the next read of the books shows (an orders read can miss an order placed a moment ago,
-     * and a positions read can trail its fill). Per contract, so another contract's exit is never held back. Memory only.
+     * and a positions read can trail its fill). Per contract and product (one position row), so no other position's exit is ever
+     * held back. Memory only.
      */
     const val GAP_MS = 15_000L
     private val placedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -35,15 +36,15 @@ internal object SquareOffExit {
     /** The gap in force: [GAP_MS] in the app, always; the older tests' back-to-back passes set it to 0 (its own tests set it). */
     @Volatile internal var gapMs: Long = GAP_MS
 
-    /** Whether a square-off exit went on [exchange]:[symbol] within [GAP_MS]. */
-    fun inGap(exchange: String, symbol: String): Boolean {
-        val at = placedAt["$exchange:$symbol"] ?: return false
+    /** Whether a square-off exit went on [exchange]:[symbol] [product] within [GAP_MS]. */
+    fun inGap(exchange: String, symbol: String, product: String): Boolean {
+        val at = placedAt["$exchange:$symbol:$product"] ?: return false
         val now = clock()
         return now >= at && now - at < gapMs
     }
 
-    /** A square-off exit was placed on [exchange]:[symbol] now. */
-    fun notePlaced(exchange: String, symbol: String) { placedAt["$exchange:$symbol"] = clock() }
+    /** A square-off exit was placed on [exchange]:[symbol] [product] now. */
+    fun notePlaced(exchange: String, symbol: String, product: String) { placedAt["$exchange:$symbol:$product"] = clock() }
 
     /** TEST ONLY. */
     internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap }
@@ -57,7 +58,7 @@ internal object SquareOffExit {
         val pass = ExitCoordinator.enter(p.exchange, p.symbol, who)
         try {
             // 19 Nov 2026: an exit placed on it a moment ago is still on its way ([GAP_MS]): nothing more now, the next run reads again.
-            if (inGap(p.exchange, p.symbol)) return false
+            if (inGap(p.exchange, p.symbol, p.product)) return false
             if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
             val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
@@ -132,12 +133,12 @@ internal object SquareOffExit {
                     }
                     // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out
                     // either way, so the contract's gap starts ([GAP_MS]).
-                    notePlaced(p.exchange, p.symbol)
+                    notePlaced(p.exchange, p.symbol, p.product)
                     runCatching { Broker.findRecentRetrying(o, placed + working.map { it.id }) }.getOrNull()?.let { placed += it }
                     break
                 }
             }
-            if (placed.isNotEmpty()) notePlaced(p.exchange, p.symbol)
+            if (placed.isNotEmpty()) notePlaced(p.exchange, p.symbol, p.product)
             return placed.isNotEmpty()
         } finally { pass.leave() }
     }

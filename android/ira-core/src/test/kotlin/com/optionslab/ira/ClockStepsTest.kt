@@ -129,6 +129,35 @@ class ClockStepsTest {
         assertFalse(turn.held)
     }
 
+    /**
+     * 19 Nov 2026 (second review): the square-offs let the turn go between them and take it again at once; the loss limit's sales,
+     * polling, never got in and went without the turn after their wait. Now a `first` waiter has it as soon as it is let go.
+     */
+    @Test fun theLossLimitsSalesGetTheTurnBetweenTwoSquareOffs() = runBlocking {
+        val turn = ClockSteps.Turn(pollMs = 20)
+        val order = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val salesWaiting = CompletableDeferred<Unit>()
+        val sequence = async(Dispatchers.IO) {
+            for (n in listOf("expiry square-off", "MCX expiry exit", "flat-by")) {
+                val had = turn.take(waitMs = 5_000, who = n) {
+                    order += n
+                    if (n == "expiry square-off") { salesWaiting.await(); delay(200) }
+                    true
+                }
+                assertEquals(true, had, n)
+            }
+        }
+        until { order.isNotEmpty() }
+        val sales = async(Dispatchers.IO) {
+            turn.take(waitMs = 5_000, who = "daily loss limit", first = true) { order += "daily loss limit"; true }
+        }
+        delay(50)
+        salesWaiting.complete(Unit)
+        assertEquals(true, sales.await(), "the sales had the turn, never went without it")
+        sequence.await()
+        assertEquals(listOf("expiry square-off", "daily loss limit", "MCX expiry exit", "flat-by"), order.toList())
+    }
+
     @Test fun onceTellsEachKeyOncePerDay() {
         val once = ClockSteps.Once()
         assertTrue(once.first(tue, "expiry|15:05")); assertFalse(once.first(tue, "expiry|15:05"))

@@ -34,7 +34,7 @@ import java.time.LocalDate
  * 19 Nov 2026 (second review of the clock lane, "merge after fixes"): the clock lane ([ClockLane]) against the fake Kite, with the
  * REAL expiry square-off, flat-by and daily loss limit (no stand-in work): a square-off never sells twice while the positions trail
  * its fill, nor runs again back to back; the loss limit runs first in a round and its sales take the square-offs' turn; a slow
- * square-off never starves the flat-by, and a starved step is said late; the stop rescue waits while a square-off runs.
+ * square-off never starves the flat-by, and a starved step is said late.
  */
 @ConscryptMode(ConscryptMode.Mode.OFF)
 class ClockLaneSquareOffTest : RobolectricTest() {
@@ -227,27 +227,6 @@ class ClockLaneSquareOffTest : RobolectricTest() {
             ctl.ended = true; ClockLane.poke(); lane.join()
         } finally {
             WatchWorkers.end(run)
-        }
-    }
-
-    /** Item 6: the stop rescue (now on its own, beside the square-offs) looks at nothing while a square-off is running. */
-    @Test fun theStopRescueWaitsWhileASquareOffRuns() = runBlocking {
-        com.optionslab.app.ira.Automations.set(com.optionslab.app.ira.Automations.Auto.RESCUE, true)
-        com.optionslab.app.ira.IraHub.init(context); com.optionslab.app.ira.IraHub.awaitLoadedBlocking()
-        kite.position(mis, 75, 20.0, product = "MIS")
-        val release = CompletableDeferred<Unit>()
-        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
-        try {
-            Background.await("a square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
-            kite.requests.clear()
-            withContext(Dispatchers.IO) { com.optionslab.app.ira.IraHub.rescueWatch() }
-            assertEquals("no read while the square-off runs", 0, gets("/portfolio/positions").size)
-            release.complete(Unit); hold.join()
-            withContext(Dispatchers.IO) { com.optionslab.app.ira.IraHub.rescueWatch() }
-            assertTrue("it looks again once the square-off is done", gets("/portfolio/positions").isNotEmpty())
-        } finally {
-            release.complete(Unit)
-            hold.join()
         }
     }
 }

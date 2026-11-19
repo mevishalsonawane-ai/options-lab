@@ -114,7 +114,7 @@ object McxGuard {
                 val pass = ExitCoordinator.enter(Mcx.EXCHANGE, p.symbol, "MCX expiry exit")
                 try {
                     // 19 Nov 2026: a square-off exit placed on it a moment ago is still on its way ([SquareOffExit.GAP_MS]).
-                    if (SquareOffExit.inGap(Mcx.EXCHANGE, p.symbol)) continue
+                    if (SquareOffExit.inGap(Mcx.EXCHANGE, p.symbol, p.product)) continue
                     if (ExitCoordinator.stale(Mcx.EXCHANGE, p.symbol, "MCX expiry exit", read)) continue
                     val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
                     val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
@@ -140,7 +140,7 @@ object McxGuard {
                     }
                     try {
                         val id = Broker.placeOrder(o, exit = true)
-                        SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol)
+                        SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol, p.product)
                         runCatching { Strategies.tagOwner("kite:$id", Origins.EXPIRY) }
                         tellOnce(context, "live ${p.symbol}", "MCX expiry exit", "Zerodha ${p.symbol}: close sent. ${due.text}")
                     } catch (e: Exception) {
@@ -148,7 +148,7 @@ object McxGuard {
                             "Zerodha refused the exit of ${p.symbol}: ${e.message}. Retrying every pass; close it yourself if it keeps failing.")
                         else {
                             // The reply was lost, not necessarily the order (19 Nov 2026: the contract's gap starts either way).
-                            SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol)
+                            SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol, p.product)
                             runCatching { Broker.findRecentRetrying(o, working.map { it.id }) }
                         }
                     }

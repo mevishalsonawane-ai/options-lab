@@ -690,13 +690,37 @@ object Tasks {
             val started = ClockLane.lossStartedAt
             val age = if (started > 0L) ClockLane.clock() - started else 0L
             if (waited >= maxMs || age >= maxMs) {
-                runCatching { Heartbeat.diary("the arms went on after waiting ${maxMs / 1000} s for the daily loss limit's run to end") }
+                if (started != lossToldFor) {
+                    lossToldFor = started
+                    runCatching { Heartbeat.diary("the arms went on after waiting ${maxMs / 1000} s for the daily loss limit's run to end") }
+                }
                 return false
             }
             kotlinx.coroutines.delay(100); waited += 100
         }
         return true
     }
+
+    /**
+     * 19 Nov 2026 (second review: the stop rescue now runs on its own, beside the square-offs): [body] once no square-off holds the
+     * turn ([ClockLane.squareOffRunning]), waited for [maxMs] at most (counted in waits); still held then, skipped - the next pass
+     * looks again. True when [body] ran.
+     */
+    internal suspend fun afterSquareOffs(maxMs: Long = RESCUE_WAIT_MS, body: suspend () -> Unit): Boolean {
+        var waited = 0L
+        while (ClockLane.squareOffRunning()) {
+            if (waited >= maxMs) return false
+            kotlinx.coroutines.delay(100); waited += 100
+        }
+        body()
+        return true
+    }
+
+    /** 19 Nov 2026: the longest the stop rescue waits for a square-off holding the turn ([afterSquareOffs]). */
+    private const val RESCUE_WAIT_MS = 20_000L
+
+    /** The loss-limit run the arms last told the diary they went on without (its start; one line per hung run). */
+    @Volatile private var lossToldFor = 0L
 
     /** 19 Nov 2026: the longest the arms wait for a loss-limit run under way ([awaitLossLimit]), counted from its start. */
     private const val LOSS_BEFORE_ARMS_MS = 30_000L
@@ -1201,7 +1225,9 @@ object Tasks {
         // a job of their own that the pass never waits on, one at a time ([detached]); outside the service (a test's pass) here,
         // in order, as before. What they place goes through the protections' own lock, as before.
         // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
-        detached(lanes, "stop rescue") { com.optionslab.app.ira.IraHub.rescueWatch() }
+        // 19 Nov 2026 (second review): never beside a square-off holding the turn (it may be closing the very contract); waited for,
+        // bounded ([afterSquareOffs]), then left to the next pass.
+        detached(lanes, "stop rescue") { afterSquareOffs { com.optionslab.app.ira.IraHub.rescueWatch() } }
         // Jarvis: your own stops trailed up automatically (Boss's switch).
         detached(lanes, "trailing stops") { com.optionslab.app.ira.IraCoach.trailWatch() }
         // Every open position's notification, with its live P&L and a Close button. 18 Nov 2026 (audit): in the pass as before, but

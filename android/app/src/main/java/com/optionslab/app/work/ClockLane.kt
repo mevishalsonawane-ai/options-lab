@@ -126,7 +126,7 @@ internal object ClockLane {
     /**
      * The square-offs of [mode]'s look, one after another in the pass's order ([SQUARE_OFFS]): after a loss-limit run under way has
      * ended ([LOSS_FIRST_WAIT_MS] at most, so a hung one never holds them for ever), each in the turn for its own run (so a tripped
-     * loss limit's sales slot in between, never beside one); a turn not had, the rest of the sequence is left to the next round, in
+     * loss limit's sales, first in line, slot in between, never beside one); a turn not had, the rest of the sequence is left to the next round, in
      * order. Stamps [SQUARE_OFFS] only when every one completed; each stamps its own name ([runOne]).
      */
     suspend fun runSquareOffs(context: Context, s: AppSettings, mode: StopLane.Mode) {
@@ -190,7 +190,8 @@ internal object ClockLane {
      * anyway (a tripped limit always sells) and the diary says so.
      */
     suspend fun <T> sales(who: String, block: suspend () -> T): T {
-        val r = turn.take(SALES_TURN_WAIT_MS, who) { Result.success(block()) }
+        // First in line ([ClockSteps.Turn.take] first): the square-offs hold back while it waits, so it has the turn between two of them.
+        val r = turn.take(SALES_TURN_WAIT_MS, who, first = true) { Result.success(block()) }
         if (r != null) return r.getOrThrow()
         runCatching { Heartbeat.diary("$who: a square-off held the turn ${SALES_TURN_WAIT_MS / 1000} s (${turn.holder ?: "?"}); its sales go now") }
         return block()
