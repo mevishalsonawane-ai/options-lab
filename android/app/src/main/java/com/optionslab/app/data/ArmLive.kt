@@ -1499,7 +1499,10 @@ object ArmLive {
         // paper exit, Stop for today and square-offs never sold, unsaid): when other working exits hold this due exit back, a plain LIMIT
         // of no part of the app (his target) is cancelled first, confirmed out, in the contract's exit turn, and the exit goes on fresh
         // reads (as [SquareOffExit] does for the square-offs); anything else that holds it back is said to Boss loudly, each minute.
-        if (planned < want && ExitQty.sendable(held0.coerceAtLeast(0), 0, want, p.lot) > planned) {
+        val most = ExitQty.sendable(held0.coerceAtLeast(0), 0, want, p.lot)
+        // (Never cancelled for a sale the order gates would refuse anyway: that is said below, his order left as it is.)
+        if (planned < most && Kite.refusals(Kite.Order(p.symbol, exitSide, most, p.lot, p.product, "MARKET", null, p.tick, p.exchange, LiveMirror.TAG,
+                multiplier = p.multiplier), AppSettings.load().limits(), Broker.sentToday(), false, exit = true).isEmpty()) {
             when (freeBlocked(p, want, why, mineOf(orders0, stopIds), held0)) {
                 Freed.NONE -> Unit
                 Freed.WAIT -> return listOf(p)
