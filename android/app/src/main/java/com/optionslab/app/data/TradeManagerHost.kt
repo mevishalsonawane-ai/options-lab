@@ -169,7 +169,9 @@ object TradeManagerHost {
     private class Live(@Volatile var reg: Registration, @Volatile var team: ManagerTeam.TeamState, @Volatile var pendingExit: String? = null,
                        @Volatile var high: Double? = null, @Volatile var atr: Double? = null, @Volatile var noteLock: Double? = null,
                        /** The option's 1-minute bars today that had closed when read (the research's rules read them; memory only). */
-                       @Volatile var bars: List<TradeManager.Bar> = emptyList()) {
+                       @Volatile var bars: List<TradeManager.Bar> = emptyList(),
+                       /** 19 Nov 2026 (audit batch 2, delta review): its last look was held for a live copy ([heldNoted] kept meanwhile). */
+                       @Volatile var held: Boolean = false) {
         val state: TradeManager.State get() = team.core
     }
 
@@ -276,6 +278,30 @@ object TradeManagerHost {
 
     /** 19 Nov 2026 (audit batch 2): the same by the paper trade's own ref (the Hero ticket's Trend watch exit). TEST SEAM. */
     @Volatile internal var liveCopyOfRef: (String) -> Boolean = { ref -> armLiveCopy(ref = ref) }
+
+    /**
+     * 19 Nov 2026 (audit batch 2, delta review): whether a live copy of the paper contract [paperSymbol] is KNOWN to be open -
+     * ArmLive's book read and a real trade copying it there - never assumed (an unread book or an unknown Live setting: false).
+     * Only a known copy turns a manager record to SHADOW for good ([one]). Memory only. TEST SEAM: a test sets its own.
+     */
+    @Volatile internal var liveCopyKnownOf: (String) -> Boolean = { sym -> armLiveCopyKnown(sym) }
+
+    internal fun armLiveCopyKnown(paperSymbol: String): Boolean = runCatching {
+        val v = ArmLive.view.value
+        v.loaded && v.openReal.any { it.paperSymbol == paperSymbol || it.symbol == paperSymbol }
+    }.getOrDefault(false)
+
+    /** 19 Nov 2026 (audit batch 2, delta review): a note of a look held for a live copy (not acted; not an exit). */
+    const val HELD_NOTE = "HELD"
+
+    /** 19 Nov 2026 (audit batch 2, delta review): the held looks already noted ("id|kind"), once each while held (memory, bounded). */
+    private val heldNoted: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** Whether [id]'s held [kind] is noted now (true the first time while held; bounded). */
+    private fun firstHeld(id: String, kind: String): Boolean {
+        if (heldNoted.size > 500) heldNoted.clear()
+        return heldNoted.add("$id|$kind")
+    }
 
     /**
      * 19 Nov 2026 (audit batch 2): whether [ArmLive] holds a real (not shadow) live trade copying the paper trade [ref] or the paper
@@ -510,22 +536,55 @@ object TradeManagerHost {
         // Out already (the strategy has not closed it yet): nothing more to decide, and the last look stays on show.
         if (l.state.exited) return
         val t = l.reg.trade
-        // 19 Nov 2026 (audit batch 2, second review): a PAPER trade whose live copy follows its paper exits is looked at as in SHADOW
-        // unless its family's LIVE mode is ACT ([heldForLiveCopy]): what it would do is recorded, priced as the counterfactual, and
-        // never acted on (no "exited", no exit asked) - the paper exit would sell the live position too.
+        // 19 Nov 2026 (audit batch 2, second review): a PAPER trade whose live copy follows its paper exits is never acted on unless its
+        // family's LIVE mode is ACT ([heldForLiveCopy]): no "exited", no exit asked - the paper exit would sell the live position too.
         val held = r0.mode == TradeManager.Mode.ACT && heldForLiveCopy(t)
         val act = r0.mode == TradeManager.Mode.ACT && !held
-        // Its record from here is a SHADOW one (review): settled and tallied as a would-be, never as the manager's own exit.
-        if (held) update(id) { if (it.mode == TradeManager.Mode.ACT) it.copy(mode = TradeManager.Mode.SHADOW) else it }
+        // Its record from here is a SHADOW one (review): settled and tallied as a would-be, never as the manager's own exit - but only
+        // when the live copy is KNOWN (ArmLive's book read, a real copy open) and the manager has not acted on this trade yet (delta
+        // review). Otherwise (the Live setting unknown, or a lock or extension already acted on) its record stays ACT and only this
+        // look is held: its exit or extension is noted once, nothing is recorded as acted, and the next look decides again.
+        val forGood = held && r0.actedAtMs == null && r0.extensions == 0 && liveCopyKnownOf(t.instrument)
+        val holdLook = held && !forGood
+        if (forGood) update(id) { if (it.mode == TradeManager.Mode.ACT) it.copy(mode = TradeManager.Mode.SHADOW) else it }
+        // Its held notes forgotten once it is no longer held for now (only on that change: no scan on every look).
+        if (l.held && !holdLook) heldNoted.removeIf { it.startsWith("$id|") }
+        l.held = holdLook
         // The committee: LIVE trades the manager acts on use the frozen weights; SHADOW and paper the self-tuned ones (memory only).
         val frozen = act && t.account == TradeManager.Account.LIVE
         // Today's regime weights (TODO S8): out of shadow only, live only once Boss approved them; memory only.
         val cfg = ManagerSpecialists.configFor(t.family, frozen, t.underlying).let { c ->
             runCatching { RegimeHost.managerConfig(c, t.account == TradeManager.Account.LIVE) }.getOrDefault(c)
         }
+        val before = l.team
         val s = snapshot(l, now, cfg.isResearch)
         val step = ManagerTeam.decide(t, s, l.team, cfg)
         l.team = step.state
+        // A look held only for now: an exit, extension or trail is not taken - the team keeps everything this look learned (its tape,
+        // holds and votes) but not that step: never "exited", the target, lock and extensions as before - so the next look decides
+        // again (delta review). An exit or extension is noted once per rule while held; a trail is not recorded at all.
+        val d0 = step.decision
+        if (holdLook && (d0 is TradeManager.Decision.ExitEarly || d0 is TradeManager.Decision.Extend || d0 is TradeManager.Decision.Trail)) {
+            val was = before.core
+            l.team = step.state.copy(core = step.state.core.copy(exited = false, target = was.target, lock = was.lock,
+                extensions = was.extensions, lastExtendMs = was.lastExtendMs))
+            runCatching { ManagerSpecialists.observe(id, t, step, now, frozen) }
+            val d = step.decision
+            if (d is TradeManager.Decision.Trail) return
+            // Its own kind ([HELD_NOTE]), never EXIT_EARLY: a restart must not read a held look as the trade being out.
+            if (firstHeld(id, if (d is TradeManager.Decision.ExitEarly) "exit:${d.rule.key}" else "extend")) {
+                val words = when (d) {
+                    is TradeManager.Decision.ExitEarly -> "would have exited early (${HELD_WORDS}): " +
+                        (if (d.rule == TradeManager.Rule.LOCK) "profit lock hit" else TradeManager.short(d.rule, t.side))
+                    is TradeManager.Decision.Extend -> "would have extended its target to ${TradeManager.lv(d.newTarget)} (${HELD_WORDS})"
+                    else -> ""
+                }
+                note(id, TradeManager.Note(now, HELD_NOTE, (d as? TradeManager.Decision.ExitEarly)?.rule?.key ?: TradeManager.Rule.EXTEND.key,
+                    words, s.premium, false, (d as? TradeManager.Decision.ExitEarly)?.evidence ?: (d as TradeManager.Decision.Extend).evidence))
+                post(t, "${TradeManager.familyName(t.family)} $words")
+            }
+            return
+        }
         runCatching { ManagerSpecialists.observe(id, t, step, now, frozen) }
         val lead = step.lead?.specialist
         val voters = step.voters
@@ -853,6 +912,7 @@ object TradeManagerHost {
         lastEval = 0L; minuteSettled = -1L
         // 19 Nov 2026 (audit batch 2): the live-copy seams back to ArmLive's book, nothing held back.
         liveCopyOf = { sym -> armLiveCopy(paperSymbol = sym) }; liveCopyOfRef = { ref -> armLiveCopy(ref = ref) }; heldBack.clear()
+        liveCopyKnownOf = { sym -> armLiveCopyKnown(sym) }; heldNoted.clear()
         ManagerSpecialists.resetForTest()
         if (com.optionslab.app.BuildConfig.DEBUG) { testSnapshot = null; testBars = null; testNoWake = false }
     }
