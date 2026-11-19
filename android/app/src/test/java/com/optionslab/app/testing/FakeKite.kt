@@ -232,7 +232,8 @@ class FakeKite : Closeable {
                     exchange: String = "NFO"): String = synchronized(lock) {
         val id = (++seq).toString()
         val stop = type == "SL" || type == "SL-M"
-        orders[id] = Order(id, symbol, exchange, side, qty, product, type, price, if (stop) price else 0.0, "", if (stop) "TRIGGER PENDING" else "OPEN")
+        orders[id] = Order(id, symbol, exchange, side, qty, product, type, if (type == "SL-M") 0.0 else price, if (stop) price else 0.0, "",
+            if (stop) "TRIGGER PENDING" else "OPEN")
         id
     }
 
