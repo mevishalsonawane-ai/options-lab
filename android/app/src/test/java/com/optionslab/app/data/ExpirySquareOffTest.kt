@@ -50,6 +50,7 @@ class ExpirySquareOffTest : RobolectricTest() {
     @After fun down() {
         ExpirySquareOff.armOwns = { ArmLive.ownerOf(it) != null }
         ExpirySquareOff.liveBooksReady = { true }
+        SquareOffExit.resetForTest(gap = 0L)
         AutomationSupport.realClocks()
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -281,6 +282,44 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue("no refusal said", texts().none { it.contains("Zerodha refused the expiry exit of $ce") })
         pass()
         assertEquals("nothing more", 2, kite.placed.size)
+    }
+
+    /**
+     * 20 Nov 2026 (third review, item 3): the blocked-MARKET exit's LIMIT whose reply is lost (accepted at Zerodha, the connection
+     * dropped). It was taken as refused - said so, and no gap - although it was out. Now it is looked for as the MARKET path does:
+     * found, it is the exit (filled here); never said refused; nothing more is sent.
+     */
+    @Test fun aBlockedMarketExitsLimitWithALostReplyIsLookedForNeverSaidRefused() {
+        SquareOffExit.resetForTest()                                    // the contract's gap on, as it ships
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "NRML MARKET orders are blocked for this NIFTY contract due to its open interest (OI) being less than 100 lots.")
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
+        pass()
+        assertEquals(listOf("MARKET", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertTrue("never said refused", texts().none { it.contains("Zerodha refused the expiry exit of $ce") })
+        assertEquals("found and filled", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        at(15, 7); pass()
+        assertEquals("nothing more", 2, kite.placed.size)
+    }
+
+    /**
+     * 20 Nov 2026 (third review, item 4): the contract's gap starts with the order placed (each slice), not once the whole loop has
+     * ended: here the first freeze slice goes, the clock moves on 20 s before the second is refused, and a pass 10 s after the first
+     * slice still finds the contract in its gap (before, the gap was dated from the loop's end and this pass sent the rest again).
+     */
+    @Test fun theGapStartsWithTheSlicePlacedNotTheLoopsEnd() {
+        SquareOffExit.resetForTest()
+        var now = 1_000_000L
+        SquareOffExit.clock = { now }
+        kite.position(ce, 3_600, 20.0)                                  // 48 lots; NIFTY freezes at 1,800: two slices
+        kite.nextPlace()
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "Order rejected by the exchange.")
+        kite.afterNext("/orders/regular") { now += 20_000 }
+        pass()
+        assertEquals(2, kite.placed.size)
+        now = 1_000_000L + 10_000
+        at(15, 7); pass()
+        assertEquals("nothing sent inside the first slice's gap", 2, kite.placed.size)
     }
 
     @Test fun anExitTheAppWillNotSendIsSaidOnce() {

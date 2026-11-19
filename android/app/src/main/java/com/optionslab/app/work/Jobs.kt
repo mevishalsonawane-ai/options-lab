@@ -683,6 +683,9 @@ object Tasks {
      */
     internal suspend fun awaitLossLimit(maxMs: Long = LOSS_BEFORE_ARMS_MS): Boolean {
         val sup = WatchWorkers.supervisor ?: return true
+        // 20 Nov 2026 (third review): already tripped today, nothing to wait for - the arms' gates read the stop (memory), and the
+        // groups also run the exits of positions still open, which must never wait on the limit's sales.
+        if (runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false)) return true
         var waited = 0L
         while (sup.busy(ClockLane.LOSS)) {
             // Bounded by the run's own age too (review): a hung run holds the arms [maxMs] in all, never [maxMs] before each group
@@ -704,7 +707,9 @@ object Tasks {
     /**
      * 19 Nov 2026 (second review: the stop rescue now runs on its own, beside the square-offs): [body] once no square-off holds the
      * turn ([ClockLane.squareOffRunning]), waited for [maxMs] at most (counted in waits); still held then, skipped - the next pass
-     * looks again. True when [body] ran.
+     * looks again. True when [body] ran. 20 Nov 2026 (third review): a look, then the run - not a lock: a square-off that starts just
+     * after the look can run beside the rescue (the square-off cancels a stop resting on what it sells, and the rescue's next read sees
+     * the position gone).
      */
     internal suspend fun afterSquareOffs(maxMs: Long = RESCUE_WAIT_MS, body: suspend () -> Unit): Boolean {
         var waited = 0L
@@ -1225,7 +1230,7 @@ object Tasks {
         // a job of their own that the pass never waits on, one at a time ([detached]); outside the service (a test's pass) here,
         // in order, as before. What they place goes through the protections' own lock, as before.
         // Jarvis: a position with no stop is offered one (or given one, when Boss switched that on).
-        // 19 Nov 2026 (second review): never beside a square-off holding the turn (it may be closing the very contract); waited for,
+        // 19 Nov 2026 (second review): not started while a square-off holds the turn (it may be closing the very contract); waited for,
         // bounded ([afterSquareOffs]), then left to the next pass.
         detached(lanes, "stop rescue") { afterSquareOffs { com.optionslab.app.ira.IraHub.rescueWatch() } }
         // Jarvis: your own stops trailed up automatically (Boss's switch).

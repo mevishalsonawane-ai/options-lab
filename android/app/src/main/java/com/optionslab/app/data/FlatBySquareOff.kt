@@ -96,7 +96,7 @@ object FlatBySquareOff {
                 if (NightArm.holds(p.symbol)) continue
                 stillOpen[seg] = (stillOpen[seg] ?: 0) + 1
                 val r = Paper.close(p.symbol, p.product)
-                r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", Origins.FLAT_BY) } }
+                r.orderId?.let { runCatching { Strategies.tagOwnerSoon("paper:$it", Origins.FLAT_BY) } }
                 if (r.ok) closed += "paper ${p.symbol}" else tellOnce(context, "paper ${p.symbol}", "Paper ${p.symbol} could not be closed at its flat-by: ${r.message}. Retrying.")
             }
         }.onFailure { unread = true }

@@ -90,7 +90,7 @@ object ExpirySquareOff {
                 if (NightArm.holds(p.symbol)) continue
                 stillOpen++
                 val r = Paper.close(p.symbol, p.product)
-                r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", Origins.EXPIRY) } }
+                r.orderId?.let { runCatching { Strategies.tagOwnerSoon("paper:$it", Origins.EXPIRY) } }
                 if (r.ok) closed += "paper ${p.symbol}" else tellOnce(context, "paper ${p.symbol}", "Paper ${p.symbol} could not be closed: ${r.message}. Retrying.")
             }
         }.onFailure { unread = true }

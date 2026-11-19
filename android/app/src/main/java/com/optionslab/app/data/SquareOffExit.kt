@@ -104,7 +104,8 @@ internal object SquareOffExit {
             val placed = ArrayList<String>()
             for (o in orders) {
                 try {
-                    placed += Broker.placeOrder(o, exit = true).also { runCatching { Strategies.tagOwner("kite:$it", origin) } }
+                    // 20 Nov 2026 (third review): the contract's gap starts with each order placed, not after the whole loop.
+                    placed += Broker.placeOrder(o, exit = true).also { notePlaced(p.exchange, p.symbol, p.product); runCatching { Strategies.tagOwnerSoon("kite:$it", origin) } }
                 } catch (e: Exception) {
                     if (Broker.definite(e)) {
                         // 10 Nov (the 3 Nov refusal, for an exit): MARKET blocked on a low-open-interest contract - the same slice once as a
@@ -115,9 +116,25 @@ internal object SquareOffExit {
                             val key = "${p.exchange}:${p.symbol}"
                             val q = runCatching { Broker.quotes(listOf(key))[key] }.getOrNull()
                             val limit = com.optionslab.engine.orb.LiveMirror.blockedMarketExit(o, q?.last, q?.ask, q?.bid)
-                            val sent = limit?.let { l -> runCatching { Broker.placeOrder(l, exit = true) }.getOrNull() }
+                            // 20 Nov 2026 (third review): a lost reply is not a refusal - the LIMIT may be out, so the gap starts and it
+                            // is looked for, as the MARKET path does; never said as refused.
+                            var limitLost = false
+                            val sent = limit?.let { l ->
+                                try {
+                                    Broker.placeOrder(l, exit = true).also { notePlaced(p.exchange, p.symbol, p.product) }
+                                } catch (e2: kotlinx.coroutines.CancellationException) {
+                                    throw e2
+                                } catch (e2: Exception) {
+                                    if (Broker.definite(e2)) null else {
+                                        limitLost = true
+                                        notePlaced(p.exchange, p.symbol, p.product)
+                                        runCatching { Broker.findRecentRetrying(l, placed + working.map { it.id }) }.getOrNull()
+                                    }
+                                }
+                            }
+                            if (sent == null && limitLost) break
                             if (sent != null) {
-                                runCatching { Strategies.tagOwner("kite:$sent", origin) }
+                                runCatching { Strategies.tagOwnerSoon("kite:$sent", origin) }
                                 var f = runCatching { Broker.awaitOrder(sent, 10_000) }.getOrNull()
                                 if (f?.status !in DONE) { runCatching { Broker.cancel(sent) }; f = runCatching { Broker.orderState(sent) }.getOrNull() ?: f }
                                 // Counted as placed when any of it filled or it may still be working; cancelled unfilled: said, next pass.
@@ -138,7 +155,6 @@ internal object SquareOffExit {
                     break
                 }
             }
-            if (placed.isNotEmpty()) notePlaced(p.exchange, p.symbol, p.product)
             return placed.isNotEmpty()
         } finally { pass.leave() }
     }

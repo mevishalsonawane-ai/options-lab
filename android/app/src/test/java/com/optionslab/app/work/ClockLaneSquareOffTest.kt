@@ -55,7 +55,9 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         kite.instruments += FakeKite.Ins(1_101, ce, "NIFTY", today, 24_500.0, "CE", 75)
         kite.instruments += FakeKite.Ins(1_102, mis, "NIFTY", today.plusDays(7), 24_600.0, "CE", 75)
         kite.instruments += FakeKite.Ins(1_103, other, "NIFTY", today.plusDays(7), 24_000.0, "PE", 75)
+        AutomationSupport.niftyOptions(kite)           // a strategy's leg (a week and more out)
         listOf(ce, mis, other).forEach { kite.quote("NFO:$it", 20.0, 19.95, 20.05) }
+        kite.quote("NFO:${AutomationSupport.NIFTY_CE}", 100.0, 99.95, 100.05)
         runBlocking { Broker.instruments() }
         kite.requests.clear()
         AutomationSupport.resetExpiryTold()
@@ -150,12 +152,24 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         kite.quote("NFO:$other", 100.0 - loss / 75)
     }
 
+    /** A running LIVE strategy holding one NIFTY CE leg (bought at the start), as the loss limit's test makes one. */
+    private fun runningStrategy() = runBlocking {
+        AutomationSupport.security(compromised = false)
+        assertEquals(null, Strategies.save(AutomationSupport.strategy("Clock lane test", com.optionslab.engine.strategy.Position.B to com.optionslab.engine.strategy.OptionType.CE)))
+        val id = Strategies.all().single().def.id
+        Strategies.setLiveEnabled(id, true)
+        Strategies.start(id, com.optionslab.engine.strategy.RunMode.LIVE, "manual", confirmedByOwner = true, compromised = false)
+        assertEquals("BUY", kite.placed.single().form["transaction_type"])
+    }
+    private fun strategySells() = kite.placed.count { it.form["tradingsymbol"] == AutomationSupport.NIFTY_CE && it.form["transaction_type"] == "SELL" }
+
     /**
-     * Item 2: the real daily loss limit trips while a square-off holds the turn. Its sales (every running strategy stopped and sold)
-     * wait for the turn, never beside the square-off's sales on the same legs; once the turn is free they go.
+     * Item 2 (second review): the real daily loss limit trips while a square-off holds the turn; the running strategy's exit send waits
+     * for the turn, never beside the square-off's sales on the same legs; once the turn is free it goes, once.
      */
-    @Test fun aTrippedLossLimitsSalesTakeTheSquareOffsTurn() = runBlocking {
+    @Test fun aRunningStrategysExitSendWaitsForTheSquareOffsTurn() = runBlocking {
         AutomationSupport.liveSettings()
+        runningStrategy()
         losing(3_000.0)
         val release = CompletableDeferred<Unit>()
         val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
@@ -164,14 +178,116 @@ class ClockLaneSquareOffTest : RobolectricTest() {
             val check = launch(Dispatchers.IO) { LossBreaker.check(context) }
             Background.await("the limit tripped", 10_000) { LossBreaker.trippedToday() }
             Thread.sleep(1_500)
-            assertFalse("its sales wait for the square-off", runBlocking { Strategies.stoppedToday() })
-            assertFalse(check.isCompleted)
+            assertEquals("its exit waits for the square-off", 0, strategySells())
             release.complete(Unit)
             check.join()
-            assertTrue("then they go", runBlocking { Strategies.stoppedToday() })
+            assertEquals("then it goes, once", 1, strategySells())
         } finally {
             release.complete(Unit)
             hold.join()
+        }
+    }
+
+    /**
+     * Item 1 (c), third review: tripped with no strategy running there is nothing to sell, so the turn is never waited for - the day's
+     * stop is written at once even while a square-off holds the turn (before, the whole stop waited up to 30 s for it).
+     */
+    @Test fun aTrippedLimitWithNothingRunningNeverWaitsForTheTurn() = runBlocking {
+        AutomationSupport.liveSettings()
+        losing(3_000.0)
+        val release = CompletableDeferred<Unit>()
+        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
+        try {
+            Background.await("a square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
+            val t0 = System.currentTimeMillis()
+            withContext(Dispatchers.IO) { LossBreaker.check(context) }
+            val ms = System.currentTimeMillis() - t0
+            assertTrue("the check took $ms ms", ms < 8_000L)
+            assertTrue(LossBreaker.trippedToday())
+            assertTrue("stopped for the day at once", Strategies.stoppedToday())
+        } finally {
+            release.complete(Unit)
+            hold.join()
+        }
+    }
+
+    /**
+     * Item 1 (b), third review: the stop's sales take the turn only once the strategies' lock is held - never while waiting for it (a
+     * pass held that lock across Zerodha calls for minutes, and the square-offs waited behind the queued sale all that time). Before,
+     * the loss limit wrapped the whole stop, the wait for the lock included, in the turn.
+     */
+    @Test fun theTurnIsNeverQueuedWhileTheStopWaitsForTheStrategiesLock() = runBlocking {
+        AutomationSupport.liveSettings()
+        runningStrategy()
+        val release = CompletableDeferred<Unit>()
+        val lock = launch(Dispatchers.IO) { Strategies.holdLockForTest(release) }
+        try {
+            Thread.sleep(200)
+            val stop = launch(Dispatchers.IO) {
+                Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true)
+            }
+            repeat(15) {
+                assertFalse("the turn is free while the stop waits for the lock", ClockLane.salesQueuedForTest())
+                Thread.sleep(100)
+            }
+            assertEquals(0, strategySells())
+            release.complete(Unit)
+            stop.join()
+            assertEquals("sold once the lock was had", 1, strategySells())
+        } finally {
+            release.complete(Unit)
+            lock.join()
+        }
+    }
+
+    /**
+     * Item 1 (b), third review: the square-offs never wait for the strategies' lock (their order labels go in once it is free), so a
+     * stop holding it while it waits for the turn can never hold a square-off too. The real expiry square-off, the lock held throughout.
+     */
+    @Test fun aSquareOffNeverWaitsForTheStrategiesLock() = runBlocking {
+        kite.position(ce, 75, 20.0)
+        val release = CompletableDeferred<Unit>()
+        val lock = launch(Dispatchers.IO) { Strategies.holdLockForTest(release) }
+        try {
+            Thread.sleep(200)
+            val t0 = System.currentTimeMillis()
+            withContext(Dispatchers.IO) { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
+            val ms = System.currentTimeMillis() - t0
+            assertTrue("the square-off took $ms ms with the lock held", ms < 8_000L)
+            assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
+            release.complete(Unit)
+            lock.join()
+            val id = kite.orders.values.single { it.symbol == ce }.id
+            assertEquals("its label went in once the lock was free", com.optionslab.app.data.Origins.EXPIRY, Strategies.owners()["kite:$id"])
+        } finally {
+            release.complete(Unit)
+            lock.join()
+        }
+    }
+
+    /**
+     * Items 1 (a) and 2, third review: a loss-limit sale stuck in the turn (at Zerodha, for minutes) never keeps the real expiry
+     * square-off or the flat-by back past the sales' wait: each waits that long (worked out at every look, the flat-by too), then goes
+     * and the diary says so. (Before, each round gave up at once behind it.)
+     */
+    @Test fun aStuckLossSaleNeverKeepsTheSquareOffsBackPastItsWait() = runBlocking {
+        ClockLane.salesTurnWaitMs = 2_000L
+        at(15, 25)
+        kite.position(ce, 75, 20.0)
+        kite.position(mis, 75, 20.0, product = "MIS")
+        val release = CompletableDeferred<Unit>()
+        val sale = launch(Dispatchers.IO) { ClockLane.sales(ClockLane.LOSS) { release.await() } }
+        try {
+            Background.await("the sale holds the turn", 5_000) { ClockLane.salesQueuedForTest() }
+            val t0 = System.currentTimeMillis()
+            withContext(Dispatchers.IO) { ClockLane.runSquareOffs(context, AppSettings.load(), StopLane.Mode.NSE) }
+            val ms = System.currentTimeMillis() - t0
+            assertEquals("both went, in order", listOf(ce, mis), kite.placed.map { it.form["tradingsymbol"] })
+            assertTrue("within the waits: $ms ms", ms < 20_000L)
+            assertFalse("the sale is still stuck", sale.isCompleted)
+        } finally {
+            release.complete(Unit)
+            sale.join()
         }
     }
 

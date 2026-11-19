@@ -101,7 +101,7 @@ internal object ClockLane {
      * start ([lastDone]); one that throws stamps nothing.
      */
     suspend fun run(context: Context, name: String, s: AppSettings) {
-        if (name != LOSS) { turn.take(turnWait(), name) { runOne(context, name, s) }; return }
+        if (name != LOSS) { inTurn(name) { runOne(context, name, s) }; return }
         val t0 = clock()
         lossStartedAt = t0
         try {
@@ -120,14 +120,32 @@ internal object ClockLane {
         }
     }
 
-    /** How long a square-off waits for the turn: the loss limit's sales hold it for as long as they take, so longer for them. */
-    private fun turnWait(): Long = if (turn.holder == LOSS) SALES_TURN_WAIT_MS else ClockSteps.TURN_WAIT_MS
+    /** The loss limit's sales hold the turn or wait for it now. */
+    private fun salesQueued(): Boolean = turn.holder == LOSS || turn.firstWaiting > 0
+
+    /** 20 Nov 2026 (third review): how long the sales and the square-offs wait for each other ([SALES_TURN_WAIT_MS]; a test's shorter). */
+    @Volatile internal var salesTurnWaitMs = SALES_TURN_WAIT_MS
+
+    /**
+     * A square-off's [body] in the turn. 20 Nov 2026 (third review): the wait is worked out at every look - long ([salesTurnWaitMs])
+     * while the loss limit's sales hold or wait for the turn, else [ClockSteps.TURN_WAIT_MS] - so a square-off later in the sequence is
+     * never left out because a sale queued after it began to wait. Waited that long behind the sales (a sale stuck at Zerodha), it goes
+     * anyway, as the sales do behind a square-off ([sales]), and the diary says so: a stuck sale never keeps the 15:05 square-off or
+     * the flat-by back for more than that. Null: the turn not had from another square-off (the next round tries again).
+     */
+    private suspend fun <T> inTurn(name: String, body: suspend () -> T): T? {
+        val r = turn.take({ if (salesQueued()) salesTurnWaitMs else ClockSteps.TURN_WAIT_MS }, name) { Result.success(body()) }
+        if (r != null) return r.getOrThrow()
+        if (!salesQueued()) return null
+        runCatching { Heartbeat.diary("$name: the daily loss limit's sales held the turn ${salesTurnWaitMs / 1000} s; it goes now") }
+        return body()
+    }
 
     /**
      * The square-offs of [mode]'s look, one after another in the pass's order ([SQUARE_OFFS]): after a loss-limit run under way has
      * ended ([LOSS_FIRST_WAIT_MS] at most, so a hung one never holds them for ever), each in the turn for its own run (so a tripped
-     * loss limit's sales, first in line, slot in between, never beside one); a turn not had, the rest of the sequence is left to the next round, in
-     * order. Stamps [SQUARE_OFFS] only when every one completed; each stamps its own name ([runOne]).
+     * loss limit's sales, first in line, slot in between; 20 Nov 2026: behind a sale stuck past [salesTurnWaitMs] a square-off goes
+     * anyway, [inTurn]); a turn not had from another square-off, the rest of the sequence is left to the next round, in order. Stamps [SQUARE_OFFS] only when every one completed; each stamps its own name ([runOne]).
      */
     suspend fun runSquareOffs(context: Context, s: AppSettings, mode: StopLane.Mode) {
         val t0 = clock()
@@ -136,7 +154,7 @@ internal object ClockLane {
         while (sup != null && sup.busy(LOSS) && waited < LOSS_FIRST_WAIT_MS) { kotlinx.coroutines.delay(100); waited += 100 }
         var all = true
         for (n in squareOffsFor(mode)) {
-            val ok = turn.take(turnWait(), n) { runOne(context, n, s) }
+            val ok = inTurn(n) { runOne(context, n, s) }
             if (ok == null) {
                 all = false
                 if (t0 - turnToldAt >= 60_000L || t0 < turnToldAt) {
@@ -187,18 +205,23 @@ internal object ClockLane {
     /**
      * 19 Nov 2026 (second review: the loss limit's sales could overlap a square-off's on the same legs): [block] - the loss limit's
      * sales - in the square-offs' turn, waited for [SALES_TURN_WAIT_MS] at most; not had by then (a square-off hung), they go
-     * anyway (a tripped limit always sells) and the diary says so.
+     * anyway (a tripped limit always sells) and the diary says so. 20 Nov 2026 (third review): called around the exit sends only, with
+     * the strategies' lock already held ([com.optionslab.app.data.Strategies.stop]) - never while waiting for that lock, and not at
+     * all when nothing is running.
      */
     suspend fun <T> sales(who: String, block: suspend () -> T): T {
         // First in line ([ClockSteps.Turn.take] first): the square-offs hold back while it waits, so it has the turn between two of them.
-        val r = turn.take(SALES_TURN_WAIT_MS, who, first = true) { Result.success(block()) }
+        val r = turn.take(salesTurnWaitMs, who, first = true) { Result.success(block()) }
         if (r != null) return r.getOrThrow()
-        runCatching { Heartbeat.diary("$who: a square-off held the turn ${SALES_TURN_WAIT_MS / 1000} s (${turn.holder ?: "?"}); its sales go now") }
+        runCatching { Heartbeat.diary("$who: a square-off held the turn ${salesTurnWaitMs / 1000} s (${turn.holder ?: "?"}); its sales go now") }
         return block()
     }
 
     /** 19 Nov 2026 (second review): a square-off holds the turn now (it is closing positions); the stop rescue waits. */
     fun squareOffRunning(): Boolean = turn.holder.let { it != null && it != LOSS }
+
+    /** TEST ONLY: whether the loss limit's sales hold or wait for the turn now. */
+    internal fun salesQueuedForTest(): Boolean = salesQueued()
 
     /** TEST ONLY: the turn held by [who] until [release] completes. */
     internal suspend fun holdTurnForTest(who: String, release: kotlinx.coroutines.CompletableDeferred<Unit>) { turn.take(60_000L, who) { release.await() } }
@@ -325,7 +348,7 @@ internal object ClockLane {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { done.clear(); lastStart.clear(); lossStartedAt = 0L; testWork = null; lane = null; clock = System::currentTimeMillis; told = ClockSteps.Once() }
+    internal fun resetForTest() { done.clear(); lastStart.clear(); lossStartedAt = 0L; salesTurnWaitMs = SALES_TURN_WAIT_MS; testWork = null; lane = null; clock = System::currentTimeMillis; told = ClockSteps.Once() }
 }
 
 /**

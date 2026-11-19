@@ -158,6 +158,27 @@ class ClockStepsTest {
         assertEquals(listOf("expiry square-off", "daily loss limit", "MCX expiry exit", "flat-by"), order.toList())
     }
 
+    /**
+     * 20 Nov 2026 (third review): the wait is worked out at every look, not once at the start - a square-off that began to wait while
+     * another square-off held the turn (a short wait) waits long once the loss limit's sales queue behind it, so it is not left out.
+     */
+    @Test fun theWaitIsWorkedOutAfreshAtEveryLook() = runBlocking {
+        val turn = ClockSteps.Turn(pollMs = 10)
+        val releaseA = CompletableDeferred<Unit>()
+        val a = scope.launch { turn.take(waitMs = 5_000, who = "expiry square-off") { releaseA.await() } }
+        until { turn.holder == "expiry square-off" }
+        val c = async(Dispatchers.IO) {
+            turn.take({ if (turn.firstWaiting > 0 || turn.holder == "daily loss limit") 3_000L else 300L }, "flat-by") { "flat-by ran" }
+        }
+        delay(50)
+        val sales = async(Dispatchers.IO) { turn.take(waitMs = 5_000, who = "daily loss limit", first = true) { delay(600); "sold" } }
+        until { turn.firstWaiting > 0 }
+        delay(400)                                     // past the short wait the flat-by began with
+        releaseA.complete(Unit); a.join()
+        assertEquals("sold", sales.await())
+        assertEquals("flat-by ran", c.await(), "it waited on through the sales, never left out at its first 300 ms")
+    }
+
     @Test fun onceTellsEachKeyOncePerDay() {
         val once = ClockSteps.Once()
         assertTrue(once.first(tue, "expiry|15:05")); assertFalse(once.first(tue, "expiry|15:05"))

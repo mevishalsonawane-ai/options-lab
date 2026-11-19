@@ -98,26 +98,35 @@ object ClockSteps {
         @Volatile var holder: String? = null
             private set
 
-        /** How many [take]s with `first` are waiting now. */
-        private val firstWaiting = java.util.concurrent.atomic.AtomicInteger()
+        private val firstCount = java.util.concurrent.atomic.AtomicInteger()
+
+        /** How many [take]s with `first` are waiting now (memory). */
+        val firstWaiting: Int get() = firstCount.get()
 
         /**
          * The turn for [block], waited for [waitMs] at most (null: not had). 19 Nov 2026 (second review: a sequence that lets the turn go
          * and takes it again at once never let a polling waiter in): [first] - the daily loss limit's sales - goes before every take
          * without it: while one waits, the others hold back (within their own [waitMs]), so it has the turn as soon as it is let go.
          */
-        suspend fun <T> take(waitMs: Long = TURN_WAIT_MS, who: String? = null, first: Boolean = false, block: suspend () -> T): T? {
+        suspend fun <T> take(waitMs: Long = TURN_WAIT_MS, who: String? = null, first: Boolean = false, block: suspend () -> T): T? =
+            take({ waitMs }, who, first, block)
+
+        /**
+         * As [take], with the longest wait worked out afresh at every look ([waitMs]): 20 Nov 2026 (third review) - a square-off waits
+         * longer while the loss limit's sales hold or wait for the turn, also when they queue after it began to wait.
+         */
+        suspend fun <T> take(waitMs: () -> Long, who: String? = null, first: Boolean = false, block: suspend () -> T): T? {
             // tryLock and a short sleep, never lock() under a timeout: a timeout that fires as the lock is had would keep it for ever.
             var waited = 0L
-            if (first) firstWaiting.incrementAndGet()
+            if (first) firstCount.incrementAndGet()
             try {
-                while ((!first && firstWaiting.get() > 0) || !m.tryLock()) {
-                    if (waited >= waitMs) return null
+                while ((!first && firstCount.get() > 0) || !m.tryLock()) {
+                    if (waited >= waitMs()) return null
                     delay(pollMs)
                     waited += pollMs
                 }
             } finally {
-                if (first) firstWaiting.decrementAndGet()
+                if (first) firstCount.decrementAndGet()
             }
             holder = who
             try {

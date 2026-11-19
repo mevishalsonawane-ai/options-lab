@@ -76,7 +76,7 @@ object McxGuard {
                 val c = Paper.contractOf(p.symbol) ?: continue
                 val due = McxExpiry.due(c.underlying, c.expiry, c.right != Right.IX, now, cal, cfg) ?: continue
                 val r = Paper.close(p.symbol, p.product)
-                r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", Origins.EXPIRY) } }
+                r.orderId?.let { runCatching { Strategies.tagOwnerSoon("paper:$it", Origins.EXPIRY) } }
                 if (r.ok) tellOnce(context, "paper ${p.symbol}", "MCX expiry exit", "Paper ${p.symbol} closed. ${due.text}")
                 else tellOnce(context, "paper fail ${p.symbol}", "MCX expiry exit", "Paper ${p.symbol} could not be closed (${r.message}). Retrying every pass. ${due.text}")
             }
@@ -141,7 +141,7 @@ object McxGuard {
                     try {
                         val id = Broker.placeOrder(o, exit = true)
                         SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol, p.product)
-                        runCatching { Strategies.tagOwner("kite:$id", Origins.EXPIRY) }
+                        runCatching { Strategies.tagOwnerSoon("kite:$id", Origins.EXPIRY) }
                         tellOnce(context, "live ${p.symbol}", "MCX expiry exit", "Zerodha ${p.symbol}: close sent. ${due.text}")
                     } catch (e: Exception) {
                         if (Broker.definite(e)) tellOnce(context, "rejected ${p.symbol} ${e.message}", "MCX expiry exit",

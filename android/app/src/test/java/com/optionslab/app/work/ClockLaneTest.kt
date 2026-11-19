@@ -254,6 +254,31 @@ class ClockLaneTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (third review, item B): once the limit has tripped today the arms never wait for a loss-limit run (their gates read
+     * the stop, and the groups also run the exits of positions still open, which must not wait on the limit's sales).
+     */
+    @Test fun theArmsNeverWaitForTheLossLimitOnceItTripped() = runBlocking {
+        val release = CompletableDeferred<Unit>()
+        ClockLane.testWork = { n -> if (n == ClockLane.LOSS) release.await() }
+        val run = WatchWorkers.begin(this)
+        try {
+            com.optionslab.app.security.SecurePrefs.put("breaker.day", com.optionslab.app.data.Market.today().toString())
+            com.optionslab.app.data.LossBreaker.forgetForTest()
+            assertTrue(com.optionslab.app.data.LossBreaker.trippedToday())
+            val s = com.optionslab.app.data.AppSettings.load()
+            kotlinx.coroutines.withContext(Dispatchers.IO) { WatchWorkers.supervisor!!.kick(ClockLane.GROUP, listOf(ClockLane.step(context, ClockLane.LOSS, s))) }
+            Background.await("the loss limit running", 5_000) { WatchWorkers.supervisor!!.busy(ClockLane.LOSS) }
+            val t0 = System.currentTimeMillis()
+            assertTrue(Tasks.awaitLossLimit(10_000))
+            val ms = System.currentTimeMillis() - t0
+            assertTrue("no wait: $ms ms", ms < 2_000L)
+        } finally {
+            release.complete(Unit)
+            WatchWorkers.end(run)
+        }
+    }
+
+    /**
      * 19 Nov 2026 (second review, item 6): the stop rescue, now on its own beside the square-offs, never runs while a square-off holds
      * the turn (it may be closing the very contract): it waits, bounded, then is left to the next pass; it runs once the turn is free.
      * (The rescue itself is Jarvis's: this is its gate in the pass, [Tasks.afterSquareOffs].)

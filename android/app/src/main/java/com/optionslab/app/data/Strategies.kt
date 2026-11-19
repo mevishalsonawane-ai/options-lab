@@ -545,14 +545,48 @@ object Strategies {
     }
 
     /** Who placed each order this phone knows of: venue id ("paper:…", "kite:…") -> strategy label. */
-    suspend fun owners(): Map<String, String> = lock.withLock { HashMap(book().owners) }
+    suspend fun owners(): Map<String, String> = lock.withLock { val b = book(); drainOwnersSoon(b); HashMap(b.owners) }
 
     /** Label an order placed outside a strategy definition (the ORB arms), for the Orders and Trades lists. */
     suspend fun tagOwner(key: String, label: String) = lock.withLock {
         // The book unreadable just now: the label is skipped, never a throw on the caller's order path (18 Oct, review).
         val b = runCatching { book() }.getOrNull() ?: return@withLock
+        drainOwnersSoon(b)
         b.owners[key] = label; saveSoon(b)
     }
+
+    /**
+     * 20 Nov 2026 (third review of the clock lane): labels given while this book's lock was busy ([tagOwnerSoon]); put in at the next
+     * look under the lock ([owners], [tagOwner]). Memory only.
+     */
+    private val ownersSoon = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    private fun drainOwnersSoon(b: Book) {
+        if (ownersSoon.isEmpty()) return
+        val it = ownersSoon.entries.iterator()
+        while (it.hasNext()) { val e = it.next(); b.owners[e.key] = e.value; it.remove() }
+        saveSoon(b)
+    }
+
+    /**
+     * [tagOwner] that never waits for this book's lock: had at once, the label goes in now; busy, it is kept in memory and put in at the
+     * next look. For the square-offs, which hold the turn that the daily loss limit's sales wait for while holding this lock
+     * ([stop] with salesInTurn): waiting here would hold both for the sales' whole wait.
+     */
+    fun tagOwnerSoon(key: String, label: String) {
+        if (!lock.tryLock()) { ownersSoon[key] = label; return }
+        try {
+            val b = runCatching { book() }.getOrNull()
+            if (b == null) { ownersSoon[key] = label; return }
+            drainOwnersSoon(b)
+            b.owners[key] = label; saveSoon(b)
+        } finally {
+            lock.unlock()
+        }
+    }
+
+    /** TEST ONLY: this book's lock held until [release] completes (a pass holding it across Zerodha calls). */
+    internal suspend fun holdLockForTest(release: kotlinx.coroutines.CompletableDeferred<Unit>) { lock.withLock { release.await() } }
 
     /**
      * The order flow beside a one-leg strategy's option BUY entry (9 Oct; a basket's legs are never gated one by one: a
@@ -824,7 +858,7 @@ object Strategies {
      * the timeline's own Undo (it marks its entry itself).
      */
     suspend fun stopForToday(stopRunning: Boolean, compromised: Boolean, why: com.optionslab.ira.DayStop.Why = com.optionslab.ira.DayStop.Why.BOSS,
-                             log: Boolean = true): String {
+                             log: Boolean = true, salesInTurn: Boolean = false): String {
         var logged: String? = null
         val running = lock.withLock {
             val b = book()
@@ -844,7 +878,7 @@ object Strategies {
         if (log && loggedAt != null) logSide(com.optionslab.ira.DayStop.Side.INDEX, true, com.optionslab.ira.DayStop.by(why), loggedAt)
         if (!stopRunning || running.isEmpty()) return "Index bots stopped for today: armed strategies will not start." +
             (if (running.isNotEmpty()) " ${running.size} running strategy(ies) keep managing their exits." else "") + " The commodity bots keep trading."
-        val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised) }.getOrElse { e -> "${e.message}" } }
+        val results = running.map { (id, _) -> runCatching { stop(id, "bot stopped for the day", compromised, salesInTurn) }.getOrElse { e -> "${e.message}" } }
         return "Index bots stopped for today. " + results.joinToString(" ") + " The commodity bots keep trading."
     }
 
@@ -936,13 +970,20 @@ object Strategies {
         return index.removeSuffix(" The commodity bots keep trading.") + " " + mcx.removeSuffix(" The index bots keep trading.")
     }
 
-    suspend fun stop(id: Long, reason: String, compromised: Boolean): String = lock.withLock {
+    /**
+     * Stop strategy [id], selling what it holds. 20 Nov 2026 (third review of the clock lane): [salesInTurn] (the daily loss limit's
+     * stop) - the exit sends only, with this book's lock already held, in the square-offs' turn
+     * ([com.optionslab.app.work.ClockLane.sales]); the turn is never held while waiting for this lock (the square-offs never wait
+     * for it: [tagOwnerSoon]).
+     */
+    suspend fun stop(id: Long, reason: String, compromised: Boolean, salesInTurn: Boolean = false): String = lock.withLock {
         val b = book()
         val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
         val run = b.runs[id] ?: return@withLock "${def.name} is not running."
         val v = try { venue(run.mode) } catch (e: Exception) { return@withLock "Could not load the contracts: ${e.message}" }
         val ids = b.brokerIds.getOrPut(run.runId) { HashMap() }
-        val next = host.stop(run, def, Market.now(), reason, exec(b, def, v, run.mode, compromised), ids, checkpoint(b, id))
+        val send: suspend () -> RunState = { host.stop(run, def, Market.now(), reason, exec(b, def, v, run.mode, compromised), ids, checkpoint(b, id)) }
+        val next = if (salesInTurn) com.optionslab.app.work.ClockLane.sales(com.optionslab.app.work.ClockLane.LOSS) { send() } else send()
         b.runs[id] = next; finish(b, next); save(b)
         if (next.stoppedAt != null) "${def.name} stopped." else "Exit orders sent for ${def.name}; it closes when they fill."
     }
@@ -1354,6 +1395,7 @@ object Strategies {
      */
     fun wipe() {
         synchronized(ioLock) { synchronized(writeOrder) { wipeGen++; ownersPending = null; saveSeq++; cache = null } }
+        ownersSoon.clear()
         clearHints(); notRestedAt.clear()
         written.forget()
         filesForErase().forEach { runCatching { it.delete() } }
