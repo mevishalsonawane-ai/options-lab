@@ -66,7 +66,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testSync = false
         ArmLive.testNow = null
         ArmLive.testReadFails = null; ArmLive.testAccountFails = false; ArmLive.testSecurityFails = false; ArmLive.testHeard = null
-        ArmLive.testLotCap = null
+        ArmLive.testLotCap = null; ArmLive.testWriteFails = null
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -1433,15 +1433,20 @@ class ArmLiveTest : RobolectricTest() {
         } finally { ExitCoordinator.resetForTest() }
     }
 
-    @Test fun inShadowTheLagGuardOnlyLogsAndTheExitGoesAsBefore() {
+    /**
+     * 18 Nov 2026 (audit A2: with Boss's global switch in shadow a trailing positions read was sold again - a double sell, a naked
+     * short): the arms' live exits and stops use the positions-lag guard whatever that switch says (it only ever sends less).
+     */
+    @Test fun evenWithTheLagGuardInShadowAnArmsExitThatFilledIsNeverSoldAgain() {
         ExitCoordinator.resetForTest(lagOn = false)
         try {
             bossSoldWhileThePositionsTrail("lag-shadow", 50)
             watch()
-            // As before this round (the hole the guard closes once Boss switches it on): the trailing read is sold again.
-            assertEquals(1, kite.placed.count { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" })
-            assertTrue(ExitCoordinator.countsForTest().lagShadow >= 1)
-            assertEquals(0, ExitCoordinator.countsForTest().lagSubtracted)
+            assertEquals("no second market sell", 0, kite.placed.count { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" })
+            assertEquals("flat, never short", 0, held())
+            assertTrue("no stop rested again on lots already sold",
+                kite.placed.none { it.form["order_type"] == "SL" && it.form["transaction_type"] == "SELL" })
+            assertFalse("Boss's own switch is untouched", ExitCoordinator.isLagOn())
         } finally { ExitCoordinator.resetForTest() }
     }
 
@@ -1818,5 +1823,242 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("its stop taken out first", "CANCELLED", kite.order(id).status)
         assertEquals(com.optionslab.engine.orb.StepTrail.WHY_LOCK, view().closed.single().why)
         assertEquals(0, kite.positions["NFO:$s:MIS"]?.first ?: 0)
+    }
+
+    // ---- 18 Nov 2026 audit (A1-A4): another order on the contract, lost exit replies, Boss's round trips, a death mid-entry -------
+
+    private fun posted(text: String) = com.optionslab.app.work.Alerts.posted.count { text in it.text }
+    private fun marketSells() = kite.placed.count { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "SELL" }
+    private fun restingSells() = kite.orders.values.filter { it.working && it.side == "SELL" && it.symbol == sym }.sumOf { it.qty - it.filled }
+
+    /**
+     * Audit A1 (CRITICAL): Boss's own LIMIT target in Kite on the arm's contract left its stop no room - the stop was cancelled unsaid and
+     * the stop never sold. Now: Boss is told loudly (once), never more resting sells than held, the app watches the level itself, and
+     * when the price reaches it his LIMIT is cancelled, confirmed out, and the arm sells.
+     */
+    @Test fun bossesOwnLimitTargetIsSaidAndCancelledWhenTheArmsStopIsDue() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "tgt"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        val boss = kite.restsInKite(sym, "SELL", 30, 260.0)               // his own target, in Kite
+        watch()
+        assertFalse("the stop cut to the room left", kite.order(sid).working)
+        assertEquals("never more resting sells than held", 30, restingSells())
+        assertEquals("said loudly", 1, posted("another sell order covers the lot"))
+        watch(); watch()
+        assertEquals("said once for the trade", 1, posted("another sell order covers the lot"))
+        assertEquals("no second stop beside his order", 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertEquals(30, held()); assertTrue(view().closed.isEmpty())
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)                    // through the arm's 170 stop
+        watch()
+        assertEquals("his LIMIT cancelled first", "CANCELLED", kite.order(boss).status)
+        assertEquals(1, marketSells())
+        assertEquals("flat, never short", 0, held())
+        assertEquals("stop", view().closed.single().why)
+        assertEquals(1, posted("was cancelled and the arm sells now"))
+        assertEquals(0, restingSells())
+    }
+
+    /** Audit A1: at 15:15 with the arm's stop resting and Boss's LIMIT covering the lot, his LIMIT and the stop go out and the arm sells once. */
+    @Test fun theSquareOffSellsThroughBossesLimitTarget() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.VixDivRules.SOURCE, "sq-tgt"))
+        val sid = view().openReal.single().stopOrderId!!
+        val boss = kite.restsInKite(sym, "SELL", 30, 260.0)
+        ArmLive.testNow = Market.today().atTime(15, 15).atZone(com.optionslab.engine.IST)
+        watch()
+        assertEquals("CANCELLED", kite.order(boss).status)
+        assertEquals("CANCELLED", kite.order(sid).status)
+        assertEquals(1, marketSells())
+        assertEquals("square_off", view().closed.single().why)
+        assertEquals("flat, never short", 0, held())
+        assertEquals(0, restingSells())
+    }
+
+    /**
+     * Audit A1: held back by an order the arm may not cancel (Boss's own SL in Kite): nothing is sold beside it (never more than held),
+     * and Boss is told loudly, again each minute while the exit stays due.
+     */
+    @Test fun anExitHeldBackByAnOrderItMayNotCancelIsSaidEachMinute() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "blocked"))
+        watch()
+        val boss = kite.restsInKite(sym, "SELL", 30, 150.0, type = "SL")
+        watch()
+        legs["blocked"] = donchian to 0                                     // the paper trade sold: the exit is due
+        watch()
+        assertEquals(1, posted("is due but cannot sell"))
+        watch()
+        assertEquals("not again within the minute", 1, posted("is due but cannot sell"))
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(61)
+        watch()
+        assertEquals("again a minute on", 2, posted("is due but cannot sell"))
+        assertEquals("nothing sold beside it", 0, marketSells())
+        assertTrue("his order untouched", kite.order(boss).working)
+        assertEquals(30, held()); assertEquals(30, restingSells())
+    }
+
+    /**
+     * Audit A2: an exit whose reply was lost and which the book did not show is never sent again while it may still be selling (the
+     * positions trailing its fill); once the book shows it, it is the exit - one sale only.
+     */
+    @Test fun aLostExitIsNeverSentAgainAndIsTheExitOnceTheBookShowsIt() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "lost-exit"))
+        watch()
+        kite.trailReads = 1_000                                              // the sale will not show in the order book
+        kite.positionsTrailReads = 1_000                                     // nor in the positions
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)             // and its reply is lost (it fills at Zerodha)
+        legs["lost-exit"] = donchian to 0
+        watch()
+        assertEquals(1, marketSells())
+        assertEquals(1, posted("got no reply from Zerodha"))
+        watch()
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(10); watch()
+        assertEquals("never sent again while it may be selling", 1, marketSells())
+        assertTrue("no stop rested beside it", kite.orders.values.none { it.working && it.side == "SELL" })
+        kite.showInBook()
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(5); watch()
+        assertEquals("the lost order is the exit", "paper_exit", view().closed.single().why)
+        assertEquals(1, marketSells())
+        assertTrue(view().openReal.isEmpty())
+    }
+
+    /** Audit A2: a lost exit that the book never shows (it never went) holds the contract for its 25 s only; then the exit goes. */
+    @Test fun aLostExitNeverFoundLetsTheExitGoAfterTheHold() {
+        ArmLive.entered(ask(donchian, "lost-none"))
+        watch()
+        kite.trailReads = 1_000
+        kite.nextPlace(FakeKite.Scenario(reply = FakeKite.Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.REJECT))   // nothing sold
+        legs["lost-none"] = donchian to 0
+        watch()
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(10); watch()
+        assertEquals(1, marketSells()); assertEquals(30, held())
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(20); watch()
+        assertEquals("sent again once the hold ended", 2, marketSells())
+        assertEquals(0, held())
+        assertEquals("paper_exit", view().closed.single().why)
+    }
+
+    /** Audit A2: Zerodha's net on a contract an arm trades the other way of its trade (more sold than held) is said loudly, once. */
+    @Test fun aNetShortOnAnArmsContractIsSaidLoudly() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "neg"))
+        watch()
+        kite.soldInKite(sym, 60, 200.0)
+        assertEquals(-30, held())
+        watch(); watch()
+        assertEquals(1, posted("more was sold than held"))
+    }
+
+    /**
+     * Audit A3: a lot Boss bought through the app's own Trade screen (tagged "iraalgo"), or Pine ("irapine"), and sold in Kite is his
+     * round trip, never this trade's close: one short read then closes nothing and leaves the stop resting.
+     */
+    @Test fun aTradeScreenOrPineRoundTripNeverConfirmsAShortRead() {
+        for (tag in listOf("iraalgo", "irapine")) {
+            ArmLive.wipe(); kite.flat(); kite.orders.clear(); legs.clear()
+            ArmLive.entered(ask(donchian, "trip-$tag"))
+            watch()
+            val sid = view().openReal.single().stopOrderId!!
+            kite.boughtInKite(sym, 30, 201.0, tag = tag)
+            kite.soldInKite(sym, 30, 203.0)
+            assertEquals("the arm's lot still held", 30, held())
+            kite.positions["NFO:$sym:MIS"] = 0 to 0.0                    // then one bad read
+            watch()
+            assertTrue("$tag: kept", view().closed.isEmpty())
+            assertEquals(30, view().openReal.single().qty)
+            assertTrue("$tag: its stop rests", kite.order(sid).working)
+        }
+    }
+
+    /**
+     * Audit A4 (CRITICAL): the entry's intent is in the book before its order goes, so a death between the POST and the booking leaves
+     * a trade the restart settles against Zerodha - taken back with its stop, never a live lot nothing owns.
+     */
+    @Test fun anEntryIsWrittenBeforeItsOrderGoesSoADeathAtThePostIsTakenBackWithAStop() {
+        val f = java.io.File(context.noBackupFilesDir, "arm_live.vault")
+        var atPost: ByteArray? = null
+        var intent = false
+        kite.afterNext("/orders/regular") {
+            atPost = f.readBytes()
+            intent = ArmLive.view.value.openReal.any { it.ref == "crash" && it.unconfirmed && it.entryOrderId == null }
+        }
+        ArmLive.entered(ask(donchian, "crash"))
+        assertTrue("the entry's intent was in the book when its order went", intent)
+        // The phone died at the POST: nothing after it happened (no stop, no booking); the book on disk as it was then.
+        kite.orders.values.filter { it.side == "SELL" && it.working }.forEach { it.status = "CANCELLED" }
+        f.writeBytes(atPost!!)
+        ArmLive.forgetMemoryForTest()
+        assertTrue(runBlocking { ArmLive.refresh() }.openReal.single().unconfirmed)
+        watch()
+        val p = view().openReal.single()
+        assertEquals("crash", p.ref); assertFalse(p.unconfirmed); assertEquals(30, p.qty)
+        val stops = kite.orders.values.filter { it.side == "SELL" && it.type == "SL" && it.working }
+        assertEquals(1, stops.size); assertEquals(p.stopOrderId, stops.single().id); assertEquals(30, stops.single().qty)
+        assertEquals("one buy only", 1, kite.orders.values.count { it.side == "BUY" })
+    }
+
+    /** Audit A4: an entry Zerodha refuses leaves no intent behind; a book that cannot be written sends no order and is said, once. */
+    @Test fun anIntentIsDroppedWhenNothingWasBoughtAndNoOrderGoesUnwritten() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "Insufficient funds.")
+        ArmLive.entered(ask(donchian, "refused"))
+        assertTrue(view().open.isEmpty())
+        kite.nextPlace(outcome = FakeKite.Outcome.REJECT)
+        ArmLive.entered(ask(donchian, "rejected"))
+        assertTrue("rejected, nothing filled: no row left", view().open.isEmpty())
+        kite.requests.clear()
+        ArmLive.testWriteFails = java.util.concurrent.atomic.AtomicInteger(1_000)
+        ArmLive.entered(ask(donchian, "unwritten"))
+        assertTrue("no order without its intent written", kite.placed.isEmpty())
+        assertTrue(view().open.isEmpty())
+        assertEquals(true, view().refused[donchian]?.contains("could not be written"))
+        assertEquals("said once", 1, posted("could not be saved"))
+        ArmLive.testWriteFails = null
+        watch()
+        ArmLive.entered(ask(donchian, "written"))
+        assertEquals(1, view().openReal.size)
+    }
+
+    /**
+     * Audit A4: the arm's own stop that Zerodha took just before a death (its id never written) is found resting after the restart and
+     * taken as the trade's stop - never a second stop beside it, never counted as another order that blocks its exit.
+     */
+    @Test fun itsOwnStopFoundRestingAfterARestartIsItsStopNeverASecondOne() {
+        val f = java.io.File(context.noBackupFilesDir, "arm_live.vault")
+        var afterStop: ByteArray? = null
+        kite.afterNext("/orders/regular") { kite.afterNext("/orders/regular") { afterStop = f.readBytes() } }
+        ArmLive.entered(ask(donchian, "orphan"))
+        val sid = view().openReal.single().stopOrderId!!
+        f.writeBytes(afterStop!!)                                              // died right after Zerodha took the stop
+        ArmLive.forgetMemoryForTest()
+        assertNull(runBlocking { ArmLive.refresh() }.openReal.single().stopOrderId)
+        kite.requests.clear()
+        watch()
+        assertTrue("no second stop", kite.placed.none { it.form["order_type"] == "SL" })
+        assertEquals(sid, view().openReal.single().stopOrderId)
+        legs["orphan"] = donchian to 0
+        watch()
+        assertEquals("CANCELLED", kite.order(sid).status)
+        assertEquals(1, marketSells()); assertEquals(0, held())
+        assertEquals("paper_exit", view().closed.single().why)
+    }
+
+    /** Audit (small): a trade row the book cannot read is said, and the open live trades are taken back from Zerodha. */
+    @Test fun aTradeRowTheBookCannotReadIsSaidAndTakenBackFromZerodha() {
+        ArmLive.entered(ask(donchian, "badrow"))
+        val f = java.io.File(context.noBackupFilesDir, "arm_live.vault")
+        val o = org.json.JSONObject(String(com.optionslab.app.security.Vault.readFile(f)!!, Charsets.UTF_8))
+        o.getJSONArray("positions").getJSONObject(0).remove("symbol")
+        com.optionslab.app.security.Vault.writeFile(f, o.toString().toByteArray(Charsets.UTF_8))
+        ArmLive.forgetMemoryForTest()
+        com.optionslab.app.work.Alerts.forgetPosted()
+        runBlocking { ArmLive.refresh() }
+        assertTrue("taken back on the next look", ArmLive.recoverHint)
+        assertEquals(1, posted("could not be read"))
+        watch()
+        assertEquals(1, view().openReal.size)
+        assertEquals("its own stop kept, no second", 1, kite.orders.values.count { it.working && it.side == "SELL" && it.type == "SL" })
     }
 }

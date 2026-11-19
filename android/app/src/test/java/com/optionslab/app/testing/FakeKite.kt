@@ -216,11 +216,23 @@ class FakeKite : Closeable {
     }
 
     /** 18 Nov 2026 (review F1): Boss buys [qty] of [symbol] himself in the Kite app at [price] (no tag), the position moved by it. Its id. */
-    fun boughtInKite(symbol: String, qty: Int, price: Double, product: String = "MIS", exchange: String = "NFO"): String = synchronized(lock) {
+    fun boughtInKite(symbol: String, qty: Int, price: Double, product: String = "MIS", exchange: String = "NFO", tag: String = ""): String = synchronized(lock) {
         val id = (++seq).toString()
-        val o = Order(id, symbol, exchange, "BUY", qty, product, "MARKET", 0.0, 0.0, "", "COMPLETE", filled = qty, avg = price)
+        val o = Order(id, symbol, exchange, "BUY", qty, product, "MARKET", 0.0, 0.0, tag, "COMPLETE", filled = qty, avg = price)
         orders[id] = o
         move(o, qty)
+        id
+    }
+
+    /**
+     * 18 Nov 2026 (audit A1): Boss rests an order himself in the Kite app (no tag; [type] LIMIT by default, an SL triggers at [price]):
+     * working in the book until filled or cancelled, the position unmoved. Its id.
+     */
+    fun restsInKite(symbol: String, side: String, qty: Int, price: Double, type: String = "LIMIT", product: String = "MIS",
+                    exchange: String = "NFO"): String = synchronized(lock) {
+        val id = (++seq).toString()
+        val stop = type == "SL" || type == "SL-M"
+        orders[id] = Order(id, symbol, exchange, side, qty, product, type, price, if (stop) price else 0.0, "", if (stop) "TRIGGER PENDING" else "OPEN")
         id
     }
 
