@@ -414,29 +414,50 @@ class NotificationActionReceiver : BroadcastReceiver() {
             val symbol = intent.getStringExtra(PositionCards.EXTRA_SYMBOL) ?: return
             val done = goAsync()
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                try {
-                    // An MCX position by MCX's own hours (9 Oct); NSE's exactly as before.
-                    val mcx = com.optionslab.app.data.Paper.contractOf(symbol)?.isMcx == true
-                    val accepts = if (mcx) com.optionslab.app.data.McxMarket.acceptsOrders() else com.optionslab.app.data.Market.acceptsOrders()
-                    val open = if (!accepts) {
-                        Alerts.post(if (mcx) com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS else com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
-                    } else com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
-                    if (open.isEmpty() && accepts) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
-                    for (p in open) {
-                        val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
-                        r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
-                        Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
-                    }
-                    // An ORB position closed this way is booked and its resting stop taken out now, not on the next pass.
-                    runCatching { com.optionslab.app.data.OrbArms.priceCheckOnly() }
-                    runCatching { com.optionslab.app.data.Paper.tick() }
-                    runCatching { PositionCards.refresh(context) }
-                    PositionCards.closedFromShade.value++
-                } finally { done.finish() }
+                try { closePaper(context, symbol) } finally { done.finish() }
             }
         }
     }
+
+    /**
+     * "Close position" on a paper position's card. 19 Nov 2026 (audit batch 2): the paper book can be unreadable for a few seconds
+     * (a Keystore hiccup: its read throws rather than handing back an empty account) - then Boss is told to try again and nothing
+     * else happens; it never crashes the app. [readState] and [contractOf] are the tests' seams. Never throws (a cancellation goes up).
+     */
+    internal suspend fun closePaper(context: Context, symbol: String,
+                                    readState: () -> com.optionslab.engine.sandbox.SandboxState = { com.optionslab.app.data.Paper.state },
+                                    contractOf: (String) -> com.optionslab.app.data.Paper.Contract? = { com.optionslab.app.data.Paper.contractOf(it) }) {
+        try {
+            // An MCX position by MCX's own hours (9 Oct); NSE's exactly as before.
+            val mcx = contractOf(symbol)?.isMcx == true
+            val accepts = if (mcx) com.optionslab.app.data.McxMarket.acceptsOrders() else com.optionslab.app.data.Market.acceptsOrders()
+            val open = if (!accepts) {
+                Alerts.post(if (mcx) com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS else com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
+            } else readState().positions.filter { it.symbol == symbol && it.quantity != 0 }
+            if (open.isEmpty() && accepts) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
+            for (p in open) {
+                val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
+                r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
+                Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // The class name only (never a message: it can carry a path or a value).
+            runCatching { com.optionslab.app.data.Diag.record("paper", "close from the notification: the paper book could not be read (${e.javaClass.simpleName})") }
+            Alerts.post(PAPER_UNREADABLE, Alerts.Kind.ERROR, "Could not close")
+            return
+        }
+        // An ORB position closed this way is booked and its resting stop taken out now, not on the next pass.
+        runCatching { com.optionslab.app.data.OrbArms.priceCheckOnly() }
+        runCatching { com.optionslab.app.data.Paper.tick() }
+        runCatching { PositionCards.refresh(context) }
+        PositionCards.closedFromShade.value++
+    }
 }
+
+/** 19 Nov 2026 (audit batch 2): what Boss is told when the paper book cannot be read for a moment. */
+internal const val PAPER_UNREADABLE = "Paper book not readable right now, try again in a few seconds."
 
 /** What each job actually does; shared by the service and the fallback worker. */
 object Tasks {

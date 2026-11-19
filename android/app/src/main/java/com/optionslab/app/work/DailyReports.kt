@@ -265,8 +265,10 @@ object DailyReports {
         Heartbeat.batteryRestricted(context)?.let { restricted ->
             ok(!restricted, if (restricted) com.optionslab.ira.WatchHealth.BATTERY_FIX else com.optionslab.ira.WatchHealth.BATTERY_OK)
         }
-        val carried = Paper.state.positions.count { it.quantity != 0 }
-        if (carried > 0) lines += "• Paper positions carried overnight: $carried"
+        // 19 Nov 2026 (audit batch 2): a paper book unreadable for a moment (a Keystore hiccup) is said, never a failed report.
+        val carried = runCatching { Paper.state.positions.count { it.quantity != 0 } }.getOrNull()
+        if (carried == null) lines += "• Paper positions: paper book not readable right now (checked again next time)"
+        else if (carried > 0) lines += "• Paper positions carried overnight: $carried"
         lines += "• Mode: " + if (s.live) "LIVE (Zerodha)" else "Paper"
         // Boss's paper-only period (12 Oct), when one is set: its end date and reason.
         runCatching { com.optionslab.app.data.PaperOnly.ensureLoaded(); com.optionslab.app.data.PaperOnly.activeNow() }.getOrNull()
