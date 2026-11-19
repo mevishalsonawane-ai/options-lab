@@ -284,6 +284,8 @@ object PersonalStores {
         "orderflow/events/**" to "the move recorder's event files: public market moves (prices and flow around a big move)",
         "history/**" to "the history keeper's folder: public 1-minute bars of indices, futures, watched options and end-of-day chains",
         "holidays.json" to "NSE's public holiday calendar",
+        // 19 Nov 2026: written by the erase itself, so the arms' live copies never take back after a restart a lot from before it.
+        "arm_live_erased.txt" to "the time of the last \"Erase everything\" only (one timestamp), for the arms' live copies; nothing about the account",
         "mcx_holidays.json" to "MCX's public trading calendar",
         "mcx_contracts.json" to "the day's public MCX contract list",
         "mcx_contracts.json.tmp" to "the public MCX contract list being written",

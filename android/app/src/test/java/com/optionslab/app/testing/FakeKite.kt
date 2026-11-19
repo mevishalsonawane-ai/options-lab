@@ -190,6 +190,15 @@ class FakeKite : Closeable {
      * as Zerodha's book can trail a POST by a moment. Its own history (GET /orders/{id}) shows it at once.
      */
     @Volatile var trailReads = 0
+
+    /**
+     * 19 Nov 2026: the next cancel is taken but its order shows working in its history (GET /orders/{id}) for this many reads more, as
+     * Zerodha's book can show a cancel a moment after its reply; then CANCELLED.
+     */
+    @Volatile var cancelLagReads = 0
+    /** 19 Nov 2026: this many cancels are answered as taken but never land (the order stays working). */
+    @Volatile var cancelsLost = 0
+    private val cancelLag = HashMap<String, Int>()
     private val trailing = HashMap<String, Int>()
 
     fun nextPlace(s: Scenario) = synchronized(lock) { scenarios.addLast(s) }
@@ -221,6 +230,19 @@ class FakeKite : Closeable {
         val o = Order(id, symbol, exchange, "BUY", qty, product, "MARKET", 0.0, 0.0, tag, "COMPLETE", filled = qty, avg = price)
         orders[id] = o
         move(o, qty)
+        id
+    }
+
+    /**
+     * 18 Nov 2026 (audit A1): Boss rests an order himself in the Kite app (no tag; [type] LIMIT by default, an SL triggers at [price]):
+     * working in the book until filled or cancelled, the position unmoved. Its id.
+     */
+    fun restsInKite(symbol: String, side: String, qty: Int, price: Double, type: String = "LIMIT", product: String = "MIS",
+                    exchange: String = "NFO", tag: String = ""): String = synchronized(lock) {
+        val id = (++seq).toString()
+        val stop = type == "SL" || type == "SL-M"
+        orders[id] = Order(id, symbol, exchange, side, qty, product, type, if (type == "SL-M") 0.0 else price, if (stop) price else 0.0, tag,
+            if (stop) "TRIGGER PENDING" else "OPEN")
         id
     }
 
@@ -585,6 +607,7 @@ class FakeKite : Closeable {
 
     private fun history(id: String): MockResponse {
         val o = orders[id] ?: return error(400, "InputException", "Couldn't find that `order_id`.")
+        cancelLag[id]?.let { left -> if (left <= 1) { cancelLag.remove(id); o.status = "CANCELLED" } else cancelLag[id] = left - 1 }
         if (o.pollsLeft > 0 && --o.pollsLeft == 0) {
             if (o.cancelRest) { o.status = "CANCELLED"; o.message = "Your order has been cancelled because of market protection." }
             else { o.status = "COMPLETE"; val add = o.qty - o.filled; o.filled = o.qty; o.avg = o.fillPrice; move(o, add) }
@@ -596,6 +619,8 @@ class FakeKite : Closeable {
     private fun cancel(id: String): MockResponse {
         val o = orders[id] ?: return error(400, "InputException", "Couldn't find that `order_id`.")
         if (!o.working) return error(400, "InputException", "Order cannot be cancelled as it is being processed. Try later.")
+        if (cancelsLost > 0) { cancelsLost--; return ok(JSONObject().put("order_id", id)) }
+        if (cancelLagReads > 0) { cancelLag[id] = cancelLagReads; cancelLagReads = 0; return ok(JSONObject().put("order_id", id)) }
         o.status = "CANCELLED"
         return ok(JSONObject().put("order_id", id))
     }

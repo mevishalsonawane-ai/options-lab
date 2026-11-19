@@ -338,11 +338,91 @@ class LiveMirrorTest {
     @Test fun aRestingStopIsShrunkToWhatIsHeldLessTheOtherWorkingExits() {
         val l = Look(side = 1, qty = 60, held = 30, ltp = 200.0, tick = 0.05, stopTrigger = 170.0, stopResting = true, stopQty = 60, lot = 30)
         assertEquals(Decision(Step.SHRINK_STOP, "held_less", 30), LiveMirror.decide(l))           // Boss sold one of two lots by hand
-        assertEquals(Decision(Step.SHRINK_STOP, "held_less", 0), LiveMirror.decide(l.copy(otherWorking = 30)))   // another holder covers it
+        // 18 Nov 2026 (audit A1): another order covering the lot is told apart from Boss's own sale, so the app says it.
+        assertEquals(Decision(Step.SHRINK_STOP, LiveMirror.SHRINK_COVERED, 0), LiveMirror.decide(l.copy(otherWorking = 30)))   // another holder covers it
         assertEquals(Decision(Step.HOLD), LiveMirror.decide(l.copy(held = 60)))
         assertEquals(Decision(Step.HOLD), LiveMirror.decide(l.copy(held = 120, otherWorking = 60)))
         assertEquals(Decision(Step.SHRINK_STOP, "held_less", 20), LiveMirror.decide(l.copy(side = -1, held = -20, stopQty = 30, lot = 0)))
         assertEquals(Step.SELL, LiveMirror.decide(l.copy(squareOff = true)).step, "a sale due goes first")
+    }
+
+    /**
+     * 18 Nov 2026 (audit A1: Boss's own LIMIT sell in Kite took the arm's stop's room, unsaid): a shrink is "other_exit" only when the
+     * other working exits, not what is held, take the room; a shrink for what Boss sold stays "held_less".
+     */
+    @Test fun aShrinkSaysWhenAnotherOrderNotWhatIsHeldTakesTheRoom() {
+        val l = Look(side = 1, qty = 30, held = 30, ltp = 200.0, tick = 0.05, stopTrigger = 170.0, stopResting = true, stopQty = 30, lot = 30)
+        assertEquals(Decision(Step.HOLD), LiveMirror.decide(l))
+        assertEquals(Decision(Step.SHRINK_STOP, LiveMirror.SHRINK_COVERED, 0), LiveMirror.decide(l.copy(otherWorking = 30)))
+        assertEquals(Decision(Step.SHRINK_STOP, LiveMirror.SHRINK_COVERED, 0), LiveMirror.decide(l.copy(otherWorking = 15)))
+        // Two lots, Boss sold one and his limit covers the other: the others take room beyond what is held.
+        val two = l.copy(qty = 60, stopQty = 60, held = 30)
+        assertEquals(Decision(Step.SHRINK_STOP, LiveMirror.SHRINK_COVERED, 0), LiveMirror.decide(two.copy(otherWorking = 30)))
+        assertEquals(Decision(Step.SHRINK_STOP, "held_less", 30), LiveMirror.decide(two))
+        // Held more than the stop (Boss's own lot beside it, with his own target): room enough, nothing.
+        assertEquals(Decision(Step.HOLD), LiveMirror.decide(l.copy(held = 60, otherWorking = 30)))
+        // A short (MCX) the same way round.
+        assertEquals(Decision(Step.SHRINK_STOP, LiveMirror.SHRINK_COVERED, 0), LiveMirror.decide(l.copy(side = -1, held = -30, otherWorking = 30)))
+        // Nothing held: a sale or "closed outside" decides, never a shrink.
+        assertEquals(Step.CLOSED_OUTSIDE, LiveMirror.decide(l.copy(held = 0, otherWorking = 30)).step)
+    }
+
+    /** 18 Nov 2026 (audit A1): which other exits a due exit cancels first - only Boss's plain LIMITs, the fewest, newest first. */
+    @Test fun aDueExitCancelsOnlyTheFewestCancellableOrdersThatHoldItBack() {
+        val boss = LiveMirror.Blocker("b1", 30, cancellable = true)
+        val bossOld = LiveMirror.Blocker("b0", 30, cancellable = true)
+        val app = LiveMirror.Blocker("a1", 30, cancellable = false)
+        // Not held back: nothing.
+        assertEquals(emptyList<String>(), LiveMirror.blockersToCancel(60, listOf(boss), 30, 30))
+        assertEquals(emptyList<String>(), LiveMirror.blockersToCancel(30, emptyList(), 30, 30))
+        // Boss's target covers the lot: it is cancelled.
+        assertEquals(listOf("b1"), LiveMirror.blockersToCancel(30, listOf(boss), 30, 30))
+        // Two of his: only as many as the exit needs, newest (first given) first.
+        assertEquals(listOf("b1", "b0"), LiveMirror.blockersToCancel(60, listOf(boss, bossOld), 60, 30))
+        assertEquals(listOf("b1"), LiveMirror.blockersToCancel(60, listOf(boss, bossOld), 30, 30))
+        // Held back only by an order that may not be cancelled: nothing (the app says so instead).
+        assertEquals(emptyList<String>(), LiveMirror.blockersToCancel(30, listOf(app), 30, 30))
+        // Both: Boss's is cancelled only when that lets the exit sell more than it can now.
+        assertEquals(emptyList<String>(), LiveMirror.blockersToCancel(30, listOf(boss, app), 30, 30))
+        assertEquals(listOf("b1"), LiveMirror.blockersToCancel(60, listOf(boss, app), 30, 30))
+        // Nothing held: nothing to sell, nothing cancelled.
+        assertEquals(emptyList<String>(), LiveMirror.blockersToCancel(0, listOf(boss), 30, 30))
+        assertEquals(emptyList<String>(), LiveMirror.blockersToCancel(-30, listOf(boss), 30, 30))
+        // Part lots: whole lots only.
+        assertEquals(listOf("b1"), LiveMirror.blockersToCancel(30, listOf(LiveMirror.Blocker("b1", 10, cancellable = true)), 30, 30))
+        assertEquals(emptyList<String>(), LiveMirror.blockersToCancel(30, listOf(LiveMirror.Blocker("z", 0, cancellable = true)), 30, 30))
+    }
+
+    /** 19 Nov 2026 (second review): a net short is the arms' only when their own sales today pass their buys and what was carried in. */
+    @Test fun aNetShortIsTheArmsOnlyWhenTheySoldBeyondWhatTheyBoughtAndCarried() {
+        assertTrue(LiveMirror.armsSoldBeyond(60, 30, 0), "two exits of one lot")
+        assertFalse(LiveMirror.armsSoldBeyond(30, 30, 0), "one exit of one lot")
+        assertFalse(LiveMirror.armsSoldBeyond(0, 0, 0), "nothing sold")
+        // A lot carried from yesterday sold today by the arm (Boss's own short beside it): not the arms'.
+        assertFalse(LiveMirror.armsSoldBeyond(30, 0, 30))
+        assertTrue(LiveMirror.armsSoldBeyond(60, 0, 30), "sold twice what was carried")
+        assertTrue(LiveMirror.armsSoldBeyond(30, 0, -30), "a carried short never adds room")
+    }
+
+    /** 19 Nov 2026 (Boss: "Go"): an arm's live buy goes as a marketable LIMIT - the offer plus max(2 ticks, 0.5%), on the tick, capped. */
+    @Test fun anEntryLimitIsTheOfferPlusABufferOnTheTickNeverAboveThePaperLimit() {
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, null)!!, 1e-9)        // 200.05 + 1.00 -> 201.05025 -> 201.10
+        assertEquals(10.15, LiveMirror.entryLimit(10.05, 10.0, 0.05, null)!!, 1e-9)           // two ticks beat 0.5% on a cheap option
+        assertEquals(201.0, LiveMirror.entryLimit(null, 200.0, 0.05, null)!!, 1e-9, "no offer: the last price")
+        assertEquals(201.0, LiveMirror.entryLimit(0.0, 200.0, 0.05, null)!!, 1e-9)
+        assertEquals(201.0, LiveMirror.entryLimit(Double.NaN, 200.0, 0.05, null)!!, 1e-9)
+        assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.5)!!, 1e-9, "capped by the paper limit")
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, 210.0)!!, 1e-9, "a paper limit above it changes nothing")
+        assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.51)!!, 1e-9, "the cap on its tick, never above it")
+        // Never chased: a wide or stale offer is capped at the last price plus 2% (it rests there, cancelled unfilled).
+        assertEquals(204.0, LiveMirror.entryLimit(260.0, 200.0, 0.05, null)!!, 1e-9, "last + 2%")
+        assertEquals(3.10, LiveMirror.entryLimit(3.20, 3.0, 0.05, null)!!, 1e-9, "a cheap option: last + 2 ticks")
+        assertEquals(261.30, LiveMirror.entryLimit(260.0, 0.0, 0.05, null)!!, 1e-9, "no last: the offer alone")
+        assertNull(LiveMirror.entryLimit(null, 0.0, 0.05, null))
+        assertNull(LiveMirror.entryLimit(null, Double.NaN, 0.05, null))
+        assertNull(LiveMirror.entryLimit(0.10, 0.05, 0.05, 0.04), "a paper limit under one tick: no price, never 0.00")
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.0, null)!!, 1e-9, "a bad tick taken as 0.05")
+        assertEquals(5025.0, LiveMirror.entryLimit(5000.0, 5000.0, 1.0, null)!!, 1e-9, "an MCX 1.0 tick: 0.5% beats two ticks")
     }
 
     @Test fun aTradeNeverSeenHeldIsNotClosedOnALaggingZeroRead() {
@@ -603,24 +683,4 @@ class LiveMirrorTest {
         assertTrue(LiveMirror.sameContractWords("A", "X", listOf("B", "C"))!!.contains("held live by B, C"))
     }
 
-    /** 19 Nov 2026 (Boss: "Go"): an arm's live buy goes as a marketable LIMIT - the offer plus max(2 ticks, 0.5%), on the tick, capped. */
-    @Test fun anEntryLimitIsTheOfferPlusABufferOnTheTickNeverAboveThePaperLimit() {
-        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, null)!!, 1e-9)        // 200.05 + 1.00 -> 201.05025 -> 201.10
-        assertEquals(10.15, LiveMirror.entryLimit(10.05, 10.0, 0.05, null)!!, 1e-9)           // two ticks beat 0.5% on a cheap option
-        assertEquals(201.0, LiveMirror.entryLimit(null, 200.0, 0.05, null)!!, 1e-9, "no offer: the last price")
-        assertEquals(201.0, LiveMirror.entryLimit(0.0, 200.0, 0.05, null)!!, 1e-9)
-        assertEquals(201.0, LiveMirror.entryLimit(Double.NaN, 200.0, 0.05, null)!!, 1e-9)
-        assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.5)!!, 1e-9, "capped by the paper limit")
-        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, 210.0)!!, 1e-9, "a paper limit above it changes nothing")
-        assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.51)!!, 1e-9, "the cap on its tick, never above it")
-        // Never chased: a wide or stale offer is capped at the last price plus 2% (it rests there, cancelled unfilled).
-        assertEquals(204.0, LiveMirror.entryLimit(260.0, 200.0, 0.05, null)!!, 1e-9, "last + 2%")
-        assertEquals(3.10, LiveMirror.entryLimit(3.20, 3.0, 0.05, null)!!, 1e-9, "a cheap option: last + 2 ticks")
-        assertEquals(261.30, LiveMirror.entryLimit(260.0, 0.0, 0.05, null)!!, 1e-9, "no last: the offer alone")
-        assertNull(LiveMirror.entryLimit(null, 0.0, 0.05, null))
-        assertNull(LiveMirror.entryLimit(null, Double.NaN, 0.05, null))
-        assertNull(LiveMirror.entryLimit(0.10, 0.05, 0.05, 0.04), "a paper limit under one tick: no price, never 0.00")
-        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.0, null)!!, 1e-9, "a bad tick taken as 0.05")
-        assertEquals(5025.0, LiveMirror.entryLimit(5000.0, 5000.0, 1.0, null)!!, 1e-9, "an MCX 1.0 tick: 0.5% beats two ticks")
-    }
 }
