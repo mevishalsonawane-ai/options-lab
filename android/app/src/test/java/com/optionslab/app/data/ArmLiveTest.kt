@@ -2009,10 +2009,13 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(1, stops.size); assertEquals(p.stopOrderId, stops.single().id); assertEquals(30, stops.single().qty)
         assertEquals("one buy only", 1, kite.orders.values.count { it.side == "BUY" })
         assertEquals("Boss told", 1, posted("taken back"))
-        // Once only: a later look takes nothing back again.
+        // Once only: a later look, and a second restart, take nothing back again.
         watch()
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
         assertEquals(1, view().openReal.size)
         assertEquals(1, kite.orders.values.count { it.side == "SELL" && it.type == "SL" && it.working })
+        assertEquals(1, posted("taken back"))
     }
 
     /**
@@ -2295,6 +2298,7 @@ class ArmLiveTest : RobolectricTest() {
             ArmLive.drainWritesForTest()
             assertFalse("the book stays erased", f.exists())
             entry.join(30_000)
-        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0; kite.slowMs.clear() }
+            assertFalse("the entry finished", entry.isAlive)
+        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0; kite.slowMs.clear(); ArmLive.drainWritesForTest(); ArmLive.wipe(); f.delete() }
     }
 }

@@ -208,6 +208,8 @@ object ArmLive {
      * written on the book's own writer, never delaying the order). Cleared once the sweep has read Zerodha's books.
      */
     @Volatile private var coldDue = true
+    /** 19 Nov 2026: the sweep is due and Zerodha was logged in when last asked (memory only, for [recoverHint] on the tick lanes). */
+    @Volatile private var coldPending = false
     /**
      * 18 Oct (final review F1): when the last read of the book failed (memory). While it is unreadable every lane that watches
      * keeps coming back ([recoverHint]) and reads it again, at most every [RETRY_MS], so its open live trades are watched the
@@ -646,7 +648,7 @@ object ArmLive {
     suspend fun holding(): Boolean {
         if (!ready()) return false
         // A damaged book: its open live trades are taken back from Zerodha first, before any other start-up work (open positions first).
-        if ((recoverDue || coldDue) && Broker.loggedIn) runCatching { watch() }
+        if ((recoverDue || coldDue) && Broker.loggedIn) { if (coldDue) coldPending = true; runCatching { watch() } }
         return runCatching { lock.withLock { book() } }.fold({ _view.value.openReal.isNotEmpty() }, { true })
     }
 
@@ -1966,7 +1968,7 @@ object ArmLive {
      * F1: it may hold open live trades) - memory only: every lane that watches (the minute lane, the live lane, the 15-second
      * check) and every keep-alive keeps running for it, and the watch reads the book again.
      */
-    val recoverHint: Boolean get() = recoverDue || unreadable || (coldDue && runCatching { Broker.loggedIn }.getOrDefault(false))
+    val recoverHint: Boolean get() = recoverDue || unreadable || coldPending
 
     /** Whether a look has work now (memory only): a live trade held, a shadow trade open, a damaged or unread book. */
     val lookDue: Boolean get() = holdingHint || shadowHint || recoverHint
@@ -1987,13 +1989,14 @@ object ArmLive {
         // 18 Nov 2026 (audit): a write that failed is tried again (the book in memory is the one to keep).
         if (saveDue && !stream) runCatching { lock.withLock { cache?.let { save(it) } } }
         val sweep = coldDue && !stream && runCatching { Broker.loggedIn }.getOrDefault(false)
+        if (sweep) coldPending = true
         if (!holdingHint && !shadowHint && !recoverDue && !sweep) return
         if (!opLock.tryLock()) return                 // a look already running does this one's work
         try {
             if (recoverDue && Broker.loggedIn) runCatching { recover() }
-            // 19 Nov 2026 (third review): after a start, with the open positions first and never on the live lane (it reads the books).
-            if (sweep) runCatching { if (sweepUnowned()) coldDue = false }
             if (holdingHint) look(stream)
+            // 19 Nov 2026 (third review): after a start, once the open trades were looked at (their stops first), never on the live lane.
+            if (sweep) runCatching { if (sweepUnowned()) { coldDue = false; coldPending = false } }
         } finally { opLock.unlock() }
         // The shadow trades after, under their own lock (review of the final fixes): their quote and candle reads never hold up
         // the live trades' looks (the live lane and the 15-second check skip a look while [opLock] is held).
@@ -2405,8 +2408,11 @@ object ArmLive {
 
         // 19 Nov 2026 (third review): a lost exit found in Zerodha's book whose trade is no longer among the open ones (closed another way)
         // never holds the contract back for the others: forgotten, with a diary line.
-        for ((c, l) in lostExits.entries.toList()) if (l.foundId != null && open.none { it.contract == c && it.ref == l.ref } && lostExits.remove(c, l))
-            runCatching { Diag.record("armlive", "${l.order.tradingSymbol}: the lost exit ${l.foundId} found for a trade no longer open: forgotten") }
+        if (lostExits.values.any { it.foundId != null }) {
+            val stillOpen = runCatching { lock.withLock { book().positions.filter { it.open && !it.shadow }.map { it.contract to it.ref }.toSet() } }.getOrNull()
+            if (stillOpen != null) for ((c, l) in lostExits.entries.toList()) if (l.foundId != null && (c to l.ref) !in stillOpen && lostExits.remove(c, l))
+                runCatching { Diag.record("armlive", "${l.order.tradingSymbol}: the lost exit ${l.foundId} found for a trade no longer open: forgotten") }
+        }
 
         // 3. Each trade's decision, newest first on each contract, against the exits working on it (kept up to date as they change).
         val working = HashMap<String, Int>()     // order id -> remaining, the exits working on these contracts
@@ -2889,73 +2895,107 @@ object ArmLive {
      * Zerodha's books were read. Regular looks only.
      */
     private suspend fun sweepUnowned(): Boolean {
-        if (entryLock.isLocked || OrbArms.entryInFlight) return false
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return false
         val pb = runCatching { Broker.positionBook() }.getOrNull() ?: return false
-        val rows = runCatching { lock.withLock { book().positions.toList() } }.getOrNull() ?: return false
-        val booked = rows.mapNotNull { it.entryOrderId }.toSet()
-        val cands = orders.filter { it.tag == LiveMirror.TAG && it.side == "BUY" && it.status == "COMPLETE" && it.filled > 0 && it.id !in booked }
-        if (cands.isEmpty()) return true
+        // (After the reads, as [adoptHeld]: an entry that filled between them could be taken for an unowned one. Tried again.)
+        if (entryLock.isLocked || OrbArms.entryInFlight) return false
+        val today = now().toLocalDate()
+        val buysToday = orders.filter { it.tag == LiveMirror.TAG && it.side == "BUY" && it.filled > 0 }
+        if (buysToday.isEmpty()) return true
         val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
-        val adopted = ArrayList<Pos>()
-        for ((_, buys) in cands.groupBy { "${it.exchange}|${it.symbol}|${it.product}" }) {
-            val o0 = buys.first()
-            val sym = o0.symbol; val exch = o0.exchange; val product = o0.product
-            val contract = "$exch|$sym|$product"
-            if (rows.any { it.open && !it.shadow && it.contract == contract && it.unconfirmed && it.entryOrderId == null }) continue
-            val net = pb.net.filter { it.symbol == sym && it.exchange == exch && it.product == product }
-            if (net.sumOf { it.qty } <= 0) continue
-            val held = minOf(net.sumOf { it.qty },
-                runCatching { ExitCoordinator.held(exch, sym, product, WHO, orders, first = pb, forceLag = lagForced()) }.getOrNull() ?: continue)
-            if (held <= 0) continue
-            val others = rows.filter { it.open && !it.shadow && it.side > 0 && (!it.unconfirmed || it.entryOrderId != null) && it.contract == contract }
-                .sumOf { it.qty } + adopted.filter { it.contract == contract }.sumOf { it.qty } +
-                (if (exch == "NFO" && product == "MIS") OrbArms.liveQtyHint[sym] ?: 0 else 0)
-            val today = LiveMirror.boughtTodayCap(net.map { it.dayBuyQty }, net.sumOf { it.overnight }, held,
-                orders.filter { it.symbol == sym && it.exchange == exch && it.product == product && it.side == "BUY" && it.tag != LiveMirror.TAG }.sumOf { it.filled })
-            val spec0 = runCatching { Broker.spec(exch, sym) }.getOrNull()
-            val lot = (spec0?.lotSize ?: 1).coerceAtLeast(1)
-            val tick = spec0?.tickSize?.takeIf { it > 0 } ?: 0.05
-            val q = takeLost("arm", exch, sym, product) { other -> LiveMirror.unexplainedQty(held, today, others + other, buys.sumOf { it.filled }, lot) }
-            if (q <= 0) continue
-            val newest = buys.maxByOrNull { it.placedAt }!!
-            // Its arm: the owner label of its order, else the one open paper trade on the contract of an arm not yet mirrored live.
-            val refs = rows.map { it.ref }.toSet()
-            val byLabel = owners["kite:${newest.id}"]?.substringBefore(" · ")?.let { l -> LiveMirror.ARMS.firstOrNull { it.label == l } }
-            val legs = LiveMirror.ARMS.filter { it.exchange == exch && it.product == product }
-                .mapNotNull { sp -> rebuiltLeg(sp, sym)?.takeIf { it.ref !in refs }?.let { sp to it } }
-            val leg = (byLabel?.let { b -> legs.firstOrNull { it.first.key == b.key } }) ?: legs.singleOrNull().takeIf { byLabel == null }
-            val spec = byLabel ?: leg?.first
-            // Not told: managed under an arm of the same product that rests its stop as an SL order (its exits and square-offs), safety stop.
-            val host = spec ?: LiveMirror.ARMS.firstOrNull { it.exchange == exch && it.product == product && it.rest == LiveMirror.Rest.SL }
-                ?: LiveMirror.ARMS.firstOrNull { it.product == product && it.rest == LiveMirror.Rest.SL } ?: continue
-            val fill = buys.sumOf { it.avg * it.filled }.let { v -> if (buys.sumOf { it.filled } > 0) v / buys.sumOf { it.filled } else 0.0 }
-                .takeIf { it > 0 } ?: net.singleOrNull()?.avg?.takeIf { it > 0 } ?: continue
-            val rule = if (spec != null) rebuiltRule(spec, sym, placedTime(newest.placedAt)) else (false to false)
-            val ref = leg?.second?.ref ?: "recovered:${newest.id}"
-            val base = Pos(host.key, ref, sym, exch, product, 1, q, q, lot, tick, (net.firstOrNull()?.multiplier?.toInt() ?: 1).coerceAtLeast(1), fill, now(),
-                fill, q, runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == sym }?.expiry }.getOrNull(),
-                newest.id, seen = leg != null, heldSeen = true, stopKind = SAFETY, fixed = rule.first, lock = rule.second)
-            val (lv, kind) = if (spec != null) firstStop(spec, base) else (null to SAFETY)
-            val level = lv ?: LiveMirror.safetyLevel(fill, 1, tick)
-            val got = base.copy(stopKind = if (lv != null) kind else SAFETY)
-            val ltp = runCatching { Broker.stopQuotes(listOf("$exch:$sym"))["$exch:$sym"]?.last }.getOrNull()?.takeIf { it > 0 } ?: fill
-            adopted += restStop(got, level, ltp)
-            val stopWords = level?.let { "a stop at %.2f".format(Locale.ENGLISH, it) } ?: "no stop level"
-            com.optionslab.app.work.Alerts.error(if (spec != null)
-                "${spec.label}: a live buy of $q ${sym} (order ${newest.id}) that the arms' book did not hold after the app restarted is taken back " +
-                    "from Zerodha with $stopWords and its square-off. Check it in Trade."
-                else "Arms live: a live buy of $q ${sym} (order ${newest.id}) by the arms, with no record after the app restarted and no arm that " +
-                    "could be told, is taken back from Zerodha with a safety stop ($stopWords) and its square-off, managed as ${host.label}'s. " +
-                    "Check it in Trade now.", WHO)
-            runCatching { Diag.record("armlive", "after a start: ${sym} $q taken back (order ${newest.id}, arm ${spec?.label ?: "not told; as ${host.label}"})") }
+        var undecided = 0
+        for ((contract, buys) in buysToday.groupBy { "${it.exchange}|${it.symbol}|${it.product}" }) {
+            val decided = try { sweepOne(contract, buys, orders, pb, owners, today) } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) { false }
+            if (!decided) undecided++
         }
-        if (adopted.isNotEmpty()) lock.withLock {
+        if (undecided == 0) return true
+        // (Not every one could be decided - a read that failed, the positions not showing a fill yet, an entry still settling, an order
+        // still working: tried again on each regular look, for a few minutes after the start; then Boss is told to check.)
+        val ms = runCatching { nowMs() }.getOrDefault(System.currentTimeMillis())
+        val first = coldFirstMs.also { if (it == 0L) coldFirstMs = ms }.takeIf { it > 0 } ?: ms
+        if (ms - first < COLD_SWEEP_MS) return false
+        com.optionslab.app.work.Alerts.error("Arms live: after the app restarted, $undecided contract(s) with today's live buys of the arms could not " +
+            "be checked against Zerodha. If one is held with no arm trade, it has no app stop: check open positions in Trade.", WHO)
+        return true
+    }
+
+    /** 19 Nov 2026: when the sweep first could not decide everything (0: not yet); it keeps trying for [COLD_SWEEP_MS]. */
+    @Volatile private var coldFirstMs = 0L
+    private const val COLD_SWEEP_MS = 5 * 60_000L
+
+    /**
+     * 19 Nov 2026 (third review): [sweepUnowned] for one contract ([buys]: today's filled buys of this path on it). What this path bought
+     * there today beyond what the book's trades of today entered (open or closed, whatever their order ids) is unowned; never more than
+     * Zerodha holds beyond what the book's open trades and the ORB arms' / Liquidity's explain, nor than was bought today by orders of no
+     * other owner. True when decided (taken back, or nothing to take); false to try again.
+     */
+    private suspend fun sweepOne(contract: String, buys: List<Broker.OrderRow>, orders: List<Broker.OrderRow>, pb: Broker.Positions,
+                                 owners: Map<String, String>, today: LocalDate): Boolean {
+        val o0 = buys.first()
+        val sym = o0.symbol; val exch = o0.exchange; val product = o0.product
+        val rows = lock.withLock { book().positions.filter { !it.shadow && it.contract == contract }.toList() }
+        // An entry still settling on disk is that entry's to settle ([settle]): decided once it has.
+        if (rows.any { it.open && it.unconfirmed && it.entryOrderId == null }) return false
+        // A buy of this path still working (its process died before it settled it): cancelled - no trade owns it - and looked at again.
+        val working = buys.filter { it.working }
+        if (working.isNotEmpty()) { working.forEach { o -> runCatching { Broker.cancel(o.id, o.variety) } }; return false }
+        val asked = buys.sumOf { it.filled } - rows.filter { it.day == today && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty }
+        if (asked <= 0) return true
+        val net = pb.net.filter { it.symbol == sym && it.exchange == exch && it.product == product }
+        if (net.sumOf { it.qty } <= 0) return false                         // the positions may not show the fill yet
+        val held = minOf(net.sumOf { it.qty },
+            runCatching { ExitCoordinator.held(exch, sym, product, WHO, orders, first = pb, forceLag = lagForced()) }.getOrNull() ?: return false)
+        if (held <= 0) return false
+        val others = rows.filter { it.open && it.side > 0 && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty } +
+            (if (exch == "NFO" && product == "MIS") OrbArms.liveQtyHint[sym] ?: 0 else 0)
+        val boughtToday = LiveMirror.boughtTodayCap(net.map { it.dayBuyQty }, net.sumOf { it.overnight }, held,
+            orders.filter { it.symbol == sym && it.exchange == exch && it.product == product && it.side == "BUY" && it.tag != LiveMirror.TAG }.sumOf { it.filled })
+        val spec0 = runCatching { Broker.spec(exch, sym) }.getOrNull() ?: return false
+        val lot = spec0.lotSize.coerceAtLeast(1)
+        val tick = spec0.tickSize.takeIf { it > 0 } ?: 0.05
+        val q = takeLost("arm", exch, sym, product) { other -> LiveMirror.unexplainedQty(held, boughtToday, others + other, asked, lot) }
+        if (q <= 0) return true
+        val booked = rows.mapNotNull { it.entryOrderId }.toSet()
+        val newest = buys.filter { it.id !in booked }.maxByOrNull { it.placedAt } ?: buys.maxByOrNull { it.placedAt }!!
+        // Its arm: the owner label of its order, else the one open paper trade on the contract of an arm not yet mirrored live.
+        val refs = lock.withLock { book().positions.map { it.ref }.toSet() }
+        val byLabel = owners["kite:${newest.id}"]?.substringBefore(" · ")?.let { l -> LiveMirror.ARMS.firstOrNull { it.label == l } }
+        val legs = LiveMirror.ARMS.filter { it.exchange == exch && it.product == product }
+            .mapNotNull { sp -> rebuiltLeg(sp, sym)?.takeIf { it.ref !in refs }?.let { sp to it } }
+        val leg = (byLabel?.let { b -> legs.firstOrNull { it.first.key == b.key } }) ?: legs.singleOrNull().takeIf { byLabel == null }
+        val spec = byLabel ?: leg?.first
+        // Not told: managed under an arm of the same product that rests its stop as an SL order (its exits and square-offs), safety stop.
+        val host = spec ?: LiveMirror.ARMS.firstOrNull { it.exchange == exch && it.product == product && it.rest == LiveMirror.Rest.SL }
+            ?: LiveMirror.ARMS.firstOrNull { it.product == product && it.rest == LiveMirror.Rest.SL } ?: return false
+        val filled = buys.sumOf { it.filled }
+        val fill = (if (filled > 0) buys.sumOf { it.avg * it.filled } / filled else 0.0).takeIf { it > 0 }
+            ?: net.singleOrNull()?.avg?.takeIf { it > 0 } ?: return false
+        val rule = if (spec != null) rebuiltRule(spec, sym, placedTime(newest.placedAt)) else (false to false)
+        val ref = leg?.second?.ref ?: "recovered:${newest.id}"
+        val base = Pos(host.key, ref, sym, exch, product, 1, q, q, lot, tick, (net.firstOrNull()?.multiplier?.toInt() ?: 1).coerceAtLeast(1), fill,
+            placedTime(newest.placedAt) ?: now(), fill, q,
+            runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == sym }?.expiry }.getOrNull(),
+            newest.id, seen = leg != null, heldSeen = true, stopKind = SAFETY, fixed = rule.first, lock = rule.second)
+        val (lv, kind) = if (spec != null) firstStop(spec, base) else (null to SAFETY)
+        val level = lv ?: LiveMirror.safetyLevel(fill, 1, tick)
+        val ltp = runCatching { Broker.stopQuotes(listOf("$exch:$sym"))["$exch:$sym"]?.last }.getOrNull()?.takeIf { it > 0 } ?: fill
+        val got = restStop(base.copy(stopKind = if (lv != null) kind else SAFETY), level, ltp)
+        // Written at once (its stop already rests at Zerodha), so nothing later in the sweep can lose it.
+        lock.withLock {
             val b = book()
-            b.positions += adopted
-            adopted.forEach { line(b, "${it.label}: ${it.symbol} ${it.qty} taken back from Zerodha after a start (no record of it in the book)") }
+            b.positions += got
+            line(b, "${got.label}: ${got.symbol} ${got.qty} taken back from Zerodha after a start (no record of it in the book)")
             save(b)
         }
+        val stopWords = got.stopTrigger?.let { "a stop at %.2f".format(Locale.ENGLISH, it) } ?: "no stop level"
+        com.optionslab.app.work.Alerts.error(if (spec != null)
+            "${spec.label}: a live buy of $q $sym (order ${newest.id}) that the arms' book did not hold after the app restarted is taken back " +
+                "from Zerodha with $stopWords and its square-off. Check it in Trade."
+            else "Arms live: a live buy of $q $sym (order ${newest.id}) by the arms, with no record after the app restarted and no arm that " +
+                "could be told, is taken back from Zerodha with a safety stop ($stopWords) and its square-off, managed as ${host.label}'s. " +
+                "Check it in Trade now.", WHO)
+        runCatching { Diag.record("armlive", "after a start: $sym $q taken back (order ${newest.id}, arm ${spec?.label ?: "not told; as ${host.label}"})") }
         return true
     }
 
@@ -3101,7 +3141,7 @@ object ArmLive {
     internal fun wipe() {
         wipeGen++
         written.forget()
-        cache = null; unreadable = false; recoverDue = false; coldDue = false; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
+        cache = null; unreadable = false; recoverDue = false; coldDue = false; coldPending = false; coldFirstMs = 0L; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L; shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims()
         saveDue = false; blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear()
         _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); handsOffUntil.clear(); levels.clear(); closedRefs.clear()
@@ -3128,5 +3168,5 @@ object ArmLive {
     }
 
     /** For tests: as after a restart - the memory gone, the book on disk. */
-    internal fun forgetMemoryForTest() { coldDue = true; cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear(); shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims(); blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear() }
+    internal fun forgetMemoryForTest() { coldDue = true; coldPending = false; coldFirstMs = 0L; cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear(); shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims(); blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear() }
 }
