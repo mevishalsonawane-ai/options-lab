@@ -404,6 +404,22 @@ class LiveMirrorTest {
         assertTrue(LiveMirror.armsSoldBeyond(30, 0, -30), "a carried short never adds room")
     }
 
+    /** 19 Nov 2026 (Boss: "Go"): an arm's live buy goes as a marketable LIMIT - the offer plus max(2 ticks, 0.5%), on the tick, capped. */
+    @Test fun anEntryLimitIsTheOfferPlusABufferOnTheTickNeverAboveThePaperLimit() {
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, null)!!, 1e-9)        // 200.05 + 1.00 -> 201.05025 -> 201.10
+        assertEquals(10.15, LiveMirror.entryLimit(10.05, 10.0, 0.05, null)!!, 1e-9)           // two ticks beat 0.5% on a cheap option
+        assertEquals(201.0, LiveMirror.entryLimit(null, 200.0, 0.05, null)!!, 1e-9, "no offer: the last price")
+        assertEquals(201.0, LiveMirror.entryLimit(0.0, 200.0, 0.05, null)!!, 1e-9)
+        assertEquals(201.0, LiveMirror.entryLimit(Double.NaN, 200.0, 0.05, null)!!, 1e-9)
+        assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.5)!!, 1e-9, "capped by the paper limit")
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, 210.0)!!, 1e-9, "a paper limit above it changes nothing")
+        assertEquals(200.55, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.51)!!, 1e-9, "the cap on its tick")
+        assertNull(LiveMirror.entryLimit(null, 0.0, 0.05, null))
+        assertNull(LiveMirror.entryLimit(null, Double.NaN, 0.05, null))
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.0, null)!!, 1e-9, "a bad tick taken as 0.05")
+        assertEquals(5025.0, LiveMirror.entryLimit(5000.0, 5000.0, 1.0, null)!!, 1e-9, "an MCX 1.0 tick: 0.5% beats two ticks")
+    }
+
     @Test fun aTradeNeverSeenHeldIsNotClosedOnALaggingZeroRead() {
         val l = Look(side = 1, qty = 30, held = 0, ltp = 200.0, tick = 0.05, stopTrigger = 170.0, stopResting = true, heldSeen = false)
         assertEquals(Decision(Step.HOLD), LiveMirror.decide(l))

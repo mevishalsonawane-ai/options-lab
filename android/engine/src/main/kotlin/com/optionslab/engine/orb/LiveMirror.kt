@@ -338,6 +338,23 @@ object LiveMirror {
     fun marketBlocked(message: String?): Boolean = message?.contains("MARKET orders are blocked", ignoreCase = true) == true
 
     /**
+     * 19 Nov 2026 (Boss: "Go"; Zerodha refused live MARKET option buys for "Insufficient funds" - it blocks margin for a MARKET option buy at
+     * a protective price far above the premium, e.g. Rs 64,715 asked for a lot whose premium was about Rs 18,000): the LIMIT an arm's live
+     * BUY entry is sent at - marketable: the offer [ask] (else the [last] price) plus max(2 ticks, 0.5%), rounded up to the [tick], never
+     * above the paper arm's own [paperLimit] when it has one (on its tick). null: no usable price. Pure.
+     */
+    fun entryLimit(ask: Double?, last: Double, tick: Double, paperLimit: Double?): Double? {
+        val base = ask?.takeIf { it.isFinite() && it > 0 } ?: last.takeIf { it.isFinite() && it > 0 } ?: return null
+        val t = tick.takeIf { it.isFinite() && it > 0 } ?: 0.05
+        val px = Kite.onTick(base + maxOf(2 * t, base * ENTRY_BUFFER), t, Kite.Side.BUY)
+        val cap = paperLimit?.takeIf { it.isFinite() && it > 0 }?.let { Kite.onTick(it, t, Kite.Side.BUY) }
+        return if (cap != null) minOf(px, cap) else px
+    }
+
+    /** 19 Nov 2026: the share of the price an entry LIMIT is set above the offer ([entryLimit]; at least two ticks). */
+    const val ENTRY_BUFFER = 0.005
+
+    /**
      * 3 Nov: the LIMIT an entry is sent at when Zerodha blocks its MARKET order: the offer for a buy (the bid for a sell), never more
      * than 1% through the [last] price (it never chases); the last price ±0.5% when the book has no side. null: no usable price.
      */

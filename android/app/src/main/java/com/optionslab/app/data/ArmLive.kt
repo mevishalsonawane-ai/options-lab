@@ -942,7 +942,11 @@ object ArmLive {
         val want = qty / ins.lot
         // 15 Nov: the funds check below reuses the fit's own read when it ran (nothing new is read for it).
         val optionBuy = a.side > 0 && a.contract.right != Right.IX && ins.exchange != "MCX"
-        val fitPx = maxOf(last, quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: last, a.limit ?: 0.0)
+        // 19 Nov 2026 (Boss: "Go"; Zerodha refused MARKET option buys for "Insufficient funds" - it blocks margin for them at a protective
+        // price far above the premium): every live BUY entry goes as a marketable LIMIT at the offer plus a small buffer, never above the
+        // paper arm's own limit ([LiveMirror.entryLimit]); the lots that fit and the funds check are priced at that LIMIT.
+        val entryPx = if (a.side > 0) LiveMirror.entryLimit(quote?.ask, last, ins.tick, a.limit) else null
+        val fitPx = entryPx ?: maxOf(last, quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: last, a.limit ?: 0.0)
         var fitFree: Double? = null
         if (want > 1 && optionBuy) {
             val free = Broker.freeCash()
@@ -960,11 +964,14 @@ object ArmLive {
             .getOrElse { notMirrored(a, "Zerodha's positions could not be read"); return@withLock }
         LiveMirror.againstNet(a.side, net)?.let { notMirrored(a, it); return@withLock }
         val side = if (a.side >= 0) Kite.Side.BUY else Kite.Side.SELL
-        // The paper arm's own order type: a LIMIT entry pays at most its paper limit (never chases), else MARKET.
-        val o = if (a.limit != null) Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "LIMIT",
+        // A buy: the marketable LIMIT above (unfilled in the wait below, its rest is cancelled and only what filled is booked - never
+        // chased). A sale: the paper arm's own order type, as before - a LIMIT entry pays at most its paper limit, else MARKET.
+        val o = if (entryPx != null) Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "LIMIT", entryPx, ins.tick, ins.exchange,
+                LiveMirror.TAG, multiplier = ins.multiplier)
+            else if (a.limit != null) Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "LIMIT",
                 Kite.onTick(a.limit, ins.tick, side), ins.tick, ins.exchange, LiveMirror.TAG, multiplier = ins.multiplier)
             else Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "MARKET", null, ins.tick, ins.exchange, LiveMirror.TAG, multiplier = ins.multiplier)
-        val acct = runCatching { Broker.accountNow(needed = last * qty * ins.multiplier) }.getOrNull()
+        val acct = runCatching { Broker.accountNow(needed = (entryPx ?: last) * qty * ins.multiplier) }.getOrNull()
         Guard.check(Guard.liveOrder(o).copy(price = last), acct).takeIf { it.isNotEmpty() }?.let { notMirrored(a, "account guard: " + it.joinToString(" ")); return@withLock }
         Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last).takeIf { it.isNotEmpty() }?.let { notMirrored(a, it.joinToString("; ")); return@withLock }
         // 22 Oct: the gate's verdict stamped with this exact order's fingerprint (the paper stop it will rest with it); the door
@@ -1061,7 +1068,7 @@ object ArmLive {
         // 15 Nov: by its id in memory at once too (the order review reads it even if the labels' book could not be read just now).
         id?.let { ArmOrderLabels.answered(it, owner, labelMs()) }
         id?.let { runCatching { Strategies.tagOwner("kite:$it", owner) } }
-        var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
+        var f = id?.let { runCatching { Broker.awaitOrder(it, testEntryWaitMs ?: ENTRY_WAIT_MS) }.getOrNull() }
         if (id != null && f?.status !in DONE) {
             // Not finished in 15 s: the rest is cancelled so it can never fill later untracked; only what filled is booked.
             runCatching { Broker.cancel(id) }
@@ -1355,6 +1362,12 @@ object ArmLive {
      * placed a moment ago, its id not written yet. After a restart it is empty, which is when an orphan can be.
      */
     private val placedStops: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** How long an entry order is waited for before its rest is cancelled (only what filled is booked). */
+    private const val ENTRY_WAIT_MS = 15_000L
+    /** TEST ONLY: [ENTRY_WAIT_MS] shortened (19 Nov 2026: the LIMIT entries' unfilled and part-filled tests). Debug builds only. */
+    @Volatile internal var testEntryWaitMs: Long? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /** 19 Nov 2026 (second review): since when each trade (ref) has had no stop resting because the positions do not show its fill. */
     private val noStopSince = java.util.concurrent.ConcurrentHashMap<String, Long>()

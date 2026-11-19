@@ -66,7 +66,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testSync = false
         ArmLive.testNow = null
         ArmLive.testReadFails = null; ArmLive.testAccountFails = false; ArmLive.testSecurityFails = false; ArmLive.testHeard = null
-        ArmLive.testLotCap = null; ArmLive.testWriteFails = null
+        ArmLive.testLotCap = null; ArmLive.testWriteFails = null; ArmLive.testEntryWaitMs = null
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -565,13 +565,21 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(view().log.toString(), view().log.any { "2 of your 3 lots: the free cash (Rs 13,000) fits 2" in it })
     }
 
-    /** 4 Nov: a LIMIT entry is priced at its own limit (Zerodha blocks the premium there), not the lower last price. */
+    /**
+     * 4 Nov: a LIMIT entry is fitted at the price it is sent at. 19 Nov 2026 (Boss: "Go"): that is the offer plus its buffer (201.10),
+     * never above the paper arm's own limit - a 210 paper limit is not paid, and the lots are fitted at 201.10; a 200.50 one caps it.
+     */
     @Test fun aLimitEntryIsFittedAtItsLimitPrice() {
         AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
-        kite.cash = 12_500.0                                         // 2 lots at 200 fit; at the 210 limit only 1 does
+        kite.cash = 12_500.0                                         // 2 lots at 201.10 fit (Rs 12,428 with the buffer); 3 do not
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "lim", limit = 210.0))
         val buy = kite.placed.first()
-        assertEquals("LIMIT", buy.form["order_type"]); assertEquals("1 lot", "30", buy.form["quantity"])
+        assertEquals("LIMIT", buy.form["order_type"]); assertEquals(201.10, buy.form["price"]!!.toDouble(), 1e-9)
+        assertEquals("2 lots", "60", buy.form["quantity"])
+        val (c2, _) = other(8)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "lim2", limit = 200.5, c = c2))
+        assertEquals("capped by its paper limit", 200.5, kite.placed.last { it.form["transaction_type"] == "BUY" }.form["price"]!!.toDouble(), 1e-9)
     }
 
     @Test fun whenNotEvenOneLotFitsTheEntryGoesAsBefore() {
@@ -647,13 +655,15 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(view().log.none { "of your 3 lots" in it })
     }
 
-    /** 3 Nov (live): Zerodha blocks MIS MARKET orders on a low-OI contract; the entry goes once as a LIMIT at the offer instead. */
-    @Test fun aMarketOrderZerodhaBlocksGoesOnceAsALimitAtTheOffer() {
-        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "MIS MARKET orders are blocked for this FINNIFTY contract due to its open interest (OI) being less than 100 lots.")
+    /**
+     * 3 Nov (live): Zerodha blocks MIS MARKET orders on a low-OI contract. 19 Nov 2026 (Boss: "Go"): a buy entry goes as a LIMIT from the
+     * start, so that block never meets it - one order, no MARKET try (the MARKET-blocked retry stays for a MARKET entry).
+     */
+    @Test fun aBuyEntryNeverMeetsZerodhasMarketBlockItGoesAsALimit() {
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "lowoi"))
         val sent = kite.placed
-        assertEquals(listOf("MARKET", "LIMIT", "SL"), sent.map { it.form["order_type"] })
-        assertEquals("at the offer", "200.05", sent[1].form["price"]); assertEquals("BUY", sent[1].form["transaction_type"])
+        assertEquals(listOf("LIMIT", "SL"), sent.map { it.form["order_type"] })
+        assertEquals("BUY", sent[0].form["transaction_type"])
         assertEquals(1, view().open.size)
     }
 
@@ -2351,5 +2361,57 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(sym, p.symbol); assertEquals(lost, p.entryOrderId); assertEquals(30, p.qty)
         assertNotNull("with a stop", p.stopOrderId)
         assertEquals(1, posted("taken back"))
+    }
+
+    // ---- 19 Nov 2026 (Boss: "Go"): the arms' live buys go as marketable LIMITs -----------------------------------------------------
+
+    /** The buy goes as a LIMIT at the offer plus its buffer (200.05 + max(2 ticks, 0.5%) = 201.10), with its stop once filled. */
+    @Test fun aLiveBuyGoesAsAMarketableLimitAtTheOfferPlusABuffer() {
+        ArmLive.entered(ask(donchian, "lim-entry"))
+        val buy = kite.placed.first()
+        assertEquals("BUY", buy.form["transaction_type"]); assertEquals("LIMIT", buy.form["order_type"])
+        assertEquals(201.10, buy.form["price"]!!.toDouble(), 1e-9)
+        assertTrue("no MARKET buy", kite.placed.none { it.form["order_type"] == "MARKET" && it.form["transaction_type"] == "BUY" })
+        val p = view().openReal.single()
+        assertEquals(30, p.qty); assertNotNull(p.stopOrderId)
+    }
+
+    /** A LIMIT that does not fill within the wait is cancelled, and nothing is booked or protected (nothing is held). */
+    @Test fun anUnfilledEntryLimitIsCancelledAfterTheWaitAndNothingIsBooked() {
+        ArmLive.testEntryWaitMs = 300
+        kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.OPEN))
+        ArmLive.entered(ask(donchian, "unfilled"))
+        val buy = kite.orders.values.single { it.side == "BUY" }
+        assertEquals("CANCELLED", buy.status)
+        assertTrue("nothing booked", view().open.isEmpty())
+        assertTrue("no stop", kite.placed.none { it.form["order_type"] == "SL" })
+        assertEquals(0, held())
+        assertEquals("never chased", 1, kite.placed.count { it.form["transaction_type"] == "BUY" })
+    }
+
+    /** A LIMIT part-filled within the wait: its rest is cancelled and what filled is booked, with a stop for exactly that. */
+    @Test fun aPartFilledEntryLimitIsBookedForWhatFilledWithItsStop() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 2, maxLotsPerOrder = 5, guardMaxLots = 10))
+        ArmLive.testEntryWaitMs = 300
+        kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.PARTIAL, partialQty = 30))
+        ArmLive.entered(ask(donchian, "part", qty = 60))
+        val buy = kite.orders.values.single { it.side == "BUY" }
+        assertEquals("60", kite.placed.first().form["quantity"])
+        assertEquals("its rest cancelled", "CANCELLED", buy.status)
+        val p = view().openReal.single()
+        assertEquals(30, p.qty)
+        val stop = kite.orders.values.single { it.side == "SELL" && it.type == "SL" && it.working }
+        assertEquals(30, stop.qty); assertEquals(p.stopOrderId, stop.id)
+        assertEquals(30, held())
+    }
+
+    /** The lots that fit are priced at the LIMIT sent (201.10), not the offer: Rs 18,600 fits 3 lots at 200.05 but only 2 at 201.10. */
+    @Test fun theLotsCutIsPricedAtTheEntryLimit() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 3, maxLotsPerOrder = 5, guardMaxLots = 10))
+        kite.cash = 18_600.0
+        ArmLive.entered(ask(donchian, "fit-lim"))
+        val buy = kite.placed.first()
+        assertEquals("LIMIT", buy.form["order_type"])
+        assertEquals("2 of the 3 lots", "60", buy.form["quantity"])
     }
 }
