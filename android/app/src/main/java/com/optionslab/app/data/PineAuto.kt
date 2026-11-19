@@ -1709,6 +1709,9 @@ object PineAuto {
             ?: (if (streamLook) null else runCatching { Broker.orderState(sid) }.getOrNull()?.filled) ?: UNKNOWN_FILL }
         orders.orEmpty().filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" }
             .forEach { ids[it.id] = it.filled }
+        // (19 Nov 2026, third review: an order an earlier holding's removal already holds stays with it - one order, one entry.)
+        val pending = b.removing.flatMap { it.ids.keys }.toSet()
+        ids.keys.removeAll(pending)
         if (ids.isEmpty() && orders != null) return
         val r = Removing(id, sym, ids, today.toString(), scanned = orders != null, at = System.currentTimeMillis())
         b.removing += r
@@ -1745,7 +1748,8 @@ object PineAuto {
             if (!r.scanned && !streamLook && !heldAgain) {
                 val orders = runCatching { Broker.orders() }.getOrNull()
                 if (orders != null) r = r.copy(scanned = true, ids = r.ids + orders.filter { it.working && it.symbol == r.kite &&
-                    it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" && it.id !in r.ids }.associate { it.id to it.filled })
+                    it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" && it.id !in r.ids &&
+                    b.removing.none { o -> o !== r0 && it.id in o.ids } }.associate { it.id to it.filled })
             }
             val left = LinkedHashMap<String, Int>()
             for ((oid, base0) in r.ids) {
