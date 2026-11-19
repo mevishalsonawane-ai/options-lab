@@ -79,7 +79,9 @@ object ManualCoverRule {
     }
 
     /** The words that make a cancel's message the exchange's or the broker's ([endedByExchange]). */
-    private val EXCHANGE_WORDS = listOf("exchange", "rms", "circuit", "freeze", "risk", "validity", "expired", "margin")
+    // 19 Nov 2026 (audit batch 2, final review): + "market protection" - Zerodha's own cancel of a resting order for its market protection
+    // ("Your order has been cancelled because of market protection.", as the app's order tests model Zerodha), never Boss's.
+    private val EXCHANGE_WORDS = listOf("exchange", "rms", "circuit", "freeze", "risk", "validity", "expired", "margin", "market protection")
 
     /**
      * 15 Nov: the note of one slice of a protection rested in slices (a quantity above the exchange's freeze quantity) that ended

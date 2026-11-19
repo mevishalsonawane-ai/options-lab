@@ -1104,6 +1104,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // is still held (the exit refused, failed or part filled) is placed again once the exit is done ([Protections.noteTakenOver]),
         // never ended as his choice. The arms' own stops are rested again by their watch as before, once the contract is handed back.
         runCatching { com.optionslab.app.data.Protections.noteTakenOver(rest.map { it.id }) }
+        // 19 Nov 2026 (audit batch 2, final review): and the arms' live book, so a restart after an exit that did not go never reads these
+        // cancels as Boss's own in Kite (his 16 Nov rule) - an arm's stop is put back as before (memory at once; written off this path).
+        runCatching { com.optionslab.app.data.ArmLive.markOwnCancels(rest.map { it.id }) }
         taken?.addAll(rest.map { it.id })
         for (r in rest) runCatching { b.cancel(r.id, r.variety) }
         // The cancels confirmed (or the check that follows sees what still works and says so).

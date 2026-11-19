@@ -1747,12 +1747,23 @@ object ArmLive {
      * own writer ([saveAsync]: the cancel never waits on the disk), before the cancel goes - so a restart reads it as the app's, never Boss's.
      * 19 Nov 2026 (audit batch 2, B2-B).
      */
-    private suspend fun markOwnCancel(id: String) {
-        synchronized(ownCancels) { ownCancels += id }
-        if (!ready()) return
-        // (Never waiting on the book's lock or the vault: taken only when free, else carried by the next write of the book.)
-        if (lock.tryLock()) try { val b = cache; if (b != null && id !in b.ownCancels) { b.ownCancels += id; saveAsync(b) } else if (b == null) ownCancelsDue += id } finally { lock.unlock() }
-        else ownCancelsDue += id
+    private suspend fun markOwnCancel(id: String) = markOwnCancels(listOf(id))
+
+    /**
+     * 19 Nov 2026 (audit batch 2, final review): [ids] (SL order ids, or "gtt:<id>") are being cancelled by the app itself - an arm's exit, or
+     * Boss's manual exit from the app taking the arms' resting stops out ([com.optionslab.app.ui.AppModel]'s takeOverLeg): in memory at once,
+     * before the cancel goes, and written with the book on its own writer - never waiting on the book's lock or the vault (taken only when
+     * free; else a write is asked on this object's own worker). So a restart never reads the app's own cancel as Boss's.
+     */
+    internal suspend fun markOwnCancels(ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        synchronized(ownCancels) { ownCancels += ids }
+        if (!ready()) { ownCancelsDue += ids; return }
+        if (lock.tryLock()) try {
+            val b = cache
+            if (b != null) { var add = false; for (id in ids) if (id !in b.ownCancels) { b.ownCancels += id; add = true }; if (add) saveAsync(b) } else ownCancelsDue += ids
+        } finally { lock.unlock() }
+        else { ownCancelsDue += ids; scope.launch { runCatching { lock.withLock { cache?.let { saveAsync(it) } } } } }
     }
     /** 19 Nov 2026 (B2-B): own-cancel marks still to be written (the book's lock was busy): folded into the next write ([bytesOf]). */
     private val ownCancelsDue: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()

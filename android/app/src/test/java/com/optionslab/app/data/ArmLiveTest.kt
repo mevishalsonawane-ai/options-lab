@@ -2890,6 +2890,31 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("put back at once", 1, slPosts())
     }
 
+    /**
+     * Final review (1): Boss's manual exit from the app takes the arm's resting SL out (AppModel's takeOverLeg marks it the app's own before
+     * its cancel). The sale does not go and the app restarts: the blank, in-hours CANCELLED is the app's own - put back, never Boss's.
+     */
+    @Test fun aManualExitsCancelThenARestartIsTheAppsOwnAndPutBack() {
+        Market.testOrdersAnyTime = true
+        ArmLive.entered(ask(donchian, "manual-exit"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        runBlocking { ArmLive.markOwnCancels(listOf(sid)) }               // as takeOverLeg does, right before its cancel
+        kite.orders.getValue(sid).status = "CANCELLED"                   // its cancel (blank words, in hours); the sale did not go
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()                                     // a restart
+        runBlocking { ArmLive.refresh() }
+        kite.requests.clear()
+        watch()
+        assertFalse("the app's own cancel", view().openReal.single().stopByYou)
+        assertEquals("put back at Zerodha", 1, slPosts())
+        // The manual exit marks the cancels before they go.
+        fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/$f"), java.io.File("app/src/main/java/com/optionslab/app/$f")).first { it.isFile }.readText()
+        val t = src("ui/AppModel.kt")
+        val take = t.substring(t.indexOf("private suspend fun takeOverLeg"))
+        assertTrue(take.indexOf("ArmLive.markOwnCancels(rest.map { it.id })") in 1 until take.indexOf("for (r in rest) runCatching { b.cancel(r.id, r.variety) }"))
+    }
+
     /** B2-B (6): an active GTT seen at Zerodha ends its re-rest back-off (as a working SL does). */
     @Test fun anActiveGttEndsTheBackOff() {
         com.optionslab.app.work.Alerts.forgetPosted()

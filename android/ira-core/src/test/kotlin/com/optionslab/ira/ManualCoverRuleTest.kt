@@ -358,6 +358,8 @@ class ManualCoverRuleTest {
         assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Quantity exceeds the freeze limit"))
         assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Order validity expired"))
         assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Margin shortfall"))
+        // 19 Nov 2026 (audit batch 2, final review): Zerodha's market-protection cancel is Zerodha's, never Boss's.
+        assertTrue(ManualCoverRule.endedByExchange("CANCELLED", "Your order has been cancelled because of market protection."))
         assertFalse(ManualCoverRule.endedByExchange("CANCELLED", ""), "blank: Boss's (every cancel in the diagnostics)")
         assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "   "))
         assertFalse(ManualCoverRule.endedByExchange("CANCELLED", "Cancelled by user"))
