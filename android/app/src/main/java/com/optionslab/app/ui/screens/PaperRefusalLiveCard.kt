@@ -35,7 +35,7 @@ internal fun PaperRefusalLiveCard(model: AppModel) {
     val scope = rememberCoroutineScope()
     var said by remember { mutableStateOf<String?>(null) }
     fun save(f: suspend () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
-    PaperRefusalLiveCardFlow(view.refusalLiveOn, view.refusalShadowToday, said, onOff = { save { PassedArmsHost.setRefusalLive(false) } },
+    PaperRefusalLiveCardFlow(view.refusalLiveOn, view.refusalShadowToday, said, loaded = view.loaded, onOff = { save { PassedArmsHost.setRefusalLive(false) } },
         onOnConfirmed = { save { PassedArmsHost.setRefusalLive(true, pinConfirmed = true) } }) { onOk, onCancel ->
         Reauth(model, onOk = onOk, onCancel = onCancel, why = REFUSAL_LIVE_PIN)
     }
@@ -43,14 +43,15 @@ internal fun PaperRefusalLiveCard(model: AppModel) {
 
 /** The card and its PIN step ([pin]: shown only when switching on; tests give their own). */
 @Composable
-internal fun PaperRefusalLiveCardFlow(on: Boolean, today: Int, said: String?, onOff: () -> Unit, onOnConfirmed: () -> Unit,
+internal fun PaperRefusalLiveCardFlow(on: Boolean, today: Int, said: String?, onOff: () -> Unit, onOnConfirmed: () -> Unit, loaded: Boolean = true,
                                       pin: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit) {
     var askPin by remember { mutableStateOf(false) }
     LedgerCard(title = "Paper refusals and live") {
         Note("An R51, R52, Solo 2.0 or R72 entry that could go live, but whose paper side was refused (another arm holds the option on " +
             "paper, the paper account guard, no fresh paper price). Off, live is skipped as it always was and each is logged; on, its live " +
             "copy goes through every live gate.")
-        ToggleRow(REFUSAL_LIVE_SWITCH, if (on) "On: such entries go live (every live gate applies)" else "Off (shadow): skipped live; each is logged",
+        if (!loaded) Note("Reading the switch...", Modifier.padding(top = 4.dp))
+        else ToggleRow(REFUSAL_LIVE_SWITCH, if (on) "On: such entries go live (every live gate applies)" else "Off (shadow): skipped live; each is logged",
             on, keepSub = true) { want -> if (want) askPin = true else onOff() }
         Note("Today: $today would have gone live. On adds live entries, so it takes your PIN; off is one tap.", Modifier.padding(top = 2.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }

@@ -453,7 +453,7 @@ object ArmLive {
                 if (p.open && !p.detached && detachNotes.containsKey(p.ref)) { b.positions[i] = p.copy(detached = true); hit += b.positions[i] }
             }
             // (Not said for one an exit of its arm's own rules is about to sell: [ruleExit].)
-            if (hit.isNotEmpty()) { save(b); hit.forEach { if (!it.shadow && !closedRefs.containsKey(it.ref)) saidDetached(it) } }
+            if (hit.isNotEmpty()) { save(b); hit.forEach { if (!it.shadow && closedWhy(it.ref)?.let { w -> !LiveMirror.paperEndKeepsLive(w) } != true) saidDetached(it) } }
         } } }
     }
 
@@ -796,6 +796,7 @@ object ArmLive {
             .put("shadowSince", JSONObject().apply { b.shadowSince.forEach { (k, v) -> put(k, v.toString()) } })
             .put("notMirrored", JSONArray().apply { b.notMirrored.forEach { put(JSONObject().put("ref", it.ref).put("key", it.key).put("at", it.at.toString()).put("why", it.why)) } })
         b.sweepFrom?.let { o.put("sweepFrom", it) }
+        if (ownCancelsDue.isNotEmpty()) { val due = ownCancelsDue.toList(); due.forEach { if (it !in b.ownCancels) b.ownCancels += it }; ownCancelsDue.removeAll(due.toSet()) }
         while (b.ownCancels.size > OWN_CANCELS_KEPT) b.ownCancels.removeAt(0)
         if (b.ownCancels.isNotEmpty()) o.put("ownCancels", JSONArray().apply { b.ownCancels.forEach { put(it) } })
         return o.toString().toByteArray(Charsets.UTF_8)
@@ -1746,8 +1747,12 @@ object ArmLive {
     private suspend fun markOwnCancel(id: String) {
         synchronized(ownCancels) { ownCancels += id }
         if (!ready()) return
-        runCatching { lock.withLock { val b = book(); if (id !in b.ownCancels) { b.ownCancels += id; saveAsync(b) } } }
+        // (Never waiting on the book's lock or the vault: taken only when free, else carried by the next write of the book.)
+        if (lock.tryLock()) try { val b = cache; if (b != null && id !in b.ownCancels) { b.ownCancels += id; saveAsync(b) } else if (b == null) ownCancelsDue += id } finally { lock.unlock() }
+        else ownCancelsDue += id
     }
+    /** 19 Nov 2026 (B2-B): own-cancel marks still to be written (the book's lock was busy): folded into the next write ([bytesOf]). */
+    private val ownCancelsDue: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private const val OWN_CANCELS_KEPT = 200
 
     /** TEST ONLY (19 Nov 2026): [markOwnCancel], as the app's own exit does before a cancel. Debug builds only. */
@@ -2640,7 +2645,7 @@ object ArmLive {
                 }
                 if (so != null && !so.working && so.status == "COMPLETE") p = p.copy(stopOrderId = null, stopQty = null, stopBooked = 0)
                 // 19 Nov 2026 (audit batch 2): a stop seen resting at Zerodha ends its re-rest back-off; a later refusal is a new one.
-                if ((so != null && so.working) || g?.status?.lowercase() == "active") { restBackoff.remove(p.ref); restRefusedSaid.remove(p.ref) }
+                if ((so != null && so.working) || (gttsFresh && g?.status?.lowercase() == "active")) { restBackoff.remove(p.ref); restRefusedSaid.remove(p.ref) }
                 if (so != null && so.status in setOf("REJECTED", "CANCELLED")) {
                     // 19 Nov 2026 (audit batch 2, Boss 16 Nov: "All the stops and profit locks should be on zerodha"; a stop Boss cancelled
                     // himself is respected): told apart as the ORB arms do - ended by the exchange, its risk system or a rejection
@@ -2654,7 +2659,7 @@ object ArmLive {
                     // the app's own (kept in the book across a restart). A blank or unrecognised cancel is Zerodha's: put back, after a back-off.)
                     val byExchange = com.optionslab.ira.ManualCoverRule.endedByExchange(so.status, so.message)
                     val byYou = !appsOwn && !byExchange && so.status == "CANCELLED" && bossCancelWords(so.message) &&
-                        runCatching { Market.acceptsOrders() }.getOrDefault(false)
+                        runCatching { if (p.exchange == "MCX") McxMarket.acceptsOrders() else Market.acceptsOrders() }.getOrDefault(false)
                     if (so.status == "CANCELLED" && !appsOwn && !byExchange && !byYou) backOff(p)
                     val level = p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "its level"
                     // (Said once for each stop that ended; a refusal's back-off and its words: [refusedStop].)

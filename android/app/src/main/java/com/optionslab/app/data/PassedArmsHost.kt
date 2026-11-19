@@ -384,6 +384,8 @@ object PassedArmsHost {
         val refusalLiveOn: Boolean = false,
         /** 19 Nov 2026 (audit batch 2, B2-B): today's paper-only refusals that would have gone live (logged in shadow, [REFUSAL_MARK]). */
         val refusalShadowToday: Int = 0,
+        /** 19 Nov 2026 (audit batch 2, B2-B): the book has been read (its switches are known; the card says "reading" before). */
+        val loaded: Boolean = false,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         /**
@@ -756,7 +758,7 @@ object PassedArmsHost {
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
             model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet(),
             wideOn = b.wideOn, np5On = b.np5On, pickOn = b.pickOn, w20On = b.w20On, refusalLiveOn = b.refusalLiveOn,
-            refusalShadowToday = b.log.count { it.startsWith(today.toString()) && REFUSAL_MARK in it })
+            refusalShadowToday = b.log.count { it.startsWith(today.toString()) && REFUSAL_MARK in it }, loaded = true)
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open && it.shadow == null }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
@@ -2054,18 +2056,9 @@ object PassedArmsHost {
      * 19 Nov 2026 (audit batch 2: a live trade was silently skipped when the paper side had no fresh price): while the entry could be copied
      * live, the first strike the paper side could not price or fill ([c]) is kept as a would-be trade at Zerodha's last price
      * ([SHADOW_NOPRICE], [because] why) and its live copy asked ([askLive]; every live gate applies). Null: nothing asked (no such strike,
-     * the arm off or skipped by the picker - those stay would-be only - no live path now, or no Zerodha price either).
+     * the arm off or skipped by the picker - those stay would-be only - no live path now, or no Zerodha price either). 19 Nov 2026 (B2-B):
+     * only with Bot settings' switch on ([setRefusalLive]); off, logged in shadow ([refusalShadow]).
      */
-    /**
-     * 19 Nov 2026 (audit batch 2, B2-B): a paper-only refusal of [arm]'s entry on [symbol] ([why]) that could have gone live, logged in shadow
-     * (the switch off: [setRefusalLive]) - once a day for the arm and option. Nothing is sent.
-     */
-    private fun refusalShadow(b: Book, arm: String, symbol: String, why: String) {
-        val day = now0().toLocalDate().toString()
-        val line = "${label(arm)}: $symbol $REFUSAL_MARK ($why; switch off, shadow - nothing sent)"
-        if (b.log.none { it.startsWith(day) && it.endsWith(line) }) note(b, line)
-    }
-
     private suspend fun liveNoPrice(b: Book, arm: String, u: String, c: Paper.Contract?, right: Right, now: LocalDateTime, setup: String?, idx: Double?,
                                     atr: Double?, keys: List<String>, breadth: Boolean?, pickSkip: String?, because: String): Pos? {
         if (c == null || pickSkip != null || b.armed[arm] != true || !ExposureCapHost.liveMirrorPossible(arm)) return null
@@ -2272,6 +2265,16 @@ object PassedArmsHost {
      */
     private fun askLive(arm: String, c: Paper.Contract, pos: Pos) {
         runCatching { ArmLive.entered(ArmLive.Ask(arm, mirrorRef(pos), c, 1, pos.qty, pos.entry, stop = premiumStop(pos), fixed = pos.fx, lock = pos.fx && pos.sl)) }
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2, B2-B): a paper-only refusal of [arm]'s entry on [symbol] ([why]) that could have gone live, logged in shadow
+     * (the switch off: [setRefusalLive]) - once a day for the arm and option. Nothing is sent.
+     */
+    private fun refusalShadow(b: Book, arm: String, symbol: String, why: String) {
+        val day = now0().toLocalDate().toString()
+        val line = "${label(arm)}: $symbol $REFUSAL_MARK ($why; switch off, shadow - nothing sent)"
+        if (b.log.none { it.startsWith(day) && it.endsWith(line) }) note(b, line)
     }
 
     /** What the arm's status says for a trade it just took (a would-be one labelled as such). */
