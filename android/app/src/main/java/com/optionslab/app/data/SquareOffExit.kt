@@ -20,15 +20,71 @@ internal object SquareOffExit {
     /** The two square-offs' tags: each counts the other's working exit as cover and never cancels it (25 Oct review). */
     val TAGS = setOf("iraalgoexpiry", "iraalgoflat")
     private val DONE = setOf("COMPLETE", "REJECTED", "CANCELLED")
+    /** The Strategy Module's orders' tag ([Strategies]). */
+    private const val STRATEGY_TAG = "iraalgostrat"
+    /** 19 Nov 2026 (final review): a strategy's exit sale resting longer than this is told to Boss. */
+    private const val STRATEGY_COVER_MS = 60_000L
+    /** ... and longer than this, taken over by the square-off (cancelled, then sold). */
+    const val TAKEOVER_MS = 120_000L
+    private val STAMP = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+    /** How long it has rested by the market's clock (Zerodha's stamps are IST; a phone behind it reads young; unread: 0). */
+    private fun restedMs(o: Broker.OrderRow): Long = runCatching {
+        val at = java.time.LocalDateTime.parse(o.placedAt, STAMP).atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
+        Market.now().toInstant().toEpochMilli() - at
+    }.getOrDefault(0L)
+
+    /**
+     * 19 Nov 2026 (second review of the clock lane: a square-off can now run twice back to back, the lane's run and the pass's):
+     * after a square-off exit was placed on a contract (by any square-off: this object's two and the MCX expiry exit), none is sent
+     * on it again for [GAP_MS], whatever the next read of the books shows (an orders read can miss an order placed a moment ago,
+     * and a positions read can trail its fill). Per contract and product (one position row), so no other position's exit is ever
+     * held back. Memory only.
+     */
+    const val GAP_MS = 15_000L
+    private val placedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** The wall clock the gap reads (a test's fake one). */
+    @Volatile internal var clock: () -> Long = System::currentTimeMillis
+    /** The gap in force: [GAP_MS] in the app, always; the older tests' back-to-back passes set it to 0 (its own tests set it). */
+    @Volatile internal var gapMs: Long = GAP_MS
+
+    /** Whether a square-off exit went on [exchange]:[symbol] [product] within [GAP_MS]. */
+    fun inGap(exchange: String, symbol: String, product: String): Boolean {
+        val at = placedAt["$exchange:$symbol:$product"] ?: return false
+        val now = clock()
+        return now >= at && now - at < gapMs
+    }
+
+    /** A square-off exit was placed on [exchange]:[symbol] [product] now. */
+    fun notePlaced(exchange: String, symbol: String, product: String) { placedAt["$exchange:$symbol:$product"] = clock() }
+
+    /** 19 Nov 2026 (final review): nothing of it is out after all (a LIMIT confirmed cancelled unfilled): the gap is not kept. */
+    private fun clearPlaced(exchange: String, symbol: String, product: String) { placedAt.remove("$exchange:$symbol:$product") }
+
+    /** Whether the diary was told this process that the square-offs always use the lag guard (Boss's choice). Memory only. */
+    private val choiceSaid = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** 19 Nov 2026 (Boss's choice, "Go"): the square-offs always use the positions-lag guard - said once in the diary. */
+    fun noteBossChoice() {
+        if (choiceSaid.compareAndSet(false, true))
+            runCatching { Diag.record("exits", "square-offs always use the positions-lag guard, whatever its switch says (your choice, 19 Nov 2026)") }
+    }
+
+    /** TEST ONLY. */
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap }
 
     /** A stop-type order (waits for a trigger): the kind that is cancelled before the exit. A plain MARKET or LIMIT sell is an exit. */
     private fun isStop(o: Broker.OrderRow): Boolean = o.type.equals("SL", true) || o.type.equals("SL-M", true) || o.status == "TRIGGER PENDING"
 
     suspend fun send(p: Broker.Position, lotSize: Int, tickSize: Double, read: List<Broker.OrderRow>, working: List<Broker.OrderRow>,
                      positions: Broker.Positions, limits: Kite.Limits, who: String, tag: String, origin: String,
-                     aboutIt: String, exitName: String, multiplier: Int = 1, tell: (String, String) -> Unit): Boolean {
+                     aboutIt: String, exitName: String, multiplier: Int = 1, backstop: Boolean = false, minutesLeft: Int? = null,
+                     tell: (String, String) -> Unit): Boolean {
         val pass = ExitCoordinator.enter(p.exchange, p.symbol, who)
         try {
+            // 19 Nov 2026: an exit placed on it a moment ago is still on its way ([GAP_MS]): nothing more now, the next run reads again.
+            if (inGap(p.exchange, p.symbol, p.product)) return false
             if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
             val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
@@ -40,14 +96,36 @@ internal object SquareOffExit {
             // pass; the arm put its stop back in between and this cancelled it again, every minute until the close, with the
             // position never flat and its stop gone most of the time.) A cancelled order found filled sold the position meanwhile:
             // nothing more this pass, the next reads the books again; one not yet out: the exit waits for the next pass too.
-            val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) }
+            // 19 Nov 2026 (final review): a strategy's own exit sale working ([STRATEGY_TAG], not its resting stop) is its closing in
+            // progress, so cover - a cancel racing its fill, then a sale here, could sell twice. (The Strategy Module's own exit reads the
+            // orders and what is held in the contract's exit turn, the lag guard always on, so it never sends again over a sale here.)
+            // Not for ever: from [backstop] (the expiry square-off's own backstop minute), or once it has rested [TAKEOVER_MS] (a
+            // protected MARKET left behind as the price moved), it is cancelled, confirmed out with nothing more filled, and the
+            // square-off sells what is held - so a stuck one never carries the position into the settlement.
+            fun takeOver(o: Broker.OrderRow) = backstop || restedMs(o) > TAKEOVER_MS
+            val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) ||
+                (it.tag == STRATEGY_TAG && !isStop(it) && !takeOver(it)) }
+            same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && (restedMs(it) > STRATEGY_COVER_MS || takeOver(it)) }?.let {
+                if (takeOver(it)) {
+                    tell("strategy exit taken over ${p.symbol}", "${p.symbol} $aboutIt and a strategy's exit sale for it was still resting at Zerodha: " +
+                        "the $exitName cancels it and sells what is held.")
+                } else {
+                    // Told once; from 15:15 (or the flat-by minute) each minute it is still resting, a RISK alert naming the minutes left.
+                    val left = minutesLeft
+                    tell("strategy exit resting ${p.symbol}${left?.let { " $it" } ?: ""}", "${p.symbol} $aboutIt and a strategy's exit sale for it is still " +
+                        "resting at Zerodha" + (left?.let { " with $it minute(s) to the close" } ?: "") + ". The $exitName takes over if it does not fill " +
+                        "(cancels it, then sells); check it in Trade.")
+                }
+            }
             val others = same.filter { it !in cover }
             if (others.isNotEmpty()) {
                 var filled = false; var allOut = true
                 for (o in others) {
                     runCatching { Broker.cancel(o.id, o.variety) }
-                    val st = runCatching { Broker.orderState(o.id)?.status }.getOrNull()
-                    if (st == "COMPLETE") filled = true else if (st !in DONE) allOut = false
+                    val st = runCatching { Broker.orderState(o.id) }.getOrNull()
+                    // 19 Nov 2026: more of it filled since the read (a strategy's exit taken over, part filled as it came out) is a
+                    // fill too - the next pass reads the books again, never a sale on what this read showed.
+                    if (st?.status == "COMPLETE" || (st != null && st.filled > o.filled)) filled = true else if (st?.status !in DONE) allOut = false
                 }
                 if (filled || !allOut) return false
             }
@@ -56,8 +134,12 @@ internal object SquareOffExit {
             if (!Protections.dayGttsOut(p.exchange, p.symbol, who)) return false
             val pending = cover.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
             // What is held, checked against the orders read's fills: an exit sent from here that filled a moment ago is never
-            // sold again while the positions catch up ([ExitCoordinator.held]).
-            val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, read, positions) }.getOrNull() ?: return false
+            // sold again while the positions catch up ([ExitCoordinator.held]). 19 Nov 2026 (second review of the clock lane: a
+            // square-off can now run twice back to back, the clock lane's run and the pass's): the lag guard always acts here
+            // ([forceLag], as [Protections] has since 15 Nov), whatever its switch says - it only ever lowers what is sent. Boss's
+            // choice (19 Nov 2026, "Go"): the square-offs ALWAYS use the positions-lag guard ([noteBossChoice] says so once in the diary).
+            noteBossChoice()
+            val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, read, positions, forceLag = true) }.getOrNull() ?: return false
             if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) return false          // closed meanwhile: the next pass sees it
             val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), lotSize)
             if (qty <= 0) return false                                      // still closing; checked again next pass
@@ -72,7 +154,8 @@ internal object SquareOffExit {
             val placed = ArrayList<String>()
             for (o in orders) {
                 try {
-                    placed += Broker.placeOrder(o, exit = true).also { runCatching { Strategies.tagOwner("kite:$it", origin) } }
+                    // 19 Nov 2026 (third review): the contract's gap starts with each order placed, not after the whole loop.
+                    placed += Broker.placeOrder(o, exit = true).also { notePlaced(p.exchange, p.symbol, p.product); runCatching { Strategies.tagOwnerSoon("kite:$it", origin) } }
                 } catch (e: Exception) {
                     if (Broker.definite(e)) {
                         // 10 Nov (the 3 Nov refusal, for an exit): MARKET blocked on a low-open-interest contract - the same slice once as a
@@ -83,13 +166,31 @@ internal object SquareOffExit {
                             val key = "${p.exchange}:${p.symbol}"
                             val q = runCatching { Broker.quotes(listOf(key))[key] }.getOrNull()
                             val limit = com.optionslab.engine.orb.LiveMirror.blockedMarketExit(o, q?.last, q?.ask, q?.bid)
-                            val sent = limit?.let { l -> runCatching { Broker.placeOrder(l, exit = true) }.getOrNull() }
+                            // 19 Nov 2026 (third review): a lost reply is not a refusal - the LIMIT may be out, so the gap starts and it
+                            // is looked for, as the MARKET path does; never said as refused.
+                            var limitLost = false
+                            val sent = limit?.let { l ->
+                                try {
+                                    Broker.placeOrder(l, exit = true).also { notePlaced(p.exchange, p.symbol, p.product) }
+                                } catch (e2: kotlinx.coroutines.CancellationException) {
+                                    throw e2
+                                } catch (e2: Exception) {
+                                    if (Broker.definite(e2)) null else {
+                                        limitLost = true
+                                        notePlaced(p.exchange, p.symbol, p.product)
+                                        runCatching { Broker.findRecentRetrying(l, placed + working.map { it.id }) }.getOrNull()
+                                    }
+                                }
+                            }
+                            if (sent == null && limitLost) break
                             if (sent != null) {
-                                runCatching { Strategies.tagOwner("kite:$sent", origin) }
+                                runCatching { Strategies.tagOwnerSoon("kite:$sent", origin) }
                                 var f = runCatching { Broker.awaitOrder(sent, 10_000) }.getOrNull()
                                 if (f?.status !in DONE) { runCatching { Broker.cancel(sent) }; f = runCatching { Broker.orderState(sent) }.getOrNull() ?: f }
                                 // Counted as placed when any of it filled or it may still be working; cancelled unfilled: said, next pass.
                                 if (f == null || f.filled > 0 || f.status !in DONE) { placed += sent; continue }
+                                // Confirmed cancelled, nothing filled, nothing else out this time: no gap (the retry near 15:05 is not held).
+                                if (placed.isEmpty()) clearPlaced(p.exchange, p.symbol, p.product)
                                 tell("unfilled ${p.symbol}", "Zerodha blocks MARKET orders on ${p.symbol} (low open interest), and its $exitName exit as a LIMIT at " +
                                     "%.2f did not fill in 10 s, so it was cancelled. Retrying every pass until the close; close it yourself if it keeps failing."
                                         .format(java.util.Locale.ENGLISH, limit?.price ?: 0.0))
@@ -99,7 +200,9 @@ internal object SquareOffExit {
                         tell("rejected ${p.symbol} ${e.message}", "Zerodha refused the $exitName exit of ${p.symbol}: ${e.message}. Retrying every pass until the close; close it yourself if it keeps failing.")
                         break
                     }
-                    // The reply was lost, not necessarily the order: look for it before trying again.
+                    // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out
+                    // either way, so the contract's gap starts ([GAP_MS]).
+                    notePlaced(p.exchange, p.symbol, p.product)
                     runCatching { Broker.findRecentRetrying(o, placed + working.map { it.id }) }.getOrNull()?.let { placed += it }
                     break
                 }

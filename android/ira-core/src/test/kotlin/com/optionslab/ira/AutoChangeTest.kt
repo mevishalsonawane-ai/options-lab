@@ -672,4 +672,14 @@ class AutoChangeTest {
         assertFalse(A.undoNeedsPin(c), "paper only: no PIN")
         assertEquals(A.FT3_TARGET, A.paperArmOffByBoss(A.FT3_TARGET, "FT3").target)
     }
+
+    /** 19 Nov 2026: a loss-limit stop lifted on Boss's choice is Boss's own, raises live risk, and is a record only (no Undo). */
+    @Test fun aLossLiftIsBossOwnAndARecordOnly() {
+        val c = AutoChange.lossLift(SegmentLock.Trip.LIVE, "switched Zerodha's daily loss limit off", "14:02")
+        assertTrue(AutoChange.bossOwn(c.kind))
+        assertEquals(AutoChange.Risk.RAISE, AutoChange.riskOf(c))
+        assertEquals(SegmentLock.Trip.LIVE, AutoChange.lossStopTrip(c.from))
+        val (book, e) = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.KEPT, 0L, LocalDate.of(2026, 11, 19), by = "your choice", note = "")
+        assertNull(AutoChange.undo(book, e.id), "no Undo: the way back is the limit itself")
+    }
 }

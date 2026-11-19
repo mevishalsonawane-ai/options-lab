@@ -20,6 +20,8 @@ object ExpirySquareOff {
     const val AT_MINUTE = com.optionslab.engine.NseHours.EXPIRY_SQUARE_OFF
     /** 20 Oct: from here an arm's live trade still open on its expiry is closed by this square-off too (its own 15:05 missed it). */
     const val BACKSTOP_MINUTE = AT_MINUTE + 3
+    /** 19 Nov 2026: from here a strategy's exit sale still resting on an expiring option is a RISK alert each minute ([SquareOffExit]). */
+    const val REPEAT_FROM = 15 * 60 + 15
     private const val K_DONE = "sq.expiry.done"
 
     /**
@@ -34,6 +36,13 @@ object ExpirySquareOff {
 
     /** Whether an arm's live trade ([ArmLive]) holds [symbol] (memory only); replaceable in tests. */
     @Volatile internal var armOwns: (String) -> Boolean = { ArmLive.ownerOf(it) != null }
+
+    /**
+     * 19 Nov 2026 (second review of the clock lane: it runs this from the watch's first seconds, a restart at 15:06 included): whether
+     * the arms' live book is read, as [FlatBySquareOff.liveBooksReady]. Until it is, every live position counts as an arm's (never
+     * sold as Boss's own before the backstop) and the day is not marked done. Replaceable in tests.
+     */
+    @Volatile internal var liveBooksReady: () -> Boolean = { ArmLive.view.value.let { it.loaded && !it.unreadable } }
 
     /** What the owner was already told today ("day|what"), so a retry every pass does not repeat it. */
     private val told = HashSet<String>()
@@ -83,7 +92,7 @@ object ExpirySquareOff {
                 if (NightArm.holds(p.symbol)) continue
                 stillOpen++
                 val r = Paper.close(p.symbol, p.product)
-                r.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", Origins.EXPIRY) } }
+                r.orderId?.let { runCatching { Strategies.tagOwnerSoon("paper:$it", Origins.EXPIRY) } }
                 if (r.ok) closed += "paper ${p.symbol}" else tellOnce(context, "paper ${p.symbol}", "Paper ${p.symbol} could not be closed: ${r.message}. Retrying.")
             }
         }.onFailure { unread = true }
@@ -122,11 +131,15 @@ object ExpirySquareOff {
             // [BACKSTOP_MINUTE]; after that this closes whatever is still open, as before. ORB's trades exit at 15:10 by their own
             // rules, so they stay this square-off's at 15:05.
             val backstop = minuteNow() >= BACKSTOP_MINUTE
+            // 19 Nov 2026: the arms' live book not read yet - no position can be told an arm's, so each counts as one ([liveBooksReady]).
+            val booksReady = runCatching { liveBooksReady() }.getOrDefault(false)
+            if (!booksReady) unread = true
+            fun armHolds(sym: String): Boolean = !booksReady || runCatching { armOwns(sym) }.getOrDefault(false)
             val expiring = book.filter { it.exchange == "NFO" || it.exchange == "BFO" }
                 .filter { p -> ins[p.symbol]?.let { it.expiry == today && !isTicketLeg(it.name, it.strike, it.right.name) } == true }
             // Still counted open (the day is not done) while left to its owner, so the backstop pass still sees it.
             stillOpen += expiring.size
-            val open = expiring.filter { p -> backstop || !runCatching { armOwns(p.symbol) }.getOrDefault(false) }
+            val open = expiring.filter { p -> backstop || !armHolds(p.symbol) }
                 .sortedBy { if (it.qty < 0) 0 else 1 }
             // Exits already working at Zerodha (an earlier pass's order resting in a thin book, or one whose
             // reply was lost; read above, before the positions) are subtracted first, so a retry never sends a second exit.
@@ -139,14 +152,16 @@ object ExpirySquareOff {
                 // Second review: at the backstop, an arm's own exit still working on it (its market sell, or its stop it is about to
                 // replace with one) is its closing in progress: never cancelled here (it would only rest it again, and the two
                 // could both sell). The arm is left to finish; this pass sends nothing for it and says so once.
-                if (backstop && runCatching { armOwns(p.symbol) }.getOrDefault(false) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG }) {
+                if (backstop && armHolds(p.symbol) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG }) {
                     tellOnce(context, "arm closing ${p.symbol}", "${p.symbol} expires today and its arm is still closing it at Zerodha; watch it in Trade.")
                     continue
                 }
                 // 22 Oct: the exit itself as the flat-by sends it too ([SquareOffExit]: one exit turn, other resting exits cancelled
                 // first, the day's GTT out first, fills checked, freeze slices, refusals said once, a lost reply looked for).
                 val placed = SquareOffExit.send(p, i.lotSize, i.tickSize, read, working, positions, s.limits(), "expiry square-off", "iraalgoexpiry",
-                    Origins.EXPIRY, "expires today", "expiry") { key, text -> tellOnce(context, key, text) }
+                    Origins.EXPIRY, "expires today", "expiry", backstop = backstop,
+                    // 19 Nov 2026: from 15:15 a strategy's exit still resting is said each minute, with the minutes left to F&O's close.
+                    minutesLeft = (Market.foClose(today) - minuteNow()).takeIf { minuteNow() >= REPEAT_FROM }) { key, text -> tellOnce(context, key, text) }
                 if (placed) closed += "live ${p.symbol}"
             }
         }.onFailure { unread = true }

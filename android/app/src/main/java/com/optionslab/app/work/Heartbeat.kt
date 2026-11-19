@@ -222,7 +222,8 @@ object Heartbeat {
     private const val RECHECK_SLACK_MS = 5_000L
 
     /** The watch's own pulse in this process is fresh. */
-    private fun aliveNow(): Boolean = alivePulse > 0L && System.currentTimeMillis() - alivePulse in 0L until WatchHealth.ALIVE_MS
+    // 18 Nov 2026 (audit): internal - the clock alarm ([ClockAlarm]) starts the watch only when it is not alive, as [check] does.
+    internal fun aliveNow(): Boolean = alivePulse > 0L && System.currentTimeMillis() - alivePulse in 0L until WatchHealth.ALIVE_MS
 
     /** The alarm fired: re-arm, and if the watch is silent, restart it and say so once. */
     fun check(context: Context) {

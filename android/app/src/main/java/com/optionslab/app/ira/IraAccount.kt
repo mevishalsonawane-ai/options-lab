@@ -385,7 +385,7 @@ internal object IraAccount {
                 // 30 Oct: the index side and the commodity side are said apart (the main button stops the index side only).
                 val dayStop = runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()?.let { w ->
                     "Index bots stopped for today ${com.optionslab.ira.DayStop.by(w)}: armed strategies, NSE arms and Pine scripts make no new entries today. " +
-                        if (com.optionslab.ira.DayStop.mayLift(w)) "\"Start all\" (or Start index bots on Home) resumes them." else "It holds until tomorrow (\"start all\" does not lift it)."
+                        if (com.optionslab.ira.DayStop.mayLift(w)) "\"Start all\" (or Start index bots on Home) resumes them." else "It holds until tomorrow (\"start all\" does not lift it; switching that limit off, or raising it past today's loss, with your PIN does)."
                 }
                 val mcxStop = runCatching { com.optionslab.app.data.Strategies.mcxStoppedKept() }.getOrNull()?.let { k ->
                     "Commodity bots ${com.optionslab.ira.DayStop.state(k)}: the MCX arms make no new entries today. \"Start the commodity bots again\" (or Start again on the MCX card) resumes them."

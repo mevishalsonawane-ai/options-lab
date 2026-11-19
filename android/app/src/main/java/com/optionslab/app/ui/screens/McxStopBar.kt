@@ -69,7 +69,7 @@ private fun McxStopDialog(st: AppModel.McxStopState, onStop: (Boolean) -> Unit, 
         text = {
             Column {
                 Text(when {
-                    st.loss -> "A daily loss limit stopped the commodity bots today: they stay stopped until tomorrow, and starting them again is refused."
+                    st.loss -> "A daily loss limit stopped the commodity bots today: starting them again is refused while that stop holds. Switching off Zerodha's or the paper bots' daily loss limit that made it (or raising it past today's loss) with your PIN lifts it; the commodities' own limit holds until tomorrow."
                     st.stopped -> "The armed MCX arms trade again today. Nothing that is switched off is switched on. The index bots are not changed."
                     else -> "No new MCX entries today. The index bots keep trading: the main \"Stop index bots\" button is theirs. " +
                         "Open MCX positions keep their own stops, targets and exits."

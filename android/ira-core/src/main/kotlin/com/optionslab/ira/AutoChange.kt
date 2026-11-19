@@ -176,6 +176,12 @@ object AutoChange {
          * an Undo that lifts its stop asks the PIN where one is set; stopping only lowers risk. Never proposed or applied by Autopilot.
          */
         DAY_STOP("risk guards", "a side's day stop"),
+        /**
+         * 19 Nov 2026 (Boss's choice, "Go"): the daily loss limit's stop of today lifted because Boss switched that limit off, or
+         * raised it past today's loss, with his PIN ([lossLift]): logged so the timeline shows it - a record only, with no Undo (the
+         * way back is the limit itself). Never proposed or applied by Autopilot.
+         */
+        LOSS_LIFT("risk guards", "a loss-limit stop lifted on your choice"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -364,6 +370,8 @@ object AutoChange {
             Kind.IDEA_HELD -> Risk.LOWER
             // 30 Oct: a side stopped lowers risk; started again it may trade again (adds risk).
             Kind.DAY_STOP -> if (c.to == STOPPED) Risk.LOWER else Risk.RAISE
+            // 19 Nov 2026: lifted it may trade again today (adds risk); put back lowers risk.
+            Kind.LOSS_LIFT -> if (c.to == LIFTED) Risk.RAISE else Risk.LOWER
             // CONFIRM only ever skips entries (lower risk); away from it takes the skips away (adds risk).
             Kind.FLOW_MODE -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else if (c.to == OrderFlow.Mode.CONFIRM.name) Risk.LOWER else Risk.RAISE
             Kind.SPECIALIST_WEIGHT -> if (c.scope == Scope.SHADOW) Risk.NEUTRAL_SHADOW else {
@@ -404,7 +412,8 @@ object AutoChange {
      */
     fun bossOwn(k: Kind): Boolean = k == Kind.ARM_PARK || k == Kind.LIQ_TRAIL || k == Kind.PAPER_ARM_ON || k == Kind.ARM_HIDE || k == Kind.LIQ_INDEX_ON ||
         k == Kind.TREND_EXIT || k == Kind.PAPER_LOCK || k == Kind.PAPER_FILTER || k == Kind.ARM_LIVE ||
-        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT || k == Kind.LIQ_BREAKEVEN || k == Kind.IDEA_RULE || k == Kind.DAY_STOP
+        k == Kind.ARM_SHADOW || k == Kind.SEGMENT_SPLIT || k == Kind.LIQ_BREAKEVEN || k == Kind.IDEA_RULE || k == Kind.DAY_STOP ||
+        k == Kind.LOSS_LIFT
 
     /** What may be done by itself on PAPER (b). */
     private val PAPER_AUTO = setOf(Kind.SPECIALIST_WEIGHT, Kind.SPECIALIST_MUTE, Kind.MANAGER_MODE, Kind.PAPER_ENTRIES, Kind.FLOW_MODE, Kind.DRIFT_THRESHOLD)
@@ -526,6 +535,26 @@ object AutoChange {
         else "${side.title} started again $by${at?.let { " at $it" } ?: ""} (a loss-limit stop is never lifted)",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (stopped) Risk.LOWER else Risk.RAISE,
         if (side == DayStop.Side.INDEX) Scope.LIVE else Scope.PAPER, what = "${side.title}' day stop")
+
+    /** 19 Nov 2026: the target of a [Kind.LOSS_LIFT] (the index side's loss-limit stop of today). */
+    const val LOSS_LIFT_TARGET = "lossstop:index"
+    /** A [Kind.LOSS_LIFT]'s to: the stop lifted. Its from: [LOSS_STOP] and today's stop's kind ([SegmentLock.Trip.wire]). */
+    const val LIFTED = "lifted"
+    const val LOSS_STOP = "loss stop:"
+
+    /**
+     * 19 Nov 2026 (Boss's choice, "Go"): today's daily loss limit stop ([trip]) lifted because Boss [how] ("switched Zerodha's daily
+     * loss limit off", "raised the paper bots' daily loss limit to ₹10,000") with his PIN, at [at]. The bots stay stopped until he
+     * starts them; the limit, if still on, stops them again past it. A record only: no Undo ([undo]).
+     */
+    fun lossLift(trip: SegmentLock.Trip, how: String, at: String? = null): Change = Change(Kind.LOSS_LIFT, LOSS_LIFT_TARGET,
+        LOSS_STOP + trip.wire, LIFTED,
+        "today's daily loss limit stop lifted: you $how with your PIN${at?.let { " at $it" } ?: ""}. The index bots stay stopped until you start " +
+            "them; a limit still on stops them again past it",
+        Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.RAISE, Scope.LIVE, what = "Today's loss-limit stop")
+
+    /** The trip a [Kind.LOSS_LIFT]'s [LOSS_STOP] value names, or null. */
+    fun lossStopTrip(v: String): SegmentLock.Trip? = if (!v.startsWith(LOSS_STOP)) null else SegmentLock.Trip.of(v.removePrefix(LOSS_STOP))
 
     /** The target of Boss's Hero ₹1,000 ticket switch ([Kind.PAPER_ARM_ON]). */
     const val TICKET_TARGET = "paperarm:hero_ticket"
@@ -1587,6 +1616,9 @@ object AutoChange {
     fun undo(book: Book, id: String): Undo? {
         val e = entry(book, id) ?: return null
         if (!e.applied || superseded(book, e)) return null
+        // 19 Nov 2026: a loss-limit stop lifted on Boss's choice is a record only - the way back is the limit itself (switched on
+        // again, it stops the bots past it); an Undo on another day, or with the limit still off, would stop them with no loss reached.
+        if (e.change.kind == Kind.LOSS_LIFT) return null
         val inv = inverse(e.change, "undone by you")
         return Undo(e, inv, undoNeedsPin(e.change))
     }

@@ -49,6 +49,8 @@ class ExpirySquareOffTest : RobolectricTest() {
 
     @After fun down() {
         ExpirySquareOff.armOwns = { ArmLive.ownerOf(it) != null }
+        ExpirySquareOff.liveBooksReady = { true }
+        SquareOffExit.resetForTest(gap = 0L)
         AutomationSupport.realClocks()
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -123,6 +125,21 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue("and the day is done", done())
     }
 
+    /**
+     * 19 Nov 2026 (second review of the clock lane, item 4: it runs this from the watch's first seconds, a restart at 15:06
+     * included): the arms' live book not read yet, no live position can be told an arm's, so none is sold as Boss's own before the
+     * backstop, and the day is not done. At the backstop whatever is still open is closed, as before.
+     */
+    @Test fun anUnreadArmsBookSellsNoLivePositionBeforeTheBackstop() {
+        ExpirySquareOff.liveBooksReady = { false }
+        kite.position(ce, 75, 20.0)
+        pass()
+        assertTrue("nothing sold while the arms' book is unread", kite.placed.isEmpty())
+        assertTrue("and the day is not done", !done())
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
+    }
+
     /** The other half: a fill between the reads leaves the orders read first showing it working; the positions then flat. */
     @Test fun ordersAreReadBeforeThePositions() {
         kite.position(ce, 75, 20.0)
@@ -142,7 +159,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         at(15, 6); pass()
         assertEquals("only the one no arm owns", listOf(Triple(pe, "SELL", "75")), sent())
         assertTrue("the arm's is still open: not done", !done())
-        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
         assertEquals("the backstop closes what its owner did not", listOf(Triple(pe, "SELL", "75"), Triple(ce, "SELL", "75")), sent())
     }
 
@@ -154,7 +171,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         val armSell = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO",
             com.optionslab.engine.orb.LiveMirror.TAG), exit = true) }
         kite.requests.clear()
-        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
         assertTrue("nothing sent", kite.placed.isEmpty())
         assertTrue("the arm's exit not cancelled", kite.requests.none { it.method == "DELETE" })
         assertEquals("OPEN", kite.order(armSell).status)
@@ -267,6 +284,121 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertEquals("nothing more", 2, kite.placed.size)
     }
 
+    /**
+     * 19 Nov 2026 (third review, item 3): the blocked-MARKET exit's LIMIT whose reply is lost (accepted at Zerodha, the connection
+     * dropped). It was taken as refused - said so, and no gap - although it was out. Now it is looked for as the MARKET path does:
+     * found, it is the exit (filled here); never said refused; nothing more is sent.
+     */
+    @Test fun aBlockedMarketExitsLimitWithALostReplyIsLookedForNeverSaidRefused() {
+        SquareOffExit.resetForTest()                                    // the contract's gap on, as it ships
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "NRML MARKET orders are blocked for this NIFTY contract due to its open interest (OI) being less than 100 lots.")
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
+        pass()
+        assertEquals(listOf("MARKET", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertTrue("never said refused", texts().none { it.contains("Zerodha refused the expiry exit of $ce") })
+        assertEquals("found and filled", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        at(15, 7); pass()
+        assertEquals("nothing more", 2, kite.placed.size)
+    }
+
+    /**
+     * 19 Nov 2026 (third review, item 4): the contract's gap starts with the order placed (each slice), not once the whole loop has
+     * ended: here the first freeze slice goes, the clock moves on 20 s before the second is refused, and a pass 10 s after the first
+     * slice still finds the contract in its gap (before, the gap was dated from the loop's end and this pass sent the rest again).
+     */
+    @Test fun theGapStartsWithTheSlicePlacedNotTheLoopsEnd() {
+        SquareOffExit.resetForTest()
+        var now = 1_000_000L
+        SquareOffExit.clock = { now }
+        kite.position(ce, 3_600, 20.0)                                  // 48 lots; NIFTY freezes at 1,800: two slices
+        kite.nextPlace()
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "Order rejected by the exchange.")
+        // The clock moves on as the second (refused) slice is answered, after the first slice was placed and noted.
+        kite.afterNext("/orders/regular") { kite.afterNext("/orders/regular") { now += 20_000 } }
+        pass()
+        assertEquals(2, kite.placed.size)
+        now = 1_000_000L + 10_000
+        at(15, 7); pass()
+        assertEquals("nothing sent inside the first slice's gap", 2, kite.placed.size)
+    }
+
+    /**
+     * 19 Nov 2026 (final review, item 5): the blocked-MARKET exit's LIMIT confirmed cancelled unfilled leaves no gap - nothing of it is
+     * out, so the next pass tries again at once (near 15:05 a 15 s hold is a long time).
+     */
+    @Test fun aLimitCancelledUnfilledLeavesNoGap() {
+        SquareOffExit.resetForTest()
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "NRML MARKET orders are blocked for this NIFTY contract due to its open interest (OI) being less than 100 lots.")
+        kite.nextPlace(outcome = Outcome.OPEN)                          // the LIMIT rests and is cancelled after its 10 s
+        pass()
+        assertEquals(listOf("MARKET", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals("CANCELLED", kite.orders.values.single { it.type == "LIMIT" }.status)
+        at(15, 7); pass()
+        assertEquals("tried again at once", listOf("MARKET", "LIMIT", "MARKET"), kite.placed.map { it.form["order_type"] })
+    }
+
+    /**
+     * 19 Nov 2026 (final review, the Strategy Module): a strategy's own exit sale working on the contract is cover - never cancelled
+     * (the strategy would send its exit again from its own book, beside this square-off's, and the account would end short).
+     */
+    @Test fun aStrategysWorkingExitSaleIsCoverBeforeItsBackstop() {
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val id = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
+        kite.requests.clear()
+        pass()
+        assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(id).status)
+        assertTrue("nothing more sent", kite.placed.isEmpty())
+        assertTrue("nothing told while it is fresh", texts().none { it.contains("a strategy's exit sale for it is still resting") })
+        // Resting a while (90 s): still cover (its closing in progress), told to Boss once.
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(Market.now().toInstant().plusSeconds(90), com.optionslab.engine.IST)
+        try {
+            at(15, 7); pass(); pass()
+            assertTrue("not cancelled yet", kite.requests.none { it.method == "DELETE" })
+            assertTrue("nothing sold beside it", kite.placed.isEmpty())
+            assertEquals("told once", 1, texts().count { it.contains("a strategy's exit sale for it is still resting") })
+        } finally {
+            com.optionslab.app.data.Market.testClock = null
+        }
+    }
+
+    /**
+     * 19 Nov 2026 (final check, M1): from the backstop minute a strategy's exit sale still resting is taken over - cancelled, confirmed
+     * out with nothing filled, and the expiry square-off sells what is held: once, never twice; never carried into the settlement.
+     */
+    @Test fun atTheBackstopAStuckStrategyExitIsCancelledThenSoldOnce() {
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val id = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
+        kite.requests.clear()
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        assertEquals("CANCELLED", kite.order(id).status)
+        assertEquals("sold once by the square-off", listOf(Triple(ce, "SELL", "75")), sent())
+        assertEquals("iraalgoexpiry", kite.placed.single().form["tag"])
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        pass()
+        assertEquals("nothing more", 1, kite.placed.size)
+    }
+
+    /** M1: before the backstop, one resting past two minutes is taken over too. */
+    @Test fun aStrategyExitRestingPastTwoMinutesIsTakenOver() {
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val id = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
+        kite.requests.clear()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(Market.now().toInstant().plusSeconds(150), com.optionslab.engine.IST)
+        try {
+            pass()
+            assertEquals("CANCELLED", kite.order(id).status)
+            assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
+        } finally {
+            com.optionslab.app.data.Market.testClock = null
+        }
+    }
+
     @Test fun anExitTheAppWillNotSendIsSaidOnce() {
         kite.position(ce, 75, 20.0, product = "CO")                   // a cover order position: not a product the app sends
         pass(); pass()
@@ -319,7 +451,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue(kite.placed.isEmpty())
         // 20 Oct: SENSEX's list is asked for first; with no list by the backstop minute, it is said whatever.
         assertTrue("not before the list could be read", texts().none { it.contains("SENSEX26SEP80000CE") })
-        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
         assertTrue(kite.placed.isEmpty())
         val said = texts().single { it.contains("SENSEX26SEP80000CE") }
         assertTrue(said, said.contains("NOT closed automatically"))

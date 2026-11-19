@@ -1076,6 +1076,27 @@ internal object Autopilot {
     }
 
     /**
+     * 19 Nov 2026 (Boss's choice, [com.optionslab.app.data.LossBreaker.liftForLoosened]): today's loss-limit stop ([trip]) lifted because
+     * Boss [how] with his PIN, at [at]: logged as his own (kept), a record only (no Undo: the way back is the limit itself).
+     */
+    fun logLossLift(trip: com.optionslab.ira.SegmentLock.Trip, how: String, at: String?) {
+        if (!enabled()) return
+        val c = AutoChange.lossLift(trip, how, at)
+        scope.launch(trailLane) {
+            runCatching {
+                if (appContext == null) return@runCatching
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
+                        note = "your choice (19 Nov 2026): a loss limit you switch off or raise with your PIN lifts its stop of today").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
      * Bot settings' "Commodities keep their own paper limits" switch flipped by Boss (21 Oct): on is logged as a new entry (its Undo
      * puts the shared lock back); off closes the newest kept entry as undone, so no Undo is left that would do nothing.
      */

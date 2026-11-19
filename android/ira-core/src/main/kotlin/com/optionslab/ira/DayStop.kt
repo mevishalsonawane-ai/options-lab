@@ -68,9 +68,9 @@ object DayStop {
      * What "start" says for one side while its stop is a loss stop, or it is not stopped: null when it may be started now.
      */
     fun startRefusal(side: Side, kept: Kept?, loss: Boolean): String? = when {
-        loss -> "Not started: the daily loss limit stopped the ${side.words} today, so they stay stopped until tomorrow."
+        loss -> "Not started: the daily loss limit stopped the ${side.words} today, so they stay stopped until tomorrow (or until you switch that limit off, or raise it past today's loss, with your PIN)."
         kept == null -> "The ${side.words} are not stopped."
-        !mayLift(kept.why) -> "Not started: the daily loss limit stopped the ${side.words} today, so they stay stopped until tomorrow."
+        !mayLift(kept.why) -> "Not started: the daily loss limit stopped the ${side.words} today, so they stay stopped until tomorrow (or until you switch that limit off, or raise it past today's loss, with your PIN)."
         else -> null
     }
 
@@ -96,7 +96,8 @@ object DayStop {
 
     /** Said when "start all" or Start bot is asked while the daily loss limit holds: nothing is lifted or switched on. */
     const val LOSS_HOLDS = "The daily loss limit stopped the bot today, Boss, so it stays stopped until tomorrow - \"start all\" and Start index bots " +
-        "don't lift it (plans only lower risk). Nothing was started. Tomorrow the armed arms and scripts run as usual."
+        "don't lift it (plans only lower risk); switching that limit off, or raising it past today's loss, with your PIN does. Nothing was started. " +
+        "Tomorrow the armed arms and scripts run as usual."
 
     /** One strategy, arm or script as it stands: on (armed or running); [needsPin]: on, in Live, but not cleared for Zerodha. */
     data class Arm(val name: String, val on: Boolean, val needsPin: Boolean = false)

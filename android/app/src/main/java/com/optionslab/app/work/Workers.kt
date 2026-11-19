@@ -142,7 +142,9 @@ object WatchWorkers {
             if (runCatching { com.optionslab.app.data.FastPath.running }.getOrDefault(false)) "running" else "off"
         // The smart workers (10 Oct): the market brain, health incidents, the findings and each arm's wakes and skips.
         val brain = runCatching { com.optionslab.app.data.SmartWorkers.diagLines() }.getOrElse { listOf("Brain: could not read") }
-        return listOf(head) + rows.map { "  $it" } + listOf("  $fast") + brain
+        // 18 Nov 2026 (audit): each clock step's last completed run ([ClockLane]).
+        val clock = runCatching { ClockLane.line() }.getOrElse { "Clock lane: could not read" }
+        return listOf(head) + rows.map { "  $it" } + listOf("  $fast", "  $clock") + brain
     }
 
     /** The slowest steps today, in one line. */
