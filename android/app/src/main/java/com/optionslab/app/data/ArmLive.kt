@@ -2070,11 +2070,13 @@ object ArmLive {
         }
         // 19 Nov 2026 (third review; final review): the start's sweep after the open trades were looked at (their stops first), under
         // its own lock - never [opLock], so its reads never make the live lane or the 15-second check skip a look - never on the live lane.
-        // (Never while a damaged book's recovery is due: [recover] takes those lots back first, under [opLock], and the sweep after it.)
+        // (Never while a damaged book's recovery is due: [recover] takes those lots back first, under [opLock], and the sweep after it.
+        // Its time bound still runs meanwhile.)
+        if (sweep && recoverDue) coldPendingBound()
         if (sweep && !recoverDue && sweepLock.tryLock()) {
             try {
                 coldPendingBound()
-                runCatching {
+                if (!recoverDue) runCatching {
                     val r = sweepUnowned()
                     if (r == Swept.DONE || (r == Swept.UNDECIDED && coldGiveUp())) { coldDue = false; coldPending = false }
                 }
@@ -3087,10 +3089,15 @@ object ArmLive {
         // own net today on the contract - its filled buys less its filled sales (a short trade still open counted back on its side) - less
         // what the book's open long trades hold. Its round trips explain nothing held now: Boss's, Pine's or a strategy's lot stays theirs.
         val mine = counted.filter { it.tag == LiveMirror.TAG && it.symbol == sym && it.exchange == exch && it.product == product && it.filled > 0 }
-        // (A sale today of a lot carried from an earlier day closed that day's trade, never today's buy: counted back.)
-        val netLong = mine.filter { it.side == "BUY" }.sumOf { it.filled } - mine.filter { it.side == "SELL" }.sumOf { it.filled } +
-            rows.filter { it.open && it.side < 0 }.sumOf { it.qty } +
-            rows.filter { it.side > 0 && !it.open && it.day.isBefore(today) && it.exitTime?.toLocalDate() == today }.sumOf { it.qty }
+        // (A sale today of a lot carried from an earlier day closed that day's trade, never today's buy: counted back - no more than this
+        // path's own sales today beyond what today's closed long trades sold. A short carried in and bought back today: taken off.)
+        val tagSells = mine.filter { it.side == "SELL" }.sumOf { it.filled }
+        val todayClosedLong = rows.filter { it.side > 0 && !it.open && it.day == today }.sumOf { it.qty }
+        val carriedBack = minOf(rows.filter { it.side > 0 && !it.open && it.day.isBefore(today) && it.exitTime?.toLocalDate() == today }.sumOf { it.qty },
+            (tagSells - todayClosedLong).coerceAtLeast(0))
+        val netLong = mine.filter { it.side == "BUY" }.sumOf { it.filled } - tagSells +
+            rows.filter { it.open && it.side < 0 }.sumOf { it.qty } + carriedBack -
+            rows.filter { it.side < 0 && !it.open && it.day.isBefore(today) && it.exitTime?.toLocalDate() == today }.sumOf { it.qty }
         val openLong = rows.filter { it.open && it.side > 0 && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty }
         val asked = minOf(balance, netLong - openLong)
         if (asked <= 0) return true
@@ -3114,15 +3121,16 @@ object ArmLive {
         val entries = buys.filter { it.type != "SL" && it.type != "SL-M" }.ifEmpty { buys }
         // 19 Nov 2026 (final review): the orders taken back are the unowned ones: not a row's entry, nor the order a row with no order id
         // (taken back from the positions earlier) stands for - for each such trade, an order of its quantity nearest its entry time.
-        val pool = entries.filter { it.id !in booked }.toMutableList()
-        // (Ties broken the same way every time: one placed at or before its entry first, then the nearest, then the older order.)
+        // (Each such trade takes its quantity off one order that holds at least that much - its own quantity first, then the nearest in
+        // time, then the older order; a time that cannot be read last. An order with nothing left is not unowned.)
+        val rem = HashMap<String, Int>().apply { entries.filter { it.id !in booked }.forEach { put(it.id, it.filled) } }
         for (r in rows.filter { it.entryOrderId == null && !it.unconfirmed && it.side > 0 && it.day == today }.distinctBy { it.ref }) {
-            val cands = pool.filter { it.filled == r.entryQty }.ifEmpty { pool.toList() }
-            cands.sortedWith(compareBy<Broker.OrderRow>(
-                { o -> if (placedTime(o.placedAt)?.isAfter(r.entryTime) == true) 1 else 0 },
+            entries.filter { (rem[it.id] ?: 0) >= r.entryQty }.sortedWith(compareBy<Broker.OrderRow>(
+                { o -> if (rem[o.id] == r.entryQty) 0 else 1 },
                 { o -> placedTime(o.placedAt)?.let { kotlin.math.abs(java.time.Duration.between(it, r.entryTime).seconds) } ?: Long.MAX_VALUE },
-                { o -> o.placedAt }, { o -> o.id.toLongOrNull() ?: Long.MAX_VALUE })).firstOrNull()?.let { pool.remove(it) }
+                { o -> o.id.toLongOrNull() ?: Long.MAX_VALUE })).firstOrNull()?.let { o -> rem[o.id] = (rem[o.id] ?: 0) - r.entryQty }
         }
+        val pool = entries.filter { (rem[it.id] ?: 0) > 0 }
         if (pool.isEmpty()) return true
         val newest = pool.maxByOrNull { it.placedAt }!!
         // Its arm: the owner label of its order, else the one open paper trade on the contract of an arm not yet mirrored live.
@@ -3137,7 +3145,7 @@ object ArmLive {
             ?: LiveMirror.ARMS.firstOrNull { it.product == product && it.rest == LiveMirror.Rest.SL } ?: return false
         // (Its price: the average of the unowned orders taken back, newest first for what is taken - never blended with an owned one's.)
         var left = q; var paid = 0.0; var paidQty = 0
-        for (o in pool.sortedByDescending { it.placedAt }) { if (left <= 0) break; val k = minOf(left, o.filled); if (o.avg > 0) { paid += o.avg * k; paidQty += k }; left -= k }
+        for (o in pool.sortedByDescending { it.placedAt }) { if (left <= 0) break; val k = minOf(left, rem[o.id] ?: 0); if (o.avg > 0) { paid += o.avg * k; paidQty += k }; left -= k }
         val fill = (if (paidQty > 0) paid / paidQty else 0.0).takeIf { it > 0 } ?: net.singleOrNull()?.avg?.takeIf { it > 0 } ?: return false
         val rule = if (spec != null) rebuiltRule(spec, sym, placedTime(newest.placedAt)) else (false to false)
         val ref = leg?.second?.ref ?: "recovered:${newest.id}"
