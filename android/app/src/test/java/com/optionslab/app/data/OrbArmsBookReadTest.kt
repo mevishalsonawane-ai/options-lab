@@ -183,6 +183,26 @@ class OrbArmsBookReadTest : RobolectricTest() {
         assertTrue(alerts().toString(), alerts().any { "could not be read (armed)" in it && "every arm is off" in it })
     }
 
+    // ---- paper-side ends never sell a live trade (coordinator, 19 Nov 2026) ----------------------------------------------------
+
+    @Test fun aPaperRowClosedOrResetNeverSellsOrDropsTheLiveTrade() {
+        val stop = kite.restingInKite(sym, "SELL", 30, 152.0, type = "SL", trigger = 160.0, tag = "iraorb")
+        // The same arm's paper row on the same option, which the paper book does not hold (closed there by hand, or its contract unknown).
+        val paper = position(30, 200.0, "P1").put("live", false).put("kite", "").put("entryOrderId", "P1")
+        state(armed = false, positions = listOf(position(30, 200.0, "E1", stopId = stop, stop = 160.0), paper))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        restart()
+        pass()
+        val live = { runBlocking { OrbArms.liveOpen() }.map { it.second } }
+        assertEquals("the live trade is untouched by its paper side", listOf("E1"), live().map { it.entryOrderId })
+        runBlocking { OrbArms.resetPaper() }                                // Boss resets the paper account
+        pass()
+        val p = live().single()
+        assertTrue(p.open); assertEquals(stop, p.stopOrderId); assertEquals(30, p.qty)
+        assertTrue("its own stop still resting at Zerodha", kite.order(stop).working)
+        assertTrue("never a sale because of the paper side", kite.placed.none { it.form["transaction_type"] == "SELL" })
+    }
+
     // ---- L1: an unclaimed stop on a flat contract ----------------------------------------------------------------------------
 
     @Test fun anUnclaimedStopOnAFlatContractIsCancelledOnceItIsConfirmedFlat() {
