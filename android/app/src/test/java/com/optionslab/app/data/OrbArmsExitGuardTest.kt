@@ -268,6 +268,32 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals("TRIGGER PENDING", kite.order(open("orb")!!.stopOrderId!!).status)
     }
 
+    /**
+     * 19 Nov 2026 (review): a 15:10 sale refused: its stop is put back, and not taken out and sold again on every look - the next try
+     * waits 45 s (the stop rests meanwhile).
+     */
+    @Test fun aRefusedSessionEndSaleIsTriedAgainOnlyAfterABackOff() {
+        OrbArms.testNow = OrbArms.testNow!!.with(java.time.LocalTime.of(15, 12))
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.nextPlace(reply = FakeKite.Reply.INPUT_EXCEPTION, message = "Markets are closed right now.")
+        pass()
+        val back = open("orb")!!.stopOrderId!!
+        assertEquals("TRIGGER PENDING", kite.order(back).status)
+        kite.requests.clear()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(15)
+        pass()
+        assertTrue("nothing cancelled or sold 15 s later: ${kite.requests.filter { it.method != "GET" }.map { it.method + " " + it.path }}",
+            kite.requests.none { it.method == "DELETE" } && marketSells().isEmpty())
+        assertEquals("TRIGGER PENDING", kite.order(back).status)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(40)
+        pass()
+        assertEquals("tried again after the back-off", "CANCELLED", kite.order(back).status)
+        assertEquals(1, marketSells().size)
+    }
+
     /** 19 Nov 2026 (second review): with Boss's Stop for today on, a refused exit sale puts the stop back too (as main did). */
     @Test fun withStopForTodayARefusedExitPutsTheStopBack() {
         runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }

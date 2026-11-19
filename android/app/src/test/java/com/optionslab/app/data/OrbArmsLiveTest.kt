@@ -256,6 +256,89 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals(kite.orders.keys.last(), p.stopOrderId)
     }
 
+    /** A new process: the arms' book read back from disk, the arms' live copies' book read. */
+    private fun restart() { OrbArms.forgetMemoryForTest(); runBlocking { ArmLive.refresh() } }
+
+    /**
+     * 19 Nov 2026 (review): a trade kept from the positions alone (no entry order id) closed by its own stop, and Pine's lot on the same
+     * contract: at the restart nothing is taken back - these arms' own net there is 0 (their buy less their stop's sale).
+     */
+    @Test fun theSweepNeverTakesPinesLotBesideAClosedTradeOfTheseArms() {
+        val closed = position("orb", 30, 200.0, entryId = null).put("exit", 160.0).put("exitTime", ago(10).toString()).put("why", "stop")
+        state(positions = listOf(closed))
+        kite.boughtInKite(sym, 30, 200.0, tag = "iraorb")                 // its buy, no order id kept on the row
+        kite.soldInKite(sym, 30, 160.0, tag = "iraorb")                   // its stop's sale
+        kite.boughtInKite(sym, 30, 210.0, tag = "irapine")                // Pine's lot
+        kite.dayBought["NFO:$sym:MIS"] = 60
+        restart()
+        kite.requests.clear()
+        pass()
+        assertNull("nothing taken back", arm().open)
+        assertTrue("no stop placed: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+    }
+
+    /** 19 Nov 2026 (review): after "Erase everything" mid-day, a buy of these arms from before the erase is never taken back as a trade. */
+    @Test fun theSweepNeverTakesBackALotFromBeforeAnErase() {
+        kite.boughtInKite(sym, 30, 200.0, tag = "iraorb")
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        OrbArms.testNow = Market.now().plusMinutes(1)                      // the erase comes after that buy
+        OrbArms.wipe()
+        runBlocking { ArmLive.refresh() }
+        kite.requests.clear()
+        pass()
+        assertNull("nothing taken back", runBlocking { OrbArms.view() }.arms.firstNotNullOfOrNull { it.open })
+        assertTrue("no stop placed: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+    }
+
+    /** 19 Nov 2026 (review): another arm's lot taken back at the first entry after a restart never stops this arm's entry. */
+    @Test fun anotherArmsLotTakenBackAtTheFirstEntryLetsThisEntryGo() {
+        val theirs = kite.boughtInKite(sym, 30, 200.0, tag = "iraorb")
+        runBlocking { Strategies.tagOwner("kite:$theirs", "Liquidity 15m · entry") }
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        state(pending = true)
+        restart()
+        assertEquals("Entered at Zerodha (live).", approve())
+        val today = runBlocking { OrbArms.view() }.arms
+        assertEquals("theirs taken back", theirs, today.single { it.arm.source == "liquidity15" }.open?.entryOrderId)
+        assertEquals("this arm's entry went", 2, kite.orders.values.count { it.side == "BUY" })
+        assertTrue(arm().open!!.entryOrderId != theirs)
+    }
+
+    /** 19 Nov 2026 (review): a buy of these arms still working (part filled) that no row holds is cancelled at the sweep and what filled taken back. */
+    @Test fun theSweepCancelsAStillWorkingBuyAndTakesBackWhatFilled() {
+        state()
+        val id = kite.restingInKite(sym, "BUY", 60, 201.0, tag = "iraorb")
+        kite.orders.getValue(id).apply { filled = 30; avg = 200.0 }
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        restart()
+        kite.requests.clear()
+        pass()
+        assertEquals("the rest cancelled", "CANCELLED", kite.order(id).status)
+        val p = arm().open!!
+        assertEquals(id, p.entryOrderId); assertEquals(30, p.qty)
+        assertEquals("30", kite.placed.single { it.form["order_type"] == "SL" }.form["quantity"])
+    }
+
+    /**
+     * 19 Nov 2026 (review): a lost entry about to be kept from the positions alone while a buy of these arms that no row claims still works
+     * on the contract: that buy is cancelled and the entry stays unconfirmed (settled next look from what that order ended with).
+     */
+    @Test fun aLostEntryIsNotKeptFromThePositionsWhileAnUnclaimedBuyStillWorks() {
+        val lost = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true)
+        state(positions = listOf(lost))
+        val id = kite.restingInKite(sym, "BUY", 60, 201.0, tag = "iraorb")
+        runBlocking { Strategies.tagOwner("kite:$id", "ORB Fresh · entry") }   // labelled for another arm: the search leaves it out
+        kite.orders.getValue(id).apply { filled = 30; avg = 200.0 }
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        runBlocking { ArmLive.refresh() }
+        pass()
+        assertEquals("the working buy cancelled", "CANCELLED", kite.order(id).status)
+        assertTrue("still unconfirmed", arm().open!!.unconfirmed)
+        assertTrue("no stop yet", kite.placed.none { it.form["order_type"] == "SL" })
+    }
+
     /**
      * 19 Nov 2026 (coordinator): the start-up sweep cannot run yet (the arms' live copies' book not read) while a buy of these arms that no
      * row holds is at Zerodha: a live entry goes as before - the wait is only logged in shadow - and Boss is told once.
