@@ -26,6 +26,8 @@ object ClockSteps {
     const val ROUND_OFFSET_MS = 1_000L
     /** A due step that has not COMPLETED this long after its time (positions open) is a RISK alert. */
     const val LATE_MS = 45_000L
+    /** With nothing held and outside its minutes, a step runs once a minute (as each pass ran it), not every round. */
+    const val IDLE_EVERY_MS = 60_000L
     /** How long a square-off waits for another one's turn before it leaves this round to the next. */
     const val TURN_WAIT_MS = 5_000L
     /** The alarm rings this many minutes before its step's minute, so the watch is up and running when the minute comes. */
@@ -64,11 +66,11 @@ object ClockSteps {
 
     /**
      * Since when a completed run of a step is due: the later of its last completed run's start ([lastDoneMs]) or the lane's own
-     * start ([activeSinceMs]) plus a round, and its scheduled minute today ([scheduledMs], null: none passed yet) - a lane started
+     * start ([activeSinceMs]) plus [everyMs] (its slowest cadence), and its scheduled minute today ([scheduledMs], null: none passed yet) - a lane started
      * late gets its own round's grace first.
      */
-    fun dueAt(lastDoneMs: Long, activeSinceMs: Long, scheduledMs: Long?): Long {
-        val rolling = maxOf(lastDoneMs, activeSinceMs) + ROUND_MS
+    fun dueAt(lastDoneMs: Long, activeSinceMs: Long, scheduledMs: Long?, everyMs: Long = ROUND_MS): Long {
+        val rolling = maxOf(lastDoneMs, activeSinceMs) + everyMs
         return if (scheduledMs == null) rolling else maxOf(rolling, maxOf(scheduledMs, activeSinceMs))
     }
 
@@ -91,7 +93,11 @@ object ClockSteps {
         /** Held now (diagnostics, tests). */
         val held: Boolean get() = m.isLocked
 
-        suspend fun <T> take(waitMs: Long = TURN_WAIT_MS, block: suspend () -> T): T? {
+        /** Who holds the turn now ([take]'s `who`), null: nobody. */
+        @Volatile var holder: String? = null
+            private set
+
+        suspend fun <T> take(waitMs: Long = TURN_WAIT_MS, who: String? = null, block: suspend () -> T): T? {
             // tryLock and a short sleep, never lock() under a timeout: a timeout that fires as the lock is had would keep it for ever.
             var waited = 0L
             while (!m.tryLock()) {
@@ -99,9 +105,11 @@ object ClockSteps {
                 delay(pollMs)
                 waited += pollMs
             }
+            holder = who
             try {
                 return block()
             } finally {
+                holder = null
                 m.unlock()
             }
         }

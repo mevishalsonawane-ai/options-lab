@@ -90,7 +90,7 @@ internal object ClockLane {
                 FLAT_BY -> suspend { com.optionslab.app.data.FlatBySquareOff.maybeRun(context, s) }
                 else -> suspend { }
             }
-            if (name == LOSS) { work(); true } else turn.take { work(); true } ?: false
+            if (name == LOSS) { work(); true } else turn.take(who = name) { work(); true } ?: false
         }
         if (ok) done.merge(name, t0, ::maxOf)
         else if (t0 - turnToldAt >= 60_000L || t0 < turnToldAt) {
@@ -122,17 +122,51 @@ internal object ClockLane {
                 val m = mode()
                 val names = stepsFor(m)
                 if (names.isNotEmpty()) {
-                    // Settings read fresh each round, as each pass reads them (the kill switch never stops these: they only lower risk).
-                    val s = AppSettings.load()
-                    val steps = names.map { step(context, it, s) }
-                    val sup = supervisor()
-                    // No workers (never in the service): one after another here, as the pass would.
-                    if (sup != null) sup.kick(GROUP, steps) else steps.forEach { st -> runCatching { st.body() } }
-                    runCatching { lateCheck(context, m, names, t, since, held) }
+                    val heldNow = runCatching { held() }.getOrDefault(true)
+                    val armsBusy = runCatching { Tasks.armsBusy() }.getOrDefault(false)
+                    val due = names.filter { n -> dueThisRound(n, m, t, heldNow, armsBusy) }
+                    if (due.isNotEmpty()) {
+                        // Settings read fresh each round that runs a step, as each pass reads them (the kill switch never stops
+                        // these: they only lower risk).
+                        val s = AppSettings.load()
+                        val steps = due.map { step(context, it, s) }
+                        val sup = supervisor()
+                        // No workers (never in the service): one after another here, as the pass would.
+                        val started = if (sup != null) sup.kick(GROUP, steps) else steps.map { st -> runCatching { st.body() }; st.name }
+                        started.forEach { lastStart[it] = t }
+                    }
+                    runCatching { lateCheck(context, m, names, t, since, heldNow) }
                 }
             })
         } finally {
             if (lane === l) lane = null
+        }
+    }
+
+    /** When the lane last started each step (wall-clock ms; memory only). */
+    private val lastStart = ConcurrentHashMap<String, Long>()
+
+    /** How long the lane leaves its square-offs to a pass waiting on an arms group (the arms' own exits first, as in the pass). */
+    const val ARMS_YIELD_MS = 30_000L
+
+    /**
+     * Whether the lane starts [name] in the round at [t]: every round while anything is held ([heldNow]) or inside the step's own
+     * minutes (the expiry square-off from 15:05 to F&O's close; the flat-by while a segment's is due) - they read the books and
+     * Zerodha themselves, so the holding hints never hold them back there; else once a minute, as each pass ran them. A square-off
+     * is left to the pass while it waits on an arms group ([armsBusy], [ARMS_YIELD_MS] at most), so it still comes after the arms'
+     * own exits.
+     */
+    private fun dueThisRound(name: String, mode: StopLane.Mode, t: Long, heldNow: Boolean, armsBusy: Boolean): Boolean {
+        if (name != LOSS && armsBusy) return false
+        if (heldNow || t - (lastStart[name] ?: 0L) >= ClockSteps.IDLE_EVERY_MS || t < (lastStart[name] ?: 0L)) return true
+        val now = java.time.Instant.ofEpochMilli(t).atZone(Market.now().zone)
+        val day = now.toLocalDate()
+        val minute = now.hour * 60 + now.minute
+        return when (name) {
+            EXPIRY -> mode == StopLane.Mode.NSE && Market.isTradingDay(day) &&
+                minute >= com.optionslab.engine.NseHours.EXPIRY_SQUARE_OFF && minute < Market.foClose(day)
+            FLAT_BY -> runCatching { com.optionslab.app.data.FlatBySquareOff.dueNow(day, minute).isNotEmpty() }.getOrDefault(true)
+            else -> false
         }
     }
 
@@ -150,13 +184,16 @@ internal object ClockLane {
     }
 
     /** A due step not completed 45 s after its time, with anything held: one RISK alert (and a diary line) per step and time. */
-    private fun lateCheck(context: Context, mode: StopLane.Mode, names: List<String>, nowMs: Long, since: Long, held: () -> Boolean) {
+    private fun lateCheck(context: Context, mode: StopLane.Mode, names: List<String>, nowMs: Long, since: Long, held: Boolean) {
+        if (!held) return
         val now = java.time.Instant.ofEpochMilli(nowMs).atZone(Market.now().zone)
         for (name in names) {
+            // A square-off waiting for another one's turn is not judged: the one holding the turn is (it is told if it is late).
+            val holder = turn.holder
+            if (holder != null && holder != name && name != LOSS) continue
             val last = lastDone(name)
-            val due = ClockSteps.dueAt(last, since, runCatching { scheduled(name, mode, now) }.getOrNull())
+            val due = ClockSteps.dueAt(last, since, runCatching { scheduled(name, mode, now) }.getOrNull(), ClockSteps.IDLE_EVERY_MS)
             if (!ClockSteps.late(due, last, nowMs)) continue
-            if (!runCatching { held() }.getOrDefault(true)) continue
             if (!told.first(now.toLocalDate(), "$name|$due")) continue
             val hhmmss = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
             val dueText = java.time.Instant.ofEpochMilli(due).atZone(now.zone).format(hhmmss)
@@ -181,7 +218,7 @@ internal object ClockLane {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { done.clear(); testWork = null; lane = null; clock = System::currentTimeMillis; told = ClockSteps.Once() }
+    internal fun resetForTest() { done.clear(); lastStart.clear(); testWork = null; lane = null; clock = System::currentTimeMillis; told = ClockSteps.Once() }
 }
 
 /**

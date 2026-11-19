@@ -128,7 +128,7 @@ class ClockLaneTest : RobolectricTest() {
         val ctl = StopLane.Control().apply { mode = StopLane.Mode.NSE }
         try {
             val lane = launch(Dispatchers.IO) {
-                ClockLane.runLane(context, stop = { ctl.ended }, mode = { ctl.mode }, held = { false }, supervisor = { WatchWorkers.supervisor })
+                ClockLane.runLane(context, stop = { ctl.ended }, mode = { ctl.mode }, held = { true }, supervisor = { WatchWorkers.supervisor })
             }
             Background.await("the square-off hung", 10_000) { expiryStarts.get() == 1 }
             val lossBefore = ran.count { it == ClockLane.LOSS }
@@ -150,8 +150,8 @@ class ClockLaneTest : RobolectricTest() {
         }
     }
 
-    /** The pass runs a clock step as the same supervisor step: the lane's run under way is waited for, never doubled. */
-    @Test fun thePassWaitsForTheLanesRunAndNeverStartsASecond() = runBlocking {
+    /** The pass runs a clock step as the same supervisor step: the lane's run under way is waited for, never run beside it. */
+    @Test fun thePassWaitsForTheLanesRunAndNeverRunsBesideIt() = runBlocking {
         val inside = java.util.concurrent.atomic.AtomicInteger()
         val most = java.util.concurrent.atomic.AtomicInteger()
         val runs = java.util.concurrent.atomic.AtomicInteger()
@@ -170,15 +170,19 @@ class ClockLaneTest : RobolectricTest() {
             assertFalse("the pass waits for the lane's run (what it closes is booked before the arms after it)", pass.isCompleted)
             release.complete(Unit)
             pass.join()
-            assertEquals("one run, never two at once", 1, runs.get())
-            assertEquals(1, most.get())
+            // Then its own run, after the lane's (which had read the books before this pass), as each pass ran it - never beside it.
+            assertEquals(2, runs.get())
+            assertEquals("never two at once", 1, most.get())
         } finally {
             release.complete(Unit)
             WatchWorkers.end(run)
         }
     }
 
-    /** A due step with no completed run 45 s after its time, positions open: one RISK alert; nothing held: none. */
+    /**
+     * A due step with no completed run 45 s after its time while anything is held: one RISK alert. Nothing held: none. A square-off
+     * only waiting for the hung one's turn is not told (the hung one is); the loss limit, completing every round, never is.
+     */
     @Test fun aLateStepWithPositionsOpenIsARiskAlertOnce() = runBlocking {
         var fake = epoch(tue, 15, 5, 1)
         ClockLane.clock = { fake }
@@ -193,30 +197,23 @@ class ClockLaneTest : RobolectricTest() {
                 ClockLane.runLane(context, stop = { ctl.ended }, mode = { ctl.mode }, held = { held }, supervisor = { WatchWorkers.supervisor })
             }
             Background.await("the first round", 5_000) { ClockLane.lastDone(ClockLane.LOSS) == epoch(tue, 15, 5, 1) }
-            // A minute on, nothing held: the stuck square-off is late but not told.
-            for (i in 1..3) {
-                fake += 20_000
-                val before = fake
-                ClockLane.poke()
-                Background.await("round $i", 5_000) { ClockLane.lastDone(ClockLane.LOSS) == before }
-            }
+            // Two minutes on with nothing held: the hung square-off is late, but nothing is told.
+            repeat(6) { fake += 20_000; ClockLane.poke(); Thread.sleep(300) }
             assertTrue(lateAlerts().isEmpty())
+            // Positions open: told once, the hung one only.
             held = true
             fake += 20_000
-            val at = fake
             ClockLane.poke()
             Background.await("the late alert", 5_000) { lateAlerts().isNotEmpty() }
+            val at = fake
             Background.await("that round's loss limit", 5_000) { ClockLane.lastDone(ClockLane.LOSS) == at }
-            // The hung square-off (and the two waiting for its turn) told; the loss limit - completing every round - never.
-            assertEquals(1, lateAlerts().count { it.text.contains("expiry square-off") })
-            assertFalse(lateAlerts().any { it.text.contains("daily loss limit") })
-            // Told once.
+            assertEquals(1, lateAlerts().size)
+            assertTrue(lateAlerts().single().text, lateAlerts().single().text.contains("expiry square-off"))
             fake += 20_000
             val next = fake
             ClockLane.poke()
             Background.await("the next round", 5_000) { ClockLane.lastDone(ClockLane.LOSS) == next }
-            assertEquals(1, lateAlerts().count { it.text.contains("expiry square-off") })
-            assertFalse(lateAlerts().any { it.text.contains("daily loss limit") })
+            assertEquals("told once", 1, lateAlerts().size)
             ctl.ended = true; ClockLane.poke(); lane.join()
         } finally {
             release.complete(Unit)

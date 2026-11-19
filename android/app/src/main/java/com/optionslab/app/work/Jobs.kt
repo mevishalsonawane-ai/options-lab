@@ -655,9 +655,20 @@ object Tasks {
         if (inOrder || sup == null) { step(name) { ClockLane.run(context, name, s) }; return }
         Heartbeat.stepBegin(name)
         val t0 = android.os.SystemClock.elapsedRealtime()
+        val wall0 = ClockLane.clock()
+        fun left() = ClockLane.PASS_WAIT_MS - (android.os.SystemClock.elapsedRealtime() - t0)
         try {
-            sup.group(ClockLane.PASS_GROUP, listOf(ClockLane.step(context, name, s)), ClockLane.PASS_WAIT_MS)
-            while (sup.busy(name) && android.os.SystemClock.elapsedRealtime() - t0 < ClockLane.PASS_WAIT_MS) kotlinx.coroutines.delay(200)
+            // Until a run that started now or later has completed (the lane's run under way may have started before this pass's
+            // books, or given up its round waiting for another square-off's turn), within the bound; as the pass always ran it.
+            // This pass's own run once; before it, the lane's run under way waited for. A run of its own that failed is the next
+            // pass's (and the lane's next round's) to try again, as before.
+            for (attempt in 1..2) {
+                if (left() <= 0) break
+                val laneRun = sup.busy(name)
+                sup.group(ClockLane.PASS_GROUP, listOf(ClockLane.step(context, name, s)), left().coerceAtLeast(1L))
+                while (sup.busy(name) && left() > 0) kotlinx.coroutines.delay(200)
+                if (!laneRun || ClockLane.lastDone(name) >= wall0 || sup.busy(name)) break
+            }
         } finally {
             Heartbeat.stepEnd()
         }
@@ -679,6 +690,23 @@ object Tasks {
             stepFailed(name, e)
         }
     }
+
+    /**
+     * 18 Nov 2026 (review): when (elapsedRealtime) this pass started waiting on an arms group, 0: none. Memory only. The clock lane
+     * reads it ([armsBusy]) and leaves its square-offs to the pass meanwhile, so they never run beside the arms' own exits that the
+     * pass runs just before them (as in the pass, one after the other).
+     */
+    @Volatile private var armsPhaseAt = 0L
+
+    private suspend inline fun armsPhase(service: Boolean, block: () -> Unit) {
+        if (!service) { block(); return }
+        armsPhaseAt = android.os.SystemClock.elapsedRealtime().coerceAtLeast(1L)
+        try { block() } finally { armsPhaseAt = 0L }
+    }
+
+    /** The pass is waiting on an arms group, for less than [ClockLane.ARMS_YIELD_MS] (a stuck arm never holds the lane back longer). */
+    internal fun armsBusy(nowEl: Long = android.os.SystemClock.elapsedRealtime()): Boolean =
+        armsPhaseAt.let { it != 0L && nowEl - it in 0 until ClockLane.ARMS_YIELD_MS }
 
     /** The supervisor group of the steps after the money steps that the pass never waits on. */
     private const val AFTER_MONEY = "after the money steps"
@@ -1078,7 +1106,9 @@ object Tasks {
         armBooksRead()
         // The arms side by side (10 Oct), each under its own lock as before; every new position still goes through the one
         // entry door and the one-index claims. Outside the service (a test's pass) one after another, in this order.
-        together("arms", armsDue(lanes != null, listOfNotNull(
+        // 18 Nov 2026 (review): while this pass waits on an arms group, the clock lane leaves its square-offs to this pass for up to
+        // [ClockLane.ARMS_YIELD_MS] ([armsPhase]): they still come after the arms' own exits, as they did in the pass.
+        armsPhase(lanes != null) { together("arms", armsDue(lanes != null, listOfNotNull(
             // The ORB paper arms: manage open positions, then decide on the last completed 5-minute bar.
             com.optionslab.ira.Supervisor.Step("ORB arms") { com.optionslab.app.data.OrbArms.tick() },
             // 30 Oct: the ORB family's switched-off shadow in the late job, after the stops ([OffShadow.runLate]).
@@ -1103,7 +1133,7 @@ object Tasks {
             split(false, late, if (com.optionslab.app.data.OffShadow.wantsPass()) com.optionslab.ira.Supervisor.Step(com.optionslab.app.data.FastPath.OFF_SHADOW) { com.optionslab.app.data.OffShadow.watch() } else null),
             // Pine scripts set to auto-trade: decide on each completed candle, sell at 15:15.
             com.optionslab.ira.Supervisor.Step("Pine scripts") { com.optionslab.app.data.PineAuto.tick() },
-        )), armsWait, inOrder = lanes == null)
+        )), armsWait, inOrder = lanes == null) }
         safely {
             // Stops, trailing stops and targets: one exit filled cancels the other; trails move up.
             step("stops and targets") { com.optionslab.app.data.Protections.tick() }
@@ -1121,7 +1151,7 @@ object Tasks {
         // After the square-off (so what it closed is booked as closed), side by side as above: the MCX paper arms (9 Oct,
         // research M3/M4/M2; paper only, off by default), the Strategy Module (schedules, prices, per-leg and basket risk,
         // exits), and - in Jarvis - his approved news trades and Solo (paper only, Boss's switch); they never go first.
-        together("arms after the square-off", armsDue(lanes != null, listOfNotNull(
+        armsPhase(lanes != null) { together("arms after the square-off", armsDue(lanes != null, listOfNotNull(
             com.optionslab.ira.Supervisor.Step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() },
             split(false, late, com.optionslab.ira.Supervisor.Step("MCX paper arms (switched off: shadow)") { com.optionslab.app.data.McxPaperArms.tick(shadow = true) }),
             // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
@@ -1132,7 +1162,7 @@ object Tasks {
             },
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,
-        )), armsWait, inOrder = lanes == null)
+        )), armsWait, inOrder = lanes == null) }
         com.optionslab.app.data.OffShadow.runLate(armsDue(lanes != null, late))
         // 7 Nov (Boss: "if any manual order is placed, then stoploss and target ... should be placed by the application"): a live
         // option bought by hand that nothing in the app follows gets a stop 5% under its average and a target 10% over it (Boss's
@@ -2086,12 +2116,13 @@ class WatchService : Service() {
                 // With the live stream up, Zerodha cards move every 3 s from ticks alone (no network).
                 val streaming = com.optionslab.app.data.KiteStream.status.value == com.optionslab.app.data.KiteStream.Status.LIVE
                 if (holding && streaming) {
-                    val until = waitEnd
+                    // 18 Nov 2026 (review): timed on the monotonic clock too (a wall clock set back mid-wait never stretches it).
+                    val untilEl = android.os.SystemClock.elapsedRealtime() + (waitEnd - System.currentTimeMillis())
                     // The cards are for the eye: on a low battery (not charging) they move less often (stops are not affected).
                     // 20 Oct, review: never waited past the 15 s window (a 6 s or 12 s step waited 18 s or 24 s before the stops).
                     val step = Battery.gap(this, 3_000)
-                    while (System.currentTimeMillis() < until) {
-                        delay(com.optionslab.ira.BatterySaver.nextWait(until - System.currentTimeMillis(), step))
+                    while (android.os.SystemClock.elapsedRealtime() < untilEl) {
+                        delay(com.optionslab.ira.BatterySaver.nextWait(untilEl - android.os.SystemClock.elapsedRealtime(), step))
                         runCatching { PositionCards.tickLive(this) }
                     }
                 } else if (holding) delay((waitEnd - System.currentTimeMillis()).coerceAtLeast(0)) else {

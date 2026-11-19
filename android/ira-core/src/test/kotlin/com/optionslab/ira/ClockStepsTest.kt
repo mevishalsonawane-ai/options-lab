@@ -89,8 +89,9 @@ class ClockStepsTest {
         // A lane that only started at 15:10 (a restart) gets its own round's grace, never an alert at once.
         val start = at(tue, 15, 10).toInstant().toEpochMilli()
         assertEquals(start + ClockSteps.ROUND_MS, ClockSteps.dueAt(0L, start, t1505))
-        // No scheduled minute (the loss limit): a run completed within each minute.
+        // No scheduled minute (the loss limit): a run completed within each round, or each minute on the idle cadence.
         assertEquals(since + 15_000, ClockSteps.dueAt(0L, since, null))
+        assertEquals(since + ClockSteps.IDLE_EVERY_MS, ClockSteps.dueAt(0L, since, null, ClockSteps.IDLE_EVERY_MS))
     }
 
     @Test fun lastScheduledIsTheLatestMinuteAlreadyPassed() {
@@ -115,11 +116,13 @@ class ClockStepsTest {
         assertEquals(1, most, "never two at once")
         // One stuck (a hung read): the other waits its bound and leaves the round, the turn untouched.
         val release = CompletableDeferred<Unit>()
-        val stuck = scope.launch { turn.take { release.await() } }
+        val stuck = scope.launch { turn.take(who = "expiry square-off") { release.await() } }
         until { turn.held }
+        assertEquals("expiry square-off", turn.holder, "the late check judges the holder, not the ones waiting for it")
         assertNull(turn.take(waitMs = 50) { "ran" })
         release.complete(Unit); stuck.join()
         assertFalse(turn.held)
+        assertNull(turn.holder)
         assertEquals("ran", turn.take { "ran" })
         // A failure lets the turn go.
         runCatching { turn.take<Unit> { error("boom") } }

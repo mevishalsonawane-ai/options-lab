@@ -1036,12 +1036,12 @@ object IraHub {
     private val unguardedSince = HashMap<String, Instant>()
     private val rescueAsked = HashSet<String>()
 
-    /**
-     * A bought option open two minutes with no stop: Jarvis offers one 15% under the price paid (asked, never set alone).
-     */
     /** 18 Nov 2026 (audit): the longest [rescueWatch] waits for another module's lock (a read; nothing is cut mid-order). */
     internal const val RESCUE_LOCK_WAIT_MS = 5_000L
 
+    /**
+     * A bought option open two minutes with no stop: Jarvis offers one 15% under the price paid (asked, never set alone).
+     */
     suspend fun rescueWatch(now: Instant = Instant.now()) {
         if (!com.optionslab.app.BuildConfig.JARVIS || !com.optionslab.app.data.Market.isOpen()) return
         val c = app ?: return
@@ -1058,7 +1058,12 @@ object IraHub {
         // Battery (round 7): the paper account read once, fresh, for both its positions here and its stop orders below (they
         // read it twice, moments apart: each read downloads every held contract's day of candles without a Zerodha session).
         // The stop priced from it and the "set alone" check further down read as before.
-        val paperBook = runCatching { kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) { com.optionslab.app.data.Paper.snapshot() } }.getOrNull()
+        // 18 Nov 2026 (review): a paper read not had in time ends this pass (the paper positions' first-seen times are kept, so their
+        // two-minute grace is never started again by a slow lock); a read that fails is no paper book, as before.
+        val paperRead = kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) {
+            try { Result.success(com.optionslab.app.data.Paper.snapshot()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { Result.failure(e) }
+        } ?: return
+        val paperBook = paperRead.getOrNull()
         runCatching { paperBook?.positions?.positions?.filter { it.quantity != 0 }
             ?.forEach { open += com.optionslab.ira.Rescue.Open(it.symbol, false, it.quantity, it.averagePrice, it.ltp) to it.product } }
         // Zerodha reads with a deadline (this runs in the risk pass): slow or failed, the live positions wait for the next pass.
