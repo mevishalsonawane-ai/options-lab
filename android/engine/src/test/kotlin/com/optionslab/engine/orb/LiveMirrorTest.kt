@@ -393,6 +393,17 @@ class LiveMirrorTest {
         assertEquals(emptyList<String>(), LiveMirror.blockersToCancel(30, listOf(LiveMirror.Blocker("z", 0, cancellable = true)), 30, 30))
     }
 
+    /** 19 Nov 2026 (second review): a net short is the arms' only when their own sales today pass their buys and what was carried in. */
+    @Test fun aNetShortIsTheArmsOnlyWhenTheySoldBeyondWhatTheyBoughtAndCarried() {
+        assertTrue(LiveMirror.armsSoldBeyond(60, 30, 0), "two exits of one lot")
+        assertFalse(LiveMirror.armsSoldBeyond(30, 30, 0), "one exit of one lot")
+        assertFalse(LiveMirror.armsSoldBeyond(0, 0, 0), "nothing sold")
+        // A lot carried from yesterday sold today by the arm (Boss's own short beside it): not the arms'.
+        assertFalse(LiveMirror.armsSoldBeyond(30, 0, 30))
+        assertTrue(LiveMirror.armsSoldBeyond(60, 0, 30), "sold twice what was carried")
+        assertTrue(LiveMirror.armsSoldBeyond(30, 0, -30), "a carried short never adds room")
+    }
+
     @Test fun aTradeNeverSeenHeldIsNotClosedOnALaggingZeroRead() {
         val l = Look(side = 1, qty = 30, held = 0, ltp = 200.0, tick = 0.05, stopTrigger = 170.0, stopResting = true, heldSeen = false)
         assertEquals(Decision(Step.HOLD), LiveMirror.decide(l))

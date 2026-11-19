@@ -557,6 +557,14 @@ object LiveMirror {
     data class Blocker(val id: String, val remaining: Int, val cancellable: Boolean)
 
     /**
+     * 18 Nov 2026 (audit A2): the arms' own orders sold more of a contract today ([sold]) than they bought today ([bought]) and than was
+     * carried into today the trades' way ([carried], below 0 taken as 0) - two exits of one lot filled, a naked short of theirs. 19 Nov
+     * 2026 (second review): the carried lot counts, so a lot carried from yesterday that the arm sells today, beside Boss's own short,
+     * is never taken for one. Pure.
+     */
+    fun armsSoldBeyond(sold: Int, bought: Int, carried: Int): Boolean = sold > bought + carried.coerceAtLeast(0)
+
+    /**
      * 18 Nov 2026 (audit A1): which of the other exits working on a contract ([others], in the order to cancel them: newest first) to
      * cancel so a due exit of [want] can sell what Zerodha holds ([held], as the trade's side sees it) in whole [lot]s: none when the
      * exit is not held back by them, or when only orders that may not be cancelled hold it back; else the fewest cancellable ones,
