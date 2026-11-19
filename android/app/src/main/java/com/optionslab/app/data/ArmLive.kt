@@ -488,8 +488,9 @@ object ArmLive {
         // No file (new, or set aside) or a rebuilt one: Boss's switches from their second copy, never fresh defaults.
         if (bytes == null || !parsed) restoreSwitches(b)
         // 19 Nov 2026 (final review): the new book an erase leaves carries when it was erased (written at once, below).
-        val afterErase = bytes == null && b.sweepFrom == null && erasedAt != null
-        if (afterErase) b.sweepFrom = erasedAt
+        val erased = erasedAt ?: runCatching { eraseMark()?.takeIf { it.exists() }?.readText()?.trim()?.ifEmpty { null } }.getOrNull()
+        val afterErase = bytes == null && b.sweepFrom == null && erased != null
+        if (afterErase) b.sweepFrom = erased
         if (unreadable) runCatching { Diag.record("armlive", "the live book was read again: its open live trades are watched") }
         unreadable = false
         readFails = 0
@@ -504,6 +505,10 @@ object ArmLive {
 
     /** 19 Nov 2026 (final review): when this process last erased the book (market clock, ISO); a new book carries it ([Book.sweepFrom]). */
     @Volatile private var erasedAt: String? = null
+
+    /** 19 Nov 2026 (final check): the last erase's time on disk (only that), beside the book; null before [init]. */
+    private fun eraseMark(): File? = file?.let { File(it.parentFile, ERASE_MARK) }
+    internal const val ERASE_MARK = "arm_live_erased.txt"
 
     /** A book that failed authentication or did not parse: set aside, rebuilt, its open live trades recovered from Zerodha. */
     private fun tampered(f: File) {
@@ -3091,14 +3096,17 @@ object ArmLive {
         val mine = counted.filter { it.tag == LiveMirror.TAG && it.symbol == sym && it.exchange == exch && it.product == product && it.filled > 0 }
         // (A sale today of a lot carried from an earlier day closed that day's trade, never today's buy: counted back - no more than this
         // path's own sales today beyond what today's closed long trades sold. A short carried in and bought back today: taken off.)
+        // (19 Nov 2026, final check: only today's trades are netted against today's orders - a lot carried in from an earlier day was bought
+        // then, never by today's orders; a part of it sold today, whether its row is closed or still open, is counted back.)
         val tagSells = mine.filter { it.side == "SELL" }.sumOf { it.filled }
         val todayClosedLong = rows.filter { it.side > 0 && !it.open && it.day == today }.sumOf { it.qty }
-        val carriedBack = minOf(rows.filter { it.side > 0 && !it.open && it.day.isBefore(today) && it.exitTime?.toLocalDate() == today }.sumOf { it.qty },
-            (tagSells - todayClosedLong).coerceAtLeast(0))
+        val carriedSoldToday = rows.filter { it.side > 0 && !it.open && it.day.isBefore(today) && it.exitTime?.toLocalDate() == today }.sumOf { it.qty } +
+            rows.filter { it.side > 0 && it.open && it.day.isBefore(today) }.sumOf { (it.entryQty - it.qty).coerceAtLeast(0) }
+        val carriedBack = minOf(carriedSoldToday, (tagSells - todayClosedLong).coerceAtLeast(0))
         val netLong = mine.filter { it.side == "BUY" }.sumOf { it.filled } - tagSells +
-            rows.filter { it.open && it.side < 0 }.sumOf { it.qty } + carriedBack -
+            rows.filter { it.open && it.side < 0 && it.day == today }.sumOf { it.qty } + carriedBack -
             rows.filter { it.side < 0 && !it.open && it.day.isBefore(today) && it.exitTime?.toLocalDate() == today }.sumOf { it.qty }
-        val openLong = rows.filter { it.open && it.side > 0 && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty }
+        val openLong = rows.filter { it.open && it.side > 0 && it.day == today && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty }
         val asked = minOf(balance, netLong - openLong)
         if (asked <= 0) return true
         // (Nothing held: decided - unless its newest buy filled a moment ago and the positions may not show it yet.)
@@ -3131,8 +3139,11 @@ object ArmLive {
                 { o -> o.id.toLongOrNull() ?: Long.MAX_VALUE })).firstOrNull()?.let { o -> rem[o.id] = (rem[o.id] ?: 0) - r.entryQty }
         }
         val pool = entries.filter { (rem[it.id] ?: 0) > 0 }
-        if (pool.isEmpty()) return true
-        val newest = pool.maxByOrNull { it.placedAt }!!
+        // 19 Nov 2026 (final check): held, unexplained, and no unowned order left to stand for it - never left unwatched: taken back all the
+        // same, on the newest order no row names (else none), priced at the position's average, with a safety stop; Boss told.
+        val unmatched = pool.isEmpty()
+        val newest = pool.maxByOrNull { it.placedAt } ?: entries.filter { it.id !in booked }.maxByOrNull { it.placedAt } ?: entries.maxByOrNull { it.placedAt }!!
+        val newestId = newest.id.takeIf { it !in booked }
         // Its arm: the owner label of its order, else the one open paper trade on the contract of an arm not yet mirrored live.
         val refs = lock.withLock { book().positions.map { it.ref }.toSet() }
         val byLabel = owners["kite:${newest.id}"]?.substringBefore(" · ")?.let { l -> LiveMirror.ARMS.firstOrNull { it.label == l } }
@@ -3146,14 +3157,14 @@ object ArmLive {
         // (Its price: the average of the unowned orders taken back, newest first for what is taken - never blended with an owned one's.)
         var left = q; var paid = 0.0; var paidQty = 0
         for (o in pool.sortedByDescending { it.placedAt }) { if (left <= 0) break; val k = minOf(left, rem[o.id] ?: 0); if (o.avg > 0) { paid += o.avg * k; paidQty += k }; left -= k }
-        val fill = (if (paidQty > 0) paid / paidQty else 0.0).takeIf { it > 0 } ?: net.singleOrNull()?.avg?.takeIf { it > 0 } ?: return false
+        val fill = (if (paidQty > 0) paid / paidQty else 0.0).takeIf { it > 0 && !unmatched } ?: net.firstOrNull { it.avg > 0 }?.avg ?: return false
         val rule = if (spec != null) rebuiltRule(spec, sym, placedTime(newest.placedAt)) else (false to false)
-        val ref = leg?.second?.ref ?: "recovered:${newest.id}"
+        val ref = if (unmatched) "recovered:${newest.id}:${sym}:${now().toLocalTime()}" else leg?.second?.ref ?: "recovered:${newest.id}"
         val base = Pos(host.key, ref, sym, exch, product, 1, q, q, lot, tick, (net.firstOrNull()?.multiplier?.toInt() ?: 1).coerceAtLeast(1), fill,
             placedTime(newest.placedAt)?.takeIf { it.toLocalDate() == today } ?: now(), fill, q,
             runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == sym }?.expiry }.getOrNull(),
-            newest.id, seen = leg != null, heldSeen = true, stopKind = SAFETY, fixed = rule.first, lock = rule.second)
-        val (lv, kind) = if (spec != null) firstStop(spec, base) else (null to SAFETY)
+            newestId, seen = leg != null && !unmatched, heldSeen = true, stopKind = SAFETY, fixed = rule.first, lock = rule.second)
+        val (lv, kind) = if (spec != null && !unmatched) firstStop(spec, base) else (null to SAFETY)
         val level = lv ?: LiveMirror.safetyLevel(fill, 1, tick)
         val ltp = runCatching { Broker.stopQuotes(listOf("$exch:$sym"))["$exch:$sym"]?.last }.getOrNull()?.takeIf { it > 0 } ?: fill
         val got = restStop(base.copy(stopKind = if (lv != null) kind else SAFETY), level, ltp)
@@ -3165,7 +3176,10 @@ object ArmLive {
             save(b)
         }
         val stopWords = got.stopTrigger?.let { "a stop at %.2f".format(Locale.ENGLISH, it) } ?: "no stop level"
-        com.optionslab.app.work.Alerts.error(if (spec != null)
+        com.optionslab.app.work.Alerts.error(if (unmatched)
+            "Arms live: Zerodha holds $q $sym that the arms' book does not explain after the app restarted, and no order of the arms left to " +
+                "stand for it: taken back with a safety stop ($stopWords) at the position's average, managed as ${host.label}'s. Check it in Trade now."
+            else if (spec != null)
             "${spec.label}: a live buy of $q $sym (order ${newest.id}) that the arms' book did not hold after the app restarted is taken back " +
                 "from Zerodha with $stopWords and its square-off. Check it in Trade."
             else "Arms live: a live buy of $q $sym (order ${newest.id}) by the arms, with no record after the app restarted and no arm that " +
@@ -3199,6 +3213,13 @@ object ArmLive {
             if ("${pos.exchange}|${pos.symbol}|${pos.product}" in have) continue
             val entry = orders.filter { it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.product == pos.product &&
                 it.status == "COMPLETE" && it.side == (if (pos.qty > 0) "BUY" else "SELL") && it.id !in booked }.maxByOrNull { it.placedAt } ?: continue
+            // 19 Nov 2026 (final check): never more than this path's own net today on the contract (its filled buys less its filled sales)
+            // - its round trips explain nothing held now: Boss's, Pine's or a strategy's lot stays theirs.
+            val mineToday = orders.filter { it.tag == LiveMirror.TAG && it.symbol == pos.symbol && it.exchange == pos.exchange && it.product == pos.product && it.filled > 0 }
+            val way = if (pos.qty > 0) "BUY" else "SELL"
+            val ownNet = mineToday.filter { it.side == way }.sumOf { it.filled } - mineToday.filter { it.side != way }.sumOf { it.filled }
+            val takeQty = minOf(kotlin.math.abs(pos.qty), ownNet)
+            if (takeQty <= 0) continue
             val label = owners["kite:${entry.id}"]?.substringBefore(" · ") ?: continue
             val spec = LiveMirror.ARMS.firstOrNull { it.label == label } ?: continue
             val tick = runCatching { Broker.spec(pos.exchange, pos.symbol).tickSize }.getOrDefault(0.05)
@@ -3206,8 +3227,8 @@ object ArmLive {
             val side = if (pos.qty > 0) 1 else -1
             // 15 Nov / 16 Nov: the breakeven rule and the step lock its paper trade entered with ([rebuiltRule]; a buy only).
             val rule = if (side > 0) rebuiltRule(spec, pos.symbol, placedTime(entry.placedAt)) else (false to false)
-            val p = Pos(spec.key, "recovered:${entry.id}", pos.symbol, pos.exchange, pos.product, side, kotlin.math.abs(pos.qty), kotlin.math.abs(pos.qty), lot, tick,
-                pos.multiplier.toInt().coerceAtLeast(1), pos.avg.takeIf { it > 0 } ?: entry.avg, now(), pos.avg, kotlin.math.abs(pos.qty),
+            val p = Pos(spec.key, "recovered:${entry.id}", pos.symbol, pos.exchange, pos.product, side, takeQty, takeQty, lot, tick,
+                pos.multiplier.toInt().coerceAtLeast(1), pos.avg.takeIf { it > 0 } ?: entry.avg, now(), pos.avg, takeQty,
                 // Its contract's expiry from the day's lists, so the 15:05 expiry square-off applies to it too (review).
                 runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == pos.symbol }?.expiry }.getOrNull(),
                 entry.id,
@@ -3317,7 +3338,7 @@ object ArmLive {
     internal fun wipe() {
         wipeGen++
         written.forget()
-        cache = null; unreadable = false; recoverDue = false; coldDue = false; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
+        cache = null; unreadable = false; recoverDue = false; coldDue = false; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; runCatching { eraseMark()?.delete() }; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L; shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims()
         saveDue = false; blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear()
         _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); handsOffUntil.clear(); levels.clear(); closedRefs.clear()
@@ -3328,6 +3349,9 @@ object ArmLive {
     internal fun wipeForErase() {
         wipe()
         erasedAt = runCatching { now().toString() }.getOrNull()
+        // 19 Nov 2026 (final check): also on disk at once, as a plain file holding only the time (a worker, never the tick or order path),
+        // so a kill before the new book is first written still keeps it ([PersonalStores.KEPT_FILES]: nothing about the account).
+        erasedAt?.let { t -> runCatching { eraseMark()?.writeText(t) } }
         // 19 Nov 2026 (third review): never beside a write in flight on the book's writer, which could put the book back after the delete
         // (a write built before the erase is dropped once this has run: [writeSeq]).
         synchronized(writeMon) { filesForErase().forEach { runCatching { it.delete() } } }

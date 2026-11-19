@@ -2611,4 +2611,75 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue("the minute lanes still try", ArmLive.lookDue)
         assertEquals(1, posted("could not all be checked against Zerodha for 10 minutes"))
     }
+
+    // ---- 19 Nov 2026: the final check ------------------------------------------------------------------------------------------
+
+    /** Sets a field of every row of the book on disk (as an older or damaged book would have it). */
+    private fun editRows(f: (org.json.JSONObject) -> Unit) {
+        ArmLive.drainWritesForTest()
+        val o = org.json.JSONObject(String(com.optionslab.app.security.Vault.readFile(vault)!!, Charsets.UTF_8))
+        val rows = o.getJSONArray("positions"); for (i in 0 until rows.length()) f(rows.getJSONObject(i))
+        com.optionslab.app.security.Vault.writeFile(vault, o.toString().toByteArray(Charsets.UTF_8))
+    }
+
+    /** F1: an arm's lot carried in from yesterday and a lost buy today on the same contract: the lost lot is taken back with a stop, Boss told. */
+    @Test fun aLostBuyBesideACarriedArmLotIsTakenBackWithAStop() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "carried"))  // a carried (NRML) arm
+        val entryId = view().openReal.single().entryOrderId!!
+        editRows { it.put("entryTime", java.time.LocalDateTime.parse(it.getString("entryTime")).minusDays(1).toString()) }
+        kite.orders.remove(entryId)                                                // yesterday's order is not in today's book
+        kite.flat(); kite.overnight(sym, 30, 200.0, product = "NRML")              // carried in overnight
+        val lost = kite.boughtInKite(sym, 30, 200.0, product = "NRML", tag = LiveMirror.TAG)   // today's buy whose row never reached the disk
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
+        val p = view().openReal.single { it.ref != "carried" }
+        assertEquals(lost, p.entryOrderId); assertEquals(30, p.qty)
+        assertNotNull("with its stop", p.stopOrderId)
+        assertEquals(1, posted("taken back"))
+    }
+
+    /** P1: a held lot no row explains and no unowned order stands for is still taken back (safety stop, the position's average), Boss told. */
+    @Test fun anUnexplainedLotWithNoUnownedOrderIsStillTakenBack() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 2, maxLotsPerOrder = 5, guardMaxLots = 10))
+        ArmLive.entered(ask(donchian, "sixty", qty = 60))
+        assertEquals(60, view().openReal.single().qty)
+        editRows { it.put("qty", 30).put("entryQty", 30) }                       // the book holds 30 of its order's 60
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
+        assertEquals(2, view().openReal.size)
+        val p = view().openReal.single { it.ref != "sixty" }
+        assertEquals(30, p.qty); assertNull("no order of its own", p.entryOrderId)
+        assertEquals(1, posted("no order of the arms left to stand for it"))
+    }
+
+    /** P3: the erase's time is on disk at once - a kill before the new book is ever written still keeps a lot from before it untaken. */
+    @Test fun theEraseTimeSurvivesAKillBeforeTheNewBookIsWritten() {
+        ArmLive.entered(ask(donchian, "pre-kill"))
+        val sl = kite.placed.count { it.form["order_type"] == "SL" }
+        ArmLive.testNow = Market.now().plusSeconds(30)
+        ArmLive.wipeForErase()
+        ArmLive.forgetMemoryForTest()                                               // killed: no book written since the erase
+        runBlocking { ArmLive.holding() }
+        assertTrue(view().openReal.isEmpty())
+        assertEquals(sl, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
+    /** P5: a damaged book's recovery never takes Boss's lot for an arm's round trip today (its own net is nothing). */
+    @Test fun aDamagedBooksRecoveryNeverTakesBossesLotForAnArmsRoundTrip() {
+        ArmLive.entered(ask(donchian, "rt-damaged"))
+        watch()
+        legs["rt-damaged"] = donchian to 0
+        watch()
+        assertEquals("paper_exit", view().closed.single().why)
+        kite.boughtInKite(sym, 30, 199.0)                                          // Boss's own lot
+        ArmLive.drainWritesForTest()
+        vault.writeBytes(ByteArray(64) { 7 })                                       // the book damaged
+        ArmLive.wipe()                                                              // restarted (no start sweep: recovery alone)
+        val sl = kite.placed.count { it.form["order_type"] == "SL" }
+        watch()
+        assertTrue("his lot is his", view().openReal.isEmpty())
+        assertEquals(sl, kite.placed.count { it.form["order_type"] == "SL" })
+    }
 }
