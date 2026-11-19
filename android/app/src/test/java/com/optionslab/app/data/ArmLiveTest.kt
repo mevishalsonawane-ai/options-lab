@@ -1965,21 +1965,22 @@ class ArmLiveTest : RobolectricTest() {
      * Audit A3: a lot Boss bought through the app's own Trade screen (tagged "iraalgo"), or Pine ("irapine"), and sold in Kite is his
      * round trip, never this trade's close: one short read then closes nothing and leaves the stop resting.
      */
-    @Test fun aTradeScreenOrPineRoundTripNeverConfirmsAShortRead() {
-        for (tag in listOf("iraalgo", "irapine")) {
-            ArmLive.wipe(); kite.flat(); kite.orders.clear(); legs.clear()
-            ArmLive.entered(ask(donchian, "trip-$tag"))
-            watch()
-            val sid = view().openReal.single().stopOrderId!!
-            kite.boughtInKite(sym, 30, 201.0, tag = tag)
-            kite.soldInKite(sym, 30, 203.0)
-            assertEquals("the arm's lot still held", 30, held())
-            kite.positions["NFO:$sym:MIS"] = 0 to 0.0                    // then one bad read
-            watch()
-            assertTrue("$tag: kept", view().closed.isEmpty())
-            assertEquals(30, view().openReal.single().qty)
-            assertTrue("$tag: its stop rests", kite.order(sid).working)
-        }
+    @Test fun aTradeScreenRoundTripNeverConfirmsAShortRead() = roundTripNeverConfirms("iraalgo")
+    @Test fun aPineRoundTripNeverConfirmsAShortRead() = roundTripNeverConfirms("irapine")
+    @Test fun aStrategyRoundTripNeverConfirmsAShortRead() = roundTripNeverConfirms("iraalgostrat")
+
+    private fun roundTripNeverConfirms(tag: String) {
+        ArmLive.entered(ask(donchian, "trip-$tag"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        kite.boughtInKite(sym, 30, 201.0, tag = tag)
+        kite.soldInKite(sym, 30, 203.0)
+        assertEquals("the arm's lot still held", 30, held())
+        kite.positions["NFO:$sym:MIS"] = 0 to 0.0                    // then one bad read
+        watch()
+        assertTrue("$tag: kept", view().closed.isEmpty())
+        assertEquals(30, view().openReal.single().qty)
+        assertTrue("$tag: its stop rests", kite.order(sid).working)
     }
 
     /**
