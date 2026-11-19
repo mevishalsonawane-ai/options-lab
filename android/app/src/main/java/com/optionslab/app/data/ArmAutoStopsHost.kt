@@ -88,7 +88,9 @@ object ArmAutoStopsHost {
             state = merged(saved, state)
             loaded = true
             readFailed = false
-            if (notApplied == null) notApplied = why
+            // (20 Nov 2026, review: a switch Boss set themselves in this process ended the notice: the start's late read never brings it
+            // back - the same protection [switched] gives the switches.)
+            if (notApplied == null && switched.isEmpty()) notApplied = why
         }
         publish()
     }
@@ -187,9 +189,14 @@ object ArmAutoStopsHost {
         // never marked done on a guess.
         val had = existed ?: tradedBeforeChoice() ?: return false
         if (!had) {
-            synchronized(lock) { state = state.copy(migrated = true, cutoffMigrated = true); notApplied = ArmAutoStops.NotApplied.NEW_PHONE }
-            runCatching { SecurePrefs.putAllSoon(mapOf(ArmAutoStops.MIGRATION_KEY to true, ArmAutoStops.CUTOFF_MIGRATION_KEY to true,
-                ArmAutoStops.NOT_APPLIED_KEY to ArmAutoStops.NotApplied.NEW_PHONE.key)) }
+            synchronized(lock) {
+                state = state.copy(migrated = true, cutoffMigrated = true)
+                if (switched.isEmpty()) notApplied = ArmAutoStops.NotApplied.NEW_PHONE
+            }
+            // (20 Nov 2026, review: never the reason on disk once Boss has set a switch - set() cleared it there; a restart keeps it so.)
+            val bossSet = synchronized(lock) { switched.isNotEmpty() }
+            runCatching { SecurePrefs.putAllSoon(mapOf(ArmAutoStops.MIGRATION_KEY to true, ArmAutoStops.CUTOFF_MIGRATION_KEY to true) +
+                (if (bossSet) emptyMap() else mapOf(ArmAutoStops.NOT_APPLIED_KEY to ArmAutoStops.NotApplied.NEW_PHONE.key))) }
             publish()
             runCatching { Diag.record("autostops", "no trade of R51, R72 or Liquidity before 19 Nov on this phone (new, or erased since): the automatic stops stay on, as on a fresh phone") }
             return false

@@ -19,6 +19,18 @@ class RepeatGateTest {
         assertTrue(g.tell("Iron|leg|1", 16 * min), "another run too")
     }
 
+    /** 20 Nov 2026 (review): a higher level (more positions refused) is told at once; back and forth below it waits. */
+    @Test fun aRisingLevelIsToldAtOnceAndAFallingOneWaits() {
+        val g = RepeatGate(15 * min)
+        assertTrue(g.tell("ORB|stop", 0L, level = 1))
+        assertFalse(g.tell("ORB|stop", min, level = 1))
+        assertTrue(g.tell("ORB|stop", 2 * min, level = 3), "three refused now: told")
+        assertFalse(g.tell("ORB|stop", 3 * min, level = 1))
+        assertFalse(g.tell("ORB|stop", 4 * min, level = 3), "back to three: already told")
+        assertTrue(g.tell("ORB|stop", 17 * min, level = 1), "the reminder")
+        assertFalse(g.tell("ORB|stop", 18 * min, level = 3), "the episode's highest is kept")
+    }
+
     @Test fun anEndedRunStartsAFreshEpisodeAndAClockGoneBackTells() {
         val g = RepeatGate(15 * min)
         g.tell("ORB|leg|1", 0L); g.tell("ORB|stop", 0L); g.tell("ORBX|leg|1", 0L)
