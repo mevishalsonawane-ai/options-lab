@@ -340,16 +340,23 @@ object LiveMirror {
     /**
      * 19 Nov 2026 (Boss: "Go"; Zerodha refused live MARKET option buys for "Insufficient funds" - it blocks margin for a MARKET option buy at
      * a protective price far above the premium, e.g. Rs 64,715 asked for a lot whose premium was about Rs 18,000): the LIMIT an arm's live
-     * BUY entry is sent at - marketable: the offer [ask] (else the [last] price) plus max(2 ticks, 0.5%), rounded up to the [tick], never
-     * above the paper arm's own [paperLimit] when it has one (on its tick). null: no usable price. Pure.
+     * BUY entry is sent at - marketable: the offer [ask] (else the [last] price) plus max(2 ticks, 0.5%), rounded up to the [tick]. Never
+     * chased: never above the [last] price plus max(2 ticks, [ENTRY_MAX_OVER_LAST]) (a wide or stale offer: it rests there and is cancelled
+     * unfilled), nor above the paper arm's own [paperLimit] when it has one (each on its tick, rounded down). null: no usable price. Pure.
      */
     fun entryLimit(ask: Double?, last: Double, tick: Double, paperLimit: Double?): Double? {
-        val base = ask?.takeIf { it.isFinite() && it > 0 } ?: last.takeIf { it.isFinite() && it > 0 } ?: return null
+        val lastOk = last.takeIf { it.isFinite() && it > 0 }
+        val base = ask?.takeIf { it.isFinite() && it > 0 } ?: lastOk ?: return null
         val t = tick.takeIf { it.isFinite() && it > 0 } ?: 0.05
         val px = Kite.onTick(base + maxOf(2 * t, base * ENTRY_BUFFER), t, Kite.Side.BUY)
-        val cap = paperLimit?.takeIf { it.isFinite() && it > 0 }?.let { Kite.onTick(it, t, Kite.Side.BUY) }
-        return if (cap != null) minOf(px, cap) else px
+        val caps = listOfNotNull(
+            lastOk?.let { Kite.onTick(it + maxOf(2 * t, it * ENTRY_MAX_OVER_LAST), t, Kite.Side.SELL) },
+            paperLimit?.takeIf { it.isFinite() && it > 0 }?.let { Kite.onTick(it, t, Kite.Side.SELL) })
+        return (listOf(px) + caps).minOrNull()
     }
+
+    /** 19 Nov 2026: the most an entry LIMIT is set above the last price ([entryLimit]; at least two ticks). */
+    const val ENTRY_MAX_OVER_LAST = 0.02
 
     /** 19 Nov 2026: the share of the price an entry LIMIT is set above the offer ([entryLimit]; at least two ticks). */
     const val ENTRY_BUFFER = 0.005

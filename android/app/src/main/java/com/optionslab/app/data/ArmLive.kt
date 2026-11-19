@@ -937,7 +937,8 @@ object ArmLive {
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
         // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; "make it default, don't have one
         // more option"): an index option buy of more than one lot is cut to the lots the free cash fits - only ever fewer than his
-        // setting, never more. Priced at the higher of the last price, the offer and its own limit. A sale, a future or an MCX
+        // setting, never more. Priced at the higher of the last price, the offer and its own limit (19 Nov 2026: a buy at the LIMIT it
+        // is sent at, [LiveMirror.entryLimit] - the offer plus its buffer, capped). A sale, a future or an MCX
         // option (its own segment's money) is never cut; not even one lot fitting, or the cash unreadable, goes as before.
         val want = qty / ins.lot
         // 15 Nov: the funds check below reuses the fit's own read when it ran (nothing new is read for it).
@@ -972,7 +973,7 @@ object ArmLive {
                 Kite.onTick(a.limit, ins.tick, side), ins.tick, ins.exchange, LiveMirror.TAG, multiplier = ins.multiplier)
             else Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "MARKET", null, ins.tick, ins.exchange, LiveMirror.TAG, multiplier = ins.multiplier)
         val acct = runCatching { Broker.accountNow(needed = (entryPx ?: last) * qty * ins.multiplier) }.getOrNull()
-        Guard.check(Guard.liveOrder(o).copy(price = last), acct).takeIf { it.isNotEmpty() }?.let { notMirrored(a, "account guard: " + it.joinToString(" ")); return@withLock }
+        Guard.check(Guard.liveOrder(o).copy(price = entryPx ?: last), acct).takeIf { it.isNotEmpty() }?.let { notMirrored(a, "account guard: " + it.joinToString(" ")); return@withLock }
         Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last).takeIf { it.isNotEmpty() }?.let { notMirrored(a, it.joinToString("; ")); return@withLock }
         // 22 Oct: the gate's verdict stamped with this exact order's fingerprint (the paper stop it will rest with it); the door
         // recomputes it right before Zerodha and refuses a difference ([OrderVerdicts]).
@@ -1134,8 +1135,10 @@ object ArmLive {
     private suspend fun enterShadow(spec: LiveMirror.Spec, a: Ask, base: Pos, o: Kite.Order, quote: Broker.Quote?, cut: String = "") {
         val buy = base.side > 0
         val limit = o.price?.takeIf { o.orderType == "LIMIT" }
+        // (19 Nov 2026: a buy's marketable entry LIMIT still pays the measured entry slippage, as its MARKET did - never a better shadow
+        // fill than live - and is judged against its LIMIT below. A sale's paper LIMIT fills at its price, as before.)
         val px = LiveMirror.shadowFill(buy, base.entry, quote?.bid, quote?.ask, base.tick, halfSpreadOf(base),
-            if (limit != null) 0.0 else measured(com.optionslab.ira.Slippage.Leg.ENTRY, ENTRY_BASES))
+            if (limit != null && !buy) 0.0 else measured(com.optionslab.ira.Slippage.Leg.ENTRY, ENTRY_BASES))
         if (limit != null && (if (buy) px > limit + 1e-9 else px < limit - 1e-9)) {
             notMirrored(a, "shadow: its LIMIT %.2f would not have filled at %.2f".format(Locale.ENGLISH, limit, px)); return
         }

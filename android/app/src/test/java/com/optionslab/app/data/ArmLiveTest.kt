@@ -2381,6 +2381,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testEntryWaitMs = 300
         kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.OPEN))
         ArmLive.entered(ask(donchian, "unfilled"))
+        assertEquals("LIMIT", kite.placed.first().form["order_type"]); assertEquals(201.10, kite.placed.first().form["price"]!!.toDouble(), 1e-9)
         val buy = kite.orders.values.single { it.side == "BUY" }
         assertEquals("CANCELLED", buy.status)
         assertTrue("nothing booked", view().open.isEmpty())
@@ -2395,6 +2396,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testEntryWaitMs = 300
         kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.PARTIAL, partialQty = 30))
         ArmLive.entered(ask(donchian, "part", qty = 60))
+        assertEquals("LIMIT", kite.placed.first().form["order_type"])
         val buy = kite.orders.values.single { it.side == "BUY" }
         assertEquals("60", kite.placed.first().form["quantity"])
         assertEquals("its rest cancelled", "CANCELLED", buy.status)

@@ -413,7 +413,11 @@ class LiveMirrorTest {
         assertEquals(201.0, LiveMirror.entryLimit(Double.NaN, 200.0, 0.05, null)!!, 1e-9)
         assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.5)!!, 1e-9, "capped by the paper limit")
         assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, 210.0)!!, 1e-9, "a paper limit above it changes nothing")
-        assertEquals(200.55, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.51)!!, 1e-9, "the cap on its tick")
+        assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.51)!!, 1e-9, "the cap on its tick, never above it")
+        // Never chased: a wide or stale offer is capped at the last price plus 2% (it rests there, cancelled unfilled).
+        assertEquals(204.0, LiveMirror.entryLimit(260.0, 200.0, 0.05, null)!!, 1e-9, "last + 2%")
+        assertEquals(3.10, LiveMirror.entryLimit(3.20, 3.0, 0.05, null)!!, 1e-9, "a cheap option: last + 2 ticks")
+        assertEquals(261.30, LiveMirror.entryLimit(260.0, 0.0, 0.05, null)!!, 1e-9, "no last: the offer alone")
         assertNull(LiveMirror.entryLimit(null, 0.0, 0.05, null))
         assertNull(LiveMirror.entryLimit(null, Double.NaN, 0.05, null))
         assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.0, null)!!, 1e-9, "a bad tick taken as 0.05")
