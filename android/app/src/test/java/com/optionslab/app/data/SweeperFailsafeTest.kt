@@ -213,6 +213,61 @@ class SweeperFailsafeTest : RobolectricTest() {
         assertTrue(warned().isEmpty())
     }
 
+    /**
+     * 19 Nov 2026 (audit): an app stop with nothing held on its contract (its position closed in Kite, the stop left resting) is never
+     * turned into a sell, though the price is through it; once the reads agree it is held nowhere, it is cancelled at Zerodha.
+     */
+    @Test fun aStopWithNoPositionHeldIsNeverTurnedIntoASellAndIsTakenOutOnceConfirmed() {
+        kite.quote("NFO:$nfo", 200.0, 199.95, 200.05)
+        kite.orders["1"] = FakeKite.Order("1", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "irapine", "TRIGGER PENDING")
+        pass(10, 0)                                           // no row at all: no reading, nothing done
+        kite.position(nfo, 0, 0.0, product = "MIS")           // shown closed (no sale in the order book)
+        pass(10, 1)
+        pass(10, 5)
+        assertTrue("never turned into a sell", kite.requests.none { it.method == "PUT" })
+        assertTrue(kite.requests.none { it.method == "DELETE" })
+        assertEquals("SL", kite.order("1").type)
+        assertEquals("TRIGGER PENDING", kite.order("1").status)
+        pass(10, 6)                                           // five minutes of reads at 0
+        assertEquals("CANCELLED", kite.order("1").status)
+        assertTrue(kite.requests.none { it.method == "PUT" || (it.method == "POST" && it.path.startsWith("/orders")) })
+    }
+
+    /**
+     * 19 Nov 2026 (audit): a stop left after Boss's sale in Kite: the sweep cannot tell whose sale it was, so it waits the full five
+     * minutes of agreeing reads (the stop's own book takes it out first); one read held again starts the count afresh.
+     */
+    @Test fun aStopLeftAfterASaleInKiteIsTakenOutOnlyAfterFiveMinutesOfAgreeingReads() {
+        kite.quote("NFO:$nfo", 220.0, 219.95, 220.05)
+        kite.position(nfo, 30, 200.0, product = "MIS")
+        kite.orders["1"] = FakeKite.Order("1", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "irapine", "TRIGGER PENDING")
+        kite.soldInKite(nfo, 30, 220.0)
+        pass(10, 0)
+        pass(10, 0, 30)
+        assertEquals("30 s is not enough for the sweep", "TRIGGER PENDING", kite.order("1").status)
+        kite.position(nfo, 30, 200.0, product = "MIS")           // read held again: the count starts afresh
+        pass(10, 3)
+        kite.position(nfo, 0, 0.0, product = "MIS")
+        pass(10, 4)
+        pass(10, 8)
+        assertEquals("TRIGGER PENDING", kite.order("1").status)
+        pass(10, 9)
+        assertEquals("CANCELLED", kite.order("1").status)
+        assertTrue(kite.requests.none { it.method == "PUT" })
+    }
+
+    /** 19 Nov 2026 (audit): two app stops through the price on 30 held: only 30 is turned into a sell, never more than is held. */
+    @Test fun stopsThroughThePriceAreNeverTurnedIntoMoreSellsThanAreHeld() {
+        kite.position(nfo, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$nfo", 200.0, 199.95, 200.05)
+        kite.orders["1"] = FakeKite.Order("1", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "irapine", "TRIGGER PENDING")
+        kite.orders["2"] = FakeKite.Order("2", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "iraprotect", "TRIGGER PENDING")
+        pass(10, 0)
+        val swept = listOf("1", "2").filter { kite.order(it).type == "LIMIT" }
+        assertEquals("one of the two only", 1, swept.size)
+        assertEquals(30, kite.order(swept.single()).qty)
+    }
+
     /** The paper book's positions as [Paper.sweepMissedStops] hands them over: keyed as its prices are, judged on the app's calendars. */
     @Test fun paperPositionsAreJudgedOnTheAppsCalendars() {
         val contracts = mapOf(

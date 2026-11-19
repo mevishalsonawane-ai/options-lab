@@ -53,7 +53,7 @@ object Sweeper {
     @Volatile private var lastLive: List<PriceWatch.Held> = emptyList()
 
     /** Tests: the failsafe starts afresh. */
-    internal fun resetForTest() { watch = PriceWatch.Failsafe(); lastPaper = emptyList(); lastLive = emptyList() }
+    internal fun resetForTest() { watch = PriceWatch.Failsafe(); lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear() }
 
     /**
      * 26 Oct (erase everything): the positions each book last showed dropped (the books themselves are erased; the next sweep
@@ -61,7 +61,7 @@ object Sweeper {
      * still said on time. The backup GTTs' list is a settings key, wiped with the settings. Never waits for a sweep: one under
      * way sets the lists again from the books it read.
      */
-    fun wipe() { lastPaper = emptyList(); lastLive = emptyList() }
+    fun wipe() { lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear() }
 
     /** Positions in memory (the erase's test; memory only). */
     internal fun holdsForErase(): Boolean = lastPaper.isNotEmpty() || lastLive.isNotEmpty()
@@ -93,7 +93,7 @@ object Sweeper {
                 paper.swept.forEach { said(context, MissedLock.say(it.trigger, it.price, it.symbol), "Paper", it.orderId) }
             } else books += judge(lastPaper, emptySet(), t)
             if (Broker.loggedIn) {
-                val l = runCatching { live(context) }.getOrNull()
+                val l = runCatching { live(context, at.toInstant().toEpochMilli()) }.getOrNull()
                 if (l != null) { lastLive = l.first; books += judge(l.first, l.second, t, all = true) }
                 else books += judge(lastLive, emptySet(), t, all = true)
             } else lastLive = emptyList()
@@ -118,10 +118,12 @@ object Sweeper {
      * could not be read. 15 Oct: an order book not read no longer counts as "no prices" (a false alarm): the positions are
      * still priced, and only the sweep and the backups wait for the next pass.
      */
-    private suspend fun live(context: Context): Pair<List<PriceWatch.Held>, Set<String>>? {
+    private suspend fun live(context: Context, nowMs: Long): Pair<List<PriceWatch.Held>, Set<String>>? {
         // Long and short alike (18 Oct, review): a sold leg at Zerodha with no prices was never warned of (it was qty > 0, while
         // the paper side counts every quantity != 0). The sweep below still turns only SELL stops (a long's) into sells.
-        val held = runCatching { Broker.positionBook().net.filter { it.exchange in SWEPT && it.qty != 0 } }.getOrNull() ?: return null
+        // 19 Nov 2026 (audit): the rows at 0 are kept too ([book]): a stop's contract shown closed is told from one not listed.
+        val book = runCatching { Broker.positionBook().net.filter { it.exchange in SWEPT } }.getOrNull() ?: return null
+        val held = book.filter { it.qty != 0 }
         val orders = runCatching { Broker.orders() }.getOrNull()
         val stops = orders.orEmpty().filter { it.working && it.side == "SELL" && it.exchange in SWEPT && ours(it.tag) && (it.type == "SL" || it.type == "SL-M") }
         val keys = (held.map { "${it.exchange}:${it.symbol}" } + stops.map { "${it.exchange}:${it.symbol}" }).distinct()
@@ -130,18 +132,64 @@ object Sweeper {
         val ltp = if (keys.isEmpty()) emptyMap() else runCatching { Broker.stopQuotes(keys) }.getOrDefault(emptyMap())
             .mapValues { it.value.last }.filterValues { it > 0 }
         // Item 7: a resting stop the price is already through is turned into a sell at a protected limit (the same order).
+        // 19 Nov 2026 (audit: a Pine stop left resting after its position closed could open a naked short): only for what is held. A
+        // stop on a contract held long nowhere is never turned into a sell; once confirmed ([stale]) it is cancelled. A stop on a
+        // contract held is sold for no more than its product holds, less what this sweep already turned into sells there.
+        val used = HashMap<String, Int>()
         for (so in stops) {
+            val pk = "${so.exchange}:${so.symbol}:${so.product}"
+            val long = book.filter { it.exchange == so.exchange && it.symbol == so.symbol && it.qty > 0 }.sumOf { it.qty }
+            if (long <= 0) { stale(so, book, nowMs); continue }
+            flatSince.remove(so.id)
             val px = ltp["${so.exchange}:${so.symbol}"] ?: continue
             if (!MissedLock.missed(px, so.trigger)) continue
+            val have = book.filter { it.exchange == so.exchange && it.symbol == so.symbol && it.product == so.product }.sumOf { it.qty } - (used[pk] ?: 0)
+            val left = com.optionslab.engine.risk.ExitQty.remaining(so.qty, so.filled, so.pending)
+            val send = minOf(left, have)
+            if (send <= 0) {
+                runCatching { Diag.record("risk", "Zerodha: ${so.symbol} is through its stop %.2f at %.2f, but nothing of it is held in %s: not turned into a sell"
+                    .format(Locale.ENGLISH, so.trigger, px, so.product.ifBlank { "its product" })) }
+                continue
+            }
             val tick = runCatching { Broker.spec(so.exchange, so.symbol).tickSize }.getOrDefault(0.05)
             val limit = MissedLock.limit(px, tick)
-            val r = runCatching { Broker.modify(so, so.qty, "LIMIT", limit, null) }
+            val r = runCatching { Broker.modify(so, so.qty - (left - send), "LIMIT", limit, null) }
+            if (r.isSuccess) used[pk] = (used[pk] ?: 0) + send
             if (r.isSuccess) said(context, MissedLock.say(so.trigger, px, so.symbol) + " (a sell at a limit of %.2f)".format(Locale.ENGLISH, limit), "Zerodha", so.id)
             else com.optionslab.app.work.Alerts.post("Zerodha: ${so.symbol} is through its stop %.2f at %.2f, and the stop could not be turned into a sell (%s). Close it in Trade."
                 .format(Locale.ENGLISH, so.trigger, px, r.exceptionOrNull()?.message?.take(160) ?: "an error"), com.optionslab.app.work.Alerts.Kind.ERROR, "Missed lock", throttle = true)
         }
         if (orders != null) runCatching { backups(orders, stops.filter { backed(it.tag) }, ltp) }
         return held.map { PriceWatch.Held("${it.exchange}:${it.symbol}", it.exchange) } to ltp.keys
+    }
+
+    /** 19 Nov 2026 (audit): when each app stop's contract was first read held long nowhere, by order id (market-clock ms). Memory only. */
+    private val flatSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * 19 Nov 2026 (audit): app stop [so], whose contract the positions read [book] shows held long nowhere: never turned into a sell
+     * (above); cancelled at Zerodha and confirmed once the reads agree ([com.optionslab.engine.orb.LiveMirror.shortConfirmed]: a row is
+     * listed for the contract - a read with no row is no reading - and every read for five minutes has shown it held long nowhere). The
+     * sweep cannot tell whose sale closed what, so it never takes the 30-second way the books take with a sale in the order book: the
+     * stop's own book takes it out first. Not confirmed gone: Boss is told to cancel it in Kite.
+     */
+    private suspend fun stale(so: Broker.OrderRow, book: List<Broker.Position>, nowMs: Long) {
+        if (flatSince.size > 200) flatSince.clear()
+        val rowShown = book.any { it.exchange == so.exchange && it.symbol == so.symbol }
+        val first = if (rowShown) flatSince.putIfAbsent(so.id, nowMs) else flatSince[so.id]
+        if (!com.optionslab.engine.orb.LiveMirror.shortConfirmed(rowShown, false, first ?: nowMs, nowMs, unbookedSale = false)) return
+        runCatching { Broker.cancel(so.id, so.variety) }
+        val st = runCatching { Broker.orderState(so.id) }.getOrNull()
+        if (st != null && st.status in setOf("CANCELLED", "REJECTED", "COMPLETE")) {
+            flatSince.remove(so.id)
+            val text = if (st.filled > 0) "Zerodha: the app's stop ${so.id} on ${so.symbol} filled ${st.filled} with nothing held. A short may be open: check it in Kite now."
+                else "Zerodha: the app's stop ${so.id} on ${so.symbol} rested with nothing held; it was cancelled"
+            runCatching { Diag.record("risk", text) }
+            if (st.filled > 0) com.optionslab.app.work.Alerts.post(text, com.optionslab.app.work.Alerts.Kind.ERROR, "Missed lock")
+            return
+        }
+        com.optionslab.app.work.Alerts.post("Zerodha: the app's stop ${so.id} on ${so.symbol} rests with nothing held, and it could not be cancelled. " +
+            "Cancel it in Kite: if it fires it sells what is not held.", com.optionslab.app.work.Alerts.Kind.ERROR, "Missed lock", throttle = true)
     }
 
     // ---- item 6: the GTT beside each bot's SL ------------------------------------------------------------------------
