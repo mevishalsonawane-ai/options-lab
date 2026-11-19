@@ -2336,4 +2336,20 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue("no stop on it", kite.placed.none { it.form["order_type"] == "SL" })
         assertEquals(30, held())
     }
+
+    /** Review item 1: a stale working buy on one contract never holds back the sweep of an unowned filled lot on another. */
+    @Test fun aStaleBuyOnOneContractNeverHoldsBackTheSweepOfAnother() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        val (_, s2) = other(7)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        val stale = kite.restsInKite(s2, "BUY", 30, 190.0, tag = LiveMirror.TAG)
+        val lost = kite.boughtInKite(sym, 30, 200.0, tag = LiveMirror.TAG)     // an arm's buy whose row never reached the disk
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
+        assertEquals("CANCELLED", kite.order(stale).status)
+        val p = view().openReal.single()
+        assertEquals(sym, p.symbol); assertEquals(lost, p.entryOrderId); assertEquals(30, p.qty)
+        assertNotNull("with a stop", p.stopOrderId)
+        assertEquals(1, posted("taken back"))
+    }
 }
