@@ -744,6 +744,18 @@ class OrbArmsDayTest : RobolectricTest() {
         state(trades(40, t.minusHours(1)))
         val (liq40, _) = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }.first { it.first.name == "Liquidity 15+5" }
         assertTrue("40 losing trades: asked", com.optionslab.ira.ArmCutoff.due(liq40))
+        // 19 Nov (Boss: "Yes, Jarvis cutoff should leave them alone too"): its switch off, Liquidity is neither asked about nor switched off
+        // by Jarvis's cutoff (other arms still are); while the switches are not read it waits; on again (one tap), as before.
+        val rule = com.optionslab.ira.ArmAutoStops.Rule.JARVIS_CUTOFF
+        assertTrue(ArmAutoStopsHost.set(rule, false, pinConfirmed = true, log = false).startsWith("Off"))
+        val off = runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }
+        assertTrue("left alone", off.none { it.first.name == "Liquidity 15+5" })
+        assertTrue("another arm is still judged", off.any { it.first.name == "ORB" })
+        ArmAutoStopsHost.resetForTest(com.optionslab.ira.ArmAutoStops.State(), loaded = false)
+        assertTrue("not read yet: waits", runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }.none { it.first.name == "Liquidity 15+5" })
+        ArmAutoStopsHost.resetForTest()
+        assertTrue(ArmAutoStopsHost.set(rule, true, log = false).contains("already on"))
+        assertTrue(runBlocking { com.optionslab.app.ira.IraBots.cutoffArms() }.any { it.first.name == "Liquidity 15+5" })
     }
 
     @Test fun anArmWithFifteenLosingPaperTradesIsPutToBossAndHisYesOnlySwitchesItOff() {

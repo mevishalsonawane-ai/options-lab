@@ -22,14 +22,15 @@ import kotlinx.coroutines.withContext
 
 /** The card's title. */
 internal const val ARM_AUTOSTOPS_TITLE = "Automatic stops on R51, R72 and Liquidity"
-/** The PIN prompt's reason when one of the four is switched off. */
+/** The PIN prompt's reason when one of them is switched off. */
 internal const val ARM_AUTOSTOPS_PIN = "Enter your app PIN to switch this automatic stop off for R51, R72 and Liquidity (they then run until you stop them)."
 
 /**
- * 19 Nov 2026 (Boss: "i want it to run until i stop them"; he chose all four, each a switch turned off by PIN): Bot settings' four switches
- * ([ArmAutoStopsHost]) - the forward-test switch-off, Liquidity's live stop rule, its self-review park and pause, the paper account stop -
+ * 19 Nov 2026 (Boss: "i want it to run until i stop them"; he chose all four, each a switch turned off by PIN; 19 Nov, the fifth: "Yes, Jarvis cutoff should leave them alone too"): Bot settings' five switches
+ * ([ArmAutoStopsHost]) - the forward-test switch-off, Liquidity's live stop rule, its self-review park and pause, the paper account stop,
+ * Jarvis's losing-arm cutoff -
  * each "applies to R51, R72 and Liquidity". On (as before 19 Nov) lowers risk: one tap. Off takes the PIN, always. Boss's one-time choice
- * switched all four off; every change is in the change timeline.
+ * switched them all off; every change is in the change timeline.
  */
 @Composable
 internal fun ArmAutoStopsCard(model: AppModel) {
@@ -59,7 +60,7 @@ internal fun ArmAutoStopsCardFlow(view: ArmAutoStopsHost.View, said: String?, on
 internal fun ArmAutoStopsCardContent(view: ArmAutoStopsHost.View, said: String?, onSwitch: (ArmAutoStops.Rule, Boolean) -> Unit) {
     LedgerCard(title = ARM_AUTOSTOPS_TITLE) {
         Note("${ArmAutoStops.CHOICE}. Off, a stop below no longer stops R51 Donchian 20, R72 Breadth Donchian or Liquidity 15+5 (every book): " +
-            "they run until you stop them. Every other arm keeps all four. The kill switch, the day lock, the guard and daily loss limit, Stop " +
+            "they run until you stop them. Every other arm keeps them all. The kill switch, the day lock, the guard and daily loss limit, Stop " +
             "for today, every live gate (Live with your PIN, AI trades go live, each arm's Trade live switch) and every exit still apply. " +
             "Nothing is switched back on by this: an arm a stop had already switched off, parked or paused waits for you.")
         if (!view.loaded) Note("Reading the switches...", Modifier.padding(top = 4.dp))
@@ -69,8 +70,8 @@ internal fun ArmAutoStopsCardContent(view: ArmAutoStopsHost.View, said: String?,
                     view.isOn(r), keepSub = true, onChange = { on -> onSwitch(r, on) })
             }
         }
-        Note("On again is one tap (it lowers risk); switching one off takes your PIN. Jarvis may switch one on, never off. Every change is " +
-            "in the change timeline.", Modifier.padding(top = 2.dp))
+        Note("On again is one tap (it lowers risk); switching one off takes your PIN, here only - never Jarvis or a voice command. Every " +
+            "change is in the change timeline.", Modifier.padding(top = 2.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }
 }

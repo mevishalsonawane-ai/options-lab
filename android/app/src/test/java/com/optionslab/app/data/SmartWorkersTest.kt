@@ -263,6 +263,49 @@ class SmartWorkersTest : RobolectricTest() {
         } finally { Market.testClock = null }
     }
 
+    /**
+     * 19 Nov (review): the daily review reads Boss's automatic-stop switches itself when the start could not - his saved "off" is then
+     * what Liquidity's review acts on (said as his choice). Still unreadable, they count as on (their default, the side that lowers
+     * risk): the park is done as before, never held back on a guess, and never said to be his choice. Hero as before either way.
+     */
+    @Test fun theReviewReadsTheSwitchesItselfAndUnreadableTheyCountAsOn() = runBlocking {
+        clockAt(java.time.LocalDateTime.of(2026, 10, 14, 15, 50))
+        val choice = "not parked or paused: ${com.optionslab.ira.ArmAutoStops.CHOICE}"
+        try {
+            SmartWorkers.ensureLoaded()
+            val liq = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.LIQUIDITY, List(30) { -2_000.0 }, live = true)
+            val hero = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.HERO, List(20) { -5_000.0 }, live = true)
+            SmartWorkers.testReviews = listOf(liq, hero)
+            // Boss's "off" saved (his choice run), but not read at the start: the review reads it.
+            val rule = com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW
+            SecurePrefs.put(rule.prefKey, false); SecurePrefs.put(rule.offAtKey, "1000")
+            SecurePrefs.put(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, true); SecurePrefs.put(com.optionslab.ira.ArmAutoStops.CUTOFF_MIGRATION_KEY, true)
+            ArmAutoStopsHost.resetForTest(com.optionslab.ira.ArmAutoStops.State(), loaded = false)
+            SmartWorkers.reviewIfDue(context)
+            assertEquals("2026-10-14", SecurePrefs.getString("brain.reviewedOn"))
+            assertFalse("his off read: not parked", "liquidity" in SmartWorkers.settings.value.parked)
+            assertTrue("Hero parked as before", "hero" in SmartWorkers.settings.value.parked)
+            val end = System.currentTimeMillis() + 10_000
+            while (Diag.lines().none { it.contains(choice) } && System.currentTimeMillis() < end) Thread.sleep(20)
+            assertTrue(Diag.lines().any { it.contains(choice) })
+        } finally { Market.testClock = null; SmartWorkers.testReviews = null }
+    }
+
+    @Test fun unreadableSwitchesCountAsOnAndTheParkIsDone() = runBlocking {
+        clockAt(java.time.LocalDateTime.of(2026, 10, 14, 15, 50))
+        try {
+            SmartWorkers.ensureLoaded()
+            val liq = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.LIQUIDITY, List(30) { -2_000.0 }, live = true)
+            SmartWorkers.testReviews = listOf(liq)
+            ArmAutoStopsHost.resetForTest(com.optionslab.ira.ArmAutoStops.State(), loaded = false)
+            ArmAutoStopsHost.testReadFails = true
+            SmartWorkers.reviewIfDue(context)
+            assertEquals("the day is reviewed", "2026-10-14", SecurePrefs.getString("brain.reviewedOn"))
+            assertTrue("parked as before (the switches count as on)", "liquidity" in SmartWorkers.settings.value.parked)
+            assertTrue(Diag.lines().none { it.contains("not parked or paused: ${com.optionslab.ira.ArmAutoStops.CHOICE}") })
+        } finally { Market.testClock = null; SmartWorkers.testReviews = null }
+    }
+
     /** G8-3: the relay down, then switched off by Boss: live entries are no longer refused for it. G8-7: its breaker acts. */
     @Test fun theRelaySwitchedOffNoLongerRefusesAndAnOpenBreakerSkipsThePing() {
         com.optionslab.app.work.Tasks.resetRelayForTest()

@@ -23,11 +23,14 @@ class ArmAutoStopsTest {
     private val allOff = ArmAutoStops.migrate(on, 1_000L, null)!!
 
     @Test fun theThreeArmsAreCoveredAndNoOther() {
-        for (who in listOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE, DonchianArm.LABEL, BreadthDonchianArm.LABEL, LiquidityRules.ARM.source,
-                LiquidityRules.ARM.label, ArmAutoStops.REVIEW_KEY) + LiquidityRules.BOOKS.flatMap { listOf(it.source, it.label) })
+        for (who in listOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE, LiquidityRules.ARM.source, ArmAutoStops.REVIEW_KEY) +
+                LiquidityRules.BOOKS.map { it.source })
             assertTrue(ArmAutoStops.covers(who), who)
         for (who in listOf("orb", "R52 Open outside value", "oov", "solo2", "Hero", "hero", "", "liquidity ", "s5trail", "FT3"))
             assertFalse(ArmAutoStops.covers(who), who)
+        // Review (19 Nov): by source only - a strategy of Boss's named like one of the arms is never taken for it.
+        for (name in listOf(DonchianArm.LABEL, BreadthDonchianArm.LABEL, LiquidityRules.ARM.label) + LiquidityRules.BOOKS.map { it.label })
+            assertFalse(ArmAutoStops.covers(name), name)
     }
 
     @Test fun onByDefaultEveryRuleActsAsBefore() {
@@ -45,7 +48,7 @@ class ArmAutoStopsTest {
 
     @Test fun offStopsActingOnTheThreeOnlyAndEveryOtherArmKeepsIt() {
         for (r in Rule.entries) {
-            assertFalse(ArmAutoStops.acts(allOff, r, DonchianArm.LABEL))
+            assertFalse(ArmAutoStops.acts(allOff, r, DonchianArm.SOURCE))
             assertFalse(ArmAutoStops.acts(allOff, r, LiquidityRules.ARM5.source))
             assertTrue(ArmAutoStops.acts(allOff, r, "R52 Open outside value"), "another arm keeps ${r.name}")
             assertTrue(ArmAutoStops.acts(allOff, r, "Hero ₹1,000"))
@@ -111,11 +114,12 @@ class ArmAutoStopsTest {
         val afterReenable = LiquidityStopRule.check(trades + t(400, -50_000.0), day, 350L)
         assertTrue(afterReenable.stopped, "a new loss after the re-enable reaches it again on its own")
         assertFalse(ArmAutoStops.liveStatus(offLate, afterReenable, trades + t(400, -50_000.0), day, 350L).stopped)
-        // Not reached: nothing to change; off with no time kept (an unreadable save): not a stop.
+        // Not reached: nothing to change.
         val calm = LiquidityStopRule.check(listOf(t(100, 500.0)), day)
         assertSame(calm, ArmAutoStops.liveStatus(allOff, calm, listOf(t(100, 500.0)), day, 0L))
+        // Review (19 Nov): when it went off is not known (an unreadable save): the stop is kept, never lifted on a guess.
         val noTime = allOff.copy(offAtMs = emptyMap())
-        assertFalse(ArmAutoStops.liveStatus(noTime, raw, trades, day, 0L).stopped)
+        assertTrue(ArmAutoStops.liveStatus(noTime, raw, trades, day, 0L).stopped)
         // Empty record.
         val none = LiquidityStopRule.check(emptyList(), day)
         assertFalse(ArmAutoStops.liveStatus(allOff, none, emptyList(), day, 0L).stopped)
@@ -126,18 +130,20 @@ class ArmAutoStopsTest {
         assertEquals("2026-10-25|2026-11-10|drawdown -Rs 41,000", key)
         assertNull(ArmAutoStops.accountKey(LocalDate.of(2026, 10, 25), null))
         // On: as before, for everyone.
-        assertTrue(ArmAutoStops.paperAccountActs(on, DonchianArm.LABEL, key))
+        assertTrue(ArmAutoStops.paperAccountActs(on, DonchianArm.SOURCE, key))
         // Off with nothing reached then: a stop reached later does not stop the three; another arm still stops.
         val off = ArmAutoStops.set(on, Rule.PAPER_ACCOUNT, false, 5L, pinConfirmed = true, heldAccount = null).state
-        assertFalse(ArmAutoStops.paperAccountActs(off, DonchianArm.LABEL, key))
-        assertFalse(ArmAutoStops.paperAccountActs(off, LiquidityRules.ARM15.label, key))
-        assertTrue(ArmAutoStops.paperAccountActs(off, "R52 Open outside value", key))
-        assertFalse(ArmAutoStops.paperAccountActs(off, DonchianArm.LABEL, null))
+        assertFalse(ArmAutoStops.paperAccountActs(off, DonchianArm.SOURCE, key))
+        assertFalse(ArmAutoStops.paperAccountActs(off, LiquidityRules.ARM15.source, key))
+        assertTrue(ArmAutoStops.paperAccountActs(off, "oov", key))
+        // Review (19 Nov): an entry that is not one of the arms' own (no source: a strategy named like an arm) is refused as before.
+        assertTrue(ArmAutoStops.paperAccountActs(off, null, key))
+        assertFalse(ArmAutoStops.paperAccountActs(off, DonchianArm.SOURCE, null))
         // Off while it was reached: still stops them, until Boss restarts its count (a new count: a new key, or none).
         val held = ArmAutoStops.set(on, Rule.PAPER_ACCOUNT, false, 5L, pinConfirmed = true, heldAccount = key).state
-        assertTrue(ArmAutoStops.paperAccountActs(held, BreadthDonchianArm.LABEL, key))
-        assertFalse(ArmAutoStops.paperAccountActs(held, BreadthDonchianArm.LABEL, null))
-        assertFalse(ArmAutoStops.paperAccountActs(held, BreadthDonchianArm.LABEL, ArmAutoStops.accountKey(LocalDate.of(2026, 11, 20), "2026-12-01|month")))
+        assertTrue(ArmAutoStops.paperAccountActs(held, BreadthDonchianArm.SOURCE, key))
+        assertFalse(ArmAutoStops.paperAccountActs(held, BreadthDonchianArm.SOURCE, null))
+        assertFalse(ArmAutoStops.paperAccountActs(held, BreadthDonchianArm.SOURCE, ArmAutoStops.accountKey(LocalDate.of(2026, 11, 20), "2026-12-01|month")))
         // On again clears the hold; another rule never touches it.
         assertNull(ArmAutoStops.set(held, Rule.PAPER_ACCOUNT, true, 6L, pinConfirmed = false).state.heldAccount)
         assertEquals(key, ArmAutoStops.set(held, Rule.LIVE_STOP, false, 6L, pinConfirmed = true).state.heldAccount)
@@ -148,7 +154,7 @@ class ArmAutoStopsTest {
         assertTrue(r51.startsWith("Auto-stop off by Boss's choice (19 Nov): the forward-test switch-off, the paper account stop no longer stop it"), r51)
         assertFalse(r51.contains("live stop rule"), r51)
         val liq = ArmAutoStops.rowLine(allOff, LiquidityRules.ARM.source)!!
-        assertTrue(liq.contains("the live stop rule, the self-review park and pause, the paper account stop"), liq)
+        assertTrue(liq.contains("the live stop rule, the self-review park and pause, the paper account stop, Jarvis's losing-arm cutoff"), liq)
         assertFalse(liq.contains("forward-test"), liq)
         assertNull(ArmAutoStops.rowLine(allOff, "orb"))
         // Only the live stop off: R51's row has nothing to say; Liquidity's names it alone.
@@ -185,6 +191,31 @@ class ArmAutoStopsTest {
             assertEquals(rule.switch, off.what)
         }
         assertFalse(AutoChange.isAutoStopTarget("autostop:else"))
+    }
+
+    /** Review (19 Nov): a phone whose first choice ran with four switches gets Jarvis's cutoff off too, once, while the choice stands. */
+    @Test fun theFifthSwitchsOwnStepRunsOnceOnAPhoneThatRanTheFirstChoice() {
+        val four = ArmAutoStops.State(on = (Rule.entries - Rule.JARVIS_CUTOFF).associateWith { false },
+            offAtMs = (Rule.entries - Rule.JARVIS_CUTOFF).associateWith { 1L }, migrated = true, cutoffMigrated = false)
+        assertFalse(four.ready)
+        val m = ArmAutoStops.migrateCutoff(four, 9L)!!
+        assertFalse(m.isOn(Rule.JARVIS_CUTOFF)); assertEquals(9L, m.offAtMs[Rule.JARVIS_CUTOFF]); assertTrue(m.ready)
+        assertNull(ArmAutoStops.migrateCutoff(m, 10L), "never twice")
+        // Boss had switched the other four back on himself: the cutoff stays on (marked done).
+        val allBack = ArmAutoStops.State(migrated = true, cutoffMigrated = false)
+        val k = ArmAutoStops.migrateCutoff(allBack, 9L)!!
+        assertTrue(k.isOn(Rule.JARVIS_CUTOFF)); assertTrue(k.ready)
+        // A phone where the choice never applied (the no-trades path) and Boss switched one stop off himself: the cutoff stays on.
+        val own = ArmAutoStops.State(on = mapOf(Rule.PAPER_ACCOUNT to false), offAtMs = mapOf(Rule.PAPER_ACCOUNT to 5L), migrated = true,
+            cutoffMigrated = false)
+        assertTrue(ArmAutoStops.migrateCutoff(own, 9L)!!.isOn(Rule.JARVIS_CUTOFF))
+        // The first choice not run yet: nothing here (the first choice switches all five).
+        assertNull(ArmAutoStops.migrateCutoff(ArmAutoStops.State(), 9L))
+        assertTrue(allOff.ready); assertFalse(allOff.isOn(Rule.JARVIS_CUTOFF))
+        // Read back: the step's own key, missing on such a phone, reads as not run.
+        val back = ArmAutoStops.decode({ r -> four.on[r] }, { r -> four.offAtMs[r]?.toString() }, null, migrated = true, cutoffMigrated = false)
+        assertFalse(back.ready)
+        assertEquals(true, ArmAutoStops.encode(m)[ArmAutoStops.CUTOFF_MIGRATION_KEY])
     }
 
     @Test fun aSwitchsChangeWritesOnlyItsOwnKeys() {

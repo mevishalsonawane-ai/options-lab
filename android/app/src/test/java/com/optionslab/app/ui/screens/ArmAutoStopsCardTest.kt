@@ -62,6 +62,11 @@ class ArmAutoStopsCardTest {
             assertTrue(r.switch.endsWith("applies to R51, R72 and Liquidity"))
         }
         assertTrue(shows("Off - ${ArmAutoStops.ROW}", sub = true))
+        assertEquals("five switches", 5, Rule.entries.size)
+        assertTrue(shows(Rule.JARVIS_CUTOFF.switch))
+        // Review (19 Nov): no path lets Jarvis switch one on, so the card never says so.
+        assertFalse(shows("Jarvis may switch one on", sub = true))
+        assertTrue(shows("never Jarvis or a voice command", sub = true))
         compose.onNodeWithText(Rule.LIVE_STOP.switch).performScrollTo().performClick()
         compose.waitForIdle()
         assertFalse("no PIN to switch it on", shows("PIN asked"))
@@ -124,7 +129,7 @@ class ArmAutoStopsCardTest {
         assertEquals(1, tagged.size)
         assertEquals("only Liquidity's row", 1, compose.onAllNodesWithText("Auto-stop off by Boss's choice (19 Nov)", substring = true,
             useUnmergedTree = true).fetchSemanticsNodes().size)
-        assertTrue(compose.onAllNodesWithText("the live stop rule, the self-review park and pause, the paper account stop no longer stop it",
+        assertTrue(compose.onAllNodesWithText("the live stop rule, the self-review park and pause, the paper account stop, Jarvis's losing-arm cutoff no longer stop it",
             substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
     }
 }

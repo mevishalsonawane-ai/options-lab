@@ -169,6 +169,78 @@ class ArmAutoStopsHostTest : RobolectricTest() {
         } finally { PositionsFirst.resetForTest(started = false) }
     }
 
+    /**
+     * Review (19 Nov): a book set aside as unreadable is no evidence the phone ran the three (the ORB family's book holds every ORB arm):
+     * with no trade of theirs before the choice, every stop stays on.
+     */
+    @Test fun aSetAsideBookIsNoEvidenceAndTheStopsStayOn() {
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = true)
+        java.io.File(context.filesDir, "orb.vault.unreadable.123").writeText("x")
+        assertEquals(false, runBlocking { ArmAutoStopsHost.tradedBeforeChoice() })
+        assertFalse(runBlocking { ArmAutoStopsHost.migrateNow() })
+        assertTrue(Rule.entries.all { ArmAutoStopsHost.isOn(it) })
+    }
+
+    /** Review (19 Nov): a restore marks the choice done in memory too, and a later read never undoes that mark. */
+    @Test fun aRestoresMarkSurvivesARead() {
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.markChoiceRun()
+        ArmAutoStopsHost.load()                                 // the vault still says not run
+        assertFalse(runBlocking { ArmAutoStopsHost.migrateNow(existed = true) })
+        assertTrue(Rule.entries.all { ArmAutoStopsHost.isOn(it) })
+        assertFalse(ArmAutoStopsHost.deferring())
+    }
+
+    /**
+     * Review (19 Nov): the switches unreadable at the start are read again from the arms' and the review's workers (at most once a
+     * minute, in the background), and Boss's choice then runs; until then the stops that latch wait on the three.
+     */
+    @Test fun anUnreadableStartIsReadAgainLaterAndTheChoiceThenRuns() {
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.testReadFails = true
+        ArmAutoStopsHost.retryNowForTest()
+        assertTrue("still waiting", ArmAutoStopsHost.ensureReady())
+        Thread.sleep(500)                                       // the background try (it fails) has run
+        assertTrue(ArmAutoStopsHost.deferring())
+        assertFalse(ArmAutoStopsHost.mayLatch(Rule.FORWARD_BAR, DonchianArm.SOURCE))
+        // Readable again: the next try (after a minute) reads the switches and runs the choice (here a phone that ran R72 before).
+        ArmAutoStopsHost.testReadFails = false
+        val t0 = java.time.LocalDateTime.of(2026, 11, 12, 11, 0)
+        runBlocking { PassedArmsHost.addClosedForTest(listOf(PassedArmsHost.Pos(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "NIFTY", "X2", "CE",
+            65, 100.0, t0, null, exit = 98.0, exitTime = t0, why = "stop"))) }
+        assertTrue("within the minute: not tried again", ArmAutoStopsHost.ensureReady())
+        ArmAutoStopsHost.retryNowForTest()
+        ArmAutoStopsHost.ensureReady()
+        val end = System.currentTimeMillis() + 10_000
+        while (System.currentTimeMillis() < end && ArmAutoStopsHost.deferring()) Thread.sleep(20)
+        assertFalse(ArmAutoStopsHost.deferring())
+        assertTrue(Rule.entries.none { ArmAutoStopsHost.isOn(it) })
+        assertFalse("ready: nothing more to do", ArmAutoStopsHost.ensureReady())
+    }
+
+    /** Review (19 Nov): a phone whose first choice ran with four switches (the earlier build) gets Jarvis's cutoff off too, once, logged. */
+    @Test fun aPhoneThatRanTheFourSwitchChoiceGetsTheCutoffOffToo() {
+        // As the earlier build's choice saved them: the four off together, at one moment.
+        for (r in Rule.entries - Rule.JARVIS_CUTOFF) { SecurePrefs.put(r.prefKey, false); SecurePrefs.put(r.offAtKey, "1000") }
+        SecurePrefs.put(ArmAutoStops.MIGRATION_KEY, true)
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.load()
+        assertTrue(ArmAutoStopsHost.isOn(Rule.JARVIS_CUTOFF))
+        assertTrue("its own step not run yet: the latching stops wait", ArmAutoStopsHost.deferring())
+        assertTrue(runBlocking { ArmAutoStopsHost.migrateNow(existed = true) })
+        assertFalse(ArmAutoStopsHost.isOn(Rule.JARVIS_CUTOFF))
+        assertFalse(ArmAutoStopsHost.deferring())
+        assertFalse("never twice", runBlocking { ArmAutoStopsHost.migrateNow(existed = true) })
+        SecurePrefs.flush()
+        assertTrue(SecurePrefs.getBoolean(ArmAutoStops.CUTOFF_MIGRATION_KEY, false))
+        assertFalse(SecurePrefs.getBoolean(Rule.JARVIS_CUTOFF.prefKey, true))
+        if (!Autopilot.enabled()) return
+        val end = System.currentTimeMillis() + 10_000
+        fun cut() = Autopilot.book.value.entries.filter { it.change.target == Rule.JARVIS_CUTOFF.target }
+        while (cut().isEmpty() && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertEquals(AutoChange.SWITCHED_OFF, cut().single().change.to)
+    }
+
     @Test fun aNewOrErasedPhoneKeepsEveryRuleOnAndMarksTheChoiceRun() {
         ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = true)
         // No trade of the three closed before 19 Nov in this (new) phone's books: nothing of Boss's to carry over.

@@ -15,17 +15,17 @@ import java.time.LocalDate
 
 /**
  * 19 Nov 2026 (Boss: "Also remove the stop trades after the max loss for all r51,r72 and liquidity strategy, i want it to run until i
- * stop them"; he chose all four, each a switch turned off by PIN; then "Go"): the switches of the four automatic stops on R51 Donchian 20,
+ * stop them"; he chose all four, each a switch turned off by PIN; then "Go"): the switches of the five automatic stops on R51 Donchian 20,
  * R72 Breadth Donchian and Liquidity 15+5 ([ArmAutoStops]: the forward-test switch-off, Liquidity's live stop rule, its self-review park
- * and pause, the paper account stop), and Boss's one-time choice that switched all four off.
+ * and pause, the paper account stop, Jarvis's losing-arm cutoff), and Boss's one-time choice that switched them all off.
  *
  *  - ON by default in code (today's behaviour, the side that lowers risk): until the start's read lands every rule acts as before.
- *  - Boss's choice runs once ([migrateNow], after the start's read, off every hot path): all four off, logged in the Autopilot change
+ *  - Boss's choice runs once ([migrateNow], after the start's read, off every hot path): all of them off, logged in the Autopilot change
  *    timeline as "Boss's choice, 19 Nov: run until he stops them", one entry each, listing what each still holds stopped (nothing is
  *    switched back on: Boss switches those arms on himself), each undone in one tap (back on: no PIN).
- *  - Bot settings' rows ([com.optionslab.app.ui.screens.ArmAutoStopsCard]): ON is one tap; OFF takes the PIN. Jarvis or a voice command
- *    may switch one ON, never OFF ([set]'s byVoice).
- *  - Every other arm keeps all four; the kill switch, the day lock, the guard and daily loss limit, Stop for today and every live gate
+ *  - Bot settings' rows ([com.optionslab.app.ui.screens.ArmAutoStopsCard]): ON is one tap; OFF takes the PIN, never from Jarvis or a
+ *    voice command ([set]'s byVoice refuses it; no voice path switches one either way).
+ *  - Every other arm keeps them all; the kill switch, the day lock, the guard and daily loss limit, Stop for today and every live gate
  *    are untouched, and so is every exit of an open position.
  *
  * The arms' entry and stop paths read memory only here ([acts], [liveStatus], [paperAccountActs], [reviewMayStop]: no settings read, no
@@ -42,7 +42,7 @@ object ArmAutoStopsHost {
     /** Bot settings' rows and the arm rows: each switch, and whether it was read. */
     data class View(val loaded: Boolean = false, val state: ArmAutoStops.State = ArmAutoStops.State()) {
         fun isOn(r: Rule): Boolean = state.isOn(r)
-        /** The arm row's line for [source] ([ArmAutoStops.rowLine]); null before the read, for another arm, or with all four on. */
+        /** The arm row's line for [source] ([ArmAutoStops.rowLine]); null before the read, for another arm, or with all of them on. */
         fun rowLine(source: String): String? = if (!loaded) null else ArmAutoStops.rowLine(state, source)
     }
     private val _view = MutableStateFlow(View())
@@ -63,7 +63,8 @@ object ArmAutoStopsHost {
         val saved = runCatching {
             check(!testReadFails) { "test: the vault cannot be read" }
             ArmAutoStops.decode({ r -> SecurePrefs.getBoolean(r.prefKey, true) }, { r -> SecurePrefs.getString(r.offAtKey) },
-                SecurePrefs.getString(ArmAutoStops.HELD_KEY), SecurePrefs.getBoolean(ArmAutoStops.MIGRATION_KEY, false))
+                SecurePrefs.getString(ArmAutoStops.HELD_KEY), SecurePrefs.getBoolean(ArmAutoStops.MIGRATION_KEY, false),
+                SecurePrefs.getBoolean(ArmAutoStops.CUTOFF_MIGRATION_KEY, false))
         }.getOrNull() ?: return     // unreadable now: the defaults stay (every rule on), read again next time
         synchronized(lock) {
             state = merged(saved, state)
@@ -74,11 +75,12 @@ object ArmAutoStopsHost {
 
     /** [saved] with the rules Boss switched in this process kept as he set them ([now]). Under [lock]. */
     private fun merged(saved: ArmAutoStops.State, now: ArmAutoStops.State): ArmAutoStops.State {
-        if (switched.isEmpty()) return saved
+        // (Review: the one-time steps marked done in memory - a restore's mark among them - are never undone by a read.)
+        if (switched.isEmpty()) return saved.copy(migrated = saved.migrated || now.migrated, cutoffMigrated = saved.cutoffMigrated || now.cutoffMigrated)
         return saved.copy(on = saved.on + switched.associateWith { now.isOn(it) },
             offAtMs = saved.offAtMs.filterKeys { it !in switched } + now.offAtMs.filterKeys { it in switched },
             heldAccount = if (Rule.PAPER_ACCOUNT in switched) now.heldAccount else saved.heldAccount,
-            migrated = saved.migrated || now.migrated)
+            migrated = saved.migrated || now.migrated, cutoffMigrated = saved.cutoffMigrated || now.cutoffMigrated)
     }
 
     private fun publish() { runCatching { _view.value = View(loaded, state) } }
@@ -87,7 +89,7 @@ object ArmAutoStopsHost {
 
     // ---- the arms' paths (memory only) -----------------------------------------------------------------------------------------
 
-    /** Whether [rule] acts on [who] (an arm's source or label, or the self-review's key): always on another arm. Memory only. */
+    /** Whether [rule] acts on [who] (an arm's source, or the self-review's key; never a display name): always on another arm. Memory only. */
     fun acts(rule: Rule, who: String): Boolean = ArmAutoStops.acts(state, rule, who)
 
     /**
@@ -97,14 +99,14 @@ object ArmAutoStopsHost {
      * read. Every other arm, and IraGoldAlgo, as [acts]. Memory only.
      */
     fun mayLatch(rule: Rule, who: String): Boolean =
-        if (!com.optionslab.app.BuildConfig.GOLD && ArmAutoStops.covers(who) && (!loaded || !state.migrated)) false else acts(rule, who)
+        if (ArmAutoStops.covers(who) && deferring()) false else acts(rule, who)
 
     /** Liquidity's live stop rule as its books read it ([ArmAutoStops.liveStatus]). Memory only. */
     fun liveStatus(raw: LiquidityStopRule.Status, trades: List<LiquidityStopRule.Trade>, today: LocalDate, resetMs: Long): LiquidityStopRule.Status =
         ArmAutoStops.liveStatus(state, raw, trades, today, resetMs)
 
-    /** Whether the paper account stop refuses [owner]'s entry ([ArmAutoStops.paperAccountActs]). Memory only. */
-    fun paperAccountActs(owner: String, reachedNow: String?): Boolean = ArmAutoStops.paperAccountActs(state, owner, reachedNow)
+    /** Whether the paper account stop refuses the entry of the arm [source] (null: not an arm's own entry; [ArmAutoStops.paperAccountActs]). Memory only. */
+    fun paperAccountActs(source: String?, reachedNow: String?): Boolean = ArmAutoStops.paperAccountActs(state, source, reachedNow)
 
     /** Whether the self-review or Autopilot (not on Boss's yes or his own Undo, [byBoss]) may park or pause [key] now ([mayLatch]). Memory only. */
     fun reviewMayStop(key: String, byBoss: Boolean = false): Boolean = byBoss || mayLatch(Rule.SELF_REVIEW, key)
@@ -115,7 +117,7 @@ object ArmAutoStopsHost {
     // ---- Boss's switches -------------------------------------------------------------------------------------------------------
 
     /**
-     * Boss's switch for [rule] (Bot settings, the change timeline's Undo, or - on only - Jarvis): ON at once (it lowers risk); OFF only
+     * Boss's switch for [rule] (Bot settings, or the change timeline's Undo): ON at once (it lowers risk); OFF only
      * with [pinConfirmed] and never [byVoice]. [log]: into the change timeline (false for its own Undo). A worker thread only. What to say.
      */
     fun set(rule: Rule, on: Boolean, pinConfirmed: Boolean = false, log: Boolean = true, byVoice: Boolean = false): String {
@@ -144,24 +146,28 @@ object ArmAutoStopsHost {
     // ---- Boss's one-time choice (19 Nov) ---------------------------------------------------------------------------------------
 
     /**
-     * Boss's choice, once (19 Nov: "run until he stops them"): all four off, logged in the change timeline - one entry each, listing what
+     * Boss's choice, once (19 Nov: "run until he stops them"): all of them off, logged in the change timeline - one entry each, listing what
      * it still holds stopped (nothing is switched back on). Not before the switches were read (an unreadable vault: tried at the next
      * start); never in IraGoldAlgo; never twice. A worker thread only. True when it ran now.
      */
     internal suspend fun migrateNow(nowMs: Long = System.currentTimeMillis(), existed: Boolean? = null): Boolean {
         if (com.optionslab.app.BuildConfig.GOLD) return false
         if (!loaded) load()
-        if (!loaded || state.migrated) return false
+        if (!loaded || state.ready) return false
         // Open positions and their stops first (CLAUDE.md): the books are read only after the start's positions step and the stream
         // (at once when this process never ran them; never forever).
         PositionsFirst.awaitPositions()
         PositionsFirst.awaitStream()
+        if (state.migrated) return migrateCutoffNow(nowMs)
         // Review: a new phone, or one erased since ("Erase everything": the books and their trades go too), had none of the three arms
         // trading before Boss's choice - nothing of his to carry over: the choice is marked run with every rule on, as a fresh phone has
         // them (Boss switches them in Bot settings).
-        if (!(existed ?: tradedBeforeChoice())) {
-            synchronized(lock) { state = state.copy(migrated = true) }
-            runCatching { SecurePrefs.putAllSoon(mapOf(ArmAutoStops.MIGRATION_KEY to true)) }
+        // Review (19 Nov): a book not ready or not readable says nothing - the choice is left to a later pass ([ensureReady]) or start,
+        // never marked done on a guess.
+        val had = existed ?: tradedBeforeChoice() ?: return false
+        if (!had) {
+            synchronized(lock) { state = state.copy(migrated = true, cutoffMigrated = true) }
+            runCatching { SecurePrefs.putAllSoon(mapOf(ArmAutoStops.MIGRATION_KEY to true, ArmAutoStops.CUTOFF_MIGRATION_KEY to true)) }
             publish()
             runCatching { Diag.record("autostops", "no trade of R51, R72 or Liquidity before 19 Nov on this phone (new, or erased since): the automatic stops stay on, as on a fresh phone") }
             return false
@@ -172,7 +178,7 @@ object ArmAutoStopsHost {
         val next = synchronized(lock) {
             val m = ArmAutoStops.migrate(state, nowMs, held) ?: return false
             // (A rule Boss switched himself in this process before the choice ran stays as he set it.)
-            merged(m, state).copy(migrated = true).also { state = it }
+            merged(m, state).copy(migrated = true, cutoffMigrated = true).also { state = it }
         }
         save(next)
         publish()
@@ -182,15 +188,90 @@ object ArmAutoStopsHost {
         return true
     }
 
+    /**
+     * Review (19 Nov): the fifth switch's own step ([ArmAutoStops.migrateCutoff]) on a phone whose first choice ran with four switches:
+     * Jarvis's cutoff goes off too (logged in the change timeline) while Boss's choice stands. True when it switched it off now.
+     */
+    private suspend fun migrateCutoffNow(nowMs: Long): Boolean {
+        if (state.cutoffMigrated) return false
+        val stopped = runCatching { stoppedByNow(Rule.JARVIS_CUTOFF) }.getOrNull()
+        val next = synchronized(lock) {
+            if (state.cutoffMigrated) return false
+            // (Review: the cutoff's switch Boss changed himself in this process stays as he set it: the step is only marked done, unlogged.)
+            if (Rule.JARVIS_CUTOFF in switched) {
+                state = state.copy(cutoffMigrated = true)
+                runCatching { SecurePrefs.putAllSoon(mapOf(ArmAutoStops.CUTOFF_MIGRATION_KEY to true)) }
+                publish()
+                return false
+            }
+            ArmAutoStops.migrateCutoff(state, nowMs)?.also { state = it }
+        } ?: return false
+        runCatching { SecurePrefs.putAllSoon(ArmAutoStops.encodeRule(next, Rule.JARVIS_CUTOFF) + (ArmAutoStops.CUTOFF_MIGRATION_KEY to true)) }
+        publish()
+        if (next.isOn(Rule.JARVIS_CUTOFF)) return false
+        runCatching { Diag.record("autostops", "${ArmAutoStops.CHOICE}: ${Rule.JARVIS_CUTOFF.switch} off too") }
+        runCatching { com.optionslab.app.ira.Autopilot.logArmAutoStopOff(Rule.JARVIS_CUTOFF, ArmAutoStops.offReason(Rule.JARVIS_CUTOFF, stopped)) }
+        return true
+    }
+
     /** The day of Boss's choice: a trade of the three closed before it shows the phone ran them before (not new, not erased since). */
     private val CHOICE_DAY: LocalDate = LocalDate.of(2026, 11, 19)
 
-    /** Whether this phone has a trade of R51, R72 or Liquidity closed before Boss's choice (paper or live). Reads only; a worker thread. */
-    private suspend fun tradedBeforeChoice(): Boolean {
+    /**
+     * Whether this phone ran R51, R72 or Liquidity before Boss's choice: a trade of theirs closed before it (paper or live). Null when it
+     * cannot be told now - a book not ready yet, or a read that failed: the caller then decides nothing. Review: a book set aside as
+     * unreadable is no evidence (the ORB family's book holds every ORB arm, not only these): the choice is decided by the books as they
+     * read now - with no trade of the three, every stop stays on (the side that lowers risk; Boss can switch them off with his PIN).
+     * Reads only; a worker thread.
+     */
+    internal suspend fun tradedBeforeChoice(): Boolean? {
         fun before(t: java.time.LocalDateTime?) = t?.toLocalDate()?.isBefore(CHOICE_DAY) == true
-        val orb = runCatching { (OrbArms.closedPaper() + OrbArms.closedLive()).any { ArmAutoStops.covers(it.arm) && before(it.exitTime) } }.getOrDefault(false)
-        return orb || runCatching { PassedArmsHost.tradedBefore(CHOICE_DAY) }.getOrNull() == true
+        val files = OrbArms.filesForErase()
+        if (files.isEmpty()) return null                                   // the arms' book not set up yet
+        val orb = runCatching { (OrbArms.closedPaper() + OrbArms.closedLive()).any { ArmAutoStops.covers(it.arm) && before(it.exitTime) } }.getOrNull()
+            ?: return null
+        if (orb) return true
+        return runCatching { PassedArmsHost.tradedBefore(CHOICE_DAY) }.getOrNull()
     }
+
+    /** One retry at a time ([ensureReady]), and not more than once a minute. */
+    private val retrying = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var lastRetryMs = 0L
+
+    /**
+     * Review (19 Nov): the switches not read yet, or Boss's one-time choice not run yet (a vault or a book that could not be read at the
+     * start): tried again in the background, at most once a minute. Called from the arms' and the review's workers - it only looks at
+     * memory here and never waits (the read and the choice run on this object's own thread). True when it is still waiting.
+     */
+    fun ensureReady(nowMs: Long = System.currentTimeMillis()): Boolean {
+        if (com.optionslab.app.BuildConfig.GOLD || (loaded && state.ready)) return false
+        if (nowMs - lastRetryMs < RETRY_MS || !retrying.compareAndSet(false, true)) return true
+        lastRetryMs = nowMs
+        scope.launch { try { runCatching { if (!loaded) load(); migrateNow() } } finally { retrying.set(false) } }
+        return true
+    }
+
+    private const val RETRY_MS = 60_000L
+
+    /**
+     * The switches read now if they are not, and Boss's one-time choice run if it is due - on the caller's worker (the daily review),
+     * never a hot path. True when ready after it.
+     */
+    suspend fun readyNow(): Boolean {
+        if (com.optionslab.app.BuildConfig.GOLD) return true
+        if (!loaded) load()
+        runCatching { migrateNow() }
+        return !deferring()
+    }
+
+    /**
+     * Review (19 Nov): a restore never runs Boss's one-time choice on its books ([Backup.restore] marks it done in the vault): marked done
+     * in memory too, so a retry before the restart cannot run it.
+     */
+    fun markChoiceRun() { synchronized(lock) { state = state.copy(migrated = true, cutoffMigrated = true) }; publish() }
+
+    /** Whether the stops that latch are held back on the three now ([mayLatch]): the switches not read, or the choice not run. Memory only. */
+    fun deferring(): Boolean = !com.optionslab.app.BuildConfig.GOLD && (!loaded || !state.ready)
 
     /** TEST ONLY: the settings vault cannot be read. */
     @Volatile internal var testReadFails = false
@@ -219,6 +300,12 @@ object ArmAutoStopsHost {
             listOfNotNull(BossRiskHost.accountReachedWords()?.let { "the paper account stop, reached on $it, still holds every arm's new paper entries " +
                 "until you restart its count with your PIN (Account guard page)" })
         }
+        Rule.JARVIS_CUTOFF -> {
+            // The cutoff leaves no mark of its own: Liquidity 15+5 switched off now (by you, or by Jarvis's cutoff) is said as it is.
+            val liq = OrbArms.view().arms.firstOrNull { it.arm.source == com.optionslab.engine.orb.LiquidityRules.ARM.source }
+            listOfNotNull(if (liq != null && !liq.armed) "Liquidity 15+5 is switched off (by you or by Jarvis's cutoff): its switch on Home " +
+                "puts it back on" else null)
+        }
     }
 
     // ---- words, erase, tests -----------------------------------------------------------------------------------------------------
@@ -245,6 +332,9 @@ object ArmAutoStopsHost {
 
     /** Whether Boss's choice (a rule off, a stop held) is still in memory (the erase's check). Memory only. */
     internal fun holdsForErase(): Boolean = state.off.isNotEmpty() || state.heldAccount != null
+
+    /** TEST ONLY: the retry's clock forgotten ([ensureReady] may try at once). */
+    internal fun retryNowForTest() { lastRetryMs = 0L }
 
     /** TEST ONLY: as a fresh start would have it ([state] read, the one-time choice run unless the test says so), nothing switched. */
     internal fun resetForTest(state: ArmAutoStops.State = ArmAutoStops.State(migrated = true), loaded: Boolean = true) {

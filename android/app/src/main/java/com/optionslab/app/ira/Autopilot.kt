@@ -546,7 +546,7 @@ internal object Autopilot {
                 com.optionslab.app.data.StepTrailExits.setLock(c.to == AutoChange.V5_LOCK, pinConfirmed = pinConfirmed, log = false)
                     .takeIf { !it.contains("Nothing changed") }
             } else if (AutoChange.isAutoStopTarget(c.target)) {
-                // 19 Nov (Boss's choice: "run until i stop them"): one of the four automatic stops' switches on R51, R72 and Liquidity
+                // 19 Nov (Boss's choice: "run until i stop them"): one of the automatic stops' switches on R51, R72 and Liquidity
                 // ([logArmAutoStopOff], [logArmAutoStop]): the Undo switches it back on (no PIN: it lowers risk) or off again (the PIN, by the
                 // change's live scope, asked before this runs and passed as given - never assumed); not logged again.
                 if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
@@ -1471,7 +1471,7 @@ internal object Autopilot {
     }
 
     /**
-     * 19 Nov (Boss: "i want it to run until i stop them"): one of the four automatic stops switched off for R51, R72 and Liquidity by his
+     * 19 Nov (Boss: "i want it to run until i stop them"): one of the automatic stops switched off for R51, R72 and Liquidity by his
      * one-time choice ([com.optionslab.app.data.ArmAutoStopsHost.migrateNow]) - logged once as Boss's, with [reason] listing what it still
      * holds stopped; one tap undoes it (back on, no PIN).
      */
@@ -1480,7 +1480,7 @@ internal object Autopilot {
         logBossOwnOnce(AutoChange.armAutoStop(rule, false, reason), "${com.optionslab.ira.ArmAutoStops.CHOICE}; paper and live; Undo switches it back on (one tap)")
     }
 
-    /** 19 Nov: Boss switching one of the four in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
+    /** 19 Nov: Boss switching one of them in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
     fun logArmAutoStop(rule: com.optionslab.ira.ArmAutoStops.Rule, on: Boolean, reason: String) {
         if (!enabled()) return
         val c = AutoChange.armAutoStop(rule, on, reason)

@@ -673,6 +673,9 @@ object SmartWorkers {
     /** One review at a time, the day marked only once a pass got its reads (review G8-1, G8-5). */
     private val reviewGuard = DriftReview.DayOnce()
 
+    /** TEST ONLY: the reviews the books would give (null: read the books). */
+    @Volatile internal var testReviews: List<DriftReview.Review>? = null
+
     /** TEST ONLY: the books' reads fail (as a pass cut at its time limit, or a book that cannot be read). */
     @Volatile internal var testReadsFail = false
 
@@ -681,6 +684,7 @@ object SmartWorkers {
      * review of empty books). A cancellation goes through.
      */
     private suspend fun reviewNow(): List<DriftReview.Review>? {
+        testReviews?.let { return it }
         val out = ArrayList<DriftReview.Review>()
         val paper = tried { check(!testReadsFail) { "test" }; OrbArms.closedPaper() } ?: return null
         val live = tried { check(!testReadsFail) { "test" }; OrbArms.closedLive() } ?: return null
@@ -728,6 +732,10 @@ object SmartWorkers {
             val list = reviewNow() ?: return
             // 26 Oct: the books were read before an erase ([wipe]): nothing is kept or acted on (the next pass reviews again).
             if (gen != wipes) return
+            // 19 Nov (review, [ArmAutoStopsHost]): Boss's automatic-stop switches read now if the start could not, and his one-time
+            // choice run if it is due (this worker, off every hot path), so Liquidity's review acts on what he set. Still unreadable: the
+            // switches count as on (their default, the side that lowers risk) - the park or pause is done, never held back on a guess.
+            if (ArmAutoStopsHost.deferring()) try { ArmAutoStopsHost.readyNow() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) {}
             // The books were read: the day is reviewed (the steps below are memory and posts; none waits).
             reviewGuard.done(day)
             reviewedOn = day
@@ -751,7 +759,8 @@ object SmartWorkers {
                 a = DriftReview.action(r, s.paperDrift, alreadyParked = already)
                 // 19 Nov (Boss's choice, [ArmAutoStopsHost]): with its switch off Liquidity's review parks and pauses nothing ("run until
                 // i stop them"): it only warns, and asks. Every other strategy as before.
-                if ((a == DriftReview.Action.PARK_TO_PAPER || a == DriftReview.Action.PAUSE) && !ArmAutoStopsHost.reviewMayStop(key)) {
+                if ((a == DriftReview.Action.PARK_TO_PAPER || a == DriftReview.Action.PAUSE) &&
+                    !ArmAutoStopsHost.acts(com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW, key)) {
                     a = DriftReview.Action.WARN; kept = true
                 }
                 when (a) {
@@ -907,6 +916,7 @@ object SmartWorkers {
         bus.clear(); health.reset(); sched.resetCounts(); lastPost.clear()
         _brain.value = MarketBrain.Context(); _settings.value = Settings(); loaded = true
         _reviews.value = emptyList(); reviewedOn = null; nearUntil = 0L; reviewGuard.reset(); testReadsFail = false
+        testReviews = null
         synchronized(trapsSeen) { trapsSeen.clear() }; synchronized(sideSeen) { sideSeen.clear() }
         activeWindowsSeen.clear(); synchronized(closedSeen) { closedSeen.clear() }
     }

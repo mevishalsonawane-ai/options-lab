@@ -3933,11 +3933,13 @@ object OrbArms {
                                       verdict: com.optionslab.engine.risk.OrderFingerprint.Verdict? = null,
                                       /** 25 Oct: h14's capped limit (Liquidity's paper entries): a LIMIT at it instead of MARKET. */
                                       limit: Double? = null,
+                                      /** 19 Nov: the arm's source, so the paper account stop tells Liquidity apart by it ([ArmAutoStopsHost]). */
+                                      source: String? = null,
                                       recheck: suspend (com.optionslab.engine.sandbox.Quote) -> String?): EntryBuy {
         val sent1 = System.currentTimeMillis()
         // 22 Oct: [verdict] the guard's verdict on this exact order (the paper book refuses a different one); the same order again
         // on a retry for its price is the same fingerprint.
-        val first = Paper.place(c, "BUY", lots, if (limit != null) "LIMIT" else "MARKET", "MIS", limit, null, known = known, auto = auto, verdict = verdict)
+        val first = Paper.place(c, "BUY", lots, if (limit != null) "LIMIT" else "MARKET", "MIS", limit, null, known = known, auto = auto, verdict = verdict, source = source)
         // 22 Oct (arms audit; the 21 Oct diagnostics showed Liquidity 5m's cancelled 09:30 entry as "IraAlgo-Android"): every
         // order carries its arm's name from the moment it is placed, filled or not, so a cancelled entry is never taken for one
         // of Boss's own in Orders, the order review or the uploaded diagnostics.
@@ -3951,7 +3953,7 @@ object OrbArms {
         // The checks made before the first order, made again at the new price (a check that fails to run refuses).
         val refusal = q?.let { nq -> runCatching { recheck(nq) }.getOrElse { e -> "refused: the checks could not be made again (${e.message})" } }
         val sent2 = System.currentTimeMillis()
-        val again = if (q != null && refusal == null) Paper.place(c, "BUY", lots, if (limit != null) "LIMIT" else "MARKET", "MIS", limit, null, known = q, auto = auto, verdict = verdict) else null
+        val again = if (q != null && refusal == null) Paper.place(c, "BUY", lots, if (limit != null) "LIMIT" else "MARKET", "MIS", limit, null, known = q, auto = auto, verdict = verdict, source = source) else null
         again?.orderId?.let { runCatching { Strategies.tagOwner("paper:$it", tag) } }
         val fill = again?.let { filledOrCancelled(it) }
         // Logged either way (the diagnostics' "orb" lines): an execution retry, never a change to what the arm trades.
@@ -4234,7 +4236,7 @@ object OrbArms {
         }
         // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]).
         val verdict = OrderVerdicts.stamp(OrderVerdicts.paperFields(c, "BUY", lots, if (cap != null) "LIMIT" else "MARKET", "MIS", cap, null, Market.today(), arm.source), refusals, "paper guard")
-        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b) && cap == null, tag = "${LiquidityRules.ARM.label} · entry", verdict = verdict, limit = cap) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
+        val entry = buyPaperEntry(arm.label, c, lots, q, ownerOf(arm), mayRetryPrice(b) && cap == null, tag = "${LiquidityRules.ARM.label} · entry", verdict = verdict, limit = cap, source = arm.source) { nq -> exposureRefusal(b, c, arm) ?: paperRecheck(c, lots, nq) }   // 22 Oct, merge review: the side rule again too
         val buy = entry.result
         // The capped LIMIT not filled at once (the price moved over the cap meanwhile; the book cancelled it): the signal waits on
         // within its 3 minutes, never chasing. A refusal (a rule, the guard) ends the wait.
