@@ -185,6 +185,72 @@ class OrbArmsLiveTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (coordinator): the phone "dies" right at the POST - the intent's write still running (a 1.5 s vault write), so the book
+     * on disk holds no row for the buy, and no stop was placed. After the restart the first regular look takes the lot back as the arm's
+     * trade with exactly one stop, says so, marks its bar decided, and buys nothing again.
+     */
+    @Test fun aBuyWhoseIntentNeverReachedTheDiskIsTakenBackAtTheColdStart() {
+        state(pending = true)
+        val file = java.io.File(context.filesDir, "orb.vault")
+        val atPost = java.util.concurrent.atomic.AtomicReference<ByteArray?>()
+        kite.afterNext("/orders/regular") { atPost.set(com.optionslab.app.security.Vault.readFile(file)) }
+        com.optionslab.app.security.Vault.testWriteDelayMs = 1_500L
+        try {
+            assertEquals("Entered at Zerodha (live).", approve())
+        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0L }
+        val snap = atPost.get()!!
+        assertEquals("no row on disk at the POST", 0, JSONObject(String(snap, Charsets.UTF_8)).getJSONArray("positions").length())
+        val buyId = kite.orders.values.single { it.side == "BUY" }.id
+        kite.orders.remove(arm().open!!.stopOrderId!!)                    // the phone died before its stop went
+        assertTrue(OrbArms.awaitWrites())
+        // A new process: the book on disk is the one from the POST.
+        com.optionslab.app.security.Vault.writeFile(file, snap)
+        OrbArms.forgetMemoryForTest()
+        assertNull("no row after the restart", arm().open)
+        runBlocking { ArmLive.refresh() }
+        AutomationSupport.clearAlerts()
+        kite.requests.clear()
+        pass()
+        val p = arm().open!!
+        assertFalse(p.unconfirmed); assertTrue(p.live)
+        assertEquals(30, p.qty); assertEquals(buyId, p.entryOrderId); assertEquals(sym, p.kite)
+        val stop = kite.placed.single()
+        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "quantity" to "30"),
+            stop.form.filterKeys { it in setOf("transaction_type", "order_type", "quantity") })
+        assertEquals(kite.orders.keys.last(), p.stopOrderId)
+        assertEquals("exactly one stop", 1, kite.orders.values.count { it.side == "SELL" && it.working })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "found at Zerodha with no trade here" in it })
+        // Its bar is decided, on disk too; a second look buys nothing and adopts nothing more.
+        assertTrue(OrbArms.awaitWrites())
+        val decided = JSONObject(String(com.optionslab.app.security.Vault.readFile(file)!!, Charsets.UTF_8)).getJSONObject("decided")
+            .getJSONArray("orb|${OrbArms.testNow!!.toLocalDate()}")
+        val minute = kite.orders.getValue(buyId).at.withSecond(0).withNano(0).toString()
+        assertTrue("$minute in $decided", (0 until decided.length()).any { decided.getString(it) == minute })
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(20)
+        pass()
+        assertEquals("still one buy", 1, kite.orders.values.count { it.side == "BUY" })
+        assertEquals(1, arm().today.count { it.open })
+    }
+
+    /**
+     * 19 Nov 2026 (coordinator): "Erase everything" while the intent's write is still running never leaves the arms' book on disk: the
+     * write that ends after the erase deletes the file again, and the erase itself never waits on it.
+     */
+    @Test fun anEraseDuringTheIntentsWriteLeavesNoBookOnDisk() {
+        state(pending = true)
+        val file = java.io.File(context.filesDir, "orb.vault")
+        val eraseMs = java.util.concurrent.atomic.AtomicLong(-1)
+        kite.afterNext("/orders/regular") {
+            val t0 = System.nanoTime(); OrbArms.wipe(); eraseMs.set((System.nanoTime() - t0) / 1_000_000)
+        }
+        com.optionslab.app.security.Vault.testWriteDelayMs = 1_500L
+        try { runCatching { approve() } } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0L }
+        assertTrue(OrbArms.awaitWrites())
+        assertTrue("the erase took ${eraseMs.get()} ms", eraseMs.get() in 0 until 1_000)
+        assertFalse("no book on disk after the erase", file.exists())
+    }
+
+    /**
      * 19 Nov 2026 (second review): two stops of these arms rest unclaimed on the contract when the app comes back (the first stop and
      * another): neither is taken and no third is placed - the entry stays unconfirmed (the arm buys nothing more) while both rest.
      */

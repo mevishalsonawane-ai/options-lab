@@ -459,4 +459,65 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals(null, open("orb")!!.stopOrderId)
         assertEquals("TRIGGER PENDING", kite.order(a).status); assertEquals("TRIGGER PENDING", kite.order(c).status)
     }
+
+    // ---- coordinator, 19 Nov: a stop never sells more than is held beside the other working sales ---------------------------
+
+    /**
+     * 19 Nov 2026 (coordinator): 90 held, another book's sale for 60 working, the trade's exit for the 30 left refused: its stop comes back
+     * for 30 (never 90 beside the 60), the trade split so the stop's fill is booked for what it covers.
+     */
+    @Test fun aRefusedExitPutsTheStopBackOnlyForWhatTheOtherSalesLeave() {
+        val s1 = stopOrder(90, 160.0, 152.0)
+        state(listOf(position("orb", 90, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 90, 200.0, product = "MIS")
+        val other = kite.restingInKite(sym, "SELL", 60, 260.0, tag = "iraalgostrat")
+        runBlocking { Strategies.tagOwner("kite:$other", "Iron fly · exit") }
+        kite.quote("NFO:$sym", 245.0, 244.95, 245.05)                       // the ORB's target
+        kite.nextPlace(reply = FakeKite.Reply.INPUT_EXCEPTION, message = "Markets are closed right now.")
+        kite.requests.clear()
+        pass()
+        assertEquals("the sale tried was the 30 left", listOf("30"), marketSells().map { it.form["quantity"] })
+        val back = kite.placed.single { it.form["order_type"] == "SL" }
+        assertEquals("never more than the other sale leaves", "30", back.form["quantity"])
+        val open = today("orb").filter { it.open }
+        assertEquals(listOf(30, 60), open.map { it.qty }.sorted())
+        assertEquals(kite.orders.keys.last(), open.single { it.qty == 30 }.stopOrderId)
+    }
+
+    /**
+     * 19 Nov 2026 (coordinator): the price check rests a missing stop only for what Zerodha holds less the other working sales; with
+     * nothing left it rests none and says so each minute (the other sales are the only cover).
+     */
+    @Test fun theReRestNeverRestsAStopForMoreThanTheOtherSalesLeave() {
+        state(listOf(position("orb", 60, 200.0, "E1", stopId = null, stop = 160.0)))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        val other = kite.restingInKite(sym, "SELL", 60, 260.0, tag = "iraalgostrat")
+        runBlocking { Strategies.tagOwner("kite:$other", "Iron fly · exit") }
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.requests.clear()
+        pass()
+        assertTrue("no stop beside the sale that covers all: ${kite.placed.map { it.form }}", kite.placed.isEmpty())
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "no stop can rest at Zerodha for $sym" in it })
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(20)
+        pass()
+        assertEquals("said once a minute", 1, AutomationSupport.alerts().count { "no stop can rest at Zerodha for $sym" in it })
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(60)
+        pass()
+        assertEquals("and again the next minute", 2, AutomationSupport.alerts().count { "no stop can rest at Zerodha for $sym" in it })
+    }
+
+    /** 19 Nov 2026 (coordinator): 90 held beside another book's sale for 60: the missing stop rests for 30 and the trade is split. */
+    @Test fun theReRestRestsForWhatTheOtherSalesLeaveAndSplitsTheTrade() {
+        state(listOf(position("orb", 60, 200.0, "E1", stopId = null, stop = 160.0)))
+        kite.position(sym, 90, 200.0, product = "MIS")
+        val other = kite.restingInKite(sym, "SELL", 60, 260.0, tag = "iraalgostrat")
+        runBlocking { Strategies.tagOwner("kite:$other", "Iron fly · exit") }
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.requests.clear()
+        pass()
+        assertEquals("30", kite.placed.single { it.form["order_type"] == "SL" }.form["quantity"])
+        val open = today("orb").filter { it.open }
+        assertEquals(listOf(30, 30), open.map { it.qty }.sorted())
+        assertEquals(kite.orders.keys.last(), open.first { it.stopOrderId != null }.stopOrderId)
+    }
 }
