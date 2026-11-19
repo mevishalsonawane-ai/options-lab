@@ -220,7 +220,7 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals(kite.orders.keys.last(), p.stopOrderId)
         assertEquals("exactly one stop", 1, kite.orders.values.count { it.side == "SELL" && it.working })
         assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "found at Zerodha with no trade here" in it })
-        // Its bar is decided, on disk too; a second look buys nothing and adopts nothing more.
+        // Its bar is decided, on disk too (what keeps the arm from buying that bar again); a second look adopts nothing more.
         assertTrue(OrbArms.awaitWrites())
         val decided = JSONObject(String(com.optionslab.app.security.Vault.readFile(file)!!, Charsets.UTF_8)).getJSONObject("decided")
             .getJSONArray("orb|${OrbArms.testNow!!.toLocalDate()}")
