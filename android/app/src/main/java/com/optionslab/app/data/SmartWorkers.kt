@@ -673,6 +673,9 @@ object SmartWorkers {
     /** One review at a time, the day marked only once a pass got its reads (review G8-1, G8-5). */
     private val reviewGuard = DriftReview.DayOnce()
 
+    /** TEST ONLY: the reviews the books would give (null: read the books). */
+    @Volatile internal var testReviews: List<DriftReview.Review>? = null
+
     /** TEST ONLY: the books' reads fail (as a pass cut at its time limit, or a book that cannot be read). */
     @Volatile internal var testReadsFail = false
 
@@ -681,6 +684,7 @@ object SmartWorkers {
      * review of empty books). A cancellation goes through.
      */
     private suspend fun reviewNow(): List<DriftReview.Review>? {
+        testReviews?.let { return it }
         val out = ArrayList<DriftReview.Review>()
         val paper = tried { check(!testReadsFail) { "test" }; OrbArms.closedPaper() } ?: return null
         val live = tried { check(!testReadsFail) { "test" }; OrbArms.closedLive() } ?: return null
@@ -728,6 +732,10 @@ object SmartWorkers {
             val list = reviewNow() ?: return
             // 26 Oct: the books were read before an erase ([wipe]): nothing is kept or acted on (the next pass reviews again).
             if (gen != wipes) return
+            // 19 Nov (review, [ArmAutoStopsHost]): Boss's automatic-stop switches read now if the start could not, and his one-time
+            // choice run if it is due (this worker, off every hot path), so Liquidity's review acts on what he set. Still unreadable: the
+            // switches count as on (their default, the side that lowers risk) - the park or pause is done, never held back on a guess.
+            if (ArmAutoStopsHost.deferring()) try { ArmAutoStopsHost.readyNow() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) {}
             // The books were read: the day is reviewed (the steps below are memory and posts; none waits).
             reviewGuard.done(day)
             reviewedOn = day
@@ -736,15 +744,25 @@ object SmartWorkers {
         } finally { reviewGuard.release() }
     }
 
+    /** TEST ONLY: the review's steps on [list] (as [reviewIfDue] takes them once the books were read), with no notification. */
+    internal fun actForTest(list: List<DriftReview.Review>) = act(null, list)
+
     private fun act(context: Context?, list: List<DriftReview.Review>) {
         _reviews.value = list
         val ctx = context ?: appContext
         for ((i, r) in list.withIndex()) {
             val key = r.key
             var a = DriftReview.Action.NONE
+            var kept = false
             change { s ->
                 val already = if (r.live) key in s.parked else key in s.paused
                 a = DriftReview.action(r, s.paperDrift, alreadyParked = already)
+                // 19 Nov (Boss's choice, [ArmAutoStopsHost]): with its switch off Liquidity's review parks and pauses nothing ("run until
+                // i stop them"): it only warns, and asks. Every other strategy as before.
+                if ((a == DriftReview.Action.PARK_TO_PAPER || a == DriftReview.Action.PAUSE) &&
+                    !ArmAutoStopsHost.acts(com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW, key)) {
+                    a = DriftReview.Action.WARN; kept = true
+                }
                 when (a) {
                     DriftReview.Action.PARK_TO_PAPER -> s.copy(parked = s.parked + key) to "${r.name}: parked to paper by its self-review"
                     DriftReview.Action.PAUSE -> s.copy(paused = s.paused + key) to "${r.name}: new paper entries paused by its self-review"
@@ -752,7 +770,8 @@ object SmartWorkers {
                 }
             }
             if (a == DriftReview.Action.NONE) continue
-            if (a == DriftReview.Action.WARN) runCatching { Diag.record("brain", "${r.name} (${r.venue}): drifting from its backtest (warned)") }
+            if (a == DriftReview.Action.WARN) runCatching { Diag.record("brain", "${r.name} (${r.venue}): drifting from its backtest (warned" +
+                (if (kept) "; not parked or paused: ${com.optionslab.ira.ArmAutoStops.CHOICE}" else "") + ")") }
             val text = DriftReview.ask(r, a)
             found("self-review", Findings.Kind.DRIFT, Findings.ALL, 0, null, 70, "${r.name} (${r.venue}) drifting from its backtest", 24 * 3_600_000L)
             if (ctx != null) runCatching { com.optionslab.app.work.Notifier.post(ctx, 5120 + i, com.optionslab.app.work.Notifier.HEALTH,
@@ -789,7 +808,9 @@ object SmartWorkers {
     private fun nameOfKey(key: String): String = reviews.value.firstOrNull { it.key == key }?.name ?: com.optionslab.ira.FlowShadow.strategy(key)?.label ?: key
 
     /** Autopilot paused [key]'s new paper entries (its record says it loses; risk-lowering, exits always go). Null: already paused. */
-    fun pausePaperByAutopilot(key: String): String? {
+    fun pausePaperByAutopilot(key: String, byBoss: Boolean = false): String? {
+        // 19 Nov (Boss's choice, [ArmAutoStopsHost]): Autopilot's own pause of Liquidity, with its switch off, does nothing (Boss's yes still may).
+        if (!ArmAutoStopsHost.reviewMayStop(key, byBoss)) return null
         ensureLoaded()
         if (!change { s -> if (key !in s.paused) s.copy(paused = s.paused + key) to "$key: new paper entries paused by Autopilot" else null }) return null
         return "New paper entries of ${nameOfKey(key)} are paused by Autopilot. Exits always go."
@@ -806,7 +827,9 @@ object SmartWorkers {
      * Autopilot parked [key] to paper (its self-review says it is broken): its next entries go to paper, open live trades are
      * still managed to their exits. Lowers risk only; only Boss puts it back on live, with his PIN. Null: already parked.
      */
-    fun parkByAutopilot(key: String): String? {
+    fun parkByAutopilot(key: String, byBoss: Boolean = false): String? {
+        // 19 Nov (Boss's choice, [ArmAutoStopsHost]): Autopilot's own park of Liquidity, with its switch off, does nothing (Boss's yes still may).
+        if (!ArmAutoStopsHost.reviewMayStop(key, byBoss)) return null
         ensureLoaded()
         if (!change { s -> if (key !in s.parked) s.copy(parked = s.parked + key) to "$key: parked to paper by Autopilot" else null }) return null
         return "${nameOfKey(key)} is parked to paper: its next entries go to the paper account; open live trades are still managed to their exits."
@@ -893,6 +916,7 @@ object SmartWorkers {
         bus.clear(); health.reset(); sched.resetCounts(); lastPost.clear()
         _brain.value = MarketBrain.Context(); _settings.value = Settings(); loaded = true
         _reviews.value = emptyList(); reviewedOn = null; nearUntil = 0L; reviewGuard.reset(); testReadsFail = false
+        testReviews = null
         synchronized(trapsSeen) { trapsSeen.clear() }; synchronized(sideSeen) { sideSeen.clear() }
         activeWindowsSeen.clear(); synchronized(closedSeen) { closedSeen.clear() }
     }

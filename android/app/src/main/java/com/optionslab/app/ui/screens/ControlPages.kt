@@ -710,6 +710,8 @@ fun RiskPage(model: AppModel) {
             item { AccountStopCard(model) }
             // 15 Nov (Boss): the funds check on the arms' live entries (in shadow until switched on; off again takes the PIN).
             item { FundsCheckCard(model) }
+            // 19 Nov (Boss: "i want it to run until i stop them"): the four automatic stops on R51, R72 and Liquidity (off by his choice; off takes the PIN).
+            item { ArmAutoStopsCard(model) }
             // 25 Oct (Boss's decisions on the app audit): the new risk rules - paper on, live in shadow until switched on.
             item { BossRiskCard(model) }
             // 21 Oct, enhancement round 4: payouts counted in the drawdown (in shadow until switched on; acts only on Boss's PIN).

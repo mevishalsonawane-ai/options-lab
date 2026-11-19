@@ -1030,6 +1030,19 @@ object AutoChange {
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
         what = "step lock (R51, R72) and breakeven at +₹1,000 (Liquidity) on top of V4, paper and live (failed gates, Boss's exception)")
 
+    /** 19 Nov 2026: whether [target] is one of the four automatic stops' switches on R51, R72 and Liquidity ([ArmAutoStops.Rule]). */
+    fun isAutoStopTarget(target: String): Boolean = ArmAutoStops.Rule.ofTarget(target) != null
+
+    /**
+     * 19 Nov 2026 (Boss: "i want it to run until i stop them"; he chose all four, each a switch turned off by PIN): [rule] switched [on]
+     * or off for R51, R72 and Liquidity 15+5. [reason]: what to show (the one-time change lists what the rule still holds stopped). Live
+     * scope, as each stops live trades too: on lowers risk (one tap, no PIN); off - and the Undo of an on - takes the PIN. No "liquidity"
+     * in the targets, so the paper-test freeze never holds their Undo.
+     */
+    fun armAutoStop(rule: ArmAutoStops.Rule, on: Boolean, reason: String): Change = Change(Kind.PAPER_FILTER, rule.target,
+        if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF, reason, Evidence(0, 0.0, AgentLessons.Confidence.WEAK),
+        if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE, what = rule.switch)
+
     /** The target of the same-direction cap on the automatic paper entries ([Kind.PAPER_FILTER], [SameDirectionCap]). */
     const val SAME_DIR_TARGET = "filter:same_direction_cap"
 

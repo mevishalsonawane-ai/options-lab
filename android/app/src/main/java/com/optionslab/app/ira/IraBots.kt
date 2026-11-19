@@ -411,6 +411,14 @@ internal object IraBots {
                     else it.arm == a.arm.source && (back == null || !it.day.isBefore(back)) }
                 .sortedBy { it.exitTime }.map { (it.grossPnl ?: 0.0) - it.charges }
             val src = a.arm.source; val auto = a.automatic
+            // 19 Nov (Boss: "Yes, Jarvis cutoff should leave them alone too"; [com.optionslab.app.data.ArmAutoStopsHost]): with its switch off
+            // the cutoff neither asks about nor switches off Liquidity 15+5 (the one of the three it judges: R51 and R72 are not ORB rows);
+            // while the switches are not read yet it waits for a later look (and they are read again in the background). Every other arm as
+            // before. Memory only.
+            if (!com.optionslab.app.data.ArmAutoStopsHost.mayLatch(com.optionslab.ira.ArmAutoStops.Rule.JARVIS_CUTOFF, src)) {
+                runCatching { com.optionslab.app.data.ArmAutoStopsHost.ensureReady() }
+                continue
+            }
             val act: suspend () -> String = { com.optionslab.app.data.OrbArms.setArmed(src, false, automatic = auto) }
             out += Pair(com.optionslab.ira.ArmCutoff.Arm(a.arm.label, a.armed, mine,
                 if (a.arm.liquidity) com.optionslab.ira.ArmCutoff.LIQUIDITY_MIN_TRADES else com.optionslab.ira.ArmCutoff.MIN_TRADES), act)

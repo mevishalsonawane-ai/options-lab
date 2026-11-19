@@ -65,7 +65,9 @@ fun OrbRows(model: AppModel) {
     // Home's own poll (only while the app is on screen) refreshes the arm states every 20 s.
     val all = v ?: return
     val view = visibleOrbView(all, hidden)
-    OrbRowsContent(view, live = settings.live && settings.allowRealOrders, waiting = { it in hidden.waiting },
+    // 19 Nov (Boss's choice): Liquidity's automatic stops that are off, on its row.
+    val stops by com.optionslab.app.data.ArmAutoStopsHost.view.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    OrbRowsContent(view, live = settings.live && settings.allowRealOrders, waiting = { it in hidden.waiting }, autoStop = { stops.rowLine(it) },
         actions = object : OrbActions {
             override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { model.armOrb(source, on, automatic, pinConfirmed) }
             override fun approve(source: String, pinConfirmed: Boolean) { model.approveOrb(source, pinConfirmed) }
@@ -136,6 +138,8 @@ internal fun OrbRowsContent(
     openRead: (suspend (OrbArms.Position) -> OrbArms.LiquidityOpenNow?)? = null,
     /** 15 Oct (Boss's cleanup): an arm to be hidden still holding a position (it says so until its exit). Memory only. */
     waiting: (String) -> Boolean = { false },
+    /** 19 Nov (Boss's choice): an arm's automatic stops that are off, in words ([com.optionslab.ira.ArmAutoStops.rowLine]); null: none. */
+    autoStop: (String) -> String? = { null },
 ) {
     val p = LocalPalette.current
     var choosing by remember { mutableStateOf<String?>(null) }
@@ -213,6 +217,9 @@ internal fun OrbRowsContent(
                 if (a.reviewParked) Text("Parked to paper (by its self-review or the change timeline's Undo): its next entries go to the " +
                     "paper account. Lifting the park takes your PIN.", style = Type.bodySmall.copy(color = p.amber, fontSize = 12.sp))
                 if (a.reviewParked || a.reviewPaused) BrassButton(LIFT_PARK, Modifier.padding(top = 2.dp), tone = p.oxblood) { liftAuth = true }
+                // 19 Nov (Boss's choice): "auto-stop off by Boss's choice" - which automatic stops no longer apply to Liquidity.
+                autoStop(a.arm.source)?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), maxLines = 3,
+                    modifier = Modifier.testTag("orb-autostop:${a.arm.source}")) }
                 // 30 Oct (Boss): an arm that is off runs in shadow - its would-be trades' record, under its line.
                 a.offShadow?.let { Text(it, style = Type.bodySmall.copy(color = p.inkFaint, fontSize = 11.sp), maxLines = 2,
                     modifier = Modifier.testTag("orb-shadow:${a.arm.source}")) }

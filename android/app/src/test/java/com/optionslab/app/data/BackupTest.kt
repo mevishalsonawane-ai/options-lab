@@ -108,6 +108,8 @@ class BackupTest : RobolectricTest() {
         assertEquals("other-test-key", SecurePrefs.getString("kite.apiKey"))
         assertNull(SecurePrefs.getString("pin.hash"))
         assertTrue("restored state must start disarmed", SecurePrefs.getBoolean(Backup.DISARM, false))
+        // 19 Nov (review): a restore's books never run Boss's one-time automatic-stops choice (it would switch his stops off with no PIN).
+        assertTrue(SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false))
         val orb = JSONObject(String(Vault.readFile(orbFile())!!))
         assertEquals(0, orb.getJSONObject("armed").length())
         assertEquals(0, orb.getJSONObject("auto").length())

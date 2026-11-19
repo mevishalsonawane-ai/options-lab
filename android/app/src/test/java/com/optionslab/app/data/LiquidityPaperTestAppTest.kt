@@ -162,6 +162,39 @@ class LiquidityPaperTestAppTest : RobolectricTest() {
         assertTrue(saved.getJSONObject(0).getBoolean("live"))
     }
 
+    /**
+     * 19 Nov (Boss's choice, [ArmAutoStopsHost]): with the live stop rule's switch off, a stop reached after it went off stops no book
+     * (its figures stay); on again, its books read it at once; switched off after it was reached, the stop is kept until Boss re-enables
+     * it with his PIN (nothing switched back on).
+     */
+    @Test fun theLiveStopRuleSwitchedOffStopsNoBookButKeepsOneReachedBefore() {
+        at(oct20)
+        LiquidityTest.setStateForTest(LiquidityFreeze.State())
+        val rule = com.optionslab.ira.ArmAutoStops.Rule.LIVE_STOP
+        // Off since before the losing live trade closed.
+        ArmAutoStopsHost.resetForTest(com.optionslab.ira.ArmAutoStops.State(on = mapOf(rule to false), offAtMs = mapOf(rule to 0L), migrated = true))
+        val rows = org.json.JSONArray().put(org.json.JSONObject()
+            .put("arm", "liquidity15").put("symbol", "BANKNIFTY26OCT52000CE").put("right", "CE").put("qty", 100).put("entry", 500.0)
+            .put("entryTime", LocalDate.of(2026, 10, 14).atTime(10, 0).toString()).put("signalBar", LocalDate.of(2026, 10, 14).atTime(9, 55).toString())
+            .put("exit", 90.0).put("exitTime", LocalDate.of(2026, 10, 14).atTime(11, 0).toString()).put("why", "stop").put("charges", 0.0).put("live", true))
+        com.optionslab.app.testing.AutomationSupport.orbState(context, org.json.JSONObject()
+            .put("armed", org.json.JSONObject()).put("auto", org.json.JSONObject()).put("liveOk", org.json.JSONObject()).put("positions", rows))
+        kotlinx.coroutines.runBlocking { OrbArms.view() }
+        assertFalse("off: no stop", OrbArms.liquidityStopHint.stopped)
+        assertTrue("its figures stay", OrbArms.liquidityStopHint.drawdown <= -40_000.0)
+        assertTrue(kotlinx.coroutines.runBlocking { OrbArms.reenableLiquidityLive(pinConfirmed = true) }.contains("is not reached"))
+        // On again (one tap, no PIN): its books read it at once.
+        assertTrue(ArmAutoStopsHost.set(rule, true, log = false).startsWith("On"))
+        waitFor("the stop read again") { OrbArms.liquidityStopHint.stopped }
+        // Off again now, after it was reached (with the PIN): kept - only Boss's re-enable with his PIN clears it.
+        assertTrue(ArmAutoStopsHost.set(rule, false, pinConfirmed = false, log = false).contains("takes your PIN"))
+        assertTrue(ArmAutoStopsHost.set(rule, false, pinConfirmed = true, log = false).startsWith("Off"))
+        kotlinx.coroutines.runBlocking { OrbArms.refreshStopHints() }
+        assertTrue("reached before it went off: kept", OrbArms.liquidityStopHint.stopped)
+        assertTrue(kotlinx.coroutines.runBlocking { OrbArms.reenableLiquidityLive(pinConfirmed = true) }.startsWith("Liquidity BANKNIFTY may take live entries again"))
+        assertFalse(OrbArms.liquidityStopHint.stopped)
+    }
+
     @Test fun aBookUnderTheTrimKeepsEveryRowInOrder() {
         val all = (0 until 5).map { n ->
             OrbArms.Position("liquidity15", "S$n", "CE", 30, 100.0, java.time.LocalDateTime.of(2026, 10, 14, 10, n), java.time.LocalDateTime.of(2026, 10, 14, 9, n),
