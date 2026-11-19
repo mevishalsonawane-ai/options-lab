@@ -2198,6 +2198,28 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("paper_exit", view().closed.single().why)
     }
 
+    /**
+     * Review item 3: a lost exit that filled, its hold ended while only the live lane looked: it is searched for before anything more is
+     * sold, found, and booked as the exit by the next regular look - one sale only, never a naked short.
+     */
+    @Test fun aLostExitFoundAfterItsHoldIsTheExitNeverASecondSale() {
+        ArmLive.entered(ask(donchian, "lost-late"))
+        watch()
+        kite.trailReads = 1_000                                              // the sale will not show in the order book yet
+        kite.positionsTrailReads = 1_000                                     // nor in the positions
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)             // its reply is lost; it fills at Zerodha
+        legs["lost-late"] = donchian to 0
+        watch()
+        assertEquals(1, marketSells())
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(11)
+        kite.showInBook()                                                    // the book shows it now
+        runBlocking { ArmLive.watch(stream = true) }
+        watch()
+        assertEquals("one sale only", 1, marketSells())
+        assertEquals("the lost order is the exit", "paper_exit", view().closed.single().why)
+        assertTrue(view().openReal.isEmpty())
+    }
+
     /** Review item 4: Pine's own round trip, then Boss's real sale in Kite: netted per tag, the short read is confirmed at once. */
     @Test fun aPineRoundTripThenBossesOwnSaleConfirmsTheShortRead() {
         ArmLive.entered(ask(donchian, "pine-then-boss"))

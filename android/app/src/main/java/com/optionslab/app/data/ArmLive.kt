@@ -1541,10 +1541,15 @@ object ArmLive {
         // 19 Nov 2026 (second review): a hold that ended before the book was searched (only the live lane looked): searched once now,
         // before anything is sold. Found: held again, and the next regular look books it as the exit. Not found: said, and the exit goes.
         unsearchedLost[p0.contract]?.let { missed ->
+            // (At most every few seconds, as the look searches: a book that cannot be read leaves it to the next try.)
+            val ms = nowMs()
+            if (ms - missed.askedMs in 0 until LOST_EXIT_ASK_MS) return listOf(p0)
+            val asked = missed.copy(askedMs = ms)
+            if (!unsearchedLost.replace(p0.contract, missed, asked)) return listOf(p0)
             val found = try { Broker.findRecent(missed.order, missed.known) } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Exception) { return listOf(p0) }
-            if (unsearchedLost.remove(p0.contract, missed)) {
-                if (found != null) { lostExits[p0.contract] = missed.copy(sinceMs = nowMs(), askedMs = 0L); return listOf(p0) }
+            if (unsearchedLost.remove(p0.contract, asked)) {
+                if (found != null) { lostExits[p0.contract] = asked.copy(sinceMs = ms, foundId = found); return listOf(p0) }
                 lostNotFound(missed)
             }
         }
@@ -1710,7 +1715,7 @@ object ArmLive {
             val rows = Broker.orders()
             val onIt = Broker.positionBook().net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }
             checkNet(p.label, p.exchange, p.symbol, p.product, p.side, onIt.sumOf { it.qty }, now().toLocalDate(), rows,
-                minOf(onIt.sumOf { it.overnight } * p.side, armsCarried(p)))
+                { armsCarried(p)?.let { minOf(onIt.sumOf { it.overnight } * p.side, it) } })
         }
         return out
     }
@@ -1747,13 +1752,22 @@ object ArmLive {
         // (Never on the live lane's look, which comes every tick and must not wait on the order book: the minute lane and the 15-second
         // check search for it; the stream keeps the hold meanwhile, which still ends on time.)
         if (stream) return keep
+        // (Found already by its trade's own exit ([exitLive]): booked now, never searched for again.)
+        lost.foundId?.let { id ->
+            if (owner?.ref != lost.ref || !lostExits.remove(contract, lost)) return keep
+            return lostFound(lost, id, owner, ltp, keep)
+        }
         // (Searched at most every few seconds. A book that cannot be read keeps the hold, which ends on time.)
         if (ms - lost.askedMs in 0 until LOST_EXIT_ASK_MS) return keep
-        lostExits[contract] = lost.copy(askedMs = ms)
+        val asked = lost.copy(askedMs = ms)
+        lostExits[contract] = asked
         // (While the search runs the hold never ends under it: one found as the hold ends is still the exit, never "not found".)
         searchingLost += contract
+        var failed = false
         val found = try { Broker.findRecent(lost.order, lost.known) } catch (e: kotlinx.coroutines.CancellationException) { throw e
-        } catch (e: Exception) { null } finally { searchingLost -= contract }
+        } catch (e: Exception) { failed = true; null } finally { searchingLost -= contract }
+        // (A search that could not read the book is no search: past the hold it is searched once more before anything is sold.)
+        if (failed) { lostExits.replace(contract, asked, lost); return keep }
         if (found == null) return keep
         lostExits.remove(contract)
         unsearchedLost.remove(contract)
@@ -1860,7 +1874,8 @@ object ArmLive {
             val o = rows.firstOrNull { it.id == id } ?: continue
             if (!o.working) { if (o.filled > 0) return Freed.WAIT else continue }            // filled or gone since: the books again
             if (!cancellable(o, mine)) return Freed.WAIT
-            val taken = runCatching { Broker.cancel(o.id, o.variety) }.isSuccess
+            // (Polled unless Zerodha definitely refused it: a reply lost or timed out may still have cancelled it.)
+            val taken = runCatching { Broker.cancel(o.id, o.variety) }.exceptionOrNull().let { e -> e == null || (e is Exception && !Broker.definite(e)) }
             // 19 Nov 2026 (second review): Zerodha's book shows a cancel it took a moment after its reply - read again for up to ~1 s.
             var st = runCatching { Broker.orderState(o.id) }.getOrNull()
             var tries = 0
@@ -2050,7 +2065,9 @@ object ArmLive {
      * found. [order] what was sent for trade [ref]; [known] the order ids known before it went; [sinceMs] when (market clock); [askedMs]
      * when the book was last searched for it; [why] the exit's reason. Memory only (a restart reads the books afresh).
      */
-    private data class LostExit(val ref: String, val why: String, val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val askedMs: Long = 0L)
+    private data class LostExit(val ref: String, val why: String, val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val askedMs: Long = 0L,
+                                // 19 Nov 2026: the order found in Zerodha's book by an exit's own search, booked by the next regular look.
+                                val foundId: String? = null)
     private val lostExits = java.util.concurrent.ConcurrentHashMap<String, LostExit>()
     // 19 Nov 2026 (second review): 10 s - the exit's own retries already searched for it for ~4-6 s before it was held.
     private const val LOST_EXIT_HOLD_MS = 10_000L
@@ -2063,7 +2080,7 @@ object ArmLive {
      */
     private fun lostExitHolds(contract: String): Boolean {
         val lost = lostExits[contract] ?: return false
-        if (contract in searchingLost) return true
+        if (contract in searchingLost || lost.foundId != null) return true
         val ms = runCatching { nowMs() }.getOrDefault(System.currentTimeMillis())
         if (ms - lost.sinceMs < LOST_EXIT_HOLD_MS) return true
         // (Searched and not found: said. Never searched: kept apart, searched once before anything is sold or rested on the contract.)
@@ -2086,21 +2103,23 @@ object ArmLive {
      * 19 Nov 2026 (second review): what this book's trades on [p]'s contract carried into today the trades' way (open, or closed today):
      * only that counts as bought in [checkNet] - never Boss's own carried lot. Memory only.
      */
-    private suspend fun armsCarried(p: Pos): Int = runCatching {
+    private suspend fun armsCarried(p: Pos): Int? = try {
         val today = now().toLocalDate()
         lock.withLock { book().positions.filter { !it.shadow && it.contract == p.contract && it.side == p.side && it.day.isBefore(today) &&
             (it.open || it.exitTime?.toLocalDate() == today) }.sumOf { it.qty } }
-    }.getOrDefault(0)
+    } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { null }
 
     /**
      * 18 Nov 2026 (audit A2): Zerodha's net quantity [net] (signed) on a contract an arm traded today the [side] way: the other way of it
      * (a long's net below 0) is said loudly when this path's own orders today ([orders], [LiveMirror.TAG]) sold more than they bought -
      * two exits of one lot filled, a naked short - never Boss's own short in Kite. Once a day while it lasts.
      */
-    private fun checkNet(label: String, exchange: String, symbol: String, product: String, side: Int, net: Int, day: LocalDate,
-                         orders: Collection<Broker.OrderRow>, carried: Int) {
+    private suspend fun checkNet(label: String, exchange: String, symbol: String, product: String, side: Int, net: Int, day: LocalDate,
+                         orders: Collection<Broker.OrderRow>, carriedNow: suspend () -> Int?) {
         val key = "$exchange|$symbol|$product|$day"
         if (net * side >= 0) { negSaid.remove(key); return }
+        // (Read only now, the net the other way - rare: never on every tick. Not known: no alarm.)
+        val carried = carriedNow() ?: return
         val mine = orders.filter { it.tag == LiveMirror.TAG && it.symbol == symbol && it.exchange == exchange && it.product == product && it.filled > 0 }
         val (out, inn) = (if (side > 0) "SELL" to "BUY" else "BUY" to "SELL")
         // (19 Nov 2026, second review: what was carried from an earlier day counts as bought - a carried lot the arm sells today.)
@@ -2252,8 +2271,8 @@ object ArmLive {
             val held = heldOf(first)
             // 18 Nov 2026 (audit A2): Zerodha holding the other way of these trades (two exits of one lot filled) is said loudly.
             checkNet(first.label, first.exchange, first.symbol, first.product, first.side, held * first.side, t.toLocalDate(), orders.values,
-                minOf(net.filter { it.symbol == first.symbol && it.exchange == first.exchange && it.product == first.product }.sumOf { it.overnight } * first.side,
-                    armsCarried(first)))
+                { armsCarried(first)?.let { minOf(net.filter { it.symbol == first.symbol && it.exchange == first.exchange && it.product == first.product }
+                    .sumOf { it.overnight } * first.side, it) } })
             val counted = live.filter { (_, p) -> p.heldSeen || LiveMirror.zeroLongEnough(p.zeroSinceMs, ms) }.map { it.first }.toSet()
             var cum = 0
             for ((p0, p) in live) {
@@ -2365,7 +2384,7 @@ object ArmLive {
         // count: [unsure].)
         shortSince.keys.retainAll(shortNow + unsure)
         shortSaid.retainAll(shortNow + unsure)
-        noStopSince.keys.retainAll(open.map { it.ref }.toSet())
+        if (!stream) runCatching { lock.withLock { book().positions.filter { it.open }.map { it.ref }.toSet() } }.getOrNull()?.let { noStopSince.keys.retainAll(it) }
 
         // 3. Each trade's decision, newest first on each contract, against the exits working on it (kept up to date as they change).
         val working = HashMap<String, Int>()     // order id -> remaining, the exits working on these contracts
@@ -2434,7 +2453,8 @@ object ArmLive {
                     // watches the level meanwhile. Memory only.
                     val unshownHeld = heldOf(p)
                     // (This trade's share, oldest first: the trades on the contract entered no later than it, with it.)
-                    val through = group.mapNotNull { cur(it)?.takeIf { c -> !c.unconfirmed } }.filter { it.entryTime <= p.entryTime }.sumOf { it.qty }
+                    val oldest = group.mapNotNull { cur(it)?.takeIf { c -> !c.unconfirmed } }.sortedWith(compareBy<Pos>({ it.entryTime }, { it.ref }))
+                    val through = oldest.take(oldest.indexOfFirst { it.ref == p.ref }.let { if (it < 0) oldest.size else it + 1 }).sumOf { it.qty }
                     if (p.stopOrderId == null && p.stopTrigger != null && unshownHeld < through) {
                         val since = noStopSince.putIfAbsent(p.ref, ms) ?: ms
                         if (ms - since >= NO_STOP_SAY_MS) sayBlocked(p, "no_stop", again = true, "${p.label}: its live ${p.symbol} has had no stop " +
