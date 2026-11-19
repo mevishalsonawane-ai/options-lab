@@ -334,19 +334,32 @@ object LiveMirror {
     /** Whether a live entry on [underlying] may go: an index only when Boss selected it; anything else (MCX) is not decided here. */
     fun marketOn(underlying: String, selected: Set<String>): Boolean = underlying.uppercase() !in INDEX_MARKETS || underlying.uppercase() in selected
 
-    /**
-     * 19 Nov 2026 (Boss: "Go"; Zerodha blocks margin for a MARKET option buy at a protective price far above the premium): the price an
-     * arm's live buy goes at as a marketable LIMIT - the offer ([ask], else [last] when the book has no offer) plus max(2 ticks, 0.5%),
-     * rounded up to the [tick]. NaN when there is no usable price (the order's own checks then refuse it). Pure.
-     */
-    fun entryLimit(last: Double, ask: Double?, tick: Double): Double {
-        val base = ask?.takeIf { it.isFinite() && it > 0 } ?: last.takeIf { it.isFinite() && it > 0 } ?: return Double.NaN
-        val t = if (tick.isFinite() && tick > 0) tick else 0.05
-        return Kite.onTick(base + maxOf(2 * t, base * 0.005), t, Kite.Side.BUY)
-    }
-
     /** 3 Nov (live): Zerodha's refusal of a MARKET order on a contract with little open interest (it takes a LIMIT). */
     fun marketBlocked(message: String?): Boolean = message?.contains("MARKET orders are blocked", ignoreCase = true) == true
+
+    /**
+     * 19 Nov 2026 (Boss: "Go"; Zerodha refused live MARKET option buys for "Insufficient funds" - it blocks margin for a MARKET option buy at
+     * a protective price far above the premium, e.g. Rs 64,715 asked for a lot whose premium was about Rs 18,000): the LIMIT an arm's live
+     * BUY entry is sent at - marketable: the offer [ask] (else the [last] price) plus max(2 ticks, 0.5%), rounded up to the [tick]. Never
+     * chased: never above the [last] price plus max(2 ticks, [ENTRY_MAX_OVER_LAST]) (a wide or stale offer: it rests there and is cancelled
+     * unfilled), nor above the paper arm's own [paperLimit] when it has one (each on its tick, rounded down). null: no usable price. Pure.
+     */
+    fun entryLimit(ask: Double?, last: Double, tick: Double, paperLimit: Double?): Double? {
+        val lastOk = last.takeIf { it.isFinite() && it > 0 }
+        val base = ask?.takeIf { it.isFinite() && it > 0 } ?: lastOk ?: return null
+        val t = tick.takeIf { it.isFinite() && it > 0 } ?: 0.05
+        val px = Kite.onTick(base + maxOf(2 * t, base * ENTRY_BUFFER), t, Kite.Side.BUY)
+        val caps = listOfNotNull(
+            lastOk?.let { Kite.onTick(it + maxOf(2 * t, it * ENTRY_MAX_OVER_LAST), t, Kite.Side.SELL) },
+            paperLimit?.takeIf { it.isFinite() && it > 0 }?.let { Kite.onTick(it, t, Kite.Side.SELL) })
+        return (listOf(px) + caps).minOrNull()?.takeIf { it > 0 }
+    }
+
+    /** 19 Nov 2026: the most an entry LIMIT is set above the last price ([entryLimit]; at least two ticks). */
+    const val ENTRY_MAX_OVER_LAST = 0.02
+
+    /** 19 Nov 2026: the share of the price an entry LIMIT is set above the offer ([entryLimit]; at least two ticks). */
+    const val ENTRY_BUFFER = 0.005
 
     /**
      * 3 Nov: the LIMIT an entry is sent at when Zerodha blocks its MARKET order: the offer for a buy (the bid for a sell), never more

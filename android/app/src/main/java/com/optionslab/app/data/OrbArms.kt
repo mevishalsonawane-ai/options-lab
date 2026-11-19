@@ -3289,9 +3289,14 @@ object OrbArms {
         if (Strategies.stoppedToday()) return "stopped_for_today"
         // 19 Nov 2026 (Boss: "Go"; live: Zerodha refused MARKET option buys for "Insufficient funds" - it blocks margin for a MARKET buy
         // at a protective price far above the premium, ~₹65k asked for lots costing ~₹17-19k with ₹50k free): the live buy goes as a
-        // marketable LIMIT - the offer from the quote read above (else the last price) plus max(2 ticks, 0.5%), up to the tick. It waits for
-        // its fill as before; what has not filled after the wait is cancelled and only what filled is booked, with its stop (never chased).
-        val limitPx = com.optionslab.engine.orb.LiveMirror.entryLimit(last, quote?.ask, ins.tickSize)
+        // marketable LIMIT - the offer from the quote read above (else the last price) plus max(2 ticks, 0.5%), up to the tick, never above
+        // the last price plus max(2 ticks, 2%) (a wide or stale offer is not chased: it rests there and is cancelled unfilled). It waits for
+        // its fill; what has not filled after the wait is cancelled and only what filled is booked, with its stop (never chased). No usable
+        // price: nothing is sent, and Boss is told. (The one function the arms' live copies use too.)
+        val limitPx = com.optionslab.engine.orb.LiveMirror.entryLimit(quote?.ask, last, ins.tickSize, null) ?: run {
+            runCatching { com.optionslab.app.work.Alerts.error("${arm.label}: no usable price to set the live LIMIT buy of $sym at; nothing was sent.", "ORB live") }
+            return "refused: no usable price for the LIMIT buy of $sym"
+        }
         var o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, ins.lotSize * lots.coerceAtLeast(1), ins.lotSize, "MIS", "LIMIT", limitPx,
             ins.tickSize, "NFO", "iraorb")
         // Positions, funds and orders: the kept margins when fresh and roomy for this buy, else read now (in parallel).

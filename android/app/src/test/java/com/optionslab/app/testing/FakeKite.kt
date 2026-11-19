@@ -544,13 +544,11 @@ class FakeKite : Closeable {
         val o = Order(id, f["tradingsymbol"] ?: "", f["exchange"] ?: "NFO", f["transaction_type"] ?: "BUY", f["quantity"]?.toInt() ?: 0,
             f["product"] ?: "NRML", type, f["price"]?.toDouble() ?: 0.0, f["trigger_price"]?.toDouble() ?: 0.0, f["tag"] ?: "",
             status = if (type == "SL" || type == "SL-M") "TRIGGER PENDING" else "OPEN")
-        // 19 Nov 2026: a LIMIT strictly through the touch (a buy above the offer, a sale below the bid: a marketable LIMIT entry) fills
-        // as a MARKET order does here, at the last price - never through its limit; one at the touch or away from it as before.
-        val q0 = quotes["${o.exchange}:${o.symbol}"]
-        val through = type == "LIMIT" && q0 != null && o.price > 0 &&
-            (if (o.side == "BUY") o.price > (q0.third ?: q0.first) + 1e-9 else o.price < (q0.second ?: q0.first) - 1e-9)
-        val px = s.fillPrice ?: (if (through) (if (o.side == "BUY") minOf(o.price, q0!!.first) else maxOf(o.price, q0!!.first)) else null)
-            ?: o.price.takeIf { it > 0 } ?: q0?.first ?: 0.0
+        // 19 Nov 2026 (coordinator: one rule for every BUY LIMIT, any tag): at or above the last price it fills at the last price, as a
+        // MARKET buy does here; below it, it rests. Sales and every other type as before.
+        val lastPx = quotes["${o.exchange}:${o.symbol}"]?.first
+        val buyLimit = type == "LIMIT" && o.side == "BUY" && lastPx != null && lastPx > 0
+        val px = s.fillPrice ?: (if (buyLimit && o.price >= lastPx!! - 1e-9) lastPx else null) ?: o.price.takeIf { it > 0 } ?: lastPx ?: 0.0
         o.fillPrice = px
         orders[id] = o
         if (trailReads > 0) { trailing[id] = trailReads; trailReads = 0 }
@@ -558,7 +556,7 @@ class FakeKite : Closeable {
         // A limit away from the quoted market rests (a target), as at the exchange; with no quote it fills.
         val q = quotes["${o.exchange}:${o.symbol}"]
         val marketable = type != "LIMIT" || q == null ||
-            (if (o.side == "BUY") o.price >= (q.third ?: q.first) else o.price <= (q.second ?: q.first))
+            (if (o.side == "BUY") o.price >= q.first - 1e-9 else o.price <= (q.second ?: q.first))
         if (o.status == "OPEN") when (s.outcome) {
             Outcome.FILL -> if (marketable) { o.status = "COMPLETE"; o.filled = o.qty; o.avg = px; move(o, o.qty) }
             Outcome.PARTIAL -> { o.filled = s.partialQty; o.avg = px; move(o, s.partialQty) }

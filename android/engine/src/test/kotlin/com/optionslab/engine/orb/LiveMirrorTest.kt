@@ -603,15 +603,24 @@ class LiveMirrorTest {
         assertTrue(LiveMirror.sameContractWords("A", "X", listOf("B", "C"))!!.contains("held live by B, C"))
     }
 
-    /** 19 Nov 2026 (Boss: "Go"): a live buy's marketable LIMIT - the offer plus max(2 ticks, 0.5%), up to the tick. */
-    @Test fun anEntryLimitIsTheOfferPlusTheBufferOnTheTick() {
-        assertEquals(201.10, LiveMirror.entryLimit(200.0, 200.05, 0.05), 1e-9)          // 0.5% (1.00) beats 2 ticks
-        assertEquals(10.15, LiveMirror.entryLimit(10.0, 10.05, 0.05), 1e-9)             // 2 ticks (0.10) beat 0.5% (0.05)
-        assertEquals(201.00, LiveMirror.entryLimit(200.0, null, 0.05), 1e-9)            // no offer: the last price
-        assertEquals(201.00, LiveMirror.entryLimit(200.0, 0.0, 0.05), 1e-9)             // an empty offer is no offer
-        assertEquals(201.00, LiveMirror.entryLimit(200.0, Double.NaN, 0.05), 1e-9)
-        assertEquals(201.00, LiveMirror.entryLimit(200.0, null, 0.0), 1e-9)             // no tick known: 0.05
-        assertTrue(LiveMirror.entryLimit(0.0, null, 0.05).isNaN())                      // no price at all
-        assertTrue(LiveMirror.entryLimit(Double.NaN, -1.0, 0.05).isNaN())
+    /** 19 Nov 2026 (Boss: "Go"): an arm's live buy goes as a marketable LIMIT - the offer plus max(2 ticks, 0.5%), on the tick, capped. */
+    @Test fun anEntryLimitIsTheOfferPlusABufferOnTheTickNeverAboveThePaperLimit() {
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, null)!!, 1e-9)        // 200.05 + 1.00 -> 201.05025 -> 201.10
+        assertEquals(10.15, LiveMirror.entryLimit(10.05, 10.0, 0.05, null)!!, 1e-9)           // two ticks beat 0.5% on a cheap option
+        assertEquals(201.0, LiveMirror.entryLimit(null, 200.0, 0.05, null)!!, 1e-9, "no offer: the last price")
+        assertEquals(201.0, LiveMirror.entryLimit(0.0, 200.0, 0.05, null)!!, 1e-9)
+        assertEquals(201.0, LiveMirror.entryLimit(Double.NaN, 200.0, 0.05, null)!!, 1e-9)
+        assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.5)!!, 1e-9, "capped by the paper limit")
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.05, 210.0)!!, 1e-9, "a paper limit above it changes nothing")
+        assertEquals(200.50, LiveMirror.entryLimit(200.05, 200.0, 0.05, 200.51)!!, 1e-9, "the cap on its tick, never above it")
+        // Never chased: a wide or stale offer is capped at the last price plus 2% (it rests there, cancelled unfilled).
+        assertEquals(204.0, LiveMirror.entryLimit(260.0, 200.0, 0.05, null)!!, 1e-9, "last + 2%")
+        assertEquals(3.10, LiveMirror.entryLimit(3.20, 3.0, 0.05, null)!!, 1e-9, "a cheap option: last + 2 ticks")
+        assertEquals(261.30, LiveMirror.entryLimit(260.0, 0.0, 0.05, null)!!, 1e-9, "no last: the offer alone")
+        assertNull(LiveMirror.entryLimit(null, 0.0, 0.05, null))
+        assertNull(LiveMirror.entryLimit(null, Double.NaN, 0.05, null))
+        assertNull(LiveMirror.entryLimit(0.10, 0.05, 0.05, 0.04), "a paper limit under one tick: no price, never 0.00")
+        assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.0, null)!!, 1e-9, "a bad tick taken as 0.05")
+        assertEquals(5025.0, LiveMirror.entryLimit(5000.0, 5000.0, 1.0, null)!!, 1e-9, "an MCX 1.0 tick: 0.5% beats two ticks")
     }
 }
