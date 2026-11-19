@@ -183,6 +183,18 @@ class OrbArmsBookReadTest : RobolectricTest() {
         assertTrue(alerts().toString(), alerts().any { "could not be read (armed)" in it && "every arm is off" in it })
     }
 
+    @Test fun aRecordPartThatCannotBeReadIsDroppedAndTheArmsStayAsTheyWere() {
+        state(positions = listOf(position(30, 200.0, "E1", stopId = "S1", stop = 160.0)))
+        // A book saved with a record part that cannot be read (the up/down days).
+        val o = JSONObject(String(Vault.readFile(file)!!, Charsets.UTF_8)).put("upDays", JSONObject().put("2026-11-18", "maybe"))
+        Vault.writeFile(file, o.toString().toByteArray(Charsets.UTF_8))
+        restart()
+        val a = arm()
+        assertTrue("the arms as they were", a.armed)
+        assertEquals("E1", a.open!!.entryOrderId)
+        assertTrue(alerts().toString(), alerts().any { "could not be read (upDays)" in it && "every arm is off" !in it })
+    }
+
     // ---- paper-side ends never sell a live trade (coordinator, 19 Nov 2026) ----------------------------------------------------
 
     @Test fun aPaperRowClosedOrResetNeverSellsOrDropsTheLiveTrade() {

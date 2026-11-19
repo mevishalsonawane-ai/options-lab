@@ -43,12 +43,15 @@ class OrbArmsLockTest : RobolectricTest() {
     private val pe0Key = "NSE_FO|LOCKPE0"
     /** Released at the end of each test: a hung read never outlives it. */
     private val gate = CountDownLatch(1)
+    /** [LiquidityArmTest]'s failed break: the 13:05 bar closes back at 54,090, so the position is sold at 13:10 ("failed_break"). */
+    private var failDay = false
 
     /** The 5-minute bar k (09:15 + 5k) as (open, high, low, close): [LiquidityArmTest]'s day where the break holds. */
     private fun bar(k: Int): DoubleArray = when {
         k == 20 -> doubleArrayOf(54_050.0, 54_100.0, 54_040.0, 54_060.0)
         k == 26 -> doubleArrayOf(54_040.0, 54_070.0, 54_020.0, 54_030.0)
         k == 45 -> doubleArrayOf(54_020.0, 54_150.0, 54_015.0, 54_140.0)
+        k == 46 && failDay -> doubleArrayOf(54_140.0, 54_145.0, 54_080.0, 54_090.0)
         k >= 46 -> doubleArrayOf(54_150.0, 54_150.0, 54_145.0, 54_150.0)
         else -> doubleArrayOf(54_000.0, 54_010.0, 53_990.0, 54_000.0)
     }
@@ -84,6 +87,7 @@ class OrbArmsLockTest : RobolectricTest() {
 
     @After fun down() {
         gate.countDown()
+        OrbArms.testMinutesInMemory = null
         com.optionslab.ira.ArmExits.clear()
         AutomationSupport.realClocks()
         Market.testClock = null
@@ -156,6 +160,67 @@ class OrbArmsLockTest : RobolectricTest() {
         assertFalse("the pass ended at its read deadline", pass.isAlive)
         assertTrue(row().today.single().open)
         assertEquals("one buy only", 1, Paper.state.orders.count { it.action == "BUY" })
+    }
+
+    /** The day up to 13:05 on the failed-break day: the call bought, its index exit due at 13:10. */
+    private fun boughtOnTheFailDay(): OrbArms.Position {
+        failDay = true
+        runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        return row().today.single().also { assertTrue(it.open) }
+    }
+
+    @Test fun aSlowHistoryReadOutlastingTheLookStillLandsAndTheIndexExitThenFires() {
+        boughtOnTheFailDay()
+        // A new day's earlier sessions (yesterday, flat at 54,000), on a slow link: the read takes longer than a look may wait.
+        val yesterday = (9 * 60 + 15 until 15 * 60 + 30).map { day.minusDays(1).atTime(it / 60, it % 60) }
+            .map { Upstox.Bar(it.atZone(IST).toEpochSecond(), 54_000.0, 54_010.0, 53_990.0, 54_000.0, 1000, 0) }
+        OrbArms.testHistoryBars = { Thread.sleep(OrbArms.LOOK_READ_MS + 2_000); yesterday }
+        at(LocalTime.of(13, 10))
+        val t0 = System.currentTimeMillis()
+        runBlocking { OrbArms.priceCheckOnly() }
+        assertTrue("the look stopped waiting at its deadline", System.currentTimeMillis() - t0 < OrbArms.LOOK_READ_MS + 3_000)
+        assertTrue("no index exit on today's candles alone", row().today.single().open)
+        assertEquals("not landed yet", 0, OrbArms.historyKeptForTest("BANKNIFTY"))
+        // The read was not cut: it lands by itself (kept in memory), and the next look sells on the failed break.
+        val end = System.currentTimeMillis() + 10_000
+        while (OrbArms.historyKeptForTest("BANKNIFTY") == 0 && System.currentTimeMillis() < end) Thread.sleep(50)
+        assertEquals("yesterday's session kept", yesterday.size, OrbArms.historyKeptForTest("BANKNIFTY"))
+        runBlocking { OrbArms.priceCheckOnly() }
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals("failed_break", closed.why)
+    }
+
+    @Test fun aFastLookStillRunsTheTimeStopWhenTheIndexMinutesAreNotInMemory() {
+        heldTo1324()
+        at(LocalTime.of(13, 25))
+        runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) }
+        val closed = row().today.single()
+        assertFalse("sold on the stream's look, no candle read", closed.open)
+        assertEquals("time_stop", closed.why)
+    }
+
+    @Test fun aFastLookJudgesTheIndexExitsFromTheMinutesInMemory() {
+        boughtOnTheFailDay()
+        OrbArms.testMinutesInMemory = { u, t -> if (u == "BANKNIFTY") feed(t) else null }
+        hang()                                                              // the feed itself is never read on a fast look
+        at(LocalTime.of(13, 10))
+        assertTrue(endsWithin(3_000) { runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) } })
+        val closed = row().today.single()
+        assertFalse(closed.open)
+        assertEquals("failed_break", closed.why)
+    }
+
+    @Test fun theStopRescuesFreshViewWaitsForTheBookItself() {
+        runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
+        val holder = Thread { runBlocking { OrbArms.holdLockForTest(1_500) } }.apply { isDaemon = true; start() }
+        Thread.sleep(200)
+        val t0 = System.currentTimeMillis()
+        val r = runBlocking { OrbArms.view(fresh = true) }.arms.single { it.arm.source == "liquidity" }
+        assertTrue("waited for the lock, never a copy: ${System.currentTimeMillis() - t0} ms", System.currentTimeMillis() - t0 >= 1_000)
+        assertTrue(r.armed)
+        holder.join(5_000)
     }
 
     @Test fun theViewNeverWaitsOnTheLockItShowsTheBookAsLastSaved() {

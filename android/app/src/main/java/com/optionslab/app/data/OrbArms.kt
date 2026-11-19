@@ -365,6 +365,13 @@ object OrbArms {
     @Volatile internal var testRead: (() -> ByteArray?)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
 
+    /**
+     * 19 Nov 2026 (audit batch 2, P3): the parts of the book that decide what the arms may do - one that cannot be read turns every arm off
+     * (and marks every one-time change done); the parkings too (lost, a switch-on would arm a parked index). Any other part (a record:
+     * replays, the up days, the day's status, ...) is only dropped and named, the arms left as they were.
+     */
+    private val CRITICAL_PARTS = setOf("armed", "auto", "liveOk", "pending", "decided", "migrated", "positions", "liqParked", "famParked")
+
     /** Every one-time change a new or set-aside book starts with marked done (nothing is armed or cleared by itself). */
     private val ONE_TIME_CHANGES get() = listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
         LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST)
@@ -486,7 +493,7 @@ object OrbArms {
                 part("liqParked") { o.optJSONArray("liqParked")?.let { a -> for (i in 0 until a.length()) b.parked += a.getString(i) } }
                 part("famParked") { o.optJSONArray("famParked")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { FamilyPark.covers(it) }?.let { b.famParked += it } } }
                 o.optString("sweepFrom").takeIf { it.isNotEmpty() }?.let { b.sweepFrom = it }
-                if (dropped.any { !it.startsWith("position ") }) {
+                if (dropped.any { it in CRITICAL_PARTS }) {
                     // (A part of the switches, today's decisions or the one-time changes lost: every arm is off until Boss switches it on
                     // again - lower risk - and every one-time change counts as done, so none runs again on what is left.)
                     b.armed.clear(); b.pending.clear()
@@ -512,7 +519,7 @@ object OrbArms {
             val what = dropped.joinToString(", ")
             runCatching { Diag.record("orb", "the arms' book: could not read $what; the rest is kept") }
             val words = "ORB arms: part of their saved book could not be read ($what); the rest is kept" +
-                (if (dropped.any { !it.startsWith("position ") }) " and every arm is off until you switch it on" else "") +
+                (if (dropped.any { it in CRITICAL_PARTS }) " and every arm is off until you switch it on" else "") +
                 (if (droppedLive > 0) ". A live trade's row was lost: its lot is taken back from Zerodha with its stop" else "") + ". Check Trade and Kite."
             if (droppedLive > 0) rebuildFromZerodha(words) else runCatching { com.optionslab.app.work.Alerts.error(words, "ORB live") }
         }
@@ -1779,7 +1786,11 @@ object OrbArms {
 
     private fun mark(sym: String, px: Double, t: LocalDateTime) { marks[sym] = px; markedAt[sym] = t }
 
-    suspend fun view(): View {
+    /**
+     * [fresh] (19 Nov 2026, audit batch 2, P1): the book itself, waiting for the lock as before - for a caller that acts on what the arms
+     * hold (the stop rescue); otherwise, while the lock is held, the copy as last saved.
+     */
+    suspend fun view(fresh: Boolean = false): View {
         // (Read apart from the arms' lock: the bot's stop is the strategies' own.)
         val why = runCatching { Strategies.stoppedWhy() }.getOrNull()
         // (The shadows' rows too: they never wait on a pass.)
@@ -1789,7 +1800,12 @@ object OrbArms {
         // 30 Oct: each switched-off arm's shadow line (memory only: the shadow's own view, never its lock or file).
         // 15 Nov: the app's Live switch for Liquidity's row ("would trade live now"), read before the lock (never under it).
         val appLive = runCatching { liveNow() }.getOrDefault(false)
-        return viewLocked(extra, appLive).let { v -> v.copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows,
+        return (if (fresh) lock.withLock {
+            // (The book not readable for a moment: the copy as last read, when there is one - never "nothing held".)
+            try { viewOf(book(), extra, appLive) } catch (e: java.io.IOException) {
+                viewBook?.takeIf { it.gen == wipeGen }?.let { viewOf(it, extra, appLive) } ?: throw e
+            }
+        } else viewLocked(extra, appLive)).let { v -> v.copy(stopped = why?.let { DayStop.line(it) }, shadows = shadows,
             arms = v.arms.map { a -> offLine(a)?.let { a.copy(offShadow = it) } ?: a }) }
     }
 
@@ -2451,8 +2467,9 @@ object OrbArms {
             val unds = liquidityIndicesOpen(b)
             val mem = unds.mapNotNull { u -> minutesInMemory(u, t)?.let { u to it } }.toMap()
             val ready = mem.size == unds.size
-            // (A fast look: the positions whose index is in memory are judged now; the rest are read off the lock for the next look.)
-            if ((ready || fast) && mem.isNotEmpty()) runCatching { liquidityExits(b, t, IndexData.Reads(), mem, only = mem.keys) }
+            // (A fast look judges every open Liquidity position now - the time stop on every look: those whose index minutes are in memory on
+            // them, the rest quietly with none (as a failed read: the index exits wait); those minutes are read off the lock for the next look.)
+            if ((ready || fast) && unds.isNotEmpty()) runCatching { liquidityExits(b, t, IndexData.Reads(), mem, quiet = !ready) }
             if (fast && !ready) refreshSoon(t, unds - mem.keys)
             runCatching { liquidityNotices(b, t) }
             if (before != null && before == untracked(b)) { cache = b; hints(b, copy = false); wipedSince(b) } else save(b)
@@ -2467,6 +2484,10 @@ object OrbArms {
             save(b)
         }
     }
+
+    /** TEST ONLY (19 Nov 2026, audit batch 2): an index's 1-minute bars as kept in memory for a minute ([minutesInMemory]); null in the app. */
+    @Volatile internal var testMinutesInMemory: ((String, LocalDateTime) -> List<Upstox.Bar>?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
 
     /** 19 Nov 2026 (audit batch 2): one off-lock read of the open positions' index candles at a time ([refreshSoon]). */
     private val refreshing = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -2651,7 +2672,8 @@ object OrbArms {
     private suspend fun warmContracts(waitMs: Long) {
         if (testFeeds() || listedNow() != null) return
         val job = synchronized(offLock) {
-            warming?.takeIf { it.isActive } ?: offLock.async { runCatching { Market.contracts() }; Unit }.also { warming = it }
+            // (P2: read back once here, off the lock, so [listedNow] under it never parses the file.)
+            warming?.takeIf { it.isActive } ?: offLock.async { runCatching { Market.contracts() }; runCatching { Market.cachedContracts() }; Unit }.also { warming = it }
         }
         kotlinx.coroutines.withTimeoutOrNull(waitMs) { job.await() }
     }
@@ -3333,6 +3355,30 @@ object OrbArms {
         HeroRules.Seen(what, now().toLocalTime().withNano(0), q?.ltp?.takeIf { it > 0 } ?: fallback, q?.bid?.takeIf { it > 0 },
             q?.ask?.takeIf { it > 0 }, q?.bidQty?.takeIf { it > 0 }, q?.askQty?.takeIf { it > 0 })
 
+    /** 19 Nov 2026 (audit batch 2, F3): the most a background read of the Hero position's option minutes may take. */
+    internal const val HERO_STOP_READ_MS = 20_000L
+
+    /** 19 Nov 2026 (audit batch 2, F3): one background read of the Hero position's option minutes at a time ([heroStopSoon]). */
+    private val heroStopReading = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** 19 Nov 2026 (audit batch 2, F3): [key]'s minutes of [t]'s minute read OFF the arms' lock into [heroStopBars] for the next look. */
+    private fun heroStopSoon(key: String, t: LocalDateTime) {
+        if (!heroStopReading.compareAndSet(false, true)) return
+        val minute = t.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        offLock.launch {
+            try {
+                // (A deadline: one hung read never holds back every later one. A test feed is read so that the deadline ends it too.)
+                val raw = runCatching {
+                    kotlinx.coroutines.withTimeoutOrNull(HERO_STOP_READ_MS) {
+                        val f = testHeroBars
+                        if (f != null) kotlinx.coroutines.runInterruptible(kotlinx.coroutines.Dispatchers.IO) { f(key, t) } else Net.intraday(key)
+                    }
+                }.getOrNull()
+                if (raw != null && heroStopBars?.second?.isAfter(minute) != true) heroStopBars = Triple(key, minute, minutesOf(raw, t))
+            } finally { heroStopReading.set(false) }
+        }
+    }
+
     /** The option's 1-minute bars read for the Hero arm's stop this minute (feed key, minute, bars): one read a minute. */
     @Volatile private var heroStopBars: Triple<String, LocalDateTime, Map<LocalTime, Upstox.Bar>>? = null
 
@@ -3345,9 +3391,13 @@ object OrbArms {
         var p = p0
         val lot = c.lotSize.coerceAtLeast(1)
         val minute = t.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        // 19 Nov 2026 (audit batch 2, second review F3): from memory only - this minute's bars read before the lock by the pass
+        // ([heroPrefetch]) or in the background ([heroStopSoon]); never a read here, under the arms' lock on the stop path. Not in memory
+        // yet: read off the lock for the next look, and this look judges the targets and 15:05 on the price as usual.
         val bars = heroStopBars?.takeIf { it.first == c.feedKey && it.second == minute }?.third
-            ?: runCatching { heroMinutes(c.feedKey, t) }.getOrNull()?.also { heroStopBars = Triple(c.feedKey, minute, it) }
-            ?: emptyMap()
+            ?: heroFed[c.feedKey]?.let { minutesOf(it, t) }?.also { heroStopBars = Triple(c.feedKey, minute, it) }
+            // (Meanwhile the minutes it last had of this option: every minute closed by then is still judged.)
+            ?: run { heroStopSoon(c.feedKey, t); heroStopBars?.takeIf { it.first == c.feedKey }?.third ?: emptyMap() }
         val closes = if (p.day == t.toLocalDate()) HeroRules.stopMinutes(p.entryTime.toLocalTime(), bars.keys).mapNotNull { bars[it]?.close }
             else emptyList()
         repeat(2) {
@@ -3629,6 +3679,8 @@ object OrbArms {
         // of the book writes after it, never under it - [saveSoon].)
         runCatching { saveSoon(b) }
         testIntentQueued?.let { runCatching { it() } }
+        // 19 Nov 2026 (audit batch 2, P4): a new live entry on the contract - an earlier "confirmed flat" mark on it no longer stands.
+        flatSince.remove(sym)
         // (The row as it now stands in the book, found by identity: the book's lock is held for the whole entry.)
         var row = intent
         fun dropIntent() { val r = row; b.positions.removeAll { it === r }; runCatching { save(b) } }
@@ -5766,21 +5818,20 @@ object OrbArms {
      * memory for this minute) or [reads] (read before the lock); an index in neither is a failed read for this look ([indexReadFailed]).
      */
     private suspend fun liquidityExits(b: Book, t: LocalDateTime, reads: IndexData.Reads<List<Upstox.Bar>>?, pre: Map<String, List<Bar>> = emptyMap(),
-                                       /** 19 Nov 2026 (audit batch 2): only the positions on these indices (null: all). */
-                                       only: Set<String>? = null) {
+                                       /** 19 Nov 2026 (audit batch 2): a fast look - an index not in memory is not said as a failed read. */
+                                       quiet: Boolean = false) {
         val open = b.positions.withIndex().filter { it.value.open && !it.value.unconfirmed && armOf(it.value.arm).liquidity }
         if (open.isEmpty()) return
         val minutes = HashMap<String, List<Bar>>()
         for ((i, p) in open) try {
             val und = LiquidityRules.underlyingOf(armOf(p.arm))
-            if (only != null && und !in only) continue
             // 22 Oct (R100 audit A): one index's failed candle read used to escape this loop, so every Liquidity position after it
             // (other indices too) got no index exit and no time stop on that pass. Now a failed read stops only the index exits of
             // that index's own positions ([indexReadFailed]: no bars, so no index stop, target, failed break or new level can be
             // judged); their time stop, which reads only the option's price, still decides, and the other indices go on as before.
             val ones = minutes.getOrPut(und) {
                 (pre[und] ?: try { liquidityMinutes(t, und, reads = reads, offline = true) } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                    catch (e: Exception) { indexReadFailed(und, t, e); emptyList() })
+                    catch (e: Exception) { if (!quiet) indexReadFailed(und, t, e); emptyList() })
                     .filter { !it.start.plusMinutes(1).isAfter(t) }
             }
             val tf = LiquidityRules.minutesOf(armOf(p.arm))
@@ -5850,7 +5901,11 @@ object OrbArms {
      * always: [liquidityMinutes] then reads [Net.history]. Its setter throws unless BuildConfig.DEBUG; no app code sets it.
      */
     @Volatile internal var testHistoryBars: ((java.time.LocalDate) -> List<Upstox.Bar>)? = null
-        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test history feed exists only in debug builds" }; field = v }
+        set(v) {
+            check(com.optionslab.app.BuildConfig.DEBUG) { "the test history feed exists only in debug builds" }; field = v
+            // (19 Nov 2026, audit batch 2: the earlier sessions are kept in memory for the day - a test's never carry into the next.)
+            forgetHistoryForTest()
+        }
 
     /**
      * TEST ONLY: today's 1-minute bars of an index other than BANKNIFTY (FINNIFTY, MIDCPNIFTY) at a given moment. Null in the app,
@@ -5858,6 +5913,42 @@ object OrbArms {
      */
     @Volatile internal var testOtherIndexBars: ((String, LocalDateTime) -> List<Upstox.Bar>)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test index feed exists only in debug builds" }; field = v }
+
+    /** 19 Nov 2026 (audit batch 2, F1): each index's running read of its earlier sessions ([historyJob]). */
+    private val historyJobs = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Deferred<Unit>>()
+
+    /**
+     * 19 Nov 2026 (audit batch 2, F1): [underlying]'s earlier sessions (the ten calendar days before [day]) read by a job of its own off the
+     * arms' lock - one at a time per index, with the read's full tries and timeouts (never cut by a look's deadline: whoever waits for it
+     * may stop waiting, the read goes on). Kept in memory for the day; none came back (empty, or every try failed): marked missing, tried
+     * again after [HISTORY_MISS_MS], as before. In a test the history feed is its read.
+     */
+    private fun historyJob(underlying: String, day: LocalDate, bank: Boolean, key: String): kotlinx.coroutines.Deferred<Unit> =
+        historyJobs.compute(underlying) { _, running ->
+            running?.takeIf { it.isActive } ?: historyGen.let { gen -> offLock.async {
+                val testing = testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null
+                val raw = if (testing) runCatching { (if (bank) testHistoryBars?.invoke(day) else null).orEmpty() }.getOrDefault(emptyList())
+                    else try { Net.history(key, day.minusDays(10), day.minusDays(1)) }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
+                val bars = toBars(raw).filter { it.start.toLocalDate().isBefore(day) }
+                // (Forgotten meanwhile - a test's reset, a new process's memory: what it read is not kept.)
+                if (gen != historyGen) return@async
+                if (bars.isNotEmpty()) { liquidityHistory[underlying] = day to bars; liquidityHistoryMiss.remove(underlying) }
+                else liquidityHistoryMiss[underlying] = System.currentTimeMillis()
+            } }
+        }!!
+
+    /** 19 Nov 2026 (audit batch 2): bumped when the earlier sessions are forgotten: a read started before is not kept. */
+    @Volatile private var historyGen = 0
+
+    /** TEST ONLY (19 Nov 2026, audit batch 2): every index's earlier sessions forgotten, as on a new day. */
+    internal fun forgetHistoryForTest() {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        historyGen++; historyJobs.values.forEach { it.cancel() }; historyJobs.clear(); liquidityHistory.clear(); liquidityHistoryMiss.clear()
+    }
+
+    /** TEST ONLY (19 Nov 2026, audit batch 2): how many earlier-session minutes of [underlying] are kept in memory now. */
+    internal fun historyKeptForTest(underlying: String): Int = liquidityHistory[underlying]?.second?.size ?: 0
 
     /** Earlier sessions' minutes per index, fetched once a day (the levels need a few days of 15-minute bars). */
     private val liquidityHistory = java.util.concurrent.ConcurrentHashMap<String, Pair<java.time.LocalDate, List<Bar>>>()
@@ -5926,19 +6017,15 @@ object OrbArms {
         val bank = underlying == OrbRules.UNDERLYING
         val key = LiquidityRules.INDEX_KEYS.getValue(underlying)
         // 22 Oct (arms audit): a history read that came back empty is not tried again (6 tries) on every look: once a minute.
-        val missFresh = !testing && liquidityHistoryMiss[underlying]?.let { nowMs - it < HISTORY_MISS_MS } == true
-        // (19 Nov 2026, audit batch 2: under the lock the earlier sessions are never read: not kept yet (the read before the lock ran out of
-        // time) is a failed read for this look - never a decision or an index exit on today's candles alone.)
-        val hist = (if (!testing) liquidityHistory[underlying]?.takeIf { it.first == day }?.second else null) ?: if (missFresh) emptyList()
-            else if (offline && !testing) throw NotReadBeforeLock(underlying) else run {
-            val raw = if (testing) (if (bank) testHistoryBars?.invoke(day) else null).orEmpty()
-                // (A read cut by its deadline is not an empty history: thrown, never marked missing nor kept as the minute's read.)
-                else try { Net.history(key, day.minusDays(10), day.minusDays(1), tries = if (quick) 2 else 6) }
-                    catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
-            toBars(raw).filter { it.start.toLocalDate().isBefore(day) }.also {
-                if (!testing && it.isNotEmpty()) { liquidityHistory[underlying] = day to it; liquidityHistoryMiss.remove(underlying) }
-                else if (!testing) liquidityHistoryMiss[underlying] = nowMs
-            }
+        // 19 Nov 2026 (audit batch 2, second review F1): the earlier sessions are read once a day per index by a job of their own, OFF the
+        // lock, with its full tries and timeout ([historyJob]) - a look's deadline only stops waiting for it, never the read, so on a slow
+        // link it still lands and the next look finds it in memory. Under the lock they are never read: not in memory yet is a failed read
+        // for this look - never a decision or an index exit on today's candles alone. (In a test too: the test feed is that job's read.)
+        fun kept(): List<Bar>? = liquidityHistory[underlying]?.takeIf { it.first == day }?.second
+            ?: if (liquidityHistoryMiss[underlying]?.let { System.currentTimeMillis() - it < HISTORY_MISS_MS } == true) emptyList() else null
+        val hist = kept() ?: if (offline) throw NotReadBeforeLock(underlying) else {
+            historyJob(underlying, day, bank, key).await()
+            kept() ?: throw java.io.IOException("$underlying: its earlier sessions are not read yet")
         }
         // [reads] (the arms pass): today's candles shared with the pass's other books on this index, read once (13 Oct).
         // (19 Nov 2026, audit batch 2: under the lock, only what [reads] holds - an index not read before the lock is not read there.)
@@ -6430,6 +6517,7 @@ object OrbArms {
      * looks' index exits use only these (no read at all on a look of the stream's). Never in a test with the arms' feeds set.
      */
     private fun minutesInMemory(underlying: String, t: LocalDateTime): List<Bar>? {
+        testMinutesInMemory?.let { f -> return f(underlying, t)?.let { raw -> toBars(raw) } }
         if (testIndexBars != null || testHistoryBars != null || testOtherIndexBars != null) return null
         val minute = t.withSecond(0).withNano(0)
         liquidityPass[underlying]?.let { if (it.first == minute) return it.second }
@@ -6664,6 +6752,7 @@ object OrbArms {
         erasedAt = null; coldSafety.clear()
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         readFails = 0
+        forgetHistoryForTest()
         synchronized(ownCancels) { ownCancels.clear() }
         forgetStopSaid()
     }

@@ -1108,9 +1108,11 @@ object IraHub {
         val bots = HashSet<String>()
         // 18 Nov 2026 (audit): ORB's and the strategies' books each waited on [RESCUE_LOCK_WAIT_MS] at most; not read in time, this
         // pass stops here (a bot's position must never be taken for Boss's own). A read that fails is skipped, as before.
+        // (19 Nov 2026, audit batch 2: ORB's book itself - fresh, never its copy as last saved - since this pass acts on what it holds; a
+        // book that cannot be read now ends this pass as a slow read does, never "ORB holds nothing".)
         val orbOpen: List<String>? = try {
-            kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) { com.optionslab.app.data.OrbArms.view().arms.mapNotNull { it.open?.symbol } }
-        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) { emptyList() }
+            kotlinx.coroutines.withTimeoutOrNull(RESCUE_LOCK_WAIT_MS) { com.optionslab.app.data.OrbArms.view(fresh = true).arms.mapNotNull { it.open?.symbol } }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: java.io.IOException) { null } catch (_: Throwable) { emptyList() }
         if (orbOpen == null) return
         bots += orbOpen
         runCatching { com.optionslab.app.data.PineAuto.held.value.values.forEach { bots += it.symbol } }

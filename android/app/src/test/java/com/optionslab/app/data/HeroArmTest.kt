@@ -291,6 +291,28 @@ class HeroArmTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (audit batch 2, second review F3): the -60% stop's option minutes are never read under the arms' lock on the stop path:
+     * with that feed hung, the stop look still ends at once (the minutes are read in the background for the next look).
+     */
+    @Test fun aHungOptionFeedNeverHoldsTheStopLook() {
+        setUp(listOf(day, day.plusDays(7)))
+        armHero()
+        passes(LocalTime.of(13, 44), LocalTime.of(13, 46))
+        assertTrue(hero().today.single().open)
+        val ce = key(day, 25_200.0, Right.CE)
+        val gate = java.util.concurrent.CountDownLatch(1)
+        val feed = OrbArms.testHeroBars!!
+        OrbArms.testHeroBars = { k, t -> if (k == ce) gate.await(10, java.util.concurrent.TimeUnit.MINUTES); feed(k, t) }
+        try {
+            at(LocalTime.of(13, 50))
+            val look = Thread { runBlocking { OrbArms.priceCheckOnly() } }.apply { isDaemon = true; start() }
+            look.join(3_000)
+            assertFalse("the stop look did not wait for the option's minutes", look.isAlive)
+            assertTrue("held: no minute closed at or below the stop", hero().today.single().open)
+        } finally { gate.countDown() }
+    }
+
+    /**
      * 18 Oct (review D8): the Hero arm's paper trades reach the live path ([ArmLive]). Its paper buy is told with its own key, its
      * reference and its quantity; once its -60% stop sells it on paper, the ORB book it registered shows that trade at quantity 0,
      * so its live copy is sold too.
