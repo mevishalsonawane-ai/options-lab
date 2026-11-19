@@ -2474,7 +2474,7 @@ class ArmLiveTest : RobolectricTest() {
         val nextMs = (System.nanoTime() - t0) / 1_000_000
         assertFalse(next.isAlive); assertFalse(slow.isAlive)
         assertTrue("a look is not held up: $lookMs ms", lookMs < 4_000)
-        assertTrue("the next entry waited about 5 s, never the old 15: $nextMs ms", nextMs < 14_000)
+        assertTrue("the next entry waited about 5 s, never the old 15: $nextMs ms", nextMs < 11_000)
         assertEquals("the unfilled one cancelled", "CANCELLED", kite.orders.values.single { it.side == "BUY" && it.symbol != sym && it.symbol != s3 }.status)
         assertEquals(setOf("open-one", "next"), view().openReal.map { it.ref }.toSet())
     }
@@ -2609,6 +2609,6 @@ class ArmLiveTest : RobolectricTest() {
         watch()
         assertFalse("the tick lanes' hint dropped", ArmLive.recoverHint)
         assertTrue("the minute lanes still try", ArmLive.lookDue)
-        assertEquals(1, posted("could not be read to check"))
+        assertEquals(1, posted("could not all be checked against Zerodha for 10 minutes"))
     }
 }

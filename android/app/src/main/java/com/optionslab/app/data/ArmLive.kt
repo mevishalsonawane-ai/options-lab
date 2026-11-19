@@ -2057,17 +2057,21 @@ object ArmLive {
         val sweep = coldDue && !stream && runCatching { Broker.loggedIn }.getOrDefault(false)
         if (!stream && !sweep) coldPending = false
         if (!holdingHint && !shadowHint && !recoverDue && !sweep) return
+        var lookFailed: Exception? = null
         if (holdingHint || recoverDue) {
             if (opLock.tryLock()) {
                 try {
                     if (recoverDue && Broker.loggedIn) runCatching { recover() }
                     if (holdingHint) look(stream)
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                } catch (e: Exception) { lookFailed = e        // (the sweep below still runs; the failure is passed on after it)
                 } finally { opLock.unlock() }
             } else if (!sweep) return                 // a look already running does this one's work
         }
         // 19 Nov 2026 (third review; final review): the start's sweep after the open trades were looked at (their stops first), under
         // its own lock - never [opLock], so its reads never make the live lane or the 15-second check skip a look - never on the live lane.
-        if (sweep && sweepLock.tryLock()) {
+        // (Never while a damaged book's recovery is due: [recover] takes those lots back first, under [opLock], and the sweep after it.)
+        if (sweep && !recoverDue && sweepLock.tryLock()) {
             try {
                 coldPendingBound()
                 runCatching {
@@ -2076,6 +2080,7 @@ object ArmLive {
                 }
             } finally { sweepLock.unlock() }
         }
+        lookFailed?.let { throw it }
         // The shadow trades after, under their own lock (review of the final fixes): their quote and candle reads never hold up
         // the live trades' looks (the live lane and the 15-second check skip a look while [opLock] is held).
         if (!stream && shadowHint && shadowLock.tryLock()) {
@@ -2100,8 +2105,8 @@ object ArmLive {
         if (ms - coldPendingSince < COLD_PENDING_MAX_MS) { coldPending = true; return }
         if (coldPending || !coldPendingSaid) {
             coldPendingSaid = true
-            com.optionslab.app.work.Alerts.error("Arms live: after the app restarted, Zerodha's books could not be read to check today's live buys " +
-                "of the arms for ${COLD_PENDING_MAX_MS / 60_000} minutes. It keeps trying each minute; check open positions in Trade.", WHO)
+            com.optionslab.app.work.Alerts.error("Arms live: after the app restarted, today's live buys of the arms could not all be checked against " +
+                "Zerodha for ${COLD_PENDING_MAX_MS / 60_000} minutes. It keeps trying each minute; check open positions in Trade.", WHO)
         }
         coldPending = false
     }
@@ -3082,8 +3087,10 @@ object ArmLive {
         // own net today on the contract - its filled buys less its filled sales (a short trade still open counted back on its side) - less
         // what the book's open long trades hold. Its round trips explain nothing held now: Boss's, Pine's or a strategy's lot stays theirs.
         val mine = counted.filter { it.tag == LiveMirror.TAG && it.symbol == sym && it.exchange == exch && it.product == product && it.filled > 0 }
+        // (A sale today of a lot carried from an earlier day closed that day's trade, never today's buy: counted back.)
         val netLong = mine.filter { it.side == "BUY" }.sumOf { it.filled } - mine.filter { it.side == "SELL" }.sumOf { it.filled } +
-            rows.filter { it.open && it.side < 0 }.sumOf { it.qty }
+            rows.filter { it.open && it.side < 0 }.sumOf { it.qty } +
+            rows.filter { it.side > 0 && !it.open && it.day.isBefore(today) && it.exitTime?.toLocalDate() == today }.sumOf { it.qty }
         val openLong = rows.filter { it.open && it.side > 0 && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty }
         val asked = minOf(balance, netLong - openLong)
         if (asked <= 0) return true
@@ -3108,9 +3115,13 @@ object ArmLive {
         // 19 Nov 2026 (final review): the orders taken back are the unowned ones: not a row's entry, nor the order a row with no order id
         // (taken back from the positions earlier) stands for - for each such trade, an order of its quantity nearest its entry time.
         val pool = entries.filter { it.id !in booked }.toMutableList()
+        // (Ties broken the same way every time: one placed at or before its entry first, then the nearest, then the older order.)
         for (r in rows.filter { it.entryOrderId == null && !it.unconfirmed && it.side > 0 && it.day == today }.distinctBy { it.ref }) {
-            pool.filter { it.filled == r.entryQty }.minByOrNull { o -> placedTime(o.placedAt)?.let { kotlin.math.abs(java.time.Duration.between(it, r.entryTime).seconds) }
-                ?: Long.MAX_VALUE }?.let { pool.remove(it) }
+            val cands = pool.filter { it.filled == r.entryQty }.ifEmpty { pool.toList() }
+            cands.sortedWith(compareBy<Broker.OrderRow>(
+                { o -> if (placedTime(o.placedAt)?.isAfter(r.entryTime) == true) 1 else 0 },
+                { o -> placedTime(o.placedAt)?.let { kotlin.math.abs(java.time.Duration.between(it, r.entryTime).seconds) } ?: Long.MAX_VALUE },
+                { o -> o.placedAt }, { o -> o.id.toLongOrNull() ?: Long.MAX_VALUE })).firstOrNull()?.let { pool.remove(it) }
         }
         if (pool.isEmpty()) return true
         val newest = pool.maxByOrNull { it.placedAt }!!
