@@ -426,7 +426,7 @@ object OrbArms {
                 "Their saved state was set aside and both arms are disarmed. If an ORB position was open, check Trade → Paper now.", "trade")
             return Book().also { it.gen = gen; it.sweepFrom = erasedAt; it.migrated += listOf(OFF_LOSERS, RetiredArms.MIGRATION, RetiredArms.UNRETIRE, LiquidityRules.MIDCP_JOIN,
                 LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST); cache = it; hints(it)
-                if (!wipedSince(it) && it.sweepFrom != null) runCatching { saveSoon(it) } }
+                if (!wipedSince(it) && it.sweepFrom != null && !file.exists()) runCatching { saveSoon(it) } }
         }
         // A restore not yet disarmed (the app clears the flag once it has): the restored arms act as disarmed.
         if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) {
@@ -3262,7 +3262,7 @@ object OrbArms {
             // (19 Nov 2026, review: only when a lot taken back is THIS arm's on this index - that trade already exists; another arm's or
             // another index's lets this entry go on.)
             val sameIndex = Regex("^${Regex.escape(c.underlying)}\\d")
-            if (b.positions.drop(rows).any { sameIndex.containsMatchIn(it.symbol) && (it.arm == arm.source || arm.source in coldSafety) })
+            if (b.positions.drop(rows).any { sameIndex.containsMatchIn(it.symbol) && (it.arm == arm.source || "${arm.source}|${c.underlying}" in coldSafety) })
                 return "refused: a lot from before the restart was taken back at Zerodha; nothing more bought now"
             if (!done) {
                 runCatching { Diag.record("orb", "${arm.label}: shadow - would have waited for the start-up sweep of Zerodha's orders (not run yet); the entry goes") }
@@ -3292,7 +3292,7 @@ object OrbArms {
         // marketable LIMIT - the offer from the quote read above (else the last price) plus max(2 ticks, 0.5%), up to the tick, never above
         // the last price plus max(2 ticks, 2%) (a wide or stale offer is not chased: it rests there and is cancelled unfilled). It waits for
         // its fill; what has not filled after the wait is cancelled and only what filled is booked, with its stop (never chased). No usable
-        // price: nothing is sent, and Boss is told. (The one function the arms' live copies use too.)
+        // price: nothing is sent, and Boss is told. ([com.optionslab.engine.orb.LiveMirror.entryLimit] as the arms' live copies' branch has it.)
         val limitPx = com.optionslab.engine.orb.LiveMirror.entryLimit(quote?.ask, last, ins.tickSize, null) ?: run {
             runCatching { com.optionslab.app.work.Alerts.error("${arm.label}: no usable price to set the live LIMIT buy of $sym at; nothing was sent.", "ORB live") }
             return "refused: no usable price for the LIMIT buy of $sym"
@@ -3698,7 +3698,9 @@ object OrbArms {
                 orders.values.none { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS }) {
                 // (19 Nov 2026, second review: beside its own working sale - or a stop of these arms resting unclaimed - nothing new rests,
                 // but an unclaimed stop placed since its entry is still taken as its own: [restExchangeStop] with adoptOnly.)
-                val adoptOnly = ownSaleWorking(cur, sym, orders.values, b.positions.mapNotNull { it.stopOrderId }.toSet())
+                // (19 Nov 2026, review: a stop of these arms resting unclaimed is [orphanStop]'s to judge - taken, waited on, or a stop capped
+                // beside it - never a reason by itself to place nothing.)
+                val adoptOnly = ownSaleWorking(cur, sym, orders.values, b.positions.mapNotNull { it.stopOrderId }.toSet(), ownStops = false)
                 val rested = runCatching { restExchangeStop(b, cur, sym, held, ltp, tick, orders.values, adoptOnly) }.getOrNull()
                 if (rested != null) { b.positions[i] = rested.first; rested.second?.let { b.positions += it }; continue }
             }
@@ -3939,7 +3941,7 @@ object OrbArms {
                 } else b.positions += row
                 if (mayRest && stopId == null && covered <= 0) coverSay(row, "${a.label}: no stop can rest at Zerodha for $sym taken back at the start - other " +
                     "working sales already cover all it holds; they are its only cover, and the app watches its level. Check $sym in Kite.")
-                if (safety) coldSafety += candidates.map { it.source }
+                if (safety) coldSafety += candidates.map { "${it.source}|${ins.name}" }
                 for (d in (if (safety) candidates + a else listOf(a)).distinct()) {
                     val spent = b.decided.getOrPut("${d.source}|$today") { HashSet() }
                     var m = at.withSecond(0).withNano(0).minusMinutes(60)
@@ -4206,13 +4208,14 @@ object OrbArms {
      * known: the careful side). Another book's labelled sale, and any resting stop, never hold it back. Reads the order labels (a
      * regular pass only).
      */
-    private suspend fun ownSaleWorking(p: Position, sym: String, orders: Collection<Broker.OrderRow>, claimed: Set<String> = emptySet()): Boolean {
+    private suspend fun ownSaleWorking(p: Position, sym: String, orders: Collection<Broker.OrderRow>, claimed: Set<String> = emptySet(),
+                                       ownStops: Boolean = true): Boolean {
         // (Review: any working SALE on the contract - not a resting stop - whose label is not another arm's: this arm's own, or one with
         // no label kept, Boss's own sale in Kite included: a stop never goes in beside a sale that could sell the same units.)
         // (And a resting stop of the arms' own ("iraorb") with no other book's label: this position's own stop whose reply was lost.)
         // (19 Nov 2026: never a stop another trade of this book holds as its own - a split trade's other part - that is its stop, not a sale.)
         val sales = orders.filter { it.symbol == sym && it.working && it.side == "SELL" && it.id != p.stopOrderId && it.id !in claimed &&
-            ((it.type != "SL" && it.type != "SL-M") || it.tag == "iraorb") }
+            ((it.type != "SL" && it.type != "SL-M") || (ownStops && it.tag == "iraorb")) }
         if (sales.isEmpty()) return false
         val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
         val label = armOf(p.arm).label
@@ -4262,13 +4265,15 @@ object OrbArms {
      * 19 Nov 2026 (review): before a lost entry is looked for in Zerodha's positions ([settleEntry], no order found for it), a buy of these
      * arms on [sym] still working that no trade claims and no other arm's or book's label names - it may be this very entry, still filling -
      * is cancelled as the app's own, and true is returned: the entry stays unconfirmed and is judged again on the next look from what
-     * Zerodha then holds. The orders unreadable: true (asked again). False: none working, or the labels unreadable (nothing cancelled).
+     * Zerodha then holds. The orders unreadable: true (asked again). The labels unreadable: nothing cancelled, true while such a buy works.
+     * False: none working.
      */
     private suspend fun strayBuyWorking(b: Book, sym: String): Boolean {
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return true
-        // (The labels unreadable: nothing is cancelled - it could be another arm's - and the entry is judged from the positions as before.)
-        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return false
         val claimed = b.positions.mapNotNull { it.entryOrderId }.toSet()
+        // (The labels unreadable: nothing is cancelled - it could be another arm's - but the entry waits while such a buy still works.)
+        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return orders.any { it.symbol == sym && it.tag == "iraorb" && it.side == "BUY" &&
+            it.exchange == "NFO" && it.product == "MIS" && it.working && it.id !in claimed }
         val working = orders.filter { it.symbol == sym && it.tag == "iraorb" && it.side == "BUY" && it.exchange == "NFO" && it.product == "MIS" &&
             it.working && it.id !in claimed && owners["kite:${it.id}"] == null }
         working.forEach { o -> runCatching { Broker.cancel(o.id, o.variety) } }

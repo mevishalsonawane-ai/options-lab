@@ -299,13 +299,13 @@ class OrbArmsLiveTest : RobolectricTest() {
     }
 
     /**
-     * 19 Nov 2026 (review): a lot with no arm known taken back at the first entry after a restart (ORB and Liquidity 15m both live on its
+     * 19 Nov 2026 (review): a lot with no arm known taken back at the first entry after a restart (ORB and ORB Fresh both live on its
      * index - it may be either's): an entry of any arm it could be is refused, never a second buy of the same signal.
      */
     @Test fun aSafetyLotTakenBackAtTheFirstEntryStopsTheArmsItCouldBe() {
         kite.boughtInKite(sym, 30, 200.0, tag = "iraorb")                 // no owner label: the app died before it was written
         kite.dayBought["NFO:$sym:MIS"] = 30
-        state(pending = true, alsoLive = listOf("liquidity15"))
+        state(pending = true, alsoLive = listOf("orb_fresh"))
         restart()
         val msg = approve()
         assertTrue(msg, msg.contains("taken back"))
@@ -321,8 +321,7 @@ class OrbArmsLiveTest : RobolectricTest() {
         state(pending = true)
         restart()
         assertEquals("Entered at Zerodha (live).", approve())
-        val today = runBlocking { OrbArms.view() }.arms
-        assertEquals("theirs taken back", theirs, today.single { it.arm.source == "liquidity15" }.open?.entryOrderId)
+        assertTrue("theirs taken back as Liquidity 15m's", runBlocking { OrbArms.liveOpen() }.any { it.second.arm == "liquidity15" && it.second.entryOrderId == theirs })
         assertEquals("this arm's entry went", 2, kite.orders.values.count { it.side == "BUY" })
         assertTrue(arm().open!!.entryOrderId != theirs)
     }

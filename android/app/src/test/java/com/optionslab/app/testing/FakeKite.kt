@@ -544,7 +544,7 @@ class FakeKite : Closeable {
         val o = Order(id, f["tradingsymbol"] ?: "", f["exchange"] ?: "NFO", f["transaction_type"] ?: "BUY", f["quantity"]?.toInt() ?: 0,
             f["product"] ?: "NRML", type, f["price"]?.toDouble() ?: 0.0, f["trigger_price"]?.toDouble() ?: 0.0, f["tag"] ?: "",
             status = if (type == "SL" || type == "SL-M") "TRIGGER PENDING" else "OPEN")
-        // 19 Nov 2026 (coordinator: one rule for every BUY LIMIT, any tag): at or above the last price it fills at the last price, as a
+        // 19 Nov 2026 (coordinator: one rule for every BUY LIMIT placed here, any tag; a GTT's leg as before): at or above the last price it fills at the last price, as a
         // MARKET buy does here; below it, it rests. Sales and every other type as before.
         val lastPx = quotes["${o.exchange}:${o.symbol}"]?.first
         val buyLimit = type == "LIMIT" && o.side == "BUY" && lastPx != null && lastPx > 0
