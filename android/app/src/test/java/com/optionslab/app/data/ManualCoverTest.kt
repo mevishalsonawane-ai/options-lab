@@ -42,6 +42,10 @@ class ManualCoverTest : RobolectricTest() {
         com.optionslab.app.testing.Background.clearAlerts()
         DayOco.resetForTest()
         ManualCover.resetForTest(on = true)
+        // 20 Nov 2026 (CI flake: "expected [SL, LIMIT] but was []"): a look's 3 s / 8 s read budgets are wall-clock waits a cold, busy
+        // test JVM can overrun, so a look stopped before its sighting and the two looks never came. The rule under test is the looks'
+        // timing by the market clock, not the budgets: they are wide here (a read that never answers still fails the test, slowly).
+        ManualCover.testBudgetMs = 60_000L
     }
 
     @After fun down() {
@@ -433,6 +437,7 @@ class ManualCoverTest : RobolectricTest() {
     }
 
     @Test fun aHangingReadInsideTheLockNeverHoldsTheStopsLong() {
+        ManualCover.testBudgetMs = null                        // the app's own budgets: what this test is about
         look(); later(25)
         // The look's own orders read goes through; the next one (inside the protections' lock) never answers.
         kite.afterNext("/quote") { kite.afterNext("/orders") { kite.hang += "/orders" } }

@@ -265,4 +265,39 @@ class ArmAutoStopsHostTest : RobolectricTest() {
         ArmAutoStopsHost.load()
         assertTrue(ArmAutoStopsHost.isOn(Rule.LIVE_STOP))
     }
+
+    /** 20 Nov 2026 (minor fixes, item 3): why the choice was not applied reaches the card - a new phone (kept over a restart), a restore. */
+    @Test fun theCardIsToldWhyTheChoiceWasNotApplied() {
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = true)
+        assertTrue("not run yet: said as waiting on a read", ArmAutoStopsHost.view.value.notice()!!.contains("have not been read yet"))
+        assertFalse(runBlocking { ArmAutoStopsHost.migrateNow() })            // no trade of the three before 19 Nov
+        assertEquals(ArmAutoStops.NotApplied.NEW_PHONE, ArmAutoStopsHost.view.value.notApplied)
+        assertTrue(ArmAutoStopsHost.view.value.notice()!!.contains("no trade of R51, R72 or Liquidity before 19 Nov"))
+        SecurePrefs.flush()
+        assertEquals("new", SecurePrefs.getString(ArmAutoStops.NOT_APPLIED_KEY))
+        // A restart reads it back.
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.load()
+        assertEquals(ArmAutoStops.NotApplied.NEW_PHONE, ArmAutoStopsHost.view.value.notApplied)
+        // A restore's mark.
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.markChoiceRun(ArmAutoStops.NotApplied.RESTORE)
+        assertEquals(ArmAutoStops.NotApplied.RESTORE, ArmAutoStopsHost.view.value.notApplied)
+        // The choice applied: no notice.
+        SecurePrefs.put(ArmAutoStops.NOT_APPLIED_KEY, "")
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = true)
+        assertTrue(runBlocking { ArmAutoStopsHost.migrateNow(existed = true) })
+        assertNull(ArmAutoStopsHost.view.value.notice())
+    }
+
+    @Test fun anUnreadableVaultIsSaidOnTheCard() {
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.testReadFails = true
+        ArmAutoStopsHost.load()
+        assertTrue(ArmAutoStopsHost.view.value.readFailed)
+        assertTrue(ArmAutoStopsHost.view.value.notice()!!.contains("Once they are read"))
+        ArmAutoStopsHost.testReadFails = false
+        ArmAutoStopsHost.load()
+        assertFalse(ArmAutoStopsHost.view.value.readFailed)
+    }
 }

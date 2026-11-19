@@ -2037,9 +2037,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             }
             runCatching {
                 when (r) {
-                    com.optionslab.app.data.LossBreaker.Lift.LIFTED -> com.optionslab.app.work.Alerts.success(r.words)
+                    com.optionslab.app.data.LossBreaker.Lift.LIFTED -> com.optionslab.app.work.Alerts.success(r.say(limit, new))
                     com.optionslab.app.data.LossBreaker.Lift.NO_STOP -> Unit
-                    else -> com.optionslab.app.work.Alerts.error(r.words)
+                    else -> com.optionslab.app.work.Alerts.error(r.say(limit, new))
                 }
             }
         }

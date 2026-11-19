@@ -140,6 +140,36 @@ class FlatBySquareOffTest : RobolectricTest() {
         assertEquals(0, kite.positions.getValue("NFO:$ce:MIS").first)
     }
 
+    /**
+     * 20 Nov 2026 (minor fixes, item 2): a strategy's exit sale still resting is told once for that order, not again each minute as the
+     * minutes left change (the alert's key carried them); a reminder only after 15 minutes ([SquareOffExit.strategyAlertKey]).
+     */
+    @Test fun aStrategysRestingExitIsToldOnceNotEachMinute() {
+        FlatBySquareOff.liveOwner = { if (it == ce) "ORB" else null }
+        kite.position(ce, 30, 200.0, product = "MIS")
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(ce, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
+        kite.requests.clear()
+        val start = Market.now().toInstant()
+        fun told() = com.optionslab.app.work.Alerts.queue.value.map { it.text }.distinct().count { it.contains("a strategy's exit sale for it is still resting") }
+        Market.testClock = java.time.Clock.fixed(start.plusSeconds(70), com.optionslab.engine.IST)
+        at(15, 27); pass()
+        Market.testClock = java.time.Clock.fixed(start.plusSeconds(100), com.optionslab.engine.IST)
+        at(15, 28); pass()
+        assertEquals("told once for the one stuck order", 1, told())
+        assertTrue("nothing sold beside it", kite.placed.isEmpty())
+    }
+
+    /** Item 2: the key - one per order (episode), the same inside 15 minutes, a new one each 15 minutes after; never below 0. */
+    @Test fun theStuckExitAlertKeyRemindsAtMostEvery15Minutes() {
+        val k = { id: String, ms: Long -> SquareOffExit.strategyAlertKey("resting", ce, id, ms) }
+        assertEquals(k("1", 0L), k("1", 14 * 60_000L + 59_000L))
+        assertEquals(k("1", 0L), k("1", -30_000L))
+        assertTrue(k("1", 0L) != k("1", SquareOffExit.STRATEGY_REMIND_MS))
+        assertTrue("another stuck order is a new episode", k("1", 0L) != k("2", 0L))
+        assertTrue(SquareOffExit.strategyAlertKey("taken over", ce, "1", 0L) != k("1", 0L))
+    }
+
     @Test fun aRestartAt1524StillClosesAt1525() {
         paper(paperCe, "MIS", 200.0)
         // The process died at 15:24 and came back: nothing in memory (no done marks), the position restored first.

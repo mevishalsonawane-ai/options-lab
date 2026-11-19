@@ -292,17 +292,31 @@ object LossBreaker {
      * the diary. A limit still on stops them again past it on the next look. True when lifted.
      */
     /** What a lift came to ([liftForLoosened]). */
-    enum class Lift(val words: String) {
-        LIFTED("Today's loss-limit stop is lifted: Start index bots works again today."),
-        NO_PIN("Today's loss-limit stop stays: it is lifted only with your PIN."),
-        NO_STOP("No loss-limit stop of today to lift."),
-        OTHER_LIMIT("Today's loss-limit stop stays: the limit that made it is still on. Switch that one off (or raise it past today's loss) with your PIN."),
-        NOT_LOOSENED("Today's loss-limit stop stays: lowering a limit, or switching one on, never lifts it."),
-        STILL_PAST("Today's loss-limit stop stays: today's loss is still past the new limit."),
-        OTHER_PAST("Today's loss-limit stop stays: today's loss is past your other daily loss limit too, which would stop the bots again at once. " +
-            "Loosen that one too with your PIN: the stop lifts then."),
-        UNREAD("Today's loss-limit stop stays: today's P&L could not be read just now. Try again in a moment."),
-        FAILED("Today's loss-limit stop stays: the bots' book could not be changed just now. Try again in a moment."),
+    enum class Lift {
+        LIFTED, NO_PIN, NO_STOP, OTHER_LIMIT, NOT_LOOSENED, STILL_PAST, OTHER_PAST, UNREAD, FAILED;
+
+        /**
+         * 20 Nov 2026 (minor fixes, item 1): what Boss is told, short and plain, naming the limits: [limit] is the one he changed,
+         * [new] its new figure (0: off). Each says why the stop stays, or what the lift did, and what to do next when there is a next.
+         */
+        fun say(limit: Limit, new: Double): String {
+            val other = if (limit == Limit.ZERODHA) Limit.PAPER else Limit.ZERODHA
+            val set = if (new <= 0.0) "off" else "Rs %,.0f".format(java.util.Locale.ENGLISH, new)
+            return when (this) {
+                LIFTED -> "Today's loss-limit stop is lifted (${limit.words} $set). The bots stay stopped until you start them: Start index bots works today."
+                NO_PIN -> "Today's loss-limit stop stays: it is lifted only with your PIN."
+                NO_STOP -> "There is no loss-limit stop today to lift."
+                OTHER_LIMIT -> "Today's loss-limit stop stays: ${other.words} made it, and that one is still on. " +
+                    "Switch it off, or raise it past today's loss, with your PIN."
+                NOT_LOOSENED -> "Today's loss-limit stop stays: only switching a limit off or raising it lifts the stop; lowering one or switching one on does not."
+                STILL_PAST -> "Today's loss-limit stop stays: today's loss is still past ${limit.words} of $set."
+                OTHER_PAST -> "Today's loss-limit stop stays: today's loss is also past ${other.words}, so the bots would stop again at once. " +
+                    (if (new <= 0.0) "Loosen that one too with your PIN: the stop lifts then."
+                    else "Loosen that one too with your PIN, then raise ${limit.words} again (or switch it off): the stop lifts then.")
+                UNREAD -> "Today's loss-limit stop stays: today's P&L could not be read just now. Try again in a moment."
+                FAILED -> "Today's loss-limit stop stays: the bots' stop could not be changed just now. Try again in a moment."
+            }
+        }
     }
 
     suspend fun liftForLoosened(limit: Limit, old: Double, new: Double, pinVerified: Boolean): Lift {
@@ -327,7 +341,9 @@ object LossBreaker {
                 if (ownLimit > 0.0) return Lift.OTHER_LIMIT
             }
             // 19 Nov 2026 (final review): never when the other limit is past today too - the next look would stop the bots again at once.
-            if (otherPast(own)) return Lift.OTHER_PAST
+            // 20 Nov 2026 (minor fixes): when the limit Boss just loosened IS that other one (the stop's own limit already off), it is
+            // the new figure that today's loss is still past: said as such, not as "the other limit".
+            if (otherPast(own)) return if (own == limit) Lift.OTHER_PAST else Lift.STILL_PAST
             // The bots' day stops kept as Boss's own first (they stay stopped; Start works today); failing, nothing is lifted. Under the
             // looks' lock: no look puts the loss stop back in between.
             try {

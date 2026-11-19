@@ -78,6 +78,26 @@ class FindingsTest {
         assertTrue(bus.drainLines().size <= 108, "the unwritten lines are bounded too")
     }
 
+    /**
+     * 20 Nov 2026 (minor fixes, item 5): the race of two posters a ring apart, played in the losing order - the older finding's write
+     * landing after the newer one's in the same slot - never takes the newer finding off the board.
+     */
+    @Test fun anOlderWriteLandingLateNeverReplacesANewerFinding() {
+        val bus = Findings.Bus(capacity = 4)
+        val old = bus.post(f("old", Findings.Kind.OTHER, "NIFTY"))            // seq 0, slot 0
+        repeat(3) { bus.post(f("mid$it", Findings.Kind.OTHER, "NIFTY")) }
+        val newer = bus.post(f("new", Findings.Kind.OTHER, "NIFTY"))          // seq 4, slot 0 again
+        bus.store(old)                                                       // the slow poster's write lands now
+        val r = bus.recent(t0)
+        assertEquals(4, r.size, "the newest four kept")
+        assertEquals(newer.seq, r.first().seq)
+        assertTrue(r.none { it.who == "old" })
+        // The clear empties the log and keeps its count right: the cap still bounds what follows.
+        bus.clear()
+        assertTrue(bus.drainLines().isEmpty())
+        assertTrue(bus.recent(t0).isEmpty())
+    }
+
     @Test fun consensusCountsAgreeingAndConflictingFindingsInTheWindow() {
         val all = listOf(
             f("Liquidity", Findings.Kind.SWEEP, "BANKNIFTY", 1, 70), f("ORB", Findings.Kind.BREAK, "BANKNIFTY", 1, 60),

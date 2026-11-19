@@ -75,7 +75,7 @@ class TestApp : Application() {
         com.optionslab.app.data.WatchClock.resetForTest()
         IdleSampler.install()
         NetworkGuard.install()
-        NetworkGuard.blocked.clear()
+        NetworkGuard.reset()
         KiteStream.testOff = true          // the fake Kite has no price stream: never open its socket
         com.optionslab.app.data.OrderFlowLive.testOff = true     // and the order flow never lays out its instruments by itself
         FakeAndroidKeyStore.install()

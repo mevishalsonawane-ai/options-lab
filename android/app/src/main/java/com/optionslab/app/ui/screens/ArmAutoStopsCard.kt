@@ -63,7 +63,9 @@ internal fun ArmAutoStopsCardContent(view: ArmAutoStopsHost.View, said: String?,
             "they run until you stop them. Every other arm keeps them all. The kill switch, the day lock, the guard and daily loss limit, Stop " +
             "for today, every live gate (Live with your PIN, AI trades go live, each arm's Trade live switch) and every exit still apply. " +
             "Nothing is switched back on by this: an arm a stop had already switched off, parked or paused waits for you.")
-        if (!view.loaded) Note("Reading the switches...", Modifier.padding(top = 4.dp))
+        // 20 Nov 2026 (minor fixes, item 3): Boss's choice not applied here - why, and how to switch one off (PIN).
+        view.notice()?.let { Note(it, Modifier.padding(top = 4.dp)) }
+        if (!view.loaded) { if (!view.readFailed) Note("Reading the switches...", Modifier.padding(top = 4.dp)) }
         else {
             for (r in ArmAutoStops.Rule.entries) {
                 ToggleRow(r.switch, if (view.isOn(r)) "On (as before 19 Nov): ${r.words}" else "Off - ${ArmAutoStops.ROW}: ${r.words} no longer stops them",

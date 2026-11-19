@@ -26,6 +26,19 @@ internal object SquareOffExit {
     private const val STRATEGY_COVER_MS = 60_000L
     /** ... and longer than this, taken over by the square-off (cancelled, then sold). */
     const val TAKEOVER_MS = 120_000L
+    /**
+     * 20 Nov 2026 (minor fixes, item 2: the stuck-exit alert came every minute from 15:15, its key carrying the minutes left): a
+     * strategy's stuck exit sale is told once per leg per stuck episode (its order), then reminded at most this often while it lasts.
+     */
+    const val STRATEGY_REMIND_MS = 15 * 60_000L
+
+    /**
+     * The once-a-day key ([ExpirySquareOff] / [FlatBySquareOff] tell each key once a day) of a strategy's stuck exit alert: [what]
+     * ("resting", "taken over") on [symbol], its order [orderId] (one stuck episode), and the 15-minute window of [sinceMs] (how long it
+     * has been past the alert's own threshold; under 0 counts as 0) - so one alert per episode, one reminder per [STRATEGY_REMIND_MS].
+     */
+    internal fun strategyAlertKey(what: String, symbol: String, orderId: String, sinceMs: Long): String =
+        "strategy exit $what $symbol $orderId ${sinceMs.coerceAtLeast(0L) / STRATEGY_REMIND_MS}"
     private val STAMP = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
     /** How long it has rested by the market's clock (Zerodha's stamps are IST; a phone behind it reads young; unread: 0). */
@@ -107,12 +120,13 @@ internal object SquareOffExit {
                 (it.tag == STRATEGY_TAG && !isStop(it) && !takeOver(it)) }
             same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && (restedMs(it) > STRATEGY_COVER_MS || takeOver(it)) }?.let {
                 if (takeOver(it)) {
-                    tell("strategy exit taken over ${p.symbol}", "${p.symbol} $aboutIt and a strategy's exit sale for it was still resting at Zerodha: " +
+                    tell(strategyAlertKey("taken over", p.symbol, it.id, restedMs(it) - TAKEOVER_MS), "${p.symbol} $aboutIt and a strategy's exit sale for it was still resting at Zerodha: " +
                         "the $exitName cancels it and sells what is held.")
                 } else {
-                    // Told once; from 15:15 (or the flat-by minute) each minute it is still resting, a RISK alert naming the minutes left.
+                    // Told once per stuck order, naming the minutes left when near the close; a reminder at most every 15 minutes
+                    // ([STRATEGY_REMIND_MS]; 20 Nov 2026: before, one each minute from 15:15).
                     val left = minutesLeft
-                    tell("strategy exit resting ${p.symbol}${left?.let { " $it" } ?: ""}", "${p.symbol} $aboutIt and a strategy's exit sale for it is still " +
+                    tell(strategyAlertKey("resting", p.symbol, it.id, restedMs(it) - STRATEGY_COVER_MS), "${p.symbol} $aboutIt and a strategy's exit sale for it is still " +
                         "resting at Zerodha" + (left?.let { " with $it minute(s) to the close" } ?: "") + ". The $exitName takes over if it does not fill " +
                         "(cancels it, then sells); check it in Trade.")
                 }

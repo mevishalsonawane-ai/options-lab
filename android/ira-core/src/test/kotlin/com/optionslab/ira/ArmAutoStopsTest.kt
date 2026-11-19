@@ -239,4 +239,23 @@ class ArmAutoStopsTest {
         assertTrue(Rule.entries.all { fresh.isOn(it) }); assertTrue(fresh.offAtMs.isEmpty()); assertNull(fresh.heldAccount); assertFalse(fresh.migrated)
         assertNotNull(Rule.ofTarget("autostop:forward_bar"))
     }
+
+    /** 20 Nov 2026 (minor fixes, item 3): the card's notice when Boss's choice was not applied - why, and how to switch one off (PIN). */
+    @Test fun theNotAppliedNoticeSaysWhyAndHowToSwitchOneOff() {
+        for (w in ArmAutoStops.NotApplied.entries) {
+            val n = ArmAutoStops.notAppliedNote(w, on)!!
+            assertTrue(n.contains("not applied on this phone") && n.contains(w.why), n)
+            assertTrue(n.contains("enter your PIN"), n)
+        }
+        assertTrue(ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.RESTORE, on)!!.contains("a backup was restored"))
+        assertTrue(ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.UNREAD, on, switchesShown = false)!!.contains("Once they are read"))
+        assertNull(ArmAutoStops.notAppliedNote(null, on), "applied (or nothing known): no notice")
+        assertNull(ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.NEW_PHONE, allOff), "all off already: nothing to tell")
+        val oneOff = ArmAutoStops.set(on, Rule.LIVE_STOP, false, 5L, pinConfirmed = true).state
+        assertNotNull(ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.NEW_PHONE, oneOff), "some still on: still told")
+        // The vault keeps the new phone's and the restore's reasons; never an unread one.
+        assertEquals(ArmAutoStops.NotApplied.NEW_PHONE, ArmAutoStops.NotApplied.ofKey("new"))
+        assertEquals(ArmAutoStops.NotApplied.RESTORE, ArmAutoStops.NotApplied.ofKey("restore"))
+        assertNull(ArmAutoStops.NotApplied.ofKey("unread")); assertNull(ArmAutoStops.NotApplied.ofKey("")); assertNull(ArmAutoStops.NotApplied.ofKey(null))
+    }
 }

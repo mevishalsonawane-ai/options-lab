@@ -517,9 +517,25 @@ object Strategies {
         }
     }
 
+    /**
+     * 20 Nov 2026 (minor fixes, item 2): a leg's exit refused look after look (a square-off took it over, its stop not yet confirmed out)
+     * and a stop the run keeps retrying alerted on every look: told once per leg per stuck episode, then at most every 15 minutes
+     * ([com.optionslab.ira.RepeatGate]); the run's log keeps every line. A run started or stopped ends its episodes. Memory only.
+     */
+    private val stuckAlerts = com.optionslab.ira.RepeatGate(15 * 60_000L)
+    private val STUCK_KINDS = setOf("leg_exit_rejected", "flip_outgoing_exit_rejected", "run_stop_failed")
+
+    /** Whether [e] of the run [name] is told now ([stuckAlerts]); every other event, always. */
+    internal fun tellsNow(name: String, e: Event, nowMs: Long): Boolean {
+        if (e.kind == "run_started" || e.kind == "run_stopped") stuckAlerts.end("$name|")
+        if (e.kind !in STUCK_KINDS) return true
+        return stuckAlerts.tell("$name|${e.legId?.let { "leg|$it" } ?: "run"}", nowMs)
+    }
+
     private fun record(b: Book, name: String, e: Event, alert: Boolean) {
         b.log += LogLine(System.currentTimeMillis(), name, e.kind, e.message, e.severity)
-        if (alert || e.severity == "warn") Notifier.post(app, 6000 + (name.hashCode() and 0x1ff), if (alert) Notifier.RISK else Notifier.LIVE,
+        val tell = tellsNow(name, e, System.currentTimeMillis())
+        if ((alert || e.severity == "warn") && tell) Notifier.post(app, 6000 + (name.hashCode() and 0x1ff), if (alert) Notifier.RISK else Notifier.LIVE,
             "$name: ${e.kind.replace('_', ' ')}", e.message, "strategy")
     }
 

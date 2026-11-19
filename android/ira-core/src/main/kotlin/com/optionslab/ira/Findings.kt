@@ -77,11 +77,26 @@ object Findings {
         fun post(f: Finding): Finding {
             val seq = next.getAndIncrement()
             val g = f.copy(seq = seq, strength = f.strength.coerceIn(0, 100), ttlMs = f.ttlMs.coerceAtLeast(1_000L))
-            ring.set((seq % capacity).toInt(), g)
+            store(g)
             if (pendingSize.incrementAndGet() > pendingCap) { if (pending.poll() != null) pendingSize.decrementAndGet() }
             pending.add(line(g))
             for (s in subs) if (s.wants(g)) runCatching { s.onFinding(g) }
             return g
+        }
+
+        /**
+         * 20 Nov 2026 (minor fixes, item 5: two posters [capacity] apart share a slot; the slower one, holding the OLDER finding, could
+         * write last and leave the slot with a finding [recent] then drops as past the ring - the newer one lost): [g] goes into its slot
+         * only over an older finding (or an empty slot), by compare-and-set - lock-free, never blocks, no I/O. A newer one already there
+         * wins; [g] is past the ring by then anyway.
+         */
+        internal fun store(g: Finding) {
+            val slot = (g.seq % capacity).toInt()
+            while (true) {
+                val cur = ring.get(slot)
+                if (cur != null && cur.seq >= g.seq) return
+                if (ring.compareAndSet(slot, cur, g)) return
+            }
         }
 
         fun subscribe(s: Sub): Sub { subs += s; return s }
@@ -116,7 +131,8 @@ object Findings {
         /** TEST / a new day. */
         fun clear() {
             for (i in 0 until capacity) ring.set(i, null)
-            pending.clear(); pendingSize.set(0)
+            // (20 Nov 2026: each line taken out counted out, so a post racing the clear never leaves the count below the queue.)
+            while (pending.poll() != null) pendingSize.decrementAndGet()
         }
     }
 
