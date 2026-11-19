@@ -1870,8 +1870,14 @@ object PassedArmsHost {
     /** Each arm's forward bar on its closed trades: a failed bar switches it off once (risk-lowering, logged). */
     private fun forward(b: Book): Boolean {
         var changed = false
+        // 19 Nov (review): the automatic-stop switches read again in the background if the start could not (memory only here).
+        runCatching { ArmAutoStopsHost.ensureReady() }
         for (s in SOURCES) {
             if (b.armed[s] != true) continue
+            // 19 Nov (Boss's choice, [ArmAutoStopsHost]): with its switch off the bar no longer switches R51 or R72 off ("run until i stop
+            // them"); R52 and Solo 2.0 keep theirs. Before the switch is read it waits for a later pass (a switch-off is never undone by
+            // itself). Memory only.
+            if (!ArmAutoStopsHost.mayLatch(com.optionslab.ira.ArmAutoStops.Rule.FORWARD_BAR, s)) continue
             // 22 Oct (arms audit): only the trades really bought count toward the 40-trade bar and its twice-the-spread test; a
             // would-be trade (the cap, a twin, record only) was never bought and books no entry spread, so it could neither
             // switch the arm off nor pass it. They stay in the record, labelled.
@@ -1906,6 +1912,27 @@ object PassedArmsHost {
             changed = true
         }
         return changed
+    }
+
+    /**
+     * 19 Nov ([ArmAutoStopsHost]'s timeline entry): R51 and R72 when their forward bar switched them off and they are still off, with why;
+     * null while the book is not ready. Reads only (a worker thread).
+     */
+    internal suspend fun forwardBarStopped(): List<String>? {
+        if (!ready()) return null
+        return lock.withLock {
+            val b = book()
+            listOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE).filter { b.armed[it] != true && b.paused[it] != null }
+                .map { "${label(it)} switched itself off on its forward-test bar (${b.paused[it]})" }
+        }
+    }
+
+    /** 19 Nov ([ArmAutoStopsHost]): whether R51 or R72 has a trade closed before [day]; null while the book is not ready. Reads only. */
+    internal suspend fun tradedBefore(day: LocalDate): Boolean? {
+        if (!ready()) return null
+        return lock.withLock {
+            book().positions.any { (it.arm == DonchianArm.SOURCE || it.arm == BreadthDonchianArm.SOURCE) && it.exitTime?.toLocalDate()?.isBefore(day) == true }
+        }
     }
 
     // ---- entries -------------------------------------------------------------------------------------------------------
@@ -2021,7 +2048,7 @@ object PassedArmsHost {
         inFlight += c.symbol
         var why = ""
         val p: Pos = (try {
-            val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = label(arm), mirror = arm, verdict = verdict)
+            val r = Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, known = q, auto = label(arm), mirror = arm, verdict = verdict, source = arm)
             // 19 Oct: the same-direction cap refused it: nothing was bought; kept as a would-be trade at the price seen.
             // Priced at the ask when the quote has one (a buyer pays it), else the last price.
             // 25 Oct: one of Boss's new risk rules refused it ([BossRiskHost]): kept the same way, labelled with that rule.
@@ -2977,7 +3004,9 @@ object PassedArmsHost {
     }.getOrDefault(false)
 
     /** Its book's file (none before [init]). */
-    internal fun filesForErase(): List<File> = if (ready()) listOfNotNull(file, histFile(VIX)?.parentFile) else emptyList()
+    // 19 Nov (review): with any copy of the book set aside as unreadable (it held the arms' trades; [ArmAutoStopsHost] reads it as history).
+    internal fun filesForErase(): List<File> = if (ready()) listOfNotNull(file, histFile(VIX)?.parentFile) +
+        runCatching { file.parentFile?.listFiles { x -> x.name.startsWith(file.name + ".unreadable.") }?.toList() }.getOrNull().orEmpty() else emptyList()
 
     /** TEST ONLY: closed trades added to the book as if traded (the forward bars' tests). Debug builds only. */
     internal suspend fun addClosedForTest(list: List<Pos>) {

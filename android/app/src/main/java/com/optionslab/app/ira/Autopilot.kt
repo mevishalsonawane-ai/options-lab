@@ -297,7 +297,7 @@ internal object Autopilot {
      * [c] applied through its agent's setter: what was said, or null when the agent refused or nothing changed. A change that
      * raises live risk goes only with [pinConfirmed]. Never an order, a size, a stop or a safety setting.
      */
-    internal fun apply(c: AutoChange.Change, pinConfirmed: Boolean, byBoss: Boolean = false): String? {
+    internal fun apply(c: AutoChange.Change, pinConfirmed: Boolean, byBoss: Boolean = false, ownUndo: Boolean = false): String? {
         if (AutoChange.never(c)) return null
         // Liquidity BANKNIFTY frozen for its paper test (Boss, 12 Oct): no automatic change aimed at Liquidity applies - it is
         // recorded only - except parking its LIVE entries to paper (that only takes risk off). Boss's own yes still applies.
@@ -332,7 +332,7 @@ internal object Autopilot {
             }
             AutoChange.Kind.PAPER_ENTRIES -> {
                 val key = c.target.removePrefix("paper:")
-                if (c.to == AutoChange.PAUSED) SmartWorkers.pausePaperByAutopilot(key) else SmartWorkers.resumePaperByAutopilot(key)
+                if (c.to == AutoChange.PAUSED) SmartWorkers.pausePaperByAutopilot(key, byBoss || ownUndo) else SmartWorkers.resumePaperByAutopilot(key)
             }
             // Boss's 13 Oct park ([logBossPark]): only its Undo applies here - the arm switched back on, ON PAPER (never cleared
             // for Zerodha: in Live an ordinary arm asks for the PIN, which is never given here, so nothing changes). Never re-parked.
@@ -545,6 +545,14 @@ internal object Autopilot {
                 if (c.to != AutoChange.V4_ONLY && c.to != AutoChange.V5_LOCK) return null
                 com.optionslab.app.data.StepTrailExits.setLock(c.to == AutoChange.V5_LOCK, pinConfirmed = pinConfirmed, log = false)
                     .takeIf { !it.contains("Nothing changed") }
+            } else if (AutoChange.isAutoStopTarget(c.target)) {
+                // 19 Nov (Boss's choice: "run until i stop them"): one of the automatic stops' switches on R51, R72 and Liquidity
+                // ([logArmAutoStopOff], [logArmAutoStop]): the Undo switches it back on (no PIN: it lowers risk) or off again (the PIN, by the
+                // change's live scope, asked before this runs and passed as given - never assumed); not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                val rule = com.optionslab.ira.ArmAutoStops.Rule.ofTarget(c.target) ?: return null
+                com.optionslab.app.data.ArmAutoStopsHost.set(rule, c.to == AutoChange.ON, pinConfirmed = pinConfirmed, log = false)
+                    .takeIf { !it.contains("Nothing changed") }
             } else if (c.target == AutoChange.PICK_TARGET) {
                 // 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers ([logPassedPickerOn]): the Undo switches them off or on.
                 // Off adds live trades back: the PIN, by the change's live scope ([needsPin]); not logged again.
@@ -586,7 +594,7 @@ internal object Autopilot {
             }
             AutoChange.Kind.LIVE_ENTRIES -> {
                 val key = c.target.removePrefix("live:")
-                if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key)
+                if (c.to == AutoChange.PARKED) SmartWorkers.parkByAutopilot(key, byBoss || ownUndo)
                 else { SmartWorkers.ownerRearmed(key); "${key} may take live entries again." }
             }
             AutoChange.Kind.FLOW_THRESHOLD -> {
@@ -709,7 +717,8 @@ internal object Autopilot {
         AutoChange.entry(_book.value, id)?.let { e -> if (e.applied && AutoChange.superseded(_book.value, e)) return AutoChange.SUPERSEDED_UNDO }
         val u = AutoChange.undo(_book.value, id) ?: return "That change can't be undone now (it was already undone or reverted)."
         if (needsPin(u.inverse, u.needsPin) && !pinConfirmed) return PIN_UNDO
-        val said = runCatching { apply(u.inverse, pinConfirmed) }.getOrNull() ?: return "Nothing changed: ${u.entry.change.what} could not be put back just now."
+        // 19 Nov (review): [ownUndo] - Boss's own tap may park or pause Liquidity again whatever its automatic stop's switch says.
+        val said = runCatching { apply(u.inverse, pinConfirmed, ownUndo = true) }.getOrNull() ?: return "Nothing changed: ${u.entry.change.what} could not be put back just now."
         synchronized(lock) { _book.value = AutoChange.undone(_book.value, id, Market.today()) }
         runCatching { Diag.record("autopilot", "undone by you: ${u.entry.change.what}") }
         saveSoon()
@@ -1455,6 +1464,33 @@ internal object Autopilot {
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
                         note = if (on) "your choice; paper and live, new trades" else "your choice (with your PIN); new trades use the arms' own exits").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * 19 Nov (Boss: "i want it to run until i stop them"): one of the automatic stops switched off for R51, R72 and Liquidity by his
+     * one-time choice ([com.optionslab.app.data.ArmAutoStopsHost.migrateNow]) - logged once as Boss's, with [reason] listing what it still
+     * holds stopped; one tap undoes it (back on, no PIN).
+     */
+    fun logArmAutoStopOff(rule: com.optionslab.ira.ArmAutoStops.Rule, reason: String) {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.armAutoStop(rule, false, reason), "${com.optionslab.ira.ArmAutoStops.CHOICE}; paper and live; Undo switches it back on (one tap)")
+    }
+
+    /** 19 Nov: Boss switching one of them in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
+    fun logArmAutoStop(rule: com.optionslab.ira.ArmAutoStops.Rule, on: Boolean, reason: String) {
+        if (!enabled()) return
+        val c = AutoChange.armAutoStop(rule, on, reason)
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
+                        note = if (on) "your choice (Bot settings); R51, R72 and Liquidity" else "your choice (Bot settings, with your PIN); R51, R72 and Liquidity").first
                     save()
                 }
             }
