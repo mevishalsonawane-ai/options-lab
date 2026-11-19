@@ -1561,6 +1561,11 @@ class WatchService : Service() {
          * [RUN_DAY]: a start meanwhile does not take that day for a process that died.
          */
         @Volatile private var endSeenRun = 0L
+        /**
+         * TEST ONLY: thrown at the top of each pass (19 Nov 2026, audit batch 2: the beat's vault write, which the tests failed to make a
+         * pass fail, now goes to the background writer).
+         */
+        @Volatile internal var passFailureForTest: Throwable? = null
         /** 19 Nov 2026 (audit batch 2): the last run whose own end cleared [RUN_DAY] (written under [runDayLock]). */
         @Volatile private var endedRun = 0L
         /** Tests run many services in one process: the run count starts again as a new process would. */
@@ -2125,6 +2130,7 @@ class WatchService : Service() {
     // while MCX's pass runs (mcxPass), none before the open, in the evening look or on a closed day (as before: no stop check there).
     private suspend fun watchPass(fired: HashSet<String>, lane: StopLane.Control) {
         run {
+            passFailureForTest?.let { throw it }
             Heartbeat.beat(this)
             // Outside NSE's session (before its open, after its close, an NSE holiday): MCX's pass when it is due (9 Oct).
             // 20 Oct, enhancement round 1 (idea 2): past the close, only the stops-and-targets look while a carried protection waits

@@ -258,7 +258,7 @@ class StopLaneTest : RobolectricTest() {
             assertTrue("told", n != null)
             val text = com.optionslab.app.testing.Background.text(n!!).orEmpty()
             assertTrue(text, text.contains("arms' live trades: last completed check 46 s ago") && !text.contains("paper book"))
-            assertEquals(com.optionslab.app.work.Notifier.RISK, n.channelId)
+            assertEquals(com.optionslab.app.work.Notifier.APPROVAL, n.channelId)
             // Not again within 5 minutes; a completed check makes it fresh.
             context.getSystemService(android.app.NotificationManager::class.java).cancelAll()
             StopLane.completedCheck(context, StopLane.Mode.NSE, t0 + 100_000L, books)

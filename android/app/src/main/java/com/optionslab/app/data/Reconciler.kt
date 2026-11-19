@@ -69,8 +69,10 @@ object Reconciler {
             told = true
             val text = Reconcile.notice(alerts)
             runCatching { Diag.record("sync", "RISK: $text") }
-            runCatching { com.optionslab.app.work.Notifier.post(context, NOTE_ID, com.optionslab.app.work.Notifier.RISK,
-                "RISK: a Zerodha position no book follows", text, "broker") }
+            // On the always-shown channel (as the dead-man's "Order watch stopped"): the risk channel reaches the shade only with
+            // "other alerts" on, and this must never be missed. Red in the app.
+            runCatching { com.optionslab.app.work.Notifier.post(context, NOTE_ID, com.optionslab.app.work.Notifier.APPROVAL,
+                "RISK: a Zerodha position no book follows", text, "broker", banner = com.optionslab.app.work.Alerts.Kind.ERROR) }
         } else if (told && found.isEmpty()) {
             told = false
             runCatching { androidx.core.app.NotificationManagerCompat.from(context).cancel(NOTE_ID) }

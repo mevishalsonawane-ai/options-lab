@@ -208,7 +208,8 @@ internal object StopLane {
         val text = stale.joinToString("; ") { (b, age) -> "$b: last completed check ${age / 1000} s ago" } +
             ". A live position's exit checks are late (the promise is 15 s). Check the open positions in Kite; the watch goes on."
         runCatching { Heartbeat.diary("RISK: $text") }
-        runCatching { Notifier.post(context, STALE_NOTE_ID, Notifier.RISK, "RISK: live stop checks are late", text, "almanac") }
+        // On the always-shown channel (the risk channel reaches the shade only with "other alerts" on); red in the app.
+        runCatching { Notifier.post(context, STALE_NOTE_ID, Notifier.APPROVAL, "RISK: live stop checks are late", text, "almanac", banner = Alerts.Kind.ERROR) }
     }
 
     /** The diagnostics' line: the worst completed-to-completed gap today. */

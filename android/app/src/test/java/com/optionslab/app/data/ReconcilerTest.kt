@@ -71,7 +71,7 @@ class ReconcilerTest : RobolectricTest() {
         val n = risk()
         assertNotNull("two reads a minute apart agree: told", n)
         n!!
-        assertEquals(com.optionslab.app.work.Notifier.RISK, n.channelId)
+        assertEquals(com.optionslab.app.work.Notifier.APPROVAL, n.channelId)
         val text = Background.text(n).orEmpty()
         assertTrue(text, text.contains("Zerodha holds -30 $other") && text.contains("no exit stop rests"))
         assertTrue(text, text.contains("placed, changed or cancelled nothing"))
