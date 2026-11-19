@@ -3859,7 +3859,7 @@ object OrbArms {
     }
 
     /** The memory of [endedSaid], [restTries] and [restRefusedSaid] dropped (a new process, an erase). */
-    private fun forgetStopSaid() { endedSaid.clear(); restTries.clear(); restRefusedSaid.clear(); goneSince.clear(); goneNoRowSaid.clear(); settleAsked.clear(); goneAlertSaid.clear(); shortSince.clear(); settleZero.clear() }
+    private fun forgetStopSaid() { endedSaid.clear(); restTries.clear(); restRefusedSaid.clear(); goneSince.clear(); goneNoRowSaid.clear(); settleAsked.clear(); goneAlertSaid.clear(); shortSince.clear(); settleZero.clear(); bossSaid.clear() }
 
     /** Cancels the stop [id] as the app's own ([ownCancels]). */
     private suspend fun cancelOwnStop(id: String) {
