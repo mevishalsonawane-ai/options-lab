@@ -422,6 +422,7 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("exactly what is held", 60, stops.sumOf { it.qty })
         // A third resting exit would pass what is held: an arm's stop that went missing is not rested beside Boss's own sell.
         kite.orders.getValue(stops.first().id).status = "CANCELLED"
+        kite.orders.getValue(stops.first().id).message = "Cancelled by the exchange (RMS)"   // (B2-B: Zerodha's, so the put-back guard runs)
         runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "LIMIT", 260.0, 0.05,
             "NFO", "manual"), exit = true) }
         watch()
@@ -2848,9 +2849,11 @@ class ArmLiveTest : RobolectricTest() {
         watch()
         val sid = view().openReal.single().stopOrderId!!
         try {
-            Market.testClock = java.time.Clock.fixed(Market.today().atTime(20, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+            val late = Market.today().atTime(20, 0)
+            Market.testClock = java.time.Clock.fixed(late.atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
             assertFalse(Market.acceptsOrders())
             kite.orders.getValue(sid).status = "CANCELLED"
+            kite.orders.getValue(sid).updated = late                       // Zerodha's own time of the cancel
             kite.requests.clear()
             val t0 = ArmLive.testNow!!
             watch()

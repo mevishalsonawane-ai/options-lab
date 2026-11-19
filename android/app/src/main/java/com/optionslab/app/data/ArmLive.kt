@@ -2654,7 +2654,13 @@ object ArmLive {
                     // the level itself. Exchange / RMS words are Zerodha's: put back at once. One outside market hours (the day's end) is Zerodha's
                     // too: put back after a back-off.)
                     val byExchange = com.optionslab.ira.ManualCoverRule.endedByExchange(so.status, so.message)
-                    val inHours = runCatching { if (p.exchange == "MCX") McxMarket.acceptsOrders() else Market.acceptsOrders() }.getOrDefault(true)
+                    // (Judged at Zerodha's own time of the cancel when it gives one - never by how late this look came - else now; unknown: put back.)
+                    val endedAt = placedTime(so.updatedAt)
+                    val inHours = runCatching {
+                        if (p.exchange == "MCX") McxMarket.acceptsOrders()
+                        else if (endedAt != null) Market.testOrdersAnyTime || Market.isOpenAt(endedAt.toLocalDate(), endedAt.hour * 60 + endedAt.minute)
+                        else Market.acceptsOrders()
+                    }.getOrDefault(false)
                     val byYou = !appsOwn && !byExchange && inHours
                     if (so.status == "CANCELLED" && !appsOwn && !byExchange && !inHours) backOff(p)
                     val level = p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "its level"
