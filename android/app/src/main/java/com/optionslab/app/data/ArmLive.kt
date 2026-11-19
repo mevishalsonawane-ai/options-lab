@@ -3087,8 +3087,8 @@ object ArmLive {
         val o0 = buys.first()
         val sym = o0.symbol; val exch = o0.exchange; val product = o0.product
         val rows = lock.withLock { book().positions.filter { !it.shadow && it.contract == contract }.toList() }
-        // An entry still settling on disk is that entry's to settle ([settle]): decided once it has.
-        if (rows.any { it.open && it.unconfirmed && it.entryOrderId == null }) return false
+        // An entry still settling on disk is that entry's to settle ([settle]) - with its order id or without: decided once it has.
+        if (rows.any { it.open && it.unconfirmed }) return false
         // (An entry still filling: decided once it is done. A short trade's own working stop or exit is not one.)
         if (rows.none { it.open && it.side < 0 } && buys.any { it.working && it.type != "SL" && it.type != "SL-M" }) return false
         // (What this path bought there today, less what the book's long trades of today entered and its short trades bought back today.)
@@ -3152,18 +3152,23 @@ object ArmLive {
             val ownBooked = rows.filter { it.entryOrderId != null && it.entryOrderId in todayIds && it.side > 0 }.sumOf { it.qty }
             minOf(asked, ((ownFilled - ownBooked) / lot) * lot)
         }
-        val unexplained = LiveMirror.unexplainedQty(held, boughtToday, others, asked, lot)
+        // (What the other book claimed a moment ago counts too - never its lot said to be Boss's.)
+        var otherSeen = 0
         if (unmatched && cap <= 0) {
+            takeLost("arm", exch, sym, product) { other -> otherSeen = other; 0 }
+            val unexplained = LiveMirror.unexplainedQty(held, boughtToday, others + otherSeen, asked, lot)
             if (unexplained > 0) com.optionslab.app.work.Alerts.error("Arms live: after the app restarted, Zerodha holds $unexplained $sym that the " +
                 "arms' book does not explain and no order of the arms stands for it. It is not taken as an arm's (it may be yours): check it in Trade.", WHO)
             return true
         }
-        val q = takeLost("arm", exch, sym, product) { other -> minOf(cap, LiveMirror.unexplainedQty(held, boughtToday, others + other, asked, lot)) }
+        // (Its managing arm and its price known before anything is claimed: a claim is never left for a lot nobody took.)
+        if (LiveMirror.ARMS.none { it.product == product && it.rest == LiveMirror.Rest.SL }) return false
+        if (pool.none { it.avg > 0 } && net.none { it.avg > 0 }) return false
+        val q = takeLost("arm", exch, sym, product) { other -> otherSeen = other
+            minOf(cap, LiveMirror.unexplainedQty(held, boughtToday, others + other, asked, lot)) }
         if (q <= 0) return true
         val takeQ = q
-        if (unmatched && unexplained > takeQ) com.optionslab.app.work.Alerts.error("Arms live: after the app restarted, Zerodha holds " +
-            "${unexplained - takeQ} more $sym than the arms' own orders explain. That part is not taken as an arm's (it may be yours) and has no " +
-            "app stop: check it in Trade.", WHO)
+        val restUnexplained = if (unmatched) LiveMirror.unexplainedQty(held, boughtToday, others + otherSeen, asked, lot) - takeQ else 0
         val newest = pool.maxByOrNull { it.placedAt } ?: entries.maxByOrNull { it.placedAt }!!
         val newestId = newest.id.takeIf { !unmatched }
         // Its arm: the owner label of its order, else the one open paper trade on the contract of an arm not yet mirrored live.
@@ -3181,7 +3186,7 @@ object ArmLive {
         for (o in pool.sortedByDescending { it.placedAt }) { if (left <= 0) break; val k = minOf(left, rem[o.id] ?: 0); if (o.avg > 0) { paid += o.avg * k; paidQty += k }; left -= k }
         val fill = (if (paidQty > 0) paid / paidQty else 0.0).takeIf { it > 0 && !unmatched } ?: net.firstOrNull { it.avg > 0 }?.avg ?: return false
         val rule = if (spec != null) rebuiltRule(spec, sym, placedTime(newest.placedAt)) else (false to false)
-        val ref = if (unmatched) "recovered:${sym}:${now().toLocalTime()}" else leg?.second?.ref ?: "recovered:${newest.id}"
+        val ref = if (unmatched) "recovered:${sym}:${now()}:${System.nanoTime() % 1_000_000}" else leg?.second?.ref ?: "recovered:${newest.id}"
         val base = Pos(host.key, ref, sym, exch, product, 1, takeQ, takeQ, lot, tick, (net.firstOrNull()?.multiplier?.toInt() ?: 1).coerceAtLeast(1), fill,
             (if (unmatched) null else placedTime(newest.placedAt)?.takeIf { it.toLocalDate() == today }) ?: now(), fill, takeQ,
             runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == sym }?.expiry }.getOrNull(),
@@ -3207,6 +3212,8 @@ object ArmLive {
             else "Arms live: a live buy of $takeQ $sym (order ${newest.id}) by the arms, with no record after the app restarted and no arm that " +
                 "could be told, is taken back from Zerodha with a safety stop ($stopWords) and its square-off, managed as ${host.label}'s. " +
                 "Check it in Trade now.", WHO)
+        if (restUnexplained > 0) com.optionslab.app.work.Alerts.error("Arms live: after the app restarted, Zerodha holds $restUnexplained more $sym " +
+            "than the arms' own orders explain. That part is not taken as an arm's (it may be yours) and has no app stop: check it in Trade.", WHO)
         runCatching { Diag.record("armlive", "after a start: $sym $takeQ taken back (${if (unmatched) "no order of its own" else "order ${newest.id}"}, " +
             "arm ${spec?.label ?: "not told; as ${host.label}"})") }
         return true
@@ -3275,11 +3282,14 @@ object ArmLive {
             val gt = gt0?.takeIf { it.covers(exitSide, pos.product) <= takeQty }
             if (gt0 != null && gt == null) bigGtt += pos.symbol
             val soLeft = so?.let { ExitQty.remaining(it.qty, it.filled, it.pending) } ?: 0
+            // (A larger one that cannot be brought down is never taken as this trade's own - the app watches the level - and no second stop
+            // rests beside it; Boss is told, below.)
             adopted += when {
                 so != null && soLeft <= takeQty -> p.copy(stopOrderId = so.id, stopTrigger = so.trigger, stopQty = soLeft, stopKind = OWN)
                 so != null -> shrinkStop(p.copy(stopOrderId = so.id, stopTrigger = so.trigger, stopQty = soLeft, stopKind = OWN), so, takeQty,
-                    pos.last.takeIf { it > 0 }) ?: p.copy(stopOrderId = so.id, stopTrigger = so.trigger, stopQty = soLeft, stopKind = OWN).also { bigStop += pos.symbol }
+                    pos.last.takeIf { it > 0 })?.takeIf { (it.stopQty ?: 0) <= takeQty } ?: p.copy(stopTrigger = so.trigger).also { bigStop += pos.symbol }
                 gt != null -> p.copy(stopOrderId = GTT + gt.id, stopTrigger = gt.triggers.firstOrNull(), stopQty = gt.covers(exitSide, pos.product), stopKind = OWN)
+                gt0 != null -> p.copy(stopTrigger = gt0.triggers.firstOrNull() ?: LiveMirror.safetyLevel(p.entry, side, tick))
                 else -> restStop(p, LiveMirror.safetyLevel(p.entry, side, tick), pos.last.takeIf { it > 0 } ?: p.entry)
             }
             if (takeQty < kotlin.math.abs(pos.qty)) partial += pos.symbol
@@ -3302,8 +3312,8 @@ object ArmLive {
             "arms' readable trades. If part of it was an arm's live trade, that part has no app stop now: check it in Trade.", WHO)
         // (19 Nov 2026, final check: what Zerodha holds beyond what this path's own orders explain is never taken - it may be Boss's.)
         if (bigStop.isNotEmpty() || bigGtt.isNotEmpty()) com.optionslab.app.work.Alerts.error("Arms live: a stop resting at Zerodha on " +
-            "${(bigStop + bigGtt).distinct().joinToString()} covers more than the arms' trade taken back and could not be brought down to it: it may " +
-            "sell your own lot too. Check it in Kite.", WHO)
+            "${(bigStop + bigGtt).distinct().joinToString()} covers more than the arms' trade taken back${if (bigStop.isNotEmpty()) " and could not be " +
+            "brought down to it" else ""}: it may sell your own lot too. The app watches the trade's level itself; check that stop in Kite.", WHO)
         if (partial.isNotEmpty()) com.optionslab.app.work.Alerts.error("Arms live: Zerodha holds more of ${partial.joinToString()} than the arms' own " +
             "orders explain; only that part was taken back. The rest has no app stop: check it in Trade.", WHO)
         if (adopted.isNotEmpty()) com.optionslab.app.work.Alerts.error("Arms live: ${adopted.size} open live trade(s) taken back from Zerodha after the " +
@@ -3395,7 +3405,7 @@ object ArmLive {
             val tmp = File(f.parentFile, "$ERASE_MARK.tmp")
             try {
                 java.io.FileOutputStream(tmp).use { out -> out.write(t.toByteArray(Charsets.UTF_8)); out.fd.sync() }
-                if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
+                tmp.renameTo(f)                                    // (replaces the old mark at once; it stays until this works)
             } finally { if (tmp.exists()) tmp.delete() }
         } } }
         // 19 Nov 2026 (third review): never beside a write in flight on the book's writer, which could put the book back after the delete

@@ -2682,4 +2682,22 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue("his lot is his", view().openReal.isEmpty())
         assertEquals(sl, kite.placed.count { it.form["order_type"] == "SL" })
     }
+
+    /** P5: a damaged book's recovery brings this path's own larger stop down to the lot it takes back, never leaving it able to sell Boss's. */
+    @Test fun aDamagedBooksRecoveryBringsItsOwnLargerStopDownToWhatItTakes() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 2, maxLotsPerOrder = 5, guardMaxLots = 10))
+        ArmLive.entered(ask(donchian, "two-lots", qty = 60))
+        val sid = view().openReal.single().stopOrderId!!
+        assertEquals(60, kite.order(sid).qty)
+        kite.soldInKite(sym, 30, 205.0, tag = LiveMirror.TAG)                     // the arm's own part sale today
+        kite.boughtInKite(sym, 30, 199.0)                                          // Boss's own lot
+        ArmLive.drainWritesForTest()
+        vault.writeBytes(ByteArray(64) { 7 })                                       // the book damaged
+        ArmLive.wipe()
+        watch()
+        val p = view().openReal.single()
+        assertEquals("only this path's own net", 30, p.qty)
+        assertEquals("its stop brought down to it", 30, kite.order(sid).qty)
+        assertEquals(sid, p.stopOrderId)
+    }
 }
