@@ -763,7 +763,9 @@ object HeroTicketArm {
             val step = HeroTicketRules.exitStep(p.entry, ltp, trail, now.toLocalTime(), target, p.day.isBefore(now.toLocalDate()))
             // 16 Oct (research R63, Boss's "if the trend changes, sell"): the Trend watch asked to sell this leg - the index turned
             // against it (T3, which passed every gate for this ticket). Memory only: a map read, never a file or the network here.
-            val trend = runCatching { TrendWatchHost.sellRequested(p.symbol) }.getOrDefault(false)
+            // 19 Nov 2026 (audit batch 2): never while the ticket has a live copy at Zerodha ([ArmLive], which sells it with every paper
+            // exit): the Trend watch never causes an order. Then the paper leg keeps its own exits, as its live copy does.
+            val trend = runCatching { TrendWatchHost.sellRequested(p.symbol) && !TradeManagerHost.liveCopyOfRef(mirrorRef(p)) }.getOrDefault(false)
             // Boss's stop for today (or the daily loss limit) sells what is held: it only lowers risk.
             val (why, limit) = when {
                 step != null -> step.kind.why to step.limit

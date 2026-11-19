@@ -420,7 +420,7 @@ class TradeManagerTest {
         assertTrue("Solo exited early at 12:41: sellers took over" in a && "strength 70" in a && "lock none" in a, a)
         assertTrue("has not exited early" in M.answerWhy("pine", listOf(r)) { "x" })
         val s = M.answerStatus(listOf(r), TradeManager.Policy())
-        assertTrue("Pine: paper acting, live shadow" in s && "Solo: paper acting" in s && "every other strategy records only" in s && "Liquidity 15+5: paper shadow (records only), live shadow" in s && "Night (R3): paper off;" in s && "ORB Fresh: paper acting, live shadow" in s, s)
+        assertTrue("Pine: paper acting, live shadow" in s && "Solo: paper acting" in s && "every other strategy records only" in s && "Liquidity 15+5: paper shadow (records only), live shadow" in s && "Night (R3): paper off, live off;" in s && "ORB Fresh: paper acting, live shadow" in s, s)
 
         // Review G4 L5: Boss switched Solo off on paper - the fixed sentence is said as the defaults, never as what holds now.
         val off = M.answerStatus(listOf(r), TradeManager.Policy().with("solo", TradeManager.Account.PAPER, TradeManager.Mode.OFF))
@@ -451,6 +451,35 @@ class TradeManagerTest {
         assertTrue(TradeManager.asksPin("pine", TradeManager.Account.LIVE, TradeManager.Mode.ACT))
         assertFalse(TradeManager.asksPin("pine", TradeManager.Account.PAPER, TradeManager.Mode.ACT))
         assertFalse(TradeManager.asksPin("pine", TradeManager.Account.LIVE, TradeManager.Mode.SHADOW))
+        // 19 Nov 2026 (audit batch 2): the arms with a live copy are not paper only: their LIVE to ACT is offered, with the PIN.
+        for (f in TradeManager.LIVE_COPIED - "solo") {
+            assertFalse(TradeManager.familyOf(f)!!.paperOnly, f)
+            assertTrue(TradeManager.asksPin(f, TradeManager.Account.LIVE, TradeManager.Mode.ACT), f)
+            assertFalse(TradeManager.asksPin(f, TradeManager.Account.PAPER, TradeManager.Mode.ACT), f)
+        }
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2: the trade manager's live reach): a manager exit of a PAPER trade whose live copy follows its paper
+     * exits goes only when the family's LIVE mode is ACT (which took the PIN); with no live copy, or on the live account, as before.
+     */
+    @Test fun aPaperExitWithALiveCopyNeedsTheLiveModeOnAct() {
+        val p = TradeManager.Policy().with("night", TradeManager.Account.PAPER, TradeManager.Mode.ACT)
+        assertFalse(TradeManager.exitMayAct(TradeManager.Account.PAPER, "night", liveCopy = true, policy = p))
+        assertTrue(TradeManager.exitMayAct(TradeManager.Account.PAPER, "night", liveCopy = false, policy = p), "no live copy: the paper exit is paper only")
+        val live = p.with("night", TradeManager.Account.LIVE, TradeManager.Mode.ACT)
+        assertEquals(TradeManager.Mode.ACT, live.mode("night", TradeManager.Account.LIVE))
+        assertTrue(TradeManager.exitMayAct(TradeManager.Account.PAPER, "night", liveCopy = true, policy = live))
+        assertFalse(TradeManager.exitMayAct(TradeManager.Account.PAPER, "night", true,
+            p.with("night", TradeManager.Account.LIVE, TradeManager.Mode.SHADOW)), "live SHADOW is not ACT")
+        assertTrue(TradeManager.exitMayAct(TradeManager.Account.LIVE, "pine", true, TradeManager.Policy()), "the live account's own trades: unchanged")
+        assertEquals(setOf("night", "vixdiv", "mcx-eve", "mcx-morning", "mcx-trend", "silver-night", "solo"), TradeManager.LIVE_COPIED)
+        assertTrue(TradeManager.LIVE_COPIED.all { TradeManager.familyOf(it)?.canAct == true })
+        // Solo is paper only: its LIVE mode never reads ACT, so a paper exit with a real live copy is always held back.
+        val solo = TradeManager.Policy()
+        assertEquals(TradeManager.Mode.ACT, solo.mode("solo", TradeManager.Account.PAPER))
+        assertFalse(TradeManager.exitMayAct(TradeManager.Account.PAPER, "solo", liveCopy = true, policy = solo))
+        assertTrue(TradeManager.exitMayAct(TradeManager.Account.PAPER, "solo", liveCopy = false, policy = solo))
     }
 
     @Test fun theResearchAnswerLeavesTheModesOutOnALockedPhone() {

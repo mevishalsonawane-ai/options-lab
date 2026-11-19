@@ -19,6 +19,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -529,6 +530,62 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue(runBlocking { Strategies.pending() }.isEmpty())
         assertEquals("Nothing is waiting for approval.", runBlocking { Strategies.approve(id, compromised = false) })
         assertTrue(kite.placed.isEmpty())
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2: the strategies' automatic live entries): with "AI trades go live" off, an automatic scheduled LIVE
+     * start is refused (nothing sent, it says why); Boss's own approval of a waiting live start, confirmed in the app, still goes.
+     */
+    @Test fun anAutomaticLiveStartNeedsAiTradesGoLiveBossesOwnStartDoesNot() {
+        live()
+        val id = armedLive(automatic = true)
+        at(9, 19); tick()
+        com.optionslab.app.ira.IraNewsTrades.paperFirst = true          // "AI trades go live" off
+        try {
+            at(9, 21)
+            val notes = tick()
+            assertTrue(notes.toString(), notes.any { it.contains("scheduled live start refused: \"AI trades go live\" is off") })
+            assertTrue("nothing sent", kite.placed.isEmpty())
+            assertFalse(entry(id).running)
+            val log = runBlocking { Strategies.log() }.joinToString("\n") { it.message }
+            assertTrue(log, log.contains("Scheduled start refused: \"AI trades go live\" is off"))
+            assertNotNull(Strategies.autoLiveRefusal())
+        } finally { com.optionslab.app.ira.IraNewsTrades.paperFirst = false }
+        assertNull("on again: nothing refused", Strategies.autoLiveRefusal())
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2, second review): a scheduler-started run's entry is marked automatic all the way to the door: when
+     * "AI trades go live" turns off after the scheduler's and the entry's own checks (here at the door itself, the last moment), the
+     * door refuses it and nothing reaches Zerodha.
+     */
+    @Test fun aSchedulerRunWhoseAiLiveTurnsOffAfterItsCheckIsRefusedInsideTheDoor() {
+        live()
+        val id = armedLive(automatic = true)
+        at(9, 19); tick()
+        val flipped = java.util.concurrent.atomic.AtomicBoolean(false)
+        Broker.testAtDoor = { o -> if (o.tag == "iraalgostrat" && flipped.compareAndSet(false, true)) com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
+        try {
+            at(9, 21)
+            val notes = tick()
+            assertTrue("AI trades go live turned off after the scheduler's check", flipped.get())
+            assertTrue(notes.toString(), notes.any { it.contains("scheduled live start") })
+            assertTrue("nothing sent", buys().isEmpty())
+            val log = runBlocking { Strategies.log() }.joinToString("\n") { it.message } + (entry(id).run?.startError ?: "")
+            assertTrue(log, log.contains("refused: \"AI trades go live\" is off"))
+            assertFalse("refused at the door, not before it", log.contains("automatic live entry refused"))
+        } finally { Broker.testAtDoor = null; com.optionslab.app.ira.IraNewsTrades.paperFirst = false }
+    }
+
+    @Test fun bossesOwnApprovalOfALiveStartGoesWithAiTradesGoLiveOff() {
+        live()
+        val id = armedLive(automatic = false)
+        at(9, 19); tick(); at(9, 21); tick()
+        com.optionslab.app.ira.IraNewsTrades.paperFirst = true
+        try {
+            assertEquals("Test basket started (live): 1 of 1 legs open.", runBlocking { Strategies.approve(id, compromised = false) })
+            assertEquals(1, kite.placed.size)
+        } finally { com.optionslab.app.ira.IraNewsTrades.paperFirst = false }
     }
 
     @Test fun noArmedStartWhileTheBotIsStoppedForToday() {

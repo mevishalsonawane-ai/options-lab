@@ -681,6 +681,30 @@ class LiquidityArmTest : RobolectricTest() {
         assertEquals("Liquidity 15+5 already trades 1 lot.", runBlocking { OrbArms.setLiquidityLots(1, "test") })
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2: Liquidity's lots): in Live with a PIN set, a raise takes the PIN (the row asks it) and Jarvis refuses
+     * it by voice; lowering never asks, by the row or by voice.
+     */
+    @Test fun inLiveARaiseTakesThePinAndIsRefusedByVoiceALoweringNever() {
+        com.optionslab.app.security.PinLock.setPin("482915".toCharArray())
+        AutomationSupport.liveSettings()
+        try {
+            assertEquals(OrbArms.LIQ_LOTS_PIN, runBlocking { OrbArms.setLiquidityLots(3, "Boss on the row") })
+            assertEquals("nothing changed without the PIN", 1, row().lots)
+            val (said, act) = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Ask.parse("set liquidity to 3 lots").command!!) }
+            assertEquals(com.optionslab.app.ira.IraActions.LIQ_LOTS_PIN, said)
+            assertEquals("never by voice: nothing to confirm", null, act)
+            assertTrue(runBlocking { OrbArms.setLiquidityLots(3, "Boss on the row", pinConfirmed = true) }.startsWith("Liquidity 15+5 now buys 3 lots"))
+            assertEquals(3, row().lots)
+            // Lowering: no PIN, and by voice too (said back and confirmed).
+            assertTrue(runBlocking { OrbArms.setLiquidityLots(2, "Boss on the row") }.startsWith("Liquidity 15+5 now buys 2 lots"))
+            val (cutSaid, cutAct) = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Ask.parse("set liquidity to 1 lot").command!!) }
+            assertEquals("change Liquidity 15+5's lots a trade from 2 to 1", cutSaid)
+            assertTrue(runBlocking { cutAct!!() }.startsWith("Liquidity 15+5 now buys 1 lot"))
+            assertEquals(1, row().lots)
+        } finally { AutomationSupport.liveSettings(live = false) }
+    }
+
     /** A build that ran FINNIFTY on 15 + 5 minutes saved its 15-minute book as "liquidity15_fin": it carries on as the 30-minute book. */
     @Test fun finniftysOld15MinuteBookCarriesOnAsItsThirtyMinuteBook() {
         val books = listOf("liquidity15", "liquidity5", "liquidity15_fin", "liquidity5_fin")

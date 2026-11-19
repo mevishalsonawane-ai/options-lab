@@ -382,8 +382,8 @@ class NtfyArmTest : RobolectricTest() {
         ArmLive.testHeard = heard
         try {
             on()
-            // 30 Oct (Boss: "make all arms as live"): its Trade live starts ON now; Boss turns it off (no PIN) for paper only.
-            assertTrue("its own Trade live starts on", ArmLive.view.value.on(LiveMirror.NTFY_ALERTS))
+            // 19 Nov 2026 (audit batch 2: ntfy's live gate): its Trade live starts OFF (it was ON from 30 Oct); off is one tap, no PIN.
+            assertFalse("its own Trade live starts off", ArmLive.view.value.on(LiveMirror.NTFY_ALERTS))
             runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, false, pinConfirmed = false, log = false) }
             assertFalse(ArmLive.view.value.on(LiveMirror.NTFY_ALERTS))
             msg("m1", "BUY NIFTY 25000 CE SL 100")
@@ -393,6 +393,46 @@ class NtfyArmTest : RobolectricTest() {
             assertEquals(listOf(ArmLive.PaperLeg(p.ref, LiveMirror.NTFY_ALERTS, 65)), ArmLive.legsForTest(LiveMirror.NTFY))
             assertNothingAtZerodha()
         } finally { ArmLive.testHeard = null }
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2: ntfy's live gate): Trade live stays on only with an access token or Boss's own server. Once on each
+     * phone, a switch on by the old default is switched off (logged); later, a switch on with only the topic protecting it is switched
+     * off on the next pass, whichever page turned it on; with a token it is kept. The one-time step runs once.
+     */
+    @Test fun tradeLiveIsSwitchedOffUnlessAnAccessTokenOrOwnServerProtectsTheTopic() {
+        fun liveOn() = ArmLive.view.value.on(LiveMirror.NTFY_ALERTS)
+        NtfyArm.liveRuleForTest()
+        SecurePrefs.put(NtfyArm.K_LIVE_RULE, null)
+        runBlocking { ArmLive.refresh() }                                   // the arms' live book read (the guard waits for it)
+        assertTrue("the arms' live book is read", ArmLive.view.value.loaded)
+        runBlocking { NtfyArm.liveGuard() }
+        assertFalse(liveOn())
+        assertEquals("1", SecurePrefs.getString(NtfyArm.K_LIVE_RULE))
+        // Asked on with the PIN from any page (Bot settings' list, the timeline's Undo), no token: refused, said, left off.
+        val said = runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, true, pinConfirmed = true, log = false) }
+        assertEquals("${NtfyReader.LIVE_NEEDS_TOKEN} ${ArmLive.UNCHANGED}", said)
+        assertFalse("the timeline's Undo sees nothing done", ArmLive.done(said))
+        assertFalse("only the topic protects it", liveOn())
+        // Its own server instead of a token: on.
+        SecurePrefs.put(NtfyReader.K_SERVER, "https://ntfy.example.org")
+        runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, true, pinConfirmed = true, log = false) }
+        assertTrue("its own server protects it", liveOn())
+        SecurePrefs.put(NtfyReader.K_SERVER, null)
+        runBlocking { NtfyArm.liveGuard() }
+        assertFalse("back on ntfy.sh with no token: off on the next pass", liveOn())
+        // With an access token: kept on.
+        SecurePrefs.put(NtfyReader.K_TOKEN, "tk_test0001")
+        runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, true, pinConfirmed = true, log = false) }
+        runBlocking { NtfyArm.liveGuard() }
+        assertTrue("an access token protects it", liveOn())
+        // The one-time step does not run again (a token-protected switch Boss chose is his).
+        NtfyArm.liveRuleForTest()
+        runBlocking { NtfyArm.liveGuard() }
+        assertTrue(liveOn())
+        SecurePrefs.put(NtfyReader.K_TOKEN, null)
+        runBlocking { NtfyArm.liveGuard() }
+        assertFalse("the token cleared: off again", liveOn())
     }
 
     @Test fun jsonSignalsTestOnesAreNeverTradedAndASignalIdTradesOnce() {

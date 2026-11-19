@@ -154,24 +154,49 @@ internal fun PortfolioSheet(onClose: () -> Unit) {
     }
 }
 
-/** Bot settings: the portfolio guard's cap and switch (TODO S12). */
+/**
+ * 19 Nov 2026 (audit batch 2: live risk rules' PIN): the PIN step a live risk rule's switch-off takes ([Reauth] in the app, with
+ * [LIVE_RULE_PIN]; tests give their own). [onOk] runs only after the PIN or fingerprint.
+ */
+internal typealias PinStep = @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit
+
+/** 19 Nov 2026 (audit batch 2): the PIN prompt's words for a live risk rule switched off or put back in shadow. */
+internal const val LIVE_RULE_PIN = "Enter your app PIN to switch off a live risk rule (it lets more of the bots' live entries through)."
+
+/** 19 Nov 2026 (audit batch 2): whether switching a live risk rule off asks the PIN now (the guard's own rule, [com.optionslab.app.security.GuardPin]). */
+internal fun liveRulePinAsks(model: com.optionslab.app.ui.AppModel): Boolean =
+    runCatching { com.optionslab.app.security.GuardPin.asks(true, model.settings.value.live) }.getOrDefault(true)
+
+/** The app's PIN step for a live risk rule ([Reauth]). */
+internal fun liveRulePin(model: com.optionslab.app.ui.AppModel): PinStep = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = LIVE_RULE_PIN) }
+
+/** Bot settings: the portfolio guard's cap and switch (TODO S12); off asks the PIN where the guard's rule does (19 Nov 2026, audit batch 2). */
 @Composable
-internal fun PortfolioSettingCard() {
+internal fun PortfolioSettingCard(model: com.optionslab.app.ui.AppModel) = PortfolioSettingCard(pinAsks = { liveRulePinAsks(model) }, pin = liveRulePin(model))
+
+/** The card with its PIN step ([pinAsks]: whether switching off asks it now; tests give their own). */
+@Composable
+internal fun PortfolioSettingCard(pinAsks: () -> Boolean = { false }, pin: PinStep = { _, _ -> }) {
     val view by PortfolioHost.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var said by remember { mutableStateOf<String?>(null) }
+    var askOff by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { PortfolioHost.refresh() } } }
     fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
     LedgerCard(title = "Portfolio guard") {
         Note("When arms that move together (correlation above ${PortfolioRisk.RHO}) open the same way on one day, a later one is " +
             "blocked if all their stops together would lose more than this share of capital. Paper and Zerodha alike; it never adds a trade.")
-        ToggleRow("Block correlated entries over the cap", if (view.on) "On" else "Off: correlated arms may all open on one day", view.on) { on -> save { PortfolioHost.setOn(on) } }
+        // 19 Nov 2026 (audit batch 2): off lets correlated live entries through - the PIN first where the guard's rule asks it; on never waits.
+        ToggleRow("Block correlated entries over the cap", if (view.on) "On" else "Off: correlated arms may all open on one day", view.on) { on ->
+            if (!on && view.on && pinAsks()) askOff = true else save { PortfolioHost.setOn(on) }
+        }
         ParamTokens("Cap for correlated arms together (% of capital)", PortfolioRisk.CAP_CHOICES.map {
             (if (it % 1.0 == 0.0) "${it.toInt()}%" else "$it%") to (kotlin.math.abs(it - view.capPct) < 1e-9)
         }) { i -> save { PortfolioHost.setCapPct(PortfolioRisk.CAP_CHOICES[i]) } }
         if (view.capRs > 0) Note("Now: ${PortfolioRisk.rs(view.capRs)} of your capital.")
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }
+    if (askOff) pin({ askOff = false; save { PortfolioHost.setOn(false, pinConfirmed = true) } }, { askOff = false })
 }
 
 /**
@@ -180,10 +205,15 @@ internal fun PortfolioSettingCard() {
  * automatic index options open now, and today's refused entries by arm (Liquidity's counted apart).
  */
 @Composable
-internal fun SameDirectionCapCard() {
+internal fun SameDirectionCapCard(model: com.optionslab.app.ui.AppModel) = SameDirectionCapCard(pinAsks = { liveRulePinAsks(model) }, pin = liveRulePin(model))
+
+/** The card with its PIN step for the live switch going back to shadow (19 Nov 2026, audit batch 2; tests give their own). */
+@Composable
+internal fun SameDirectionCapCard(pinAsks: () -> Boolean = { false }, pin: PinStep = { _, _ -> }) {
     val view by com.optionslab.app.data.ExposureCapHost.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var said by remember { mutableStateOf<String?>(null) }
+    var askOff by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.ExposureCapHost.refresh() } } }
     fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
     LedgerCard(title = "Same-direction cap") {
@@ -195,13 +225,15 @@ internal fun SameDirectionCapCard() {
         ParamTokens("Most open the same way", com.optionslab.ira.SameDirectionCap.CHOICES.map { "$it" to (it == view.max) }) { i ->
             save { com.optionslab.app.data.ExposureCapHost.setMax(com.optionslab.ira.SameDirectionCap.CHOICES[i]) }
         }
+        // 19 Nov 2026 (audit batch 2): back to shadow lets more live entries through - the PIN first where the guard's rule asks it.
         ToggleRow("Also refuse the bots' live entries", if (view.liveOn) "On: live entries past the cap are refused" else "Off: live only logs what it would refuse", view.liveOn) { on ->
-            save { com.optionslab.app.data.ExposureCapHost.setLiveOn(on) }
+            if (!on && view.liveOn && pinAsks()) askOff = true else save { com.optionslab.app.data.ExposureCapHost.setLiveOn(on) }
         }
         if (view.openNow.isNotEmpty()) Note("Open now (paper): " + view.openNow.joinToString(", "), Modifier.padding(top = 4.dp))
         if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }
+    if (askOff) pin({ askOff = false; save { com.optionslab.app.data.ExposureCapHost.setLiveOn(false, pinConfirmed = true) } }, { askOff = false })
 }
 
 /**
@@ -218,9 +250,22 @@ internal fun AccountStopCard(model: com.optionslab.app.ui.AppModel) {
     var askPin by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.AccountStopHost.refresh() } } }
     fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
-    AccountStopCardContent(view, said, onSwitch = { on -> save { com.optionslab.app.data.AccountStopHost.setOn(on) } }, onRestart = { askPin = true })
+    AccountStopSwitchFlow(view, said, pinAsks = { liveRulePinAsks(model) }, pin = liveRulePin(model),
+        onSwitch = { on, pin -> save { com.optionslab.app.data.AccountStopHost.setOn(on, pinConfirmed = pin) } }, onRestart = { askPin = true })
     if (askPin) Reauth(model, onOk = { askPin = false; save { com.optionslab.app.data.AccountStopHost.restart(pinConfirmed = true) } },
         onCancel = { askPin = false }, why = "Enter your app PIN to restart the account stop rule's count. It then counts again from the next trading day.")
+}
+
+/**
+ * 19 Nov 2026 (audit batch 2: live risk rules' PIN): the account stop card with its switch's PIN step - back to shadow asks the PIN
+ * first where the guard's rule does ([pinAsks]); on never waits. [onSwitch] gets the switch and whether the PIN was taken.
+ */
+@Composable
+internal fun AccountStopSwitchFlow(view: com.optionslab.app.data.AccountStopHost.View, said: String?, pinAsks: () -> Boolean, pin: PinStep,
+                                   onSwitch: (Boolean, Boolean) -> Unit, onRestart: () -> Unit) {
+    var askOff by remember { mutableStateOf(false) }
+    AccountStopCardContent(view, said, onSwitch = { on -> if (!on && view.on && pinAsks()) askOff = true else onSwitch(on, false) }, onRestart = onRestart)
+    if (askOff) pin({ askOff = false; onSwitch(false, true) }, { askOff = false })
 }
 
 internal const val ACCOUNT_STOP_RESTART = "Restart the count (PIN)"

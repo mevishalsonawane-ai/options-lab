@@ -28,25 +28,38 @@ import kotlinx.coroutines.withContext
  * live switch is off by default: shadow, what it would refuse is only logged.
  */
 @Composable
-internal fun BossRiskCard(model: com.optionslab.app.ui.AppModel) {
+internal fun BossRiskCard(model: com.optionslab.app.ui.AppModel) =
+    BossRiskCardFlow(loosenAsks = { liveRulePinAsks(model) }) { why, onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = why) }
+
+/**
+ * 19 Nov 2026 (audit batch 2): the card with its PIN step ([loosenAsks]: whether loosening asks the PIN now, the guard's own rule;
+ * [pin]: the prompt with its words - [Reauth] in the app, tests give their own).
+ */
+@Composable
+internal fun BossRiskCardFlow(loosenAsks: () -> Boolean, pin: @Composable (why: String, onOk: () -> Unit, onCancel: () -> Unit) -> Unit) {
     val view by BossRiskHost.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var said by remember { mutableStateOf<String?>(null) }
     var askPin by remember { mutableStateOf<(() -> String)?>(null) }
+    var askLivePin by remember { mutableStateOf<(() -> String)?>(null) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { BossRiskHost.refreshView() } } }
     fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
     BossRiskCardContent(view, said,
         onPaper = { rule, on ->
             // Off loosens a limit: the PIN first when the guard's rule asks it (as the paper loss limit's row).
-            if (!on && rule.pinToLoosen && com.optionslab.app.security.GuardPin.asks(true, model.settings.value.live))
+            if (!on && rule.pinToLoosen && loosenAsks())
                 askPin = { BossRiskHost.setPaper(rule, false, pinConfirmed = true) }
             else save { BossRiskHost.setPaper(rule, on, pinConfirmed = !rule.pinToLoosen || on) }
         },
-        onLive = { rule, on -> save { BossRiskHost.setLive(rule, on) } },
+        // 19 Nov 2026 (audit batch 2: live risk rules' PIN): a live rule back to shadow lets more live entries through - the PIN
+        // first where the guard's rule asks it; on never waits.
+        onLive = { rule, on ->
+            if (!on && view.live[rule] == true && loosenAsks()) askLivePin = { BossRiskHost.setLive(rule, false, pinConfirmed = true) }
+            else save { BossRiskHost.setLive(rule, on) }
+        },
         onRestart = { askPin = { BossRiskHost.restartAccount(pinConfirmed = true) } })
-    askPin?.let { action ->
-        Reauth(model, onOk = { askPin = null; save(action) }, onCancel = { askPin = null }, why = BOSS_RISK_PIN)
-    }
+    askPin?.let { action -> pin(BOSS_RISK_PIN, { askPin = null; save(action) }, { askPin = null }) }
+    askLivePin?.let { action -> pin(LIVE_RULE_PIN, { askLivePin = null; save(action) }, { askLivePin = null }) }
 }
 
 internal const val BOSS_RISK_PIN = "Enter your app PIN to loosen a paper risk limit."

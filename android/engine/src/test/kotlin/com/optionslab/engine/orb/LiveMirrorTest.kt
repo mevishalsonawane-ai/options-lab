@@ -88,14 +88,16 @@ class LiveMirrorTest {
         assertFalse(LiveMirror.on(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to false)))
         assertTrue(LiveMirror.on(DonchianArm.SOURCE, mapOf(DonchianArm.SOURCE to true)))
         assertFalse(LiveMirror.on("nope", mapOf("nope" to true)), "an unknown arm never")
-        // 30 Oct (Boss: "make all arms as live"): ntfy alerts and IraThinker's flow start ON like every other arm now; Boss's own
-        // saved "off" still holds.
-        assertTrue(LiveMirror.on(LiveMirror.NTFY_ALERTS, emptyMap()))
+        // 30 Oct (Boss: "make all arms as live"): IraThinker's flow starts ON like every other arm; Boss's own saved "off" still holds.
+        // 19 Nov 2026 (audit batch 2: ntfy's live gate): ntfy alerts alone starts OFF (anyone who learns its topic can post); Boss's
+        // saved "on" holds (the app keeps it on only with an access token or his own server).
+        assertFalse(LiveMirror.on(LiveMirror.NTFY_ALERTS, emptyMap()))
         assertFalse(LiveMirror.on(LiveMirror.NTFY_ALERTS, mapOf(LiveMirror.NTFY_ALERTS to false)))
+        assertTrue(LiveMirror.on(LiveMirror.NTFY_ALERTS, mapOf(LiveMirror.NTFY_ALERTS to true)))
         assertTrue(LiveMirror.on(com.optionslab.engine.signals.FlowRules.SOURCE, emptyMap()))
         assertEquals(LiveMirror.FLOW, LiveMirror.spec(com.optionslab.engine.signals.FlowRules.SOURCE)!!.family)
-        assertEquals(emptyList(), LiveMirror.ARMS.filter { !it.defaultOn }.map { it.key }, "no arm starts with Trade live off")
-        for (a in LiveMirror.ARMS) assertTrue(LiveMirror.on(a.key, emptyMap()), a.key)
+        assertEquals(listOf(LiveMirror.NTFY_ALERTS), LiveMirror.ARMS.filter { !it.defaultOn }.map { it.key }, "only ntfy alerts starts with Trade live off")
+        for (a in LiveMirror.ARMS.filter { it.key != LiveMirror.NTFY_ALERTS }) assertTrue(LiveMirror.on(a.key, emptyMap()), a.key)
     }
 
     // ---- the gate -----------------------------------------------------------------------------------------------------------------
