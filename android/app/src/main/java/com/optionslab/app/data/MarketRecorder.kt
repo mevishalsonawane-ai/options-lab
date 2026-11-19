@@ -341,7 +341,8 @@ object MarketRecorder {
     )
 
     /**
-     * Arms the off-hours alarm at the next slot ([RecorderFeeds.nextSlot]: 06:30-09:00 every 15 minutes, 18:30, the
+     * Arms the off-hours alarm at the next slot ([RecorderFeeds.nextSlot]: 08:45 (19 Nov 2026, audit batch 2: it was 06:30-09:00
+     * every 15 minutes, each a cold start of the app), 18:30, the
      * evening's retries while a participant file is missing, 23:30 on trading days; 08:00 on a closed day while one is
      * missing). Off: cancelled. No service: each firing hands one short run to WorkManager ([fired]).
      */

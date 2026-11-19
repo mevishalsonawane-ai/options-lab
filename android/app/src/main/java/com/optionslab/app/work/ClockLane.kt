@@ -250,12 +250,16 @@ internal object ClockLane {
      * The lane until [stop] (read between rounds). [mode] is the watch loop's market ([StopLane.Control.mode]); [held] whether
      * anything is held (memory only, unknown counts as held); [supervisor] the watch's workers. The clock is the tests' seam.
      */
+    // 19 Nov 2026 (audit batch 2: the watch's clocks on a small pool of their own, [WatchLanes]): [roundContext] is where each round
+    // runs (the watch passes Dispatchers.IO), so the steps it starts - which take the round's context - never run on that pool.
     suspend fun runLane(context: Context, stop: () -> Boolean, mode: () -> StopLane.Mode, held: () -> Boolean,
-                    supervisor: () -> Supervisor?, now: () -> Long = { clock() }) {
+                    supervisor: () -> Supervisor?, now: () -> Long = { clock() },
+                    roundContext: kotlin.coroutines.CoroutineContext = kotlin.coroutines.EmptyCoroutineContext) {
         val l = ClockSteps.Lane(now = now)
         lane = l
         try {
-            l.run(stop = stop, active = { mode() != StopLane.Mode.OFF }, failed = { e -> Tasks.stepFailed(GROUP, e) }, round = { t, since ->
+            l.run(stop = stop, active = { mode() != StopLane.Mode.OFF }, failed = { e -> WatchLanes.offload { Tasks.stepFailed(GROUP, e) } }, round = { t, since ->
+              kotlinx.coroutines.withContext(roundContext) {
                 val m = mode()
                 val names = stepsFor(m)
                 if (names.isNotEmpty()) {
@@ -278,6 +282,8 @@ internal object ClockLane {
                     }
                     runCatching { lateCheck(context, m, names, t, since, heldNow) }
                 }
+                Unit
+              }
             })
         } finally {
             if (lane === l) lane = null

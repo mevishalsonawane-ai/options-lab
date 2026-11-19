@@ -91,6 +91,7 @@ class JobsTest : RobolectricTest() {
     }
 
     @After fun down() {
+        WatchService.passFailureForTest = null
         services.forEach { runCatching { it.destroy() } }
         FakeAndroidKeyStore.failing.clear()
         // 18 Oct: each destroyed service's jobs are waited for BEFORE the fake Upstox closes and the calendar is cleared.
@@ -461,14 +462,16 @@ class JobsTest : RobolectricTest() {
 
     @Test fun aFailedPassDoesNotEndTheWatch() {
         Background.at(WED, 9, 5)
-        FakeAndroidKeyStore.failing += "ol.vault.data.v1"   // every settings write (the heartbeat) now fails
+        // 19 Nov 2026 (audit batch 2): the heartbeat's vault write is the background writer's now, so a failing Keystore no longer
+        // fails a pass: every pass fails here instead, as a Keystore hiccup inside one would.
+        WatchService.passFailureForTest = java.security.UnrecoverableKeyException("simulated")
         val svc = startService(Jobs.Kind.LIVE)
         Background.await("the hiccup notice") { alert("Order watch hiccup") != null }
         val a = alert("Order watch hiccup")!!
         assertEquals("One pass failed (UnrecoverableKeyException); the watch goes on.", a.text)
         assertFalse("no raw exception message", a.text.contains("simulated"))
         assertFalse(shadowOf(svc).isStoppedBySelf)
-        FakeAndroidKeyStore.failing.clear()
+        WatchService.passFailureForTest = null
         Background.await("the next pass", timeoutMs = 30_000) { Background.title(shadowOf(svc).lastForegroundNotification) == Tasks.WATCH_TITLE }
         assertFalse(shadowOf(svc).isStoppedBySelf)
     }

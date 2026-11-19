@@ -8,7 +8,8 @@ package com.optionslab.app.data
  */
 object HeldNow {
     /** What each book says now, from memory. */
-    fun sources(): com.optionslab.ira.Held.Sources {
+    // 19 Nov 2026 (audit batch 2): [mcx] false leaves out Zerodha's MCX book (its calendar may be a file read): for the main thread.
+    fun sources(mcx: Boolean = true): com.optionslab.ira.Held.Sources {
         fun q(f: () -> Boolean): Boolean = runCatching(f).getOrDefault(true)
         val paper = runCatching {
             Paper.stateIfLoaded()?.let { st -> st.positions.any { it.quantity != 0 } || st.orders.any { it.status == "open" || it.status == "trigger pending" } }
@@ -35,7 +36,10 @@ object HeldNow {
             mcxArms = q { McxPaperArms.view.value.open.isNotEmpty() },
             // Zerodha's MCX book only while MCX trades (as before): its "not read yet today" counts as held, which outside MCX's
             // hours would keep the processor awake all night for nothing.
-            mcxLive = q { McxMarket.isOpen() && McxMarket.heldQuick() },
+            mcxLive = mcx && q { McxMarket.isOpen() && McxMarket.heldQuick() },
+            // 19 Nov 2026 (audit batch 2): Zerodha's own positions at the reconciler's last good read ([Reconciler], memory only;
+            // it lapses 10 minutes after the last read), so the watch never sleeps while Zerodha holds anything.
+            broker = Reconciler.heldHint(),
         )
     }
 

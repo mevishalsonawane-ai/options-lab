@@ -34,7 +34,6 @@ object Heartbeat {
     /** The watch went silent at least once today (for the day report). */
     fun stalledToday(): Boolean = SecurePrefs.getString(STALLED) == Market.today().toString()
     private const val STALE_MS = 3 * 60_000L
-    private const val EVERY_MS = 5 * 60_000L
     private const val NOTE_ID = 2014
 
     /**
@@ -64,13 +63,16 @@ object Heartbeat {
         val due = persistedAt == 0L || el < persistedAt || el - persistedAt >= PERSIST_MS
         // The wall-clock checks stay: a clock moved by more than the minute since the write is written at once, so the
         // stored beat never sits in the future or looks a stall old after a clock change.
+        // 19 Nov 2026 (audit batch 2: the watch's first pass wrote the vault - a Keystore encryption and two disk syncs - before the
+        // stop lane knew its market): the beat is readable at once and written by the settings' background writer (milliseconds
+        // later, well inside the dead-man's 3 minutes), never on the watch's own thread.
         if (due || now - persisted >= PERSIST_MS || now < persisted || SecurePrefs.getLong(KEY, 0L) != persisted) {
-            SecurePrefs.put(KEY, now)
+            SecurePrefs.putAllSoon(mapOf(KEY to now))
             persisted = now
             persistedAt = el
         }
         if (SecurePrefs.getString(ALERTED) != null) {
-            SecurePrefs.put(ALERTED, null)
+            SecurePrefs.putAllSoon(mapOf(ALERTED to null))
             runCatching { androidx.core.app.NotificationManagerCompat.from(context).cancel(NOTE_ID) }
         }
     }
@@ -124,7 +126,28 @@ object Heartbeat {
     /** The same condition [Jobs] schedules the market watch on. */
     private fun watched(): Boolean = Jobs.enabled(Jobs.Kind.LIVE, com.optionslab.app.data.AppSettings.load())
 
-    fun stale(): Boolean = inHours() && System.currentTimeMillis() - last() > STALE_MS
+    // 19 Nov 2026 (audit batch 2): also while the MCX watch should run (MCX open with something held there or an arm armed): it was
+    // judged in NSE's hours only, so a watch dead in MCX's evening was brought back but never told. Off the main thread (the alarm).
+    fun stale(): Boolean = com.optionslab.ira.WatchHealth.staleJudged(inHours(), mcxWatchDue()) && System.currentTimeMillis() - last() > STALE_MS
+
+    /**
+     * MCX's watch should run now (its calendar, what is held there, its armed arms), from 2 minutes after MCX's open (review: as NSE's
+     * [inHours], so a watch just started for MCX beats first); a read that fails is no.
+     */
+    private fun mcxWatchDue(): Boolean = runCatching {
+        val w = com.optionslab.app.data.McxMarket.todayWindow() ?: return@runCatching false
+        Market.minuteNow() >= w.open.hour * 60 + w.open.minute + 2 && com.optionslab.app.data.McxMarket.watchDue()
+    }.getOrDefault(false)
+
+    /**
+     * 19 Nov 2026 (audit batch 2): a LIVE position is held now (memory hints only): the arms' live copies, the ORB family's live
+     * trades, a live protection, Pine's live holdings, or Zerodha's own positions at the reconciler's last read.
+     */
+    internal fun liveHeld(): Boolean = runCatching {
+        com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.OrbArms.liveHint ||
+            com.optionslab.app.data.Protections.liveKeysHint.isNotEmpty() || com.optionslab.app.data.PineAuto.held.value.values.any { it.live } ||
+            com.optionslab.app.data.Reconciler.heldHint()
+    }.getOrDefault(true)
 
     private fun intent(context: Context): PendingIntent = PendingIntent.getBroadcast(
         context, 190, Intent(context, AlarmReceiver::class.java).setAction(ACTION),
@@ -145,8 +168,12 @@ object Heartbeat {
         val main = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
         val mcx = if (main) runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() == true }.getOrDefault(false)
             else runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
-        val at = if (mcx || Market.isTradingDay() && Market.minuteNow() < Market.foClose() && Market.minuteNow() >= Market.OPEN) {
-            System.currentTimeMillis() + EVERY_MS
+        // 19 Nov 2026 (audit batch 2): every minute while a LIVE position is held (memory hints), as an alarm clock (Android's most
+        // reliable alarm, never held back by Doze); else every 5 minutes, as before.
+        val live = liveHeld()
+        val inSession = mcx || Market.isTradingDay() && Market.minuteNow() < Market.foClose() && Market.minuteNow() >= Market.OPEN
+        val at = if (inSession) {
+            System.currentTimeMillis() + WatchHealth.deadManEveryMs(live)
         } else {
             var d = now.toLocalDate()
             if (Market.minuteNow() >= Market.OPEN) d = d.plusDays(1)
@@ -158,11 +185,18 @@ object Heartbeat {
             if (mcxNext != null && mcxNext < nse) mcxNext else nse
         }
         try {
-            if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            if (inSession && live && Jobs.canExact(context)) am.setAlarmClock(AlarmManager.AlarmClockInfo(at, showIntent(context)), pi)
+            else if (Jobs.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
             else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         } catch (_: SecurityException) {
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         }
+    }
+
+    /** 19 Nov 2026 (audit batch 2): what tapping the alarm-clock icon opens (the app). Never null: an empty intent of this app at worst. */
+    private fun showIntent(context: Context): PendingIntent {
+        val open = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: Intent().setPackage(context.packageName)
+        return PendingIntent.getActivity(context, 191, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     /**

@@ -1,8 +1,10 @@
 package com.optionslab.app.work
 
 import android.content.Context
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * 22 Oct: the stop lane. The open positions' stops, targets, trails and locks get a look every 15 s while anything is held,
@@ -74,7 +76,7 @@ internal object StopLane {
             look = { t -> lookIn(m, t) },
             // Nothing held any more: the drift guard starts its count again (a gap from a look with nothing held is no drift).
             idle = { com.optionslab.app.data.WatchClock.looked(held = false, now = now()); quietGaps.idle() },
-            failed = { e -> Tasks.stepFailed("stop lane", e) },
+            failed = { e -> WatchLanes.offload { Tasks.stepFailed("stop lane", e) } },
             // MCX's own pass runs these checks itself (its start is noted as a look): the lane looks only when that pass is late.
             // NSE's full pass is not counted (its stops come after its arms): the lane keeps its own 15 s there.
             outside = { if (m == Mode.MCX) mcxPassAt() else 0L },
@@ -120,12 +122,148 @@ internal object StopLane {
     suspend fun look(context: Context, mode: Mode, startMs: Long) {
         if (mode == Mode.OFF) return
         runCatching { com.optionslab.app.data.WatchClock.looked(held = true, now = startMs) }
+        // 19 Nov 2026 (audit batch 2: asleep or busy?): the look timed on both monotonic clocks - elapsedRealtime counts deep sleep,
+        // uptimeMillis does not - so the diagnostics can tell a look the phone slept through from one that was busy.
+        val el0 = android.os.SystemClock.elapsedRealtime()
+        val up0 = android.os.SystemClock.uptimeMillis()
         try {
             if (mode == Mode.MCX) mcxCheck(context) else nseCheck(context)
         } finally {
             WatchWorkers.timed(if (mode == Mode.MCX) MCX_TOTAL else NSE_TOTAL, System.currentTimeMillis() - startMs)
+            runCatching {
+                val asleep = sleepSplit.look(android.os.SystemClock.elapsedRealtime() - el0, android.os.SystemClock.uptimeMillis() - up0,
+                    com.optionslab.app.data.Market.today())
+                if (asleep >= ASLEEP_NOTE_MS) Heartbeat.diary("stop check: the phone slept ${asleep / 1000} s during one look (the processor's hold lapsed)")
+            }
         }
     }
+
+    // ---- 19 Nov 2026 (audit batch 2: the watch and dead-man gaps) ------------------------------------------------------------
+
+    /** Each look on both clocks ([com.optionslab.ira.StopCadence.SleepSplit]); memory only. */
+    val sleepSplit = com.optionslab.ira.StopCadence.SleepSplit()
+    /** A look with this much sleep in it gets a diary line. */
+    private const val ASLEEP_NOTE_MS = 5_000L
+
+    /** The diagnostics' line: looks asleep or busy today. */
+    fun sleepLine(): String = sleepSplit.line(com.optionslab.app.data.Market.today())
+
+    /**
+     * Each held book's last COMPLETED exit check ([com.optionslab.ira.StopCadence.Completed]): stamped by the book's step in a look
+     * when it ends normally (one still running, or one that failed, is not a completed check). Memory only.
+     */
+    val completed = com.optionslab.ira.StopCadence.Completed()
+
+    const val B_PAPER = "paper book"
+    const val B_ORB = "ORB arms"
+    const val B_PINE = "Pine scripts"
+    const val B_ARMS_LIVE = "arms' live trades"
+    const val B_STRATEGIES = "strategies"
+    const val B_PROTECTIONS = "stops and targets"
+
+    /** [book]'s exit check completed now (memory only; never throws). */
+    internal fun done(book: String) {
+        runCatching { completed.done(book, System.currentTimeMillis(), com.optionslab.app.data.Market.today()) }
+    }
+
+    /** The books holding now and whether each holds something LIVE (memory hints only: never a lock, a vault read or the network). */
+    internal fun heldBooks(): Map<String, Boolean> {
+        fun q(f: () -> Boolean): Boolean = runCatching(f).getOrDefault(true)
+        val out = LinkedHashMap<String, Boolean>()
+        if (q { com.optionslab.app.data.OrbArms.liveHint }) out[B_ORB] = true
+        else if (q { com.optionslab.app.data.OrbArms.holdingHint }) out[B_ORB] = false
+        if (q { com.optionslab.app.data.ArmLive.holdingHint }) out[B_ARMS_LIVE] = true
+        if (q { com.optionslab.app.data.PineAuto.held.value.values.any { it.live } }) out[B_PINE] = true
+        else if (q { com.optionslab.app.data.PineAuto.holding() }) out[B_PINE] = false
+        // Review: the Strategy Module's hint is paper and live runs alike (no live-only hint in memory): measured, never a live RISK.
+        if (q { com.optionslab.app.data.Strategies.runningHint }) out[B_STRATEGIES] = false
+        if (q { com.optionslab.app.data.Protections.liveKeysHint.isNotEmpty() }) out[B_PROTECTIONS] = true
+        else if (runCatching { com.optionslab.app.data.Protections.activeHint }.getOrNull() != false) out[B_PROTECTIONS] = false
+        if (runCatching { com.optionslab.app.data.HeldNow.sources().paperBook }.getOrNull() != false) out[B_PAPER] = false
+        return out
+    }
+
+    @Volatile private var staleToldAt = 0L
+
+    /** TEST ONLY: no completed check and no late-check notice yet (as a fresh process). */
+    internal fun resetCompletedForTest() { staleToldAt = 0L; completed.held(emptySet(), 0L) }
+
+    /** The RISK notification's id for a held live book's late checks. */
+    internal const val STALE_NOTE_ID = 2064
+
+    /**
+     * The held books given to the completed-check record, and a RISK notification when a held LIVE book's last completed exit check
+     * is over 45 s old while NSE's looks run (before the open, the evening look, a closed day and MCX's hours: nothing is judged).
+     * Again at most every 5 minutes while it lasts. Memory and a notification only; never an order.
+     */
+    internal fun completedCheck(context: Context, mode: Mode, now: Long = System.currentTimeMillis(), books: Map<String, Boolean> = heldBooks()) {
+        // Judged in NSE's looks only: in MCX's hours MCX's own pass runs these checks on its own clock (the lane looks only when that
+        // pass is late), and a carried NSE position rests on its overnight GTT there - neither is a late check. Outside NSE's looks
+        // nothing is kept, so the first NSE look after them (the open) starts every book's count afresh.
+        if (mode != Mode.NSE) { completed.held(emptySet(), now); return }
+        completed.held(books.keys, now)
+        val stale = completed.stale(now).filter { (b, _) -> books[b] == true }
+        if (stale.isEmpty() || (staleToldAt > 0L && now - staleToldAt in 0 until com.optionslab.ira.StopCadence.COMPLETED_REPEAT_MS)) return
+        staleToldAt = now
+        val text = stale.joinToString("; ") { (b, age) -> "$b: last completed check ${age / 1000} s ago" } +
+            ". A live position's exit checks are late (the promise is 15 s). Check the open positions in Kite; the watch goes on."
+        runCatching { Heartbeat.diary("RISK: $text") }
+        // On the always-shown channel (the risk channel reaches the shade only with "other alerts" on); red in the app.
+        runCatching { Notifier.post(context, STALE_NOTE_ID, Notifier.APPROVAL, "RISK: live stop checks are late", text, "almanac", banner = Alerts.Kind.ERROR) }
+    }
+
+    /** The diagnostics' line: the worst completed-to-completed gap today. */
+    fun completedLine(): String = completed.line(com.optionslab.app.data.Market.today())
+
+    /**
+     * The stop lane's market from the clock alone (19 Nov 2026, audit batch 2: the lane waited for the watch's first pass, whose
+     * settings writes came first, before it knew its market): NSE's session, else MCX's while it trades, else none. Memory and the
+     * calendars only; a failure is none (the first pass then says, as before).
+     */
+    fun modeNow(): Mode = runCatching {
+        val m = com.optionslab.app.data.Market.minuteNow()
+        when {
+            com.optionslab.app.data.Market.isTradingDay() && m >= com.optionslab.app.data.Market.OPEN && m < com.optionslab.app.data.Market.foClose() -> Mode.NSE
+            com.optionslab.app.data.McxMarket.isOpen() -> Mode.MCX
+            else -> Mode.OFF
+        }
+    }.getOrDefault(Mode.OFF)
+
+    /**
+     * 19 Nov 2026 (audit batch 2): the watch's side lane beside the stop lane, every [SIDE_EVERY_MS] until [stop]: the completed-check
+     * RISK ([completedCheck]), the plain "anything held" mark for a quiet start ([com.optionslab.app.data.Reconciler.markHeld]) and
+     * the reconciler ([com.optionslab.app.data.Reconciler.step], about every minute; its Zerodha reads on IO in a job of their own,
+     * never two at once, so a slow read never holds this lane up). Never on the order or tick path; it places nothing.
+     */
+    suspend fun sideLane(context: Context, stop: () -> Boolean, mode: () -> Mode, heldAny: () -> Boolean): Unit = kotlinx.coroutines.coroutineScope {
+        var reconcile: kotlinx.coroutines.Job? = null
+        // The first reconcile [FIRST_RECONCILE_MS] after the watch starts: a restart restores and watches the books first.
+        val startEl = android.os.SystemClock.elapsedRealtime()
+        try {
+            while (!stop()) {
+                // Review: a notice, the diary and the plain mark's file are small blocking calls - on IO, as everything blocking.
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { completedCheck(context, mode()) }
+                    runCatching { com.optionslab.app.data.Reconciler.markHeld(context, com.optionslab.app.data.Reconciler.markFor(heldAny())) }
+                }
+                val settled = android.os.SystemClock.elapsedRealtime() - startEl >= FIRST_RECONCILE_MS
+                if (settled && reconcile?.isActive != true && runCatching { com.optionslab.app.data.Reconciler.due() }.getOrDefault(false)) {
+                    reconcile = launch(kotlinx.coroutines.Dispatchers.IO) {
+                        try { com.optionslab.app.data.Reconciler.step(context) } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                        catch (e: Throwable) { Tasks.stepFailed("reconciler", e) }
+                    }
+                }
+                kotlinx.coroutines.delay(SIDE_EVERY_MS)
+            }
+        } finally {
+            reconcile?.cancel()
+        }
+    }
+
+    /** The side lane's pace: the completed checks are judged every 15 s (a RISK at 45 s is seen within a minute). */
+    const val SIDE_EVERY_MS = 15_000L
+    /** The first reconcile this long after the watch starts (the books are restored and watched first). */
+    const val FIRST_RECONCILE_MS = 30_000L
 
     /** One step in its own try: a failure is kept, never thrown; a cancellation goes up only when the lane itself was cancelled. */
     private suspend inline fun guarded(name: String, block: () -> Unit) {
@@ -149,7 +287,7 @@ internal object StopLane {
         // arms' exits waited behind it. It is still first, but waited on [PAPER_WAIT_MS] at most: one still running is left to
         // finish by itself (never cut mid-order, not started again beside itself) and the exits go on time.
         Tasks.together("15-second stop check: paper", listOf(com.optionslab.ira.Supervisor.Step("15-second stop check: paper orders") {
-            guarded("15-second stop check: paper orders") { Tasks.paperEventsPublic(context, com.optionslab.app.data.Paper.tick()) }
+            guarded("15-second stop check: paper orders") { Tasks.paperEventsPublic(context, com.optionslab.app.data.Paper.tick()); done(B_PAPER) }
             // 16 Oct: an arm's paper position with no record in its arm's book is taken back (or protected) first.
             guarded("15-second stop check: unwatched positions") { com.optionslab.app.data.OrphanWatch.run(context) }
         }), PAPER_WAIT_MS, inOrder = false, named = false)
@@ -157,8 +295,8 @@ internal object StopLane {
         // research/PROFIT_LOCK_8OCT.md fix 3) - the Pine scripts' stops and locks, Solo's exits, Jarvis's own trades' profit-lock
         // stop and exits. Each under its own lock, as in the full pass, so a holding never has two sells in flight.
         Tasks.together("15-second stop check", listOfNotNull(
-            com.optionslab.ira.Supervisor.Step("15-second stop check: ORB arms") { com.optionslab.app.data.OrbArms.priceCheckOnly() },
-            com.optionslab.ira.Supervisor.Step("15-second stop check: Pine scripts") { com.optionslab.app.data.PineAuto.watchOnly() },
+            com.optionslab.ira.Supervisor.Step("15-second stop check: ORB arms") { com.optionslab.app.data.OrbArms.priceCheckOnly(); done(B_ORB) },
+            com.optionslab.ira.Supervisor.Step("15-second stop check: Pine scripts") { com.optionslab.app.data.PineAuto.watchOnly(); done(B_PINE) },
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Solo") { com.optionslab.app.ira.IraSolo.manageOnly() } else null,
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("15-second stop check: Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
             // 16 Oct: the paper arms whose exits otherwise ran only in the minute lane (which needs the stream's ticks).
@@ -171,12 +309,13 @@ internal object StopLane {
             if (com.optionslab.app.data.CisdArm.holding()) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.CISD}") { com.optionslab.app.data.CisdArm.manageOnly() } else null,
             // 18 Oct: the paper strategies' live trades ([com.optionslab.app.data.ArmLive]): their Zerodha stops, the paper exits
             // they follow and the 15:15 square-off.
-            if (com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch() } else null,
+            if (com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch(); done(B_ARMS_LIVE) } else null,
             // 18 Oct, review: the Strategy Module's open runs - their per-leg and basket stops, targets and trails (no scheduled
             // starts or square-offs: those stay in the full pass).
             if (com.optionslab.app.data.Strategies.runningHint) com.optionslab.ira.Supervisor.Step("15-second stop check: strategies") {
                 val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
                 com.optionslab.app.data.Strategies.manageOnly(bad)
+                done(B_STRATEGIES)
             } else null,
         ), if (quietNow) QUIET_EXITS_WAIT_MS else WatchWorkers.EXITS_WAIT_MS, inOrder = false, named = false)
         // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the bots' live stops,
@@ -185,7 +324,7 @@ internal object StopLane {
         // starts on time: the look is bounded by [LOOK_BOUND_MS], inside its 15 s.
         Tasks.together("15-second stop check: safety", listOf(com.optionslab.ira.Supervisor.Step("15-second stop check: sweep and stops") {
             guarded("15-second stop check: missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
-            guarded("15-second stop check: stops and targets") { com.optionslab.app.data.Protections.tick() }
+            guarded("15-second stop check: stops and targets") { com.optionslab.app.data.Protections.tick(); done(B_PROTECTIONS) }
         }), SAFETY_WAIT_MS, inOrder = false, named = false)
     }
 
@@ -203,10 +342,43 @@ internal object StopLane {
      */
     private suspend fun mcxCheck(context: Context) = Tasks.safely {
         guarded("MCX stop check: paper orders") { Tasks.paperEventsPublic(context, com.optionslab.app.data.Paper.tick()) }
-        guarded("MCX stop check: stops and targets") { com.optionslab.app.data.Protections.tick() }
+        guarded("MCX stop check: stops and targets") { com.optionslab.app.data.Protections.tick(); done(B_PROTECTIONS) }
         // 30 Oct (deep review): the arms' live MCX trades too (their GTT, the paper exit they follow); the NSE look already has them.
         if (com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint)
-            guarded("MCX stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch() }
+            guarded("MCX stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch(); done(B_ARMS_LIVE) }
         guarded("MCX stop check: missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
+    }
+}
+
+/**
+ * 19 Nov 2026 (audit batch 2: the stop lane and the pulse shared Dispatchers.IO with the blocking work - Keystore, disk, Zerodha
+ * reads - so a burst of it could leave them waiting for a thread): a small pool of their own for the watch's clocks - the pulse, the
+ * stop lane's loop and the clock lane's loop. Their looks and rounds still run their book steps on Dispatchers.IO
+ * exactly as before (the caller switches), so nothing blocking sits on these threads. Daemon threads at the foreground priority;
+ * made once per process.
+ */
+internal object WatchLanes {
+    const val THREADS = 4
+    private const val NAME = "watch-lane-"
+    private val io = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** On one of these threads now. */
+    fun onLane(): Boolean = Thread.currentThread().name.startsWith(NAME)
+
+    /**
+     * 19 Nov 2026 (second review): a small blocking call (the diary, a failure's note, a problem cleared) made from a lane is handed to
+     * IO and not waited for; anywhere else it runs here, as before. Never throws.
+     */
+    fun offload(block: () -> Unit) {
+        if (onLane()) io.launch { runCatching(block) } else runCatching(block)
+    }
+    val dispatcher: kotlinx.coroutines.CoroutineDispatcher by lazy {
+        val n = java.util.concurrent.atomic.AtomicInteger()
+        java.util.concurrent.Executors.newFixedThreadPool(THREADS) { r ->
+            Thread({
+                runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_FOREGROUND) }
+                r.run()
+            }, "$NAME${n.incrementAndGet()}").apply { isDaemon = true }
+        }.asCoroutineDispatcher()
     }
 }

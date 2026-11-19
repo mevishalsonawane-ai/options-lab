@@ -40,6 +40,11 @@ object Held {
         val vixDiv: Boolean = false,
         val mcxArms: Boolean = false,
         val mcxLive: Boolean = false,
+        /**
+         * 19 Nov 2026 (audit batch 2): Zerodha itself showed a position at the reconciler's last good read (any book's or none:
+         * [Reconcile.Tracker.heldHint]), so the watch never sleeps while Zerodha holds anything.
+         */
+        val broker: Boolean = false,
     )
 
     /** Each source's name and whether it holds (unknown counts as held). */
@@ -62,6 +67,7 @@ object Held {
         "VIX divergence" to s.vixDiv,
         "MCX arms" to s.mcxArms,
         "MCX live" to s.mcxLive,
+        "Zerodha (reconciler)" to s.broker,
     )
 
     /** Anything held anywhere. */
