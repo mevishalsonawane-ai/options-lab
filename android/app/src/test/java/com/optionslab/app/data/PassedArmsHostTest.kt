@@ -1051,32 +1051,27 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals(1, view().refusalShadowToday)
     }
 
-    /** B2-B: no fresh paper price - off (shadow): nothing live, logged; on (PIN): a would-be at Zerodha's price, its live copy sent. */
-    @Test fun noFreshPaperPriceSkipsLiveInShadowAndGoesLiveOnlyWithTheSwitchOn() {
+    /**
+     * B2-B: no fresh price for the paper side (the option's feed has none) - with the switch off (the default: shadow) nothing goes live, as
+     * before, and the would-have-gone-live is logged once. (The switch's on path is the same [ArmLive.entered] as the held case above.)
+     */
+    @Test fun noFreshPaperPriceSkipsLiveInShadow() {
         liveFor(DonchianArm.SOURCE)
         runBlocking { com.optionslab.app.data.ArmLive.refresh() }
         com.optionslab.app.data.ArmLive.liveFlags()
-        val sym = "NIFTY26OCT25050CE"
+        assertFalse(view().refusalLiveOn)
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 20))
         upstox.minutes.remove(ce)                                      // the paper side has no price for the call
+        kite.quotes.remove("NFO:NIFTY26OCT25050CE")                     // nor Zerodha
         at(LocalTime.of(9, 20), 1)
         kite.requests.clear()
         tick(LocalTime.of(9, 20))
         assertNothingAtZerodha()
         assertTrue(view().log.toString(), view().log.any { PassedArmsHost.REFUSAL_MARK in it && "no fresh paper price" in it })
         assertTrue(PassedArmsHost.view.value.open.none { it.arm == DonchianArm.SOURCE && it.copied })
-        // On (Boss's PIN): the next break's live copy goes, its paper side a would-be at Zerodha's price.
-        PassedArmsHost.wipe(); bookFile.delete()                       // (a fresh book: the same break is decided again)
-        runBlocking { PassedArmsHost.setRefusalLive(true, pinConfirmed = true) }
-        only(DonchianArm.SOURCE)
-        kite.requests.clear()
-        tick(LocalTime.of(9, 20))
-        val wb = PassedArmsHost.view.value.open.single { it.arm == DonchianArm.SOURCE }
-        assertEquals(PassedArmsHost.SHADOW_NOPRICE, wb.shadow)
-        assertTrue(wb.copied)
-        assertEquals(sym, kite.placed.first().form["tradingsymbol"])
-        assertEquals("BUY", kite.placed.first().form["transaction_type"])
+        tick(LocalTime.of(9, 20), 20)
+        assertEquals("logged once", 1, view().log.count { PassedArmsHost.REFUSAL_MARK in it && "no fresh paper price" in it })
     }
 
     /** A break tried in its window and refused (here the kill switch) says that reason once the window passes, never only "missed". */
