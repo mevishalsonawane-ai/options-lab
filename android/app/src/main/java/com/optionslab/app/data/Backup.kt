@@ -222,7 +222,13 @@ object Backup {
         val values = HashMap<String, Any?>()
         prefs.keys().forEach { k -> if (carried(k)) values[k] = prefs.get(k) }
         values[DISARM] = true
+        // 19 Nov (review): Boss's one-time automatic-stops choice is never run by a restore's books (it would switch his stops off with
+        // no PIN): marked done, whatever the backup held. His switches stay as this phone has them.
+        values[com.optionslab.ira.ArmAutoStops.MIGRATION_KEY] = true
+        values[com.optionslab.ira.ArmAutoStops.CUTOFF_MIGRATION_KEY] = true
         SecurePrefs.putAll(values)
+        // ...and in memory, so a retry before the restart cannot run it either (a later read keeps the mark: [ArmAutoStopsHost.load]).
+        runCatching { ArmAutoStopsHost.markChoiceRun() }
         // The danger meter's switch as restored, in the entry path's memory copy at once (the restart loads it again).
         runCatching { AppSettings.syncDangerHalf() }
         } catch (e: Throwable) {

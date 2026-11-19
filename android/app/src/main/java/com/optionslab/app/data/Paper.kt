@@ -1066,7 +1066,9 @@ object Paper {
      */
     suspend fun place(c: Contract, action: String, lots: Int, priceType: String, product: String, price: Double?, trigger: Double?,
                       known: Quote? = null, auto: String? = null, mirror: String? = null, exit: Boolean = false,
-                      verdict: com.optionslab.engine.risk.OrderFingerprint.Verdict? = null, stop: Double? = null, target: Double? = null): Result {
+                      verdict: com.optionslab.engine.risk.OrderFingerprint.Verdict? = null, stop: Double? = null, target: Double? = null,
+                      /** 19 Nov: the arm's own source for an arm's automatic entry ([BossRiskHost.paperEarly] tells R51, R72 and Liquidity apart by it). */
+                      source: String? = null): Result {
         // 22 Oct (arms audit): an arm's EXIT ([exit]) only ever reduces what the book holds in [product]. An arm reads "held" and
         // then sells a moment later; the expiry square-off (15:05), the 15:15 square-off, the sweeper or Boss may have closed the
         // position in between, and a plain SELL on a flat book opened a paper SHORT nothing managed (the Hero tickets' and ORB's
@@ -1112,7 +1114,7 @@ object Paper {
         if (bossEntry) {
             val d = com.optionslab.ira.SameDirectionCap.direction(c.underlying, c.exchange, c.right.name)
             val bets = if (d == null) emptyList() else runCatching { bossBets(book()) }.getOrDefault(emptyList())
-            BossRiskHost.paperEarly(auto!!, c.symbol, c.underlying, d, bets, mirrorTo)?.let { why ->
+            BossRiskHost.paperEarly(auto!!, c.symbol, c.underlying, d, bets, mirrorTo, source)?.let { why ->
                 return Result(false, why, emptyList(), capped = true, rule = BossRiskHost.Rule.entries.firstOrNull { r -> why.contains(r.words) })
             }
         }

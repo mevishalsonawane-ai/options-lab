@@ -187,7 +187,9 @@ object BossRiskHost {
             synchronized(lock) { if (gen != wipeGen) return@runCatching; recompute(d) }
             if (acctStatus.stopped && !wasAcct) said(context, "Account stop rule reached on paper",
                 "The paper account reached the account stop rule (${acctStatus.why}). " +
-                    (if (paperOn[Rule.ACCOUNT] == true) "The bots open no new paper position until you restart the count with your PIN (Account guard page); open positions keep their exits."
+                    (if (paperOn[Rule.ACCOUNT] == true) "The bots open no new paper position until you restart the count with your PIN (Account guard page); open positions keep their exits." +
+                        // 19 Nov (Boss's choice, [ArmAutoStopsHost]): said when R51, R72 and Liquidity are left out of it.
+                        (if (threeLeftOut()) " $ACCT_EXEMPT" else "")
                     else "Its paper switch is off: nothing changes."), 2071)
             if (week.reached && !wasWeek) said(context, "Weekly loss stop reached on paper",
                 "This paper week is ${BossRisk.rs(week.net)}, past the ${BossRisk.rs(-week.limit)} weekly loss stop. " +
@@ -229,14 +231,21 @@ object BossRiskHost {
      * stop's paper copy, the weekly stop and opposite bets ([open]: the automatic entries open now, as the same-direction cap counts
      * them, with their index). [mirror]: the arm's live key (while its entry could go live, only logged). Memory only; never throws.
      */
-    fun paperEarly(owner: String, symbol: String, underlying: String, dir: Int?, open: List<BossRisk.Bet>, mirror: String?): String? = runCatching {
+    fun paperEarly(owner: String, symbol: String, underlying: String, dir: Int?, open: List<BossRisk.Bet>, mirror: String?,
+                   /** 19 Nov: the arm's own source when the entry is one of the arms' (R51, R72 and Liquidity are told apart by it, never by name). */
+                   source: String? = null): String? = runCatching {
         val applied = !ExposureCapHost.liveMirrorPossible(mirror)
         fun hit(rule: Rule, why: String?): String? {
             if (why == null || paperOn[rule] != true) return null
             note(rule, owner, symbol, live = false, applied = applied, why = if (applied) why else "$why (logged only: this entry may also go live)")
             return if (applied) "refused: $why" else null
         }
-        hit(Rule.ACCOUNT, AccountStop.refusal(acctStatus)?.removePrefix("refused: ")?.let { "$it on paper" })?.let { return@runCatching it }
+        // 19 Nov (Boss's choice, [ArmAutoStopsHost]): with its switch off the account stop no longer refuses R51, R72 or Liquidity 15+5's
+        // entries (one it had reached as the switch went off still does, until Boss restarts its count); every other arm as before.
+        val acctWhy = AccountStop.refusal(acctStatus)?.removePrefix("refused: ")?.let { "$it on paper" }
+        if (acctWhy != null && paperOn[Rule.ACCOUNT] == true && !ArmAutoStopsHost.paperAccountActs(source, accountKeyNow()))
+            note(Rule.ACCOUNT, owner, symbol, live = false, applied = false, why = "$acctWhy (not applied: ${com.optionslab.ira.ArmAutoStops.CHOICE})")
+        else hit(Rule.ACCOUNT, acctWhy)?.let { return@runCatching it }
         // The week worked out now from the days in memory (review: on a Monday last week's "reached" never holds an entry made
         // before the first watch pass of the day).
         hit(Rule.WEEKLY, BossRisk.weeklyRefusal(BossRisk.weekly(synchronized(lock) { paperDays }, today(), weekLimit, weekReachedOn)))?.let { return@runCatching it }
@@ -445,7 +454,8 @@ object BossRiskHost {
         val a = acctStatus
         val acct = "Account stop rule on paper (${if (paperOn[Rule.ACCOUNT] == true) "on" else "off"}; counted from ${acctSince ?: "today"}): " +
             (if (a.trades == 0) "no paper day recorded yet" else "drawdown ${BossRisk.rs(a.drawdown)} of -Rs 40,000, this month ${BossRisk.rs(a.month)} of -Rs 13,000 (${a.trades} day${if (a.trades == 1) "" else "s"})") +
-            (if (a.stopped) "; REACHED on ${a.day} (${a.why}): no new paper entries until you restart it with your PIN" else "") + "."
+            (if (a.stopped) "; REACHED on ${a.day} (${a.why}): no new paper entries until you restart it with your PIN" +
+                (if (threeLeftOut()) " (R51, R72 and Liquidity 15+5 left out: your choice, 19 Nov)" else "") else "") + "."
         val w = week
         val wk = "Weekly loss stop on paper (${if (paperOn[Rule.WEEKLY] == true && w.limit > 0) "on, ${BossRisk.rs(-w.limit)}" else "off"}): this week ${BossRisk.rs(w.net)}" +
             (if (w.reached) "; REACHED: no new paper entries until Monday" else "") + "; live in shadow (${if (liveOn[Rule.WEEKLY] == true) "on" else "off"})."
@@ -468,6 +478,15 @@ object BossRiskHost {
     fun refreshView() { if (!loaded) load() else publish() }
 
     // ---- Boss's switches ---------------------------------------------------------------------------------------------------
+
+    /**
+     * 19 Nov (review): whether the account stop reached now leaves R51, R72 and Liquidity out - its switch off, and not a stop already
+     * reached as it went off (that one still holds them). Memory only.
+     */
+    private fun threeLeftOut(): Boolean = !ArmAutoStopsHost.paperAccountActs(com.optionslab.engine.orb.DonchianArm.SOURCE, accountKeyNow())
+
+    /** 19 Nov: what the account stop's notice and line add while its switch for R51, R72 and Liquidity is off. */
+    const val ACCT_EXEMPT = "R51, R72 and Liquidity 15+5 are left out of it while its switch in Bot settings is off (your choice, 19 Nov): they keep trading."
 
     /** The PIN's words for loosening one of these paper rules (as the paper loss limit's). */
     const val PIN_LOOSEN = "Switching a paper risk limit off loosens it: enter your app PIN on the Account guard page. Nothing changed."
@@ -502,6 +521,15 @@ object BossRiskHost {
         return if (on) "${rule.words.replaceFirstChar { it.uppercase() }} on live: the bots' live entries past it are refused (your own orders never)."
         else "${rule.words.replaceFirstChar { it.uppercase() }} on live: in shadow - what it would refuse is logged, nothing changes."
     }
+
+    /**
+     * 19 Nov: the paper account stop as reached now - the day its count started and the reach saved ([com.optionslab.ira.ArmAutoStops.accountKey]);
+     * null when not reached. Memory only.
+     */
+    fun accountKeyNow(): String? = com.optionslab.ira.ArmAutoStops.accountKey(acctSince, AccountStop.encodeReached(acctReached))
+
+    /** 19 Nov: the paper account stop's reach in words ("2026-11-10 (drawdown ...)"), when it is reached now; else null. Memory only. */
+    fun accountReachedWords(): String? = acctStatus.takeIf { it.stopped }?.let { "${it.day} (${it.why})" }
 
     /** Boss restarts the paper account stop's count after it was reached (the Account guard page, with the PIN). */
     fun restartAccount(pinConfirmed: Boolean): String {

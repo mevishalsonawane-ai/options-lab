@@ -56,8 +56,10 @@ internal fun PassedArmRows() {
     val v by PassedArmsHost.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { PassedArmsHost.refresh() } } }
+    // 19 Nov (Boss's choice): R51 / R72's automatic stops that are off, on their rows.
+    val stops by com.optionslab.app.data.ArmAutoStopsHost.view.collectAsState(Dispatchers.Main.immediate)
     PassedArmsHost.SOURCES.forEach { s ->
-        PassedArmRowContent(s, v) { on ->
+        PassedArmRowContent(s, v, stops.rowLine(s)) { on ->
             scope.launch(Dispatchers.IO) { runCatching { PassedArmsHost.setArmed(s, on) } }
         }
     }
@@ -181,7 +183,7 @@ internal fun soloDecisions(v: PassedArmsHost.View): List<String> =
  * on or off - off runs in shadow (its breaks kept as would-be trades, nothing bought), so the 19 Oct "Record only" choice is gone.
  */
 @Composable
-internal fun PassedArmRowContent(source: String, v: PassedArmsHost.View, onArm: (Boolean) -> Unit) {
+internal fun PassedArmRowContent(source: String, v: PassedArmsHost.View, autoStop: String? = null, onArm: (Boolean) -> Unit) {
     val p = LocalPalette.current
     val label = PassedArmsHost.label(source)
     val on = v.on(source)
@@ -191,6 +193,8 @@ internal fun PassedArmRowContent(source: String, v: PassedArmsHost.View, onArm: 
             // ONE status line (15 Oct, Boss); its record and forward-test numbers are in the name's dialog with its explanation.
             ExplainedName(label, listOf(passedNumbersLine(source, v) + ".") + passedExplanation(source, v))
             Text(keepNumbersWhole(passedStatusLine(source, v)), style = Type.bodySmall.copy(color = if (on) p.verdigris else p.inkFaint, fontSize = 12.sp))
+            // 19 Nov (Boss's choice): "auto-stop off by Boss's choice" - which automatic stops no longer apply to it ([ArmAutoStops.rowLine]).
+            autoStop?.let { Text(it, style = Type.bodySmall.copy(color = p.inkSoft, fontSize = 11.sp), maxLines = 3) }
         }
         Switch(
             modifier = Modifier.semantics { contentDescription = "Paper only: switch $label" },

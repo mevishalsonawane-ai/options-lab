@@ -735,6 +735,40 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov (Boss's choice, [ArmAutoStopsHost]): with the forward-test switch-off off, R51 and R72 keep running on a failed bar; R52 (another
+     * arm) still switches itself off; on again, the bar acts as before. An arm the bar had switched off before stays off (listed).
+     */
+    @Test fun theForwardBarOffLeavesR51AndR72RunningButR52StillSwitchesOff() {
+        only(DonchianArm.SOURCE)
+        runBlocking { PassedArmsHost.setArmed(BreadthDonchianArm.SOURCE, true, log = false); PassedArmsHost.setArmed(OovArm.SOURCE, true, log = false) }
+        assertEquals("no arm off by it yet", emptyList<String>(), runBlocking { PassedArmsHost.forwardBarStopped() })
+        assertTrue(ArmAutoStopsHost.set(com.optionslab.ira.ArmAutoStops.Rule.FORWARD_BAR, false, pinConfirmed = true, log = false).startsWith("Off"))
+        val t0 = day.minusDays(3).atTime(10, 0)
+        fun losers(src: String, tag: String) = List(40) { i ->
+            PassedArmsHost.Pos(src, "NIFTY", "$tag$i", "CE", 65, 100.0, t0.plusMinutes(i.toLong()), null, exit = 98.0, exitTime = t0, why = "stop") }
+        runBlocking { PassedArmsHost.addClosedForTest(losers(DonchianArm.SOURCE, "D") + losers(BreadthDonchianArm.SOURCE, "B") + losers(OovArm.SOURCE, "O")) }
+        tick(LocalTime.of(9, 0))
+        val v = view()
+        assertTrue("R51 runs until Boss stops it", v.on(DonchianArm.SOURCE)); assertNull(v.paused[DonchianArm.SOURCE])
+        assertTrue("R72 too", v.on(BreadthDonchianArm.SOURCE)); assertNull(v.paused[BreadthDonchianArm.SOURCE])
+        assertFalse("R52 keeps its bar", v.on(OovArm.SOURCE))
+        assertTrue(v.paused[OovArm.SOURCE].orEmpty().contains("after 40 paper trades"))
+        // On again (one tap, no PIN): the bar acts as before.
+        assertTrue(ArmAutoStopsHost.set(com.optionslab.ira.ArmAutoStops.Rule.FORWARD_BAR, true, log = false).startsWith("On"))
+        tick(LocalTime.of(9, 1))
+        assertFalse(view().on(DonchianArm.SOURCE)); assertFalse(view().on(BreadthDonchianArm.SOURCE))
+        // What it holds stopped, for the change timeline (R52 is not one of the three).
+        val listed = runBlocking { PassedArmsHost.forwardBarStopped() }!!
+        assertEquals(2, listed.size)
+        assertTrue(listed.toString(), listed.any { it.startsWith("${DonchianArm.LABEL} switched itself off on its forward-test bar (net") })
+        assertTrue(listed.toString(), listed.none { it.contains(OovArm.LABEL) })
+        // Off again does not switch them back on (Boss does that himself).
+        ArmAutoStopsHost.set(com.optionslab.ira.ArmAutoStops.Rule.FORWARD_BAR, false, pinConfirmed = true, log = false)
+        tick(LocalTime.of(9, 2))
+        assertFalse(view().on(DonchianArm.SOURCE))
+    }
+
+    /**
      * 22 Oct (arms audit): a would-be trade (the cap, a twin, record only) was never bought and books no entry spread, so it no
      * longer counts toward the 40-trade bar: 35 real losers and 5 would-be ones are 35 of 40, not a failed bar.
      */
