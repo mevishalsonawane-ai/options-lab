@@ -38,6 +38,9 @@ class AuditBatch2VoiceGatesTest : RobolectricTest() {
         // The tile's call (no PIN): refused, said to open the app.
         assertEquals(Strategies.LIFT_PIN, runBlocking { Strategies.startAgain() })
         assertTrue("still stopped", stopped())
+        // The tile tells Boss how (a notice), never a silent log line; any other answer posts nothing.
+        assertEquals(com.optionslab.app.work.BotTile.TILE_PIN_TEXT, com.optionslab.app.work.BotTile.startNotice(Strategies.LIFT_PIN))
+        assertNull(com.optionslab.app.work.BotTile.startNotice("Index bots running: armed strategies start at their times."))
         // Home, after the PIN.
         assertTrue(runBlocking { Strategies.startAgain(pinConfirmed = true) }.startsWith("Index bots running"))
         assertFalse(stopped())

@@ -182,7 +182,10 @@ object AccountStopHost {
      * voice never switch it at all.
      */
     fun setOn(on: Boolean, pinConfirmed: Boolean = false): String {
-        if (!on && this.on && !pinConfirmed && pinAsked()) return PIN_OFF
+        // 19 Nov 2026 (audit batch 2, second review): on in memory OR as saved (a worker thread, as the card's saves are; a vault that
+        // cannot be read counts as on), so a switch-off is never let through on a stale or unread "off".
+        if (!on && !pinConfirmed && pinAsked() && (this.on ||
+                runCatching { SecurePrefs.unreadable || SecurePrefs.getBoolean(K_ON, false) }.getOrDefault(true))) return PIN_OFF
         this.on = on
         runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to on)) }
         runCatching { Diag.record("risk", "Account stop rule ${if (on) "on: the bots' new live entries are refused once it is reached" else "in shadow: logged only"} (by you)") }

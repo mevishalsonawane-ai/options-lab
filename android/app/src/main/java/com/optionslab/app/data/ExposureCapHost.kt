@@ -185,7 +185,10 @@ object ExposureCapHost {
      * asks the PIN first) wherever the guard's own rule asks it ([com.optionslab.app.security.GuardPin]); on never asks.
      */
     fun setLiveOn(on: Boolean, pinConfirmed: Boolean = false): String {
-        if (!on && liveOn && !pinConfirmed && pinAsked()) return PIN_OFF
+        // 19 Nov 2026 (audit batch 2, second review): on in memory OR as saved (a worker thread, as the card's saves are; a vault that
+        // cannot be read counts as on), so a switch-off is never let through on a stale or unread "off".
+        if (!on && !pinConfirmed && pinAsked() && (liveOn ||
+                runCatching { SecurePrefs.unreadable || SecurePrefs.getBoolean(K_LIVE, false) }.getOrDefault(true))) return PIN_OFF
         liveOn = on
         runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE to on)) }
         runCatching { Diag.record("risk", "Same-direction cap on live ${if (on) "on: live entries past it are refused" else "in shadow: logged only"}") }

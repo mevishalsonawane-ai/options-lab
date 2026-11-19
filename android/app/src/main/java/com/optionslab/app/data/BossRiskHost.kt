@@ -522,7 +522,10 @@ object BossRiskHost {
      */
     fun setLive(rule: Rule, on: Boolean, pinConfirmed: Boolean = false): String {
         if (rule !in LIVE_RULES) return "That rule has no live switch."
-        if (!on && liveOn[rule] == true && !pinConfirmed && pinAsked()) return PIN_LIVE_OFF
+        // 19 Nov 2026 (audit batch 2, second review): on in memory OR as saved (a worker thread, as the card's saves are; a vault that
+        // cannot be read counts as on), so a switch-off is never let through on a stale or unread "off".
+        if (!on && !pinConfirmed && pinAsked() && (liveOn[rule] == true ||
+                runCatching { SecurePrefs.unreadable || SecurePrefs.getBoolean(rule.liveKey, false) }.getOrDefault(true))) return PIN_LIVE_OFF
         liveOn[rule] = on
         runCatching { SecurePrefs.putAllSoon(mapOf(rule.liveKey to on)) }
         runCatching { Diag.record("risk", "${rule.words} on live ${if (on) "on: the bots' live entries past it are refused" else "in shadow: logged only"} (by you)") }

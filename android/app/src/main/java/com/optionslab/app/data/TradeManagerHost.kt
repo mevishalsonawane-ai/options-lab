@@ -242,8 +242,7 @@ object TradeManagerHost {
         if (modeOf(tradeId) != TradeManager.Mode.ACT) return null
         val why = l.pendingExit ?: return null
         val t = l.reg.trade
-        if (t.account == TradeManager.Account.PAPER && t.family in TradeManager.LIVE_COPIED &&
-            !TradeManager.exitMayAct(t.account, t.family, liveCopyOf(t.instrument), _policy.value)) {
+        if (heldForLiveCopy(t)) {
             if (heldBack.add(tradeId)) runCatching {
                 if (heldBack.size > 500) heldBack.clear()
                 Diag.record("trade manager", "${t.label} ${t.instrument}: early exit not taken - its live copy at Zerodha follows the paper " +
@@ -253,6 +252,17 @@ object TradeManagerHost {
         }
         return why
     }
+
+    /** 19 Nov 2026 (audit batch 2, second review): how a look held back for a live copy is said. */
+    const val HELD_WORDS = "held for its live copy"
+
+    /**
+     * 19 Nov 2026 (audit batch 2, second review): whether [t] - a PAPER trade of a family whose live copy follows its paper exits - has
+     * such a copy now and its family's LIVE mode is not ACT: the manager then only records for it ([one], [exitDue]). Memory only.
+     */
+    private fun heldForLiveCopy(t: TradeManager.ManagedTrade): Boolean =
+        t.account == TradeManager.Account.PAPER && t.family in TradeManager.LIVE_COPIED &&
+            !TradeManager.exitMayAct(t.account, t.family, liveCopyOf(t.instrument), _policy.value)
 
     /** 19 Nov 2026 (audit batch 2): the trades whose early exit was held back for their live copy, said once each (memory, bounded). */
     private val heldBack: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
@@ -269,15 +279,18 @@ object TradeManagerHost {
 
     /**
      * 19 Nov 2026 (audit batch 2): whether [ArmLive] holds a real (not shadow) live trade copying the paper trade [ref] or the paper
-     * contract [paperSymbol]. Its book not read yet (a start-up window): one is assumed while the app is in Live (as last kept in
-     * memory - ArmLive would sell it once read), none in Paper (where ArmLive's book may never be read). Memory only; never throws (an
-     * error counts as a live copy: nothing is sold by the back door on a guess).
+     * contract [paperSymbol]. Its book not read yet (a start-up window): one is assumed while the app is in Live, or while the Live
+     * setting is not known in memory yet (ArmLive would sell it once read); none in Paper (where ArmLive's book may never be read).
+     * Memory only; never throws (an error counts as a live copy: nothing is sold by the back door on a guess).
      */
     internal fun armLiveCopy(paperSymbol: String? = null, ref: String? = null): Boolean = runCatching {
         val v = ArmLive.view.value
-        if (!v.loaded) return@runCatching ArmLive.liveFlagsKept()?.first == true
-        v.openReal.any { (ref != null && it.ref == ref) || (paperSymbol != null && (it.paperSymbol == paperSymbol || it.symbol == paperSymbol)) }
+        liveCopyFrom(v.loaded, if (v.loaded) null else ArmLive.liveFlagsKept()?.first,
+            v.openReal.any { (ref != null && it.ref == ref) || (paperSymbol != null && (it.paperSymbol == paperSymbol || it.symbol == paperSymbol)) })
     }.getOrDefault(true)
+
+    /** [armLiveCopy]'s rule from plain facts (tests): the book read - what it holds; not read - the app's Live as kept, unknown: yes. */
+    internal fun liveCopyFrom(loaded: Boolean, appLiveKept: Boolean?, held: Boolean): Boolean = if (loaded) held else appLiveKept ?: true
 
     /** In ACT: the manager's (target, lock) for [tradeId] (either null: the strategy's own); null when it does not act. */
     fun levels(tradeId: String): Pair<Double?, Double?>? {
@@ -370,6 +383,9 @@ object TradeManagerHost {
         // 16 Oct: the open ones' own exits for the position popup's "Exits" line ([com.optionslab.ira.ArmExits], memory only).
         owner?.let { o -> runCatching { com.optionslab.ira.ArmExits.set(o, trades.filter { it.exit == null }.map { exitsOf(o, it) }) } }
         if (com.optionslab.app.BuildConfig.GOLD) return
+        // 19 Nov 2026 (audit batch 2, review): the app's Live kept in memory for [armLiveCopy] (a settings read here, off the order and
+        // tick paths), so a paper trade in Paper is not taken as having a live copy for want of it.
+        if (trades.any { it.family in TradeManager.LIVE_COPIED }) runCatching { ArmLive.liveFlags() }
         for (a in trades) runCatching {
             val k = if (a.shortFuture) -1.0 else 1.0
             if (a.exit != null) {
@@ -494,7 +510,13 @@ object TradeManagerHost {
         // Out already (the strategy has not closed it yet): nothing more to decide, and the last look stays on show.
         if (l.state.exited) return
         val t = l.reg.trade
-        val act = r0.mode == TradeManager.Mode.ACT
+        // 19 Nov 2026 (audit batch 2, second review): a PAPER trade whose live copy follows its paper exits is looked at as in SHADOW
+        // unless its family's LIVE mode is ACT ([heldForLiveCopy]): what it would do is recorded, priced as the counterfactual, and
+        // never acted on (no "exited", no exit asked) - the paper exit would sell the live position too.
+        val held = r0.mode == TradeManager.Mode.ACT && heldForLiveCopy(t)
+        val act = r0.mode == TradeManager.Mode.ACT && !held
+        // Its record from here is a SHADOW one (review): settled and tallied as a would-be, never as the manager's own exit.
+        if (held) update(id) { if (it.mode == TradeManager.Mode.ACT) it.copy(mode = TradeManager.Mode.SHADOW) else it }
         // The committee: LIVE trades the manager acts on use the frozen weights; SHADOW and paper the self-tuned ones (memory only).
         val frozen = act && t.account == TradeManager.Account.LIVE
         // Today's regime weights (TODO S8): out of shadow only, live only once Boss approved them; memory only.
@@ -540,7 +562,7 @@ object TradeManagerHost {
                     l.pendingExit = if (lockHit) "the trade manager's profit lock" else "the trade manager: $words"
                     wake(l)
                     post(t, "$who exited early: $words" + if (lockHit) " (lock ${TradeManager.lv(step.state.core.lock ?: 0.0)})" else "")
-                } else post(t, "$who would have exited early (shadow): $words")
+                } else post(t, "$who would have exited early (${if (held) HELD_WORDS else "shadow"}): $words")
             }
             is TradeManager.Decision.Extend -> {
                 note(id, TradeManager.Note(now, TradeManager.EXTEND_NOTE, TradeManager.Rule.EXTEND.key,
@@ -552,7 +574,7 @@ object TradeManagerHost {
                 if (act) {
                     wake(l)
                     post(t, "$who target extended to ${TradeManager.lv(d.newTarget)}, lock raised to ${TradeManager.lv(d.newStop)}")
-                } else post(t, "$who would have extended its target to ${TradeManager.lv(d.newTarget)} with the lock at ${TradeManager.lv(d.newStop)} (shadow)")
+                } else post(t, "$who would have extended its target to ${TradeManager.lv(d.newTarget)} with the lock at ${TradeManager.lv(d.newStop)} (${if (held) HELD_WORDS else "shadow"})")
             }
         }
     }

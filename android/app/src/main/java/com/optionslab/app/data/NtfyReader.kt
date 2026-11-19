@@ -95,8 +95,8 @@ object NtfyReader {
     }.getOrDefault(true)
 
     /** 19 Nov 2026 (audit batch 2): what is said when "Trade live" is asked for with nothing but the topic protecting it. */
-    const val LIVE_NEEDS_TOKEN = "ntfy alerts trades live only with an access token or your own server: set one here first " +
-        "(on the public ntfy.sh anyone who learns the topic can post an alert). Trade live stays off."
+    const val LIVE_NEEDS_TOKEN = "ntfy alerts trades live only with an access token or your own server: set one on the ntfy page " +
+        "(Settings → Automation → ntfy alerts) first - on the public ntfy.sh anyone who learns the topic can post an alert. Trade live stays off."
 
     /** Boss's topic typed once: checked, kept encrypted. What to say (never the topic itself). */
     fun setTopic(topic: String): String {

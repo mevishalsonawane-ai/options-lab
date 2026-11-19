@@ -165,7 +165,11 @@ object Broker {
         return on
     }
 
+    /** TEST SEAM (19 Nov 2026, audit batch 2): run inside the door, just before its own checks (a setting flipped at the last moment). */
+    @Volatile internal var testAtDoor: ((Kite.Order) -> Unit)? = null
+
     internal fun entryRecheck(o: Kite.Order, arm: String? = null, intended: Double? = null, stop: Double? = null): String? {
+        testAtDoor?.invoke(o)
         // The kill switch kept in memory and read again only when a kept-elsewhere setting changed (g.kill is one of them):
         // the door reads nothing from the settings store on the order path (round 2's rule), yet sees a flip at once.
         if (killOn()) return "refused: the kill switch is on"

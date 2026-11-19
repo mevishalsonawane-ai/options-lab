@@ -554,6 +554,29 @@ class StrategiesLiveTest : RobolectricTest() {
         assertNull("on again: nothing refused", Strategies.autoLiveRefusal())
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2, second review): a scheduler-started run's entry is marked automatic all the way to the door: when
+     * "AI trades go live" turns off after the scheduler's and the entry's own checks (here at the door itself, the last moment), the
+     * door refuses it and nothing reaches Zerodha.
+     */
+    @Test fun aSchedulerRunWhoseAiLiveTurnsOffAfterItsCheckIsRefusedInsideTheDoor() {
+        live()
+        val id = armedLive(automatic = true)
+        at(9, 19); tick()
+        val flipped = java.util.concurrent.atomic.AtomicBoolean(false)
+        Broker.testAtDoor = { o -> if (o.tag == "iraalgostrat" && flipped.compareAndSet(false, true)) com.optionslab.app.ira.IraNewsTrades.paperFirst = true }
+        try {
+            at(9, 21)
+            val notes = tick()
+            assertTrue("AI trades go live turned off after the scheduler's check", flipped.get())
+            assertTrue(notes.toString(), notes.any { it.contains("scheduled live start") })
+            assertTrue("nothing sent", buys().isEmpty())
+            val log = runBlocking { Strategies.log() }.joinToString("\n") { it.message } + (entry(id).run?.startError ?: "")
+            assertTrue(log, log.contains("refused: \"AI trades go live\" is off"))
+            assertFalse("refused at the door, not before it", log.contains("automatic live entry refused"))
+        } finally { Broker.testAtDoor = null; com.optionslab.app.ira.IraNewsTrades.paperFirst = false }
+    }
+
     @Test fun bossesOwnApprovalOfALiveStartGoesWithAiTradesGoLiveOff() {
         live()
         val id = armedLive(automatic = false)

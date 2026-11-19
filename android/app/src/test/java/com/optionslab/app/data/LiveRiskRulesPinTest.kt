@@ -46,6 +46,25 @@ class LiveRiskRulesPinTest : RobolectricTest() {
         assertTrue(AccountStopHost.setOn(false).contains("in shadow"))
     }
 
+    /**
+     * Second review: before the saved switch is read, memory says "off" although the rule is on; the PIN check reads it first (or
+     * counts it as on), so a switch-off is never let through on a stale "off".
+     */
+    @Test fun aSwitchOffBeforeTheSavedSwitchIsReadStillAsksThePin() {
+        liveWithPin()
+        com.optionslab.app.security.SecurePrefs.put("g.accountStop.on", true)   // on, as saved on the phone
+        AccountStopHost.unloadForTest()
+        assertFalse("memory not read yet", AccountStopHost.view.value.on)
+        assertEquals(AccountStopHost.PIN_OFF, AccountStopHost.setOn(false))
+        AccountStopHost.refresh()
+        assertTrue("read: still on", AccountStopHost.view.value.on)
+        // The same for the same-direction cap's and the risk rules' live switches.
+        com.optionslab.app.security.SecurePrefs.put("g.sameDirCap.live", true)
+        assertEquals(ExposureCapHost.PIN_OFF, ExposureCapHost.setLiveOn(false))
+        com.optionslab.app.security.SecurePrefs.put(BossRiskHost.Rule.WEEKLY.liveKey, true)
+        assertEquals(BossRiskHost.PIN_LIVE_OFF, BossRiskHost.setLive(BossRiskHost.Rule.WEEKLY, false))
+    }
+
     @Test fun theSameDirectionCapsLiveSwitchGoesBackToShadowOnlyWithThePin() {
         liveWithPin()
         assertTrue(ExposureCapHost.setLiveOn(true).startsWith("Live: the bots' entries past the cap are refused"))

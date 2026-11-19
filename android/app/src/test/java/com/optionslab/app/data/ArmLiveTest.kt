@@ -43,6 +43,8 @@ class ArmLiveTest : RobolectricTest() {
         AutomationSupport.liveSettings()
         AutomationSupport.security(compromised = false)
         AutomationSupport.clearAlerts()
+        // 19 Nov 2026 (audit batch 2): ntfy alerts goes live only with an access token (its own tests cover the refusal).
+        SecurePrefs.put(NtfyReader.K_TOKEN, "tk_test0001")
         kite.instruments += FakeKite.Ins(22_000_001, sym, "BANKNIFTY", expiry, 52_000.0, "CE", 30)
         kite.quote("NFO:$sym", 200.0, 199.95, 200.05)
         runBlocking { Broker.instruments() }

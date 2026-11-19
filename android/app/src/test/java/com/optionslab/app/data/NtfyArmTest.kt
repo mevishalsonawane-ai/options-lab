@@ -409,11 +409,18 @@ class NtfyArmTest : RobolectricTest() {
         runBlocking { NtfyArm.liveGuard() }
         assertFalse(liveOn())
         assertEquals("1", SecurePrefs.getString(NtfyArm.K_LIVE_RULE))
-        // Switched on again with the PIN (any page), no token: off on the next pass.
+        // Asked on with the PIN from any page (Bot settings' list, the timeline's Undo), no token: refused, said, left off.
+        val said = runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, true, pinConfirmed = true, log = false) }
+        assertEquals("${NtfyReader.LIVE_NEEDS_TOKEN} ${ArmLive.UNCHANGED}", said)
+        assertFalse("the timeline's Undo sees nothing done", ArmLive.done(said))
+        assertFalse("only the topic protects it", liveOn())
+        // Its own server instead of a token: on.
+        SecurePrefs.put(NtfyReader.K_SERVER, "https://ntfy.example.org")
         runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, true, pinConfirmed = true, log = false) }
-        assertTrue(liveOn())
+        assertTrue("its own server protects it", liveOn())
+        SecurePrefs.put(NtfyReader.K_SERVER, null)
         runBlocking { NtfyArm.liveGuard() }
-        assertFalse("only the topic protected it", liveOn())
+        assertFalse("back on ntfy.sh with no token: off on the next pass", liveOn())
         // With an access token: kept on.
         SecurePrefs.put(NtfyReader.K_TOKEN, "tk_test0001")
         runBlocking { ArmLive.setLive(LiveMirror.NTFY_ALERTS, true, pinConfirmed = true, log = false) }

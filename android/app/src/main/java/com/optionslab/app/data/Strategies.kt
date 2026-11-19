@@ -106,6 +106,12 @@ object Strategies {
         var mcxStoppedWhy: String? = null,
         var mcxStoppedAt: String? = null,
         var mcxStopSells: Boolean = true,
+        /**
+         * 19 Nov 2026 (audit batch 2, second review): the runs the scheduler started by itself (run ids): their entries, later ones
+         * too, are automatic and need "AI trades go live" ([autoLiveRefusal]). A run Boss started himself, or one from before this
+         * was kept, is his own start for all its entries (no new live skip).
+         */
+        val autoRuns: LinkedHashSet<Long> = LinkedHashSet(),
     ) {
         /** 26 Oct: the [wipeGen] this book was read in; a book from before "Erase everything" is never saved or kept again. */
         @Volatile var gen: Int = 0
@@ -244,7 +250,8 @@ object Strategies {
                 stoppedDay, stoppedWhy, legStops, stoppedAt = o.optString("stoppedAt").takeIf { it.isNotBlank() },
                 mcxStoppedDay = mcx?.first, mcxStoppedWhy = mcx?.second,
                 mcxStoppedAt = if (o.optInt("stopSides", 0) >= 1) o.optString("mcxStoppedAt").takeIf { it.isNotBlank() } else o.optString("stoppedAt").takeIf { it.isNotBlank() },
-                mcxStopSells = o.optBoolean("mcxStopSells", true))
+                mcxStopSells = o.optBoolean("mcxStopSells", true),
+                autoRuns = LinkedHashSet<Long>().apply { o.optJSONArray("autoRuns")?.let { a -> for (i in 0 until a.length()) add(a.getLong(i)) } })
         }.getOrNull()
         if (b == null && file.exists()) {
             Vault.setAside(file)
@@ -351,6 +358,7 @@ object Strategies {
         b.mcxStoppedAt?.let { o.put("mcxStoppedAt", it) }
         o.put("mcxStopSells", b.mcxStopSells)
         o.put("legStops", JSONObject().apply { b.legStops.forEach { (k, v) -> put(k, v) } })
+        o.put("autoRuns", JSONArray().apply { b.autoRuns.forEach { put(it) } })
         return o.toString().toByteArray(Charsets.UTF_8)
     }
 
@@ -638,9 +646,10 @@ object Strategies {
 
     /**
      * 19 Nov 2026 (audit batch 2: the strategies' automatic live entries): why an AUTOMATIC live entry of a saved strategy (its
-     * scheduled start, a signal entry later in a run) may not go now - the app in Paper, or "AI trades go live" off - as every arm's
-     * live entry is asked (CLAUDE.md); null: it may. Boss's own start from the app (confirmed with his PIN) and every exit are never
-     * asked. Memory first ([ArmLive.liveFlags]); unknown counts as a refusal.
+     * scheduled start, and every later entry of a run the scheduler started - [Book.autoRuns]) may not go now - the app in Paper, or
+     * "AI trades go live" off - as every arm's live entry is asked (CLAUDE.md); null: it may. A run Boss started himself from the app
+     * (confirmed with his PIN), its later entries too, and every exit are never asked. Memory first ([ArmLive.liveFlags]); unknown
+     * counts as a refusal.
      */
     internal fun autoLiveRefusal(): String? = runCatching {
         ArmLive.liveFlags().let { (appLive, aiLive) -> if (!appLive) "the app is in Paper" else if (!aiLive) "\"AI trades go live\" is off" else null }
@@ -771,8 +780,14 @@ object Strategies {
         override fun event(e: Event, alert: Boolean) = record(b, def.name, e, alert)
     }
 
-    private fun exec(b: Book, def: StrategyDef, v: Venue, mode: RunMode, compromised: Boolean, ownerStart: Boolean = false) =
-        if (mode == RunMode.LIVE) kiteExec(b, def, v, compromised, ownerStart) { b.brokerIds.values.flatMap { it.values } } else paperExec(b, def, v)
+    /**
+     * [ownerStart] null (19 Nov 2026, second review): from [def]'s current run - its own start unless the scheduler started it
+     * ([Book.autoRuns]); a new run's start says it itself.
+     */
+    private fun exec(b: Book, def: StrategyDef, v: Venue, mode: RunMode, compromised: Boolean, ownerStart: Boolean? = null) =
+        if (mode == RunMode.LIVE) kiteExec(b, def, v, compromised, ownerStart ?: (b.runs[def.id]?.runId?.let { it !in b.autoRuns } ?: true)) {
+            b.brokerIds.values.flatMap { it.values }
+        } else paperExec(b, def, v)
 
     /** Persist the run after every accepted order, before the next one goes out. */
     private fun checkpoint(b: Book, strategyId: Long): (RunState) -> Unit = { r -> b.runs[strategyId] = r; runCatching { save(b) } }
@@ -1124,7 +1139,11 @@ object Strategies {
         val ids = HashMap<Long, String>()
         b.brokerIds[runId] = ids
         val ltp = runCatching { Market.quote(def.underlying)?.last }.getOrNull()
-        val run = host.start(def, SymbolResolver.resolve(def, v.master, ltp, now), now, runId, mode, trigger, exec(b, def, v, mode, compromised), ids, checkpoint(b, def.id))
+        // 19 Nov 2026 (audit batch 2, second review): started by the scheduler - every entry of this run is an automatic one.
+        // Only runs still kept (latest per strategy) need it: the rest dropped, never an open one (review).
+        b.autoRuns.retainAll(b.runs.values.map { it.runId }.toSet())
+        b.autoRuns += runId
+        val run = host.start(def, SymbolResolver.resolve(def, v.master, ltp, now), now, runId, mode, trigger, exec(b, def, v, mode, compromised, ownerStart = false), ids, checkpoint(b, def.id))
         b.runs[def.id] = run
         finish(b, run)
         b.pending.remove(def.id)
