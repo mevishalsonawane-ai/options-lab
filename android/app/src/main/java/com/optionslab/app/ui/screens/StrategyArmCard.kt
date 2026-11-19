@@ -386,8 +386,10 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
                 Text(when {
                     killOn -> "Orders are allowed again, within your Bot settings limits. Armed strategies start at their times" +
                         if (stopped) " once the index bots are started too." else "."
-                    // The daily loss limit's stop is never lifted today (plans only lower risk).
-                    stopped && lossStop -> "The daily loss limit stopped the index bots today: they stay stopped until tomorrow, and starting them again is refused. " +
+                    // The daily loss limit's stop holds today (plans only lower risk). 19 Nov 2026 (Boss's choice): switching that limit off,
+                    // or raising it past today's loss, with the PIN lifts it.
+                    stopped && lossStop -> "The daily loss limit stopped the index bots today: starting them again is refused while that stop holds. " +
+                        "To lift it today, switch that limit off (or raise it past today's loss) with your PIN in Account guard or Bot settings. " +
                         "Tomorrow the armed strategies, NSE arms and Pine scripts run as usual."
                     stopped -> "Armed strategies start at their scheduled times again today, and the armed NSE arms and Pine scripts trade again. " +
                         "Nothing that is switched off is switched on. The commodity bots have their own stop on the MCX card."

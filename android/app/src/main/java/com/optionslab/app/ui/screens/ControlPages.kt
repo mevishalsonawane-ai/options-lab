@@ -824,12 +824,23 @@ private fun GuardCard(model: AppModel) {
     // away). Tightening is at once; with no app PIN set there is nothing to ask.
     var guarded by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
     guarded?.let { (why, action) -> Reauth(model, onOk = { guarded = null; action() }, onCancel = { guarded = null }, why = why) }
+    // 19 Nov 2026 (Boss's choice): lifting today's loss-limit stop takes the PIN itself (never a fingerprint).
+    var liftGuard by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
+    liftGuard?.let { (why, action) -> Reauth(model, onOk = { liftGuard = null; action() }, onCancel = { liftGuard = null }, pinOnly = true, why = why) }
     fun loosen(looser: Boolean, why: String, action: () -> Unit) {
         if (com.optionslab.app.security.GuardPin.asks(looser, s.live)) guarded = why to action else action()
     }
     // A limit of 0 (or a cut-off below 0) is off: any limit is tighter than off; off, or a higher one, is looser.
     fun looser(cur: Double, next: Double) = cur > 0 && (next <= 0 || next > cur)
     val askLimit = "Enter your app PIN to loosen the account guard on Zerodha."
+    // 19 Nov 2026 (Boss's choice): a daily loss limit switched off, or raised, that made today's stop lifts it - always behind the
+    // PIN (on Paper too); without a PIN set nothing is lifted. Lowering it, or switching it on, never lifts anything.
+    fun loosenLimit(limit: com.optionslab.app.data.LossBreaker.Limit, cur: Double, next: Double, why: String, apply: () -> Unit) {
+        if (com.optionslab.app.data.LossBreaker.mayLift(limit, cur, next) && com.optionslab.app.security.PinLock.isSet)
+            liftGuard = (if (next <= 0.0) "$why This lifts today's loss-limit stop." else "$why This lifts today's loss-limit stop if today's loss is inside the new limit.") to
+                { apply(); model.liftLossStop(limit, cur, next, pinVerified = true) }
+        else loosen(looser(cur, next), why, apply)
+    }
     confirmKill?.let { turnOn ->
         AlertDialog(
             onDismissRequest = { confirmKill = null },
@@ -848,7 +859,7 @@ private fun GuardCard(model: AppModel) {
         Note("Checked on every Zerodha order, from a strategy or by hand (paper is never refused). Closing a position is never blocked, not even by the kill switch.")
         ToggleRow("Kill switch", if (s.guardKill) "ON: new entries are refused until you turn it off; exits and square-offs still go through" else "Off. Turn on to stop all new entries at once", s.guardKill, keepSub = true) { on -> confirmKill = on }
         val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
-        ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> loosen(looser(s.guardDailyLoss, loss[i]), askLimit) { model.update { it.copy(guardDailyLoss = loss[i]) } } }
+        ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> loosenLimit(com.optionslab.app.data.LossBreaker.Limit.ZERODHA, s.guardDailyLoss, loss[i], askLimit) { model.update { it.copy(guardDailyLoss = loss[i]) } } }
         val dd = listOf(5.0, 10.0, 20.0, 0.0)
         ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> loosen(looser(s.guardDrawdownPct, dd[i]), askLimit) { model.update { it.copy(guardDrawdownPct = dd[i]) } } }
         val open = listOf(1, 2, 3, 5, 0)
@@ -872,7 +883,7 @@ private fun GuardCard(model: AppModel) {
         // PIN, as the commodities' own paper limit and the day lock already do; tightening never waits.
         val paperLoss = listOf(5_000.0, 10_000.0, 20_000.0, 0.0)
         ParamTokens("Paper bots' daily loss limit (sells what the NSE paper bots hold and stops them for the day)", paperLoss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardPaperDailyLoss) }) { i ->
-            loosen(looser(s.guardPaperDailyLoss, paperLoss[i]), ASK_PAPER_LOSS) { model.update { it.copy(guardPaperDailyLoss = paperLoss[i]) } }
+            loosenLimit(com.optionslab.app.data.LossBreaker.Limit.PAPER, s.guardPaperDailyLoss, paperLoss[i], ASK_PAPER_LOSS) { model.update { it.copy(guardPaperDailyLoss = paperLoss[i]) } }
         }
         // 25 Oct (Boss's decision on the app audit, R7): the paper weekly loss stop - no new paper entry for the rest of the week once the
         // paper week is down by it. Loosening it (more, or off) takes the PIN, as the paper daily loss limit does; tightening goes at once.

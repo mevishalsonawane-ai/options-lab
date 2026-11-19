@@ -175,4 +175,88 @@ class LossBreakerTest : RobolectricTest() {
         assertTrue(LossBreaker.trippedToday())
         assertTrue(runBlocking { Strategies.stoppedToday() })
     }
+
+    // ---- 19 Nov 2026 (Boss's choice, "Go"): a loss limit switched off or raised with the PIN lifts the stop it made today ----
+
+    private fun limit(rupees: Double) = SecurePrefs.put("g.loss", rupees)
+    private fun lift(old: Double, new: Double, pin: Boolean) = runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, old, new, pin) }
+    private fun startAgain() = runBlocking { Strategies.startAgain() }
+    private fun trippedAt5k(loss: Double) {
+        kite.login()
+        AutomationSupport.liveSettings()
+        limit(5_000.0)
+        losing(loss)
+        check()
+        assertTrue(LossBreaker.trippedToday())
+        val said = startAgain()
+        assertTrue(said, said.startsWith("Not started"))
+    }
+
+    @Test fun switchedOffWithThePinTodaysStopIsLiftedAndStartWorks() {
+        trippedAt5k(6_000.0)
+        limit(0.0)                                              // the switch, then the lift (the settings page's order)
+        assertTrue(lift(5_000.0, 0.0, pin = true))
+        assertFalse(LossBreaker.trippedToday())
+        val said = startAgain()
+        assertTrue(said, said.contains("running"))
+        check()
+        assertFalse("off: the next look never stops them again", LossBreaker.trippedToday())
+    }
+
+    @Test fun withoutThePinNothingIsLifted() {
+        trippedAt5k(6_000.0)
+        assertFalse(lift(5_000.0, 0.0, pin = false))
+        assertTrue(LossBreaker.trippedToday())
+        assertTrue(startAgain().startsWith("Not started"))
+    }
+
+    @Test fun raisedPastTodaysLossItIsLifted() {
+        trippedAt5k(9_000.0)
+        limit(10_000.0)
+        assertTrue(lift(5_000.0, 10_000.0, pin = true))
+        val said = startAgain()
+        assertTrue(said, said.contains("running"))
+        check()
+        assertFalse("inside the new limit: not stopped again", LossBreaker.trippedToday())
+    }
+
+    @Test fun raisedButTodaysLossIsStillPastItTheStopStays() {
+        trippedAt5k(12_000.0)
+        limit(10_000.0)
+        assertFalse(lift(5_000.0, 10_000.0, pin = true))
+        assertTrue(LossBreaker.trippedToday())
+        assertTrue(startAgain().startsWith("Not started"))
+    }
+
+    @Test fun loweredOrSwitchedOnNeverLiftsAnything() {
+        trippedAt5k(6_000.0)
+        assertFalse(lift(5_000.0, 2_000.0, pin = true))
+        assertFalse(lift(0.0, 10_000.0, pin = true))
+        // Another limit's change (the paper bots') never lifts Zerodha's stop.
+        assertFalse(runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+        assertTrue(LossBreaker.trippedToday())
+    }
+
+    /**
+     * The paper bots' limit: a stop made on the NSE paper day (commodities on their own limits) lifts when the limit is raised past
+     * that day, not when it is raised short of it.
+     */
+    @Test fun thePaperBotsLimitRaisedPastTheNsePaperDayLiftsItsStop() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), listOf(other to -12_000.0)) }
+        LossBreaker.testDayFigure = { -12_000.0 }
+        try {
+            check()
+            assertTrue(LossBreaker.trippedToday())
+            assertTrue("${LossBreaker.tripToday()}", LossBreaker.tripToday() in setOf(com.optionslab.ira.SegmentLock.Trip.PAPER, com.optionslab.ira.SegmentLock.Trip.SHARED))
+            assertFalse("-12k is still past 11k", runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 11_000.0, true) })
+            assertFalse("Zerodha's limit is not the one that made it", lift(2_000.0, 0.0, pin = true))
+            SecurePrefs.put("g.pLoss", 20_000.0)
+            assertTrue(runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 20_000.0, true) })
+            val said = startAgain()
+            assertTrue(said, said.contains("running"))
+        } finally {
+            LossBreaker.testPaperDay = null
+            LossBreaker.testDayFigure = null
+        }
+    }
 }

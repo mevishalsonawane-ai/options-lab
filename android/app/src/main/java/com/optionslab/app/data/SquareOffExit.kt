@@ -46,6 +46,15 @@ internal object SquareOffExit {
     /** A square-off exit was placed on [exchange]:[symbol] [product] now. */
     fun notePlaced(exchange: String, symbol: String, product: String) { placedAt["$exchange:$symbol:$product"] = clock() }
 
+    /** Whether the diary was told this process that the square-offs always use the lag guard (Boss's choice). Memory only. */
+    private val choiceSaid = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /** 19 Nov 2026 (Boss's choice, "Go"): the square-offs always use the positions-lag guard - said once in the diary. */
+    fun noteBossChoice() {
+        if (choiceSaid.compareAndSet(false, true))
+            runCatching { Diag.record("exits", "square-offs always use the positions-lag guard, whatever its switch says (your choice, 19 Nov 2026)") }
+    }
+
     /** TEST ONLY. */
     internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap }
 
@@ -88,7 +97,9 @@ internal object SquareOffExit {
             // What is held, checked against the orders read's fills: an exit sent from here that filled a moment ago is never
             // sold again while the positions catch up ([ExitCoordinator.held]). 19 Nov 2026 (second review of the clock lane: a
             // square-off can now run twice back to back, the clock lane's run and the pass's): the lag guard always acts here
-            // ([forceLag], as [Protections] has since 15 Nov), whatever its switch says - it only ever lowers what is sent.
+            // ([forceLag], as [Protections] has since 15 Nov), whatever its switch says - it only ever lowers what is sent. Boss's
+            // choice (19 Nov 2026, "Go"): the square-offs ALWAYS use the positions-lag guard ([noteBossChoice] says so once in the diary).
+            noteBossChoice()
             val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, read, positions, forceLag = true) }.getOrNull() ?: return false
             if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) return false          // closed meanwhile: the next pass sees it
             val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), lotSize)

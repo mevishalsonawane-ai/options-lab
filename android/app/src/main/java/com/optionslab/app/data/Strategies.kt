@@ -889,6 +889,19 @@ object Strategies {
     }
 
     /**
+     * 19 Nov 2026 (Boss's choice, [LossBreaker.liftForLoosened]): today's index day stop made by the loss limit kept as Boss's own -
+     * the bots stay stopped, and "Start index bots" ([startAgain]) works today. Nothing else changes. True when there was one.
+     */
+    suspend fun liftLossStop(): Boolean = lock.withLock {
+        val b = book()
+        val today = Market.today().toString()
+        if (b.stoppedDay != today || com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) != com.optionslab.ira.DayStop.Why.LOSS) return@withLock false
+        b.stoppedWhy = com.optionslab.ira.DayStop.Why.BOSS.wire
+        save(b)
+        true
+    }
+
+    /**
      * Undo [stopForToday]: armed strategies start at their times again (and the NSE arms and Pine scripts that are armed trade
      * again). Never on a day the daily loss limit stopped the index side: plans only lower risk, so that stop holds until tomorrow.
      * The commodity side is its own ([startCommoditiesAgain]).
@@ -900,7 +913,7 @@ object Strategies {
             val b = book()
             val today = Market.today().toString()
             if (loss || (b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS))
-                return@withLock "Not started: the daily loss limit stopped the index bots today, so they stay stopped until tomorrow."
+                return@withLock "Not started: the daily loss limit stopped the index bots today, so they stay stopped until tomorrow (or until you switch that limit off, or raise it past today's loss, with your PIN)."
             was = if (b.stoppedDay == today) com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) else null
             b.stoppedDay = null; b.stoppedWhy = null; b.stoppedAt = null; save(b)
             "Index bots running: armed strategies start at their times."

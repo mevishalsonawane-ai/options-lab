@@ -188,6 +188,21 @@ object SegmentLock {
     /** "2026-10-21|paper": whose limit stopped the NSE side, and on which day. */
     fun encodeTrip(day: LocalDate, t: Trip): String = "$day|${t.wire}"
 
+    /**
+     * 19 Nov 2026 (Boss's choice, "Go"): whether loosening a daily loss limit lifts the stop it made today. [trip]: today's stop's
+     * kind (null: none, or an older build's without one - never lifted); [zerodha]: the limit changed is Zerodha's (it made [Trip.LIVE]
+     * stops) or the paper bots' (it made [Trip.PAPER] and [Trip.SHARED] ones); [old] -> [new] the limit (0: off); [pnl]: today's figure
+     * that limit reads (null: unknown). Switched off: lifted. Raised: lifted only when [pnl] is now inside the new limit. Lowered or
+     * switched on: never.
+     */
+    fun liftsOnLoosen(trip: Trip?, zerodha: Boolean, old: Double, new: Double, pnl: Double?): Boolean {
+        if (trip == null) return false
+        val mine = if (zerodha) trip == Trip.LIVE else trip == Trip.PAPER || trip == Trip.SHARED
+        if (!mine || old <= 0.0) return false
+        if (new <= 0.0) return true
+        return new > old && pnl != null && pnl > -new
+    }
+
     /** [encodeTrip] read back for [today]; null for another day or anything broken. */
     fun decodeTrip(s: String?, today: LocalDate): Trip? {
         val p = s?.split('|') ?: return null

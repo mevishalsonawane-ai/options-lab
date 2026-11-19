@@ -126,7 +126,9 @@ object McxGuard {
                     val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
                     // 21 Oct, enhancement round 3 (idea 1, review): held, checked against the orders read's fills ([ExitCoordinator.held]).
                     // 19 Nov 2026 (second review of the clock lane: it can now run twice back to back): the lag guard always acts
-                    // here ([forceLag], as the NSE square-offs' [SquareOffExit]); it only ever lowers what is sent.
+                    // here ([forceLag], as the NSE square-offs' [SquareOffExit]); it only ever lowers what is sent. Boss's choice
+                    // (19 Nov 2026, "Go"): the square-offs ALWAYS use it.
+                    SquareOffExit.noteBossChoice()
                     val heldNow = runCatching { ExitCoordinator.held(Mcx.EXCHANGE, p.symbol, p.product, "MCX expiry exit", read, freshBook, forceLag = true) }.getOrNull() ?: continue
                     if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) continue
                     // Zerodha keeps MCX positions and orders in lots: the whole open quantity, one lot at a time.

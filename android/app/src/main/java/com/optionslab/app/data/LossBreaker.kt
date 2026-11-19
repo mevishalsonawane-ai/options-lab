@@ -2,6 +2,7 @@ package com.optionslab.app.data
 
 import android.content.Context
 import com.optionslab.app.security.SecurePrefs
+import kotlinx.coroutines.sync.withLock
 import com.optionslab.app.work.Notifier
 
 /**
@@ -127,8 +128,13 @@ object LossBreaker {
      * entry door's next look reads memory only after any stop written here (as the day lock's pass does).
      */
     suspend fun check(context: Context) {
-        try { checkOnce(context) } finally { runCatching { kept() } }
+        // 19 Nov 2026: one look at a time, and never beside a lift ([liftForLoosened]): a look that read the stop before a lift can
+        // never put it back after it.
+        pass.withLock { try { checkOnce(context) } finally { runCatching { kept() } } }
     }
+
+    /** The looks' and the lifts' one lock (19 Nov 2026). */
+    private val pass = kotlinx.coroutines.sync.Mutex()
 
     private suspend fun checkOnce(context: Context) {
         val today = Market.today().toString()
@@ -213,6 +219,67 @@ object LossBreaker {
         runCatching { Diag.record("risk", "daily loss stop: " + text) }
         // Also the in-app banner (Notifier.post drops it in): one call, one banner.
         Notifier.post(context, 2040, Notifier.RISK, "Daily loss limit reached", text, "almanac", setting = "risk.guards")
+    }
+
+    /** The daily loss limits Boss can loosen (19 Nov 2026): Zerodha's (Account guard) and the paper bots'. */
+    enum class Limit(val words: String) { ZERODHA("Zerodha's daily loss limit"), PAPER("the paper bots' daily loss limit") }
+
+    /**
+     * 19 Nov 2026 (Boss's choice, "Go": "if I switch the daily loss limit off with my PIN, starting the bots again must work today"):
+     * whether loosening [limit] from [old] to [new] (0: off) may lift today's loss-limit stop - that limit's own stop, switched off
+     * or raised (a raise lifts it only if today's figure is inside the new limit, read fresh by [liftForLoosened]). Memory only: the
+     * settings page asks for the PIN when it may.
+     */
+    fun mayLift(limit: Limit, old: Double, new: Double): Boolean {
+        // Memory only (the settings page asks on its own thread): the kept copy as the last look left it; none kept, nothing to lift.
+        val k = kept ?: return false
+        val trip = com.optionslab.ira.SegmentLock.decodeTrip(k.kind, Market.today()).takeIf { k.day == Market.today().toString() }
+        return com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, pnl = 0.0)
+    }
+
+    /** TEST SEAM: today's figure a raised [Limit] is judged on, instead of a fresh read. */
+    @Volatile internal var testDayFigure: ((Limit) -> Double?)? = null
+
+    /**
+     * Today's figure [limit] reads, fresh: Zerodha's m2m (its read's budget), or the paper day after charges - the NSE part alone for a
+     * stop made on it ([com.optionslab.ira.SegmentLock.Trip.PAPER], as the look reads it), the whole day for a shared one. Null: unknown.
+     */
+    private suspend fun dayFigure(limit: Limit, trip: com.optionslab.ira.SegmentLock.Trip): Double? = testDayFigure?.invoke(limit) ?: if (limit == Limit.ZERODHA) {
+        if (!Broker.loggedIn) null else Broker.within(Broker.READ_BUDGET_MS) { Broker.positionBook() }?.m2m
+    } else runCatching {
+        val snap = Paper.snapshot()
+        if (trip != com.optionslab.ira.SegmentLock.Trip.PAPER) snap.dayPnl
+        else com.optionslab.ira.SegmentLock.split(snap.dayPnl, snap.positions.positions.map { it.exchange to it.totalPnlToday },
+            snap.trades.map { it.exchange to it.charges })?.nse
+    }.getOrNull()
+
+    /**
+     * 19 Nov 2026 (Boss's choice): [limit] loosened from [old] to [new] by Boss - [pinVerified]: with his PIN (no PIN, nothing is
+     * lifted). When it lifts today's stop ([mayLift], a raise judged on today's figure read now): the day's stop and its kind cleared, the index bots' day stop kept as
+     * Boss's own (they stay stopped until he starts them, and "Start index bots" works today), logged in the change timeline and
+     * the diary. A limit still on stops them again past it on the next look. True when lifted.
+     */
+    suspend fun liftForLoosened(limit: Limit, old: Double, new: Double, pinVerified: Boolean): Boolean {
+        if (!pinVerified) return false
+        val trip = pass.withLock {
+            val trip = tripToday() ?: return false
+            if (!com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, pnl = 0.0)) return false
+            // Raised (not off): only when today's figure, read now, is inside the new limit.
+            if (new > 0.0 && !com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, dayFigure(limit, trip))) return false
+            SecurePrefs.put(K_DAY, "")
+            SecurePrefs.put(K_KIND, "")
+            if (limit == Limit.PAPER && kept().whole == Market.today().toString()) SecurePrefs.put(K_WHOLE, "")
+            kept = null
+            runCatching { kept() }
+            // The index bots' day stop kept as Boss's own (they stay stopped; Start works today). Under the looks' lock: no look puts
+            // the loss stop back in between.
+            runCatching { Strategies.liftLossStop() }
+            trip
+        }
+        val how = if (new <= 0.0) "switched ${limit.words} off" else "raised ${limit.words} to Rs %,.0f".format(java.util.Locale.ENGLISH, new)
+        runCatching { Diag.record("risk", "daily loss stop lifted: you $how with your PIN (your choice, 19 Nov 2026); the index bots start when you start them") }
+        runCatching { com.optionslab.app.ira.Autopilot.logLossLift(trip, how, Market.now().toLocalTime().toString().take(5)) }
+        return true
     }
 
     /** The commodities' own loss limit reached (21 Oct): kept for the day; the MCX arms sell what they hold on their next pass. */
