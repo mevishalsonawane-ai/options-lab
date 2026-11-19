@@ -105,12 +105,17 @@ internal object SquareOffExit {
             fun takeOver(o: Broker.OrderRow) = backstop || restedMs(o) > TAKEOVER_MS
             val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) ||
                 (it.tag == STRATEGY_TAG && !isStop(it) && !takeOver(it)) }
-            same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && restedMs(it) > STRATEGY_COVER_MS }?.let {
-                // Told once; from 15:15 (or the flat-by minute) each minute it is still resting, a RISK alert naming the minutes left.
-                val left = minutesLeft
-                tell("strategy exit resting ${p.symbol}${left?.let { " $it" } ?: ""}", "${p.symbol} $aboutIt and a strategy's exit sale for it is still " +
-                    "resting at Zerodha" + (left?.let { " with $it minute(s) to the close" } ?: "") + ". The $exitName takes over if it does not fill " +
-                    "(cancels it, then sells); check it in Trade.")
+            same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && (restedMs(it) > STRATEGY_COVER_MS || takeOver(it)) }?.let {
+                if (takeOver(it)) {
+                    tell("strategy exit taken over ${p.symbol}", "${p.symbol} $aboutIt and a strategy's exit sale for it was still resting at Zerodha: " +
+                        "the $exitName cancels it and sells what is held.")
+                } else {
+                    // Told once; from 15:15 (or the flat-by minute) each minute it is still resting, a RISK alert naming the minutes left.
+                    val left = minutesLeft
+                    tell("strategy exit resting ${p.symbol}${left?.let { " $it" } ?: ""}", "${p.symbol} $aboutIt and a strategy's exit sale for it is still " +
+                        "resting at Zerodha" + (left?.let { " with $it minute(s) to the close" } ?: "") + ". The $exitName takes over if it does not fill " +
+                        "(cancels it, then sells); check it in Trade.")
+                }
             }
             val others = same.filter { it !in cover }
             if (others.isNotEmpty()) {

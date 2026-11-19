@@ -132,9 +132,10 @@ object FlatBySquareOff {
                 if (lot == null || lot <= 0) { tellOnce(context, "unknown ${p.symbol}", "$owner's ${p.symbol} (${p.qty}) is past its flat-by time and the app cannot tell its lot size, so it is NOT closed automatically. Close it yourself in Trade."); continue }
                 val placed = SquareOffExit.send(p, lot, mcx?.tick ?: i?.tickSize ?: 0.05, read, working, positions, s.limits(), "flat-by", "iraalgoflat",
                     "${Origins.FLAT_BY} · $owner", "is past its flat-by time", "flat-by", multiplier = mcx?.multiplier ?: 1,
-                    // 19 Nov 2026: the flat-by is itself the backstop (a strategy's exit resting on it is taken over), and from its minute
-                    // one still resting is said each minute with the minutes left (NSE: to F&O's close).
-                    backstop = true, minutesLeft = if (seg == FlatBy.Segment.MCX) null else (Market.foClose(today) - minuteNow()).coerceAtLeast(0)) { key, text -> tellOnce(context, key, text) }
+                    // 19 Nov 2026: a strategy's exit resting on it two minutes is taken over (never one just sent: it may be filling),
+                    // and one still resting is said each minute with the minutes left (NSE cash to 15:30, F&O to its close).
+                    minutesLeft = if (seg == FlatBy.Segment.MCX) null
+                        else ((if (p.exchange == "NSE" || p.exchange == "BSE") 15 * 60 + 30 else Market.foClose(today)) - minuteNow()).coerceAtLeast(0)) { key, text -> tellOnce(context, key, text) }
                 if (placed) closed += "live ${p.symbol} ($owner)"
             }
         }.onFailure { unread = true }

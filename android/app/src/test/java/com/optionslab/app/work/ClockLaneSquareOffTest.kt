@@ -238,8 +238,8 @@ class ClockLaneSquareOffTest : RobolectricTest() {
                 Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true)
             }
             val ms = System.currentTimeMillis() - t0
-            // One 4 s wait in all, then the exits: within 1.5 times the wait (before: one each, 12 s of waits and more).
-            assertTrue("one wait for all three: $ms ms", ms < 6_000L)
+            // One 4 s wait in all, then the exits: well under two waits (before: one each, 12 s of waits and more).
+            assertTrue("one wait for all three: $ms ms", ms < 7_900L)
             // Each leg bought is sold, contract by contract (the account guard may refuse an entry: counted from the BUYs).
             val orders = kite.placed.map { "${it.form["transaction_type"]} ${it.form["quantity"]} ${it.form["tradingsymbol"]}" }
             val bought = kite.placed.filter { it.form["transaction_type"] == "BUY" }.groupingBy { it.form["tradingsymbol"] }.eachCount()

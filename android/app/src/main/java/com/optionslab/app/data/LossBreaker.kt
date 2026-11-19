@@ -237,7 +237,7 @@ object LossBreaker {
         val k = kept ?: return loosened
         val trip = com.optionslab.ira.SegmentLock.decodeTrip(k.kind, Market.today()).takeIf { k.day == Market.today().toString() }
         // 19 Nov 2026 (final check): either limit loosened may lift today's stop - its own, or the other one once the stop's own limit
-        // is off or inside today's loss ([liftForLoosened] decides).
+        // is off ([liftForLoosened] decides).
         return trip != null && loosened
     }
 
@@ -296,7 +296,7 @@ object LossBreaker {
         LIFTED("Today's loss-limit stop is lifted: Start index bots works again today."),
         NO_PIN("Today's loss-limit stop stays: it is lifted only with your PIN."),
         NO_STOP("No loss-limit stop of today to lift."),
-        OTHER_LIMIT("Today's loss-limit stop stays: the limit that made it is still on, and today's loss is past it. Loosen that one with your PIN."),
+        OTHER_LIMIT("Today's loss-limit stop stays: the limit that made it is still on. Switch that one off (or raise it past today's loss) with your PIN."),
         NOT_LOOSENED("Today's loss-limit stop stays: lowering a limit, or switching one on, never lifts it."),
         STILL_PAST("Today's loss-limit stop stays: today's loss is still past the new limit."),
         OTHER_PAST("Today's loss-limit stop stays: today's loss is past your other daily loss limit too, which would stop the bots again at once. " +
@@ -319,14 +319,12 @@ object LossBreaker {
                     if (!com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, figure)) return Lift.STILL_PAST
                 }
             } else {
-                // 19 Nov 2026 (final check): the other limit loosened (after an OTHER_PAST: "loosen that one too") - lifted when the
-                // stop's own limit is already off, or today's figure is inside it now.
+                // 19 Nov 2026 (final check): the other limit loosened (after an OTHER_PAST: "loosen that one too") - lifted only when
+                // the stop's own limit is already off (Boss switched it off with his PIN). Still on, the stop holds even if the day has
+                // recovered inside it (a stop holds all day; only loosening its own limit lifts it).
                 val s = AppSettings.load()
                 val ownLimit = if (own == Limit.ZERODHA) s.guardDailyLoss else s.guardPaperDailyLoss
-                if (ownLimit > 0.0) {
-                    val figure = dayFigure(own, trip) ?: return Lift.UNREAD
-                    if (figure <= -ownLimit) return Lift.OTHER_LIMIT
-                }
+                if (ownLimit > 0.0) return Lift.OTHER_LIMIT
             }
             // 19 Nov 2026 (final review): never when the other limit is past today too - the next look would stop the bots again at once.
             if (otherPast(own)) return Lift.OTHER_PAST

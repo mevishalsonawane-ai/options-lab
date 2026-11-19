@@ -120,6 +120,26 @@ class FlatBySquareOffTest : RobolectricTest() {
         assertEquals("MARKET", o["order_type"]); assertEquals("MIS", o["product"]); assertEquals("iraalgoflat", o["tag"])
     }
 
+    /**
+     * 19 Nov 2026 (final check, M1): a strategy's exit sale on an arm's MIS position, just sent, is left to fill (cover); resting past two
+     * minutes it is taken over - cancelled, then the flat-by sells once.
+     */
+    @Test fun aStrategysExitRestingTwoMinutesIsTakenOverByTheFlatBy() {
+        FlatBySquareOff.liveOwner = { if (it == ce) "ORB" else null }
+        kite.position(ce, 30, 200.0, product = "MIS")
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)
+        val id = runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(ce, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
+        kite.requests.clear()
+        at(15, 27); pass()
+        assertEquals("just sent: left to fill", "OPEN", kite.order(id).status)
+        assertTrue(kite.placed.isEmpty())
+        Market.testClock = java.time.Clock.fixed(Market.now().toInstant().plusSeconds(150), com.optionslab.engine.IST)
+        at(15, 29); pass()
+        assertEquals("CANCELLED", kite.order(id).status)
+        assertEquals("sold once by the flat-by", listOf(Triple(ce, "SELL", "30")), sent())
+        assertEquals(0, kite.positions.getValue("NFO:$ce:MIS").first)
+    }
+
     @Test fun aRestartAt1524StillClosesAt1525() {
         paper(paperCe, "MIS", 200.0)
         // The process died at 15:24 and came back: nothing in memory (no done marks), the position restored first.

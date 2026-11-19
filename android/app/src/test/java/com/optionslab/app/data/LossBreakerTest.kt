@@ -232,7 +232,7 @@ class LossBreakerTest : RobolectricTest() {
         trippedAt5k(6_000.0)
         assertFalse(lift(5_000.0, 2_000.0, pin = true))
         assertFalse(lift(0.0, 10_000.0, pin = true))
-        // Another limit's change (the paper bots') never lifts Zerodha's stop.
+        // Another limit's change (the paper bots') never lifts Zerodha's stop while Zerodha's own limit is on.
         assertEquals(LossBreaker.Lift.OTHER_LIMIT, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
         // The settings page's memory-only look: may lift when this limit is loosened, never when lowered or another limit.
         assertTrue(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0))
@@ -363,5 +363,13 @@ class LossBreakerTest : RobolectricTest() {
         } finally {
             LossBreaker.testPaperDay = null
         }
+    }
+
+    /** Final check: the day recovered inside Zerodha's limit, still on - loosening the paper bots' limit never lifts Zerodha's stop. */
+    @Test fun aRecoveredDayAndTheOtherLimitLoosenedNeverLiftTheStop() {
+        trippedAt5k(6_000.0)
+        losing(4_000.0)                                         // recovered inside ₹5k; Zerodha's limit untouched
+        assertEquals(LossBreaker.Lift.OTHER_LIMIT, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+        assertTrue(LossBreaker.trippedToday())
     }
 }

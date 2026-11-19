@@ -837,7 +837,7 @@ private fun GuardCard(model: AppModel) {
     // PIN (on Paper too); without a PIN set nothing is lifted. Lowering it, or switching it on, never lifts anything.
     fun loosenLimit(limit: com.optionslab.app.data.LossBreaker.Limit, cur: Double, next: Double, why: String, apply: () -> Unit) {
         if (com.optionslab.app.data.LossBreaker.mayLift(limit, cur, next) && com.optionslab.app.security.PinLock.isSet)
-            liftGuard = (if (next <= 0.0) "$why This lifts today's loss-limit stop." else "$why This lifts today's loss-limit stop if today's loss is inside the new limit.") to
+            liftGuard = (if (next <= 0.0) "$why This can lift today's loss-limit stop." else "$why This can lift today's loss-limit stop if today's loss is inside the new limit.") to
                 { apply(); model.liftLossStop(limit, cur, next, pinVerified = true) }
         else loosen(looser(cur, next), why, apply)
     }
