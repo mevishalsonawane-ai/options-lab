@@ -88,8 +88,26 @@ fun NtfyPage(model: AppModel) {
         onPrefix = { x -> io { NtfyReader.setPrefix(x) } },
         onOn = { on -> io { NtfyArm.setOn(on) } },
         onSettings = { s -> io { NtfyArm.setSettings(s) } },
-        onLive = { on -> if (on) askLive = true else io { com.optionslab.app.data.ArmLive.setLive(LiveMirror.NTFY_ALERTS, false, pinConfirmed = false) } },
+        // 19 Nov 2026 (audit batch 2): on only with an access token or Boss's own server set (said, no PIN asked for nothing); off one tap.
+        onLive = { on -> when (ntfyLiveTap(on, cfg)) {
+            NtfyLiveTap.ASK_PIN -> askLive = true
+            NtfyLiveTap.NEEDS_TOKEN -> said = NtfyReader.LIVE_NEEDS_TOKEN
+            NtfyLiveTap.OFF -> io { com.optionslab.app.data.ArmLive.setLive(LiveMirror.NTFY_ALERTS, false, pinConfirmed = false) }
+        } },
         onTest = { io { NtfyReader.test() } })
+}
+
+/** 19 Nov 2026 (audit batch 2): what a tap on ntfy's Trade live does. */
+internal enum class NtfyLiveTap { ASK_PIN, NEEDS_TOKEN, OFF }
+
+/**
+ * 19 Nov 2026 (audit batch 2: ntfy's live gate): on asks the PIN only when an access token or Boss's own server is set
+ * ([NtfyReader.secured]); with neither (or the settings not read yet) it is refused and said; off is always one tap.
+ */
+internal fun ntfyLiveTap(on: Boolean, cfg: NtfyReader.Config?): NtfyLiveTap = when {
+    !on -> NtfyLiveTap.OFF
+    cfg != null && NtfyReader.secured(cfg) -> NtfyLiveTap.ASK_PIN
+    else -> NtfyLiveTap.NEEDS_TOKEN
 }
 
 /** The page from plain state (tests drive it). */

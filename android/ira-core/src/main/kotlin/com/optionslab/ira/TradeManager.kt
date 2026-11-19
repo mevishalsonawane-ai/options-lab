@@ -99,13 +99,31 @@ object TradeManager {
         Family("range_fade", "Range Fade", paperOnly = true, canAct = false),
         Family("liquidity", "Liquidity 15+5", paperOnly = false, canAct = false),
         Family("hero", "Expiry Hero", paperOnly = false, canAct = false),
-        Family("night", "Night (R3)", paperOnly = true, canAct = true),
-        Family("vixdiv", "VIX divergence", paperOnly = true, canAct = true),
-        Family("mcx-eve", "MCX evening", paperOnly = true, canAct = true),
-        Family("mcx-morning", "MCX morning", paperOnly = true, canAct = true),
-        Family("mcx-trend", "MCX trend", paperOnly = true, canAct = true),
-        Family("silver-night", "US-night silver", paperOnly = true, canAct = true),
+        // 19 Nov 2026 (audit batch 2: the trade manager's live reach): these six trade on paper and, since 30 Oct, each has a live copy
+        // ([com.optionslab.engine.orb.LiveMirror]) that follows its paper exits - so they are not paper only. Their LIVE mode is the
+        // one that decides whether the manager may exit a paper trade that has a live copy (LIVE to ACT takes the PIN); on PAPER the
+        // manager exits only a paper trade with no live copy.
+        Family("night", "Night (R3)", paperOnly = false, canAct = true),
+        Family("vixdiv", "VIX divergence", paperOnly = false, canAct = true),
+        Family("mcx-eve", "MCX evening", paperOnly = false, canAct = true),
+        Family("mcx-morning", "MCX morning", paperOnly = false, canAct = true),
+        Family("mcx-trend", "MCX trend", paperOnly = false, canAct = true),
+        Family("silver-night", "US-night silver", paperOnly = false, canAct = true),
     )
+
+    /**
+     * 19 Nov 2026 (audit batch 2): whether the manager's exit of a PAPER trade may go ahead when that paper trade has a live copy at
+     * Zerodha that follows its paper exits ([liveCopy]): only when [family]'s LIVE mode is ACT (which took Boss's PIN), so a paper
+     * exit can never sell a live position by the back door. A trade with no live copy, or on the LIVE account: as before.
+     */
+    fun exitMayAct(account: Account, family: String, liveCopy: Boolean, policy: Policy): Boolean =
+        account != Account.PAPER || !liveCopy || policy.mode(family, Account.LIVE) == Mode.ACT
+
+    /**
+     * 19 Nov 2026 (audit batch 2): the families whose paper trades a live copy follows (their paper exits sell it too). Solo too: its
+     * midday paper trades have a live copy (in shadow until proven); being paper only, a real copy holds its manager exit back always.
+     */
+    val LIVE_COPIED: Set<String> = setOf("night", "vixdiv", "mcx-eve", "mcx-morning", "mcx-trend", "silver-night", "solo")
 
     /** The ORB family's arms, each with its own mode (they shared the "orb" one before 10 Oct's round 2). */
     val ORB_ARMS: List<String> = listOf("orb", "orb_fresh", "orb_sweep", "range_fade")

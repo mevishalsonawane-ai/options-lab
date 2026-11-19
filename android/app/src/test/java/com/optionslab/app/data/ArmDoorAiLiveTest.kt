@@ -40,10 +40,23 @@ class ArmDoorAiLiveTest : RobolectricTest() {
         for (tag in listOf("iraorb", "irapine")) assertEquals(tag, "refused: the app is in Paper", Broker.entryRecheck(order(tag), "orb"))
     }
 
-    @Test fun aSavedStrategysLegAndBossesOwnOrderAreNotAskedIt() {
+    /**
+     * 19 Nov 2026 (audit batch 2: the strategies' automatic live entries): a saved strategy's AUTOMATIC live entry (its scheduled start,
+     * a signal later in a run - marked by [Broker.automaticStrategyEntry]) is asked Live and "AI trades go live" at the door too. Boss's
+     * own start from the app (an unmarked leg) and Boss's own order are not; the mark goes once the send returns.
+     */
+    @Test fun aSavedStrategysAutomaticEntryIsAskedItBossesOwnStartAndOrderAreNot() {
         IraNewsTrades.paperFirst = true
-        assertNull(Broker.entryRecheck(order("iraalgostrat"), null))
+        val auto = order("iraalgostrat")
+        val seen = kotlinx.coroutines.runBlocking { Broker.automaticStrategyEntry(auto) { Broker.entryRecheck(auto, null) } }
+        assertEquals("refused: \"AI trades go live\" is off", seen)
+        assertNull("the mark is gone after the send", Broker.entryRecheck(auto, null))
+        assertNull("Boss's own start: an unmarked leg", Broker.entryRecheck(order("iraalgostrat"), null))
         assertNull(Broker.entryRecheck(order("iraalgo"), null))
+        IraNewsTrades.paperFirst = false
+        assertNull(kotlinx.coroutines.runBlocking { Broker.automaticStrategyEntry(auto) { Broker.entryRecheck(auto, null) } })
+        AutomationSupport.liveSettings(live = false)
+        assertEquals("refused: the app is in Paper", kotlinx.coroutines.runBlocking { Broker.automaticStrategyEntry(auto) { Broker.entryRecheck(auto, null) } })
         assertEquals(setOf("iraorb", "irapine"), Broker.ARM_TAGS)
     }
 }

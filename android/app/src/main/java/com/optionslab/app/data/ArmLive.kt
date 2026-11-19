@@ -368,6 +368,9 @@ object ArmLive {
         val spec = LiveMirror.spec(key) ?: return "No such arm. $UNCHANGED"
         if (!ready()) return "Not ready yet. $UNCHANGED"
         if (on && !pinConfirmed) return "Turning ${spec.label}'s live trading on needs your PIN. $UNCHANGED"
+        // 19 Nov 2026 (audit batch 2: ntfy's live gate): ntfy alerts goes on only with an access token or Boss's own server, from any
+        // page (Bot settings' arms list, the timeline's Undo); else said and left off. Off always goes.
+        if (on && key == LiveMirror.NTFY_ALERTS && !runCatching { NtfyReader.secured(NtfyReader.config()) }.getOrDefault(false)) return "${NtfyReader.LIVE_NEEDS_TOKEN} $UNCHANGED"
         val was = runCatching {
             lock.withLock {
                 val b = book()
