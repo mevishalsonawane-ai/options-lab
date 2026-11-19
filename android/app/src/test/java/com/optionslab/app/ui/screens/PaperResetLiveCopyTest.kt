@@ -62,6 +62,23 @@ class PaperResetLiveCopyTest {
         assertTrue(shows("it stays open with its own stop and exits. Nothing at Zerodha is sold"))
     }
 
+    /** The paper book unreadable for a moment: a reset changes nothing, says so, and never ends in an uncaught error. */
+    @Test fun aResetWhileThePaperBookCannotBeReadChangesNothing() {
+        com.optionslab.app.data.Paper.reset(java.math.BigDecimal("250000"))
+        com.optionslab.app.data.Paper.awaitWrites()
+        com.optionslab.app.data.Paper.forgetForTest()
+        try {
+            com.optionslab.app.data.Paper.readRetryGapMs = 0L
+            com.optionslab.app.data.Paper.testRead = { throw java.io.IOException("Keystore busy") }
+            model.paperResetAll()
+            val until = System.currentTimeMillis() + 15_000
+            while (model.message.value?.contains("could not be read just now") != true && System.currentTimeMillis() < until) Thread.sleep(20)
+            assertTrue(model.message.value.toString(), model.message.value?.contains("could not be read just now") == true)
+            com.optionslab.app.data.Paper.testRead = null
+            assertEquals("nothing changed", 0, com.optionslab.app.data.Paper.capital.compareTo(java.math.BigDecimal("250000")))
+        } finally { com.optionslab.app.data.Paper.testRead = null; com.optionslab.app.data.Paper.readRetryGapMs = 2_000L }
+    }
+
     @Test fun theAmountDialogSaysItTooAndNothingWhenNoneIsOpen() {
         ArmLive.viewForTest(ArmLive.View(open = listOf(liveCopy()), loaded = true))
         compose.setContent { IraAlgoTheme("light") { PaperResetDialog(model) { } } }

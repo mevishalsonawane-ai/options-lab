@@ -795,6 +795,9 @@ object McxPaperArms {
         val (fill, r) = paperOrder(c, if (p.side > 0) "SELL" else "BUY", "${label(p.arm)} · exit", exit = true)
         if (fill == null) {
             if (!r.ok && heldQty(p.symbol) * p.side <= 0) {
+                // 19 Nov 2026 (audit batch 2): the arm's own exit ([why]) decided this sale and lost the race to another paper close: its live copy
+                // is still sold by that exit ([ArmLive.ruleExit]), never only detached as a plain "closed elsewhere" is.
+                runCatching { ArmLive.ruleExit(mirrorRef(p), why) }
                 // Already flat in the paper book: closed by the expiry exit, the sweeper or Boss - booked at that sale's price.
                 val closing = if (p.side > 0) "SELL" else "BUY"
                 val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == closing && !it.timestamp.isBefore(p.entryTime) }

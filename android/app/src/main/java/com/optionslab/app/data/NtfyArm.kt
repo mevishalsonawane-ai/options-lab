@@ -1018,6 +1018,9 @@ object NtfyArm {
             // Already flat in the paper book (the square-off, the sweeper or Boss): closed elsewhere, at that sale's price.
             if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
                 val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                // 19 Nov 2026 (audit batch 2): the arm's own exit ([why]) decided this sale and lost the race to another paper close: its live copy
+                // is still sold by that exit ([ArmLive.ruleExit]), never only detached as a plain "closed elsewhere" is.
+                runCatching { ArmLive.ruleExit(p.ref, why) }
                 return closed(p.copy(stopOrderId = null), t?.price?.toDouble() ?: p.entry, t?.timestamp ?: now(), "closed_elsewhere", t?.charges?.toDouble() ?: 0.0)
             }
             // Not filled (no fresh price): the stop goes back into the paper book at once, and the exit is tried next pass.

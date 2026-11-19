@@ -2904,6 +2904,73 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("said once", 1, posted("does not explain and no order of the arms stands for it"))
     }
 
+    /**
+     * Coordinator's decision (3): an exit of the arm's own rules whose paper sale lost the race to another paper close (booked "closed
+     * elsewhere" on paper) still sells the live copy with that exit - before and after the copy was detached - never only detaches it.
+     */
+    @Test fun aRuleExitThatLostTheRaceToAPaperCloseStillSellsTheLiveCopy() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "race"))
+        watch()
+        ArmLive.ruleExit("race", "square-off 15:15")
+        ArmLive.closed("race", "closed_elsewhere")
+        legs.remove("race")
+        watch()
+        assertEquals(1, marketSells())
+        assertEquals("square-off 15:15", view().closed.single().why)
+        assertEquals("never said kept open", 0, posted("is NOT sold"))
+        // Already detached (closed elsewhere first), then the arm's own exit: still sold by it.
+        ArmLive.entered(ask(donchian, "race-2"))
+        watch()
+        ArmLive.closed("race-2", "closed_elsewhere")
+        legs.remove("race-2")
+        watch()
+        assertEquals(1, marketSells())
+        assertTrue(view().openReal.single().detached)
+        ArmLive.ruleExit("race-2", "closed_elsewhere")                    // a plain "closed elsewhere" word is never taken as an exit's
+        watch()
+        assertEquals("exit", view().closed.single { it.ref == "race-2" }.why)
+        assertEquals(2, marketSells())
+        assertEquals(0, held())
+        // Every paper host with an exit sale that can lose that race tells its own exit.
+        fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/data/$f"), java.io.File("app/src/main/java/com/optionslab/app/data/$f")).first { it.isFile }.readText()
+        for (f in listOf("S5Arm.kt", "CisdArm.kt", "NtfyArm.kt", "FlowArm.kt", "Ft3Arm.kt", "VixDivArm.kt", "HeroTicketArm.kt", "McxPaperArms.kt"))
+            assertTrue("$f tells its own exit", src(f).contains("ArmLive.ruleExit("))
+    }
+
+    /**
+     * Coordinator's decision (7): a GTT stop Boss deleted himself in Kite is respected like a cancelled SL - never put back, the app watches
+     * its level and sells there; one Zerodha expired is put back as before.
+     */
+    @Test fun aGttStopBossDeletedIsNeverPutBackAndAnExpiredOneIs() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        fun gttPosts() = kite.requests.count { it.method == "POST" && it.path == "/gtt/triggers" }
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "gtt-boss"))
+        watch()
+        val gid = kite.gtts.keys.single()
+        kite.gtts.getValue(gid).put("status", "deleted")               // Boss deleted it in Kite
+        kite.requests.clear()
+        watch(); watch()
+        assertEquals("never put back", 0, gttPosts())
+        val p = view().openReal.single()
+        assertTrue(p.stopByYou); assertNull(p.stopOrderId)
+        assertEquals("said once", 1, posted("looks deleted by you"))
+        kite.quote("NFO:$sym", 130.0, 129.95, 130.05)                  // through its level: the app sells there itself
+        watch()
+        assertTrue(view().closed.single().why!!.contains("stop"))
+        assertEquals(0, nrmlHeld())
+        // Expired at Zerodha: put back.
+        kite.quote("NFO:$sym", 200.0, 199.95, 200.05)
+        ArmLive.entered(ask(com.optionslab.engine.orb.NightRules.SOURCE, "gtt-expired"))
+        watch()
+        val gid2 = kite.gtts.entries.single { it.value.optString("status") == "active" }.key
+        kite.gtts.getValue(gid2).put("status", "expired")
+        kite.requests.clear()
+        watch()
+        assertEquals("put back at Zerodha", 1, gttPosts())
+        assertFalse(view().openReal.single().stopByYou)
+    }
+
     /** Item 1 (the dialog): the paper reset dialogs say an open live copy stays open with its own stop. */
     @Test fun thePaperResetWordsNameEachLiveCopy() {
         ArmLive.entered(ask(donchian, "w1"))

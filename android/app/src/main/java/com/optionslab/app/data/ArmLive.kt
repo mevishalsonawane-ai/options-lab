@@ -384,6 +384,20 @@ object ArmLive {
     }
 
     /**
+     * 19 Nov 2026 (audit batch 2, coordinator's decision): the arm's own exit [why] (its stop, lock, target, time or square-off) decided to
+     * sell the paper trade [ref], but its sale found the paper book already flat (another paper close got there first). The paper trade is
+     * booked "closed elsewhere", yet the arm meant to exit: its live copy is sold by that exit as before, never only detached. Memory only.
+     */
+    fun ruleExit(ref: String, why: String) {
+        val w = if (LiveMirror.paperEndKeepsLive(why)) "exit" else why
+        testHeard?.add("rule_exit|$ref|$w")
+        // (The time machine's log is told by the paper trade's own close that follows; only the live sale is asked here.)
+        closedRefs[ref] = (runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() }) to w
+        if (closedRefs.size > NOTES_KEPT) prune()
+        if (holdingHint || shadowHint) nudge()
+    }
+
+    /**
      * 19 Nov 2026 (audit batch 2): the paper trade [ref] ended without an exit decision of its arm's rules ([why]: closed elsewhere, a paper
      * reset, a paper row closed by hand): its live copy, if any, stops following it and keeps its own stop and exits - [Pos.detached], set
      * by the next look and written with the book, and Boss told once. Memory only, never blocking (the paper hosts call it on their lanes).
@@ -1781,6 +1795,7 @@ object ArmLive {
                 return "CANCELLED" to null
             }
             gttsKept = null
+            markOwnCancel("$GTT$gid")          // (19 Nov 2026, audit batch 2: the app's own delete, never taken as Boss's)
             runCatching { Broker.deleteGtt(gid) }
             val after = runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrElse { return null }
             if (after?.status?.lowercase() == "triggered") return stopOut(p)
@@ -2604,7 +2619,20 @@ object ArmLive {
                 if (p.gttId != null && gtts != null && gttsFresh && (g == null || g.status.lowercase() in setOf("deleted", "cancelled", "expired", "rejected", "disabled"))) {
                     // (19 Nov 2026, audit batch 2: a GTT Zerodha rejected or disabled is a refusal too: rested again after its back-off.)
                     if (g != null && g.status.lowercase() in setOf("rejected", "disabled")) refusedStop(p, p.stopTrigger, "the GTT was ${g.status.lowercase()} at Zerodha")
-                    p = p.copy(stopOrderId = null, stopQty = null)
+                    // 19 Nov 2026 (audit batch 2, coordinator's decision): a GTT deleted (or cancelled) by Boss himself in Kite is respected
+                    // like a cancelled SL - never put back, the app watches the level and sells there ([Pos.stopByYou]). Deleted by the app
+                    // (its own exit taking it out, Stop for today, a square-off) is the app's; expired, rejected, disabled or gone from the
+                    // list is Zerodha's or unknown: put back as before.
+                    val gid = p.gttId
+                    val byYou = g != null && g.status.lowercase() in setOf("deleted", "cancelled") && gid != null &&
+                        !(ownCancel("$GTT$gid") || (if (p.exchange == "MCX") mcxStopped else stopped) || SquareOffExit.inGap(p.exchange, p.symbol, p.product) ||
+                            handsOffRecently(p.exchange, p.symbol) ||
+                            orders.values.any { it.symbol == p.symbol && it.exchange == p.exchange && it.working && it.tag in SquareOffExit.TAGS })
+                    if (byYou && endedSaid.put(p.ref, "$GTT$gid") != "$GTT$gid") com.optionslab.app.work.Alerts.error("${p.label}: the live GTT stop on " +
+                        "${p.symbol} at Zerodha was deleted. It looks deleted by you (in Kite), so the app does not put it back: it watches " +
+                        (p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "its level") + " itself and sells there. Set a stop at Zerodha " +
+                        "yourself if you want one there.", WHO)
+                    p = p.copy(stopOrderId = null, stopQty = null, stopByYou = p.stopByYou || byYou)
                 }
                 if (g?.status?.lowercase() == "triggered") {
                     // A fired GTT: its own orders are the stop. All filled: that was the stop; refused or cancelled: rested again.
@@ -2801,7 +2829,7 @@ object ArmLive {
                 try {
                     val spec = LiveMirror.spec(p1.key)
                     val (pPaper, paperSell, paperWhy) = paperSide(p1, legsOf(spec, stream), fresh = !stream)
-                    if (pPaper.detached && !p1.detached) saidDetached(pPaper)
+                    if (pPaper.detached && !p1.detached && paperSell <= 0) saidDetached(pPaper)
                     // 15 Nov: a stop-rule trade's best price raised to the price now (kept, so its stop never drops after a restart).
                     val p = withBest(pPaper, ltpOf(pPaper), highSince(pPaper, fresh = !stream))
                     val so = p.slId?.let { orders[it] }

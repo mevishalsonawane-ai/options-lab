@@ -2567,15 +2567,34 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val hit = runCatching { com.optionslab.app.data.ArmLive.detachAll("paper reset") }.getOrDefault(emptyList())
         // (Written before the paper book is emptied: a kill right after the reset still never sells them.)
         if (hit.isNotEmpty()) runCatching { com.optionslab.app.data.ArmLive.applyDetached() }
+        lastDetached = hit
         return com.optionslab.app.data.ArmLive.liveCopyWords(hit)
+    }
+    /** 19 Nov 2026 (audit batch 2): the live copies the last reset detached (given back when the reset itself fails). */
+    @Volatile private var lastDetached: List<com.optionslab.app.data.ArmLive.Pos> = emptyList()
+
+    /**
+     * 19 Nov 2026 (audit batch 2: the paper book's read may now fail for a moment instead of starting an empty account): [capital] as the
+     * paper account's new start, its live copies detached first ([liveCopiesKept]). False (said) when the book cannot be read or reset now -
+     * nothing changed, the live copies given back to their paper trades - never an uncaught error on this worker.
+     */
+    private suspend fun resetPaperBook(capital: java.math.BigDecimal): Pair<Boolean, String?> {
+        if (runCatching { com.optionslab.app.data.Paper.capital }.isFailure) {
+            say("The paper account could not be read just now, so it was not reset. Try again in a moment."); return false to null
+        }
+        val words = liveCopiesKept()
+        return try { com.optionslab.app.data.Paper.reset(capital); true to words } catch (e: Exception) {
+            lastDetached.forEach { runCatching { com.optionslab.app.data.ArmLive.undetach(it.ref) } }
+            say("Paper reset failed (${e.message ?: e.javaClass.simpleName}); nothing changed."); false to null
+        }
     }
 
     fun paperReset(capital: Double) {
         viewModelScope.launch(Dispatchers.IO) {
             // 19 Nov 2026 (audit batch 2: a paper reset made every mirrored arm sell its live copy at market): every live copy stops
             // following its paper trade first and keeps its own stop and exits - nothing at Zerodha is sold - and the answer says so.
-            val words = liveCopiesKept()
-            com.optionslab.app.data.Paper.reset(java.math.BigDecimal.valueOf(capital).setScale(2))
+            val (ok, words) = resetPaperBook(java.math.BigDecimal.valueOf(capital).setScale(2))
+            if (!ok) return@launch
             com.optionslab.app.data.Guard.resetPeak(live = false)   // the drawdown peak starts again with the new capital
             say("Paper account reset to ${rs(capital)}." + (words?.let { " $it" } ?: ""))
             loadPaper()
@@ -2591,8 +2610,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val default = com.optionslab.engine.sandbox.SandboxConfig().startingCapital
             // 19 Nov 2026 (audit batch 2): every live copy keeps its own stop and exits - never sold for the paper reset ([paperReset]).
-            val words = liveCopiesKept()
-            com.optionslab.app.data.Paper.reset(default)
+            val (ok, words) = resetPaperBook(default)
+            if (!ok) return@launch
             runCatching { com.optionslab.app.data.OrbArms.resetPaper() }
             runCatching { com.optionslab.app.data.PineAuto.resetPaper() }
             runCatching { com.optionslab.app.data.Strategies.resetPaper() }
