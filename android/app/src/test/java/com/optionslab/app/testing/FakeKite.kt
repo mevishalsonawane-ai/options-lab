@@ -236,10 +236,10 @@ class FakeKite : Closeable {
      * working in the book until filled or cancelled, the position unmoved. Its id.
      */
     fun restsInKite(symbol: String, side: String, qty: Int, price: Double, type: String = "LIMIT", product: String = "MIS",
-                    exchange: String = "NFO"): String = synchronized(lock) {
+                    exchange: String = "NFO", tag: String = ""): String = synchronized(lock) {
         val id = (++seq).toString()
         val stop = type == "SL" || type == "SL-M"
-        orders[id] = Order(id, symbol, exchange, side, qty, product, type, if (type == "SL-M") 0.0 else price, if (stop) price else 0.0, "",
+        orders[id] = Order(id, symbol, exchange, side, qty, product, type, if (type == "SL-M") 0.0 else price, if (stop) price else 0.0, tag,
             if (stop) "TRIGGER PENDING" else "OPEN")
         id
     }

@@ -208,7 +208,10 @@ object ArmLive {
      * written on the book's own writer, never delaying the order). Cleared once the sweep has read Zerodha's books.
      */
     @Volatile private var coldDue = true
-    /** 19 Nov 2026: the sweep is due and Zerodha was logged in when last asked (memory only, for [recoverHint] on the tick lanes). */
+    /**
+     * 19 Nov 2026: the sweep is due and Zerodha was logged in when last asked off the tick lanes ([watch], [holding]; memory only, for
+     * [recoverHint] on the tick lanes) - false again after a logout, at the next such look.
+     */
     @Volatile private var coldPending = false
     /**
      * 18 Oct (final review F1): when the last read of the book failed (memory). While it is unreadable every lane that watches
@@ -649,6 +652,7 @@ object ArmLive {
         if (!ready()) return false
         // A damaged book: its open live trades are taken back from Zerodha first, before any other start-up work (open positions first).
         if ((recoverDue || coldDue) && Broker.loggedIn) { if (coldDue) coldPending = true; runCatching { watch() } }
+        else if (coldDue) coldPending = false
         return runCatching { lock.withLock { book() } }.fold({ _view.value.openReal.isNotEmpty() }, { true })
     }
 
@@ -1971,7 +1975,8 @@ object ArmLive {
     val recoverHint: Boolean get() = recoverDue || unreadable || coldPending
 
     /** Whether a look has work now (memory only): a live trade held, a shadow trade open, a damaged or unread book. */
-    val lookDue: Boolean get() = holdingHint || shadowHint || recoverHint
+    // (19 Nov 2026, third review: and the start's sweep, so a login later in the day still reaches it on the minute lanes; memory only.)
+    val lookDue: Boolean get() = holdingHint || shadowHint || recoverHint || coldDue
 
     private fun retryWaitMs(): Long = (RETRY_MS shl (readFails - 1).coerceIn(0, 4)).coerceAtMost(RETRY_MAX_MS)
 
@@ -1989,14 +1994,16 @@ object ArmLive {
         // 18 Nov 2026 (audit): a write that failed is tried again (the book in memory is the one to keep).
         if (saveDue && !stream) runCatching { lock.withLock { cache?.let { save(it) } } }
         val sweep = coldDue && !stream && runCatching { Broker.loggedIn }.getOrDefault(false)
-        if (sweep) coldPending = true
+        if (!stream) coldPending = sweep
         if (!holdingHint && !shadowHint && !recoverDue && !sweep) return
         if (!opLock.tryLock()) return                 // a look already running does this one's work
         try {
             if (recoverDue && Broker.loggedIn) runCatching { recover() }
-            if (holdingHint) look(stream)
-            // 19 Nov 2026 (third review): after a start, once the open trades were looked at (their stops first), never on the live lane.
-            if (sweep) runCatching { if (sweepUnowned()) { coldDue = false; coldPending = false } }
+            // 19 Nov 2026 (third review): the start's sweep after the open trades were looked at (their stops first) - even when that look
+            // failed - never on the live lane.
+            try { if (holdingHint) look(stream) } finally {
+                if (sweep) runCatching { if (sweepUnowned() || coldGiveUp()) { coldDue = false; coldPending = false } }
+            }
         } finally { opLock.unlock() }
         // The shadow trades after, under their own lock (review of the final fixes): their quote and candle reads never hold up
         // the live trades' looks (the live lane and the 15-second check skip a look while [opLock] is held).
@@ -2408,7 +2415,7 @@ object ArmLive {
 
         // 19 Nov 2026 (third review): a lost exit found in Zerodha's book whose trade is no longer among the open ones (closed another way)
         // never holds the contract back for the others: forgotten, with a diary line.
-        if (lostExits.values.any { it.foundId != null }) {
+        if (!stream && lostExits.values.any { it.foundId != null }) {
             val stillOpen = runCatching { lock.withLock { book().positions.filter { it.open && !it.shadow }.map { it.contract to it.ref }.toSet() } }.getOrNull()
             if (stillOpen != null) for ((c, l) in lostExits.entries.toList()) if (l.foundId != null && (c to l.ref) !in stillOpen && lostExits.remove(c, l))
                 runCatching { Diag.record("armlive", "${l.order.tradingSymbol}: the lost exit ${l.foundId} found for a trade no longer open: forgotten") }
@@ -2900,7 +2907,19 @@ object ArmLive {
         // (After the reads, as [adoptHeld]: an entry that filled between them could be taken for an unowned one. Tried again.)
         if (entryLock.isLocked || OrbArms.entryInFlight) return false
         val today = now().toLocalDate()
-        val buysToday = orders.filter { it.tag == LiveMirror.TAG && it.side == "BUY" && it.filled > 0 }
+        val rowsAll = lock.withLock { book().positions.filter { !it.shadow }.toList() }
+        // An entry buy of this path still working that no trade owns (its process died before it settled it): cancelled - nothing owns
+        // it - and looked at again. Never a short trade's buy (its stop or exit), nor on a contract where an entry is still settling.
+        val ownedIds = rowsAll.mapNotNull { it.entryOrderId }.toSet()
+        val waitOn = rowsAll.filter { it.open && (it.side < 0 || (it.unconfirmed && it.entryOrderId == null)) }.map { it.contract }.toSet()
+        val stale = orders.filter { it.tag == LiveMirror.TAG && it.side == "BUY" && it.working && it.type != "SL" && it.type != "SL-M" &&
+            it.id !in ownedIds && "${it.exchange}|${it.symbol}|${it.product}" !in waitOn }
+        if (stale.isNotEmpty()) {
+            stale.forEach { o -> runCatching { Broker.cancel(o.id, o.variety) } }
+            runCatching { Diag.record("armlive", "after a start: ${stale.size} working buy(s) of the arms with no trade cancelled (${stale.joinToString { it.id }})") }
+            return false
+        }
+        val buysToday = orders.filter { it.tag == LiveMirror.TAG && it.side == "BUY" && it.filled > 0 && it.type != "SL" && it.type != "SL-M" }
         if (buysToday.isEmpty()) return true
         val owners = runCatching { Strategies.owners() }.getOrDefault(emptyMap())
         var undecided = 0
@@ -2909,14 +2928,20 @@ object ArmLive {
             } catch (e: Exception) { false }
             if (!decided) undecided++
         }
-        if (undecided == 0) return true
-        // (Not every one could be decided - a read that failed, the positions not showing a fill yet, an entry still settling, an order
-        // still working: tried again on each regular look, for a few minutes after the start; then Boss is told to check.)
+        return undecided == 0
+    }
+
+    /**
+     * 19 Nov 2026: the start's sweep could not decide everything (a read that failed, a fill not shown yet, an entry still settling, an
+     * entry being cancelled): tried again on each regular look for [COLD_SWEEP_MS] after the first such try; then Boss is told to check
+     * and the sweep ends (true).
+     */
+    private fun coldGiveUp(): Boolean {
         val ms = runCatching { nowMs() }.getOrDefault(System.currentTimeMillis())
-        val first = coldFirstMs.also { if (it == 0L) coldFirstMs = ms }.takeIf { it > 0 } ?: ms
-        if (ms - first < COLD_SWEEP_MS) return false
-        com.optionslab.app.work.Alerts.error("Arms live: after the app restarted, $undecided contract(s) with today's live buys of the arms could not " +
-            "be checked against Zerodha. If one is held with no arm trade, it has no app stop: check open positions in Trade.", WHO)
+        if (coldFirstMs == 0L) { coldFirstMs = ms; return false }
+        if (ms - coldFirstMs < COLD_SWEEP_MS) return false
+        com.optionslab.app.work.Alerts.error("Arms live: after the app restarted, today's live buys of the arms could not all be checked against " +
+            "Zerodha. If one is held with no arm trade, it has no app stop: check open positions in Trade.", WHO)
         return true
     }
 
@@ -2937,16 +2962,18 @@ object ArmLive {
         val rows = lock.withLock { book().positions.filter { !it.shadow && it.contract == contract }.toList() }
         // An entry still settling on disk is that entry's to settle ([settle]): decided once it has.
         if (rows.any { it.open && it.unconfirmed && it.entryOrderId == null }) return false
-        // A buy of this path still working (its process died before it settled it): cancelled - no trade owns it - and looked at again.
-        val working = buys.filter { it.working }
-        if (working.isNotEmpty()) { working.forEach { o -> runCatching { Broker.cancel(o.id, o.variety) } }; return false }
-        val asked = buys.sumOf { it.filled } - rows.filter { it.day == today && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty }
+        if (buys.any { it.working }) return false                            // still filling: decided once it is done
+        // (What this path bought there today, less what the book's long trades of today entered and its short trades bought back today.)
+        val asked = buys.sumOf { it.filled } - rows.filter { it.side > 0 && it.day == today && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty } -
+            rows.filter { it.side < 0 && !it.open && it.exitTime?.toLocalDate() == today }.sumOf { it.qty }
         if (asked <= 0) return true
+        // (Nothing held: decided - unless its newest buy filled a moment ago and the positions may not show it yet.)
+        val recent = buys.mapNotNull { placedTime(it.placedAt) }.maxOrNull()?.let { java.time.Duration.between(it, now()).seconds < 120 } ?: true
         val net = pb.net.filter { it.symbol == sym && it.exchange == exch && it.product == product }
-        if (net.sumOf { it.qty } <= 0) return false                         // the positions may not show the fill yet
+        if (net.sumOf { it.qty } <= 0) return !recent
         val held = minOf(net.sumOf { it.qty },
             runCatching { ExitCoordinator.held(exch, sym, product, WHO, orders, first = pb, forceLag = lagForced()) }.getOrNull() ?: return false)
-        if (held <= 0) return false
+        if (held <= 0) return !recent
         val others = rows.filter { it.open && it.side > 0 && (!it.unconfirmed || it.entryOrderId != null) }.sumOf { it.qty } +
             (if (exch == "NFO" && product == "MIS") OrbArms.liveQtyHint[sym] ?: 0 else 0)
         val boughtToday = LiveMirror.boughtTodayCap(net.map { it.dayBuyQty }, net.sumOf { it.overnight }, held,
@@ -2974,7 +3001,7 @@ object ArmLive {
         val rule = if (spec != null) rebuiltRule(spec, sym, placedTime(newest.placedAt)) else (false to false)
         val ref = leg?.second?.ref ?: "recovered:${newest.id}"
         val base = Pos(host.key, ref, sym, exch, product, 1, q, q, lot, tick, (net.firstOrNull()?.multiplier?.toInt() ?: 1).coerceAtLeast(1), fill,
-            placedTime(newest.placedAt) ?: now(), fill, q,
+            placedTime(newest.placedAt)?.takeIf { it.toLocalDate() == today } ?: now(), fill, q,
             runCatching { (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).firstOrNull { it.tradingSymbol == sym }?.expiry }.getOrNull(),
             newest.id, seen = leg != null, heldSeen = true, stopKind = SAFETY, fixed = rule.first, lock = rule.second)
         val (lv, kind) = if (spec != null) firstStop(spec, base) else (null to SAFETY)

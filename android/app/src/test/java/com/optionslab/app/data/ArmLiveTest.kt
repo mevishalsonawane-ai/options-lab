@@ -2002,6 +2002,7 @@ class ArmLiveTest : RobolectricTest() {
         kite.orders.values.filter { it.side == "SELL" && it.working }.forEach { it.status = "CANCELLED" }
         if (atPost!!.isEmpty()) f.delete() else f.writeBytes(atPost!!)
         ArmLive.forgetMemoryForTest()
+        assertTrue("the minute lanes look after a start", ArmLive.lookDue)
         runBlocking { ArmLive.holding() }                                      // the start's positions-first step
         val p = view().openReal.single()
         assertEquals(sym, p.symbol); assertFalse(p.unconfirmed); assertEquals(30, p.qty)
@@ -2300,5 +2301,39 @@ class ArmLiveTest : RobolectricTest() {
             entry.join(30_000)
             assertFalse("the entry finished", entry.isAlive)
         } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0; kite.slowMs.clear(); ArmLive.drainWritesForTest(); ArmLive.wipe(); f.delete() }
+    }
+
+    /** Review item 1: after a restart a working entry buy of this path that no trade owns (its process died) is cancelled, never left. */
+    @Test fun aWorkingBuyOfTheArmsWithNoTradeIsCancelledAfterARestart() {
+        val id = kite.restsInKite(sym, "BUY", 30, 190.0, tag = LiveMirror.TAG)
+        ArmLive.forgetMemoryForTest()
+        assertTrue(ArmLive.lookDue)
+        runBlocking { ArmLive.holding() }
+        assertEquals("CANCELLED", kite.order(id).status)
+        assertTrue(view().openReal.isEmpty())
+    }
+
+    /**
+     * Review item 1: the start's sweep balances today's buys of this path against the book's trades of today (whatever their order ids):
+     * a closed trade whose row has no entry order id (as one taken back from the positions has) never makes Boss's own lot an arm's.
+     */
+    @Test fun theStartsSweepNeverTakesBossesOwnLotForAClosedTradesBuy() {
+        ArmLive.entered(ask(donchian, "t1"))
+        watch()
+        legs["t1"] = donchian to 0
+        watch()
+        assertEquals("paper_exit", view().closed.single().why)
+        val f = java.io.File(context.noBackupFilesDir, "arm_live.vault")
+        val o = org.json.JSONObject(String(com.optionslab.app.security.Vault.readFile(f)!!, Charsets.UTF_8))
+        val rows = o.getJSONArray("positions")
+        for (i in 0 until rows.length()) rows.getJSONObject(i).put("entryOrderId", "")
+        com.optionslab.app.security.Vault.writeFile(f, o.toString().toByteArray(Charsets.UTF_8))
+        kite.boughtInKite(sym, 30, 199.0)                                      // Boss's own lot, in Kite
+        ArmLive.forgetMemoryForTest()
+        kite.requests.clear()
+        runBlocking { ArmLive.holding() }
+        assertTrue("his lot is his", view().openReal.isEmpty())
+        assertTrue("no stop on it", kite.placed.none { it.form["order_type"] == "SL" })
+        assertEquals(30, held())
     }
 }
