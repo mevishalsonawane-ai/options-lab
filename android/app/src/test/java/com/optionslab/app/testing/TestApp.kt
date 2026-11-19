@@ -136,6 +136,8 @@ class TestApp : Application() {
         TradeBook.init(this)
         com.optionslab.app.data.FillSlippage.init(this)
         com.optionslab.app.data.FillSlippage.resetForTest()
+        // 19 Nov 2026 (audit batch 2): no "Zerodha holds something" left by the previous test's reconciler.
+        com.optionslab.app.data.Reconciler.resetForTest()
         com.optionslab.app.work.Notifier.resetLiveCopiesForTest()   // 2 Nov: no live copy left by the previous test hides a paper card
         com.optionslab.app.work.Notifier.testPaperAlerts = true     // 2 Nov: paper notices on in tests, as before (their own tests turn it off)
         com.optionslab.app.data.LiquidityTest.init(this)

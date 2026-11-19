@@ -717,7 +717,8 @@ object FlowArm {
 
     /**
      * A filled entry booked: its ticket labelled, its premium stop resting as a paper SELL SL-M, the time machine's shadow check, its
-     * live path told ([ArmLive]; off until Boss switches it on), the diary's line. [lv] the plan's IraThinker levels (NaN: unknown -
+     * live path told ([ArmLive]; its Trade live is ON by default since 30 Oct, Boss's own switch, and it trades live only through every
+     * live gate - corrected 19 Nov 2026), the diary's line. [lv] the plan's IraThinker levels (NaN: unknown -
      * then only the premium stop and the 15:15 square-off close it).
      */
     private suspend fun entered(b: Book, u: String, c: Paper.Contract, orderId: String?, qty: Int, price: Double, now: LocalDateTime, lv: Level, said: String): Pos {

@@ -703,9 +703,10 @@ fun RiskPage(model: AppModel) {
         item { com.optionslab.app.ui.SettingSpot("ideas.winrate") { IdeaRuleSettingCard(model) } }
         // Risk across the arms, the event days learning leaves out and the market history kept on the phone (TODO S5, S11, S12).
         if (!com.optionslab.app.BuildConfig.GOLD) {
-            item { PortfolioSettingCard() }
+            // 19 Nov 2026 (audit batch 2): the model passed in for the PIN a switch-off of a live protection takes.
+            item { PortfolioSettingCard(model) }
             // 19 Oct: the same-direction cap on automatic entries (paper on, live logged only until switched on).
-            item { SameDirectionCapCard() }
+            item { SameDirectionCapCard(model) }
             // 20 Oct, enhancement round 1: Boss's account stop rule over the whole account (in shadow until switched on).
             item { AccountStopCard(model) }
             // 15 Nov (Boss): the funds check on the arms' live entries (in shadow until switched on; off again takes the PIN).

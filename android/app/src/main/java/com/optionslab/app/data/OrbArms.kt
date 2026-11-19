@@ -1755,11 +1755,18 @@ object OrbArms {
      * quantity. Raising it is Boss's alone: the row asks before it, and Jarvis only on his confirmed yes ([by] says who; the
      * arm log keeps it). A restore's waiting size is answered by this too. Paper takes it as it is; Live still goes through
      * the account guard, and a size the Bot settings do not allow is said now and refused at the entry, never traded smaller.
+     * 19 Nov 2026 (audit batch 2: Liquidity's lots): a RAISE takes [pinConfirmed] (the row asks the PIN first) wherever the guard's
+     * own rule asks it ([com.optionslab.app.security.GuardPin]: a PIN set, and Live or Zerodha set up) - Liquidity's books trade
+     * live by Boss's switch alone, so more lots is more live risk. Lowering never asks; Jarvis never raises it in Live.
      */
-    suspend fun setLiquidityLots(lots: Int, by: String): String = lock.withLock {
+    suspend fun setLiquidityLots(lots: Int, by: String, pinConfirmed: Boolean = false): String {
+      // 19 Nov 2026 (audit batch 2, second review): the settings read before the book's lock, never under it.
+      val asks = !pinConfirmed && liquidityLotsPinAsked()
+      return lock.withLock {
         if (!LiquidityLots.valid(lots)) return@withLock "Liquidity 15+5 trades 1, 2 or 3 lots, not $lots."
         val b = book()
         val old = lotsOf(b)
+        if (LiquidityLots.raises(old, lots) && asks) return@withLock LIQ_LOTS_PIN
         val waited = b.liqLotsAsk
         b.liqLots = lots; b.liqLotsAsk = null; b.liqLotsChosen = true
         if (old == lots && waited == null) return@withLock "Liquidity 15+5 already trades ${LiquidityLots.words(lots)}."
@@ -1771,7 +1778,16 @@ object OrbArms {
         "Liquidity 15+5 now buys ${LiquidityLots.words(lots)} of each contract's lot on every new entry" +
             (if (holding) "; the open position keeps its own quantity." else ".") +
             (LiquidityLots.liveRefusal(lots, max)?.let { " On Zerodha, Bot settings allow ${LiquidityLots.words(max)}: a live entry would be refused until you raise that." } ?: "")
+      }
     }
+
+    /** 19 Nov 2026 (audit batch 2): what is said when Liquidity's lots are raised without the PIN. */
+    const val LIQ_LOTS_PIN = "Raising Liquidity 15+5's lots adds live risk: enter your app PIN on its row on Home. Nothing changed."
+
+    /** 19 Nov 2026 (audit batch 2): whether raising Liquidity's lots asks the PIN now (the guard's own rule; unknown counts as yes). */
+    internal fun liquidityLotsPinAsked(): Boolean = runCatching {
+        com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true))
+    }.getOrDefault(true)
 
     /**
      * Liquidity 15+5's closed paper trades as [LiquidityShadow] counts them (from 06 Oct, each candidate's flag). Candidates (d)

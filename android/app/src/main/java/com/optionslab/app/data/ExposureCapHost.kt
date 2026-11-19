@@ -175,14 +175,31 @@ object ExposureCapHost {
         return "At most $v automatic index option ${if (v == 1) "position" else "positions"} betting the same way."
     }
 
-    /** Boss's live switch (off by default: live only logs what it would refuse). Turning it on only ever refuses entries. */
-    fun setLiveOn(on: Boolean): String {
+    /** 19 Nov 2026 (audit batch 2: live risk rules' PIN): what is said when live is put back in shadow without the PIN. */
+    const val PIN_OFF = "Putting the same-direction cap's live refusals back in shadow lets more of the bots' live entries through: " +
+        "enter your app PIN on its Bot settings card. Nothing changed."
+
+    /**
+     * Boss's live switch (off by default: live only logs what it would refuse). Turning it on only ever refuses entries.
+     * 19 Nov 2026 (audit batch 2: live risk rules' PIN): on -> shadow loosens a live protection, so it takes [pinConfirmed] (the card
+     * asks the PIN first) wherever the guard's own rule asks it ([com.optionslab.app.security.GuardPin]); on never asks.
+     */
+    fun setLiveOn(on: Boolean, pinConfirmed: Boolean = false): String {
+        // 19 Nov 2026 (audit batch 2, second review): on in memory OR as saved (a worker thread, as the card's saves are; a vault that
+        // cannot be read counts as on), so a switch-off is never let through on a stale or unread "off".
+        if (!on && !pinConfirmed && pinAsked() && (liveOn ||
+                runCatching { SecurePrefs.unreadable || SecurePrefs.getBoolean(K_LIVE, false) }.getOrDefault(true))) return PIN_OFF
         liveOn = on
         runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE to on)) }
         runCatching { Diag.record("risk", "Same-direction cap on live ${if (on) "on: live entries past it are refused" else "in shadow: logged only"}") }
         publish()
         return if (on) "Live: the bots' entries past the cap are refused too (your own orders never)." else "Live: in shadow - what it would refuse is logged, nothing changes."
     }
+
+    /** 19 Nov 2026 (audit batch 2): whether loosening asks the PIN now (the guard's own rule; unknown counts as yes). Not the order path. */
+    private fun pinAsked(): Boolean = runCatching {
+        com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true))
+    }.getOrDefault(true)
 
     // ---- live (the entry door; memory only) -----------------------------------------------------------------------------
 

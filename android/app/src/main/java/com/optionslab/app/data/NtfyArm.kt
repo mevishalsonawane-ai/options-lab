@@ -53,7 +53,9 @@ import java.util.Locale
  * never a short.
  *
  * Live: never from here. Each paper buy, stop move and close is told to [ArmLive] (memory only), whose live trade goes only with
- * Live, "AI trades go live", Boss's PIN and this arm's own "Trade live" switch (off until Boss turns it on).
+ * Live, "AI trades go live", Boss's PIN and this arm's own "Trade live" switch. 19 Nov 2026 (audit batch 2): that switch starts OFF
+ * and stays off unless an access token or Boss's own server is set ([NtfyReader.secured]): each pass switches it off first when
+ * neither is ([liveGuard]), with a line in the change timeline and an alert. (Between 30 Oct and 19 Nov it started ON.)
  *
  * Switched off (30 Oct, Boss: "If i switch any arm off, it should be always run in shadow and record only"): a message read while
  * off is decided exactly as above (every guard), and the buy it would have made is handed to the switched-off shadow ([OffShadow])
@@ -84,7 +86,8 @@ object NtfyArm {
     fun init(context: Context) {
         file = File(context.applicationContext.noBackupFilesDir, FILE)
         oldFile = File(context.applicationContext.noBackupFilesDir, OLD_FILE)
-        // Its paper trades for their live path ([ArmLive]; its live switch starts off - only Boss turns it on, with the PIN).
+        // Its paper trades for their live path ([ArmLive]; its live switch starts off - only Boss turns it on, with the PIN, and only
+        // with an access token or his own server set: 19 Nov 2026, [liveGuard]).
         ArmLive.register(LiveMirror.NTFY) {
             if (cache == null) null else _view.value.let { v ->
                 val today = Market.today()
@@ -507,6 +510,8 @@ object NtfyArm {
     }
 
     private suspend fun pass() {
+        // 19 Nov 2026 (audit batch 2): Trade live off first when only the topic protects it - before any message is decided.
+        runCatching { liveGuard() }
         val now = now()
         if (cache == null) lock.withLock { book() }
         // The prices this pass needs (the underlyings of held trades with their own levels, and of waiting buys), read BEFORE the
@@ -529,6 +534,55 @@ object NtfyArm {
         // read), so the 15-second stop check never waits behind it.
         shadowNow()
     }
+
+    // ---- the live gate (19 Nov 2026, audit batch 2) ------------------------------------------------------------------------
+
+    /** Set once the one-time switch-off below has run on this phone (the settings key) - and in memory after. */
+    internal const val K_LIVE_RULE = "ntfy.liveTokenRule.v1"
+    @Volatile private var liveRuleDone = false
+
+    /** What the alert says when Trade live was switched off for want of a token. */
+    internal const val LIVE_OFF_NO_TOKEN = "ntfy alerts: Trade live switched off - only the topic protected it (anyone who learns " +
+        "it can post an alert). Set an access token or your own server on the ntfy page, then switch it on again with your PIN."
+    /** ... and once, when it was on only by the old default (it starts off since 19 Nov). */
+    internal const val LIVE_OFF_DEFAULT = "ntfy alerts: Trade live is now off by default (19 Nov). Switch it on again on the ntfy page " +
+        "with your PIN if you want it."
+
+    /**
+     * 19 Nov 2026 (audit batch 2: ntfy's live gate), in each pass (never the order or tick path): ntfy alerts' "Trade live" is
+     * switched OFF (it only lowers risk: no PIN; logged in the change timeline by [ArmLive.setLive], and an alert) whenever it is on
+     * with neither an access token nor Boss's own server set ([NtfyReader.secured]) - whichever page switched it on. Once on each
+     * phone where ntfy alerts is set up (a topic saved), a switch that was on only by the old default (ON from 30 Oct; never touched -
+     * it reads off now) is saved off and logged in the change timeline, and said, so the new default never goes unseen. Waits until
+     * the arms' live book is read; a switch-off that did not land is tried on the next pass.
+     */
+    internal suspend fun liveGuard() {
+        val v = ArmLive.view.value
+        if (!v.loaded) return
+        val cfg = runCatching { NtfyReader.config() }.getOrNull()
+        val secured = cfg?.let { NtfyReader.secured(it) } ?: false
+        val saved = v.switches[LiveMirror.NTFY_ALERTS]
+        val first = !liveRuleDone && runCatching { com.optionslab.app.security.SecurePrefs.getString(K_LIVE_RULE) == null }.getOrDefault(false)
+        if (v.on(LiveMirror.NTFY_ALERTS) && !secured) {
+            // On with only the topic protecting it: off (ArmLive logs the change in the timeline, as it was on).
+            runCatching { ArmLive.setLive(LiveMirror.NTFY_ALERTS, false, pinConfirmed = false) }
+            if (ArmLive.view.value.on(LiveMirror.NTFY_ALERTS)) return           // not switched off yet: tried again next pass
+            runCatching { Diag.record("ntfy", LIVE_OFF_NO_TOKEN) }
+            runCatching { com.optionslab.app.work.Alerts.error(LIVE_OFF_NO_TOKEN) }
+        } else if (first && saved == null && cfg?.topic != null) {
+            // On only by the old default before this update (it reads off now): saved off, logged in the timeline and said, once.
+            runCatching { ArmLive.setLive(LiveMirror.NTFY_ALERTS, false, pinConfirmed = false, log = false) }
+            if (ArmLive.view.value.switches[LiveMirror.NTFY_ALERTS] == null) return   // not saved yet: tried again next pass
+            runCatching { com.optionslab.app.ira.Autopilot.logArmLive(LiveMirror.NTFY_ALERTS, "ntfy alerts", false) }
+            runCatching { Diag.record("ntfy", LIVE_OFF_DEFAULT) }
+            runCatching { com.optionslab.app.work.Alerts.error(LIVE_OFF_DEFAULT) }
+        }
+        if (first) runCatching { com.optionslab.app.security.SecurePrefs.put(K_LIVE_RULE, "1") }
+        liveRuleDone = true
+    }
+
+    /** TEST ONLY: the one-time switch-off not run yet in memory (the settings key is the phone's). */
+    internal fun liveRuleForTest() { liveRuleDone = false }
 
     // ---- switched off: the shadow (30 Oct) ---------------------------------------------------------------------------------
 
@@ -907,7 +961,8 @@ object NtfyArm {
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(LiveMirror.NTFY_ALERTS, NtfyRules.OWNER, pos.ref, p.index,
             if (p.right == Right.CE) 1 else -1, now, (price - stop).takeIf { it > 0 }, (target - price).takeIf { it > 0 }, premium = true,
             exitAt = ex.exitAt?.toLocalTime()?.takeIf { it.isBefore(NtfyRules.SQ) } ?: NtfyRules.SQ)) }
-        // Its live path ([ArmLive], off until Boss switches it on): the same option and lots, a LIMIT 1% over the fill at most, the stop resting.
+        // Its live path ([ArmLive]; its Trade live is off by default and only on with an access token or Boss's own server, [liveGuard]):
+        // the same option and lots, a LIMIT 1% over the fill at most, the stop resting.
         // 26 Oct (review): a signal marked "paper": true is labelled paper only but still told to the live path as before (whose
         // own switch and Boss's PIN decide): skipping it would be a new live skip, which CLAUDE.md says must start in shadow.
         runCatching { ArmLive.entered(ArmLive.Ask(LiveMirror.NTFY_ALERTS, pos.ref, c, 1, qty, price, stop = stop, limit = price * 1.01)) }

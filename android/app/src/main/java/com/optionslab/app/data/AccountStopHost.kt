@@ -171,8 +171,21 @@ object AccountStopHost {
         return "The account stop rule counts again from $from (-Rs 40,000 from the best, -Rs 13,000 a month)."
     }
 
-    /** Boss's switch (off by default: in shadow). On only ever refuses the bots' entries; never Boss's own, never an exit. */
-    fun setOn(on: Boolean): String {
+    /** 19 Nov 2026 (audit batch 2: live risk rules' PIN): what is said when the rule is put back in shadow without the PIN. */
+    const val PIN_OFF = "Putting the account stop rule back in shadow lets the bots' live entries through once it is reached: " +
+        "enter your app PIN on its Bot settings card. Nothing changed."
+
+    /**
+     * Boss's switch (off by default: in shadow). On only ever refuses the bots' entries; never Boss's own, never an exit.
+     * 19 Nov 2026 (audit batch 2: live risk rules' PIN): on -> shadow loosens a live protection, so it takes [pinConfirmed] (the card
+     * asks the PIN first) wherever the guard's own rule asks it ([com.optionslab.app.security.GuardPin]); on never asks. Jarvis and
+     * voice never switch it at all.
+     */
+    fun setOn(on: Boolean, pinConfirmed: Boolean = false): String {
+        // 19 Nov 2026 (audit batch 2, second review): on in memory OR as saved (a worker thread, as the card's saves are; a vault that
+        // cannot be read counts as on), so a switch-off is never let through on a stale or unread "off".
+        if (!on && !pinConfirmed && pinAsked() && (this.on ||
+                runCatching { SecurePrefs.unreadable || SecurePrefs.getBoolean(K_ON, false) }.getOrDefault(true))) return PIN_OFF
         this.on = on
         runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to on)) }
         runCatching { Diag.record("risk", "Account stop rule ${if (on) "on: the bots' new live entries are refused once it is reached" else "in shadow: logged only"} (by you)") }
@@ -183,6 +196,11 @@ object AccountStopHost {
 
     /** Re-reads what Bot settings shows (the screen opening; a worker thread). */
     fun refresh() { if (!loaded) load() else publish() }
+
+    /** 19 Nov 2026 (audit batch 2): whether loosening asks the PIN now (the guard's own rule; unknown counts as yes). Not the order path. */
+    private fun pinAsked(): Boolean = runCatching {
+        com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true))
+    }.getOrDefault(true)
 
     private fun publish() {
         runCatching { _view.value = View(on, line(), status.stopped) }

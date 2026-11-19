@@ -156,6 +156,8 @@ object RecorderFeeds {
     /** The evening's tries after [OI_FROM] (while still missing), and the morning's on a closed day. */
     val OI_EVENING: List<LocalTime> = listOf(LocalTime.of(19, 30), LocalTime.of(20, 30), LocalTime.of(21, 30), LocalTime.of(22, 30))
     val OI_CLOSED_MORNING: LocalTime = LocalTime.of(8, 0)
+    /** 19 Nov 2026 (audit batch 2): the one pre-open alarm on a trading day (it was every 15 minutes from 06:30 to 09:00). */
+    val PRE_OPEN_SLOT: LocalTime = LocalTime.of(8, 45)
     /** A failed read writes a gap at most this often (a broken page is one gap an hour, not one every 5 minutes). */
     const val GAP_EVERY_MIN = 60L
 
@@ -226,17 +228,19 @@ object RecorderFeeds {
     }
 
     /**
-     * The off-hours alarm's next time after [now]: on trading days 06:30-09:00 every 15 minutes (GIFT Nifty, and the
-     * missing participant file), 18:30, the evening's retries while [oiPending], and 23:30; on a closed day 08:00 while
+     * The off-hours alarm's next time after [now]: on trading days 08:45 (GIFT Nifty, and the missing participant file), 18:30, the evening's retries while [oiPending], and 23:30; on a closed day 08:00 while
      * [oiPending]. Market hours are the market watch's own (the recorder's pass in it reads GIFT Nifty every 5 minutes).
      */
+    // 19 Nov 2026 (audit batch 2: Android ended the app at 08:15 and 08:30 for "excessive CPU / binder traffic during cached"):
+    // each of the ten 15-minute pre-open alarms (06:30-09:00) started the whole app afresh. One pre-open slot now, [PRE_OPEN_SLOT]
+    // (08:45: GIFT Nifty and a missing participant file once before the open, more than 10 minutes before MCX's 09:00 and NSE's
+    // watch, so the start stays light); the market watch's own pass reads GIFT Nifty from 09:00 as before.
     fun nextSlot(now: LocalDateTime, trading: (LocalDate) -> Boolean, oiPending: Boolean): LocalDateTime {
         for (i in 0L..14L) {
             val d = now.toLocalDate().plusDays(i)
             val slots = ArrayList<LocalTime>()
             if (trading(d)) {
-                var t = GIFT_FROM
-                while (t.isBefore(GIFT_PRE_UNTIL)) { slots += t; t = t.plusMinutes(GIFT_PRE_EVERY) }
+                slots += PRE_OPEN_SLOT
                 slots += OI_FROM
                 if (oiPending && i == 0L) slots += OI_EVENING
                 slots += GIFT_NIGHT

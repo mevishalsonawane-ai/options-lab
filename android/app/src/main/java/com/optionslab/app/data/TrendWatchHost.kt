@@ -37,7 +37,9 @@ import java.util.concurrent.ConcurrentHashMap
  *
  *  - the Hero ₹1,000 ticket's paper legs: T3 PASSED, so a turn asks the arm to sell that leg ([sellRequested]: memory only;
  *    the arm sells it through its own exit in the watch's minute lane) - logged in Autopilot's change timeline, one tap
- *    undoes it (the Hero trend exit off; a sold leg is not bought back);
+ *    undoes it (the Hero trend exit off; a sold leg is not bought back). 19 Nov 2026 (audit batch 2): never a leg that has a live
+ *    copy at Zerodha ([ArmLive] sells the copy with every paper exit) - that leg keeps its own exits, so the Trend watch never
+ *    causes an order, on paper's back or otherwise;
  *  - everything else: a note "trend turned against <source> <symbol> at hh:mm: would sell at <premium>", and a quiet alert
  *    only with its switch on (off by default; nothing about the account on a locked phone). Never an order;
  *  - Zerodha positions: notes only, and only with "Live positions too" on (OFF by default). Never an order, never a cancel;

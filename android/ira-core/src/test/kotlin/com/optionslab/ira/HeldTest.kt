@@ -19,6 +19,8 @@ class HeldTest {
             Held.Sources(orbLive = true), Held.Sources(pine = true), Held.Sources(strategies = true), Held.Sources(armLive = true),
             Held.Sources(armLiveRecovering = true), Held.Sources(passed = true), Held.Sources(hero = true), Held.Sources(ft3 = true), Held.Sources(signal = true), Held.Sources(flow = true), Held.Sources(s5 = true), Held.Sources(cisd = true),
             Held.Sources(night = true), Held.Sources(vixDiv = true), Held.Sources(mcxArms = true), Held.Sources(mcxLive = true),
+            // 19 Nov 2026 (audit batch 2): Zerodha's own positions as the reconciler last read them.
+            Held.Sources(broker = true),
         )
         each.forEach { assertTrue(Held.any(it), "$it") }
         // Every field of Sources is covered above (a new field must be added to the list and to Held.parts).
@@ -39,5 +41,6 @@ class HeldTest {
         assertEquals("IraThinker's flow", Held.line(Held.Sources(flow = true)))
         assertEquals("S5 Trail", Held.line(Held.Sources(s5 = true)))
         assertEquals("CISD + network", Held.line(Held.Sources(cisd = true)))
+        assertEquals("Zerodha (reconciler)", Held.line(Held.Sources(broker = true)))
     }
 }

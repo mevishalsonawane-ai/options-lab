@@ -249,6 +249,13 @@ class JarvisVoice : Service() {
         internal fun lockedSafe(): Boolean = runCatching { IraHub.appContext() == null || IraHub.locked() }.getOrDefault(true)
 
         /**
+         * 19 Nov 2026 (audit batch 2): the keyguard's answer [read] as the voice service takes it - a failed read (no keyguard service,
+         * an error) counts as LOCKED, as [lockedSafe] does: nothing about the account is said, and no order is taken by voice, on a
+         * phone whose lock cannot be told. Before, a failure read as unlocked.
+         */
+        internal fun keyguardLocked(read: () -> Boolean?): Boolean = runCatching { read() }.getOrNull() ?: true
+
+        /**
          * A request's yes-or-no question [text] as it may be said now (18 Oct, review): the lock as it is this moment
          * (unknown counts as locked, as for an announcement); locked, only how many requests wait.
          */
@@ -1338,7 +1345,8 @@ class JarvisVoice : Service() {
     private fun talkIntent() = PendingIntent.getService(this, 2, Intent(this, JarvisVoice::class.java).setAction(ACTION_TALK),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-    private fun locked(): Boolean = runCatching { (getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager).isKeyguardLocked }.getOrDefault(false)
+    // 19 Nov 2026 (audit batch 2): unknown counts as locked ([keyguardLocked]).
+    private fun locked(): Boolean = keyguardLocked { (getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager)?.isKeyguardLocked }
 
     private fun awake() = SystemClock.elapsedRealtime() < awakeUntil
 

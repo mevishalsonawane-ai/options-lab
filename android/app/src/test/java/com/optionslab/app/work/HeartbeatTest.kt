@@ -64,6 +64,38 @@ class HeartbeatTest : RobolectricTest() {
         assertTrue("trigger $t", fromUptime < 5_000 || fromWall < 60_000)
     }
 
+    /** 19 Nov 2026 (audit batch 2): while a LIVE position is held, the dead-man check runs every minute, as an alarm clock. */
+    @Test fun whileALivePositionIsHeldItChecksEveryMinuteAsAnAlarmClock() {
+        Background.at(WED, 11, 0)
+        com.optionslab.app.data.Reconciler.heldForTest()
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
+        try {
+            assertTrue(Heartbeat.liveHeld())
+            Heartbeat.schedule(context)
+            val t = beats().single().triggerAtMs
+            val fromUptime = abs(t - 60_000L - SystemClock.uptimeMillis())
+            val fromWall = abs(t - 60_000L - java.time.Instant.now().toEpochMilli())
+            assertTrue("trigger $t", fromUptime < 5_000 || fromWall < 30_000)
+            assertNotNull("an alarm clock", context.getSystemService(AlarmManager::class.java).nextAlarmClock)
+        } finally {
+            com.optionslab.app.data.Reconciler.resetForTest()
+            org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(false)
+        }
+        // Nothing live any more: every 5 minutes again, an ordinary exact alarm.
+        Heartbeat.schedule(context)
+        val t = beats().single().triggerAtMs
+        assertTrue("trigger $t", abs(t - 300_000L - SystemClock.uptimeMillis()) < 5_000 || abs(t - 300_000L - java.time.Instant.now().toEpochMilli()) < 60_000)
+    }
+
+    /** 19 Nov 2026 (audit batch 2): a stale beat is judged in NSE's hours and while MCX's watch should run, not otherwise. */
+    @Test fun aStaleBeatIsNotJudgedOutsideBothMarketsWatches() {
+        SecurePrefs.put("hb.last", 1L)
+        Background.at(WED, 20, 0)
+        assertFalse("MCX's evening with nothing held or armed there", Heartbeat.stale())
+        Background.at(WED, 11, 0)
+        assertTrue(Heartbeat.stale())
+    }
+
     @Test fun beforeTheOpenItWaitsForTodayAndItSkipsClosedDays() {
         Background.at(WED, 8, 0)
         Heartbeat.schedule(context)

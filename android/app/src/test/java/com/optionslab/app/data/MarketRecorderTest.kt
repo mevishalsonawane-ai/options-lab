@@ -422,14 +422,15 @@ class MarketRecorderTest : RobolectricTest() {
         MarketRecorder.testSource = Feeds()
         val am = org.robolectric.Shadows.shadowOf(context.getSystemService(android.app.AlarmManager::class.java))
         fun ours() = am.scheduledAlarms.filter { org.robolectric.Shadows.shadowOf(it.operation).savedIntent.action == MarketRecorder.ACTION }
+        // 19 Nov 2026 (audit batch 2): one pre-open slot, 08:45 (it was every 15 minutes from 06:30).
         at(2, 0); MarketRecorder.scheduleOffHours(context)
-        assertEquals(day.atTime(6, 30).atZone(IST).toInstant().toEpochMilli(), ours().single().triggerAtMs)
+        assertEquals(day.atTime(8, 45).atZone(IST).toInstant().toEpochMilli(), ours().single().triggerAtMs)
         at(12, 0); MarketRecorder.scheduleOffHours(context)
         assertEquals(day.atTime(18, 30).atZone(IST).toInstant().toEpochMilli(), ours().single().triggerAtMs)
         // 23:31 with the day's participant file still missing: the next trading morning, or 08:00 on a closed one.
         at(23, 31); MarketRecorder.scheduleOffHours(context)
         val d1 = day.plusDays(1)
-        val want = if (Market.isTradingDay(d1)) d1.atTime(6, 30) else d1.atTime(8, 0)
+        val want = if (Market.isTradingDay(d1)) d1.atTime(8, 45) else d1.atTime(8, 0)
         assertEquals(want.atZone(IST).toInstant().toEpochMilli(), ours().single().triggerAtMs)
         MarketRecorder.on = false
         assertTrue(ours().isEmpty())
