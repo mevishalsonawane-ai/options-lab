@@ -168,7 +168,7 @@ class ClockStepsTest {
         val a = scope.launch { turn.take(waitMs = 5_000, who = "expiry square-off") { releaseA.await() } }
         until { turn.holder == "expiry square-off" }
         val c = async(Dispatchers.IO) {
-            turn.take({ if (turn.firstWaiting > 0 || turn.holder == "daily loss limit") 3_000L else 300L }, "flat-by") { "flat-by ran" }
+            turn.take({ if (turn.firstWaiting > 0 || turn.holder == "daily loss limit" || (turn.held && turn.holder == null)) 3_000L else 300L }, "flat-by") { "flat-by ran" }
         }
         delay(50)
         val sales = async(Dispatchers.IO) { turn.take(waitMs = 5_000, who = "daily loss limit", first = true) { delay(600); "sold" } }

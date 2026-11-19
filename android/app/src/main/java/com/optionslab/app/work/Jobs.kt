@@ -683,9 +683,14 @@ object Tasks {
      */
     internal suspend fun awaitLossLimit(maxMs: Long = LOSS_BEFORE_ARMS_MS): Boolean {
         val sup = WatchWorkers.supervisor ?: return true
-        // 20 Nov 2026 (third review): already tripped today, nothing to wait for - the arms' gates read the stop (memory), and the
-        // groups also run the exits of positions still open, which must never wait on the limit's sales.
-        if (runCatching { com.optionslab.app.data.LossBreaker.trippedToday() }.getOrDefault(false)) return true
+        // 20 Nov 2026 (third review): already tripped today with nothing more to trip, nothing to wait for - the arms' gates read the
+        // stop (memory), and the groups also run the exits of positions still open, which must never wait on the limit's sales. With
+        // commodities on their own limits, only once their stop holds too (the run may yet trip it).
+        val nothingMore = runCatching {
+            com.optionslab.app.data.LossBreaker.trippedToday() &&
+                (!com.optionslab.app.data.DayLockGuard.splitOn() || com.optionslab.app.data.LossBreaker.mcxTrippedToday())
+        }.getOrDefault(false)
+        if (nothingMore) return true
         var waited = 0L
         while (sup.busy(ClockLane.LOSS)) {
             // Bounded by the run's own age too (review): a hung run holds the arms [maxMs] in all, never [maxMs] before each group

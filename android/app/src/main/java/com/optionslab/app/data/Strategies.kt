@@ -270,6 +270,7 @@ object Strategies {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
+        drainOwnersSoon(b)                                   // 20 Nov 2026: labels given while the lock was busy go with every write
         val bytes = encode(b)
         // 19 Oct: one order of writes with [saveSoon]: a write it left pending is dropped (this newer book carries it).
         synchronized(ioLock) {
@@ -289,6 +290,7 @@ object Strategies {
      * [stoppedToday] waited for that lock). In memory at once; written next unless a newer [save] wrote first. Never older over newer.
      */
     private fun saveSoon(b: Book) {
+        drainOwnersSoon(b)
         val bytes = encode(b)
         synchronized(writeOrder) {
             if (b.gen != wipeGen) return                    // 26 Oct: a book read before "Erase everything" is dropped
@@ -545,13 +547,12 @@ object Strategies {
     }
 
     /** Who placed each order this phone knows of: venue id ("paper:…", "kite:…") -> strategy label. */
-    suspend fun owners(): Map<String, String> = lock.withLock { val b = book(); drainOwnersSoon(b); HashMap(b.owners) }
+    suspend fun owners(): Map<String, String> = lock.withLock { val b = book(); if (drainOwnersSoon(b)) saveSoon(b); HashMap(b.owners) }
 
     /** Label an order placed outside a strategy definition (the ORB arms), for the Orders and Trades lists. */
     suspend fun tagOwner(key: String, label: String) = lock.withLock {
         // The book unreadable just now: the label is skipped, never a throw on the caller's order path (18 Oct, review).
         val b = runCatching { book() }.getOrNull() ?: return@withLock
-        drainOwnersSoon(b)
         b.owners[key] = label; saveSoon(b)
     }
 
@@ -561,11 +562,12 @@ object Strategies {
      */
     private val ownersSoon = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-    private fun drainOwnersSoon(b: Book) {
-        if (ownersSoon.isEmpty()) return
-        val it = ownersSoon.entries.iterator()
-        while (it.hasNext()) { val e = it.next(); b.owners[e.key] = e.value; it.remove() }
-        saveSoon(b)
+    /** The labels kept in memory put into [b] (under the lock); true when there were any. A newer label for a key is never lost. */
+    private fun drainOwnersSoon(b: Book): Boolean {
+        if (ownersSoon.isEmpty()) return false
+        var any = false
+        for ((k, v) in ownersSoon.entries.toList()) { b.owners[k] = v; ownersSoon.remove(k, v); any = true }
+        return any
     }
 
     /**
@@ -578,7 +580,6 @@ object Strategies {
         try {
             val b = runCatching { book() }.getOrNull()
             if (b == null) { ownersSoon[key] = label; return }
-            drainOwnersSoon(b)
             b.owners[key] = label; saveSoon(b)
         } finally {
             lock.unlock()
@@ -587,6 +588,9 @@ object Strategies {
 
     /** TEST ONLY: this book's lock held until [release] completes (a pass holding it across Zerodha calls). */
     internal suspend fun holdLockForTest(release: kotlinx.coroutines.CompletableDeferred<Unit>) { lock.withLock { release.await() } }
+
+    /** TEST ONLY: this book's lock is held now. */
+    internal fun lockHeldForTest(): Boolean = lock.isLocked
 
     /**
      * The order flow beside a one-leg strategy's option BUY entry (9 Oct; a basket's legs are never gated one by one: a
@@ -972,20 +976,38 @@ object Strategies {
 
     /**
      * Stop strategy [id], selling what it holds. 20 Nov 2026 (third review of the clock lane): [salesInTurn] (the daily loss limit's
-     * stop) - the exit sends only, with this book's lock already held, in the square-offs' turn
-     * ([com.optionslab.app.work.ClockLane.sales]); the turn is never held while waiting for this lock (the square-offs never wait
-     * for it: [tagOwnerSoon]).
+     * stop) - its exit sends in the square-offs' turn ([com.optionslab.app.work.ClockLane.sales]), with this book's lock had inside
+     * it; the turn is never held while waiting for this lock, nor this lock while waiting for the turn (the square-offs never wait
+     * for it either: [tagOwnerSoon]).
      */
-    suspend fun stop(id: Long, reason: String, compromised: Boolean, salesInTurn: Boolean = false): String = lock.withLock {
+    suspend fun stop(id: Long, reason: String, compromised: Boolean, salesInTurn: Boolean = false): String {
+        if (!salesInTurn) return lock.withLock { stopHeld(id, reason, compromised) }
+        // 20 Nov 2026 (third review): neither held while waiting for the other - in the turn this lock is only tried; busy, the turn
+        // is let go and the lock waited for outside it, then both tried again (a pathological run of busy locks: as before, both).
+        repeat(STOP_TRIES) {
+            val r = com.optionslab.app.work.ClockLane.sales(com.optionslab.app.work.ClockLane.LOSS) {
+                if (lock.tryLock()) try { Result.success(stopHeld(id, reason, compromised)) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { Result.failure(e) } finally { lock.unlock() }
+                else null
+            }
+            if (r != null) return r.getOrThrow()
+            lock.withLock { }
+        }
+        return lock.withLock { com.optionslab.app.work.ClockLane.sales(com.optionslab.app.work.ClockLane.LOSS) { stopHeld(id, reason, compromised) } }
+    }
+
+    /** [stop]'s tries for this lock and the turn together before it waits for both in turn. */
+    private const val STOP_TRIES = 20
+
+    /** [stop]'s work, this book's lock held. */
+    private suspend fun stopHeld(id: Long, reason: String, compromised: Boolean): String {
         val b = book()
-        val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
-        val run = b.runs[id] ?: return@withLock "${def.name} is not running."
-        val v = try { venue(run.mode) } catch (e: Exception) { return@withLock "Could not load the contracts: ${e.message}" }
+        val def = b.defs.firstOrNull { it.id == id } ?: return "No such strategy."
+        val run = b.runs[id] ?: return "${def.name} is not running."
+        val v = try { venue(run.mode) } catch (e: Exception) { return "Could not load the contracts: ${e.message}" }
         val ids = b.brokerIds.getOrPut(run.runId) { HashMap() }
-        val send: suspend () -> RunState = { host.stop(run, def, Market.now(), reason, exec(b, def, v, run.mode, compromised), ids, checkpoint(b, id)) }
-        val next = if (salesInTurn) com.optionslab.app.work.ClockLane.sales(com.optionslab.app.work.ClockLane.LOSS) { send() } else send()
+        val next = host.stop(run, def, Market.now(), reason, exec(b, def, v, run.mode, compromised), ids, checkpoint(b, id))
         b.runs[id] = next; finish(b, next); save(b)
-        if (next.stoppedAt != null) "${def.name} stopped." else "Exit orders sent for ${def.name}; it closes when they fill."
+        return if (next.stoppedAt != null) "${def.name} stopped." else "Exit orders sent for ${def.name}; it closes when they fill."
     }
 
     suspend fun closeLeg(id: Long, legId: Int, compromised: Boolean): String = lock.withLock {

@@ -120,8 +120,11 @@ internal object ClockLane {
         }
     }
 
-    /** The loss limit's sales hold the turn or wait for it now. */
-    private fun salesQueued(): Boolean = turn.holder == LOSS || turn.firstWaiting > 0
+    /**
+     * The loss limit's sales hold the turn or wait for it now. (Held with no holder - a take or a release this instant - counts too,
+     * for the wait only: never a reason to go without the turn, [inTurn].)
+     */
+    private fun salesQueued(): Boolean = turn.holder == LOSS || turn.firstWaiting > 0 || (turn.held && turn.holder == null)
 
     /** 20 Nov 2026 (third review): how long the sales and the square-offs wait for each other ([SALES_TURN_WAIT_MS]; a test's shorter). */
     @Volatile internal var salesTurnWaitMs = SALES_TURN_WAIT_MS
@@ -136,7 +139,8 @@ internal object ClockLane {
     private suspend fun <T> inTurn(name: String, body: suspend () -> T): T? {
         val r = turn.take({ if (salesQueued()) salesTurnWaitMs else ClockSteps.TURN_WAIT_MS }, name) { Result.success(body()) }
         if (r != null) return r.getOrThrow()
-        if (!salesQueued()) return null
+        // Only behind the sales holding the turn (third review): behind another square-off (the sales merely queued) never.
+        if (turn.holder != LOSS) return null
         runCatching { Heartbeat.diary("$name: the daily loss limit's sales held the turn ${salesTurnWaitMs / 1000} s; it goes now") }
         return body()
     }
@@ -222,6 +226,9 @@ internal object ClockLane {
 
     /** TEST ONLY: whether the loss limit's sales hold or wait for the turn now. */
     internal fun salesQueuedForTest(): Boolean = salesQueued()
+
+    /** TEST ONLY: the loss limit's sales waiting for the turn (first in line) for [waitMs] at most, selling nothing. */
+    internal suspend fun queueSalesForTest(waitMs: Long) { turn.take(waitMs, LOSS, first = true) { } }
 
     /** TEST ONLY: the turn held by [who] until [release] completes. */
     internal suspend fun holdTurnForTest(who: String, release: kotlinx.coroutines.CompletableDeferred<Unit>) { turn.take(60_000L, who) { release.await() } }

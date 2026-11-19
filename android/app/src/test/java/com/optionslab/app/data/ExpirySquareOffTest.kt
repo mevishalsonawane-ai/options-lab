@@ -314,7 +314,8 @@ class ExpirySquareOffTest : RobolectricTest() {
         kite.position(ce, 3_600, 20.0)                                  // 48 lots; NIFTY freezes at 1,800: two slices
         kite.nextPlace()
         kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "Order rejected by the exchange.")
-        kite.afterNext("/orders/regular") { now += 20_000 }
+        // The clock moves on as the second (refused) slice is answered, after the first slice was placed and noted.
+        kite.afterNext("/orders/regular") { kite.afterNext("/orders/regular") { now += 20_000 } }
         pass()
         assertEquals(2, kite.placed.size)
         now = 1_000_000L + 10_000

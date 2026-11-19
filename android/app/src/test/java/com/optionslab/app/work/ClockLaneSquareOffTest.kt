@@ -222,7 +222,7 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         val release = CompletableDeferred<Unit>()
         val lock = launch(Dispatchers.IO) { Strategies.holdLockForTest(release) }
         try {
-            Thread.sleep(200)
+            Background.await("the strategies' lock held", 5_000) { Strategies.lockHeldForTest() }
             val stop = launch(Dispatchers.IO) {
                 Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true)
             }
@@ -241,6 +241,35 @@ class ClockLaneSquareOffTest : RobolectricTest() {
     }
 
     /**
+     * Item 1 (b), third review (review round): nor is the strategies' lock held while the stop's sales wait for the turn - everything
+     * else on that book (the strategies' own stops and targets, the protections' and the arms' order labels) goes on meanwhile.
+     */
+    @Test fun theStrategiesLockIsNeverHeldWhileTheStopWaitsForTheTurn() = runBlocking {
+        AutomationSupport.liveSettings()
+        runningStrategy()
+        val release = CompletableDeferred<Unit>()
+        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
+        try {
+            Background.await("a square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
+            val stop = launch(Dispatchers.IO) {
+                Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true)
+            }
+            Background.await("its sales wait for the turn", 10_000) { ClockLane.salesQueuedForTest() }
+            val t0 = System.currentTimeMillis()
+            withContext(Dispatchers.IO) { Strategies.owners() }
+            val ms = System.currentTimeMillis() - t0
+            assertTrue("the book was free while the sales waited: $ms ms", ms < 2_000L)
+            assertEquals(0, strategySells())
+            release.complete(Unit)
+            stop.join()
+            assertEquals("sold once the turn was free", 1, strategySells())
+        } finally {
+            release.complete(Unit)
+            hold.join()
+        }
+    }
+
+    /**
      * Item 1 (b), third review: the square-offs never wait for the strategies' lock (their order labels go in once it is free), so a
      * stop holding it while it waits for the turn can never hold a square-off too. The real expiry square-off, the lock held throughout.
      */
@@ -249,7 +278,7 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         val release = CompletableDeferred<Unit>()
         val lock = launch(Dispatchers.IO) { Strategies.holdLockForTest(release) }
         try {
-            Thread.sleep(200)
+            Background.await("the strategies' lock held", 5_000) { Strategies.lockHeldForTest() }
             val t0 = System.currentTimeMillis()
             withContext(Dispatchers.IO) { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
             val ms = System.currentTimeMillis() - t0

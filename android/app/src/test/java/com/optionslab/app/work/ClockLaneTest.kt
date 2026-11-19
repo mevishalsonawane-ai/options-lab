@@ -254,6 +254,31 @@ class ClockLaneTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (third review, review round): a square-off goes without the turn only behind the loss limit's sales HOLDING it -
+     * behind another square-off (the sales merely queued there too) it never does: two square-offs never run at once.
+     */
+    @Test fun aSquareOffNeverGoesWithoutTheTurnBehindAnotherSquareOff() = runBlocking {
+        ClockLane.salesTurnWaitMs = 500L
+        val ran = java.util.concurrent.atomic.AtomicInteger()
+        ClockLane.testWork = { n -> if (n == ClockLane.EXPIRY) ran.incrementAndGet() }
+        val release = CompletableDeferred<Unit>()
+        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.FLAT_BY, release) }
+        try {
+            Background.await("another square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
+            val queued = launch(Dispatchers.IO) { ClockLane.queueSalesForTest(10_000L) }
+            Background.await("the sales queued behind it", 5_000) { ClockLane.salesQueuedForTest() }
+            val s = com.optionslab.app.data.AppSettings.load()
+            kotlinx.coroutines.withContext(Dispatchers.IO) { ClockLane.run(context, ClockLane.EXPIRY, s) }
+            assertEquals("never ran beside the other square-off", 0, ran.get())
+            release.complete(Unit)
+            queued.join()
+        } finally {
+            release.complete(Unit)
+            hold.join()
+        }
+    }
+
+    /**
      * 20 Nov 2026 (third review, item B): once the limit has tripped today the arms never wait for a loss-limit run (their gates read
      * the stop, and the groups also run the exits of positions still open, which must not wait on the limit's sales).
      */
@@ -262,9 +287,13 @@ class ClockLaneTest : RobolectricTest() {
         ClockLane.testWork = { n -> if (n == ClockLane.LOSS) release.await() }
         val run = WatchWorkers.begin(this)
         try {
+            // Tripped today, commodities on the one shared limit (nothing more the run could trip).
+            com.optionslab.app.security.SecurePrefs.put("g.mcxOwn", false)
+            com.optionslab.app.data.DayLockGuard.forgetForTest()
             com.optionslab.app.security.SecurePrefs.put("breaker.day", com.optionslab.app.data.Market.today().toString())
             com.optionslab.app.data.LossBreaker.forgetForTest()
             assertTrue(com.optionslab.app.data.LossBreaker.trippedToday())
+            assertFalse(com.optionslab.app.data.DayLockGuard.splitOn())
             val s = com.optionslab.app.data.AppSettings.load()
             kotlinx.coroutines.withContext(Dispatchers.IO) { WatchWorkers.supervisor!!.kick(ClockLane.GROUP, listOf(ClockLane.step(context, ClockLane.LOSS, s))) }
             Background.await("the loss limit running", 5_000) { WatchWorkers.supervisor!!.busy(ClockLane.LOSS) }
@@ -272,6 +301,10 @@ class ClockLaneTest : RobolectricTest() {
             assertTrue(Tasks.awaitLossLimit(10_000))
             val ms = System.currentTimeMillis() - t0
             assertTrue("no wait: $ms ms", ms < 2_000L)
+            // Commodities on their own limits and theirs not reached: the run may yet trip it, so the arms wait (bounded) as before.
+            com.optionslab.app.security.SecurePrefs.put("g.mcxOwn", true)
+            com.optionslab.app.data.DayLockGuard.forgetForTest()
+            assertFalse("still waiting while the run may trip the commodities' limit", Tasks.awaitLossLimit(300))
         } finally {
             release.complete(Unit)
             WatchWorkers.end(run)

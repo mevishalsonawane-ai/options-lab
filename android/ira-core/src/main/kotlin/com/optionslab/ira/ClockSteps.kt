@@ -91,7 +91,7 @@ object ClockSteps {
     class Turn(private val pollMs: Long = 50L) {
         private val m = Mutex()
 
-        /** Held now (diagnostics, tests). */
+        /** Held now (diagnostics, tests). Held with no [holder]: a take or a release under way this instant. */
         val held: Boolean get() = m.isLocked
 
         /** Who holds the turn now ([take]'s `who`), null: nobody. */
@@ -125,10 +125,11 @@ object ClockSteps {
                     delay(pollMs)
                     waited += pollMs
                 }
+                // Named before a `first` waiter stops counting, so a look in between never reads the turn as nobody's sales.
+                holder = who
             } finally {
                 if (first) firstCount.decrementAndGet()
             }
-            holder = who
             try {
                 return block()
             } finally {
