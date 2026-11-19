@@ -343,7 +343,7 @@ class ExpirySquareOffTest : RobolectricTest() {
      * 19 Nov 2026 (final review, the Strategy Module): a strategy's own exit sale working on the contract is cover - never cancelled
      * (the strategy would send its exit again from its own book, beside this square-off's, and the account would end short).
      */
-    @Test fun aStrategysWorkingExitSaleIsCoverNeverCancelled() {
+    @Test fun aStrategysWorkingExitSaleIsCoverBeforeItsBackstop() {
         kite.position(ce, 75, 20.0)
         kite.nextPlace(outcome = Outcome.OPEN)
         val id = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
@@ -352,13 +352,48 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
         assertEquals("OPEN", kite.order(id).status)
         assertTrue("nothing more sent", kite.placed.isEmpty())
-        // Resting long (a protected MARKET left behind): still never cancelled (the strategy would sell again), told to Boss once.
+        assertTrue("nothing told while it is fresh", texts().none { it.contains("a strategy's exit sale for it is still resting") })
+        // Resting a while (90 s): still cover (its closing in progress), told to Boss once.
         com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(Market.now().toInstant().plusSeconds(90), com.optionslab.engine.IST)
         try {
             at(15, 7); pass(); pass()
-            assertTrue("never cancelled", kite.requests.none { it.method == "DELETE" })
+            assertTrue("not cancelled yet", kite.requests.none { it.method == "DELETE" })
             assertTrue("nothing sold beside it", kite.placed.isEmpty())
             assertEquals("told once", 1, texts().count { it.contains("a strategy's exit sale for it is still resting") })
+        } finally {
+            com.optionslab.app.data.Market.testClock = null
+        }
+    }
+
+    /**
+     * 19 Nov 2026 (final check, M1): from the backstop minute a strategy's exit sale still resting is taken over - cancelled, confirmed
+     * out with nothing filled, and the expiry square-off sells what is held: once, never twice; never carried into the settlement.
+     */
+    @Test fun atTheBackstopAStuckStrategyExitIsCancelledThenSoldOnce() {
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val id = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
+        kite.requests.clear()
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        assertEquals("CANCELLED", kite.order(id).status)
+        assertEquals("sold once by the square-off", listOf(Triple(ce, "SELL", "75")), sent())
+        assertEquals("iraalgoexpiry", kite.placed.single().form["tag"])
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        pass()
+        assertEquals("nothing more", 1, kite.placed.size)
+    }
+
+    /** M1: before the backstop, one resting past two minutes is taken over too. */
+    @Test fun aStrategyExitRestingPastTwoMinutesIsTakenOver() {
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val id = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO", "iraalgostrat"), exit = true) }
+        kite.requests.clear()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(Market.now().toInstant().plusSeconds(150), com.optionslab.engine.IST)
+        try {
+            pass()
+            assertEquals("CANCELLED", kite.order(id).status)
+            assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
         } finally {
             com.optionslab.app.data.Market.testClock = null
         }

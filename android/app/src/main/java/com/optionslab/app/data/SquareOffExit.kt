@@ -22,15 +22,17 @@ internal object SquareOffExit {
     private val DONE = setOf("COMPLETE", "REJECTED", "CANCELLED")
     /** The Strategy Module's orders' tag ([Strategies]). */
     private const val STRATEGY_TAG = "iraalgostrat"
-    /** 19 Nov 2026 (final review): a strategy's exit sale resting longer than this is told to Boss (it stays cover). */
+    /** 19 Nov 2026 (final review): a strategy's exit sale resting longer than this is told to Boss. */
     private const val STRATEGY_COVER_MS = 60_000L
+    /** ... and longer than this, taken over by the square-off (cancelled, then sold). */
+    const val TAKEOVER_MS = 120_000L
     private val STAMP = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-    /** Resting longer than [STRATEGY_COVER_MS] by the market's clock (Zerodha's stamps are IST; a phone behind it reads young). */
-    private fun stale(o: Broker.OrderRow): Boolean = runCatching {
+    /** How long it has rested by the market's clock (Zerodha's stamps are IST; a phone behind it reads young; unread: 0). */
+    private fun restedMs(o: Broker.OrderRow): Long = runCatching {
         val at = java.time.LocalDateTime.parse(o.placedAt, STAMP).atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
-        Market.now().toInstant().toEpochMilli() - at > STRATEGY_COVER_MS
-    }.getOrDefault(false)
+        Market.now().toInstant().toEpochMilli() - at
+    }.getOrDefault(0L)
 
     /**
      * 19 Nov 2026 (second review of the clock lane: a square-off can now run twice back to back, the lane's run and the pass's):
@@ -77,7 +79,8 @@ internal object SquareOffExit {
 
     suspend fun send(p: Broker.Position, lotSize: Int, tickSize: Double, read: List<Broker.OrderRow>, working: List<Broker.OrderRow>,
                      positions: Broker.Positions, limits: Kite.Limits, who: String, tag: String, origin: String,
-                     aboutIt: String, exitName: String, multiplier: Int = 1, tell: (String, String) -> Unit): Boolean {
+                     aboutIt: String, exitName: String, multiplier: Int = 1, backstop: Boolean = false, minutesLeft: Int? = null,
+                     tell: (String, String) -> Unit): Boolean {
         val pass = ExitCoordinator.enter(p.exchange, p.symbol, who)
         try {
             // 19 Nov 2026: an exit placed on it a moment ago is still on its way ([GAP_MS]): nothing more now, the next run reads again.
@@ -93,22 +96,31 @@ internal object SquareOffExit {
             // pass; the arm put its stop back in between and this cancelled it again, every minute until the close, with the
             // position never flat and its stop gone most of the time.) A cancelled order found filled sold the position meanwhile:
             // nothing more this pass, the next reads the books again; one not yet out: the exit waits for the next pass too.
-            // 19 Nov 2026 (final review): a strategy's own exit sale working ([STRATEGY_TAG], not its resting stop) is cover too - cancelled,
-            // the Strategy Module sends its exit again from its own book (it never reads Zerodha's positions first), beside this one's.
-            // Whatever its age: cancelled and sold here, the strategy sends it again and the leg is sold twice. One resting long (a
-            // protected MARKET left behind as the price moved) is told to Boss once instead ([STRATEGY_COVER_MS]).
-            val cover = same.filter { it.tag == tag || it.tag in TAGS || ((it.tag == com.optionslab.engine.orb.LiveMirror.TAG || it.tag == STRATEGY_TAG) && !isStop(it)) }
-            same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && stale(it) }?.let {
-                tell("strategy exit resting ${p.symbol}", "${p.symbol} $aboutIt and a strategy's exit sale for it is still resting at Zerodha. The $exitName " +
-                    "leaves it there (selling beside it could sell the position twice): check it in Trade, and modify or cancel it yourself if it is not filling.")
+            // 19 Nov 2026 (final review): a strategy's own exit sale working ([STRATEGY_TAG], not its resting stop) is its closing in
+            // progress, so cover - a cancel racing its fill, then a sale here, could sell twice. (The Strategy Module's own exit reads the
+            // orders and what is held in the contract's exit turn, the lag guard always on, so it never sends again over a sale here.)
+            // Not for ever: from [backstop] (the expiry square-off's own backstop minute), or once it has rested [TAKEOVER_MS] (a
+            // protected MARKET left behind as the price moved), it is cancelled, confirmed out with nothing more filled, and the
+            // square-off sells what is held - so a stuck one never carries the position into the settlement.
+            fun takeOver(o: Broker.OrderRow) = backstop || restedMs(o) > TAKEOVER_MS
+            val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) ||
+                (it.tag == STRATEGY_TAG && !isStop(it) && !takeOver(it)) }
+            same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && restedMs(it) > STRATEGY_COVER_MS }?.let {
+                // Told once; from 15:15 (or the flat-by minute) each minute it is still resting, a RISK alert naming the minutes left.
+                val left = minutesLeft
+                tell("strategy exit resting ${p.symbol}${left?.let { " $it" } ?: ""}", "${p.symbol} $aboutIt and a strategy's exit sale for it is still " +
+                    "resting at Zerodha" + (left?.let { " with $it minute(s) to the close" } ?: "") + ". The $exitName takes over if it does not fill " +
+                    "(cancels it, then sells); check it in Trade.")
             }
             val others = same.filter { it !in cover }
             if (others.isNotEmpty()) {
                 var filled = false; var allOut = true
                 for (o in others) {
                     runCatching { Broker.cancel(o.id, o.variety) }
-                    val st = runCatching { Broker.orderState(o.id)?.status }.getOrNull()
-                    if (st == "COMPLETE") filled = true else if (st !in DONE) allOut = false
+                    val st = runCatching { Broker.orderState(o.id) }.getOrNull()
+                    // 19 Nov 2026: more of it filled since the read (a strategy's exit taken over, part filled as it came out) is a
+                    // fill too - the next pass reads the books again, never a sale on what this read showed.
+                    if (st?.status == "COMPLETE" || (st != null && st.filled > o.filled)) filled = true else if (st?.status !in DONE) allOut = false
                 }
                 if (filled || !allOut) return false
             }

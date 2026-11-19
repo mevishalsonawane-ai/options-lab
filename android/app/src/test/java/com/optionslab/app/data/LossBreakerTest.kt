@@ -238,7 +238,8 @@ class LossBreakerTest : RobolectricTest() {
         assertTrue(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0))
         assertTrue(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 10_000.0))
         assertFalse(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 2_000.0))
-        assertFalse(LossBreaker.mayLift(LossBreaker.Limit.PAPER, 10_000.0, 0.0))
+        // The other limit loosened may lift too, once this stop's own limit is off ([liftForLoosened] decides): the PIN is asked.
+        assertTrue(LossBreaker.mayLift(LossBreaker.Limit.PAPER, 10_000.0, 0.0))
         assertTrue(LossBreaker.trippedToday())
     }
 
@@ -324,6 +325,43 @@ class LossBreakerTest : RobolectricTest() {
         } finally {
             LossBreaker.testPaperDay = null
             LossBreaker.testDayFigure = null
+        }
+    }
+
+    /**
+     * Final check (L1): today past both limits. Zerodha's switched off first is refused (the paper one would stop them again), and
+     * says to loosen that one too; then the paper limit switched off lifts the stop. In the other order: the paper one first leaves the
+     * stop (Zerodha's still on and past), then Zerodha's off lifts it.
+     */
+    @Test fun pastBothLimitsTheStopLiftsOnceBothAreLoosenedInEitherOrder() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        try {
+            trippedAt5k(6_000.0)
+            limit(0.0)
+            val first = runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, true) }
+            assertEquals(LossBreaker.Lift.OTHER_PAST, first)
+            assertTrue(first.words, first.words.contains("Loosen that one too"))
+            SecurePrefs.put("g.pLoss", 0.0)
+            assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+            val said = startAgain()
+            assertTrue(said, said.contains("running"))
+        } finally {
+            LossBreaker.testPaperDay = null
+        }
+    }
+
+    @Test fun pastBothLimitsThePaperOneFirstThenZerodhasLiftsIt() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        try {
+            trippedAt5k(6_000.0)
+            SecurePrefs.put("g.pLoss", 0.0)
+            assertEquals("Zerodha's limit still on and past", LossBreaker.Lift.OTHER_LIMIT,
+                runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+            assertTrue(LossBreaker.trippedToday())
+            limit(0.0)
+            assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, true) })
+        } finally {
+            LossBreaker.testPaperDay = null
         }
     }
 }

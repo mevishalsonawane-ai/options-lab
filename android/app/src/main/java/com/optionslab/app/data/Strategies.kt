@@ -698,7 +698,9 @@ object Strategies {
                         val working = runCatching { ExitCoordinator.orders(ref.exchange, kiteSym, "strategy ${def.name}") }.getOrNull()
                             ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha's orders to confirm the exit; will retry")
                         // 21 Oct, enhancement round 3 (idea 1): held, checked against that orders read's fills ([ExitCoordinator.held]).
-                        val held = runCatching { ExitCoordinator.held(ref.exchange, kiteSym, order.product, "strategy ${def.name}", working) }.getOrNull()
+                        // 19 Nov 2026 (final check): the lag guard always on here (forceLag, as the square-offs and the protections): a sale a
+                        // square-off made a moment ago, still trailing in the positions, is never sold again by this exit's retry.
+                        val held = runCatching { ExitCoordinator.held(ref.exchange, kiteSym, order.product, "strategy ${def.name}", working, forceLag = true) }.getOrNull()
                             ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
                         val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
                         if (!closes) return@runBlocking StrategyHost.Placed.Refused(

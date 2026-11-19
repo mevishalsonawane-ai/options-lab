@@ -20,6 +20,8 @@ object ExpirySquareOff {
     const val AT_MINUTE = com.optionslab.engine.NseHours.EXPIRY_SQUARE_OFF
     /** 20 Oct: from here an arm's live trade still open on its expiry is closed by this square-off too (its own 15:05 missed it). */
     const val BACKSTOP_MINUTE = AT_MINUTE + 3
+    /** 19 Nov 2026: from here a strategy's exit sale still resting on an expiring option is a RISK alert each minute ([SquareOffExit]). */
+    const val REPEAT_FROM = 15 * 60 + 15
     private const val K_DONE = "sq.expiry.done"
 
     /**
@@ -157,7 +159,9 @@ object ExpirySquareOff {
                 // 22 Oct: the exit itself as the flat-by sends it too ([SquareOffExit]: one exit turn, other resting exits cancelled
                 // first, the day's GTT out first, fills checked, freeze slices, refusals said once, a lost reply looked for).
                 val placed = SquareOffExit.send(p, i.lotSize, i.tickSize, read, working, positions, s.limits(), "expiry square-off", "iraalgoexpiry",
-                    Origins.EXPIRY, "expires today", "expiry") { key, text -> tellOnce(context, key, text) }
+                    Origins.EXPIRY, "expires today", "expiry", backstop = backstop,
+                    // 19 Nov 2026: from 15:15 a strategy's exit still resting is said each minute, with the minutes left to F&O's close.
+                    minutesLeft = (Market.foClose(today) - minuteNow()).takeIf { minuteNow() >= REPEAT_FROM }) { key, text -> tellOnce(context, key, text) }
                 if (placed) closed += "live ${p.symbol}"
             }
         }.onFailure { unread = true }
