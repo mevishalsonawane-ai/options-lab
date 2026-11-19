@@ -381,7 +381,9 @@ class OrbArmsLiveTest : RobolectricTest() {
     @Test fun aLostReplyIsHeldUnconfirmedThenSettledWithItsStop() {
         state(pending = true)
         kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
-        kite.down += "/orders"                                         // and the order book cannot be read either
+        // and the order book cannot be read either, from the POST on (19 Nov 2026: before it, the entry's start-up check of Zerodha's
+        // orders must read it - an unreadable book then refuses the entry, never a blind buy).
+        kite.afterNext("/orders/regular") { kite.down += "/orders" }
         assertEquals("Bought at Zerodha, not yet confirmed: held until the order book shows what filled.", approve())
         val held = arm().open!!
         assertTrue(held.unconfirmed); assertNull(held.stopOrderId); assertNull(held.entryOrderId)

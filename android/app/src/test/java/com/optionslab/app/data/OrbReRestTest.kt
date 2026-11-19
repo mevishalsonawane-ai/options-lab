@@ -201,6 +201,9 @@ class OrbReRestTest : RobolectricTest() {
         val s = held("orb")
         kite.orders["OTHER1"] = FakeKite.Order("OTHER1", sym, "NFO", "SELL", 30, "MIS", "SL", 140.0, 145.0, "iraorb", "TRIGGER PENDING")
         runBlocking { Strategies.tagOwner("kite:OTHER1", "Another book · stop") }
+        // (19 Nov 2026: the other book's stop covers its own lot - Zerodha holds both books' lots; a stop is never put back for more than
+        // what is held less every other working sale, so with only this trade's 30 held there would be nothing left to cover.)
+        kite.position(sym, 60, 200.0, product = "MIS")
         kite.reject(s, message = exchangeCancel, status = "CANCELLED")
         pass()
         assertEquals("put back beside another book's stop", 1, slCount())
