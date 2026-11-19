@@ -1984,31 +1984,35 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     /**
-     * Audit A4 (CRITICAL): the entry's intent is in the book before its order goes, so a death between the POST and the booking leaves
-     * a trade the restart settles against Zerodha - taken back with its stop, never a live lot nothing owns.
+     * Audit A4 (CRITICAL), 19 Nov 2026 (third review): the entry's intent is written on the book's own writer, so the order never waits on
+     * the disk - and a death right at the POST, the intent not yet on disk, leaves a filled lot of this path with no row. The first look
+     * after the restart sweeps today's buys of this path that no row owns: the lot is taken back with a stop, Boss told - never unwatched.
      */
-    @Test fun anEntryIsWrittenBeforeItsOrderGoesSoADeathAtThePostIsTakenBackWithAStop() {
+    @Test fun aDeathAtThePostBeforeTheIntentIsOnDiskIsTakenBackWithAStopAfterTheRestart() {
+        com.optionslab.app.work.Alerts.forgetPosted()
         val f = java.io.File(context.noBackupFilesDir, "arm_live.vault")
         var atPost: ByteArray? = null
-        var intent = false
-        kite.afterNext("/orders/regular") {
-            ArmLive.drainWritesForTest()                                        // its intent goes on the book's own writer
-            atPost = f.readBytes()
-            intent = ArmLive.view.value.openReal.any { it.ref == "crash" && it.unconfirmed && it.entryOrderId == null }
-        }
-        ArmLive.entered(ask(donchian, "crash"))
-        assertTrue("the entry's intent was in the book when its order went", intent)
+        com.optionslab.app.security.Vault.testWriteDelayMs = 1_500         // the intent's write still running at the POST
+        try {
+            kite.afterNext("/orders/regular") { atPost = if (f.exists()) f.readBytes() else ByteArray(0) }
+            ArmLive.entered(ask(donchian, "crash"))
+            ArmLive.drainWritesForTest()
+        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0 }
         // The phone died at the POST: nothing after it happened (no stop, no booking); the book on disk as it was then.
         kite.orders.values.filter { it.side == "SELL" && it.working }.forEach { it.status = "CANCELLED" }
-        f.writeBytes(atPost!!)
+        if (atPost!!.isEmpty()) f.delete() else f.writeBytes(atPost!!)
         ArmLive.forgetMemoryForTest()
-        assertTrue(runBlocking { ArmLive.refresh() }.openReal.single().unconfirmed)
-        watch()
+        runBlocking { ArmLive.holding() }                                      // the start's positions-first step
         val p = view().openReal.single()
-        assertEquals("crash", p.ref); assertFalse(p.unconfirmed); assertEquals(30, p.qty)
+        assertEquals(sym, p.symbol); assertFalse(p.unconfirmed); assertEquals(30, p.qty)
         val stops = kite.orders.values.filter { it.side == "SELL" && it.type == "SL" && it.working }
         assertEquals(1, stops.size); assertEquals(p.stopOrderId, stops.single().id); assertEquals(30, stops.single().qty)
         assertEquals("one buy only", 1, kite.orders.values.count { it.side == "BUY" })
+        assertEquals("Boss told", 1, posted("taken back"))
+        // Once only: a later look takes nothing back again.
+        watch()
+        assertEquals(1, view().openReal.size)
+        assertEquals(1, kite.orders.values.count { it.side == "SELL" && it.type == "SL" && it.working })
     }
 
     /**
@@ -2256,5 +2260,41 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(1, posted("has had no stop resting"))
         assertTrue("still no stop beside nothing held", kite.orders.values.none { it.working && it.side == "SELL" })
         assertEquals(1, view().openReal.size)
+    }
+
+    // ---- 19 Nov 2026: the third review ------------------------------------------------------------------------------------------
+
+    /** Review item 3: a lost exit found for a trade no longer open never holds back another trade's exit on the contract. */
+    @Test fun aFoundLostExitOfATradeNoLongerOpenNeverHoldsTheContractBack() {
+        ArmLive.entered(ask(donchian, "sib"))
+        watch()
+        ArmLive.seedFoundLostForTest("gone-trade", sym, "999999")
+        legs["sib"] = donchian to 0
+        watch()
+        assertEquals("paper_exit", view().closed.single().why)
+        assertEquals(1, marketSells())
+        assertEquals(0, held())
+    }
+
+    /** Review item 5: an erase while the book's writer is writing leaves no book behind (the write never lands after the delete). */
+    @Test fun anEraseWhileTheBooksWriterIsWritingLeavesNoBookBehind() {
+        val f = java.io.File(context.noBackupFilesDir, "arm_live.vault")
+        ArmLive.entered(ask(donchian, "before"))
+        assertTrue(f.exists())
+        val (c2, s2) = other(6)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        com.optionslab.app.security.Vault.testWriteDelayMs = 800
+        kite.slowMs["/orders/regular"] = 3_000L                                // the entry waits after its POST
+        try {
+            kite.requests.clear()
+            val entry = Thread { ArmLive.entered(ask(donchian, "during", c = c2)) }.apply { start() }
+            val until = System.nanoTime() + 20_000_000_000L
+            while (System.nanoTime() < until && kite.requests.toList().none { it.method == "POST" && it.form["tradingsymbol"] == s2 }) Thread.sleep(2)
+            Thread.sleep(100)                                                   // its intent's write is running
+            ArmLive.wipeForErase()
+            ArmLive.drainWritesForTest()
+            assertFalse("the book stays erased", f.exists())
+            entry.join(30_000)
+        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0; kite.slowMs.clear() }
     }
 }
