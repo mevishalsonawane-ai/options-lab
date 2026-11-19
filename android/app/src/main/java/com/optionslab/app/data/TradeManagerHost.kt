@@ -288,7 +288,8 @@ object TradeManagerHost {
 
     internal fun armLiveCopyKnown(paperSymbol: String): Boolean = runCatching {
         val v = ArmLive.view.value
-        v.loaded && v.openReal.any { it.paperSymbol == paperSymbol || it.symbol == paperSymbol }
+        // (19 Nov 2026, audit batch 2: a copy Boss detached from its paper trade - his reset or hand close - no longer follows paper exits.)
+        v.loaded && v.openReal.any { !it.detached && (it.paperSymbol == paperSymbol || it.symbol == paperSymbol) }
     }.getOrDefault(false)
 
     /** 19 Nov 2026 (audit batch 2, delta review): a note of a look held for a live copy (not acted; not an exit). */
@@ -312,7 +313,7 @@ object TradeManagerHost {
     internal fun armLiveCopy(paperSymbol: String? = null, ref: String? = null): Boolean = runCatching {
         val v = ArmLive.view.value
         liveCopyFrom(v.loaded, if (v.loaded) null else ArmLive.liveFlagsKept()?.first,
-            v.openReal.any { (ref != null && it.ref == ref) || (paperSymbol != null && (it.paperSymbol == paperSymbol || it.symbol == paperSymbol)) })
+            v.openReal.any { !it.detached && ((ref != null && it.ref == ref) || (paperSymbol != null && (it.paperSymbol == paperSymbol || it.symbol == paperSymbol))) })
     }.getOrDefault(true)
 
     /** [armLiveCopy]'s rule from plain facts (tests): the book read - what it holds; not read - the app's Live as kept, unknown: yes. */

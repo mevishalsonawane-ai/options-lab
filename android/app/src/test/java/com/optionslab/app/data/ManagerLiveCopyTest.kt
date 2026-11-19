@@ -114,4 +114,23 @@ class ManagerLiveCopyTest : RobolectricTest() {
         assertFalse("read, and no live trade copies it", TradeManagerHost.armLiveCopyKnown("NIFTY25OCT25000CE"))
         assertFalse("read, and no live trade copies it", TradeManagerHost.armLiveCopy(paperSymbol = "NIFTY25OCT25000CE"))
     }
+
+    /**
+     * 19 Nov 2026 (audit batch 2): a live copy Boss detached from its paper trade (his paper reset or hand close: [ArmLive.Pos.detached]) no
+     * longer follows paper exits, so it never counts as the paper trade's live copy here; a following one does.
+     */
+    @Test fun aDetachedLiveCopyNeverCountsAsTheLiveCopy() {
+        val copy = ArmLive.Pos(com.optionslab.engine.orb.DonchianArm.SOURCE, "passed:r51:9", "NIFTY25OCT25000CE", "NFO", "MIS", 1, 75, 75, 75, 0.05, 1,
+            100.0, java.time.LocalDateTime.now().withNano(0), 100.0, 75, null, "1001", paperSymbol = "NIFTY-PA-25000CE")
+        try {
+            ArmLive.viewForTest(ArmLive.View(open = listOf(copy), loaded = true))
+            assertTrue(TradeManagerHost.armLiveCopyKnown("NIFTY-PA-25000CE"))
+            assertTrue(TradeManagerHost.armLiveCopy(paperSymbol = "NIFTY-PA-25000CE"))
+            assertTrue(TradeManagerHost.armLiveCopy(ref = "passed:r51:9"))
+            ArmLive.viewForTest(ArmLive.View(open = listOf(copy.copy(detached = true)), loaded = true))
+            assertFalse("detached: not known", TradeManagerHost.armLiveCopyKnown("NIFTY-PA-25000CE"))
+            assertFalse("detached: not a live copy", TradeManagerHost.armLiveCopy(paperSymbol = "NIFTY-PA-25000CE"))
+            assertFalse(TradeManagerHost.armLiveCopy(ref = "passed:r51:9"))
+        } finally { ArmLive.viewForTest(ArmLive.View()) }
+    }
 }
