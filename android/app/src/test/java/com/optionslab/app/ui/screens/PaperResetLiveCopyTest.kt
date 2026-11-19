@@ -59,7 +59,7 @@ class PaperResetLiveCopyTest {
         compose.frames()
         assertTrue(shows("Paper only - nothing at Zerodha changes."))
         assertTrue(shows("A live copy is open at Zerodha"))
-        assertTrue(shows("it stays open with its own stop and exits. Nothing at Zerodha is sold"))
+        assertTrue(shows("it stays open with its own stop and the 15:15 square-off; nothing at Zerodha is sold for it"))
     }
 
     /** The paper book unreadable for a moment: a reset changes nothing, says so, and never ends in an uncaught error. */

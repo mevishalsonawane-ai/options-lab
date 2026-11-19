@@ -810,6 +810,13 @@ object LiveMirror {
      */
     fun paperEndKeepsLive(why: String?): Boolean = why == PAPER_CLOSED_ELSEWHERE || why == PAPER_CLOSED_OUTSIDE
 
+    /**
+     * 19 Nov 2026 (audit batch 2, coordinator's decision B2-B): whether a live trade on [exchange] in [product] has a square-off of its own
+     * ([squareOffDue]: an NSE intraday trade at 15:15) - only such a copy may be detached from its paper trade by Boss's reset or hand close;
+     * a carried (NRML) or MCX one goes with its paper trade (its time exit is its arm's). Pure.
+     */
+    fun ownSquareOff(exchange: String, product: String): Boolean = exchange in NSE && product == "MIS"
+
     /** 19 Nov 2026 (audit batch 2): the paper arms' words for a paper trade closed by something other than their own rules. */
     const val PAPER_CLOSED_ELSEWHERE = "closed_elsewhere"
     const val PAPER_CLOSED_OUTSIDE = "closed_outside"

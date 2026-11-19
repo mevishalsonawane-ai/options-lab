@@ -253,6 +253,26 @@ class Ft3ArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2, B2-B): its 15:05 exit finds the paper book already flat (another paper close got there first): paper books it
+     * closed elsewhere, and its live copy is told the arm's own exit - once, never "closed elsewhere" as the reason.
+     */
+    @Test fun itsExitThatLosesTheRaceToAPaperCloseStillTellsItsLiveCopyItsExit() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        try {
+            market(LocalTime.of(11, 21)); tick(LocalTime.of(11, 21))
+            val p = Ft3Arm.view.value.open.single()
+            val ref = "ft3:${p.index}:${p.orderId ?: p.entryTime}"
+            Paper.testBeforeExit = { c -> Paper.close(c.symbol, "MIS") }
+            market(LocalTime.of(15, 5)); tick(LocalTime.of(15, 5), seconds = 2)
+            assertEquals("closed_elsewhere", Ft3Arm.view.value.closed.single { it.symbol == p.symbol }.why)
+            val told = heard.filter { it.startsWith("rule_exit|$ref|") }
+            assertEquals(heard.toString(), 1, told.size)
+            assertFalse(told.single(), told.single().endsWith("|closed_elsewhere") || told.single().endsWith("|exit"))
+        } finally { ArmLive.testHeard = null; Paper.testBeforeExit = null }
+    }
+
     @Test fun aSignalTheWatchWasNotInTimeForIsThatDaysTicketGone() {
         // The phone was asleep: the first pass is at 11:30, after the 11:20 mark's window (11:21-11:23).
         market(LocalTime.of(11, 30))

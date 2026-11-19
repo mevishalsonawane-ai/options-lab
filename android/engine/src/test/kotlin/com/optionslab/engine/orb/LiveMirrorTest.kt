@@ -284,6 +284,15 @@ class LiveMirrorTest {
             assertFalse(LiveMirror.paperEndKeepsLive(w), "the arm's own exit ($w) is still mirrored")
     }
 
+    /** 19 Nov 2026 (audit batch 2, B2-B): only an NSE intraday copy has a square-off of its own (and may be detached). */
+    @Test fun onlyAnNseIntradayCopyHasItsOwnSquareOff() {
+        assertTrue(LiveMirror.ownSquareOff("NFO", "MIS"))
+        assertTrue(LiveMirror.ownSquareOff("BFO", "MIS"))
+        assertFalse(LiveMirror.ownSquareOff("NFO", "NRML"), "Night's carried option")
+        assertFalse(LiveMirror.ownSquareOff("MCX", "NRML"))
+        assertFalse(LiveMirror.ownSquareOff("MCX", "MIS"))
+    }
+
     /** 19 Nov 2026 (audit batch 2): a refused stop is tried again after 5 s, doubling to 60 s at most. */
     @Test fun aRefusedStopIsTriedAgainAfter5sDoublingTo60s() {
         assertEquals(listOf(5_000L, 5_000L, 10_000L, 20_000L, 40_000L, 60_000L, 60_000L, 60_000L),

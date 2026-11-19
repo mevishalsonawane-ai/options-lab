@@ -1100,6 +1100,8 @@ object Paper {
         // position in between, and a plain SELL on a flat book opened a paper SHORT nothing managed (the Hero tickets' and ORB's
         // 15:05 sales). Now such an exit is refused as "already closed" (the arm books it closed elsewhere), and one for more
         // than is held sells only what is held. Checked here before any price read, and again inside the book's lock, with the place.
+        // (TEST ONLY, 19 Nov 2026: another paper close gets there just before this exit - the race the arms' exits must handle.)
+        if (exit) testBeforeExit?.let { h -> testBeforeExit = null; h(c) }
         if (exit && reduceQty(book(), c.symbol, product, action, lots * c.lotSize) == null) return notOpen(c.symbol)
         // 22 Oct: the order fingerprint ([OrderVerdicts]): a paper order whose check stamped a [verdict] goes only when the
         // fingerprint of what is placed now (these arguments, [stop] / [target] what the caller rests) is the one the check
@@ -1661,6 +1663,9 @@ object Paper {
     @Volatile internal var readAsideAfterMs = 5 * 60_000L
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
     @Volatile internal var readRetryGapMs = 2_000L
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+    /** TEST ONLY (19 Nov 2026, audit batch 2): run once right before the next exit order (a test closes the position there: the race). */
+    @Volatile internal var testBeforeExit: (suspend (Contract) -> Unit)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
     /** TEST ONLY (19 Nov 2026): the vault read replaced (a Keystore hiccup). Debug builds only. */
     @Volatile internal var testRead: (() -> ByteArray?)? = null

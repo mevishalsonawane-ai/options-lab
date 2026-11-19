@@ -171,6 +171,11 @@ object ArmLive {
         /** 19 Nov 2026 (final review): when the book was erased ("Erase everything"; market clock, ISO): the start's sweep counts only
          *  this path's orders placed after it ([sweepUnowned]). Carried by the new book an erase leaves. */
         var sweepFrom: String? = null,
+        /**
+         * 19 Nov 2026 (audit batch 2, B2-B): the stop orders and GTTs ("gtt:<id>") this path took out itself, the newest [OWN_CANCELS_KEPT]:
+         * written with the book (on its own writer), so a restart never takes the app's own cancel for Boss's ([markOwnCancel]).
+         */
+        val ownCancels: ArrayList<String> = ArrayList(),
     )
 
     /** What the screen and the tests read. */
@@ -368,15 +373,13 @@ object ArmLive {
      */
     fun closed(ref: String, why: String, pct: Double? = null) {
         testHeard?.add("closed|$ref|$why")
-        // 19 Nov 2026 (audit batch 2: a paper-side event sold every live copy at market - a paper book read afresh after a Keystore hiccup,
-        // "Reset paper", a paper row closed by hand): a paper trade closed elsewhere or outside ended without an exit decision of its arm's
-        // rules, so its live copy is NOT sold - it keeps its own stop and exits ([detach]). Only the arm's own exits are mirrored.
-        if (LiveMirror.paperEndKeepsLive(why)) {
-            runCatching { TimeMachineHost.settle(ref, why, pct) }
-            detach(ref, why)
-            return
-        }
-        closedRefs[ref] = (runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() }) to why
+        // 19 Nov 2026 (audit batch 2, coordinator's decision B2-B): every automatic paper end - closed elsewhere or outside included (the
+        // paper square-off, loss limit, sweeper, a book set aside) - still sells the live copy, as before. Only Boss's own reset or hand close
+        // of the paper row detaches it ([detach]; such a copy ignores the paper's "closed elsewhere" that follows: [paperSide]). A rule exit
+        // already told for the trade ([ruleExit]) keeps its reason over a later plain "closed elsewhere".
+        val kept = closedRefs[ref]?.second
+        if (!(LiveMirror.paperEndKeepsLive(why) && kept != null && !LiveMirror.paperEndKeepsLive(kept)))
+            closedRefs[ref] = (runCatching { now().toLocalDate() }.getOrElse { LocalDate.now() }) to why
         // 22 Oct: the time machine's forward log learns how the trade ended (one queue add; the write runs on its own scope).
         runCatching { TimeMachineHost.settle(ref, why, pct) }
         if (closedRefs.size > NOTES_KEPT) prune()
@@ -413,7 +416,9 @@ object ArmLive {
      * copying the paper contract [paperSymbol] detached ([detach]) before the paper row is closed; those trades returned (memory only).
      */
     fun detachPaperSymbol(paperSymbol: String, why: String, product: String? = null): List<Pos> {
-        val hit = _view.value.open.filter { it.paperSymbol == paperSymbol && !it.detached && (product == null || it.product == product) }
+        // (B2-B: only a copy with its own 15:15 square-off is detached; a carried or MCX one goes with its paper trade, as before.)
+        val hit = _view.value.open.filter { it.paperSymbol == paperSymbol && !it.detached && (product == null || it.product == product) &&
+            LiveMirror.ownSquareOff(it.exchange, it.product) }
         hit.forEach { detach(it.ref, why) }
         return hit
     }
@@ -458,14 +463,14 @@ object ArmLive {
      * returned. Memory only (the caller reads the book first: [refresh]).
      */
     fun detachAll(why: String): List<Pos> {
-        val hit = _view.value.open.filter { !it.detached }
+        val hit = _view.value.open.filter { !it.detached && LiveMirror.ownSquareOff(it.exchange, it.product) }
         hit.forEach { detach(it.ref, why) }
         return hit
     }
 
     /** 19 Nov 2026 (audit batch 2): the open live trades that still follow a paper trade ([paperSymbol]'s only, when given). Memory only. */
-    fun liveCopiesOpen(paperSymbol: String? = null): List<Pos> =
-        _view.value.openReal.filter { !it.detached && (paperSymbol == null || it.paperSymbol == paperSymbol) }
+    fun liveCopiesOpen(paperSymbol: String? = null, product: String? = null): List<Pos> =
+        _view.value.openReal.filter { !it.detached && (paperSymbol == null || it.paperSymbol == paperSymbol) && (product == null || it.product == product) }
 
     /**
      * 19 Nov 2026 (audit batch 2): what a paper reset or a paper row closed by hand does to the live [copies] (none: null) - in the confirm
@@ -474,11 +479,17 @@ object ArmLive {
     fun liveCopyWords(trades: List<Pos>): String? {
         val copies = trades.filter { !it.shadow }
         if (copies.isEmpty()) return null
-        val one = copies.size == 1
-        return "${if (one) "A live copy is" else "${copies.size} live copies are"} open at Zerodha (" +
-            copies.joinToString { "${it.label} ${it.symbol}" } + "): ${if (one) "it stays" else "they stay"} open with " +
-            "${if (one) "its" else "their"} own stop${if (one) "" else "s"} and exits. Nothing at Zerodha is sold; close ${if (one) "it" else "them"} " +
-            "in Trade or Kite if you want ${if (one) "it" else "them"} out."
+        // (B2-B: true words - a copy with its own 15:15 square-off stays open; a carried or MCX one is sold with its paper trade.)
+        val (kept, sold) = copies.partition { LiveMirror.ownSquareOff(it.exchange, it.product) }
+        fun names(l: List<Pos>) = l.joinToString { "${it.label} ${it.symbol}" }
+        val k = if (kept.isEmpty()) null else { val one = kept.size == 1
+            "${if (one) "A live copy is" else "${kept.size} live copies are"} open at Zerodha (${names(kept)}): ${if (one) "it stays" else "they stay"} " +
+                "open with ${if (one) "its" else "their"} own stop${if (one) "" else "s"} and the 15:15 square-off; nothing at Zerodha is sold for " +
+                "${if (one) "it" else "them"}. Close ${if (one) "it" else "them"} in Trade or Kite if you want ${if (one) "it" else "them"} out." }
+        val s = if (sold.isEmpty()) null else { val one = sold.size == 1
+            "${if (one) "A live copy" else "${sold.size} live copies"} with no square-off of ${if (one) "its" else "their"} own (${names(sold)}) " +
+                "${if (one) "is" else "are"} sold at Zerodha with the paper trade, as before." }
+        return listOfNotNull(k, s).joinToString(" ")
     }
 
     /**
@@ -624,6 +635,8 @@ object ArmLive {
             o.optJSONObject("shadow")?.let { m -> m.keys().forEach { b.shadow[it] = m.getBoolean(it) } }
             o.optJSONObject("shadowSince")?.let { m -> m.keys().forEach { k -> runCatching { b.shadowSince[k] = LocalDateTime.parse(m.getString(k)) } } }
             o.optString("sweepFrom").takeIf { it.isNotEmpty() }?.let { b.sweepFrom = it }
+            o.optJSONArray("ownCancels")?.let { a -> for (i in 0 until a.length()) a.optString(i).takeIf { it.isNotEmpty() }?.let { b.ownCancels += it } }
+            synchronized(ownCancels) { ownCancels += b.ownCancels }
             o.optJSONArray("notMirrored")?.let { a -> for (i in 0 until a.length()) runCatching { a.getJSONObject(i).let { x ->
                 b.notMirrored += NotMirrored(x.getString("ref"), LiveMirror.migratedKey(x.getString("key")), LocalDateTime.parse(x.getString("at")), x.getString("why")) } } }
         }.isSuccess
@@ -783,6 +796,8 @@ object ArmLive {
             .put("shadowSince", JSONObject().apply { b.shadowSince.forEach { (k, v) -> put(k, v.toString()) } })
             .put("notMirrored", JSONArray().apply { b.notMirrored.forEach { put(JSONObject().put("ref", it.ref).put("key", it.key).put("at", it.at.toString()).put("why", it.why)) } })
         b.sweepFrom?.let { o.put("sweepFrom", it) }
+        while (b.ownCancels.size > OWN_CANCELS_KEPT) b.ownCancels.removeAt(0)
+        if (b.ownCancels.isNotEmpty()) o.put("ownCancels", JSONArray().apply { b.ownCancels.forEach { put(it) } })
         return o.toString().toByteArray(Charsets.UTF_8)
     }
 
@@ -1691,12 +1706,21 @@ object ArmLive {
      * tried again only after [LiveMirror.restBackoffMs] (5 s doubling to 60 s), the app watching the level meanwhile, and Boss is told
      * once, with the reason, until a stop of the trade rests at Zerodha again. Memory only.
      */
-    private fun refusedStop(p: Pos, trigger: Double?, why: String) {
+    /**
+     * 19 Nov 2026 (audit batch 2): [p]'s stop is rested again only after [LiveMirror.restBackoffMs] - one more try in a row (5 s doubling to
+     * 60 s). The wait in ms.
+     */
+    private fun backOff(p: Pos): Long {
         val ms = runCatching { nowMs() }.getOrDefault(System.currentTimeMillis())
         val tries = (restBackoff[p.ref]?.first ?: 0) + 1
         val wait = LiveMirror.restBackoffMs(tries)
         if (restBackoff.size > 500) restBackoff.clear()
         restBackoff[p.ref] = tries to ms + wait
+        return wait
+    }
+
+    private fun refusedStop(p: Pos, trigger: Double?, why: String) {
+        val wait = backOff(p)
         if (restRefusedSaid.size > 500) restRefusedSaid.clear()
         if (!restRefusedSaid.add(p.ref)) return
         val text = "${p.label}: Zerodha refused its live ${stopWords(p)} on ${p.symbol}" +
@@ -1714,7 +1738,27 @@ object ArmLive {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?): Boolean = size > 500
     })
     private fun ownCancel(id: String): Boolean = synchronized(ownCancels) { id in ownCancels }
-    private fun markOwnCancel(id: String) { synchronized(ownCancels) { ownCancels += id } }
+    /**
+     * [id] (an SL order's id, or "gtt:<id>") is being taken out by this path itself: kept in memory at once and written with the book on its
+     * own writer ([saveAsync]: the cancel never waits on the disk), before the cancel goes - so a restart reads it as the app's, never Boss's.
+     * 19 Nov 2026 (audit batch 2, B2-B).
+     */
+    private suspend fun markOwnCancel(id: String) {
+        synchronized(ownCancels) { ownCancels += id }
+        if (!ready()) return
+        runCatching { lock.withLock { val b = book(); if (id !in b.ownCancels) { b.ownCancels += id; saveAsync(b) } } }
+    }
+    private const val OWN_CANCELS_KEPT = 200
+
+    /** TEST ONLY (19 Nov 2026): [markOwnCancel], as the app's own exit does before a cancel. Debug builds only. */
+    internal suspend fun markOwnCancelForTest(id: String) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; markOwnCancel(id) }
+
+    /**
+     * 19 Nov 2026 (audit batch 2, B2-B): a positive sign that Boss cancelled an SL himself - Zerodha's words name a user's cancel - while the
+     * market takes orders. A blank or unrecognised message is never enough (Zerodha's own cancels come blank too): such a stop is put back.
+     */
+    private fun bossCancelWords(message: String): Boolean = message.lowercase().let { m -> BOSS_CANCEL_WORDS.any { it in m } }
+    private val BOSS_CANCEL_WORDS = listOf("by user", "by the user", "user cancel", "cancelled by you", "canceled by user")
 
     /**
      * 19 Nov 2026 (audit batch 2): when the app's own manual exit last took a contract in hand ([handsOff]; "EXCHANGE:SYMBOL" -> wall ms):
@@ -2357,13 +2401,13 @@ object ArmLive {
     // copy, as every paper exit does. Kept on purpose: the rule is per lot, so the live trade's own levels are the same distance from its
     // own fill and come at about the same price - and a live trade that stopped following its paper trade would lose the arm's other
     // exits (its time stop) and could be held to the square-off. An earlier exit only.
-    // 19 Nov 2026 (audit batch 2): a live trade whose paper trade ended without an exit decision of its arm's rules ([detach]) follows no
-    // paper book any more: a missing or emptied paper trade sells nothing - its own stop and exits remain. Only an exit of the arm's own
-    // rules told afterwards ([closed]: Night's 09:16 exit, its paper row closed by hand before it) still sells it.
+    // 19 Nov 2026 (audit batch 2): a live trade Boss detached from its paper trade (his paper reset or hand close: [detach]; only one with
+    // its own 15:15 square-off) follows no paper book any more: a missing or emptied paper trade, and the paper's own "closed elsewhere"
+    // that follows, sell nothing - its own stop, rule stop and square-off remain. An exit of the arm's own rules told afterwards still sells it.
     private fun paperSide(p: Pos, legs: List<PaperLeg>?, fresh: Boolean = true): Triple<Pos, Int, String?> {
         if (p.detached || detachNotes.containsKey(p.ref)) {
             val q = if (p.detached) p else p.copy(detached = true)
-            val ruleExit = closedWhy(p.ref)
+            val ruleExit = closedWhy(p.ref)?.takeIf { !LiveMirror.paperEndKeepsLive(it) }
             return Triple(q, if (ruleExit != null) q.qty else 0, ruleExit)
         }
         val leg = legs?.firstOrNull { it.ref == p.ref }
@@ -2384,8 +2428,8 @@ object ArmLive {
         if (detachSaid.size > 500) { detachSaid.clear(); detachSaid.add(p.ref) }
         val why = detachNotes[p.ref]?.second ?: LiveMirror.PAPER_CLOSED_ELSEWHERE
         val text = "${p.label}: its paper trade ended without its own exit ($why), so its live ${p.symbol} is NOT sold: it stays open at Zerodha " +
-            "with its own stop (" + (p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none on the premium") + ") and exits (its " +
-            "square-off). Close it in Trade or Kite if you want it out."
+            "with its own stop (" + (p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "none on the premium") + "), its rule stop and the " +
+            "15:15 square-off. Close it in Trade or Kite if you want it out."
         com.optionslab.app.work.Alerts.error(text, WHO)
         note(p.key, text)
     }
@@ -2596,7 +2640,7 @@ object ArmLive {
                 }
                 if (so != null && !so.working && so.status == "COMPLETE") p = p.copy(stopOrderId = null, stopQty = null, stopBooked = 0)
                 // 19 Nov 2026 (audit batch 2): a stop seen resting at Zerodha ends its re-rest back-off; a later refusal is a new one.
-                if (so != null && so.working) { restBackoff.remove(p.ref); restRefusedSaid.remove(p.ref) }
+                if ((so != null && so.working) || g?.status?.lowercase() == "active") { restBackoff.remove(p.ref); restRefusedSaid.remove(p.ref) }
                 if (so != null && so.status in setOf("REJECTED", "CANCELLED")) {
                     // 19 Nov 2026 (audit batch 2, Boss 16 Nov: "All the stops and profit locks should be on zerodha"; a stop Boss cancelled
                     // himself is respected): told apart as the ORB arms do - ended by the exchange, its risk system or a rejection
@@ -2606,7 +2650,12 @@ object ArmLive {
                     val opStop = if (p.exchange == "MCX") mcxStopped else stopped
                     val appsOwn = ownCancel(so.id) || opStop || SquareOffExit.inGap(p.exchange, p.symbol, p.product) || handsOffRecently(p.exchange, p.symbol) ||
                         orders.values.any { it.symbol == p.symbol && it.exchange == p.exchange && it.working && it.tag in SquareOffExit.TAGS }
-                    val byYou = !appsOwn && !com.optionslab.ira.ManualCoverRule.endedByExchange(so.status, so.message)
+                    // (B2-B: Boss's only on a positive sign - Zerodha's words name a user's cancel, while the market takes orders, and no mark of
+                    // the app's own (kept in the book across a restart). A blank or unrecognised cancel is Zerodha's: put back, after a back-off.)
+                    val byExchange = com.optionslab.ira.ManualCoverRule.endedByExchange(so.status, so.message)
+                    val byYou = !appsOwn && !byExchange && so.status == "CANCELLED" && bossCancelWords(so.message) &&
+                        runCatching { Market.acceptsOrders() }.getOrDefault(false)
+                    if (so.status == "CANCELLED" && !appsOwn && !byExchange && !byYou) backOff(p)
                     val level = p.stopTrigger?.let { "%.2f".format(Locale.ENGLISH, it) } ?: "its level"
                     // (Said once for each stop that ended; a refusal's back-off and its words: [refusedStop].)
                     if (so.status == "REJECTED") refusedStop(p, p.stopTrigger, so.message.ifBlank { "no reason given" })

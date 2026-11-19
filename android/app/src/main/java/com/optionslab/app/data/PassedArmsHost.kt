@@ -333,10 +333,17 @@ object PassedArmsHost {
         var pickOn: Boolean = false,
         /** 6 Nov: R150 B's W20 labels each R51 break (shadow log only, [setW20]). */
         var w20On: Boolean = false,
+        /**
+         * 19 Nov 2026 (audit batch 2, coordinator's decision B2-B): a paper-only refusal (another arm holds the option on paper, the paper
+         * account guard, no fresh paper price) also sends the live copy ([setRefusalLive]). Off (the default): shadow - the refusal skips
+         * live as before and each "would have gone live" is logged ([REFUSAL_MARK]). On adds live entries, so it takes the PIN.
+         */
+        var refusalLiveOn: Boolean = false,
     ) {
         /** A copy for the entries phase (worked on outside the book's lock, then merged back). */
         fun copy(): Book = Book(HashMap(armed), ArrayList(positions), HashSet(decided), status.copyMap(), ArrayList(log), HashSet(migrated), HashMap(base),
-            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On, pickOn, w20On)
+            soloBase, HashMap(acted), HashMap(paused), ArrayList(scores), HashMap(marks), HashMap(locks), lockOn, l25On, stOn, breadthSince, HashSet(recordOnly), wideOn, np5On, pickOn, w20On,
+            refusalLiveOn)
 
         /**
          * [source]'s entries run this pass. 30 Oct (Boss: "If i switch any arm off, it should be always run in shadow and record
@@ -373,6 +380,10 @@ object PassedArmsHost {
         val pickOn: Boolean = false,
         /** 6 Nov: R150 B's W20 labels each R51 break (failed gates; a shadow log only). */
         val w20On: Boolean = false,
+        /** 19 Nov 2026 (audit batch 2, B2-B): a paper-only refusal also sends the live copy ([setRefusalLive]; off: shadow, logged only). */
+        val refusalLiveOn: Boolean = false,
+        /** 19 Nov 2026 (audit batch 2, B2-B): today's paper-only refusals that would have gone live (logged in shadow, [REFUSAL_MARK]). */
+        val refusalShadowToday: Int = 0,
     ) {
         fun on(source: String): Boolean = armed[source] == true
         /**
@@ -470,6 +481,7 @@ object PassedArmsHost {
             b.np5On = o.optBoolean("r52NoProgress", false)
             b.pickOn = o.optBoolean("r72PickerShadow", false)
             b.w20On = o.optBoolean("r51W20Shadow", false)
+            b.refusalLiveOn = o.optBoolean("refusalLive", false)
             // 19 Oct: absent in an older book (no arm record only); never beside "on" (on wins).
             o.optJSONArray("recordOnly")?.let { a -> for (i in 0 until a.length()) a.getString(i).takeIf { it in SOURCES && b.armed[it] != true }?.let { b.recordOnly += it } }
         }.onFailure { unreadable = true; if (file.exists()) Vault.setAside(file) }
@@ -692,6 +704,7 @@ object PassedArmsHost {
         o.put("r52NoProgress", b.np5On)
         o.put("r72PickerShadow", b.pickOn)
         o.put("r51W20Shadow", b.w20On)
+        o.put("refusalLive", b.refusalLiveOn)
         o.put("recordOnly", JSONArray().apply { b.recordOnly.sorted().forEach { put(it) } })
         o.put("locks", JSONObject().apply { b.locks.filterKeys { k -> b.positions.any { it.open && (lockKey(it) == k || ownLockKey(it) == k) } }.forEach { (k, v) -> put(k, v) } })
         while (b.log.size > LOG_KEPT) b.log.removeAt(0)
@@ -742,7 +755,8 @@ object PassedArmsHost {
         _view.value = View(b.armed.toMap(), b.status.shown({ k, _ -> k == ST_UNJUDGED_KEY }), b.positions.filter { it.open }, closed.takeLast(30), b.positions.filter { it.day == today },
             b.log.takeLast(40), closed, b.marks.toMap(), b.paused.toMap(), b.scores.filter { it.startsWith("$today|") }.map { it.substringAfter('|').substringAfter('|') },
             model != null, b.base.toMap(), soloBase(b), b.lockOn, b.l25On, b.stOn, b.breadthSince, stUnjudgedOn(b.status, today), b.recordOnly.toSet(),
-            wideOn = b.wideOn, np5On = b.np5On, pickOn = b.pickOn, w20On = b.w20On)
+            wideOn = b.wideOn, np5On = b.np5On, pickOn = b.pickOn, w20On = b.w20On, refusalLiveOn = b.refusalLiveOn,
+            refusalShadowToday = b.log.count { it.startsWith(today.toString()) && REFUSAL_MARK in it })
         // 16 Oct: each open trade's own exits for the position popup's "Exits" line (memory only).
         runCatching { com.optionslab.ira.ArmExits.set("passed", b.positions.filter { it.open && it.shadow == null }.map { exitsOf(it, b.locks[lockKey(it)]) }) }
     }
@@ -986,6 +1000,30 @@ object PassedArmsHost {
             else "The R72 and R51 pickers are off: their breaks are taken without them."
         }
     }
+
+    /**
+     * 19 Nov 2026 (audit batch 2, coordinator's decision B2-B; Bot settings): a paper-only refusal of an entry that could go live - another
+     * arm holds the option on paper, the paper account guard, no fresh paper price - also sends its live copy, through every live gate.
+     * Off (the default) is shadow: the refusal skips live as it always did and each such entry is logged "would have gone live". On adds
+     * live entries (live risk up), so it takes [pinConfirmed]; off only lowers risk (one tap).
+     */
+    suspend fun setRefusalLive(on: Boolean, pinConfirmed: Boolean = false): String {
+        if (!ready()) return "The passed arms are not ready yet."
+        if (on && !pinConfirmed) return "Switching this on adds live entries: it needs your PIN. Nothing changed."
+        return lock.withLock {
+            val b = book()
+            if (b.refusalLiveOn == on) return@withLock "Paper refusals going live is already ${if (on) "on" else "off"}."
+            b.refusalLiveOn = on
+            note(b, if (on) "paper refusals go live ON (Boss's PIN): an entry the paper book refused that could go live is sent live through every live gate"
+                else "paper refusals go live OFF: such entries skip live as before (each logged in shadow)")
+            save(b)
+            if (on) "On: an entry the paper book refuses (held on paper, the paper guard, no paper price) still goes live through every live gate."
+            else "Off (shadow): such entries skip live as before; each is logged as would have gone live."
+        }
+    }
+
+    /** 19 Nov 2026 (audit batch 2, B2-B): the words of a paper refusal that would have gone live (shadow), counted on the Bot settings card. */
+    const val REFUSAL_MARK = "would have gone live"
 
     /**
      * 6 Nov (Boss: "Do whatever you recommend", on R51): R150 B's W20 label on or off. On, each new R51 break is labelled "W20 would skip
@@ -2018,9 +2056,21 @@ object PassedArmsHost {
      * ([SHADOW_NOPRICE], [because] why) and its live copy asked ([askLive]; every live gate applies). Null: nothing asked (no such strike,
      * the arm off or skipped by the picker - those stay would-be only - no live path now, or no Zerodha price either).
      */
+    /**
+     * 19 Nov 2026 (audit batch 2, B2-B): a paper-only refusal of [arm]'s entry on [symbol] ([why]) that could have gone live, logged in shadow
+     * (the switch off: [setRefusalLive]) - once a day for the arm and option. Nothing is sent.
+     */
+    private fun refusalShadow(b: Book, arm: String, symbol: String, why: String) {
+        val day = now0().toLocalDate().toString()
+        val line = "${label(arm)}: $symbol $REFUSAL_MARK ($why; switch off, shadow - nothing sent)"
+        if (b.log.none { it.startsWith(day) && it.endsWith(line) }) note(b, line)
+    }
+
     private suspend fun liveNoPrice(b: Book, arm: String, u: String, c: Paper.Contract?, right: Right, now: LocalDateTime, setup: String?, idx: Double?,
                                     atr: Double?, keys: List<String>, breadth: Boolean?, pickSkip: String?, because: String): Pos? {
         if (c == null || pickSkip != null || b.armed[arm] != true || !ExposureCapHost.liveMirrorPossible(arm)) return null
+        // (B2-B: off - the default - shadow: skipped live as before, logged once.)
+        if (!b.refusalLiveOn) { refusalShadow(b, arm, c.symbol, "no fresh paper price"); return null }
         val px = runCatching { ArmLive.liveLast(c) }.getOrNull() ?: return null
         val p = wouldBe(b, arm, u, c, right, px, now, setup, idx, atr, keys, breadth, SHADOW_NOPRICE, because, copied = true)
         askLive(arm, c, p)
@@ -2062,11 +2112,13 @@ object PassedArmsHost {
         // the last price, as the cap's; the line names the arm.
         // 19 Nov 2026 (audit batch 2): while the entry could be copied live, a paper-only refusal never skips the live trade - the paper
         // side is kept as a would-be trade and its live copy is asked ([askLive]; every live gate still applies).
-        val liveCopy = ExposureCapHost.liveMirrorPossible(arm)
+        // (B2-B: only with Bot settings' switch on, Boss's PIN - [setRefusalLive]; off, shadow: skipped live as before and logged.)
+        val canLive = ExposureCapHost.liveMirrorPossible(arm)
+        val liveCopy = b.refusalLiveOn && canLive
         if (held != null) {
             val p = wouldBe(b, arm, u, c, right, q?.ask?.takeIf { it > 0 } ?: ref, now, setup, idx, atr, keys, breadth, SHADOW_HELD,
                 "${c.symbol} is held by ${label(held.arm)}", copied = liveCopy)
-            if (liveCopy) askLive(arm, c, p)
+            if (liveCopy) askLive(arm, c, p) else if (canLive) refusalShadow(b, arm, c.symbol, "held on paper by ${label(held.arm)}")
             return BuyStep(p, "would-be", true)
         }
         if (twin != null) {
@@ -2090,6 +2142,7 @@ object PassedArmsHost {
                 askLive(arm, c, p)
                 return BuyStep(p, "would-be", true)
             }
+            if (canLive) refusalShadow(b, arm, c.symbol, "refused by the paper account guard")
             return BuyStep(null, "refused by the account guard: " + refusals.joinToString(" "), true)
         }
         // 22 Oct: the guard's verdict stamped with this order's fingerprint ([OrderVerdicts]; the premium stop rests on the fill).

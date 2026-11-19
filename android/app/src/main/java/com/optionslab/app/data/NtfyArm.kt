@@ -991,7 +991,12 @@ object NtfyArm {
             var sold = 0; var value = 0.0; var ch = 0.0
             if (half > 0) {
                 val r = Paper.place(c, "SELL", half, "MARKET", "MIS", null, null, exit = true)
-                val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: return p
+                val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: run {
+                    // 19 Nov 2026 (audit batch 2, B2-B): its T1 sale found the paper book already flat (another paper close got there first):
+                    // the arm meant to sell, so its live copy is sold by this exit ([ArmLive.ruleExit]); the next look books it closed elsewhere.
+                    if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) runCatching { ArmLive.ruleExit(p.ref, "target T1") }
+                    return p
+                }
                 sold = f.quantity; value = f.price * f.quantity; ch = chargesOf(r.orderId)
             }
             p.stopOrderId?.let { runCatching { Paper.modify(it, p.qty - sold, null, p.entry) } }

@@ -2537,8 +2537,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // 19 Nov 2026 (audit batch 2: closing a paper row by hand sold its live copy at market): a live copy of this paper row stops
         // following it first and keeps its own stop and exits - nothing at Zerodha is sold - and the answer says so.
         runCatching { com.optionslab.app.data.ArmLive.refresh() }
+        // (B2-B: the words name every live copy of the row - one with its own 15:15 square-off stays open, a carried or MCX one is sold.)
+        val open = runCatching { com.optionslab.app.data.ArmLive.liveCopiesOpen(symbol, product) }.getOrDefault(emptyList())
         val copies = runCatching { com.optionslab.app.data.ArmLive.detachPaperSymbol(symbol, "paper row closed by hand", product) }.getOrDefault(emptyList())
-        val words = com.optionslab.app.data.ArmLive.liveCopyWords(copies)
+        val words = com.optionslab.app.data.ArmLive.liveCopyWords(open)
         // (A close that did not go - it threw, or the paper row is still held - gives the live copies back to their paper trade.)
         suspend fun giveBack() = copies.forEach { runCatching { com.optionslab.app.data.ArmLive.undetach(it.ref) } }
         // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
@@ -2564,10 +2566,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     private suspend fun liveCopiesKept(): Pair<List<com.optionslab.app.data.ArmLive.Pos>, String?> {
         runCatching { com.optionslab.app.data.ArmLive.refresh() }
+        val open = runCatching { com.optionslab.app.data.ArmLive.liveCopiesOpen() }.getOrDefault(emptyList())
         val hit = runCatching { com.optionslab.app.data.ArmLive.detachAll("paper reset") }.getOrDefault(emptyList())
         // (Written before the paper book is emptied: a kill right after the reset still never sells them.)
         if (hit.isNotEmpty()) runCatching { com.optionslab.app.data.ArmLive.applyDetached() }
-        return hit to com.optionslab.app.data.ArmLive.liveCopyWords(hit)
+        return hit to com.optionslab.app.data.ArmLive.liveCopyWords(open)
     }
 
     /**

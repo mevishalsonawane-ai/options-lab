@@ -158,6 +158,6 @@ private fun whenText(at: Long): String = runCatching {
  * logged in; null when it cannot be told (the close popup then checks it itself, as from the row).
  */
 internal suspend fun positionStillOpen(venue: String, symbol: String): Boolean? =
-    if (venue == "Paper") runCatching { com.optionslab.app.data.Paper.state.positions.any { it.symbol == symbol && it.quantity != 0 } }.getOrNull()
+    if (venue == "Paper") com.optionslab.app.data.Paper.stateIfLoaded()?.positions?.any { it.symbol == symbol && it.quantity != 0 }   // (19 Nov 2026: memory only - never the vault on the screen's thread)
     else if (!com.optionslab.app.data.Broker.loggedIn) null
     else runCatching { com.optionslab.app.data.Broker.positionBook().net.any { it.symbol == symbol && it.qty != 0 } }.getOrNull()

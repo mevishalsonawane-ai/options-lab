@@ -278,6 +278,38 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (audit batch 2, B2-B): R51's paper stop sale finds the paper book already flat (another paper close got there first): its
+     * live copy is still sold by that stop - exactly once, booked "stop" - and the paper trade is booked closed elsewhere.
+     */
+    @Test fun aStopThatLosesTheRaceToAPaperCloseStillSellsTheLiveCopyOnce() {
+        com.optionslab.app.data.ArmLive.testDefaultOff = false
+        com.optionslab.app.data.ArmLive.testSync = true
+        runBlocking { com.optionslab.app.data.ArmLive.setShadow(DonchianArm.SOURCE, false, pinConfirmed = true, log = false) }
+        val sym = "NIFTY26OCT25050CE"
+        kite.instruments += FakeKite.Ins(26_000_001, sym, "NIFTY", day.plusDays(7), 25_050.0, "CE", 65)
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        File(context.filesDir, "kite_instruments.json").delete()
+        runBlocking { Broker.instruments() }
+        only(DonchianArm.SOURCE)
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        val live = com.optionslab.app.data.ArmLive.view.value.open.single()
+        market(LocalTime.of(9, 25), call = { t -> if (t.isBefore(LocalTime.of(9, 24))) 100.0 else 84.0 })
+        kite.quote("NFO:$sym", 86.0, 85.95, 86.05)
+        try {
+            Paper.testBeforeExit = { c -> Paper.close(c.symbol, "MIS") }
+            at(LocalTime.of(9, 25)); runBlocking { PassedArmsHost.manageOnly() }
+        } finally { Paper.testBeforeExit = null }
+        runBlocking { com.optionslab.app.data.ArmLive.watch() }
+        at(LocalTime.of(9, 25), 20); runBlocking { PassedArmsHost.manageOnly() }       // the next look books the paper trade
+        runBlocking { com.optionslab.app.data.ArmLive.watch() }
+        assertEquals("closed_elsewhere", PassedArmsHost.view.value.closed.single { it.shadow != PassedArmsHost.SHADOW_OFF }.why)
+        assertEquals("CANCELLED", kite.order(live.stopOrderId!!).status)
+        assertEquals("sold by the arm's own stop", "stop", com.optionslab.app.data.ArmLive.view.value.closed.single().why)
+        assertEquals("exactly once", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+        assertEquals("flat at Zerodha, never short", 0, kite.positions["NFO:$sym:MIS"]?.first ?: 0)
+    }
+
+    /**
      * 18 Oct (Boss: "add a shadow button"): end to end, in Live with AI trades and Trade live on but R51 in SHADOW (its default), the
      * same break sends nothing to Zerodha: its live path records a shadow trade, which closes with the paper stop.
      */
@@ -955,6 +987,11 @@ class PassedArmsHostTest : RobolectricTest() {
         runBlocking { com.optionslab.app.data.ArmLive.refresh() }
         com.optionslab.app.data.ArmLive.liveFlags()
         assertTrue(ExposureCapHost.liveMirrorPossible(DonchianArm.SOURCE))
+        // (B2-B: only with Bot settings' switch on, which takes the PIN.)
+        assertTrue(runBlocking { PassedArmsHost.setRefusalLive(true) }.contains("needs your PIN"))
+        assertFalse(view().refusalLiveOn)
+        assertTrue(runBlocking { PassedArmsHost.setRefusalLive(true, pinConfirmed = true) }.startsWith("On"))
+        assertTrue(view().refusalLiveOn)
         val sym = "NIFTY26OCT25050CE"
         only(DonchianArm.SOURCE)
         market(LocalTime.of(9, 20))
@@ -990,6 +1027,56 @@ class PassedArmsHostTest : RobolectricTest() {
         // Persisted: a restart reads it back as copied.
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertTrue(view().closedOf(DonchianArm.SOURCE).single().copied)
+    }
+
+    /** B2-B: with the switch off (the default: shadow), a break held on paper by another arm skips live as before and is only logged. */
+    @Test fun withTheSwitchOffABreakHeldOnPaperSkipsLiveAndIsLoggedInShadow() {
+        liveFor(DonchianArm.SOURCE)
+        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
+        com.optionslab.app.data.ArmLive.liveFlags()
+        assertFalse("off by default", view().refusalLiveOn)
+        only(DonchianArm.SOURCE)
+        market(LocalTime.of(9, 20))
+        at(LocalTime.of(9, 20), 1)
+        val c = breakCall()
+        val r = runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null, com.optionslab.engine.sandbox.Quote(100.0), auto = OovArm.LABEL) }
+        runBlocking { PassedArmsHost.addOpenForTest(PassedArmsHost.Pos(OovArm.SOURCE, "NIFTY", c.symbol, "CE", 65, 100.0, day.atTime(9, 20), r.orderId, null, 100.0, null, null)) }
+        kite.requests.clear()
+        tick(LocalTime.of(9, 20))
+        val wb = PassedArmsHost.view.value.open.single { it.arm == DonchianArm.SOURCE }
+        assertEquals(PassedArmsHost.SHADOW_HELD, wb.shadow)
+        assertFalse("never copied live", wb.copied)
+        assertNothingAtZerodha()
+        assertTrue(view().log.toString(), view().log.any { PassedArmsHost.REFUSAL_MARK in it && "held on paper" in it })
+        assertEquals(1, view().refusalShadowToday)
+    }
+
+    /** B2-B: no fresh paper price - off (shadow): nothing live, logged; on (PIN): a would-be at Zerodha's price, its live copy sent. */
+    @Test fun noFreshPaperPriceSkipsLiveInShadowAndGoesLiveOnlyWithTheSwitchOn() {
+        liveFor(DonchianArm.SOURCE)
+        runBlocking { com.optionslab.app.data.ArmLive.refresh() }
+        com.optionslab.app.data.ArmLive.liveFlags()
+        val sym = "NIFTY26OCT25050CE"
+        only(DonchianArm.SOURCE)
+        market(LocalTime.of(9, 20))
+        upstox.minutes.remove(ce)                                      // the paper side has no price for the call
+        at(LocalTime.of(9, 20), 1)
+        kite.requests.clear()
+        tick(LocalTime.of(9, 20))
+        assertNothingAtZerodha()
+        assertTrue(view().log.toString(), view().log.any { PassedArmsHost.REFUSAL_MARK in it && "no fresh paper price" in it })
+        assertTrue(PassedArmsHost.view.value.open.none { it.arm == DonchianArm.SOURCE && it.copied })
+        // On (Boss's PIN): the next break's live copy goes, its paper side a would-be at Zerodha's price.
+        PassedArmsHost.wipe(); bookFile.delete()                       // (a fresh book: the same break is decided again)
+        runBlocking { PassedArmsHost.setRefusalLive(true, pinConfirmed = true) }
+        only(DonchianArm.SOURCE)
+        kite.requests.clear()
+        tick(LocalTime.of(9, 20))
+        val wb = PassedArmsHost.view.value.open.single { it.arm == DonchianArm.SOURCE }
+        assertEquals(PassedArmsHost.SHADOW_NOPRICE, wb.shadow)
+        assertTrue(wb.copied)
+        assertEquals(sym, kite.placed.first().form["tradingsymbol"])
+        assertEquals("BUY", kite.placed.first().form["transaction_type"])
     }
 
     /** A break tried in its window and refused (here the kill switch) says that reason once the window passes, never only "missed". */
