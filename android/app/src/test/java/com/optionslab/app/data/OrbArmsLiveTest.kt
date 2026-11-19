@@ -114,41 +114,102 @@ class OrbArmsLiveTest : RobolectricTest() {
     }
 
     /**
-     * 18 Nov 2026 (audit: B5, a crash between the POST and the booking): the entry is on disk as an unconfirmed trade BEFORE its order goes.
-     * The phone "dies" right after the POST (the book on disk is the one written before it, the stop never placed); after the restart the
-     * settle takes the lot Zerodha holds back as the arm's trade, with its stop - never an unowned lot with no stop, and no second buy.
+     * 18 Nov 2026 (audit: B5): approves the waiting entry and keeps the arms' book as it was on disk when the buy's POST reached Zerodha
+     * (19 Nov 2026: the intent's write runs beside the POST on the book's writer thread; it is awaited there, as the write a crash right
+     * after the POST would have left).
      */
-    @Test fun anEntryIsWrittenDownBeforeItsOrderGoesAndARestartSettlesIt() {
-        state(pending = true)
+    private fun approveKeepingTheBookAtThePost(): ByteArray {
         val file = java.io.File(context.filesDir, "orb.vault")
         val atPost = java.util.concurrent.atomic.AtomicReference<ByteArray?>()
-        kite.afterNext("/orders/regular") { atPost.set(com.optionslab.app.security.Vault.readFile(file)) }
+        kite.afterNext("/orders/regular") { OrbArms.awaitWrites(); atPost.set(com.optionslab.app.security.Vault.readFile(file)) }
         assertEquals("Entered at Zerodha (live).", approve())
         val snap = atPost.get()!!
         val saved = JSONObject(String(snap, Charsets.UTF_8))
         val row = saved.getJSONArray("positions").getJSONObject(0)
-        assertTrue("on disk before the order went", row.getBoolean("unconfirmed"))
+        assertTrue("on disk with the order", row.getBoolean("unconfirmed"))
         assertEquals("", row.getString("entryOrderId")); assertEquals("", row.getString("stopOrderId"))
         assertEquals(sym, row.getString("kite")); assertEquals(30, row.getInt("qty"))
         assertFalse("the approval used up on disk too", saved.optJSONObject("pending")?.has("orb") == true)
-        // The phone dies right after the POST: the book on disk is that one, and no stop was ever placed.
-        val buyId = kite.orders.keys.first()
-        val stopId = arm().open!!.stopOrderId!!
-        kite.orders.remove(stopId)
-        com.optionslab.app.security.Vault.writeFile(file, snap)
+        return snap
+    }
+
+    /** The phone "dies" with the book on disk as [snap]; the app starts again and its book is read back. */
+    private fun restartFrom(snap: ByteArray) {
+        com.optionslab.app.security.Vault.writeFile(java.io.File(context.filesDir, "orb.vault"), snap)
         com.optionslab.app.testing.AutomationSupport.reloadFromDisk(OrbArms)
         assertTrue("held as unconfirmed after the restart", arm().open!!.unconfirmed)
+    }
+
+    /**
+     * 18 Nov 2026 (audit: B5, a crash between the POST and the booking): the entry is on disk as an unconfirmed trade with its order.
+     * The phone "dies" right after the POST (the stop never placed); after the restart the settle finds the arm's own order (labelled,
+     * not claimed by any trade) and takes the lot back as the arm's trade, with its stop - never an unowned lot with no stop, no second buy.
+     */
+    @Test fun anEntryIsWrittenDownBeforeItsOrderGoesAndARestartSettlesIt() {
+        state(pending = true)
+        val snap = approveKeepingTheBookAtThePost()
+        val buyId = kite.orders.keys.first()
+        kite.orders.remove(arm().open!!.stopOrderId!!)                    // its stop was never placed
+        restartFrom(snap)
+        runBlocking { ArmLive.refresh() }
+        kite.requests.clear()
+        pass()
+        val p = arm().open!!
+        assertFalse(p.unconfirmed)
+        assertEquals(30, p.qty); assertEquals(buyId, p.entryOrderId)
+        val stop = kite.placed.single()
+        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "quantity" to "30"),
+            stop.form.filterKeys { it in setOf("transaction_type", "order_type", "quantity") })
+        assertEquals(kite.orders.keys.last(), p.stopOrderId)
+        assertEquals("still one buy", listOf(buyId), kite.orders.values.filter { it.side == "BUY" }.map { it.id })
+    }
+
+    /**
+     * 19 Nov 2026 (second review): the phone "dies" after the first stop was placed but before the booked trade was saved: after the
+     * restart the settle takes that resting stop as the trade's - exactly one stop at Zerodha, never a second beside it.
+     */
+    @Test fun aRestartAfterTheFirstStopWentTakesThatStopNeverASecond() {
+        state(pending = true)
+        val snap = approveKeepingTheBookAtThePost()
+        val stopId = arm().open!!.stopOrderId!!
+        restartFrom(snap)
         runBlocking { ArmLive.refresh() }
         kite.requests.clear()
         pass()
         val p = arm().open!!
         assertFalse(p.unconfirmed)
         assertEquals(30, p.qty)
-        val stop = kite.placed.single()
-        assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "quantity" to "30"),
-            stop.form.filterKeys { it in setOf("transaction_type", "order_type", "quantity") })
-        assertEquals(kite.orders.keys.last(), p.stopOrderId)
-        assertEquals("still one buy", listOf(buyId), kite.orders.values.filter { it.side == "BUY" }.map { it.id })
+        assertEquals("its stop is the one already resting", stopId, p.stopOrderId)
+        assertTrue("no second stop: ${kite.placed.map { it.form }}", kite.placed.none { it.form["order_type"] == "SL" || it.form["order_type"] == "SL-M" })
+        assertEquals("exactly one stop at Zerodha", 1, kite.orders.values.count { it.side == "SELL" && it.type == "SL" && it.working })
+    }
+
+    /**
+     * 19 Nov 2026 (second review, order speed): with a 1.5 s vault write (a Pixel's StrongBox) the entry's POST never waits on the
+     * intent's write - when the buy reaches Zerodha the intent is still being written (it lands moments later), and the POST comes well
+     * before two writes' time (the approval's own write of the used-up approval, as before, is the only one ahead of it).
+     */
+    @Test fun theEntrysPostNeverWaitsOnTheIntentsVaultWrite() {
+        state(pending = true)
+        val file = java.io.File(context.filesDir, "orb.vault")
+        val onDisk = java.util.concurrent.atomic.AtomicReference<String?>()
+        val postMs = java.util.concurrent.atomic.AtomicLong(-1)
+        val t0 = System.nanoTime()
+        kite.afterNext("/orders/regular") {
+            postMs.set((System.nanoTime() - t0) / 1_000_000)
+            onDisk.set(com.optionslab.app.security.Vault.readFile(file)?.toString(Charsets.UTF_8))
+        }
+        com.optionslab.app.security.Vault.testWriteDelayMs = 1_500L
+        try {
+            assertEquals("Entered at Zerodha (live).", approve())
+        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0L }
+        val atPost = JSONObject(onDisk.get()!!).getJSONArray("positions")
+        assertEquals("the intent not on disk yet when the order went (its write still running): $atPost", 0, atPost.length())
+        assertTrue("the POST at ${postMs.get()} ms, under two 1.5 s writes", postMs.get() in 0 until 2_900)
+        assertTrue(OrbArms.awaitWrites())
+        val now = JSONObject(String(com.optionslab.app.security.Vault.readFile(file)!!, Charsets.UTF_8)).getJSONArray("positions")
+        assertEquals("on disk after", 1, now.length())
+        assertFalse(now.getJSONObject(0).getBoolean("unconfirmed"))
     }
 
     /** 18 Nov 2026 (audit: B5): an entry Zerodha refuses outright leaves no unconfirmed row behind (the arm is free for the next signal). */

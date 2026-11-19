@@ -227,8 +227,8 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
-     * 18 Nov 2026 (audit: B2, review): a stop put back for less than the trade holds (another sale covers the rest) splits the trade, so
-     * its fill is never booked for more than it sold.
+     * 18 Nov 2026 (audit: B2, review): a stop put back for less than the trade holds (another sale covers the rest; the exit's read failed
+     * after the stop came out) splits the trade, so its fill is never booked for more than it sold.
      */
     @Test fun aStopPutBackForLessThanTheTradeSplitsIt() {
         val s1 = stopOrder(60, 160.0, 152.0)
@@ -236,10 +236,11 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         kite.position(sym, 90, 200.0, product = "MIS")
         kite.restingInKite(sym, "SELL", 60, 260.0, tag = "iraalgo")         // another book's sale covers 60 of the 90 held
         kite.quote("NFO:$sym", 245.0, 244.95, 245.05)                       // the ORB's target
-        kite.nextPlace(reply = FakeKite.Reply.INPUT_EXCEPTION, message = "Markets are closed right now.")
+        kite.afterNext("/orders/regular/$s1") { kite.down += "/orders" }   // the order book fails from the stop's cancel on
         kite.requests.clear()
         pass()
-        assertEquals("the sale tried was the 30 left", "30", marketSells().single().form["quantity"])
+        kite.down.clear()
+        assertTrue("nothing sold", marketSells().isEmpty())
         val back = kite.placed.single { it.form["order_type"] == "SL" }
         assertEquals("30", back.form["quantity"])
         val open = view().single { it.arm.source == "orb" }.today.filter { it.open }
@@ -247,8 +248,11 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals("the stop is the covered part's", 1, open.count { it.stopOrderId == kite.orders.keys.last() })
     }
 
-    /** 18 Nov 2026 (audit: B2): from 15:10 a refused exit does not put the stop back (the square-off sells it; Boss is told). */
-    @Test fun fromTheSquareOffARefusedExitDoesNotPutTheStopBack() {
+    /**
+     * 19 Nov 2026 (second review, coordinator's decision: main's behaviour): from 15:10 an exit sale Zerodha refuses puts the stop back at
+     * once, for the whole trade - a lot is never left with no stop because a sale was refused (the next pass takes it out again to sell).
+     */
+    @Test fun fromTheSquareOffARefusedExitPutsTheStopBack() {
         OrbArms.testNow = OrbArms.testNow!!.with(java.time.LocalTime.of(15, 12))
         val s1 = stopOrder(30, 160.0, 152.0)
         state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
@@ -258,8 +262,48 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         kite.requests.clear()
         pass()
         assertEquals("CANCELLED", kite.order(s1).status)
-        assertTrue("no stop placed again", kite.placed.none { it.form["order_type"] == "SL" })
-        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "was not put back (the square-off time)" in it })
+        val back = kite.placed.single { it.form["order_type"] == "SL" }
+        assertEquals("30", back.form["quantity"])
+        assertEquals(kite.orders.keys.last(), open("orb")!!.stopOrderId)
+        assertEquals("TRIGGER PENDING", kite.order(open("orb")!!.stopOrderId!!).status)
+    }
+
+    /** 19 Nov 2026 (second review): with Boss's Stop for today on, a refused exit sale puts the stop back too (as main did). */
+    @Test fun withStopForTodayARefusedExitPutsTheStopBack() {
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.nextPlace(reply = FakeKite.Reply.INPUT_EXCEPTION, message = "Markets are closed right now.")
+        kite.requests.clear()
+        pass()
+        assertEquals("the stop came out for the sale", "CANCELLED", kite.order(s1).status)
+        assertEquals("the sale was tried", listOf("30"), marketSells().map { it.form["quantity"] })
+        val back = kite.placed.single { it.form["order_type"] == "SL" }
+        assertEquals("30", back.form["quantity"]); assertEquals("160.00", back.form["trigger_price"])
+        val p = open("orb")!!
+        assertEquals(kite.orders.keys.last(), p.stopOrderId)
+        assertEquals("TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+    }
+
+    /**
+     * 19 Nov 2026 (second review): an unconfirmed row on the contract (an entry written down before its order went) never counts as the
+     * app's lots when deciding whether Boss's own sell may be cancelled: Zerodha holds his lot beside the arm's, so it is left alone.
+     */
+    @Test fun anUnconfirmedRowNeverLetsTheAppCancelBosssSell() {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0),
+            position("orb", 30, 200.0, entryId = null, stopId = null, stop = null).put("arm", "orb_fresh").put("unconfirmed", true)))
+        kite.position(sym, 60, 200.0, product = "MIS")                      // the arm's lot and Boss's own
+        val his = kite.restingInKite(sym, "SELL", 60, 250.0)
+        kite.quote("NFO:$sym", 150.0, 149.95, 150.05)                       // through the stop's limit
+        kite.requests.clear()
+        pass()
+        assertEquals("his order left alone", "OPEN", kite.order(his).status)
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertTrue("nothing cancelled, nothing sold: ${kite.requests.filter { it.method != "GET" }.map { it.method + " " + it.path }}",
+            kite.requests.none { it.method == "DELETE" } && marketSells().isEmpty())
     }
 
     // ---- B3: the resting stop never sells more than Zerodha holds ------------------------------------------------------------
@@ -294,6 +338,24 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         val closed = today("orb").single { !it.open }
         assertEquals(30, closed.qty); assertEquals("closed_by_you", closed.why)
         assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "Zerodha holds 30 of $sym" in it })
+    }
+
+    /**
+     * 19 Nov 2026 (second review): a strategy leg traded the same contract today (its sale is in the order book): the reads agreeing for
+     * a while never cut the arm's trade or its stop - only a sale outside the app covering the difference would.
+     */
+    @Test fun aStrategyLegOnTheContractNeverLetsTheTimerShrinkTheStop() {
+        val s1 = twoLots()
+        kite.soldInKite(sym, 30, 211.0, tag = "iraalgostrat")              // a strategy's leg sells 30 of the same contract
+        pass()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(31)
+        pass()
+        OrbArms.testNow = OrbArms.testNow!!.plusMinutes(6)
+        pass()
+        assertEquals("the stop untouched", 60, kite.order(s1).qty)
+        assertEquals("TRIGGER PENDING", kite.order(s1).status)
+        assertEquals(60, open("orb")!!.qty)
+        assertTrue(today("orb").none { !it.open })
     }
 
     /** 18 Nov 2026 (audit: B3): one read showing less with no sale anywhere changes nothing; five minutes of reads agreeing do. */

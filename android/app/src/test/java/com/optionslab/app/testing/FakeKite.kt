@@ -207,9 +207,9 @@ class FakeKite : Closeable {
      * 18 Nov 2026: Boss sells [qty] of [symbol] himself in the Kite app at [price]: a COMPLETE sale with no tag in the order book (as
      * Zerodha shows it), the position moved by it. The order's id.
      */
-    fun soldInKite(symbol: String, qty: Int, price: Double, product: String = "MIS", exchange: String = "NFO"): String = synchronized(lock) {
+    fun soldInKite(symbol: String, qty: Int, price: Double, product: String = "MIS", exchange: String = "NFO", tag: String = ""): String = synchronized(lock) {
         val id = (++seq).toString()
-        val o = Order(id, symbol, exchange, "SELL", qty, product, "MARKET", 0.0, 0.0, "", "COMPLETE", filled = qty, avg = price)
+        val o = Order(id, symbol, exchange, "SELL", qty, product, "MARKET", 0.0, 0.0, tag, "COMPLETE", filled = qty, avg = price)
         orders[id] = o
         move(o, qty)
         id
