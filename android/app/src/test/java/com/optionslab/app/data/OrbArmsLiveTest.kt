@@ -278,7 +278,7 @@ class OrbArmsLiveTest : RobolectricTest() {
         kite.boughtInKite(sym, 30, 199.0, tag = "iraorb")
         state()
         OrbArms.testNow = OrbArms.testNow!!.withSecond(0).withNano(0)
-        val said = { AutomationSupport.alerts().count { "for over a minute since the app started" in it } }
+        val said = { AutomationSupport.alerts().count { "for over a minute since their first try" in it } }
         pass()
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(30)
         pass()
@@ -292,13 +292,15 @@ class OrbArmsLiveTest : RobolectricTest() {
     }
 
     /**
-     * 19 Nov 2026 (coordinator): an unfilled LIMIT entry holds the arms' lock 5 s at most (then cancelled, its cancel confirmed): another
+     * 19 Nov 2026 (coordinator): an unfilled LIMIT entry waits 5 s at most under the arms' lock (then cancelled, its cancel confirmed in 3 s
+     * at most - at once here): another
      * open trade's price check waiting on that lock is held up no longer than that.
      */
     @Test fun anUnfilledLimitEntryHoldsOtherTradesLooksFiveSecondsAtMost() {
         state(pending = true)
         kite.nextPlace(outcome = Outcome.OPEN)
-        val entry = Thread { runBlocking { OrbArms.approve("orb", pinConfirmed = true) } }
+        val result = java.util.concurrent.atomic.AtomicReference<Any?>()
+        val entry = Thread { result.set(runCatching { runBlocking { OrbArms.approve("orb", pinConfirmed = true) } }.fold({ it }, { it })) }
         entry.start()
         val until = System.currentTimeMillis() + 10_000
         while (kite.placed.none { it.form["transaction_type"] == "BUY" } && System.currentTimeMillis() < until) Thread.sleep(20)
@@ -307,7 +309,10 @@ class OrbArmsLiveTest : RobolectricTest() {
         pass()                                                             // waits on the arms' lock the entry holds
         val ms = (System.nanoTime() - t0) / 1_000_000
         entry.join(20_000)
-        assertTrue("the look waited $ms ms", ms < 6_500)
+        assertFalse("the entry finished", entry.isAlive)
+        assertTrue("the entry answered: ${result.get()}", (result.get() as? String)?.contains("did not fill") == true)
+        // (5 s wait + the cancel's confirm, at once here, + the look's own work; the 15 s wait before held it ~15 s.)
+        assertTrue("the look waited $ms ms", ms < 8_000)
         assertEquals("cancelled, nothing bought", "CANCELLED", kite.orders.values.single { it.side == "BUY" }.status)
         assertNull(arm().open)
     }
@@ -437,8 +442,8 @@ class OrbArmsLiveTest : RobolectricTest() {
     @Test fun aLostReplyIsHeldUnconfirmedThenSettledWithItsStop() {
         state(pending = true)
         kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
-        // and the order book cannot be read either, from the POST on (19 Nov 2026: before it, the entry's start-up check of Zerodha's
-        // orders must read it - an unreadable book then refuses the entry, never a blind buy).
+        // and the order book cannot be read either, from the POST on (19 Nov 2026: so the entry's start-up check of Zerodha's orders runs
+        // first - an unreadable book then would let the entry go with the wait logged in shadow, a different case from this one).
         kite.afterNext("/orders/regular") { kite.down += "/orders" }
         assertEquals("Bought at Zerodha, not yet confirmed: held until the order book shows what filled.", approve())
         val held = arm().open!!

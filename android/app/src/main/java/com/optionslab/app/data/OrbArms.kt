@@ -3241,8 +3241,11 @@ object OrbArms {
         // that is only logged in SHADOW ("would have waited") and said once; the sweep keeps trying on later looks.
         if (!coldSwept) {
             val rows = b.positions.size
-            if (runCatching { coldSweep(b, now(), Strategies.stoppedToday()) }.getOrDefault(false)) coldSwept = true
-            else {
+            val t0 = now()
+            val done = runCatching { coldSweep(b, t0, Strategies.stoppedToday()) }.getOrDefault(false)
+            if (done) coldSwept = true else coldFailed(t0)
+            if (b.positions.size != rows) return "refused: a lot from before the restart was taken back at Zerodha; nothing more bought now"
+            if (!done) {
                 runCatching { Diag.record("orb", "${arm.label}: shadow - would have waited for the start-up sweep of Zerodha's orders (not run yet); the entry goes") }
                 if (!coldGateSaid) {
                     coldGateSaid = true
@@ -3250,7 +3253,6 @@ object OrbArms {
                         "for a buy from before the restart (the check is tried again on each look). Check Trade for a lot with no stop.", "ORB live") }
                 }
             }
-            if (b.positions.size != rows) return "refused: a lot from before the restart was taken back at Zerodha; nothing more bought now"
         }
         val ins = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull())?.firstOrNull {
             it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6
@@ -3761,7 +3763,7 @@ object OrbArms {
         val first = coldFailSince ?: ms.also { coldFailSince = it }
         if (!coldFailSaid && ms - first > COLD_FAIL_SAY_MS) {
             coldFailSaid = true
-            runCatching { com.optionslab.app.work.Alerts.error("ORB live: for over a minute since the app started, the arms could not check Zerodha's " +
+            runCatching { com.optionslab.app.work.Alerts.error("ORB live: for over a minute since their first try after the app started, the arms could not check Zerodha's " +
                 "orders for a buy of theirs from before the restart - a lot may be held with no stop and nothing watching it. Check Trade and Kite.", "ORB live") }
         }
     }
@@ -3803,7 +3805,8 @@ object OrbArms {
         val byLabel = ALL_ARMS.associateBy { it.label }
         var changed = false
         for ((sym, list) in buys.groupBy { it.symbol }) {
-            if (b.positions.any { it.open && it.live && it.kite == sym && it.unconfirmed && it.entryOrderId == null }) continue
+            // (Its own settle takes it; the sweep is not done until that row has settled - an old lot beside it is looked at again then.)
+            if (b.positions.any { it.open && it.live && it.kite == sym && it.unconfirmed && it.entryOrderId == null }) { again = true; continue }
             val ins = instruments.firstOrNull { it.tradingSymbol == sym } ?: run { again = true; null } ?: continue
             val lot = ins.lotSize.coerceAtLeast(1)
             val rows = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }
