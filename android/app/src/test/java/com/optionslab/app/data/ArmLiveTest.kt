@@ -1940,15 +1940,25 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("paper_exit", view().closed.single().why)
     }
 
-    /** Audit A2: Zerodha's net on a contract an arm trades the other way of its trade (more sold than held) is said loudly, once. */
-    @Test fun aNetShortOnAnArmsContractIsSaidLoudly() {
+    /**
+     * Audit A2: the arms' own sales of a contract beyond what they bought (two exits of one lot filled: a naked short) are said loudly,
+     * once; Boss's own short in Kite beside an arm's lot is his, never alarmed.
+     */
+    @Test fun aNetShortTheArmsSoldIsSaidLoudlyButNeverBossesOwnShort() {
         com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.entered(ask(donchian, "own-short"))
+        watch()
+        kite.soldInKite(sym, 60, 200.0)                                    // Boss writes 2 lots himself in Kite
+        assertEquals(-30, held())
+        watch()
+        assertEquals("his own short is his", 0, posted("more was sold than held"))
+        ArmLive.wipe(); kite.flat(); kite.orders.clear(); legs.clear(); com.optionslab.app.work.Alerts.forgetPosted()
         ArmLive.entered(ask(donchian, "neg"))
         watch()
-        kite.soldInKite(sym, 60, 200.0)
+        repeat(2) { kite.soldInKite(sym, 30, 200.0, tag = LiveMirror.TAG) }        // two of the arms' own exits of one lot filled
         assertEquals(-30, held())
         watch(); watch()
-        assertEquals(1, posted("more was sold than held"))
+        assertEquals("said once", 1, posted("more was sold than held"))
     }
 
     /**
@@ -1999,8 +2009,11 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("one buy only", 1, kite.orders.values.count { it.side == "BUY" })
     }
 
-    /** Audit A4: an entry Zerodha refuses leaves no intent behind; a book that cannot be written sends no order and is said, once. */
-    @Test fun anIntentIsDroppedWhenNothingWasBoughtAndNoOrderGoesUnwritten() {
+    /**
+     * Audit A4: an entry Zerodha refuses leaves no intent behind. A book that cannot be written is said once and written again on the next
+     * look; the entry still goes as before (never a new skip of a live entry), its intent kept in memory.
+     */
+    @Test fun anIntentIsDroppedWhenNothingWasBoughtAndAnUnwrittenBookIsSaid() {
         com.optionslab.app.work.Alerts.forgetPosted()
         kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "Insufficient funds.")
         ArmLive.entered(ask(donchian, "refused"))
@@ -2009,16 +2022,18 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(donchian, "rejected"))
         assertTrue("rejected, nothing filled: no row left", view().open.isEmpty())
         kite.requests.clear()
+        val f = java.io.File(context.noBackupFilesDir, "arm_live.vault")
         ArmLive.testWriteFails = java.util.concurrent.atomic.AtomicInteger(1_000)
         ArmLive.entered(ask(donchian, "unwritten"))
-        assertTrue("no order without its intent written", kite.placed.isEmpty())
-        assertTrue(view().open.isEmpty())
-        assertEquals(true, view().refused[donchian]?.contains("could not be written"))
+        assertEquals("the entry goes as before", "BUY", kite.placed.first().form["transaction_type"])
+        assertEquals(1, view().openReal.size)
         assertEquals("said once", 1, posted("could not be saved"))
         ArmLive.testWriteFails = null
         watch()
-        ArmLive.entered(ask(donchian, "written"))
-        assertEquals(1, view().openReal.size)
+        // Written on the next look: a restart finds the trade.
+        ArmLive.forgetMemoryForTest()
+        assertTrue(f.exists())
+        assertEquals("unwritten", runBlocking { ArmLive.refresh() }.openReal.single().ref)
     }
 
     /**
