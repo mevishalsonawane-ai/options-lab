@@ -5418,6 +5418,10 @@ object OrbArms {
             liquidityMinutes(t, und, reads = reads, offline = true)
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
+        } catch (e: HistoryNotKept) {
+            // (19 Nov 2026, audit batch 2: the earlier sessions still being read - no entry on today's candles alone; a failed read of
+            // today's candles is said as such first.)
+            return reads?.let { IndexData.gate(und, it) } ?: "liquidity_history_loading"
         } catch (e: Exception) {
             // Its own index's candles could not be read on this pass: only the books on that index stop (any other error as before).
             return reads?.let { IndexData.gate(und, it) } ?: throw e
@@ -5839,6 +5843,11 @@ object OrbArms {
         val open = b.positions.withIndex().filter { it.value.open && !it.value.unconfirmed && armOf(it.value.arm).liquidity }
         if (open.isEmpty()) return
         val minutes = HashMap<String, List<Bar>>()
+        // 19 Nov 2026 (audit batch 2, last round): the indices whose earlier sessions are not in memory yet (a restart mid-day, the history
+        // job still reading) but whose today's candles were read: their positions' exits are judged on today's minutes with the levels the
+        // position stored - the index stop, the target, the failed break and the time stop need nothing else; only "new liquidity" (the
+        // zones, which need the earlier sessions) waits for them. Entries keep waiting for the earlier sessions.
+        val todayOnly = HashSet<String>()
         for ((i, p) in open) try {
             val und = LiquidityRules.underlyingOf(armOf(p.arm))
             // 22 Oct (R100 audit A): one index's failed candle read used to escape this loop, so every Liquidity position after it
@@ -5847,6 +5856,11 @@ object OrbArms {
             // judged); their time stop, which reads only the option's price, still decides, and the other indices go on as before.
             val ones = minutes.getOrPut(und) {
                 (pre[und] ?: try { liquidityMinutes(t, und, reads = reads, offline = true) } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: HistoryNotKept) {
+                        val today = reads?.takeIf { und in it.fetched && !it.failed(und) }?.read(und) { throw e }
+                        if (today != null) { todayOnly += und; toBars(today).filter { it.start.toLocalDate() == t.toLocalDate() } }
+                        else { if (!quiet) indexReadFailed(und, t, e); emptyList() }
+                    }
                     catch (e: Exception) { if (!quiet) indexReadFailed(und, t, e); emptyList() })
                     .filter { !it.start.plusMinutes(1).isAfter(t) }
             }
@@ -5863,7 +5877,9 @@ object OrbArms {
             val fresh = marks[p.symbol]?.takeIf { markedAt[p.symbol]?.isBefore(t.minusMinutes(1)) == false }
             // The decision itself is pure ([LiquidityRules.exitNow]: the strategy lab replays the same), with the position's own
             // day's and account's exit parameters (S9; its constants unless a variant is in force).
-            val look = LiquidityRules.exitNow(side, level, p.target, p.signalBar, p.entry, p.entryTime, t, bars, since, und, fresh, p.timed, liqParams(p))
+            val look = if (und in todayOnly) LiquidityRules.exitNow(side, level, p.target, p.signalBar, p.entry, p.entryTime, t, bars, since, und, fresh,
+                p.timed, liqParams(p), levels = { emptyList() })
+                else LiquidityRules.exitNow(side, level, p.target, p.signalBar, p.entry, p.entryTime, t, bars, since, und, fresh, p.timed, liqParams(p))
             if (look.timed && !p.timed) { cur = p.copy(timed = true); b.positions[i] = cur }
             val why = look.why ?: continue
             if (p.live) {
@@ -6035,11 +6051,13 @@ object OrbArms {
         // 22 Oct (arms audit): a history read that came back empty is not tried again (6 tries) on every look: once a minute.
         // 19 Nov 2026 (audit batch 2, second review F1): the earlier sessions are read once a day per index by a job of their own, OFF the
         // lock, with its full tries and timeout ([historyJob]) - a look's deadline only stops waiting for it, never the read, so on a slow
-        // link it still lands and the next look finds it in memory. Under the lock they are never read: not in memory yet is a failed read
-        // for this look - never a decision or an index exit on today's candles alone. (In a test too: the test feed is that job's read.)
+        // link it still lands and the next look finds it in memory. Under the lock they are never read: not in memory yet, an entry waits
+        // for them ("history loading"), and an open position's exits use only what needs no earlier session (today's minutes and the levels
+        // it stored: [liquidityExits]). As before, for [HISTORY_MISS_MS] after a read that found none, today's candles are used alone.
+        // (In a test too: the test feed is that job's read.)
         fun kept(): List<Bar>? = liquidityHistory[underlying]?.takeIf { it.first == day }?.second
             ?: if (liquidityHistoryMiss[underlying]?.let { System.currentTimeMillis() - it < HISTORY_MISS_MS } == true) emptyList() else null
-        val hist = kept() ?: if (offline) throw NotReadBeforeLock(underlying) else {
+        val hist = kept() ?: if (offline) throw HistoryNotKept(underlying) else {
             historyJob(underlying, day, bank, key).await()
             kept() ?: throw java.io.IOException("$underlying: its earlier sessions are not read yet")
         }
@@ -6493,6 +6511,9 @@ object OrbArms {
         return streamed(underlying, if (quick) Net.intradayQuick(key) else Net.intraday(key), t)
     }
 
+    /** 19 Nov 2026 (audit batch 2, last round): an index's earlier sessions not in memory yet under the arms' lock - never read there. */
+    private class HistoryNotKept(index: String) : java.io.IOException("$index: its earlier sessions are not read yet")
+
     /** 19 Nov 2026 (audit batch 2): an index's candles asked for under the arms' lock that were not read before it - never read there. */
     private class NotReadBeforeLock(index: String) : java.io.IOException("$index: its candles were not read before the arms' lock this pass")
 
@@ -6519,7 +6540,11 @@ object OrbArms {
                     ?: Result.failure(java.io.IOException("$u: its candles did not come within ${budgetMs / 1000} s"))
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Result.failure(e) }
             reads.read(u) { got.getOrThrow() }
-            if (u !in liq || got.isFailure) continue
+        }
+        // (19 Nov 2026, last round: today's candles of every index first, then the earlier sessions with the time left - one index's slow
+        // history never leaves the others without today's candles.)
+        for (u in unds.distinct()) {
+            if (u !in liq || reads.failed(u)) continue
             val left2 = end - System.currentTimeMillis()
             if (left2 > 0) try {
                 kotlinx.coroutines.withTimeoutOrNull(left2) { liquidityMinutes(t, u, reads = reads, quick = true) }
