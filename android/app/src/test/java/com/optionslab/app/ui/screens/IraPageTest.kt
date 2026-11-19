@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.optionslab.app.ira.IraHub
@@ -113,6 +114,17 @@ class IraPageTest {
         compose.onNodeWithText("Ask").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.until(10_000, "a second answer") { IraHub.state.value.messages.size == 4 }
         assertTrue(IraHub.state.value.messages.last().text.startsWith("I only know"))
+        // 20 Nov 2026 (CI on 87fe8c6f1: "timed out waiting for 'Forget this conversation'"): the link is the list's last item, under the
+        // newest message. The page scrolls to the list's last item when a message arrives, but reads the item count before the new message
+        // is laid out - so it can stop on the message, the link just below the fold and never composed (a lazy list composes what is in
+        // view). Scrolled to as Boss would, then waited for and tapped as before.
+        compose.until(10_000, "the link scrolled into view") {
+            compose.onAllNodes(androidx.compose.ui.test.hasScrollToNodeAction()).fetchSemanticsNodes().indices.any { i ->
+                runCatching { compose.onAllNodes(androidx.compose.ui.test.hasScrollToNodeAction())[i]
+                    .performScrollToNode(androidx.compose.ui.test.hasText("Forget this conversation")) }.isSuccess
+            }
+        }
+        compose.frames()
         compose.waitForText("Forget this conversation")
         compose.onNodeWithText("Forget this conversation").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
         compose.until(5_000, "forgotten") { IraHub.state.value.messages.isEmpty() }
