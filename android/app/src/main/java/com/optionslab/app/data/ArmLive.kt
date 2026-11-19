@@ -3162,7 +3162,7 @@ object ArmLive {
             return true
         }
         // (Its managing arm and its price known before anything is claimed: a claim is never left for a lot nobody took.)
-        if (LiveMirror.ARMS.none { it.product == product && it.rest == LiveMirror.Rest.SL }) return false
+        if (LiveMirror.ARMS.none { it.product == product }) return false
         if (pool.none { it.avg > 0 } && net.none { it.avg > 0 }) return false
         val q = takeLost("arm", exch, sym, product) { other -> otherSeen = other
             minOf(cap, LiveMirror.unexplainedQty(held, boughtToday, others + other, asked, lot)) }
@@ -3178,9 +3178,11 @@ object ArmLive {
             .mapNotNull { sp -> rebuiltLeg(sp, sym)?.takeIf { it.ref !in refs }?.let { sp to it } }
         val leg = (byLabel?.let { b -> legs.firstOrNull { it.first.key == b.key } }) ?: legs.singleOrNull().takeIf { byLabel == null }
         val spec = byLabel ?: leg?.first
-        // Not told: managed under an arm of the same product that rests its stop as an SL order (its exits and square-offs), safety stop.
+        // Not told: managed under an arm of the same exchange and product (its exits and square-offs; one resting an SL order first, else
+        // one resting a GTT - a carried lot), with the safety stop.
         val host = spec ?: LiveMirror.ARMS.firstOrNull { it.exchange == exch && it.product == product && it.rest == LiveMirror.Rest.SL }
-            ?: LiveMirror.ARMS.firstOrNull { it.product == product && it.rest == LiveMirror.Rest.SL } ?: return false
+            ?: LiveMirror.ARMS.firstOrNull { it.exchange == exch && it.product == product }
+            ?: LiveMirror.ARMS.firstOrNull { it.product == product } ?: return false
         // (Its price: the average of the unowned orders taken back, newest first for what is taken - never blended with an owned one's.)
         var left = takeQ; var paid = 0.0; var paidQty = 0
         for (o in pool.sortedByDescending { it.placedAt }) { if (left <= 0) break; val k = minOf(left, rem[o.id] ?: 0); if (o.avg > 0) { paid += o.avg * k; paidQty += k }; left -= k }
