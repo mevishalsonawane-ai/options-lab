@@ -216,9 +216,9 @@ class FakeKite : Closeable {
     }
 
     /** 18 Nov 2026 (review F1): Boss buys [qty] of [symbol] himself in the Kite app at [price] (no tag), the position moved by it. Its id. */
-    fun boughtInKite(symbol: String, qty: Int, price: Double, product: String = "MIS", exchange: String = "NFO"): String = synchronized(lock) {
+    fun boughtInKite(symbol: String, qty: Int, price: Double, product: String = "MIS", exchange: String = "NFO", tag: String = ""): String = synchronized(lock) {
         val id = (++seq).toString()
-        val o = Order(id, symbol, exchange, "BUY", qty, product, "MARKET", 0.0, 0.0, "", "COMPLETE", filled = qty, avg = price)
+        val o = Order(id, symbol, exchange, "BUY", qty, product, "MARKET", 0.0, 0.0, tag, "COMPLETE", filled = qty, avg = price)
         orders[id] = o
         move(o, qty)
         id

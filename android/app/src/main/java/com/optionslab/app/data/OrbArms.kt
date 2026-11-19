@@ -2473,7 +2473,9 @@ object OrbArms {
         val stopped = Strategies.stoppedToday()
         // 19 Nov 2026 (coordinator): this process's first regular look takes back the arms' own live buys no row holds (never on a stream
         // look) - before the open positions are watched, so what it adopts is watched from this pass on ([coldSweep]).
-        if (regular && !stream && !coldSwept && Broker.loggedIn && runCatching { coldSweep(b, t, stopped) }.getOrDefault(false)) coldSwept = true
+        if (regular && !stream && !coldSwept && Broker.loggedIn) {
+            if (runCatching { coldSweep(b, t, stopped) }.getOrDefault(false)) coldSwept = true else coldFailed(t)
+        }
         val liveOpen = b.positions.withIndex().filter { it.value.open && it.value.live }
         if (liveOpen.isNotEmpty()) runCatching { priceCheckLive(b, t, liveOpen, stopped, stream, regular) }
         val open = b.positions.withIndex().filter { it.value.open && !it.value.live }
@@ -3233,13 +3235,21 @@ object OrbArms {
         val findings = runCatching { com.optionslab.app.security.Integrity.reportWithin(app, 60_000) }.getOrDefault(emptyList())
         if (com.optionslab.app.security.Integrity.compromised(findings)) return "refused: this phone failed the security check; no live order sent"
         if (!Broker.loggedIn) return "refused: not logged in to Zerodha today"
-        // 19 Nov 2026 (coordinator): no live entry before this process's cold-start sweep has run to its end - an arm whose lot from before
-        // the restart is not taken back yet would buy again ([coldSweep]; run here when no look has run it yet, once per process).
+        // 19 Nov 2026 (coordinator): this process's cold-start sweep ([coldSweep]) runs here when no look has run it yet. It took a lot back:
+        // that trade already exists and this entry's checks ran before it was here - no buy now. It could not run (the order book
+        // unreadable, the arms' live copies' book not read): the entry goes as before - waiting would be a new skip of live entries, so
+        // that is only logged in SHADOW ("would have waited") and said once; the sweep keeps trying on later looks.
         if (!coldSwept) {
             val rows = b.positions.size
             if (runCatching { coldSweep(b, now(), Strategies.stoppedToday()) }.getOrDefault(false)) coldSwept = true
-            else return "refused: the arms' start-up check of Zerodha's orders has not finished (asked again next signal)"
-            // (It took a lot back: this entry's checks ran before that trade was here - no buy now; the next signal checks again.)
+            else {
+                runCatching { Diag.record("orb", "${arm.label}: shadow - would have waited for the start-up sweep of Zerodha's orders (not run yet); the entry goes") }
+                if (!coldGateSaid) {
+                    coldGateSaid = true
+                    runCatching { com.optionslab.app.work.Alerts.error("${arm.label}: a live entry went before the arms could check Zerodha's orders " +
+                        "for a buy from before the restart (the check is tried again on each look). Check Trade for a lot with no stop.", "ORB live") }
+                }
+            }
             if (b.positions.size != rows) return "refused: a lot from before the restart was taken back at Zerodha; nothing more bought now"
         }
         val ins = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull())?.firstOrNull {
@@ -3345,10 +3355,13 @@ object OrbArms {
         if (id != null) { putIntent(intent.copy(entryOrderId = id)); runCatching { saveSoon(b) } }
         id?.let { runCatching { ArmOrderLabels.answered(it, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis())) } }
         id?.let { runCatching { Strategies.tagOwner("kite:$it", owner) } }
-        var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
+        // 19 Nov 2026 (coordinator: the arms' lock is held through this wait - the other open trades' looks wait on it): a marketable LIMIT
+        // fills at once or not at all, so 5 s at most; then the rest is cancelled and its end waited for (3 s at most) - still not ended,
+        // the entry is kept unconfirmed with its order id and the settle finishes it on a later look, outside this wait.
+        var f = id?.let { runCatching { Broker.awaitOrder(it, ENTRY_WAIT_MS) }.getOrNull() }
         var cancelledByApp = false
         if (id != null && f?.status !in DONE) {
-            // Not finished in 15 s: the unfilled rest is cancelled so it can never fill later untracked; only what filled is booked.
+            // Not finished in the wait: the unfilled rest is cancelled so it can never fill later untracked; only what filled is booked.
             // (19 Nov 2026: then its end waited for, a few seconds - Kite shows a cancel as pending for a moment.)
             cancelledByApp = runCatching { Broker.cancel(id) }.isSuccess
             f = runCatching { Broker.awaitOrder(id, 3_000) }.getOrNull()?.takeIf { it.status in DONE } ?: runCatching { Broker.orderState(id) }.getOrNull()
@@ -3365,8 +3378,8 @@ object OrbArms {
             dropIntent()
             // (19 Nov 2026: the LIMIT not filled in the wait and cancelled by the app: nothing bought, never chased - said as such.)
             if (cancelledByApp && f.status == "CANCELLED") {
-                runCatching { Diag.record("orb", "${arm.label}: the LIMIT buy of $sym at %.2f did not fill in 15 s; cancelled, nothing bought".format(Locale.ENGLISH, limitPx)) }
-                return "unfilled: the LIMIT buy at %.2f did not fill in 15 s; cancelled, nothing bought".format(Locale.ENGLISH, limitPx)
+                runCatching { Diag.record("orb", "${arm.label}: the LIMIT buy of $sym at %.2f did not fill in 5 s; cancelled, nothing bought".format(Locale.ENGLISH, limitPx)) }
+                return "unfilled: the LIMIT buy at %.2f did not fill in 5 s; cancelled, nothing bought".format(Locale.ENGLISH, limitPx)
             }
             return "order_refused: Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
         }
@@ -3728,6 +3741,31 @@ object OrbArms {
     /** 19 Nov 2026 (coordinator): this process's cold-start sweep ([coldSweep]) has run to its end. Memory only: a new process sweeps again. */
     @Volatile private var coldSwept = false
 
+    /** 19 Nov 2026 (coordinator): an entry went before the sweep could run - said once per process ([enterLiveNow]). */
+    @Volatile private var coldGateSaid = false
+
+    /**
+     * 19 Nov 2026 (coordinator): when (market-clock ms) this process's sweep first could not run to its end, and whether Boss was told it
+     * has kept failing for over a minute ([COLD_FAIL_SAY_MS]): a buy of these arms from today may be held with no row and no stop.
+     */
+    @Volatile private var coldFailSince: Long? = null
+    @Volatile private var coldFailSaid = false
+    private const val COLD_FAIL_SAY_MS = 60_000L
+
+    /** 19 Nov 2026 (coordinator): a live LIMIT entry's wait for its fill under the arms' lock ([enterLiveNow]). */
+    private const val ENTRY_WAIT_MS = 5_000L
+
+    /** One sweep that did not run to its end at [t]: said once when that has gone on for over a minute since the first. */
+    private fun coldFailed(t: LocalDateTime) {
+        val ms = epochMs(t)
+        val first = coldFailSince ?: ms.also { coldFailSince = it }
+        if (!coldFailSaid && ms - first > COLD_FAIL_SAY_MS) {
+            coldFailSaid = true
+            runCatching { com.optionslab.app.work.Alerts.error("ORB live: for over a minute since the app started, the arms could not check Zerodha's " +
+                "orders for a buy of theirs from before the restart - a lot may be held with no stop and nothing watching it. Check Trade and Kite.", "ORB live") }
+        }
+    }
+
     /**
      * 19 Nov 2026 (coordinator: the entry's intent is written beside its POST, so a process that dies within that write leaves a lot at
      * Zerodha that no row here holds - no stop, nothing watching it, and its bar not marked decided): on this process's first regular look
@@ -3742,8 +3780,8 @@ object OrbArms {
      * SAFETY stop at -15%, every such arm's bars marked decided. Its stop: an unclaimed stop of these arms taken first ([orphanStop]); else
      * placed at once - not from 15:10, with Stop for today or at the 15:05 expiry square-off (the same pass sells it). It keeps its arm's
      * rules (ladder, Boss's exit rule and lock) as a new entry would. The bars of the hour before its order are marked decided for its
-     * arm (the same bar is never bought again). Said loudly. True when it ran to its end; false (asked again next look, and no live entry
-     * meanwhile) when a read failed, the arms' live copies' book is not read or is unreadable, one of their entries is in flight, or a buy
+     * arm (the same bar is never bought again). Said loudly. True when it ran to its end; false (asked again next look; a live entry
+     * meanwhile goes, logged in shadow - [enterLiveNow]; over a minute of it is said - [coldFailed]) when a read failed, the arms' live copies' book is not read or is unreadable, one of their entries is in flight, or a buy
      * could not be judged yet (its contract not in the instrument list, no fill price, still working).
      */
     private suspend fun coldSweep(b: Book, t: LocalDateTime, stopped: Boolean): Boolean {
@@ -5883,7 +5921,7 @@ object OrbArms {
     /** TEST ONLY: the book forgotten from memory (its file kept), as a new process starts. */
     @Synchronized internal fun forgetMemoryForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
-        cache = null; writtenText = null; writtenStat = null; coldSwept = false
+        cache = null; writtenText = null; writtenStat = null; coldSwept = false; coldGateSaid = false; coldFailSince = null; coldFailSaid = false
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         synchronized(ownCancels) { ownCancels.clear() }
         forgetStopSaid()
@@ -5901,7 +5939,7 @@ object OrbArms {
         // (19 Nov 2026: a pending write is dropped; never a wait on one running - the screen may erase - which deletes the file again
         // itself if it finishes after this erase ([flushSoon]).)
         synchronized(writeOrder) { wipeGen++; pendingWrite = null; saveSeq++ }
-        coldSwept = false
+        coldSwept = false; coldGateSaid = false; coldFailSince = null; coldFailSaid = false
         cache = null; restoppedAt.clear(); writtenText = null; writtenStat = null
         forgetHints()
         shownParams.clear()

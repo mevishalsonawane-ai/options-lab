@@ -257,6 +257,62 @@ class OrbArmsLiveTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (coordinator): the start-up sweep cannot run yet (the arms' live copies' book not read) while a buy of these arms that no
+     * row holds is at Zerodha: a live entry goes as before - the wait is only logged in shadow - and Boss is told once.
+     */
+    @Test fun anEntryBeforeTheSweepCanRunGoesAndTheWaitIsShadowOnly() {
+        kite.boughtInKite(sym, 30, 199.0, tag = "iraorb")                 // a buy from before the restart, no row here
+        state(pending = true)
+        assertEquals("Entered at Zerodha (live).", approve())
+        assertEquals("the entry went", 2, kite.orders.values.count { it.side == "BUY" })
+        assertTrue(com.optionslab.app.data.Diag.lines().toString(),
+            com.optionslab.app.data.Diag.lines().any { "would have waited for the start-up sweep" in it })
+        assertEquals(1, AutomationSupport.alerts().count { "a live entry went before the arms could check Zerodha's orders" in it })
+    }
+
+    /**
+     * 19 Nov 2026 (coordinator): the sweep keeps failing to run (the arms' live copies' book not read) with a buy of these arms that no row
+     * holds at Zerodha: once it has failed for over a minute since the first try, Boss is told - once.
+     */
+    @Test fun aSweepFailingForOverAMinuteIsSaid() {
+        kite.boughtInKite(sym, 30, 199.0, tag = "iraorb")
+        state()
+        OrbArms.testNow = OrbArms.testNow!!.withSecond(0).withNano(0)
+        val said = { AutomationSupport.alerts().count { "for over a minute since the app started" in it } }
+        pass()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(30)
+        pass()
+        assertEquals("not yet", 0, said())
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(31)
+        pass()
+        assertEquals(1, said())
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(60)
+        pass()
+        assertEquals("once", 1, said())
+    }
+
+    /**
+     * 19 Nov 2026 (coordinator): an unfilled LIMIT entry holds the arms' lock 5 s at most (then cancelled, its cancel confirmed): another
+     * open trade's price check waiting on that lock is held up no longer than that.
+     */
+    @Test fun anUnfilledLimitEntryHoldsOtherTradesLooksFiveSecondsAtMost() {
+        state(pending = true)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val entry = Thread { runBlocking { OrbArms.approve("orb", pinConfirmed = true) } }
+        entry.start()
+        val until = System.currentTimeMillis() + 10_000
+        while (kite.placed.none { it.form["transaction_type"] == "BUY" } && System.currentTimeMillis() < until) Thread.sleep(20)
+        assertTrue("the buy went", kite.placed.any { it.form["transaction_type"] == "BUY" })
+        val t0 = System.nanoTime()
+        pass()                                                             // waits on the arms' lock the entry holds
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        entry.join(20_000)
+        assertTrue("the look waited $ms ms", ms < 6_500)
+        assertEquals("cancelled, nothing bought", "CANCELLED", kite.orders.values.single { it.side == "BUY" }.status)
+        assertNull(arm().open)
+    }
+
+    /**
      * 19 Nov 2026 (review): an entry whose reply was lost and that the order book does not show yet is kept unconfirmed with no order id
      * (a LIMIT may still rest and fill) - never dropped as unsent; the settle's lost-id search follows it.
      */
