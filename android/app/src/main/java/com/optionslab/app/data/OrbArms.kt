@@ -1096,6 +1096,13 @@ object OrbArms {
         }
     }
 
+    /**
+     * TEST ONLY (19 Nov 2026, order speed): called right after a live entry's intent is handed to the writer, before its order goes - so
+     * a test can time the POST from there. Null in the app; set only in debug builds.
+     */
+    @Volatile internal var testIntentQueued: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     /** TEST ONLY: every [saveSoon] on disk now, [timeoutMs] at most. Never on the order path. */
     internal fun awaitWrites(timeoutMs: Long = 10_000L): Boolean = bookWriter.await(timeoutMs).also { flushSoon() }
 
@@ -3294,6 +3301,7 @@ object OrbArms {
         // (19 Nov 2026, second review: written on the book's writer thread, so the order below never waits on the disk; any later save
         // of the book writes after it, never under it - [saveSoon].)
         runCatching { saveSoon(b) }
+        testIntentQueued?.let { runCatching { it() } }
         // (The row as it now stands in the book, found by identity: the book's lock is held for the whole entry.)
         var row = intent
         fun dropIntent() { val r = row; b.positions.removeAll { it === r }; runCatching { save(b) } }

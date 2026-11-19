@@ -186,27 +186,29 @@ class OrbArmsLiveTest : RobolectricTest() {
 
     /**
      * 19 Nov 2026 (second review, order speed): with a 1.5 s vault write (a Pixel's StrongBox) the entry's POST never waits on the
-     * intent's write - when the buy reaches Zerodha the intent is still being written (it lands moments later). (No bound on the POST's
-     * time itself: the approval's own earlier writes, as before, and the test machine's speed come ahead of it; that the intent is not on
-     * disk yet at the POST is what shows the order did not wait for it - a wait would have finished the write first.)
+     * intent's write - when the buy reaches Zerodha the intent is still being written (it lands moments later), and the POST comes well
+     * under one write's time after the intent was handed to the writer. (Timed from there: the approval's own earlier write of the used-up
+     * approval, as before, comes ahead of the entry and is not the intent's.)
      */
     @Test fun theEntrysPostNeverWaitsOnTheIntentsVaultWrite() {
         state(pending = true)
         val file = java.io.File(context.filesDir, "orb.vault")
         val onDisk = java.util.concurrent.atomic.AtomicReference<String?>()
         val postMs = java.util.concurrent.atomic.AtomicLong(-1)
-        val t0 = System.nanoTime()
+        val queuedAt = java.util.concurrent.atomic.AtomicLong(0)
+        OrbArms.testIntentQueued = { queuedAt.set(System.nanoTime()) }
         kite.afterNext("/orders/regular") {
-            postMs.set((System.nanoTime() - t0) / 1_000_000)
+            postMs.set((System.nanoTime() - queuedAt.get()) / 1_000_000)
             onDisk.set(com.optionslab.app.security.Vault.readFile(file)?.toString(Charsets.UTF_8))
         }
         com.optionslab.app.security.Vault.testWriteDelayMs = 1_500L
         try {
             assertEquals("Entered at Zerodha (live).", approve())
-        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0L }
+        } finally { com.optionslab.app.security.Vault.testWriteDelayMs = 0L; OrbArms.testIntentQueued = null }
         val atPost = JSONObject(onDisk.get()!!).getJSONArray("positions")
         assertEquals("the intent not on disk yet when the order went (its write still running): $atPost", 0, atPost.length())
-        assertTrue("the POST reached Zerodha", postMs.get() >= 0)
+        assertTrue("the intent was queued", queuedAt.get() != 0L)
+        assertTrue("the POST ${postMs.get()} ms after the intent was queued, well under one 1.5 s write", postMs.get() in 0 until 1_000)
         assertTrue(OrbArms.awaitWrites())
         val now = JSONObject(String(com.optionslab.app.security.Vault.readFile(file)!!, Charsets.UTF_8)).getJSONArray("positions")
         assertEquals("on disk after", 1, now.length())
