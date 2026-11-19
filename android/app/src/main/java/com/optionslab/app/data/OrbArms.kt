@@ -3168,7 +3168,8 @@ object OrbArms {
         } ?: return "refused: ${c.symbol} is not listed on Zerodha"
         val sym = ins.tradingSymbol
         val key = "NFO:$sym"
-        val last = runCatching { Broker.quotes(listOf(key))[key]?.last }.getOrNull()?.takeIf { it > 0 } ?: return "refused: no quote"
+        val quote = runCatching { Broker.quotes(listOf(key))[key] }.getOrNull()
+        val last = quote?.last?.takeIf { it > 0 } ?: return "refused: no quote"
         // The live account's parameters today (S1: a variant only after Boss's PIN, from the session after): its stop.
         val today0 = now().toLocalDate()
         val lp = paramsOf(arm, today0, live = true)
@@ -3176,10 +3177,28 @@ object OrbArms {
         if (liquidity == null && OrbRules.stopTrigger(last, lp.stopPoints) == null) return "refused: premium %.2f is at or below %s, a %s-point stop has no level"
             .format(Locale.ENGLISH, last, pts(lp.stopPoints), pts(lp.stopPoints))
         if (Strategies.stoppedToday()) return "stopped_for_today"
-        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, ins.lotSize * lots.coerceAtLeast(1), ins.lotSize, "MIS", "MARKET", null,
+        var o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, ins.lotSize * lots.coerceAtLeast(1), ins.lotSize, "MIS", "MARKET", null,
             ins.tickSize, "NFO", "iraorb")
         // Positions, funds and orders: the kept margins when fresh and roomy for this buy, else read now (in parallel).
         val acct = Broker.accountNow(needed = last * o.quantity)
+        // 18 Nov 2026 (audit: B6; Boss, 4 Nov: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1 ... make it default"):
+        // Liquidity's own live buy of more than one lot is cut to the lots the free cash fits ([com.optionslab.engine.orb.LiveMirror.lotsThatFit],
+        // as the arms' live copies do), priced at the higher of the last price and the offer - only ever fewer than Boss's lots, never
+        // more. The free cash is the margins the account read above just used ([Broker.keptFreeCash], memory: nothing new is read);
+        // unknown, or not even one lot fitting, the buy goes as before (the funds check below and Zerodha say why). Every check after
+        // this one sees the order as it will be sent.
+        val want = lots.coerceAtLeast(1)
+        var buyLots = want
+        if (want > 1) {
+            val free = Broker.keptFreeCash()
+            val fitPx = maxOf(last, quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: last)
+            val fit = com.optionslab.engine.orb.LiveMirror.lotsThatFit(want, fitPx * ins.lotSize, free)
+            if (free != null && fit in 1 until want) {
+                buyLots = fit
+                o = o.copy(quantity = ins.lotSize * fit)
+                runCatching { Diag.record("orb", "${arm.label}: $sym" + com.optionslab.engine.orb.LiveMirror.fitWords(want, fit, free)) }
+            }
+        }
         val refusals = Guard.check(Guard.liveOrder(o).copy(price = last), acct)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last)
@@ -3188,7 +3207,7 @@ object OrbArms {
         // a buy the free cash cannot pay for even one lot. Its figure is the margins the account read above just used
         // ([Broker.keptFreeCash], memory; nothing new is read); unknown, it says nothing. In SHADOW (its switch off, the default) the
         // order goes exactly as before and the would-skip is logged; on, it is not sent (kept as a would-be entry).
-        FundsCheck.check(arm.label, sym, lots.coerceAtLeast(1), last * ins.lotSize, Broker.keptFreeCash(), last)?.let { return it }
+        FundsCheck.check(arm.label, sym, buyLots, last * ins.lotSize, Broker.keptFreeCash(), last)?.let { return it }
         val known = knownKite(b)
         // 15 Nov (Boss's exception): a Liquidity live entry enters with the breakeven rule while the switch is on (memory only); 16 Nov:
         // a new one with the fourth version's breakeven at +₹1,000 a lot too ([Position.lock]).

@@ -433,6 +433,42 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals(60, p.qty); assertEquals(30, p.lot)
     }
 
+    /**
+     * 18 Nov 2026 (audit: B6; Boss, 4 Nov: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"): Liquidity's own live buy
+     * of more lots than the free cash fits buys the lots it fits - one lot of 30 at about 200 is about Rs 6,000 (Rs 6,180 with the room for
+     * the fill and charges) - and its stop covers what was bought.
+     */
+    @Test fun twoLotsTheCashFitsOnlyOneOfBuyOneLot() {
+        kite.cash = 7_000.0
+        state(lots = 2)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        val (buy, stop) = kite.placed
+        assertEquals("30", buy.form["quantity"]); assertEquals("BUY", buy.form["transaction_type"])
+        assertEquals("30", stop.form["quantity"]); assertEquals("SL", stop.form["order_type"])
+        assertEquals(30, row().open!!.qty)
+        assertTrue("the cash covers what was bought: nothing for the funds check", FundsCheck.recsOf().isEmpty())
+    }
+
+    /** 18 Nov 2026 (audit: B6): three lots set, the cash fits two: two are bought - never more than Boss's lots. */
+    @Test fun threeLotsTheCashFitsTwoOfBuyTwo() {
+        SecurePrefs.put("g.lots", 3)
+        kite.cash = 13_000.0
+        state(lots = 3)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("60", kite.placed.first().form["quantity"])
+        assertEquals(60, row().open!!.qty)
+    }
+
+    /** 18 Nov 2026 (audit: B6): not even one lot fitting, the buy goes as before (Boss's lots; the funds check in shadow logs it). */
+    @Test fun notEvenOneLotFittingTheBuyGoesAsBefore() {
+        kite.cash = 5_000.0
+        state(lots = 2)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("60", kite.placed.first().form["quantity"])
+        val r = FundsCheck.recsOf().single()
+        assertFalse("logged only", r.applied); assertEquals(2, r.lots)
+    }
+
     @Test fun aBookSavedBeforeTheSizeTradesOneLot() {
         state(lots = null)
         assertEquals("the default is 1 lot since 08 Oct (research X1)", 1, row().lots)
