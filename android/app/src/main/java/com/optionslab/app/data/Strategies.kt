@@ -636,12 +636,25 @@ object Strategies {
         override fun event(e: Event, alert: Boolean) = record(b, def.name, e, alert)
     }
 
-    private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, known: () -> Collection<String>) = object : StrategyHost.Executor {
+    /**
+     * 19 Nov 2026 (audit batch 2: the strategies' automatic live entries): why an AUTOMATIC live entry of a saved strategy (its
+     * scheduled start, a signal entry later in a run) may not go now - the app in Paper, or "AI trades go live" off - as every arm's
+     * live entry is asked (CLAUDE.md); null: it may. Boss's own start from the app (confirmed with his PIN) and every exit are never
+     * asked. Memory first ([ArmLive.liveFlags]); unknown counts as a refusal.
+     */
+    internal fun autoLiveRefusal(): String? = runCatching {
+        ArmLive.liveFlags().let { (appLive, aiLive) -> if (!appLive) "the app is in Paper" else if (!aiLive) "\"AI trades go live\" is off" else null }
+    }.getOrElse { "\"AI trades go live\" could not be read" }
+
+    /** [ownerStart]: the entries of Boss's own start from the app ([start]); false: automatic ones ([autoLiveRefusal] asks them). */
+    private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, ownerStart: Boolean = false, known: () -> Collection<String>) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val s = AppSettings.load()
             // Paper mode blocks new live entries only: a live run's stops, targets and square-off must still
             // close what it holds at Zerodha (a stop that waits for the badge to say Live is not a stop).
             if (order.kind == "entry" && (!s.live || !s.allowRealOrders)) return StrategyHost.Placed.Refused("the app is in Paper mode (switch to Live with the badge at the top)")
+            // 19 Nov 2026 (audit batch 2): an automatic entry also needs "AI trades go live" (asked again inside the door, [Broker]).
+            if (order.kind == "entry" && !ownerStart) autoLiveRefusal()?.let { return StrategyHost.Placed.Refused("automatic live entry refused: $it") }
             if (compromised && order.kind == "entry") return StrategyHost.Placed.Refused("this device shows signs of compromise")
             if (!Broker.loggedIn) return StrategyHost.Placed.Refused("not logged in to Zerodha today")
             // The order flow can only refuse this entry (CONFIRM), never add to it; exits are never asked.
@@ -730,7 +743,9 @@ object Strategies {
                     // 22 Oct: the checks above cleared this order: stamped with its fingerprint, recomputed at the door ([OrderVerdicts]).
                     val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), OrderVerdicts.sourceOf(o, null)), "strategy checks")
                     try {
-                        Broker.placeOrder(o, exit, verdict = verdict)
+                        // 19 Nov 2026 (audit batch 2): an automatic entry is marked for the door, which asks "AI trades go live" again.
+                        if (!exit && !ownerStart) Broker.automaticStrategyEntry(o) { Broker.placeOrder(o, exit, verdict = verdict) }
+                        else Broker.placeOrder(o, exit, verdict = verdict)
                     } catch (e: Exception) {
                         if (Broker.definite(e)) return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
                         // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
@@ -756,8 +771,8 @@ object Strategies {
         override fun event(e: Event, alert: Boolean) = record(b, def.name, e, alert)
     }
 
-    private fun exec(b: Book, def: StrategyDef, v: Venue, mode: RunMode, compromised: Boolean) =
-        if (mode == RunMode.LIVE) kiteExec(b, def, v, compromised) { b.brokerIds.values.flatMap { it.values } } else paperExec(b, def, v)
+    private fun exec(b: Book, def: StrategyDef, v: Venue, mode: RunMode, compromised: Boolean, ownerStart: Boolean = false) =
+        if (mode == RunMode.LIVE) kiteExec(b, def, v, compromised, ownerStart) { b.brokerIds.values.flatMap { it.values } } else paperExec(b, def, v)
 
     /** Persist the run after every accepted order, before the next one goes out. */
     private fun checkpoint(b: Book, strategyId: Long): (RunState) -> Unit = { r -> b.runs[strategyId] = r; runCatching { save(b) } }
@@ -798,7 +813,8 @@ object Strategies {
         val runId = b.nextRunId++
         val ids = HashMap<Long, String>()
         b.brokerIds[runId] = ids
-        val run = host.start(def, resolved, now, runId, mode, trigger, exec(b, def, v, mode, compromised), ids, checkpoint(b, id))
+        // 19 Nov 2026 (audit batch 2): Boss's own start (a live one confirmed with his PIN): its entries are his, not automatic ones.
+        val run = host.start(def, resolved, now, runId, mode, trigger, exec(b, def, v, mode, compromised, ownerStart = true), ids, checkpoint(b, id))
         b.runs[id] = run
         b.pending.remove(id)
         finish(b, run)
@@ -931,14 +947,19 @@ object Strategies {
      * again). Never on a day the daily loss limit stopped the index side: plans only lower risk, so that stop holds until tomorrow.
      * The commodity side is its own ([startCommoditiesAgain]).
      */
-    suspend fun startAgain(log: Boolean = true): String {
+    suspend fun startAgain(log: Boolean = true, pinConfirmed: Boolean = !log): String {
         val loss = runCatching { LossBreaker.trippedToday() }.getOrDefault(false)
+        // 19 Nov 2026 (audit batch 2: lifting Stop for today): in Live with an app PIN set, lifting the index side's stop adds live
+        // risk, so it takes [pinConfirmed] - Home asks the PIN first; the quick-settings tile and voice are refused and told to open
+        // the app. The change timeline's Undo ([log] false) took the PIN itself. Read before the lock (a settings read).
+        val asks = !pinConfirmed && liftAsksPin()
         var was: com.optionslab.ira.DayStop.Why? = null
         val said = lock.withLock {
             val b = book()
             val today = Market.today().toString()
             if (loss || (b.stoppedDay == today && com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) == com.optionslab.ira.DayStop.Why.LOSS))
                 return@withLock "Not started: the daily loss limit stopped the index bots today, so they stay stopped until tomorrow (or until you switch that limit off, or raise it past today's loss, with your PIN)."
+            if (asks && b.stoppedDay == today) return@withLock LIFT_PIN
             was = if (b.stoppedDay == today) com.optionslab.ira.DayStop.Why.of(b.stoppedWhy) else null
             b.stoppedDay = null; b.stoppedWhy = null; b.stoppedAt = null; save(b)
             "Index bots running: armed strategies start at their times."
@@ -946,6 +967,20 @@ object Strategies {
         if (log && was != null) logSide(com.optionslab.ira.DayStop.Side.INDEX, false, "by you", nowHm())
         return said
     }
+
+    /** 19 Nov 2026 (audit batch 2): what is said when Stop for today is lifted in Live without the PIN (the tile, voice). */
+    const val LIFT_PIN = "Not started: in Live, starting the index bots again takes your app PIN - open IraAlgo and tap Start index bots " +
+        "on Home. They stay stopped for today."
+    /** 19 Nov 2026 (audit batch 2): the PIN prompt's words on Home. */
+    const val LIFT_WHY = "Enter your app PIN to start the index bots again today (the app is in Live)."
+
+    /**
+     * 19 Nov 2026 (audit batch 2): whether lifting the index side's Stop for today asks the PIN now - the app in Live with an app PIN
+     * set (with none there is nothing to ask). Unknown counts as yes. A settings read: never the order path.
+     */
+    fun liftAsksPin(): Boolean = runCatching {
+        com.optionslab.app.security.GuardPin.asks(true, com.optionslab.app.security.PinLock.isSet, AppSettings.load().live, zerodha = false)
+    }.getOrDefault(true)
 
     /**
      * 30 Oct (Boss: "Make stop bot different for index and comodities"): stop the COMMODITY side for the rest of today ("Stop
@@ -1182,6 +1217,13 @@ object Strategies {
                             if (d.mode == RunMode.LIVE && runCatching { LossBreaker.liveDoorTripped() }.getOrDefault(true)) {
                                 record(b, def.name, Event("start_refused", "Scheduled start refused: the daily loss limit was reached today", "warn"), true)
                                 notes += "${def.name}: the daily loss limit was reached today"
+                                continue
+                            }
+                            // 19 Nov 2026 (audit batch 2): an automatic LIVE start asks "AI trades go live" (and Live) first, as every arm's
+                            // live entry does; refused, nothing starts and it says why. Boss's own start from the app is never asked.
+                            if (d.mode == RunMode.LIVE) autoLiveRefusal()?.let { why ->
+                                record(b, def.name, Event("start_refused", "Scheduled start refused: $why", "warn"), true)
+                                notes += "${def.name}: scheduled live start refused: $why"
                                 continue
                             }
                             val v = venueFor(d.mode)

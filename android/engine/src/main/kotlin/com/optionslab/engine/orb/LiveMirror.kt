@@ -109,7 +109,7 @@ object LiveMirror {
     const val SOLO_MIDDAY = "solo_midday"
     /** The shadow variants Boss re-armed on paper ([ShadowRules]): one live switch for them all. */
     const val SHADOW_PROMOTED = "shadow_promoted"
-    /** ntfy alerts (25 Oct): one live switch; 30 Oct (Boss: "make all arms as live"): ON by default like every other arm. */
+    /** ntfy alerts (25 Oct): one live switch; OFF by default since 19 Nov 2026 (audit batch 2: only with an access token or Boss's own server). */
     const val NTFY_ALERTS = "ntfy_alerts"
 
     /**
@@ -137,9 +137,10 @@ object LiveMirror {
         Spec(VixDivRules.SOURCE, VixDivRules.LABEL, VIX, signal = "the index against India VIX", safety = true),
         Spec(NightRules.SOURCE, NightRules.LABEL, NIGHT, product = "NRML", rest = Rest.GTT, signal = "the index's close and the day-end OI build-up",
             safety = true),
-        // 25 Oct: an external message, not a researched rule. 30 Oct (Boss: "make all arms as live, will stop it if i want"): its
-        // live switch starts ON like every other arm's (it still trades live only in Live, with AI trades on and its paper arm on).
-        Spec(NTFY_ALERTS, "ntfy alerts", NTFY, signal = com.optionslab.engine.signals.NtfyRules.SIGNAL, bossLots = true),
+        // 25 Oct: an external message, not a researched rule. 19 Nov 2026 (audit batch 2: ntfy's live gate): its live switch starts
+        // OFF - anyone who learns the topic can post a message - and the app switches it on only with an access token or Boss's own
+        // server set ([com.optionslab.app.data.NtfyArm]); then still only in Live, with AI trades on, Boss's PIN and its paper arm on.
+        Spec(NTFY_ALERTS, "ntfy alerts", NTFY, signal = com.optionslab.engine.signals.NtfyRules.SIGNAL, bossLots = true, defaultOn = false),
         // 28 Oct (Boss: "just take orders from flow"): IraThinker's flow - not proven (R110). 30 Oct: ON by default too (Boss).
         Spec(com.optionslab.engine.signals.FlowRules.SOURCE, com.optionslab.engine.signals.FlowRules.LABEL, FLOW,
             signal = com.optionslab.engine.signals.FlowRules.SIGNAL),

@@ -231,8 +231,53 @@ object TradeManagerHost {
 
     private fun modeOf(id: String): TradeManager.Mode = synchronized(recs) { recs[id]?.mode } ?: TradeManager.Mode.OFF
 
-    /** In ACT: why the manager wants [tradeId] out now (null: it does not, or it only records). The strategy exits its own way. */
-    fun exitDue(tradeId: String): String? = live[tradeId]?.takeIf { modeOf(tradeId) == TradeManager.Mode.ACT }?.pendingExit
+    /**
+     * In ACT: why the manager wants [tradeId] out now (null: it does not, or it only records). The strategy exits its own way.
+     * 19 Nov 2026 (audit batch 2: the trade manager's live reach): a PAPER trade whose live copy at Zerodha follows its paper exits
+     * ([liveCopyOf]) is held back unless its family's LIVE mode is ACT (which takes the PIN) - the paper exit would sell the live
+     * position too. Held back, the paper trade keeps its own rules (as its live copy does); said once in the diagnostics. Memory only.
+     */
+    fun exitDue(tradeId: String): String? {
+        val l = live[tradeId] ?: return null
+        if (modeOf(tradeId) != TradeManager.Mode.ACT) return null
+        val why = l.pendingExit ?: return null
+        val t = l.reg.trade
+        if (t.account == TradeManager.Account.PAPER && t.family in TradeManager.LIVE_COPIED &&
+            !TradeManager.exitMayAct(t.account, t.family, liveCopyOf(t.instrument), _policy.value)) {
+            if (heldBack.add(tradeId)) runCatching {
+                if (heldBack.size > 500) heldBack.clear()
+                Diag.record("trade manager", "${t.label} ${t.instrument}: early exit not taken - its live copy at Zerodha follows the paper " +
+                    "trade, and the manager acts on live only with ${TradeManager.familyName(t.family)}'s live mode on ACT (your PIN); it keeps its own rules")
+            }
+            return null
+        }
+        return why
+    }
+
+    /** 19 Nov 2026 (audit batch 2): the trades whose early exit was held back for their live copy, said once each (memory, bounded). */
+    private val heldBack: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /**
+     * 19 Nov 2026 (audit batch 2): whether a paper trade on [paperSymbol] has a live copy at Zerodha that follows its paper exits
+     * ([armLiveCopy]: ArmLive's open real trades, by the paper contract they copy). Memory only (the order and tick paths may ask it).
+     * TEST SEAM: a test sets its own.
+     */
+    @Volatile internal var liveCopyOf: (String) -> Boolean = { sym -> armLiveCopy(paperSymbol = sym) }
+
+    /** 19 Nov 2026 (audit batch 2): the same by the paper trade's own ref (the Hero ticket's Trend watch exit). TEST SEAM. */
+    @Volatile internal var liveCopyOfRef: (String) -> Boolean = { ref -> armLiveCopy(ref = ref) }
+
+    /**
+     * 19 Nov 2026 (audit batch 2): whether [ArmLive] holds a real (not shadow) live trade copying the paper trade [ref] or the paper
+     * contract [paperSymbol]. Its book not read yet (a start-up window): one is assumed while the app is in Live (as last kept in
+     * memory - ArmLive would sell it once read), none in Paper (where ArmLive's book may never be read). Memory only; never throws (an
+     * error counts as a live copy: nothing is sold by the back door on a guess).
+     */
+    internal fun armLiveCopy(paperSymbol: String? = null, ref: String? = null): Boolean = runCatching {
+        val v = ArmLive.view.value
+        if (!v.loaded) return@runCatching ArmLive.liveFlagsKept()?.first == true
+        v.openReal.any { (ref != null && it.ref == ref) || (paperSymbol != null && (it.paperSymbol == paperSymbol || it.symbol == paperSymbol)) }
+    }.getOrDefault(true)
 
     /** In ACT: the manager's (target, lock) for [tradeId] (either null: the strategy's own); null when it does not act. */
     fun levels(tradeId: String): Pair<Double?, Double?>? {
@@ -784,6 +829,8 @@ object TradeManagerHost {
         live.clear(); synchronized(recs) { recs.clear() }; publish()
         _policy.value = TradeManager.Policy(); policyLoaded = true; loaded = true; testPolicyRead = null
         lastEval = 0L; minuteSettled = -1L
+        // 19 Nov 2026 (audit batch 2): the live-copy seams back to ArmLive's book, nothing held back.
+        liveCopyOf = { sym -> armLiveCopy(paperSymbol = sym) }; liveCopyOfRef = { ref -> armLiveCopy(ref = ref) }; heldBack.clear()
         ManagerSpecialists.resetForTest()
         if (com.optionslab.app.BuildConfig.DEBUG) { testSnapshot = null; testBars = null; testNoWake = false }
     }

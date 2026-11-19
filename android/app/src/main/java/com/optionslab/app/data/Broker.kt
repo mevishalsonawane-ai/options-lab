@@ -139,6 +139,19 @@ object Broker {
     internal val ARM_TAGS = setOf("iraorb", "irapine")
 
     /**
+     * 19 Nov 2026 (audit batch 2): the saved strategies' AUTOMATIC live entries in flight (a scheduled start's, a signal's later in a
+     * run - [Strategies]), by the very order object sent: the door asks them Live and "AI trades go live" too, at the last moment,
+     * like [ARM_TAGS]. Boss's own start from the app and every exit are never marked. Memory only.
+     */
+    private val autoStrategyEntries: MutableSet<Kite.Order> = java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(java.util.IdentityHashMap()))
+
+    /** [send]s [o] marked as a saved strategy's automatic entry ([autoStrategyEntries]); the mark goes when it returns. */
+    internal suspend fun <T> automaticStrategyEntry(o: Kite.Order, send: suspend () -> T): T {
+        autoStrategyEntries.add(o)
+        try { return send() } finally { autoStrategyEntries.remove(o) }
+    }
+
+    /**
      * Why an entry may not be sent NOW, asked inside the door (null: it may). Reads memory and the settings already in it:
      * no lock any bot holds (the bots call [placeOrder] holding their own).
      */
@@ -166,7 +179,7 @@ object Broker {
         // Liquidity 15+5) and Pine's live entries asked the app's Live and "AI trades go live" here too, at the last moment, from
         // memory ([ArmLive.liveFlags]: the settings are read only after one of those keys was written). Before, they went on the
         // app's Live and their own PIN flag alone. It only ever refuses an entry; exits never come here.
-        if (o.tag in ARM_TAGS) ArmLive.liveFlags().let { (appLive, aiLive) ->
+        if (o.tag in ARM_TAGS || autoStrategyEntries.contains(o)) ArmLive.liveFlags().let { (appLive, aiLive) ->
             if (!appLive) return "refused: the app is in Paper"
             if (!aiLive) return "refused: \"AI trades go live\" is off"
         }

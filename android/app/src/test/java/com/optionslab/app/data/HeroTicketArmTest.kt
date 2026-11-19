@@ -282,6 +282,31 @@ class HeroTicketArmTest : RobolectricTest() {
     }
 
     /**
+     * 19 Nov 2026 (audit batch 2): a leg with a live copy at Zerodha (which every paper exit sells too) is never sold by the Trend
+     * watch: the paper leg keeps its own exits, so the Trend watch never causes an order.
+     */
+    @Test fun theTrendWatchNeverSellsALegThatHasALiveCopy() {
+        runBlocking { HeroTicketArm.setTrailStart(HeroTicketRules.TrailStart.AFTER_2X) }
+        market(LocalTime.of(12, 30)); tick(LocalTime.of(12, 30))
+        val call = HeroTicketArm.view.value.open.single { it.right == "CE" }
+        TrendWatchHost.resetForTest(); TrendWatchHost.init(context)
+        TrendWatchHost.testMinutes = { _, n -> (0 until 375).map { r -> day.atTime(9, 15).plusMinutes(r.toLong()) }.filter { !it.plusMinutes(1).isAfter(n) }
+            .map { t -> val c = if (t.toLocalTime().isBefore(LocalTime.of(12, 40))) 25_010.0 else 25_010.0 - 2.0 * (java.time.Duration.between(day.atTime(12, 40), t).toMinutes() + 1)
+                com.optionslab.engine.orb.Bar(t, c, c + 1, c - 1, c) } }
+        market(LocalTime.of(12, 52))
+        at(LocalTime.of(12, 46)); runBlocking { TrendWatchHost.round(day.atTime(12, 46, 20)) }
+        at(LocalTime.of(12, 51)); runBlocking { TrendWatchHost.round(day.atTime(12, 51, 20)) }
+        assertTrue(TrendWatchHost.sellRequested(call.symbol))
+        TradeManagerHost.liveCopyOfRef = { true }
+        try {
+            at(LocalTime.of(12, 51)); runBlocking { HeroTicketArm.manageOnly() }
+            assertTrue("the call is kept: its live copy follows its own exits", HeroTicketArm.view.value.open.any { it.symbol == call.symbol })
+            assertTrue(HeroTicketArm.view.value.closed.none { it.why == HeroTicketArm.TREND_WHY })
+            assertNothingAtZerodha()
+        } finally { TradeManagerHost.liveCopyOfRef = { ref -> TradeManagerHost.armLiveCopy(ref = ref) } }
+    }
+
+    /**
      * 16 Oct (research R63): T3 passed for this ticket, so when NIFTY closes twice below the day's average after 12:40 the Trend
      * watch asks for the CALL leg to be sold, and the arm sells it on paper through its own exit ("trend_turn") - the put, with
      * the trend, is kept; nothing reaches Zerodha; the sale is in Autopilot's change log, and its Undo switches the exit off.
@@ -304,6 +329,8 @@ class HeroTicketArmTest : RobolectricTest() {
         assertTrue(TrendWatchHost.sellRequested(call.symbol))
         assertFalse("the put is with the trend", TrendWatchHost.sellRequested(put.symbol))
         assertTrue(TrendWatchHost.view.value.recent.single().line.contains("selling on paper at about"))
+        // 19 Nov 2026 (audit batch 2): the arms' live book read - it holds no live copy of this ticket, so the Trend watch may sell it.
+        runBlocking { ArmLive.refresh() }
         // The arm's own minute lane sells it.
         at(LocalTime.of(12, 51)); runBlocking { HeroTicketArm.manageOnly() }
         val sold = HeroTicketArm.view.value.closed.single { it.right == "CE" }

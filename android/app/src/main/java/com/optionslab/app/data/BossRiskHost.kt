@@ -511,9 +511,18 @@ object BossRiskHost {
         com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true))
     }.getOrDefault(true)
 
-    /** Boss's live switch for [rule] (off by default: shadow, logged only). On only ever refuses the bots' live entries. */
-    fun setLive(rule: Rule, on: Boolean): String {
+    /** 19 Nov 2026 (audit batch 2: live risk rules' PIN): what is said when a live rule is put back in shadow without the PIN. */
+    const val PIN_LIVE_OFF = "Putting a live risk rule back in shadow lets more of the bots' live entries through: enter your app PIN " +
+        "on the Risk rules card. Nothing changed."
+
+    /**
+     * Boss's live switch for [rule] (off by default: shadow, logged only). On only ever refuses the bots' live entries.
+     * 19 Nov 2026 (audit batch 2: live risk rules' PIN): on -> shadow loosens a live protection (the weekly loss stop, the 2% risk cap,
+     * opposite bets), so it takes [pinConfirmed] (the card asks the PIN first) wherever the guard's own rule asks it; on never asks.
+     */
+    fun setLive(rule: Rule, on: Boolean, pinConfirmed: Boolean = false): String {
         if (rule !in LIVE_RULES) return "That rule has no live switch."
+        if (!on && liveOn[rule] == true && !pinConfirmed && pinAsked()) return PIN_LIVE_OFF
         liveOn[rule] = on
         runCatching { SecurePrefs.putAllSoon(mapOf(rule.liveKey to on)) }
         runCatching { Diag.record("risk", "${rule.words} on live ${if (on) "on: the bots' live entries past it are refused" else "in shadow: logged only"} (by you)") }

@@ -77,6 +77,27 @@ object NtfyReader {
         testServer ?: SecurePrefs.getString(K_SERVER)?.let { NtfyRules.server(it) } ?: NtfyRules.DEFAULT_SERVER,
         SecurePrefs.getString(K_TOKEN)?.takeIf { it.isNotBlank() }, SecurePrefs.getString(K_PREFIX).orEmpty())
 
+    /**
+     * 19 Nov 2026 (audit batch 2: ntfy's live gate): whether the topic is protected by more than its name - an access token, or
+     * Boss's own server. On the public ntfy.sh with no token anyone who learns the topic can post, so ntfy alerts never trades live
+     * then ([NtfyArm]: its "Trade live" stays off).
+     */
+    fun secured(c: Config): Boolean = c.token != null || !publicServer(c.server)
+
+    /**
+     * 19 Nov 2026 (audit batch 2, review): whether [server] is the public ntfy.sh, however it is written ("https://NTFY.sh:443/",
+     * "https://www.ntfy.sh", a path after it) - by its host, lower case, without "www." and the port. An address that cannot be read
+     * counts as public (never secured on a guess).
+     */
+    internal fun publicServer(server: String): Boolean = runCatching {
+        val host = java.net.URI(server.trim()).host?.lowercase(java.util.Locale.ENGLISH)?.trimEnd('.')?.removePrefix("www.") ?: return@runCatching true
+        host == "ntfy.sh"
+    }.getOrDefault(true)
+
+    /** 19 Nov 2026 (audit batch 2): what is said when "Trade live" is asked for with nothing but the topic protecting it. */
+    const val LIVE_NEEDS_TOKEN = "ntfy alerts trades live only with an access token or your own server: set one here first " +
+        "(on the public ntfy.sh anyone who learns the topic can post an alert). Trade live stays off."
+
     /** Boss's topic typed once: checked, kept encrypted. What to say (never the topic itself). */
     fun setTopic(topic: String): String {
         val t = topic.trim()

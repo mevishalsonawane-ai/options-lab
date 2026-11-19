@@ -21,7 +21,8 @@ import kotlinx.coroutines.launch
  */
 internal object IraActions {
     /** One thing Jarvis can act on, as numbered in its lists. */
-    data class Target(val name: String, val run: suspend () -> String)
+    /** [protective]: a resting stop-loss order (SL / SL-M) that guards an open position (19 Nov 2026, audit batch 2). */
+    data class Target(val name: String, val protective: Boolean = false, val run: suspend () -> String)
 
     /** The app's screen model while the app is open: the Live order paths (order review and send) need it. */
     @Volatile private var bridge: WeakReference<com.optionslab.app.ui.AppModel>? = null
@@ -174,15 +175,50 @@ internal object IraActions {
     /** Open orders: the paper account's, then Zerodha's (when logged in). */
     private suspend fun openOrders(): List<Target> {
         val out = ArrayList<Target>()
-        runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.orders?.orders
+        val paper = runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()
+        // 19 Nov 2026 (audit batch 2): what each account holds, by symbol, to tell a protective stop from a stop-type entry.
+        val paperHeld = paper?.positions?.positions?.groupBy { it.symbol }?.mapValues { (_, l) -> l.sumOf { it.quantity } }
+        paper?.orders?.orders
             ?.filter { com.optionslab.ira.AppFacts.isOpen(it.status) }?.forEach { o ->
-                out += Target("paper ${o.action} ${o.quantity} ${o.symbol}") { com.optionslab.app.data.Paper.cancel(o.orderId, "jarvis").message }
+                out += Target("paper ${o.action} ${o.quantity} ${o.symbol}", protective = protectiveStop(o.priceType, o.action, paperHeld?.let { it[o.symbol] ?: 0 })) {
+                    com.optionslab.app.data.Paper.cancel(o.orderId, "jarvis").message
+                }
             }
-        if (Broker.loggedIn) runCatching { Broker.orders() }.getOrNull()?.filter { it.working }?.forEach { o ->
-            out += Target("Zerodha ${o.side} ${o.qty} ${o.symbol}") { Broker.cancel(o.id, o.variety); "Cancelled at Zerodha: ${o.side} ${o.qty} ${o.symbol}." }
+        if (Broker.loggedIn) {
+            val orders = runCatching { Broker.orders() }.getOrNull()?.filter { it.working }.orEmpty()
+            // (Delivery holdings bought on earlier days are not in the day's positions: added, so their stops count as protective.)
+            val held = if (orders.none { isStopType(it.type) }) null else runCatching {
+                val net = Broker.positionBook().net.map { it.symbol to it.qty }
+                val cnc = Broker.holdings().map { it.symbol to (it.qty + it.t1) }
+                (net + cnc).groupBy({ it.first }, { it.second }).mapValues { (_, q) -> q.sum() }
+            }.getOrNull()
+            orders.forEach { o ->
+                out += Target("Zerodha ${o.side} ${o.qty} ${o.symbol}", protective = protectiveStop(o.type, o.side, held?.let { it[o.symbol] ?: 0 })) {
+                    Broker.cancel(o.id, o.variety); "Cancelled at Zerodha: ${o.side} ${o.qty} ${o.symbol}."
+                }
+            }
         }
         return out
     }
+
+    /**
+     * 19 Nov 2026 (audit batch 2): a stop-type order ([isStopType]) that would CLOSE what its account holds on that contract ([held]
+     * net units: a SELL against a long, a BUY against a short) - a protective stop "cancel all orders" leaves working. A stop-type
+     * order that would open or add (a stop entry) is cancelled with the rest. [held] unknown (the positions could not be read): every
+     * stop-type order counts as protective (a stop is never cancelled on a guess).
+     */
+    internal fun protectiveStop(type: String?, side: String, held: Int?): Boolean {
+        if (!isStopType(type)) return false
+        if (held == null) return true
+        val s = side.trim().uppercase(java.util.Locale.ENGLISH)
+        return (s == "SELL" && held > 0) || (s == "BUY" && held < 0)
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2): an order type that is a stop-loss (SL, SL-M): "cancel all orders" leaves it working (a resting stop
+     * guards an open position; GTTs are never in that list). One can still be cancelled by name, said back and confirmed.
+     */
+    internal fun isStopType(type: String?): Boolean = type?.trim()?.uppercase(java.util.Locale.ENGLISH)?.let { it == "SL" || it == "SL-M" } == true
 
     /** Open positions: the paper account's, then Zerodha's (closing a Zerodha one needs the app open). */
     private suspend fun openPositions(): List<Target> {
@@ -319,6 +355,16 @@ internal object IraActions {
                 val mcxToo = c.side == null && mcxKept != null && !mcxLoss
                 // 15 Nov: Liquidity's books on but not cleared by Boss's own switch stay on paper - said, so it never sounds like they go live.
                 val liqNote = liquidityPaperNote()
+                // 19 Nov 2026 (audit batch 2): in Live with a PIN set, lifting the index side's stop takes the PIN on Home - never by voice
+                // (the commodity side, paper only, may still start).
+                if (st.lift && runCatching { com.optionslab.app.data.Strategies.liftAsksPin() }.getOrDefault(true)) {
+                    if (!mcxToo) return LIFT_PIN to null
+                    return "start the commodity bots again (the index bots stay stopped: $LIFT_PIN_SHORT)" to suspend {
+                        val r = com.optionslab.app.data.Strategies.startCommoditiesAgain()
+                        model()?.refreshStrategies()
+                        r
+                    }
+                }
                 if (!st.lift && !mcxToo) st.say + liqNote to null
                 else (if (st.lift) st.say else "start the commodity bots again (the index bots stay stopped: ${st.say})") +
                     (if (st.lift && mcxToo) "; and start the commodity bots again" else "") + liqNote to suspend {
@@ -352,9 +398,15 @@ internal object IraActions {
                 Commands.describe(c, name) + (armNick?.let { " (${it.second})" } ?: "") + heroNote + dayNote to (if (c.kind == Command.Kind.START_ONE) act.first else act.second)
             }
             Command.Kind.CANCEL_ALL -> {
-                val o = openOrders()
-                if (o.isEmpty()) "There are no open orders to cancel." to null
-                else "cancel ${o.size} open order${if (o.size > 1) "s" else ""}" to suspend { o.map { runCatching { it.run() }.getOrElse { e -> "Failed: ${e.message}" } }.joinToString(" ") }
+                // 19 Nov 2026 (audit batch 2): every working order but the protective stops (SL / SL-M): those guard open positions.
+                val all = openOrders()
+                val o = all.filter { !it.protective }
+                val kept = all.size - o.size
+                val keptWords = if (kept > 0) " ($kept stop-loss order${if (kept > 1) "s" else ""} kept working)" else ""
+                if (o.isEmpty()) (if (kept > 0) "There are no open orders to cancel besides your stop-loss orders. $CANCEL_KEEPS_STOPS" else "There are no open orders to cancel.") to null
+                else "cancel ${o.size} open order${if (o.size > 1) "s" else ""}$keptWords" to suspend {
+                    o.map { runCatching { it.run() }.getOrElse { e -> "Failed: ${e.message}" } }.joinToString(" ") + if (kept > 0) " $CANCEL_KEEPS_STOPS" else ""
+                }
             }
             Command.Kind.CANCEL_ONE -> {
                 val o = openOrders()
@@ -701,6 +753,9 @@ internal object IraActions {
         if (v % 1.0 != 0.0 || !com.optionslab.engine.orb.LiquidityLots.valid(n)) return "Liquidity 15+5 trades 1, 2 or 3 lots, Boss - not ${SettingsTalk.show(key, v)}." to null
         val old = com.optionslab.app.data.OrbArms.liquidityLots()
         if (old == n) return "Liquidity 15+5 already trades ${com.optionslab.engine.orb.LiquidityLots.words(n)}." to null
+        // 19 Nov 2026 (audit batch 2): a raise adds live risk (Liquidity trades live by Boss's switch alone): never by voice where the
+        // guard's rule asks the PIN (as [LIMIT_PIN] for the guard's limits) - on its row on Home with the PIN. Lowering always may.
+        if (com.optionslab.engine.orb.LiquidityLots.raises(old, n) && guardPinNeeded()) return LIQ_LOTS_PIN to null
         val more = if (com.optionslab.engine.orb.LiquidityLots.raises(old, n)) " (this allows more risk: each trade wins or loses ${"%.1f".format(java.util.Locale.ENGLISH, n.toDouble() / old).removeSuffix(".0")}x as much)" else ""
         return SettingsTalk.describe(key, old.toDouble(), v) + more to suspend {
             // Checked again at Confirm: changed meanwhile (on the row, or another request), nothing is applied.
@@ -750,6 +805,16 @@ internal object IraActions {
         SettingsTalk.Key.PAPER_WEEKLY_LOSS)
 
     const val LIMIT_PIN = "Loosening the account guard or the paper loss limits needs your app PIN, Boss. Change it on the Account guard page and enter your PIN there. Nothing changed."
+
+    /** 19 Nov 2026 (audit batch 2): lifting the index side's Stop for today by voice in Live (with a PIN set). */
+    const val LIFT_PIN = "Starting the index bots again in Live needs your app PIN, Boss: open IraAlgo and tap Start index bots on Home. They stay stopped."
+    const val LIFT_PIN_SHORT = "in Live that takes your PIN on Home"
+
+    /** 19 Nov 2026 (audit batch 2): what "cancel all orders" leaves working - protective stop orders, said apart. */
+    const val CANCEL_KEEPS_STOPS = "Your stop-loss orders stay working: cancel one by name if you mean it."
+
+    /** 19 Nov 2026 (audit batch 2): raising Liquidity's lots by voice where the PIN is asked. */
+    const val LIQ_LOTS_PIN = "Raising Liquidity 15+5's lots adds live risk, Boss, so it needs your app PIN: change it on its row on Home and enter your PIN there. Nothing changed."
 
     const val KILL_OFF_PIN = "Clearing the kill switch needs your app PIN, Boss. Tap Clear kill switch on Home, or turn it off on the Account guard page, and enter your PIN there. It stays on."
 
