@@ -2877,7 +2877,12 @@ object PassedArmsHost {
         // there first between the held read and this sale), the trade is booked closed elsewhere on the next look, never sold short.
         val r = Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
-        if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) return p
+        if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
+            // 19 Nov 2026 (audit batch 2, coordinator's decision): the arm's own exit ([why]) lost the race to another paper close - the next
+            // look books it closed elsewhere, but its live copy is still sold by this exit ([ArmLive.ruleExit]), never only detached.
+            if (p.mirrored) runCatching { ArmLive.ruleExit(mirrorRef(p), why) }
+            return p
+        }
         if (fill == null) {
             r.orderId?.takeIf { r.ok }?.let { id -> runCatching { Paper.cancel(id, "unfilled_market") } }
             val k = "${p.arm}|exit"

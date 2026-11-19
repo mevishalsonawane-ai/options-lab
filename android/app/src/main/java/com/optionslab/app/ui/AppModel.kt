@@ -2562,16 +2562,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * 19 Nov 2026 (audit batch 2): before a paper reset, every open live copy of an arm stops following its paper trade and keeps its own
      * stop and exits ([com.optionslab.app.data.ArmLive.detachAll]); the words saying so (null: none open). A worker thread (reads the book).
      */
-    private suspend fun liveCopiesKept(): String? {
+    private suspend fun liveCopiesKept(): Pair<List<com.optionslab.app.data.ArmLive.Pos>, String?> {
         runCatching { com.optionslab.app.data.ArmLive.refresh() }
         val hit = runCatching { com.optionslab.app.data.ArmLive.detachAll("paper reset") }.getOrDefault(emptyList())
         // (Written before the paper book is emptied: a kill right after the reset still never sells them.)
         if (hit.isNotEmpty()) runCatching { com.optionslab.app.data.ArmLive.applyDetached() }
-        lastDetached = hit
-        return com.optionslab.app.data.ArmLive.liveCopyWords(hit)
+        return hit to com.optionslab.app.data.ArmLive.liveCopyWords(hit)
     }
-    /** 19 Nov 2026 (audit batch 2): the live copies the last reset detached (given back when the reset itself fails). */
-    @Volatile private var lastDetached: List<com.optionslab.app.data.ArmLive.Pos> = emptyList()
 
     /**
      * 19 Nov 2026 (audit batch 2: the paper book's read may now fail for a moment instead of starting an empty account): [capital] as the
@@ -2582,9 +2579,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         if (runCatching { com.optionslab.app.data.Paper.capital }.isFailure) {
             say("The paper account could not be read just now, so it was not reset. Try again in a moment."); return false to null
         }
-        val words = liveCopiesKept()
-        return try { com.optionslab.app.data.Paper.reset(capital); true to words } catch (e: Exception) {
-            lastDetached.forEach { runCatching { com.optionslab.app.data.ArmLive.undetach(it.ref) } }
+        val (hit, words) = liveCopiesKept()
+        return try { com.optionslab.app.data.Paper.reset(capital); true to words } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (e: Exception) {
+            hit.forEach { runCatching { com.optionslab.app.data.ArmLive.undetach(it.ref) } }
             say("Paper reset failed (${e.message ?: e.javaClass.simpleName}); nothing changed."); false to null
         }
     }

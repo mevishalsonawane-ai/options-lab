@@ -447,7 +447,8 @@ object ArmLive {
                 val p = b.positions[i]
                 if (p.open && !p.detached && detachNotes.containsKey(p.ref)) { b.positions[i] = p.copy(detached = true); hit += b.positions[i] }
             }
-            if (hit.isNotEmpty()) { save(b); hit.forEach { if (!it.shadow) saidDetached(it) } }
+            // (Not said for one an exit of its arm's own rules is about to sell: [ruleExit].)
+            if (hit.isNotEmpty()) { save(b); hit.forEach { if (!it.shadow && !closedRefs.containsKey(it.ref)) saidDetached(it) } }
         } } }
     }
 
@@ -2619,12 +2620,12 @@ object ArmLive {
                 if (p.gttId != null && gtts != null && gttsFresh && (g == null || g.status.lowercase() in setOf("deleted", "cancelled", "expired", "rejected", "disabled"))) {
                     // (19 Nov 2026, audit batch 2: a GTT Zerodha rejected or disabled is a refusal too: rested again after its back-off.)
                     if (g != null && g.status.lowercase() in setOf("rejected", "disabled")) refusedStop(p, p.stopTrigger, "the GTT was ${g.status.lowercase()} at Zerodha")
-                    // 19 Nov 2026 (audit batch 2, coordinator's decision): a GTT deleted (or cancelled) by Boss himself in Kite is respected
+                    // 19 Nov 2026 (audit batch 2, coordinator's decision): a GTT deleted by Boss himself in Kite is respected
                     // like a cancelled SL - never put back, the app watches the level and sells there ([Pos.stopByYou]). Deleted by the app
-                    // (its own exit taking it out, Stop for today, a square-off) is the app's; expired, rejected, disabled or gone from the
-                    // list is Zerodha's or unknown: put back as before.
+                    // (its own exit taking it out, Stop for today, a square-off) is the app's; cancelled, expired, rejected, disabled or gone
+                    // from the list is Zerodha's or unknown: put back as before.
                     val gid = p.gttId
-                    val byYou = g != null && g.status.lowercase() in setOf("deleted", "cancelled") && gid != null &&
+                    val byYou = g != null && g.status.lowercase() == "deleted" && gid != null &&
                         !(ownCancel("$GTT$gid") || (if (p.exchange == "MCX") mcxStopped else stopped) || SquareOffExit.inGap(p.exchange, p.symbol, p.product) ||
                             handsOffRecently(p.exchange, p.symbol) ||
                             orders.values.any { it.symbol == p.symbol && it.exchange == p.exchange && it.working && it.tag in SquareOffExit.TAGS })

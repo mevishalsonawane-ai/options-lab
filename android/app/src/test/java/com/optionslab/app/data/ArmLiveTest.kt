@@ -2934,7 +2934,8 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(0, held())
         // Every paper host with an exit sale that can lose that race tells its own exit.
         fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/data/$f"), java.io.File("app/src/main/java/com/optionslab/app/data/$f")).first { it.isFile }.readText()
-        for (f in listOf("S5Arm.kt", "CisdArm.kt", "NtfyArm.kt", "FlowArm.kt", "Ft3Arm.kt", "VixDivArm.kt", "HeroTicketArm.kt", "McxPaperArms.kt"))
+        for (f in listOf("S5Arm.kt", "CisdArm.kt", "NtfyArm.kt", "FlowArm.kt", "Ft3Arm.kt", "VixDivArm.kt", "HeroTicketArm.kt", "McxPaperArms.kt",
+                "PassedArmsHost.kt", "ShadowArms.kt"))
             assertTrue("$f tells its own exit", src(f).contains("ArmLive.ruleExit("))
     }
 
