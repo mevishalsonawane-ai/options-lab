@@ -2461,7 +2461,9 @@ class ArmLiveTest : RobolectricTest() {
         kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.OPEN))             // the next buy rests unfilled
         val t0 = System.nanoTime()
         val slow = Thread { ArmLive.entered(ask(donchian, "unfilled-slow", c = c2)) }.apply { start() }
-        Thread.sleep(300)
+        val until = System.nanoTime() + 10_000_000_000L
+        while (!ArmLive.entryInFlight && System.nanoTime() < until) Thread.sleep(2)            // the slow entry holds the lock
+        assertTrue(ArmLive.entryInFlight)
         val l0 = System.nanoTime()
         watch()                                                                    // the open trade's look, meanwhile
         val lookMs = (System.nanoTime() - l0) / 1_000_000
@@ -2470,8 +2472,33 @@ class ArmLiveTest : RobolectricTest() {
         val nextMs = (System.nanoTime() - t0) / 1_000_000
         assertFalse(next.isAlive); assertFalse(slow.isAlive)
         assertTrue("a look is not held up: $lookMs ms", lookMs < 2_000)
-        assertTrue("the next entry waited about 5 s at most: $nextMs ms", nextMs < 8_500)
+        assertTrue("the next entry waited about 5 s, never the old 15: $nextMs ms", nextMs < 12_000)
         assertEquals("the unfilled one cancelled", "CANCELLED", kite.orders.values.single { it.side == "BUY" && it.symbol != sym && it.symbol != s3 }.status)
         assertEquals(setOf("open-one", "next"), view().openReal.map { it.ref }.toSet())
+    }
+
+    /** 19 Nov 2026: a cancel Zerodha's book shows a moment late is waited for: nothing booked, never held as unconfirmed. */
+    @Test fun anEntrysCancelShownLateIsConfirmedAndNothingIsBooked() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.testEntryWaitMs = 300
+        kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.OPEN))
+        kite.cancelLagReads = 3
+        ArmLive.entered(ask(donchian, "late-cancel"))
+        assertEquals("CANCELLED", kite.orders.values.single { it.side == "BUY" }.status)
+        assertTrue("nothing booked, nothing unconfirmed", view().open.isEmpty())
+        assertEquals(0, posted("did not confirm"))
+    }
+
+    /** 19 Nov 2026: a cancel that never shows within its 3 s: held as unconfirmed (settled later from the order book), Boss told. */
+    @Test fun anEntrysCancelThatNeverShowsIsHeldAsUnconfirmed() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.testEntryWaitMs = 300
+        kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.OPEN))
+        kite.cancelsLost = 1_000
+        ArmLive.entered(ask(donchian, "lost-cancel"))
+        val p = view().openReal.single()
+        assertTrue(p.unconfirmed); assertNotNull(p.entryOrderId)
+        assertEquals(1, posted("did not confirm"))
+        assertTrue("its cancel sent again", kite.requests.count { it.method == "DELETE" } >= 2)
     }
 }

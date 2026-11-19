@@ -196,6 +196,8 @@ class FakeKite : Closeable {
      * Zerodha's book can show a cancel a moment after its reply; then CANCELLED.
      */
     @Volatile var cancelLagReads = 0
+    /** 19 Nov 2026: this many cancels are answered as taken but never land (the order stays working). */
+    @Volatile var cancelsLost = 0
     private val cancelLag = HashMap<String, Int>()
     private val trailing = HashMap<String, Int>()
 
@@ -606,6 +608,7 @@ class FakeKite : Closeable {
     private fun cancel(id: String): MockResponse {
         val o = orders[id] ?: return error(400, "InputException", "Couldn't find that `order_id`.")
         if (!o.working) return error(400, "InputException", "Order cannot be cancelled as it is being processed. Try later.")
+        if (cancelsLost > 0) { cancelsLost--; return ok(JSONObject().put("order_id", id)) }
         if (cancelLagReads > 0) { cancelLag[id] = cancelLagReads; cancelLagReads = 0; return ok(JSONObject().put("order_id", id)) }
         o.status = "CANCELLED"
         return ok(JSONObject().put("order_id", id))
