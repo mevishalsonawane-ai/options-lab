@@ -1047,6 +1047,9 @@ object IraHub {
         val c = app ?: return
         val guard = Automations.on(Automations.Auto.GUARD)
         if (!Automations.on(Automations.Auto.RESCUE) && !guard) return
+        // 19 Nov 2026 (second review of the clock lane: the rescue now runs on its own, beside the square-offs): nothing while a
+        // square-off is running (it may be closing the very contract); the next pass looks again.
+        if (com.optionslab.app.work.ClockLane.squareOffRunning()) return
         // Guarded: a protection with a stop (or a trail), or a stop order the owner placed directly (ticket, Kite web).
         // 18 Nov 2026 (audit: "stop rescue max 8 min 45 s" - it waited on other modules' locks with no limit): each lock read below
         // waits [RESCUE_LOCK_WAIT_MS] at most; not had in time, nothing is offered or set this pass (never a stop on a position

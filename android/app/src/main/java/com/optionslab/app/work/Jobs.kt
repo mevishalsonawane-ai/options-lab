@@ -650,29 +650,56 @@ object Tasks {
      * before the arms after it, as before); still running then, it finishes by itself and the pass goes on. [inOrder] (a test's
      * pass) or no workers: run here, in order, exactly as before.
      */
-    internal suspend fun clockStep(context: Context, s: AppSettings, name: String, inOrder: Boolean) {
+    internal suspend fun clockStep(context: Context, s: AppSettings, name: String, inOrder: Boolean, mode: StopLane.Mode = StopLane.Mode.NSE) {
         val sup = WatchWorkers.supervisor
-        if (inOrder || sup == null) { step(name) { ClockLane.run(context, name, s) }; return }
+        if (inOrder || sup == null) { step(name) { ClockLane.step(context, name, s, mode).body() }; return }
         Heartbeat.stepBegin(name)
         val t0 = android.os.SystemClock.elapsedRealtime()
-        val wall0 = ClockLane.clock()
         fun left() = ClockLane.PASS_WAIT_MS - (android.os.SystemClock.elapsedRealtime() - t0)
+        // 19 Nov 2026 (second review: a square-off ran twice back to back, the lane's run and then this pass's a second later): a run
+        // that completed (by its start) within [ClockLane.RECENT_MS] stands for this pass's own.
+        fun recent() = (ClockLane.clock() - ClockLane.lastDone(name)).let { it >= 0 && it < ClockLane.RECENT_MS }
         try {
-            // Until a run that started now or later has completed (the lane's run under way may have started before this pass's
-            // books, or given up its round waiting for another square-off's turn), within the bound; as the pass always ran it.
-            // This pass's own run once; before it, the lane's run under way waited for. A run of its own that failed is the next
-            // pass's (and the lane's next round's) to try again, as before.
+            // The lane's run under way waited for (within the bound); then this pass's own run, unless a run completed just now.
+            // A run of its own that failed is the next pass's (and the lane's next round's) to try again, as before.
             for (attempt in 1..2) {
                 if (left() <= 0) break
+                if (!sup.busy(name) && recent()) break
                 val laneRun = sup.busy(name)
-                sup.group(ClockLane.PASS_GROUP, listOf(ClockLane.step(context, name, s)), left().coerceAtLeast(1L))
+                sup.group(ClockLane.PASS_GROUP, listOf(ClockLane.step(context, name, s, mode)), left().coerceAtLeast(1L))
                 while (sup.busy(name) && left() > 0) kotlinx.coroutines.delay(200)
-                if (!laneRun || ClockLane.lastDone(name) >= wall0 || sup.busy(name)) break
+                if (!laneRun || sup.busy(name)) break
             }
         } finally {
             Heartbeat.stepEnd()
         }
     }
+
+    /**
+     * 19 Nov 2026 (second review: arms could enter while this pass's loss limit was still running, after the pass moved on from it at
+     * [ClockLane.PASS_WAIT_MS]): before an arms group, a loss-limit run under way (this pass's or the clock lane's) is waited for,
+     * until it is [maxMs] old at most (and [maxMs] of waits here), as the old one-after-another pass waited for it; past that the pass
+     * goes on and the diary says so. True when none was running at the end. No new skip: the arms' own gates read the stop as before.
+     */
+    internal suspend fun awaitLossLimit(maxMs: Long = LOSS_BEFORE_ARMS_MS): Boolean {
+        val sup = WatchWorkers.supervisor ?: return true
+        var waited = 0L
+        while (sup.busy(ClockLane.LOSS)) {
+            // Bounded by the run's own age too (review): a hung run holds the arms [maxMs] in all, never [maxMs] before each group
+            // of every pass.
+            val started = ClockLane.lossStartedAt
+            val age = if (started > 0L) ClockLane.clock() - started else 0L
+            if (waited >= maxMs || age >= maxMs) {
+                runCatching { Heartbeat.diary("the arms went on after waiting ${maxMs / 1000} s for the daily loss limit's run to end") }
+                return false
+            }
+            kotlinx.coroutines.delay(100); waited += 100
+        }
+        return true
+    }
+
+    /** 19 Nov 2026: the longest the arms wait for a loss-limit run under way ([awaitLossLimit]), counted from its start. */
+    private const val LOSS_BEFORE_ARMS_MS = 30_000L
 
     /**
      * 18 Nov 2026 (audit): a step that may wait long and places nothing the pass's later steps need (the stop rescue, the trailing
@@ -700,6 +727,7 @@ object Tasks {
 
     private suspend inline fun armsPhase(service: Boolean, block: () -> Unit) {
         if (!service) { block(); return }
+        awaitLossLimit()
         armsPhaseAt = android.os.SystemClock.elapsedRealtime().coerceAtLeast(1L)
         try { block() } finally { armsPhaseAt = 0L }
     }
@@ -1141,12 +1169,11 @@ object Tasks {
             // every 15 s by the clock ([ClockLane]), in their one turn; here too, in this order, as the same steps (never two runs of
             // one at once), each waited on at most [ClockLane.PASS_WAIT_MS] (never cut: one still running finishes by itself).
             // Expiry day, 15:05: close every option position expiring today (paper and live, all products).
-            clockStep(context, s, ClockLane.EXPIRY, inOrder = lanes == null)
             // MCX (9 Oct): options closed by 23:00 the day before expiry, delivery futures 5 trading days before (paper and live).
-            clockStep(context, s, ClockLane.MCX_EXPIRY, inOrder = lanes == null)
             // 22 Oct: the hard flat-by per segment (NSE index 15:25, stock 15:20, MCX ten minutes before its close): every intraday
             // arm position still open after the arms' own exits, paper and live; the kill switch never stops it.
-            clockStep(context, s, ClockLane.FLAT_BY, inOrder = lanes == null)
+            // 19 Nov 2026 (second review): the three as one step, in this order ([ClockLane.SQUARE_OFFS]).
+            clockStep(context, s, ClockLane.SQUARE_OFFS, inOrder = lanes == null)
         }
         // After the square-off (so what it closed is booked as closed), side by side as above: the MCX paper arms (9 Oct,
         // research M3/M4/M2; paper only, off by default), the Strategy Module (schedules, prices, per-leg and basket risk,
@@ -1381,9 +1408,9 @@ object Tasks {
             // ([ClockLane]); here as the same steps (never two runs of one at once), waited on [ClockLane.PASS_WAIT_MS] at most.
             clockStep(context, s, ClockLane.LOSS, inOrder = false)
             step("stops and targets") { com.optionslab.app.data.Protections.tick() }
-            clockStep(context, s, ClockLane.MCX_EXPIRY, inOrder = false)
             // 22 Oct: MCX's flat-by, ten minutes before its close (the arms' NRML futures are held by design; MIS only).
-            clockStep(context, s, ClockLane.FLAT_BY, inOrder = false)
+            // 19 Nov 2026 (second review): the MCX expiry exit, then the flat-by, as one step ([ClockLane.SQUARE_OFFS]).
+            clockStep(context, s, ClockLane.SQUARE_OFFS, inOrder = false, mode = StopLane.Mode.MCX)
             // The MCX paper arms (paper only): after the expiry exit, so a position it closed is booked as closed there.
             step("MCX paper arms") { com.optionslab.app.data.McxPaperArms.tick() }
             // 30 Oct (deep review): the arms' live trades on MCX in the evening ([com.optionslab.app.data.ArmLive]) - their GTT moved to

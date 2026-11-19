@@ -113,6 +113,8 @@ object McxGuard {
                 // 20 Oct, enhancement round 2: each contract in its one exit turn ([ExitCoordinator]), as the NSE expiry square-off.
                 val pass = ExitCoordinator.enter(Mcx.EXCHANGE, p.symbol, "MCX expiry exit")
                 try {
+                    // 19 Nov 2026: a square-off exit placed on it a moment ago is still on its way ([SquareOffExit.GAP_MS]).
+                    if (SquareOffExit.inGap(Mcx.EXCHANGE, p.symbol)) continue
                     if (ExitCoordinator.stale(Mcx.EXCHANGE, p.symbol, "MCX expiry exit", read)) continue
                     val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
                     val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
@@ -123,7 +125,9 @@ object McxGuard {
                     if (!Protections.dayGttsOut(Mcx.EXCHANGE, p.symbol, "MCX expiry exit")) continue
                     val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
                     // 21 Oct, enhancement round 3 (idea 1, review): held, checked against the orders read's fills ([ExitCoordinator.held]).
-                    val heldNow = runCatching { ExitCoordinator.held(Mcx.EXCHANGE, p.symbol, p.product, "MCX expiry exit", read, freshBook) }.getOrNull() ?: continue
+                    // 19 Nov 2026 (second review of the clock lane: it can now run twice back to back): the lag guard always acts
+                    // here ([forceLag], as the NSE square-offs' [SquareOffExit]); it only ever lowers what is sent.
+                    val heldNow = runCatching { ExitCoordinator.held(Mcx.EXCHANGE, p.symbol, p.product, "MCX expiry exit", read, freshBook, forceLag = true) }.getOrNull() ?: continue
                     if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) continue
                     // Zerodha keeps MCX positions and orders in lots: the whole open quantity, one lot at a time.
                     val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), 1)
@@ -136,12 +140,17 @@ object McxGuard {
                     }
                     try {
                         val id = Broker.placeOrder(o, exit = true)
+                        SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol)
                         runCatching { Strategies.tagOwner("kite:$id", Origins.EXPIRY) }
                         tellOnce(context, "live ${p.symbol}", "MCX expiry exit", "Zerodha ${p.symbol}: close sent. ${due.text}")
                     } catch (e: Exception) {
                         if (Broker.definite(e)) tellOnce(context, "rejected ${p.symbol} ${e.message}", "MCX expiry exit",
                             "Zerodha refused the exit of ${p.symbol}: ${e.message}. Retrying every pass; close it yourself if it keeps failing.")
-                        else runCatching { Broker.findRecentRetrying(o, working.map { it.id }) }
+                        else {
+                            // The reply was lost, not necessarily the order (19 Nov 2026: the contract's gap starts either way).
+                            SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol)
+                            runCatching { Broker.findRecentRetrying(o, working.map { it.id }) }
+                        }
                     }
                 } finally { pass.leave() }
             }

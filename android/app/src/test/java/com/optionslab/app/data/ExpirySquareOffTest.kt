@@ -49,6 +49,7 @@ class ExpirySquareOffTest : RobolectricTest() {
 
     @After fun down() {
         ExpirySquareOff.armOwns = { ArmLive.ownerOf(it) != null }
+        ExpirySquareOff.liveBooksReady = { true }
         AutomationSupport.realClocks()
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -123,6 +124,21 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue("and the day is done", done())
     }
 
+    /**
+     * 19 Nov 2026 (second review of the clock lane, item 4: it runs this from the watch's first seconds, a restart at 15:06
+     * included): the arms' live book not read yet, no live position can be told an arm's, so none is sold as Boss's own before the
+     * backstop, and the day is not done. At the backstop whatever is still open is closed, as before.
+     */
+    @Test fun anUnreadArmsBookSellsNoLivePositionBeforeTheBackstop() {
+        ExpirySquareOff.liveBooksReady = { false }
+        kite.position(ce, 75, 20.0)
+        pass()
+        assertTrue("nothing sold while the arms' book is unread", kite.placed.isEmpty())
+        assertTrue("and the day is not done", !done())
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
+    }
+
     /** The other half: a fill between the reads leaves the orders read first showing it working; the positions then flat. */
     @Test fun ordersAreReadBeforeThePositions() {
         kite.position(ce, 75, 20.0)
@@ -142,7 +158,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         at(15, 6); pass()
         assertEquals("only the one no arm owns", listOf(Triple(pe, "SELL", "75")), sent())
         assertTrue("the arm's is still open: not done", !done())
-        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
         assertEquals("the backstop closes what its owner did not", listOf(Triple(pe, "SELL", "75"), Triple(ce, "SELL", "75")), sent())
     }
 
@@ -154,7 +170,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         val armSell = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 75, 75, "NRML", "MARKET", null, 0.05, "NFO",
             com.optionslab.engine.orb.LiveMirror.TAG), exit = true) }
         kite.requests.clear()
-        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
         assertTrue("nothing sent", kite.placed.isEmpty())
         assertTrue("the arm's exit not cancelled", kite.requests.none { it.method == "DELETE" })
         assertEquals("OPEN", kite.order(armSell).status)
@@ -319,7 +335,7 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue(kite.placed.isEmpty())
         // 20 Oct: SENSEX's list is asked for first; with no list by the backstop minute, it is said whatever.
         assertTrue("not before the list could be read", texts().none { it.contains("SENSEX26SEP80000CE") })
-        at(15, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); pass()
         assertTrue(kite.placed.isEmpty())
         val said = texts().single { it.contains("SENSEX26SEP80000CE") }
         assertTrue(said, said.contains("NOT closed automatically"))

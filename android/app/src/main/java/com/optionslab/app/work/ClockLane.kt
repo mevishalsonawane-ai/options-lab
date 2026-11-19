@@ -23,9 +23,9 @@ import java.util.concurrent.ConcurrentHashMap
  *  - the same steps as the pass ran, in the same markets: NSE's look runs all four, MCX's evening look (outside NSE's hours) the
  *    loss limit, the MCX expiry exit and the flat-by, as [Tasks.mcxTick]; none before the open, in the evening look or on a closed
  *    day ([StopLane.Mode.OFF]), as before. They run whether or not anything is held: each reads the books and Zerodha itself;
- *  - the three square-offs take one turn ([ClockSteps.Turn]): they ran one after another in the pass and still never run at the
- *    same time, so two of them never sell one contract twice. The loss limit takes no turn (it ran beside the stop lane's exits
- *    before too);
+ *  - the three square-offs are one step ([SQUARE_OFFS]), one after another in the pass's order, each in the one turn
+ *    ([ClockSteps.Turn]) that the loss limit's sales take too ([sales]); the loss limit runs first in a round and the square-offs after
+ *    it ends (19 Nov 2026, second review);
  *  - the pass still runs them at their old place ([Tasks.clockStep]), as the same supervisor steps: never two runs of one at once;
  *  - each run's start is kept when it COMPLETES ([lastDone]); a due step with no completed run 45 s after its time while anything is
  *    held is a RISK alert, once ([ClockSteps.late]);
@@ -72,39 +72,142 @@ internal object ClockLane {
     @Volatile internal var testWork: (suspend (String) -> Unit)? = null
 
     /**
-     * One run of [name], as the lane and the pass both run it: as safety work (its Zerodha requests first), a square-off in its
-     * turn. A run that completes stamps its start ([lastDone]); one that throws, or could not have its turn, stamps nothing.
+     * 19 Nov 2026 (second review): the three square-offs as ONE supervisor step, run one after another in the pass's old order
+     * ([squareOffsFor]: the expiry square-off, the MCX expiry exit, the flat-by), so each always runs after the one before however
+     * long that takes - a slow one never starves the next (they took one shared turn each before, and a slow expiry square-off could
+     * keep the flat-by from ever having it).
+     */
+    const val SQUARE_OFFS = "square-offs"
+
+    /** The square-offs of a market's look, in the pass's order. */
+    fun squareOffsFor(mode: StopLane.Mode): List<String> = stepsFor(mode).filter { it != LOSS }
+
+    /** 19 Nov 2026: the square-offs wait this long at most for a loss-limit run under way to end before they start. */
+    const val LOSS_FIRST_WAIT_MS = 10_000L
+    /**
+     * 19 Nov 2026: the loss limit's sales wait this long at most for the turn (a square-off holds it for one square-off at a time);
+     * then they go (a diary line says so). A square-off waits as long for the loss limit's sales.
+     */
+    const val SALES_TURN_WAIT_MS = 30_000L
+    /** 19 Nov 2026 (second review: the lane's run and then the pass's, a second apart): the pass skips its own run of a clock step that completed (by its start) this recently. */
+    const val RECENT_MS = 15_000L
+
+    /** When the loss limit's run under way started (wall-clock ms, 0: none; memory only), for the arms' bounded wait ([Tasks.awaitLossLimit]). */
+    @Volatile internal var lossStartedAt = 0L
+
+    /**
+     * One run of [name], as the lane and the pass both run it: as safety work (its Zerodha requests first). The loss limit takes no
+     * turn itself (its sales do, [sales]); a single square-off takes the turn as in [runSquareOffs]. A run that completes stamps its
+     * start ([lastDone]); one that throws stamps nothing.
      */
     suspend fun run(context: Context, name: String, s: AppSettings) {
+        if (name != LOSS) { turn.take(turnWait(), name) { runOne(context, name, s) }; return }
         val t0 = clock()
-        val ok = Tasks.safely {
-            val work: suspend () -> Unit = testWork?.let { w -> suspend { w(name) } } ?: when (name) {
-                LOSS -> suspend {
+        lossStartedAt = t0
+        try {
+            val ok = Tasks.safely {
+                val w = testWork
+                if (w != null) w(name) else {
                     com.optionslab.app.data.LossBreaker.check(context)
                     // The guards as they stand now, in the shared state (memory: the settings and the breaker's record), as the pass did.
                     runCatching { com.optionslab.app.data.AppState.refreshGuards() }
-                    Unit
                 }
-                EXPIRY -> suspend { com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s) }
-                MCX_EXPIRY -> suspend { com.optionslab.app.data.McxGuard.maybeRun(context, s) }
-                FLAT_BY -> suspend { com.optionslab.app.data.FlatBySquareOff.maybeRun(context, s) }
-                else -> suspend { }
+                true
             }
-            if (name == LOSS) { work(); true } else turn.take(who = name) { work(); true } ?: false
-        }
-        if (ok) done.merge(name, t0) { a, b -> maxOf(a, b) }
-        else if (t0 - turnToldAt >= 60_000L || t0 < turnToldAt) {
-            // One diary line a minute at most (a hung square-off keeps the turn every round).
-            turnToldAt = t0
-            runCatching { Heartbeat.diary("$name waited ${ClockSteps.TURN_WAIT_MS / 1000} s for another square-off to finish; the next round tries again") }
+            if (ok) done.merge(name, t0) { a, b -> maxOf(a, b) }
+        } finally {
+            if (lossStartedAt == t0) lossStartedAt = 0L
         }
     }
+
+    /** How long a square-off waits for the turn: the loss limit's sales hold it for as long as they take, so longer for them. */
+    private fun turnWait(): Long = if (turn.holder == LOSS) SALES_TURN_WAIT_MS else ClockSteps.TURN_WAIT_MS
+
+    /**
+     * The square-offs of [mode]'s look, one after another in the pass's order ([SQUARE_OFFS]): after a loss-limit run under way has
+     * ended ([LOSS_FIRST_WAIT_MS] at most, so a hung one never holds them for ever), each in the turn for its own run (so a tripped
+     * loss limit's sales slot in between, never beside one); a turn not had, the rest of the sequence is left to the next round, in
+     * order. Stamps [SQUARE_OFFS] only when every one completed; each stamps its own name ([runOne]).
+     */
+    suspend fun runSquareOffs(context: Context, s: AppSettings, mode: StopLane.Mode) {
+        val t0 = clock()
+        val sup = WatchWorkers.supervisor
+        var waited = 0L
+        while (sup != null && sup.busy(LOSS) && waited < LOSS_FIRST_WAIT_MS) { kotlinx.coroutines.delay(100); waited += 100 }
+        var all = true
+        for (n in squareOffsFor(mode)) {
+            val ok = turn.take(turnWait(), n) { runOne(context, n, s) }
+            if (ok == null) {
+                all = false
+                if (t0 - turnToldAt >= 60_000L || t0 < turnToldAt) {
+                    // One diary line a minute at most (a long sale keeps the turn every round).
+                    turnToldAt = t0
+                    runCatching { Heartbeat.diary("$n waited for the turn (${turn.holder ?: "?"}); the next round tries again") }
+                }
+                break
+            }
+            if (!ok) all = false
+        }
+        if (all) done.merge(SQUARE_OFFS, t0) { a, b -> maxOf(a, b) }
+    }
+
+    /**
+     * One square-off's run (its turn held): as safety work, timed under its own name; a run that completes stamps its start and
+     * returns true. One that throws is told and returns false, and the next square-off still runs.
+     */
+    private suspend fun runOne(context: Context, name: String, s: AppSettings): Boolean {
+        val t0 = clock()
+        val el0 = android.os.SystemClock.elapsedRealtime()
+        val ok = try {
+            Tasks.safely {
+                val w = testWork
+                if (w != null) w(name) else when (name) {
+                    EXPIRY -> com.optionslab.app.data.ExpirySquareOff.maybeRun(context, s)
+                    MCX_EXPIRY -> com.optionslab.app.data.McxGuard.maybeRun(context, s)
+                    FLAT_BY -> com.optionslab.app.data.FlatBySquareOff.maybeRun(context, s)
+                    else -> Unit
+                }
+                true
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Our own end is passed on; a cancellation from inside its work (a timeout that escaped it) is its failure.
+            if (kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]?.isActive == false) throw e
+            runCatching { Tasks.stepFailed(name, e) }
+            false
+        } catch (e: Throwable) {
+            runCatching { Tasks.stepFailed(name, e) }
+            false
+        } finally {
+            runCatching { WatchWorkers.timed(name, android.os.SystemClock.elapsedRealtime() - el0) }
+        }
+        if (ok) done.merge(name, t0) { a, b -> maxOf(a, b) }
+        return ok
+    }
+
+    /**
+     * 19 Nov 2026 (second review: the loss limit's sales could overlap a square-off's on the same legs): [block] - the loss limit's
+     * sales - in the square-offs' turn, waited for [SALES_TURN_WAIT_MS] at most; not had by then (a square-off hung), they go
+     * anyway (a tripped limit always sells) and the diary says so.
+     */
+    suspend fun <T> sales(who: String, block: suspend () -> T): T {
+        val r = turn.take(SALES_TURN_WAIT_MS, who) { Result.success(block()) }
+        if (r != null) return r.getOrThrow()
+        runCatching { Heartbeat.diary("$who: a square-off held the turn ${SALES_TURN_WAIT_MS / 1000} s (${turn.holder ?: "?"}); its sales go now") }
+        return block()
+    }
+
+    /** 19 Nov 2026 (second review): a square-off holds the turn now (it is closing positions); the stop rescue waits. */
+    fun squareOffRunning(): Boolean = turn.holder.let { it != null && it != LOSS }
+
+    /** TEST ONLY: the turn held by [who] until [release] completes. */
+    internal suspend fun holdTurnForTest(who: String, release: kotlinx.coroutines.CompletableDeferred<Unit>) { turn.take(60_000L, who) { release.await() } }
 
     /** When a square-off last told the diary it could not have its turn (wall-clock ms; memory only). */
     @Volatile private var turnToldAt = 0L
 
-    /** [name] as a supervisor step (the lane's and the pass's: one name, so never two runs at once). */
-    fun step(context: Context, name: String, s: AppSettings): Supervisor.Step = Supervisor.Step(name) { run(context, name, s) }
+    /** [name] as a supervisor step (the lane's and the pass's: one name, so never two runs at once); [mode]: the square-offs' look. */
+    fun step(context: Context, name: String, s: AppSettings, mode: StopLane.Mode = StopLane.Mode.NSE): Supervisor.Step =
+        Supervisor.Step(name) { if (name == SQUARE_OFFS) runSquareOffs(context, s, mode) else run(context, name, s) }
 
     /** A round now (a clock alarm rang): memory only, never blocks; nothing when no watch runs (the alarm starts one). */
     fun poke() { lane?.poke() }
@@ -129,11 +232,15 @@ internal object ClockLane {
                         // Settings read fresh each round that runs a step, as each pass reads them (the kill switch never stops
                         // these: they only lower risk).
                         val s = AppSettings.load()
-                        val steps = due.map { step(context, it, s) }
+                        // 19 Nov 2026 (second review): the loss limit first, then the square-offs as one step in their order (it
+                        // waits for the loss limit to end, [runSquareOffs]).
+                        val sq = due.filter { it != LOSS }
+                        val steps = listOfNotNull(if (LOSS in due) step(context, LOSS, s) else null,
+                            if (sq.isNotEmpty()) step(context, SQUARE_OFFS, s, m) else null)
                         val sup = supervisor()
                         // No workers (never in the service): one after another here, as the pass would.
                         val started = if (sup != null) sup.kick(GROUP, steps) else steps.map { st -> runCatching { st.body() }; st.name }
-                        started.forEach { lastStart[it] = t }
+                        started.forEach { n -> if (n == SQUARE_OFFS) { squareOffsFor(m).forEach { lastStart[it] = t } } else { lastStart[n] = t } }
                     }
                     runCatching { lateCheck(context, m, names, t, since, heldNow) }
                 }
@@ -188,9 +295,8 @@ internal object ClockLane {
         if (!held) return
         val now = java.time.Instant.ofEpochMilli(nowMs).atZone(Market.now().zone)
         for (name in names) {
-            // A square-off waiting for another one's turn is not judged: the one holding the turn is (it is told if it is late).
-            val holder = turn.holder
-            if (holder != null && holder != name && name != LOSS) continue
+            // 19 Nov 2026 (second review): each judged by its own due time, whoever holds the turn (a square-off starved behind a slow
+            // one is late too, and said).
             val last = lastDone(name)
             val due = ClockSteps.dueAt(last, since, runCatching { scheduled(name, mode, now) }.getOrNull(), ClockSteps.IDLE_EVERY_MS)
             if (!ClockSteps.late(due, last, nowMs)) continue
@@ -218,7 +324,7 @@ internal object ClockLane {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest() { done.clear(); lastStart.clear(); testWork = null; lane = null; clock = System::currentTimeMillis; told = ClockSteps.Once() }
+    internal fun resetForTest() { done.clear(); lastStart.clear(); lossStartedAt = 0L; testWork = null; lane = null; clock = System::currentTimeMillis; told = ClockSteps.Once() }
 }
 
 /**

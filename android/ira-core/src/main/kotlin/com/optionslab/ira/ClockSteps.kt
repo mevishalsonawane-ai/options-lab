@@ -85,7 +85,8 @@ object ClockSteps {
      * The square-offs' one turn (the expiry square-off, the MCX expiry exit, the flat-by): they ran one after another in the pass,
      * and on the lane they still never run at the same time (two could otherwise sell one contract twice). A step waits
      * [TURN_WAIT_MS] at most for the turn, polling, never cancelled while it holds it; not had in time, the round is left (null)
-     * and the next one tries again. The daily loss limit takes no turn.
+     * and the next one tries again. 19 Nov 2026 (second review): the three run as one sequence holding it, and the daily loss limit's
+     * sales take it too.
      */
     class Turn(private val pollMs: Long = 50L) {
         private val m = Mutex()

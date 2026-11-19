@@ -12,6 +12,7 @@ import com.optionslab.app.data.Origins
 import com.optionslab.app.data.Paper
 import java.util.Locale
 import kotlin.math.abs
+import kotlinx.coroutines.ensureActive
 
 /**
  * One notification per open position, paper and Zerodha, kept live: quantity,
@@ -60,7 +61,7 @@ object PositionCards {
      */
     internal fun resetForTest() {
         resetGen++
-        posted.clear(); shown.clear(); sources.clear(); sourceQty.clear(); lastLive = null; anyOpen = false
+        posted.clear(); shown.clear(); sources.clear(); sourceQty.clear(); lastLive = null; anyOpen = false; testBeforeRead = null
     }
 
     fun idOf(venue: String, symbol: String) = 30_000 + ("$venue|$symbol".hashCode() and Int.MAX_VALUE) % 5_000
@@ -182,13 +183,20 @@ object PositionCards {
         runCatching { com.optionslab.app.widget.IraWidget.publish(context, nifty, bank, pnl) }
     }
 
+    /** TEST SEAM: run first inside the paper read of [refresh] (a slow read). Null in the app, always. */
+    @Volatile internal var testBeforeRead: (suspend () -> Unit)? = null
+
     /** Rewrite every card from the accounts' current positions; a position gone since the last pass gets its final card. */
     suspend fun refresh(context: Context) {
         val gen0 = resetGen
         val s = runCatching { AppSettings.load() }.getOrNull() ?: return
         val now = HashMap<String, Unit>()
         val owners = runCatching { com.optionslab.app.data.Strategies.owners() }.getOrDefault(emptyMap())
-        val paperSnap = runCatching { Paper.snapshot(Paper.SHARED_QUOTE_MS) }.getOrNull()
+        val paperSnap = runCatching { testBeforeRead?.invoke(); Paper.snapshot(Paper.SHARED_QUOTE_MS) }.getOrNull()
+        // 19 Nov 2026 (second review: the watch pass now gives this 20 s, then cancels it): a read cut short by that is not "no
+        // positions" - the reads above swallow the cancellation, so it is passed on here, before any card is dismissed or the
+        // watch's "anything open" is written.
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
         paperSnap?.let { snap -> snap.positions.positions.map { it to snap.trades } }?.forEach { (p, trades) ->
             val key = "Paper|${p.symbol}"
             // 2 Nov: paper notifications off ([Notifier.paperQuiet]): no paper card, yet still counted as open for the watch.
@@ -237,6 +245,7 @@ object PositionCards {
             if (p.qty != 0) { now[key] = Unit; card(context, "Live", p.symbol, p.qty, p.avg, p.last.takeIf { it > 0 }, p.pnl) }
             else if (shown.remove(key) != null) card(context, "Live", p.symbol, 0, p.avg, null, p.pnl)
         }
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
         // 18 Oct, review: a Zerodha read that failed (a timeout, a network blip) is not "no positions": the Live cards stay as
         // they were, and so does the watch's 15-second stop check (anyOpen), until a read that succeeds lacks them.
         if (s.live && liveLoggedIn && liveBook == null) {
@@ -255,6 +264,7 @@ object PositionCards {
         if (!ordersRead && s.live && liveLoggedIn && runCatching { com.optionslab.app.widget.OpenWidget.wantsOrders(context, true) }.getOrDefault(false))
             runCatching { Broker.orders() }.getOrNull()?.let { watchOrders = it }
         // The "Open" widget from the books just read (no read of its own); a failed Zerodha read is shown as one.
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
         runCatching { com.optionslab.app.widget.OpenWidget.fromWatch(context, s.live, liveLoggedIn, liveBook, paperSnap, watchOrders) }
     }
 }

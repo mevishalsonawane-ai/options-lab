@@ -451,14 +451,20 @@ class ExitCoordinatorTest : RobolectricTest() {
         assertTrue(ExitCoordinator.countsForTest().lagSubtracted >= 1)
     }
 
-    @Test fun inShadowTheExpirySquareOffGoesAsBeforeAndOnlyLogs() {
+    /**
+     * 19 Nov 2026 (second review of the clock lane: a square-off can run twice back to back): the square-offs' guard acts whatever
+     * the switch says ([ExitCoordinator.held] forceLag, as Protections since 15 Nov); it only ever lowers what is sent. (Before: in
+     * shadow the trailing read was sold again.)
+     */
+    @Test fun inShadowTheExpirySquareOffStillNeverSellsAFilledExitAgain() {
         kite.position(ce, 75, 20.0)
         kite.positionsTrailReads = 50
         bossSells(75)
         kite.requests.clear()
         pass()
-        assertEquals("as before this round: the trailing read is sold", 75, sells())
-        assertTrue(ExitCoordinator.countsForTest().lagShadow >= 1)
+        assertEquals("no second sell", 0, sells())
+        assertEquals(0, held())
+        assertTrue(ExitCoordinator.countsForTest().lagSubtracted >= 1)
     }
 
     @Test fun anExpiryPassWithNoExitOfOursJustFilledReadsThePositionsOnce() {
@@ -556,12 +562,14 @@ class ExitCoordinatorTest : RobolectricTest() {
         assertTrue(ExitCoordinator.countsForTest().lagSubtracted >= 1)
     }
 
-    @Test fun inShadowTheExpirySquareOffWithARestingStopsFillOnlyLogs() {
+    /** 19 Nov 2026: in shadow too, the square-off's guard acts (above). */
+    @Test fun inShadowTheExpirySquareOffNeverSellsARestingStopsFillAgain() {
         kite.position(ce, 75, 20.0)
         restingStopFills(75, trail = 50)
         pass()
-        assertEquals("as before this round: the pass sells the trailing read again", 75, sells())
-        assertTrue(ExitCoordinator.countsForTest().lagShadow >= 1)
+        assertEquals("the pass sends nothing: the stop already sold it", 0, sells())
+        assertEquals(0, held())
+        assertTrue(ExitCoordinator.countsForTest().lagSubtracted >= 1)
     }
 
     // ---- 21 Oct, enhancement round 5 (idea 3): a same-day NRML/MIS conversion ------------------------------------------------

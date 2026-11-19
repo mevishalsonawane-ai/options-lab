@@ -66,6 +66,12 @@ class TestApp : Application() {
         // switch them on ([com.optionslab.app.data.BossRiskHost]).
         com.optionslab.app.data.BossRiskHost.resetForTest(paperOn = false)
         com.optionslab.app.work.StopLane.quietNow = false
+        // 19 Nov 2026: the arms' live book counts as read for the expiry square-off (as the flat-by's tests set it); the tests of
+        // an unread book set it themselves.
+        com.optionslab.app.data.ExpirySquareOff.liveBooksReady = { true }
+        // 19 Nov 2026: the square-offs' 15 s gap per contract after an exit off (the older tests run passes back to back on purpose);
+        // its own tests switch it on.
+        com.optionslab.app.data.SquareOffExit.resetForTest(gap = 0L)
         com.optionslab.app.data.WatchClock.resetForTest()
         IdleSampler.install()
         NetworkGuard.install()

@@ -21,6 +21,33 @@ internal object SquareOffExit {
     val TAGS = setOf("iraalgoexpiry", "iraalgoflat")
     private val DONE = setOf("COMPLETE", "REJECTED", "CANCELLED")
 
+    /**
+     * 19 Nov 2026 (second review of the clock lane: a square-off can now run twice back to back, the lane's run and the pass's):
+     * after a square-off exit was placed on a contract (by any square-off: this object's two and the MCX expiry exit), none is sent
+     * on it again for [GAP_MS], whatever the next read of the books shows (an orders read can miss an order placed a moment ago,
+     * and a positions read can trail its fill). Per contract, so another contract's exit is never held back. Memory only.
+     */
+    const val GAP_MS = 15_000L
+    private val placedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** The wall clock the gap reads (a test's fake one). */
+    @Volatile internal var clock: () -> Long = System::currentTimeMillis
+    /** The gap in force: [GAP_MS] in the app, always; the older tests' back-to-back passes set it to 0 (its own tests set it). */
+    @Volatile internal var gapMs: Long = GAP_MS
+
+    /** Whether a square-off exit went on [exchange]:[symbol] within [GAP_MS]. */
+    fun inGap(exchange: String, symbol: String): Boolean {
+        val at = placedAt["$exchange:$symbol"] ?: return false
+        val now = clock()
+        return now >= at && now - at < gapMs
+    }
+
+    /** A square-off exit was placed on [exchange]:[symbol] now. */
+    fun notePlaced(exchange: String, symbol: String) { placedAt["$exchange:$symbol"] = clock() }
+
+    /** TEST ONLY. */
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap }
+
     /** A stop-type order (waits for a trigger): the kind that is cancelled before the exit. A plain MARKET or LIMIT sell is an exit. */
     private fun isStop(o: Broker.OrderRow): Boolean = o.type.equals("SL", true) || o.type.equals("SL-M", true) || o.status == "TRIGGER PENDING"
 
@@ -29,6 +56,8 @@ internal object SquareOffExit {
                      aboutIt: String, exitName: String, multiplier: Int = 1, tell: (String, String) -> Unit): Boolean {
         val pass = ExitCoordinator.enter(p.exchange, p.symbol, who)
         try {
+            // 19 Nov 2026: an exit placed on it a moment ago is still on its way ([GAP_MS]): nothing more now, the next run reads again.
+            if (inGap(p.exchange, p.symbol)) return false
             if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
             val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
@@ -56,8 +85,10 @@ internal object SquareOffExit {
             if (!Protections.dayGttsOut(p.exchange, p.symbol, who)) return false
             val pending = cover.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
             // What is held, checked against the orders read's fills: an exit sent from here that filled a moment ago is never
-            // sold again while the positions catch up ([ExitCoordinator.held]).
-            val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, read, positions) }.getOrNull() ?: return false
+            // sold again while the positions catch up ([ExitCoordinator.held]). 19 Nov 2026 (second review of the clock lane: a
+            // square-off can now run twice back to back, the clock lane's run and the pass's): the lag guard always acts here
+            // ([forceLag], as [Protections] has since 15 Nov), whatever its switch says - it only ever lowers what is sent.
+            val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, read, positions, forceLag = true) }.getOrNull() ?: return false
             if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) return false          // closed meanwhile: the next pass sees it
             val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), lotSize)
             if (qty <= 0) return false                                      // still closing; checked again next pass
@@ -99,11 +130,14 @@ internal object SquareOffExit {
                         tell("rejected ${p.symbol} ${e.message}", "Zerodha refused the $exitName exit of ${p.symbol}: ${e.message}. Retrying every pass until the close; close it yourself if it keeps failing.")
                         break
                     }
-                    // The reply was lost, not necessarily the order: look for it before trying again.
+                    // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out
+                    // either way, so the contract's gap starts ([GAP_MS]).
+                    notePlaced(p.exchange, p.symbol)
                     runCatching { Broker.findRecentRetrying(o, placed + working.map { it.id }) }.getOrNull()?.let { placed += it }
                     break
                 }
             }
+            if (placed.isNotEmpty()) notePlaced(p.exchange, p.symbol)
             return placed.isNotEmpty()
         } finally { pass.leave() }
     }

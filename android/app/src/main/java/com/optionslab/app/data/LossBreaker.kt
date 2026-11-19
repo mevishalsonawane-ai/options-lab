@@ -138,8 +138,11 @@ object LossBreaker {
             // Tripped: keep asking until every running strategy has actually stopped (a stop that
             // could not be requested, e.g. contracts not loaded, is retried on the next pass).
             // The day's stop is put back too if it was lifted (plans only lower risk: the limit holds until tomorrow).
+            // 19 Nov 2026 (second review of the clock lane): its sales in the square-offs' one turn ([ClockLane.sales]).
             if (Strategies.anyRunning() || !Strategies.stoppedToday())
-                runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS) }
+                com.optionslab.app.work.ClockLane.sales(com.optionslab.app.work.ClockLane.LOSS) {
+                    runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS) }
+                }
             // 21 Oct: with commodities on their own limits, the MCX side is still watched, and a later Zerodha loss still stops them.
             if (!split) return
         }
@@ -198,7 +201,11 @@ object LossBreaker {
         SecurePrefs.put(K_DAY, today)
         kept = null
         // Kept as the loss limit's stop (never "by you"): "start all" and Start bot do not lift it today.
-        val msg = runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS) }.getOrElse { it.message ?: "" }
+        // 19 Nov 2026 (second review of the clock lane: the loss limit's sales could overlap a square-off's on the same legs): sold in
+        // the square-offs' one turn ([ClockLane.sales]), never beside the expiry square-off, the MCX expiry exit or the flat-by.
+        val msg = com.optionslab.app.work.ClockLane.sales(com.optionslab.app.work.ClockLane.LOSS) {
+            runCatching { Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS) }.getOrElse { it.message ?: "" }
+        }
         val text = "Today's %s P&L Rs %,.0f reached the Rs %,.0f daily loss limit. The bot sold what it held and stopped for today. %s"
             .format(hit.who, hit.pnl, hit.limit, msg) +
             (if (hit.trip == com.optionslab.ira.SegmentLock.Trip.PAPER) " The MCX paper arms keep their own limit." else "") +

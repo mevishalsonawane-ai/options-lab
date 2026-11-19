@@ -1,0 +1,253 @@
+package com.optionslab.app.work
+
+import com.optionslab.app.data.AppSettings
+import com.optionslab.app.data.Broker
+import com.optionslab.app.data.ExitCoordinator
+import com.optionslab.app.data.ExpirySquareOff
+import com.optionslab.app.data.FlatBySquareOff
+import com.optionslab.app.data.LossBreaker
+import com.optionslab.app.data.Market
+import com.optionslab.app.data.SquareOffExit
+import com.optionslab.app.data.Strategies
+import com.optionslab.app.testing.AutomationSupport
+import com.optionslab.app.testing.Background
+import com.optionslab.app.testing.FakeKite
+import com.optionslab.app.testing.FakeKite.Outcome
+import com.optionslab.app.testing.NetworkGuard
+import com.optionslab.app.testing.RobolectricTest
+import com.optionslab.engine.IST
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.robolectric.annotation.ConscryptMode
+import java.time.LocalDate
+
+/**
+ * 19 Nov 2026 (second review of the clock lane, "merge after fixes"): the clock lane ([ClockLane]) against the fake Kite, with the
+ * REAL expiry square-off, flat-by and daily loss limit (no stand-in work): a square-off never sells twice while the positions trail
+ * its fill, nor runs again back to back; the loss limit runs first in a round and its sales take the square-offs' turn; a slow
+ * square-off never starves the flat-by, and a starved step is said late; the stop rescue waits while a square-off runs.
+ */
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class ClockLaneSquareOffTest : RobolectricTest() {
+    @get:org.junit.Rule val watchdog = com.optionslab.app.testing.AutomationWatchdog()
+    private lateinit var kite: FakeKite
+    private lateinit var today: LocalDate
+    /** Expires today (NRML): the expiry square-off's. */
+    private val ce = "NIFTY26SEP24500CE"
+    /** A week out, MIS, an arm's: the flat-by's at 15:25. */
+    private val mis = "NIFTY26NOV24600CE"
+    /** A week out, NRML, Boss's own: what makes the day's loss. */
+    private val other = "NIFTY26NOV24000PE"
+
+    @Before fun up() {
+        kite = FakeKite()
+        kite.login()
+        today = Market.today()
+        kite.instruments += FakeKite.Ins(1_101, ce, "NIFTY", today, 24_500.0, "CE", 75)
+        kite.instruments += FakeKite.Ins(1_102, mis, "NIFTY", today.plusDays(7), 24_600.0, "CE", 75)
+        kite.instruments += FakeKite.Ins(1_103, other, "NIFTY", today.plusDays(7), 24_000.0, "PE", 75)
+        listOf(ce, mis, other).forEach { kite.quote("NFO:$it", 20.0, 19.95, 20.05) }
+        runBlocking { Broker.instruments() }
+        kite.requests.clear()
+        AutomationSupport.resetExpiryTold()
+        Background.clearAlerts()
+        Alerts.forgetPosted()
+        Background.grantNotifications(context)
+        ExitCoordinator.resetForTest()                 // the lag guard's switch in shadow, as it ships
+        ClockLane.resetForTest()
+        WatchWorkers.resetForTest()
+        FlatBySquareOff.resetForTest()
+        FlatBySquareOff.liveBooksReady = { true }
+        FlatBySquareOff.liveOwner = { if (it == mis) "ORB" else null }
+        SquareOffExit.resetForTest()                   // the contract's gap after an exit on, as it ships
+        at(15, 6)
+    }
+
+    @After fun down() {
+        FlatBySquareOff.liveOwner = { sym -> com.optionslab.app.data.ArmLive.ownerOf(sym) }
+        FlatBySquareOff.liveBooksReady = { com.optionslab.app.data.ArmLive.view.value.let { it.loaded && !it.unreadable } }
+        ClockLane.resetForTest()
+        WatchWorkers.resetForTest()
+        ExitCoordinator.resetForTest()
+        SquareOffExit.resetForTest(gap = 0L)
+        AutomationSupport.realClocks()
+        kite.close()
+        assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
+    }
+
+    private fun at(h: Int, m: Int) {
+        val t = today.atTime(h, m).atZone(IST)
+        ExpirySquareOff.testNow = t
+        FlatBySquareOff.testNow = t
+    }
+    private fun epoch(h: Int, m: Int, s: Int = 0) = today.atTime(h, m, s).atZone(IST).toInstant().toEpochMilli()
+    private fun sent() = kite.placed.map { Triple(it.form["tradingsymbol"], it.form["transaction_type"], it.form["quantity"]) }
+    private fun gets(path: String) = kite.requests.filter { it.method == "GET" && it.path == path }
+    private fun lateAlerts() = Alerts.posted.filter { it.title == "Safety check late" }
+
+    /**
+     * Item 1 (a): the lane's run sold the expiring option with a MARKET order; the pass's run a moment later reads the orders (the
+     * sale COMPLETE) and then positions that still trail the fill. With the lag guard's switch in shadow (as it ships), that second
+     * run sold the trailing 75 again and left the account short on expiry day. The square-offs' guard now always acts.
+     */
+    @Test fun aSecondRunWhileThePositionsTrailTheSaleNeverSellsAgain() {
+        SquareOffExit.resetForTest(gap = 0L)           // the guard alone here (the contract's gap is the next test's)
+        kite.position(ce, 75, 20.0)
+        kite.positionsTrailReads = 50                  // the positions trail the exit's fill for many reads
+        repeat(2) { runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) } }
+        assertEquals("one sale", listOf(Triple(ce, "SELL", "75")), sent())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+    }
+
+    /**
+     * Item 1 (b): the lane's run placed the expiry exit. The pass right after skips its own run (one completed just now stands for
+     * it). The next lane round reads the books again, and Zerodha's orders read misses the exit placed a moment ago (its book a moment
+     * behind): the position still shows and no exit is working, yet nothing more is sent inside the contract's gap.
+     */
+    @Test fun aSquareOffIsNeverRunTwiceBackToBackNorSentAgainInsideItsGap() = runBlocking {
+        var now = epoch(15, 6, 1)
+        ClockLane.clock = { now }
+        SquareOffExit.clock = { now }
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(outcome = Outcome.OPEN)         // a thin book: the exit rests
+        val run = WatchWorkers.begin(this)
+        try {
+            val s = AppSettings.load()
+            val sup = WatchWorkers.supervisor!!
+            suspend fun laneRound() {
+                withContext(Dispatchers.IO) { sup.kick(ClockLane.GROUP, listOf(ClockLane.step(context, ClockLane.SQUARE_OFFS, s))) }
+                Background.await("the round's square-offs", 20_000) { !sup.busy(ClockLane.SQUARE_OFFS) }
+            }
+            laneRound()
+            assertEquals(listOf(Triple(ce, "SELL", "75")), sent())
+            val reads = gets("/orders").size
+            // The pass a second later: the lane's run completed just now stands for its own.
+            withContext(Dispatchers.IO) { Tasks.clockStep(context, s, ClockLane.SQUARE_OFFS, inOrder = false) }
+            assertEquals("the pass ran no second square-off", reads, gets("/orders").size)
+            // The next lane round, 5 s on, with an orders read that misses the resting exit.
+            kite.orders.clear()
+            now += 5_000
+            laneRound()
+            assertTrue("it read the books again", gets("/orders").size > reads)
+            assertEquals("and sent nothing more inside the contract's gap", 1, kite.placed.size)
+        } finally {
+            WatchWorkers.end(run)
+        }
+    }
+
+    /** A hand-made position losing [loss] rupees today, past the default Rs 2,000 limit when [loss] is bigger. */
+    private fun losing(loss: Double) {
+        kite.position(other, 75, 100.0)
+        kite.quote("NFO:$other", 100.0 - loss / 75)
+    }
+
+    /**
+     * Item 2: the real daily loss limit trips while a square-off holds the turn. Its sales (every running strategy stopped and sold)
+     * wait for the turn, never beside the square-off's sales on the same legs; once the turn is free they go.
+     */
+    @Test fun aTrippedLossLimitsSalesTakeTheSquareOffsTurn() = runBlocking {
+        AutomationSupport.liveSettings()
+        losing(3_000.0)
+        val release = CompletableDeferred<Unit>()
+        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
+        try {
+            Background.await("a square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
+            val check = launch(Dispatchers.IO) { LossBreaker.check(context) }
+            Background.await("the limit tripped", 10_000) { LossBreaker.trippedToday() }
+            Thread.sleep(1_500)
+            assertFalse("its sales wait for the square-off", runBlocking { Strategies.stoppedToday() })
+            assertFalse(check.isCompleted)
+            release.complete(Unit)
+            check.join()
+            assertTrue("then they go", runBlocking { Strategies.stoppedToday() })
+        } finally {
+            release.complete(Unit)
+            hold.join()
+        }
+    }
+
+    /**
+     * Item 2: in a lane round the real loss limit runs first and the square-offs start only after it ends (its positions read is slow
+     * here): the expiry square-off's first read of the orders comes after the loss limit's read of the positions has answered.
+     */
+    @Test fun inALaneRoundTheSquareOffsStartAfterTheLossLimitEnds() = runBlocking {
+        kite.position(ce, 75, 20.0)
+        kite.slowMs["/portfolio/positions"] = 1_500L
+        val run = WatchWorkers.begin(this)
+        val ctl = StopLane.Control().apply { mode = StopLane.Mode.NSE }
+        try {
+            val lane = launch(Dispatchers.IO) {
+                ClockLane.runLane(context, stop = { ctl.ended }, mode = { ctl.mode }, held = { true }, supervisor = { WatchWorkers.supervisor })
+            }
+            Background.await("the expiry exit", 30_000) { kite.placed.isNotEmpty() }
+            val positions = gets("/portfolio/positions").first().atNanos
+            val orders = gets("/orders").first().atNanos
+            assertTrue("the square-off read the orders ${(orders - positions) / 1_000_000} ms after the loss limit's positions read began",
+                orders - positions >= 1_300_000_000L)
+            ctl.ended = true; ClockLane.poke(); lane.join()
+        } finally {
+            WatchWorkers.end(run)
+        }
+    }
+
+    /**
+     * Item 3: at 15:25 on an expiry day the expiry square-off's order is slow at Zerodha. The flat-by is never starved behind it: it
+     * runs right after it in the same step. While it waits, it is judged by its own due time and said late (before, the step holding
+     * the turn hid it).
+     */
+    @Test fun aSlowExpirySquareOffNeverStarvesTheFlatByAndAStarvedStepIsSaidLate() = runBlocking {
+        at(15, 25)
+        var now = epoch(15, 25, 1)
+        ClockLane.clock = { now }
+        kite.position(ce, 75, 20.0)
+        kite.position(mis, 75, 20.0, product = "MIS")
+        kite.slowMs["/orders/regular"] = 6_000L
+        val run = WatchWorkers.begin(this)
+        val ctl = StopLane.Control().apply { mode = StopLane.Mode.NSE }
+        try {
+            val lane = launch(Dispatchers.IO) {
+                ClockLane.runLane(context, stop = { ctl.ended }, mode = { ctl.mode }, held = { true }, supervisor = { WatchWorkers.supervisor })
+            }
+            Background.await("the expiry exit on its way", 15_000) { kite.placed.any { it.form["tradingsymbol"] == ce } }
+            now += 120_000
+            ClockLane.poke()
+            Background.await("the flat-by said late", 5_000) { lateAlerts().any { it.text.contains("The ${ClockLane.FLAT_BY} check") } }
+            Background.await("the flat-by's exit after it", 30_000) { kite.placed.any { it.form["tradingsymbol"] == mis } }
+            assertEquals("the pass's old order: the expiry square-off, then the flat-by",
+                listOf(ce, mis), kite.placed.map { it.form["tradingsymbol"] }.distinct())
+            ctl.ended = true; ClockLane.poke(); lane.join()
+        } finally {
+            WatchWorkers.end(run)
+        }
+    }
+
+    /** Item 6: the stop rescue (now on its own, beside the square-offs) looks at nothing while a square-off is running. */
+    @Test fun theStopRescueWaitsWhileASquareOffRuns() = runBlocking {
+        com.optionslab.app.ira.Automations.set(com.optionslab.app.ira.Automations.Auto.RESCUE, true)
+        com.optionslab.app.ira.IraHub.init(context); com.optionslab.app.ira.IraHub.awaitLoadedBlocking()
+        kite.position(mis, 75, 20.0, product = "MIS")
+        val release = CompletableDeferred<Unit>()
+        val hold = launch(Dispatchers.IO) { ClockLane.holdTurnForTest(ClockLane.SQUARE_OFFS, release) }
+        try {
+            Background.await("a square-off holds the turn", 5_000) { ClockLane.squareOffRunning() }
+            kite.requests.clear()
+            withContext(Dispatchers.IO) { com.optionslab.app.ira.IraHub.rescueWatch() }
+            assertEquals("no read while the square-off runs", 0, gets("/portfolio/positions").size)
+            release.complete(Unit); hold.join()
+            withContext(Dispatchers.IO) { com.optionslab.app.ira.IraHub.rescueWatch() }
+            assertTrue("it looks again once the square-off is done", gets("/portfolio/positions").isNotEmpty())
+        } finally {
+            release.complete(Unit)
+            hold.join()
+        }
+    }
+}

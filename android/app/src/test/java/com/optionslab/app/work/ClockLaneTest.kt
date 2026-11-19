@@ -12,6 +12,7 @@ import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.engine.IST
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -105,9 +106,9 @@ class ClockLaneTest : RobolectricTest() {
     }
 
     /**
-     * A stuck clock step never holds the others or the next round back: with the expiry square-off hung, the loss limit runs every
-     * round. The other square-offs share its one turn (never two square-offs selling one contract at once): they wait for it, never
-     * beside it, and run once it is free. The hung one is never started a second time beside itself.
+     * A stuck clock step never holds the loss limit or the next round back: with the expiry square-off hung, the loss limit runs every
+     * round. The other square-offs come after it in their one step (19 Nov 2026: one sequence in the pass's order, never two
+     * square-offs selling one contract at once), and run once it ends. The hung one is never started a second time beside itself.
      */
     @Test fun aStuckClockStepNeverBlocksTheLossLimitAndTheSquareOffsNeverRunTogether() = runBlocking {
         val ran = CopyOnWriteArrayList<String>()
@@ -156,23 +157,25 @@ class ClockLaneTest : RobolectricTest() {
         val most = java.util.concurrent.atomic.AtomicInteger()
         val runs = java.util.concurrent.atomic.AtomicInteger()
         val release = CompletableDeferred<Unit>()
-        ClockLane.testWork = { _ ->
-            most.accumulateAndGet(inside.incrementAndGet(), ::maxOf); runs.incrementAndGet()
-            release.await(); inside.decrementAndGet()
+        ClockLane.testWork = { n ->
+            if (n == ClockLane.EXPIRY) {
+                most.accumulateAndGet(inside.incrementAndGet(), ::maxOf); runs.incrementAndGet()
+                release.await(); inside.decrementAndGet()
+            }
         }
         val run = WatchWorkers.begin(this)
         try {
             val s = com.optionslab.app.data.AppSettings.load()
             // Kicked from a worker thread, as the lane does (a kicked step keeps its caller's dispatcher: never this blocked thread's).
-            kotlinx.coroutines.withContext(Dispatchers.IO) { WatchWorkers.supervisor!!.kick(ClockLane.GROUP, listOf(ClockLane.step(context, ClockLane.EXPIRY, s))) }
+            kotlinx.coroutines.withContext(Dispatchers.IO) { WatchWorkers.supervisor!!.kick(ClockLane.GROUP, listOf(ClockLane.step(context, ClockLane.SQUARE_OFFS, s))) }
             Background.await("the lane's run", 5_000) { runs.get() == 1 }
-            val pass = launch(Dispatchers.IO) { Tasks.clockStep(context, s, ClockLane.EXPIRY, inOrder = false) }
+            val pass = launch(Dispatchers.IO) { Tasks.clockStep(context, s, ClockLane.SQUARE_OFFS, inOrder = false) }
             Thread.sleep(500)
             assertFalse("the pass waits for the lane's run (what it closes is booked before the arms after it)", pass.isCompleted)
             release.complete(Unit)
             pass.join()
-            // Then its own run, after the lane's (which had read the books before this pass), as each pass ran it - never beside it.
-            assertEquals(2, runs.get())
+            // 19 Nov 2026 (second review): the lane's run just completed stands for the pass's own - never a second run back to back.
+            assertEquals(1, runs.get())
             assertEquals("never two at once", 1, most.get())
         } finally {
             release.complete(Unit)
@@ -181,8 +184,9 @@ class ClockLaneTest : RobolectricTest() {
     }
 
     /**
-     * A due step with no completed run 45 s after its time while anything is held: one RISK alert. Nothing held: none. A square-off
-     * only waiting for the hung one's turn is not told (the hung one is); the loss limit, completing every round, never is.
+     * A due step with no completed run 45 s after its time while anything is held: one RISK alert per step. Nothing held: none. 19 Nov
+     * 2026 (second review): the square-offs starved behind the hung one are judged by their own due time and told too; the loss
+     * limit, completing every round, never is.
      */
     @Test fun aLateStepWithPositionsOpenIsARiskAlertOnce() = runBlocking {
         var fake = epoch(tue, 15, 5, 1)
@@ -208,14 +212,41 @@ class ClockLaneTest : RobolectricTest() {
             Background.await("the late alert", 5_000) { lateAlerts().isNotEmpty() }
             val at = fake
             Background.await("that round's loss limit", 5_000) { ClockLane.lastDone(ClockLane.LOSS) == at }
-            assertEquals(1, lateAlerts().size)
-            assertTrue(lateAlerts().single().text, lateAlerts().single().text.contains("expiry square-off"))
+            Background.await("every starved square-off told", 5_000) { lateAlerts().size >= 3 }
+            for (n in listOf(ClockLane.EXPIRY, ClockLane.MCX_EXPIRY, ClockLane.FLAT_BY))
+                assertEquals(n, 1, lateAlerts().count { it.text.contains("The $n check") })
+            assertFalse(lateAlerts().any { it.text.contains(ClockLane.LOSS) })
             fake += 20_000
             val next = fake
             ClockLane.poke()
             Background.await("the next round", 5_000) { ClockLane.lastDone(ClockLane.LOSS) == next }
-            assertEquals("told once", 1, lateAlerts().size)
+            assertEquals("told once", 3, lateAlerts().size)
             ctl.ended = true; ClockLane.poke(); lane.join()
+        } finally {
+            release.complete(Unit)
+            WatchWorkers.end(run)
+        }
+    }
+
+    /**
+     * 19 Nov 2026 (second review, item 5): the pass's arms wait for a loss-limit run under way (the lane's or the pass's), bounded,
+     * as the old one-after-another pass did; then go on with a diary line.
+     */
+    @Test fun theArmsWaitForALossLimitRunUnderWayBounded() = runBlocking {
+        val release = CompletableDeferred<Unit>()
+        ClockLane.testWork = { n -> if (n == ClockLane.LOSS) release.await() }
+        val run = WatchWorkers.begin(this)
+        try {
+            assertTrue("none running: no wait", Tasks.awaitLossLimit(300))
+            val s = com.optionslab.app.data.AppSettings.load()
+            kotlinx.coroutines.withContext(Dispatchers.IO) { WatchWorkers.supervisor!!.kick(ClockLane.GROUP, listOf(ClockLane.step(context, ClockLane.LOSS, s))) }
+            Background.await("the loss limit running", 5_000) { WatchWorkers.supervisor!!.busy(ClockLane.LOSS) }
+            assertFalse("bounded: the arms go on past the wait", Tasks.awaitLossLimit(300))
+            val waiting = async(Dispatchers.IO) { Tasks.awaitLossLimit(20_000) }
+            Thread.sleep(300)
+            assertFalse("still waiting while it runs", waiting.isCompleted)
+            release.complete(Unit)
+            assertTrue("it ended: the arms go", waiting.await())
         } finally {
             release.complete(Unit)
             WatchWorkers.end(run)
