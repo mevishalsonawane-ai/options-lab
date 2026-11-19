@@ -1312,6 +1312,9 @@ object PineAuto {
         } ?: run { note(b, id, "${c.symbol} is not listed on Zerodha: nothing sent"); return }
         val sym = ins.tradingSymbol
         val key = "NFO:$sym"
+        // 19 Nov 2026 (third review): an earlier holding's stop or own exits on this contract still being taken out ([Book.removing]) -
+        // every one is tried again first (not only those not yet looked for), before the quote and the checks this buy goes on.
+        b.removing.filter { it.kite == sym }.takeIf { it.isNotEmpty() }?.let { removeExits(b, it) }
         val quote = runCatching { Broker.quotes(listOf(key))[key]?.last }.getOrNull()?.takeIf { it > 0 }
             ?: run { note(b, id, "No Zerodha quote for $sym: nothing sent"); return }
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.BUY, lots * ins.lotSize, ins.lotSize, "MIS", "MARKET", null,
@@ -1328,10 +1331,7 @@ object PineAuto {
         // 19 Nov 2026 (second review): an earlier holding's stop on this contract is still being taken out at Zerodha ([Book.removing]):
         // with this buy both could rest against the new lots. Never skipped here (a new skip of a live entry starts in shadow, CLAUDE.md):
         // logged as what a wait would have done, and Boss told once a day; the removal still cancels only the earlier holding's orders.
-        // (Its own exits not yet looked for - a close on a stream look - are looked for and taken out first: once this buy is held, the
-        // removal no longer scans the contract.)
-        // (19 Nov 2026, third review: every one on this contract is tried again first, not only those not yet looked for.)
-        b.removing.filter { it.kite == sym }.takeIf { it.isNotEmpty() }?.let { removeExits(b, it) }
+        // (Each was tried again before the quote, above; one not yet looked for is not looked for while this buy is held.)
         b.removing.filter { it.kite == sym }.takeIf { it.isNotEmpty() }?.let { rs ->
             val what = listOfNotNull(rs.flatMap { it.ids.keys }.takeIf { it.isNotEmpty() }?.let { "stop (order ${it.joinToString(", ")})" },
                 if (rs.any { !it.scanned }) "own exits (not yet looked for in Zerodha's order book)" else null).joinToString(" and ")
@@ -1661,7 +1661,8 @@ object PineAuto {
             flatSince.remove(key); flatAlertSaid.remove(key)
             // (Closed from outside only when an outside sale proved it, or when hand sales whose labels were not known cover it (19 Nov
             // 2026, third review: that sale is then used up): a close on agreeing reads alone uses up no sale of Boss's.)
-            val handSells = onIt.filter { it.side == "SELL" && (hand(it) || it.tag in SquareOffExit.TAGS) }.sumOf { it.filled }
+            val handSells = onIt.filter { it.side == "SELL" && ((hand(it) && (owners == null || !labelsRead || boss(it))) || it.tag in SquareOffExit.TAGS) }
+                .sumOf { it.filled }
             bookClose(b, sym, h.qty, outside = sold ||
                 com.optionslab.engine.orb.LiveMirror.outsideSaleCovers(handSells, outsideBuys, bookedOutside, h.qty))
             return true
@@ -1718,11 +1719,11 @@ object PineAuto {
         val loggedIn = Broker.loggedIn
         for (r0 in (only ?: b.removing.toList())) {
             // (19 Nov 2026, third review: an entry handed in that is no longer the book's - replaced or done since - is skipped.)
-            if (only != null && r0 !in b.removing) continue
+            if (only != null && b.removing.none { it === r0 }) continue
             var r = r0
             if (r.day < today) { b.removing.remove(r0); continue }
             if (!loggedIn) {
-                val i = b.removing.indexOf(r0)
+                val i = b.removing.indexOfFirst { it === r0 }
                 if (i >= 0) b.removing[i] = tellOnce(b, r.copy(tries = r.tries + 1), r.ids.keys, "not logged in to Zerodha")
                 continue
             }
@@ -1758,7 +1759,7 @@ object PineAuto {
                     note(b, r.script, text)
                 }
             }
-            val i = b.removing.indexOf(r0)
+            val i = b.removing.indexOfFirst { it === r0 }
             if (i < 0) continue
             if (left.isEmpty() && r.scanned) {
                 b.removing.removeAt(i)

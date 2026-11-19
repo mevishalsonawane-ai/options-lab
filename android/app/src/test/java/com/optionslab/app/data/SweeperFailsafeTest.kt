@@ -296,6 +296,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         pass(10, 0)
         assertTrue(kite.requests.none { it.method == "PUT" })
         assertEquals(Alerts.posted.joinToString { it.text }, 1, Alerts.posted.count { it.title == "Missed lock" })
+        assertTrue(Alerts.posted.single { it.title == "Missed lock" }.text.contains("above the bid 198.50 and may not fill"))
     }
 
     @Test fun aThroughStopLeftQuietlyForMoreThanThirtySecondsIsToldToBoss() {
@@ -308,6 +309,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         assertTrue("30 s: still quiet", Alerts.posted.none { it.title == "Missed lock" })
         pass(10, 0, 45)
         assertEquals(Alerts.posted.joinToString { it.text }, 1, Alerts.posted.count { it.title == "Missed lock" })
+        assertTrue(Alerts.posted.single { it.title == "Missed lock" }.text.contains("has not filled in 30 s"))
         assertTrue(kite.requests.none { it.method == "PUT" })
     }
 

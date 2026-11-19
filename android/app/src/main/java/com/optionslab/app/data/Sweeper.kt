@@ -172,8 +172,15 @@ object Sweeper {
                     if (quietSwept.add(so.id)) runCatching { Diag.record("risk", "Zerodha: ${so.symbol} is through its stop %.2f at %.2f; the app's own exit sale already sells what is held: the stop was left as it is"
                         .format(Locale.ENGLISH, so.trigger, px)) }
                 } else if (notSwept.add(so.id)) {
-                    val text = "Zerodha: ${so.symbol} is through its stop %.2f at %.2f, but nothing of it in %s is left to sell (other orders already sell what is held there): the stop was not turned into a sell. Check it in Trade."
-                        .format(Locale.ENGLISH, so.trigger, px, so.product.ifBlank { "its product" })
+                    // (Third review: why Boss is told - the app's own exit has not filled in 30 s, or may not fill at the bid.)
+                    val why = when {
+                        quiet -> "the app's own exit sale has not filled in 30 s"
+                        sales.any { ours(it.tag) && it.tag != "iraalgo" } -> "the app's own exit sale is above the bid" + (bid?.let { " %.2f".format(Locale.ENGLISH, it) } ?: " (no bid known)") +
+                            " and may not fill"
+                        else -> "other orders already sell what is held there"
+                    }
+                    val text = "Zerodha: ${so.symbol} is through its stop %.2f at %.2f, but nothing of it in %s is left to sell (%s): the stop was not turned into a sell. Check it in Trade."
+                        .format(Locale.ENGLISH, so.trigger, px, so.product.ifBlank { "its product" }, why)
                     runCatching { Diag.record("risk", text) }
                     com.optionslab.app.work.Alerts.post(text, com.optionslab.app.work.Alerts.Kind.ERROR, "Missed lock", throttle = true)
                 }
