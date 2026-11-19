@@ -1221,9 +1221,10 @@ object Strategies {
                             }
                             // 19 Nov 2026 (audit batch 2): an automatic LIVE start asks "AI trades go live" (and Live) first, as every arm's
                             // live entry does; refused, nothing starts and it says why. Boss's own start from the app is never asked.
-                            if (d.mode == RunMode.LIVE) autoLiveRefusal()?.let { why ->
-                                record(b, def.name, Event("start_refused", "Scheduled start refused: $why", "warn"), true)
-                                notes += "${def.name}: scheduled live start refused: $why"
+                            val aiWhy = if (d.mode == RunMode.LIVE) autoLiveRefusal() else null
+                            if (aiWhy != null) {
+                                record(b, def.name, Event("start_refused", "Scheduled start refused: $aiWhy", "warn"), true)
+                                notes += "${def.name}: scheduled live start refused: $aiWhy"
                                 continue
                             }
                             val v = venueFor(d.mode)
