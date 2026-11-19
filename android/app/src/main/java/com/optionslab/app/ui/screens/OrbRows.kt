@@ -68,12 +68,14 @@ fun OrbRows(model: AppModel) {
     // 19 Nov (Boss's choice): Liquidity's automatic stops that are off, on its row.
     val stops by com.optionslab.app.data.ArmAutoStopsHost.view.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     OrbRowsContent(view, live = settings.live && settings.allowRealOrders, waiting = { it in hidden.waiting }, autoStop = { stops.rowLine(it) },
+        // 19 Nov 2026 (audit batch 2): a raise of Liquidity's lots asks the PIN where the guard's rule does ([com.optionslab.app.security.GuardPin]).
+        raiseAsksPin = { runCatching { com.optionslab.app.security.GuardPin.asks(true, settings.live) }.getOrDefault(true) },
         actions = object : OrbActions {
             override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { model.armOrb(source, on, automatic, pinConfirmed) }
             override fun approve(source: String, pinConfirmed: Boolean) { model.approveOrb(source, pinConfirmed) }
             override fun skip(source: String) { model.skipOrb(source) }
             override fun shadowOff(id: String) { model.shadowOff(id) }
-            override fun lots(n: Int) { model.liquidityLots(n) }
+            override fun lots(n: Int, pinConfirmed: Boolean) { model.liquidityLots(n, pinConfirmed) }
             override fun unpark(index: String) { model.unparkLiquidity(index) }
             override fun reenableLiquidityLive(pinConfirmed: Boolean) { model.reenableLiquidityLive(pinConfirmed) }
             override fun liftLiquidityPark(pinConfirmed: Boolean) { model.liftLiquidityPark(pinConfirmed) }
@@ -99,8 +101,11 @@ internal interface OrbActions {
     fun skip(source: String)
     /** A shadow re-armed on paper on Boss's yes ([OrbArms.View.shadows]) switched off again. */
     fun shadowOff(id: String) {}
-    /** Liquidity 15+5's size for its new entries ([OrbArms.setLiquidityLots]): a raise only after Boss's yes in the dialog. */
-    fun lots(n: Int) {}
+    /**
+     * Liquidity 15+5's size for its new entries ([OrbArms.setLiquidityLots]): a raise only after Boss's yes in the dialog, and (19 Nov
+     * 2026, audit batch 2) the PIN where the guard's rule asks it ([pinConfirmed]).
+     */
+    fun lots(n: Int, pinConfirmed: Boolean) {}
     /** A Liquidity 15+5 index parked on Boss's OK (9 Oct: FINNIFTY) switched back on ([OrbArms.unparkLiquidity]), on paper. */
     fun unpark(index: String) {}
     /** Liquidity BANKNIFTY's live entries re-enabled after its stop rule ([OrbArms.reenableLiquidityLive]): only after the PIN. */
@@ -115,6 +120,9 @@ internal interface OrbActions {
 internal const val LIQ_PARKED_BADGE = "ARMED · PARKED TO PAPER"
 internal const val LIQ_PAUSED_BADGE = "ARMED · PAUSED BY ITS REVIEW"
 internal const val LIQ_PAPER_BADGE = "ARMED · PAPER UNTIL YOU SWITCH IT ON"
+
+/** 19 Nov 2026 (audit batch 2): the PIN prompt's words for raising Liquidity's lots. */
+internal const val LIQ_LOTS_WHY = "Enter your app PIN to raise Liquidity 15+5's lots (more lots is more live risk)."
 
 /** 15 Nov: the button that lifts Liquidity's self-review park to paper (its PIN asked first). */
 internal const val LIFT_PARK = "Lift its review's park or pause (PIN)"
@@ -140,6 +148,8 @@ internal fun OrbRowsContent(
     waiting: (String) -> Boolean = { false },
     /** 19 Nov (Boss's choice): an arm's automatic stops that are off, in words ([com.optionslab.ira.ArmAutoStops.rowLine]); null: none. */
     autoStop: (String) -> String? = { null },
+    /** 19 Nov 2026 (audit batch 2): whether raising Liquidity's lots asks the PIN now (the guard's rule; tests give their own). */
+    raiseAsksPin: () -> Boolean = { live },
 ) {
     val p = LocalPalette.current
     var choosing by remember { mutableStateOf<String?>(null) }
@@ -151,6 +161,8 @@ internal fun OrbRowsContent(
     var heroConfirm by remember { mutableStateOf<String?>(null) }
     // Liquidity's size raised: (from, to), asked before it applies (more lots is more risk); lowering applies at once.
     var lotsConfirm by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    // 19 Nov 2026 (audit batch 2): the raise confirmed, waiting for the PIN (where the guard's rule asks it): the new size.
+    var lotsAuth by remember { mutableStateOf<Int?>(null) }
     // Liquidity BANKNIFTY's live entries re-enabled after its stop rule: the PIN first, always.
     var reenableAuth by remember { mutableStateOf(false) }
     // 15 Nov: Liquidity's self-review park to paper lifted: the PIN first, always.
@@ -174,7 +186,7 @@ internal fun OrbRowsContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ExplainedName(a.arm.label, orbExplanation(a, view), extra = {
                         OrbDialogExtras(a, onLots = { n, pick ->
-                            if (com.optionslab.engine.orb.LiquidityLots.raises(n, pick)) lotsConfirm = n to pick else if (pick != n || a.lotsAsk != null) actions.lots(pick)
+                            if (com.optionslab.engine.orb.LiquidityLots.raises(n, pick)) lotsConfirm = n to pick else if (pick != n || a.lotsAsk != null) actions.lots(pick, false)
                         }, onUnpark = { actions.unpark(it) }, onSwitchOn = { switchOn(a) },
                             onWatched = { on -> actions.firstLiveWatched(on) }, onReenable = { reenableAuth = true },
                             openRead = openRead, paperRecord = paperRecord)
@@ -356,10 +368,11 @@ internal fun OrbRowsContent(
                     "An open position keeps its own quantity." + if (live) " On Zerodha the Bot settings' max lots and daily loss still apply." else ""),
                     style = Type.bodySmall.copy(color = p.inkSoft))
             },
-            confirmButton = { TextButton({ lotsConfirm = null; actions.lots(to) }) { Text("Trade ${com.optionslab.engine.orb.LiquidityLots.words(to)}") } },
+            confirmButton = { TextButton({ lotsConfirm = null; if (raiseAsksPin()) lotsAuth = to else actions.lots(to, false) }) { Text("Trade ${com.optionslab.engine.orb.LiquidityLots.words(to)}") } },
             dismissButton = { TextButton({ lotsConfirm = null }) { Text("Cancel") } },
         )
     }
+    lotsAuth?.let { to -> reauth(LIQ_LOTS_WHY, { lotsAuth = null; actions.lots(to, true) }, { lotsAuth = null }) }
     if (detail) OrbDetail(view, onShadowOff = { actions.shadowOff(it) }, replay = replay) { detail = false }
 }
 

@@ -174,13 +174,15 @@ internal class RecordingStrategyActions(var saveError: String? = null) : Strateg
     override fun clearKill() { calls += "clearKill" }
     var killPin = false
     override fun clearKillNeedsPin() = killPin
-    override fun startBot() { calls += "startBot" }
+    override fun startBot(pinConfirmed: Boolean) { calls += if (pinConfirmed) "startBot pin" else "startBot" }
+    var startPin = false
+    override fun startBotNeedsPin() = startPin
     override fun stopBot(alsoRunning: Boolean) { calls += "stopBot also=$alsoRunning" }
     override fun arm(source: String, on: Boolean, automatic: Boolean, pinConfirmed: Boolean) { calls += "orb arm $source on=$on auto=$automatic pin=$pinConfirmed" }
     override fun approve(source: String, pinConfirmed: Boolean) { calls += "orb approve $source pin=$pinConfirmed" }
     override fun skip(source: String) { calls += "orb skip $source" }
     override fun shadowOff(id: String) { calls += "shadow off $id" }
-    override fun lots(n: Int) { calls += "orb lots $n" }
+    override fun lots(n: Int, pinConfirmed: Boolean) { calls += "orb lots $n" + if (pinConfirmed) " pin" else "" }
     override fun unpark(index: String) { calls += "orb unpark $index" }
     override fun liftLiquidityPark(pinConfirmed: Boolean) { calls += "orb lift pin=$pinConfirmed" }
 }
@@ -437,6 +439,19 @@ class StrategyArmCardTest {
         assertTrue(rec.calls.isEmpty())
         tap(START_INDEX); tap("Start")
         assertEquals(listOf("startBot"), rec.calls)
+    }
+
+    /** 19 Nov 2026 (audit batch 2: lifting Stop for today): in Live with a PIN set, Start asks the PIN first; Cancel keeps them stopped. */
+    @Test fun inLiveStartingTheIndexBotsAgainAsksThePinFirst() {
+        rec.startPin = true
+        card(emptyList(), stopped = true)
+        tap(START_INDEX); tap("Start")
+        assertTrue("not before the PIN", rec.calls.isEmpty())
+        tap("PIN cancel")
+        assertTrue("cancelled: still stopped", rec.calls.isEmpty())
+        tap(START_INDEX); tap("Start")
+        tap("PIN OK")
+        assertEquals(listOf("startBot pin"), rec.calls)
     }
 
     @Test fun theIndexStopSaysWhoAndWhen() {
@@ -786,6 +801,27 @@ class OrbRowsTest {
         lotsTap(3)
         tap("Trade 3 lots")
         assertEquals(listOf("orb lots 3"), rec.calls)
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2: Liquidity's lots): in Live a raise also takes the PIN after the dialog (Cancel there keeps the size);
+     * a cut still applies at once with no PIN.
+     */
+    @Test fun inLiveARaiseOfLiquiditysLotsTakesThePinACutNever() {
+        rows(StrategyFakes.orbView(armed = true, lots = 2), live = true)
+        lotsTap(3)
+        tap("Trade 3 lots")
+        assertTrue("not before the PIN", rec.calls.isEmpty())
+        assertTrue(shown(LIQ_LOTS_WHY))
+        tap("PIN cancel")
+        assertTrue("cancelled: nothing changes", rec.calls.isEmpty())
+        lotsTap(3)
+        tap("Trade 3 lots")
+        tap("PIN OK")
+        assertEquals(listOf("orb lots 3 pin"), rec.calls)
+        rec.calls.clear()
+        lotsTap(1)
+        assertEquals("fewer lots: at once, no PIN", listOf("orb lots 1"), rec.calls)
     }
 
     @Test fun theSameSizeTappedAgainChangesNothing() {

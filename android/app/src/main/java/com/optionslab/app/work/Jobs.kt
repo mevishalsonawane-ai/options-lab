@@ -356,6 +356,10 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     private fun handle(context: Context, intent: Intent) {
+        // 19 Nov 2026 (audit batch 2, the quiet start): only the recorder's off-hours read and the dead-man check stay light; every
+        // other alarm (a command Boss set, a report, a job) may need the books and the warm-ups, so the start's waiting work runs.
+        if (intent.action != Heartbeat.ACTION && intent.action != com.optionslab.app.data.MarketRecorder.ACTION)
+            com.optionslab.app.data.StartGate.open("an alarm (${intent.action ?: "job"})")
         if (intent.action == Heartbeat.ACTION) { Heartbeat.check(context); return }
         // 18 Nov 2026 (audit: nothing woke the watch for 15:05, 15:20 or 15:25): the clock alarm - the watch first, then a round now.
         if (intent.action == ClockAlarm.ACTION) { ClockAlarm.fired(context); return }
@@ -402,35 +406,58 @@ class NotificationActionReceiver : BroadcastReceiver() {
     companion object { const val STOP_LIVE = "com.optionslab.app.STOP_LIVE" }
 
     override fun onReceive(context: Context, intent: Intent) {
+        // 19 Nov 2026 (audit batch 2, the quiet start): Boss acted on a notice - the start's waiting work runs now (memory only).
+        com.optionslab.app.data.StartGate.open("a notification's button")
         if (intent.action == STOP_LIVE) Jobs.stopLive(context)
         // "Close position" on a paper position's card: close it now (paper only; a Zerodha card opens the app instead).
         if (intent.action == PositionCards.ACTION_CLOSE_PAPER) {
             val symbol = intent.getStringExtra(PositionCards.EXTRA_SYMBOL) ?: return
             val done = goAsync()
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                try {
-                    // An MCX position by MCX's own hours (9 Oct); NSE's exactly as before.
-                    val mcx = com.optionslab.app.data.Paper.contractOf(symbol)?.isMcx == true
-                    val accepts = if (mcx) com.optionslab.app.data.McxMarket.acceptsOrders() else com.optionslab.app.data.Market.acceptsOrders()
-                    val open = if (!accepts) {
-                        Alerts.post(if (mcx) com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS else com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
-                    } else com.optionslab.app.data.Paper.state.positions.filter { it.symbol == symbol && it.quantity != 0 }
-                    if (open.isEmpty() && accepts) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
-                    for (p in open) {
-                        val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
-                        r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
-                        Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
-                    }
-                    // An ORB position closed this way is booked and its resting stop taken out now, not on the next pass.
-                    runCatching { com.optionslab.app.data.OrbArms.priceCheckOnly() }
-                    runCatching { com.optionslab.app.data.Paper.tick() }
-                    runCatching { PositionCards.refresh(context) }
-                    PositionCards.closedFromShade.value++
-                } finally { done.finish() }
+                try { closePaper(context, symbol) } finally { done.finish() }
             }
         }
     }
+
+    /**
+     * "Close position" on a paper position's card. 19 Nov 2026 (audit batch 2): the paper book can be unreadable for a few seconds
+     * (a Keystore hiccup: its read throws rather than handing back an empty account) - then Boss is told to try again and nothing
+     * else happens; it never crashes the app. [readState] and [contractOf] are the tests' seams. Never throws (a cancellation goes up).
+     */
+    internal suspend fun closePaper(context: Context, symbol: String,
+                                    readState: () -> com.optionslab.engine.sandbox.SandboxState = { com.optionslab.app.data.Paper.state },
+                                    contractOf: (String) -> com.optionslab.app.data.Paper.Contract? = { com.optionslab.app.data.Paper.contractOf(it) }) {
+        try {
+            // An MCX position by MCX's own hours (9 Oct); NSE's exactly as before.
+            val mcx = contractOf(symbol)?.isMcx == true
+            val accepts = if (mcx) com.optionslab.app.data.McxMarket.acceptsOrders() else com.optionslab.app.data.Market.acceptsOrders()
+            val open = if (!accepts) {
+                Alerts.post(if (mcx) com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS else com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
+            } else readState().positions.filter { it.symbol == symbol && it.quantity != 0 }
+            if (open.isEmpty() && accepts) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
+            for (p in open) {
+                val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
+                r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
+                Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // The class name only (never a message: it can carry a path or a value).
+            runCatching { com.optionslab.app.data.Diag.record("paper", "close from the notification: the paper book could not be read (${e.javaClass.simpleName})") }
+            Alerts.post(PAPER_UNREADABLE, Alerts.Kind.ERROR, "Could not close")
+            return
+        }
+        // An ORB position closed this way is booked and its resting stop taken out now, not on the next pass.
+        runCatching { com.optionslab.app.data.OrbArms.priceCheckOnly() }
+        runCatching { com.optionslab.app.data.Paper.tick() }
+        runCatching { PositionCards.refresh(context) }
+        PositionCards.closedFromShade.value++
+    }
 }
+
+/** 19 Nov 2026 (audit batch 2): what Boss is told when the paper book cannot be read for a moment. */
+internal const val PAPER_UNREADABLE = "Paper book not readable right now, try again in a few seconds."
 
 /** What each job actually does; shared by the service and the fallback worker. */
 object Tasks {
@@ -1555,8 +1582,15 @@ class WatchService : Service() {
          * [RUN_DAY]: a start meanwhile does not take that day for a process that died.
          */
         @Volatile private var endSeenRun = 0L
+        /**
+         * TEST ONLY: thrown at the top of each pass (19 Nov 2026, audit batch 2: the beat's vault write, which the tests failed to make a
+         * pass fail, now goes to the background writer).
+         */
+        @Volatile internal var passFailureForTest: Throwable? = null
+        /** 19 Nov 2026 (audit batch 2): the last run whose own end cleared [RUN_DAY] (written under [runDayLock]). */
+        @Volatile private var endedRun = 0L
         /** Tests run many services in one process: the run count starts again as a new process would. */
-        internal fun resetRunsForTest() { synchronized(runDayLock) { watchRun = 0L; endSeenRun = 0L } }
+        internal fun resetRunsForTest() { synchronized(runDayLock) { watchRun = 0L; endSeenRun = 0L; endedRun = 0L } }
         /** The watch's check pace now in seconds (30 before the open, 15 with a position open, 60 otherwise; 0 = not running), for the battery line. */
         @Volatile var stepSec: Int = 0
 
@@ -1583,6 +1617,8 @@ class WatchService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val running = java.util.concurrent.ConcurrentHashMap<Jobs.Kind, Job>()
+    /** 19 Nov 2026 (audit batch 2): the newest watch run's start note, run beside the watch ([noteStart]); its passes wait for it. */
+    @Volatile private var startNote: Job? = null
     @Volatile private var watching = false
     /** Why the watch is being ended from outside its loop (Boss's stop, Android's time limit, a refused foreground). */
     @Volatile private var endWhy: Pair<com.optionslab.ira.WatchHealth.End, String?>? = null
@@ -1704,8 +1740,15 @@ class WatchService : Service() {
                 registered.await()
                 // ANR fix (9 Oct): the watch's start note - a settings read and a vault WRITE (a Keystore encryption and two
                 // disk syncs, queued behind any other vault work), the battery question to Android - off the main thread.
-                if (k == Jobs.Kind.LIVE) noteStart(run, byAndroid)
-                // 18 Oct: stopped or destroyed while the start note ran (blocking vault work): no further start-up.
+                // 19 Nov 2026 (audit batch 2: "positions +18-29 s" - the start note's vault write and the first beat's ran before the
+                // stop lane knew its market): the start note and the dead-man's re-arm (whenever the watch starts, MCX's evening too)
+                // run in a side job; the watch, its stop lane first, starts at once.
+                // The full passes wait for the note (the stop and clock lanes do not), so a watch stopped meanwhile starts nothing more.
+                if (k == Jobs.Kind.LIVE) startNote = scope.launch {
+                    noteStart(run, byAndroid)
+                    runCatching { Heartbeat.schedule(this@WatchService) }
+                }
+                // 18 Oct: stopped or destroyed meanwhile: no further start-up.
                 ensureActive()
                 val s = AppSettings.load()
                 when (k) {
@@ -1784,7 +1827,9 @@ class WatchService : Service() {
                 // The run before this one was seen to end (its own end may not have cleared the day yet): not a process death.
                 val runDay = if (run > 1 && endSeenRun == run - 1) null else SecurePrefs.getString(RUN_DAY)
                 com.optionslab.ira.WatchHealth.restart(runDay, today, crash, byAndroid)?.let { Heartbeat.diary(it) }
-                if (run == watchRun) SecurePrefs.put(RUN_DAY, today)
+                // 19 Nov 2026 (audit batch 2): this note runs beside the watch now - a run already seen to end (its end cleared the
+                // day first) never has its day set again here.
+                if (run == watchRun && endedRun != run) SecurePrefs.put(RUN_DAY, today)
             }
             val battery = Heartbeat.batteryRestricted(this) == true
             Heartbeat.diary("started" + if (battery) " · battery OPTIMIZED: Android may stop the watch (set IraAlgo's battery to Unrestricted)" else "")
@@ -1800,7 +1845,10 @@ class WatchService : Service() {
      * and goes to disk with the next write.
      */
     private fun endRun(run: Long) {
-        synchronized(runDayLock) { if (run == watchRun) runCatching { SecurePrefs.put(RUN_DAY, null) } }
+        synchronized(runDayLock) {
+            endedRun = run
+            if (run == watchRun) runCatching { SecurePrefs.put(RUN_DAY, null) }
+        }
     }
 
     private suspend fun watch(s: AppSettings, run: Long) = kotlinx.coroutines.coroutineScope {
@@ -1809,7 +1857,11 @@ class WatchService : Service() {
         // the evening's passes slept with the screen off) and closes a coverage gap told while the watch was away.
         val me = this@WatchService
         val runStartEl = android.os.SystemClock.elapsedRealtime()
-        val pulse = launch {
+        // 19 Nov 2026 (second review): MCX's calendar read here, on IO, once (its first read is a file): the pulse and the lanes on
+        // the small pool below then read it from memory.
+        runCatching { com.optionslab.app.data.McxMarket.isOpen() }
+        // 19 Nov 2026 (audit batch 2): on the watch's own small pool ([WatchLanes]), never queued behind blocking work on IO.
+        val pulse = launch(WatchLanes.dispatcher) {
             var hungTold = false
             while (true) {
                 Heartbeat.pulse()
@@ -1818,19 +1870,25 @@ class WatchService : Service() {
                 // minutes): a pass hung on one call with nothing open no longer keeps the processor awake for ever - the hold
                 // lapses by itself, and the dead-man alarm finds the watch stuck. A slow pass moves step by step and keeps it.
                 // With a position or order open it is renewed whatever the loop is doing: open positions come first.
-                val progressing = Heartbeat.keepsAwake(runStartEl) || holdingAny()
+                val held = holdingAny()
+                val progressing = Heartbeat.keepsAwake(runStartEl) || held
                 // 26 Oct: the hold is also renewed while the ntfy reader is reading in its hours (memory only) - but a hung loop is
                 // still told below as before.
                 val reader = !com.optionslab.app.BuildConfig.GOLD && runCatching {
                     com.optionslab.app.data.NtfyReader.armedNow() && com.optionslab.app.data.NtfyReader.status.value.running }.getOrDefault(false)
-                if (run == watchRun && (progressing || reader)) WatchWake.hold(me)
+                // 19 Nov 2026 (audit batch 2: the hold lapsed between the steps of a slow pass): renewed whatever the loop is doing
+                // during NSE's hours (a hung loop is still told below, and the dead-man still finds it).
+                val nseHours = runCatching { Market.isTradingDay() && Jobs.nseHoursAt(Market.minuteNow(), Market.foClose()) { false } }.getOrDefault(true)
+                if (run == watchRun && com.optionslab.ira.WatchHealth.holdAwake(progressing, reader, nseHours, held)) WatchWake.hold(me)
                 if (run == watchRun && progressing) hungTold = false
                 else if (run == watchRun && !hungTold) {
                     hungTold = true
-                    Heartbeat.diary("watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): " +
-                        if (reader) "the processor is held only for the ntfy reader" else "the processor's hold is not renewed")
+                    val line = "watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): " +
+                        if (nseHours) "the processor is still held (NSE's hours)" else if (reader) "the processor is held only for the ntfy reader" else "the processor's hold is not renewed"
+                    // 19 Nov 2026 (second review): the diary and the problems list from IO, never on the small pool's thread.
+                    WatchLanes.offload { Heartbeat.diary(line) }
                 }
-                Heartbeat.watchRunning()
+                WatchLanes.offload { Heartbeat.watchRunning() }
                 delay(com.optionslab.ira.WatchHealth.PULSE_MS)
             }
         }
@@ -1903,16 +1961,11 @@ class WatchService : Service() {
 
     private suspend fun watchLoop(s: AppSettings, workers: WatchWorkers.Run) {
         val fired = HashSet<String>()
-        // 18 Oct: a watch already stopped or destroyed (its job cancelled while its start note ran) goes no further, and
-        // starts no holiday refresh.
+        // 18 Oct: a watch already stopped or destroyed (its job cancelled meanwhile) goes no further, and starts no holiday refresh.
         kotlinx.coroutines.currentCoroutineContext().ensureActive()
-        // 18 Oct (open positions first): a stale calendar is refreshed in the background, never waited for. The first pass and
-        // every stop, target and square-off check run at once on the cached list (or the built-in one) until it lands.
-        if (Holidays.stale(Market.today())) Holidays.refreshInBackground()
-        val b = com.optionslab.app.data.Broker
-        if (b.configured && !b.loggedIn) Notifier.post(this, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
-            "Yesterday's session ended at 06:00. Open ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha and log in before the 11:00 entry.", "broker",
-            setting = "broker.login")
+        // 19 Nov 2026 (audit batch 2, item 5): the day this run started on, when it was a trading day: a calendar that turns today
+        // into a holiday mid-session never ends the watch while something is held ([closedDayHeld]).
+        tradingDayAtStart = runCatching { Market.today().takeIf { Market.isTradingDay(it) } }.getOrNull()
         // Market hours, and a quarter-hour past the close while a strategy run is still open,
         // so its exit-time square-off and any retried exits are seen through.
         // And while MCX trades with an MCX position or order open (9 Oct): the MCX pass ([Tasks.mcxTick]) outside NSE's hours.
@@ -1924,21 +1977,42 @@ class WatchService : Service() {
             // passes below and never after them (the full pass or a bar-close entry check held it back on 21 Oct). The passes
             // say which market's look is due ([StopLane.Control.mode]); the day's normal end lets a look under way finish (a
             // minute at most). This run's own switches: an old run ending late never stops a newer run's lane.
-            val lane = StopLane.Control()
+            // 19 Nov 2026 (audit batch 2: "positions +18-29 s" - the lane learnt its market only from the first pass, after the start
+            // note's and the first beat's vault writes): its market from the clock at once ([StopLane.modeNow]); the passes then say.
+            val lane = StopLane.Control().apply { mode = StopLane.modeNow() }
             kotlinx.coroutines.coroutineScope {
                 val me = this@WatchService
-                val laneJob = launch {
+                // 19 Nov 2026 (audit batch 2): the lanes' clocks on the watch's own small pool ([WatchLanes]); each look and round
+                // runs its book steps on Dispatchers.IO as before (the steps take the caller's context).
+                val laneJob = launch(WatchLanes.dispatcher) {
                     StopLane.run(stop = { lane.ended }, mode = { lane.mode }, held = { m -> StopLane.heldFor(m, nseHeldSeen) },
-                        look = { m, t -> StopLane.look(me, m, t) }, mcxPassAt = { lane.mcxPassAt }, quiet = { m -> StopLane.quietFor(m) })
+                        look = { m, t -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { StopLane.look(me, m, t) } },
+                        mcxPassAt = { lane.mcxPassAt }, quiet = { m -> StopLane.quietFor(m) })
                 }
                 // 18 Nov 2026 (audit: the 15:05 expiry square-off ran at 15:12 or later behind a stuck pass): the clock lane ([ClockLane])
                 // runs the loss limit, the expiry square-off, the MCX expiry exit and the flat-by every 15 s by the clock, beside the
                 // passes, in the market the passes say ([StopLane.Control.mode]: none before the open or on a closed day, as before).
-                val clockJob = launch {
+                val clockJob = launch(WatchLanes.dispatcher) {
                     ClockLane.runLane(me, stop = { lane.ended }, mode = { lane.mode }, held = { holdingAny() },
-                        supervisor = { WatchWorkers.supervisor })
+                        supervisor = { WatchWorkers.supervisor }, roundContext = kotlinx.coroutines.Dispatchers.IO)
+                }
+                // 19 Nov 2026 (audit batch 2): the side lane - the reconciler (Zerodha against every book, report only), the late
+                // completed-check RISK and the plain "anything held" mark ([StopLane.sideLane]).
+                val sideJob = launch(kotlinx.coroutines.Dispatchers.IO) {
+                    StopLane.sideLane(me, stop = { lane.ended }, mode = { lane.mode }, heldAny = { holdingAny() })
                 }
                 try {
+                    // 19 Nov 2026 (audit batch 2): the full passes wait for the start note (run beside the lanes); a watch stopped
+                    // meanwhile goes no further and starts no holiday refresh.
+                    kotlinx.coroutines.withTimeoutOrNull(START_NOTE_WAIT_MS) { startNote?.join() }
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    // 18 Oct (open positions first): a stale calendar is refreshed in the background, never waited for. The first pass
+                    // and every stop, target and square-off check run at once on the cached list (or the built-in one) until it lands.
+                    if (Holidays.stale(Market.today())) Holidays.refreshInBackground()
+                    val b = com.optionslab.app.data.Broker
+                    if (b.configured && !b.loggedIn) Notifier.post(this@WatchService, 2005, Notifier.SCHEDULE, "Log in to Zerodha for today",
+                        "Yesterday's session ended at 06:00. Open ${com.optionslab.app.ui.Tab.CABINET.label} → Zerodha and log in before the 11:00 entry.", "broker",
+                        setting = "broker.login")
                     passes(fired, lane)
                 } finally {
                     lane.mode = StopLane.Mode.OFF
@@ -1947,6 +2021,8 @@ class WatchService : Service() {
                 if (kotlinx.coroutines.withTimeoutOrNull(60_000L) { laneJob.join() } == null) laneJob.cancel()
                 // Its round only starts steps (they run on the workers, which end with the watch): it ends within a round.
                 if (kotlinx.coroutines.withTimeoutOrNull(30_000L) { clockJob.join() } == null) clockJob.cancel()
+                // Its wait is a 15 s delay and its reconcile a job of its own: ended now.
+                sideJob.cancel()
             }
             // The day's end (not a stop): an arm still finishing an entry or an exit gets a minute before its worker ends.
             WatchWorkers.drain(workers)
@@ -1962,7 +2038,8 @@ class WatchService : Service() {
      * Each pass tells [lane] which market's stop look is due.
      */
     private suspend fun passes(fired: HashSet<String>, lane: StopLane.Control) {
-        while (com.optionslab.ira.SessionCoverage.watchShouldRun(nseWindow()) { listOf(mcxCoverage()) }) {
+        // 19 Nov 2026 (audit batch 2, item 5): never ended by "not a trading day" while something is held ([closedDayHeld]).
+        while (com.optionslab.ira.SessionCoverage.watchShouldRun(nseWindow()) { listOf(mcxCoverage()) } || closedDayHeld()) {
             try {
                 watchPass(fired, lane)
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1985,6 +2062,25 @@ class WatchService : Service() {
      */
     private suspend fun nseWindow(): Boolean = Market.isTradingDay() && Jobs.nseHoursAt(Market.minuteNow(), Market.foClose()) {
         com.optionslab.app.data.Strategies.anyRunning() } || eveningLookDue() || mcxEveningLookDue()
+
+    // 19 Nov 2026 (audit batch 2): how long the full passes wait for the start note at most (the stop and clock lanes never wait).
+    private val START_NOTE_WAIT_MS = 30_000L
+
+    /** 19 Nov 2026 (audit batch 2, item 5): the day this run started on, when the calendar said it was a trading day (memory). */
+    @Volatile private var tradingDayAtStart: java.time.LocalDate? = null
+
+    /**
+     * 19 Nov 2026 (audit batch 2, item 5): the calendar now says today is not a trading day, but this run started on it as one, it is
+     * within NSE's clock hours and something is held (any book's hint, or Zerodha's own positions at the reconciler's last read): the
+     * watch stays, with NSE's stop looks ([watchPass]), so a holiday list that turned wrong never leaves a held position unwatched.
+     * Memory and the calendar only.
+     */
+    private fun closedDayHeld(): Boolean = runCatching {
+        val today = Market.today()
+        tradingDayAtStart == today && !Market.isTradingDay(today) &&
+            com.optionslab.ira.WatchHealth.keepOnClosedDay(Jobs.nseHoursAt(Market.minuteNow(), Market.foClose(today)) { false },
+                holdingAny() || com.optionslab.app.data.Reconciler.heldHint())
+    }.getOrDefault(false)
 
     /**
      * 20 Oct, enhancement round 2 (idea 3): up to half an hour past MCX's close (23:30, or 23:55 in US winter time; past midnight
@@ -2060,6 +2156,7 @@ class WatchService : Service() {
     // while MCX's pass runs (mcxPass), none before the open, in the evening look or on a closed day (as before: no stop check there).
     private suspend fun watchPass(fired: HashSet<String>, lane: StopLane.Control) {
         run {
+            passFailureForTest?.let { throw it }
             Heartbeat.beat(this)
             // Outside NSE's session (before its open, after its close, an NSE holiday): MCX's pass when it is due (9 Oct).
             // 20 Oct, enhancement round 1 (idea 2): past the close, only the stops-and-targets look while a carried protection waits
@@ -2083,6 +2180,13 @@ class WatchService : Service() {
             val nseOpen = nseWindow() && Market.minuteNow() >= Market.OPEN
             if (!nseOpen) {
                 if (mcxDue()) { mcxPass(lane); return }
+                // 19 Nov 2026 (audit batch 2, item 5): a day the calendar closed mid-session with something held - NSE's stop looks
+                // (exits only: no full pass, so no entry) until the close.
+                if (closedDayHeld() && Market.minuteNow() in Market.OPEN until Market.foClose()) {
+                    lane.mode = StopLane.Mode.NSE
+                    delay(15_000)
+                    return
+                }
                 // Past NSE's session (or an NSE holiday) with nothing due on MCX either: no NSE step runs; the loop ends next look.
                 if (!Market.isTradingDay() || Market.minuteNow() >= Market.OPEN) { lane.mode = StopLane.Mode.OFF; delay(15_000); return }
             }
@@ -2228,9 +2332,13 @@ class WatchService : Service() {
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
         // The non-blocking hints, never the locks: a strategy pass may hold its lock across network calls.
-        if (com.optionslab.app.data.Strategies.runningHint || com.optionslab.app.data.OrbArms.holdingHint)
-            Notifier.post(this, 2013, Notifier.APPROVAL, "Strategies are no longer being watched",
-                "A strategy run is open. Its stops and targets are only checked while the watch or the Strategies page is running.", "strategy")
+        // 19 Nov 2026 (audit batch 2, item 5): every book's hint (the arms' live trades, the protections, Pine, the paper book with its
+        // MCX positions, the MCX arms, and Zerodha's own positions at the reconciler's last read), not only the strategies' and ORB's.
+        // Memory only (the main thread): Zerodha's MCX book is left out here (its calendar may be a file read).
+        if (runCatching { com.optionslab.ira.Held.any(com.optionslab.app.data.HeldNow.sources(mcx = false)) }.getOrDefault(true))
+            Notifier.post(this, 2013, Notifier.APPROVAL, "Open positions are no longer being watched",
+                "A position, order or strategy run is open. Its stops and targets are only checked while the watch is running " +
+                    "(live stops resting at Zerodha still stand).", "strategy")
     }
 
     override fun onDestroy() {
@@ -2267,6 +2375,8 @@ class FallbackWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 
     override suspend fun doWork(): Result {
         val k = kind() ?: return Result.failure()
+        // 19 Nov 2026 (audit batch 2, the quiet start): a scheduled job (the ticket, the settle, the harvest) may need the books.
+        com.optionslab.app.data.StartGate.open("a scheduled job (${k.name.lowercase()})")
         val s = AppSettings.load()
         val session = inputData.getString(Jobs.EXTRA_SESSION)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() } ?: Market.today()
         if (k == Jobs.Kind.HARVEST) {

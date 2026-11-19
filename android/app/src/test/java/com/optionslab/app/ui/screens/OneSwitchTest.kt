@@ -214,8 +214,8 @@ class OneSwitchTest {
         assertTrue("on by default", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.DonchianArm.SOURCE))
         assertFalse("Jarvis's own ideas are not listed", exists("Forge ideas", substring = true))
         assertTrue(exists("ntfy alerts"))
-        // 30 Oct (Boss: "make all arms as live"): ntfy alerts' Trade live starts on like every arm's.
-        assertTrue("ntfy alerts starts on too", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.LiveMirror.NTFY_ALERTS))
+        // 19 Nov 2026 (audit batch 2: ntfy's live gate): ntfy alerts' Trade live alone starts off (only the topic protects it).
+        assertFalse("ntfy alerts starts off", com.optionslab.app.data.ArmLive.view.value.on(com.optionslab.engine.orb.LiveMirror.NTFY_ALERTS))
         // Every arm's row renders with both switches (Solo (midday) only in Jarvis builds).
         for (spec in com.optionslab.engine.orb.LiveMirror.ARMS) {
             if (spec.key == com.optionslab.engine.orb.LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) {

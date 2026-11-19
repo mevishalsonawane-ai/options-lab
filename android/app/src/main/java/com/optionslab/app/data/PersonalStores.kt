@@ -235,6 +235,8 @@ object PersonalStores {
 
     /** Source files that save something, but nothing personal (public market data, the app's own build facts): why each. */
     val NOT_PERSONAL: Map<String, String> = mapOf(
+        // 19 Nov 2026 (audit batch 2).
+        "PositionsFirst" to "saves nothing: reads the position books at a restart; its only settings call starts the large values' read-ahead (SecurePrefs.prefetchSoon), and the plain held mark (0 or 1) goes through Reconciler to NightMarks",
         "BatteryMeter" to "noBackupFilesDir/battery_today.txt: the last three days' background-loop minutes and counts (loop names and numbers only); nothing about the account",
         "GammaMorningHost" to "the morning gamma line: market GEX readings (index, signs, strikes) in memory and its day/done keys in the settings; nothing about the account",
         "CloudSync" to "ira-core's pure rules for the GitHub sync: no state, writes nothing (the app's GitHubSync host saves)",

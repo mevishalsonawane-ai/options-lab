@@ -128,8 +128,18 @@ class BotTile : TileService() {
         } else {
             val msg = runCatching { Strategies.startAgain() }.getOrElse { "could not start: ${it.javaClass.simpleName}" }
             runCatching { Diag.record("info", "tile: $msg") }
+            // 19 Nov 2026 (audit batch 2): in Live with a PIN set the tile cannot lift the stop - Boss is told how, never left guessing.
+            startNotice(msg)?.let { text -> runCatching { Notifier.post(this, TILE_PIN_NOTICE, Notifier.RISK, "Index bots still stopped", text) } }
         }
     }
 
-    companion object { private const val GOLD_ARMED = "gold.tile.armed" }
+    companion object {
+        private const val GOLD_ARMED = "gold.tile.armed"
+        /** 19 Nov 2026 (audit batch 2): the notice when the tile's Start needs the PIN (Live), and its words. */
+        private const val TILE_PIN_NOTICE = 7481
+        internal const val TILE_PIN_TEXT = "Open IraAlgo to start the index bots (PIN): in Live the tile cannot start them."
+
+        /** 19 Nov 2026 (audit batch 2): the notice the tile's Start posts for what [Strategies.startAgain] said; null: none. */
+        internal fun startNotice(said: String): String? = if (said == Strategies.LIFT_PIN) TILE_PIN_TEXT else null
+    }
 }

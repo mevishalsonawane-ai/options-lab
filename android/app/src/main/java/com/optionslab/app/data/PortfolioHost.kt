@@ -94,14 +94,29 @@ object PortfolioHost {
         return "Correlated arms together may risk at most $v% of capital on one day; a later entry past it is blocked."
     }
 
-    /** Boss's switch (on by default). Off only stops the blocking; the matrix is still worked out. */
-    fun setOn(on: Boolean): String {
+    /** 19 Nov 2026 (audit batch 2: live risk rules' PIN): what is said when the guard is switched off without the PIN. */
+    const val PIN_OFF = "Switching the portfolio guard off lets correlated arms all open on Zerodha on one day: enter your app PIN on " +
+        "its Bot settings card. Nothing changed."
+
+    /**
+     * Boss's switch (on by default). Off only stops the blocking; the matrix is still worked out.
+     * 19 Nov 2026 (audit batch 2: live risk rules' PIN): off loosens a live protection (it blocks Zerodha entries too), so it takes
+     * [pinConfirmed] (the card asks the PIN first) wherever the guard's own rule asks it ([com.optionslab.app.security.GuardPin]);
+     * on never asks.
+     */
+    fun setOn(on: Boolean, pinConfirmed: Boolean = false): String {
+        if (!on && guard.config.on && !pinConfirmed && pinAsked()) return PIN_OFF
         runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to on)) }
         guard.setConfig(guard.config.copy(on = on))
         runCatching { publish(Market.today()) }
         runCatching { Diag.record("portfolio", "Portfolio guard ${if (on) "on" else "off"}") }
         return if (on) "Portfolio guard on." else "Portfolio guard off: correlated arms may all open on one day."
     }
+
+    /** 19 Nov 2026 (audit batch 2): whether loosening asks the PIN now (the guard's own rule; unknown counts as yes). Not the order path. */
+    private fun pinAsked(): Boolean = runCatching {
+        com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true))
+    }.getOrDefault(true)
 
     /**
      * An arm's NEW entry ([key]: its strategy key, "liquidity:BANKNIFTY", "orb"; [side] +1 / -1), paper or [live]: the block's

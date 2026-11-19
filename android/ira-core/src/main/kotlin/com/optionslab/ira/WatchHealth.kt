@@ -48,6 +48,38 @@ object WatchHealth {
         return nowEl < last || nowEl - last < AWAKE_PROGRESS_MS
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2: the processor's hold lapsed between steps of a slow pass): the pulse renews the hold whatever
+     * the loop is doing during NSE's hours ([nseHours]) and while anything is held ([held]); otherwise only while it makes progress
+     * ([keepAwake]) or the ntfy reader reads ([reader]).
+     */
+    fun holdAwake(progressing: Boolean, reader: Boolean, nseHours: Boolean, held: Boolean): Boolean = progressing || reader || nseHours || held
+
+    /**
+     * 19 Nov 2026 (audit batch 2): the dead-man check judges a stale beat in NSE's hours ([nseHours]) and also while the MCX watch
+     * should run ([mcxWatchDue]: MCX open with something held there or an arm armed). It was judged in NSE's hours only.
+     */
+    fun staleJudged(nseHours: Boolean, mcxWatchDue: Boolean): Boolean = nseHours || mcxWatchDue
+
+    /** 19 Nov 2026 (audit batch 2): the dead-man check's pace - every minute while a LIVE position is held, else every 5 minutes. */
+    const val DEAD_MAN_MS = 5 * 60_000L
+    const val DEAD_MAN_LIVE_MS = 60_000L
+    fun deadManEveryMs(liveHeld: Boolean): Long = if (liveHeld) DEAD_MAN_LIVE_MS else DEAD_MAN_MS
+
+    /**
+     * 19 Nov 2026 (audit batch 2): the watch never ends itself on "not a trading day" while something is held ([held]: any book's
+     * hint, or Zerodha shows a position) within NSE's clock hours ([nseClockHours]: the watch's hours on any weekday, whatever the
+     * calendar says) - a holiday list that is wrong must never leave a held position unwatched.
+     */
+    fun keepOnClosedDay(nseClockHours: Boolean, held: Boolean): Boolean = nseClockHours && held
+
+    /**
+     * 19 Nov 2026 (audit batch 2): a holiday-calendar refresh may not close [today] once it has started trading ([trading]: today is
+     * a trading day on the calendar in use; [minute] at or after [openMinute]); it waits until tomorrow. True: refuse it for today.
+     */
+    fun refuseClosingToday(trading: Boolean, closesToday: Boolean, minute: Int, openMinute: Int): Boolean =
+        trading && closesToday && minute >= openMinute
+
     /** The relay warm-up after a failed connect: 2, 4, 8 then 10 minutes between tries (the server is down). */
     const val WARM_FIRST_MS = 2 * 60_000L
     const val WARM_MAX_MS = 10 * 60_000L

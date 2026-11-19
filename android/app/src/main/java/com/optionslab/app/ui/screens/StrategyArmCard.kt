@@ -81,13 +81,16 @@ fun StrategyArmCard(model: AppModel, onManage: () -> Unit) {
             override fun clearKill() = model.update { it.copy(guardKill = false) }
             // 18 Oct, review: clearing the kill switch here asks for the PIN as the Account guard page does ([GuardPin]).
             override fun clearKillNeedsPin() = com.optionslab.app.security.GuardPin.clearKillAsks(s.live)
-            override fun startBot() { model.startBotAgain() }
+            override fun startBot(pinConfirmed: Boolean) { model.startBotAgain(pinConfirmed) }
+            // 19 Nov 2026 (audit batch 2): lifting Stop for today in Live asks the PIN (with one set), as the timeline's Undo does.
+            override fun startBotNeedsPin() = runCatching { com.optionslab.app.security.GuardPin.asks(true, com.optionslab.app.security.PinLock.isSet, s.live, zerodha = false) }.getOrDefault(true)
             override fun stopBot(alsoRunning: Boolean) { model.stopBotForToday(alsoRunning) }
         },
         onManage = onManage,
         orbRows = { OrbRows(model) },
         reauth = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel) },
         reauthClearKill = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) },
+        reauthStartBot = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = com.optionslab.app.data.Strategies.LIFT_WHY) },
         stopWhy = botStopWhy,
         stopAt = botStopAt,
         dayLock = dayLock,
@@ -148,7 +151,10 @@ internal interface StrategyArmActions {
     fun clearKill()
     /** Clearing the kill switch asks for the PIN or fingerprint first ([com.optionslab.app.security.GuardPin]). */
     fun clearKillNeedsPin(): Boolean
-    fun startBot()
+    /** Start the index bots again today; 19 Nov 2026 (audit batch 2): [pinConfirmed], the PIN was taken ([startBotNeedsPin]). */
+    fun startBot(pinConfirmed: Boolean)
+    /** 19 Nov 2026 (audit batch 2): lifting Stop for today asks the PIN first (in Live with a PIN set). */
+    fun startBotNeedsPin(): Boolean = false
     fun stopBot(alsoRunning: Boolean)
 }
 
@@ -167,6 +173,8 @@ internal fun StrategyArmContent(
     stopAt: String? = null,
     /** The PIN prompt for clearing the kill switch (18 Oct, review: its own words; [reauth] when not given). */
     reauthClearKill: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit = reauth,
+    /** 19 Nov 2026 (audit batch 2): the PIN prompt for starting the index bots again in Live (its own words; [reauth] when not given). */
+    reauthStartBot: @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit = reauth,
     /** The account day lock's line when reached today ("Day lock (paper): reached +Rs 8,000 at 14:11, no new entries"). */
     dayLock: String? = null,
     /** The paper account's running total since the Settings start date ("Paper since 1 Oct: +Rs 5,490 net over 5 days ..."). */
@@ -294,10 +302,14 @@ internal fun StrategyArmContent(
     reauthApprove?.let { id -> reauth({ reauthApprove = null; actions.approve(id) }, { reauthApprove = null }) }
     var reauthKill by remember { mutableStateOf(false) }
     if (reauthKill) reauthClearKill({ reauthKill = false; actions.clearKill() }, { reauthKill = false })
+    // 19 Nov 2026 (audit batch 2): starting the index bots again in Live (with a PIN set): the PIN first.
+    var reauthStart by remember { mutableStateOf(false) }
+    if (reauthStart) reauthStartBot({ reauthStart = false; actions.startBot(true) }, { reauthStart = false })
     if (importing) ImportDialog(actions) { importing = false }
     if (confirmBot) BotDialog(actions, killOn = killOn, stopped = botStopped, anyRunning = list.any { it.running },
         lossStop = botStopped && stopWhy == com.optionslab.ira.DayStop.Why.LOSS,
-        onClearKill = { if (actions.clearKillNeedsPin()) { reauthKill = true } else { actions.clearKill() } }) { confirmBot = false }
+        onClearKill = { if (actions.clearKillNeedsPin()) { reauthKill = true } else { actions.clearKill() } },
+        onStart = { if (actions.startBotNeedsPin()) reauthStart = true else actions.startBot(false) }) { confirmBot = false }
 }
 
 /** The desktop app's local API lists strategies and returns each one in full; this is the command that collects them. */
@@ -374,7 +386,7 @@ private fun ChoiceRow(title: String, detail: String, onClick: () -> Unit) {
 /** The confirmation behind Home's single bot button. */
 @Composable
 private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boolean, anyRunning: Boolean, lossStop: Boolean = false,
-                      onClearKill: () -> Unit, onClose: () -> Unit) {
+                      onClearKill: () -> Unit, onStart: () -> Unit, onClose: () -> Unit) {
     val p = LocalPalette.current
     var alsoStop by remember { mutableStateOf(false) }
     AlertDialog(
@@ -408,7 +420,7 @@ private fun BotDialog(actions: StrategyArmActions, killOn: Boolean, stopped: Boo
                 when {
                     killOn -> onClearKill()
                     stopped && lossStop -> Unit
-                    stopped -> actions.startBot()
+                    stopped -> onStart()
                     else -> actions.stopBot(alsoStop)
                 }
                 onClose()

@@ -207,6 +207,98 @@ object StopCadence {
         }
     }
 
+    /** 19 Nov 2026 (audit batch 2: completed checks): a held live book whose last COMPLETED exit check is older than this is a RISK. */
+    const val COMPLETED_ALERT_MS = 45_000L
+    /** 19 Nov 2026 (audit batch 2): that RISK notice is posted again at most this often while it lasts. */
+    const val COMPLETED_REPEAT_MS = 5 * 60_000L
+
+    /**
+     * 19 Nov 2026 (audit batch 2: "Stop-check gaps" counted when a look STARTED, so a look that started on time but whose book's exit
+     * check never finished - hung on a slow Zerodha read - looked healthy). Each book's exit check stamps here when it COMPLETES
+     * ([done]); [held] says which books hold now (a book that stops holding is forgotten: a gap across a flat spell is no gap).
+     *  - [worst]: the day's worst completed-to-completed gap of any book (the diagnostics' line);
+     *  - [stale]: the held books whose last completed check (or, never completed yet, the moment they were first seen held) is
+     *    [COMPLETED_ALERT_MS] or more old.
+     * Thread-safe; memory only (a restart starts again at none). Pure: the caller passes the clock.
+     */
+    class Completed {
+        private val last = HashMap<String, Long>()
+        /** The books seen held and not completed since (the time they were first seen held). */
+        private val baseline = HashMap<String, Long>()
+        private var day: LocalDate? = null
+        private var worst = 0L
+        private var worstBook: String? = null
+        private var gaps = 0
+
+        /** [book]'s exit check completed at [nowMs] on [today]. */
+        @Synchronized fun done(book: String, nowMs: Long, today: LocalDate) {
+            if (day != today) { day = today; worst = 0L; worstBook = null; gaps = 0 }
+            val prev = last[book]
+            baseline.remove(book)
+            last[book] = nowMs
+            if (prev != null && nowMs >= prev) {
+                gaps++
+                val g = nowMs - prev
+                if (g > worst) { worst = g; worstBook = book }
+            }
+        }
+
+        /** The books holding now ([books]) at [nowMs]: a new one gets its baseline; one no longer held is forgotten. */
+        @Synchronized fun held(books: Set<String>, nowMs: Long) {
+            last.keys.retainAll(books)
+            baseline.keys.retainAll(books)
+            for (b in books) if (b !in last && b !in baseline) baseline[b] = nowMs
+        }
+
+        /** The held books (as last given to [held]) whose last completed check is [COMPLETED_ALERT_MS] or more old at [nowMs], with its age. */
+        @Synchronized fun stale(nowMs: Long, limitMs: Long = COMPLETED_ALERT_MS): List<Pair<String, Long>> =
+            (last.entries + baseline.entries).map { it.key to (nowMs - it.value) }.filter { it.second >= limitMs }.sortedBy { it.first }
+
+        /** (gaps measured, the worst gap in ms, its book) today. */
+        @Synchronized fun today(today: LocalDate): Triple<Int, Long, String?> = if (day == today) Triple(gaps, worst, worstBook) else Triple(0, 0L, null)
+
+        /** The diagnostics' line. */
+        fun line(today: LocalDate): String {
+            val (n, w, b) = today(today)
+            return if (n == 0) "Completed stop checks: none measured today (nothing held while the watch ran)."
+            else "Completed stop checks: $n gaps between completed checks today; worst ${"%.1f".format(java.util.Locale.ENGLISH, w / 1000.0)} s" +
+                (b?.let { " ($it)" } ?: "") + if (w >= COMPLETED_ALERT_MS) " - over the ${COMPLETED_ALERT_MS / 1000} s limit." else "."
+        }
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2: asleep or busy?): each stop look's length on both clocks - the monotonic clock that counts deep
+     * sleep (elapsedRealtime) and the one that does not (uptimeMillis). Their difference is time the phone slept during the look
+     * (the processor's hold lapsed); the rest is time the look was busy. Thread-safe; memory only; pure (the caller passes both).
+     */
+    class SleepSplit {
+        private var day: LocalDate? = null
+        private var looks = 0
+        private var slept = 0
+        private var worstAsleep = 0L
+        private var worstBusy = 0L
+
+        /** One look on [today] took [elapsedMs] (counting sleep) and [uptimeMs] (not); returns the time asleep. */
+        @Synchronized fun look(elapsedMs: Long, uptimeMs: Long, today: LocalDate): Long {
+            if (day != today) { day = today; looks = 0; slept = 0; worstAsleep = 0L; worstBusy = 0L }
+            looks++
+            val asleep = (elapsedMs - uptimeMs).coerceAtLeast(0L)
+            if (asleep >= ASLEEP_MS) slept++
+            if (asleep > worstAsleep) worstAsleep = asleep
+            if (uptimeMs > worstBusy) worstBusy = uptimeMs
+            return asleep
+        }
+
+        /** The diagnostics' line. */
+        @Synchronized fun line(today: LocalDate): String =
+            if (day != today || looks == 0) "Stop checks asleep or busy: none measured today."
+            else "Stop checks asleep or busy: $looks looks today; $slept with the phone asleep ${ASLEEP_MS / 1000} s or more " +
+                "(worst ${worstAsleep / 1000} s asleep); the longest busy look ${"%.1f".format(java.util.Locale.ENGLISH, worstBusy / 1000.0)} s."
+    }
+
+    /** 19 Nov 2026 (audit batch 2): a look with at least this much sleep in it is counted as asleep. */
+    const val ASLEEP_MS = 1_000L
+
     /** What the app shows for a gap of 30 s or more: the same words each time, so one banner stands for them all. */
     const val ALERT_WORDS = "The stops were looked at 30 s or more apart while a position was held (the promise is 15 s). " +
         "Something held the watch back: keep the app open, or check the battery settings."
