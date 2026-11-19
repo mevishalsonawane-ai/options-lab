@@ -167,8 +167,8 @@ class ClockLaneSquareOffTest : RobolectricTest() {
     private var legSymbol = ""
 
     /** Another running LIVE strategy named [name] (its BUY placed). */
-    private fun anotherStrategy(name: String) = runBlocking {
-        assertEquals(null, Strategies.save(AutomationSupport.strategy(name, com.optionslab.engine.strategy.Position.B to com.optionslab.engine.strategy.OptionType.CE)))
+    private fun anotherStrategy(name: String, right: com.optionslab.engine.strategy.OptionType = com.optionslab.engine.strategy.OptionType.CE) = runBlocking {
+        assertEquals(null, Strategies.save(AutomationSupport.strategy(name, com.optionslab.engine.strategy.Position.B to right)))
         val id = Strategies.all().single { it.def.name == name }.def.id
         Strategies.setLiveEnabled(id, true)
         Strategies.start(id, com.optionslab.engine.strategy.RunMode.LIVE, "manual", confirmedByOwner = true, compromised = false)
@@ -207,7 +207,7 @@ class ClockLaneSquareOffTest : RobolectricTest() {
     @Test fun threeStrategiesShareOneWaitForTheTurn() = runBlocking {
         AutomationSupport.liveSettings()
         runningStrategy()
-        anotherStrategy("Clock lane test 2")
+        anotherStrategy("Clock lane test 2", com.optionslab.engine.strategy.OptionType.PE)
         anotherStrategy("Clock lane test 3")
         ClockLane.salesTurnWaitMs = 3_000L
         val release = CompletableDeferred<Unit>()
@@ -221,7 +221,12 @@ class ClockLaneSquareOffTest : RobolectricTest() {
             val ms = System.currentTimeMillis() - t0
             // One 3 s wait in all, then the exits (before: one each, 9 s of waits and more).
             assertTrue("one wait for all three: $ms ms", ms < 7_500L)
-            assertEquals("each strategy's leg sold", 3, kite.placed.count { it.form["tradingsymbol"] == legSymbol && it.form["transaction_type"] == "SELL" })
+            // Each leg bought is sold, contract by contract (the account guard may refuse an entry: counted from the BUYs).
+            val orders = kite.placed.map { "${it.form["transaction_type"]} ${it.form["quantity"]} ${it.form["tradingsymbol"]}" }
+            val bought = kite.placed.filter { it.form["transaction_type"] == "BUY" }.groupingBy { it.form["tradingsymbol"] }.eachCount()
+            val sold = kite.placed.filter { it.form["transaction_type"] == "SELL" }.groupingBy { it.form["tradingsymbol"] }.eachCount()
+            assertTrue("at least two running: $orders", bought.values.sum() >= 2)
+            assertEquals("every leg bought is sold: $orders", bought, sold)
             assertTrue(com.optionslab.app.data.Diag.lines().takeLast(40).joinToString("\n"),
                 com.optionslab.app.data.Diag.lines().any { it.contains("exits went without it") })
         } finally {
