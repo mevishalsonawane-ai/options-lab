@@ -86,7 +86,7 @@ class PositionCardsTest : RobolectricTest() {
      */
     @Test fun aRefreshCutShortLeavesTheCardsAndTheOpenFlagAsTheyWere() = kotlinx.coroutines.runBlocking {
         PositionCards.card(context, "Paper", "X", 75, 100.0, 98.0, -150.0)
-        PositionCards.anyOpen = true
+        PositionCards.markOpenForTest()
         PositionCards.testBeforeRead = { kotlinx.coroutines.delay(10_000) }
         try {
             kotlinx.coroutines.withTimeoutOrNull(300) { PositionCards.refresh(context) }

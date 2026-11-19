@@ -51,6 +51,9 @@ object PositionCards {
     @Volatile var anyOpen = false
         private set
 
+    /** TEST SEAM (19 Nov 2026): the "open" flag as a refresh that found a position left it. */
+    internal fun markOpenForTest() { anyOpen = true }
+
     /** 15 Nov: bumped by [resetForTest]; a refresh started before it never sets [anyOpen] after it. */
     @Volatile private var resetGen = 0
 
