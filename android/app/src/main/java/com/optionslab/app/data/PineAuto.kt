@@ -1337,7 +1337,8 @@ object PineAuto {
                 if (rs.any { !it.scanned }) "own exits (not yet looked for in Zerodha's order book)" else null).joinToString(" and ")
             note(b, id, "Shadow (logged only): would have waited - the earlier holding's $what on $sym is still being taken out at " +
                 "Zerodha; buying as before")
-            if (reentrySaid.add("${todayIst()}|$sym")) com.optionslab.app.work.Alerts.error("${label(item)}: buying $sym again while the " +
+            if (reentrySaid.size > 200) reentrySaid.clear()
+            if (reentrySaid.add("${todayIst()}|$sym|${rs.joinToString(",") { it.ids.keys.joinToString("+").ifEmpty { "scan" } }}")) com.optionslab.app.work.Alerts.error("${label(item)}: buying $sym again while the " +
                 "earlier holding's $what is not yet cancelled at Zerodha. It may sell the new lots: check the sells of $sym in Kite.",
                 "Pine live")
         }
@@ -1577,7 +1578,10 @@ object PineAuto {
 
     // ---- 19 Nov 2026 (audit): a closed live holding's stop is taken out at Zerodha, and confirmed ------------------------------
 
-    /** 19 Nov 2026 (second review): the contracts bought again while an earlier stop was being taken out, already told ("day|symbol"). */
+    /**
+     * 19 Nov 2026 (second review): the contracts bought again while an earlier stop was being taken out, already told ("day|symbol|its
+     * orders": told once for each earlier holding's orders). Memory only; bounded.
+     */
     private val reentrySaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /**
