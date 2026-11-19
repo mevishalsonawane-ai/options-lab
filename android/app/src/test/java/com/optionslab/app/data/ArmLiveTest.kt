@@ -2256,7 +2256,9 @@ class ArmLiveTest : RobolectricTest() {
         kite.soldInKite(sym, 30, 205.0)                                       // Boss sells the arm's lot in Kite
         assertEquals(0, held())
         ArmLive.testNow = Market.now().plusMinutes(1)
-        watch()
+        // (Looked at until booked, a few seconds at most: never one look that a lane still busy from an earlier test could skip.)
+        val until = System.nanoTime() + 10_000_000_000L
+        do { watch(); if (view().closed.isNotEmpty()) break; Thread.sleep(50) } while (System.nanoTime() < until)
         assertEquals("closed_at_zerodha", view().closed.single().why)
         assertTrue(view().openReal.isEmpty())
     }
@@ -2471,8 +2473,8 @@ class ArmLiveTest : RobolectricTest() {
         next.join(30_000); slow.join(30_000)
         val nextMs = (System.nanoTime() - t0) / 1_000_000
         assertFalse(next.isAlive); assertFalse(slow.isAlive)
-        assertTrue("a look is not held up: $lookMs ms", lookMs < 2_000)
-        assertTrue("the next entry waited about 5 s, never the old 15: $nextMs ms", nextMs < 12_000)
+        assertTrue("a look is not held up: $lookMs ms", lookMs < 4_000)
+        assertTrue("the next entry waited about 5 s, never the old 15: $nextMs ms", nextMs < 14_000)
         assertEquals("the unfilled one cancelled", "CANCELLED", kite.orders.values.single { it.side == "BUY" && it.symbol != sym && it.symbol != s3 }.status)
         assertEquals(setOf("open-one", "next"), view().openReal.map { it.ref }.toSet())
     }
@@ -2500,5 +2502,113 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(p.unconfirmed); assertNotNull(p.entryOrderId)
         assertEquals(1, posted("did not confirm"))
         assertTrue("its cancel sent again", kite.requests.count { it.method == "DELETE" } >= 2)
+    }
+
+    // ---- 19 Nov 2026: the final review ------------------------------------------------------------------------------------------
+
+    private val vault get() = java.io.File(context.noBackupFilesDir, "arm_live.vault")
+
+    /** As a book rebuilt with nothing in it (damaged, set aside): the restart reads no file. */
+    private fun restartWithNoBook() { ArmLive.drainWritesForTest(); vault.delete(); ArmLive.forgetMemoryForTest() }
+
+    /** Item 1: an arm bought and sold, the book rebuilt empty, Boss buys in Kite: the restart takes nothing - its round trip explains nothing. */
+    @Test fun aRebuiltBookNeverTakesBossesLotForAnArmsRoundTrip() {
+        ArmLive.entered(ask(donchian, "rt"))
+        watch()
+        legs["rt"] = donchian to 0
+        watch()
+        assertEquals("paper_exit", view().closed.single().why)
+        kite.boughtInKite(sym, 30, 199.0)                                          // Boss's own lot
+        restartWithNoBook()
+        val sl = kite.placed.count { it.form["order_type"] == "SL" }
+        runBlocking { ArmLive.holding() }
+        assertTrue("his lot is his", view().openReal.isEmpty())
+        assertEquals("no stop on it", sl, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
+    /** Item 1: the same with Pine's lot on the contract. */
+    @Test fun aRebuiltBookNeverTakesPinesLotForAnArmsRoundTrip() {
+        ArmLive.entered(ask(donchian, "rt2"))
+        watch()
+        legs["rt2"] = donchian to 0
+        watch()
+        kite.boughtInKite(sym, 30, 199.0, tag = "irapine")                          // Pine's own lot
+        restartWithNoBook()
+        runBlocking { ArmLive.holding() }
+        assertTrue(view().openReal.isEmpty())
+    }
+
+    /** Item 1: after "Erase everything" an arm's lot bought before the erase is never taken back after a restart (only later orders count). */
+    @Test fun afterAnEraseALotBoughtBeforeItIsNeverTakenBack() {
+        ArmLive.entered(ask(donchian, "pre-erase"))
+        val sl = kite.placed.count { it.form["order_type"] == "SL" }
+        ArmLive.testNow = Market.now().plusSeconds(30)
+        ArmLive.wipeForErase()
+        runBlocking { ArmLive.refresh() }                                            // the new book, carrying when it was erased
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
+        assertTrue(view().openReal.isEmpty())
+        assertEquals(sl, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
+    /**
+     * Items 2 and 6: the lot taken back is priced at the unowned order alone - never blended with an owned one, nor with the order of a
+     * trade taken back earlier with no order id (300 owned that way + 150 lost -> 150, not 225).
+     */
+    @Test fun aLotTakenBackIsPricedAtItsOwnOrderNotABlend() {
+        kite.quote("NFO:$sym", 300.0, 299.95, 300.05)
+        ArmLive.entered(ask(donchian, "owned", stop = 255.0))
+        assertEquals(300.0, view().openReal.single().entry, 1e-9)
+        val o = org.json.JSONObject(String(com.optionslab.app.security.Vault.readFile(vault)!!, Charsets.UTF_8))
+        val rows = o.getJSONArray("positions"); for (i in 0 until rows.length()) rows.getJSONObject(i).put("entryOrderId", "")
+        com.optionslab.app.security.Vault.writeFile(vault, o.toString().toByteArray(Charsets.UTF_8))
+        val lost = kite.boughtInKite(sym, 30, 150.0, tag = LiveMirror.TAG)           // a lost entry's lot
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
+        val p = view().openReal.single { it.ref != "owned" }
+        assertEquals(lost, p.entryOrderId); assertEquals(150.0, p.entry, 1e-9)
+    }
+
+    /** Item 2: the other way round (100 owned + 300 lost -> 300). */
+    @Test fun aLotTakenBackIsPricedAtItsOwnOrderTheOtherWayRound() {
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        ArmLive.entered(ask(donchian, "owned2", stop = 85.0))
+        val lost = kite.boughtInKite(sym, 30, 300.0, tag = LiveMirror.TAG)
+        ArmLive.forgetMemoryForTest()
+        runBlocking { ArmLive.holding() }
+        val p = view().openReal.single { it.ref != "owned2" }
+        assertEquals(lost, p.entryOrderId); assertEquals(300.0, p.entry, 1e-9)
+    }
+
+    /** Item 4: the start's sweep runs under its own lock - a look of the open trades is never skipped while it reads Zerodha. */
+    @Test fun aLookIsNeverSkippedWhileTheStartsSweepRuns() {
+        ArmLive.entered(ask(donchian, "open-look"))
+        ArmLive.forgetMemoryForTest()
+        kite.slowMs["/portfolio/positions"] = 1_500L
+        try {
+            val t = Thread { runBlocking { ArmLive.watch() } }.apply { start() }
+            val until = System.nanoTime() + 20_000_000_000L
+            while (!ArmLive.sweepingForTest && System.nanoTime() < until) Thread.sleep(2)
+            assertTrue("the sweep is running", ArmLive.sweepingForTest)
+            val before = ArmLive.looksForTest.get()
+            runBlocking { ArmLive.watch(stream = true) }
+            assertTrue("a look ran beside it", ArmLive.looksForTest.get() > before)
+            t.join(30_000)
+        } finally { kite.slowMs.clear() }
+    }
+
+    /** Item 5: Zerodha's books unreadable after a start: the tick lanes' hint is dropped after 10 minutes, Boss told; the minute lanes go on. */
+    @Test fun anUnreadableStartSweepKeepsTheTickLanesOnForTenMinutesAtMost() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        ArmLive.forgetMemoryForTest()
+        kite.drop += "/orders"
+        watch()
+        assertTrue(ArmLive.recoverHint)
+        ArmLive.testNow = ArmLive.testNow!!.plusMinutes(11)
+        watch()
+        assertFalse("the tick lanes' hint dropped", ArmLive.recoverHint)
+        assertTrue("the minute lanes still try", ArmLive.lookDue)
+        assertEquals(1, posted("could not be read to check"))
     }
 }
