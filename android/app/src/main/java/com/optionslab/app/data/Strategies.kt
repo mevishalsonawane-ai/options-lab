@@ -270,7 +270,7 @@ object Strategies {
     private val written = Vault.LastWrite()
 
     private fun save(b: Book) {
-        drainOwnersSoon(b)                                   // 20 Nov 2026: labels given while the lock was busy go with every write
+        if (b.gen == wipeGen) drainOwnersSoon(b)             // 20 Nov 2026: labels given while the lock was busy go with every write
         val bytes = encode(b)
         // 19 Oct: one order of writes with [saveSoon]: a write it left pending is dropped (this newer book carries it).
         synchronized(ioLock) {
@@ -290,7 +290,7 @@ object Strategies {
      * [stoppedToday] waited for that lock). In memory at once; written next unless a newer [save] wrote first. Never older over newer.
      */
     private fun saveSoon(b: Book) {
-        drainOwnersSoon(b)
+        if (b.gen == wipeGen) drainOwnersSoon(b)
         val bytes = encode(b)
         synchronized(writeOrder) {
             if (b.gen != wipeGen) return                    // 26 Oct: a book read before "Erase everything" is dropped
@@ -553,6 +553,7 @@ object Strategies {
     suspend fun tagOwner(key: String, label: String) = lock.withLock {
         // The book unreadable just now: the label is skipped, never a throw on the caller's order path (18 Oct, review).
         val b = runCatching { book() }.getOrNull() ?: return@withLock
+        drainOwnersSoon(b)                                   // the older labels first: this newer one wins
         b.owners[key] = label; saveSoon(b)
     }
 
@@ -580,6 +581,7 @@ object Strategies {
         try {
             val b = runCatching { book() }.getOrNull()
             if (b == null) { ownersSoon[key] = label; return }
+            drainOwnersSoon(b)
             b.owners[key] = label; saveSoon(b)
         } finally {
             lock.unlock()
@@ -983,20 +985,25 @@ object Strategies {
     suspend fun stop(id: Long, reason: String, compromised: Boolean, salesInTurn: Boolean = false): String {
         if (!salesInTurn) return lock.withLock { stopHeld(id, reason, compromised) }
         // 20 Nov 2026 (third review): neither held while waiting for the other - in the turn this lock is only tried; busy, the turn
-        // is let go and the lock waited for outside it, then both tried again (a pathological run of busy locks: as before, both).
-        repeat(STOP_TRIES) {
-            val r = com.optionslab.app.work.ClockLane.sales(com.optionslab.app.work.ClockLane.LOSS) {
+        // is let go and the lock waited for outside it, then both tried again. The contracts' list is read first, outside both (a
+        // network read on a cold day must never hold the square-offs' turn). All the tries together wait no longer than the sales'
+        // wait for the turn; past it, the sales go with the lock alone, as the sales do behind a stuck square-off.
+        runCatching { lock.withLock { book().runs[id]?.mode } }.getOrNull()?.let { m -> runCatching { venue(m) } }
+        val lane = com.optionslab.app.work.ClockLane
+        val deadline = System.currentTimeMillis() + lane.salesTurnWaitMs
+        while (true) {
+            val left = deadline - System.currentTimeMillis()
+            if (left <= 0L) break
+            val r = lane.sales(lane.LOSS, waitMs = left, quiet = true) {
                 if (lock.tryLock()) try { Result.success(stopHeld(id, reason, compromised)) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { Result.failure(e) } finally { lock.unlock() }
                 else null
             }
             if (r != null) return r.getOrThrow()
             lock.withLock { }
         }
-        return lock.withLock { com.optionslab.app.work.ClockLane.sales(com.optionslab.app.work.ClockLane.LOSS) { stopHeld(id, reason, compromised) } }
+        runCatching { com.optionslab.app.work.Heartbeat.diary("daily loss limit: the turn not had in ${lane.salesTurnWaitMs / 1000} s; the stop of strategy $id goes now") }
+        return lock.withLock { stopHeld(id, reason, compromised) }
     }
-
-    /** [stop]'s tries for this lock and the turn together before it waits for both in turn. */
-    private const val STOP_TRIES = 20
 
     /** [stop]'s work, this book's lock held. */
     private suspend fun stopHeld(id: Long, reason: String, compromised: Boolean): String {

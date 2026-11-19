@@ -153,13 +153,14 @@ class ClockLaneSquareOffTest : RobolectricTest() {
     }
 
     /** A running LIVE strategy holding one NIFTY CE leg (bought at the start), as the loss limit's test makes one. */
-    private fun runningStrategy() = runBlocking {
+    private fun runningStrategy(): Long = runBlocking {
         AutomationSupport.security(compromised = false)
         assertEquals(null, Strategies.save(AutomationSupport.strategy("Clock lane test", com.optionslab.engine.strategy.Position.B to com.optionslab.engine.strategy.OptionType.CE)))
         val id = Strategies.all().single().def.id
         Strategies.setLiveEnabled(id, true)
         Strategies.start(id, com.optionslab.engine.strategy.RunMode.LIVE, "manual", confirmedByOwner = true, compromised = false)
         assertEquals("BUY", kite.placed.single().form["transaction_type"])
+        id
     }
     private fun strategySells() = kite.placed.count { it.form["tradingsymbol"] == AutomationSupport.NIFTY_CE && it.form["transaction_type"] == "SELL" }
 
@@ -213,19 +214,18 @@ class ClockLaneSquareOffTest : RobolectricTest() {
 
     /**
      * Item 1 (b), third review: the stop's sales take the turn only once the strategies' lock is held - never while waiting for it (a
-     * pass held that lock across Zerodha calls for minutes, and the square-offs waited behind the queued sale all that time). Before,
-     * the loss limit wrapped the whole stop, the wait for the lock included, in the turn.
+     * pass held that lock across Zerodha calls for minutes, and the square-offs waited behind the queued sale all that time). The
+     * stop tries the lock in the turn, lets both go, and waits for the lock alone.
      */
     @Test fun theTurnIsNeverQueuedWhileTheStopWaitsForTheStrategiesLock() = runBlocking {
         AutomationSupport.liveSettings()
-        runningStrategy()
+        val id = runningStrategy()
         val release = CompletableDeferred<Unit>()
         val lock = launch(Dispatchers.IO) { Strategies.holdLockForTest(release) }
         try {
             Background.await("the strategies' lock held", 5_000) { Strategies.lockHeldForTest() }
-            val stop = launch(Dispatchers.IO) {
-                Strategies.stopForToday(stopRunning = true, compromised = false, why = com.optionslab.ira.DayStop.Why.LOSS, salesInTurn = true)
-            }
+            val stop = launch(Dispatchers.IO) { Strategies.stop(id, "daily loss limit", compromised = false, salesInTurn = true) }
+            Thread.sleep(300)                          // past its one try in the turn: now it waits for the lock alone
             repeat(15) {
                 assertFalse("the turn is free while the stop waits for the lock", ClockLane.salesQueuedForTest())
                 Thread.sleep(100)

@@ -213,11 +213,12 @@ internal object ClockLane {
      * the strategies' lock already held ([com.optionslab.app.data.Strategies.stop]) - never while waiting for that lock, and not at
      * all when nothing is running.
      */
-    suspend fun <T> sales(who: String, block: suspend () -> T): T {
+    suspend fun <T> sales(who: String, waitMs: Long = salesTurnWaitMs, quiet: Boolean = false, block: suspend () -> T): T {
         // First in line ([ClockSteps.Turn.take] first): the square-offs hold back while it waits, so it has the turn between two of them.
-        val r = turn.take(salesTurnWaitMs, who, first = true) { Result.success(block()) }
+        val r = turn.take(waitMs, who, first = true) { Result.success(block()) }
         if (r != null) return r.getOrThrow()
-        runCatching { Heartbeat.diary("$who: a square-off held the turn ${salesTurnWaitMs / 1000} s (${turn.holder ?: "?"}); its sales go now") }
+        // [quiet]: the caller says what it did itself (its block may only try a lock and sell nothing).
+        if (!quiet) runCatching { Heartbeat.diary("$who: a square-off held the turn ${waitMs / 1000} s (${turn.holder ?: "?"}); its sales go now") }
         return block()
     }
 
