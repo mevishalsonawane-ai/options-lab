@@ -53,11 +53,14 @@ object PineAuto {
 
     /**
      * 19 Nov 2026 (audit: a Pine live stop left resting at Zerodha after its position closed could later open a naked short): a live
-     * holding confirmed closed at Zerodha whose resting stop and other own exits ("irapine" SELLs on [kite], order ids [ids]) are not
-     * yet confirmed gone there. Kept (saved with the book) and tried again on every check until Zerodha shows each one cancelled,
-     * rejected or complete; Boss is told once after [REMOVE_TRIES] tries ([told]). [script]: whose holding it was.
+     * holding confirmed closed at Zerodha whose resting stop and other own exits ("irapine" SELLs on [kite]) are not yet confirmed gone
+     * there: [ids], each order id with what of it had filled when it was recorded (a fill beyond that sold what was no longer held).
+     * Kept (saved with the book) and tried again on every check until Zerodha shows each one cancelled, rejected or complete; Boss is
+     * told once after [REMOVE_TRIES] tries ([told]). [script]: whose holding it was; [day]: the session (a DAY order ends with it).
+     * [scanned] false: Zerodha's orders could not be read when it closed, so its contract's other own exits are still to be looked for.
      */
-    data class Removing(val script: Long, val kite: String, val ids: List<String>, val tries: Int = 0, val told: Boolean = false)
+    data class Removing(val script: Long, val kite: String, val ids: Map<String, Int>, val day: String, val scanned: Boolean = true,
+                        val tries: Int = 0, val told: Boolean = false)
 
     private class Book(
         val held: HashMap<Long, Held> = HashMap(),
@@ -136,8 +139,9 @@ object PineAuto {
                 ?: run { bk.autoSaved += bk.lastTarget.keys; bk.autoSaved += bk.lastBar.keys }
             // 19 Nov 2026 (audit): the live exits still being taken out, and today's live closes (a book from before: none).
             o.optJSONArray("removing")?.let { a -> for (i in 0 until a.length()) { val r = a.getJSONObject(i)
-                val ids = r.optJSONArray("ids")?.let { l -> (0 until l.length()).map { l.getString(it) } }.orEmpty()
-                bk.removing += Removing(r.getLong("script"), r.getString("kite"), ids, r.optInt("tries"), r.optBoolean("told")) } }
+                val ids = LinkedHashMap<String, Int>().apply { r.optJSONObject("ids")?.let { m -> m.keys().forEach { k -> put(k, m.getInt(k)) } } }
+                bk.removing += Removing(r.getLong("script"), r.getString("kite"), ids, r.optString("day"), r.optBoolean("scanned", true),
+                    r.optInt("tries"), r.optBoolean("told")) } }
             o.optJSONObject("closed")?.let { m -> m.keys().forEach { k -> bk.closed[k] = m.getInt(k) } }
             // A restore not yet disarmed (the app clears the flag once it has): no script may trade live on restored approvals.
             if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) bk.liveOk.clear()
@@ -172,7 +176,8 @@ object PineAuto {
         o.put("migrated", JSONArray(b.migrated.sorted()))
         o.put("autoSaved", JSONArray(b.autoSaved.sorted()))
         o.put("removing", JSONArray().apply { b.removing.forEach { r -> put(JSONObject().put("script", r.script).put("kite", r.kite)
-            .put("ids", JSONArray(r.ids)).put("tries", r.tries).put("told", r.told)) } })
+            .put("ids", JSONObject().apply { r.ids.forEach { (k, v) -> put(k, v) } }).put("day", r.day).put("scanned", r.scanned)
+            .put("tries", r.tries).put("told", r.told)) } })
         o.put("closed", JSONObject().apply { b.closed.forEach { (k, v) -> put(k, v) } })
         written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         synchronized(this) {
@@ -547,8 +552,8 @@ object PineAuto {
         // A restore not yet disarmed: every script counts as switched off (what it holds is still sold).
         val disarm = com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)
         val b = book()
-        // 19 Nov 2026 (audit): a closed live holding's stop still resting at Zerodha is taken out first, on every pass, until confirmed.
-        if (b.removing.isNotEmpty()) { removeExits(b); save(b) }
+        // 19 Nov 2026 (audit): the closed holdings' exits still being taken out as the pass starts (one try each this pass).
+        val removing = b.removing.toList()
         // 14 Oct: a script refused on load for a chart that is not an index: its holding managed to its exit, never sold by
         // the switch-off (before the "no longer auto-trading" sale below).
         PineScripts.loadNow()
@@ -581,7 +586,11 @@ object PineAuto {
         val shadowOnly = if (b.held.isNotEmpty()) emptyList() else all.filter { it.id in b.autoSaved && on.none { x -> x.id == it.id } &&
             winding.none { x -> x.id == it.id } && it.id !in b.held && shadowable(it) }
             .let { l -> if (l.size <= SHADOW_PER_PASS) l else { val k = shadowTurn++ % l.size; (l.drop(k) + l.take(k)).take(SHADOW_PER_PASS) } }
-        if (on.isEmpty() && b.held.isEmpty() && shadowOnly.isEmpty()) return@withLock
+        if (on.isEmpty() && b.held.isEmpty() && shadowOnly.isEmpty()) {
+            // 19 Nov 2026 (audit): a closed live holding's exits still resting at Zerodha are taken out on every pass until confirmed.
+            if (removing.isNotEmpty()) { removeExits(b, removing); save(b) }
+            return@withLock
+        }
         // Held by a script that is no longer on (turned off elsewhere, a restore, deleted): sell it.
         for ((id, h) in b.held.toMap()) if (on.none { it.id == id } && winding.none { it.id == id }) {
             val item = all.firstOrNull { it.id == id } ?: PineScripts.Item(id, "deleted script", "")
@@ -599,6 +608,9 @@ object PineAuto {
         // 30 Oct: switched off, holding nothing: its signal read on its candles as when on, each would-be entry to the shadow only.
         for (item in shadowOnly) runCatching { one(b, item, stopped, entries = false, shadow = true, quiet = true) }
             .onFailure { e -> runCatching { Diag.record("pine", "${label(item)} (shadow): ${e.javaClass.simpleName}") } }
+        // 19 Nov 2026 (audit): after the holdings' own exits (they come first), a closed live holding's exits still resting at Zerodha
+        // (one just closed this pass was tried at once).
+        if (removing.isNotEmpty()) removeExits(b, removing)
         save(b)
     }
 
@@ -649,10 +661,10 @@ object PineAuto {
 
     private suspend fun watchOnlyLocked(fast: Boolean) {
         val b = book()
-        // 19 Nov 2026 (audit): a closed live holding's exits still resting at Zerodha are taken out on every check until confirmed
-        // (not on a stream look, which reads no order's state over REST: the 15-second check and the full pass do).
-        if (b.removing.isNotEmpty() && !streamLook) { removeExits(b); save(b) }
-        if (b.held.isEmpty()) return
+        // 19 Nov 2026 (audit): a closed live holding's exits still resting at Zerodha are taken out on every check until confirmed -
+        // on the 15-second check only (never on a fast look: no Zerodha reads and no write per tick there), after the holdings' exits.
+        if (b.held.isEmpty()) { if (!fast && b.removing.isNotEmpty()) { removeExits(b); save(b) }; return }
+        val removing = if (fast) emptyList() else b.removing.toList()
         // [fast]: an event-driven look ([FastPath]). Only the best premium seen changed (peak): kept in memory and written with
         // the next save, never a Keystore write per tick; a stop moved, a sale or a note is written now as before.
         val before = if (fast) untracked(b) else null
@@ -679,6 +691,7 @@ object PineAuto {
                 Unit
             }.onFailure { e -> note(b, id, "Error: ${e.message ?: e.javaClass.simpleName}") }
         }
+        if (removing.isNotEmpty()) removeExits(b, removing)
         // 26 Oct: [b] is the cached book (an erase since: [publish] shows nothing, [save] writes nothing).
         if (before != null && before == untracked(b)) publish(b) else save(b)
     }
@@ -1449,7 +1462,7 @@ object PineAuto {
             takeOutExits(b, id, h)
             return
         }
-        flatSince.remove(managerId(id, h))
+        managerId(id, h).let { flatSince.remove(it); flatAlertSaid.remove(it) }
         // Its own exits still working (an earlier pass's, or one whose reply was lost) come out first; every other sell
         // resting on the symbol (a protection's stop, an ORB stop, the owner's own limit) is left alone and subtracted:
         // together they never sell more than is held, and none of them can block this exit.
@@ -1536,7 +1549,7 @@ object PineAuto {
         val net: List<Broker.Position>? = if (!Broker.loggedIn || h.kite == null) null else runCatching { Broker.positionBook().net }.getOrNull()
         if (net == null) false
         else if (net.filter { it.symbol == h.kite && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } > 0) {
-            flatSince.remove(managerId(id, h)); false
+            managerId(id, h).let { flatSince.remove(it); flatAlertSaid.remove(it) }; false
         } else flatConfirmed(b, id, h, net, runCatching { kiteOrders() }.getOrNull())
     }
 
@@ -1580,11 +1593,14 @@ object PineAuto {
         if (runCatching { java.time.LocalDate.parse(h.day).isBefore(today) }.getOrDefault(false)) { flatSince.remove(key); return true }
         val rowShown = net.any { it.symbol == sym && it.exchange == "NFO" }
         val onIt = orders.orEmpty().filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.filled > 0 }
-        // (Boss's own orders are told by having no tag: the order labels are read only when such an order is on the contract.)
-        val mine: Set<String> = if (onIt.none { it.tag.isBlank() }) emptySet() else knownKite().toSet()
-        val outsideSells = onIt.filter { it.side == "SELL" && ((it.tag.isBlank() && it.id !in mine) || it.tag in SquareOffExit.TAGS) }.sumOf { it.filled }
+        // (Boss's own orders are told by having no tag: the order labels are read only when such an order is on the contract - never on
+        // a stream look, which waits on no other book: there an order with no tag is not taken as Boss's sale, the careful side.)
+        val mine: Set<String>? = if (onIt.none { it.tag.isBlank() }) emptySet() else if (streamLook) null else knownKite().toSet()
+        val outsideSells = onIt.filter { it.side == "SELL" && ((it.tag.isBlank() && mine != null && it.id !in mine) || it.tag in SquareOffExit.TAGS) }
+            .sumOf { it.filled }
         val carried = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.overnight }
-        val outsideBuys = onIt.filter { it.side == "BUY" && it.tag.isBlank() && it.id !in mine }.sumOf { it.filled } + carried.coerceAtLeast(0)
+        val outsideBuys = onIt.filter { it.side == "BUY" && it.tag.isBlank() && (mine == null || it.id !in mine) }.sumOf { it.filled } +
+            carried.coerceAtLeast(0)
         val day = today.toString()
         val orb = runCatching { OrbArms.liveClosedHint.filter { it.exchange == "NFO" && it.symbol == sym && it.product == "MIS" && it.at.toLocalDate() == today } }
             .getOrDefault(emptyList())
@@ -1614,46 +1630,65 @@ object PineAuto {
      * Live holding [h] of script [id], confirmed closed at Zerodha (already dropped from the book): its resting stop and every own exit
      * ("irapine" SELL) still working on its contract are taken out at Zerodha and confirmed gone ([removeExits]); one not confirmed is
      * kept in [Book.removing] and tried again on every check. No other script can hold the same contract meanwhile (one index, one
-     * side), and a retry cancels only the orders recorded here, never a later holding's stop.
+     * side), and a retry cancels only the orders recorded here, never a later holding's stop. A holding from an earlier day has none
+     * left (its DAY orders ended with that session).
      */
     private suspend fun takeOutExits(b: Book, id: Long, h: Held) {
         val sym = h.kite ?: return
+        val today = todayIst()
+        if (runCatching { java.time.LocalDate.parse(h.day).isBefore(today) }.getOrDefault(false)) return
         val orders = runCatching { kiteOrders() }.getOrNull()
-        val ids = (listOfNotNull(h.stop) + orders.orEmpty()
-            .filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" }.map { it.id }).distinct()
-        if (ids.isEmpty()) return
-        b.removing += Removing(id, sym, ids)
-        removeExits(b)
+        val ids = LinkedHashMap<String, Int>()
+        h.stop?.let { sid -> ids[sid] = orders?.firstOrNull { it.id == sid }?.filled ?: 0 }
+        orders.orEmpty().filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" }
+            .forEach { ids[it.id] = it.filled }
+        if (ids.isEmpty() && orders != null) return
+        val r = Removing(id, sym, ids, today.toString(), scanned = orders != null)
+        b.removing += r
+        removeExits(b, listOf(r))
     }
 
     /**
-     * Every [Book.removing] entry's orders cancelled at Zerodha and their state read back: each shown CANCELLED, REJECTED or COMPLETE is
-     * done; one still working (or not read) is kept and tried again on the next check. After [REMOVE_TRIES] tries Boss is told once to
-     * cancel it in Kite; one that filled after its holding closed (it sold what was no longer held: a short) is told at once. Never
-     * places an order.
+     * Every [Book.removing] entry ([only]: just those, as they were) taken out at Zerodha: its contract's own exits looked for first when they
+     * could not be when it closed ([Removing.scanned]: never while a script holds the contract again - its exits are its own); each
+     * order cancelled and its state read back - one shown CANCELLED, REJECTED or COMPLETE is done, one still working (or not read) is
+     * kept and tried again on the next check. After [REMOVE_TRIES] tries Boss is told once to cancel it in Kite; one that filled more
+     * after its holding closed (it sold what was no longer held: a short) is told at once. An entry of an earlier session is dropped
+     * (its DAY orders ended with it). Never places an order.
      */
-    private suspend fun removeExits(b: Book) {
+    private suspend fun removeExits(b: Book, only: List<Removing>? = null) {
         if (b.removing.isEmpty() || !Broker.loggedIn) return
-        for (r in b.removing.toList()) {
-            val left = ArrayList<String>()
-            for (oid in r.ids) {
+        val today = todayIst().toString()
+        for (r0 in (only ?: b.removing.toList())) {
+            var r = r0
+            if (r.day < today) { b.removing.remove(r0); continue }
+            if (!r.scanned) {
+                if (b.held.values.any { it.live && it.kite == r.kite }) r = r.copy(scanned = true)
+                else {
+                    val orders = runCatching { Broker.orders() }.getOrNull()
+                    if (orders != null) r = r.copy(scanned = true, ids = r.ids + orders.filter { it.working && it.symbol == r.kite &&
+                        it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" && it.id !in r.ids }.associate { it.id to it.filled })
+                }
+            }
+            val left = LinkedHashMap<String, Int>()
+            for ((oid, base) in r.ids) {
                 var st = runCatching { Broker.orderState(oid) }.getOrNull()
                 if (st == null || st.status !in DONE) {
                     runCatching { Broker.cancel(oid) }
                     st = runCatching { Broker.orderState(oid) }.getOrNull()
                 }
-                if (st == null || st.status !in DONE) { left += oid; continue }
-                if (st.filled > 0) {
-                    val text = "Pine #${r.script}: its exit order $oid on ${r.kite} filled ${st.filled} after the position was closed. " +
+                if (st == null || st.status !in DONE) { left[oid] = base; continue }
+                if (st.filled > base) {
+                    val text = "Pine #${r.script}: its exit order $oid on ${r.kite} filled ${st.filled - base} after the position was closed. " +
                         "A short of ${r.kite} may be open at Zerodha: check it in Kite now."
                     runCatching { Diag.record("pine", text) }
                     com.optionslab.app.work.Alerts.error(text, "Pine live")
                     note(b, r.script, text)
                 }
             }
-            val i = b.removing.indexOf(r)
+            val i = b.removing.indexOf(r0)
             if (i < 0) continue
-            if (left.isEmpty()) {
+            if (left.isEmpty() && r.scanned) {
                 b.removing.removeAt(i)
                 note(b, r.script, "${r.kite}: its stop and exits at Zerodha are taken out (the position is closed)")
                 continue
@@ -1661,9 +1696,10 @@ object PineAuto {
             var next = r.copy(ids = left, tries = r.tries + 1)
             if (next.tries >= REMOVE_TRIES && !next.told) {
                 next = next.copy(told = true)
+                val what = if (left.isEmpty()) "Zerodha's orders could not be read to find its exits" else "order ${left.keys.joinToString(", ")}"
                 val text = "Pine #${r.script}: its stop on ${r.kite} could not be taken out at Zerodha after ${next.tries} tries, though the " +
-                    "position is closed. Cancel order ${left.joinToString(", ")} in Kite now: if it fires it sells what is no longer held. " +
-                    "The app keeps trying."
+                    "position is closed ($what). Cancel any working sell of ${r.kite} in Kite now: if it fires it sells what is no longer " +
+                    "held. The app keeps trying."
                 runCatching { Diag.record("pine", text) }
                 com.optionslab.app.work.Alerts.error(text, "Pine live")
                 note(b, r.script, text)

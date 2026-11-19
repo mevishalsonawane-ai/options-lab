@@ -507,6 +507,19 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue(kite.placed.none { it.form["transaction_type"] == "SELL" && it.form["order_type"] != "SL" })
     }
 
+    /** 19 Nov 2026 (audit, review): a stop still being taken out is dropped in the next session (its DAY order ended): no endless check. */
+    @Test fun aStopStillBeingTakenOutIsDroppedInTheNextSession() {
+        bought()
+        val stop = held()!!.stop!!
+        kite.soldInKite(ce, 30, 310.0)
+        kite.down += "/orders/regular/$stop"
+        pass(52_010.0)
+        assertTrue(PineAuto.holding())
+        now = now.plusDays(1); PineAuto.testNow = now
+        runBlocking { PineAuto.watchOnly() }
+        assertFalse(PineAuto.holding())
+    }
+
     /**
      * 19 Nov 2026 (audit; the 18 Nov class of bug): ONE positions read showing a held option at 0, with no sale anywhere, neither drops
      * it nor takes its stop out - not by the fast lane's exit, not by the full pass. Read held again, it is sold at its target as usual.

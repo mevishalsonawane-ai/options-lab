@@ -220,6 +220,9 @@ class SweeperFailsafeTest : RobolectricTest() {
     @Test fun aStopWithNoPositionHeldIsNeverTurnedIntoASellAndIsTakenOutOnceConfirmed() {
         kite.quote("NFO:$nfo", 200.0, 199.95, 200.05)
         kite.orders["1"] = FakeKite.Order("1", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "irapine", "TRIGGER PENDING")
+        // An ORB arm's stop: never turned into a sell either, and left to its own book (which puts back a stop it finds cancelled
+        // only when Boss did not cancel it himself).
+        kite.orders["2"] = FakeKite.Order("2", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "iraorb", "TRIGGER PENDING")
         pass(10, 0)                                           // no row at all: no reading, nothing done
         kite.position(nfo, 0, 0.0, product = "MIS")           // shown closed (no sale in the order book)
         pass(10, 1)
@@ -230,6 +233,8 @@ class SweeperFailsafeTest : RobolectricTest() {
         assertEquals("TRIGGER PENDING", kite.order("1").status)
         pass(10, 6)                                           // five minutes of reads at 0
         assertEquals("CANCELLED", kite.order("1").status)
+        assertEquals("the ORB stop is its own book's", "TRIGGER PENDING", kite.order("2").status)
+        assertEquals("SL", kite.order("2").type)
         assertTrue(kite.requests.none { it.method == "PUT" || (it.method == "POST" && it.path.startsWith("/orders")) })
     }
 

@@ -53,7 +53,7 @@ object Sweeper {
     @Volatile private var lastLive: List<PriceWatch.Held> = emptyList()
 
     /** Tests: the failsafe starts afresh. */
-    internal fun resetForTest() { watch = PriceWatch.Failsafe(); lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear() }
+    internal fun resetForTest() { watch = PriceWatch.Failsafe(); lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear(); notSwept.clear() }
 
     /**
      * 26 Oct (erase everything): the positions each book last showed dropped (the books themselves are erased; the next sweep
@@ -61,7 +61,7 @@ object Sweeper {
      * still said on time. The backup GTTs' list is a settings key, wiped with the settings. Never waits for a sweep: one under
      * way sets the lists again from the books it read.
      */
-    fun wipe() { lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear() }
+    fun wipe() { lastPaper = emptyList(); lastLive = emptyList(); flatSince.clear(); notSwept.clear() }
 
     /** Positions in memory (the erase's test; memory only). */
     internal fun holdsForErase(): Boolean = lastPaper.isNotEmpty() || lastLive.isNotEmpty()
@@ -133,21 +133,30 @@ object Sweeper {
             .mapValues { it.value.last }.filterValues { it > 0 }
         // Item 7: a resting stop the price is already through is turned into a sell at a protected limit (the same order).
         // 19 Nov 2026 (audit: a Pine stop left resting after its position closed could open a naked short): only for what is held. A
-        // stop on a contract held long nowhere is never turned into a sell; once confirmed ([stale]) it is cancelled. A stop on a
-        // contract held is sold for no more than its product holds, less what this sweep already turned into sells there.
+        // stop on a contract held long nowhere is never turned into a sell; a Pine script's ("irapine") is cancelled once confirmed
+        // ([stale]; every other book takes its own out, and the ORB family puts back a stop it finds cancelled only when it was not
+        // Boss's own cancel - the sweep's would look like one). A stop on a contract held is sold for no more than its product holds,
+        // less the other sales working on it and what this sweep already turned into sells there.
         val used = HashMap<String, Int>()
         for (so in stops) {
             val pk = "${so.exchange}:${so.symbol}:${so.product}"
             val long = book.filter { it.exchange == so.exchange && it.symbol == so.symbol && it.qty > 0 }.sumOf { it.qty }
-            if (long <= 0) { stale(so, book, nowMs); continue }
+            if (long <= 0) { if (so.tag == "irapine") stale(so, book, nowMs); continue }
             flatSince.remove(so.id)
             val px = ltp["${so.exchange}:${so.symbol}"] ?: continue
             if (!MissedLock.missed(px, so.trigger)) continue
-            val have = book.filter { it.exchange == so.exchange && it.symbol == so.symbol && it.product == so.product }.sumOf { it.qty } - (used[pk] ?: 0)
+            // (Less every other sale already working on it - an exit's limit, Boss's own, a stop swept on an earlier pass: never more
+            // than is held in all.)
+            val selling = orders.orEmpty().filter { it.working && it.side == "SELL" && it.id != so.id && it.exchange == so.exchange &&
+                it.symbol == so.symbol && it.product == so.product && it.type != "SL" && it.type != "SL-M" }
+                .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            val have = book.filter { it.exchange == so.exchange && it.symbol == so.symbol && it.product == so.product }.sumOf { it.qty } -
+                selling - (used[pk] ?: 0)
             val left = com.optionslab.engine.risk.ExitQty.remaining(so.qty, so.filled, so.pending)
             val send = minOf(left, have)
             if (send <= 0) {
-                runCatching { Diag.record("risk", "Zerodha: ${so.symbol} is through its stop %.2f at %.2f, but nothing of it is held in %s: not turned into a sell"
+                if (notSwept.size > 200) notSwept.clear()
+                if (notSwept.add(so.id)) runCatching { Diag.record("risk", "Zerodha: ${so.symbol} is through its stop %.2f at %.2f, but nothing of it is left to sell in %s: not turned into a sell"
                     .format(Locale.ENGLISH, so.trigger, px, so.product.ifBlank { "its product" })) }
                 continue
             }
@@ -165,9 +174,11 @@ object Sweeper {
 
     /** 19 Nov 2026 (audit): when each app stop's contract was first read held long nowhere, by order id (market-clock ms). Memory only. */
     private val flatSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** 19 Nov 2026 (audit): the stops already said not swept for want of a holding (said once each). Memory only; bounded. */
+    private val notSwept: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /**
-     * 19 Nov 2026 (audit): app stop [so], whose contract the positions read [book] shows held long nowhere: never turned into a sell
+     * 19 Nov 2026 (audit): a Pine script's stop [so], whose contract the positions read [book] shows held long nowhere: never turned into a sell
      * (above); cancelled at Zerodha and confirmed once the reads agree ([com.optionslab.engine.orb.LiveMirror.shortConfirmed]: a row is
      * listed for the contract - a read with no row is no reading - and every read for five minutes has shown it held long nowhere). The
      * sweep cannot tell whose sale closed what, so it never takes the 30-second way the books take with a sale in the order book: the
