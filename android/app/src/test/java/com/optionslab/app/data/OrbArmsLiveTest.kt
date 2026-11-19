@@ -390,6 +390,25 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "kept working for over 90 s" in it })
     }
 
+    /**
+     * 19 Nov 2026 (final check): a lot taken back at the start in the gap after a square-off's exit on its contract gets no stop beside
+     * that exit (the same pass's exits sell it).
+     */
+    @Test fun theSweepRestsNoStopInTheGapAfterASquareOffsExit() {
+        kite.boughtInKite(sym, 30, 200.0, tag = "iraorb")
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        state()
+        SquareOffExit.resetForTest()                                       // the app's own gap (the test default is none)
+        try {
+            SquareOffExit.notePlaced("NFO", sym, "MIS")
+            restart()
+            kite.requests.clear()
+            pass()
+            assertTrue("taken back", arm().open != null)
+            assertTrue("no stop beside the square-off: ${kite.placed.map { it.form }}", kite.placed.none { it.form["order_type"] == "SL" })
+        } finally { SquareOffExit.resetForTest(gap = 0L) }
+    }
+
     /** 19 Nov 2026 (review): the start-up sweep never cancels a working buy that another book's label names - it is not these arms'. */
     @Test fun theSweepLeavesAnotherBooksWorkingBuyAlone() {
         state()

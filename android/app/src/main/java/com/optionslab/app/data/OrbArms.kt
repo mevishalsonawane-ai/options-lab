@@ -2489,15 +2489,16 @@ object OrbArms {
     /** Resting stop, +40 target, 15:10 exit, the 15:15 backstop and the operator stop, for every open position. */
     private suspend fun priceCheck(b: Book, t: LocalDateTime, stream: Boolean = false, regular: Boolean = true) {
         if (watchFrom == null) watchFrom = t                                        // this process's first check ([bestSince])
-        passPlaced.clear()
+        passPlaced.clear(); passIds.clear()
         val stopped = Strategies.stoppedToday()
         // 19 Nov 2026 (coordinator): this process's first regular look takes back the arms' own live buys no row holds (never on a stream
         // look) - before the open positions are watched, so what it adopts is watched from this pass on ([coldSweep]).
         if (regular && !stream && !coldSwept && Broker.loggedIn && epochMs(t) >= coldNextAt) {
             if (runCatching { coldSweep(b, t, stopped) }.getOrDefault(false)) coldSwept = true
             else { coldFailed(t); coldNextAt = epochMs(t) + COLD_RETRY_MS }        // (review: backed off - not every look's reads again)
-            passPlaced.clear()                     // (the price check below reads the orders afresh: the sweep's stops are in that read)
         }
+        // (19 Nov 2026, final check: on every regular look, whatever is open - a stray buy left after a lost entry's take-back is followed.)
+        if (regular && !stream && strayLeft.isNotEmpty()) runCatching { strayLeftCheck(Broker.orders().associateBy { it.id }) }
         val liveOpen = b.positions.withIndex().filter { it.value.open && it.value.live }
         if (liveOpen.isNotEmpty()) runCatching { priceCheckLive(b, t, liveOpen, stopped, stream, regular) }
         val open = b.positions.withIndex().filter { it.value.open && !it.value.live }
@@ -3264,7 +3265,7 @@ object OrbArms {
         if (!coldSwept) {
             val rows = b.positions.size
             coldSafety.clear()                                                       // (only this call's safety candidates count below)
-            passPlaced.clear()
+            passPlaced.clear(); passIds.clear()
             val t0 = now()
             val done = runCatching { coldSweep(b, t0, Strategies.stoppedToday()) }.getOrDefault(false)
             if (done) coldSwept = true else coldFailed(t0)
@@ -3488,7 +3489,7 @@ object OrbArms {
                 else if (spec != null) placeStop(label, sym, filled, spec.lotSize, spec.tickSize, fill, mine, liquidity = false,
                     points = pts0, pct = pct0).let { (a, b, _) -> a to b }
                 else null to (if (liq) firstStop(LiquidityRules.stopTrigger(fill, pct0), fill, lotOf(p), p.fixed) else OrbRules.stopTrigger(fill, pts0))
-            if (stopId != null) placed(sym, filled)
+            if (stopId != null) placed(sym, filled, stopId)
             return p.copy(qty = filled, entry = fill, entryOrderId = oid, stopOrderId = stopId, stopTrigger = trigger,
                 charges = kiteCharge("BUY", fill, filled), unconfirmed = false, entryQty = filled)
         }
@@ -3597,7 +3598,7 @@ object OrbArms {
         // now), and each price from the stream's fresh tick; a contract without one is quoted from Zerodha as before.
         val orders = (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id }
         val net = (if (stream) Broker.positionsRecon() else Broker.positionBook()).net
-        if (regular && !stream && strayLeft.isNotEmpty()) runCatching { strayLeftCheck(orders) }
+        passIds.entries.removeAll { (id, v) -> if (orders.containsKey(id)) { passPlaced[v.first] = placedNow(v.first) - v.second; true } else false }
         val keys = open.mapNotNull { it.value.kite }.map { "NFO:$it" }.distinct()
         val q = runCatching { liveQuotes(keys, stream) }.getOrDefault(emptyMap())
         val drop = ArrayList<Int>()
@@ -3634,7 +3635,7 @@ object OrbArms {
             // (Review: a cancel the app made itself - an exit taking its stop out first - is never taken as Boss's.)
             // (Also any other of the app's own takers: a square-off's sale on the contract, Stop for today - never Boss's.)
             val appsOwn = ended && (ownCancel(so!!.id) || p.appCancelled || stopped ||
-                orders.values.any { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS })
+                orders.values.any { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } || SquareOffExit.inGap("NFO", sym, "MIS"))
             val byExchange = ended && (com.optionslab.ira.ManualCoverRule.endedByExchange(so!!.status, so.message) || appsOwn)
             val level = p.stopTrigger?.let { "the stop at %.2f".format(Locale.ENGLISH, it) } ?: "the stop"
             // (Review: a stop Zerodha keeps refusing at each re-rest is said once, not at every try: said again only after a stop of
@@ -3803,8 +3804,15 @@ object OrbArms {
      * read does not show them yet, so each later cap counts them. Cleared at each pass (the arms' lock is held through it).
      */
     private val passPlaced = HashMap<String, Int>()
+    /** The orders behind [passPlaced] (id -> contract, quantity): each comes off once a fresh order read of this pass shows it. */
+    private val passIds = HashMap<String, Pair<String, Int>>()
     private fun placedNow(sym: String) = passPlaced[sym] ?: 0
-    private fun placed(sym: String, qty: Int) { if (qty > 0) passPlaced[sym] = placedNow(sym) + qty }
+    /** A stop of [qty] placed on [sym] this pass (order [id]); negative: one taken and cut below its size in the read. */
+    private fun placed(sym: String, qty: Int, id: String? = null) {
+        if (qty == 0) return
+        passPlaced[sym] = placedNow(sym) + qty
+        if (id != null) passIds[id] = sym to ((passIds[id]?.second ?: 0) + qty)
+    }
 
     /** 19 Nov 2026 (final check): by lost entry ([managerId]), when (market-clock ms) it first waited on a still-working buy ([strayBuyWorking]). */
     private val strayWaitSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -3968,7 +3976,7 @@ object OrbArms {
                 when (so) {
                     is Orphan.Took -> {
                         stopId = so.id; stopAt = so.trigger; covered = want
-                        orders.firstOrNull { it.id == so.id }?.let { r -> placed(sym, want - com.optionslab.engine.risk.ExitQty.remaining(r.qty, r.filled, r.pending)) }
+                        orders.firstOrNull { it.id == so.id }?.let { r -> placed(sym, want - com.optionslab.engine.risk.ExitQty.remaining(r.qty, r.filled, r.pending), so.id) }
                     }
                     Orphan.None, Orphan.Other -> if (mayRest) {
                         covered = minOf(qty, held - othersAll).coerceAtLeast(0) / lot * lot
@@ -3976,7 +3984,7 @@ object OrbArms {
                         if (covered > 0) {
                             val (id, tr, _) = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig)
                             stopId = id; stopAt = tr ?: trig
-                            if (id != null) placed(sym, covered)
+                            if (id != null) placed(sym, covered, id)
                         }
                     }
                     else -> {}
@@ -4325,8 +4333,8 @@ object OrbArms {
         val key = managerId(p)
         val ms = epochMs(now())
         // (The orders unreadable: asked again - the timer neither starts nor runs out on a read that saw nothing.)
-        val waits = strayFound(b, sym) ?: return true
-        if (!waits) { strayWaitSince.remove(key); return false }
+        val found = strayFound(b, sym) ?: return true
+        if (!found.waits) { strayWaitSince.remove(key); return false }
         if (strayWaitSince.size > 200) strayWaitSince.clear()
         val first = strayWaitSince.putIfAbsent(key, ms) ?: ms
         if (ms - first < STRAY_WAIT_MS) return true
@@ -4335,34 +4343,40 @@ object OrbArms {
         if (strayWaitSince.replace(key, Long.MIN_VALUE / 2) != null && first != Long.MIN_VALUE / 2) runCatching { com.optionslab.app.work.Alerts.error(
             "${armOf(p.arm).label}: a buy of these arms on $sym kept working for over 90 s while its lost entry was being settled; what Zerodha holds " +
             "is taken back with its stop now, and that buy is cancelled again on each check. Check $sym in Kite.", "ORB live") }
-        runCatching { Broker.orders() }.getOrNull()?.filter { it.symbol == sym && it.tag == "iraorb" && it.side == "BUY" && it.working }?.forEach { strayLeft[it.id] = sym }
+        found.buys.forEach { strayLeft[it.id] = sym to it.filled }
         return false
     }
 
-    /** 19 Nov 2026 (final check): stray buys of these arms still working after a lost entry was taken back past the 90 s: id -> contract. */
-    private val strayLeft = java.util.concurrent.ConcurrentHashMap<String, String>()
+    /** 19 Nov 2026 (final check): stray buys of these arms still working after a lost entry was taken back past the 90 s: id -> (contract, filled then). */
+    private val strayLeft = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Int>>()
 
     /** Each regular look: [strayLeft]'s buys cancelled again until they end; one that filled more after the take-back is said. */
     private suspend fun strayLeftCheck(orders: Map<String, Broker.OrderRow>) {
-        for ((id, sym) in strayLeft.entries.toList()) {
+        for ((id, v) in strayLeft.entries.toList()) {
+            val (sym, before) = v
             val o = orders[id] ?: continue
             if (o.working) { runCatching { Broker.cancel(o.id, o.variety) }; continue }
             strayLeft.remove(id)
-            runCatching { com.optionslab.app.work.Alerts.error("ORB live: the stray buy of $sym (order $id) ended ${o.status.lowercase()} with ${o.filled} filled; " +
-                "check $sym in Kite and Trade - any lot it filled after the take-back has no trade here.", "ORB live") }
+            val more = o.filled - before
+            if (more > 0) runCatching { com.optionslab.app.work.Alerts.error("ORB live: the stray buy of $sym (order $id) filled $more more after its lost entry was " +
+                "taken back, then ended ${o.status.lowercase()}: those $more have no trade here and no stop. Check $sym in Kite.", "ORB live") }
+            else runCatching { Diag.record("orb", "the stray buy of $sym (order $id) ended ${o.status.lowercase()} with nothing more filled") }
         }
     }
 
-    private suspend fun strayFound(b: Book, sym: String): Boolean? {
+    /** What [strayFound] saw: whether the entry waits, and the stray buys it cancels (none when the labels could not be read). */
+    private class Stray(val waits: Boolean, val buys: List<Broker.OrderRow>)
+
+    private suspend fun strayFound(b: Book, sym: String): Stray? {
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return null
         val claimed = b.positions.mapNotNull { it.entryOrderId }.toSet()
         // (The labels unreadable: nothing is cancelled - it could be another arm's - but the entry waits while such a buy still works.)
-        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return orders.any { it.symbol == sym && it.tag == "iraorb" && it.side == "BUY" &&
-            it.exchange == "NFO" && it.product == "MIS" && it.working && it.id !in claimed }
+        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return Stray(orders.any { it.symbol == sym && it.tag == "iraorb" && it.side == "BUY" &&
+            it.exchange == "NFO" && it.product == "MIS" && it.working && it.id !in claimed }, emptyList())
         val working = orders.filter { it.symbol == sym && it.tag == "iraorb" && it.side == "BUY" && it.exchange == "NFO" && it.product == "MIS" &&
             it.working && it.id !in claimed && owners["kite:${it.id}"] == null }
         working.forEach { o -> runCatching { Broker.cancel(o.id, o.variety) } }
-        return working.isNotEmpty()
+        return Stray(working.isNotEmpty(), working)
     }
 
     /** 19 Nov 2026 (second review): what [orphanStop] found. */
@@ -4523,7 +4537,7 @@ object OrbArms {
         when (o) {
             is Orphan.Wait, Orphan.Unread -> return null
             is Orphan.Took -> {
-                orders?.firstOrNull { it.id == o.id }?.let { r -> placed(sym, want - com.optionslab.engine.risk.ExitQty.remaining(r.qty, r.filled, r.pending)) }
+                orders?.firstOrNull { it.id == o.id }?.let { r -> placed(sym, want - com.optionslab.engine.risk.ExitQty.remaining(r.qty, r.filled, r.pending), o.id) }
                 return split(p.copy(stopOrderId = o.id, stopTrigger = o.trigger), want)
             }
             Orphan.None, Orphan.Other -> if (adoptOnly) return null
@@ -4543,7 +4557,7 @@ object OrbArms {
             liquidity = armOf(p.arm).liquidity, at = level, alert = key !in restRefusedSaid)
         if (id == null && refused) restRefusedSaid += key
         if (id == null) return null
-        placed(sym, qty)
+        placed(sym, qty, id)
         return split(p.copy(stopOrderId = id, stopTrigger = trig ?: level), qty)
     }
 
@@ -4731,11 +4745,11 @@ object OrbArms {
             val lock = lockOrStop(p, spec.tickSize)?.takeIf { l -> ladderTarget(p) != null && l > (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 }
             if (lock != null) {
                 val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock)
-                if (id != null) { putBack(id); placed(sym, qty); return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock)) }
+                if (id != null) { putBack(id); placed(sym, qty, id); return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock)) }
             }
             val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger)
             putBack(id)
-            if (id != null) placed(sym, qty)
+            if (id != null) placed(sym, qty, id)
             return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger))
         }
         p.stopOrderId?.let { id ->
