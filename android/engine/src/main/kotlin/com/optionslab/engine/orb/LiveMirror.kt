@@ -544,6 +544,43 @@ object LiveMirror {
     data class Decision(val step: Step, val why: String? = null, val qty: Int = 0, val to: Double? = null)
 
     /**
+     * 18 Nov 2026 (audit A1): a [Step.SHRINK_STOP]'s reason when the other exits working on the contract ([Look.otherWorking]), not
+     * what Zerodha holds, leave the resting stop less room than the trade (another order covers the lot): the app says so to Boss.
+     */
+    const val SHRINK_COVERED = "other_exit"
+
+    /**
+     * 18 Nov 2026 (audit A1): one exit order working on a contract beside a live trade's own: its [id], what it still has to sell
+     * ([remaining]), and whether the arm may cancel it when its own exit is due ([cancellable]: a plain LIMIT order of no part of the
+     * app - Boss's own target in Kite).
+     */
+    data class Blocker(val id: String, val remaining: Int, val cancellable: Boolean)
+
+    /**
+     * 18 Nov 2026 (audit A1): which of the other exits working on a contract ([others], in the order to cancel them: newest first) to
+     * cancel so a due exit of [want] can sell what Zerodha holds ([held], as the trade's side sees it) in whole [lot]s: none when the
+     * exit is not held back by them, or when only orders that may not be cancelled hold it back; else the fewest cancellable ones,
+     * in order, that let it sell as much as cancelling all of them would. Never more than is held (what is sold stays
+     * [ExitQty.sendable]). Pure.
+     */
+    fun blockersToCancel(held: Int, others: List<Blocker>, want: Int, lot: Int): List<String> {
+        fun sendable(working: Int) = com.optionslab.engine.risk.ExitQty.sendable(held.coerceAtLeast(0), working.coerceAtLeast(0), want, lot)
+        val now = sendable(others.sumOf { it.remaining })
+        if (now >= want) return emptyList()
+        val best = sendable(others.filter { !it.cancellable }.sumOf { it.remaining })
+        if (best <= now) return emptyList()
+        val out = ArrayList<String>()
+        var left = others.sumOf { it.remaining }
+        for (o in others) {
+            if (!o.cancellable || o.remaining <= 0) continue
+            out += o.id
+            left -= o.remaining
+            if (sendable(left) >= best) break
+        }
+        return out
+    }
+
+    /**
      * One live position as the watch sees it: [stopFilled] its resting stop filled at Zerodha (null: unknown or none); [held] the
      * quantity Zerodha holds of its contract and product (null: not read - nothing is decided on it); [ltp] the price now (null:
      * none fresh); [qty] the trade's own live quantity; [stopTrigger] where its stop rests or is watched; [stopResting] whether a
@@ -594,7 +631,10 @@ object LiveMirror {
         if (l.stopResting && l.stopQty != null) {
             val room = (heldMine - l.otherWorking.coerceAtLeast(0)).coerceAtLeast(0)
             val lot = l.lot.coerceAtLeast(1)
-            if (l.stopQty > room) return Decision(Step.SHRINK_STOP, "held_less", room / lot * lot)
+            // 18 Nov 2026 (audit A1: Boss's own LIMIT sell in Kite on the contract shrank the arm's stop to nothing, unsaid): the
+            // reason says when the other working exits, not what is held, take the room ([SHRINK_COVERED]), so the app tells Boss.
+            if (l.stopQty > room) return Decision(Step.SHRINK_STOP,
+                if (room < minOf(l.stopQty, heldMine) / lot * lot) SHRINK_COVERED else "held_less", room / lot * lot)
         }
         val trigger = l.stopTrigger
         if (!l.stopResting && atStop(l.ltp, trigger, l.side)) return Decision(Step.SELL, "stop", qty)
