@@ -233,4 +233,57 @@ class StopLaneTest : RobolectricTest() {
             com.optionslab.app.data.Market.testClock = null
         }
     }
+
+    /**
+     * 19 Nov 2026 (audit batch 2): a held LIVE book whose last COMPLETED exit check is over 45 s old is a RISK notification while the
+     * looks run (again at most every 5 minutes); a completed check clears it; a paper book, or no look due, is never told.
+     */
+    @Test fun aHeldLiveBooksLateCompletedCheckIsARiskWhileTheLooksRun() {
+        com.optionslab.app.testing.Background.grantNotifications(context)
+        StopLane.resetCompletedForTest()
+        fun note() = com.optionslab.app.testing.Background.notifications(context).getNotification(StopLane.STALE_NOTE_ID)
+        val books = mapOf(StopLane.B_ARMS_LIVE to true, StopLane.B_PAPER to false)
+        val t0 = 1_000_000L
+        try {
+            // Before the open (no look due): nothing judged, and the open starts every book's count afresh.
+            StopLane.completedCheck(context, StopLane.Mode.OFF, t0 - 900_000L, books)
+            StopLane.completedCheck(context, StopLane.Mode.OFF, t0 - 1_000L, books)
+            assertEquals("no look due (before the open): not judged", null, note())
+            StopLane.completedCheck(context, StopLane.Mode.NSE, t0, books)
+            assertEquals("the open is not 15 minutes late", null, note())
+            StopLane.completedCheck(context, StopLane.Mode.NSE, t0 + 44_000L, books)
+            assertEquals(null, note())
+            StopLane.completedCheck(context, StopLane.Mode.NSE, t0 + 46_000L, books)
+            val n = note()
+            assertTrue("told", n != null)
+            val text = com.optionslab.app.testing.Background.text(n!!).orEmpty()
+            assertTrue(text, text.contains("arms' live trades: last completed check 46 s ago") && !text.contains("paper book"))
+            assertEquals(com.optionslab.app.work.Notifier.RISK, n.channelId)
+            // Not again within 5 minutes; a completed check makes it fresh.
+            context.getSystemService(android.app.NotificationManager::class.java).cancelAll()
+            StopLane.completedCheck(context, StopLane.Mode.NSE, t0 + 100_000L, books)
+            assertEquals(null, note())
+            StopLane.completed.done(StopLane.B_ARMS_LIVE, t0 + 400_000L, com.optionslab.app.data.Market.today())
+            StopLane.completedCheck(context, StopLane.Mode.NSE, t0 + 401_000L, books)
+            assertEquals(null, note())
+            // In MCX's hours MCX's own pass runs these checks on its own clock: never judged there.
+            StopLane.completedCheck(context, StopLane.Mode.MCX, t0 + 900_000L, mapOf(StopLane.B_ARMS_LIVE to true))
+            StopLane.completedCheck(context, StopLane.Mode.MCX, t0 + 1_000_000L, mapOf(StopLane.B_ARMS_LIVE to true))
+            assertEquals("not judged in MCX's hours", null, note())
+        } finally { StopLane.resetCompletedForTest() }
+    }
+
+    /** 19 Nov 2026 (audit batch 2): the lane's market from the clock alone, before the first pass says it. */
+    @Test fun theLanesMarketFromTheClock() {
+        val wed = com.optionslab.app.testing.Background.WED
+        com.optionslab.app.testing.Background.calendar(wed)
+        try {
+            com.optionslab.app.testing.Background.at(wed, 11, 0)
+            assertEquals(StopLane.Mode.NSE, StopLane.modeNow())
+            com.optionslab.app.testing.Background.at(wed, 9, 10)
+            assertEquals("NSE not open yet; MCX is", StopLane.Mode.MCX, StopLane.modeNow())
+            com.optionslab.app.testing.Background.at(wed, 2, 0)
+            assertEquals(StopLane.Mode.OFF, StopLane.modeNow())
+        } finally { com.optionslab.app.testing.Background.reset() }
+    }
 }

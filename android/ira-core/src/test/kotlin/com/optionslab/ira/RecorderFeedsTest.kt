@@ -183,24 +183,30 @@ class RecorderFeedsTest {
     }
 
     @Test fun theOffHoursAlarmFiresOnlyAtItsSlots() {
-        assertEquals(at(tue, 6, 30), RecorderFeeds.nextSlot(at(tue, 2, 0), trading, false))
-        assertEquals(at(tue, 6, 45), RecorderFeeds.nextSlot(at(tue, 6, 30), trading, false))
-        assertEquals(at(tue, 9, 0), RecorderFeeds.nextSlot(at(tue, 8, 50), trading, false))
+        // 19 Nov 2026 (audit batch 2): one pre-open slot, 08:45 (it was every 15 minutes from 06:30, each a cold start of the app).
+        assertEquals(at(tue, 8, 45), RecorderFeeds.nextSlot(at(tue, 2, 0), trading, false))
+        assertEquals(at(tue, 8, 45), RecorderFeeds.nextSlot(at(tue, 6, 30), trading, false), "no 06:45 or 07:00 slot any more")
+        assertEquals(at(tue, 8, 45), RecorderFeeds.nextSlot(at(tue, 8, 44), trading, true), "a missing file is tried once before the open")
+        assertEquals(at(tue, 18, 30), RecorderFeeds.nextSlot(at(tue, 8, 45), trading, false), "nothing more before the open")
+        assertEquals(at(tue, 18, 30), RecorderFeeds.nextSlot(at(tue, 8, 50), trading, false))
         assertEquals(at(tue, 18, 30), RecorderFeeds.nextSlot(at(tue, 9, 0), trading, false), "market hours are the watch's")
         assertEquals(at(tue, 19, 30), RecorderFeeds.nextSlot(at(tue, 18, 30), trading, true), "missing: the evening's retries")
         assertEquals(at(tue, 23, 30), RecorderFeeds.nextSlot(at(tue, 18, 30), trading, false), "read: straight to the night reading")
         assertEquals(at(tue, 23, 30), RecorderFeeds.nextSlot(at(tue, 22, 30), trading, true))
-        assertEquals(at(tue.plusDays(1), 6, 30), RecorderFeeds.nextSlot(at(tue, 23, 30), trading, true))
-        // Friday 9 Oct night -> Saturday 08:00 only while Friday's file is missing, else Monday 06:30.
+        assertEquals(at(tue.plusDays(1), 8, 45), RecorderFeeds.nextSlot(at(tue, 23, 30), trading, true))
+        // Friday 9 Oct night -> Saturday 08:00 only while Friday's file is missing, else Monday 08:45.
         val fri = LocalDate.of(2026, 10, 9)
         assertEquals(at(fri.plusDays(1), 8, 0), RecorderFeeds.nextSlot(at(fri, 23, 30), trading, true))
-        assertEquals(at(fri.plusDays(3), 6, 30), RecorderFeeds.nextSlot(at(fri, 23, 30), trading, false))
+        assertEquals(at(fri.plusDays(3), 8, 45), RecorderFeeds.nextSlot(at(fri, 23, 30), trading, false))
         // A long closed stretch: tomorrow 06:30, to look again.
         assertEquals(tue.plusDays(1).atTime(6, 30), RecorderFeeds.nextSlot(at(tue, 7, 0), { false }, false))
-        // A day has 11 morning slots (06:30-09:00), 18:30 and 23:30: 13 wakes, 17 on a day its file comes late.
+        // A day has one morning slot (08:45), 18:30 and 23:30: 3 wakes (13 before), 7 on a day its file comes late.
         var n = 0; var t = at(tue, 0, 0)
         while (true) { t = RecorderFeeds.nextSlot(t, trading, false); if (t.toLocalDate() != tue) break; n++ }
-        assertEquals(13, n)
+        assertEquals(3, n)
+        n = 0; t = at(tue, 0, 0)
+        while (true) { t = RecorderFeeds.nextSlot(t, trading, true); if (t.toLocalDate() != tue) break; n++ }
+        assertEquals(7, n)
     }
 
     @Test fun aBrokenFeedIsOneGapAnHour() {

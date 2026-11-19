@@ -387,9 +387,19 @@ object SecurePrefs {
      * start ends anyway (the restore disarm, the lock); read first, they cost only their own decryption. 12 Oct: the large
      * values are no longer in that file ([SecureBlobs]); those read early are decrypted next, on their own thread.
      */
-    fun warm() {
+    // 19 Nov 2026 (audit batch 2: the prefetch's decryptions queued on the Keystore ahead of the position books at a restart):
+    // [prefetch] false leaves the large values for [prefetchSoon], which the app's start calls once the books that can hold a LIVE
+    // position are read ([com.optionslab.app.data.PositionsFirst]).
+    fun warm(prefetch: Boolean = true) {
         synchronized(this) { map() }
-        // The large values the watch and the Ira page read early, decrypted now on their own thread (never this one).
+        if (prefetch) prefetchSoon()
+    }
+
+    @Volatile private var prefetchStarted = false
+
+    /** The large values the watch and the Ira page read early, decrypted on their own thread (never the caller's); once a process. */
+    fun prefetchSoon() {
+        synchronized(this) { if (prefetchStarted) return; prefetchStarted = true }
         runCatching { Thread({ SecureBlobs.prefetch() }, "prefs-prefetch").apply { isDaemon = true; priority = Thread.NORM_PRIORITY - 1 }.start() }
     }
 

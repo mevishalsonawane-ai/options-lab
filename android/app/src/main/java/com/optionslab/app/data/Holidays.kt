@@ -132,10 +132,20 @@ object Holidays {
      * Returns how many holidays were read.
      */
     fun refresh(): Int {
-        val out = testList?.invoke() ?: fetch()
+        val read = testList?.invoke() ?: fetch()
         // Read and written under the one lock (18 Oct): a date added by hand while the fetch ran is kept.
-        synchronized(this) { save(book().copy(fetched = Market.today(), nse = out)) }
-        return out.size
+        synchronized(this) {
+            // 19 Nov 2026 (audit batch 2, item 5): a refreshed list may not close today once it has started trading (the watch,
+            // its stops and the arms' exits run on today being a trading day); today's entry waits until tomorrow.
+            val today = Market.today()
+            val refuse = runCatching {
+                com.optionslab.ira.WatchHealth.refuseClosingToday(Market.isTradingDay(today), today in read, Market.minuteNow(), Market.OPEN)
+            }.getOrDefault(false)
+            val keep = if (refuse) read - today else read
+            if (refuse) runCatching { Diag.record("calendar", "the refreshed holiday list closes today, which has already started trading: kept as a trading day until tomorrow") }
+            save(book().copy(fetched = today, nse = keep))
+        }
+        return read.size
     }
 
     private fun fetch(): Map<LocalDate, String> {

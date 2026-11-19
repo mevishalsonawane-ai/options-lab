@@ -285,6 +285,85 @@ class PositionsFirstTest : RobolectricTest() {
         assertTrue(PositionsFirst.lateSlowest.orEmpty(), PositionsFirst.lateSlowest.orEmpty().startsWith("grammar"))
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2: "positions +18-29 s"): at a restart with a live position, the books that can hold a LIVE position
+     * are read first and the watch's stop lane makes its first look (its market from the clock) before the slow paper books are read
+     * and before the large settings are decrypted; the stream connects beside the restore.
+     */
+    @Test fun theStopLanesFirstLookComesBeforeTheSlowBooksAndTheLargeSettings() {
+        PositionsFirst.resetForTest(started = true)
+        PositionsFirst.appReady()
+        val events = java.util.Collections.synchronizedList(ArrayList<String>())
+        val looked = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val lanes = CoroutineScope(Dispatchers.Default)
+        runBlocking {
+            kotlinx.coroutines.withTimeout(10_000) {
+                PositionsFirst.steps({ events += "live books"; true },
+                    watch = {
+                        events += "watch"
+                        // The watch's stop lane with a live position held, its market from the clock at once (never the first pass).
+                        lanes.launch {
+                            var once = false
+                            com.optionslab.app.work.StopLane.run(stop = { once }, mode = { com.optionslab.app.work.StopLane.Mode.NSE }, held = { true },
+                                look = { _, _ -> events += "first look"; once = true; looked.complete(Unit) }, mcxPassAt = { 0L })
+                        }
+                    },
+                    stream = { events += "stream" },
+                    rest = { looked.await(); events += "slow books"; false },
+                    early = { events += "stream connects" },
+                    afterLive = { events += "large settings" })
+            }
+        }
+        val e = events.toList()
+        assertTrue(e.toString(), e.indexOf("first look") in 0 until e.indexOf("slow books"))
+        assertTrue(e.toString(), e.indexOf("live books") in 0 until e.indexOf("large settings"))
+        assertTrue(e.toString(), e.indexOf("large settings") < e.indexOf("slow books"))
+        assertTrue(e.toString(), e.indexOf("stream connects") in 0 until e.indexOf("slow books"))
+        assertEquals("the stream asked again once every book is read", "stream", e.last())
+        assertEquals(true, PositionsFirst.foundOpen)
+        assertTrue(PositionsFirst.liveWatchedAt > 0L)
+        assertTrue(PositionsFirst.diagLine(), "live positions watched +" in PositionsFirst.diagLine() && ", positions +" in PositionsFirst.diagLine())
+    }
+
+    /** 19 Nov 2026 (audit batch 2): a slow book that cannot be read still counts as "something may be open" after the live ones. */
+    @Test fun anUnreadableSlowBookAfterTheLiveOnesCountsAsOpen() {
+        PositionsFirst.resetForTest(started = true)
+        PositionsFirst.appReady()
+        runBlocking { PositionsFirst.steps({ false }, watch = {}, stream = {}, rest = { throw IllegalStateException("unreadable") }) }
+        assertEquals(true, PositionsFirst.foundOpen)
+        PositionsFirst.resetForTest(started = true)
+        PositionsFirst.appReady()
+        runBlocking { PositionsFirst.steps({ false }, watch = {}, stream = {}, rest = { false }) }
+        assertEquals(false, PositionsFirst.foundOpen)
+    }
+
+    /**
+     * 19 Nov 2026 (audit batch 2: the 08:15 / 08:30 cached-process kills): an alarm's start at night with nothing held at the last
+     * mark is quiet; anything held, no mark, a market within 10 minutes, or the gate already open is the full start.
+     */
+    @Test fun aQuietStartOnlyAtNightWithNothingHeld() {
+        com.optionslab.app.work.NightMarks.testOffMain = true
+        try {
+            StartGate.resetForTest(held = true)
+            val night = java.time.ZonedDateTime.of(2025, 10, 15, 3, 0, 0, 0, com.optionslab.engine.IST)
+            com.optionslab.app.work.NightMarks.put(context, Reconciler.HELD_MARK, com.optionslab.ira.QuietStart.FLAT)
+            assertTrue(PositionsFirst.quietNow(context, night))
+            assertTrue("the recorder's 08:45", PositionsFirst.quietNow(context, night.withHour(8).withMinute(45)))
+            assertFalse("MCX opens and NSE's watch starts within 10 minutes", PositionsFirst.quietNow(context, night.withHour(8).withMinute(55)))
+            assertFalse("in the session", PositionsFirst.quietNow(context, night.withHour(11)))
+            com.optionslab.app.work.NightMarks.put(context, Reconciler.HELD_MARK, com.optionslab.ira.QuietStart.HELD)
+            assertFalse("held at the last mark", PositionsFirst.quietNow(context, night))
+            com.optionslab.app.work.NightMarks.put(context, Reconciler.HELD_MARK, null)
+            assertFalse("no mark yet", PositionsFirst.quietNow(context, night))
+            com.optionslab.app.work.NightMarks.put(context, Reconciler.HELD_MARK, com.optionslab.ira.QuietStart.FLAT)
+            StartGate.open("test")
+            assertFalse("the screen or a job already asked", PositionsFirst.quietNow(context, night))
+        } finally {
+            com.optionslab.app.work.NightMarks.testOffMain = false
+            StartGate.resetForTest()
+        }
+    }
+
     @Test fun theUnitTestsAppNeverWaits() {
         // Not started in this process: the parts that never trade read at once.
         PositionsFirst.resetForTest(started = false)

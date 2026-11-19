@@ -445,6 +445,10 @@ object Diag {
     /** 20 Oct, enhancement round 1: the 15-second stop check's real gaps (idea 6) and what counts as held now (idea 7). */
     private fun round1Watch(): String = buildString {
         append(runCatching { WatchClock.driftLine() }.getOrElse { "Stop-check gaps: could not read" }).append('\n')
+        // 19 Nov 2026 (audit batch 2): completed-to-completed gaps per held book, looks asleep or busy, and the reconciler.
+        append(runCatching { com.optionslab.app.work.StopLane.completedLine() }.getOrElse { "Completed stop checks: could not read" }).append('\n')
+        append(runCatching { com.optionslab.app.work.StopLane.sleepLine() }.getOrElse { "Stop checks asleep or busy: could not read" }).append('\n')
+        append(runCatching { Reconciler.line() }.getOrElse { "Reconciler: could not read" }).append('\n')
         append("Held now: ").append(runCatching { com.optionslab.ira.Held.line(HeldNow.sources()) }.getOrElse { "could not read" }).append('\n')
     }
 }
