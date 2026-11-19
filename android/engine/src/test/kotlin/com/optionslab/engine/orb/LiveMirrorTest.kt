@@ -420,6 +420,7 @@ class LiveMirrorTest {
         assertEquals(261.30, LiveMirror.entryLimit(260.0, 0.0, 0.05, null)!!, 1e-9, "no last: the offer alone")
         assertNull(LiveMirror.entryLimit(null, 0.0, 0.05, null))
         assertNull(LiveMirror.entryLimit(null, Double.NaN, 0.05, null))
+        assertNull(LiveMirror.entryLimit(0.10, 0.05, 0.05, 0.04), "a paper limit under one tick: no price, never 0.00")
         assertEquals(201.10, LiveMirror.entryLimit(200.05, 200.0, 0.0, null)!!, 1e-9, "a bad tick taken as 0.05")
         assertEquals(5025.0, LiveMirror.entryLimit(5000.0, 5000.0, 1.0, null)!!, 1e-9, "an MCX 1.0 tick: 0.5% beats two ticks")
     }

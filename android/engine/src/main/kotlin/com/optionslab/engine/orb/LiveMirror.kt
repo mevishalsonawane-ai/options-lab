@@ -352,7 +352,7 @@ object LiveMirror {
         val caps = listOfNotNull(
             lastOk?.let { Kite.onTick(it + maxOf(2 * t, it * ENTRY_MAX_OVER_LAST), t, Kite.Side.SELL) },
             paperLimit?.takeIf { it.isFinite() && it > 0 }?.let { Kite.onTick(it, t, Kite.Side.SELL) })
-        return (listOf(px) + caps).minOrNull()
+        return (listOf(px) + caps).minOrNull()?.takeIf { it > 0 }
     }
 
     /** 19 Nov 2026: the most an entry LIMIT is set above the last price ([entryLimit]; at least two ticks). */

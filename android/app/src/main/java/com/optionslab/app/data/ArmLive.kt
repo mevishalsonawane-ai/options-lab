@@ -973,7 +973,7 @@ object ArmLive {
                 Kite.onTick(a.limit, ins.tick, side), ins.tick, ins.exchange, LiveMirror.TAG, multiplier = ins.multiplier)
             else Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "MARKET", null, ins.tick, ins.exchange, LiveMirror.TAG, multiplier = ins.multiplier)
         val acct = runCatching { Broker.accountNow(needed = (entryPx ?: last) * qty * ins.multiplier) }.getOrNull()
-        Guard.check(Guard.liveOrder(o).copy(price = entryPx ?: last), acct).takeIf { it.isNotEmpty() }?.let { notMirrored(a, "account guard: " + it.joinToString(" ")); return@withLock }
+        Guard.check(Guard.liveOrder(o).copy(price = entryPx ?: o.price ?: last), acct).takeIf { it.isNotEmpty() }?.let { notMirrored(a, "account guard: " + it.joinToString(" ")); return@withLock }
         Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last).takeIf { it.isNotEmpty() }?.let { notMirrored(a, it.joinToString("; ")); return@withLock }
         // 22 Oct: the gate's verdict stamped with this exact order's fingerprint (the paper stop it will rest with it); the door
         // recomputes it right before Zerodha and refuses a difference ([OrderVerdicts]).
@@ -1136,10 +1136,13 @@ object ArmLive {
         val buy = base.side > 0
         val limit = o.price?.takeIf { o.orderType == "LIMIT" }
         // (19 Nov 2026: a buy's marketable entry LIMIT still pays the measured entry slippage, as its MARKET did - never a better shadow
-        // fill than live - and is judged against its LIMIT below. A sale's paper LIMIT fills at its price, as before.)
-        val px = LiveMirror.shadowFill(buy, base.entry, quote?.bid, quote?.ask, base.tick, halfSpreadOf(base),
+        // fill than live - but no more than its LIMIT; it would not have filled only when the offer itself is above that LIMIT. A sale's
+        // paper LIMIT fills at its price, as before.)
+        val raw = LiveMirror.shadowFill(buy, base.entry, quote?.bid, quote?.ask, base.tick, halfSpreadOf(base),
             if (limit != null && !buy) 0.0 else measured(com.optionslab.ira.Slippage.Leg.ENTRY, ENTRY_BASES))
-        if (limit != null && (if (buy) px > limit + 1e-9 else px < limit - 1e-9)) {
+        val touch = if (buy && limit != null) quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: base.entry else raw
+        val px = if (buy && limit != null && touch <= limit + 1e-9) minOf(raw, limit) else raw
+        if (limit != null && (if (buy) touch > limit + 1e-9 else px < limit - 1e-9)) {
             notMirrored(a, "shadow: its LIMIT %.2f would not have filled at %.2f".format(Locale.ENGLISH, limit, px)); return
         }
         var p = base.copy(entry = px, shadow = true, heldSeen = true, charges = charge(if (buy) "BUY" else "SELL", px, base.qty, base.exchange, base.symbol, base.multiplier))
@@ -1365,6 +1368,10 @@ object ArmLive {
      * placed a moment ago, its id not written yet. After a restart it is empty, which is when an orphan can be.
      */
     private val placedStops: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** TEST ONLY: the measured slippage share, in place of the fills' (19 Nov 2026: the shadow LIMIT buy's test). Debug builds only. */
+    @Volatile internal var testMeasured: Double? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /** How long an entry order is waited for before its rest is cancelled (only what filled is booked). */
     private const val ENTRY_WAIT_MS = 15_000L
@@ -2712,7 +2719,7 @@ object ArmLive {
 
     /** The app's measured live slippage on [leg] (a share of the price; the arms' own fills first, else all; 0 until measured). */
     private fun measured(leg: com.optionslab.ira.Slippage.Leg, bases: Set<com.optionslab.ira.Slippage.Basis>): Double =
-        runCatching { com.optionslab.ira.Slippage.medianShare(FillSlippage.fills(), leg, bases, strategy = "Arms (live)") }.getOrDefault(0.0)
+        testMeasured ?: runCatching { com.optionslab.ira.Slippage.medianShare(FillSlippage.fills(), leg, bases, strategy = "Arms (live)") }.getOrDefault(0.0)
 
     /** The half-spread a fill in [p]'s contract pays with no book read (the measured defaults, [com.optionslab.engine.sandbox.PaperSpread]). */
     private fun halfSpreadOf(p: Pos): Double = runCatching {

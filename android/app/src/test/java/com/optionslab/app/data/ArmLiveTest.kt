@@ -66,7 +66,7 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testSync = false
         ArmLive.testNow = null
         ArmLive.testReadFails = null; ArmLive.testAccountFails = false; ArmLive.testSecurityFails = false; ArmLive.testHeard = null
-        ArmLive.testLotCap = null; ArmLive.testWriteFails = null; ArmLive.testEntryWaitMs = null
+        ArmLive.testLotCap = null; ArmLive.testWriteFails = null; ArmLive.testEntryWaitMs = null; ArmLive.testMeasured = null
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -2417,5 +2417,28 @@ class ArmLiveTest : RobolectricTest() {
         val buy = kite.placed.first()
         assertEquals("LIMIT", buy.form["order_type"])
         assertEquals("2 of the 3 lots", "60", buy.form["quantity"])
+    }
+
+    /**
+     * A shadow buy pays the measured entry slippage but never more than its LIMIT, and is "not filled" only when the offer itself is above
+     * that LIMIT: a cheap option (last 10.00, offer 10.05, LIMIT 10.15) with 3% measured slippage is booked at 10.15, as live would fill.
+     */
+    @Test fun aShadowLimitBuyIsBookedAtNoMoreThanItsLimitWhenTheOfferIsUnderIt() {
+        runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }
+        ArmLive.testMeasured = 0.03
+        val (c, s) = other(9)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        kite.quote("NFO:$s", 10.0, 9.95, 10.05)
+        ArmLive.entered(ask(donchian, "cheap", c = c, stop = 8.5))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertEquals(10.15, view().openShadow.single().entry, 1e-9)
+    }
+
+    /** The account guard judges the LIMIT sent (201.10 x 30 = Rs 6,033), not the last price (Rs 6,000): over a Rs 6,010 cap, refused. */
+    @Test fun theAccountGuardJudgesTheEntryLimitNotTheLastPrice() {
+        AppSettings.save(AppSettings.load().copy(guardMaxValue = 6_010.0))
+        ArmLive.entered(ask(donchian, "guarded"))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("account guard: Order value"))
     }
 }
