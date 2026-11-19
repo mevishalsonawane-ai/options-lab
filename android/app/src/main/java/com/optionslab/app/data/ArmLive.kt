@@ -941,7 +941,9 @@ object ArmLive {
         // restart the look settles it against Zerodha ([settle]: found or held, taken back with its stop; neither, dropped with Boss
         // told). (The entry path, never the tick path.) Not written to disk (a write that failed: Boss told by [save], and it is written
         // again on the next look): the entry goes as before, its intent held in memory - never a new skip of a live entry.
-        val intentKept = runCatching { lock.withLock { val b = book(); b.positions += base.copy(unconfirmed = true); save(b) } }.getOrDefault(false)
+        // (With the stop it would rest on the price now, so a restart that finds only the intent still has its level.)
+        val intent = firstStop(spec, base).let { (lv, kind) -> base.copy(unconfirmed = true, stopTrigger = lv, stopKind = kind) }
+        val intentKept = runCatching { lock.withLock { val b = book(); b.positions += intent; save(b) } }.getOrDefault(false)
         if (!intentKept) note(a.key, "its entry's intent could not be written before the order went; the order goes as before")
         val known = known()
         // (The entry door asks the switches again inside it, from memory: [doorRefusal].)
@@ -998,7 +1000,7 @@ object ArmLive {
         }
         if (f == null || f.status !in DONE) {
             // Zerodha has not said how it ended: held as unconfirmed (no second entry meanwhile) until the order book settles it.
-            lock.withLock { val b = book(); b.putIntent(a.ref, base.copy(entryOrderId = id, unconfirmed = true)); line(b, "${spec.label}: bought ${ins.symbol}, not yet confirmed"); save(b) }
+            lock.withLock { val b = book(); b.putIntent(a.ref, intent.copy(entryOrderId = id)); line(b, "${spec.label}: bought ${ins.symbol}, not yet confirmed"); save(b) }
             com.optionslab.app.work.Alerts.error("${spec.label}: Zerodha did not confirm the live ${side.name.lowercase()} of ${ins.symbol}. " +
                 "It is treated as held until the order book shows what filled.", WHO)
             return@withLock
@@ -2512,7 +2514,7 @@ object ArmLive {
             com.optionslab.app.work.Alerts.error("${p.label}: the live entry in ${p.symbol} on ${p.day} was never confirmed, but Zerodha holds $q: it is managed as this arm's trade.", WHO)
             val got = p.copy(qty = q, entryQty = q, unconfirmed = false, heldSeen = true)
             val (stop, kind) = spec?.let { firstStop(it, got) } ?: (null to OWN)
-            return restStop(got.copy(stopKind = kind), stop, ltp)
+            return restStop(got.copy(stopKind = kind), stop ?: got.stopTrigger, ltp)
         }
         val side = if (p.side > 0) "BUY" else "SELL"
         val searched = p.entryOrderId == null
@@ -2575,7 +2577,8 @@ object ArmLive {
         val (stop, kind) = spec?.let { firstStop(it, got) } ?: (null to OWN)
         // 18 Nov 2026: never taken again by a lost entry this look (review: only when the book's row does not already count it).
         if (!inBook) claimed.merge(p.contract, st.filled, Int::plus)
-        return restStop(got.copy(stopKind = kind), stop, ltp = fill).also {
+        // 18 Nov 2026 (audit A4): with no level in memory (after a restart), the level its intent was written with ([enterNow]).
+        return restStop(got.copy(stopKind = kind), stop ?: got.stopTrigger, ltp = fill).also {
             // 2 Nov: confirmed late, it is a live copy now: one notice for it, as for an entry confirmed at once.
             p.paperSymbol?.let { sym -> runCatching { Notifier.liveCopyFilled(app, sym) } }
         }
@@ -2653,7 +2656,7 @@ object ArmLive {
         runCatching { Diag.record("armlive", "${p.label}: unconfirmed entry ${p.symbol} taken back from Zerodha's positions: $q @ %.2f"
             .format(Locale.ENGLISH, fill)) }
         p.paperSymbol?.let { sym -> runCatching { Notifier.liveCopyFilled(app, sym) } }
-        return listOf(restStop(got.copy(stopKind = kind), stop, ltp))
+        return listOf(restStop(got.copy(stopKind = kind), stop ?: got.stopTrigger, ltp))
     }
 
     /**
