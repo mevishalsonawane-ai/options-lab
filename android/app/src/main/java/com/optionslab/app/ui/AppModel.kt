@@ -2032,12 +2032,15 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun liftLossStop(limit: com.optionslab.app.data.LossBreaker.Limit, old: Double, new: Double, pinVerified: Boolean) {
         viewModelScope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
             settingsWriter.lock(); settingsWriter.unlock()
-            val lifted = withContext(Dispatchers.IO) {
-                runCatching { com.optionslab.app.data.LossBreaker.liftForLoosened(limit, old, new, pinVerified) }.getOrDefault(false)
+            val r = withContext(Dispatchers.IO) {
+                runCatching { com.optionslab.app.data.LossBreaker.liftForLoosened(limit, old, new, pinVerified) }.getOrDefault(com.optionslab.app.data.LossBreaker.Lift.FAILED)
             }
             runCatching {
-                if (lifted) com.optionslab.app.work.Alerts.success("Today's loss-limit stop is lifted: Start index bots works again today.")
-                else com.optionslab.app.work.Alerts.error("Today's loss-limit stop stays: today's loss is still past the new limit.")
+                when (r) {
+                    com.optionslab.app.data.LossBreaker.Lift.LIFTED -> com.optionslab.app.work.Alerts.success(r.words)
+                    com.optionslab.app.data.LossBreaker.Lift.NO_STOP -> Unit
+                    else -> com.optionslab.app.work.Alerts.error(r.words)
+                }
             }
         }
     }

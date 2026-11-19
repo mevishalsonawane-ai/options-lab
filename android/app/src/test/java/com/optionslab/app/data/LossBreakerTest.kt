@@ -179,7 +179,7 @@ class LossBreakerTest : RobolectricTest() {
     // ---- 19 Nov 2026 (Boss's choice, "Go"): a loss limit switched off or raised with the PIN lifts the stop it made today ----
 
     private fun limit(rupees: Double) = SecurePrefs.put("g.loss", rupees)
-    private fun lift(old: Double, new: Double, pin: Boolean) = runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, old, new, pin) }
+    private fun lift(old: Double, new: Double, pin: Boolean) = runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, old, new, pin) } == LossBreaker.Lift.LIFTED
     private fun startAgain() = runBlocking { Strategies.startAgain() }
     private fun trippedAt5k(loss: Double) {
         kite.login()
@@ -205,7 +205,7 @@ class LossBreakerTest : RobolectricTest() {
 
     @Test fun withoutThePinNothingIsLifted() {
         trippedAt5k(6_000.0)
-        assertFalse(lift(5_000.0, 0.0, pin = false))
+        assertEquals(LossBreaker.Lift.NO_PIN, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, false) })
         assertTrue(LossBreaker.trippedToday())
         assertTrue(startAgain().startsWith("Not started"))
     }
@@ -223,7 +223,7 @@ class LossBreakerTest : RobolectricTest() {
     @Test fun raisedButTodaysLossIsStillPastItTheStopStays() {
         trippedAt5k(12_000.0)
         limit(10_000.0)
-        assertFalse(lift(5_000.0, 10_000.0, pin = true))
+        assertEquals(LossBreaker.Lift.STILL_PAST, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 10_000.0, true) })
         assertTrue(LossBreaker.trippedToday())
         assertTrue(startAgain().startsWith("Not started"))
     }
@@ -233,7 +233,12 @@ class LossBreakerTest : RobolectricTest() {
         assertFalse(lift(5_000.0, 2_000.0, pin = true))
         assertFalse(lift(0.0, 10_000.0, pin = true))
         // Another limit's change (the paper bots') never lifts Zerodha's stop.
-        assertFalse(runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+        assertEquals(LossBreaker.Lift.OTHER_LIMIT, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
+        // The settings page's memory-only look: may lift when this limit is loosened, never when lowered or another limit.
+        assertTrue(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0))
+        assertTrue(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 10_000.0))
+        assertFalse(LossBreaker.mayLift(LossBreaker.Limit.ZERODHA, 5_000.0, 2_000.0))
+        assertFalse(LossBreaker.mayLift(LossBreaker.Limit.PAPER, 10_000.0, 0.0))
         assertTrue(LossBreaker.trippedToday())
     }
 
@@ -248,10 +253,10 @@ class LossBreakerTest : RobolectricTest() {
             check()
             assertTrue(LossBreaker.trippedToday())
             assertTrue("${LossBreaker.tripToday()}", LossBreaker.tripToday() in setOf(com.optionslab.ira.SegmentLock.Trip.PAPER, com.optionslab.ira.SegmentLock.Trip.SHARED))
-            assertFalse("-12k is still past 11k", runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 11_000.0, true) })
+            assertEquals("-12k is still past 11k", LossBreaker.Lift.STILL_PAST, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 11_000.0, true) })
             assertFalse("Zerodha's limit is not the one that made it", lift(2_000.0, 0.0, pin = true))
             SecurePrefs.put("g.pLoss", 20_000.0)
-            assertTrue(runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 20_000.0, true) })
+            assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 20_000.0, true) })
             val said = startAgain()
             assertTrue(said, said.contains("running"))
         } finally {

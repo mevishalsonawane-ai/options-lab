@@ -231,8 +231,9 @@ object LossBreaker {
      * settings page asks for the PIN when it may.
      */
     fun mayLift(limit: Limit, old: Double, new: Double): Boolean {
-        // Memory only (the settings page asks on its own thread): the kept copy as the last look left it; none kept, nothing to lift.
-        val k = kept ?: return false
+        // Memory only (the settings page asks on its own thread): the kept copy as the last look left it; none kept yet (a restart), a
+        // loosening may lift - the PIN is asked and [liftForLoosened] decides on a fresh read.
+        val k = kept ?: return old > 0.0 && (new <= 0.0 || new > old)
         val trip = com.optionslab.ira.SegmentLock.decodeTrip(k.kind, Market.today()).takeIf { k.day == Market.today().toString() }
         return com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, pnl = 0.0)
     }
@@ -259,27 +260,49 @@ object LossBreaker {
      * Boss's own (they stay stopped until he starts them, and "Start index bots" works today), logged in the change timeline and
      * the diary. A limit still on stops them again past it on the next look. True when lifted.
      */
-    suspend fun liftForLoosened(limit: Limit, old: Double, new: Double, pinVerified: Boolean): Boolean {
-        if (!pinVerified) return false
+    /** What a lift came to ([liftForLoosened]). */
+    enum class Lift(val words: String) {
+        LIFTED("Today's loss-limit stop is lifted: Start index bots works again today."),
+        NO_PIN("Today's loss-limit stop stays: it is lifted only with your PIN."),
+        NO_STOP("No loss-limit stop of today to lift."),
+        OTHER_LIMIT("Today's loss-limit stop stays: another limit made it."),
+        STILL_PAST("Today's loss-limit stop stays: today's loss is still past the new limit."),
+        UNREAD("Today's loss-limit stop stays: today's P&L could not be read just now. Try again in a moment."),
+        FAILED("Today's loss-limit stop stays: the bots' book could not be changed just now. Try again in a moment."),
+    }
+
+    suspend fun liftForLoosened(limit: Limit, old: Double, new: Double, pinVerified: Boolean): Lift {
+        if (!pinVerified) return Lift.NO_PIN
         val trip = pass.withLock {
-            val trip = tripToday() ?: return false
-            if (!com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, pnl = 0.0)) return false
+            val trip = tripToday() ?: return Lift.NO_STOP
+            if (!com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, pnl = 0.0)) return Lift.OTHER_LIMIT
             // Raised (not off): only when today's figure, read now, is inside the new limit.
-            if (new > 0.0 && !com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, dayFigure(limit, trip))) return false
+            if (new > 0.0) {
+                val figure = dayFigure(limit, trip) ?: return Lift.UNREAD
+                if (!com.optionslab.ira.SegmentLock.liftsOnLoosen(trip, limit == Limit.ZERODHA, old, new, figure)) return Lift.STILL_PAST
+            }
+            // The bots' day stops kept as Boss's own first (they stay stopped; Start works today); failing, nothing is lifted. Under the
+            // looks' lock: no look puts the loss stop back in between.
+            try {
+                Strategies.liftLossStop()
+                // A stop that reached the commodities (Zerodha's, or the one shared paper figure) keeps them stopped too, as Boss's.
+                if (trip != com.optionslab.ira.SegmentLock.Trip.PAPER)
+                    Strategies.stopCommodities(sell = false, why = com.optionslab.ira.DayStop.Why.BOSS, log = false)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Throwable) { return Lift.FAILED }
             SecurePrefs.put(K_DAY, "")
             SecurePrefs.put(K_KIND, "")
-            if (limit == Limit.PAPER && kept().whole == Market.today().toString()) SecurePrefs.put(K_WHOLE, "")
+            // The whole paper day's mark (the live door reads it) only when the whole day is inside too.
+            if (limit == Limit.PAPER && kept().whole == Market.today().toString() &&
+                (new <= 0.0 || (runCatching { Paper.snapshot().dayPnl }.getOrNull() ?: Double.NEGATIVE_INFINITY) > -new)) SecurePrefs.put(K_WHOLE, "")
             kept = null
             runCatching { kept() }
-            // The index bots' day stop kept as Boss's own (they stay stopped; Start works today). Under the looks' lock: no look puts
-            // the loss stop back in between.
-            runCatching { Strategies.liftLossStop() }
             trip
         }
+        runCatching { AppState.refreshGuards() }
         val how = if (new <= 0.0) "switched ${limit.words} off" else "raised ${limit.words} to Rs %,.0f".format(java.util.Locale.ENGLISH, new)
-        runCatching { Diag.record("risk", "daily loss stop lifted: you $how with your PIN (your choice, 19 Nov 2026); the index bots start when you start them") }
+        runCatching { Diag.record("risk", "daily loss stop lifted: you $how with your PIN (your choice, 19 Nov 2026); the bots start when you start them") }
         runCatching { com.optionslab.app.ira.Autopilot.logLossLift(trip, how, Market.now().toLocalTime().toString().take(5)) }
-        return true
+        return Lift.LIFTED
     }
 
     /** The commodities' own loss limit reached (21 Oct): kept for the day; the MCX arms sell what they hold on their next pass. */
