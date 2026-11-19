@@ -92,7 +92,7 @@ internal object ClockLane {
             }
             if (name == LOSS) { work(); true } else turn.take(who = name) { work(); true } ?: false
         }
-        if (ok) done.merge(name, t0, ::maxOf)
+        if (ok) done.merge(name, t0) { a, b -> maxOf(a, b) }
         else if (t0 - turnToldAt >= 60_000L || t0 < turnToldAt) {
             // One diary line a minute at most (a hung square-off keeps the turn every round).
             turnToldAt = t0
