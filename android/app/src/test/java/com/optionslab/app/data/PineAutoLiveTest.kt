@@ -71,6 +71,7 @@ class PineAutoLiveTest : RobolectricTest() {
     }
 
     @After fun down() {
+        PineAuto.testOwners = null
         AutomationSupport.realClocks()
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
@@ -435,11 +436,303 @@ class PineAutoLiveTest : RobolectricTest() {
 
     @Test fun aHoldingClosedOutsideTheAppIsForgotten() {
         bought()
-        kite.position(ce, 0, 0.0, product = "MIS")                 // closed in the Kite app
+        val stop = held()!!.stop!!
+        // 19 Nov 2026 (audit): closed in the Kite app - Boss's own sale in Zerodha's order book (one read at 0 alone no longer drops a
+        // held position: [aSingleFlatReadNeverTakesOutAHeldPositionsStop]).
+        kite.soldInKite(ce, 30, 310.0)
         pass(52_010.0)
         assertNull(held())
         assertTrue(side("SELL").isEmpty())
         assertTrue(log(), log().contains("is no longer held"))
+        // Its resting stop is taken out at Zerodha too, confirmed: it can never sell what is no longer held.
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertFalse("nothing left to take out", PineAuto.holding())
+    }
+
+    /**
+     * 19 Nov 2026 (audit, CRITICAL): Boss sells the option in Kite at its target; the fast lane's exit then finds Zerodha flat. Before,
+     * the holding was dropped as "already closed" BEFORE its resting SL SELL was cancelled: the stop stayed at Zerodha, and a fall back
+     * to it would have opened a short nothing tracked. Now the stop is cancelled and confirmed gone, and nothing is sold.
+     */
+    @Test fun aSaleInKiteAtTheTargetThenTheFastLanesExitLeavesNoWorkingStop() {
+        bought()
+        val stop = held()!!.stop!!
+        kite.quote("NFO:$ce", 360.0, 359.95, 360.05)              // the target (300 + 60)
+        kite.soldInKite(ce, 30, 360.0)                            // Boss sold it in Kite
+        kite.requests.clear()
+        runBlocking { PineAuto.watchOnly(fast = true) }
+        assertNull(held())
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertTrue("no sale of the app's", side("SELL").isEmpty())
+        assertTrue("no exit of the app's works on the contract",
+            kite.orders.values.none { it.working && it.symbol == ce && it.side == "SELL" })
+        assertTrue(log(), log().contains("$ce already closed"))
+        assertTrue(log(), log().contains("its stop and exits at Zerodha are taken out"))
+        assertFalse(PineAuto.holding())
+        // The price falls back through the old stop's level: nothing is sold, no short.
+        kite.quote("NFO:$ce", 260.0, 259.95, 260.05)
+        runBlocking { PineAuto.watchOnly() }
+        pass(52_010.0)
+        assertTrue(kite.placed.none { it.form["transaction_type"] == "SELL" && it.form["order_type"] != "SL" })
+        assertEquals(0, kite.positions["NFO:$ce:MIS"]!!.first)
+    }
+
+    /**
+     * 19 Nov 2026 (audit): the closed holding's stop could not be cancelled (Zerodha refused the cancel): it is kept as being taken out,
+     * tried again on every pass, Boss is told once after [PineAuto.REMOVE_TRIES] tries, and it is taken out once Zerodha accepts.
+     */
+    @Test fun aStopThatCannotBeTakenOutIsTriedAgainEveryPassAndBossIsTold() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        bought()
+        val stop = held()!!.stop!!
+        kite.soldInKite(ce, 30, 310.0)
+        kite.down += "/orders/regular/$stop"                      // every cancel of it fails
+        pass(52_010.0)
+        assertNull(held())
+        assertEquals("TRIGGER PENDING", kite.order(stop).status)
+        assertTrue("still being taken out: the 15-second check keeps running", PineAuto.holding())
+        val told = { com.optionslab.app.work.Alerts.posted.filter { it.text.contains("could not be taken out at Zerodha") } }
+        assertTrue("not told on the first try", told().isEmpty())
+        runBlocking { PineAuto.watchOnly() }
+        pass(52_010.0)
+        assertEquals("told once after ${PineAuto.REMOVE_TRIES} tries", 1, told().size)
+        assertTrue(told().single().text, told().single().text.contains(stop))
+        pass(52_010.0)
+        assertEquals("told once", 1, told().size)
+        val cancels = kite.requests.count { it.method == "DELETE" && it.path == "/orders/regular/$stop" }
+        assertTrue("tried on every check: $cancels", cancels >= 4)
+        kite.down.clear()
+        pass(52_010.0)
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertFalse(PineAuto.holding())
+        assertTrue(kite.placed.none { it.form["transaction_type"] == "SELL" && it.form["order_type"] != "SL" })
+    }
+
+    /** 19 Nov 2026 (audit, review): a stop still being taken out is dropped in the next session (its DAY order ended): no endless check. */
+    @Test fun aStopStillBeingTakenOutIsDroppedInTheNextSession() {
+        bought()
+        val stop = held()!!.stop!!
+        kite.soldInKite(ce, 30, 310.0)
+        kite.down += "/orders/regular/$stop"
+        pass(52_010.0)
+        assertTrue(PineAuto.holding())
+        now = now.plusDays(1); PineAuto.testNow = now
+        runBlocking { PineAuto.watchOnly() }
+        assertFalse(PineAuto.holding())
+    }
+
+    /** A closed holding whose stop Zerodha keeps refusing to cancel: a removal pending, nothing held. */
+    private fun removalPending(): String {
+        bought()
+        val stop = held()!!.stop!!
+        kite.soldInKite(ce, 30, 310.0)
+        kite.down += "/orders/regular/$stop"
+        pass(52_010.0)
+        assertNull(held())
+        assertTrue(PineAuto.holding())
+        return stop
+    }
+
+    /**
+     * 19 Nov 2026 (second review, 1): with only a removal pending, the LIVE lane's fast look never waits on the lock a pass holds
+     * (its candle reads can take seconds): the next books' stops come first.
+     */
+    @Test fun aFastLookWithOnlyARemovalPendingNeverWaitsOnThePass() {
+        removalPending()
+        val lock = PineAuto::class.java.getDeclaredField("lock").apply { isAccessible = true }.get(null) as kotlinx.coroutines.sync.Mutex
+        runBlocking { lock.lock() }                               // a pass under way
+        try {
+            runBlocking { kotlinx.coroutines.withTimeout(2_000) { PineAuto.watchOnly(fast = true, stream = true) } }
+            runBlocking { kotlinx.coroutines.withTimeout(2_000) { PineAuto.watchOnly(fast = true) } }
+        } finally { lock.unlock() }
+        assertTrue("the 15-second check still takes it out", PineAuto.holding())
+    }
+
+    /**
+     * 19 Nov 2026 (second review, 2): closed through the app's own Trade tab or a notification's Close (tag "iraalgo", a hand order) -
+     * Boss's own sale, as one in Kite: taken as closed and its stop taken out on the same pass.
+     */
+    @Test fun aCloseFromTheAppsTradeTabIsBosssOwnSale() {
+        bought()
+        val stop = held()!!.stop!!
+        val sale = runBlocking { Broker.placeOrder(Kite.Order(ce, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO"), exit = true) }
+        runBlocking { Strategies.tagOwner("kite:$sale", Origins.manual("Trade")) }
+        assertEquals("COMPLETE", kite.order(sale).status)
+        pass(52_010.0)
+        assertNull(held())
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertFalse(PineAuto.holding())
+    }
+
+    /**
+     * 19 Nov 2026 (second review, 3): bought again on the same contract while the earlier stop is still being taken out: never skipped
+     * (a new live skip starts in shadow) - logged as a would-be wait and Boss told once; the removal cancels only the earlier stop.
+     */
+    @Test fun aBuyAgainWhileTheEarlierStopIsBeingTakenOutIsLoggedInShadowAndTold() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        val stop = removalPending()
+        pass(51_900.0)                                             // SELL: nothing to sell (shortWith exit)
+        pass(52_010.0)                                             // BUY again: the same call
+        assertEquals("bought as before", 2, side("BUY").size)
+        assertTrue(log(), log().contains("Shadow (logged only): would have waited"))
+        val told = com.optionslab.app.work.Alerts.posted.filter { it.text.contains("again while the earlier holding's stop (order $stop)") }
+        assertEquals(1, told.size)
+        val newStop = held()!!.stop!!
+        assertTrue(newStop != stop)
+        kite.down.clear()
+        pass(52_010.0)
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertEquals("the new holding's stop is never touched", "TRIGGER PENDING", kite.order(newStop).status)
+        assertNotNull(held())
+    }
+
+    /**
+     * 19 Nov 2026 (second review, 4): closed on a stream look, whose kept order book may miss an own exit sent since: the stop comes
+     * out at once, and the contract's other own exits are looked for in a fresh read on the next 15-second check.
+     */
+    @Test fun aCloseOnAStreamLookScansAFreshOrderBookForItsOtherExits() {
+        bought()
+        val stop = held()!!.stop!!
+        kite.quote("NFO:$ce", 360.0, 359.95, 360.05)              // at the target: the exit runs
+        // Zerodha's expiry square-off sold it (an outside sale, known on a stream look too).
+        kite.orders["9001"] = FakeKite.Order("9001", ce, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "iraalgoexpiry", "COMPLETE", filled = 30, avg = 360.0)
+        kite.position(ce, 0, 0.0, product = "MIS")
+        runBlocking { Broker.orders() }                           // the kept read
+        // An own exit sent since (its reply lost), not in the kept read.
+        kite.orders["9002"] = FakeKite.Order("9002", ce, "NFO", "SELL", 30, "MIS", "LIMIT", 900.0, 0.0, "irapine", "OPEN")
+        KiteStream.liveForTest(true)
+        try { runBlocking { PineAuto.watchOnly(fast = true, stream = true) } } finally { KiteStream.liveForTest(false) }
+        assertNull(held())
+        assertEquals("the stop at once", "CANCELLED", kite.order(stop).status)
+        runBlocking { PineAuto.watchOnly() }                       // the 15-second check
+        assertEquals("found in a fresh read and taken out", "CANCELLED", kite.order("9002").status)
+        assertFalse(PineAuto.holding())
+    }
+
+    /**
+     * 19 Nov 2026 (second review, 5): the stop's fill not known when it was recorded (both reads failed): its own earlier fill is never
+     * told as a short.
+     */
+    @Test fun aStopFillNotKnownWhenRecordedIsNeverToldAsAShort() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        bought()
+        val stop = held()!!.stop!!
+        kite.fill(stop, 270.0)                                     // the stop sold at Zerodha
+        kite.down += "/orders"; kite.down += "/orders/$stop"       // ... and neither the order book nor its state can be read
+        pass(52_010.0, minutes = 1)
+        assertNotNull(held())
+        pass(52_010.0, minutes = 5)                                // five minutes of reads at 0: taken as closed
+        assertNull(held())
+        kite.down.clear()
+        runBlocking { PineAuto.watchOnly() }
+        val said = com.optionslab.app.work.Alerts.posted.map { it.text }
+        assertTrue(said.joinToString(), said.none { it.contains("may be open") })
+        // (What filled is not known to be the close or a later sale: Boss is asked to look, without a short alarm.)
+        assertEquals(said.joinToString(), 1, said.count { it.contains("not known whether before or after the position was closed") })
+        assertFalse(PineAuto.holding())
+    }
+
+    /**
+     * 19 Nov 2026 (third review, C1): the order labels cannot be read; Boss bought a lot through the Trade tab ("iraalgo") and sold one
+     * in Kite - his own round trip - and one positions read shows the script's holding at 0: kept, its stop resting.
+     */
+    @Test fun withTheLabelsUnreadableBosssTradeTabBuyAndKiteSaleNeverCloseTheHolding() {
+        bought()
+        val stop = held()!!.stop!!
+        kite.orders["9101"] = FakeKite.Order("9101", ce, "NFO", "BUY", 30, "MIS", "MARKET", 0.0, 0.0, "iraalgo", "COMPLETE", filled = 30, avg = 300.0)
+        kite.soldInKite(ce, 30, 305.0)
+        kite.position(ce, 0, 0.0, product = "MIS")                // one bad read
+        PineAuto.testOwners = { throw IllegalStateException("labels unreadable") }
+        pass(52_010.0, minutes = 1)
+        assertNotNull("kept as held", held())
+        assertEquals("TRIGGER PENDING", kite.order(stop).status)
+    }
+
+    /**
+     * 19 Nov 2026 (third review, follow-up): Boss is told once for each earlier holding still being taken out - a second one on the same
+     * contract the same day is told too, the first never again.
+     */
+    @Test fun eachEarlierHoldingStillBeingTakenOutIsToldOnce() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        val stop1 = removalPending()
+        pass(51_900.0)
+        pass(52_010.0)                                             // buy again: told of stop1
+        val stop2 = held()!!.stop!!
+        kite.soldInKite(ce, 30, 310.0)                             // the second holding sold in Kite too
+        kite.down += "/orders/regular/$stop2"
+        pass(52_010.0)
+        assertNull(held())
+        pass(51_900.0)
+        pass(52_010.0)                                             // buy again: told of stop2 only
+        val told = com.optionslab.app.work.Alerts.posted.map { it.text }.filter { it.contains("again while the earlier holding's") }
+        assertEquals(told.joinToString("\n"), 2, told.size)
+        assertTrue(told[0], told[0].contains(stop1))
+        assertTrue(told[1], told[1].contains(stop2) && !told[1].contains(stop1))
+    }
+
+    /**
+     * 19 Nov 2026 (third review, C3): before a buy again on the contract, every earlier stop still being taken out is tried again - one
+     * Zerodha now accepts to cancel is gone before the buy, and nothing is left to wait for.
+     */
+    @Test fun aBuyAgainFirstTriesEveryEarlierStopStillBeingTakenOut() {
+        val stop = removalPending()
+        pass(51_900.0)
+        kite.down.clear()                                          // Zerodha accepts the cancel again
+        pass(52_010.0)                                             // BUY again
+        assertEquals(2, side("BUY").size)
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertFalse(log(), log().contains("would have waited"))
+    }
+
+    /** 19 Nov 2026 (third review, C4): an entry tried before the buy is not tried again from the pass's older copy (one try a pass). */
+    @Test fun anEntryTriedBeforeTheBuyIsNotTriedAgainOnTheSamePass() {
+        val stop = removalPending()
+        pass(51_900.0)
+        val before = kite.requests.count { it.method == "DELETE" && it.path == "/orders/regular/$stop" }
+        pass(52_010.0)                                             // BUY again, the cancel still refused
+        val tries = kite.requests.count { it.method == "DELETE" && it.path == "/orders/regular/$stop" } - before
+        assertEquals("one try this pass", 1, tries)
+    }
+
+    /**
+     * 19 Nov 2026 (audit; the 18 Nov class of bug): ONE positions read showing a held option at 0, with no sale anywhere, neither drops
+     * it nor takes its stop out - not by the fast lane's exit, not by the full pass. Read held again, it is sold at its target as usual.
+     */
+    @Test fun aSingleFlatReadNeverTakesOutAHeldPositionsStop() {
+        bought()
+        val stop = held()!!.stop!!
+        kite.position(ce, 0, 0.0, product = "MIS")                // a bad read: 0, no sale in the order book
+        kite.quote("NFO:$ce", 360.0, 359.95, 360.05)              // at the target: the exit runs
+        kite.requests.clear()
+        runBlocking { PineAuto.watchOnly(fast = true) }
+        pass(52_010.0, minutes = 0)
+        assertNotNull("kept as held", held())
+        assertEquals("its stop stays at Zerodha", "TRIGGER PENDING", kite.order(stop).status)
+        assertTrue(kite.requests.none { it.method == "DELETE" })
+        assertTrue(side("SELL").isEmpty())
+        assertTrue(log(), log().contains("not taken as closed until confirmed"))
+        kite.position(ce, 30, 300.0, product = "MIS")              // read held again
+        runBlocking { PineAuto.watchOnly() }
+        assertEquals("sold at its target", listOf("30"), side("SELL").map { it.form["quantity"] })
+        assertNull(held())
+    }
+
+    /** 19 Nov 2026 (audit): reads that keep showing it at 0 for five minutes, with no sale anywhere, close it; its stop is taken out. */
+    @Test fun readsAtZeroForFiveMinutesCloseItAndTakeItsStopOut() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        bought()
+        val stop = held()!!.stop!!
+        kite.position(ce, 0, 0.0, product = "MIS")
+        pass(52_010.0, minutes = 1)
+        assertNotNull(held())
+        assertEquals("TRIGGER PENDING", kite.order(stop).status)
+        pass(52_010.0, minutes = 1)
+        assertNotNull("30 s with no sale: kept, Boss told", held())
+        assertTrue(com.optionslab.app.work.Alerts.posted.any { it.text.contains("at 0 for 30 s with no sale") })
+        pass(52_010.0, minutes = 4)
+        assertNull(held())
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertTrue(side("SELL").isEmpty())
     }
 
     @Test fun theProfitLockSellsWhatGaveBackPastItsLockedLevel() {
