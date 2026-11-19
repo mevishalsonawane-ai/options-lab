@@ -489,6 +489,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
      * nothing left it rests none and says so each minute (the other sales are the only cover).
      */
     @Test fun theReRestNeverRestsAStopForMoreThanTheOtherSalesLeave() {
+        OrbArms.testNow = OrbArms.testNow!!.withSecond(0).withNano(0)      // on a whole minute: +20 s stays in it, +80 s is the next
         state(listOf(position("orb", 60, 200.0, "E1", stopId = null, stop = 160.0)))
         kite.position(sym, 60, 200.0, product = "MIS")
         val other = kite.restingInKite(sym, "SELL", 60, 260.0, tag = "iraalgostrat")
