@@ -7,13 +7,18 @@ package com.optionslab.ira
  * once. Memory only, a short synchronized section, no I/O. Pure.
  */
 class RepeatGate(private val remindMs: Long) {
-    private val last = HashMap<String, Long>()
+    /** Per key: when it was last told, and the highest [level] told in this episode. */
+    private val last = HashMap<String, Pair<Long, Int>>()
 
-    /** Whether [key]'s alert is told at [nowMs]: its first, or [remindMs] or more since the last one told (a clock gone back tells). */
-    @Synchronized fun tell(key: String, nowMs: Long): Boolean {
+    /**
+     * Whether [key]'s alert is told at [nowMs]: its first, [remindMs] or more since the last one told (a clock gone back tells), or -
+     * 20 Nov 2026 (review) - a [level] above any told in this episode (a larger stop refusal: more positions refused), told at once. A
+     * lower or equal level waits, so a count that goes back and forth is not told on every change.
+     */
+    @Synchronized fun tell(key: String, nowMs: Long, level: Int = 0): Boolean {
         val t = last[key]
-        if (t != null && nowMs >= t && nowMs - t < remindMs) return false
-        last[key] = nowMs
+        if (t != null && nowMs >= t.first && nowMs - t.first < remindMs && level <= t.second) return false
+        last[key] = nowMs to maxOf(level, t?.second ?: level)
         return true
     }
 

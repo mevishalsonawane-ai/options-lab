@@ -533,21 +533,32 @@ object Strategies {
      * new entry on the leg starts a fresh episode, and a run started or stopped ends its episodes. Memory only.
      */
     private val stuckAlerts = com.optionslab.ira.RepeatGate(15 * 60_000L)
+    private val REFUSED_N = Regex("""refused for (\d+) position""")
     private val STUCK_KINDS = setOf("leg_exit_rejected", "flip_outgoing_exit_rejected", "run_stop_failed")
 
-    /** Whether [e] of the run [name] is told now ([stuckAlerts]); every other event, always. */
-    internal fun tellsNow(name: String, e: Event, nowMs: Long): Boolean {
+    /**
+     * Whether [e] of the strategy [id] is told now ([stuckAlerts]); every other event, always. 20 Nov 2026 (review): keyed by the
+     * strategy's id, never its name (two strategies can share a name: a paper copy's alert never holds back the live one's); a
+     * run-level stop refusal that refuses more positions than any told in its episode is told at once.
+     */
+    internal fun tellsNow(id: Long, e: Event, nowMs: Long): Boolean {
+        val name = "#$id"
         if (e.kind == "run_started" || e.kind == "run_stopped") stuckAlerts.end("$name|")
         // A new position on the leg: its next stuck exit is a new episode.
         if (e.kind == "leg_entry_placed" && e.legId != null) for (k in STUCK_KINDS) stuckAlerts.end("$name|$k|leg|${e.legId}|")
         if (e.kind !in STUCK_KINDS || e.severity != "critical") return true
-        return stuckAlerts.tell("$name|${e.kind}|${e.legId?.let { "leg|$it|" } ?: "run|"}", nowMs)
+        // A run-level refusal: one episode, its count of positions refused as the level (a larger refusal is told at once).
+        val level = if (e.legId == null) REFUSED_N.find(e.message)?.groupValues?.get(1)?.toIntOrNull() ?: 0 else 0
+        return stuckAlerts.tell("$name|${e.kind}|${e.legId?.let { "leg|$it|" } ?: "run|"}", nowMs, level)
     }
 
-    private fun record(b: Book, name: String, e: Event, alert: Boolean) {
+    private fun record(b: Book, def: StrategyDef, e: Event, alert: Boolean) {
+        val name = def.name
         b.log += LogLine(System.currentTimeMillis(), name, e.kind, e.message, e.severity)
-        val tell = tellsNow(name, e, System.currentTimeMillis())
-        if ((alert || e.severity == "warn") && tell) Notifier.post(app, 6000 + (name.hashCode() and 0x1ff), if (alert) Notifier.RISK else Notifier.LIVE,
+        val tell = tellsNow(def.id, e, System.currentTimeMillis())
+        // (20 Nov 2026, review: the tray slot by the strategy's id too - a paper copy and the live one sharing a name never replace
+        // each other's alert.)
+        if ((alert || e.severity == "warn") && tell) Notifier.post(app, 6000 + (def.id.toInt() and 0x1ff), if (alert) Notifier.RISK else Notifier.LIVE,
             "$name: ${e.kind.replace('_', ' ')}", e.message, "strategy")
     }
 
@@ -661,7 +672,7 @@ object Strategies {
             Paper.state.orders.firstOrNull { it.orderId == brokerId.removePrefix("paper:") }?.let {
                 StrategyHost.Status(it.status, it.filledQuantity, it.averagePrice?.toDouble(), it.rejectionReason)
             }
-        override fun event(e: Event, alert: Boolean) = record(b, def.name, e, alert)
+        override fun event(e: Event, alert: Boolean) = record(b, def, e, alert)
     }
 
     /**
@@ -797,7 +808,7 @@ object Strategies {
                 StrategyHost.Status(it.status, it.filled, it.avgPrice.takeIf { p -> p > 0 }, it.message)
             }
         }
-        override fun event(e: Event, alert: Boolean) = record(b, def.name, e, alert)
+        override fun event(e: Event, alert: Boolean) = record(b, def, e, alert)
     }
 
     /**
@@ -819,7 +830,7 @@ object Strategies {
         val now = System.currentTimeMillis()
         if (now - (blindWarned[def.id] ?: 0L) < 600_000) return
         blindWarned[def.id] = now
-        record(b, def.name, Event("run_unmanaged", "${if (run.mode == RunMode.LIVE) "LIVE" else "Paper"} run not evaluated: $why. Stops and targets are NOT being checked.", "critical"), true)
+        record(b, def, Event("run_unmanaged", "${if (run.mode == RunMode.LIVE) "LIVE" else "Paper"} run not evaluated: $why. Stops and targets are NOT being checked.", "critical"), true)
     }
 
     // ---- running -------------------------------------------------------------------------
@@ -1220,12 +1231,12 @@ object Strategies {
             // caught up to five minutes late rather than IraAlgo's 60 s.
             for (due in Scheduler.due(def, last, now, { !Market.isTradingDay(it) }, java.time.Duration.ofMinutes(5))) {
                 if (due.job.kind == Scheduler.JobKind.START && needsBreakoutRules(def)) {
-                    record(b, def.name, Event("start_refused", "Scheduled start refused: ORB needs its breakout rules (not added yet)", "warn"), false)
+                    record(b, def, Event("start_refused", "Scheduled start refused: ORB needs its breakout rules (not added yet)", "warn"), false)
                 } else if (due.job.kind == Scheduler.JobKind.START && HiddenArms.blocks(com.optionslab.engine.orb.ArmsCleanup.BASKETS)) {
                     // 15 Oct (Boss's cleanup): scheduled strategies are hidden; a restore from the Hidden arms list brings them back.
-                    record(b, def.name, Event("start_skipped", "Scheduled start skipped: scheduled strategies are hidden (your 15 Oct cleanup)", "info"), false)
+                    record(b, def, Event("start_skipped", "Scheduled start skipped: scheduled strategies are hidden (your 15 Oct cleanup)", "info"), false)
                 } else if (due.job.kind == Scheduler.JobKind.START && b.stoppedDay == Market.today().toString()) {
-                    record(b, def.name, Event("start_skipped", "Scheduled start skipped: the bot is stopped for today", "info"), false)
+                    record(b, def, Event("start_skipped", "Scheduled start skipped: the bot is stopped for today", "info"), false)
                 } else if (due.job.kind == Scheduler.JobKind.START) {
                     when (val d = Scheduler.startDecision(def, running)) {
                         is Scheduler.StartDecision.Start -> if (b.autoApprove[def.id] ?: (d.mode != RunMode.LIVE)) {
@@ -1236,7 +1247,7 @@ object Strategies {
                             val side = AutoExposure.check(AutoExposure.Source.STRATEGIES, def.underlying.uppercase(), planned(def), exposureOf(b),
                                 account = d.mode == RunMode.LIVE)
                             if (side != null) {
-                                record(b, def.name, Event("start_refused", "Scheduled start refused: $side", "warn"), true)
+                                record(b, def, Event("start_refused", "Scheduled start refused: $side", "warn"), true)
                                 notes += "${def.name}: $side"
                                 continue
                             }
@@ -1247,14 +1258,14 @@ object Strategies {
                             val acct = if (d.mode == RunMode.LIVE) runCatching { AccountStopHost.doorCheck(def.underlying.uppercase(), def.name) }.getOrNull()
                                 else runCatching { BossRiskHost.paperStartRefusal(def.name, def.underlying.uppercase()) }.getOrNull()
                             if (acct != null) {
-                                record(b, def.name, Event("start_refused", "Scheduled start refused: $acct", "warn"), true)
+                                record(b, def, Event("start_refused", "Scheduled start refused: $acct", "warn"), true)
                                 notes += "${def.name}: $acct"
                                 continue
                             }
                             // 21 Oct: either paper segment's loss stop, or the whole paper day past the paper limit, refuses an automatic
                             // live start too (memory only): never weaker than one paper figure.
                             if (d.mode == RunMode.LIVE && runCatching { LossBreaker.liveDoorTripped() }.getOrDefault(true)) {
-                                record(b, def.name, Event("start_refused", "Scheduled start refused: the daily loss limit was reached today", "warn"), true)
+                                record(b, def, Event("start_refused", "Scheduled start refused: the daily loss limit was reached today", "warn"), true)
                                 notes += "${def.name}: the daily loss limit was reached today"
                                 continue
                             }
@@ -1262,12 +1273,12 @@ object Strategies {
                             // live entry does; refused, nothing starts and it says why. Boss's own start from the app is never asked.
                             val aiWhy = if (d.mode == RunMode.LIVE) autoLiveRefusal() else null
                             if (aiWhy != null) {
-                                record(b, def.name, Event("start_refused", "Scheduled start refused: $aiWhy", "warn"), true)
+                                record(b, def, Event("start_refused", "Scheduled start refused: $aiWhy", "warn"), true)
                                 notes += "${def.name}: scheduled live start refused: $aiWhy"
                                 continue
                             }
                             val v = venueFor(d.mode)
-                            if (v == null) { record(b, def.name, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
+                            if (v == null) { record(b, def, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
                             val run = startRun(b, def, v, d.mode, "scheduler", compromised, now)
                             notes += "${def.name}: scheduled ${if (d.mode == RunMode.LIVE) "live" else "paper"} start"
                             if (d.mode == RunMode.LIVE) Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.SCHEDULE, "${def.name} started (live)",
@@ -1279,7 +1290,7 @@ object Strategies {
                                 "It is ${def.name}'s start time (${if (d.mode == RunMode.LIVE) "live" else "paper"}). Open IraAlgo to approve or skip; nothing is sent until you do.", "almanac", approve = "strategy")
                             notes += "${def.name}: waiting for approval"
                         }
-                        is Scheduler.StartDecision.Refuse -> record(b, def.name, Event(d.eventKind, d.message, "warn"), false)
+                        is Scheduler.StartDecision.Refuse -> record(b, def, Event(d.eventKind, d.message, "warn"), false)
                         is Scheduler.StartDecision.Skip -> Unit
                     }
                 } else if (!running) {
@@ -1456,7 +1467,7 @@ object Strategies {
                 if (r.isSuccess) {
                     if (so != null) working[so.id] = room
                     b.legStops[k] = withQty(cur, room)
-                    record(b, def.name, Event("stop_shrunk", "Leg ${leg.legId}'s stop at Zerodha shrunk to $room (Zerodha holds less)", "info"), false)
+                    record(b, def, Event("stop_shrunk", "Leg ${leg.legId}'s stop at Zerodha shrunk to $room (Zerodha holds less)", "info"), false)
                 }
                 continue
             }
@@ -1484,14 +1495,14 @@ object Strategies {
                     val nowMs = System.currentTimeMillis()
                     if (nowMs - (notRestedAt[k] ?: 0L) >= NOT_RESTED_EVERY_MS) {
                         notRestedAt[k] = nowMs
-                        record(b, def.name, Event("stop_not_rested", "Leg ${leg.legId}'s stop at %.2f could not rest at Zerodha; the run watches it itself".format(Locale.ENGLISH, want), "warn"), false)
+                        record(b, def, Event("stop_not_rested", "Leg ${leg.legId}'s stop at %.2f could not rest at Zerodha; the run watches it itself".format(Locale.ENGLISH, want), "warn"), false)
                     }
                     continue
                 }
                 notRestedAt.remove(k)
                 b.legStops[k] = "$id|$want|${Market.today()}|$qty"
                 if (!id.startsWith("gtt:")) { b.owners["kite:$id"] = "${def.name} · leg ${leg.legId} stop"; working[id] = qty }
-                record(b, def.name, Event("stop_rested", "Leg ${leg.legId}'s stop rests at Zerodha at %.2f (%s)".format(Locale.ENGLISH, want,
+                record(b, def, Event("stop_rested", "Leg ${leg.legId}'s stop rests at Zerodha at %.2f (%s)".format(Locale.ENGLISH, want,
                     if (id.startsWith("gtt:")) "GTT" else "SL order"), "info"), false)
             } else {
                 val at = cur?.split('|')?.getOrNull(1)?.toDoubleOrNull()

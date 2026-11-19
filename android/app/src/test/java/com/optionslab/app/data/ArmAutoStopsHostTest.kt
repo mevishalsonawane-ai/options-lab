@@ -300,4 +300,33 @@ class ArmAutoStopsHostTest : RobolectricTest() {
         ArmAutoStopsHost.load()
         assertFalse(ArmAutoStopsHost.view.value.readFailed)
     }
+
+    /**
+     * 20 Nov 2026 (review): Boss set a switch themselves - the notice is over, and neither the start's late read (a vault still holding the
+     * old reason) nor the choice's new-phone step brings it back.
+     */
+    @Test fun bossesOwnSwitchEndsTheNoticeForGood() {
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(migrated = true), loaded = true)
+        ArmAutoStopsHost.markChoiceRun(ArmAutoStops.NotApplied.RESTORE)
+        assertEquals(ArmAutoStops.NotApplied.RESTORE, ArmAutoStopsHost.view.value.notApplied)
+        assertTrue(ArmAutoStopsHost.set(Rule.LIVE_STOP, false, pinConfirmed = true, log = false).startsWith("Off"))
+        assertNull(ArmAutoStopsHost.view.value.notApplied)
+        SecurePrefs.flush()
+        SecurePrefs.put(ArmAutoStops.NOT_APPLIED_KEY, ArmAutoStops.NotApplied.NEW_PHONE.key)   // the old reason, as a late read finds it
+        ArmAutoStopsHost.load()
+        assertNull("the late read never brings it back", ArmAutoStopsHost.view.value.notApplied)
+        assertNull(ArmAutoStopsHost.view.value.notice())
+        // The choice's new-phone step after Boss's own switch: no notice either.
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = true)
+        assertTrue(ArmAutoStopsHost.set(Rule.FORWARD_BAR, false, pinConfirmed = true, log = false).startsWith("Off"))
+        assertFalse(runBlocking { ArmAutoStopsHost.migrateNow(existed = false) })
+        assertNull(ArmAutoStopsHost.view.value.notApplied)
+        assertFalse(ArmAutoStopsHost.isOn(Rule.FORWARD_BAR))
+        // ...and on disk: a restart reads no reason either.
+        SecurePrefs.flush()
+        assertTrue(SecurePrefs.getString(ArmAutoStops.NOT_APPLIED_KEY).isNullOrEmpty())
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.load()
+        assertNull(ArmAutoStopsHost.view.value.notApplied)
+    }
 }
