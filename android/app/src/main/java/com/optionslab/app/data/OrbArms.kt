@@ -4386,9 +4386,14 @@ object OrbArms {
         // 19 Nov 2026 (coordinator): other working sales already cover everything held: no stop can rest - said each minute, before the
         // re-rest's back-off (which would otherwise say it at 1, 3, 7... minutes).
         val lot0 = runCatching { Broker.spec("NFO", sym).lotSize }.getOrNull()?.coerceAtLeast(1)
-        val others = orders?.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.working && !ownCancel(it.id) }
-            ?.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } ?: 0
-        if (!adoptOnly && lot0 != null && minOf(p.qty, held - others) < lot0) {
+        val otherSells = orders?.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.working && !ownCancel(it.id) }.orEmpty()
+        val others = otherSells.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+        // (Here a stop of these arms that no trade claims is left out - it may be this trade's own, taken below ([orphanStop]); the stop
+        // placed if it is not is still capped by every other working sale, that one included.)
+        val claimedStops = b.positions.mapNotNull { it.stopOrderId }.toSet()
+        val othersButOrphans = otherSells.filter { !(it.tag == "iraorb" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimedStops) }
+            .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+        if (!adoptOnly && lot0 != null && minOf(p.qty, held - othersButOrphans) < lot0) {
             coverSay(p, "${armOf(p.arm).label}: no stop can rest at Zerodha for $sym - other working sales already cover all it holds; they are " +
                 "its only cover, and the app watches its level. Check $sym in Kite.")
             return null
