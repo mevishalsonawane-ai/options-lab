@@ -3226,6 +3226,7 @@ object OrbArms {
         // the book is saved with it - the decided bar too ([Book.decided], taken before this). After a restart the unconfirmed-entry
         // settle ([settleEntry]) looks for its order and what Zerodha holds: found or held, kept with its stop; else dropped with a word.
         // Here the intent row becomes the trade: dropped when nothing went, kept unconfirmed (its order id in) when Zerodha has not said.
+        val sent = ArmOrderLabels.sending(o, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis()))
         val intent = stamped(Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, null, null, null,
             live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ladderOn(arm, today0, true),
             near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew))
@@ -3235,7 +3236,6 @@ object OrbArms {
         var row = intent
         fun dropIntent() { val r = row; b.positions.removeAll { it === r }; runCatching { save(b) } }
         fun putIntent(p: Position) { val r = row; val i = b.positions.indexOfFirst { it === r }; if (i >= 0) b.positions[i] = p else b.positions += p; row = p }
-        val sent = ArmOrderLabels.sending(o, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis()))
         val id: String? = try {
             // The arm's key as its entry check asked the portfolio guard (the door refuses only this arm's blocked entry).
             // [last]: the price this entry decided on (its slippage is measured from it once it fills; nothing else changes).
@@ -3250,11 +3250,11 @@ object OrbArms {
             try { Broker.findRecentRetrying(o, known) ?: run { dropIntent(); return "order_refused: ${e.message}; no matching order found at Zerodha" } }
             catch (_: Exception) { null }                                          // the order book could not be read either
         }
-        // (B5: the labels after the order went never stop its booking - a failure there is a missing label, not a lost trade.)
+        // (B5: its order id written down FIRST - before its owner label, which the lost-id search leaves out - so a restart from here
+        // settles it by that id; the labels after it never stop its booking: a failure there is a missing label, not a lost trade.)
+        if (id != null) { putIntent(intent.copy(entryOrderId = id)); runCatching { save(b) } }
         id?.let { runCatching { ArmOrderLabels.answered(it, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis())) } }
         id?.let { runCatching { Strategies.tagOwner("kite:$it", owner) } }
-        // (B5: its order id kept on the row in memory; written with the row's next save - a restart before it settles by the search.)
-        if (id != null) putIntent(intent.copy(entryOrderId = id))
         var f = id?.let { runCatching { Broker.awaitOrder(it, 15_000) }.getOrNull() }
         if (id != null && f?.status !in DONE) {
             // Not finished in 15 s: the unfilled rest is cancelled so it can never fill later untracked; only what filled is booked.
@@ -3626,6 +3626,9 @@ object OrbArms {
             val short = ours + others - held
             val share = held - others
             if (short <= 0 || share <= 0) { shortSince.remove(sym); continue }
+            // (A sale on it still working with a part filled - a trade's own stop part filled, any book's - is whose it is: never taken for
+            // an outside one and charged to another trade; asked again once it ends and its book has booked it.)
+            if (orders.values.any { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.working && it.filled > 0 }) continue
             // Confirmed as a trade shown gone is ([goneConfirmed]): the order book's sales outside the app, netted over the day.
             val onIt = orders.values.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.filled > 0 }
             val known: Set<String> = if (onIt.none { it.tag.isBlank() }) emptySet() else knownKite(b).toSet()
@@ -3661,8 +3664,8 @@ object OrbArms {
                     val so = orders[stopId]
                     var out = keep <= 0
                     if (!out) {
-                        // (Its stop's state not in this read: asked again next pass.)
-                        if (so == null || !so.working) continue
+                        // (Its stop's state not in this read: nothing more on this contract this pass - never an older trade cut instead.)
+                        if (so == null || !so.working) break
                         val to = com.optionslab.engine.risk.ExitQty.shrinkTo(so.qty, so.filled, keep, lot)
                         // (At the trade's own trigger now - this pass may have moved it up - with its limit under it, as [raiseLiveStop].)
                         val trig = p.stopTrigger ?: so.trigger
@@ -3673,8 +3676,8 @@ object OrbArms {
                     if (out) {
                         cancelOwnStop(stopId)
                         val st = runCatching { Broker.orderState(stopId)?.status }.getOrNull()
-                        // (Filled meanwhile - booked from its fill next pass - or not out yet: nothing changed now.)
-                        if (st != "CANCELLED" && st != "REJECTED") continue
+                        // (Filled meanwhile - booked from its fill next pass - or not out yet: nothing more on this contract this pass.)
+                        if (st != "CANCELLED" && st != "REJECTED") break
                         stopId = null
                     }
                 }
@@ -3954,7 +3957,8 @@ object OrbArms {
         // stop): from the same reads, what may be sold is worked out FIRST (what is held less every other working sale - this trade's own
         // stop left out, as it is the one taken out); the stop comes out only when a sale will go, and that holds for Boss's Stop for
         // today and 15:10 too (they read again next pass; nothing else changes for them).
-        val seen = pre ?: run {
+        // (Read here only while a stop rests: with none, nothing is taken out first, and the exit turn below reads again as before.)
+        val seen = pre ?: if (p0.stopOrderId == null) null else run {
             val o = runCatching { Broker.orders() }.getOrNull()
             val n = runCatching { Broker.positionBook().net }.getOrNull()
             if (o != null && n != null) Pre(o, n) else null
@@ -3989,23 +3993,30 @@ object OrbArms {
                     // (B2: Boss's own sell order in Kite - no tag, no owner label - covering the lot: said every minute. For a stop-level
                     // exit or a square-off it is cancelled and confirmed out first, then the app sells (as the square-offs do,
                     // [SquareOffExit]); a target or an index exit waits for him.)
+                    // (Never while Zerodha holds more than the app's live trades on it - both books': Boss holds lots of his own there,
+                    // which his order may be for.)
                     val bosses = others.filter { it.tag.isBlank() && "kite:${it.id}" !in owners }
                     if (room <= 0 && bosses.isNotEmpty()) {
-                        val cancels = why !in TAKE_EXITS
+                        val apps = b.positions.filter { it.open && it.live && it.kite == sym }.sumOf { it.qty } +
+                            ArmLive.view.value.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side > 0 }.sumOf { it.qty }
+                        val cancels = why !in TAKE_EXITS && held <= apps
+                        var out = cancels
+                        if (cancels) for (o in bosses) {
+                            runCatching { Broker.cancel(o.id, o.variety) }
+                            val st = runCatching { Broker.orderState(o.id)?.status }.getOrNull()
+                            if (st != "CANCELLED" && st != "REJECTED") out = false
+                        }
                         val minute = now().withSecond(0).withNano(0)
                         if (bossSaid.size > 200) bossSaid.clear()
                         if (bossSaid.put(managerId(p), minute) != minute) com.optionslab.app.work.Alerts.error("$label: your own sell order on $sym in Kite " +
-                            "covers the lot the app is exiting (${why.replace('_', ' ')}). " + if (cancels) "It is cancelled and the app sells the lot at market."
-                            else "The app's exit waits for it; cancel it in Kite if you want the app to sell.", "ORB live")
-                        if (cancels) {
-                            var out = true
-                            for (o in bosses) {
-                                runCatching { Broker.cancel(o.id, o.variety) }
-                                val st = runCatching { Broker.orderState(o.id)?.status }.getOrNull()
-                                if (st != "CANCELLED" && st != "REJECTED") out = false
-                            }
-                            // (Filled meanwhile, or not out yet: nothing more this pass - the next reads again; this trade's stop rests.)
-                            if (!out) return p to null
+                            "covers the lot the app is exiting (${why.replace('_', ' ')}). " + when {
+                                out -> "It was cancelled and the app sells the lot at market."
+                                cancels -> "It could not be cancelled yet (or it filled); the app reads Zerodha again on its next check."
+                                else -> "The app's exit waits for it; cancel it in Kite if you want the app to sell."
+                            }, "ORB live")
+                        // (Filled meanwhile, or not out yet: nothing more this pass - the next reads again; this trade's stop rests.)
+                        if (cancels && !out) return p to null
+                        if (out) {
                             others = others.filter { o -> bosses.none { it.id == o.id } }
                             room = com.optionslab.engine.risk.ExitQty.sendable(held, left(others), p.qty, lot)
                         }
@@ -4045,14 +4056,21 @@ object OrbArms {
                     "The app watches it and sells it itself.", "ORB live")
                 return p.copy(stopOrderId = null) to null
             }
+            // (A stop for fewer than the trade holds: the trade is split - the part the stop covers keeps it, the rest stays open with
+            // none, the app watching it - so a fill of that stop is never booked for more than it sold.)
+            fun rested(q: Position): Pair<Position, Position?> {
+                if (q.stopOrderId == null || qty >= q.qty) return q to null
+                val part = qty.toDouble() / q.qty
+                return q.copy(qty = qty, charges = q.charges * part) to q.copy(qty = q.qty - qty, stopOrderId = null, charges = q.charges * (1 - part))
+            }
             val liq = armOf(p.arm).liquidity
             val lock = lockOrStop(p, spec.tickSize)?.takeIf { l -> ladderTarget(p) != null && l > (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 }
             if (lock != null) {
                 val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock)
-                if (id != null) return p.copy(stopOrderId = id, stopTrigger = trig ?: lock) to null
+                if (id != null) return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock))
             }
             val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger)
-            return p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger) to null
+            return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger))
         }
         p.stopOrderId?.let { id ->
             // The resting exchange stop comes out FIRST (timed for the order speed card); one that already filled is the exit.
