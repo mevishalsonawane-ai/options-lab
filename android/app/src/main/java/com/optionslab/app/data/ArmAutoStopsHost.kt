@@ -53,7 +53,8 @@ object ArmAutoStopsHost {
          */
         fun notice(): String? = when {
             !loaded -> if (readFailed) ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.UNREAD, state, switchesShown = false) else null
-            !state.ready -> ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.UNREAD, state)
+            // (Review: the first choice ran and only Jarvis's cutoff step waits - the choice stands, nothing to say.)
+            !state.ready -> if (state.migrated) null else ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.UNREAD, state)
             else -> ArmAutoStops.notAppliedNote(notApplied, state)
         }
         /** The arm row's line for [source] ([ArmAutoStops.rowLine]); null before the read, for another arm, or with all of them on. */
@@ -148,12 +149,13 @@ object ArmAutoStopsHost {
         val held = if (!on && rule == Rule.PAPER_ACCOUNT) runCatching { BossRiskHost.refreshView(); BossRiskHost.accountKeyNow() }.getOrNull() else null
         val out = synchronized(lock) {
             val o = ArmAutoStops.set(state, rule, on, System.currentTimeMillis(), pinConfirmed, byVoice, held)
-            if (o.changed) { state = o.state; switched += rule }
+            if (o.changed) { state = o.state; switched += rule; notApplied = null }
             o
         }
         if (!out.changed) return out.said
-        // Only this rule's keys (review: never the others' nor the one-time choice's).
-        runCatching { SecurePrefs.putAllSoon(ArmAutoStops.encodeRule(out.state, rule)) }
+        // Only this rule's keys (review: never the others' nor the one-time choice's). 20 Nov 2026 (review): Boss set one himself - the
+        // "not applied" notice is over (his own choices stand).
+        runCatching { SecurePrefs.putAllSoon(ArmAutoStops.encodeRule(out.state, rule) + (ArmAutoStops.NOT_APPLIED_KEY to "")) }
         publish()
         runCatching { Diag.record("autostops", "${rule.switch}: ${if (on) "off → on" else "on → off"} (by you${if (on) "" else ", with your PIN"})") }
         if (log) runCatching { com.optionslab.app.ira.Autopilot.logArmAutoStop(rule, on, if (on) ArmAutoStops.onReason(rule) else ArmAutoStops.offReason(rule, stoppedBy(rule))) }

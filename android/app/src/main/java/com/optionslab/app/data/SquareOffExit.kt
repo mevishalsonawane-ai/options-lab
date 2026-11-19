@@ -123,8 +123,9 @@ internal object SquareOffExit {
                     tell(strategyAlertKey("taken over", p.symbol, it.id, restedMs(it) - TAKEOVER_MS), "${p.symbol} $aboutIt and a strategy's exit sale for it was still resting at Zerodha: " +
                         "the $exitName cancels it and sells what is held.")
                 } else {
-                    // Told once per stuck order, naming the minutes left when near the close; a reminder at most every 15 minutes
-                    // ([STRATEGY_REMIND_MS]; 20 Nov 2026: before, one each minute from 15:15).
+                    // Told once per stuck order, naming the minutes left when near the close (20 Nov 2026: before, one each minute from
+                    // 15:15). From two minutes it is taken over (above), so in practice this is said once; the 15-minute reminder
+                    // ([STRATEGY_REMIND_MS]) is for a takeover whose cancel keeps failing.
                     val left = minutesLeft
                     tell(strategyAlertKey("resting", p.symbol, it.id, restedMs(it) - STRATEGY_COVER_MS), "${p.symbol} $aboutIt and a strategy's exit sale for it is still " +
                         "resting at Zerodha" + (left?.let { " with $it minute(s) to the close" } ?: "") + ". The $exitName takes over if it does not fill " +

@@ -30,4 +30,21 @@ class StrategiesStuckAlertTest : RobolectricTest() {
         assertTrue(Strategies.tellsNow(run, Event("run_stopped", "stopped"), 17 * min))
         assertTrue(Strategies.tellsNow(run, rejected(1), 17 * min))
     }
+
+    /** Review: each kind its own episode; a command's warning never starts a quiet period; a new entry on the leg starts afresh. */
+    @Test fun kindsWarningsAndANewEntryEachKeepTheAlertsTold() {
+        val run = "Stuck test b ${System.nanoTime()}"
+        assertTrue(Strategies.tellsNow(run, rejected(3), 0L))
+        // A late fill's reconciliation alert on the same leg is another kind: told.
+        assertTrue(Strategies.tellsNow(run, Event("run_stop_failed", "A late broker entry fill for leg 3", "critical", 3), min))
+        // Boss's own command answered with a warning: said, and the engine's critical refusal on leg 4 still told after it.
+        assertTrue(Strategies.tellsNow(run, Event("leg_exit_rejected", "That leg is not open", "warn", 4), min))
+        assertTrue(Strategies.tellsNow(run, Event("leg_exit_rejected", "That leg is not open", "warn", 4), min))
+        assertTrue(Strategies.tellsNow(run, rejected(4), 2 * min))
+        // Leg 3 re-entered: its next stuck exit is a new episode, told at once (not 15 minutes after the first).
+        assertFalse(Strategies.tellsNow(run, rejected(3), 5 * min))
+        assertTrue(Strategies.tellsNow(run, Event("leg_entry_placed", "Entry placed", "info", 3), 6 * min))
+        assertTrue(Strategies.tellsNow(run, rejected(3), 7 * min))
+        assertFalse("leg 4's episode is untouched", Strategies.tellsNow(run, rejected(4), 7 * min))
+    }
 }

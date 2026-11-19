@@ -87,7 +87,11 @@ object ArmAutoStops {
      */
     fun notAppliedNote(why: NotApplied?, s: State, switchesShown: Boolean = true): String? {
         if (why == null || s.off.size == Rule.entries.size) return null
-        return "Your 19 Nov choice (all of these off) was not applied on this phone: ${why.why}. The stops stay on meanwhile. " +
+        // (Review: while the switches or the choice wait on a read, the stops that latch - the forward-test switch-off, the self-review's
+        // park and pause - wait too on the three ([com.optionslab.ira.ArmAutoStops] callers' mayLatch); the others act.)
+        val meanwhile = if (why == NotApplied.UNREAD) "Until then the forward-test switch-off and the self-review's park and pause wait on " +
+            "R51, R72 and Liquidity; the other stops act as before." else "The stops stay on."
+        return "Your 19 Nov choice (all of these off) was not applied on this phone: ${why.why}. $meanwhile " +
             (if (switchesShown) "To switch one off, tap its switch below and enter your PIN."
             else "Once they are read, you can switch one off here with your PIN.")
     }

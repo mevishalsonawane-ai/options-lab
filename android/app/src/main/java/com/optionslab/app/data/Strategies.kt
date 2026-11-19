@@ -520,7 +520,9 @@ object Strategies {
     /**
      * 20 Nov 2026 (minor fixes, item 2): a leg's exit refused look after look (a square-off took it over, its stop not yet confirmed out)
      * and a stop the run keeps retrying alerted on every look: told once per leg per stuck episode, then at most every 15 minutes
-     * ([com.optionslab.ira.RepeatGate]); the run's log keeps every line. A run started or stopped ends its episodes. Memory only.
+     * ([com.optionslab.ira.RepeatGate]); the run's log keeps every line. Each kind of alert is its own episode (one never hides
+     * another), only the engine's critical ones are gated (a command's warning is said as before and never starts a quiet period), a
+     * new entry on the leg starts a fresh episode, and a run started or stopped ends its episodes. Memory only.
      */
     private val stuckAlerts = com.optionslab.ira.RepeatGate(15 * 60_000L)
     private val STUCK_KINDS = setOf("leg_exit_rejected", "flip_outgoing_exit_rejected", "run_stop_failed")
@@ -528,8 +530,10 @@ object Strategies {
     /** Whether [e] of the run [name] is told now ([stuckAlerts]); every other event, always. */
     internal fun tellsNow(name: String, e: Event, nowMs: Long): Boolean {
         if (e.kind == "run_started" || e.kind == "run_stopped") stuckAlerts.end("$name|")
-        if (e.kind !in STUCK_KINDS) return true
-        return stuckAlerts.tell("$name|${e.legId?.let { "leg|$it" } ?: "run"}", nowMs)
+        // A new position on the leg: its next stuck exit is a new episode.
+        if (e.kind == "leg_entry_placed" && e.legId != null) for (k in STUCK_KINDS) stuckAlerts.end("$name|$k|leg|${e.legId}|")
+        if (e.kind !in STUCK_KINDS || e.severity != "critical") return true
+        return stuckAlerts.tell("$name|${e.kind}|${e.legId?.let { "leg|$it|" } ?: "run|"}", nowMs)
     }
 
     private fun record(b: Book, name: String, e: Event, alert: Boolean) {
