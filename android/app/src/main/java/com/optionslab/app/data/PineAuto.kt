@@ -1580,7 +1580,7 @@ object PineAuto {
      * holding - less Boss's own buys today and what was carried, and less what this book and the arms' live books already booked closed
      * from outside today (one sale proves one close only) - or the reads have kept showing it at 0 for 30 s (some sale on the contract
      * not booked by any book) or five minutes (none; Boss is told once at 30 s). Until then it is kept, watched, its stop resting.
-     * Confirmed, it is booked here as closed from outside ([bookClose]); the callers then drop it. A holding from an earlier day is
+     * Confirmed, it is booked here as closed ([bookClose]; from outside when an outside sale proved it); the callers then drop it. A holding from an earlier day is
      * closed (an MIS position never carries into the next session; its DAY stop went with that session), as before.
      */
     private suspend fun flatConfirmed(b: Book, id: Long, h: Held, net: List<Broker.Position>, orders: List<Broker.OrderRow>?): Boolean {
@@ -1615,7 +1615,8 @@ object PineAuto {
         val first = if (rowShown) flatSince.putIfAbsent(key, ms) else flatSince[key]
         if (com.optionslab.engine.orb.LiveMirror.shortConfirmed(rowShown, sold, first ?: ms, ms, unbooked)) {
             flatSince.remove(key); flatAlertSaid.remove(key)
-            bookClose(b, sym, h.qty, outside = true)
+            // (Closed from outside only when an outside sale proved it: a close on agreeing reads alone uses up no sale of Boss's.)
+            bookClose(b, sym, h.qty, outside = sold)
             return true
         }
         if (rowShown && first == null) note(b, id, "$sym: Zerodha's positions show it at 0 with no sale outside the app to explain it: " +
@@ -1639,7 +1640,10 @@ object PineAuto {
         if (runCatching { java.time.LocalDate.parse(h.day).isBefore(today) }.getOrDefault(false)) return
         val orders = runCatching { kiteOrders() }.getOrNull()
         val ids = LinkedHashMap<String, Int>()
-        h.stop?.let { sid -> ids[sid] = orders?.firstOrNull { it.id == sid }?.filled ?: 0 }
+        // (What of the stop had filled: from the orders read, else its own state read - never taken as 0 when unknown, so a stop's
+        // own fill is never told as a short.)
+        h.stop?.let { sid -> ids[sid] = orders?.firstOrNull { it.id == sid }?.filled
+            ?: runCatching { Broker.orderState(sid) }.getOrNull()?.filled ?: 0 }
         orders.orEmpty().filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" }
             .forEach { ids[it.id] = it.filled }
         if (ids.isEmpty() && orders != null) return
@@ -1657,11 +1661,18 @@ object PineAuto {
      * (its DAY orders ended with it). Never places an order.
      */
     private suspend fun removeExits(b: Book, only: List<Removing>? = null) {
-        if (b.removing.isEmpty() || !Broker.loggedIn) return
+        if (b.removing.isEmpty()) return
         val today = todayIst().toString()
+        // (Not logged in to Zerodha: nothing can be cancelled - each entry still counts a try, so Boss is told to cancel it in Kite.)
+        val loggedIn = Broker.loggedIn
         for (r0 in (only ?: b.removing.toList())) {
             var r = r0
             if (r.day < today) { b.removing.remove(r0); continue }
+            if (!loggedIn) {
+                val i = b.removing.indexOf(r0)
+                if (i >= 0) b.removing[i] = tellOnce(b, r.copy(tries = r.tries + 1), r.ids.keys, "not logged in to Zerodha")
+                continue
+            }
             if (!r.scanned) {
                 if (b.held.values.any { it.live && it.kite == r.kite }) r = r.copy(scanned = true)
                 else {
@@ -1693,19 +1704,22 @@ object PineAuto {
                 note(b, r.script, "${r.kite}: its stop and exits at Zerodha are taken out (the position is closed)")
                 continue
             }
-            var next = r.copy(ids = left, tries = r.tries + 1)
-            if (next.tries >= REMOVE_TRIES && !next.told) {
-                next = next.copy(told = true)
-                val what = if (left.isEmpty()) "Zerodha's orders could not be read to find its exits" else "order ${left.keys.joinToString(", ")}"
-                val text = "Pine #${r.script}: its stop on ${r.kite} could not be taken out at Zerodha after ${next.tries} tries, though the " +
-                    "position is closed ($what). Cancel any working sell of ${r.kite} in Kite now: if it fires it sells what is no longer " +
-                    "held. The app keeps trying."
-                runCatching { Diag.record("pine", text) }
-                com.optionslab.app.work.Alerts.error(text, "Pine live")
-                note(b, r.script, text)
-            }
-            b.removing[i] = next
+            b.removing[i] = tellOnce(b, r.copy(ids = left, tries = r.tries + 1), left.keys,
+                if (left.isEmpty()) "Zerodha's orders could not be read to find its exits" else null)
         }
+    }
+
+    /** [r] after a failed try: from [REMOVE_TRIES] tries on, Boss is told once to cancel [left] in Kite ([why]: what stood in the way). */
+    private fun tellOnce(b: Book, r: Removing, left: Collection<String>, why: String?): Removing {
+        if (r.tries < REMOVE_TRIES || r.told) return r
+        val what = listOfNotNull(why, left.takeIf { it.isNotEmpty() }?.let { "order ${it.joinToString(", ")}" }).joinToString("; ")
+        val text = "Pine #${r.script}: its stop on ${r.kite} could not be taken out at Zerodha after ${r.tries} tries, though the " +
+            "position is closed ($what). Cancel any working sell of ${r.kite} in Kite now: if it fires it sells what is no longer " +
+            "held. The app keeps trying."
+        runCatching { Diag.record("pine", text) }
+        com.optionslab.app.work.Alerts.error(text, "Pine live")
+        note(b, r.script, text)
+        return r.copy(told = true)
     }
 
     /** The fill of a MARKET paper order; one left open (no fresh price) is cancelled so it cannot fill later. */

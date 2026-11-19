@@ -221,7 +221,7 @@ class SweeperFailsafeTest : RobolectricTest() {
         kite.quote("NFO:$nfo", 200.0, 199.95, 200.05)
         kite.orders["1"] = FakeKite.Order("1", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "irapine", "TRIGGER PENDING")
         // An ORB arm's stop: never turned into a sell either, and left to its own book (which puts back a stop it finds cancelled
-        // only when Boss did not cancel it himself).
+        // only when Boss did not cancel it themselves).
         kite.orders["2"] = FakeKite.Order("2", nfo, "NFO", "SELL", 30, "MIS", "SL", 205.0, 210.0, "iraorb", "TRIGGER PENDING")
         pass(10, 0)                                           // no row at all: no reading, nothing done
         kite.position(nfo, 0, 0.0, product = "MIS")           // shown closed (no sale in the order book)

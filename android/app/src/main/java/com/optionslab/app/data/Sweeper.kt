@@ -145,10 +145,12 @@ object Sweeper {
             flatSince.remove(so.id)
             val px = ltp["${so.exchange}:${so.symbol}"] ?: continue
             if (!MissedLock.missed(px, so.trigger)) continue
-            // (Less every other sale already working on it - an exit's limit, Boss's own, a stop swept on an earlier pass: never more
-            // than is held in all.)
+            // (Less every other sale already working on it that can fill at this price - a market sale, a limit at or under it: an
+            // exit's, Boss's own, a stop swept on an earlier pass - never more than is held in all. A limit above the price could not
+            // fill before the stop itself would, so the sweep adds nothing to it.)
             val selling = orders.orEmpty().filter { it.working && it.side == "SELL" && it.id != so.id && it.exchange == so.exchange &&
-                it.symbol == so.symbol && it.product == so.product && it.type != "SL" && it.type != "SL-M" }
+                it.symbol == so.symbol && it.product == so.product && it.type != "SL" && it.type != "SL-M" &&
+                (it.type == "MARKET" || it.price <= px + 1e-9) }
                 .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
             val have = book.filter { it.exchange == so.exchange && it.symbol == so.symbol && it.product == so.product }.sumOf { it.qty } -
                 selling - (used[pk] ?: 0)
@@ -156,8 +158,12 @@ object Sweeper {
             val send = minOf(left, have)
             if (send <= 0) {
                 if (notSwept.size > 200) notSwept.clear()
-                if (notSwept.add(so.id)) runCatching { Diag.record("risk", "Zerodha: ${so.symbol} is through its stop %.2f at %.2f, but nothing of it is left to sell in %s: not turned into a sell"
-                    .format(Locale.ENGLISH, so.trigger, px, so.product.ifBlank { "its product" })) }
+                if (notSwept.add(so.id)) {
+                    val text = "Zerodha: ${so.symbol} is through its stop %.2f at %.2f, but nothing of it in %s is left to sell (other orders already sell what is held there): the stop was not turned into a sell. Check it in Trade."
+                        .format(Locale.ENGLISH, so.trigger, px, so.product.ifBlank { "its product" })
+                    runCatching { Diag.record("risk", text) }
+                    com.optionslab.app.work.Alerts.post(text, com.optionslab.app.work.Alerts.Kind.ERROR, "Missed lock", throttle = true)
+                }
                 continue
             }
             val tick = runCatching { Broker.spec(so.exchange, so.symbol).tickSize }.getOrDefault(0.05)
