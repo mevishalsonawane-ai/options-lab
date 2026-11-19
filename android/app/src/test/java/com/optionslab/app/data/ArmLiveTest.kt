@@ -2448,4 +2448,30 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue("nothing sent", kite.placed.isEmpty())
         assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("no usable entry price"))
     }
+
+    /**
+     * 19 Nov 2026: an unfilled marketable LIMIT entry is waited for at most 5 s (its cancel confirmed within 3 s), so another arm's entry
+     * waits no more than about that behind it, and a look of an open trade meanwhile is not held up at all.
+     */
+    @Test fun anUnfilledLimitEntryHoldsUpNoOtherEntryOrLookBeyondAFewSeconds() {
+        ArmLive.entered(ask(donchian, "open-one"))
+        val (c2, _) = other(10)
+        val (c3, s3) = other(11)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.OPEN))             // the next buy rests unfilled
+        val t0 = System.nanoTime()
+        val slow = Thread { ArmLive.entered(ask(donchian, "unfilled-slow", c = c2)) }.apply { start() }
+        Thread.sleep(300)
+        val l0 = System.nanoTime()
+        watch()                                                                    // the open trade's look, meanwhile
+        val lookMs = (System.nanoTime() - l0) / 1_000_000
+        val next = Thread { ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "next", c = c3)) }.apply { start() }
+        next.join(30_000); slow.join(30_000)
+        val nextMs = (System.nanoTime() - t0) / 1_000_000
+        assertFalse(next.isAlive); assertFalse(slow.isAlive)
+        assertTrue("a look is not held up: $lookMs ms", lookMs < 2_000)
+        assertTrue("the next entry waited about 5 s at most: $nextMs ms", nextMs < 8_500)
+        assertEquals("the unfilled one cancelled", "CANCELLED", kite.orders.values.single { it.side == "BUY" && it.symbol != sym && it.symbol != s3 }.status)
+        assertEquals(setOf("open-one", "next"), view().openReal.map { it.ref }.toSet())
+    }
 }

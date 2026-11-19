@@ -943,9 +943,10 @@ object ArmLive {
         val want = qty / ins.lot
         // 15 Nov: the funds check below reuses the fit's own read when it ran (nothing new is read for it).
         val optionBuy = a.side > 0 && a.contract.right != Right.IX && ins.exchange != "MCX"
-        // 19 Nov 2026 (Boss: "Go"; Zerodha refused MARKET option buys for "Insufficient funds" - it blocks margin for them at a protective
-        // price far above the premium): every live BUY entry goes as a marketable LIMIT at the offer plus a small buffer, never above the
-        // paper arm's own limit ([LiveMirror.entryLimit]); the lots that fit and the funds check are priced at that LIMIT.
+        // 19 Nov 2026 (Boss's explicit choice: "Go" - no shadow phase; Zerodha refused MARKET option buys for "Insufficient funds", as it
+        // blocks margin for them at a protective price far above the premium): every live BUY entry goes as a marketable LIMIT at the offer
+        // plus a small buffer, never above the paper arm's own limit ([LiveMirror.entryLimit]); the lots that fit and the funds check are
+        // priced at that LIMIT. Unfilled within [ENTRY_LIMIT_WAIT_MS] its rest is cancelled (never chased) and only what filled is booked.
         val entryPx = if (a.side > 0) LiveMirror.entryLimit(quote?.ask, last, ins.tick, a.limit) else null
         // (No usable LIMIT for a buy - a paper limit under one tick: never sent at a price above it.)
         if (a.side > 0 && entryPx == null) { notMirrored(a, "no usable entry price for ${ins.symbol}"); return@withLock }
@@ -1073,11 +1074,20 @@ object ArmLive {
         // 15 Nov: by its id in memory at once too (the order review reads it even if the labels' book could not be read just now).
         id?.let { ArmOrderLabels.answered(it, owner, labelMs()) }
         id?.let { runCatching { Strategies.tagOwner("kite:$it", owner) } }
-        var f = id?.let { runCatching { Broker.awaitOrder(it, testEntryWaitMs ?: ENTRY_WAIT_MS) }.getOrNull() }
+        // (19 Nov 2026: a buy's marketable LIMIT is waited for at most 5 s, as the Liquidity branch does, so the entry lock - other arms'
+        // entries, the lost-entry search and the start's sweep wait on it - is never held long; a sale's MARKET as before.)
+        val wait = testEntryWaitMs ?: if (o.orderType == "LIMIT" && entryPx != null) ENTRY_LIMIT_WAIT_MS else ENTRY_WAIT_MS
+        var f = id?.let { runCatching { Broker.awaitOrder(it, wait) }.getOrNull() }
         if (id != null && f?.status !in DONE) {
-            // Not finished in 15 s: the rest is cancelled so it can never fill later untracked; only what filled is booked.
+            // Not finished in the wait: the rest is cancelled so it can never fill later untracked, the cancel confirmed (up to
+            // [CANCEL_CONFIRM_MS]); only what filled is booked, with its stop.
             runCatching { Broker.cancel(id) }
             f = runCatching { Broker.orderState(id) }.getOrNull()
+            val until = System.currentTimeMillis() + CANCEL_CONFIRM_MS
+            while ((f == null || f.status !in DONE) && System.currentTimeMillis() < until) {
+                kotlinx.coroutines.delay(250)
+                f = runCatching { Broker.orderState(id) }.getOrNull() ?: f
+            }
         }
         if (f == null || f.status !in DONE) {
             // Zerodha has not said how it ended: held as unconfirmed (no second entry meanwhile) until the order book settles it.
@@ -1381,6 +1391,10 @@ object ArmLive {
 
     /** How long an entry order is waited for before its rest is cancelled (only what filled is booked). */
     private const val ENTRY_WAIT_MS = 15_000L
+    /** 19 Nov 2026: a buy's marketable entry LIMIT is waited for at most this long (then its rest is cancelled). */
+    private const val ENTRY_LIMIT_WAIT_MS = 5_000L
+    /** 19 Nov 2026: how long an entry's cancel is read again for before it is held as unconfirmed ([settle] takes it from there). */
+    private const val CANCEL_CONFIRM_MS = 3_000L
     /** TEST ONLY: [ENTRY_WAIT_MS] shortened (19 Nov 2026: the LIMIT entries' unfilled and part-filled tests). Debug builds only. */
     @Volatile internal var testEntryWaitMs: Long? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
