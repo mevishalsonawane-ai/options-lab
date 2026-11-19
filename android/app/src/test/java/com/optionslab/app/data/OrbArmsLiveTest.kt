@@ -168,6 +168,10 @@ class OrbArmsLiveTest : RobolectricTest() {
         val p = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true)
         state(positions = listOf(p))
         pass()
+        // 18 Nov 2026 (audit: B4): two reads must agree, each at least 10 s apart (entered 30 minutes ago: a read with no row counts now).
+        assertTrue("kept after one read", arm().open?.unconfirmed == true)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(11)
+        pass()
         assertNull("nothing is held", arm().open)
         assertTrue(kite.placed.isEmpty())
     }
@@ -304,20 +308,65 @@ class OrbArmsLiveTest : RobolectricTest() {
         kite.overnight(sym, 30, 180.0, product = "MIS")
         runBlocking { ArmLive.refresh() }
         pass()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(11)               // 18 Nov 2026 (audit: B4): a second read agreeing
+        pass()
         assertNull("dropped, the carried position left alone", arm().open)
         assertTrue(kite.placed.isEmpty())
     }
 
-    /** 18 Nov 2026: one whose order is not found and nothing is held waits three minutes from its entry (the book can trail), then goes. */
+    /**
+     * 18 Nov 2026: one whose order is not found and nothing is held waits three minutes from its entry (the book can trail), then goes.
+     * 18 Nov 2026 (audit: B4): only on reads that list the contract (a row at 0), two of them agreeing.
+     */
     @Test fun anUnconfirmedBuyNotFoundWaitsThreeMinutesThenIsDropped() {
         val p = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true).put("entryTime", now.toString())
         state(positions = listOf(p))
+        kite.position(sym, 0, 0.0, product = "MIS")
         pass()
         assertTrue("kept waiting", arm().open?.unconfirmed == true)
-        OrbArms.testNow = OrbArms.testNow!!.plusMinutes(4)
+        OrbArms.testNow = OrbArms.testNow!!.plusMinutes(4)              // a second read agreeing, past the three minutes
         pass()
         assertNull("nothing is held", arm().open)
         assertTrue(kite.placed.isEmpty())
+    }
+
+    /**
+     * 18 Nov 2026 (audit: B4): a lost-id entry is never dropped on reads that list no row for its contract (an empty or bad positions read)
+     * while it is young: past three minutes it is still kept; ten minutes after the entry two reads agreeing let it go.
+     */
+    @Test fun anUnconfirmedBuyIsNeverDroppedOnReadsWithNoRowForItsContract() {
+        val p = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true).put("entryTime", now.toString())
+        state(positions = listOf(p))
+        OrbArms.testNow = OrbArms.testNow!!.plusMinutes(4)
+        pass()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(11)
+        pass()
+        assertTrue("no row is no reading: kept", arm().open?.unconfirmed == true)
+        OrbArms.testNow = OrbArms.testNow!!.plusMinutes(7)
+        pass()
+        assertTrue("one read: kept", arm().open?.unconfirmed == true)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(11)
+        pass()
+        assertNull("nothing is held", arm().open)
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    /** 18 Nov 2026 (audit: B4): one read listing the contract with nothing held, then one holding it: the entry is kept with its stop. */
+    @Test fun oneShortReadThenAHeldOneKeepsTheLostEntry() {
+        val p = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true)
+        state(positions = listOf(p))
+        kite.position(sym, 0, 0.0, product = "MIS")
+        runBlocking { ArmLive.refresh() }
+        pass()
+        assertTrue("one short read: kept", arm().open?.unconfirmed == true)
+        kite.position(sym, 30, 201.0, product = "MIS")
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(11)
+        pass()
+        val kept = arm().open!!
+        assertFalse(kept.unconfirmed)
+        assertEquals(30, kept.qty)
+        assertEquals("SL", kite.placed.single().form["order_type"])
     }
 
     /**

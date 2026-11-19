@@ -3289,17 +3289,30 @@ object OrbArms {
         // the contract (MIS) that no other open live trade of this book explains is this entry's fill, kept at once with its stop and the
         // rule it entered with: (quantity, its fill). Null: the positions could not be read (kept, asked again next pass); a quantity of
         // 0: nothing unexplained is held.
+        // 18 Nov 2026 (audit: B4, a hole in the fix above: "no row for the contract" was read as "holds 0", so a lost-id entry could still
+        // be dropped at three minutes on one short read): nothing held counts only on a read that LISTS the contract, and two such reads
+        // must agree (each lost-id search is at least 10 s apart, [settleDue]) before the entry is called never bought - the first is kept
+        // and asked again (null). A read with no row is no reading at all until [NO_ROW_WAIT_MS] after the entry (a buy that reached
+        // Zerodha shows its row long before); only then may an entry Zerodha never listed go, still on two agreeing reads.
+        val key = managerId(p)
+        fun nothingHeld(): Pair<Int, Double>? {
+            if (settleZero.size > 200) settleZero.clear()
+            val n = (settleZero[key] ?: 0) + 1
+            settleZero[key] = n
+            return if (n >= 2) 0 to p.entry else null
+        }
         suspend fun unexplained(): Pair<Int, Double>? {
             // (18 Nov 2026, review: the orders read first, then the positions, so the exit coordinator can tell a positions book trailing a
             // sale that already filled - [ExitCoordinator.held] - and a lot just sold is never kept with a stop on a flat position.)
             val orders = runCatching { Broker.orders() }.getOrNull() ?: return null
             val pb = runCatching { Broker.positionBook() }.getOrNull() ?: return null
             val rows = pb.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }
-            if (rows.sumOf { it.qty } <= 0) return 0 to p.entry
+            if (rows.isEmpty() && java.time.Duration.between(p.entryTime, now()).toMillis() < NO_ROW_WAIT_MS) return null
+            if (rows.sumOf { it.qty } <= 0) return nothingHeld()
             // (Never while an arm's live copy is entering, nor before its book is read: a fill could be taken for this one's. Next pass.)
             if (ArmLive.entryInFlight || !ArmLive.view.value.loaded) return null
             val lagFree = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "ORB live", orders, first = pb) }.getOrNull() ?: return null
-            if (lagFree <= 0) return 0 to p.entry
+            if (lagFree <= 0) return nothingHeld()
             // (What explains it: this book's other open live trades on it - one still settling from its own order id too - and the arms'
             // live copies' open buys of it, from memory.)
             val others = b.positions.filter { it !== p && it.open && it.live && (!it.unconfirmed || it.entryOrderId != null) && it.kite == sym }.sumOf { it.qty } +
@@ -3315,6 +3328,8 @@ object OrbArms {
             // (Review: what a lost entry of the arms' live copies took back a moment ago counts too - never one fill taken twice.)
             val q = ArmLive.takeLost("orb", "NFO", sym, "MIS") { other -> com.optionslab.engine.orb.LiveMirror.unexplainedQty(held, today, others + other, p.qty, lot) }
             val fill = rows.singleOrNull()?.avg?.takeIf { it > 0 && others == 0 } ?: p.entry
+            if (q <= 0) return nothingHeld()
+            settleZero.remove(key)
             if (q > 0) {
                 com.optionslab.app.work.Alerts.error("$label: Zerodha did not confirm the buy of $sym and its order was not found, but Zerodha holds " +
                     "$q that no other trade explains: it is managed as this arm's trade, with its stop. Check it in Trade.", "ORB live")
@@ -3660,6 +3675,12 @@ object OrbArms {
     /** 18 Nov 2026: when each lost-reply entry ([managerId]) was last searched for (market-clock ms): at most every 10 s. Memory only; bounded. */
     private val settleAsked = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
+    /** 18 Nov 2026 (audit: B4): by lost-id entry ([managerId]), the reads in a row that listed its contract with nothing unexplained held. Memory only. */
+    private val settleZero = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    /** 18 Nov 2026 (audit: B4): how long after a lost-id entry a positions read with no row for its contract is no reading at all. */
+    private const val NO_ROW_WAIT_MS = 10 * 60_000L
+
     private fun settleDue(key: String, nowMs: Long): Boolean {
         if (settleAsked.size > 200) settleAsked.clear()
         val last = settleAsked[key]
@@ -3795,7 +3816,7 @@ object OrbArms {
     }
 
     /** The memory of [endedSaid], [restTries] and [restRefusedSaid] dropped (a new process, an erase). */
-    private fun forgetStopSaid() { endedSaid.clear(); restTries.clear(); restRefusedSaid.clear(); goneSince.clear(); goneNoRowSaid.clear(); settleAsked.clear(); goneAlertSaid.clear(); shortSince.clear() }
+    private fun forgetStopSaid() { endedSaid.clear(); restTries.clear(); restRefusedSaid.clear(); goneSince.clear(); goneNoRowSaid.clear(); settleAsked.clear(); goneAlertSaid.clear(); shortSince.clear(); settleZero.clear() }
 
     /** Cancels the stop [id] as the app's own ([ownCancels]). */
     private suspend fun cancelOwnStop(id: String) {
