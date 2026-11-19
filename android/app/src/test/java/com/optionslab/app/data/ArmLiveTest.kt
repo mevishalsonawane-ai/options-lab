@@ -2441,4 +2441,11 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue("nothing sent", kite.placed.isEmpty())
         assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("account guard: Order value"))
     }
+
+    /** A buy whose paper limit is under one tick has no usable LIMIT: it is never sent at a price above that limit; said instead. */
+    @Test fun aBuyWithNoUsableEntryLimitIsNotSent() {
+        ArmLive.entered(ask(donchian, "subtick", limit = 0.04))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("no usable entry price"))
+    }
 }

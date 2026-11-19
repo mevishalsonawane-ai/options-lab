@@ -947,6 +947,8 @@ object ArmLive {
         // price far above the premium): every live BUY entry goes as a marketable LIMIT at the offer plus a small buffer, never above the
         // paper arm's own limit ([LiveMirror.entryLimit]); the lots that fit and the funds check are priced at that LIMIT.
         val entryPx = if (a.side > 0) LiveMirror.entryLimit(quote?.ask, last, ins.tick, a.limit) else null
+        // (No usable LIMIT for a buy - a paper limit under one tick: never sent at a price above it.)
+        if (a.side > 0 && entryPx == null) { notMirrored(a, "no usable entry price for ${ins.symbol}"); return@withLock }
         val fitPx = entryPx ?: maxOf(last, quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: last, a.limit ?: 0.0)
         var fitFree: Double? = null
         if (want > 1 && optionBuy) {
@@ -972,8 +974,10 @@ object ArmLive {
             else if (a.limit != null) Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "LIMIT",
                 Kite.onTick(a.limit, ins.tick, side), ins.tick, ins.exchange, LiveMirror.TAG, multiplier = ins.multiplier)
             else Kite.Order(ins.symbol, side, qty, ins.lot, spec.product, "MARKET", null, ins.tick, ins.exchange, LiveMirror.TAG, multiplier = ins.multiplier)
-        val acct = runCatching { Broker.accountNow(needed = (entryPx ?: last) * qty * ins.multiplier) }.getOrNull()
-        Guard.check(Guard.liveOrder(o).copy(price = entryPx ?: o.price ?: last), acct).takeIf { it.isNotEmpty() }?.let { notMirrored(a, "account guard: " + it.joinToString(" ")); return@withLock }
+        // (One price for the account read and the guard: a buy's LIMIT, its ceiling; a sale never below the last price.)
+        val guardPx = entryPx ?: maxOf(last, o.price ?: last)
+        val acct = runCatching { Broker.accountNow(needed = guardPx * qty * ins.multiplier) }.getOrNull()
+        Guard.check(Guard.liveOrder(o).copy(price = guardPx), acct).takeIf { it.isNotEmpty() }?.let { notMirrored(a, "account guard: " + it.joinToString(" ")); return@withLock }
         Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last).takeIf { it.isNotEmpty() }?.let { notMirrored(a, it.joinToString("; ")); return@withLock }
         // 22 Oct: the gate's verdict stamped with this exact order's fingerprint (the paper stop it will rest with it); the door
         // recomputes it right before Zerodha and refuses a difference ([OrderVerdicts]).
@@ -1140,10 +1144,12 @@ object ArmLive {
         // paper LIMIT fills at its price, as before.)
         val raw = LiveMirror.shadowFill(buy, base.entry, quote?.bid, quote?.ask, base.tick, halfSpreadOf(base),
             if (limit != null && !buy) 0.0 else measured(com.optionslab.ira.Slippage.Leg.ENTRY, ENTRY_BASES))
-        val touch = if (buy && limit != null) quote?.ask?.takeIf { it.isFinite() && it > 0 } ?: base.entry else raw
+        // (The offer; with no book, the last price plus its half-spread on the tick, as [LiveMirror.shadowFill] prices it.)
+        val touch = if (buy && limit != null) quote?.ask?.takeIf { it.isFinite() && it > 0 }
+            ?: Kite.onTick(base.entry * (1 + halfSpreadOf(base)), base.tick, Kite.Side.BUY) else raw
         val px = if (buy && limit != null && touch <= limit + 1e-9) minOf(raw, limit) else raw
         if (limit != null && (if (buy) touch > limit + 1e-9 else px < limit - 1e-9)) {
-            notMirrored(a, "shadow: its LIMIT %.2f would not have filled at %.2f".format(Locale.ENGLISH, limit, px)); return
+            notMirrored(a, "shadow: its LIMIT %.2f would not have filled at %.2f".format(Locale.ENGLISH, limit, if (buy) touch else px)); return
         }
         var p = base.copy(entry = px, shadow = true, heldSeen = true, charges = charge(if (buy) "BUY" else "SELL", px, base.qty, base.exchange, base.symbol, base.multiplier))
         val (stop, kind) = firstStop(spec, p)
@@ -1369,7 +1375,7 @@ object ArmLive {
      */
     private val placedStops: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
-    /** TEST ONLY: the measured slippage share, in place of the fills' (19 Nov 2026: the shadow LIMIT buy's test). Debug builds only. */
+    /** TEST ONLY: the measured ENTRY slippage share, in place of the fills' (19 Nov 2026: the shadow LIMIT buy's test). Debug builds only. */
     @Volatile internal var testMeasured: Double? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
@@ -2719,7 +2725,7 @@ object ArmLive {
 
     /** The app's measured live slippage on [leg] (a share of the price; the arms' own fills first, else all; 0 until measured). */
     private fun measured(leg: com.optionslab.ira.Slippage.Leg, bases: Set<com.optionslab.ira.Slippage.Basis>): Double =
-        testMeasured ?: runCatching { com.optionslab.ira.Slippage.medianShare(FillSlippage.fills(), leg, bases, strategy = "Arms (live)") }.getOrDefault(0.0)
+        testMeasured?.takeIf { leg == com.optionslab.ira.Slippage.Leg.ENTRY } ?: runCatching { com.optionslab.ira.Slippage.medianShare(FillSlippage.fills(), leg, bases, strategy = "Arms (live)") }.getOrDefault(0.0)
 
     /** The half-spread a fill in [p]'s contract pays with no book read (the measured defaults, [com.optionslab.engine.sandbox.PaperSpread]). */
     private fun halfSpreadOf(p: Pos): Double = runCatching {
