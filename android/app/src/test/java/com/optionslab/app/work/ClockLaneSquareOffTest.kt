@@ -160,9 +160,12 @@ class ClockLaneSquareOffTest : RobolectricTest() {
         Strategies.setLiveEnabled(id, true)
         Strategies.start(id, com.optionslab.engine.strategy.RunMode.LIVE, "manual", confirmedByOwner = true, compromised = false)
         assertEquals("BUY", kite.placed.single().form["transaction_type"])
+        // The weekly leg the resolver picked (the nearest expiry on the list).
+        legSymbol = kite.placed.single().form["tradingsymbol"]!!
         id
     }
-    private fun strategySells() = kite.placed.count { it.form["tradingsymbol"] == AutomationSupport.NIFTY_CE && it.form["transaction_type"] == "SELL" }
+    private var legSymbol = ""
+    private fun strategySells() = kite.placed.count { it.form["tradingsymbol"] == legSymbol && it.form["transaction_type"] == "SELL" }
 
     /**
      * Item 2 (second review): the real daily loss limit trips while a square-off holds the turn; the running strategy's exit send waits
