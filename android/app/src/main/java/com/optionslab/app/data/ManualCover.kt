@@ -226,6 +226,9 @@ object ManualCover {
     /** TEST ONLY: whether a follow-up look is waiting or running. */
     internal fun followUpPendingForTest(): Boolean = synchronized(mem) { followJob?.isActive == true }
 
+    /** The last [kick]'s job (a test waits for it before the next test: [finishLooksForTest]). */
+    @Volatile private var kickJob: kotlinx.coroutines.Job? = null
+
     /** A [kick]'s look still running. */
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
 
@@ -237,18 +240,10 @@ object ManualCover {
         // Switched off, it looks only while one of its own protections is active (to take it off if it became a spread's leg).
         if (com.optionslab.app.BuildConfig.GOLD || (loaded && !on && !Protections.autoHint) || !running.compareAndSet(false, true)) return false
         return runCatching {
-            scope.launch { try { runCatching { run(s) } } finally { running.set(false) } }
+            kickJob = scope.launch { try { runCatching { run(s) } } finally { running.set(false) } }
             true
         }.getOrElse { running.set(false); false }
     }
-
-    /**
-     * 20 Nov 2026 (minor fixes, item 7: ManualCoverTest failed once in CI with nothing placed - a cold, loaded test JVM let a look's
-     * 3 s / 8 s read budget run out, so the look stopped before its sighting): TEST ONLY, every read budget of a look replaced by this
-     * (null in the app, always: the budgets are as written).
-     */
-    @Volatile internal var testBudgetMs: Long? = null
-    private fun ms(budget: Long): Long = testBudgetMs ?: budget
 
     /** TEST ONLY: whether a [kick]'s look is still running. */
     internal fun kickRunningForTest(): Boolean = running.get()
@@ -264,23 +259,23 @@ object ManualCover {
             tally = tally.on(day)
         }
         // The pass's one shared read finds the candidates; a fresh read is made before anything is placed (below).
-        val book = Broker.within(ms(8_000)) { Broker.passPositionBook() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        val book = Broker.within(8_000) { Broker.passPositionBook() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         val all = posOf(book)
         val candidates = all.filter { ManualCoverRule.covered(it) }
         val today0 = day.atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli()
         // 7 Nov, second review: what ended in the last week, by when it ENDED ([Protections.Item.endedAt]), not when it was set.
         val from = day.minusDays(ManualCoverRule.CARRIED_DAYS - 1).atStartOfDay(com.optionslab.engine.IST).toInstant().toEpochMilli()
-        val prot = withTimeoutOrNull(ms(3_000)) { runCatching { Protections.active() to Protections.endedSince(from) }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        val prot = withTimeoutOrNull(3_000) { runCatching { Protections.active() to Protections.endedSince(from) }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         // 7 Nov, second review: the protections this switch set (only those are ever taken off by it).
         val autos = prot.first.filter { it.live && it.auto && it.note != "removing" }
         if (candidates.isEmpty() && autos.isEmpty()) { synchronized(mem) { looks.clear() }; return ManualCoverRule.FollowUp.NONE }
         // 7 Nov, fourth review: switched off with none of its own protections, there is nothing to do: nothing more is read.
         if (!placing && autos.isEmpty()) { synchronized(mem) { looks.clear() }; return ManualCoverRule.FollowUp.NONE }
         // Zerodha's orders (working sells open shorts too), and the stock held for a stock option: not read in time, nothing.
-        val orders = Broker.within(ms(8_000)) { Broker.orders() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        val orders = Broker.within(8_000) { Broker.orders() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         // 7 Nov, fourth review: the spread and hedge decision (taking one off, leaving one alone, saying so) on Zerodha's positions
         // read now, after the orders, never the pass's shared read (it can be some seconds old).
-        val now0 = Broker.within(ms(8_000)) { Broker.positionBook() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        val now0 = Broker.within(8_000) { Broker.positionBook() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         val allNow = posOf(now0)
         val equity = equityFor(candidates.map { it.symbol } + autos.map { it.symbol }) ?: return ManualCoverRule.FollowUp.READ_FAILED
         val names = namesFor(allNow.map { it.symbol } + all.map { it.symbol } + orders.map { it.symbol })
@@ -292,7 +287,7 @@ object ManualCover {
         // What the app follows (arms, Pine, arms' live trades, protections). A book not read in time: nothing this look.
         val beliefs = ZerodhaSync.beliefs() ?: return ManualCoverRule.FollowUp.READ_FAILED
         // The Strategy Module's live runs' legs too (not in the sync's beliefs): never a manual position.
-        val legs = withTimeoutOrNull(ms(3_000)) { runCatching { Strategies.liveLegSymbols() }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        val legs = withTimeoutOrNull(3_000) { runCatching { Strategies.liveLegSymbols() }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         val first = ManualCoverRule.Facts(
             followed = beliefs.map { it.symbol }.toSet() + legs,
             protectedNow = prot.first.filter { it.live }.map { it.symbol }.toSet(),
@@ -318,8 +313,8 @@ object ManualCover {
         }
         if (open.isEmpty()) { synchronized(mem) { looks.keepOnly(emptySet()) }; return ManualCoverRule.FollowUp.NONE }
         untrackedExits(d, open, orders, prot.first)
-        val gtts = Broker.within(ms(8_000)) { Broker.gtts() } ?: return ManualCoverRule.FollowUp.READ_FAILED
-        val owners = withTimeoutOrNull(ms(3_000)) { runCatching { Strategies.owners() }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        val gtts = Broker.within(8_000) { Broker.gtts() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        val owners = withTimeoutOrNull(3_000) { runCatching { Strategies.owners() }.getOrNull() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         val facts = first.copy(
             workingOrders = workingKeys(orders),
             activeGtts = gtts.filter { it.active }.map { "${it.exchange}:${it.symbol}" }.toSet(),
@@ -346,7 +341,7 @@ object ManualCover {
         val after = if (waiting) ManualCoverRule.FollowUp.SIGHTED else ManualCoverRule.FollowUp.NONE
         if (due.isEmpty()) return after
         // Placing: Zerodha's positions read now (the pass's shared read is for words only), the same quantity still held.
-        val fresh = Broker.within(ms(8_000)) { Broker.positionBook() } ?: return ManualCoverRule.FollowUp.READ_FAILED
+        val fresh = Broker.within(8_000) { Broker.positionBook() } ?: return ManualCoverRule.FollowUp.READ_FAILED
         var next = after
         for (p in due) {
             val rows = fresh.net.filter { it.symbol == p.symbol && it.exchange == p.exchange && it.product == p.product }
@@ -399,7 +394,7 @@ object ManualCover {
      */
     private suspend fun equityFor(symbols: List<String>): Set<String>? {
         if (symbols.none { ManualCoverRule.underlying(it) !in ManualCoverRule.INDEX_UNDERLYINGS }) return emptySet()
-        return Broker.within(ms(8_000)) { Broker.holdings() }?.filter { it.qty + it.t1 > 0 }?.map { it.symbol }?.toSet()
+        return Broker.within(8_000) { Broker.holdings() }?.filter { it.qty + it.t1 > 0 }?.map { it.symbol }?.toSet()
     }
 
     /**
@@ -491,10 +486,10 @@ object ManualCover {
         val k = "$d|${p0.lookKey}"
         val key = "${p0.exchange}:${p0.symbol}"
         // 7 Nov, review: the lot and tick read with a deadline (protectLive then finds them in the day's memory); not read: next look.
-        val spec = Broker.within(ms(8_000)) { Broker.spec(p0.exchange, p0.symbol) } ?: return true
+        val spec = Broker.within(8_000) { Broker.spec(p0.exchange, p0.symbol) } ?: return true
         val tick = spec.tickSize.takeIf { it > 0 } ?: 0.05
         // 7 Nov, review (a 5% stop is tight): the price read fresh just before placing; not read: next look (no attempt counted).
-        val last = Broker.within(ms(5_000)) { Broker.quotesFresh(listOf(key)) }?.get(key)?.last?.takeIf { it > 0 } ?: return true
+        val last = Broker.within(5_000) { Broker.quotesFresh(listOf(key)) }?.get(key)?.last?.takeIf { it > 0 } ?: return true
         val p = p0.copy(last = last)
         val plan = ManualCoverRule.plan(p.avg, p.last, tick)
         val stop: Double; val target: Double?
@@ -564,12 +559,12 @@ object ManualCover {
      */
     private suspend fun recheck(p: ManualCoverRule.Pos, lot: Int, names: Map<String, String>): Pair<ManualCoverRule.Skip?, String>? {
         val again = ManualCoverRule.CHECKED_AGAIN
-        val orders = Broker.within(ms(8_000)) { Broker.orders() } ?: return null to "$again: Zerodha's orders could not be read"
-        val positions = Broker.within(ms(8_000)) { Broker.positionBook() } ?: return null to "$again: Zerodha's positions could not be read"
+        val orders = Broker.within(8_000) { Broker.orders() } ?: return null to "$again: Zerodha's orders could not be read"
+        val positions = Broker.within(8_000) { Broker.positionBook() } ?: return null to "$again: Zerodha's positions could not be read"
         val equity = equityFor(listOf(p.symbol)) ?: return null to "$again: the holdings could not be read"
-        val tracked = withTimeoutOrNull(ms(3_000)) { runCatching { trackedIds(Protections.active()) }.getOrNull() }
+        val tracked = withTimeoutOrNull(3_000) { runCatching { trackedIds(Protections.active()) }.getOrNull() }
             ?: return null to "$again: the protections could not be read"
-        val heldNow = Broker.within(ms(8_000)) { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, positions) }
+        val heldNow = Broker.within(8_000) { ExitCoordinator.held(p.exchange, p.symbol, p.product, WHO, orders, positions) }
             ?: return null to "$again: what is held could not be read"
         val sendable = com.optionslab.engine.risk.ExitQty.sendable(heldNow, 0, p.qty, lot)
         return ManualCoverRule.precheck(p, posOf(positions), sellsOf(orders, tracked), heldTodayOf(positions), equity, sendable, p.qty, names)
@@ -585,8 +580,8 @@ object ManualCover {
         val turn = ExitCoordinator.tryEnter(p.exchange, p.symbol, WHO) ?: return ManualCoverRule.precheckInLock(true, false, true, false, true, false)
         // 7 Nov, fourth review: the turn is always given back if anything throws before it is handed on (a cancellation too).
         try {
-            val orders = Broker.within(ms(2_500)) { ExitCoordinator.orders(p.exchange, p.symbol, WHO) }
-            val gtts = if (orders == null) null else Broker.within(ms(2_500)) { ExitCoordinator.gtts(p.exchange, p.symbol, WHO) }
+            val orders = Broker.within(2_500) { ExitCoordinator.orders(p.exchange, p.symbol, WHO) }
+            val gtts = if (orders == null) null else Broker.within(2_500) { ExitCoordinator.gtts(p.exchange, p.symbol, WHO) }
             val r = ManualCoverRule.precheckInLock(true, true, orders != null,
                 orders?.any { it.working && it.exchange == p.exchange && it.symbol == p.symbol } == true, gtts != null,
                 gtts?.any { it.active && it.exchange == p.exchange && it.symbol == p.symbol } == true)
@@ -639,10 +634,25 @@ object ManualCover {
 
     /** TEST ONLY: the switch as given (tests start it off, so no other test's live positions are covered), memory cleared. */
     internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) {
+        finishLooksForTest()
         this.on = on; this.loaded = loaded; switched = false
-        followUpsOn = false; followMsForTest = null; followGate = null; testBudgetMs = null
+        followUpsOn = false; followMsForTest = null; followGate = null
         clearMemory()
         publish()
+    }
+
+    /**
+     * 20 Nov 2026 (minor fixes, item 7: ManualCoverTest's first test failed in CI with nothing placed, in 1.2 s - the test before it,
+     * aRetryCoversItOnceTheReadWorksAgain, ended while its follow-up look was still recording the protection it had just placed, and
+     * that look then wrote it into the next test's fresh book, so the next test's position read as protected): TEST ONLY, a follow-up
+     * look or a [kick]'s look still running finishes before the reset (one still waiting is cancelled, as [clearMemory] does).
+     */
+    internal fun finishLooksForTest(timeoutMs: Long = 15_000L) {
+        val follow = synchronized(mem) { followJob?.also { if (!followLooking) it.cancel() } }
+        val kicked = kickJob
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeoutOrNull(timeoutMs) { follow?.join(); kicked?.join() }
+        }
     }
 
     /** TEST ONLY: the context its notification is posted with ([init] sets it in the app; null: the banner alone). */
