@@ -51,7 +51,12 @@ object Reconcile {
      * not own while it is in Paper mode) - told once while it lasts, like one with a resting stop.
      */
     data class Finding(val symbol: String, val qty: Int, val stop: Boolean?, val kind: Kind = Kind.UNOWNED, val appQty: Int? = null,
-                       val known: Boolean = false) {
+                       val known: Boolean = false,
+                       /**
+                        * 20 Nov 2026 (delta review): an unowned position seen while the app is in Paper mode (and no live book holds
+                        * anything) - said as such, and told once only when an exit stop rests at Zerodha; otherwise it repeats.
+                        */
+                       val paper: Boolean = false) {
         val key: String get() = "${kind.name}:$symbol"
     }
 
@@ -82,11 +87,11 @@ object Reconcile {
     // as the app knows them. An oversized or wrong-side position is judged on its size and side only (its stop is not: the arm's own stop
     // covers the arm's units, never the extra ones).
     fun find(positions: Map<String, Int>, owned: Set<String>, orders: List<Order>?, gtts: List<Gtt>?,
-             ownedQty: Map<String, Int?> = emptyMap(), known: Set<String> = emptySet()): List<Finding> {
+             ownedQty: Map<String, Int?> = emptyMap(), known: Set<String> = emptySet(), paper: Set<String> = emptySet()): List<Finding> {
         val out = ArrayList<Finding>()
         for ((s, q) in positions.toSortedMap()) {
             if (q == 0 || s.isBlank()) continue
-            if (s !in owned) { out += Finding(s, q, hasStop(s, q, orders, gtts), known = s in known); continue }
+            if (s !in owned) { out += Finding(s, q, hasStop(s, q, orders, gtts), known = s in known, paper = s in paper && s !in known); continue }
             mismatch(q, ownedQty[s])?.let { out += Finding(s, q, null, it, ownedQty[s]) }
         }
         return out
@@ -121,7 +126,8 @@ object Reconcile {
 
     /** The RISK notice's words (names and quantities only, never rupees). */
     fun say(f: Finding): String = when (f.kind) {
-        Kind.UNOWNED -> "Zerodha holds ${f.qty} ${f.symbol}, which no book of the app follows" + (if (f.known) " (your own position, as the app knows it)" else "") +
+        Kind.UNOWNED -> (if (f.paper) "Zerodha holds ${f.qty} ${f.symbol}: a Zerodha position no book follows (app in Paper)"
+            else "Zerodha holds ${f.qty} ${f.symbol}, which no book of the app follows" + (if (f.known) " (your own position, as the app knows it)" else "")) +
             when (f.stop) {
                 true -> " (an exit stop rests at Zerodha)"
                 false -> ", and no exit stop rests at Zerodha"

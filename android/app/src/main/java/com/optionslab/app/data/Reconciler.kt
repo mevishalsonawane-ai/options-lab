@@ -98,21 +98,28 @@ object Reconciler {
         // Only now the order book and the GTTs (whether an exit stop rests); either unread is "unknown".
         val orders = Broker.within(WAIT_MS) { Broker.ordersRecon() }?.map { Reconcile.Order(it.symbol, it.side, it.type, it.working) }
         val gtts = Broker.within(WAIT_MS) { Broker.gtts() }?.map { Reconcile.Gtt(it.symbol, it.active, it.legSides) }
-        return Reconcile.find(positions, owned, orders, gtts, ownedQty, known(positions.keys - owned)) to true
+        val unowned = positions.keys - owned
+        return Reconcile.find(positions, owned, orders, gtts, ownedQty, known(unowned), paperSide(unowned)) to true
     }
 
     /**
      * 19 Nov 2026 (second review): of the positions no book owns, those that are Boss's own as the app knows them - seen or left alone
-     * on purpose by "Stop and target on my manual positions", or any at all while the app is in Paper mode (no automatic live trade
-     * can be open then). Told once while they last, not every 5 minutes.
+     * on purpose by "Stop and target on my manual positions". Told once while they last, not every 5 minutes.
      */
-    // Review: Paper mode counts only while no live book holds anything (an arm's live trade, a live protection, Pine's live holding, a
-    // live MCX position, or one being recovered): live positions outlive a switch to Paper, and an orphan of theirs must repeat.
     private fun known(unowned: Set<String>): Set<String> {
         if (unowned.isEmpty()) return emptySet()
-        val paper = runCatching { !AppSettings.load().live }.getOrDefault(false)
-        if (paper && !liveBookHolds()) return unowned
         return unowned intersect runCatching { ManualCover.knownSymbols() }.getOrDefault(emptySet())
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): the positions no book owns while the app is in Paper mode and no live book holds anything (live
+     * positions outlive a switch to Paper, so an orphan of theirs is never counted here). Said as "app in Paper"; told once only when an
+     * exit stop rests at Zerodha, otherwise every 5 minutes like any unowned position.
+     */
+    private fun paperSide(unowned: Set<String>): Set<String> {
+        if (unowned.isEmpty()) return emptySet()
+        val paper = runCatching { !AppSettings.load().live }.getOrDefault(false)
+        return if (paper && !liveBookHolds()) unowned else emptySet()
     }
 
     /** Any live book holds (or is recovering) something (memory hints; a failure counts as yes). */

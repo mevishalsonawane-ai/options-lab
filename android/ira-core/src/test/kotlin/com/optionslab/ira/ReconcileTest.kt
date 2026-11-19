@@ -70,6 +70,25 @@ class ReconcileTest {
         assertTrue(Reconcile.say(found[0]).contains("your own position"), Reconcile.say(found[0]))
     }
 
+    /** 20 Nov 2026 (delta review): Paper mode's unowned positions repeat unless a stop rests, and are said as "app in Paper". */
+    @Test fun paperModesUnownedPositionsRepeatUnlessAStopRests() {
+        val noStop = Reconcile.find(mapOf(ce to 75), emptySet(), emptyList(), emptyList(), paper = setOf(ce))
+        assertTrue(noStop.single().paper && !noStop.single().known)
+        val s = Reconcile.say(noStop.single())
+        assertTrue(s.contains("a Zerodha position no book follows (app in Paper)") && !s.contains("your own position"), s)
+        val t = Reconcile.Tracker()
+        t.step(0L, noStop, true)
+        assertEquals(noStop, t.step(60_000L, noStop, true))
+        assertEquals(noStop, t.step(360_000L, noStop, true), "no stop: every 5 minutes")
+        val stop = Reconcile.find(mapOf(ce to 75), emptySet(), listOf(Reconcile.Order(ce, "SELL", "SL-M", true)), emptyList(), paper = setOf(ce))
+        val t2 = Reconcile.Tracker()
+        t2.step(0L, stop, true)
+        assertEquals(stop, t2.step(60_000L, stop, true))
+        assertTrue(t2.step(360_000L, stop, true).isEmpty(), "a stop rests: told once")
+        // Known to the manual-positions switch wins over Paper's wording.
+        assertFalse(Reconcile.find(mapOf(ce to 75), emptySet(), null, null, known = setOf(ce), paper = setOf(ce)).single().paper)
+    }
+
     /** 19 Nov 2026 (second review): Zerodha holding more than the books own is a duplicate or oversized fill; less never is. */
     @Test fun moreAtZerodhaThanTheBooksOwnIsFlaggedLessNever() {
         val owned = setOf(ce, pe, "X")

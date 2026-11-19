@@ -134,15 +134,27 @@ class ReconcilerTest : RobolectricTest() {
         } finally { ManualCover.resetForTest() }
     }
 
-    /** 19 Nov 2026 (second review): in Paper mode no automatic live trade can be open, so a Zerodha position is Boss's: told once. */
-    @Test fun inPaperModeAZerodhaPositionIsToldOnce() {
+    /**
+     * 20 Nov 2026 (delta review): in Paper mode a Zerodha position no book follows is said as "(app in Paper)" and still repeats every
+     * 5 minutes with no exit stop resting; with one resting at Zerodha it is told once.
+     */
+    @Test fun inPaperModeAnUnownedPositionRepeatsUnlessAStopRests() {
         AutomationSupport.liveSettings(live = false)
         kite.position(other, -30, 210.0, product = "NRML")
         runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L) }
-        assertNotNull(risk())
+        val text = Background.text(risk()!!).orEmpty()
+        assertTrue(text, text.contains("a Zerodha position no book follows (app in Paper)") && !text.contains("your own position"))
         cancelAll()
         runBlocking { Reconciler.step(context, t0 + 360_000L) }
-        assertNull(risk())
+        assertNotNull("no stop rests: told again after 5 minutes", risk())
+        cancelAll()
+        kite.restsInKite(other, "BUY", 30, 260.0, type = "SL-M", product = "NRML")
+        Reconciler.resetForTest()
+        runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L) }
+        assertNotNull(risk())
+        cancelAll()
+        runBlocking { Reconciler.step(context, t0 + 360_000L); Reconciler.step(context, t0 + 720_000L) }
+        assertNull("a stop rests: told once", risk())
     }
 
     /**
