@@ -256,7 +256,8 @@ class PassedArmsHostTest : RobolectricTest() {
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
         val p = PassedArmsHost.view.value.open.single { it.shadow != PassedArmsHost.SHADOW_OFF }
         val (buy, stop) = kite.placed
-        assertEquals(mapOf("tradingsymbol" to sym, "transaction_type" to "BUY", "order_type" to "MARKET", "quantity" to "65", "tag" to "iraarm"),
+        // (19 Nov 2026, Boss: "Go": the arms' live buy goes as a marketable LIMIT, the offer plus its buffer.)
+        assertEquals(mapOf("tradingsymbol" to sym, "transaction_type" to "BUY", "order_type" to "LIMIT", "quantity" to "65", "tag" to "iraarm"),
             buy.form.filterKeys { it in setOf("tradingsymbol", "transaction_type", "order_type", "quantity", "tag") })
         assertEquals(mapOf("transaction_type" to "SELL", "order_type" to "SL", "trigger_price" to "85.00", "quantity" to "65"),
             stop.form.filterKeys { it in setOf("transaction_type", "order_type", "trigger_price", "quantity") })

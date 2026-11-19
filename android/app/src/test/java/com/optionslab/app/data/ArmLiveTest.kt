@@ -108,7 +108,8 @@ class ArmLiveTest : RobolectricTest() {
             val (c, s) = cs[i]
             ArmLive.entered(ask(spec.key, c = c))
             val (buy, stop) = kite.placed.also { assertEquals(spec.key + " " + view().refused[spec.key], 2, it.size) }
-            assertEquals(spec.key, mapOf("tradingsymbol" to s, "transaction_type" to "BUY", "order_type" to "MARKET", "quantity" to "30",
+            // (19 Nov 2026, Boss: "Go": a live buy goes as a marketable LIMIT, the offer plus its buffer.)
+            assertEquals(spec.key, mapOf("tradingsymbol" to s, "transaction_type" to "BUY", "order_type" to "LIMIT", "quantity" to "30",
                 "product" to "MIS", "tag" to "iraarm"), form(buy, "tradingsymbol", "transaction_type", "order_type", "quantity", "product", "tag"))
             // -15% of the paper fill on the live fill (the same points for the ORB family: 200 -> 170 both ways), SL with its limit; a
             // close-judged arm (Hero, the Hero ticket) rests only its -80% disaster stop (40, limit 2 under it).
