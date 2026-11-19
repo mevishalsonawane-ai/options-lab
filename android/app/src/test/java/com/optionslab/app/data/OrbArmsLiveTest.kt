@@ -342,6 +342,54 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals("30", kite.placed.single { it.form["order_type"] == "SL" }.form["quantity"])
     }
 
+    /**
+     * 19 Nov 2026 (final check): Zerodha holds a lot nothing explains, but these arms' own orders today do not account for it (their buy went
+     * with a trade Boss closed in Kite; the lot held now came by an order the book does not show): not taken back, and never silent - Boss
+     * is told once.
+     */
+    @Test fun aHeldLotTheSweepCannotAccountForIsSaid() {
+        val closed = position("orb", 30, 200.0, entryId = "E9").put("exit", 205.0).put("exitTime", ago(10).toString()).put("why", "closed_by_you")
+        kite.boughtInKite(sym, 30, 200.0, tag = "iraorb")                 // that trade's buy (its id not kept on the row)
+        kite.soldInKite(sym, 30, 205.0)                                    // Boss closed it in Kite
+        kite.position(sym, 30, 200.0, product = "MIS")                     // and 30 are held again
+        kite.dayBought["NFO:$sym:MIS"] = 60
+        state(positions = listOf(closed))
+        restart()
+        pass()
+        assertNull("not taken back", arm().open)
+        assertEquals(1, AutomationSupport.alerts().count { "Zerodha holds 30 of $sym that no trade here" in it })
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(40)
+        pass()
+        assertEquals("once", 1, AutomationSupport.alerts().count { "Zerodha holds 30 of $sym that no trade here" in it })
+    }
+
+    /**
+     * 19 Nov 2026 (final check): a lost entry waits on a still-working buy of these arms at most 90 s: its cancel does not land, so after
+     * that what Zerodha holds is taken back with its stop, and Boss is told.
+     */
+    @Test fun aLostEntryWaitsOnAWorkingBuyNinetySecondsAtMost() {
+        val lost = position("orb", 30, 200.0, entryId = null).put("unconfirmed", true).put("entryTime", now.plusMinutes(5).toString())
+        state(positions = listOf(lost))
+        val id = kite.restingInKite(sym, "BUY", 60, 201.0, tag = "iraorb")
+        kite.orders.getValue(id).apply { filled = 30; avg = 200.0 }
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.dayBought["NFO:$sym:MIS"] = 30
+        kite.down += "/orders/regular/$id"                                // its cancel never lands
+        runBlocking { ArmLive.refresh() }
+        pass()
+        assertTrue("waiting", arm().open!!.unconfirmed)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(60)
+        pass()
+        assertTrue("still waiting at 60 s", arm().open!!.unconfirmed)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(31)
+        pass()
+        val p = arm().open!!
+        assertFalse("taken back after 90 s", p.unconfirmed)
+        assertEquals(30, p.qty)
+        assertTrue(kite.placed.any { it.form["order_type"] == "SL" })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "kept working for over 90 s" in it })
+    }
+
     /** 19 Nov 2026 (review): the start-up sweep never cancels a working buy that another book's label names - it is not these arms'. */
     @Test fun theSweepLeavesAnotherBooksWorkingBuyAlone() {
         state()

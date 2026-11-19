@@ -547,4 +547,69 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals(listOf(30, 30), open.map { it.qty }.sorted())
         assertEquals(kite.orders.keys.last(), open.first { it.stopOrderId != null }.stopOrderId)
     }
+
+    // ---- final check, 19 Nov: the re-rest's back-off, the cap on a stop taken, stops placed earlier in the pass ----------------
+
+    /**
+     * 19 Nov 2026 (final check): nothing left to cover (another book's sale and an unclaimed stop of another quantity - never taken - cover
+     * all held): the re-rest counts no try, so its "no stop can rest" word really comes once each minute.
+     */
+    @Test fun nothingLeftToCoverIsSaidEachMinuteBesideAStopOfAnotherQuantity() {
+        OrbArms.testNow = OrbArms.testNow!!.withSecond(0).withNano(0)
+        state(listOf(position("orb", 60, 200.0, "E1", stopId = null, stop = 160.0)))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        val other = kite.restingInKite(sym, "SELL", 30, 260.0, tag = "iraalgostrat")
+        runBlocking { Strategies.tagOwner("kite:$other", "Iron fly · exit") }
+        val stray = stopOrder(60, 150.0, 142.0)                            // unclaimed, for 60: never taken for this trade's 30 left
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        val said = { AutomationSupport.alerts().count { "no stop can rest at Zerodha for $sym" in it } }
+        kite.requests.clear()
+        pass()
+        assertEquals(1, said())
+        assertTrue("nothing placed", kite.placed.isEmpty())
+        assertEquals("the other quantity's stop left alone", 60, kite.order(stray).qty)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(20)
+        pass()
+        assertEquals("once in the minute", 1, said())
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(60)
+        pass()
+        assertEquals("again the next minute", 2, said())
+    }
+
+    /**
+     * 19 Nov 2026 (final check): an unclaimed stop of these arms is taken for no more than is held less the other working sales - never
+     * grown past it - and the trade split when that is less.
+     */
+    @Test fun anUnclaimedStopIsNeverGrownPastWhatTheOtherSalesLeave() {
+        val buy = kite.boughtInKite(sym, 60, 200.0, tag = "iraorb")       // the entry's own order: its Zerodha time is known
+        state(listOf(position("orb", 60, 200.0, buy, stopId = null, stop = 160.0)))
+        kite.dayBought["NFO:$sym:MIS"] = 60
+        val other = kite.restingInKite(sym, "SELL", 30, 260.0, tag = "iraalgostrat")
+        runBlocking { Strategies.tagOwner("kite:$other", "Iron fly · exit") }
+        val stray = stopOrder(15, 160.0, 152.0)
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.requests.clear()
+        pass()
+        assertEquals("grown only to the 30 the other sale leaves", 30, kite.order(stray).qty)
+        assertTrue("nothing new placed", kite.placed.isEmpty())
+        val open = today("orb").filter { it.open }
+        assertEquals(listOf(30, 30), open.map { it.qty }.sorted())
+        assertEquals(stray, open.single { it.stopOrderId != null }.stopOrderId)
+    }
+
+    /**
+     * 19 Nov 2026 (final check): two trades on one contract both missing their stops, another book's sale covering half of what is held:
+     * the first stop placed this pass is counted for the second - one stop, never two beside the other sale.
+     */
+    @Test fun aStopPlacedEarlierInThePassCountsForTheNextTradesCap() {
+        state(listOf(position("orb", 30, 200.0, "E1", stopId = null, stop = 160.0),
+            position("orb_fresh", 30, 200.0, "E2", stopId = null, stop = 160.0).put("entryTime", ago(20).toString())))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        val other = kite.restingInKite(sym, "SELL", 30, 260.0, tag = "iraalgostrat")
+        runBlocking { Strategies.tagOwner("kite:$other", "Iron fly · exit") }
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)
+        kite.requests.clear()
+        pass()
+        assertEquals("one stop for the 30 the other sale leaves", listOf("30"), kite.placed.filter { it.form["order_type"] == "SL" }.map { it.form["quantity"] })
+    }
 }
