@@ -51,7 +51,10 @@ class LiquiditySwitchTimelineTest : RobolectricTest() {
         fun flags(v: Boolean) = JSONObject().apply { books.forEach { put(it, v) } }
         AutomationSupport.orbState(context, JSONObject().put("armed", flags(true)).put("auto", flags(true)).put("liveOk", flags(false))
             .put("migrated", JSONArray().put(OrbArms.OFF_LOSERS).put(com.optionslab.engine.orb.RetiredArms.MIGRATION).put(com.optionslab.engine.orb.RetiredArms.UNRETIRE)
-                .put(com.optionslab.engine.orb.ParkedArms.MIGRATION).put(com.optionslab.engine.orb.FamilyPark.MIGRATION))
+                .put(com.optionslab.engine.orb.ParkedArms.MIGRATION).put(com.optionslab.engine.orb.FamilyPark.MIGRATION)
+                // 20 Nov 2026 (minor fixes, item 7: this test failed on main): the MIDCPNIFTY books' 7 Oct join marked done too, so it never
+                // switches them on beside this test's two books - the clearance then names exactly BANKNIFTY 15-min and 5-min.
+                .put(com.optionslab.engine.orb.LiquidityRules.MIDCP_JOIN))
             .put("positions", JSONArray()))
         assertTrue(runBlocking { OrbArms.liquidityLiveCleared() }.let { it.getValue("liquidity15") && it.getValue("liquidity5") })
         val deadline = System.currentTimeMillis() + 10_000

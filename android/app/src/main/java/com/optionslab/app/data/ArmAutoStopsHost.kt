@@ -34,14 +34,29 @@ import java.time.LocalDate
 object ArmAutoStopsHost {
     @Volatile private var state = ArmAutoStops.State()
     @Volatile private var loaded = false
+    /** 20 Nov 2026 (minor fixes, item 3): why Boss's one-time choice was not applied here (a new or erased phone, a restore); null: applied or unknown. */
+    @Volatile private var notApplied: ArmAutoStops.NotApplied? = null
+    /** The last read of the switches failed (the card says so instead of "Reading..." for ever). */
+    @Volatile private var readFailed = false
     /** The rules Boss switched in this process (the start's late read never overrides them). Under [lock]. */
     private val switched = HashSet<Rule>()
     private val lock = Any()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Bot settings' rows and the arm rows: each switch, and whether it was read. */
-    data class View(val loaded: Boolean = false, val state: ArmAutoStops.State = ArmAutoStops.State()) {
+    data class View(val loaded: Boolean = false, val state: ArmAutoStops.State = ArmAutoStops.State(),
+                    val notApplied: ArmAutoStops.NotApplied? = null, val readFailed: Boolean = false) {
         fun isOn(r: Rule): Boolean = state.isOn(r)
+        /**
+         * 20 Nov 2026 (minor fixes, item 3): the card's notice when Boss's 19 Nov choice was not applied - the switches unreadable, the
+         * choice still waiting on a read, a new or erased phone, or a restore - saying why and how to switch one off (PIN). Null: none.
+         */
+        fun notice(): String? = when {
+            !loaded -> if (readFailed) ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.UNREAD, state, switchesShown = false) else null
+            // (Review: the first choice ran and only Jarvis's cutoff step waits - the choice stands, nothing to say.)
+            !state.ready -> if (state.migrated) null else ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.UNREAD, state)
+            else -> ArmAutoStops.notAppliedNote(notApplied, state)
+        }
         /** The arm row's line for [source] ([ArmAutoStops.rowLine]); null before the read, for another arm, or with all of them on. */
         fun rowLine(source: String): String? = if (!loaded) null else ArmAutoStops.rowLine(state, source)
     }
@@ -65,10 +80,15 @@ object ArmAutoStopsHost {
             ArmAutoStops.decode({ r -> SecurePrefs.getBoolean(r.prefKey, true) }, { r -> SecurePrefs.getString(r.offAtKey) },
                 SecurePrefs.getString(ArmAutoStops.HELD_KEY), SecurePrefs.getBoolean(ArmAutoStops.MIGRATION_KEY, false),
                 SecurePrefs.getBoolean(ArmAutoStops.CUTOFF_MIGRATION_KEY, false))
-        }.getOrNull() ?: return     // unreadable now: the defaults stay (every rule on), read again next time
+        }.getOrNull()
+        if (saved == null) { readFailed = true; publish(); return }     // unreadable now: the defaults stay (every rule on), read again next time
+        // Why the choice was not applied, as kept (one set in memory - a restore's, an erase's - stays).
+        val why = runCatching { ArmAutoStops.NotApplied.ofKey(SecurePrefs.getString(ArmAutoStops.NOT_APPLIED_KEY)) }.getOrNull()
         synchronized(lock) {
             state = merged(saved, state)
             loaded = true
+            readFailed = false
+            if (notApplied == null) notApplied = why
         }
         publish()
     }
@@ -83,7 +103,7 @@ object ArmAutoStopsHost {
             migrated = saved.migrated || now.migrated, cutoffMigrated = saved.cutoffMigrated || now.cutoffMigrated)
     }
 
-    private fun publish() { runCatching { _view.value = View(loaded, state) } }
+    private fun publish() { runCatching { _view.value = View(loaded, state, notApplied, readFailed) } }
 
     private fun save(s: ArmAutoStops.State) { runCatching { SecurePrefs.putAllSoon(ArmAutoStops.encode(s)) } }
 
@@ -129,12 +149,13 @@ object ArmAutoStopsHost {
         val held = if (!on && rule == Rule.PAPER_ACCOUNT) runCatching { BossRiskHost.refreshView(); BossRiskHost.accountKeyNow() }.getOrNull() else null
         val out = synchronized(lock) {
             val o = ArmAutoStops.set(state, rule, on, System.currentTimeMillis(), pinConfirmed, byVoice, held)
-            if (o.changed) { state = o.state; switched += rule }
+            if (o.changed) { state = o.state; switched += rule; notApplied = null }
             o
         }
         if (!out.changed) return out.said
-        // Only this rule's keys (review: never the others' nor the one-time choice's).
-        runCatching { SecurePrefs.putAllSoon(ArmAutoStops.encodeRule(out.state, rule)) }
+        // Only this rule's keys (review: never the others' nor the one-time choice's). 20 Nov 2026 (review): Boss set one himself - the
+        // "not applied" notice is over (his own choices stand).
+        runCatching { SecurePrefs.putAllSoon(ArmAutoStops.encodeRule(out.state, rule) + (ArmAutoStops.NOT_APPLIED_KEY to "")) }
         publish()
         runCatching { Diag.record("autostops", "${rule.switch}: ${if (on) "off → on" else "on → off"} (by you${if (on) "" else ", with your PIN"})") }
         if (log) runCatching { com.optionslab.app.ira.Autopilot.logArmAutoStop(rule, on, if (on) ArmAutoStops.onReason(rule) else ArmAutoStops.offReason(rule, stoppedBy(rule))) }
@@ -166,8 +187,9 @@ object ArmAutoStopsHost {
         // never marked done on a guess.
         val had = existed ?: tradedBeforeChoice() ?: return false
         if (!had) {
-            synchronized(lock) { state = state.copy(migrated = true, cutoffMigrated = true) }
-            runCatching { SecurePrefs.putAllSoon(mapOf(ArmAutoStops.MIGRATION_KEY to true, ArmAutoStops.CUTOFF_MIGRATION_KEY to true)) }
+            synchronized(lock) { state = state.copy(migrated = true, cutoffMigrated = true); notApplied = ArmAutoStops.NotApplied.NEW_PHONE }
+            runCatching { SecurePrefs.putAllSoon(mapOf(ArmAutoStops.MIGRATION_KEY to true, ArmAutoStops.CUTOFF_MIGRATION_KEY to true,
+                ArmAutoStops.NOT_APPLIED_KEY to ArmAutoStops.NotApplied.NEW_PHONE.key)) }
             publish()
             runCatching { Diag.record("autostops", "no trade of R51, R72 or Liquidity before 19 Nov on this phone (new, or erased since): the automatic stops stay on, as on a fresh phone") }
             return false
@@ -266,9 +288,13 @@ object ArmAutoStopsHost {
 
     /**
      * Review (19 Nov): a restore never runs Boss's one-time choice on its books ([Backup.restore] marks it done in the vault): marked done
-     * in memory too, so a retry before the restart cannot run it.
+     * in memory too, so a retry before the restart cannot run it. [why]: the card's notice (20 Nov 2026), a restore on a phone where the
+     * choice had not run yet; null when it had (its switches stand as they were).
      */
-    fun markChoiceRun() { synchronized(lock) { state = state.copy(migrated = true, cutoffMigrated = true) }; publish() }
+    fun markChoiceRun(why: ArmAutoStops.NotApplied? = null) {
+        synchronized(lock) { state = state.copy(migrated = true, cutoffMigrated = true); if (why != null) notApplied = why }
+        publish()
+    }
 
     /** Whether the stops that latch are held back on the three now ([mayLatch]): the switches not read, or the choice not run. Memory only. */
     fun deferring(): Boolean = !com.optionslab.app.BuildConfig.GOLD && (!loaded || !state.ready)
@@ -326,6 +352,7 @@ object ArmAutoStopsHost {
             state = ArmAutoStops.State(migrated = true)
             loaded = true
             switched += Rule.entries
+            notApplied = ArmAutoStops.NotApplied.NEW_PHONE
         }
         publish()
     }
@@ -338,7 +365,7 @@ object ArmAutoStopsHost {
 
     /** TEST ONLY: as a fresh start would have it ([state] read, the one-time choice run unless the test says so), nothing switched. */
     internal fun resetForTest(state: ArmAutoStops.State = ArmAutoStops.State(migrated = true), loaded: Boolean = true) {
-        synchronized(lock) { this.state = state; this.loaded = loaded; switched.clear() }
+        synchronized(lock) { this.state = state; this.loaded = loaded; switched.clear(); notApplied = null; readFailed = false }
         testReadFails = false
         publish()
     }

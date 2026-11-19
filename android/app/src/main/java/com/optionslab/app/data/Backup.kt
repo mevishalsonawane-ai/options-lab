@@ -224,11 +224,18 @@ object Backup {
         values[DISARM] = true
         // 19 Nov (review): Boss's one-time automatic-stops choice is never run by a restore's books (it would switch his stops off with
         // no PIN): marked done, whatever the backup held. His switches stay as this phone has them.
+        // 20 Nov 2026 (minor fixes, item 3): on a phone where it had not run yet, the card says it was not applied because of the restore.
+        // (Review: both steps - a phone that ran the first choice but not yet Jarvis's cutoff step had it cut short by the restore too.)
+        val choiceWasRun = runCatching { SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false) &&
+            SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.CUTOFF_MIGRATION_KEY, false) }.getOrDefault(false)
         values[com.optionslab.ira.ArmAutoStops.MIGRATION_KEY] = true
         values[com.optionslab.ira.ArmAutoStops.CUTOFF_MIGRATION_KEY] = true
+        // (Never the backup's own reason: it was another phone's, or another time's.)
+        if (!choiceWasRun) values[com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY] = com.optionslab.ira.ArmAutoStops.NotApplied.RESTORE.key
+        else values.remove(com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY)
         SecurePrefs.putAll(values)
         // ...and in memory, so a retry before the restart cannot run it either (a later read keeps the mark: [ArmAutoStopsHost.load]).
-        runCatching { ArmAutoStopsHost.markChoiceRun() }
+        runCatching { ArmAutoStopsHost.markChoiceRun(if (choiceWasRun) null else com.optionslab.ira.ArmAutoStops.NotApplied.RESTORE) }
         // The danger meter's switch as restored, in the entry path's memory copy at once (the restart loads it again).
         runCatching { AppSettings.syncDangerHalf() }
         } catch (e: Throwable) {

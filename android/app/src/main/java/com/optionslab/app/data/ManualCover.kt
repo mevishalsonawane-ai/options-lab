@@ -246,6 +246,9 @@ object ManualCover {
     /** TEST ONLY: whether a follow-up look is waiting or running. */
     internal fun followUpPendingForTest(): Boolean = synchronized(mem) { followJob?.isActive == true }
 
+    /** The last [kick]'s job (a test waits for it before the next test: [finishLooksForTest]). */
+    @Volatile private var kickJob: kotlinx.coroutines.Job? = null
+
     /** A [kick]'s look still running. */
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
 
@@ -257,7 +260,7 @@ object ManualCover {
         // Switched off, it looks only while one of its own protections is active (to take it off if it became a spread's leg).
         if (com.optionslab.app.BuildConfig.GOLD || (loaded && !on && !Protections.autoHint) || !running.compareAndSet(false, true)) return false
         return runCatching {
-            scope.launch { try { runCatching { run(s) } } finally { running.set(false) } }
+            kickJob = scope.launch { try { runCatching { run(s) } } finally { running.set(false) } }
             true
         }.getOrElse { running.set(false); false }
     }
@@ -651,10 +654,25 @@ object ManualCover {
 
     /** TEST ONLY: the switch as given (tests start it off, so no other test's live positions are covered), memory cleared. */
     internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) {
+        finishLooksForTest()
         this.on = on; this.loaded = loaded; switched = false
         followUpsOn = false; followMsForTest = null; followGate = null
         clearMemory()
         publish()
+    }
+
+    /**
+     * 20 Nov 2026 (minor fixes, item 7: ManualCoverTest's first test failed in CI with nothing placed, in 1.2 s - the test before it,
+     * aRetryCoversItOnceTheReadWorksAgain, ended while its follow-up look was still recording the protection it had just placed, and
+     * that look then wrote it into the next test's fresh book, so the next test's position read as protected): TEST ONLY, a follow-up
+     * look or a [kick]'s look still running finishes before the reset (one still waiting is cancelled, as [clearMemory] does).
+     */
+    internal fun finishLooksForTest(timeoutMs: Long = 15_000L) {
+        val follow = synchronized(mem) { followJob?.also { if (!followLooking) it.cancel() } }
+        val kicked = kickJob
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeoutOrNull(timeoutMs) { follow?.join(); kicked?.join() }
+        }
     }
 
     /** TEST ONLY: the context its notification is posted with ([init] sets it in the app; null: the banner alone). */

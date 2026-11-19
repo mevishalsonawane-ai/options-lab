@@ -26,6 +26,13 @@ object NetworkGuard : ProxySelector() {
 
     @Synchronized fun install() { if (getDefault() !== this) setDefault(this) }
 
+    /**
+     * 20 Nov 2026 (minor fixes, item 6: [traces] was never cleared, so one test's blocked hosts and traces stayed for every later test in
+     * the same JVM): both lists forgotten. Called as each test's app starts ([TestApp]) and after each [RobolectricTest] (after the
+     * test's own @After has asserted on them).
+     */
+    fun reset() { blocked.clear(); traces.clear() }
+
     override fun select(uri: URI): List<Proxy> {
         val host = uri.host ?: return listOf(Proxy.NO_PROXY)
         if (host in local || host in runner) return listOf(Proxy.NO_PROXY)

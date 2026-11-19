@@ -340,7 +340,8 @@ class LossBreakerTest : RobolectricTest() {
             limit(0.0)
             val first = runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.ZERODHA, 5_000.0, 0.0, true) }
             assertEquals(LossBreaker.Lift.OTHER_PAST, first)
-            assertTrue(first.words, first.words.contains("Loosen that one too"))
+            val told = first.say(LossBreaker.Limit.ZERODHA, 0.0)
+            assertTrue(told, told.contains("past the paper bots' daily loss limit") && told.contains("the stop lifts then"))
             SecurePrefs.put("g.pLoss", 0.0)
             assertEquals(LossBreaker.Lift.LIFTED, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
             val said = startAgain()
@@ -371,5 +372,40 @@ class LossBreakerTest : RobolectricTest() {
         losing(4_000.0)                                         // recovered inside ₹5k; Zerodha's limit untouched
         assertEquals(LossBreaker.Lift.OTHER_LIMIT, runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 0.0, true) })
         assertTrue(LossBreaker.trippedToday())
+    }
+
+    /**
+     * 20 Nov 2026 (minor fixes, item 1): the paper limit loosened while Zerodha's (the stop's own) is off, but today's paper day still
+     * past the new paper figure: said as "still past the new limit", not as "past your other limit".
+     */
+    @Test fun theOtherLimitRaisedButStillPastSaysStillPast() {
+        LossBreaker.testPaperDay = { LossBreaker.PaperDay(-12_000.0, listOf("NFO" to -12_000.0), emptyList(), emptyList()) }
+        try {
+            trippedAt5k(6_000.0)
+            limit(0.0)
+            SecurePrefs.put("g.pLoss", 11_000.0)
+            val r = runBlocking { LossBreaker.liftForLoosened(LossBreaker.Limit.PAPER, 10_000.0, 11_000.0, true) }
+            assertEquals(LossBreaker.Lift.STILL_PAST, r)
+            assertEquals("Today's loss-limit stop stays: today's loss is still past the paper bots' daily loss limit of Rs 11,000.",
+                r.say(LossBreaker.Limit.PAPER, 11_000.0))
+            assertTrue(LossBreaker.trippedToday())
+        } finally {
+            LossBreaker.testPaperDay = null
+        }
+    }
+
+    /** Item 1: every answer names the limits right and says what to do next. */
+    @Test fun theLiftWordsNameTheLimitsAndTheNextStep() {
+        val z = LossBreaker.Limit.ZERODHA
+        val p = LossBreaker.Limit.PAPER
+        assertTrue(LossBreaker.Lift.OTHER_LIMIT.say(p, 0.0).contains("Zerodha's daily loss limit made it"))
+        assertTrue(LossBreaker.Lift.OTHER_PAST.say(z, 0.0).endsWith("Loosen that one too with your PIN: the stop lifts then."))
+        // Raised (not off): loosening the other one alone is not enough - the stop's own limit must be changed again (OTHER_LIMIT otherwise).
+        assertTrue(LossBreaker.Lift.OTHER_PAST.say(z, 8_000.0).contains("then raise Zerodha's daily loss limit again (or switch it off)"))
+        assertTrue(LossBreaker.Lift.NOT_LOOSENED.say(z, 2_000.0).contains("lowering one or switching one on does not"))
+        assertTrue(LossBreaker.Lift.LIFTED.say(z, 0.0).contains("(Zerodha's daily loss limit off)"))
+        assertTrue(LossBreaker.Lift.LIFTED.say(p, 20_000.0).contains("(the paper bots' daily loss limit Rs 20,000)"))
+        assertTrue(LossBreaker.Lift.NO_PIN.say(z, 0.0).contains("PIN"))
+        for (r in LossBreaker.Lift.values()) for (l in LossBreaker.Limit.values()) assertTrue(r.name, r.say(l, 0.0).length < 220)
     }
 }

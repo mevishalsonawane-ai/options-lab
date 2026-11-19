@@ -65,6 +65,36 @@ object ArmAutoStops {
      */
     const val CUTOFF_MIGRATION_KEY = "g.armAutoStops.migrated1119b"
     const val CHOICE = "Boss's choice, 19 Nov: run until he stops them"
+
+    /**
+     * 20 Nov 2026 (minor fixes, item 3): why Boss's one-time choice did NOT switch the stops off on this phone, for the card's notice
+     * ([notAppliedNote]). [key]: as the settings vault keeps it ([NOT_APPLIED_KEY]; [UNREAD] is never kept, only worked out now).
+     */
+    enum class NotApplied(val key: String, val why: String) {
+        NEW_PHONE("new", "this phone had no trade of R51, R72 or Liquidity before 19 Nov (a new phone, or erased since)"),
+        RESTORE("restore", "a backup was restored, and a restore never switches an automatic stop off"),
+        UNREAD("unread", "the switches or the arms' trades have not been read yet (or could not be); it is tried again every minute");
+
+        companion object { fun ofKey(k: String?): NotApplied? = entries.firstOrNull { it.key == k && it != UNREAD } }
+    }
+
+    /** Why the choice was not applied ([NotApplied.key]), in the settings vault. */
+    const val NOT_APPLIED_KEY = "g.armAutoStops.notApplied1119"
+
+    /**
+     * The card's notice when Boss's choice was not applied ([why]), while any switch is still on in [s] (all off: nothing to tell);
+     * [switchesShown]: false while the switches are not read (no row to tap yet). Null: nothing to say.
+     */
+    fun notAppliedNote(why: NotApplied?, s: State, switchesShown: Boolean = true): String? {
+        if (why == null || s.off.size == Rule.entries.size) return null
+        // (Review: while the switches or the choice wait on a read, the stops that latch - the forward-test switch-off, the self-review's
+        // park and pause - wait too on the three ([com.optionslab.ira.ArmAutoStops] callers' mayLatch); the others act.)
+        val meanwhile = if (why == NotApplied.UNREAD) "Until then the forward-test switch-off and the self-review's park and pause wait on " +
+            "R51, R72 and Liquidity; the other stops act as before." else "The stops stay on."
+        return "Your 19 Nov choice (all of these off) was not applied on this phone: ${why.why}. $meanwhile " +
+            (if (switchesShown) "To switch one off, tap its switch below and enter your PIN."
+            else "Once they are read, you can switch one off here with your PIN.")
+    }
     /** What the arm rows say while any of them is off. */
     const val ROW = "auto-stop off by Boss's choice"
     /** What a voice command or Jarvis is told when it asks for one off. */
