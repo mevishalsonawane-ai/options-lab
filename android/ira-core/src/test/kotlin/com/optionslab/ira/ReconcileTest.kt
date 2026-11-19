@@ -58,6 +58,47 @@ class ReconcileTest {
         assertEquals(unprotected, t.step(3_660_000L, unprotected, true), "its stop gone: told again at once")
     }
 
+    /** 19 Nov 2026 (second review): Boss's own manual position as the app knows it is told once, not every 5 minutes. */
+    @Test fun bossesKnownManualPositionIsToldOnceWhileItLasts() {
+        val found = Reconcile.find(mapOf(ce to 75, pe to -75), emptySet(), emptyList(), emptyList(), known = setOf(ce))
+        assertEquals(listOf(true, false), found.map { it.known })
+        val t = Reconcile.Tracker()
+        t.step(0L, found, true)
+        assertEquals(found, t.step(60_000L, found, true), "both told once the two reads agree")
+        assertEquals(listOf(pe), t.step(360_000L, found, true).map { it.symbol }, "only the unknown one again after 5 minutes")
+        assertTrue(t.step(3_600_000L, found, true).none { it.symbol == ce })
+        assertTrue(Reconcile.say(found[0]).contains("your own position"), Reconcile.say(found[0]))
+    }
+
+    /** 19 Nov 2026 (second review): Zerodha holding more than the books own is a duplicate or oversized fill; less never is. */
+    @Test fun moreAtZerodhaThanTheBooksOwnIsFlaggedLessNever() {
+        val owned = setOf(ce, pe, "X")
+        val qty = Reconcile.ownedQty(listOf(Reconcile.Claim(ce, 75), Reconcile.Claim(pe, -75), Reconcile.Claim("X", null)))
+        val f = Reconcile.find(mapOf(ce to 150, pe to -30, "X" to 999), owned, emptyList(), emptyList(), qty)
+        assertEquals(listOf(Reconcile.Finding(ce, 150, false, Reconcile.Kind.OVERSIZE, 75)), f, "a partial exit (pe) and a book with no quantity (X) are not")
+        assertTrue(Reconcile.say(f[0]).contains("more than the 75"), Reconcile.say(f[0]))
+        assertTrue(Reconcile.unownedOrOversized(mapOf(ce to 150), owned, qty))
+        assertFalse(Reconcile.unownedOrOversized(mapOf(ce to 75, pe to -30), owned, qty))
+        assertTrue(Reconcile.find(mapOf(ce to -75), owned, null, null, qty).isEmpty(), "the same size either side is not oversized")
+        // The same two-read, one-minute and 5-minute rules, counted apart from an unowned finding on the same symbol.
+        val t = Reconcile.Tracker()
+        assertTrue(t.step(0L, f, true).isEmpty())
+        assertEquals(f, t.step(60_000L, f, true))
+        assertTrue(t.step(120_000L, f, true).isEmpty())
+        assertEquals(f, t.step(360_000L, f, true))
+    }
+
+    @Test fun theOwnedQuantitySumsHoldersAndFallsBackForProtectionsAndUnknowns() {
+        val q = Reconcile.ownedQty(listOf(
+            Reconcile.Claim(ce, 75), Reconcile.Claim(ce, -50), Reconcile.Claim(ce, 75, holds = false),
+            Reconcile.Claim(pe, 30, holds = false), Reconcile.Claim(pe, 60, holds = false),
+            Reconcile.Claim("X", 10), Reconcile.Claim("X", null)))
+        assertEquals(125, q[ce], "the holders summed (a protection on it is an overlay)")
+        assertEquals(60, q[pe], "protections only: the largest")
+        assertNull(q["X"], "a claim with no quantity: symbol only")
+        assertTrue("Y" !in q)
+    }
+
     @Test fun twoReadsCloseTogetherWaitForTheMinute() {
         val t = Reconcile.Tracker()
         val f = listOf(Reconcile.Finding(ce, 75, null))

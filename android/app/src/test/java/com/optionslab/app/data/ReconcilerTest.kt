@@ -118,6 +118,77 @@ class ReconcilerTest : RobolectricTest() {
         assertTrue(Reconciler.line(), Reconciler.line().startsWith("Reconciler: not run yet"))
     }
 
+    private fun cancelAll() = context.getSystemService(android.app.NotificationManager::class.java).cancelAll()
+
+    /** 19 Nov 2026 (second review): a manual position "Stop and target on my manual positions" left alone on purpose is told once. */
+    @Test fun aManualPositionLeftAloneOnPurposeIsToldOnce() {
+        kite.position(other, -30, 210.0, product = "NRML")
+        ManualCover.leftAloneForTest("NFO:$other")
+        try {
+            runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L) }
+            val text = Background.text(risk()!!).orEmpty()
+            assertTrue(text, text.contains("your own position"))
+            cancelAll()
+            runBlocking { Reconciler.step(context, t0 + 360_000L); Reconciler.step(context, t0 + 720_000L) }
+            assertNull("told once while it lasts, not every 5 minutes", risk())
+        } finally { ManualCover.resetForTest() }
+    }
+
+    /** 19 Nov 2026 (second review): in Paper mode no automatic live trade can be open, so a Zerodha position is Boss's: told once. */
+    @Test fun inPaperModeAZerodhaPositionIsToldOnce() {
+        AutomationSupport.liveSettings(live = false)
+        kite.position(other, -30, 210.0, product = "NRML")
+        runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L) }
+        assertNotNull(risk())
+        cancelAll()
+        runBlocking { Reconciler.step(context, t0 + 360_000L) }
+        assertNull(risk())
+    }
+
+    /** 19 Nov 2026 (second review): Zerodha holding more than the books own (a duplicate fill) is said; less (a partial exit) never. */
+    @Test fun moreAtZerodhaThanTheBooksOwnIsSaidLessNever() {
+        kite.position(sym, 75, 100.0)
+        val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 100.0, 90.0, null, null) }
+        assertTrue(msg, msg.startsWith("Protected"))
+        kite.position(sym, 150, 100.0)
+        runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L) }
+        val text = Background.text(risk()!!).orEmpty()
+        assertTrue(text, text.contains("Zerodha holds 150 $sym, more than the 75"))
+        cancelAll()
+        Reconciler.resetForTest()
+        kite.position(sym, 50, 100.0)
+        runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L); Reconciler.step(context, t0 + 120_000L) }
+        assertNull("a partial exit is never one", risk())
+    }
+
+    /** 19 Nov 2026 (second review): the quiet start's mark stays "1" while a live book holds (a live protection; MCX after its close). */
+    @Test fun aHeldLiveBookKeepsTheMarkAtOne() {
+        NightMarks.testOffMain = true
+        Reconciler.markHeld(context, false)
+        kite.position(sym, 75, 100.0)
+        val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 100.0, 90.0, null, null) }
+        assertTrue(msg, msg.startsWith("Protected"))
+        // The side lane's value: every book's hint (the watch's holdingAny reads HeldNow), then the MCX carry.
+        Reconciler.markHeld(context, Reconciler.markFor(HeldNow.any(mcxLive = true)))
+        assertEquals(com.optionslab.ira.QuietStart.HELD, NightMarks.get(context, Reconciler.HELD_MARK))
+    }
+
+    @Test fun aLiveMcxPositionCarriedPastTheCloseKeepsTheMarkAtOne() {
+        NightMarks.testOffMain = true
+        Background.at(WED, 23, 50)
+        assertFalse("MCX closed", McxMarket.isOpen())
+        McxMarket.markLive()
+        try {
+            assertFalse("the books' own hint counts MCX only while it trades", HeldNow.sources().mcxLive)
+            Reconciler.markHeld(context, Reconciler.markFor(false))
+            assertEquals(com.optionslab.ira.QuietStart.HELD, NightMarks.get(context, Reconciler.HELD_MARK))
+        } finally {
+            McxMarket.noteLive(emptyList())
+        }
+        Reconciler.markHeld(context, Reconciler.markFor(false))
+        assertEquals("flat at Zerodha again: nothing held", com.optionslab.ira.QuietStart.FLAT, NightMarks.get(context, Reconciler.HELD_MARK))
+    }
+
     @Test fun theQuietStartsHeldMarkIsWrittenOnChangeOnly() {
         NightMarks.testOffMain = true
         Reconciler.markHeld(context, true)

@@ -37,8 +37,22 @@ object Reconcile {
     /** A Zerodha GTT: [active] and each leg's side. */
     data class Gtt(val symbol: String, val active: Boolean, val sides: List<String>)
 
-    /** A position Zerodha holds ([qty] signed units, + long) that no book of the app owns; [stop]: an exit stop rests at Zerodha. */
-    data class Finding(val symbol: String, val qty: Int, val stop: Boolean?)
+    /**
+     * 19 Nov 2026 (second review): what was found. [UNOWNED]: no book owns the position; [OVERSIZE]: Zerodha's net quantity is larger
+     * than the books' owned quantity together (a duplicate or oversized fill; less is never one - partial exits are normal).
+     */
+    enum class Kind { UNOWNED, OVERSIZE }
+
+    /**
+     * A position Zerodha holds ([qty] signed units, + long) that no book of the app owns ([Kind.UNOWNED]), or holds more of than the
+     * books own ([Kind.OVERSIZE], [appQty] the books' units); [stop]: an exit stop rests at Zerodha; [known]: Boss's own manual position
+     * as the app knows it (seen by "Stop and target on my manual positions", left alone by it on purpose, or any position the app does
+     * not own while it is in Paper mode) - told once while it lasts, like one with a resting stop.
+     */
+    data class Finding(val symbol: String, val qty: Int, val stop: Boolean?, val kind: Kind = Kind.UNOWNED, val appQty: Int? = null,
+                       val known: Boolean = false) {
+        val key: String get() = "${kind.name}:$symbol"
+    }
 
     /**
      * Whether an exit stop rests at Zerodha for [qty] units of [symbol]: a working SL or SL-M order on the closing side, or an active
@@ -62,12 +76,44 @@ object Reconcile {
      * The positions in [positions] (tradingsymbol -> net units, nonzero) that no book owns ([owned]: every symbol any book follows,
      * holds or protects), sorted by symbol, each with [hasStop].
      */
-    fun find(positions: Map<String, Int>, owned: Set<String>, orders: List<Order>?, gtts: List<Gtt>?): List<Finding> =
-        positions.filter { (s, q) -> q != 0 && s.isNotBlank() && s !in owned }.toSortedMap()
-            .map { (s, q) -> Finding(s, q, hasStop(s, q, orders, gtts)) }
+    // 19 Nov 2026 (second review): [ownedQty] - the books' owned units by symbol, absolute and summed (a symbol missing, or null: a book
+    // gave no quantity, so only "owned or not" is judged for it); [known] - Boss's own manual positions as the app knows them.
+    fun find(positions: Map<String, Int>, owned: Set<String>, orders: List<Order>?, gtts: List<Gtt>?,
+             ownedQty: Map<String, Int?> = emptyMap(), known: Set<String> = emptySet()): List<Finding> {
+        val out = ArrayList<Finding>()
+        for ((s, q) in positions.toSortedMap()) {
+            if (q == 0 || s.isBlank()) continue
+            if (s !in owned) { out += Finding(s, q, hasStop(s, q, orders, gtts), known = s in known); continue }
+            val app = ownedQty[s] ?: continue
+            if (kotlin.math.abs(q) > app) out += Finding(s, q, hasStop(s, q, orders, gtts), Kind.OVERSIZE, app)
+        }
+        return out
+    }
+
+    /**
+     * 19 Nov 2026 (second review): one book's claim on a Zerodha symbol - [qty] its units (sign ignored; null: the book gives no quantity,
+     * or its fill is not confirmed yet), [holds] false for a protection (an overlay on a position, not a holding of its own).
+     */
+    data class Claim(val symbol: String, val qty: Int?, val holds: Boolean = true)
+
+    /**
+     * The books' owned units by symbol: the holders' quantities summed; a symbol only protections claim, the largest protection; null
+     * when any claim on it gives no quantity (then only "owned or not" is judged for it).
+     */
+    fun ownedQty(claims: List<Claim>): Map<String, Int?> = claims.groupBy { it.symbol }.mapValues { (_, cs) ->
+        if (cs.any { it.qty == null }) null
+        else cs.filter { it.holds }.takeIf { it.isNotEmpty() }?.sumOf { kotlin.math.abs(it.qty!!) } ?: cs.maxOf { kotlin.math.abs(it.qty!!) }
+    }
+
+    /** Whether any position is unowned or oversized (the order book and the GTTs are read only then). */
+    fun unownedOrOversized(positions: Map<String, Int>, owned: Set<String>, ownedQty: Map<String, Int?>): Boolean =
+        positions.any { (s, q) -> q != 0 && s.isNotBlank() && (s !in owned || ownedQty[s]?.let { kotlin.math.abs(q) > it } == true) }
 
     /** The RISK notice's words (names and quantities only, never rupees). */
-    fun say(f: Finding): String = "Zerodha holds ${f.qty} ${f.symbol}, which no book of the app follows" + when (f.stop) {
+    fun say(f: Finding): String = when (f.kind) {
+        Kind.UNOWNED -> "Zerodha holds ${f.qty} ${f.symbol}, which no book of the app follows" + if (f.known) " (your own position, as the app knows it)" else ""
+        Kind.OVERSIZE -> "Zerodha holds ${f.qty} ${f.symbol}, more than the ${f.appQty} the app's books own (a duplicate or oversized fill?)"
+    } + when (f.stop) {
         true -> " (an exit stop rests at Zerodha)"
         false -> ", and no exit stop rests at Zerodha"
         null -> " (whether an exit stop rests there could not be read)"
@@ -95,20 +141,21 @@ object Reconcile {
             if (brokerHeld) { held = true; flatReads = 0 } else { flatReads++; if (held == null || flatReads >= 2) held = false }
             heldAt = nowMs
             val last = prev
-            val now = found.associate { it.symbol to it.qty }
+            // Keyed by kind and symbol (19 Nov 2026, second review): an unowned position and an oversized one are counted apart.
+            val now = found.associate { it.key to it.qty }
             prev = now
             since.keys.retainAll(now.keys)
             toldAt.keys.retainAll(now.keys)
             val out = ArrayList<Finding>()
             for (f in found) {
-                val first = since.getOrPut(f.symbol) { nowMs }
-                val agreed = last != null && last[f.symbol]?.let { Integer.signum(it) == Integer.signum(f.qty) } == true
+                val first = since.getOrPut(f.key) { nowMs }
+                val agreed = last != null && last[f.key]?.let { Integer.signum(it) == Integer.signum(f.qty) } == true
                 if (!agreed || nowMs - first < ALERT_AFTER_MS - SLACK_MS) continue
-                val told = toldAt[f.symbol]
-                // Review: one with an exit stop resting at Zerodha (Boss's own position with his own stop, say) is told once while it
-                // lasts, not every 5 minutes, so the unprotected ones are never lost in the noise.
-                if (told != null && (f.stop == true || nowMs - told in 0 until REPEAT_MS)) continue
-                toldAt[f.symbol] = nowMs
+                val told = toldAt[f.key]
+                // Review: one with an exit stop resting at Zerodha, or Boss's own manual position as the app knows it, is told once
+                // while it lasts, not every 5 minutes, so the unprotected ones are never lost in the noise.
+                if (told != null && (f.stop == true || f.known || nowMs - told in 0 until REPEAT_MS)) continue
+                toldAt[f.key] = nowMs
                 out += f
             }
             return out
@@ -121,7 +168,7 @@ object Reconcile {
         @Synchronized fun heldHint(nowMs: Long): Boolean = held == true && nowMs - heldAt in 0 until HINT_MS
 
         /** The positions no book owned at the last good read (for the diagnostics). */
-        @Synchronized fun open(): Set<String> = prev?.keys.orEmpty()
+        @Synchronized fun open(): Set<String> = prev?.keys.orEmpty().map { it.substringAfter(':') }.toSet()
     }
 
     /** May the reconcile step run now: logged in to Zerodha, and NSE's session or MCX's is on; at most every [EVERY_MS]. */

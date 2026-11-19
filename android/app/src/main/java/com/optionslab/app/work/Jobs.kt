@@ -1857,6 +1857,9 @@ class WatchService : Service() {
         // the evening's passes slept with the screen off) and closes a coverage gap told while the watch was away.
         val me = this@WatchService
         val runStartEl = android.os.SystemClock.elapsedRealtime()
+        // 19 Nov 2026 (second review): MCX's calendar read here, on IO, once (its first read is a file): the pulse and the lanes on
+        // the small pool below then read it from memory.
+        runCatching { com.optionslab.app.data.McxMarket.isOpen() }
         // 19 Nov 2026 (audit batch 2): on the watch's own small pool ([WatchLanes]), never queued behind blocking work on IO.
         val pulse = launch(WatchLanes.dispatcher) {
             var hungTold = false
@@ -1880,10 +1883,12 @@ class WatchService : Service() {
                 if (run == watchRun && progressing) hungTold = false
                 else if (run == watchRun && !hungTold) {
                     hungTold = true
-                    Heartbeat.diary("watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): " +
-                        if (nseHours) "the processor is still held (NSE's hours)" else if (reader) "the processor is held only for the ntfy reader" else "the processor's hold is not renewed")
+                    val line = "watch: no pass or step finished in ${com.optionslab.ira.WatchHealth.AWAKE_PROGRESS_MS / 60_000} min (waiting on ${Heartbeat.busy ?: "nothing named"}): " +
+                        if (nseHours) "the processor is still held (NSE's hours)" else if (reader) "the processor is held only for the ntfy reader" else "the processor's hold is not renewed"
+                    // 19 Nov 2026 (second review): the diary and the problems list from IO, never on the small pool's thread.
+                    WatchLanes.offload { Heartbeat.diary(line) }
                 }
-                Heartbeat.watchRunning()
+                WatchLanes.offload { Heartbeat.watchRunning() }
                 delay(com.optionslab.ira.WatchHealth.PULSE_MS)
             }
         }

@@ -258,7 +258,7 @@ internal object ClockLane {
         val l = ClockSteps.Lane(now = now)
         lane = l
         try {
-            l.run(stop = stop, active = { mode() != StopLane.Mode.OFF }, failed = { e -> Tasks.stepFailed(GROUP, e) }, round = { t, since ->
+            l.run(stop = stop, active = { mode() != StopLane.Mode.OFF }, failed = { e -> WatchLanes.offload { Tasks.stepFailed(GROUP, e) } }, round = { t, since ->
               kotlinx.coroutines.withContext(roundContext) {
                 val m = mode()
                 val names = stepsFor(m)

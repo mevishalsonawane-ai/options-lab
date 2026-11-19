@@ -273,6 +273,53 @@ class StopLaneTest : RobolectricTest() {
         } finally { StopLane.resetCompletedForTest() }
     }
 
+    /**
+     * 19 Nov 2026 (second review): with every Dispatchers.IO thread blocked (a burst of Keystore, disk and Zerodha reads), the stop
+     * lane's clock on the watch's own pool still starts its looks; a small blocking call made from a lane goes to IO, never waited for.
+     */
+    @Test fun theLanesKeepLookingWhileIoIsSaturated() {
+        val release = java.util.concurrent.CountDownLatch(1)
+        val job = kotlinx.coroutines.SupervisorJob()
+        val scope = kotlinx.coroutines.CoroutineScope(job)
+        val stopped = java.util.concurrent.atomic.AtomicBoolean(false)
+        try {
+            // Far more blocked jobs than Dispatchers.IO has threads (64 by default).
+            repeat(200) { scope.launch(kotlinx.coroutines.Dispatchers.IO) { release.await() } }
+            val ioProbe = java.util.concurrent.atomic.AtomicBoolean(false)
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) { ioProbe.set(true) }
+            val looks = java.util.concurrent.atomic.AtomicInteger()
+            val offloaded = java.util.concurrent.atomic.AtomicBoolean(false)
+            val lane = scope.launch(WatchLanes.dispatcher) {
+                StopLane.run(stop = { stopped.get() }, mode = { StopLane.Mode.NSE }, held = { true }, mcxPassAt = { 0L }, quiet = { true },
+                    look = { _, _ ->
+                        assertTrue("on the lane's own thread", WatchLanes.onLane())
+                        looks.incrementAndGet()
+                        // Handed to IO (saturated): the look does not wait for it.
+                        WatchLanes.offload { offloaded.set(true) }
+                    })
+            }
+            val until = System.currentTimeMillis() + 12_000
+            while (looks.get() < 2 && System.currentTimeMillis() < until) Thread.sleep(50)
+            stopped.set(true)
+            assertTrue("two looks while IO was saturated (${looks.get()})", looks.get() >= 2)
+            assertFalse("IO really was saturated", ioProbe.get())
+            assertFalse("the offloaded call waits for IO, the lane does not", offloaded.get())
+            release.countDown()
+            runBlocking { kotlinx.coroutines.withTimeout(20_000) { lane.join() } }
+            val end = System.currentTimeMillis() + 5_000
+            while (!offloaded.get() && System.currentTimeMillis() < end) Thread.sleep(20)
+            assertTrue("the offloaded call ran once IO was free", offloaded.get())
+            // Off a lane, it runs here, as before.
+            var here = false
+            WatchLanes.offload { here = true }
+            assertTrue(here)
+        } finally {
+            stopped.set(true)
+            release.countDown()
+            job.cancel()
+        }
+    }
+
     /** 19 Nov 2026 (audit batch 2): the lane's market from the clock alone, before the first pass says it. */
     @Test fun theLanesMarketFromTheClock() {
         val wed = com.optionslab.app.testing.Background.WED

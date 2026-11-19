@@ -91,31 +91,50 @@ object Reconciler {
         val positions = book.net.filter { it.exchange in com.optionslab.engine.Kite.DERIVATIVE_EXCHANGES && it.qty != 0 }
             .groupBy { it.symbol }.mapValues { (_, v) -> v.sumOf { it.qty } }.filterValues { it != 0 }
         if (positions.isEmpty()) return emptyList<Reconcile.Finding>() to false
-        val owned = owned(positions.keys) ?: return null
-        if (positions.keys.all { it in owned }) return emptyList<Reconcile.Finding>() to true
-        // Only now the order book and the GTTs (whether an exit stop rests for what no book owns); either unread is "unknown".
+        val claims = claims(positions.keys) ?: return null
+        val owned = claims.map { it.symbol }.toSet()
+        val ownedQty = Reconcile.ownedQty(claims)
+        if (!Reconcile.unownedOrOversized(positions, owned, ownedQty)) return emptyList<Reconcile.Finding>() to true
+        // Only now the order book and the GTTs (whether an exit stop rests); either unread is "unknown".
         val orders = Broker.within(WAIT_MS) { Broker.ordersRecon() }?.map { Reconcile.Order(it.symbol, it.side, it.type, it.working) }
         val gtts = Broker.within(WAIT_MS) { Broker.gtts() }?.map { Reconcile.Gtt(it.symbol, it.active, it.legSides) }
-        return Reconcile.find(positions, owned, orders, gtts) to true
+        return Reconcile.find(positions, owned, orders, gtts, ownedQty, known(positions.keys - owned)) to true
     }
 
     /**
-     * Every Zerodha symbol some book owns now (memory and each book's own bounded read); null when one could not be read in time,
-     * or the arms' live copies' book is not loaded yet. [held]: the symbols Zerodha holds (for the ticket's legs).
+     * 19 Nov 2026 (second review): of the positions no book owns, those that are Boss's own as the app knows them - seen or left alone
+     * on purpose by "Stop and target on my manual positions", or any at all while the app is in Paper mode (no automatic live trade
+     * can be open then). Told once while they last, not every 5 minutes.
      */
-    internal suspend fun owned(held: Set<String>): Set<String>? {
-        val out = HashSet<String>()
-        // The arms (ORB family, Liquidity), Pine's live holdings, the arms' live copies and the live protections.
+    private fun known(unowned: Set<String>): Set<String> {
+        if (unowned.isEmpty()) return emptySet()
+        val paper = runCatching { !AppSettings.load().live }.getOrDefault(false)
+        if (paper) return unowned
+        return unowned intersect runCatching { ManualCover.knownSymbols() }.getOrDefault(emptySet())
+    }
+
+    /**
+     * Every book's claim on a Zerodha symbol now (memory and each book's own bounded read), with its quantity where the book gives one
+     * ([Reconcile.Claim]); null when one could not be read in time, or the arms' live copies' book is not loaded yet. [held]: the
+     * symbols Zerodha holds (for the ticket's legs).
+     */
+    internal suspend fun claims(held: Set<String>): List<Reconcile.Claim>? {
+        val out = ArrayList<Reconcile.Claim>()
+        // The arms (ORB family, Liquidity), Pine's live holdings, the arms' live copies and the live protections, with their quantities
+        // (a fill not confirmed yet: no quantity).
         if (runCatching { ArmLive.view.value.loaded }.getOrDefault(false) != true) return null
         val beliefs = ZerodhaSync.beliefs() ?: return null
-        beliefs.forEach { out += it.symbol }
-        runCatching { OrbArms.liveQtyHint.keys }.getOrNull()?.let { out += it }
-        runCatching { PineAuto.held.value.values.mapNotNull { it.kite } }.getOrNull()?.let { out += it }
-        // The Strategy Module's live legs.
-        out += withTimeoutOrNull(BOOK_WAIT_MS) { runCatching { Strategies.liveLegSymbols() }.getOrNull() } ?: return null
-        // Boss's manual positions seen and about to get their stop and target.
-        runCatching { ManualCover.pendingSymbols() }.getOrNull()?.let { out += it }
-        out += ticketLegs(held - out)
+        beliefs.forEach { out += Reconcile.Claim(it.symbol, it.qty.takeIf { _ -> !it.unconfirmed }, it.holds) }
+        val seen = beliefs.map { it.symbol }.toSet()
+        // The ORB family's live quantities (the same positions as its beliefs: added only where the beliefs had none).
+        runCatching { OrbArms.liveQtyHint }.getOrNull()?.forEach { (s, q) -> if (s !in seen) out += Reconcile.Claim(s, q) }
+        // Pine's holdings not among the beliefs, the Strategy Module's live legs, Boss's manual positions about to be covered and the
+        // ticket's legs: owned, with no quantity judged.
+        runCatching { PineAuto.held.value.values.mapNotNull { it.kite } }.getOrNull()?.forEach { if (it !in seen) out += Reconcile.Claim(it, null) }
+        val legs = withTimeoutOrNull(BOOK_WAIT_MS) { runCatching { Strategies.liveLegSymbols() }.getOrNull() } ?: return null
+        legs.forEach { out += Reconcile.Claim(it, null) }
+        runCatching { ManualCover.pendingSymbols() }.getOrNull()?.forEach { out += Reconcile.Claim(it, null) }
+        ticketLegs(held - out.map { it.symbol }.toSet()).forEach { out += Reconcile.Claim(it, null) }
         return out
     }
 
@@ -150,6 +169,13 @@ object Reconciler {
     }
 
     @Volatile private var markKept: String? = null
+
+    /**
+     * 19 Nov 2026 (second review): what the plain mark says - [heldAny] (every book's hint), or a live MCX position Zerodha showed and
+     * no read has seen closed since, whether MCX is open or not (the books' "MCX live" hint counts only while MCX trades, so a position
+     * carried overnight read as nothing held after the close). A failure counts as held.
+     */
+    fun markFor(heldAny: Boolean): Boolean = heldAny || runCatching { McxMarket.liveExposure() }.getOrDefault(true)
 
     /** The plain mark's key ([com.optionslab.app.work.NightMarks]). */
     internal const val HELD_MARK = "held.mark"

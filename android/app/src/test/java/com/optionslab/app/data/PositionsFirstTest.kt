@@ -365,6 +365,64 @@ class PositionsFirstTest : RobolectricTest() {
         }
     }
 
+    /**
+     * 19 Nov 2026 (second review): a quiet start end to end. The gate held, nothing is read; the watch opens it, and then the live
+     * books are restored first, the rest after, the large settings and the warm-ups last.
+     */
+    @Test fun aQuietStartWaitsForTheGateThenRestoresTheLiveBooksFirst() {
+        PositionsFirst.resetForTest(started = true)
+        PositionsFirst.appReady()
+        StartGate.resetForTest(held = true)
+        val events = java.util.Collections.synchronizedList(ArrayList<String>())
+        try {
+            val t = Thread {
+                PositionsFirst.startBody(context, quiet = { true }, capMs = 60_000L, full = {
+                    PositionsFirst.steps({ events += "live books"; true }, watch = {}, stream = {}, rest = { events += "other books"; false },
+                        afterLive = { events += "large settings" })
+                })
+            }.apply { start() }
+            Thread.sleep(200)
+            val warmUp = CoroutineScope(Dispatchers.IO).launch { PositionsFirst.awaitPositions(); events += "warm-up" }
+            Thread.sleep(300)
+            assertTrue("held: nothing read yet (${events.toList()})", events.isEmpty())
+            assertTrue(PositionsFirst.quietStart)
+            assertTrue(PositionsFirst.diagLine(), PositionsFirst.diagLine().startsWith("Start-up: quiet"))
+            StartGate.open("the market watch")
+            t.join(10_000)
+            runBlocking { kotlinx.coroutines.withTimeout(10_000) { warmUp.join() } }
+            assertEquals(listOf("live books", "other books", "large settings", "warm-up"), events.toList())
+            assertFalse(PositionsFirst.quietStart)
+        } finally { StartGate.resetForTest() }
+    }
+
+    /** 19 Nov 2026 (second review): nothing opens the gate - at the cap the full start runs anyway (safety first). */
+    @Test fun aQuietStartRunsInFullAtTheCap() {
+        PositionsFirst.resetForTest(started = true)
+        PositionsFirst.appReady()
+        StartGate.resetForTest(held = true)
+        val events = java.util.Collections.synchronizedList(ArrayList<String>())
+        try {
+            val t = Thread {
+                PositionsFirst.startBody(context, quiet = { true }, capMs = 300L, full = {
+                    PositionsFirst.steps({ events += "live books"; true }, watch = {}, stream = {}, rest = { events += "other books"; false },
+                        afterLive = { events += "large settings" })
+                })
+            }.apply { start() }
+            t.join(10_000)
+            assertTrue(StartGate.isOpen)
+            assertTrue(StartGate.openedBy.orEmpty(), StartGate.openedBy.orEmpty().startsWith("a quiet start still running"))
+            assertEquals(listOf("live books", "other books", "large settings"), events.toList())
+            // Not quiet (something held at the mark): the full start at once, the gate left as it is.
+            events.clear()
+            PositionsFirst.resetForTest(started = true)
+            PositionsFirst.appReady()
+            StartGate.resetForTest(held = true)
+            PositionsFirst.startBody(context, quiet = { false }, full = { events += "full start" })
+            assertEquals(listOf("full start"), events.toList())
+            assertFalse(StartGate.isOpen)
+        } finally { StartGate.resetForTest() }
+    }
+
     @Test fun theUnitTestsAppNeverWaits() {
         // Not started in this process: the parts that never trade read at once.
         PositionsFirst.resetForTest(started = false)

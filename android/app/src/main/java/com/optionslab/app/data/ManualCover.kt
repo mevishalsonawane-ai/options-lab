@@ -137,6 +137,25 @@ object ManualCover {
         }
     }
 
+    /**
+     * 19 Nov 2026 (audit batch 2, second review): the symbols of Boss's manual positions this switch knows of today - seen and waiting,
+     * left alone on purpose (a spread, a hedge, a short leg, his own working order, two products, a GTT...), given up on, found too low
+     * or taken off as a hedge's leg - for the reconciler, which then tells them once instead of every 5 minutes. Memory only; empty
+     * until the switch is read. Never used to place, change or skip anything.
+     */
+    fun knownSymbols(): Set<String> {
+        if (!loaded) return emptySet()
+        val d = runCatching { Market.today().toString() }.getOrNull() ?: return emptySet()
+        // Each kept as "day|EXCHANGE:SYMBOL[:PRODUCT]"; the looks as "EXCHANGE:SYMBOL:PRODUCT".
+        return synchronized(mem) {
+            (leftAlone + gaveUp + toldLow + unhedged).filter { it.startsWith("$d|") }.mapNotNull { it.substringAfter('|').split(':').getOrNull(1) }.toSet() +
+                looks.keys.mapNotNull { it.split(':').getOrNull(1) }
+        }
+    }
+
+    /** TEST ONLY: [key] ("EXCHANGE:SYMBOL") left alone today, as a look that found a spread's leg would. */
+    internal fun leftAloneForTest(key: String) { synchronized(mem) { leftAlone.add("${Market.today()}|$key"); loaded = true } }
+
     /** The diagnostics / health line: the switch and today's counts. Memory only. */
     fun line(): String = ManualCoverRule.line(on, loaded, tally, runCatching { Market.today() }.getOrElse { java.time.LocalDate.now(com.optionslab.engine.IST) })
 

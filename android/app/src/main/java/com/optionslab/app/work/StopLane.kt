@@ -76,7 +76,7 @@ internal object StopLane {
             look = { t -> lookIn(m, t) },
             // Nothing held any more: the drift guard starts its count again (a gap from a look with nothing held is no drift).
             idle = { com.optionslab.app.data.WatchClock.looked(held = false, now = now()); quietGaps.idle() },
-            failed = { e -> Tasks.stepFailed("stop lane", e) },
+            failed = { e -> WatchLanes.offload { Tasks.stepFailed("stop lane", e) } },
             // MCX's own pass runs these checks itself (its start is noted as a look): the lane looks only when that pass is late.
             // NSE's full pass is not counted (its stops come after its arms): the lane keeps its own 15 s there.
             outside = { if (m == Mode.MCX) mcxPassAt() else 0L },
@@ -244,7 +244,7 @@ internal object StopLane {
                 // Review: a notice, the diary and the plain mark's file are small blocking calls - on IO, as everything blocking.
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     runCatching { completedCheck(context, mode()) }
-                    runCatching { com.optionslab.app.data.Reconciler.markHeld(context, heldAny()) }
+                    runCatching { com.optionslab.app.data.Reconciler.markHeld(context, com.optionslab.app.data.Reconciler.markFor(heldAny())) }
                 }
                 val settled = android.os.SystemClock.elapsedRealtime() - startEl >= FIRST_RECONCILE_MS
                 if (settled && reconcile?.isActive != true && runCatching { com.optionslab.app.data.Reconciler.due() }.getOrDefault(false)) {
@@ -359,13 +359,26 @@ internal object StopLane {
  */
 internal object WatchLanes {
     const val THREADS = 4
+    private const val NAME = "watch-lane-"
+    private val io = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** On one of these threads now. */
+    fun onLane(): Boolean = Thread.currentThread().name.startsWith(NAME)
+
+    /**
+     * 19 Nov 2026 (second review): a small blocking call (the diary, a failure's note, a problem cleared) made from a lane is handed to
+     * IO and not waited for; anywhere else it runs here, as before. Never throws.
+     */
+    fun offload(block: () -> Unit) {
+        if (onLane()) io.launch { runCatching(block) } else runCatching(block)
+    }
     val dispatcher: kotlinx.coroutines.CoroutineDispatcher by lazy {
         val n = java.util.concurrent.atomic.AtomicInteger()
         java.util.concurrent.Executors.newFixedThreadPool(THREADS) { r ->
             Thread({
                 runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_FOREGROUND) }
                 r.run()
-            }, "watch-lane-${n.incrementAndGet()}").apply { isDaemon = true }
+            }, "$NAME${n.incrementAndGet()}").apply { isDaemon = true }
         }.asCoroutineDispatcher()
     }
 }

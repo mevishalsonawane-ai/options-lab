@@ -59,35 +59,47 @@ object PositionsFirst {
         startedAt = android.os.SystemClock.uptimeMillis()
         Thread({
             runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_FOREGROUND) }
-            // 19 Nov 2026 (audit batch 2: the 08:15 / 08:30 cached-process kills): a start with no market open or opening within
-            // 10 minutes and nothing held at the last mark is quiet ([com.optionslab.ira.QuietStart]) - only the job that started the
-            // app runs; this step waits until the screen opens, the market watch starts or a job asks ([StartGate]), then runs in
-            // full. Anything unknown is the full start at once, exactly as before.
-            val quiet = runCatching { quietNow(app) }.getOrDefault(false)
-            quietStart = quiet
-            decided.complete(quiet)
-            if (quiet) {
-                runCatching { Diag.record("start", "quiet start (no market open or opening within ${com.optionslab.ira.QuietStart.NEAR_MIN} min, " +
-                    "nothing held at the last mark): the books, the large settings and the warm-ups wait for the screen, the watch or a job") }
-                runBlocking { if (withTimeoutOrNull(QUIET_WAIT_MS) { StartGate.await() } == null) StartGate.open("a quiet start still running after ${QUIET_WAIT_MS / 60_000} min") }
-                quietStart = false
-                startedAt = android.os.SystemClock.uptimeMillis()
-            }
-            runBlocking {
-                steps(::restoreLive, { runCatching { com.optionslab.app.work.Jobs.ensureWatch(app) } }, { runCatching { KiteStream.ensure() } }, ::restoreLate,
-                    rest = ::restoreRest,
-                    // 19 Nov 2026 (audit batch 2): the stream asked beside the restore (it connects while the books are read; it is
-                    // asked again once they are, for the contracts they hold), and the large settings decrypted only once every
-                    // position book is read, the live ones first (they queued on the Keystore ahead of them).
-                    early = { runCatching { KiteStream.ensure() } },
-                    afterLive = { runCatching { com.optionslab.app.security.SecurePrefs.prefetchSoon() } })
-            }
-            // 19 Nov 2026 (audit batch 2): the plain "anything held" mark from what the start found (the watch keeps it after).
-            runCatching { Reconciler.markHeld(app, foundOpen != false) }
-            // 16 Oct: why Android ended the process last time (its own record), after the positions are watched.
-            runCatching { com.optionslab.app.work.ProcessExits.read(app) }
+            startBody(app)
         // The nice level only (review, 14 Oct: Java's MAX_PRIORITY would be inherited by every thread this one creates).
         }, "positions-first").apply { isDaemon = true }.start()
+    }
+
+    /**
+     * The positions-first thread's work (the tests run it with their own [quiet], [capMs] and [full]).
+     * 19 Nov 2026 (audit batch 2: the 08:15 / 08:30 cached-process kills): a start with no market open or opening within 10 minutes
+     * and nothing held at the last mark is quiet ([com.optionslab.ira.QuietStart]) - only the job that started the app runs; this step
+     * waits until the screen opens, the market watch starts or a job asks ([StartGate]), [capMs] at most, then runs in full. Anything
+     * unknown is the full start at once, exactly as before.
+     */
+    internal fun startBody(app: Context, quiet: () -> Boolean = { quietNow(app) }, capMs: Long = QUIET_WAIT_MS,
+                           full: suspend () -> Unit = { fullStart(app) }) {
+        if (decided.isCompleted) decided = CompletableDeferred()
+        val q = runCatching { quiet() }.getOrDefault(false)
+        quietStart = q
+        decided.complete(q)
+        if (q) {
+            runCatching { Diag.record("start", "quiet start (no market open or opening within ${com.optionslab.ira.QuietStart.NEAR_MIN} min, " +
+                "nothing held at the last mark): the books, the large settings and the warm-ups wait for the screen, the watch or a job") }
+            runBlocking { if (withTimeoutOrNull(capMs) { StartGate.await() } == null) StartGate.open("a quiet start still running after ${capMs / 1000} s") }
+            quietStart = false
+            startedAt = android.os.SystemClock.uptimeMillis()
+        }
+        runBlocking { full() }
+        // 19 Nov 2026 (audit batch 2): the plain "anything held" mark from what the start found (the watch keeps it after).
+        runCatching { Reconciler.markHeld(app, Reconciler.markFor(foundOpen != false)) }
+        // 16 Oct: why Android ended the process last time (its own record), after the positions are watched.
+        runCatching { com.optionslab.app.work.ProcessExits.read(app) }
+    }
+
+    /** The app's own full start: [steps] with the real books, watch, stream and read-ahead. */
+    private suspend fun fullStart(app: Context) {
+        steps(::restoreLive, { runCatching { com.optionslab.app.work.Jobs.ensureWatch(app) } }, { runCatching { KiteStream.ensure() } }, ::restoreLate,
+            rest = ::restoreRest,
+            // 19 Nov 2026 (audit batch 2): the stream asked beside the restore (it connects while the books are read; it is asked again
+            // once they are, for the contracts they hold), and the large settings decrypted only once every position book is read, the
+            // live ones first (they queued on the Keystore ahead of them).
+            early = { runCatching { KiteStream.ensure() } },
+            afterLive = { runCatching { com.optionslab.app.security.SecurePrefs.prefetchSoon() } })
     }
 
     /** 19 Nov 2026 (audit batch 2): this start is waiting as a quiet one (memory only). */
