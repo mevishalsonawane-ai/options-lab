@@ -48,8 +48,8 @@ Tested on the older days, which the idea had never seen. "A" is the group that s
 
 - **The lead from this morning's diagnosis did not hold.** "Two arms agreeing" looked better on the recent option
   trades (66% wins against 59.5%). On older days the agreed calls were right 49.4% of the time, the same coin.
-- **H6 is the only one that looks like something** (Liquidity with the day: +9.1 points in each of the three older
-  years), but it reversed in the recent days (-1.1), it lifts Liquidity's own rate by only 1.6 points, and it does not
+- **H6 is the only one that looks like something** (Liquidity with the day: +9.1 points over the older days, and
+  above zero in each of its three years), but it reversed in the recent days (-1.1), it lifts Liquidity's own rate by only 1.6 points, and it does not
   survive the correction for the 4,888 ideas tried. Not more reliable.
 
 ### 3. Two patterns worth knowing (looked at, not tested: treat as leads)
