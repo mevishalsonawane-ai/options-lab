@@ -925,11 +925,11 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (final review): at 15:10 book B's stop came out for its exit, but only the count of book A's unseen lost sale left B
-     * nothing to sell (Zerodha's positions still trail a sale that filled): B's stop rests again at once - the 15:10 hold, which keeps a
-     * stop out for a sale that did not go, never applies to this put-back.
+     * A's time-stop sale lost (its search then held up) and an earlier labelled sale of 30 that filled while Zerodha's positions still
+     * show 60 (they lag every fill); then, at [at] (or with Stop for today, [stopForToday]), B squares off with its stop resting. Returns
+     * B's stop and the search's gate (count it down to let the search answer).
      */
-    @Test fun at1510AStopTakenOutOnlyForAPendingLostSaleRestsAgainAtOnce() {
+    private fun pendingLostAndLaggingPositions(at: java.time.LocalTime?, stopForToday: Boolean = false): Pair<String, java.util.concurrent.CountDownLatch> {
         val s1 = stopOrder(30, 170.0, 161.5)
         val s2 = stopOrder(30, 170.0, 161.5)
         val b = position("liquidity15", 30, 200.0, "E2", s2, 170.0).put("level", 52_050.0).put("lot", 30)
@@ -941,30 +941,47 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
         pass()
         assertTrue("A's sale lost and held", OrbArms.lostExitForTest(sym))
-        // An earlier sale of 30 that filled (another trade's, labelled): the lag guard counts it as sold, the positions do not yet.
         val earlier = runBlocking { Broker.placeOrder(Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb"), exit = true) }
         runBlocking { Strategies.tagOwner("kite:$earlier", "Liquidity 30m FINNIFTY · square_off") }
-        // 15:10: B squares off; A's search is held up, so its sale stays pending.
         val gate = java.util.concurrent.CountDownLatch(1)
         OrbArms.testLostSearch = { gate.await(30, java.util.concurrent.TimeUnit.SECONDS) }
-        OrbArms.testNow = now.toLocalDate().atTime(15, 10, 5).atZone(com.optionslab.engine.IST)
+        if (at != null) OrbArms.testNow = now.toLocalDate().atTime(at).atZone(com.optionslab.engine.IST)
+        else OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        if (stopForToday) runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
         kite.requests.clear()
+        return s2 to gate
+    }
+
+    /**
+     * 20 Nov 2026 (final review: a short-sale case): at 15:10 B's stop came out and only A's pending lost sale left nothing to sell, but
+     * Zerodha's positions lag a fill - so A's sale may have filled unseen too: no stop is put back beyond what is held (none at all); once
+     * A's sale is let go (not found), B's square-off sells.
+     */
+    @Test fun at1510WithLaggingPositionsNoStopIsPutBackAndTheExitSellsOnceTheLostSaleResolves() {
+        val (s2, gate) = pendingLostAndLaggingPositions(java.time.LocalTime.of(15, 10, 5))
         try {
             pass()
-            assertEquals("nothing more sold", 0, marketSells().size)
+            assertEquals("nothing sold", 0, marketSells().size)
             assertEquals("B's stop came out", "CANCELLED", kite.order(s2).status)
-            val bNow = today("liquidity").single { it.arm == "liquidity15" }
-            assertTrue("B still open", bNow.open)
-            val rested = kite.placed.filter { it.form["order_type"] == "SL" }
-            assertEquals("B's stop rests again at once, for its 30", listOf("30"), rested.map { it.form["quantity"] })
-            val back = bNow.stopOrderId
-            assertNotNull("on B", back)
-            // While A's sale stays pending, B's stop rests: never cancelled and placed again on the next looks.
-            OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
-            pass(); runBlocking { OrbArms.priceCheckOnly(fast = true) }
-            assertEquals("still one stop placed", 1, kite.placed.count { it.form["order_type"] == "SL" })
-            assertTrue("B's stop still resting: ${kite.order(back!!).status}", kite.order(back).status !in setOf("CANCELLED", "COMPLETE", "REJECTED"))
-            assertEquals(back, today("liquidity").single { it.arm == "liquidity15" }.stopOrderId)
+            assertTrue("no stop put back beyond what is held", kite.placed.none { it.form["order_type"] == "SL" })
+            assertTrue("B still open", today("liquidity").single { it.arm == "liquidity15" }.open)
+        } finally { gate.countDown(); OrbArms.testLostSearch = null }
+        searchDone()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
+        pass(); pass()
+        assertTrue("A's sale let go", !OrbArms.lostExitForTest(sym))
+        assertTrue("B's square-off sold once A's sale resolved", today("liquidity").single { it.arm == "liquidity15" }.exit != null)
+        assertTrue("no stop rested meanwhile", kite.placed.none { it.form["order_type"] == "SL" })
+    }
+
+    /** 20 Nov 2026 (final review): the same with Stop for today on (before 15:10): no stop put back beyond what is held. */
+    @Test fun withStopForTodayAndLaggingPositionsNoStopIsPutBack() {
+        val (s2, gate) = pendingLostAndLaggingPositions(null, stopForToday = true)
+        try {
+            pass()
+            assertEquals("nothing sold", 0, marketSells().size)
+            assertTrue("no stop put back beyond what is held", kite.placed.none { it.form["order_type"] == "SL" })
+            assertTrue(kite.order(s2).status == "CANCELLED" || today("liquidity").single { it.arm == "liquidity15" }.stopOrderId == s2)
         } finally { gate.countDown(); OrbArms.testLostSearch = null }
         searchDone()
     }

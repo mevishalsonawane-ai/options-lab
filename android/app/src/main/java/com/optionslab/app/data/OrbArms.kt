@@ -5440,7 +5440,10 @@ object OrbArms {
         if (why in ALWAYS_EXITS && p0.stopOrderId?.let { refusedAt[it] }?.let { epochMs(now()) - it < REFUSED_RETRY_MS } == true) return p0 to null
         // 20 Nov 2026 (final review): a stop put back because only another part's pending lost sale left nothing to sell rests until that
         // sale is resolved (found or let go) - then the exit goes at once; never taken out and put back every look meanwhile.
-        p0.stopOrderId?.let { sid -> pendingBack[sid]?.let { ids -> if (ids.any { lostExits.containsKey(it) }) return p0 to null; pendingBack.remove(sid, ids) } }
+        // (Only the session's and Boss's exits wait on it - 15:10, Stop for today, the square-offs; a target or an index exit never does.)
+        if (why in ALWAYS_EXITS) p0.stopOrderId?.let { sid ->
+            pendingBack[sid]?.let { ids -> if (ids.any { lostExits.containsKey(it) }) return p0 to null; pendingBack.remove(sid, ids) }
+        }
         // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade is unresolved
         // it sells nothing more - held; searched for in the background and booked by a later look ([lostExitLook], never the network under
         // the lock). Known not
@@ -5471,9 +5474,12 @@ object OrbArms {
         var p = p0
         // What a sell may still cover beside the other working sales (the pre-read's): the most a stop put back may rest for.
         var room = p0.qty
+        // (20 Nov 2026: Zerodha's positions as the pre-read had them - the pending put-back below rests only when they did not lag.)
+        var rawNet: Int? = null
         if (seen != null) {
             // (20 Nov 2026, deep review F1: less a lost sale of another part that may still be filling, unseen - [lostPending].)
             val heldRaw = seen.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
+            rawNet = heldRaw
             val held = (heldRaw - lostPending(sym, p, seen.orders)).coerceAtLeast(0)
             // (Shown gone - or all of it covered by another part's lost sale that may still be filling: the stop stays resting.)
             if (p.stopOrderId != null && held <= 0) return p to null
@@ -5654,10 +5660,18 @@ object OrbArms {
             val workingLeft = working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
             val qty = com.optionslab.engine.risk.ExitQty.sendable(still, workingLeft, p.qty, spec.lotSize)
             // (20 Nov 2026, final review C2: nothing to sell only because another part's lost sale may still be filling - the stop that came
-            // out goes straight back, capped at what may be sold without that count - with Stop for today and from 15:10 too, but never
-            // beside a square-off's or its own working sale, at the 15:05 expiry square-off or in its gap: never no stop and nothing sold.)
+            // out goes straight back - with Stop for today and from 15:10 too, but never beside a square-off's or its own working sale, at
+            // the 15:05 expiry square-off or in its gap - for no more than Zerodha holds less every other working sale, fills its order
+            // book shows that its positions do not yet already taken off ([heldNow], the lag guard). When the positions lagged a fill,
+            // that lost sale may have filled unseen too: nothing rests - the exit sells once the lost sale is found or let go.)
             val qtyRaw = com.optionslab.engine.risk.ExitQty.sendable(heldNow, workingLeft, p.qty, spec.lotSize)
-            if (qty <= 0 && qtyRaw > 0) return unsold(qtyRaw, book, pending = true)
+            if (qty <= 0 && qtyRaw > 0) {
+                val lagged = rawNet?.let { heldNow < it } ?: true
+                if (!lagged) return unsold(qtyRaw, book, pending = true)
+                runCatching { Diag.record("orb", "$label: $sym's exit waits for another trade's lost sale; Zerodha's positions lag a fill, so no " +
+                    "stop is put back meanwhile (it could sell more than is held)") }
+                return p.copy(stopOrderId = null) to null
+            }
             // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
             // gone on this read although the read before showed it held - never a stop that could sell into a short: the price check
             // puts it back within a minute while Zerodha shows it held, [restExchangeStop].)

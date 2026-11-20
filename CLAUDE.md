@@ -210,9 +210,10 @@ notes; match the surrounding code.
     that is missing at Zerodha (not placed, or cancelled or refused by the exchange or Zerodha) is always put back there on the
     next check (no setting); never beside a square-off's or the arm's own working sale, at the 15:05 expiry square-off, from
     15:10 or with Stop for today. A stop Boss cancelled in Kite is never put back: the app watches the level and sells there.
-    One exception (20 Nov audit): a stop the arm's own exit took out, when only another trade's lost exit sale (not yet seen in Zerodha's
-    order book) left nothing to sell, goes back at once even from 15:10 or with Stop for today (never beside a square-off's or the arm's
-    own working sale), and rests until that sale is found or let go; then the exit sells.
+    One exception (20 Nov audit): a stop the arm's own exit took out, when only another part's lost exit sale (not yet seen in Zerodha's
+    order book) left nothing to sell, goes back at once, for no more than Zerodha holds less every other working sale, even from 15:10 or
+    with Stop for today. It is never put back beside a square-off's or the arm's own working sale, at the 15:05 expiry square-off or in its
+    gap, or when Boss cancelled it himself. It rests until that sale is found and finished, or let go; then the exit sells.
   Every change that touches background work must test this.
 - Nothing about the account is spoken on a locked phone.
 - Market times: NSE F&O closes 15:40, index/cash 15:30, expiry square-off 15:05.
