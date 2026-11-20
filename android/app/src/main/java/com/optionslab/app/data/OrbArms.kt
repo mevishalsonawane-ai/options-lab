@@ -2790,6 +2790,8 @@ object OrbArms {
 
     /** 19 Nov 2026 (audit batch 2): the arms' own work off the lock (the instrument list's download). */
     private val offLock = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    /** 20 Nov 2026 (b5-stream merge): a lost exit sale's background search and its cancels read and write in the stop checks' lane. */
+    private val SAFETY_LANE = Broker.Lane(com.optionslab.ira.RateGate.Priority.SAFETY)
     @Volatile private var warming: kotlinx.coroutines.Deferred<Unit>? = null
     internal const val WARM_WAIT_MS = 5_000L
 
@@ -4183,10 +4185,10 @@ object OrbArms {
                     val ms = epochMs(now())
                     val ask = orders[id]?.working == true && ms - found.cancelAskedMs !in 0 until LOST_EXIT_ASK_MS
                     lostExits.putIfAbsent(found.id, found.copy(foundId = id, cancelAskedMs = if (ask) ms else found.cancelAskedMs))
-                    if (ask) offLock.launch { runCatching { Broker.cancel(id) } }
+                    if (ask) offLock.launch(SAFETY_LANE) { runCatching { Broker.cancel(id) } }
                 } else {
                     runCatching { Diag.record("orb", "$sym: the lost exit found ($id) did not finish in Zerodha's book; let go") }
-                    offLock.launch { runCatching { Broker.cancel(id) } }
+                    offLock.launch(SAFETY_LANE) { runCatching { Broker.cancel(id) } }
                     com.optionslab.app.work.Alerts.error("ORB live: the lost exit of $sym was found in Zerodha's order book ($id) but has not finished. " +
                         "The app reads Zerodha again and sells only what is still held; check Kite's order book.", "ORB live")
                 }
@@ -5687,7 +5689,7 @@ object OrbArms {
 
     /** 20 Nov 2026: the background search of [asked] ([lostExitLook]), off the arms' lock. */
     private fun searchLost(asked: LostExit) {
-        offLock.launch { runCatching { searchLostNow(asked) } }
+        offLock.launch(SAFETY_LANE) { runCatching { searchLostNow(asked) } }
     }
 
     /** TEST ONLY (20 Nov 2026): run before each search of a lost exit (null in the app). Debug builds only. */
@@ -5889,8 +5891,9 @@ object OrbArms {
                 val trig = listOfNotNull(Broker.lostTrigger(ownLost), given.stopTrigger, lockOrStop(given, tickG), fixedStopOf(given, tickG)).maxOrNull()
                 val stopExit = why == "stop" || why == "profit_lock" || why == ruleWhy(given, tickG) || why == fixedWhy(given)
                 val stopLevel = stopExit || (ltp != null && trig != null && ltp <= trig + 1e-9)
-                // (Every other exit waits for the search's end: an order book that cannot be read keeps it going, but then the exit's own
-                // read of the book fails too - it could not sell meanwhile either.)
+                // (Every other exit waits for the search's end. The search reads the book in the stop checks' lane (SAFETY: only exits and
+                // stops go first, never entries or Jarvis), so it is not starved; a book that cannot be read keeps it going, and then the
+                // exit's own read of the book fails too - it could not sell meanwhile either.)
                 if (!stopLevel || (Broker.lostAgeMs(ownLost) ?: Long.MAX_VALUE) < LOST_EXIT_WAIT_MS) {
                     runCatching { Diag.record("orb", "$labelG: $sym's exit waits for its stop whose answer was lost (it may be resting)") }
                     return given to null

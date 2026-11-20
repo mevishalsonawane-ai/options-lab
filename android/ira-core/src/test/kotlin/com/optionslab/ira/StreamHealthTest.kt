@@ -190,4 +190,15 @@ class StreamHealthTest {
         assertEquals(StreamHealth.MAX_WAIT_MS, StreamHealth.waitFor(30_000L, null, StreamHealth.Cause.SILENT, held = false, jitter = 1.0))
         assertEquals(StreamHealth.MAX_WAIT_MS, StreamHealth.waitFor(0L, null, StreamHealth.Cause.TOKEN, held = true, jitter = 0.0))
     }
+
+    /** 20 Nov 2026 (open positions come first): what is sent first after a reconnect. */
+    @Test fun theHeldPositionsAreSubscribedFirst() {
+        val add = linkedSetOf(256265L, 999L, 12345L, 777L, 260105L)
+        val order = listOf(12345L, 777L, 4242L, 256265L, 260105L)
+        assertEquals(listOf(12345L, 777L, 256265L, 260105L, 999L), StreamHealth.subscribeOrder(add, order))
+        assertEquals(listOf(5L), StreamHealth.subscribeOrder(setOf(5L), emptyList()))
+        assertTrue(StreamHealth.subscribeOrder(emptySet(), order).isEmpty(), "nothing outside what is to be added")
+        // Chunked in that order: the positions go in the first message.
+        assertEquals(listOf(12345L, 777L), StreamHealth.chunks(StreamHealth.subscribeOrder(add, order), 2).first())
+    }
 }

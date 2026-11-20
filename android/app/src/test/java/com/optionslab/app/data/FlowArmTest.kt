@@ -330,6 +330,31 @@ class FlowArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 20 Nov 2026 (audit: "Flow uses old stream prices when the stream is down"): the index exit decides on the stream's index price
+     * only while it is fresh; an old one (20 s) is not used - Zerodha's quote of the index is read instead, so the exit is never
+     * skipped and never decided on a stale level.
+     */
+    @Test fun theIndexExitReadsZerodhaWhenTheStreamsIndexPriceIsOld() {
+        breakdownAt0941()
+        // The stream's last NIFTY tick (20 s old) says it is back over the midpoint; Zerodha's quote says it is not.
+        KiteStream.feedForTest(listOf(KiteTicks.Tick(nifty, 25_060.0, close = 25_100.0, exchangeTime = sec(day, 9, 43, 5))), System.currentTimeMillis() - 20_000)
+        kite.quote("NSE:NIFTY 50", 25_010.0)
+        option(peToken, 95.0)
+        kite.requests.clear()
+        at(LocalTime.of(9, 43), 6)
+        runBlocking { FlowArm.manageOnly() }
+        assertTrue("held: not decided on the old tick", view().closed.isEmpty())
+        assertTrue("Zerodha's index quote was read", kite.requests.any { it.path.startsWith("/quote") })
+        // Zerodha's price is over the midpoint: the index stop.
+        kite.quote("NSE:NIFTY 50", 25_060.0)
+        option(peToken, 95.0)
+        at(LocalTime.of(9, 43), 30)
+        runBlocking { FlowArm.manageOnly() }
+        assertEquals("index stop", view().closed.single().why)
+        assertNothingAtZerodha()
+    }
+
     @Test fun aRestartMidTradeRestoresItFirstAndKeepsWatchingIt() {
         breakdownAt0941()
         assertEquals(1, FlowArm.view.value.open.size)

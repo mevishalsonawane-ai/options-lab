@@ -84,6 +84,8 @@ object ArmLive {
     private const val SHADOW_KEPT = 600
     private const val NOT_MIRRORED_KEPT = 300
     private const val WHO = "Arms live"
+    /** B5 merge review: how long a live copy's entry price check waits in the entries' lane of the quote queue before the stop checks' lane. */
+    internal const val LIVE_ENTRY_QUOTE_WAIT_MS = 2_000L
     /** The switches' second copy in the settings vault (a book that cannot be read never brings every arm back on). */
     internal const val K_SWITCHES = "armlive.switches"
     internal const val K_SHADOW = "armlive.shadow"
@@ -508,7 +510,8 @@ object ArmLive {
     internal suspend fun liveLast(c: Paper.Contract): Double? {
         val ins = runCatching { zerodha(c).first }.getOrNull() ?: return null
         val k = "${ins.exchange}:${ins.symbol}"
-        return runCatching { Broker.stopQuotes(listOf(k))[k]?.last }.getOrNull()?.takeIf { it > 0 && it.isFinite() }
+        // B5-D review: an entry pass's booking read - the entries' lane of the quote queue, never ahead of a held stop's read.
+        return runCatching { Broker.stopQuotes(listOf(k), com.optionslab.ira.RateGate.Priority.ENTRY)[k]?.last }.getOrNull()?.takeIf { it > 0 && it.isFinite() }
     }
 
     /** TEST ONLY: the screen's view set (19 Nov 2026: the paper reset dialog's live-copy line). Debug builds only. */
@@ -1143,7 +1146,16 @@ object ArmLive {
         if (qty <= 0) { notMirrored(a, "the paper trade is under one lot"); return@withLock }
         var cut = LiveMirror.cutWords(lots, qty, ins.lot, s.armLiveLots)
         val qkey = "${ins.exchange}:${ins.symbol}"
-        val quote = runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
+        // (B5 merge review, 20 Nov 2026: first in the entries' lane for 2 s at most - behind any held stop's read waiting for the same quote
+        // turn - and, only when no turn came, in the stop checks' lane, as before the quote queue: it never times out and skips the live
+        // copy, and takes a stop read's turn only when the stops kept the queue busy for 2 s.)
+        // (Never an old tick from the first try: one that got no turn falls through to the fresh read. B5 review: one 2 s deadline for
+        // the whole first try - its waits and its call - on its own job ([Broker.within]), so the time here stays about 2 s plus one read.)
+        val quote = Broker.within(LIVE_ENTRY_QUOTE_WAIT_MS) {
+            kotlinx.coroutines.withContext(Broker.QuoteQueueCap(LIVE_ENTRY_QUOTE_WAIT_MS)) {
+                Broker.stopQuotes(listOf(qkey), com.optionslab.ira.RateGate.Priority.ENTRY, staleFallback = false)[qkey]
+            }
+        } ?: runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
         // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; "make it default, don't have one
         // more option"): an index option buy of more than one lot is cut to the lots the free cash fits - only ever fewer than his
@@ -3265,7 +3277,8 @@ object ArmLive {
         val t = now()
         val realMs = System.currentTimeMillis()
         val ms = nowMs()
-        val q = if (Broker.loggedIn) runCatching { Broker.stopQuotes(open.map { "${it.exchange}:${it.symbol}" }.distinct()) }.getOrDefault(emptyMap()) else emptyMap()
+        // 20 Nov 2026 (review): shadow positions (logged only) read in the lowest lane of the quote queue, behind every real stop.
+        val q = if (Broker.loggedIn) runCatching { Broker.stopQuotes(open.map { "${it.exchange}:${it.symbol}" }.distinct(), com.optionslab.ira.RateGate.Priority.ANALYSIS) }.getOrDefault(emptyMap()) else emptyMap()
         val exitSlip = measured(com.optionslab.ira.Slippage.Leg.EXIT, EXIT_BASES)
         val stopSlip = measured(com.optionslab.ira.Slippage.Leg.EXIT, STOP_BASES)
         // The minute candles read this look, by contract (one read each), and at most [CANDLE_READS] of them.

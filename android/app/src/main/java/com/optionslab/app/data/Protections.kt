@@ -871,7 +871,7 @@ object Protections {
             return p
         }
         val key = "${p.exchange}:${p.symbol}"
-        val last = runCatching { Broker.quotes(listOf(key))[key]?.last }.getOrNull()?.takeIf { it > 0 } ?: return p
+        val last = runCatching { Broker.quotes(listOf(key), lane = com.optionslab.ira.RateGate.Priority.SAFETY)[key]?.last }.getOrNull()?.takeIf { it > 0 } ?: return p   // B5-D: a stop's read
         val spec = Kite.Spec(p.exchange, p.symbol, 0L, p.lotSize, p.tick)
         var (gtt, why) = Kite.protect(spec, p.product, p.qty.sign() * qty, last, p.stop, p.target, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
         // A target that cannot rest (too near the price) never costs the stop: the stop alone.
@@ -1244,7 +1244,7 @@ object Protections {
                     p.tick, p.exchange, "iraprotect", triggerPrice = s0), known)
             }.getOrElse { e ->
                 // Usually the price opened through the stop (Zerodha refuses a stop on the wrong side of the price): said plainly.
-                val last = runCatching { Broker.quotes(listOf("${p.exchange}:${p.symbol}"))["${p.exchange}:${p.symbol}"]?.last }.getOrNull()
+                val last = runCatching { Broker.quotes(listOf("${p.exchange}:${p.symbol}"), lane = com.optionslab.ira.RateGate.Priority.SAFETY)["${p.exchange}:${p.symbol}"]?.last }.getOrNull()   // B5-D
                 val through = last != null && last > 0 && (if (p.qty > 0) last <= s0 else last >= s0)
                 unprotected(if (through) "${p.symbol} ${if (said == null) "opened" else "is"} at %.2f, already through its stop of %.2f, so the stop could not be placed again. Close it in Trade.".format(last, s0)
                     else "${p.symbol}: its stop could not be placed again${if (said == null) " at the open" else ""} (${e.message}). The position is NOT protected: set the protection again.")

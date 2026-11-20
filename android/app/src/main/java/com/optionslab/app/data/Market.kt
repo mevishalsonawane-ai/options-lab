@@ -109,8 +109,27 @@ object Market {
             field = v
         }
 
+    /**
+     * 20 Nov 2026 (audit: "Muhurat sessions aren't watched"): NSE's special session ([specialSession], e.g. Diwali's Muhurat hour)
+     * is trading at [d] [minute] - its own window, F&O's open to close. No arm trades it (they are not trading days), but the
+     * market is not "closed" then for a way out: a close is taken ([acceptsExits]) and held positions' prices stream. Review:
+     * new orders stay refused ([acceptsOrders]) - the watch does not run that session, so nothing would check a new position.
+     */
+    fun specialOpenAt(d: LocalDate, minute: Int): Boolean = specialSession(d)?.let { s ->
+        minute >= s.open.hour * 60 + s.open.minute && minute < s.close.hour * 60 + s.close.minute
+    } ?: false
+
+    /** [specialOpenAt] now. */
+    fun specialOpen(): Boolean = now().let { specialOpenAt(it.toLocalDate(), it.hour * 60 + it.minute) }
+
     /** Whether a hand order may be placed now: in F&O's hours on a trading day (to 15:40 from 3 Aug 2026). */
     fun acceptsOrders(): Boolean = testOrdersAnyTime || isOpen()
+
+    /**
+     * 20 Nov 2026: whether a position may be CLOSED now - [acceptsOrders], or within NSE's special session ([specialOpen]), so a
+     * way out in the Muhurat hour is never refused as "closed".
+     */
+    fun acceptsExits(): Boolean = acceptsOrders() || specialOpen()
 
     data class Quote(val symbol: String, val last: Double, val open: Double, val high: Double, val low: Double,
                      val minute: Int, val spark: List<Double>,
@@ -192,6 +211,8 @@ object Market {
     private fun parseContracts(): Pair<LocalDate, List<Upstox.Contract>>? = runCatching {
         val o = JSONObject(contractsFile().readText())
         val day = LocalDate.parse(o.getString("day"))
+        // 20 Nov 2026: the freeze levels saved with the list (a file from before has none: the table stands).
+        keepFreeze(o.optJSONObject("f"))
         val arr = o.getJSONArray("c")
         day to (0 until arr.length()).map {
             val c = arr.getJSONArray(it)
@@ -205,12 +226,14 @@ object Market {
     fun contracts(forceRefresh: Boolean = false): List<Upstox.Contract> = synchronized(downloadLock) {
         val cached = cachedContracts()
         if (!forceRefresh && cached != null && cached.first == today()) return cached.second
-        val fresh = Net.fetchMaster()
+        val freeze = HashMap<String, Int>()
+        val fresh = Net.fetchMaster(freeze = freeze)
+        runCatching { com.optionslab.engine.Kite.freezeFromData(freeze) }
         val arr = JSONArray()
         fresh.forEach { arr.put(JSONArray().put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.instrumentKey).put(it.tradingSymbol)) }
         // Written to a temporary file and moved into place, so a reader never sees half a list.
         val tmp = File(app.filesDir, "contracts.json.tmp")
-        tmp.writeText(JSONObject().put("day", today().toString()).put("c", arr).toString())
+        tmp.writeText(JSONObject().put("day", today().toString()).put("c", arr).put("f", JSONObject(freeze as Map<*, *>)).toString())
         synchronized(readLock) { if (!tmp.renameTo(contractsFile())) { contractsFile().writeText(tmp.readText()); tmp.delete() } }
         return fresh
     }
@@ -228,6 +251,7 @@ object Market {
         bfoMem?.let { if (it.first == stamp && f.exists()) return it.second }
         return runCatching {
             val o = JSONObject(f.readText())
+            keepFreeze(o.optJSONObject("f"))
             val arr = o.getJSONArray("c")
             LocalDate.parse(o.getString("day")) to (0 until arr.length()).map {
                 val c = arr.getJSONArray(it)
@@ -237,12 +261,12 @@ object Market {
         }.getOrNull()?.also { bfoMem = stamp to it }
     }
 
-    /** [list] saved as today's SENSEX options (written whole to a temporary file, then moved into place). */
-    internal fun saveBfo(list: List<Upstox.Contract>) {
+    /** [list] saved as today's SENSEX options (written whole to a temporary file, then moved into place); [freeze]: its freeze levels. */
+    internal fun saveBfo(list: List<Upstox.Contract>, freeze: Map<String, Int> = emptyMap()) {
         val arr = JSONArray()
         list.forEach { arr.put(JSONArray().put(it.underlying).put(it.expiry.toString()).put(it.strike).put(it.right.name).put(it.lotSize).put(it.instrumentKey).put(it.tradingSymbol)) }
         val tmp = File(app.filesDir, "contracts_bfo.json.tmp")
-        tmp.writeText(JSONObject().put("day", today().toString()).put("c", arr).toString())
+        tmp.writeText(JSONObject().put("day", today().toString()).put("c", arr).put("f", JSONObject(freeze as Map<*, *>)).toString())
         synchronized(readLock) { if (!tmp.renameTo(bfoFile())) { bfoFile().writeText(tmp.readText()); tmp.delete() } }
     }
 
@@ -254,9 +278,22 @@ object Market {
     fun bfoContracts(): List<Upstox.Contract> = synchronized(bfoLock) {
         val cached = cachedBfoContracts()
         if (cached != null && cached.first == today()) return cached.second
-        val fresh = Net.fetchBseMaster()
-        saveBfo(fresh)
+        val freeze = HashMap<String, Int>()
+        val fresh = Net.fetchBseMaster(freeze = freeze)
+        runCatching { com.optionslab.engine.Kite.freezeFromData(freeze) }
+        saveBfo(fresh, freeze)
         return fresh
+    }
+
+    /**
+     * 20 Nov 2026 (audit: "freeze quantities are hard-coded"): the freeze levels saved with a contract list, kept for the order
+     * checks ([com.optionslab.engine.Kite.freezeFromData]; the table stands for anything the data does not give). Memory only.
+     */
+    private fun keepFreeze(o: JSONObject?) {
+        if (o == null) return
+        val m = HashMap<String, Int>()
+        for (k in o.keys()) o.optInt(k, 0).takeIf { it >= 2 }?.let { m[k] = it }
+        runCatching { com.optionslab.engine.Kite.freezeFromData(m) }
     }
 
     private val bfoRefreshing = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -268,7 +305,7 @@ object Market {
      */
     fun refreshBfoInBackground() {
         val now = System.currentTimeMillis()
-        if (now - bfoTriedAt < 10 * 60_000L || !bfoRefreshing.compareAndSet(false, true)) return
+        if (now - bfoTriedAt in 0 until 10 * 60_000L || !bfoRefreshing.compareAndSet(false, true)) return
         bfoTriedAt = now
         Thread { try { runCatching { bfoContracts() } } finally { bfoRefreshing.set(false) } }.start()
     }

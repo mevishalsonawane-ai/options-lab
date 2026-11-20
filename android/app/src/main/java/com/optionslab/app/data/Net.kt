@@ -213,12 +213,13 @@ object Net {
      * The instrument master, streamed: the file is tens of megabytes of JSON,
      * so it is parsed token by token and only NIFTY/BANKNIFTY options are kept.
      */
-    fun fetchMaster(underlyings: Set<String> = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")): List<Upstox.Contract> {
+    fun fetchMaster(underlyings: Set<String> = setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"),
+                    freeze: MutableMap<String, Int>? = null): List<Upstox.Contract> {
         val c = open(Upstox.MASTER_URL, 300_000)
         c.setRequestProperty("Accept", "*/*")
         try {
             if (c.responseCode != 200) throw HttpFailure(c.responseCode)
-            return c.inputStream.use { parseMaster(GZIPInputStream(it, 1 shl 16), underlyings) }
+            return c.inputStream.use { parseMaster(GZIPInputStream(it, 1 shl 16), underlyings, freeze = freeze) }
         } catch (e: HttpFailure) {
             throw e
         } catch (_: IOException) {
@@ -385,12 +386,12 @@ object Net {
     const val BSE_MASTER_URL = "https://assets.upstox.com/market-quote/instruments/exchange/BSE.json.gz"
 
     /** SENSEX's listed options from [BSE_MASTER_URL] ([parseMaster] on the BSE_FO segment). */
-    fun fetchBseMaster(underlyings: Set<String> = setOf("SENSEX")): List<Upstox.Contract> {
+    fun fetchBseMaster(underlyings: Set<String> = setOf("SENSEX"), freeze: MutableMap<String, Int>? = null): List<Upstox.Contract> {
         val c = open(BSE_MASTER_URL, 120_000)
         c.setRequestProperty("Accept", "*/*")
         try {
             if (c.responseCode != 200) throw HttpFailure(c.responseCode)
-            return c.inputStream.use { parseMaster(GZIPInputStream(it, 1 shl 16), underlyings, segment = "BSE_FO") }
+            return c.inputStream.use { parseMaster(GZIPInputStream(it, 1 shl 16), underlyings, segment = "BSE_FO", freeze = freeze) }
         } catch (e: HttpFailure) {
             throw e
         } catch (_: IOException) {
@@ -400,14 +401,18 @@ object Net {
         }
     }
 
-    /** The options of [underlyings] in the master's [segment] (NSE_FO, as always; BSE_FO for SENSEX since 15 Oct). */
-    fun parseMaster(input: InputStream, underlyings: Set<String>, segment: String = "NSE_FO"): List<Upstox.Contract> {
+    /**
+     * The options of [underlyings] in the master's [segment] (NSE_FO, as always; BSE_FO for SENSEX since 15 Oct). 20 Nov 2026:
+     * [freeze], when given, gets each underlying's freeze level from the same rows ("freeze_quantity"; the smallest seen), for
+     * [com.optionslab.engine.Kite.freezeFromData].
+     */
+    fun parseMaster(input: InputStream, underlyings: Set<String>, segment: String = "NSE_FO", freeze: MutableMap<String, Int>? = null): List<Upstox.Contract> {
         val out = ArrayList<Upstox.Contract>()
         JsonReader(InputStreamReader(input, Charsets.UTF_8)).use { r ->
             r.beginArray()
             while (r.hasNext()) {
                 var seg: String? = null; var type: String? = null; var und: String? = null; var asset: String? = null
-                var expiry = 0L; var strike = 0.0; var lot = 0; var key: String? = null; var sym: String? = null
+                var expiry = 0L; var strike = 0.0; var lot = 0; var key: String? = null; var sym: String? = null; var fq = 0.0
                 r.beginObject()
                 while (r.hasNext()) {
                     val name = r.nextName()
@@ -422,12 +427,15 @@ object Net {
                         "lot_size" -> lot = r.nextInt()
                         "instrument_key" -> key = r.nextString()
                         "trading_symbol" -> sym = r.nextString()
+                        // Review: anything but a number is skipped whole (a failed read would leave the reader stuck on it).
+                        "freeze_quantity" -> fq = if (r.peek() == JsonToken.NUMBER) r.nextDouble() else { r.skipValue(); 0.0 }
                         else -> r.skipValue()
                     }
                 }
                 r.endObject()
                 val u = und ?: asset
                 if (seg == segment && (type == "CE" || type == "PE") && u in underlyings && key != null) {
+                    if (freeze != null && fq >= 2 && fq.isFinite()) freeze.merge(u!!, fq.toInt(), ::minOf)
                     out += Upstox.Contract(
                         underlying = u!!,
                         expiry = Instant.ofEpochMilli(expiry).atZone(com.optionslab.engine.IST).toLocalDate(),

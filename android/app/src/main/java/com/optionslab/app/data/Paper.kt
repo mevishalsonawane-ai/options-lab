@@ -704,6 +704,108 @@ object Paper {
         if (pn.lastCounts(t.last, tt, sinceSec) && !pn.farFromBook(t.last, tt, t.bid, t.ask)) t.last else pn.bookBid(t.bid, t.ask)
     }.getOrNull()
 
+    /** 20 Nov 2026: the oldest stream price an arm's exit decision takes ([exitPriceNow]); older, a fresh quote is read instead. */
+    const val EXIT_PRICE_MAX_AGE_MS = 5_000L
+
+    /** 20 Nov 2026: how long [exitPriceNow]'s fresh read may take before the exit is decided without it (the minute lane goes on). */
+    const val EXIT_READ_MS = 3_000L
+
+    /** TEST ONLY: [exitPriceNow]'s fresh read in place of Zerodha's quote and the paper feed (null: as in the app). */
+    @Volatile internal var exitReadForTest: (suspend (Contract) -> Double?)? = null
+
+    /**
+     * 20 Nov 2026 (audit: "S5, Flow and Ntfy use old stream prices as the current price when the stream is down"): [c]'s price for
+     * an arm's exit decision (its stop, profit lock or target), held since [since]:
+     *  - the stream's price when its packet is at most [EXIT_PRICE_MAX_AGE_MS] old ([heldPriceNow]'s rules: a trade since the entry,
+     *    or a sane book's bid) - nothing read, as before;
+     *  - else a fresh read, for at most [EXIT_READ_MS]: Zerodha's quote with a Zerodha session ([Broker.stopQuotes] in the entries'
+     *    lane, below every live stop's read; its book's bid when its last price lies far outside it), else the paper feed's ([quote]).
+     *    B5-D: none at all while a live stop's read waits in Zerodha's quote queue, nor once the paper arms' reads have had their
+     *    share of the window ([ReadBudget]) - so they never hold the live copies' look behind them ([paperExitRead]);
+     *  - else, so an exit is never skipped for want of a price, the stream's last price however old, as before this change.
+     * Null only when there is no price at all (the arm then decides its time exits and square-off as before, and puts its stop
+     * back). Never on the stream's thread: a background lane's look (the minute lane, the 15-second stop check).
+     */
+    suspend fun exitPriceNow(c: Contract, since: java.time.LocalDateTime, readMs: Long = EXIT_READ_MS): Double? {
+        runCatching { heldPriceNow(c, since, EXIT_PRICE_MAX_AGE_MS, lookup = true) }.getOrNull()?.let { return it }
+        // Review: the read runs on its own background job and is waited for [readMs] at most - the paper feed's read is a blocking
+        // HTTP call that a timeout cannot stop, so the arm never waits on it past the bound (a late answer is simply not used).
+        // B5-D: ONE bounded read from the paper reads' budget ([paperExitRead]) - Zerodha's quote, else the paper feed's (and its book
+        // read) - or none at all, straight to the stream's last price, once the budget is spent or a live stop's read waits.
+        val read = paperExitRead(readMs) { freshExitRead(c, since) }
+        if (read != null && read.isFinite() && read > 0) return read
+        runCatching { heldPriceNow(c, since, Long.MAX_VALUE, lookup = true) }.getOrNull()?.let { return it }
+        // Merge review: no stream packet at all: the paper feed as before this change (bounded, its own job), so a stop is never left
+        // unchecked for want of a price. B5 merge review: never Zerodha's quote here, outside the paper reads' budget - the feed's book read
+        // ([restBook]) is left out ([NoZerodhaRead]).
+        return boundedRead(readMs) {
+            kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY) + NoZerodhaRead()) { feedExitRead(c, since) }
+        }
+            ?.takeIf { it.isFinite() && it > 0 }
+    }
+
+    /** B5 merge review: on a coroutine's context, no Zerodha read ([restBook]) - the paper feed alone. */
+    class NoZerodhaRead : kotlin.coroutines.AbstractCoroutineContextElement(NoZerodhaRead) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<NoZerodhaRead>
+    }
+
+    /** B5-D: the paper arms' fresh exit reads together: at most 4 s in any 15 s ([com.optionslab.ira.ReadBudget]). */
+    @Volatile private var exitBudget = com.optionslab.ira.ReadBudget()
+
+    /** TEST ONLY: the paper arms' read budget full again. */
+    internal fun resetExitBudgetForTest() { exitBudget = com.optionslab.ira.ReadBudget() }
+
+    /**
+     * B5-D (the paper exit reads ran one after another ahead of the live copies' stop look): a paper arm's fresh exit read [block],
+     * [readMs] at most - or none (null: the caller decides on the stream's last price, never skipping the exit) while a read of a lane
+     * above the entries' (a live stop's) waits in Zerodha's quote queue, or once the paper arms' reads have spent their share of the
+     * window ([exitBudget]). For S5, Flow and ntfy's exits.
+     */
+    internal suspend fun <T> paperExitRead(readMs: Long, block: suspend () -> T?): T? {
+        if (runCatching { Broker.quoteWaitingAbove(com.optionslab.ira.RateGate.Priority.ENTRY) }.getOrDefault(false)) return null
+        val budget = exitBudget
+        val got = budget.reserve(readMs) ?: return null
+        val t0 = System.nanoTime()
+        try { return boundedRead(got.ms) { kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY)) { block() } } }
+        finally { budget.settle(got, (System.nanoTime() - t0) / 1_000_000L) }
+    }
+
+    /** [exitPriceNow]'s fresh reads (their own threads: a blocking read never holds an arm). */
+    private val exitReads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /**
+     * 20 Nov 2026 (review): [block] run on its own background job and waited for [ms] at most (null past it, or on a failure). A
+     * blocking read inside it can outlive the wait, but never holds its caller. For an arm's exit reads only.
+     */
+    suspend fun <T> boundedRead(ms: Long, block: suspend () -> T?): T? {
+        val job = exitReads.async { try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null } }
+        return try { kotlinx.coroutines.withTimeoutOrNull(ms) { job.await() } } finally { if (!job.isCompleted) job.cancel() }
+    }
+
+    /** Zerodha's quote of [c] in the entries' lane (below every live stop's read); null: none. */
+    private suspend fun zerodhaExitRead(c: Contract): Double? =
+        zerodhaKey(c)?.let { k -> Broker.stopQuotes(listOf(k), com.optionslab.ira.RateGate.Priority.ENTRY)[k] }?.let { q ->
+            q.last.takeIf { it.isFinite() && it > 0 } ?: com.optionslab.ira.PriceNow.bookBid(q.bid, q.ask)
+        }
+
+    /** Zerodha's quote of [c] with a session ([zerodhaExitRead]), else the paper feed's ([quote], its book read included), judged as [priceNowFor] judges it. */
+    private suspend fun freshExitRead(c: Contract, since: java.time.LocalDateTime): Double? {
+        exitReadForTest?.let { return runCatching { it(c) }.getOrNull() }
+        if (Broker.loggedIn && !c.isMcx) {
+            val z = try { zerodhaExitRead(c) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+            if (z != null) return z
+        }
+        return feedExitRead(c, since)
+    }
+
+    /** The paper feed's price of [c] ([quote], its book read included), judged as [priceNowFor] judges it; null: none. */
+    private suspend fun feedExitRead(c: Contract, since: java.time.LocalDateTime): Double? {
+        exitReadForTest?.let { return runCatching { it(c) }.getOrNull() }
+        val q = (try { quote(c) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }) ?: return null
+        val sinceSec = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        return com.optionslab.ira.PriceNow.ofQuote(q.ltp, q.noLast, q.bid, q.ask, null, lastCandleSec(c.symbol), sinceSec)
+    }
+
     /** The stream's last packet of [c] when at most [maxAgeMs] old (memory only; keeps the contract followed); null: none. */
     private fun packetOf(c: Contract, maxAgeMs: Long, nowMs: Long, lookup: Boolean = false): com.optionslab.engine.KiteTicks.Tick? {
         val token = kiteTokens[c.symbol]?.takeIf { it > 0 }
@@ -842,13 +944,21 @@ object Paper {
         // 28 Oct, review: only while the market is open (no pre-open book), and one Zerodha read per symbol per [REST_BOOK_MS] at
         // most: a held untraded option priced every pass never piles quote calls up (Zerodha's rate limit).
         if (!runCatching { Market.isOpen() }.getOrDefault(false)) { noPrice(c.symbol, "no trade today and the market is closed"); return null }
+        // (B5 merge review: an exit read made outside the paper reads' budget never asks Zerodha: [exitPriceNow].)
+        if (kotlinx.coroutines.currentCoroutineContext()[NoZerodhaRead] != null) return null
         val nowMs = quoteClock()
         val last = restBookAt[c.symbol]
         if (last != null && nowMs - last in 0 until REST_BOOK_MS) { noPrice(c.symbol, "no trade today; its book was read moments ago"); return null }
         restBookAt[c.symbol] = nowMs
         if (!Broker.loggedIn) { noPrice(c.symbol, "no trade today and no Zerodha session to read its book"); return null }
         val key = zerodhaKey(c) ?: run { noPrice(c.symbol, "no trade today and not found in Zerodha's list"); return null }
-        val r = Broker.within(FILL_FRESH_MS) { Broker.quotes(listOf(key))[key] }
+        // B5-D: a held position's read (its stop or exit is priced on it) goes in the safety lane; an entry's in the entries'.
+        // (A paper arm's own exit read keeps the entries' lane it runs in: [paperExitRead].)
+        val asked = kotlinx.coroutines.currentCoroutineContext()[Broker.Lane]?.priority
+        val held = asked == null && runCatching { state.positions.any { it.symbol == c.symbol && it.quantity != 0 } }.getOrDefault(false)
+        val r = Broker.within(FILL_FRESH_MS) {
+            Broker.quotes(listOf(key), lane = asked ?: if (held) com.optionslab.ira.RateGate.Priority.SAFETY else com.optionslab.ira.RateGate.Priority.ENTRY)[key]
+        }
             ?: run { noPrice(c.symbol, "no trade today and Zerodha's quote did not answer"); return null }
         return bookQuote(c, r.bid, r.ask)?.also { remember(c.symbol, it) }
     }

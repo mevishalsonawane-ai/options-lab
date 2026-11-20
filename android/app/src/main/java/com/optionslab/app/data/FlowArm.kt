@@ -584,6 +584,20 @@ object FlowArm {
         return runCatching { tokenOf(u)?.let { KiteStream.tick(it)?.last }?.takeIf { it > 0 } }.getOrNull()
     }
 
+    /**
+     * 20 Nov 2026 (audit: "Flow uses old stream prices when the stream is down"): the index's price for its exit - the stream's (at
+     * most 5 s old, [spot]), else Zerodha's quote of the index read now (the entries' lane, at most [Paper.EXIT_READ_MS]; B5-D: none
+     * while a live stop's read waits, nor past the paper arms' read budget - [Paper.paperExitRead]), else null (as before: no index exit
+     * this look - never on a stale spot; the premium stop and the square-off still act).
+     */
+    private suspend fun exitSpot(u: String): Double? {
+        spot(u)?.let { return it }
+        if (testSpot != null || !Broker.loggedIn) return null
+        val key = runCatching { Broker.indexKey(u) }.getOrNull() ?: return null
+        return Paper.paperExitRead(Paper.EXIT_READ_MS) { Broker.stopQuotes(listOf(key), com.optionslab.ira.RateGate.Priority.ENTRY)[key]?.last }
+            ?.takeIf { it.isFinite() && it > 0 }
+    }
+
     /** [c]'s price from Zerodha's stream (at most 5 s old; the option followed from now on), or null. Memory only. */
     private fun optionQuote(c: Paper.Contract, anyAge: Boolean = false): com.optionslab.engine.sandbox.Quote? = runCatching {
         val list = Broker.cachedInstruments() ?: return@runCatching null
@@ -782,11 +796,14 @@ object FlowArm {
             return closed(p, t?.price?.toDouble() ?: p.entry, t?.timestamp ?: now, "closed_elsewhere", t?.charges?.toDouble() ?: 0.0)
         }
         if (!now.isBefore(p.day.atTime(NtfyRules.SQ)) || p.day.isBefore(now.toLocalDate())) return sellRest(p, c, "square-off 15:15")
-        // IraThinker's alert exits on the index: the range midpoint (stop) and 2R (target), on the stream's fresh price only.
-        FlowRules.indexExit(p.put, spot(p.index), p.idxStop, p.idxTarget)?.let { return sellRest(p, c, it) }
+        // IraThinker's alert exits on the index: the range midpoint (stop) and 2R (target), on the stream's fresh price; 20 Nov 2026
+        // (audit): with none (the stream down or behind), Zerodha's quote of the index ([exitSpot]), so the index exit is never skipped.
+        FlowRules.indexExit(p.put, exitSpot(p.index), p.idxStop, p.idxTarget)?.let { return sellRest(p, c, it) }
         // No stop resting in the paper book: the arm checks the premium stop itself and puts the SL-M back while above it.
         if (!stopResting(p.stopOrderId)) {
-            val ltp = Paper.heldPriceNow(c, p.entryTime, lookup = true)      // 15 Nov: only a price traded since the entry, or a sane book's bid
+            // 15 Nov: only a price traded since the entry, or a sane book's bid. 20 Nov 2026 (audit): a stream price at most 5 s old,
+            // else a fresh read, else the old one (an exit is never skipped) ([Paper.exitPriceNow]).
+            val ltp = Paper.exitPriceNow(c, p.entryTime)
             if (ltp != null && ltp <= p.stop) return sellRest(p, c, "premium stop")
             val again = if (closingWorks(p.symbol)) null else runCatching { Paper.place(c, "SELL", p.lots, "SL-M", "MIS", null, p.stop) }
                 .getOrNull()?.takeIf { it.ok }?.orderId?.also { runCatching { Strategies.tagOwner("paper:$it", "${FlowRules.OWNER} · stop") } }
