@@ -2092,6 +2092,24 @@ object Broker {
     }
 
     /**
+     * 20 Nov 2026 (merge review, the found stop's tiebreaker): the order found for the lost reply under [key] so far, if any, WITHOUT taking it
+     * (the caller's own [lookLost] still does) - a search started when one is due, as [lookLost] does. Memory, and the background search.
+     */
+    fun peekLost(key: String): String? {
+        val w = lostWrites[key] ?: return null
+        val now = System.currentTimeMillis()
+        var inline = false
+        synchronized(w) {
+            if (w.foundId == null && w.searching?.isActive != true && now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
+                w.lookedMs = now
+                if (lostSearchInlineForTest) inline = true else w.searching = lostScope.launch { searchLost(w) }
+            }
+        }
+        if (inline) kotlinx.coroutines.runBlocking { searchLost(w) }
+        return w.foundId
+    }
+
+    /**
      * The lost reply under [key]: null when none is kept. Memory only - it never reads the book itself: a search runs in the background
      * when due ([LOST_LOOK_GAP_MS]) and the next call acts on it ([lostSearchInlineForTest]: on this thread).
      */

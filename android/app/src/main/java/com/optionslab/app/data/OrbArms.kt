@@ -5627,6 +5627,58 @@ object OrbArms {
         if (lostExits.replace(lost.id, lost, asked)) searchLost(asked)
     }
 
+    /**
+     * 20 Nov 2026 (coordinator, on the found stop of a part held for its lost sale): in the background search, before its answer is
+     * published (one at a time per lost sale), never under the arms' lock. The part's own lost stop, once found ([Broker.peekLost], never
+     * taken) and still working at Zerodha, rests as its cover - unless Zerodha's positions, read fresh and lag-guarded
+     * ([ExitCoordinator.held], forced), show the contract held for no more than the other open parts on it (less their own lost sales
+     * still pending): this part's lots are gone, its sale most likely filled, and the stop would sell a second time. Then it is claimed and
+     * taken out as the app's own, confirmed by the regular pass ([sweepLostStops]' cancels: again each pass until Zerodha shows it ended,
+     * Boss told after three tries). Held for less than this part's own lots (its sale filled in part): the stop is cut to what is left.
+     * A read that fails, one still showing this part's lots, another part's own sale that the read cannot tell booked, or a stop already
+     * ended (its fill is the part's own exit, booked as usual) leaves it alone.
+     */
+    private suspend fun foundStopTiebreak(asked: LostExit) {
+        val bk = cache ?: return
+        val parts = runCatching { bk.positions.toList() }.getOrNull() ?: return
+        val p = parts.firstOrNull { it.open && it.live && it.lostId == asked.id } ?: return
+        val label = armOf(p.arm).label
+        val key = runCatching { lostKeyOf(bk, p, label, asked.sym) }.getOrNull() ?: return
+        val id = Broker.peekLost(key) ?: return
+        if (parts.any { it.open && it.stopOrderId == id }) return
+        val so = runCatching { Broker.orderRow(id) }.getOrNull() ?: return
+        if (!so.working) return
+        val orders = runCatching { Broker.orders() }.getOrNull() ?: return
+        // (Another part's own sale on the contract that the read cannot tell booked - working, or filled and not booked yet: it may be
+        // what moved the positions; the stop is left alone.)
+        if (orders.any { it.symbol == asked.sym && it.side == "SELL" && it.tag == "iraorb" && it.type != "SL" && it.type != "SL-M" &&
+                (it.working || it.filled > 0) && !exitSales.containsKey(it.id) }) return
+        val held = runCatching { ExitCoordinator.held("NFO", asked.sym, "MIS", label, orders, forceLag = true) }.getOrNull() ?: return
+        val others = parts.filter { it.open && it.live && it.kite == asked.sym && it !== p && it != p }.sumOf { it.qty } -
+            lostOn(asked.sym).filter { it.id != asked.id && !it.notFound }.sumOf { it.order.quantity }
+        if (held >= others + p.qty) return
+        if (held > others) {
+            // (Its sale filled in part: the stop cut to what this part still holds; one that cannot be cut rests as it was.)
+            val lot = runCatching { Broker.spec("NFO", asked.sym) }.getOrNull() ?: return
+            val to = com.optionslab.engine.risk.ExitQty.shrinkTo(so.qty, so.filled, held - others, lot.lotSize.coerceAtLeast(1)) ?: return
+            if (to >= so.qty) return
+            val cut = runCatching {
+                if (so.type == "SL-M") Broker.modify(so, to, "SL-M", null, so.trigger) else Broker.modify(so, to, "SL", stopLimit(so.trigger, lot.tickSize), so.trigger)
+            }.isSuccess
+            runCatching { Diag.record("orb", "$label: ${asked.sym} held $held, the other parts $others - this part's lost sale filled in part: its " +
+                "found lost stop $id ${if (cut) "cut to $to" else "could not be cut; it rests as it was"}") }
+            return
+        }
+        // (Its key forgotten only while it still holds this stop - never a newer lost reply under the same key.)
+        if (Broker.peekLost(key) != id) return
+        runCatching { Diag.record("orb", "$label: ${asked.sym} held $held, no more than the other parts' $others - this part's lost sale " +
+            "most likely filled: its found lost stop $id taken out") }
+        Broker.forgetLost(key)
+        Broker.claimStop(id)
+        synchronized(sweepCancels) { sweepCancels[id] = "$label|${asked.sym}" }
+        cancelOwnStop(id)
+    }
+
     /** 20 Nov 2026 (review: the twin edge): a found lost sale's own owner label - unique to that sale (its send time), never a plain exit's. */
     private fun lostLabel(l: LostExit): String {
         val at = runCatching { java.time.Instant.ofEpochMilli(l.sinceMs).atZone(com.optionslab.engine.IST).toLocalTime().toString() }.getOrDefault("${l.sinceMs}")
@@ -5679,6 +5731,8 @@ object OrbArms {
         }
         // (Said again once at the session's end - 15:10 - while it is still unknown: the trades on the contract are still waiting.)
         val late = failed && next.fails >= LOST_EXIT_TRIES && !cur.lateSaid && !now().toLocalTime().isBefore(OrbRules.SQUARE_OFF)
+        // (The found stop's tiebreaker first, while this search still counts as running - never two at once, nor a let-go acted on meanwhile.)
+        if (found.isNullOrEmpty() && !failed) runCatching { foundStopTiebreak(asked) }
         lostExits.replace(asked.id, cur, if (late) next.copy(lateSaid = true) else next)
         if (failed && (next.fails == LOST_EXIT_TRIES || late)) {
             runCatching { Diag.record("orb", "${asked.sym}: the lost exit could not be searched for ($LOST_EXIT_TRIES reads failed); its state is unknown") }

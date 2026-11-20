@@ -1344,7 +1344,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     @Test fun aLostStopFoundWhileThePartsLostSaleIsHeldNeverSellsTwice() {
         lostLiquiditySale()                                                // the sale went and filled; its reply lost
         Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
-        val label = view().single { it.arm.source == "liquidity" }.arm.label
+        val label = com.optionslab.engine.orb.LiquidityRules.ARM5.label             // (the 5-minute book's own)
         val lostStop = kite.restingInKite(sym, "SELL", 30, 161.5, type = "SL", trigger = 170.0, tag = "iraorb")
         val key = "orbstop:$label:$sym:200.0:30"
         Broker.noteLost(key, Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 161.5, 0.05, "NFO", "iraorb", triggerPrice = 170.0),
@@ -1360,6 +1360,72 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals("never sold twice", 1, marketSells().size)
         assertTrue("the hold resolved", !OrbArms.lostExitForTest(sym))
         assertEquals("booked as its exit", "time_stop", today("liquidity").single().why)
+    }
+
+    /** A lost stop of the Liquidity part (its reply lost; it rests at Zerodha, in the book): its id. */
+    private fun lostLiquidityStop(): String {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val label = com.optionslab.engine.orb.LiquidityRules.ARM5.label             // (the 5-minute book's own)
+        val id = kite.restingInKite(sym, "SELL", 30, 161.5, type = "SL", trigger = 170.0, tag = "iraorb")
+        val key = "orbstop:$label:$sym:200.0:30"
+        Broker.noteLost(key, Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 161.5, 0.05, "NFO", "iraorb", triggerPrice = 170.0),
+            emptyList(), "test", liveOnly = true)
+        return id
+    }
+
+    /**
+     * 20 Nov 2026 (coordinator, the found stop's tiebreaker): the held part's sale filled and Zerodha's positions show it (nothing held, no
+     * other part): its found lost stop is taken out during the hold, in the background search - and nothing is sold again.
+     */
+    @Test fun aFoundLostStopIsTakenOutWhenThePositionsShowThePartsSaleFilled() {
+        lostLiquiditySale()                                                // the sale went and filled; its reply lost
+        val stop = lostLiquidityStop()
+        kite.positionsCatchUp()                                            // the positions show the sale
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone()
+        assertEquals("the found stop taken out", "CANCELLED", kite.order(stop).status)
+        assertTrue("still held meanwhile", OrbArms.lostExitForTest(sym))
+        assertEquals("nothing sold again", 1, marketSells().size)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
+        pass()                                                             // the regular pass confirms it out (its cancel no longer asked)
+        val asks = kite.requests.count { it.method == "DELETE" && it.path.endsWith("/$stop") }
+        pass()
+        assertEquals("not cancelled again once confirmed", asks, kite.requests.count { it.method == "DELETE" && it.path.endsWith("/$stop") })
+    }
+
+    /**
+     * 20 Nov 2026 (coordinator): the held part's sale never went (its lots still held): the found lost stop rests through the hold; once
+     * the sale is let go, the stop is the part's - taken out first, then the part sold once.
+     */
+    @Test fun aFoundLostStopRestsWhileThePartsLotsAreHeldThenIsTakenOutFirst() {
+        lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)                // nothing reached Zerodha
+        val lostAt = OrbArms.testNow!!
+        val stop = lostLiquidityStop()
+        kite.positionsCatchUp(); kite.trailReads = 0
+        OrbArms.testNow = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone(); pass()
+        assertTrue("the stop rests through the hold", working(stop))
+        assertEquals(1, marketSells().size)
+        OrbArms.testNow = pastWindow(lostAt)
+        pass(); searchDone(); pass(); pass()
+        assertTrue("let go", !OrbArms.lostExitForTest(sym))
+        assertEquals("the stop taken out first", "CANCELLED", kite.order(stop).status)
+        assertEquals("then sold once", 2, marketSells().size)
+        assertEquals("time_stop", today("liquidity").single().why)
+    }
+
+    /** 20 Nov 2026 (coordinator): Zerodha's positions cannot be read: the found lost stop rests (the sale may not have gone). */
+    @Test fun aFoundLostStopRestsWhenThePositionsCannotBeRead() {
+        lostLiquiditySale()
+        val stop = lostLiquidityStop()
+        kite.positionsCatchUp()
+        kite.down += "/portfolio/positions"
+        try {
+            OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+            pass(); searchDone()
+            assertTrue("the stop rests", working(stop))
+            assertEquals("nothing sold again", 1, marketSells().size)
+        } finally { kite.down.clear() }
     }
 
     /**
