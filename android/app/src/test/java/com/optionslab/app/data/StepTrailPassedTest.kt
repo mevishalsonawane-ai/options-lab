@@ -426,8 +426,14 @@ class StepTrailPassedTest : RobolectricTest() {
             assertTrue("best ${held.best} not raised by the stray print", (held.best ?: e) < e * 1.01)
             assertEquals("its stop not moved", live.stopTrigger!!, held.stopTrigger!!, 1e-9)
             assertTrue(modifies.isEmpty())
+            // A stray print WITH a trade time after the entry minute, 20% over a sane book: not counted either.
+            val entrySec0 = live.entryTime.withSecond(0).withNano(0).atZone(IST).toEpochSecond()
+            feed(e * 1.2, e, e + 0.1, entrySec0 + 120)
+            runBlocking { ArmLive.watch() }
+            assertTrue("best ${ArmLive.view.value.open.single().best}", (ArmLive.view.value.open.single().best ?: e) < e * 1.01)
+            assertTrue(modifies.isEmpty())
             // A trade inside the entry minute (it may be from before the fill) does not count either.
-            val entrySec = live.entryTime.withSecond(0).withNano(0).atZone(IST).toEpochSecond()
+            val entrySec = entrySec0
             feed(e * 1.105, e, e + 0.1, entrySec + 30)
             runBlocking { ArmLive.watch() }
             assertTrue(modifies.isEmpty())
@@ -437,6 +443,20 @@ class StepTrailPassedTest : RobolectricTest() {
             assertEquals(e * 1.105, ArmLive.view.value.open.single().best!!, 1e-9)
             assertEquals(lockedLive(live), ArmLive.view.value.open.single().stopTrigger!!, 1e-9)
         } finally { KiteStream.stop() }
+    }
+
+    /** 20 Nov 2026: the live copy's candle highs ([Paper.closedHigh]) - only today's closed minutes after the entry minute. */
+    @Test fun theLiveCandleHighReadsOnlyClosedMinutesAfterTheEntryMinute() {
+        val entry = day.atTime(10, 0, 20)
+        fun bar(h: Int, m: Int, high: Double, d: LocalDate = day) =
+            Upstox.Bar(d.atTime(h, m).atZone(IST).toEpochSecond(), 100.0, high, 99.0, 100.0, 10, 0)
+        val now = day.atTime(10, 3, 30).atZone(IST).toEpochSecond()
+        val bars = listOf(bar(10, 0, 150.0), bar(10, 1, 110.0), bar(10, 2, 120.0), bar(10, 3, 140.0), bar(10, 2, 300.0, day.minusDays(1)))
+        assertEquals("10:01 and 10:02 only (not the entry minute, the 10:03 minute still forming, nor yesterday's)", 120.0,
+            Paper.closedHigh(bars, entry, now, day)!!, 1e-9)
+        assertNull("none closed yet", Paper.closedHigh(bars, entry, day.atTime(10, 1, 59).atZone(IST).toEpochSecond(), day))
+        assertNull(Paper.closedHigh(emptyList(), entry, now, day))
+        assertNull("a bad bar is never a high", Paper.closedHigh(listOf(bar(10, 1, Double.NaN)), entry, now, day))
     }
 
     @Test fun liveTheAppSaleWaitsWhileBossIsExitingByHand() {

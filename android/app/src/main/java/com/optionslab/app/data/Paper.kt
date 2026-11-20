@@ -451,9 +451,16 @@ object Paper {
      * null: none, or not read in time. Never on the order or tick path.
      */
     suspend fun closedHighSince(c: Contract, since: java.time.LocalDateTime, waitMs: Long = GAP_READ_WAIT_MS): Double? {
-        if (!gapHighSince(c, since, waitMs).read) return null
-        val nowSec = runCatching { Market.now().toEpochSecond() }.getOrElse { System.currentTimeMillis() / 1000 }
-        return barsAfter(c, since)?.filter { it.istDate == Market.today() && it.epochSecond + 60 <= nowSec }?.maxOfOrNull { it.high }
+        // (Read fresh each time - its caller asks at most once a minute a trade, in the background - never another reader's older copy.)
+        val bars = kotlinx.coroutines.withTimeoutOrNull(waitMs) { runCatching { minutes(c) }.getOrNull() } ?: return null
+        return closedHigh(bars, since, runCatching { Market.now().toEpochSecond() }.getOrElse { System.currentTimeMillis() / 1000 }, Market.today())
+    }
+
+    /** [closedHighSince]'s pick from [bars]: today's ([day]) minutes that started after [since]'s minute and had closed by [nowSec]. Pure. */
+    internal fun closedHigh(bars: List<Upstox.Bar>, since: java.time.LocalDateTime, nowSec: Long, day: java.time.LocalDate): Double? {
+        val from = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        return bars.filter { it.istDate == day && it.epochSecond > from && it.epochSecond + 60 <= nowSec && it.high.isFinite() && it.high > 0 }
+            .maxOfOrNull { it.high }
     }
 
     /**
