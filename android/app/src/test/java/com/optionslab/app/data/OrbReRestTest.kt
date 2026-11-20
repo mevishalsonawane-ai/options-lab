@@ -262,11 +262,15 @@ class OrbReRestTest : RobolectricTest() {
             assertTrue(OrbArms.mayOwnStop(s))
             assertFalse("another book's order is not claimed", OrbArms.mayOwnStop("not-an-orb-stop"))
             // busy: a pass holds the arms' lock (placing an order) - the exit's mark never waits on it.
-            val holder = if (busy) Thread { runBlocking { OrbArms.holdLockForTest(1_500) } }.apply { start(); Thread.sleep(200) } else null
-            val t0 = System.nanoTime()
+            val release = java.util.concurrent.CountDownLatch(1)
+            val heldNow = java.util.concurrent.CountDownLatch(1)
+            val holder = if (busy) Thread { runBlocking { OrbArms.holdLockForTest(release, heldNow) } }.apply { isDaemon = true; start() } else null
+            if (busy) assertTrue(heldNow.await(30, java.util.concurrent.TimeUnit.SECONDS))
             val job = OrbArms.markOwnCancels(listOf(s))                   // as takeOverLeg does, right before its cancel
-            assertTrue("never waits on the lock", System.nanoTime() - t0 < 500_000_000L)
+            // Returned with the lock still held: the caller never waited on it (the trade's mark follows once the lock is free).
+            if (busy) assertFalse("never waits on the lock", job!!.isCompleted)
             kite.reject(s, message = "", status = "CANCELLED")            // its cancel; the sale was refused, so the lot is still held
+            release.countDown()
             holder?.join()
             runBlocking { job!!.join() }
             if (restart) {
