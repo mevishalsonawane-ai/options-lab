@@ -291,6 +291,10 @@ class OrbArmsLockTest : RobolectricTest() {
         java.io.File(context.filesDir, "contracts.json").delete()           // today's list not on the phone (not downloaded yet)
         runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
         passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+        // 20 Nov 2026 (audit): the signal waits for the list within its fill window (its bar decided again by the next look) ...
+        assertTrue(row().status, row().status.contains(OrbArms.describe(OrbArms.LIST_WAITING)))
+        // ... and, the list still not there when that window ends, it is never bought late: no contract, as before.
+        passes(LocalTime.of(13, 6), LocalTime.of(13, 8))
         assertTrue("no contract: nothing bought", row().today.isEmpty())
         assertTrue(Paper.state.orders.isEmpty())
         assertTrue(row().status, row().status.contains(OrbArms.describe("no_contract")))

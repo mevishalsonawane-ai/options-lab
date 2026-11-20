@@ -672,6 +672,13 @@ class PersonalStoresTest {
             check(com.optionslab.app.data.FundsCheck.holdsForErase())
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("LiquidityFreshBar") {
+            // 20 Nov 2026: off by default (shadow): switched on by Boss, a setting to erase.
+            com.optionslab.app.data.LiquidityFreshBar.resetForTest(on = false)
+            com.optionslab.app.data.LiquidityFreshBar.set(true)
+            check(com.optionslab.app.data.LiquidityFreshBar.holdsForErase())
+            com.optionslab.app.security.SecurePrefs.flush()
+        },
         s("ArmAutoStopsHost") {
             // 19 Nov: on by default (TestApp starts it all on): one switched off by Boss (with his PIN), a setting to erase.
             com.optionslab.app.data.ArmAutoStopsHost.resetForTest()
