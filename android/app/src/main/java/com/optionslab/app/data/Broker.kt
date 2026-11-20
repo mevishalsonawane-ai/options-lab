@@ -339,6 +339,8 @@ object Broker {
 
     private fun dropSession() {
         passBook.drop(); dropKept(); KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)); dropCreds()
+        // (20 Nov 2026, delta review: the lost replies' searches stop with the session; each stays UNKNOWN and is looked for again once logged in.)
+        cancelLostSearches()
     }
 
     /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
@@ -2038,18 +2040,17 @@ object Broker {
      * asked after yet, or still looked for with the same contract, side, quantity, order type, tag and trigger and placed no earlier than that search's
      * window opens (a time that cannot be read: may be). Such an order is left to its own lost reply: never adopted as another's orphan.
      */
-    fun lostMayBe(r: OrderRow, exceptKey: String? = null): Boolean {
+    fun lostMayBe(r: OrderRow, exceptKey: String? = null): Boolean = lostWrites.entries.any { (k, w) -> k != exceptKey && mayBe(w, r) }
+
+    private fun mayBe(w: LostWrite, r: OrderRow): Boolean {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val placed = runCatching { java.time.LocalDateTime.parse(r.placedAt, fmt) }.getOrNull()
-        return lostWrites.entries.any { (k, w) ->
-            if (k == exceptKey) return@any false
-            w.foundId?.let { return@any it == r.id }
-            val o = w.order
-            o.tradingSymbol == r.symbol && o.side.name == r.side && o.quantity == r.qty && o.orderType == r.type &&
-                o.tag.filter { c -> c.isLetterOrDigit() }.take(20) == r.tag &&
-                (!o.hasTrigger || o.triggerPrice?.let { kotlin.math.abs(it - r.trigger) <= o.tickSize / 2 + 1e-9 } != false) &&
-                (placed == null || !placed.isBefore(w.sentAt.minusMinutes(3)))
-        }
+        w.foundId?.let { return it == r.id }
+        val o = w.order
+        return o.tradingSymbol == r.symbol && o.side.name == r.side && o.quantity == r.qty && o.orderType == r.type &&
+            o.tag.filter { c -> c.isLetterOrDigit() }.take(20) == r.tag &&
+            (!o.hasTrigger || o.triggerPrice?.let { kotlin.math.abs(it - r.trigger) <= o.tickSize / 2 + 1e-9 } != false) &&
+            (placed == null || !placed.isBefore(w.sentAt.minusMinutes(3)))
     }
 
     /** The background searches of every lost reply stopped (a reset). */
@@ -2058,10 +2059,8 @@ object Broker {
     /** TEST ONLY: the background search of the lost reply under [key] (the last one started), if any. */
     internal fun lostSearchForTest(key: String): kotlinx.coroutines.Job? = lostWrites[key]?.searching
 
-    /** The lost replies under keys starting with [prefix] whose order was for [qty]: forgotten (a stop of that size taken another way). */
-    fun forgetLostOfQty(prefix: String, qty: Int) {
-        for ((k, w) in lostWrites.entries.toList()) if (k.startsWith(prefix) && w.order.quantity == qty) forgetLost(k)
-    }
+    /** 20 Nov 2026 (delta review): how long ago the lost reply under [key] was noted (null: none kept). */
+    fun lostAgeMs(key: String): Long? = lostWrites[key]?.let { System.currentTimeMillis() - it.sinceMs }
 
     /** TEST ONLY: every lost reply forgotten, as after a restart. */
     internal fun forgetLostForTest() { cancelLostSearches(); lostWrites.clear() }

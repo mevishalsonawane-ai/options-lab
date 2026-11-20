@@ -1168,7 +1168,8 @@ object PineAuto {
                     }
                 }
                 ownerTag("kite:${l.id}", "${label(item)} · stop")
-                if (l.qty < h.qty) stopShort[lostKey] = l.qty else stopShort.remove(lostKey)
+                // (For more than held - not cut, not confirmed out - it is kept and cut on the next checks ([topUpStop]).)
+                if (l.qty != h.qty) stopShort[lostKey] = l.qty else stopShort.remove(lostKey)
                 stopNotRested -= lostKey
                 return h.copy(stop = l.id, stopAt = l.trigger ?: trig)
             }
@@ -1248,21 +1249,32 @@ object PineAuto {
         val key = lostStopKey(item, h)
         val sid = h.stop ?: return h
         val sym = h.kite ?: return h
-        // (At most every [TOP_UP_GAP_MS]: the check comes on every tick.)
+        // (Never on the stream's fast look - no REST read on the tick path; the regular check grows it.)
+        if (streamLook) return h
+        // (At most every [TOP_UP_GAP_MS].)
         val now = System.currentTimeMillis()
         if (now - (topUpAt[key] ?: 0L) < (topUpGapMsForTest ?: TOP_UP_GAP_MS)) return h
         if (topUpAt.size > 200) topUpAt.clear()
         topUpAt[key] = now
-        val book = runCatching { Broker.ordersRecon() }.getOrNull() ?: return h
+        // (Fresh reads, never the kept ones: a stop is only grown on what Zerodha shows now.)
+        val book = runCatching { Broker.orders() }.getOrNull() ?: return h
         val so = book.firstOrNull { it.id == sid } ?: return h
-        if (!so.working) return h
+        if (!so.working) { stopShort.remove(key); return h }
         val covered = com.optionslab.engine.risk.ExitQty.remaining(so.qty, so.filled, so.pending)
-        if (covered >= h.qty) { stopShort.remove(key); return h }
+        // (A found stop for more than is held, not cut when found: cut to the holding now.)
+        if (covered > h.qty) {
+            if (runCatching { Broker.modify(so, so.filled + h.qty, so.type, so.price.takeIf { it > 0 }, so.trigger.takeIf { it > 0 }) }.isSuccess) {
+                note(b, item.id, "$sym: resting stop cut to the ${h.qty} held at Zerodha")
+                stopShort.remove(key)
+            }
+            return h
+        }
+        if (covered == h.qty) { stopShort.remove(key); return h }
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return h
         val removingIds = b.removing.flatMap { it.ids.keys }.toSet()
         val others = book.filter { it.working && it.id != sid && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" &&
             it.id !in removingIds }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-        val heldZ = runCatching { Broker.positionsRecon().net }.getOrNull()
+        val heldZ = runCatching { Broker.positionBook().net }.getOrNull()
             ?.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }?.sumOf { it.qty } ?: return h
         val lot = spec.lotSize.coerceAtLeast(1)
         val room = (minOf(h.qty, heldZ - others).coerceAtLeast(0) / lot) * lot

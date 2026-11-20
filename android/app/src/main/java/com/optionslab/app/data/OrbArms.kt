@@ -3533,12 +3533,6 @@ object OrbArms {
     private fun orbLostKey(label: String, sym: String, fill: Double, qty: Int) = "orbstop:$label:$sym:$fill:$qty"
 
     /**
-     * 20 Nov 2026 (audit B5 deep review): a stop of [label]'s on [sym] for [qty] taken as a trade's own another way: the lost stop of that
-     * size there is no longer looked for (another part's, of another size, still is).
-     */
-    private fun forgetLostStops(label: String, sym: String, qty: Int) = Broker.forgetLostOfQty("orbstop:$label:$sym:", qty)
-
-    /**
      * 20 Nov 2026 (delta review: the key was kept with the quantity at the send, and a ladder sale since changed the trade's): the key
      * [p]'s lost stop is kept under - its own quantity's, else, when no other part of the same fill is open (whose own it could be), one
      * sent for more on its fill (a part sold since).
@@ -3582,11 +3576,11 @@ object OrbArms {
     private suspend fun placeStop(label: String, sym: String, qty: Int, lot: Int, tick: Double, fill: Double, known: Collection<String>,
                                   liquidity: Boolean = false, at: Double? = null, points: Double = OrbRules.STOP_POINTS,
                                   pct: Double = LiquidityRules.PREMIUM_STOP, alert: Boolean = true,
-                                  lostKey: String = orbLostKey(label, sym, fill, qty)): Triple<String?, Double?, Boolean> {
+                                  lostKey: String = orbLostKey(label, sym, fill, qty)): StopPlaced {
         // The ORB's stop is 40 points ([points]) below the fill; Liquidity 15+5's is 15% ([pct]) below it; [at]: a given trigger (the lock, F3).
         val trigger = (at ?: if (liquidity) LiquidityRules.stopTrigger(fill, pct) else OrbRules.stopTrigger(fill, points))
             ?.let { com.optionslab.engine.Kite.onTick(it, tick, com.optionslab.engine.Kite.Side.SELL) }
-            ?: return Triple(null, null, false)
+            ?: return StopPlaced(null, null, false, 0)
         val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, lot, "MIS", "SL",
             stopLimit(trigger, tick), tick, "NFO", "iraorb", triggerPrice = trigger)
         // 15 Nov: whether Zerodha REFUSED it outright (nothing rests: another stop may go), apart from a lost reply.
@@ -3595,11 +3589,12 @@ object OrbArms {
         // again here, and no second stop is sent beside it while it may rest ([Broker.lookLost], two minutes; then Boss is told).
         when (val l = Broker.lookLost(lostKey)) {
             // (20 Nov 2026, delta review: never one the book already knows - another trade's - and cut to [qty] when found for more.)
+            // (A found stop for fewer than [qty] covers only its own: [StopPlaced.covers] - the rest stays with none and rests again.)
             is Broker.LostLook.Found -> if (l.id !in known) {
-                if (!fitFound(label, l, qty, lot, tick)) return Triple(null, trigger, false)
-                Strategies.tagOwner("kite:${l.id}", "$label · stop"); return Triple(l.id, l.trigger ?: trigger, false)
+                if (!fitFound(label, l, qty, lot, tick)) return StopPlaced(null, trigger, false, 0)
+                Strategies.tagOwner("kite:${l.id}", "$label · stop"); return StopPlaced(l.id, l.trigger ?: trigger, false, minOf(l.qty, qty))
             }
-            Broker.LostLook.Searching -> return Triple(null, trigger, false)
+            Broker.LostLook.Searching -> return StopPlaced(null, trigger, false, 0)
             else -> Unit
         }
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
@@ -3609,8 +3604,14 @@ object OrbArms {
         if (id != null) Strategies.tagOwner("kite:$id", "$label · stop")
         else if (alert || !refused) com.optionslab.app.work.Alerts.error("$label: the ${if (at != null) "%.2f".format(Locale.ENGLISH, trigger) else if (liquidity) "${pts(pct * 100)}%" else "−${pts(points)}"} " +
             "stop could not be placed at Zerodha; the app watches it instead.", "ORB live")
-        return Triple(id, trigger, refused)
+        return StopPlaced(id, trigger, refused, if (id != null) qty else 0)
     }
+
+    /**
+     * 20 Nov 2026 (delta review): what [placeStop] did - the stop's id (null: none rests), its trigger, whether Zerodha refused it
+     * outright, and the quantity it covers (a lost stop found for fewer than asked covers only its own; the caller splits on it).
+     */
+    private data class StopPlaced(val id: String?, val trigger: Double?, val refused: Boolean, val covers: Int)
 
     /**
      * 15 Nov (a Liquidity live trade always ends with a resting stop when one can rest): the first stop of a Liquidity live fill of [qty]
@@ -4197,10 +4198,64 @@ object OrbArms {
         // 19 Nov 2026 (audit batch 2, L1): from this pass's orders read, an unclaimed stop of these arms on a contract where no trade of this
         // book is open now (a trade closed this pass, or one never saved) is followed until it ends or the contract is confirmed flat.
         if (regular && !stream) runCatching { noteFlatOrphans(b, orders.values, t) }
+        // 20 Nov 2026 (delta review): the lost stops no open trade asks after - its trade closed, or a split left none of its size.
+        if (regular && !stream) runCatching { sweepLostStops(b) }
         // 18 Nov 2026 (audit: B3): on the regular pass, a contract Zerodha holds LESS of than the live trades on it (confirmed) has its
         // trades and resting stops cut down to what is held ([shrinkToHeld]) - after the exits above, from this pass's reads.
         if (regular) runCatching { shrinkToHeld(b, t, net, orders, q) }
     }
+
+    /**
+     * 20 Nov 2026 (delta review): the lost stops ("orbstop:" keys) no open trade asks after, once older than [LOST_SWEEP_AGE_MS] (a stop
+     * just sent: its trade may not be in the book yet). Its trade closed: looked for, and found resting, taken out as the app's own (as
+     * the arms' live copies do); given up on, it is gone - a stale key holds back a matching orphan's adoption ([Broker.lostMayBe]) only
+     * for the search's two minutes. A split left no open
+     * part of its size: looked for; found, it is the stop of a part of its size with none, else left to the parts' own orphan check
+     * ([orphanStop]: taken and resized by a part with none - no longer held back as a lost reply; counted as a working sale meanwhile).
+     */
+    private suspend fun sweepLostStops(b: Book) {
+        for (key in Broker.lostKeys("orbstop:")) {
+            val f = key.removePrefix("orbstop:").split(":")
+            if (f.size < 4) continue
+            val fill = f[f.size - 2].toDoubleOrNull() ?: continue
+            val sym = f[f.size - 3]
+            val label = f.dropLast(3).joinToString(":")
+            val open = b.positions.filter { it.open && it.live && it.kite == sym && it.entry == fill && armOf(it.arm).label == label }
+            if (open.any { lostKeyOf(b, it, label, sym) == key }) continue
+            if ((Broker.lostAgeMs(key) ?: 0L) < (lostSweepAgeMsForTest ?: LOST_SWEEP_AGE_MS)) continue
+            val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: continue
+            if (b.positions.any { it.open && it.stopOrderId == l.id }) continue
+            if (open.isEmpty()) {
+                // (Its trade closed: found resting, taken out as the app's own - never left on a closed trade; one that filled is said.)
+                val st = runCatching { Broker.orderState(l.id) }.getOrNull()
+                if (st != null && st.filled > 0) {
+                    com.optionslab.app.work.Alerts.error("$label: a stop ${l.id} on $sym whose answer was lost filled ${st.filled} at Zerodha after its " +
+                        "trade had closed. Check $sym's position in Kite.", "ORB live")
+                    if (st.status in DONE) continue
+                }
+                Broker.claimStop(l.id)
+                cancelOwnStop(l.id)
+                runCatching { Diag.record("orb", "$label: a lost stop ${l.id} on $sym found after its trade closed: taken out") }
+                continue
+            }
+            val i = b.positions.indexOfFirst { it.open && it.live && it.kite == sym && it.entry == fill && armOf(it.arm).label == label &&
+                it.stopOrderId == null && it.qty == l.qty }
+            if (i >= 0) {
+                b.positions[i] = b.positions[i].copy(stopOrderId = l.id, stopTrigger = l.trigger ?: b.positions[i].stopTrigger)
+                runCatching { Strategies.tagOwner("kite:${l.id}", "$label · stop") }
+                Broker.claimStop(l.id); placed(sym, l.qty, l.id)
+                runCatching { Diag.record("orb", "$label: a lost stop ${l.id} on $sym found after its trade was split: taken by the part of its size") }
+            } else runCatching { Diag.record("orb", "$label: a lost stop ${l.id} on $sym found after its trade was split, with no part of its " +
+                "size: left to the parts' orphan check") }
+        }
+    }
+    private const val LOST_SWEEP_AGE_MS = 30_000L
+    /** 20 Nov 2026 (delta review): the longest an exit waits for its own stop whose answer was lost ([exitLive]). */
+    private const val LOST_EXIT_WAIT_MS = 20_000L
+    /** TEST SEAM: [LOST_EXIT_WAIT_MS] shortened. */
+    @Volatile internal var lostExitWaitMsForTest: Long? = null
+    /** TEST SEAM: [LOST_SWEEP_AGE_MS] shortened. */
+    @Volatile internal var lostSweepAgeMsForTest: Long? = null
 
     /**
      * 18 Nov 2026 (audit: B3): by contract, when (market-clock ms) Zerodha's positions first showed it holding less than the live trades on
@@ -4409,10 +4464,10 @@ object OrbArms {
                         covered = minOf(qty, held - othersAll).coerceAtLeast(0) / lot * lot
                         capLeftNone = covered <= 0
                         if (covered > 0) {
-                            val (id, tr, _) = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig,
+                            val (id, tr, _, cov) = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig,
                                 lostKey = orbLostKey(a.label, sym, fill, qty))      // (the row's own quantity: what the next look asks)
                             stopId = id; stopAt = tr ?: trig
-                            if (id != null) placed(sym, covered, id)
+                            if (id != null) { covered = cov; placed(sym, covered, id) }
                         }
                     }
                     else -> {}
@@ -5016,7 +5071,7 @@ object OrbArms {
         suspend fun took(trig: Double): Orphan {
             runCatching { Strategies.tagOwner("kite:${o.id}", "$label · stop") }
             runCatching { Diag.record("orb", "$label: a stop on $sym that no trade claimed (order ${o.id}, placed ${o.placedAt}) is taken as its stop for $qty") }
-            forgetLostStops(label, sym, o.qty); Broker.claimStop(o.id)
+            Broker.claimStop(o.id)          // (20 Nov 2026, delta review: claimed; the caller forgets only its own trade's lost key)
             return Orphan.Took(o.id, trig)
         }
         // (One that sold already: taken as it is only when placed for exactly this trade's quantity - never resized or raised.)
@@ -5160,12 +5215,12 @@ object OrbArms {
                 "its only cover, and the app watches its level. Check $sym in Kite.")
             return null
         }
-        val (id, trig, refused) = placeStop(armOf(p.arm).label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b),
+        val (id, trig, refused, covers) = placeStop(armOf(p.arm).label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b),
             liquidity = armOf(p.arm).liquidity, at = level, alert = key !in restRefusedSaid, lostKey = lostKey)
         if (id == null && refused) restRefusedSaid += key
         if (id == null) return null
-        placed(sym, qty, id)
-        return split(p.copy(stopOrderId = id, stopTrigger = trig ?: level), qty)
+        placed(sym, covers, id)
+        return split(p.copy(stopOrderId = id, stopTrigger = trig ?: level), covers)
     }
 
     /**
@@ -5203,9 +5258,52 @@ object OrbArms {
      * Take the resting stop out first, then MARKET SELL what is held; if the stop filled meanwhile, that is the exit.
      * Returns the position, and (when only part sold) the rest, still open, to be sold on the next pass.
      */
-    private suspend fun exitLive(b: Book, p0: Position, sym: String, why: String, pre: Pre? = null): Pair<Position, Position?> {
+    private suspend fun exitLive(b: Book, given: Position, sym: String, why: String, pre: Pre? = null): Pair<Position, Position?> {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): the arm's own sale waits (his covers it; next pass).
-        if (ArmLive.handsOffNow("NFO", sym)) return p0 to null
+        if (ArmLive.handsOffNow("NFO", sym)) return given to null
+        // 20 Nov 2026 (delta review): this trade's own stop whose answer was lost may be resting at Zerodha - one of its own sells.
+        //  - Found for all it holds (one for more cut to it first, [fitFound]): it is the trade's stop, taken out first as any.
+        //  - Found for fewer, or beside a stop it already has: claimed and taken out first, confirmed out (a part it sold meanwhile is
+        //    booked closed at the stop, the rest sold next pass); not confirmed out yet: the exit waits a pass (it counts as working then).
+        //  - Still looked for: the exit waits while it is younger than [LOST_EXIT_WAIT_MS] (a stop that landed shows in the book within
+        //    seconds) - never longer: a stop-level exit is never held back for the whole search. Then it sells; a stop found later on a
+        //    closed trade is taken out ([sweepLostStops]).
+        val labelG = armOf(given.arm).label
+        val ownLost = lostKeyOf(b, given, labelG, sym)
+        val p0 = when (val l = Broker.lookLost(ownLost)) {
+            is Broker.LostLook.Found -> {
+                val specG = runCatching { Broker.spec("NFO", sym) }.getOrNull()
+                if (b.positions.any { it.open && it.stopOrderId == l.id }) given
+                else if (given.stopOrderId == null && l.qty >= given.qty &&
+                    fitFound(labelG, l, given.qty, specG?.lotSize?.coerceAtLeast(1) ?: 1, specG?.tickSize ?: 0.05)) {
+                    runCatching { Strategies.tagOwner("kite:${l.id}", "$labelG · stop") }
+                    Broker.claimStop(l.id)
+                    given.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: given.stopTrigger, appCancelled = false)
+                } else {
+                    Broker.claimStop(l.id)
+                    cancelOwnStop(l.id)
+                    val st = runCatching { Broker.orderState(l.id) }.getOrNull()
+                    if (st == null || st.status !in DONE) {
+                        runCatching { Diag.record("orb", "$labelG: its lost stop ${l.id} on $sym, found at its exit, is not confirmed out yet: the exit waits a pass") }
+                        return given to null
+                    }
+                    if (st.filled > 0) {
+                        val sold = minOf(st.filled, given.qty)
+                        val px = st.avgPrice.takeIf { it > 0 } ?: l.trigger ?: given.entry
+                        val share = sold.toDouble() / given.qty
+                        val closed = given.copy(qty = sold, exit = px, exitTime = now(), why = stopWhy(given), stopOrderId = null,
+                            charges = given.charges * share + kiteCharge("SELL", px, sold))
+                        return if (sold >= given.qty) closed to null else closed to given.copy(qty = given.qty - sold, charges = given.charges * (1 - share))
+                    }
+                    given
+                }
+            }
+            Broker.LostLook.Searching -> if ((Broker.lostAgeMs(ownLost) ?: Long.MAX_VALUE) < (lostExitWaitMsForTest ?: LOST_EXIT_WAIT_MS)) {
+                runCatching { Diag.record("orb", "$labelG: $sym's exit waits a moment for its stop whose answer was lost (it may be resting)") }
+                return given to null
+            } else given
+            else -> given
+        }
         // 19 Nov 2026 (review): Stop for today or the session's end refused a moment ago: its stop was put back; not taken out and sold
         // again every look - once every [REFUSED_RETRY_MS] (the stop rests meanwhile).
         if (why in ALWAYS_EXITS && p0.stopOrderId?.let { refusedAt[it] }?.let { epochMs(now()) - it < REFUSED_RETRY_MS } == true) return p0 to null
@@ -5245,11 +5343,11 @@ object OrbArms {
                     // lost - is this trade's when it has none: adopted as its stop, then taken out as its own before the sale.)
                     val stops = b.positions.mapNotNull { it.stopOrderId }.toSet()
                     val orphan = if (p.stopOrderId != null) null else others.firstOrNull { it.tag == "iraorb" && (it.type == "SL" || it.type == "SL-M") &&
-                        it.id !in stops && "kite:${it.id}" !in owners }
+                        it.id !in stops && "kite:${it.id}" !in owners && !Broker.lostMayBe(it, ownLost) }
                     if (orphan != null) {
                         p = p.copy(stopOrderId = orphan.id, stopTrigger = orphan.trigger.takeIf { it > 0 } ?: p.stopTrigger, appCancelled = false)
                         runCatching { Strategies.tagOwner("kite:${orphan.id}", "$label · stop") }
-                        forgetLostStops(label, sym, orphan.qty); Broker.claimStop(orphan.id)
+                        Broker.forgetLost(ownLost); Broker.claimStop(orphan.id)
                         runCatching { Diag.record("orb", "$label: a stop of these arms on $sym that no trade claimed (order ${orphan.id}) is taken as this trade's stop") }
                         others = others.filter { it.id != orphan.id }
                         room = com.optionslab.engine.risk.ExitQty.sendable(held, left(others), p.qty, lot)
@@ -5344,23 +5442,24 @@ object OrbArms {
             }
             // (A stop for fewer than the trade holds: the trade is split - the part the stop covers keeps it, the rest stays open with
             // none, the app watching it - so a fill of that stop is never booked for more than it sold.)
-            fun rested(q: Position): Pair<Position, Position?> {
-                if (q.stopOrderId == null || qty >= q.qty) return q to null
-                val part = qty.toDouble() / q.qty
-                return q.copy(qty = qty, charges = q.charges * part) to q.copy(qty = q.qty - qty, stopOrderId = null, charges = q.charges * (1 - part))
+            // (20 Nov 2026, delta review: on what the stop really covers - a lost stop found for fewer covers only its own.)
+            fun rested(q: Position, covers: Int = qty): Pair<Position, Position?> {
+                if (q.stopOrderId == null || covers >= q.qty) return q to null
+                val part = covers.toDouble() / q.qty
+                return q.copy(qty = covers, charges = q.charges * part) to q.copy(qty = q.qty - covers, stopOrderId = null, charges = q.charges * (1 - part))
             }
             val liq = armOf(p.arm).liquidity
             val lock = lockOrStop(p, spec.tickSize)?.takeIf { l -> ladderTarget(p) != null && l > (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 }
             if (lock != null) {
-                val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock,
-                    lostKey = lostKeyOf(b, p, label, sym))
-                if (id != null) { putBack(id); placed(sym, qty, id); return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock)) }
+                val (id, trig, _, covers) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock,
+                    lostKey = ownLost)
+                if (id != null) { putBack(id); placed(sym, covers, id); return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock), covers) }
             }
-            val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger,
-                lostKey = lostKeyOf(b, p, label, sym))
+            val (id, trig, _, covers) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger,
+                lostKey = ownLost)
             putBack(id)
-            if (id != null) placed(sym, qty, id)
-            return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger))
+            if (id != null) placed(sym, covers, id)
+            return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger), covers)
         }
         p.stopOrderId?.let { id ->
             // The resting exchange stop comes out FIRST (timed for the order speed card); one that already filled is the exit.
@@ -6983,7 +7082,7 @@ object OrbArms {
         readFails = 0
         forgetHistoryForTest()
         synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear()
-        forgetStopSaid()
+        forgetStopSaid(); lostSweepAgeMsForTest = null; lostExitWaitMsForTest = null
     }
 
     /**

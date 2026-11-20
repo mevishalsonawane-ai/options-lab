@@ -58,6 +58,7 @@ class OrbArmsLiveTest : RobolectricTest() {
 
     @After fun down() {
         AutomationSupport.realClocks()
+        OrbArms.lostExitWaitMsForTest = null; OrbArms.lostSweepAgeMsForTest = null
         kite.close()
         assertEquals("no test may reach the internet", emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -579,6 +580,90 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals("takes its lost stop", lostId, arm().open!!.stopOrderId)
         assertEquals("cut to what is held", 30, kite.order(lostId).qty - kite.order(lostId).filled)
         assertEquals(0, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
+    /**
+     * 20 Nov 2026 (delta review, confirmed): a trade of 2 lots whose stop for 1 lot went with its answer lost; Boss's Stop for today
+     * sale is refused, and the put-back finds that lost stop: only the 1 lot it covers is booked as covered, the other stays with none.
+     * When that stop fills, only its part closes - no lot is left that no trade owns.
+     */
+    @Test fun aLostStopFoundForFewerLotsAtAPutBackCoversOnlyItsPart() = withUpstox {
+        val s = stopOrder(60, 160.0, 152.0)
+        state(positions = listOf(position("orb", 60, 200.0, "E1", stopId = s, stop = 160.0)))
+        runBlocking { Strategies.tagOwner("kite:$s", "${arm().arm.label} · stop") }
+        kite.position(sym, 60, 200.0, product = "MIS")
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val lostId = kite.restingInKite(sym, "SELL", 30, 152.0, type = "SL", trigger = 160.0, tag = "iraorb", product = "MIS")
+        kite.hideFromBook(lostId, 500)
+        Broker.noteLost("orbstop:${arm().arm.label}:$sym:200.0:60",
+            Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 152.0, 0.05, "NFO", "iraorb", triggerPrice = 160.0), emptyList(), "test", liveOnly = true)
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+        OrbArms.lostExitWaitMsForTest = 0                             // (the exit's short wait for its lost stop: over)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "RMS: margin exceeds")
+        kite.afterNext("/orders/regular") { kite.showInBook() }      // the lost stop shows once the sale has gone
+        kite.requests.clear()
+        pass()
+        val open = arm().today.filter { it.open }
+        assertEquals("the sale refused: still 60 held", 60, open.sumOf { it.qty })
+        assertEquals("only the lot the found stop covers is booked as covered", 30, open.single { it.stopOrderId == lostId }.qty)
+        assertEquals("the other lot has none (rested again later)", 30, open.filter { it.stopOrderId == null }.sumOf { it.qty })
+        assertEquals("never a second stop beside it", 0, kite.placed.count { it.form["order_type"] == "SL" })
+        // The found stop fills: only its part closes.
+        kite.order(lostId).status = "COMPLETE"; kite.order(lostId).filled = 30
+        kite.position(sym, 30, 200.0, product = "MIS")
+        pass()
+        val closedByStop = arm().today.filter { !it.open && it.qty == 30 && it.exit != null }
+        assertTrue("its part closed at the stop", closedByStop.isNotEmpty())
+        assertEquals("no lot booked twice or left unowned", 60, arm().today.sumOf { it.qty })
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): an exit that finds no room never takes a sibling's stop whose answer was lost (still looked for) as its
+     * own orphan - it would cancel it before its sale and forget the sibling's search.
+     */
+    @Test fun anExitNeverTakesASiblingsLostStopAsItsOrphan() = withUpstox {
+        state(positions = listOf(position("orb", 30, 200.0, "E1"), position("orb", 30, 201.0, "E2")))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val lostId = kite.restingInKite(sym, "SELL", 30, 152.0, type = "SL", trigger = 160.0, tag = "iraorb", product = "MIS")
+        val siblingKey = "orbstop:${arm().arm.label}:$sym:201.0:30"
+        // (Its own search has not found it yet - kept out of it here - but it may be it.)
+        Broker.noteLost(siblingKey, Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 152.0, 0.05, "NFO", "iraorb", triggerPrice = 160.0),
+            listOf(lostId), "test", liveOnly = true)
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+        OrbArms.lostExitWaitMsForTest = 0
+        pass()
+        // The first trade (200, looked at first) leaves it alone; the sibling (201) takes its own lost stop out first and sells its lot.
+        val first = arm().today.single { it.entry == 200.0 }
+        val sibling = arm().today.single { it.entry == 201.0 }
+        assertTrue("the first trade never took the sibling's stop", first.open && first.stopOrderId == null)
+        assertFalse("the sibling took its own and sold", sibling.open)
+        assertEquals("taken out as the sibling's own before its sale", "CANCELLED", kite.order(lostId).status)
+        assertEquals("one sale for the one lot held", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): a closed trade's lost stop key no longer holds back a matching stop's adoption all day - the pass
+     * looks for keys no open trade asks after (taken out when found, gone once given up), and an open trade then takes the resting stop as
+     * its own (never a second).
+     */
+    @Test fun aClosedTradesLostKeyIsForgottenAndNoLongerBlocksAdoption() = withUpstox {
+        state(positions = listOf(position("orb", 30, 200.0, "E1", stop = 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        OrbArms.lostSweepAgeMsForTest = 0
+        Broker.lostSearchMsForTest = 0                                // (its search over: a good read without it gives it up)
+        try {
+            val stale = "orbstop:${arm().arm.label}:$sym:190.0:30"            // a trade at 190 that has closed
+            val orphan = kite.restingInKite(sym, "SELL", 30, 152.0, type = "SL", trigger = 160.0, tag = "iraorb", product = "MIS")
+            Broker.noteLost(stale, Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 152.0, 0.05, "NFO", "iraorb", triggerPrice = 160.0),
+                listOf(orphan), "test", liveOnly = true)
+            pass()
+            assertFalse("the closed trade's key is given up after a good read", Broker.lostPending(stale))
+            pass()
+            assertEquals("the open trade takes the resting stop", orphan, arm().open!!.stopOrderId)
+            assertEquals("never a second stop", 0, kite.placed.count { it.form["order_type"] == "SL" })
+        } finally { OrbArms.lostSweepAgeMsForTest = null }
     }
 
     @Test fun aLostReplyNotFoundYetIsKeptUnconfirmedNotDropped() {
