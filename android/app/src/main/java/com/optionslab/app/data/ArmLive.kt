@@ -1763,7 +1763,28 @@ object ArmLive {
     }
 
     /** 20 Nov 2026 (audit B5 deep review): the key a trade's stop whose reply was lost is looked for under ([Broker.noteLost]). */
-    private fun lostStopKey(p: Pos) = "armstop:${p.ref}"
+    private fun lostStopKey(p: Pos) = LOST_STOP + p.ref
+    private const val LOST_STOP = "armstop:"
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): the lost stops of trades no longer open: each found is cancelled (marked the app's own cancel
+     * first), never left resting on a closed trade; still looked for: asked again next look; given up on: nothing rests.
+     */
+    private suspend fun takeOutClosedLostStops() {
+        val keys = Broker.lostKeys(LOST_STOP)
+        if (keys.isEmpty()) return
+        val openRefs = lock.withLock { book().positions.filter { it.open }.map { it.ref }.toSet() }
+        for (key in keys) {
+            if (key.removePrefix(LOST_STOP) in openRefs) continue
+            val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: continue
+            markOwnCancel(l.id)
+            val ok = runCatching { Broker.cancel(l.id) }.isSuccess
+            runCatching { Diag.record("armlive", "A stop ${l.id} found after its answer was lost, for a trade no longer open: " +
+                if (ok) "taken out" else "its cancel failed - check the order book in Kite") }
+            if (!ok) com.optionslab.app.work.Alerts.error("A live stop ${l.id} found at Zerodha for an arm's trade no longer open could not be " +
+                "cancelled. Check the order book in Kite.", WHO)
+        }
+    }
 
     /** The GTT ids this path already tracks (memory): never adopted for a lost reply. */
     private fun knownGtts(): Set<Long> = _view.value.open.mapNotNull { it.gttId }.toSet()
@@ -2435,6 +2456,9 @@ object ArmLive {
         if (saveDue && !stream) runCatching { lock.withLock { cache?.let { save(it) } } }
         val sweep = coldDue && !stream && runCatching { Broker.loggedIn }.getOrDefault(false)
         if (!stream && !sweep) coldPending = false
+        // 20 Nov 2026 (audit B5 deep review): a trade that closed while its stop's lost reply was still looked for: looked for on, and the
+        // stop taken out once found - never left resting on a closed trade (the book read in the background: [Broker.lookLost]).
+        if (!stream && Broker.lostKeys(LOST_STOP).isNotEmpty()) runCatching { takeOutClosedLostStops() }
         if (!holdingHint && !shadowHint && !recoverDue && !sweep) return
         var lookFailed: Exception? = null
         if (holdingHint || recoverDue) {
@@ -2685,8 +2709,7 @@ object ArmLive {
 
     private suspend fun look(stream: Boolean) {
         looksForTest.incrementAndGet()
-        val open = lock.withLock { book().positions.filter { it.open && !it.shadow && it.ref !in resting && !handsOffNow(it.exchange, it.symbol) }.toList() }
-        // (18 Nov 2026, review: a look that returns early never leaves a short count behind for a later trade on the contract.)
+        val open = lock.withLock { book().positions.filter { it.open && !it.shadow && it.ref !in resting && !handsOffNow(it.exchange, it.symbol) }.toList() }        // (18 Nov 2026, review: a look that returns early never leaves a short count behind for a later trade on the contract.)
         if (open.isEmpty()) { shortSince.clear(); shortSaid.clear(); return }
         if (shortSince.size > 200) shortSince.clear()
         if (noRowSaid.size > 200) noRowSaid.clear()
@@ -3153,8 +3176,7 @@ object ArmLive {
                     if (c.side > 0) "sold" else "bought back", c.symbol, c.qty, c.exit ?: 0.0,
                     c.why?.let { com.optionslab.engine.orb.StepTrail.words(it) }, LiveMirror.rs(c.net ?: 0.0)))
                 if (b.positions.none { it.open && it.ref == c.ref }) { closedRefs.remove(c.ref); levels.remove(c.ref); RuleHighs.forget("live:${c.ref}")
-                    detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref)
-                    Broker.forgetLost(lostStopKey(c)) }   // (20 Nov 2026: the trade closed - its lost stop never looked for again)
+                    detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref) }
             }
         }
         // 20 Nov 2026 (audit B5, item 5): a look that only raised rule trades' best prices (a new breakeven or step lock earned: [changed])

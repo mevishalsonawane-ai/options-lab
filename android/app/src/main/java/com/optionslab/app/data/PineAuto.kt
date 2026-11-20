@@ -743,7 +743,7 @@ object PineAuto {
         if (h != null && h.unconfirmed) {
             h = settle(b, id, h)
             // Confirmed now: its stop-loss rests at Zerodha from here on (fix 1), as after a confirmed buy.
-            if (h != null && !h.unconfirmed && h.live && h.stop == null) h = placeLiveStop(item, h.copy(at = System.currentTimeMillis()))
+            if (h != null && !h.unconfirmed && h.live && h.stop == null) h = placeLiveStop(b, item, h.copy(at = System.currentTimeMillis()))
             if (h == null) b.held.remove(id) else b.held[id] = h
         }
         // The resting stop filled (the paper book or Zerodha sold at it): that was the exit.
@@ -764,7 +764,7 @@ object PineAuto {
         // 20 Nov 2026 (audit B5 deep review): a live stop whose reply was lost is looked for on each check until found or given up on -
         // only while the holding is still held and due no exit, in market hours before 15:15, at the level it was sent at.
         if (h != null && !h.unconfirmed && h.live && h.stop == null && isOpen() && mins < 15 * 60 + 15 && Broker.lostPending(lostStopKey(item, h))) {
-            h = placeLiveStop(item, h, h.stopAt)
+            h = placeLiveStop(b, item, h, h.stopAt)
             b.held[id] = h
         }
         val a = item.auto
@@ -1096,15 +1096,15 @@ object PineAuto {
      * Only for a live holding (the entry already passed the PIN, the guard, the kill switch and the order limits); the
      * holding unchanged when it could not be placed (the app then watches the stop itself, as before).
      */
-    private suspend fun placeLiveStop(item: PineScripts.Item, h: Held, at: Double? = null): Held {
+    private suspend fun placeLiveStop(b: Book, item: PineScripts.Item, h: Held, at: Double? = null): Held {
         if (!h.live || h.unconfirmed) return h
         val sym = h.kite ?: return h
         val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return h
         // [at]: a stop put back where it rested (the profit lock may have moved it up: never lowered to the base).
         val trig = at ?: ProfitLock.pineBase(h.entry, item.auto.stopPts, spec.tickSize) ?: return h
-        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, h.qty, spec.lotSize, "MIS", "SL",
+        val o0 = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, h.qty, spec.lotSize, "MIS", "SL",
             stopLimit(trig, spec.tickSize), spec.tickSize, "NFO", "irapine", triggerPrice = trig)
-        val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
+        val bad = com.optionslab.engine.Kite.refusals(o0, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
         if (bad.isNotEmpty()) {
             com.optionslab.app.work.Alerts.error("${label(item)}: the stop on $sym was not placed at Zerodha (${bad.joinToString("; ")}); " +
                 "the app watches it instead.", "Pine live")
@@ -1118,26 +1118,42 @@ object PineAuto {
             Broker.LostLook.Searching -> return h
             else -> Unit
         }
-        // 20 Nov 2026 (audit B5 deep review, as ArmLive and the ORB arms do): from a fresh read of the order book, a working stop of the
-        // scripts' on the contract that no holding claims is this holding's own (one whose answer was lost, given up on too early, or
-        // placed just before a restart): taken as its stop, never a second one beside it. Another working sale on the contract leaves no
-        // room for a full stop: none is placed (never more resting than held), the app watches the level and Boss is told. A book that
-        // cannot be read: placed as before.
-        runCatching { Broker.orders(fresh = true) }.getOrNull()?.let { book ->
-            val claimed = held.value.values.mapNotNull { it.stop }.toSet()
-            val mine = book.filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" }
-            mine.firstOrNull { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed }?.let { orphan ->
-                Broker.forgetLost(lostKey)
-                runCatching { Diag.record("pine", "${label(item)}: a stop of the scripts' resting on $sym with no holding claiming it (${orphan.id}): taken as its stop") }
-                ownerTag("kite:${orphan.id}", "${label(item)} · stop")
-                return h.copy(stop = orphan.id, stopAt = orphan.trigger.takeIf { it > 0 } ?: trig)
-            }
-            if (mine.isNotEmpty()) {
-                com.optionslab.app.work.Alerts.error("${label(item)}: the stop on $sym was not placed at Zerodha because another sell order is working on " +
-                    "it (${mine.joinToString { "${it.type} ${it.id}" }}); the app watches the level instead.", "Pine live")
+        // 20 Nov 2026 (audit B5 deep review, as ArmLive and the ORB arms do), from the order book and the positions (the kept reads when they
+        // may stand, else fresh - never a wait on the stream's look beyond them):
+        //  - a working stop of the scripts' on the contract that no holding of this book claims, that is not being taken out for a closed
+        //    holding ([Book.removing]), and whose quantity fits this holding (the nearest to its level first) is this holding's own (its
+        //    answer lost, given up on too early, or placed just before a restart): taken as its stop, never a second one beside it;
+        //  - otherwise the stop rests only for what Zerodha holds less every other working sale on the contract (never more resting than
+        //    held): none left, none is placed and the app watches the level; a part, the stop rests for that part.
+        // A book that cannot be read: placed as before.
+        var stopQty = h.qty
+        val book = runCatching { Broker.ordersRecon() }.getOrNull()
+        if (book != null) {
+            val claimed = b.held.values.mapNotNull { it.stop }.toSet() + b.removing.flatMap { it.ids.keys }
+            val sells = book.filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" }
+            sells.filter { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed &&
+                com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) in 1..h.qty }
+                .minByOrNull { kotlin.math.abs(it.trigger - trig) }?.let { orphan ->
+                    Broker.forgetLost(lostKey)
+                    runCatching { Diag.record("pine", "${label(item)}: a stop of the scripts' resting on $sym with no holding claiming it (${orphan.id}): taken as its stop") }
+                    ownerTag("kite:${orphan.id}", "${label(item)} · stop")
+                    return h.copy(stop = orphan.id, stopAt = orphan.trigger.takeIf { it > 0 } ?: trig)
+                }
+            val others = sells.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            val heldZ = runCatching { Broker.positionsRecon().net }.getOrNull()
+                ?.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }?.sumOf { it.qty }
+            // (What Zerodha holds beyond this holding - other books' lots - is what the other sales may cover first; positions that
+            // trail a fill, or cannot be read, count none, so the stop only ever rests for less, never more than held.)
+            val extra = ((heldZ ?: h.qty) - h.qty).coerceAtLeast(0)
+            val lot = spec.lotSize.coerceAtLeast(1)
+            stopQty = ((h.qty - (others - extra).coerceAtLeast(0)).coerceAtLeast(0) / lot) * lot
+            if (stopQty <= 0) {
+                com.optionslab.app.work.Alerts.error("${label(item)}: the stop on $sym was not placed at Zerodha because other working sell orders " +
+                    "already cover what is held (${sells.joinToString { "${it.type} ${it.id}" }}); the app watches the level instead.", "Pine live")
                 return h
             }
         }
+        val o = if (stopQty < h.qty) o0.copy(quantity = stopQty) else o0
         val oid = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite()) }.getOrNull()
                 ?: null.also { Broker.noteLost(lostKey, o, knownKite(), "${label(item)}: its stop", liveOnly = true) }
@@ -1423,7 +1439,7 @@ object PineAuto {
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         note(b, id, "Bought ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} (LIVE)")
         // Its stop-loss rests at Zerodha from now on (fix 1): it sells there with the app closed too.
-        b.held[id]?.let { h -> b.held[id] = placeLiveStop(item, h) }
+        b.held[id]?.let { h -> b.held[id] = placeLiveStop(b, item, h) }
         runCatching { save(b) }
     }
 
@@ -1550,7 +1566,7 @@ object PineAuto {
         // back for what is still held, at the level it rested at (never lower), so the holding is never left without one.
         val tookStop = h0.stop != null && h.stop == null
         suspend fun restop(left: Held) {
-            if (tookStop && left.qty > 0) b.held[id] = placeLiveStop(item, left.copy(stop = null), left.stopAt)
+            if (tookStop && left.qty > 0) b.held[id] = placeLiveStop(b, item, left.copy(stop = null), left.stopAt)
         }
         // 20 Oct, enhancement round 2: read and sent in the contract's one exit turn, from an orders read that shows every exit sent
         // from here ([ExitCoordinator]); and the orders first, then the positions read again (an exit filling between the two reads

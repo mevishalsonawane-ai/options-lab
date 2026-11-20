@@ -398,6 +398,23 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (audit B5 deep review): a trade that closes while its stop's lost reply is still looked for: once the book shows that
+     * stop, it is taken out - never left resting on a flat position.
+     */
+    @Test fun aLostStopFoundAfterItsTradeClosedIsTakenOut() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "closed"))
+        assertNull(view().open.single().stopOrderId)
+        legs["closed"] = legs.getValue("closed").first to 0         // the paper trade sold: the live one follows
+        watch()
+        assertTrue("closed", view().open.isEmpty())
+        kite.showInBook()
+        watch()
+        assertEquals("taken out once found", "CANCELLED", kite.orders.values.single { it.type == "SL" }.status)
+    }
+
+    /**
      * 20 Nov 2026 (audit B5 deep review): a stop whose reply was lost and that never shows in the book is looked for for two minutes, a
      * second one never rested meanwhile; then Boss is told and the stop is rested as usual.
      */

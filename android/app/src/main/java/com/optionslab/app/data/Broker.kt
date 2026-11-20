@@ -1785,7 +1785,8 @@ object Broker {
      * is adopted only when it is surely this one - a LIMIT's price must match too (to half a tick), and an order the
      * exchange REJECTED, or CANCELLED with nothing filled, is never taken for it (that is no live order; the error stands).
      */
-    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false, liveOnly: Boolean = false): String? {
+    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false, liveOnly: Boolean = false,
+                           sentAt: java.time.LocalDateTime? = null): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
@@ -1803,7 +1804,7 @@ object Broker {
         val offNow = serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
         val off = mark?.offset?.takeIf { o -> offNow == null || kotlin.math.abs(offNow - o) <= OFFSET_MOVED_MS }
         val since = mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
-            ?: now.minusMinutes(3)
+            ?: sentAt?.minusMinutes(3) ?: now.minusMinutes(3)
         val before = mark?.before?.mapTo(HashSet()) { it.id }.orEmpty()
         return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
@@ -1816,11 +1817,17 @@ object Broker {
                 // after Kite's error): a resting order at another level is never taken for this one.
                 samePrices(o, it) &&
                 // (20 Nov 2026, audit B5 deep review: a lost stop's search never takes an order that has ended.)
-                (!liveOnly || it.optString("status").uppercase() !in setOf("COMPLETE", "CANCELLED", "REJECTED")) &&
+                (!liveOnly || !diedUnfilled(it)) &&
                 (!afterError || adoptableAfterError(o, it))
         }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it)
             // (20 Nov 2026, review: a lost reply found is kept as the entry or exit it was sent as, for the kill switch.)
             mark?.let { m -> noteKind(it, entry = !m.exit) } }
+    }
+
+    /** 20 Nov 2026 (audit B5 deep review): [r] ended with nothing filled - REJECTED, or CANCELLED unfilled. */
+    private fun diedUnfilled(r: JSONObject): Boolean {
+        val st = r.optString("status").uppercase()
+        return st == "REJECTED" || (st == "CANCELLED" && r.optInt("filled_quantity", 0) <= 0)
     }
 
     /** [r]'s price (a LIMIT's or an SL's) and trigger (an SL's or an SL-M's) are [o]'s, to half a tick. */
@@ -1875,11 +1882,15 @@ object Broker {
      * go on - the book would have shown an order Zerodha took long before). A book that cannot be read never gives up: past
      * [LOST_SEARCH_MS] Boss is told the order's state is unknown, and it stays UNKNOWN.
      */
-    private class LostWrite(val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val what: String, val liveOnly: Boolean) {
+    private class LostWrite(val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val what: String, val liveOnly: Boolean,
+                            /** When it was sent, by the phone's market clock: the search's start even once the send's own mark is gone. */
+                            val sentAt: java.time.LocalDateTime) {
         @Volatile var lookedMs = 0L
         @Volatile var foundId: String? = null
         /** When a read of the book last SUCCEEDED without finding it (0: never). */
         @Volatile var readOkAtMs = 0L
+        /** When a read of the book last FAILED (0: never). */
+        @Volatile var readFailAtMs = 0L
         @Volatile var searching: kotlinx.coroutines.Job? = null
         @Volatile var unknownSaid = false
     }
@@ -1901,12 +1912,13 @@ object Broker {
 
     /**
      * [o] ([what], for Boss's words) was sent under [key], its reply lost and not found in the book yet ([known]: never adopted).
-     * [liveOnly] (a stop): an order the book shows ended (COMPLETE, CANCELLED, REJECTED) is never taken for it - a stale key never adopts a
-     * dead stop.
+     * [liveOnly] (a stop): an order that died unfilled (REJECTED, or CANCELLED with nothing filled) is never taken for it - a stale key never
+     * adopts a dead stop; one that filled (COMPLETE, or cancelled after a part) is still found, so its caller books the fill. Never pruned
+     * while unresolved (an unknown order dropped could be sent twice): each ends found, given up on after a good read, or forgotten.
      */
     fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false) {
-        if (lostWrites.size > 200) lostWrites.entries.removeIf { System.currentTimeMillis() - it.value.sinceMs > 4 * LOST_SEARCH_MS }
-        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what, liveOnly))
+        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what, liveOnly,
+            runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }))
     }
 
     /** Whether a lost reply is being looked for under [key]. Memory only. */
@@ -1923,8 +1935,8 @@ object Broker {
 
     /** One search of the book for [w]: found, or a read that succeeded without it; a read that failed changes nothing. */
     private suspend fun searchLost(w: LostWrite) {
-        val found = try { findRecent(w.order, w.known, liveOnly = w.liveOnly) } catch (e: kotlinx.coroutines.CancellationException) { throw e
-        } catch (_: Exception) { return }
+        val found = try { findRecent(w.order, w.known, liveOnly = w.liveOnly, sentAt = w.sentAt) } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (_: Exception) { w.readFailAtMs = System.currentTimeMillis(); return }
         if (found != null) w.foundId = found else w.readOkAtMs = System.currentTimeMillis()
     }
 
@@ -1947,9 +1959,10 @@ object Broker {
         }
         val window = lostSearchMsForTest ?: LOST_SEARCH_MS
         if (now - w.sinceMs < window) return LostLook.Searching
-        // Past the window: given up on only on a read that succeeded after it; a book never read stays UNKNOWN (Boss told once).
+        // Past the window: given up on only on a read that succeeded after it; while the reads after it fail, it stays UNKNOWN (Boss told
+        // once); a read still on its way says nothing yet.
         if (w.readOkAtMs - w.sinceMs < window) {
-            if (!w.unknownSaid) {
+            if (!w.unknownSaid && w.readFailAtMs - w.sinceMs >= window) {
                 w.unknownSaid = true
                 runCatching {
                     val text = "${w.what} on ${w.order.tradingSymbol}: Zerodha's answer was lost and its order book could not be read for " +

@@ -5016,11 +5016,18 @@ object OrbArms {
         if (ArmLive.handsOffNow("NFO", sym)) return null
         // 20 Nov 2026 (audit B5 deep review): this trade's stop whose reply was lost and is not found yet: looked for first (the book read
         // in the background, never here), nothing new placed meanwhile and no try or back-off counted; found, it is the trade's stop.
+        // (The trade split when its stop covers less: the part it covers keeps it, the rest has none - asked again next look.)
+        fun split(q: Position, covered: Int): Pair<Position, Position?> {
+            if (covered >= p.qty) return q to null
+            val part = covered.toDouble() / p.qty
+            return q.copy(qty = covered, charges = p.charges * part) to p.copy(qty = p.qty - covered, stopOrderId = null, charges = p.charges * (1 - part))
+        }
         val lostKey = orbLostKey(armOf(p.arm).label, sym, p.entry)
         when (val l = Broker.lookLost(lostKey)) {
             is Broker.LostLook.Found -> {
                 runCatching { Strategies.tagOwner("kite:${l.id}", "${armOf(p.arm).label} · stop") }
-                return p.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: p.stopTrigger) to null
+                placed(sym, l.qty, l.id)
+                return split(p.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: p.stopTrigger), l.qty)
             }
             Broker.LostLook.Searching -> return null
             else -> Unit
@@ -5068,11 +5075,6 @@ object OrbArms {
         // the trade split when that is less.)
         val lotW = spec.lotSize.coerceAtLeast(1)
         val want = (if (adoptOnly) minOf(p.qty, held) else minOf(p.qty, held - othersButOrphans)).coerceAtLeast(0) / lotW * lotW
-        fun split(q: Position, covered: Int): Pair<Position, Position?> {
-            if (covered >= p.qty) return q to null
-            val part = covered.toDouble() / p.qty
-            return q.copy(qty = covered, charges = p.charges * part) to p.copy(qty = p.qty - covered, stopOrderId = null, charges = p.charges * (1 - part))
-        }
         val o = if (want > 0) orphanStop(b, armOf(p.arm).label, sym, p.entryTime, want, spec.tickSize, orders, at = level, grow = !adoptOnly,
             entryOid = p.entryOrderId) else Orphan.None
         when (o) {
