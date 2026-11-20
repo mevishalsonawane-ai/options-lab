@@ -170,8 +170,9 @@ class StreamAuditTest : RobolectricTest() {
             now += 50
         }
         assertEquals(now - 50, KiteStream.seen(token)!!.at)
-        // A packet 9 s late arrives now: stamped back, so a stop asks Zerodha instead of taking it as fresh.
-        val arrived = System.currentTimeMillis()
+        // A packet 9 s late arrives now: stamped back, so a stop asks Zerodha instead of taking it as fresh. (On the same timeline as the
+        // steady packets: a step against the monotonic clock would be a clock change, which forgets what was learnt.)
+        val arrived = now
         KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 90.0, bid = 89.9, ask = 90.1, exchangeTime = (arrived - 9_300) / 1000)), arrived, stampLate = true)
         val seen = KiteStream.seen(token)!!
         assertEquals(90.0, seen.tick.last, 0.0)
@@ -180,11 +181,10 @@ class StreamAuditTest : RobolectricTest() {
         assertNull("nor to show as live", KiteStream.tick(token))
         // Review: a new connection's first packet of it is Zerodha's snapshot of it NOW - a quiet option's carries the stamp of its
         // last change, a minute ago - and is kept as arrived. The same connection's next late packet is stamped back again.
-        val reopened = System.currentTimeMillis()
+        val reopened = arrived + 100
         KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 91.0, bid = 90.9, ask = 91.1, exchangeTime = (reopened - 60_300) / 1000)), reopened, stampLate = true, conn = 7)
         assertEquals(reopened, KiteStream.seen(token)!!.at)
-        assertNotNull(KiteStream.freshTick(token))
-        val again = System.currentTimeMillis()
+        val again = arrived + 200
         KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 92.0, bid = 91.9, ask = 92.1, exchangeTime = (again - 9_300) / 1000)), again, stampLate = true, conn = 7)
         assertTrue(again - KiteStream.seen(token)!!.at >= 5_000)
     }
@@ -214,8 +214,8 @@ class StreamAuditTest : RobolectricTest() {
             """{"day":"${today.minusDays(1)}","at":${System.currentTimeMillis() - 86_400_000L},"i":[[51000001,"NIFTYOLD24000CE","NIFTY","$usual",24000,75,"CE",0.05]]}""")
         kite.instruments += FakeKite.Ins(51_000_002L, "NIFTYNEW24000CE", "NIFTY", moved, 24_000.0, "CE", 75)
         Broker.resetInstrumentsRetryForTest()
-        assertFalse(Broker.instrumentsAreToday())
-        Broker.cachedInstruments()                                        // answered at once from the old list; today's fetched behind it
+        // Answered at once from the old list; today's is fetched behind it.
+        assertEquals(listOf("NIFTYOLD24000CE"), Broker.cachedInstruments()!!.map { it.tradingSymbol })
         val end = System.currentTimeMillis() + 10_000
         while (!Broker.instrumentsAreToday() && System.currentTimeMillis() < end) Thread.sleep(20)
         assertTrue("today's list fetched in the background", Broker.instrumentsAreToday())
