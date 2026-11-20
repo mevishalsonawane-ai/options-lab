@@ -52,8 +52,8 @@ internal fun StaleHistoryCardFlow(on: Boolean, today: Int, said: String?, onOnCo
     var askPin by remember { mutableStateOf<Boolean?>(null) }
     LedgerCard(title = "R51 / R72 stale history") {
         Note("R51 and R72 read the index's earlier sessions for their first breaks of the day (09:20 - 10:55). When those do not reach the " +
-            "last trading day (yesterday missing, or read in part), a break can be false. The history is read again 1, 2, then every 5 " +
-            "minutes either way.")
+            "last trading day (yesterday missing, or read in part), a break can be false. On, the history is read again 1, 2, then every 5 " +
+            "minutes; off, a missing one every 10 minutes as before, and a stale one in use only once an hour (logged, never replaced).")
         if (!loaded) Note("Reading the switch...", Modifier.padding(top = 4.dp))
         else ToggleRow(STALE_HISTORY_SWITCH, if (on) "On: such a break waits while the history is read again, else it is let go (paper and live)"
             else "Off (shadow): taken as before; each is logged", on, keepSub = true) { want -> askPin = want }

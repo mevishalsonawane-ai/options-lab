@@ -33,8 +33,9 @@ import java.time.LocalTime
  * 20 Nov 2026 (audit B5): R51 / R72's data and locks.
  * - Item 1: a history that does not reach the last trading day (yesterday missing, or read in part) is told ([PassedArmsHost.staleWhy]); a
  *   break whose 20-bar channel reads it is logged in shadow by default ("would have skipped (stale history)", taken as before), and with
- *   Bot settings' switch on (one tap; off takes the PIN) it waits while the history is read again and is let go when its window ends.
- * - Item 2: a missing, empty or stale history is read again on a back-off (1, 2, then 5 minutes), in the background.
+ *   Bot settings' switch on (both ways take the PIN) it waits while the history is read again and is let go when its window ends.
+ * - Item 2: with the switch on, a missing, empty or stale history is read again on a back-off (1, 2, then 5 minutes), in the background;
+ *   off, as before (every 10 minutes while one is missing; a stale one in use only once an hour, for the log, never replacing it).
  * - Items 5 and 6: a lock the walk earned is saved at once (a restart that lost the minutes still sells at it), and while the option's
  *   minutes stop coming the price now raises the same lock.
  */
@@ -339,7 +340,15 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
     }
 
     @Test fun offAStaleHistoryInUseIsReadAgainOnlyOnceAnHourForTheLog() {
-        history(session(PassedArmsHost.previousSession(prev)!!))
+        // Every other index and India VIX whole, NIFTY's stale: nothing missing, so only the hourly read can fetch NIFTY again.
+        val before = PassedArmsHost.previousSession(prev)!!
+        PassedArmsHost.wipe()
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(before) else session(prev) }
+        PassedArmsHost.testDaily = { emptyList() }
+        runBlocking { PassedArmsHost.prefetchNow(day) }
+        for (u in listOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX", PassedArmsHost.VIX)) assertNotNull(u, PassedArmsHost.history(u, day))
+        assertNotNull(PassedArmsHost.historyStale("NIFTY", day))
+        assertFalse(view().staleOn)
         val whole = session(prev)
         val reads = java.util.concurrent.atomic.AtomicInteger()
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") { reads.incrementAndGet(); whole } else emptyList() }
@@ -355,6 +364,11 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         PassedArmsHost.prefetch(day.atTime(9, 0), listOf("NIFTY"))
         Thread.sleep(300)
         assertEquals("not again within the hour", n, reads.get())
+        // Switched on: the 1, 2, 5-minute reads start afresh, and the whole read replaces it.
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
+        PassedArmsHost.prefetch(day.atTime(9, 0), listOf("NIFTY"))
+        settled(reads, n + 1)
+        assertNull(PassedArmsHost.historyStale("NIFTY", day))
     }
 
     @Test fun todaysDecisionsAreNeverDroppedFromTheBook() {

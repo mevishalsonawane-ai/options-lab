@@ -1067,6 +1067,8 @@ object PassedArmsHost {
             val b = book()
             if (b.staleOn == on) return@withLock "The stale-history check is already ${if (on) "on" else "off (shadow)"}."
             b.staleOn = on
+            // (On: the 1, 2, 5-minute reads start afresh, not after the tries the off reads counted.)
+            if (on) { histTried = null; pickTried = null }
             note(b, if (on) "stale-history check ON (Boss's PIN): an R51 / R72 break that reads an earlier session not up to the last trading day waits while the history is read again, then is let go (paper and live)"
                 else "stale-history check OFF (Boss's PIN): such breaks are taken as before (each logged in shadow)")
             save(b)
@@ -1331,7 +1333,8 @@ object PassedArmsHost {
         val day = now.toLocalDate()
         if (now.toLocalTime().isBefore(LocalTime.of(8, 45))) return
         // 20 Nov 2026 (audit B5, item 2): read again while any is missing, has no session or does not reach the last trading day
-        // ([historyWanted]), 1, 2, then every 5 minutes (it was every 10, and a history with no session was kept all day).
+        // ([historyWanted]) - with the stale-history check on 1, 2, then every 5 minutes; off, as before ([histGapMs]: every 10 minutes
+        // while one is missing, and a stale one in use only once an hour, for the log).
         if ((indices + VIX).none { historyWanted(it, day) }) return
         val all = (indices + ALL_INDICES).distinct()
         val on = staleActs()
