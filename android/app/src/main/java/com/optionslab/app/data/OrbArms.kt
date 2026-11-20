@@ -4047,9 +4047,14 @@ object OrbArms {
                     b.positions[i] = booked.first
                     booked.second?.let { b.positions += it }
                 } else if (epochMs(now()) - found.askedMs in 0 until LOST_EXIT_FOUND_KEEP_MS) {
-                    lostExits.putIfAbsent(found.id, found.copy(foundId = id))
+                    // (Still working - a market sale's protection turned into a resting limit: the rest is cancelled once, in the
+                    // background, as an exit not finished in time always was; the next look books what filled.)
+                    val ask = orders[id]?.working == true && !found.cancelAsked
+                    lostExits.putIfAbsent(found.id, found.copy(foundId = id, cancelAsked = found.cancelAsked || ask))
+                    if (ask) offLock.launch { runCatching { Broker.cancel(id) } }
                 } else {
                     runCatching { Diag.record("orb", "$sym: the lost exit found ($id) did not finish in Zerodha's book; let go") }
+                    offLock.launch { runCatching { Broker.cancel(id) } }
                     com.optionslab.app.work.Alerts.error("ORB live: the lost exit of $sym was found in Zerodha's order book ($id) but has not finished. " +
                         "The app reads Zerodha again and sells only what is still held; check Kite's order book.", "ORB live")
                 }
@@ -5241,7 +5246,11 @@ object OrbArms {
                                 /** A search runs now ([searchLost]: at most one at a time). */
                                 val searching: Boolean = false,
                                 /** Searched and not found (or the book unreadable [LOST_EXIT_TRIES] times): the next look lets it go and sells. */
-                                val notFound: Boolean = false)
+                                val notFound: Boolean = false,
+                                /** The arm's name, for the found sale's owner label. */
+                                val label: String = "",
+                                /** Found still working: the rest of it was asked to be cancelled (once, in the background). */
+                                val cancelAsked: Boolean = false)
     /** By [LostExit.id] (never reused: a part's stale [Position.lostId] matches nothing). */
     private val lostExits = java.util.concurrent.ConcurrentHashMap<Long, LostExit>()
     private val lostSeq = java.util.concurrent.atomic.AtomicLong()
@@ -5264,7 +5273,7 @@ object OrbArms {
     /** [p]'s exit [o] ([why]) on [sym] lost its reply and was not found: held for that part ([lostExits]), Boss told. Its id. Memory only. */
     private fun lostExit(p: Position, sym: String, why: String, o: com.optionslab.engine.Kite.Order, known: Set<String>): Long {
         val id = lostSeq.incrementAndGet()
-        lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()))
+        lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()), label = armOf(p.arm).label)
         com.optionslab.app.work.Alerts.error("${armOf(p.arm).label}: the live exit of $sym got no reply from Zerodha and is not in its order book " +
             "yet. This trade sells nothing more for ${LOST_EXIT_HOLD_MS / 1000} s while the app looks for it (other trades on it go on, counting " +
             "that sale as going); check Kite's order book.", "ORB live")
@@ -5329,8 +5338,9 @@ object OrbArms {
         if (!lostExits.replace(lost.id, lost, asked)) return LOST_HOLD
         if (!inline) { searchLost(asked); return LOST_HOLD }
         searchLostNow(asked)
-        // (Its answer acted on at once; a failed read keeps the hold until the next try is due.)
-        return lostExitLook(asked, inline = false)
+        // (Its answer acted on at once - found or not found; a failed read keeps the hold until the next try is due.)
+        val now = lostExits[lost.id] ?: return null
+        return if (now.foundId != null || now.notFound) lostExitLook(now, inline = false) else LOST_HOLD
     }
 
     /** 20 Nov 2026: the background search of [asked] ([lostExitLook] on a fast or stream look), off the arms' lock. */
@@ -5365,7 +5375,11 @@ object OrbArms {
             found.isNullOrEmpty() -> cur.copy(searching = false, notFound = true)
             else -> cur.copy(searching = false, foundId = found)
         }
-        if (found?.isNotEmpty() == true) runCatching { Diag.record("orb", "${asked.sym}: the lost exit found in Zerodha's book ($found): it is the exit") }
+        if (found?.isNotEmpty() == true) {
+            runCatching { Diag.record("orb", "${asked.sym}: the lost exit found in Zerodha's book ($found): it is the exit") }
+            // (Labelled at once, whatever its state: never taken for another lost sale meanwhile, [lostPending].)
+            runCatching { Strategies.tagOwner("kite:$found", "${asked.label} · ${asked.why}") }
+        }
         lostExits.replace(asked.id, cur, next)
     }
 
@@ -5393,11 +5407,11 @@ object OrbArms {
     internal fun lostExitForTest(sym: String): Boolean = lostOn(sym).isNotEmpty()
 
     /**
-     * TEST ONLY: a look on [sym]'s (first) lost exit by the part whose sale was lost ([owner]) or by another trade, as [exitLive] makes it:
+     * TEST ONLY: a regular look on [sym]'s (first) lost exit by the part whose sale was lost (a search in line when due):
      * "hold", "none" (go on), or "found <id>".
      */
-    internal suspend fun lostExitLookForTest(sym: String, owner: Boolean): String =
-        (if (owner) lostOn(sym).minByOrNull { it.id }?.let { lostExitLook(it, inline = true) } else null)
+    internal suspend fun lostExitLookForTest(sym: String): String =
+        lostOn(sym).minByOrNull { it.id }?.let { lostExitLook(it, inline = true) }
             .let { if (it == null) "none" else if (it.hold) "hold" else "found ${it.found}" }
 
     /** 18 Nov 2026 (audit: B1): Zerodha's orders and positions as the pass that decided an exit already read them ([exitLive]). */
@@ -5583,7 +5597,7 @@ object OrbArms {
             if (st?.status == "COMPLETE") {
                 val px = st.avgPrice.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
                 return p.copy(exit = px, exitTime = now(), why = stopWhy(p), stopOrderId = null,
-                    charges = p.charges + kiteCharge("SELL", px, filled)) to null
+                    charges = p.charges + kiteCharge("SELL", px, p.qty)) to null
             }
             // Only sell once the stop is known to be out: a stop still working plus a market sell could both fill.
             // (16 Nov review: marked as the app's own cancel, so the next look - after a restart too - never takes it as Boss's.)

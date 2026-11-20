@@ -656,13 +656,13 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /** The Liquidity exit of a lot whose sale lost its reply (the order book does not list it yet, the positions trail it). */
-    private fun lostLiquiditySale(reply: FakeKite.Reply = FakeKite.Reply.DROP_AFTER_ACCEPT): String {
+    private fun lostLiquiditySale(reply: FakeKite.Reply = FakeKite.Reply.DROP_AFTER_ACCEPT, outcome: FakeKite.Outcome = FakeKite.Outcome.FILL): String {
         val s1 = stopOrder(30, 170.0, 161.5)
         state(listOf(liquidity(30, 200.0, s1, 170.0)))                     // its time stop is due
         kite.position(sym, 30, 200.0, product = "MIS")
         kite.positionsTrailReads = 1_000
         kite.trailReads = 1_000
-        kite.nextPlace(reply = reply)
+        kite.nextPlace(reply = reply, outcome = outcome)
         kite.requests.clear()
         pass()
         assertEquals("its stop came out first", "CANCELLED", kite.order(s1).status)
@@ -694,21 +694,24 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (review; deep review F1): ANOTHER trade's look on the contract is never held by a lost exit and never takes it: the sale
-     * is kept for its own trade, whose next look searches and books it as its exit.
+     * 20 Nov 2026 (review: a found lost sale is never awaited under the lock): found still working (a market sale's protection left it
+     * resting), its rest is cancelled once, in the background; the next looks book what filled - nothing - and the exit goes again.
      */
-    @Test fun aLostExitIsKeptForItsOwnTradeNeverTakenByAnother() {
-        lostLiquiditySale()
+    @Test fun aFoundLostExitStillWorkingIsCancelledInTheBackgroundThenTheExitGoesAgain() {
+        lostLiquiditySale(outcome = FakeKite.Outcome.OPEN)
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()
-        assertEquals("another trade's look goes on", "none", runBlocking { OrbArms.lostExitLookForTest(sym, owner = false) })
-        assertTrue("kept for its own trade", OrbArms.lostExitForTest(sym))
-        assertEquals("still kept: another's look never takes it", "none", runBlocking { OrbArms.lostExitLookForTest(sym, owner = false) })
-        assertTrue(OrbArms.lostExitForTest(sym))
         pass()
-        assertEquals("never sold twice", 1, marketSells().size)
-        assertEquals("booked as its own trade's exit", "time_stop", today("liquidity").single().why)
+        assertNotNull("not booked while it works", open("liquidity"))
+        assertEquals(1, marketSells().size)
+        val end = System.currentTimeMillis() + 10_000
+        fun cancels() = kite.requests.count { it.method == "DELETE" && it.path.startsWith("/orders/") }
+        while (cancels() == 0 && System.currentTimeMillis() < end) Thread.sleep(10)
+        assertEquals("its rest cancelled once, in the background", 1, cancels())
+        pass(); pass()
         assertTrue(!OrbArms.lostExitForTest(sym))
+        assertEquals("the exit went again for what is still held", 2, marketSells().size)
+        assertEquals("time_stop", today("liquidity").single().why)
     }
 
     /** Waits (wall clock, at most 10 s) until no background search of a lost exit on [sym] runs. */
@@ -825,12 +828,11 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         kite.down += "/orders"
         try {
             repeat(OrbArms.LOST_EXIT_TRIES - 1) { n ->
-                assertEquals("try ${n + 1}: held", "hold", runBlocking { OrbArms.lostExitLookForTest(sym, owner = true) })
-                assertEquals("asked again only after a pause", "hold", runBlocking { OrbArms.lostExitLookForTest(sym, owner = true) })
-                assertEquals("another trade is never held", "none", runBlocking { OrbArms.lostExitLookForTest(sym, owner = false) })
+                assertEquals("try ${n + 1}: held", "hold", runBlocking { OrbArms.lostExitLookForTest(sym) })
+                assertEquals("asked again only after a pause", "hold", runBlocking { OrbArms.lostExitLookForTest(sym) })
                 OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_ASK_MS / 1000 + 1)
             }
-            assertEquals("let go", "none", runBlocking { OrbArms.lostExitLookForTest(sym, owner = true) })
+            assertEquals("let go", "none", runBlocking { OrbArms.lostExitLookForTest(sym) })
             assertTrue(!OrbArms.lostExitForTest(sym))
             val gapS = java.time.Duration.between(lostAt, OrbArms.testNow!!).seconds
             assertTrue("bounded: $gapS s", gapS <= OrbArms.LOST_EXIT_HOLD_MS / 1000 + OrbArms.LOST_EXIT_TRIES * (OrbArms.LOST_EXIT_ASK_MS / 1000 + 1) + 1)
