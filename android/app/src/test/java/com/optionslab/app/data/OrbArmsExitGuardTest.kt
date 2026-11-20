@@ -1251,16 +1251,150 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "lost exit of $sym was not found" in it })
     }
 
+    /** The MARKET sells on [sym] in Zerodha's (fake) book, oldest first. */
+    private fun bookSells() = runBlocking { Broker.orders() }.filter { it.symbol == sym && it.side == "SELL" && it.type == "MARKET" }
+        .sortedBy { it.id.toLong() }.map { it.id }
+
+    /**
+     * 20 Nov 2026 (merge review C2): as [twinPartsWithTheSameLabelNeverAdoptEachOthersSale], with B's booked sale carrying A's own lost label
+     * after the restart (the label check bypassed): only the saved exit sales leave it out - A is let go, never "found" in B's sale.
+     */
+    @Test fun aBookedExitSaleIsNeverAdoptedEvenWithTheLostSalesOwnLabel() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val twin = position("liquidity5", 30, 200.0, "E1", null, null).put("level", 52_050.0).put("lot", 30)
+        state(listOf(liquidity(30, 200.0, s1, 170.0), twin))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.NETWORK_EXCEPTION)           // A's sale: nothing reached Zerodha
+        val lostAt = OrbArms.testNow!!
+        pass()
+        assertEquals("the twin sold its own 30, booked", 1, today("liquidity").count { it.exit != null })
+        val bSale = bookSells().single()
+        OrbArms.forgetMemoryForTest(); Broker.forgetSentForTest()          // a restart
+        view()
+        assertTrue("A's lost sale taken back", OrbArms.lostExitForTest(sym))
+        assertTrue("B's sale saved as booked", bSale in OrbArms.exitSalesForTest())
+        runBlocking { Strategies.tagOwner("kite:$bSale", OrbArms.lostLabelForTest(sym)!!) }   // the label check bypassed
+        OrbArms.testNow = pastWindow(lostAt)
+        pass(); searchDone(); pass(); pass()
+        assertTrue("A let go, not found", !OrbArms.lostExitForTest(sym))
+        assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "lost exit of $sym was not found" in it })
+    }
+
+    /**
+     * 20 Nov 2026 (merge review C2): two lost sales on one contract taken back from the book, C's already found (X, still working). A's search
+     * never takes X for its own, though X matches it and carries no label: past its window A is let go.
+     */
+    @Test fun anotherLostSalesFoundOrderIsNeverAdopted() {
+        val nowMs = OrbArms.testNow!!.toInstant().toEpochMilli()
+        val sent = Market.now().toLocalDateTime().minusSeconds(OrbArms.LOST_LET_GO_MS / 1000 + 30)
+        val x = kite.restingInKite(sym, "SELL", 30, 0.0, type = "MARKET", tag = "iraorb")
+        fun lost(since: Long, found: String?) = JSONObject().put("why", "time_stop").put("qty", 30).put("type", "MARKET").put("tag", "iraorb")
+            .put("since", since).put("sentAt", sent.toString()).put("label", "Liquidity 5m").put("known", JSONArray())
+            .apply { found?.let { put("found", it).put("asked", since) } }
+        val a = liquidity(30, 200.0, null, null).put("lostExit", lost(nowMs - OrbArms.LOST_LET_GO_MS - 30_000, null))
+        val c = position("liquidity15", 30, 200.0, "E2", null, null).put("level", 52_050.0).put("lot", 30)
+            .put("lostExit", lost(nowMs - OrbArms.LOST_LET_GO_MS - 20_000, x))
+        state(listOf(a, c))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        view()
+        assertEquals("A (the first) is let go, X not taken", "none", runBlocking { OrbArms.lostExitLookForTest(sym) })
+        // (The control: X is a match for A's order in A's window - only C's found id kept A from it.)
+        Broker.forgetSentForTest()
+        assertEquals(x, runBlocking { Broker.findRecent(Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb"),
+            emptySet(), since = sent.minusMinutes(3), earliest = true) })
+    }
+
+    /**
+     * 20 Nov 2026 (merge review C2): the twin case with A's sale reaching Zerodha (it filled; its reply lost) and B's sale after it: after a
+     * restart A's search chooses between the two and takes its own - the earlier - never B's; neither part sells again.
+     */
+    @Test fun twinPartsAfterARestartEachKeepTheirOwnSale() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val twin = position("liquidity5", 30, 200.0, "E1", null, null).put("level", 52_050.0).put("lot", 30)
+        state(listOf(liquidity(30, 200.0, s1, 170.0), twin))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.trailReads = 1_000                                            // (not in the book at once)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)          // A's sale went and filled; its reply lost
+        val lostAt = OrbArms.testNow!!
+        pass()
+        assertTrue("A's sale lost and held", OrbArms.lostExitForTest(sym))
+        assertEquals("B booked", 1, today("liquidity").count { it.exit != null })
+        OrbArms.forgetMemoryForTest(); Broker.forgetSentForTest()          // a restart
+        kite.showInBook()
+        val sells = bookSells()
+        assertEquals("A's sale and B's", 2, sells.size)
+        val (aSale, bSale) = sells
+        OrbArms.testNow = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone()
+        assertEquals("A found its own sale", aSale, OrbArms.lostFoundForTest(sym))
+        assertTrue(aSale != bSale)
+        pass(); pass()
+        assertTrue("resolved", !OrbArms.lostExitForTest(sym))
+        assertEquals("both parts closed", 2, today("liquidity").count { it.exit != null })
+        assertEquals("never sold again", 2, marketSells().size)
+    }
+
+    /**
+     * 20 Nov 2026 (merge review C1): a lost stop and a lost sale on the same part; the stop is found while the sale is held, and the time
+     * exit is due all along: the found stop is never attached to the part, nothing is sold again, and the hold resolves (the sale found
+     * and booked as the exit).
+     */
+    @Test fun aLostStopFoundWhileThePartsLostSaleIsHeldNeverSellsTwice() {
+        lostLiquiditySale()                                                // the sale went and filled; its reply lost
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val label = view().single { it.arm.source == "liquidity" }.arm.label
+        val lostStop = kite.restingInKite(sym, "SELL", 30, 161.5, type = "SL", trigger = 170.0, tag = "iraorb")
+        val key = "orbstop:$label:$sym:200.0:30"
+        Broker.noteLost(key, Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 161.5, 0.05, "NFO", "iraorb", triggerPrice = 170.0),
+            emptyList(), "test", liveOnly = true)
+        Broker.ageLostForTest(key, 25_000)
+        pass(); pass()
+        assertEquals("nothing sold again within the hold", 1, marketSells().size)
+        assertTrue("the found stop not attached to the held part", open("liquidity")?.stopOrderId != lostStop)
+        assertTrue("still held", OrbArms.lostExitForTest(sym))
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        kite.showInBook()
+        pass(); searchDone(); pass(); pass(); pass()
+        assertEquals("never sold twice", 1, marketSells().size)
+        assertTrue("the hold resolved", !OrbArms.lostExitForTest(sym))
+        assertEquals("booked as its exit", "time_stop", today("liquidity").single().why)
+    }
+
+    /**
+     * 20 Nov 2026 (merge review C1): a part with a stop resting AND a pending lost sale (taken back from the book) is still held - by its
+     * lost sale alone, whatever its stop: its due time exit neither takes the stop out nor sells.
+     */
+    @Test fun aPartWithAStopAndAPendingLostSaleIsStillHeld() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val nowMs = OrbArms.testNow!!.toInstant().toEpochMilli()
+        val lost = JSONObject().put("why", "time_stop").put("qty", 30).put("type", "MARKET").put("tag", "iraorb").put("since", nowMs)
+            .put("sentAt", Market.now().toLocalDateTime().toString()).put("label", "Liquidity 5m").put("known", JSONArray())
+        state(listOf(liquidity(30, 200.0, s1, 170.0).put("lostExit", lost)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.requests.clear()
+        pass(); pass()
+        assertTrue("held", OrbArms.lostExitForTest(sym))
+        assertEquals("nothing sold", 0, marketSells().size)
+        assertTrue("its stop still rests", working(s1))
+    }
+
     /** 20 Nov 2026 (review): a lost sale's search takes the EARLIEST of two matching orders after it went, not the latest. */
     @Test fun theLostSearchTakesTheEarliestOfTwoCandidates() {
-        val o = Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
+        // (Two distinct order objects, as two parts send: each keeps its own send mark.)
+        fun order() = Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
+        val o1 = order(); val o2 = order()
         val since = Market.now().toLocalDateTime().minusMinutes(1)
-        val first = runBlocking { Broker.placeOrder(o, exit = true) }
-        val second = runBlocking { Broker.placeOrder(o, exit = true) }
-        Broker.forgetSentForTest()                                         // (as after a restart: neither is known as sent)
-        assertEquals("earliest", first, runBlocking { Broker.findRecent(o, emptySet(), since = since, earliest = true) })
+        val first = runBlocking { Broker.placeOrder(o1, exit = true) }
+        val second = runBlocking { Broker.placeOrder(o2, exit = true) }
+        Broker.forgetSentForTest()                                         // (neither is known as sent)
+        assertEquals("earliest, its own mark's window", first, runBlocking { Broker.findRecent(o1, emptySet(), since = since, earliest = true) })
         Broker.forgetSentForTest()
-        assertEquals("the latest, as before, without it", second, runBlocking { Broker.findRecent(o, emptySet()) })
+        // (A fresh object - as after a restart, no mark: the caller's own since.)
+        assertEquals("earliest, by since alone", first, runBlocking { Broker.findRecent(order(), emptySet(), since = since, earliest = true) })
+        Broker.forgetSentForTest()
+        assertEquals("the latest, as before, without it", second, runBlocking { Broker.findRecent(order(), emptySet()) })
     }
 
     /**

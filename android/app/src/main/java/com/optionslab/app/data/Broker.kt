@@ -1872,9 +1872,8 @@ object Broker {
      */
     suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false, liveOnly: Boolean = false,
                            sentAt: java.time.LocalDateTime? = null,
-                           /** 20 Nov 2026: the earliest an order may be stamped (a lost exit sale's send less 3 minutes, from its caller), in
-                            *  place of this phone's send mark - a mark is kept per order, and an identical later sale (a twin part's) would
-                            *  overwrite it. Null: the send mark, else [sentAt], else the last 3 minutes, as before. */
+                           /** 20 Nov 2026: the earliest an order may be stamped (a lost exit sale's send less 3 minutes, from its caller) when
+                            *  this process has no send mark for [o] (after a restart); the mark's window and its "before" list come first. */
                            since: java.time.LocalDateTime? = null,
                            /** 20 Nov 2026: the earliest such order after [since] (a lost sale's own), not the latest. */
                            earliest: Boolean = false): String? {
@@ -1889,16 +1888,15 @@ object Broker {
         // time on Zerodha's clock less [SENT_SLACK_S] when the phone's offset to it was measured in the last [OFFSET_FRESH_MS], else
         // from three minutes before the send (never narrower than the old three minutes before now, so its own order is never missed
         // for a clock it cannot trust). An order in the book read before the send is never taken, whatever its time.
-        // (20 Nov 2026, merge: a caller's own [since] - a lost exit sale's - comes first, and then no send mark is read: an identical
-        // later sale's mark would start the window after this one's own sale.)
-        val sentMark = synchronized(sendMarks) { sendMarks[o] }
-        val mark = if (since != null) null else sentMark
+        // (20 Nov 2026, merge review P1: the send mark - kept by the order object itself, so a twin's identical order never shares it - comes
+        // first; a caller's own [since] only when there is none, after a restart.)
+        val mark = synchronized(sendMarks) { sendMarks[o] }
         // (Review: the offset as it was at the send, never one measured later; one that moved since by more than [OFFSET_MOVED_MS] - the
         // phone's clock stepped - leaves the tight window for the three minutes.)
         val offNow = serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
         val off = mark?.offset?.takeIf { o -> offNow == null || kotlin.math.abs(offNow - o) <= OFFSET_MOVED_MS }
-        val from = since ?: mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
-            ?: sentAt?.minusMinutes(3) ?: now.minusMinutes(3)
+        val from = mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
+            ?: since ?: sentAt?.minusMinutes(3) ?: now.minusMinutes(3)
         val before = mark?.before?.mapTo(HashSet()) { it.id }.orEmpty()
         val match: (JSONObject) -> Boolean = {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
@@ -1918,8 +1916,7 @@ object Broker {
         }
         return (if (earliest) rs.firstOrNull(match) else rs.lastOrNull(match))?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it)
             // (20 Nov 2026, review: a lost reply found is kept as the entry or exit it was sent as, for the kill switch.)
-            // (Its kind from the send's mark even with a caller's own [since]: an identical order is the same kind.)
-            sentMark?.let { m -> noteKind(it, entry = !m.exit) } }
+            mark?.let { m -> noteKind(it, entry = !m.exit) } }
     }
 
     /** 20 Nov 2026 (audit B5 deep review): [r] ended with nothing filled - REJECTED, or CANCELLED unfilled. */

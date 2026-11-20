@@ -4410,7 +4410,11 @@ object OrbArms {
                 continue
             }
             val i = b.positions.indexOfFirst { it.open && it.live && it.kite == sym && it.entry == fill && armOf(it.arm).label == label &&
-                it.stopOrderId == null && it.qty == l.qty && !Broker.lostPending(orbLostKey(label, sym, fill, it.qty)) }
+                it.stopOrderId == null && it.qty == l.qty && !Broker.lostPending(orbLostKey(label, sym, fill, it.qty)) &&
+                // (Review of the b5-orders merge, C1: never a part whose own lost sale is pending.)
+                lostOf(it) == null }
+            // (A part of its size held for its own lost sale: the stop rests as its cover, left to its own look - nothing said each pass.)
+            if (i < 0 && open.any { it.stopOrderId == null && it.qty == l.qty && lostOf(it) != null }) continue
             if (i >= 0) {
                 b.positions[i] = b.positions[i].copy(stopOrderId = l.id, stopTrigger = l.trigger ?: b.positions[i].stopTrigger)
                 runCatching { Strategies.tagOwner("kite:${l.id}", "$label · stop") }
@@ -5324,6 +5328,9 @@ object OrbArms {
         // ORB arms by Boss's "yes" the same day). [AppSettings.exchangeStops] is no longer read. The caller's guards decide when.
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no new stop beside his sale (asked again next look).
         if (ArmLive.handsOffNow("NFO", sym)) return null
+        // (Review of the b5-orders merge, C1: never for a part whose own lost sale is pending - no stop placed, and a lost stop found is not
+        // attached; it rests as cover, left to its own lost reply, until that sale is booked or let go.)
+        if (lostOf(p) != null) return null
         // 20 Nov 2026 (audit B5 deep review): this trade's stop whose reply was lost and is not found yet: looked for first (the book read
         // in the background, never here), nothing new placed meanwhile and no try or back-off counted; found, it is the trade's stop.
         // (The trade split when its stop covers less: the part it covers keeps it, the rest has none - asked again next look.)
@@ -5548,8 +5555,12 @@ object OrbArms {
     /** The lost exits on [sym]. Memory only. */
     private fun lostOn(sym: String): List<LostExit> = lostExits.values.filter { it.sym == sym }
 
-    /** 20 Nov 2026 (deep review F1): [p]'s own lost sale, while it is held for it (the part that sent it has no stop resting). Memory only. */
-    private fun lostOf(p: Position): LostExit? = p.lostId?.let { lostExits[it] }?.takeIf { p.stopOrderId == null }
+    /**
+     * 20 Nov 2026 (deep review F1): [p]'s own lost sale, while it is held for it. Memory only. (Review of the b5-orders merge: by [Position.lostId]
+     * alone, whatever its stop - a part with a stop and a pending lost sale is still held and still searched; a lost stop found meanwhile is
+     * never attached to it, [exitLive] and [restExchangeStop].)
+     */
+    private fun lostOf(p: Position): LostExit? = p.lostId?.let { lostExits[it] }
 
     /**
      * 20 Nov 2026 (deep review F1): what [p]'s sale on [sym] counts as already going: every other part's lost sale neither found nor let go
@@ -5687,13 +5698,19 @@ object OrbArms {
      * 20 Nov 2026 (review; coordinator: never a wait under the lock): [p]'s lost exit [id] ([why]) found in Zerodha's book, booked from the
      * look's own read of it ([row]) - never awaited. Finished with a fill: that is the exit ([bookFilled]: a part fill leaves the rest open with
      * no stop). Finished with nothing filled: [p] stays open with no stop (the next look rests one or sells). Not finished, or not in that
-     * read: null - the next look books it. [p] has no stop resting (only such a part takes it, [lostOf]).
+     * read: null - the next look books it. [p] normally has no stop resting (nothing attaches one while its lost sale is pending); one it
+     * has all the same (a book saved by an earlier build) is kept when nothing filled, and taken out as the app's own - in the background -
+     * when the found sale filled, never left resting unwatched beside it.
      */
     private suspend fun bookFoundRow(p: Position, label: String, sym: String, why: String, id: String, row: Broker.OrderRow?): Pair<Position, Position?>? {
         if (row == null || row.status !in DONE) return null
         runCatching { Strategies.tagOwner("kite:$id", "$label · $why") }           // (relabelled at booking: plain, as any exit sale)
         runCatching { noteExitSale(id) }
-        if (row.filled <= 0) return p.copy(stopOrderId = null) to null
+        if (row.filled <= 0) return p to null
+        p.stopOrderId?.let { s ->
+            runCatching { Diag.record("orb", "$label: $sym's lost exit $id found filled while a stop $s rested: the stop taken out") }
+            offLock.launch { runCatching { cancelOwnStop(s) } }
+        }
         return bookFilled(p, label, sym, why, row.filled, row.avg, id)
     }
 
@@ -5710,6 +5727,8 @@ object OrbArms {
     internal fun lostFoundForTest(sym: String): String? = lostOn(sym).firstNotNullOfOrNull { it.foundId }
     /** TEST ONLY: today's booked exit sales the lost search leaves out. */
     internal fun exitSalesForTest(): Set<String> = exitSales.keys.toSet()
+    /** TEST ONLY: the owner label [sym]'s (first) lost exit would give its sale when found. */
+    internal fun lostLabelForTest(sym: String): String? = lostOn(sym).minByOrNull { it.id }?.let { lostLabel(it) }
 
     /**
      * TEST ONLY: a look on [sym]'s (first) lost exit by the part whose sale was lost, then - a search started - the next look on its answer:
@@ -5738,6 +5757,16 @@ object OrbArms {
                                  ltp: Double? = null): Pair<Position, Position?> {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): the arm's own sale waits (his covers it; next pass).
         if (ArmLive.handsOffNow("NFO", sym)) return given to null
+        // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade is unresolved
+        // it sells nothing more - held; searched for in the background and booked by a later look ([lostExitLook], never the network under
+        // the lock). Known not found, it is said and the exit goes on as below (reading Zerodha's books first, the forced lag guard counting
+        // what is still held). Any other trade on the contract is never held here: it counts that sale as going ([lostPending]). Memory only.
+        // (Review of the b5-orders merge, C1: FIRST, before this trade's lost stop is looked at - a found lost stop attached here would have
+        // let the part sell again beside its first sale; it is never attached while that sale is pending, and rests as cover meanwhile.)
+        lostOf(given)?.let { own ->
+            if (!own.notFound || !lostExits.remove(own.id, own)) return given to null
+            lostNotFound(sym)
+        }
         // 20 Nov 2026 (delta review): this trade's own stop whose answer was lost may be resting at Zerodha - one of its own sells.
         //  - Found for all it holds (one for more cut to it first, [fitFound]): it is the trade's stop, taken out first as any (only when
         //    its sale will go - the usual path below).
@@ -5822,15 +5851,6 @@ object OrbArms {
                 runCatching { Diag.record("orb", "${armOf(p0.arm).label}: $sym's exit (${why.replace('_', ' ')}) waits for another trade's lost sale " +
                     "to be found; its stop rests at Zerodha meanwhile") }
             return p0 to null
-        }
-        // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade is unresolved
-        // it sells nothing more - held; searched for in the background and booked by a later look ([lostExitLook], never the network under
-        // the lock). Known not
-        // found, it is said and the exit goes on as below (reading Zerodha's books first, the forced lag guard counting what is still held).
-        // Any other trade on the contract is never held here: it counts that sale as going ([lostPending]). Memory only.
-        lostOf(p0)?.let { own ->
-            if (!own.notFound || !lostExits.remove(own.id, own)) return p0 to null
-            lostNotFound(sym)
         }
         runCatching { OrderTiming.decided() }
         val label = armOf(p0.arm).label
