@@ -380,20 +380,27 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 }
 
-/** Alarms do not survive a reboot or an app update; re-arm them. */
+/**
+ * Alarms do not survive a reboot or an app update; re-arm them.
+ *
+ * 20 Nov 2026 (audit: "after a reboot nothing starts until you unlock the phone"): Android keeps the app's encrypted storage (the
+ * Zerodha session, the books, the settings) locked until the phone is first unlocked after a reboot, and only then sends
+ * [Intent.ACTION_BOOT_COMPLETED]; no app can trade or read its positions before that. From that moment the positions watch is
+ * started FIRST - before the alarms are re-armed - so the held positions are watched as soon as the phone is unlocked
+ * (review, 20 Nov 2026: the makers' "quick boot" words are not listened for - any app may send those to this exported receiver,
+ * while only Android itself sends the boot and update words).
+ */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED,
-            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" -> {
-                Jobs.scheduleAll(context)
-                // Commands Boss set for a time (Jarvis): their alarm too.
-                if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraLater.schedule(context) }
-            }
+        val booted = intent.action == Intent.ACTION_BOOT_COMPLETED
+        // Rebooted or updated during market hours: pick the watch straight back up - first, before anything else here.
+        if (booted || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) runCatching { Jobs.ensureWatch(context) }
+        if (booted || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED || intent.action == "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED") {
+            Jobs.scheduleAll(context)
+            // Commands Boss set for a time (Jarvis): their alarm too.
+            if (com.optionslab.app.BuildConfig.JARVIS) runCatching { com.optionslab.app.ira.IraLater.schedule(context) }
         }
-        // Rebooted or updated during market hours: pick the watch straight back up.
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
-            Jobs.ensureWatch(context)
+        if (booted || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             // The "Open" widget filled from what the phone holds (no network), off this thread.
             val pending = runCatching { goAsync() }.getOrNull()
             runCatching { com.optionslab.app.widget.OpenWidget.fillSoon(context) { runCatching { pending?.finish() } } }

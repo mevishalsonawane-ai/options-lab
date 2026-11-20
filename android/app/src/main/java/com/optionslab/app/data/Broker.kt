@@ -90,6 +90,17 @@ object Broker {
     private val rate = com.optionslab.ira.RateGate(perSecond = 8)
 
     /**
+     * 20 Nov 2026 (audit: "stop-price quotes compete with about 40 other readers"): Zerodha allows its quote calls (/quote,
+     * /quote/ohlc, /quote/ltp) about one a second, apart from the budget above, and refused the rest with a 429 that each reader
+     * then retried a second or more later - a stop's read among them. They now queue here instead, one per 1.1 s, served in lane
+     * order: a stop's, target's or lock's read ([stopQuotes], the safety lane) goes before any entry, screen or Jarvis read waiting.
+     */
+    private val quoteRate = com.optionslab.ira.RateGate(perSecond = 1, windowMs = 1_100L)
+
+    /** Whether [path] is one of Zerodha's quote calls ([quoteRate]). Pure. */
+    internal fun quoteLimited(path: String): Boolean = path.startsWith("/quote")
+
+    /**
      * Positions, orders and margins asked for by several workers at once are read once: a caller whose read is already on
      * its way (started at most [SHARE_MS] ago, with no order, change or cancel since) waits for that one. Nothing is kept
      * after a read ends ([com.optionslab.ira.SingleFlight]), so no caller gets an older answer than it would have.
@@ -304,7 +315,7 @@ object Broker {
 
     /** The erase's files: the instrument lists [forget] deletes (empty before [init]). */
     internal fun filesForErase(): List<File> = if (!::app.isInitialized) emptyList() else
-        listOf("kite_instruments.json", "kite_instruments.json.tmp", "kite_futures.json", "kite_futures.json.tmp").map { File(app.filesDir, it) }
+        listOf("kite_instruments.json", "kite_instruments.json.tmp", "kite_instruments_bfo.json", "kite_instruments_bfo.json.tmp", "kite_futures.json", "kite_futures.json.tmp").map { File(app.filesDir, it) }
 
     /**
      * 26 Oct: whether the session or a kept read of the account is still in memory (the erase's test). Memory only: a session
@@ -465,7 +476,7 @@ object Broker {
         // (20 s connect, 60 s read), which the HTTP stack's own silent retries and the 429 retries each started afresh. A read
         // now has one budget for the whole call ([readBudgetMs]); past it the connection is cut, and no 429 retry starts.
         val budget = readBudgetMs(method, path, readOnly, viaRelay)
-        val began = System.currentTimeMillis()
+        var began = System.currentTimeMillis()
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
             // cannot connect, so nothing leaves from another IP); reads go direct ([viaRelay]: a read that
@@ -475,6 +486,14 @@ object Broker {
             if (test == null) {
                 val p = if (method != "GET" && !readOnly) com.optionslab.ira.RateGate.Priority.SAFETY
                     else kotlinx.coroutines.currentCoroutineContext()[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.ENTRY
+                // 20 Nov 2026 (audit: "stop-price quotes compete with about 40 other readers"): a quote call first takes its turn in
+                // Zerodha's own quote limit ([quoteRate], one a second), in lane order - a stop's read before the others. The turn's
+                // wait is not part of the read's own budget (it is a queue, not a slow answer).
+                if (quoteLimited(path)) {
+                    val w0 = System.currentTimeMillis()
+                    quoteRate.acquire(p)
+                    began += (System.currentTimeMillis() - w0).coerceAtLeast(0L)
+                }
                 rate.acquire(p)
             }
             val relay = if (((method != "GET" && !readOnly) || viaRelay) && test == null) Relay.proxy() else null
@@ -990,7 +1009,7 @@ object Broker {
         // MCX: from the day's MCX list ([McxMarket]), so its contracts stream too.
         if (key.startsWith("MCX:")) return McxMarket.tokenOf(key.removePrefix("MCX:"))
         // 20 Oct, review: SENSEX's options (BFO) from today's BFO list in memory, so a live SENSEX trade's exits stream too.
-        if (key.startsWith("BFO:")) return bfoToken(key)
+        if (key.startsWith("BFO:")) return bfoToken(key, load = true)
         if (!key.startsWith("NFO:")) return null
         val m = tokenMap?.takeIf { it.first == Market.today() }?.second
             ?: cachedInstruments()?.associate { "NFO:" + it.tradingSymbol to it.token }?.also { tokenMap = Market.today() to it }
@@ -1008,10 +1027,15 @@ object Broker {
         else if (key.startsWith("MCX:")) McxMarket.tokenKnown(key.removePrefix("MCX:"))
         else tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
 
-    /** "BFO:<symbol>" -> its token from today's BFO list in memory (never a file or the network); the map built once per list. */
+    /**
+     * "BFO:<symbol>" -> its token from today's BFO list in memory (never a file or the network); the map built once per list.
+     * 20 Nov 2026 (audit: "after a restart, SENSEX live prices come from slower quotes"): no list in memory yet (a restart) -
+     * its read is started in the background ([loadBfoOptionsInBackground], returns at once), so the SENSEX position is followed on
+     * the stream from the next look instead of on quote calls until something else happened to read the list.
+     */
     @Volatile private var bfoTokens: Pair<List<Kite.Instrument>, Map<String, Long>>? = null
-    private fun bfoToken(key: String): Long? {
-        val list = cachedBfoOptions() ?: return null
+    private fun bfoToken(key: String, load: Boolean = false): Long? {
+        val list = cachedBfoOptions() ?: run { if (load) runCatching { loadBfoOptionsInBackground() }; return null }
         val m = bfoTokens?.takeIf { it.first === list }?.second
             ?: list.associate { "BFO:" + it.tradingSymbol to it.token }.also { bfoTokens = list to it }
         return m[key]
@@ -1051,7 +1075,11 @@ object Broker {
         }.toMap()
         val rest = keys.filter { it !in streamed }
         if (rest.isEmpty()) return streamed.mapValues { stopGuard(it.value) }
-        val read = try { quotesRest(rest) } catch (e: Exception) {
+        // 20 Nov 2026 (audit: "stop-price quotes compete with about 40 other readers"): a stop's, target's or lock's quote read goes
+        // in the safety lane of the one request budget, with the exits and orders ([com.optionslab.ira.RateGate]: a higher lane
+        // waiting is served before any lower one), never behind the entries', screens' and Jarvis's reads. Same budget, so
+        // Zerodha's limit is kept.
+        val read = try { kotlinx.coroutines.withContext(Lane(com.optionslab.ira.RateGate.Priority.SAFETY)) { quotesRest(rest) } } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             val older = rest.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
             if (streamed.isEmpty() && older.isEmpty()) throw e
@@ -1069,7 +1097,11 @@ object Broker {
     /** Zerodha's quote call itself, never the stream's memory (a paper fill's re-read when no stream tick is 2 s fresh, 16 Oct). */
     suspend fun quotesFresh(keys: List<String>): Map<String, Quote> = if (keys.isEmpty()) emptyMap() else quotesRest(keys)
 
+    /** TEST ONLY: the request lane the last quote read asked in (memory only; one volatile write per read). */
+    @Volatile internal var lastQuoteLaneForTest: com.optionslab.ira.RateGate.Priority? = null
+
     private suspend fun quotesRest(keys: List<String>): Map<String, Quote> {
+        lastQuoteLaneForTest = kotlinx.coroutines.currentCoroutineContext()[Lane]?.priority
         val data = call("GET", "/quote?" + keys.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
         return keys.mapNotNull { k ->
             val q = data.optJSONObject(k) ?: return@mapNotNull null
@@ -1169,7 +1201,7 @@ object Broker {
         val (nfoDay, bfoDay, kept) = futuresKept()
         if (nfoDay == today && bfoDay == today) return kept
         val now = System.currentTimeMillis()
-        if (now - futuresTriedAt < 30 * 60_000L) return if (nfoDay == today) kept else emptyList()
+        if (now - futuresTriedAt in 0 until 30 * 60_000L) return if (nfoDay == today) kept else emptyList()
         futuresTriedAt = now
         val nfo: List<Kite.Future> = if (nfoDay == today) kept.filter { it.exchange == "NFO" } else {
             // The day's options list first: not downloaded yet today, its dump carries the futures too.
@@ -1264,8 +1296,20 @@ object Broker {
 
     // ---- instruments ---------------------------------------------------------------------
 
-    /** The parsed list, the day it was fetched and the file stamp (modified time, length) it was parsed from. */
-    private class InstrumentsMemo(val stamp: Pair<Long, Long>, val day: String, val list: List<Kite.Instrument>)
+    /**
+     * The parsed list, the day it was fetched and the file stamp (modified time, length) it was parsed from. 20 Nov 2026: and when
+     * it was fetched ([at], epoch ms on the market clock; null in a file written before), for [instrumentsCurrent].
+     */
+    private class InstrumentsMemo(val stamp: Pair<Long, Long>, val day: String, val list: List<Kite.Instrument>, val at: Long? = null)
+
+    /**
+     * 20 Nov 2026 (audit: "the instruments list is cached by date only"): [m] is today's list - of today and fetched after
+     * Zerodha's morning dump ([com.optionslab.ira.InstrumentsFile.current]). Memory only.
+     */
+    private fun instrumentsCurrent(m: InstrumentsMemo?): Boolean = m != null && runCatching {
+        com.optionslab.ira.InstrumentsFile.current(m.day,
+            m.at?.let { java.time.Instant.ofEpochMilli(it).atZone(com.optionslab.engine.IST).toLocalDateTime() }, Market.now().toLocalDateTime())
+    }.getOrDefault(m.day == Market.today().toString())
     @Volatile private var instrumentsMemo: InstrumentsMemo? = null
 
     /** The instruments file, parsed once per change of the file (it is large: parsing it on every review cost a few hundred ms). */
@@ -1276,8 +1320,8 @@ object Broker {
         // Memory audit (14 Oct, item 5): read as a stream, the repeated names and expiries shared - no whole-file string, no
         // JSON tree (several MB at once after every restart).
         return runCatching {
-            val (day, list) = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.read(it) } ?: return@runCatching null
-            InstrumentsMemo(stamp, day, list).also { instrumentsMemo = it }
+            val saved = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.readSaved(it) } ?: return@runCatching null
+            InstrumentsMemo(stamp, saved.day, saved.list, saved.at).also { instrumentsMemo = it }
         }.getOrNull() ?: instrumentsMemo?.takeIf { f.exists() }   // G1-6: a file that does not parse keeps the list in memory; a file gone (cleared data) has none
     }
 
@@ -1289,23 +1333,51 @@ object Broker {
     }
 
     /** True when the instruments list in memory is today's download (memory only: no file read). */
-    internal fun instrumentsAreToday(): Boolean = instrumentsMemo?.day == Market.today().toString()
+    internal fun instrumentsAreToday(): Boolean = instrumentsCurrent(instrumentsMemo)
 
-    /** The last instruments list fetched (any day), without touching the network; parsed again only when the file changes. */
-    fun cachedInstruments(): List<Kite.Instrument>? = instrumentsFile()?.list
+    /**
+     * The last instruments list fetched (any day), without touching the network; parsed again only when the file changes.
+     * 20 Nov 2026 (audit): when it is not today's list ([instrumentsCurrent]: an earlier day's, or fetched before the morning's
+     * dump), today's is fetched in the background ([refreshInstrumentsInBackground]); the caller is answered at once, as before.
+     */
+    fun cachedInstruments(): List<Kite.Instrument>? = instrumentsFile().also { if (!instrumentsCurrent(it)) refreshInstrumentsInBackground() }?.list
+
+    @Volatile private var instrumentsTriedAt = 0L
+    private val instrumentsLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** After a failed background fetch, the next is tried this much later at the soonest. */
+    private const val INSTRUMENTS_RETRY_MS = 2 * 60_000L
+
+    /**
+     * 20 Nov 2026: today's instruments list fetched in the background (logged in only; one at a time; at most every
+     * [INSTRUMENTS_RETRY_MS]). Returns at once: memory only on the caller's thread (never the network, a file or the vault).
+     */
+    internal fun refreshInstrumentsInBackground() {
+        val now = System.nanoTime() / 1_000_000L
+        if (instrumentsTriedAt != 0L && now - instrumentsTriedAt in 0 until INSTRUMENTS_RETRY_MS) return
+        if (!instrumentsLoading.compareAndSet(false, true)) return
+        instrumentsTriedAt = now
+        // The session is looked at on the background thread (it may read the vault): never on the caller's.
+        readScope.launch {
+            try { if (loggedIn) runCatching { instruments() } else instrumentsTriedAt = 0L } finally { instrumentsLoading.set(false) }
+        }
+    }
+
+    /** TEST ONLY: the background fetch's wait forgotten. */
+    internal fun resetInstrumentsRetryForTest() { instrumentsTriedAt = 0L }
 
     /** NIFTY and BANKNIFTY options from GET /instruments/NFO, cached for the day. */
     suspend fun instruments(): List<Kite.Instrument> {
         val f = File(app.filesDir, "kite_instruments.json")
-        instrumentsFile()?.takeIf { it.day == Market.today().toString() }?.let { return it.list }
+        instrumentsFile()?.takeIf { instrumentsCurrent(it) }?.let { return it.list }
         val text = call("GET", "/instruments/NFO", raw = true) as String
         val list = com.optionslab.ira.InstrumentsFile.compact(Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")))
         // The market recorder's index futures from the same dump (never a second download for them).
         runCatching { keepNfoFutures(text) }
         val a = JSONArray()
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
-        writeAtomic(f, JSONObject().put("day", Market.today().toString()).put("i", a).toString())
-        instrumentsMemo = InstrumentsMemo(f.lastModified() to f.length(), Market.today().toString(), list)
+        val at = Market.now().toInstant().toEpochMilli()
+        writeAtomic(f, JSONObject().put("day", Market.today().toString()).put("at", at).put("i", a).toString())
+        instrumentsMemo = InstrumentsMemo(f.lastModified() to f.length(), Market.today().toString(), list, at)
         // G1-2: the day's token map follows the list just downloaded. One built earlier today from yesterday's file (the watch's
         // first pass) would otherwise miss every contract listed since - new strikes too - for the rest of the day.
         tokenMap = Market.today() to list.associate { "NFO:" + it.tradingSymbol to it.token }
@@ -1353,7 +1425,10 @@ object Broker {
     fun cachedBfoOptions(): List<Kite.Instrument>? = bfoOptions?.takeIf { it.first == Market.today() }?.second
 
     /** Tests: SENSEX's list forgotten and its 10-minute retry wait cleared. */
-    internal fun resetBfoForTest() { bfoOptions = null; bfoTriedAt = 0L }
+    internal fun resetBfoForTest(keepFile: Boolean = false) {
+        bfoOptions = null; bfoTriedAt = 0L
+        if (!keepFile && ::app.isInitialized) runCatching { bfoFile().delete() }
+    }
 
     /**
      * Read today's SENSEX options in the background (logged in only; at most every 10 minutes after a failure). Returns at once:
@@ -1361,13 +1436,20 @@ object Broker {
      */
     fun loadBfoOptionsInBackground() {
         if (!loggedIn || cachedBfoOptions() != null) return
-        val now = System.currentTimeMillis()
-        if (now - bfoTriedAt < 10 * 60_000L || !bfoLoading.compareAndSet(false, true)) return
+        val now = System.nanoTime() / 1_000_000L
+        // 20 Nov 2026: 2 minutes after a failure (it was 10: a held SENSEX position's prices waited that long on quote calls); on the
+        // monotonic clock, so a wall clock set back never holds it.
+        if ((bfoTriedAt != 0L && now - bfoTriedAt in 0 until BFO_RETRY_MS) || !bfoLoading.compareAndSet(false, true)) return
         bfoTriedAt = now
         readScope.launch {
             try {
+                // 20 Nov 2026: after a restart, today's list saved earlier today is read back first (no download; a background thread).
+                val saved = runCatching { readBfoFile() }.getOrNull()
+                if (saved != null) { bfoOptions = Market.today() to saved; return@launch }
                 val text = call("GET", "/instruments/BFO", raw = true) as String
-                bfoOptions = Market.today() to Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT")
+                val list = Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT")
+                bfoOptions = Market.today() to list
+                runCatching { writeBfoFile(list) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -1379,8 +1461,33 @@ object Broker {
     /** 3 Nov: today's SENSEX options, read now when not yet in memory (a worker thread only: the morning check). */
     suspend fun bfoOptionsNow(): List<Kite.Instrument> {
         cachedBfoOptions()?.let { return it }
+        runCatching { readBfoFile() }.getOrNull()?.let { bfoOptions = Market.today() to it; return it }
         val text = call("GET", "/instruments/BFO", raw = true) as String
-        return Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT").also { bfoOptions = Market.today() to it }
+        return Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT").also {
+            bfoOptions = Market.today() to it
+            runCatching { writeBfoFile(it) }
+        }
+    }
+
+    private const val BFO_RETRY_MS = 2 * 60_000L
+
+    /** 20 Nov 2026: today's SENSEX options saved on the phone (public market data, like the NFO list), so a restart reads them back. */
+    private fun bfoFile() = File(app.filesDir, "kite_instruments_bfo.json")
+
+    /** Today's saved SENSEX list (fetched after the morning's dump, [com.optionslab.ira.InstrumentsFile.current]), or null. A worker thread only. */
+    private fun readBfoFile(): List<Kite.Instrument>? {
+        val f = bfoFile()
+        if (!f.exists()) return null
+        val saved = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.readSaved(it) } ?: return null
+        val at = saved.at?.let { java.time.Instant.ofEpochMilli(it).atZone(com.optionslab.engine.IST).toLocalDateTime() } ?: return null
+        if (!com.optionslab.ira.InstrumentsFile.current(saved.day, at, Market.now().toLocalDateTime())) return null
+        return saved.list.takeIf { it.isNotEmpty() }
+    }
+
+    private fun writeBfoFile(list: List<Kite.Instrument>) {
+        val a = JSONArray()
+        list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
+        writeAtomic(bfoFile(), JSONObject().put("day", Market.today().toString()).put("at", Market.now().toInstant().toEpochMilli()).put("i", a).toString())
     }
 
     /** 3 Nov: whether the account's commodity (MCX) segment is enabled at Zerodha (GET /user/margins/commodity); null: not known. */

@@ -402,8 +402,14 @@ class OrderPathRound2Test : RobolectricTest() {
             assertNotNull("the screens' read still takes it", KiteStream.tick(token))
             kite.quote("NFO:$sym", 150.0, 149.95, 150.05)
             kite.requests.clear()
+            Broker.lastQuoteLaneForTest = null
             assertEquals("Zerodha's quote, not the 3.5-s tick", 150.0, Broker.stopQuotes(listOf("NFO:$sym")).getValue("NFO:$sym").last, 0.0)
             assertTrue(kite.requests.any { it.path.startsWith("/quote") })
+            // 20 Nov 2026: a stop's quote read asks in the safety lane of the request budget (ahead of the other readers).
+            assertEquals(com.optionslab.ira.RateGate.Priority.SAFETY, Broker.lastQuoteLaneForTest)
+            // An ordinary read keeps its own lane (none set: an entry's).
+            Broker.quotesFresh(listOf("NFO:$sym"))
+            assertNull(Broker.lastQuoteLaneForTest)
             assertTrue("kept followed on the stream", token in KiteStream.touchedForTest())
             // The ORB pass with the app's own 160 stop: the stream's last price says 201, Zerodha's says 150 - it sells.
             state(listOf(position(30, 200.0, stopId = null, stop = 160.0)))

@@ -66,4 +66,73 @@ class RateGateTest {
         assertTrue(g.waited >= 1)
         assertEquals(20L, g.taken)
     }
+
+    @Test fun aWaitingHigherLaneIsServedBeforeALowerOneTakesASlot() = runBlocking {
+        val now = java.util.concurrent.atomic.AtomicLong(0L)
+        val g = RateGate(perSecond = 8) { now.get() }
+        repeat(8) { assertEquals(0L, g.tryTake(RateGate.Priority.SAFETY)) }
+        val stop = async(Dispatchers.IO) { g.acquire(RateGate.Priority.SAFETY) }
+        // The stop's read queues in the gate (the budget is full).
+        val t0 = System.nanoTime()
+        while (g.waitingFor(RateGate.Priority.SAFETY) == 0) {
+            assertTrue(System.nanoTime() - t0 < 5_000_000_000L, "the safety read never queued")
+            Thread.sleep(2)
+        }
+        // The second ends: a slot is free, but an entry read asking now leaves it to the waiting stop's read.
+        now.set(1_000L)
+        assertEquals(20L, g.tryTake(RateGate.Priority.ENTRY))
+        assertEquals(20L, g.tryTake(RateGate.Priority.ANALYSIS))
+        stop.await()
+        assertEquals(0, g.waitingFor(RateGate.Priority.SAFETY))
+        assertEquals(9L, g.taken, "the stop's read took the freed slot")
+        // With nobody waiting any more, the entry read gets in.
+        assertEquals(0L, g.tryTake(RateGate.Priority.ENTRY))
+    }
+
+    @Test fun aLowerLaneYieldsOnlyWhileAHigherOneWaits() {
+        var now = 0L
+        val g = RateGate(perSecond = 8) { now }
+        // Nobody waiting: the reserve rule alone, exactly as before.
+        repeat(7) { assertEquals(0L, g.tryTake(RateGate.Priority.ENTRY)) }
+        assertTrue(g.tryTake(RateGate.Priority.ENTRY) > 0)
+        now += 1_000
+        assertEquals(0L, g.tryTake(RateGate.Priority.ANALYSIS))
+        assertEquals(0, g.waitingFor(RateGate.Priority.SAFETY))
+    }
+
+    /** 20 Nov 2026 (review): Zerodha's quote limit (one a second) as its own gate, its window a little over a second. */
+    @Test fun theQuoteGateLetsOneThroughPerWindowEveryLaneAlike() {
+        var now = 0L
+        val g = RateGate(perSecond = 1, clock = { now }, windowMs = 1_100L)
+        assertEquals(0L, g.tryTake(RateGate.Priority.ANALYSIS), "the only lane asking gets the slot")
+        assertEquals(1_100L, g.tryTake(RateGate.Priority.SAFETY))
+        now = 1_000
+        assertEquals(100L, g.tryTake(RateGate.Priority.SAFETY), "not yet: the window is 1.1 s")
+        now = 1_100
+        assertEquals(0L, g.tryTake(RateGate.Priority.ENTRY))
+        // Over a minute of callers asking every 7 ms: never two inside 1.1 s.
+        val sent = ArrayList<Long>()
+        while (now < 61_100) { if (g.tryTake(RateGate.Priority.SAFETY) == 0L) sent += now; now += 7 }
+        sent.zipWithNext().forEach { (a, b) -> assertTrue(b - a >= 1_100, "$a then $b") }
+        assertTrue(sent.size in 50..55, "${sent.size}")
+        // A clock set back by more than the window starts it again.
+        now = -60_000
+        assertEquals(0L, g.tryTake(RateGate.Priority.ANALYSIS))
+    }
+
+    @Test fun onTheQuoteGateAWaitingStopReadGoesBeforeAnEntryRead() = runBlocking {
+        val now = java.util.concurrent.atomic.AtomicLong(0L)
+        val g = RateGate(perSecond = 1, clock = { now.get() }, windowMs = 1_100L)
+        assertEquals(0L, g.tryTake(RateGate.Priority.ENTRY))
+        val stop = async(Dispatchers.IO) { g.acquire(RateGate.Priority.SAFETY) }
+        val t0 = System.nanoTime()
+        while (g.waitingFor(RateGate.Priority.SAFETY) == 0) {
+            assertTrue(System.nanoTime() - t0 < 5_000_000_000L, "the stop read never queued")
+            Thread.sleep(2)
+        }
+        now.set(1_100L)
+        assertEquals(20L, g.tryTake(RateGate.Priority.ENTRY), "the entry read leaves the slot to the stop's")
+        stop.await()
+        assertTrue(g.tryTake(RateGate.Priority.ENTRY) > 0, "the stop read took this window's one slot")
+    }
 }

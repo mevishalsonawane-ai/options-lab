@@ -710,7 +710,9 @@ object S5Arm {
         if (!now.isBefore(p.day.atTime(sq)) || p.day.isBefore(now.toLocalDate())) return sellRest(p, c, "square-off $sq")
         // The profit lock already said "out" and the sale did not fill: sold again now, never re-judged.
         if (p.lockHit) return sellRest(p, c, "profit lock (best ${rs(p.peak ?: 0.0)})")
-        val ltp = Paper.heldPriceNow(c, p.entryTime, lookup = true)          // 15 Nov: only a price traded since the entry, or a sane book's bid
+        // 15 Nov: only a price traded since the entry, or a sane book's bid. 20 Nov 2026 (audit): never a stream price more than 5 s
+        // old while a fresh one can be read ([Paper.exitPriceNow]); the old one only when no fresh read answers (an exit is never skipped).
+        val ltp = Paper.exitPriceNow(c, p.entryTime)
         // The profit lock, once a minute (R128 marked the net at minute closes).
         val minute = now.withSecond(0).withNano(0)
         if (ltp != null && marked[p.ref] != minute) {

@@ -46,6 +46,8 @@ object Diag {
         var out = SECRETISH.replace(s) { m -> if (TRADING_SYMBOL.matches(m.value) || reasonCode(m.value)) m.value else "‹redacted›" }
         // The account holder's name (Zerodha's welcome line) never reaches the report the owner shares.
         runCatching { Broker.userName }.getOrNull()?.takeIf { it.length >= 3 }?.let { out = out.replace(it, "‹name›", ignoreCase = true) }
+        // 20 Nov 2026 (audit): the static-IP relay server's address is never kept or shared (memory only: never the vault here).
+        runCatching { Relay.hostForRedact() }.getOrNull()?.trim()?.takeIf { it.length >= 3 }?.let { out = out.replace(it, "the relay server", ignoreCase = true) }
         return out
     }
 

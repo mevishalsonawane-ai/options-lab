@@ -605,6 +605,45 @@ object Paper {
         if (pn.lastCounts(t.last, tt, sinceSec) && !pn.farFromBook(t.last, tt, t.bid, t.ask)) t.last else pn.bookBid(t.bid, t.ask)
     }.getOrNull()
 
+    /** 20 Nov 2026: the oldest stream price an arm's exit decision takes ([exitPriceNow]); older, a fresh quote is read instead. */
+    const val EXIT_PRICE_MAX_AGE_MS = 5_000L
+
+    /** 20 Nov 2026: how long [exitPriceNow]'s fresh read may take before the exit is decided without it (the minute lane goes on). */
+    const val EXIT_READ_MS = 4_000L
+
+    /** TEST ONLY: [exitPriceNow]'s fresh read in place of Zerodha's quote and the paper feed (null: as in the app). */
+    @Volatile internal var exitReadForTest: (suspend (Contract) -> Double?)? = null
+
+    /**
+     * 20 Nov 2026 (audit: "S5, Flow and Ntfy use old stream prices as the current price when the stream is down"): [c]'s price for
+     * an arm's exit decision (its stop, profit lock or target), held since [since]:
+     *  - the stream's price when its packet is at most [EXIT_PRICE_MAX_AGE_MS] old ([heldPriceNow]'s rules: a trade since the entry,
+     *    or a sane book's bid) - nothing read, as before;
+     *  - else a fresh read, for at most [EXIT_READ_MS]: Zerodha's quote with a Zerodha session (the stops' own read,
+     *    [Broker.stopQuotes]: the safety lane, its book's bid when its last price lies far outside it), else the paper feed's
+     *    ([quote]);
+     *  - else, so an exit is never skipped for want of a price, the stream's last price however old, as before this change.
+     * Null only when there is no price at all (the arm then decides its time exits and square-off as before, and puts its stop
+     * back). Never on the stream's thread: a background lane's look (the minute lane, the 15-second stop check).
+     */
+    suspend fun exitPriceNow(c: Contract, since: java.time.LocalDateTime, readMs: Long = EXIT_READ_MS): Double? {
+        runCatching { heldPriceNow(c, since, EXIT_PRICE_MAX_AGE_MS, lookup = true) }.getOrNull()?.let { return it }
+        val read = kotlinx.coroutines.withTimeoutOrNull(readMs) {
+            exitReadForTest?.let { return@withTimeoutOrNull runCatching { it(c) }.getOrNull() }
+            if (Broker.loggedIn && !c.isMcx) runCatching {
+                zerodhaKey(c)?.let { k -> Broker.stopQuotes(listOf(k))[k] }?.let { q ->
+                    q.last.takeIf { it.isFinite() && it > 0 } ?: com.optionslab.ira.PriceNow.bookBid(q.bid, q.ask)
+                }
+            }.getOrNull()?.let { return@withTimeoutOrNull it }
+            runCatching { quote(c) }.getOrNull()?.let { q ->
+                val sinceSec = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+                com.optionslab.ira.PriceNow.ofQuote(q.ltp, q.noLast, q.bid, q.ask, null, lastCandleSec(c.symbol), sinceSec)
+            }
+        }
+        if (read != null && read.isFinite() && read > 0) return read
+        return runCatching { heldPriceNow(c, since, Long.MAX_VALUE, lookup = true) }.getOrNull()
+    }
+
     /** The stream's last packet of [c] when at most [maxAgeMs] old (memory only; keeps the contract followed); null: none. */
     private fun packetOf(c: Contract, maxAgeMs: Long, nowMs: Long, lookup: Boolean = false): com.optionslab.engine.KiteTicks.Tick? {
         val token = kiteTokens[c.symbol]?.takeIf { it > 0 }

@@ -66,4 +66,25 @@ class InstrumentsFileTest {
         assertSame(a, out[0], "an instrument already sharing its words is not copied")
         assertTrue(InstrumentsFile.compact(emptyList()).isEmpty())
     }
+
+    /** 20 Nov 2026 (audit: "the instruments list is cached by date only"): the fetch time read back, and when a list stands. */
+    @Test fun theFetchTimeIsReadBackAndAListStandsOnlyAfterTheMorningsDump() {
+        val t = """{"day":"2026-11-20","at":1763607000000,"i":[[4,"NIFTY26NOV24500CE","NIFTY","2026-11-24",24500,75,"CE",0.05]]}"""
+        val saved = assertNotNull(InstrumentsFile.readSaved(StringReader(t)))
+        assertEquals("2026-11-20", saved.day)
+        assertEquals(1763607000000L, saved.at)
+        assertEquals(1, saved.list.size)
+        assertNull(assertNotNull(InstrumentsFile.readSaved(StringReader(text))).at, "an older file says no time")
+        val d = LocalDate.of(2026, 11, 20)
+        // Fetched at 08:45 today: stands all day.
+        assertTrue(InstrumentsFile.current("2026-11-20", d.atTime(8, 45), d.atTime(14, 0)))
+        // Fetched at 07:50 today (before the dump): stands until 08:30, then today's is fetched again.
+        assertTrue(InstrumentsFile.current("2026-11-20", d.atTime(7, 50), d.atTime(8, 10)))
+        kotlin.test.assertFalse(InstrumentsFile.current("2026-11-20", d.atTime(7, 50), d.atTime(8, 30)))
+        // Yesterday's (or the last day before a holiday): never today's list.
+        kotlin.test.assertFalse(InstrumentsFile.current("2026-11-19", d.minusDays(1).atTime(9, 0), d.atTime(9, 0)))
+        kotlin.test.assertFalse(InstrumentsFile.current(null, null, d.atTime(9, 0)))
+        // An older file with no time: today's day still stands (as before).
+        assertTrue(InstrumentsFile.current("2026-11-20", null, d.atTime(9, 0)))
+    }
 }
