@@ -244,7 +244,7 @@ internal object SquareOffExit {
                         // pass prices it again). A lost reply is counted by the next pass's read of the working orders, as every exit here.
                         if (com.optionslab.engine.orb.LiveMirror.marketBlocked(e.message)) {
                             val key = "${p.exchange}:${p.symbol}"
-                            val q = runCatching { Broker.quotes(listOf(key))[key] }.getOrNull()
+                            val q = runCatching { Broker.quotes(listOf(key), lane = com.optionslab.ira.RateGate.Priority.SAFETY)[key] }.getOrNull()   // B5-D: an exit's read
                             val limit = com.optionslab.engine.orb.LiveMirror.blockedMarketExit(o, q?.last, q?.ask, q?.bid)
                             // 19 Nov 2026 (third review): a lost reply is not a refusal - the LIMIT may be out, so the gap starts and it
                             // is looked for, as the MARKET path does; never said as refused.
@@ -277,7 +277,9 @@ internal object SquareOffExit {
                                 break
                             }
                         }
-                        tell("rejected ${p.symbol} ${e.message}", "Zerodha refused the $exitName exit of ${p.symbol}: ${e.message}. Retrying every pass until the close; close it yourself if it keeps failing.")
+                        // (20 Nov 2026, audit B5: one that never left the phone is no refusal - Zerodha never saw it.)
+                        tell("rejected ${p.symbol} ${e.message}", (if (e is Broker.NotSent) Broker.notSentWords("$exitName exit of ${p.symbol}") + " "
+                            else "Zerodha refused the $exitName exit of ${p.symbol}: ${e.message}. ") + "Retrying every pass until the close; close it yourself if it keeps failing.")
                         break
                     }
                     // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out

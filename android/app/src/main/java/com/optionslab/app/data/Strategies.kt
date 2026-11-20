@@ -791,6 +791,16 @@ object Strategies {
         ArmLive.liveFlags().let { (appLive, aiLive) -> if (!appLive) "the app is in Paper" else if (!aiLive) "\"AI trades go live\" is off" else null }
     }.getOrElse { "\"AI trades go live\" could not be read" }
 
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a live order whose reply was lost and not found yet is accepted under "lost:<n>" ([kiteExec]),
+     * looked for on each status read ([Broker.lookLost]); [lostFound]: the Zerodha id each one turned out to be. Memory only.
+     */
+    internal const val LOST = "lost:"
+    private val lostSeq = java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis())
+    private val lostFound = java.util.concurrent.ConcurrentHashMap<String, String>()
+    /** Lost ids from before a restart that Boss was told of (once each). Memory only. */
+    private val restartedLost: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     /** [ownerStart]: the entries of Boss's own start from the app ([start]); false: automatic ones ([autoLiveRefusal] asks them). */
     private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, ownerStart: Boolean = false, known: () -> Collection<String>) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
@@ -894,8 +904,17 @@ object Strategies {
                     } catch (e: Exception) {
                         if (Broker.definite(e)) return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
                         // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
+                        // 20 Nov 2026 (audit B5 deep review): not found yet is UNKNOWN, never "refused" (a run could then send it again,
+                        // or leave a live order untracked): accepted under a lost id ([LOST]), looked for on each later status read for
+                        // [Broker.LOST_SEARCH_MS]; found, it is the order; not there by then, Boss is told and it reads as rejected.
                         runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
-                            ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
+                            ?: run {
+                                val lostId = LOST + (if (exit) "x" else "e") + lostSeq.incrementAndGet()
+                                Broker.noteLost(lostId, o, known().map { it.removePrefix("kite:") }, "Strategy ${def.name}: its ${if (exit) "exit" else "entry"}")
+                                b.owners[lostId] = ownerLabel(def, order)
+                                return@runBlocking StrategyHost.Placed.Accepted(lostId, "UNKNOWN", 0, null,
+                                    "Zerodha's answer was lost (${e.message}); looking for the order in its book")
+                            }
                     }
                 } finally { pass?.leave() }
                 b.owners["kite:$id"] = ownerLabel(def, order)
@@ -907,9 +926,36 @@ object Strategies {
                 StrategyHost.Placed.Accepted("kite:$id", f?.status ?: "UNKNOWN", f?.filled ?: 0, f?.avgPrice?.takeIf { it > 0 }, f?.message)
             }
         }
-        override fun cancel(brokerId: String) = runBlocking { runCatching { Broker.cancel(brokerId.removePrefix("kite:")) }.isSuccess }
+        override fun cancel(brokerId: String) = runBlocking {
+            // (A lost id: cancelled only once found; until then nothing is known to cancel.)
+            val id = if (brokerId.startsWith(LOST)) lostFound[brokerId] ?: return@runBlocking false else brokerId.removePrefix("kite:")
+            runCatching { Broker.cancel(id) }.isSuccess
+        }
         override fun status(brokerId: String): StrategyHost.Status? = runBlocking {
-            runCatching { Broker.orderState(brokerId.removePrefix("kite:")) }.getOrNull()?.let {
+            // 20 Nov 2026 (audit B5 deep review): a lost id is looked for ([Broker.lookLost]) until found or given up on.
+            val id = if (!brokerId.startsWith(LOST)) brokerId.removePrefix("kite:") else lostFound[brokerId] ?: when (val l = Broker.lookLost(brokerId)) {
+                is Broker.LostLook.Found -> {
+                    lostFound[brokerId] = l.id
+                    b.owners["kite:${l.id}"] = b.owners[brokerId] ?: def.name
+                    l.id
+                }
+                Broker.LostLook.Searching -> return@runBlocking StrategyHost.Status("UNKNOWN", 0, null, "looking for the order in Zerodha's book")
+                // Given up on (Boss told): not placed - the book would have shown it long before.
+                Broker.LostLook.GaveUp -> return@runBlocking StrategyHost.Status("REJECTED", 0, null, "Zerodha's answer was lost and the order was not found in its book")
+                // (Review: a lost id from before a restart - nothing left in memory to look for. An EXIT reads as rejected, so the run
+                // sends it again - always capped by what Zerodha holds less the exits working, so never into a short. An ENTRY stays
+                // UNKNOWN, never taken as refused and never sent again, and Boss is told once to check the order book.)
+                null -> {
+                    if (brokerId.startsWith(LOST + "x")) return@runBlocking StrategyHost.Status("REJECTED", 0, null,
+                        "its answer was lost before a restart; sent again, capped by what Zerodha holds")
+                    if (restartedLost.add(brokerId)) runCatching {
+                        com.optionslab.app.work.Alerts.error("Strategy ${def.name}: a live order whose answer was lost before the app restarted " +
+                            "cannot be looked for any more. Its state is unknown: check the order book in Kite.", "Strategies")
+                    }
+                    return@runBlocking StrategyHost.Status("UNKNOWN", 0, null, "lost before a restart: check the order book in Kite")
+                }
+            }
+            runCatching { Broker.orderState(id) }.getOrNull()?.let {
                 StrategyHost.Status(it.status, it.filled, it.avgPrice.takeIf { p -> p > 0 }, it.message)
             }
         }
@@ -1535,12 +1581,31 @@ object Strategies {
      * out (or gone with an earlier session), so none is ever left resting on a flat position. Each pass, logged in only.
      */
     private suspend fun cleanLegStops(b: Book) {
-        if (b.legStops.isEmpty() || !Broker.loggedIn) return
         val running = b.defs.mapNotNull { d -> b.runs[d.id]?.takeIf { Entry(d, it).running }?.runId }.toSet()
+        // (20 Nov 2026, audit B5 deep review: a run no longer running whose leg stop's reply was lost: looked for, taken out once found.)
+        if (Broker.loggedIn) for (key in Broker.lostKeys(LOST_LEG_STOP))
+            if (key.removePrefix(LOST_LEG_STOP).substringBefore(':').toLongOrNull() !in running) takeOutLostLegStop(key, "a strategy")
+        if (b.legStops.isEmpty() || !Broker.loggedIn) return
         for ((k, v) in b.legStops.toMap()) {
             if (k.substringBefore(':').toLongOrNull() in running) continue
             if (legStopOut(v) != null) b.legStops.remove(k)
         }
+    }
+
+    /** 20 Nov 2026 (audit B5 deep review): the key a leg's (or a run's, with [k] its "<runId>:" prefix) lost stop is looked for under. */
+    private const val LOST_LEG_STOP = "stratstop:"
+    private fun lostLegStopKey(k: String) = LOST_LEG_STOP + k
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a leg that is no longer open (or whose run ended) and whose stop's reply was lost: looked for,
+     * and taken out once found - never left resting on a closed leg. Still looking: asked again on the next check.
+     */
+    private suspend fun takeOutLostLegStop(key: String, who: String) {
+        val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: return
+        val ok = runCatching { Broker.cancel(l.id) }.isSuccess
+        runCatching { Diag.record("strategies", "$who: a leg's stop ${l.id}, found after its answer was lost on a leg no longer open: " +
+            if (ok) "taken out" else "its cancel failed - check the order book in Kite") }
+        if (!ok) runCatching { com.optionslab.app.work.Alerts.error("$who: a stop ${l.id} found at Zerodha for a leg no longer open could not be cancelled. Check the order book in Kite.", "Strategies") }
     }
 
     /**
@@ -1555,6 +1620,9 @@ object Strategies {
         val run = b.runs[def.id] ?: return
         val mine = b.legStops.keys.filter { it.startsWith("${run.runId}:") }
         val open = run.legs.values.filter { it.status == "open" && it.entryStatus == "complete" }
+        // (20 Nov 2026, audit B5 deep review: a leg no longer open whose stop's reply was lost: looked for, and taken out once found.)
+        val lostClosed = Broker.lostKeys(lostLegStopKey("${run.runId}:")).filter { key -> open.none { lostLegStopKey(legKey(run.runId, it.legId)) == key } }
+        for (key in lostClosed) takeOutLostLegStop(key, def.name)
         if (open.isEmpty() && mine.isEmpty()) return
         val orders = runCatching { Broker.orders().associateBy { it.id } }.getOrNull() ?: return
         val book = runCatching { Broker.positionBook() }.getOrNull() ?: return
@@ -1582,6 +1650,22 @@ object Strategies {
             val exitSide = if (dir > 0) Kite.Side.SELL else Kite.Side.BUY
             val held = net.filter { it.symbol == kiteSym && it.exchange == ex && it.product == product }.sumOf { it.qty } * dir
             val cur = b.legStops[k]
+            // 20 Nov 2026 (audit B5 deep review): this leg's stop whose reply was lost and is not found yet is UNKNOWN: looked for again
+            // first (before any room is counted - once the book shows it, it is the room's own order), never a second one beside it
+            // ([Broker.lookLost]: two minutes, then Boss told); found, it is the leg's stop.
+            if (cur == null) when (val l = Broker.lookLost(lostLegStopKey(k))) {
+                is Broker.LostLook.Found -> {
+                    val at = l.trigger ?: 0.0
+                    b.legStops[k] = "${l.id}|$at|${Market.today()}|${l.qty}"
+                    b.owners["kite:${l.id}"] = "${def.name} · leg ${leg.legId} stop"
+                    notRestedAt.remove(k)
+                    record(b, def, Event("stop_rested", "Leg ${leg.legId}'s stop rests at Zerodha at %.2f (SL order, found after its answer was lost)"
+                        .format(Locale.ENGLISH, at), "info"), false)
+                    continue
+                }
+                Broker.LostLook.Searching -> continue
+                else -> Unit
+            }
             val gid = cur?.let(::gttOf)
             val sid = cur?.substringBefore('|')
             val so = if (gid == null) sid?.let { orders[it] } else null
@@ -1657,10 +1741,13 @@ object Strategies {
                     // A lost reply never leaves a second GTT ([Broker.placeGttOnce] adopts the one that went through).
                     gtt?.let { x -> Broker.placeGttOnce(x, b.legStops.values.mapNotNull(::gttOf).toSet())?.let { "gtt:$it" } }
                 } else {
+                    val lostKey = lostLegStopKey(k)
                     val o = Kite.Order(kiteSym, exitSide, qty, ref.lot, product, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(want, ref.tick, dir), ref.tick,
                         ex, "iraalgostrat", triggerPrice = want)
+                    val known = b.owners.keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") }
                     try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-                        if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, b.owners.keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") }) }.getOrNull()
+                        if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
+                            ?: null.also { Broker.noteLost(lostKey, o, known, "Strategy ${def.name}: leg ${leg.legId}'s stop", liveOnly = true) }
                     }
                 }
                 if (id == null) {

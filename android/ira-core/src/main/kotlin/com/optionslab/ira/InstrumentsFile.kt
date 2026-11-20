@@ -15,12 +15,37 @@ import java.time.LocalDate
  * Any row that does not read is skipped; a file that is not this shape gives null (the caller keeps what it had). Pure.
  */
 object InstrumentsFile {
+    /**
+     * 20 Nov 2026 (audit: "the instruments list is cached by date only"): Zerodha makes the day's instruments dump once a morning;
+     * a list fetched before [DUMP_READY_MIN] (08:30 IST) may be the day before's (no new strikes, no new weekly expiry, an expiry
+     * moved for a holiday not shown), so it stands only until then.
+     */
+    const val DUMP_READY_MIN = 8 * 60 + 30
+
+    /**
+     * Whether a list of [day] fetched at [fetchedAt] (IST, null: an older file that did not say) is today's list at [now] (IST):
+     * of today, and fetched after the morning's dump was made - or it is not made yet. Pure.
+     */
+    fun current(day: String?, fetchedAt: java.time.LocalDateTime?, now: java.time.LocalDateTime): Boolean {
+        if (day != now.toLocalDate().toString()) return false
+        if (fetchedAt == null) return true
+        val ready = now.toLocalDate().atTime(DUMP_READY_MIN / 60, DUMP_READY_MIN % 60)
+        return !fetchedAt.isBefore(ready) || now.isBefore(ready)
+    }
+
+    /** The file's day, when it was fetched ("at", epoch ms; null in an older file) and its instruments. */
+    data class Saved(val day: String, val at: Long?, val list: List<Kite.Instrument>)
+
     /** The file's day and its instruments, or null when it is not a list of this shape. Reads [r] to its end (the caller closes it). */
-    fun read(r: Reader): Pair<String, List<Kite.Instrument>>? = runCatching {
+    fun read(r: Reader): Pair<String, List<Kite.Instrument>>? = readSaved(r)?.let { it.day to it.list }
+
+    /** [read] with the fetch time ([Saved.at]) too. */
+    fun readSaved(r: Reader): Saved? = runCatching {
         val p = Pull(r)
         val names = HashMap<String, String>()
         val dates = HashMap<String, LocalDate>()
         var day = ""
+        var at: Long? = null
         var list: ArrayList<Kite.Instrument>? = null
         p.expect('{')
         if (!p.endOf('}')) do {
@@ -28,6 +53,7 @@ object InstrumentsFile {
             p.expect(':')
             when (key) {
                 "day" -> day = p.valueText() ?: ""
+                "at" -> at = p.valueText()?.let { it.toLongOrNull() ?: it.toDoubleOrNull()?.toLong() }
                 "i" -> {
                     val out = ArrayList<Kite.Instrument>()
                     p.expect('[')
@@ -42,7 +68,7 @@ object InstrumentsFile {
                 else -> p.valueText()
             }
         } while (p.more('}'))
-        list?.let { day to it }
+        list?.let { Saved(day, at, it) }
     }.getOrNull()
 
     private fun row(c: List<String?>, names: HashMap<String, String>, dates: HashMap<String, LocalDate>): Kite.Instrument? = runCatching {

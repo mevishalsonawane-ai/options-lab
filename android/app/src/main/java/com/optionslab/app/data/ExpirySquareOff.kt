@@ -102,6 +102,8 @@ object ExpirySquareOff {
         if (Broker.loggedIn) runCatching {
             // 20 Oct, review: SENSEX's options (BFO) too, from the day's list in memory: they were all "unknown", so Boss's own
             // SENSEX options were never closed and an arm's SENSEX trade raised a false "NOT closed automatically" notice.
+            // (B5 review: the list in memory, whenever it was fetched - one from before the morning's dump already lists today's expiries,
+            // so an expiring SENSEX position is closed at 15:05 as ever; only the "unknown contract" notice waits for today's list.)
             val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).associateBy { it.tradingSymbol }
             // 20 Oct, review: the orders are read BEFORE the positions (as [McxGuard] has since 18 Oct). Read the other way, an
             // exit resting from the last pass that filled between the two reads showed the position still open and no exit
@@ -119,7 +121,9 @@ object ExpirySquareOff {
             // expiry cannot be told here, so the owner is told instead of it being held into settlement unseen.
             // SENSEX's list not read yet today: asked for now (in the background) and the notice waits for the next passes, until
             // the backstop minute, when it is said whatever.
-            val bfoWait = Broker.cachedBfoOptions() == null && minuteNow() < BACKSTOP_MINUTE
+            // (B5 merge review: the notice also waits for a list fetched after the morning's dump - [Broker.currentBfoOptions]; one from before
+            // it is read again behind (cachedBfoOptions starts that). The pass counts as unread only with no list at all, as before.)
+            val bfoWait = Broker.currentBfoOptions() == null && minuteNow() < BACKSTOP_MINUTE
             if (Broker.cachedBfoOptions() == null && book.any { it.exchange == "BFO" }) {
                 runCatching { Broker.loadBfoOptionsInBackground() }
                 // Its expiry not known yet: the day is not done (a later pass, with the list in, closes or reports it).

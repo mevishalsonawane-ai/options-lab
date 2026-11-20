@@ -397,6 +397,41 @@ class S5ArmTest : RobolectricTest() {
         assertNothingAtZerodha()
     }
 
+    /**
+     * 20 Nov 2026 (audit: "S5, Flow and Ntfy use old stream prices as the current price when the stream is down"): a stream price
+     * more than 5 s old is not the price an exit decides on while Zerodha's can be read; with no fresh read, the old one is still
+     * used, so an exit is never skipped ([Paper.exitPriceNow]).
+     */
+    @Test fun aStaleStreamPriceIsNeverTheExitPriceWhileAFreshOneCanBeRead() {
+        val p = boughtAt0920()
+        option(peToken, p.entry + 42.0); at(LocalTime.of(10, 0), 5); runBlocking { S5Arm.manageOnly() }
+        assertTrue(view().open.single().peak!! > 2500)
+        // The stream stalls: its last packet (20 s old) says the trade fell under the lock; Zerodha's quote says it did not.
+        KiteStream.feedForTest(listOf(KiteTicks.Tick(peToken, p.entry + 20.0, bid = p.entry + 19.9, ask = p.entry + 20.1)), System.currentTimeMillis() - 20_000)
+        kite.quote("NFO:NIFTYS525000PE", p.entry + 40.0, p.entry + 39.9, p.entry + 40.1)
+        kite.requests.clear()
+        at(LocalTime.of(10, 1), 5); runBlocking { S5Arm.manageOnly() }
+        assertTrue("held: Zerodha's price now, not the stream's old one", view().open.isNotEmpty())
+        assertTrue("Zerodha's quote was read", kite.requests.any { it.path.startsWith("/quote") })
+        // Zerodha's price falls under the lock too: out.
+        kite.quote("NFO:NIFTYS525000PE", p.entry + 20.0, p.entry + 19.9, p.entry + 20.1)
+        at(LocalTime.of(10, 2), 5); runBlocking { S5Arm.manageOnly() }
+        assertTrue(view().closed.single().why!!.startsWith("profit lock"))
+        assertNothingAtZerodha()
+    }
+
+    @Test fun withNoFreshReadTheOldStreamPriceStillExits() {
+        val p = boughtAt0920()
+        option(peToken, p.entry + 42.0); at(LocalTime.of(10, 0), 5); runBlocking { S5Arm.manageOnly() }
+        Paper.exitReadForTest = { null }                                   // Zerodha and the feed do not answer
+        try {
+            KiteStream.feedForTest(listOf(KiteTicks.Tick(peToken, p.entry + 20.0, bid = p.entry + 19.9, ask = p.entry + 20.1)), System.currentTimeMillis() - 20_000)
+            at(LocalTime.of(10, 1), 5); runBlocking { S5Arm.manageOnly() }
+            assertTrue("never skipped for want of a fresh price", view().closed.single().why!!.startsWith("profit lock"))
+        } finally { Paper.exitReadForTest = null }
+        assertNothingAtZerodha()
+    }
+
     @Test fun theSquareOffSellsAt1515() {
         boughtAt0920()
         option(peToken, 105.0)

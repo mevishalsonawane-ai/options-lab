@@ -269,6 +269,19 @@ class JobsTest : RobolectricTest() {
         assertTrue("after hours the watch waits for its alarm", startedServices().isEmpty())
     }
 
+    /**
+     * 20 Nov 2026 (review): the receiver is exported for Android's own boot and update words. A maker's "quick boot" word, which
+     * any app may send, starts and re-arms nothing; the real boot still starts the watch in hours.
+     */
+    @Test fun aQuickBootWordAnyAppMaySendStartsNothing() {
+        BootReceiver().onReceive(context, Intent("android.intent.action.QUICKBOOT_POWERON"))
+        BootReceiver().onReceive(context, Intent("com.htc.intent.action.QUICKBOOT_POWERON"))
+        assertTrue(startedServices().isEmpty())
+        assertTrue(alarms("ol.job.LIVE").isEmpty())
+        BootReceiver().onReceive(context, Intent(Intent.ACTION_BOOT_COMPLETED))
+        assertEquals("LIVE", startedServices().single().getStringExtra(Jobs.EXTRA_KIND))
+    }
+
     // ---- starting work -----------------------------------------------------------------------------
 
     @Test fun harvestNowGoesToWorkManagerAndTheScheduledOneToTheService() {

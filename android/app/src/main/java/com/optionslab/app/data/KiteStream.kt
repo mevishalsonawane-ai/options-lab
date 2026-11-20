@@ -43,6 +43,12 @@ import java.util.concurrent.atomic.AtomicReference
  *    or the error's kind, how long it was up, ticks, tokens, foreground, network, watch.
  *  - The connection carries the access token, so it is pinned like the REST calls
  *    (its own trust-on-first-use CA set); the URL, API key and token are never logged.
+ *  - 20 Nov 2026 (audit): the phone's network changing ([NetWatch]) closes the connection and opens a new one at once on the
+ *    new network, the held positions subscribed first ([StreamHealth.subscribeOrder]); a subscription Zerodha's socket did
+ *    not take is tried again, never counted as done; the kept order and position reads are dropped on every drop and open
+ *    (order updates may have been missed meanwhile); a packet that arrived late is stamped by the exchange's own time
+ *    ([com.optionslab.ira.TickStamp]); and the stall watchdog and the waits run on the monotonic clock, so a wall clock set
+ *    back never stalls them.
  *
  * [Broker.quotes] answers from here when every asked instrument has a fresh tick,
  * which also makes the option chain, alarms, strategies and re-pricing faster.
@@ -50,7 +56,14 @@ import java.util.concurrent.atomic.AtomicReference
 object KiteStream {
     enum class Status { OFF, CONNECTING, LIVE, RETRYING }
 
-    data class Seen(val tick: KiteTicks.Tick, val at: Long)
+    /**
+     * [conn]: 20 Nov 2026, the connection that brought it (0: the test feed), so a connection's first packet of each instrument is known.
+     * [arrived]: when it reached the phone ([at] is that, or earlier for a packet that came late: [com.optionslab.ira.TickStamp]).
+     */
+    data class Seen(val tick: KiteTicks.Tick, val at: Long, val conn: Int = 0, val arrived: Long = at)
+
+    /** 20 Nov 2026: numbers the connections ([Conn.id], [Seen.conn]). */
+    private val connIds = java.util.concurrent.atomic.AtomicInteger()
 
     private val ticks = ConcurrentHashMap<Long, Seen>()
     private val wants = ConcurrentHashMap<String, Set<Long>>()
@@ -73,7 +86,8 @@ object KiteStream {
         if (d.now) { _version.value = now; return }
         val at = d.scheduleAt ?: return
         scope.launch {
-            delay((at - System.currentTimeMillis()).coerceAtLeast(0L))
+            // 20 Nov 2026: never longer than a second (a wall clock set back between the offer and this wait).
+            delay((at - System.currentTimeMillis()).coerceIn(0L, 1_000L))
             val t = System.currentTimeMillis()
             synchronized(redraw) { redraw.fired(t) }
             _version.value = t
@@ -119,6 +133,21 @@ object KiteStream {
 
     /** When the current connection dropped (0: not down), for the gap figure; and drops counted today. */
     @Volatile private var downSince = 0L
+
+    /** 20 Nov 2026: the monotonic clock (ms; deep sleep counted), for the watchdog and the waits: a wall clock set back never stalls them. */
+    private fun mono(): Long = android.os.SystemClock.elapsedRealtime()
+
+    /** 20 Nov 2026: a late packet's time by the exchange's own stamp ([com.optionslab.ira.TickStamp]). Memory only. */
+    private val stamps = com.optionslab.ira.TickStamp()
+
+    /** 20 Nov 2026: ends a wait between tries at once (the phone's network changed). Memory only. */
+    private val kick = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+
+    /** Waits [ms] at most; true when [kick] ended it early. */
+    private suspend fun pause(ms: Long): Boolean = ms > 0 && withTimeoutOrNull(ms) { kick.receive() } != null
+
+    /** 20 Nov 2026: a subscribe or unsubscribe message the socket did not take: tried again on the watchdog's next look. */
+    @Volatile private var subscribeOwed = false
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var loop: Job? = null
@@ -196,6 +225,14 @@ object KiteStream {
         ticks[token]?.takeIf { System.currentTimeMillis() - it.at in 0..maxAgeMs }?.tick
 
     /**
+     * B5-D: the last tick for [token] when it REACHED the phone at most [maxAgeMs] ago, however late the exchange stamped it - the
+     * stop reads' fallback when no fresh quote answers ([Broker.stopQuotes]), exactly as [tick] was before late packets were stamped
+     * back. Never a price to decide on while a fresh one can be had. Memory only.
+     */
+    fun arrivedTick(token: Long, maxAgeMs: Long = 5_000): KiteTicks.Tick? =
+        ticks[token]?.takeIf { System.currentTimeMillis() - it.arrived in 0..maxAgeMs }?.tick
+
+    /**
      * The last tick for [token] when it is fresh enough to DECIDE on ([com.optionslab.ira.LiveQuote.FRESH_MS], 2 s), else
      * null: the caller then reads Zerodha (the REST fallback).
      */
@@ -211,14 +248,23 @@ object KiteStream {
 
     @Volatile private var appContext: android.content.Context? = null
 
-    /** The application context, for the network check a drop records (no other use). */
-    fun init(context: android.content.Context) { appContext = context.applicationContext }
+    /**
+     * The application context, for the network check a drop records; 20 Nov 2026: and Android's network callback ([NetWatch]),
+     * which opens the stream and the relay again at once when the phone's network changes.
+     */
+    fun init(context: android.content.Context) {
+        appContext = context.applicationContext
+        // B5-D review: registered off the main thread (a binder call), never ahead of the start's positions-first work.
+        val app = context.applicationContext
+        scope.launch { runCatching { NetWatch.start(app) } }
+    }
 
     /**
      * One connection: what its drop line needs. Every listener callback checks it is still the current connection,
      * so a socket left over from an earlier loop can never set the status, the subscriptions or the ticks.
      */
     private class Conn {
+        val id = connIds.incrementAndGet()
         val opened = AtomicBoolean(false)
         val done = CompletableDeferred<Unit>()
         val end = AtomicReference<StreamHealth.Drop?>(null)
@@ -232,6 +278,8 @@ object KiteStream {
         @Volatile var network: String? = null
         /** Closed on purpose by the Live check to time the reconnect ([dropForCheck]): not a drop of the stream's health. */
         @Volatile var byCheck = false
+        /** 20 Nov 2026: closed because the phone's network changed ([networkChanged]): opened again at once. */
+        @Volatile var byNetwork = false
     }
     @Volatile private var conn: Conn? = null
     /** 25 Oct: the price-silence drops in a row ([StreamHealth.pricesStalled]); a connection that sees a price starts it again. */
@@ -255,7 +303,7 @@ object KiteStream {
             // streaming - so a stop, target or exit is checked at the same pace either way.
             if (needed()) { idleSince = 0L; idleStopped = false; start(); return }
             if (idleStopped) return
-            val now = System.currentTimeMillis()
+            val now = mono()                              // 20 Nov 2026: monotonic (a wall clock set back never holds or ends it)
             if (idleSince == 0L) idleSince = now
             if (now - idleSince < IDLE_STOP_MS) { start(); return }
             idleStopped = true
@@ -272,7 +320,16 @@ object KiteStream {
      */
     internal fun inHoursNow(): Boolean =
         runCatching { Market.isTradingDay() && Market.minuteNow() in (9 * 60)..maxOf(15 * 60 + 45, Market.foClose() + 5) }.getOrDefault(true) ||
+            // 20 Nov 2026: NSE's special session (the Muhurat hour), from 15 minutes before it to 5 after it.
+            runCatching { specialHours() }.getOrDefault(false) ||
             runCatching { McxMarket.watchDue() }.getOrDefault(false)
+
+    /** 20 Nov 2026: within NSE's special session today ([Market.specialSession]), 15 minutes before it to 5 after. */
+    private fun specialHours(): Boolean {
+        val s = Market.specialSession() ?: return false
+        val m = Market.minuteNow()
+        return m in (s.open.hour * 60 + s.open.minute - 15)..(s.close.hour * 60 + s.close.minute + 5)
+    }
 
     /** Battery, round 1: when the stream was first found unneeded (0: needed), and whether it was closed for that. */
     @Volatile private var idleSince = 0L
@@ -326,6 +383,40 @@ object KiteStream {
     }
 
     /**
+     * 20 Nov 2026 (audit: the relay and the stream stayed dead for up to 45 s after the phone's network changed): Android says the
+     * default network changed ([NetWatch]). The connection on the old network (open, or still being made) is closed now as a
+     * network drop, and the loop opens a new one at once instead of after its silence watchdog or its next wait; a wait between
+     * tries ends at once too. Nothing running: nothing to do ([ensure] starts it as before). Memory and the socket only (its
+     * cancel never blocks); never on the tick path.
+     */
+    @Synchronized
+    fun networkChanged(seenAt: Long = mono()): Boolean {
+        if (loop?.isActive != true) return false
+        val c = conn
+        val ws = socket
+        var dropped = false
+        // B5-D: one that OPENED after the change was seen ([seenAt], the monotonic clock: it reconnected by itself, on the new
+        // network, inside the debounce) is kept; any other is closed and opened again.
+        val keep = c != null && keepOnChange(c.opened.get(), c.openedAt, seenAt)
+        if (c != null && ws != null && !c.done.isCompleted && !keep) {
+            c.byNetwork = true
+            c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.NETWORK_CHANGED, message = "the phone's network changed"))
+            _status.value = Status.RETRYING
+            ws.cancel()
+            c.done.complete(Unit)
+            dropped = true
+        }
+        kick.trySend(Unit)
+        return dropped
+    }
+
+    /** B5-D: whether a connection is kept on a network change seen at [seenAt]: only one opened at or after it. Pure. */
+    internal fun keepOnChange(opened: Boolean, openedAt: Long, seenAt: Long): Boolean = opened && openedAt >= seenAt
+
+    /** B5-D: the stream's monotonic clock now (the network watch stamps a change with it). */
+    internal fun monoNow(): Long = mono()
+
+    /**
      * TEST ONLY: true keeps the stream from ever opening its socket (the fake Kite has no stream, and a connect the
      * test did not wait for would race its "no test may reach the internet" check). False in the app, always: the
      * setter throws unless BuildConfig.DEBUG, and only the test application sets it.
@@ -356,6 +447,8 @@ object KiteStream {
                 val token = Broker.streamToken() ?: break
                 val key = Broker.apiKey ?: break
                 val c = Conn().also { it.network = networkId() }
+                // 20 Nov 2026: a kick left from before this try (a network change while it waited) is spent here.
+                kick.tryReceive()
                 val url = "wss://${KitePin.WS_HOST}/?api_key=$key&access_token=$token"
                 // conn is set before the socket is made: onOpen (on OkHttp's thread) checks `conn !== c`, and a fast open
                 // landing before the assignment would otherwise close a healthy socket.
@@ -375,9 +468,11 @@ object KiteStream {
                 // ---- the drop, with its reason ----
                 val opened = c.opened.get()
                 val now = System.currentTimeMillis()
+                // 20 Nov 2026: order updates may have been missed while it was down: the kept orders and positions are read afresh.
+                runCatching { Broker.reconStale() }
                 val seen = c.end.get() ?: StreamHealth.Drop(message = "ended")
                 val d = seen.copy(
-                    upMs = if (opened) now - c.openedAt else null, ticks = c.ticks.get(), tokens = c.tokens,
+                    upMs = if (opened) mono() - c.openedAt else null, ticks = c.ticks.get(), tokens = c.tokens,
                     foreground = foreground(), networkChanged = networkId().let { n -> c.network != null && n != null && n != c.network },
                     watch = watchRunning(), pausedSec = c.pausedSec, tries = if (opened) 1 else fails + 1,
                 )
@@ -387,7 +482,7 @@ object KiteStream {
                 val check = c.byCheck
                 // Round 2: a drop of a live connection is counted for the order speed card, and the local candles' runs are
                 // broken (a minute that lost ticks is never decided on: the feed is read for it instead).
-                if (opened && !check) {
+                if (opened && !check && !c.byNetwork) {
                     if (downSince == 0L) downSince = now
                     runCatching { OrderTiming.streamDropped() }
                     // The app's own health record: a reconnect of the live stream (a counter; it reconnects by itself).
@@ -401,10 +496,11 @@ object KiteStream {
                 // A connection that never opened is noted once per kind of failure and every tenth try (offline for an hour
                 // is not 120 lines); every live connection lost is noted.
                 if (check) runCatching { Diag.record(StreamHealth.AREA, "live check: closed the connection on purpose to time the reconnect") }
-                else if (opened || fails == 1 || cause != lastCause || fails % 10 == 0)
+                // (Merge review: a close for a network change is planned - noted by [NetWatch], never counted or alerted as a drop.)
+                else if (!c.byNetwork && (opened || fails == 1 || cause != lastCause || fails % 10 == 0))
                     runCatching { Diag.record(StreamHealth.AREA, StreamHealth.diary(d, listOf(token, key))) }
                 lastCause = cause
-                if (opened && !check) {
+                if (opened && !check && !c.byNetwork) {
                     val why = StreamHealth.plain(cause, if (cause == StreamHealth.Cause.PAUSED) d.pausedSec ?: d.silentSec else d.silentSec)
                     com.optionslab.app.work.Alerts.post("Live price stream dropped ($why); reconnecting", com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true,
                         // 20 Oct: it reconnects by itself (each drop is also counted in the stream's own line): a warning, not an error.
@@ -414,13 +510,16 @@ object KiteStream {
                 // 27 Oct (battery audit): anything held - exactly as before; nothing held - a flapping network backs off further,
                 // spread a little ([StreamHealth.waitFor]). Memory only (HeldNow reads no disk, vault or network).
                 val heldNow = runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true)
-                wait = if (check) StreamHealth.FIRST_WAIT_MS else StreamHealth.waitFor(wait, d.upMs, cause, heldNow, kotlin.random.Random.nextDouble(-1.0, 1.0))
-                // A longer wait with nothing held ends at once when something becomes held (a 1 s look, memory only).
-                if (heldNow || wait <= StreamHealth.NETWORK_WAIT_MS) delay(wait)
+                wait = if (check || c.byNetwork) StreamHealth.FIRST_WAIT_MS else StreamHealth.waitFor(wait, d.upMs, cause, heldNow, kotlin.random.Random.nextDouble(-1.0, 1.0))
+                // 20 Nov 2026: the phone's network changed: the new connection is opened at once, on the new network (no wait).
+                if (c.byNetwork) continue
+                // A longer wait with nothing held ends at once when something becomes held (a 1 s look, memory only). 20 Nov 2026: on
+                // the monotonic clock (a wall clock set back never stretches it), and ended at once by a network change ([kick]).
+                if (heldNow || wait <= StreamHealth.NETWORK_WAIT_MS) pause(wait)
                 else {
-                    val until = System.currentTimeMillis() + wait
-                    while (System.currentTimeMillis() < until && !runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true))
-                        delay(minOf(1_000L, (until - System.currentTimeMillis()).coerceAtLeast(1L)))
+                    val until = mono() + wait
+                    while (mono() < until && !runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true))
+                        if (pause(minOf(1_000L, (until - mono()).coerceAtLeast(1L)))) break
                 }
             }
             _status.value = Status.OFF
@@ -433,8 +532,10 @@ object KiteStream {
             // An open landing before the loop has stored its socket: this is that socket (conn is c), so it is stored
             // here too, or [resubscribe] would find none and the stream would open with nothing subscribed.
             socket = webSocket
-            val now = System.currentTimeMillis()
+            val now = mono()
             c.openedAt = now; c.lastFrame = now; c.opened.set(true)
+            // 20 Nov 2026: the kept orders and positions are read afresh (updates may have been missed while it was down).
+            runCatching { Broker.reconStale() }
             _status.value = Status.LIVE
             com.optionslab.app.work.Alerts.post("Live prices streaming from Zerodha", com.optionslab.app.work.Alerts.Kind.SUCCESS, throttle = true)
             synchronized(subscribed) { subscribed.clear() }
@@ -442,7 +543,7 @@ object KiteStream {
         }
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
             if (conn !== c) return
-            c.lastFrame = System.currentTimeMillis()
+            c.lastFrame = mono()
             // 18 Oct (speed): the frame is read through a read-only view of okio's bytes (in place when okio holds them in one
             // piece, else the single copy it always cost). Each packet is then read in place, with no array of its own.
             onTicks(c, bytes.asByteBuffer())
@@ -472,15 +573,17 @@ object KiteStream {
      * few seconds to show it survived before the same rule applies, and its drop is put down to the pause.
      */
     private suspend fun watch(c: Conn, ws: WebSocket) {
-        var lastLook = System.currentTimeMillis()
+        var lastLook = mono()
         var graceUntil = 0L
         while (true) {
             if (withTimeoutOrNull(StreamHealth.STEP_MS) { c.done.await() } != null) return
-            val now = System.currentTimeMillis()
+            val now = mono()
+            // 20 Nov 2026: a subscription the socket did not take is tried again (open and current only).
+            if (subscribeOwed && c.opened.get() && conn === c) runCatching { resubscribe() }
             StreamHealth.paused(lastLook, now)?.let { sec -> c.pausedSec = sec; graceUntil = now + 5_000 }
             lastLook = now
             if (now < graceUntil) continue
-            val marketOpen = runCatching { Market.isOpen() || McxMarket.isOpen() }.getOrDefault(false)
+            val marketOpen = runCatching { Market.isOpen() || Market.specialOpen() || McxMarket.isOpen() }.getOrDefault(false)
             if (StreamHealth.stalled(c.opened.get(), marketOpen, c.lastFrame, now)) {
                 val sec = (now - c.lastFrame) / 1000
                 c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.SILENT, silentSec = sec))
@@ -559,28 +662,55 @@ object KiteStream {
         // 21 Oct, enhancement round 3 (idea 3): the paper book's open positions first too (open positions come first, paper or live).
         val first = (wants["index"].orEmpty() + wants["positions"].orEmpty() + wants["live-exits"].orEmpty() + wants[Paper.STREAM_OWNER].orEmpty())
         val want = StreamHealth.cap(wanted(), first)
+        // 20 Nov 2026: what is sent first after a (re)connect: the held positions and live exits, then the paper book's, then the indices.
+        val order = wants["positions"].orEmpty().toList() + wants["live-exits"].orEmpty() + wants[Paper.STREAM_OWNER].orEmpty() + wants["index"].orEmpty()
+        sendSubscriptions(ws, want, order)
+    }
+
+    /**
+     * Sends what [want] needs over [ws] (in [order] first). 20 Nov 2026 (audit: "a failed subscribe is marked as subscribed"): a
+     * message the socket does not take (it is closing, or its queue is full: [WebSocket.send] says false) is not counted as done;
+     * [subscribeOwed] has the watchdog try again on its next look. Memory and the socket's queue only.
+     */
+    private fun sendSubscriptions(ws: WebSocket, want: Set<Long>, order: List<Long>) {
+        var owed = false
         synchronized(subscribed) {
             val add = want - subscribed
             val drop = subscribed - want
             if (drop.isNotEmpty()) {
-                StreamHealth.chunks(drop).forEach { ws.send(KiteTicks.unsubscribe(it)) }
-                subscribed.removeAll(drop); drop.forEach { ticks.remove(it) }
+                for (chunk in StreamHealth.chunks(drop)) {
+                    if (ws.send(KiteTicks.unsubscribe(chunk))) { subscribed.removeAll(chunk.toSet()); chunk.forEach { ticks.remove(it) } }
+                    else owed = true
+                }
             }
             if (add.isNotEmpty()) {
-                StreamHealth.chunks(add).forEach { ws.send(KiteTicks.subscribe(it)); ws.send(KiteTicks.mode("full", it)) }
-                subscribed.addAll(add)
+                for (chunk in StreamHealth.chunks(StreamHealth.subscribeOrder(add, order))) {
+                    if (ws.send(KiteTicks.subscribe(chunk)) && ws.send(KiteTicks.mode("full", chunk))) subscribed.addAll(chunk)
+                    else owed = true
+                }
             }
             conn?.tokens = subscribed.size
         }
+        subscribeOwed = owed
     }
+
+    /** TEST ONLY: [sendSubscriptions] over [ws] as the open socket would do it; returns what is counted as subscribed after it. */
+    internal fun sendSubscriptionsForTest(ws: WebSocket, want: Set<Long>, order: List<Long>): Set<Long> {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        sendSubscriptions(ws, want, order)
+        return synchronized(subscribed) { subscribed.toSet() }
+    }
+
+    /** TEST ONLY: a send is owed (a subscription the socket did not take). */
+    internal fun subscribeOwedForTest(): Boolean = subscribeOwed
 
     private fun onTicks(c: Conn, message: java.nio.ByteBuffer) {
         val now = System.currentTimeMillis()
         val got = runCatching { KiteTicks.parse(message) }.getOrDefault(emptyList())
         if (got.isEmpty()) return
-        c.lastTick = now
+        c.lastTick = mono()
         c.ticks.addAndGet(got.size.toLong())
-        record(got, now)
+        record(got, now, conn = c.id)
     }
 
     /**
@@ -588,14 +718,22 @@ object KiteStream {
      * event-driven checks ([FastPath.offer]: a map put and a wake, never the checks themselves on this socket thread),
      * and one exchange stamp in five seconds to the clock-offset figure ([OrderTiming.clock]).
      */
-    private fun record(got: List<KiteTicks.Tick>, now: Long) {
+    private fun record(got: List<KiteTicks.Tick>, now: Long, stampLate: Boolean = true, conn: Int = 0) {
         var stamp: Long? = null
+        val mono = if (stampLate) mono() else 0L
         for (t in got) {
             // 15 Nov ([com.optionslab.ira.PriceNow.newTrade]): the price path a resting stop fills from takes NEW trades only - a
             // thin option's packets repeat its last trade (of another day, before it trades) with every change of its book.
-            val prev = ticks[t.token]?.tick
+            val prevSeen = ticks[t.token]
+            val prev = prevSeen?.tick
             val tt = t.lastTradeTime?.takeIf { it > 0 }
-            ticks[t.token] = Seen(t, now)
+            // 20 Nov 2026 (audit: "a burst of late ticks is stamped now"): a packet that came late is kept with the time the exchange
+            // stamped it (on the phone's clock), so it is not taken as fresh by a stop or a screen; any other packet: its arrival, as before.
+            // Review: never a connection's first packet of an instrument - Zerodha's snapshot of it as it is NOW, which for a quiet option
+            // carries the exchange's stamp of its last change, minutes ago.
+            val first = prevSeen == null || prevSeen.conn != conn
+            val at = if (stampLate && !first) runCatching { stamps.at((t.token and 0xFF).toInt(), now, mono, t.exchangeTime) }.getOrDefault(now) else now
+            ticks[t.token] = Seen(t, at, conn, now)
             if (t.last > 0 && com.optionslab.ira.PriceNow.newTrade(t.last, tt, prev != null, prev?.last, prev?.lastTradeTime, now / 1000))
                 paths.getOrPut(t.token) { com.optionslab.engine.TickPath() }.record(t.last, now)
             // The local candles by the exchange's own stamp (a tick without one - an index's quote packet - is not used); never from
@@ -665,9 +803,9 @@ object KiteStream {
      * TEST ONLY: [got] as if the socket had just brought them (kept, pathed and handed on exactly as a live message's).
      * Throws unless BuildConfig.DEBUG (as [testOff]); no app code calls it.
      */
-    internal fun feedForTest(got: List<KiteTicks.Tick>, atMs: Long = System.currentTimeMillis()) {
+    internal fun feedForTest(got: List<KiteTicks.Tick>, atMs: Long = System.currentTimeMillis(), stampLate: Boolean = false, conn: Int = 0) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }
-        record(got, atMs)
+        record(got, atMs, stampLate, conn)
     }
 
     /** TEST ONLY: the stream's status as if the socket were open (the fake Kite has no stream). Throws unless BuildConfig.DEBUG. */
@@ -683,7 +821,7 @@ object KiteStream {
      */
     internal fun resetForTest() {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
-        ticks.clear(); paths.clear(); candles.clear(); sessionCandles.clear(); touched.clear()
+        ticks.clear(); paths.clear(); candles.clear(); sessionCandles.clear(); touched.clear(); stamps.clear()
         reconnects = 0; reconnectDay = null
         synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L

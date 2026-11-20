@@ -182,6 +182,14 @@ object CheaperStrike {
     fun fundsRefused(message: String?): Boolean = message != null &&
         listOf("insufficient funds", "insufficient fund", "margin required", "margin exceeds", "insufficient margin").any { message.contains(it, ignoreCase = true) }
 
+    /**
+     * After a funds refusal: the free cash read fresh from Zerodha ([Broker.freeCash]), in the entries' lane of the one request budget as the
+     * entry's own reads are ([com.optionslab.ira.RateGate.Priority.ENTRY]). Null: it could not be read (then no step). The entry's worker only.
+     */
+    suspend fun freshFreeCash(): Double? = runCatching {
+        kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY)) { Broker.freeCash() }
+    }.getOrNull()
+
     /** Kite's error types after which an order may still exist ([Broker.sendChecked] rethrows them when its book search found nothing). */
     private val UNSURE = setOf("DataException", "GeneralException", "NetworkException")
 
@@ -314,7 +322,9 @@ object CheaperStrike {
         val usable = ins.indices.map { i -> ins[i]?.takeIf { !r.needContract || contracts[i] != null } }
         val keys = usable.mapNotNull { it?.let { i -> "${r.exchange}:${i.tradingSymbol}" } }
         // One read: the stream's fresh ticks, else Zerodha's quote (a stale tick is never a price here: [Broker.stopQuotes]).
-        val q = if (keys.isEmpty()) emptyMap() else runCatching { Broker.stopQuotes(keys) }.getOrDefault(emptyMap())
+        val q = if (keys.isEmpty()) emptyMap() else runCatching {
+            // (B5 stream merge: in the entries' lane, as the entry's own reads; never an old tick on a failed read - no quote then.)
+            Broker.stopQuotes(keys, com.optionslab.ira.RateGate.Priority.ENTRY, staleFallback = false) }.getOrDefault(emptyMap())
         val quotes = usable.map { i -> i?.let { q["${r.exchange}:${it.tradingSymbol}"] }?.takeIf { it.last > 0 && it.last.isFinite() } }
         val tries = steps.indices.map { i ->
             val inst = usable[i]

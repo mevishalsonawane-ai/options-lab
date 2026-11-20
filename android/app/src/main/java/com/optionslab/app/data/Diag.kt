@@ -46,6 +46,10 @@ object Diag {
         var out = SECRETISH.replace(s) { m -> if (TRADING_SYMBOL.matches(m.value) || reasonCode(m.value)) m.value else "‹redacted›" }
         // The account holder's name (Zerodha's welcome line) never reaches the report the owner shares.
         runCatching { Broker.userName }.getOrNull()?.takeIf { it.length >= 3 }?.let { out = out.replace(it, "‹name›", ignoreCase = true) }
+        // 20 Nov 2026 (audit): the static-IP relay server's address is never kept or shared (memory only: never the vault here).
+        runCatching { Relay.hostForRedact() }.getOrNull()?.trim()?.takeIf { it.length >= 3 }?.let { out = out.replace(it, "the relay server", ignoreCase = true) }
+        // (Merge review: any IPv4 address too - the static IP in Zerodha's "No IPs configured" refusal, a relay saved by name.)
+        out = com.optionslab.ira.RelayHealth.redactAddress(out)
         return out
     }
 
@@ -420,6 +424,8 @@ object Diag {
         (runCatching { FundsCheck.line() }.getOrElse { "Funds check: could not read" }) + "\n" +
         // 20 Nov 2026 (Boss's exception): the cheaper strike when funds are short ([CheaperStrike]): today's stepped buys and give-ups.
         (runCatching { CheaperStrike.line() }.getOrElse { "Cheaper strike: could not read" }) + "\n" +
+        // 20 Nov 2026 (audit B5): the order count check on live entries ([OrderCountCheck]; shadow by default): today's would-refusals.
+        (runCatching { OrderCountCheck.line() }.getOrElse { "Order count check: could not read" }) + "\n" +
         // 19 Nov (Boss's choice): the four automatic stops on R51, R72 and Liquidity ([ArmAutoStopsHost]).
         (runCatching { ArmAutoStopsHost.line() }.getOrElse { "Automatic stops on R51, R72 and Liquidity: could not read" }) + "\n" +
         (runCatching { PayoutWatch.line() }.getOrElse { "Payout-aware drawdown: could not read" }) + "\n"

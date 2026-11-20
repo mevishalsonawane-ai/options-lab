@@ -1027,7 +1027,9 @@ object NtfyArm {
         // 26 Oct (IraThinker review): the source rule's hold is over (mom60: 60 minutes) - out at full cadence, like the stop.
         p.exitAt?.let { if (!now.isBefore(it)) return sellRest(p, c, "time exit (the source rule's hold)") }
         // 15 Nov: only a price traded since the entry, or a real book's bid; with none the stop is still put back below (review).
-        val ltp = Paper.priceNowFor(c, p.entryTime)
+        // 20 Nov 2026 (audit: "Ntfy uses old stream prices"): a stream price at most 5 s old, else a fresh read, else the old one so an
+        // exit is never skipped ([Paper.exitPriceNow]; before, a stream packet of any age was taken as the price now).
+        val ltp = Paper.exitPriceNow(c, p.entryTime)
         // No stop resting in the paper book: the arm checks the stop itself - through it, sold now - and puts the SL-M back while
         // above it; never a position riding to the square-off without a stop.
         if (!stopResting(p.stopOrderId)) {

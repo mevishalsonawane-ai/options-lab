@@ -162,4 +162,15 @@ class RelayHealthTest {
         assertTrue(RelayHealth.events(listOf("12-01 15:00:00 [relay] connected as opc"), jan).isEmpty())
         assertEquals("1 hour 34 minutes", RelayHealth.span(java.time.Duration.ofMinutes(94)))
     }
+
+    /** 20 Nov 2026 (audit: "the relay server's address is written to the diary"). */
+    @Test fun theRelayServersAddressIsTakenOut() {
+        val line = "connect FAILED to the server as ubuntu/opc: JSchException: java.net.ConnectException: failed to connect to /203.0.113.5 (port 22)"
+        val out = RelayHealth.redactAddress(line, "203.0.113.5")
+        assertFalse("203.0.113.5" in out, out)
+        assertEquals(RelayHealth.Fail.TIMEOUT, RelayHealth.fail("IOException: " + RelayHealth.redactAddress("Relay: cannot reach 10.1.2.3 on port 22")))
+        // A host name is taken out too; any other IP as well; times and words stay.
+        assertEquals("Relay: the relay server refused; seen from ‹ip› at 10:23:45", RelayHealth.redactAddress("Relay: relay.example.org refused; seen from 198.51.100.7 at 10:23:45", "relay.example.org"))
+        assertEquals("no address here 12:00:01", RelayHealth.redactAddress("no address here 12:00:01", null))
+    }
 }

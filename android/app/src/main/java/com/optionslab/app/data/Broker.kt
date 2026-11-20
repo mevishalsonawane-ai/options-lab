@@ -78,9 +78,10 @@ object Broker {
     // ---- the watch's workers (10 Oct): one request budget, shared reads, one door for entries ----------------------
 
     /**
-     * Which lane a Zerodha request belongs to (Boss, 10 Oct: the watch's workers run side by side): exits, stops and the
-     * loss limit first ([com.optionslab.ira.RateGate.Priority.SAFETY]), then entries and ordinary reads, then Jarvis's
-     * analysis. Put on a coroutine's context; a request with none is an ordinary read. Every order is SAFETY.
+     * Which lane a Zerodha READ belongs to (Boss, 10 Oct: the watch's workers run side by side): the stop checks' and the loss
+     * limit's reads first ([com.optionslab.ira.RateGate.Priority.SAFETY]), then ordinary reads, then Jarvis's analysis. Put on a
+     * coroutine's context; a request with none is an ordinary read. A write's lane is its own (20 Nov 2026, [writePriority]): exits,
+     * stops, stop moves and cancels EXIT, above every read; a new entry's order ENTRY.
      */
     class Lane(val priority: com.optionslab.ira.RateGate.Priority) : kotlin.coroutines.AbstractCoroutineContextElement(Lane) {
         companion object Key : kotlin.coroutines.CoroutineContext.Key<Lane>
@@ -88,6 +89,55 @@ object Broker {
 
     /** At most 8 requests to Zerodha in any second from this phone, whatever runs at once (Kite allows about 10). */
     private val rate = com.optionslab.ira.RateGate(perSecond = 8)
+
+    /**
+     * 20 Nov 2026 (audit: "stop-price quotes compete with about 40 other readers"): Zerodha allows its quote calls (/quote,
+     * /quote/ohlc, /quote/ltp) about one a second, apart from the budget above, and refused the rest with a 429 that each reader
+     * then retried a second or more later - a stop's read among them. They now queue here instead, one per 1.1 s, served in lane
+     * order: a stop's, target's or lock's read ([stopQuotes], the safety lane) goes before any entry, screen or Jarvis read waiting.
+     */
+    private val quoteRate = com.optionslab.ira.RateGate(perSecond = 1, windowMs = 1_100L)
+
+    /** B5 merge review: what a budgeted read keeps for the call itself after its waits (else it gives up before taking a slot). */
+    const val MIN_CALL_MS = 1_000L
+
+    /**
+     * B5 merge review: how long a read with [budget], [spentMs] into it, may wait for the main gate (0 or less: none - no slot). It keeps
+     * [MIN_CALL_MS] for the call - or half the budget for a short one (B5 review: an order poll's last 1 s read waits up to half of it
+     * for a slot rather than failing at once). Pure.
+     */
+    internal fun mainGateWaitMs(budget: Long, spentMs: Long): Long =
+        budget - spentMs.coerceAtLeast(0L) - (if (budget < 2 * MIN_CALL_MS) budget / 2 else MIN_CALL_MS)
+
+    /**
+     * B5 merge review: the most a call under it waits for the request budget and for its quote turn ([quoteRate]) - a live copy's entry
+     * price check tries the entries' lane briefly first, then the stop checks' ([ArmLive]). On a coroutine's context.
+     */
+    class QuoteQueueCap(val ms: Long) : kotlin.coroutines.AbstractCoroutineContextElement(QuoteQueueCap) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<QuoteQueueCap>
+    }
+
+    /** Whether [path] is one of Zerodha's quote calls ([quoteRate]). Pure. */
+    internal fun quoteLimited(path: String): Boolean = path.startsWith("/quote")
+
+    /**
+     * The longest a quote call may still wait for its turn in [quoteRate], [spentMs] into the read: what is left of its deadline - the
+     * read's own budget ([READ_BUDGET_MS], 5 s; 10 s for one with none), and at most a quick read's 3 s ([FAST_READ_MS], the event
+     * path). B5-D: one hard total for the queue, the call and any 429 retry. 0 or less: no time left. Pure.
+     */
+    internal fun quoteWaitMs(quick: Boolean, budget: Long?, spentMs: Long = 0L): Long {
+        val left = (budget ?: 10_000L) - spentMs.coerceAtLeast(0L)
+        return if (quick) minOf(FAST_READ_MS.toLong(), left) else left
+    }
+
+    /**
+     * B5-D: whether a read of a lane above [p] is waiting in Zerodha's quote queue now ([quoteRate]) - a paper arm's exit read then
+     * does without its fresh quote (the stream's last price) and leaves the slot to the live stop's read. Memory only.
+     */
+    internal fun quoteWaitingAbove(p: com.optionslab.ira.RateGate.Priority): Boolean = quoteRate.waitingAbove(p)
+
+    /** TEST ONLY: the quote queue itself (a test holds its slot and queues a stop's read in it). */
+    internal fun quoteGateForTest(): com.optionslab.ira.RateGate { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; return quoteRate }
 
     /**
      * Positions, orders and margins asked for by several workers at once are read once: a caller whose read is already on
@@ -304,7 +354,7 @@ object Broker {
 
     /** The erase's files: the instrument lists [forget] deletes (empty before [init]). */
     internal fun filesForErase(): List<File> = if (!::app.isInitialized) emptyList() else
-        listOf("kite_instruments.json", "kite_instruments.json.tmp", "kite_futures.json", "kite_futures.json.tmp").map { File(app.filesDir, it) }
+        listOf("kite_instruments.json", "kite_instruments.json.tmp", "kite_instruments_bfo.json", "kite_instruments_bfo.json.tmp", "kite_futures.json", "kite_futures.json.tmp").map { File(app.filesDir, it) }
 
     /**
      * 26 Oct: whether the session or a kept read of the account is still in memory (the erase's test). Memory only: a session
@@ -338,6 +388,8 @@ object Broker {
 
     private fun dropSession() {
         passBook.drop(); dropKept(); KiteStream.stop(); SecurePrefs.putAll(mapOf(K_TOKEN to null, K_LOGIN_AT to null)); dropCreds()
+        // (20 Nov 2026, delta review: the lost replies' searches stop with the session; each stays UNKNOWN and is looked for again once logged in.)
+        cancelLostSearches()
     }
 
     /** Bumped when Zerodha itself ends the session (expired or logged out elsewhere): the app asks to log in again. */
@@ -420,7 +472,7 @@ object Broker {
      * through the static-IP relay. No header, token or key is ever read here.
      */
     private suspend fun call(method: String, path: String, body: String? = null, auth: Boolean = true, raw: Boolean = false,
-                             json: Boolean = false, viaRelay: Boolean = false, readOnly: Boolean = false): Any {
+                             json: Boolean = false, viaRelay: Boolean = false, readOnly: Boolean = false, budgetMs: Long? = null): Any {
         val t0 = System.currentTimeMillis()
         // [readOnly]: a POST that only reads (Zerodha's contract note): sent direct like a GET, and it changes nothing,
         // so no kept read is dropped and no diary line is written for it unless it fails.
@@ -434,7 +486,7 @@ object Broker {
         // sent and again once it is answered, so no words-only check is given the book from before it.
         if (write) { passBook.drop(); writes.incrementAndGet() }
         return try {
-            callInner(method, path, body, auth, raw, json, viaRelay, readOnly).also { r ->
+            callInner(method, path, body, auth, raw, json, viaRelay, readOnly, budgetMs).also { r ->
                 if (write) Diag.record("zerodha", "$where$asked$route -> ok ${(r as? JSONObject)?.optString("order_id")?.takeIf { it.isNotEmpty() }?.let { "order $it " } ?: ""}(${System.currentTimeMillis() - t0} ms)")
                 // Self-healing (10 Oct): the answer's time, after it came back (memory only; nothing added before the request).
                 SmartWorkers.restSample(true, System.currentTimeMillis() - t0)
@@ -459,12 +511,19 @@ object Broker {
     }
 
     private suspend fun callInner(method: String, path: String, body: String?, auth: Boolean, raw: Boolean,
-                                  json: Boolean, viaRelay: Boolean, readOnly: Boolean = false): Any {
+                                  json: Boolean, viaRelay: Boolean, readOnly: Boolean = false, budgetMs: Long? = null): Any {
         var attempt = 0
         // 16 Oct (Boss's diagnostics: "GET /portfolio/positions -> FAILED ... (105388 ms)"): a read had only per-socket limits
         // (20 s connect, 60 s read), which the HTTP stack's own silent retries and the 429 retries each started afresh. A read
         // now has one budget for the whole call ([readBudgetMs]); past it the connection is cut, and no 429 retry starts.
-        val budget = readBudgetMs(method, path, readOnly, viaRelay)
+        val write = method != "GET" && !readOnly
+        // 20 Nov 2026 (audit B5, item 2): an awaitOrder poll on a deadline asks for less than a read's whole budget ([budgetMs]).
+        val budget = readBudgetMs(method, path, readOnly, viaRelay)?.let { b -> budgetMs?.let { minOf(it, b) } ?: b }
+        // 20 Nov 2026 (audit B5, item 1: "an order can hang about 80 s" - a write had a 20 s connect and a 60 s read and no whole
+        // limit): a write now has [WRITE_CONNECT_MS] to connect, [WRITE_READ_MS] for its answer and [WRITE_BUDGET_MS] in all, 429
+        // waits included; past it the connection is cut. Cut after the request left, it is a lost reply (the callers search the
+        // book before any resend); cut before, it is "not sent" ([NotSent]). A fixed-length body cut half-way is never taken by Kite.
+        val cutAfter = budget ?: if (write) WRITE_BUDGET_MS else null
         val began = System.currentTimeMillis()
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
@@ -472,12 +531,39 @@ object Broker {
             // warms the order route).
             val test = testEndpoint
             // One budget for every request from this phone (10 Oct): orders first, then the caller's lane. A wait suspends.
+            // 20 Nov 2026 (audit B5, item 3): exits, stops, stop moves, cancels and GTTs in the top lane of their own (EXIT); a new
+            // entry's order ([EntrySend]) with the ordinary reads (ENTRY), below the stop checks' reads.
             if (test == null) {
-                val p = if (method != "GET" && !readOnly) com.optionslab.ira.RateGate.Priority.SAFETY
-                    else kotlinx.coroutines.currentCoroutineContext()[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.ENTRY
-                rate.acquire(p)
+                val ctx = kotlinx.coroutines.currentCoroutineContext()
+                val p = writePriority(write, ctx)
+                // 20 Nov 2026 (B5 stream audit: "stop-price quotes compete with about 40 other readers"): a quote call first takes its turn
+                // in Zerodha's own quote limit ([quoteRate], one a second), in lane order - a stop's read before the others. The turn's
+                // wait counts in the read's own budget ([quoteWaitMs]: one hard deadline for the whole read - the queue, the call and any
+                // 429 retry); past it the read gives up as on Zerodha's refusal, never a queue without end.
+                // (Merge review: the quote turn is taken after the main gate's, so it is stamped when the request really goes.)
+                // (B5 merge review: a read with a budget waits for the main gate only while at least [MIN_CALL_MS] of it would be left for
+                // the call itself - one whose time is spent takes no slot, and its cut never collapses to a few ms; the slot is given back
+                // when its quote turn then runs out, as its request never went.)
+                val slot = if (write || budget == null) { rate.acquire(p); null } else {
+                    // (A free slot is still taken at once with no time left to wait: a short read - an order poll's last second - goes.)
+                    val most = minOf(mainGateWaitMs(budget, System.currentTimeMillis() - began), ctx[QuoteQueueCap]?.ms ?: Long.MAX_VALUE)
+                    rate.acquireStamp(p, most.coerceAtLeast(0L))
+                        ?: throw KiteError("RateLimit", "the phone's own request budget is full: this read's time ran out before it could go")
+                }
+                if (quoteLimited(path)) {
+                    val most = minOf(quoteWaitMs(ctx[FastRead] != null, budget, System.currentTimeMillis() - began) - (if (budget != null) MIN_CALL_MS else 0L),
+                        ctx[QuoteQueueCap]?.ms ?: Long.MAX_VALUE)
+                    if (!quoteRate.acquireWithin(p, most.coerceAtLeast(0L))) {
+                        slot?.let { rate.giveBack(it) }
+                        throw KiteError("QuoteLimit", "Zerodha's quote calls are at their limit (one a second): this read's time ran out in the queue")
+                    }
+                }
             }
-            val relay = if (((method != "GET" && !readOnly) || viaRelay) && test == null) Relay.proxy() else null
+            val relay = if ((write || viaRelay) && test == null) {
+                // 20 Nov 2026 (audit B5, items 1 and 2): the relay not reachable, or not connected within what is left of the write's
+                // budget ([relayWithin]): nothing left the phone.
+                if (write) relayWithin((WRITE_BUDGET_MS - (System.currentTimeMillis() - began)).coerceAtLeast(1L)) else Relay.proxy()
+            } else null
             val url = URL((test?.base ?: Kite.API) + path)
             val c = (if (relay != null) url.openConnection(relay) else url.openConnection()) as HttpsURLConnection
             // TCP_NODELAY on every socket (a small order body is sent at once, not held for Nagle); one wrapper per factory,
@@ -490,35 +576,45 @@ object Broker {
             // Any failure closes it. A POST is never re-sent on a pooled connection: its body is streamed at
             // a fixed length (below), which the stack cannot replay, and a non-GET gets a health check first.
             var reusable = false
-            // The read's budget left: the connection is cut when it runs out (writes are never cut: an order is never half-sent).
-            val left = budget?.let { (it - (System.currentTimeMillis() - began)).coerceAtLeast(1L) }
+            // 20 Nov 2026 (audit B5, item 2): false until the connection to Zerodha is made (DNS, TCP, the relay's tunnel, TLS): a
+            // write that fails before then never left the phone ([NotSent], definite). From then on any failure is a lost reply.
+            var mayHaveLeft = false
+            // The call's budget left: the connection is cut when it runs out.
+            val left = cutAfter?.let { (it - (System.currentTimeMillis() - began)).coerceAtLeast(1L) }
             val cut = left?.let { ms -> runCatching { cutter.schedule(Runnable { runCatching { c.disconnect() } }, ms, java.util.concurrent.TimeUnit.MILLISECONDS) }.getOrNull() }
             try {
                 c.requestMethod = method
-                c.connectTimeout = if (quick) FAST_READ_MS else if (budget != null) READ_SOCKET_MS else 20_000
-                c.readTimeout = if (quick) FAST_READ_MS else if (budget != null) READ_SOCKET_MS else 60_000
+                c.connectTimeout = if (quick) FAST_READ_MS else if (budget != null) READ_SOCKET_MS else if (write) WRITE_CONNECT_MS else 20_000
+                c.readTimeout = if (quick) FAST_READ_MS else if (budget != null) READ_SOCKET_MS else if (write) WRITE_READ_MS else 60_000
                 c.instanceFollowRedirects = false
                 c.useCaches = false
                 c.setRequestProperty("X-Kite-Version", "3")
                 c.setRequestProperty("User-Agent", "IraAlgo-Android")
                 if (auth) { val tok = token(); c.setRequestProperty("Authorization", "token ${apiKey}:$tok") }
-                if (body != null) {
+                val bytes = body?.toByteArray()
+                if (bytes != null) {
                     c.doOutput = true
                     c.setRequestProperty("Content-Type", if (json) "application/json" else "application/x-www-form-urlencoded")
                     // Streamed at a fixed length, the body cannot be replayed: neither the JVM's nor Android's
                     // connection code may then silently re-send an order when a reply is lost (a second order).
-                    val bytes = body.toByteArray()
                     c.setFixedLengthStreamingMode(bytes.size)
-                    c.outputStream.use { it.write(bytes) }
                 }
+                // The connection made on its own first (20 Nov 2026, audit B5, item 2), so a failure up to here is told from one after
+                // the request may have gone. The request itself (its body, or its line for a DELETE) goes only after this.
+                if (write) { c.connect(); mayHaveLeft = true } else mayHaveLeft = true
+                if (bytes != null) c.outputStream.use { it.write(bytes) }
                 val askedAt = System.currentTimeMillis()
                 val code = c.responseCode
                 // 16 Oct: the phone clock's offset against Zerodha's server, NTP-style (the round trip's middle vs the Date header).
                 if (method == "GET" && code in 200..299) {
                     val gotAt = System.currentTimeMillis()
-                    runCatching { c.getHeaderFieldDate("Date", 0L).takeIf { it > 0 }?.let { OrderTiming.serverClock(askedAt, gotAt, it / 1000) } }
+                    runCatching { c.getHeaderFieldDate("Date", 0L).takeIf { it > 0 }?.let {
+                        OrderTiming.serverClock(askedAt, gotAt, it / 1000)
+                        // 20 Nov 2026 (audit B5, item 4): kept here too (memory only), for the lost-reply search's time window.
+                        com.optionslab.ira.OrderSpeed.offsetFromDate(askedAt, gotAt, it / 1000)?.let { off -> serverOffset = off to gotAt }
+                    } }
                 }
-                if (code == 429 && attempt < 3 && retryFits(budget, System.currentTimeMillis() - began, 1_000L * (attempt + 1))) {
+                if (code == 429 && attempt < 3 && retryFits(cutAfter, System.currentTimeMillis() - began, 1_000L * (attempt + 1))) {
                     SmartWorkers.restLimited(); attempt++; delay(1_000L * attempt); continue
                 }
                 val stream = if (code in 200..299) c.inputStream else c.errorStream
@@ -559,14 +655,14 @@ object Broker {
             } catch (e: NotLoggedIn) {
                 throw e
             } catch (_: java.net.UnknownHostException) {
-                throw IOException("No connection to Zerodha")
+                throw failed(write && !mayHaveLeft, "No connection to Zerodha")
             } catch (_: java.net.SocketTimeoutException) {
-                throw IOException("Zerodha did not answer in time")
+                throw failed(write && !mayHaveLeft, if (write && !mayHaveLeft) "Could not connect to Zerodha in time" else "Zerodha did not answer in time")
             } catch (e: IOException) {
-                if (com.optionslab.app.security.KitePin.mismatch) throw IOException(
+                if (com.optionslab.app.security.KitePin.mismatch) throw failed(write && !mayHaveLeft,
                     "Refused: Zerodha's certificate chain no longer matches the one this phone pinned. On a network you trust, " +
                         "check api.kite.trade in a browser, then re-trust it under More → Security.")
-                throw IOException("Could not reach Zerodha")
+                throw failed(write && !mayHaveLeft, "Could not reach Zerodha")
             } finally {
                 cut?.cancel(false)
                 if (!reusable) c.disconnect()
@@ -583,9 +679,76 @@ object Broker {
     private val UNBUDGETED = listOf("/instruments")
 
     /**
-     * The budget of one call (null: not cut - every write, which must never be half-sent, the big downloads, and a read that
-     * warms the order route through the relay, whose SSH connect alone can take seconds). A plain read, or a POST that only
-     * reads, gets [READ_BUDGET_MS]. The event-driven reads keep their own 3 s socket limits inside it.
+     * 20 Nov 2026 (audit B5, item 1): a write's limits (an order, a change, a cancel, a GTT). Zerodha answers an order in well under a
+     * second; through the relay the connect can take a few. Before, a write had 20 s to connect and 60 s for its answer, each started
+     * afresh, and no whole limit: an order could hang about 80 s with its stop or exit waiting on it.
+     */
+    const val WRITE_CONNECT_MS = 5_000
+    const val WRITE_READ_MS = 10_000
+    const val WRITE_BUDGET_MS = 15_000L
+
+    /**
+     * 20 Nov 2026 (audit B5, item 2): a write that failed before its request could leave the phone - no address for Zerodha, no
+     * network, a refused or timed-out connection, the relay not reachable, a TLS failure - so nothing reached Zerodha. Definite
+     * ([definite]): the caller may treat it as refused and try again, with no search of the book first. Any doubt stays a lost reply.
+     */
+    class NotSent(msg: String) : IOException(msg)
+
+    /** A failure's exception: [NotSent] when the write surely never left ([notSent]), else a plain (lost-reply) IOException. */
+    private fun failed(notSent: Boolean, msg: String): IOException = if (notSent) NotSent(msg) else IOException(msg)
+
+    /** The relay's connects for a write, off the caller ([relayWithin]): one that outlives the write's budget finishes here. */
+    private val relayScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /**
+     * 20 Nov 2026 (audit B5, item 1): the relay's proxy for a write, waited for at most [ms] (what is left of the write's budget). The
+     * relay's SSH connect is a blocking call of up to 15 s a try (and waits on any connect already running), so on its own it could hold
+     * an order past its budget; it now runs beside the write, which gives up when [ms] has passed. Either way nothing left the phone
+     * ([NotSent]: the order never went from another IP, and it may be sent again). The relay off: null at once, no other thread. One
+     * connect at a time is shared by every write waiting on it (review: a connect left behind by a write that gave up is joined by the
+     * next write, never started again beside it, so a hung relay never piles up blocked threads). [on] and [proxy]: test seams.
+     */
+    internal suspend fun relayWithin(ms: Long, on: () -> Boolean = { Relay.enabled },
+                                     proxy: () -> java.net.Proxy? = { Relay.proxy() }): java.net.Proxy? {
+        if (!on()) return null
+        val d = synchronized(relayLock) {
+            relayConnect?.takeIf { it.isActive } ?: relayScope.async { proxy() }.also { relayConnect = it }
+        }
+        val got = try {
+            kotlinx.coroutines.withTimeoutOrNull(ms) { listOf(d.await()) }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (e: IOException) { throw NotSent(e.message ?: "The relay could not connect") }
+        if (got == null) throw NotSent("The relay did not connect within ${ms / 1000} s; nothing was sent")
+        return got.single()
+    }
+    private val relayLock = Any()
+    @Volatile private var relayConnect: kotlinx.coroutines.Deferred<java.net.Proxy?>? = null
+
+    /**
+     * 20 Nov 2026 (audit B5, item 3): marks a NEW entry's order on its coroutine ([placeOrder]), so its POST takes the entries' lane,
+     * below the exits' and the stop checks' reads ([writePriority]). Memory only.
+     */
+    private class EntrySend : kotlin.coroutines.AbstractCoroutineContextElement(EntrySend) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<EntrySend>
+    }
+
+    /**
+     * The request budget's lane for one call: a write is an exit's (EXIT: exits, stops, stop moves, cancels, GTTs - first of all)
+     * unless it is a new entry's order ([EntrySend]: ENTRY); a read takes its caller's [Lane] (ENTRY when none).
+     */
+    internal fun writePriority(write: Boolean, ctx: kotlin.coroutines.CoroutineContext): com.optionslab.ira.RateGate.Priority = when {
+        write && ctx[EntrySend] != null -> com.optionslab.ira.RateGate.Priority.ENTRY
+        write -> com.optionslab.ira.RateGate.Priority.EXIT
+        else -> ctx[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.ENTRY
+    }
+
+    /** TEST ONLY: [writePriority] as a new entry's order would ask. */
+    internal fun entryWritePriorityForTest(): com.optionslab.ira.RateGate.Priority = writePriority(true, EntrySend())
+
+    /**
+     * The budget of one read (null: not a read's budget - every write, which has its own since 20 Nov 2026 ([WRITE_BUDGET_MS]),
+     * the big downloads, and a read that warms the order route through the relay, whose SSH connect alone can take seconds). A
+     * plain read, or a POST that only reads, gets [READ_BUDGET_MS]. The event-driven reads keep their own 3 s socket limits inside it.
      */
     internal fun readBudgetMs(method: String, path: String, readOnly: Boolean, viaRelay: Boolean = false): Long? {
         if (method != "GET" && !readOnly) return null
@@ -870,7 +1033,10 @@ object Broker {
     private fun dropKept() { keptOrders = null; keptBook = null; fundsKept = null; killKept = null; writes.incrementAndGet() }
 
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
-    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null }
+    internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
+        entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null
+        killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
+        cancelLostSearches(); lostWrites.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -1071,7 +1237,7 @@ object Broker {
         // MCX: from the day's MCX list ([McxMarket]), so its contracts stream too.
         if (key.startsWith("MCX:")) return McxMarket.tokenOf(key.removePrefix("MCX:"))
         // 20 Oct, review: SENSEX's options (BFO) from today's BFO list in memory, so a live SENSEX trade's exits stream too.
-        if (key.startsWith("BFO:")) return bfoToken(key)
+        if (key.startsWith("BFO:")) return bfoToken(key, load = true)
         if (!key.startsWith("NFO:")) return null
         val m = tokenMap?.takeIf { it.first == Market.today() }?.second
             ?: cachedInstruments()?.associate { "NFO:" + it.tradingSymbol to it.token }?.also { tokenMap = Market.today() to it }
@@ -1089,10 +1255,15 @@ object Broker {
         else if (key.startsWith("MCX:")) McxMarket.tokenKnown(key.removePrefix("MCX:"))
         else tokenMap?.takeIf { it.first == Market.today() }?.second?.get(key)
 
-    /** "BFO:<symbol>" -> its token from today's BFO list in memory (never a file or the network); the map built once per list. */
+    /**
+     * "BFO:<symbol>" -> its token from today's BFO list in memory (never a file or the network); the map built once per list.
+     * 20 Nov 2026 (audit: "after a restart, SENSEX live prices come from slower quotes"): no list in memory yet (a restart) -
+     * its read is started in the background ([loadBfoOptionsInBackground], returns at once), so the SENSEX position is followed on
+     * the stream from the next look instead of on quote calls until something else happened to read the list.
+     */
     @Volatile private var bfoTokens: Pair<List<Kite.Instrument>, Map<String, Long>>? = null
-    private fun bfoToken(key: String): Long? {
-        val list = cachedBfoOptions() ?: return null
+    private fun bfoToken(key: String, load: Boolean = false): Long? {
+        val list = cachedBfoOptions() ?: run { if (load) runCatching { loadBfoOptionsInBackground() }; return null }
         val m = bfoTokens?.takeIf { it.first === list }?.second
             ?: list.associate { "BFO:" + it.tradingSymbol to it.token }.also { bfoTokens = list to it }
         return m[key]
@@ -1103,7 +1274,7 @@ object Broker {
      * are answered from it at once; only the rest go to Kite's quote API (and are
      * followed by the stream from then on).
      */
-    suspend fun quotes(keys: List<String>, keepStream: Boolean = true): Map<String, Quote> {
+    suspend fun quotes(keys: List<String>, keepStream: Boolean = true, lane: com.optionslab.ira.RateGate.Priority? = null): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
         val tokens = keys.associateWith { tokenOf(it) }
         // [keepStream] false (Battery, 14 Oct: the MCX price reads with nothing held on MCX): answered from the stream if it
@@ -1112,7 +1283,8 @@ object Broker {
         val streamed = keys.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
         val rest = keys.filter { it !in streamed }
         if (rest.isEmpty()) return streamed
-        return streamed + quotesRest(rest)
+        // B5-D: [lane] when the caller says so (an exit's read: SAFETY); else the caller's own, as before.
+        return streamed + (if (lane == null) quotesRest(rest) else kotlinx.coroutines.withContext(Lane(lane)) { quotesRest(rest) })
     }
 
     /**
@@ -1123,7 +1295,7 @@ object Broker {
      * quote call fails (a 429, no network), the rest are answered from a tick up to 5 s old as before, and the fresh ones are
      * kept: a failed read never leaves every held position unpriced for that look.
      */
-    suspend fun stopQuotes(keys: List<String>): Map<String, Quote> {
+    suspend fun stopQuotes(keys: List<String>, lane: com.optionslab.ira.RateGate.Priority? = null, staleFallback: Boolean = true): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
         val tokens = keys.associateWith { tokenOf(it) }
         KiteStream.touch(tokens.values.filterNotNull())
@@ -1132,13 +1304,27 @@ object Broker {
         }.toMap()
         val rest = keys.filter { it !in streamed }
         if (rest.isEmpty()) return streamed.mapValues { stopGuard(it.value) }
-        val read = try { quotesRest(rest) } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            val older = rest.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
+        // 20 Nov 2026 (audit: "stop-price quotes compete with about 40 other readers"): a stop's, target's or lock's quote read goes
+        // in the safety lane of the one request budget, with the exits and orders ([com.optionslab.ira.RateGate]: a higher lane
+        // waiting is served before any lower one), never behind the entries', screens' and Jarvis's reads. Same budget, so
+        // Zerodha's limit is kept.
+        // Review: [lane] (or the caller's own) when it says so - an entry's or a shadow's price check is not a stop's read; else SAFETY.
+        val p = lane ?: kotlinx.coroutines.currentCoroutineContext()[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.SAFETY
+        // B5-D: the fallback is the latest tick by when it REACHED the phone (5 s at most, as before the late-packet stamp): a tick
+        // stamped back for coming late never leaves a stop with no price when no fresh quote answers.
+        fun older(keys: List<String>) = keys.mapNotNull { k ->
+            tokens[k]?.let { KiteStream.arrivedTick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) }
+        }.toMap()
+        val read = try { kotlinx.coroutines.withContext(Lane(p)) { quotesRest(rest) } } catch (e: Exception) {
+            // (B5 merge review: [staleFallback] false - a caller with a fresher read to fall back on - takes the failure, never an old tick.)
+            if (e is kotlinx.coroutines.CancellationException || !staleFallback) throw e
+            val older = older(rest)
             if (streamed.isEmpty() && older.isEmpty()) throw e
             older
         }
-        return (streamed + read).mapValues { stopGuard(it.value) }
+        // B5-D: one Zerodha did not answer for (none in the reply): its latest tick too, never no price.
+        val unanswered = if (staleFallback) rest.filter { it !in read } else emptyList()
+        return (streamed + older(unanswered) + read).mapValues { stopGuard(it.value) }
     }
 
     /**
@@ -1150,7 +1336,11 @@ object Broker {
     /** Zerodha's quote call itself, never the stream's memory (a paper fill's re-read when no stream tick is 2 s fresh, 16 Oct). */
     suspend fun quotesFresh(keys: List<String>): Map<String, Quote> = if (keys.isEmpty()) emptyMap() else quotesRest(keys)
 
+    /** TEST ONLY: the request lane the last quote read asked in (memory only; one volatile write per read). */
+    @Volatile internal var lastQuoteLaneForTest: com.optionslab.ira.RateGate.Priority? = null
+
     private suspend fun quotesRest(keys: List<String>): Map<String, Quote> {
+        if (com.optionslab.app.BuildConfig.DEBUG) lastQuoteLaneForTest = kotlinx.coroutines.currentCoroutineContext()[Lane]?.priority
         val data = call("GET", "/quote?" + keys.joinToString("&") { "i=" + Kite.enc(it) }) as JSONObject
         return keys.mapNotNull { k ->
             val q = data.optJSONObject(k) ?: return@mapNotNull null
@@ -1250,7 +1440,7 @@ object Broker {
         val (nfoDay, bfoDay, kept) = futuresKept()
         if (nfoDay == today && bfoDay == today) return kept
         val now = System.currentTimeMillis()
-        if (now - futuresTriedAt < 30 * 60_000L) return if (nfoDay == today) kept else emptyList()
+        if (now - futuresTriedAt in 0 until 30 * 60_000L) return if (nfoDay == today) kept else emptyList()
         futuresTriedAt = now
         val nfo: List<Kite.Future> = if (nfoDay == today) kept.filter { it.exchange == "NFO" } else {
             // The day's options list first: not downloaded yet today, its dump carries the futures too.
@@ -1345,8 +1535,20 @@ object Broker {
 
     // ---- instruments ---------------------------------------------------------------------
 
-    /** The parsed list, the day it was fetched and the file stamp (modified time, length) it was parsed from. */
-    private class InstrumentsMemo(val stamp: Pair<Long, Long>, val day: String, val list: List<Kite.Instrument>)
+    /**
+     * The parsed list, the day it was fetched and the file stamp (modified time, length) it was parsed from. 20 Nov 2026: and when
+     * it was fetched ([at], epoch ms on the market clock; null in a file written before), for [instrumentsCurrent].
+     */
+    private class InstrumentsMemo(val stamp: Pair<Long, Long>, val day: String, val list: List<Kite.Instrument>, val at: Long? = null)
+
+    /**
+     * 20 Nov 2026 (audit: "the instruments list is cached by date only"): [m] is today's list - of today and fetched after
+     * Zerodha's morning dump ([com.optionslab.ira.InstrumentsFile.current]). Memory only.
+     */
+    private fun instrumentsCurrent(m: InstrumentsMemo?): Boolean = m != null && runCatching {
+        com.optionslab.ira.InstrumentsFile.current(m.day,
+            m.at?.let { java.time.Instant.ofEpochMilli(it).atZone(com.optionslab.engine.IST).toLocalDateTime() }, Market.now().toLocalDateTime())
+    }.getOrDefault(m.day == Market.today().toString())
     @Volatile private var instrumentsMemo: InstrumentsMemo? = null
 
     /** The instruments file, parsed once per change of the file (it is large: parsing it on every review cost a few hundred ms). */
@@ -1357,8 +1559,8 @@ object Broker {
         // Memory audit (14 Oct, item 5): read as a stream, the repeated names and expiries shared - no whole-file string, no
         // JSON tree (several MB at once after every restart).
         return runCatching {
-            val (day, list) = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.read(it) } ?: return@runCatching null
-            InstrumentsMemo(stamp, day, list).also { instrumentsMemo = it }
+            val saved = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.readSaved(it) } ?: return@runCatching null
+            InstrumentsMemo(stamp, saved.day, saved.list, saved.at).also { instrumentsMemo = it }
         }.getOrNull() ?: instrumentsMemo?.takeIf { f.exists() }   // G1-6: a file that does not parse keeps the list in memory; a file gone (cleared data) has none
     }
 
@@ -1370,23 +1572,66 @@ object Broker {
     }
 
     /** True when the instruments list in memory is today's download (memory only: no file read). */
-    internal fun instrumentsAreToday(): Boolean = instrumentsMemo?.day == Market.today().toString()
+    internal fun instrumentsAreToday(): Boolean = instrumentsCurrent(instrumentsMemo)
 
-    /** The last instruments list fetched (any day), without touching the network; parsed again only when the file changes. */
-    fun cachedInstruments(): List<Kite.Instrument>? = instrumentsFile()?.list
+    /**
+     * The last instruments list fetched (any day), without touching the network; parsed again only when the file changes.
+     * 20 Nov 2026 (audit): when it is not today's list ([instrumentsCurrent]: an earlier day's, or fetched before the morning's
+     * dump), today's is fetched in the background ([refreshInstrumentsInBackground]); the caller is answered at once, as before.
+     */
+    fun cachedInstruments(): List<Kite.Instrument>? = instrumentsFile().also { if (!instrumentsCurrent(it)) refreshInstrumentsInBackground() }?.list
+
+    @Volatile private var instrumentsTriedAt = 0L
+    private val instrumentsLoading = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** After a failed background fetch, the next is tried this much later at the soonest. */
+    private const val INSTRUMENTS_RETRY_MS = 2 * 60_000L
+    /** B5-D review: logged out, a background list read is tried again this soon (memory and a job only: no vault on the caller). */
+    private const val LOGGED_OUT_RETRY_MS = 10_000L
+
+    /**
+     * 20 Nov 2026: today's instruments list fetched in the background (logged in only; one at a time; at most every
+     * [INSTRUMENTS_RETRY_MS]). Returns at once: memory only on the caller's thread (never the network, a file or the vault).
+     */
+    internal fun refreshInstrumentsInBackground() {
+        val now = System.nanoTime() / 1_000_000L
+        if (instrumentsTriedAt != 0L && now - instrumentsTriedAt in 0 until INSTRUMENTS_RETRY_MS) return
+        if (!instrumentsLoading.compareAndSet(false, true)) return
+        instrumentsTriedAt = now
+        // The session is looked at on the background thread (it may read the vault): never on the caller's.
+        // B5-D review: logged out, the next try is 10 s later (never a new job per call on the hot paths that ask; soon after a login).
+        readScope.launch {
+            try {
+                if (loggedIn) runCatching { downloadInstruments() }
+                else instrumentsTriedAt = System.nanoTime() / 1_000_000L - INSTRUMENTS_RETRY_MS + LOGGED_OUT_RETRY_MS
+            } finally { instrumentsLoading.set(false) }
+        }
+    }
+
+    /** TEST ONLY: the background fetch's wait forgotten. */
+    internal fun resetInstrumentsRetryForTest() { instrumentsTriedAt = 0L }
 
     /** NIFTY and BANKNIFTY options from GET /instruments/NFO, cached for the day. */
     suspend fun instruments(): List<Kite.Instrument> {
+        val had = instrumentsFile()
+        had?.takeIf { instrumentsCurrent(it) }?.let { return it.list }
+        // 20 Nov 2026 (B5-D review): a list of today fetched before the morning's dump answers at once, as before - its re-read is the
+        // background refresh's (one at a time, throttled: [refreshInstrumentsInBackground]), never a download every caller waits on.
+        if (had != null && had.day == Market.today().toString()) { refreshInstrumentsInBackground(); return had.list }
+        return downloadInstruments()
+    }
+
+    /** Today's NFO list downloaded now and kept ([instruments]; the background refresh). A worker thread only. */
+    private suspend fun downloadInstruments(): List<Kite.Instrument> {
         val f = File(app.filesDir, "kite_instruments.json")
-        instrumentsFile()?.takeIf { it.day == Market.today().toString() }?.let { return it.list }
         val text = call("GET", "/instruments/NFO", raw = true) as String
         val list = com.optionslab.ira.InstrumentsFile.compact(Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")))
         // The market recorder's index futures from the same dump (never a second download for them).
         runCatching { keepNfoFutures(text) }
         val a = JSONArray()
         list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
-        writeAtomic(f, JSONObject().put("day", Market.today().toString()).put("i", a).toString())
-        instrumentsMemo = InstrumentsMemo(f.lastModified() to f.length(), Market.today().toString(), list)
+        val at = Market.now().toInstant().toEpochMilli()
+        writeAtomic(f, JSONObject().put("day", Market.today().toString()).put("at", at).put("i", a).toString())
+        instrumentsMemo = InstrumentsMemo(f.lastModified() to f.length(), Market.today().toString(), list, at)
         // G1-2: the day's token map follows the list just downloaded. One built earlier today from yesterday's file (the watch's
         // first pass) would otherwise miss every contract listed since - new strikes too - for the rest of the day.
         tokenMap = Market.today() to list.associate { "NFO:" + it.tradingSymbol to it.token }
@@ -1430,25 +1675,58 @@ object Broker {
     @Volatile private var bfoTriedAt = 0L
     private val bfoLoading = java.util.concurrent.atomic.AtomicBoolean(false)
 
-    /** Today's SENSEX options list, memory only (never the network or a file): null when not read today. */
+    /** Review, 20 Nov 2026: when the list in memory was fetched (null: not known), for [cachedBfoOptions]. */
+    @Volatile private var bfoAt: java.time.LocalDateTime? = null
+
+    private fun keepBfo(list: List<Kite.Instrument>, at: java.time.LocalDateTime?) { bfoAt = at; bfoOptions = Market.today() to list }
+
+    /**
+     * Today's SENSEX options list, memory only (never the network or a file): null when not read today. Review, 20 Nov 2026: nor
+     * when it was fetched before the morning's dump ([com.optionslab.ira.InstrumentsFile.current], as the NFO list): read again.
+     */
     fun cachedBfoOptions(): List<Kite.Instrument>? = bfoOptions?.takeIf { it.first == Market.today() }?.second
+        // (Merge review: a list fetched before the dump still answers - as the NFO list does - while today's is read behind it.)
+        ?.also { if (!bfoCurrent()) runCatching { loadBfoOptionsInBackground() } }
+
+    /**
+     * B5 merge review: today's SENSEX list only when fetched after the morning's dump (null otherwise; its read is started) - for the
+     * morning check ([bfoOptionsNow]) and the expiry square-off's wait, which refuse an earlier list as before. Memory only.
+     */
+    fun currentBfoOptions(): List<Kite.Instrument>? = cachedBfoOptions()?.takeIf { bfoCurrent() }
+
+    private fun bfoCurrent(): Boolean = runCatching {
+        com.optionslab.ira.InstrumentsFile.current(Market.today().toString(), bfoAt, Market.now().toLocalDateTime())
+    }.getOrDefault(true)
 
     /** Tests: SENSEX's list forgotten and its 10-minute retry wait cleared. */
-    internal fun resetBfoForTest() { bfoOptions = null; bfoTriedAt = 0L }
+    internal fun resetBfoForTest(keepFile: Boolean = false) {
+        bfoOptions = null; bfoAt = null; bfoTriedAt = 0L
+        if (!keepFile && ::app.isInitialized) runCatching { bfoFile().delete() }
+    }
 
     /**
      * Read today's SENSEX options in the background (logged in only; at most every 10 minutes after a failure). Returns at once:
      * the stream's price of a SENSEX paper ticket follows on the next look once the list is in.
      */
     fun loadBfoOptionsInBackground() {
-        if (!loggedIn || cachedBfoOptions() != null) return
-        val now = System.currentTimeMillis()
-        if (now - bfoTriedAt < 10 * 60_000L || !bfoLoading.compareAndSet(false, true)) return
+        if (bfoOptions?.first == Market.today() && bfoCurrent()) return
+        val now = System.nanoTime() / 1_000_000L
+        // 20 Nov 2026: 2 minutes after a failure (it was 10: a held SENSEX position's prices waited that long on quote calls); on the
+        // monotonic clock, so a wall clock set back never holds it.
+        if ((bfoTriedAt != 0L && now - bfoTriedAt in 0 until BFO_RETRY_MS) || !bfoLoading.compareAndSet(false, true)) return
         bfoTriedAt = now
         readScope.launch {
             try {
+                // Review, 20 Nov 2026: the session is looked at here, on the background thread (it may read the vault), never the caller's.
+                // B5-D review: logged out, tried again 10 s later (not the 2 minutes after a failure), so a login is picked up at once.
+                if (!loggedIn) { bfoTriedAt = System.nanoTime() / 1_000_000L - BFO_RETRY_MS + LOGGED_OUT_RETRY_MS; return@launch }
+                // 20 Nov 2026: after a restart, today's list saved earlier today is read back first (no download; a background thread).
+                val saved = runCatching { readBfoFile() }.getOrNull()
+                if (saved != null) { keepBfo(saved.first, saved.second); return@launch }
                 val text = call("GET", "/instruments/BFO", raw = true) as String
-                bfoOptions = Market.today() to Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT")
+                val list = Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT")
+                keepBfo(list, Market.now().toLocalDateTime())
+                runCatching { writeBfoFile(list) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -1459,9 +1737,46 @@ object Broker {
 
     /** 3 Nov: today's SENSEX options, read now when not yet in memory (a worker thread only: the morning check). */
     suspend fun bfoOptionsNow(): List<Kite.Instrument> {
-        cachedBfoOptions()?.let { return it }
-        val text = call("GET", "/instruments/BFO", raw = true) as String
-        return Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT").also { bfoOptions = Market.today() to it }
+        currentBfoOptions()?.let { return it }
+        // (B5 review: a background read already on its way is waited for - 15 s at most - never a second download beside it.)
+        val until = System.nanoTime() / 1_000_000L + 15_000L
+        while (bfoLoading.get() && System.nanoTime() / 1_000_000L < until) kotlinx.coroutines.delay(100)
+        currentBfoOptions()?.let { return it }
+        runCatching { readBfoFile() }.getOrNull()?.let { keepBfo(it.first, it.second); return it.first }
+        val text = try { call("GET", "/instruments/BFO", raw = true) as String } catch (e: Exception) {
+            // (B5 review: today's could not be read - the list in memory, fetched before the morning's dump, still answers, with a note.)
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            cachedBfoOptions()?.let { earlier ->
+                runCatching { Diag.record("zerodha", "SENSEX's list for today could not be read (${e.javaClass.simpleName}): the earlier one (before the morning's dump) is used") }
+                return earlier
+            }
+            throw e
+        }
+        return Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT").also {
+            keepBfo(it, Market.now().toLocalDateTime())
+            runCatching { writeBfoFile(it) }
+        }
+    }
+
+    private const val BFO_RETRY_MS = 2 * 60_000L
+
+    /** 20 Nov 2026: today's SENSEX options saved on the phone (public market data, like the NFO list), so a restart reads them back. */
+    private fun bfoFile() = File(app.filesDir, "kite_instruments_bfo.json")
+
+    /** Today's saved SENSEX list (fetched after the morning's dump, [com.optionslab.ira.InstrumentsFile.current]), or null. A worker thread only. */
+    private fun readBfoFile(): Pair<List<Kite.Instrument>, java.time.LocalDateTime>? {
+        val f = bfoFile()
+        if (!f.exists()) return null
+        val saved = f.bufferedReader(Charsets.UTF_8).use { com.optionslab.ira.InstrumentsFile.readSaved(it) } ?: return null
+        val at = saved.at?.let { java.time.Instant.ofEpochMilli(it).atZone(com.optionslab.engine.IST).toLocalDateTime() } ?: return null
+        if (!com.optionslab.ira.InstrumentsFile.current(saved.day, at, Market.now().toLocalDateTime())) return null
+        return saved.list.takeIf { it.isNotEmpty() }?.let { it to at }
+    }
+
+    private fun writeBfoFile(list: List<Kite.Instrument>) {
+        val a = JSONArray()
+        list.forEach { a.put(JSONArray().put(it.token).put(it.tradingSymbol).put(it.name).put(it.expiry.toString()).put(it.strike).put(it.lotSize).put(it.right.name).put(it.tickSize)) }
+        writeAtomic(bfoFile(), JSONObject().put("day", Market.today().toString()).put("at", Market.now().toInstant().toEpochMilli()).put("i", a).toString())
     }
 
     /** 3 Nov: whether the account's commodity (MCX) segment is enabled at Zerodha (GET /user/margins/commodity); null: not known. */
@@ -1559,7 +1874,7 @@ object Broker {
         if (exit) {
             val ticket = ExitCoordinator.sending(o)
             return try {
-                com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }.also { ExitCoordinator.answered(ticket, it) }
+                com.optionslab.app.work.TradingBusy.during { sendChecked(o, true, arm, intended) }.also { ExitCoordinator.answered(ticket, it); noteKind(it, entry = false) }
             } catch (e: Throwable) {
                 ExitCoordinator.failed(ticket, e is Exception && e !is kotlinx.coroutines.CancellationException && definite(e))
                 throw e
@@ -1580,7 +1895,8 @@ object Broker {
         }
         return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm, intended, stop) }) {
             com.optionslab.app.work.TradingBusy.during {
-                try { sendChecked(o, false, arm, intended).also { if (counted) count() } }
+                // (20 Nov 2026, audit B5: its POST in the lane below the exits' ([EntrySend]); its id kept as an entry's for the kill switch.)
+                try { kotlinx.coroutines.withContext(EntrySend()) { sendChecked(o, false, arm, intended) }.also { noteKind(it, entry = true); if (counted) count() } }
                 catch (e: Exception) { if (counted && e !is kotlinx.coroutines.CancellationException && !definite(e)) runCatching { count() }; throw e }
             } }) {
             is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
@@ -1634,6 +1950,52 @@ object Broker {
     }
 
     /**
+     * 20 Nov 2026 (audit B5, item 4: "lost-reply matching can adopt an identical order"): what [findRecent] knows of each order
+     * [send] sent, by the very order object (memory only, kept [SENT_KEEP_MS]): when it was sent, by the phone's market clock
+     * ([at]), and the order book as last read before it ([before]: every order in it was there before this one, so none of them
+     * is ever taken for its lost reply). Set before the POST, from memory alone: nothing is read for it on the order path.
+     */
+    private class SendMark(val at: java.time.LocalDateTime, val atMs: Long, val before: List<OrderRow>?, val exit: Boolean,
+        /** The phone clock's offset to Zerodha's as measured in the last [OFFSET_FRESH_MS] at the send (null: none fresh), so a clock stepped after the send never moves the window. */
+        val offset: Long?)
+    private val sendMarks: MutableMap<Kite.Order, SendMark> = java.util.Collections.synchronizedMap(java.util.IdentityHashMap())
+
+    private fun markSend(o: Kite.Order, exit: Boolean) {
+        val now = System.currentTimeMillis()
+        synchronized(sendMarks) {
+            if (sendMarks.size > 100) sendMarks.entries.removeIf { now - it.value.atMs > SENT_KEEP_MS }
+            sendMarks[o] = SendMark(Market.now().toLocalDateTime(), now, keptOrders?.value, exit,
+                serverOffset?.takeIf { (_, at) -> now - at in 0..OFFSET_FRESH_MS }?.first)
+        }
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 4): the phone clock's offset against Zerodha's server (ms, +: the phone ahead) from the last read's
+     * Date header, and when it was measured. Memory only.
+     */
+    @Volatile private var serverOffset: Pair<Long, Long>? = null
+    /** An offset older than this is not trusted for the tight window. */
+    private const val OFFSET_FRESH_MS = 10 * 60_000L
+    /** The tight window's allowance before the send (Zerodha's stamps are whole seconds; the offset is good to about a second). */
+    private const val SENT_SLACK_S = 5L
+    /** An offset that moved more than this between the send and the search: the phone's clock was stepped; the wide window is used. */
+    private const val OFFSET_MOVED_MS = 2_000L
+
+    /**
+     * 20 Nov 2026 (audit B5, item 9: the kill switch did not cancel working entry orders): the ids of orders this phone sent, as an
+     * entry's ([placeOrder] through the door) or an exit's, kept [SENT_KEEP_MS] in memory, so the kill switch cancels only entries.
+     */
+    private val entryIds = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val exitIds = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private fun noteKind(id: String, entry: Boolean) {
+        val now = System.currentTimeMillis()
+        val m = if (entry) entryIds else exitIds
+        if (m.size > 200) m.entries.removeIf { now - it.value > SENT_KEEP_MS }
+        m[id] = now
+    }
+
+    /**
      * Sends [o] (the order itself, timed); [placeOrder] decides whether it may. Its slippage is noted in memory after
      * Zerodha's answer ([FillSlippage.sent]: a map put, measured once it fills; [intended]: the price the caller decided on).
      */
@@ -1643,6 +2005,7 @@ object Broker {
         val body = o.formBody()
         val stamp = runCatching { tokenKnown("${o.exchange}:${o.tradingSymbol}")?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
         val t0 = runCatching { OrderTiming.sending(live = true, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
+        runCatching { markSend(o, exit) }
         val data = call("POST", "/orders/regular", body) as JSONObject
         runCatching { OrderTiming.answered(live = true, startedAt = t0) }
         countSent()
@@ -1660,6 +2023,9 @@ object Broker {
      */
     internal val POLL_MS = longArrayOf(150, 200, 250, 300, 400, 500, 750, 1_000)
 
+    /** 20 Nov 2026 (audit B5, item 5): the least an [awaitOrder] read is given near the end of its wait. */
+    private const val POLL_MIN_BUDGET_MS = 1_000L
+
     /**
      * Read an order until it is terminal or [timeoutMs] passes. Zerodha's own order update pushed on the live stream
      * ([KiteStream.orderUpdate]: COMPLETE, REJECTED or CANCELLED for this order id) answers at once, without another read;
@@ -1671,6 +2037,12 @@ object Broker {
         val end = start + timeoutMs
         var last: JSONObject? = null
         var i = 0
+        // 20 Nov 2026 (audit B5, item 5: "one failed poll cancels a working limit"): a read that fails is read again on the same
+        // schedule until [timeoutMs]; the callers cancel only on what Zerodha says or once the wait is over. Only when no read at all
+        // answered in the whole wait does this throw (the order's state unknown, as before). Each read is held to what is left of the
+        // wait (at most a read's own budget), so the wait ends on time.
+        var lastErr: Exception? = null
+        var answered = false
         while (true) {
             streamed(orderId)?.let { f ->
                 runCatching { OrderTiming.fillKnown(live = true, ms = System.currentTimeMillis() - start, viaStream = true) }
@@ -1678,8 +2050,13 @@ object Broker {
                 return f
             }
             val seen = KiteStream.orderEvents.value
-            val hist = call("GET", "/orders/$orderId") as JSONArray
-            if (hist.length() > 0) last = hist.getJSONObject(hist.length() - 1)
+            val hist = try {
+                call("GET", "/orders/$orderId", budgetMs = (end - System.currentTimeMillis()).coerceIn(POLL_MIN_BUDGET_MS, READ_BUDGET_MS)) as JSONArray
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: NotLoggedIn) { throw e                     // (no session: reading again cannot help)
+            } catch (e: Exception) { lastErr = e; null }
+            if (hist != null) answered = true
+            if (hist != null && hist.length() > 0) last = hist.getJSONObject(hist.length() - 1)
             val st = last?.optString("status") ?: ""
             if (st in com.optionslab.ira.OrderUpdate.TERMINAL) {
                 runCatching { OrderTiming.fillKnown(live = true, ms = System.currentTimeMillis() - start, viaStream = false) }
@@ -1690,6 +2067,8 @@ object Broker {
             val wait = POLL_MS[minOf(i++, POLL_MS.size - 1)].coerceAtMost(left)
             kotlinx.coroutines.withTimeoutOrNull(wait) { KiteStream.orderEvents.first { it != seen } }
         }
+        // No read answered in the whole wait: unknown, as a failed read was before (the callers keep the order as unconfirmed).
+        if (!answered) lastErr?.let { throw it }
         val o = last ?: return Fill(orderId, "UNKNOWN", 0.0, 0, "no order history yet")
         return Fill(orderId, o.optString("status"), o.optDouble("average_price", 0.0), o.optInt("filled_quantity"),
             // Kite sends "status_message": null for an open order, which optString reads as the text "null".
@@ -1712,7 +2091,8 @@ object Broker {
      * is adopted only when it is surely this one - a LIMIT's price must match too (to half a tick), and an order the
      * exchange REJECTED, or CANCELLED with nothing filled, is never taken for it (that is no live order; the error stands).
      */
-    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false): String? {
+    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false, liveOnly: Boolean = false,
+                           sentAt: java.time.LocalDateTime? = null): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
@@ -1720,22 +2100,46 @@ object Broker {
         // slow would otherwise widen the window); never earlier than the phone's. 25 Oct: the phone's clock is [Market.now]
         // (the system clock in the app; in a test the pinned market clock, which the fake Zerodha stamps its orders from too).
         val now = rs.mapNotNull(::at).fold(Market.now().toLocalDateTime()) { a, t -> if (t.isAfter(a)) t else a }
-        val since = now.minusMinutes(3)
+        // 20 Nov 2026 (audit B5, item 4): an order this phone sent ([markSend]) is matched only from its own send on: from the send's
+        // time on Zerodha's clock less [SENT_SLACK_S] when the phone's offset to it was measured in the last [OFFSET_FRESH_MS], else
+        // from three minutes before the send (never narrower than the old three minutes before now, so its own order is never missed
+        // for a clock it cannot trust). An order in the book read before the send is never taken, whatever its time.
+        val mark = synchronized(sendMarks) { sendMarks[o] }
+        // (Review: the offset as it was at the send, never one measured later; one that moved since by more than [OFFSET_MOVED_MS] - the
+        // phone's clock stepped - leaves the tight window for the three minutes.)
+        val offNow = serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
+        val off = mark?.offset?.takeIf { o -> offNow == null || kotlin.math.abs(offNow - o) <= OFFSET_MOVED_MS }
+        val since = mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
+            ?: sentAt?.minusMinutes(3) ?: now.minusMinutes(3)
+        val before = mark?.before?.mapTo(HashSet()) { it.id }.orEmpty()
         return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
                 // 18 Oct: the order's own type too (a resting SL of the same size and tag is never taken for a market exit's lost reply).
                 it.optString("order_type") == o.orderType &&
                 it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false &&
+                // (20 Nov 2026, delta review: a stop a trade took as its own another way is never found for another's lost reply.)
+                !claimedIds.containsKey(it.optString("order_id")) &&
+                it.optString("order_id") !in before &&
+                // 20 Nov 2026 (audit B5, item 4): a LIMIT's or SL's price and a stop's trigger must be the ones sent, always (before, only
+                // after Kite's error): a resting order at another level is never taken for this one.
+                samePrices(o, it) &&
+                // (20 Nov 2026, audit B5 deep review: a lost stop's search never takes an order that has ended.)
+                (!liveOnly || !diedUnfilled(it)) &&
                 (!afterError || adoptableAfterError(o, it))
-        }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it) }
+        }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it)
+            // (20 Nov 2026, review: a lost reply found is kept as the entry or exit it was sent as, for the kill switch.)
+            mark?.let { m -> noteKind(it, entry = !m.exit) } }
     }
 
-    /**
-     * [findRecent] after Kite's error: the row's prices and its status as described there - a LIMIT's or an SL's price, and an
-     * SL's or an SL-M's trigger too (a resting stop at another level is never taken for a new one).
-     */
-    internal fun adoptableAfterError(o: Kite.Order, r: JSONObject): Boolean {
+    /** 20 Nov 2026 (audit B5 deep review): [r] ended with nothing filled - REJECTED, or CANCELLED unfilled. */
+    private fun diedUnfilled(r: JSONObject): Boolean {
+        val st = r.optString("status").uppercase()
+        return st == "REJECTED" || (st == "CANCELLED" && r.optInt("filled_quantity", 0) <= 0)
+    }
+
+    /** [r]'s price (a LIMIT's or an SL's) and trigger (an SL's or an SL-M's) are [o]'s, to half a tick. */
+    private fun samePrices(o: Kite.Order, r: JSONObject): Boolean {
         fun same(want: Double?, field: String): Boolean {
             val w = want ?: return false
             val got = r.optDouble(field, Double.NaN)
@@ -1743,6 +2147,15 @@ object Broker {
         }
         if (o.hasPrice && !same(o.price, "price")) return false
         if (o.hasTrigger && !same(o.triggerPrice, "trigger_price")) return false
+        return true
+    }
+
+    /**
+     * [findRecent] after Kite's error: the row's prices and its status as described there - a LIMIT's or an SL's price, and an
+     * SL's or an SL-M's trigger too (a resting stop at another level is never taken for a new one).
+     */
+    internal fun adoptableAfterError(o: Kite.Order, r: JSONObject): Boolean {
+        if (!samePrices(o, r)) return false
         val status = r.optString("status").uppercase()
         if (status == "REJECTED") return false
         if (status == "CANCELLED" && r.optInt("filled_quantity", 0) <= 0) return false
@@ -1755,7 +2168,198 @@ object Broker {
      * unreadable answer, Kite's own NetworkException) is not definite: the order may exist. Kite's DataException and
      * GeneralException on an order are checked against the order book inside [placeOrder] first ([UNSURE]).
      */
-    fun definite(e: Throwable): Boolean = e is NotLoggedIn || (e is KiteError && e.type != "NetworkException")
+    // 20 Nov 2026 (audit B5, item 2): and a write that never left the phone ([NotSent]: no network, no address for Zerodha, the
+    // connection refused or not made in time, the relay down). Before, those read as lost replies and were searched for.
+    fun definite(e: Throwable): Boolean = e is NotLoggedIn || e is NotSent || (e is KiteError && e.type != "NetworkException")
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): what to say of a write that never left the phone ([NotSent]) - not a refusal by Zerodha, which
+     * never saw it: "The [what] was not sent (no connection to Zerodha); trying again."
+     */
+    fun notSentWords(what: String): String = "The $what was not sent (no connection to Zerodha); trying again."
+
+    // ---- lost replies not found yet (20 Nov 2026, audit B5 deep review) ----------------------------------------------------------
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review: the write's 15 s limit makes lost replies more common, and a caller that took "lost and not found
+     * in ~4 s" as "not placed" could send a second order or rest a second stop): a write whose reply was lost and that the book did not
+     * show yet, kept by the caller's [key] (memory only). Its state is UNKNOWN: the caller never sends it again and never rests a second
+     * stop beside it; it asks [lookLost] on its later looks. The book is searched in the BACKGROUND (never on the caller's lock; at most
+     * every [LOST_LOOK_GAP_MS]) and the next look acts on what was found. Found: the order (adopted, as any lost reply found). Given up
+     * on only once a read of the book that SUCCEEDED after [LOST_SEARCH_MS] still does not show it (Boss told loudly, once; the caller may
+     * go on - the book would have shown an order Zerodha took long before). A book that cannot be read never gives up: past
+     * [LOST_SEARCH_MS] Boss is told the order's state is unknown, and it stays UNKNOWN.
+     */
+    private class LostWrite(val order: Kite.Order, val known: Set<String>, sinceMs: Long, val what: String, val liveOnly: Boolean,
+                            /** When it was sent, by the phone's market clock: the search's start even once the send's own mark is gone. */
+                            val sentAt: java.time.LocalDateTime) {
+        /** When it was noted (phone ms); moved only by [ageLostForTest]. */
+        @Volatile var sinceMs = sinceMs
+        @Volatile var lookedMs = 0L
+        /** When a caller last asked after it ([lookLost]): one no caller has asked after for long belongs to a trade long gone. */
+        @Volatile var askedMs = sinceMs
+        @Volatile var foundId: String? = null
+        /** When a read of the book last SUCCEEDED without finding it (0: never). */
+        @Volatile var readOkAtMs = 0L
+        /** When a read of the book last FAILED (0: never). */
+        @Volatile var readFailAtMs = 0L
+        @Volatile var searching: kotlinx.coroutines.Job? = null
+        @Volatile var unknownSaid = false
+    }
+    private val lostWrites = java.util.concurrent.ConcurrentHashMap<String, LostWrite>()
+    // (B5 merge review: the searches' order-book reads in the stop checks' lane, SAFETY - an ORB / Liquidity exit or a stop's re-rest
+    // waits on them, so they are never starved behind entries or Jarvis; only exits and stops (EXIT) go before them.)
+    private val lostScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + Lane(com.optionslab.ira.RateGate.Priority.SAFETY))
+
+    /** TEST ONLY: the lane the lost replies' searches read the book in. */
+    internal fun lostLaneForTest(): com.optionslab.ira.RateGate.Priority? = lostScope.coroutineContext[Lane]?.priority
+    /** How long a lost reply not found is looked for before it may be given up on (and Boss told). */
+    const val LOST_SEARCH_MS = 120_000L
+    /** The least time between two searches of one lost reply (a stream look comes every tick). */
+    private const val LOST_LOOK_GAP_MS = 3_000L
+    /** TEST SEAM: [LOST_SEARCH_MS] shortened. */
+    @Volatile internal var lostSearchMsForTest: Long? = null
+    /** TEST SEAM: [LOST_LOOK_GAP_MS] shortened. */
+    @Volatile internal var lostLookGapMsForTest: Long? = null
+    /** TEST SEAM: the book searched on the caller's thread (the tests' looks are one after another), not in the background. */
+    @Volatile internal var lostSearchInlineForTest = false
+
+    /** What [lookLost] found: the order, still looking (UNKNOWN: send nothing), or given up on (Boss told; the caller may go on). */
+    sealed class LostLook { data class Found(val id: String, val qty: Int, val trigger: Double? = null) : LostLook() { var symbol: String = "" }; object Searching : LostLook(); object GaveUp : LostLook() }
+
+    /**
+     * [o] ([what], for Boss's words) was sent under [key], its reply lost and not found in the book yet ([known]: never adopted).
+     * [liveOnly] (a stop): an order that died unfilled (REJECTED, or CANCELLED with nothing filled) is never taken for it - a stale key never
+     * adopts a dead stop; one that filled (COMPLETE, or cancelled after a part) is still found, so its caller books the fill. Never pruned
+     * while a caller still asks after it (an unknown order dropped could be sent twice): each ends found, given up on after a good read,
+     * or forgotten; only one no caller has asked after for an hour (its trade long gone) is let go, and only past 500 kept.
+     */
+    fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false) {
+        // (Bounded: only ones no caller has asked after for an hour - their trades long gone - are let go, and only past 500.)
+        if (lostWrites.size > 500) lostWrites.entries.removeIf { e ->
+            (System.currentTimeMillis() - e.value.askedMs > 3_600_000L).also { gone -> if (gone) e.value.searching?.cancel() }
+        }
+        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what, liveOnly,
+            runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }))
+    }
+
+    /** Whether a lost reply is being looked for under [key]. Memory only. */
+    fun lostPending(key: String): Boolean = lostWrites.containsKey(key)
+
+    /** The keys of the lost replies being looked for that start with [prefix]. Memory only. */
+    fun lostKeys(prefix: String): List<String> = lostWrites.keys.filter { it.startsWith(prefix) }
+
+    /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed (its search stopped). Memory only. */
+    fun forgetLost(key: String) { lostWrites.remove(key)?.searching?.cancel() }
+
+    /**
+     * 20 Nov 2026 (delta review: two trades on one contract, one's stop reply lost, the other took that stop as an orphan, then the first's
+     * search found the same order - two owners, one lot with no stop): order [id] taken as a trade's stop another way (an orphan adopted).
+     * No lost reply's search finds it from now on, and one that found it already and was not asked yet looks again. Memory only (bounded).
+     */
+    fun claimStop(id: String) {
+        val now = System.currentTimeMillis()
+        if (claimedIds.size > 500) claimedIds.entries.removeIf { now - it.value > 86_400_000L }
+        claimedIds[id] = now
+        for (w in lostWrites.values) synchronized(w) { if (w.foundId == id) w.foundId = null }
+    }
+    private val claimedIds = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * 20 Nov 2026 (delta review): whether order [r] may be a lost reply kept under a key other than [exceptKey] - found as it and not
+     * asked after yet, or still looked for with the same contract, side, quantity, order type, tag and trigger and placed no earlier than that search's
+     * window opens (a time that cannot be read: may be). Such an order is left to its own lost reply: never adopted as another's orphan.
+     */
+    fun lostMayBe(r: OrderRow, exceptKey: String? = null): Boolean = lostWrites.entries.any { (k, w) -> k != exceptKey && mayBe(w, r) }
+
+    private fun mayBe(w: LostWrite, r: OrderRow): Boolean {
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val placed = runCatching { java.time.LocalDateTime.parse(r.placedAt, fmt) }.getOrNull()
+        w.foundId?.let { return it == r.id }
+        val o = w.order
+        return o.tradingSymbol == r.symbol && o.side.name == r.side && o.quantity == r.qty && o.orderType == r.type &&
+            o.tag.filter { c -> c.isLetterOrDigit() }.take(20) == r.tag &&
+            (!o.hasTrigger || o.triggerPrice?.let { kotlin.math.abs(it - r.trigger) <= o.tickSize / 2 + 1e-9 } != false) &&
+            (placed == null || !placed.isBefore(w.sentAt.minusMinutes(3)))
+    }
+
+    /** The background searches of every lost reply stopped (a reset). */
+    private fun cancelLostSearches() { for (w in lostWrites.values) w.searching?.cancel() }
+
+    /** TEST ONLY: the background search of the lost reply under [key] (the last one started), if any. */
+    internal fun lostSearchForTest(key: String): kotlinx.coroutines.Job? = lostWrites[key]?.searching
+
+    /** 20 Nov 2026 (delta review): how long ago the lost reply under [key] was noted (null: none kept). */
+    fun lostAgeMs(key: String): Long? = lostWrites[key]?.let { System.currentTimeMillis() - it.sinceMs }
+
+    /** 20 Nov 2026 (delta review): the trigger the lost stop under [key] was sent at (null: none kept, or no trigger). */
+    fun lostTrigger(key: String): Double? = lostWrites[key]?.order?.triggerPrice
+
+    /** TEST ONLY: the lost reply under [key] noted [ms] earlier than it was (the real waits judged, never shortened). */
+    internal fun ageLostForTest(key: String, ms: Long) { lostWrites[key]?.let { it.sinceMs -= ms; it.askedMs = it.sinceMs } }
+
+    /** TEST ONLY: every lost reply forgotten, as after a restart. */
+    internal fun forgetLostForTest() { cancelLostSearches(); lostWrites.clear() }
+
+    /** One search of the book for [w]: found, or a read that succeeded without it; a read that failed changes nothing. */
+    private suspend fun searchLost(w: LostWrite) {
+        val found = try { findRecent(w.order, w.known, liveOnly = w.liveOnly, sentAt = w.sentAt) } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (_: Exception) { w.readFailAtMs = System.currentTimeMillis(); return }
+        // (20 Nov 2026, delta review: an order claimed by another trade meanwhile ([claimStop]) is not this one: looked for again.)
+        if (found != null) synchronized(w) { if (!claimedIds.containsKey(found)) w.foundId = found } else w.readOkAtMs = System.currentTimeMillis()
+    }
+
+    /**
+     * The lost reply under [key]: null when none is kept. Memory only - it never reads the book itself: a search runs in the background
+     * when due ([LOST_LOOK_GAP_MS]) and the next call acts on it ([lostSearchInlineForTest]: on this thread).
+     */
+    fun lookLost(key: String): LostLook? {
+        val w = lostWrites[key] ?: return null
+        val now = System.currentTimeMillis()
+        w.askedMs = now
+        // (20 Nov 2026, delta review: one search at a time - two looks at the same moment start one; the test seam's runs outside the lock.)
+        var inline = false
+        synchronized(w) {
+            if (w.foundId == null && w.searching?.isActive != true && now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
+                w.lookedMs = now
+                if (lostSearchInlineForTest) inline = true else w.searching = lostScope.launch { searchLost(w) }
+            }
+        }
+        if (inline) kotlinx.coroutines.runBlocking { searchLost(w) }
+        w.foundId?.let { found ->
+            // (20 Nov 2026, delta review: only the look that takes it off acts on it - another look at the same moment still reads
+            // Searching, never "none kept" - and its search is stopped.)
+            if (!lostWrites.remove(key, w)) return LostLook.Searching
+            w.searching?.cancel()
+            runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
+            return LostLook.Found(found, w.order.quantity, w.order.triggerPrice).also { it.symbol = w.order.tradingSymbol }
+        }
+        val window = lostSearchMsForTest ?: LOST_SEARCH_MS
+        if (now - w.sinceMs < window) return LostLook.Searching
+        // Past the window: given up on only on a read that succeeded after it; while the reads after it fail, it stays UNKNOWN (Boss told
+        // once); a read still on its way says nothing yet.
+        if (w.readOkAtMs - w.sinceMs < window) {
+            if (!w.unknownSaid && w.readFailAtMs - w.sinceMs >= window) {
+                w.unknownSaid = true
+                runCatching {
+                    val text = "${w.what} on ${w.order.tradingSymbol}: Zerodha's answer was lost and its order book could not be read for " +
+                        "${(now - w.sinceMs) / 1000} s, so the order's state is UNKNOWN. Nothing is sent again meanwhile; check the order book in Kite."
+                    Diag.record("zerodha", text)
+                    com.optionslab.app.work.Alerts.error(text, "Zerodha")
+                }
+            }
+            return LostLook.Searching
+        }
+        if (!lostWrites.remove(key, w)) return LostLook.Searching
+        w.searching?.cancel()
+        runCatching {
+            val text = "${w.what} on ${w.order.tradingSymbol}: Zerodha's answer was lost and the order is not in its order book " +
+                "${(now - w.sinceMs) / 1000} s later. Check the order book in Kite; the app goes on as if it was not placed."
+            Diag.record("zerodha", text)
+            com.optionslab.app.work.Alerts.error(text, "Zerodha")
+        }
+        return LostLook.GaveUp
+    }
 
     /**
      * [findRecent] for a POST whose reply was lost, tried [tries] times [waitMs] apart (the order book can
@@ -1848,6 +2452,8 @@ object Broker {
     suspend fun placeGttSure(g: Kite.Gtt, known: Set<Long>): GttSent {
         return try { GttSent.Placed(placeGtt(g)) } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
+            // (20 Nov 2026, audit B5 review: never left the phone - not a refusal: nothing rests, and it is simply tried again.)
+            if (e is NotSent) return GttSent.Unknown
             if (definite(e)) return GttSent.Refused
             val q = g.orders.firstOrNull()?.quantity ?: return GttSent.Unknown
             runCatching {
@@ -1922,10 +2528,27 @@ object Broker {
             fundsKept?.second else null
         val bookQ = async { runCatching { if (needed != null) positionsRecon() else positionBook() }.getOrNull() }
         val fundsQ = async { kept ?: runCatching { funds() }.getOrNull() }
-        val countQ = async { runCatching { (if (needed != null) ordersRecon() else orders()).size }.getOrDefault(0) }
+        // 20 Nov 2026 (audit B5, item 6: "a failed order-count read counts as zero"): a failed read is read once more, afresh; still
+        // unreadable, the count is UNKNOWN (null), judged by the order count check ([OrderCountCheck]: in shadow by default the entry
+        // goes as before, logged; on, it is refused). An exit never looks at it.
+        val countQ = async {
+            runCatching { (if (needed != null) ordersRecon() else orders()).size }.getOrNull()
+                ?: runCatching { kotlinx.coroutines.withContext(FastRead()) { orders(fresh = true) }.size }.getOrNull()   // (3 s sockets: review)
+        }
         val out = bookQ.await()?.let { runCatching { Guard.liveAccount(it, fundsQ.await(), countQ.await()) }.getOrNull() }
         if (needed != null) runCatching { OrderTiming.marginCheck(System.currentTimeMillis() - t0) }
         out
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 8): one order as a row of the order book ([OrderRow]), from its own history's last entry (GET
+     * /orders/{id}): a stop missing from a good read of the book is read again by its id, never assumed resting. Null when Kite has
+     * no history for it yet; throws when it cannot be read. [budgetMs]: a whole limit shorter than a read's own.
+     */
+    suspend fun orderRow(orderId: String, budgetMs: Long? = null): OrderRow? {
+        val hist = call("GET", "/orders/${Kite.enc(orderId)}", budgetMs = budgetMs) as JSONArray
+        if (hist.length() == 0) return null
+        return orderRow(hist.getJSONObject(hist.length() - 1)).takeIf { it.id.isNotBlank() }
     }
 
     /** One order's latest state (last entry of its history), or null if Kite has none yet. */
@@ -1940,6 +2563,134 @@ object Broker {
 
     suspend fun cancel(orderId: String, variety: String = "regular") {
         call("DELETE", "/orders/${Kite.enc(variety)}/${Kite.enc(orderId)}")
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 9: "the kill switch does not cancel working entry orders"): whether the kill switch cancels [r]: a
+     * working order of the bots' and arms' ([BOT_TAGS]) that is an ENTRY - one this phone sent as an entry ([entryIds]), or, when
+     * this phone does not know it (sent before a restart), a plain LIMIT or MARKET BUY that would open or add to a long by a good
+     * positions read ([net]). Never one it sent as an exit ([exitIds]), never a stop (SL, SL-M) it does not know as an entry, never a
+     * sale it does not know, never anything not a bot's (Boss's own orders, in Kite or sent from the app).
+     * Review (20 Nov 2026): a BUY is cancelled only on a good positions read showing no short position of the same underlying on the
+     * same exchange - a working BUY there may be a hedge (a strategy's protective leg, a cover) and cancelling it could leave a short
+     * uncovered; with no positions read no BUY is cancelled at all (a known SELL entry still is: it only opens a short).
+     */
+    internal fun killCancels(r: OrderRow, net: List<Position>?): Boolean {
+        // (Coordinator, 20 Nov 2026: only the bots' and arms' orders - ORB and Liquidity, Pine, the strategies, the arms' live copies -
+        // told apart by their tag as the door does ([BOT_TAGS]); Boss's own entries sent from the app are never cancelled.)
+        if (!r.working || r.tag !in BOT_TAGS) return false
+        if (exitIds.containsKey(r.id)) return false
+        val known = entryIds.containsKey(r.id)
+        if (r.side != "BUY") return known
+        if (net == null) return false
+        fun root(s: String) = Kite.underlyingOf(s) ?: s.takeWhile { !it.isDigit() }
+        if (net.any { it.qty < 0 && it.exchange == r.exchange && root(it.symbol) == root(r.symbol) }) return false
+        if (known) return true
+        if (r.type !in setOf("LIMIT", "MARKET")) return false
+        val held = net.filter { it.symbol == r.symbol && it.exchange == r.exchange && it.product == r.product }.sumOf { it.qty }
+        return held >= 0
+    }
+
+    private val killScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /**
+     * 20 Nov 2026 (audit B5, item 9): the kill switch just went on ([why]). [act] (only Boss's own act in the app: his kill switch, or
+     * its "cancel the bots' working entries" while it is on): the bots' working entry orders at Zerodha are cancelled
+     * ([cancelWorkingEntries]) in the background - once the kill switch reads on (review: never before Boss's switch is saved, so no
+     * bot re-enters meanwhile; not on within [KILL_SAVED_WAIT_MS], nothing is cancelled) - at once, again a few seconds later, and once
+     * more after a whole write's budget ([WRITE_BUDGET_MS]: an entry whose POST was already on its way may reach Zerodha that late).
+     * Otherwise (the guard tripping by itself, Jarvis, voice, Autopilot - coordinator, 20 Nov 2026, CLAUDE.md's shadow rule): ONE sweep
+     * in the ordinary reads' lane only LOGS which entries it would cancel; nothing is cancelled. A logging request never replaces Boss's
+     * cancelling one. Returns at once; nothing here waits, reads the disk or blocks the caller (the guard's order path can turn it on).
+     */
+    fun killEntriesSoon(why: String, act: Boolean) {
+        if (com.optionslab.app.BuildConfig.DEBUG) { if (killRequestsForTest.size > 50) killRequestsForTest.clear(); killRequestsForTest += why to act }
+        if (!killSweepOn) return
+        synchronized(killLock) {
+            val running = killJob?.takeIf { it.isActive }
+            if (running != null && killJobActs && !act) return
+            running?.cancel()
+            killJobActs = act
+            killJob = killScope.launch {
+                if (!act) { runCatching { cancelWorkingEntries(why, act = false) }; return@launch }
+                // (Boss's switch saved first: the kill switch reads on, from the vault - this background thread only.)
+                val saved = kotlinx.coroutines.withTimeoutOrNull(KILL_SAVED_WAIT_MS) {
+                    while (!runCatching { killOn() }.getOrDefault(false)) delay(100)
+                    true
+                } ?: false
+                if (!saved) {
+                    runCatching { Diag.record("zerodha", "Kill switch ($why): it did not read on, so no entry order was cancelled") }
+                    return@launch
+                }
+                // (Deep review: each sweep only while the kill switch still reads on - cleared meanwhile, a bot's new entry is never
+                // cancelled; [killCleared] also ends the job at once.)
+                suspend fun sweep() { if (runCatching { killOn() }.getOrDefault(false)) runCatching { cancelWorkingEntries(why) } }
+                sweep()
+                delay(killSweepAgainMs)
+                sweep()
+                delay(WRITE_BUDGET_MS)
+                sweep()
+            }
+        }
+    }
+
+    /** 20 Nov 2026 (audit B5 deep review): the kill switch cleared - any sweep still due is ended (nothing more is cancelled). */
+    fun killCleared() {
+        synchronized(killLock) { killJob?.cancel(); killJob = null; killJobActs = false }
+    }
+
+    /** TEST ONLY: whether a kill-switch sweep job is still running. */
+    internal fun killSweepRunningForTest(): Boolean = killJob?.isActive == true
+    /** How long Boss's cancelling request waits for his kill switch to read on (saved) before it gives up (nothing cancelled). */
+    private const val KILL_SAVED_WAIT_MS = 10_000L
+    private val killLock = Any()
+    @Volatile private var killJob: kotlinx.coroutines.Job? = null
+    @Volatile private var killJobActs = false
+    /** TEST ONLY (debug builds): every kill-switch request ([killEntriesSoon]): why, and whether it cancels. Memory only. */
+    internal val killRequestsForTest: MutableList<Pair<String, Boolean>> = java.util.Collections.synchronizedList(ArrayList())
+    /** How long after the first sweep the second runs (tests shorten it). */
+    @Volatile internal var killSweepAgainMs = 3_000L
+    /**
+     * TEST SEAM: the kill switch's sweep on (always, in the app). The JVM tests start each test with it off ([resetForTest]: a sweep
+     * left running from one test would reach the next test's fake Zerodha); a test of it turns it on. Set only in debug builds.
+     */
+    @Volatile internal var killSweepOn = true
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 9): the bots' working ENTRY orders ([killCancels]); never an exit, a stop, a possible hedge or Boss's
+     * own. [act]: cancelled; else only logged as what would be cancelled (shadow). Reads the order book afresh (tried three times); an
+     * unreadable book cancels nothing. With no positions read, no BUY is cancelled ([killCancels]). The ids cancelled (or that would be).
+     */
+    suspend fun cancelWorkingEntries(why: String, act: Boolean = true): List<String> = kotlinx.coroutines.withContext(
+        Lane(if (act) com.optionslab.ira.RateGate.Priority.SAFETY else com.optionslab.ira.RateGate.Priority.ENTRY)) {
+        if (!loggedIn) return@withContext emptyList<String>()
+        var rows: List<OrderRow>? = null
+        for (i in 0 until 3) {
+            if (i > 0) delay(1_000)
+            rows = runCatching { orders(fresh = true) }.getOrNull()
+            if (rows != null) break
+        }
+        val book = rows ?: run { runCatching { Diag.record("zerodha", "Kill switch ($why): the order book could not be read; no entry order cancelled") }; return@withContext emptyList<String>() }
+        val net = if (book.none { it.working && it.tag in BOT_TAGS }) null
+            else runCatching { positionBook().net }.getOrNull() ?: run { delay(1_000); runCatching { positionBook().net }.getOrNull() }
+        val hit = book.filter { killCancels(it, net) }
+        if (!act) {
+            if (hit.isNotEmpty()) runCatching { Diag.record("zerodha", "Kill switch ($why, shadow): would have cancelled ${hit.size} working entry order(s) " +
+                "of the bots: ${hit.joinToString { "${it.id} ${it.symbol}" }} (not cancelled: only Boss's own switch cancels them)") }
+            return@withContext hit.map { it.id }
+        }
+        val out = ArrayList<String>()
+        for (r in hit) {
+            runCatching { cancel(r.id, r.variety) }.onSuccess { out += r.id }
+                .onFailure { e -> runCatching { Diag.record("zerodha", "Kill switch ($why): cancel of entry ${r.id} (${r.symbol}) failed: ${e.message}") } }
+        }
+        if (out.isNotEmpty()) runCatching {
+            Diag.record("zerodha", "Kill switch ($why): cancelled ${out.size} working entry order(s): ${out.joinToString()}")
+            com.optionslab.app.work.Alerts.error("Kill switch: ${out.size} working entry order(s) of the bots were cancelled at Zerodha. " +
+                "Exits, stops and your own orders were left as they are.", "Kill switch")
+        }
+        out
     }
 
     /** PUT /orders/{variety}/{id}. Callers re-check the order is still working and the owner confirmed. */

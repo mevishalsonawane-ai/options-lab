@@ -108,6 +108,19 @@ object RelayHealth {
 
     private val LINE = rx("^(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2}) \\[([\\w-]+)\\] (.*)$")
 
+    private val IPV4 = Regex("\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b")
+
+    /**
+     * 20 Nov 2026 (audit: "the relay server's address is written to the diary"): [text] with the relay server's address taken
+     * out - its saved name or IP ([host], when known) and any IPv4 address - before it goes to the diary or into an error the
+     * diary keeps. The words around it are kept, so [fail] still reads the failure. Pure.
+     */
+    fun redactAddress(text: String, host: String? = null): String {
+        var out = text
+        host?.trim()?.takeIf { it.length >= 3 }?.let { out = out.replace(it, "the relay server", ignoreCase = true) }
+        return IPV4.replace(out, "‹ip›")
+    }
+
     /** The failure in [m]'s words. */
     fun fail(m: String): Fail {
         val s = m.lowercase(Locale.ENGLISH)

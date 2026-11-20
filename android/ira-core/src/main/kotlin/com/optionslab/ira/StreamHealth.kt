@@ -247,6 +247,18 @@ object StreamHealth {
     /** The longest wait between tries while the phone's network is down ([wait]). */
     const val NETWORK_WAIT_MS = 4_000L
 
+    /**
+     * 20 Nov 2026 (audit: open positions come first): the order [add] is sent to Zerodha in - every token of [first] (the held
+     * positions and live exits first, then the paper book's, then the indices: the caller's order) before the rest, so after a
+     * reconnect the held positions' prices are the first asked for. Each token once; nothing outside [add].
+     */
+    fun subscribeOrder(add: Set<Long>, first: List<Long>): List<Long> {
+        val out = LinkedHashSet<Long>(add.size * 2)
+        for (t in first) if (t in add) out += t
+        out.addAll(add)
+        return out.toList()
+    }
+
     /** At most [max] of [want], those in [first] (the indices, open positions) kept before the rest. */
     fun cap(want: Set<Long>, first: Collection<Long>, max: Int = MAX_TOKENS): Set<Long> {
         if (want.size <= max) return want
