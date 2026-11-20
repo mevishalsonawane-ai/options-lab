@@ -1483,7 +1483,8 @@ object ArmLive {
      * 20 Nov 2026 (deep review of audit B5: a stray print could raise a live R51 / R72 copy's step lock at Zerodha and sell it early): the
      * price now that may raise [p]'s best ([withBest]) - the stream's last trade only when it passes the price-now checks
      * ([com.optionslab.ira.PriceNow.lastCounts] / [com.optionslab.ira.PriceNow.farFromBook]) and traded after the entry minute; else the
-     * sane book's bid ([com.optionslab.ira.PriceNow.bookBid]) of the stream or of [q]. A quote's last price (no trade time) never counts.
+     * sane book's bid ([com.optionslab.ira.PriceNow.bookBid]). Not streamed, Zerodha's quote [q] as the live stop judges it
+     * ([com.optionslab.ira.PriceNow.stopLast]: its last price unless far outside a sane book).
      * The lock levels themselves are unchanged. Memory only (the stream's kept tick).
      */
     internal fun bestPx(p: Pos, q: Broker.Quote?): Double? {
@@ -1503,9 +1504,11 @@ object ArmLive {
                 (t.last >= book * (1 - com.optionslab.ira.PriceNow.FAR) && t.last <= ask * (1 + com.optionslab.ira.PriceNow.FAR))
             if (ts != null && ts >= entrySec + 60 && com.optionslab.ira.PriceNow.lastCounts(t.last, ts, entrySec) &&
                 !com.optionslab.ira.PriceNow.farFromBook(t.last, ts, t.bid, t.ask) && inBook) return t.last
-            book?.let { return it }
+            return book ?: q?.let { com.optionslab.ira.PriceNow.bookBid(it.bid, it.ask) }
         }
-        return q?.let { com.optionslab.ira.PriceNow.bookBid(it.bid, it.ask) }
+        // Not streamed: Zerodha's quote, whose last price carries no trade time here - judged as the live stop's price is
+        // ([com.optionslab.ira.PriceNow.stopLast]: the last price unless it lies far outside a sane book, then the bid).
+        return q?.takeIf { it.last > 0 && it.last.isFinite() }?.let { com.optionslab.ira.PriceNow.stopLast(it.last, it.bid, it.ask) }
     }
 
     /** 20 Nov 2026: [p] is an R51 / R72 rule trade, whose best counts checked prices only ([bestPx], [highSince]). */

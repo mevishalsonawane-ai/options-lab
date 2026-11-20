@@ -184,7 +184,8 @@ notes; match the surrounding code.
   first score that decides a break (skip or take) fixes that decision for the day (kept in the book across a restart). R51 / R72
   locks may also rise from the checked prices now while the option's minutes stop coming (the same levels). A live R51 / R72 copy's
   best price counts a stream price only once checked (a trade after the entry minute, not far outside a sane book), else the sane
-  book's bid, and candle highs only from closed minutes; never a quote's bare last price.
+  book's bid (not streamed: Zerodha's quote as the live stop judges it, its last price unless far outside a sane book), and candle
+  highs only from closed minutes.
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
   No main-thread I/O.
 - OPEN POSITIONS AND ORDERS COME FIRST (Boss, 14 Oct: "whenever an order is placed it must be pulled on priority, so we
