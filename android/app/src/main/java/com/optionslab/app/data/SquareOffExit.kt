@@ -90,6 +90,30 @@ internal object SquareOffExit {
     /** A stop-type order (waits for a trigger): the kind that is cancelled before the exit. A plain MARKET or LIMIT sell is an exit. */
     private fun isStop(o: Broker.OrderRow): Boolean = o.type.equals("SL", true) || o.type.equals("SL-M", true) || o.status == "TRIGGER PENDING"
 
+    /**
+     * 20 Nov 2026 (audit, the general version of what Liquidity's own exits do): the resting orders [ids] on [exchange]:[symbol] (and
+     * a protection's day GTT on it) that this square-off is about to take out, marked as the app's own cancels for every book that may
+     * own one, as Boss's exit from the app marks them: the protections ([Protections.noteTakenOver]: a stop or target, or a day GTT,
+     * found gone while the position is still held is placed again), the arms' live book ([ArmLive.markOwnCancels]) and the ORB /
+     * Liquidity book ([OrbArms.markOwnCancels]). Memory at once; none of them waits on a book's lock or the disk.
+     */
+    private suspend fun markTaken(exchange: String, symbol: String, ids: List<String>, gtts: List<String>) {
+        if (ids.isEmpty() && gtts.isEmpty()) return
+        runCatching { Protections.noteTakenOver(ids + gtts) }
+        if (ids.isEmpty()) return
+        val armIds = runCatching { ArmLive.view.value.let { v -> ids.filter { id -> !v.loaded || v.open.any { it.stopOrderId == id } } } }.getOrDefault(ids)
+        runCatching { ArmLive.markOwnCancels(armIds) }
+        runCatching { OrbArms.markOwnCancels(ids.filter { OrbArms.mayOwnStop(it) }) }
+    }
+
+    /** 20 Nov 2026: [markTaken]'s marks taken back for [ids] whose cancel did not take (still working): a later cancel of them is Boss's. */
+    private suspend fun untake(ids: List<String>) {
+        if (ids.isEmpty()) return
+        runCatching { Protections.forgetTakenOver(ids) }
+        runCatching { ArmLive.unmarkOwnCancels(ids) }
+        runCatching { OrbArms.unmarkOwnCancels(ids) }
+    }
+
     suspend fun send(p: Broker.Position, lotSize: Int, tickSize: Double, read: List<Broker.OrderRow>, working: List<Broker.OrderRow>,
                      positions: Broker.Positions, limits: Kite.Limits, who: String, tag: String, origin: String,
                      aboutIt: String, exitName: String, multiplier: Int = 1, backstop: Boolean = false, minutesLeft: Int? = null,
@@ -98,6 +122,9 @@ internal object SquareOffExit {
         try {
             // 19 Nov 2026: an exit placed on it a moment ago is still on its way ([GAP_MS]): nothing more now, the next run reads again.
             if (inGap(p.exchange, p.symbol, p.product)) return false
+            // 20 Nov 2026 (deep review): a read that left this contract's own row (its symbol and product) out as malformed: nothing taken
+            // out or sent on it now. (Final review: a row with no symbol at all never blocks an exit.)
+            if (positions.unknownForExit(p.symbol, p.product)) return false
             if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
             val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
@@ -133,20 +160,55 @@ internal object SquareOffExit {
                 }
             }
             val others = same.filter { it !in cover }
-            if (others.isNotEmpty()) {
+            // 20 Nov 2026 (audit: the square-off cancelled the stops before it knew its sale would go - a sale then refused left the
+            // position with no stop): what is held (against the orders read's fills), what is still to sell and the app's own order
+            // checks are worked out FIRST, from the reads already in hand. A sale the checks refuse, or a positions figure that could not
+            // be worked out, leaves every resting stop where it is. (Taking the stops out changes none of these figures: the cancels
+            // confirm nothing of them filled meanwhile, else the exit waits for the next pass, as before.)
+            // Every resting order and GTT taken out ([takeOut]) is marked first as the app's own cancel for each book that may own it
+            // ([markTaken]), so a stop of theirs found cancelled while the position is still held - the sale refused or failed below -
+            // is put back at Zerodha by its owner, never read as Boss's own cancel in Kite (CLAUDE.md, "WHO CANCELLED A STOP"). The
+            // Strategy Module rests a leg's cancelled stop again by itself; Pine watches its level itself.
+            // (Review: the protections' GTT marks, fresh ones included, as [Protections.dayGttsOut] takes them out.)
+            val gttMarks = runCatching { Protections.dayGttMarks(p.exchange, p.symbol) }.getOrDefault(emptyList())
+            suspend fun takeOut(): Boolean {
+                // (Review: the marks another of the app's paths made already - Boss's exit from the app - are never taken back here.)
+                val premarked = others.map { it.id }.filter { runCatching { Protections.isTakenOver(it) }.getOrDefault(true) }.toSet()
+                markTaken(p.exchange, p.symbol, others.map { it.id }, gttMarks)
+                // A protection's stop and target resting as one GTT ([DayOco]) would still fire after this exit sold the position:
+                // deleted first, confirmed (or the exit waits for the next pass). Not confirmed: the orders' marks taken back (none was
+                // cancelled yet), and the marks of the GTTs still active (review: one still resting that Boss deletes later is his own);
+                // a GTT this pass did delete keeps its mark, so it is put back while the position is held. The list not read: kept.
+                if (!Protections.dayGttsOut(p.exchange, p.symbol, who)) {
+                    val active = runCatching { Broker.gtts().filter { it.active }.map { "gtt:${it.id}" }.toSet() }.getOrNull()
+                    untake(others.map { it.id } + gttMarks.filter { active != null && it in active })
+                    return false
+                }
+                if (others.isEmpty()) return true
                 var filled = false; var allOut = true
+                val cancelled = HashSet<String>()
+                val notOurs = ArrayList<String>()
                 for (o in others) {
-                    runCatching { Broker.cancel(o.id, o.variety) }
+                    // (Refused by Zerodha itself - not a lost reply, which may have gone through.)
+                    val refused = runCatching { Broker.cancel(o.id, o.variety) }.exceptionOrNull()?.let { Broker.definite(it) } == true
                     val st = runCatching { Broker.orderState(o.id) }.getOrNull()
+                    if (st?.status == "CANCELLED") { if (refused) notOurs += o.id else cancelled += o.id }
                     // 19 Nov 2026: more of it filled since the read (a strategy's exit taken over, part filled as it came out) is a
                     // fill too - the next pass reads the books again, never a sale on what this read showed.
                     if (st?.status == "COMPLETE" || (st != null && st.filled > o.filled)) filled = true else if (st?.status !in DONE) allOut = false
                 }
-                if (filled || !allOut) return false
+                // 20 Nov 2026 (deep review, "WHO CANCELLED A STOP"): one already CANCELLED before this cancel went (Zerodha refused the
+                // cancel: nothing working to cancel) was not the app's doing: its mark taken back, so its owner reads it as before.
+                untake(notOurs.filter { it !in premarked })
+                if (filled || !allOut) {
+                    // (Those whose cancel did not take are still their owners': the marks taken back, so a later cancel by Boss is his.)
+                    // (Review: the book not read - every mark taken back but those this pass saw cancelled, which stay the app's.)
+                    val still = runCatching { Broker.orders().filter { it.working }.map { it.id }.toSet() }.getOrNull()
+                    untake(others.map { it.id }.filter { it !in cancelled && (still == null || it in still) })
+                    return false
+                }
+                return true
             }
-            // A protection's stop and target resting as one GTT ([DayOco]) would still fire after this exit sold the position:
-            // deleted first, confirmed (or the exit waits for the next pass).
-            if (!Protections.dayGttsOut(p.exchange, p.symbol, who)) return false
             val pending = cover.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
             // What is held, checked against the orders read's fills: an exit sent from here that filled a moment ago is never
             // sold again while the positions catch up ([ExitCoordinator.held]). 19 Nov 2026 (second review of the clock lane: a
@@ -155,9 +217,11 @@ internal object SquareOffExit {
             // choice (19 Nov 2026, "Go"): the square-offs ALWAYS use the positions-lag guard ([noteBossChoice] says so once in the diary).
             noteBossChoice()
             val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, read, positions, forceLag = true) }.getOrNull() ?: return false
-            if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) return false          // closed meanwhile: the next pass sees it
+            // Closed meanwhile, or still closing (an exit already working covers it): what rests on it is taken out as before (two
+            // exits never both fill), and nothing more is sent; the next pass reads the books again.
+            if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) { takeOut(); return false }
             val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), lotSize)
-            if (qty <= 0) return false                                      // still closing; checked again next pass
+            if (qty <= 0) { takeOut(); return false }
             // Above the exchange freeze quantity the exit goes as several orders, each one the exchange accepts.
             val orders = Kite.slices(qty, lotSize, Kite.freezeQuantity(p.exchange, p.symbol))
                 .map { Kite.Order(p.symbol, side, it, lotSize, p.product, "MARKET", null, tickSize, p.exchange, tag, multiplier = multiplier) }
@@ -166,6 +230,7 @@ internal object SquareOffExit {
                 tell("refused ${p.symbol}", "${p.symbol} $aboutIt and its exit was not sent (${bad.joinToString("; ")}). Close it yourself in Trade.")
                 return false
             }
+            if (!takeOut()) return false
             val placed = ArrayList<String>()
             for (o in orders) {
                 try {
@@ -222,6 +287,11 @@ internal object SquareOffExit {
                     break
                 }
             }
+            // 20 Nov 2026 (review): the sale sent, the stops it took out are put back by the protections only once the order book shows
+            // it COMPLETE and the positions catch up - as for Boss's own exit from the app ([Protections.exitFilledFor]) - never on a
+            // positions read that still shows what the sale sold. A sale refused or not filled: put back after that wait.
+            if (placed.isNotEmpty() && (others.isNotEmpty() || gttMarks.isNotEmpty()))
+                runCatching { Protections.exitFilledFor(others.map { it.id } + gttMarks, placed.associateWith { 1 }) }
             return placed.isNotEmpty()
         } finally { pass.leave() }
     }

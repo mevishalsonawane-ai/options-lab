@@ -241,7 +241,11 @@ object ExitCoordinator {
                 return if (list.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }
             }
             val every = b.net.filter { it.symbol == symbol && it.exchange == exchange }
-            return ExitDesk.positionsLag(net, exitDay(rs), own, mine, now, anyAge = forceLag) to
+            val ownLag = ExitDesk.positionsLag(net, exitDay(rs), own, mine, now, anyAge = forceLag)
+            // 20 Nov 2026 (final review): another product's row of this contract left out as malformed: the whole contract's figure
+            // cannot be told, so this product's own lag stands (never a conversion judged on a missing row).
+            if (b.unknown(symbol)) return ownLag to ownLag
+            return ownLag to
                 ExitDesk.positionsLagAcross(net, exitDay(rs), own, mine, now, exitDay(every), all, anyAge = forceLag)
         }
         var converted = false
@@ -251,7 +255,11 @@ object ExitCoordinator {
             l
         }.getOrDefault(0)
         // 15 Nov, review: forced ([forceLag]), today's exit fills of any age are compared ([ExitDesk.positionsLag] anyAge), never skipped.
-        if (!forceLag && mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
+        // 20 Nov 2026 (deep review): a read that left this contract's own row (its symbol and product) out as malformed tells nothing of
+        // what is held: thrown (not read), never 0 - a square-off never takes a stop out, nor a stop is put back, on it. (Final review:
+        // a row with no symbol at all never blocks an exit.)
+        fun known(b: Broker.Positions): Broker.Positions = if (b.unknownForExit(symbol, product)) throw java.io.IOException("$symbol's positions row could not be read") else b
+        if (!forceLag && mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(known(first ?: Broker.positionBook())).sumOf { it.qty }
         var given = first
         var (book, left) = ExitDesk.settleHeld(guard, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
         if (converted) {
@@ -280,7 +288,7 @@ object ExitCoordinator {
                 record("$who $key: its $product exit's fill shows in the other product's positions row (a conversion today?); not read as trailing [$words]")
             }
         }
-        val net = rows(book).sumOf { it.qty }
+        val net = rows(known(book)).sumOf { it.qty }
         return ExitDesk.heldLess(net, left)
     }
 

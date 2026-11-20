@@ -183,9 +183,11 @@ class ProtectionsSlicesTest : RobolectricTest() {
         assertEquals(listOf(b.id), active().map { it.id })
         val ended = runBlocking { Protections.endedSince(0L) }.single { it.id == a.id }
         assertEquals(com.optionslab.ira.ManualCoverRule.SLICE_DONE, ended.note)
-        // Closed: the last slice ends too, its orders cancelled.
-        kite.flat()
+        // Closed: the last slice ends too, its orders cancelled. (20 Nov 2026: Zerodha lists a contract traded today at 0 once closed - a
+        // read with no row is not known - and closed counts on a second agreeing read.)
+        kite.position(sym, 0, 0.0)
         tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()
         assertTrue(active().isEmpty())
         assertEquals("CANCELLED", kite.order(b.stopOrderId!!).status)
     }
@@ -449,9 +451,11 @@ class ProtectionsSlicesTest : RobolectricTest() {
         val future = active().single().id
         Market.testClock = MarketClockRule.clockAt(12, 5)                   // the clock right again; the app restarted
         Protections.forgetMemoryForTest()
-        // Its position closed: the watch reads it at once (never "its first minute" for a day) and ends it.
-        kite.flat()
+        // Its position closed: the watch reads it at once (never "its first minute" for a day) and ends it (20 Nov 2026: Zerodha's row at
+        // 0, on a second agreeing read).
+        kite.position(sym, 0, 0.0)
         tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()
         assertTrue(active().isEmpty())
         // A new protection's id is today's, not a day ahead.
         kite.position(sym, 75, 100.0)
