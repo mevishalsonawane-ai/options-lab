@@ -343,7 +343,7 @@ object PassedArmsHost {
          * 20 Nov 2026 (audit B5, item 1; Bot settings): an R51 / R72 break whose channel reads an earlier session that does not reach the
          * last trading day ([staleWhy]) waits inside its fill window while the history is read again, and is let go when the window ends
          * - on paper and live. Off (the default): shadow - taken as before and logged "would have skipped (stale history)" ([STALE_MARK]).
-         * On only lowers risk (one tap); off takes the PIN.
+         * Both ways take the PIN ([setStaleSkip]): on also lets a better history replace the one in use mid-session.
          */
         var staleOn: Boolean = false,
     ) {
@@ -692,6 +692,16 @@ object PassedArmsHost {
 
     private val written = Vault.LastWrite()
 
+    /**
+     * 20 Nov 2026 (final review of audit B5): the decisions written - every one of [today]'s (its picker decisions, held breaks, logs said
+     * once: never dropped, however many), then the newest of the earlier ones up to [cap] in all. Pure.
+     */
+    internal fun keptDecided(decided: Collection<String>, today: LocalDate?, cap: Int = 600): List<String> {
+        val mine = if (today == null) emptyList() else decided.filter { it.startsWith("$today|") }.sorted()
+        val rest = decided.filter { today == null || !it.startsWith("$today|") }.sorted()
+        return rest.takeLast((cap - mine.size).coerceAtLeast(0)) + mine
+    }
+
     private fun save(b: Book) {
         // 26 Oct (Erase everything): a pass that read the book before [wipe] never writes it back or shows it again; the
         // generation goes with the bytes, so a write already queued is dropped too ([flushBook]).
@@ -700,7 +710,7 @@ object PassedArmsHost {
         val o = JSONObject()
         o.put("armed", JSONObject().apply { b.armed.forEach { (k, v) -> put(k, v) } })
         o.put("positions", JSONArray().apply { b.positions.forEach { put(writePos(it)) } })
-        o.put("decided", JSONArray().apply { b.decided.sorted().takeLast(600).forEach { put(it) } })
+        o.put("decided", JSONArray().apply { keptDecided(b.decided, runCatching { Market.today() }.getOrNull()).forEach { put(it) } })
         o.put("status", JSONObject().apply { b.status.forEach { (k, v) -> put(k, v) } })
         b.status.writeTo(o)
         o.put("log", JSONArray().apply { b.log.takeLast(LOG_KEPT).forEach { put(it) } })
@@ -1223,7 +1233,24 @@ object PassedArmsHost {
 
     /** Whether a read for [day] may start now ([t]: the day's reads so far; [nowMs]). */
     internal fun readDue(t: Tried?, day: LocalDate, nowMs: Long, backoff: LongArray): Boolean =
-        t == null || t.day != day || nowMs - t.at !in 0 until backoffMs(t.tries, backoff)
+        readDueAfter(t, day, nowMs, t?.let { backoffMs(it.tries, backoff) } ?: 0L)
+
+    /** Whether a read for [day] may start now, [gapMs] after the last ([t]). */
+    internal fun readDueAfter(t: Tried?, day: LocalDate, nowMs: Long, gapMs: Long): Boolean =
+        t == null || t.day != day || nowMs - t.at !in 0 until gapMs
+
+    /**
+     * 20 Nov 2026 (final review of audit B5): the gap before the next history read. With the stale-history check on ([on]): 1, 2, then 5
+     * minutes ([backoffMs]). Off (the default), as before: every [MISSING_GAP_MS] while one is missing ([missing]) - a history that came
+     * sooner would add live breaks - and a stale one in use is read again only every [STALE_LOG_GAP_MS], for the "would have replaced" log.
+     */
+    internal fun histGapMs(on: Boolean, missing: Boolean, tries: Int, backoff: LongArray = HIST_BACKOFF_MS): Long = when {
+        on -> backoffMs(tries, backoff)
+        missing -> MISSING_GAP_MS
+        else -> STALE_LOG_GAP_MS
+    }
+    internal const val MISSING_GAP_MS = 10 * 60_000L
+    internal const val STALE_LOG_GAP_MS = 60 * 60_000L
 
     /**
      * 20 Nov 2026 (audit B5, item 1: the history was never checked for yesterday): why the earlier sessions [sessions] (oldest first)
@@ -1306,16 +1333,27 @@ object PassedArmsHost {
         // 20 Nov 2026 (audit B5, item 2): read again while any is missing, has no session or does not reach the last trading day
         // ([historyWanted]), 1, 2, then every 5 minutes (it was every 10, and a history with no session was kept all day).
         if ((indices + VIX).none { historyWanted(it, day) }) return
+        val all = (indices + ALL_INDICES).distinct()
+        val on = staleActs()
+        val missing = (all + VIX).any { history(it, day) == null }
         val t = histTried
         val ms = System.currentTimeMillis()
-        if (!readDue(t, day, ms, HIST_BACKOFF_MS)) return
+        // (Off: the gaps as before - see [histGapMs].)
+        if (!readDueAfter(t, day, ms, t?.let { histGapMs(on, missing, it.tries) } ?: 0L)) return
+        // (Off: a stale history in use is read again at most once an hour, only for the log.)
+        val staleToo = on || staleReadAt.let { it == null || it.first != day || ms - it.second !in 0 until STALE_LOG_GAP_MS }
+        if (!missing && !staleToo) return
         if (!histBusy.compareAndSet(false, true)) return
         histTried = Tried(day, ms, if (t != null && t.day == day) t.tries + 1 else 1)
+        if (staleToo && !on) staleReadAt = day to ms
         // (Every index still wanted is read, not only the caller's: one arm's reads never hold another's back behind the back-off.)
-        background.launch { try { runCatching { prefetchNow(day, (indices + ALL_INDICES).distinct()) } } finally { histBusy.set(false) } }
+        background.launch { try { runCatching { prefetchNow(day, all, staleToo) } } finally { histBusy.set(false) } }
     }
 
     internal const val VIX = "INDIAVIX"
+
+    /** 20 Nov 2026: when (day, ms) a stale history in use was last read again with the check off ([prefetch]). Memory only. */
+    @Volatile private var staleReadAt: Pair<LocalDate, Long>? = null
 
     /**
      * 6 Nov (R151's R72 picker, a shadow log): the picker's OWN history, apart from [hist] so nothing another rule reads changes (R51's
@@ -1445,7 +1483,8 @@ object PassedArmsHost {
         if ((R72Picker.INDICES + VIX).all { pickReady(it, day).let { h -> h != null && (h.stale == null || !staleActs()) } }) return
         val t = pickTried
         val ms = System.currentTimeMillis()
-        if (!readDue(t, day, ms, PICK_BACKOFF_MS)) return
+        // (Off: every 10 minutes while one is missing, as before; on: 1, 2, 5, then every 10.)
+        if (!readDueAfter(t, day, ms, t?.let { if (staleActs()) backoffMs(it.tries, PICK_BACKOFF_MS) else MISSING_GAP_MS } ?: 0L)) return
         if (!pickBusy.compareAndSet(false, true)) return
         pickTried = Tried(day, ms, if (t != null && t.day == day) t.tries + 1 else 1)
         background.launch { try { runCatching { prefetchPickerNow(day) } } finally { pickBusy.set(false) } }
@@ -1638,7 +1677,9 @@ object PassedArmsHost {
     }
 
     /** [prefetch]'s reads for [day] (tests call it directly). */
-    internal suspend fun prefetchNow(day: LocalDate, indices: List<String> = ALL_INDICES) {
+    internal suspend fun prefetchNow(day: LocalDate, indices: List<String> = ALL_INDICES,
+                                     /** 20 Nov 2026: also read again a stale history already in use (off: once an hour, for the log only). */
+                                     staleToo: Boolean = true) {
         // 4 Nov (Boss: after Android closed the app at 13:40, R51's 13:40 FINNIFTY and SENSEX breaks were skipped, "Supertrend
         // cannot be judged yet", and CISD could not look): the day's earlier sessions are kept on the phone once read, so a
         // restart has them back from the file in a moment instead of waiting on Upstox. All the cached files are read first.
@@ -1648,6 +1689,7 @@ object PassedArmsHost {
         for (u in indices + VIX) {
             // 20 Nov 2026 (audit B5, items 1-2): read again unless whole ([historyWanted]: none, no session, or not up to the last trading day).
             if (!historyWanted(u, day)) continue
+            if (!staleToo && history(u, day) != null) continue
             runCatching {
                 val key = if (u == VIX) Upstox.INDEX_KEYS.getValue("INDIAVIX") else upKey(u)
                 val ones = testHistory?.invoke(u) ?: toBars(Net.history(key, day.minusDays(16), day.minusDays(1)))
@@ -3464,7 +3506,7 @@ object PassedArmsHost {
             pendingBytes.set(null)
             written.forget()
         }
-        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; pickHist.clear(); pickTried = null; pickScores.clear(); pickDecisions.clear(); saneHighs.clear(); histWould.clear(); w20Labels.clear(); r51Scores.clear(); lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
+        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; staleReadAt = null; pickHist.clear(); pickTried = null; pickScores.clear(); pickDecisions.clear(); saneHighs.clear(); histWould.clear(); w20Labels.clear(); r51Scores.clear(); lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
         runCatching { com.optionslab.ira.ArmExits.set("passed", emptyList()) }
         // 26 Oct: the exit looks' kept minutes and the entry retry are memory too.
         exitReads.clear(); exitBars.clear(); retryJob?.cancel(); retryJob = null; plannedRetry = null; retriesOf = null to 0

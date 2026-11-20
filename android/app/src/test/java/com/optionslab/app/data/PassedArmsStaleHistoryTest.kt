@@ -305,6 +305,72 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
 
     // ---- item 2: read again --------------------------------------------------------------------------------------------------------
 
+    @Test fun offTheGapsAreAsBeforeTenMinutesWhileMissingAndAnHourForAStaleOneInUse() {
+        // Off (the default): a missing history every 10 minutes, as before (one that came sooner would add live breaks); a stale one in use
+        // only every hour, for the log. On: 1, 2, then 5 minutes.
+        assertEquals(600_000L, PassedArmsHost.histGapMs(on = false, missing = true, tries = 1))
+        assertEquals(600_000L, PassedArmsHost.histGapMs(on = false, missing = true, tries = 3))
+        assertEquals(3_600_000L, PassedArmsHost.histGapMs(on = false, missing = false, tries = 1))
+        assertEquals(60_000L, PassedArmsHost.histGapMs(on = true, missing = true, tries = 1))
+        assertEquals(300_000L, PassedArmsHost.histGapMs(on = true, missing = false, tries = 3))
+        val t = PassedArmsHost.Tried(day, 1_000_000L, 1)
+        assertFalse(PassedArmsHost.readDueAfter(t, day, 1_000_000L + 599_000L, PassedArmsHost.MISSING_GAP_MS))
+        assertTrue(PassedArmsHost.readDueAfter(t, day, 1_000_000L + 600_000L, PassedArmsHost.MISSING_GAP_MS))
+    }
+
+    private fun settled(reads: java.util.concurrent.atomic.AtomicInteger, atLeast: Int) {
+        val until = System.currentTimeMillis() + 10_000
+        while (reads.get() < atLeast && System.currentTimeMillis() < until) Thread.sleep(20)
+        Thread.sleep(300)
+    }
+
+    @Test fun offAMissingHistoryIsNotReadAgainWithinTenMinutes() {
+        history(emptyList())
+        assertFalse(view().staleOn)
+        val reads = java.util.concurrent.atomic.AtomicInteger()
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") { reads.incrementAndGet(); emptyList() } else emptyList() }
+        PassedArmsHost.prefetch(day.atTime(9, 0), listOf("NIFTY"))
+        settled(reads, 1)
+        assertEquals(1, reads.get())
+        // Still missing a moment later: not read again before 10 minutes (on, it would be after 1).
+        PassedArmsHost.prefetch(day.atTime(9, 0), listOf("NIFTY"))
+        Thread.sleep(300)
+        assertEquals("the 10-minute gap, as before", 1, reads.get())
+    }
+
+    @Test fun offAStaleHistoryInUseIsReadAgainOnlyOnceAnHourForTheLog() {
+        history(session(PassedArmsHost.previousSession(prev)!!))
+        val whole = session(prev)
+        val reads = java.util.concurrent.atomic.AtomicInteger()
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") { reads.incrementAndGet(); whole } else emptyList() }
+        // Read directly with the check off and not due for the hourly read: the stale one in use is not downloaded.
+        runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY"), staleToo = false) }
+        assertEquals(0, reads.get())
+        // The hourly read: once, logged, never replacing it.
+        PassedArmsHost.prefetch(day.atTime(9, 0), listOf("NIFTY"))
+        settled(reads, 1)
+        val n = reads.get()
+        assertTrue(n >= 1)
+        assertNotNull(PassedArmsHost.historyStale("NIFTY", day))
+        PassedArmsHost.prefetch(day.atTime(9, 0), listOf("NIFTY"))
+        Thread.sleep(300)
+        assertEquals("not again within the hour", n, reads.get())
+    }
+
+    @Test fun todaysDecisionsAreNeverDroppedFromTheBook() {
+        val old = (1..700).map { "${day.minusDays(1)}|R51|NIFTY|$it|1" }
+        val mine = listOf("$day|R72|NIFTY|0|1|pickFix:0.3|skip", "$day|R72|NIFTY|0|1")
+        val kept = PassedArmsHost.keptDecided(old + mine, day)
+        assertTrue(kept.containsAll(mine))
+        assertEquals(600, kept.size)
+        // More of today's than the cap: every one of today's kept, none of the earlier days'.
+        val many = (1..650).map { "$day|R51|NIFTY|$it|1|pickFix:0.5|take" }
+        val k2 = PassedArmsHost.keptDecided(old + many, day)
+        assertTrue(k2.containsAll(many)); assertEquals(650, k2.size)
+        // No day known: the newest 600 as before.
+        assertEquals(600, PassedArmsHost.keptDecided(old, null).size)
+    }
+
     @Test fun theReadsBackOffOneTwoThenFiveMinutes() {
         assertEquals(60_000L, PassedArmsHost.backoffMs(1)); assertEquals(120_000L, PassedArmsHost.backoffMs(2))
         assertEquals(300_000L, PassedArmsHost.backoffMs(3)); assertEquals(300_000L, PassedArmsHost.backoffMs(PassedArmsHost.SLOW_AFTER_TRIES - 1))

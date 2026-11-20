@@ -1512,7 +1512,7 @@ object ArmLive {
     }
 
     /** 20 Nov 2026: [p] is an R51 / R72 rule trade, whose best counts checked prices only ([bestPx], [highSince]). */
-    private fun checkedBest(p: Pos): Boolean = p.key == com.optionslab.engine.orb.DonchianArm.SOURCE || p.key == com.optionslab.engine.orb.BreadthDonchianArm.SOURCE
+    internal fun checkedBest(p: Pos): Boolean = p.key == com.optionslab.engine.orb.DonchianArm.SOURCE || p.key == com.optionslab.engine.orb.BreadthDonchianArm.SOURCE
 
 
     /**

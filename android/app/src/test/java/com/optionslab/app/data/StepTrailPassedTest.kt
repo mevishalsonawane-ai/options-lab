@@ -445,6 +445,28 @@ class StepTrailPassedTest : RobolectricTest() {
         } finally { KiteStream.stop() }
     }
 
+    /**
+     * 20 Nov 2026 (final review): [ArmLive.bestPx] off the stream - Zerodha's quote as the live stop judges it: with no book its last price,
+     * far outside a sane book the bid, inside it the last. Liquidity 15+5's live trades keep the quote's last price and their raw reads.
+     */
+    @Test fun theLiveBestFromAQuoteAndLiquidityUnchanged() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val e = live.entry
+        assertTrue(ArmLive.checkedBest(live))
+        assertEquals("an empty book: the last price", e * 1.1, ArmLive.bestPx(live, Broker.Quote(e * 1.1, null, null, 0.0))!!, 1e-9)
+        assertEquals("a far book: its bid", e, ArmLive.bestPx(live, Broker.Quote(e * 1.5, e, e + 0.1, 0.0))!!, 1e-9)
+        assertEquals("inside a sane book: the last", e * 1.05, ArmLive.bestPx(live, Broker.Quote(e * 1.05, e * 1.05 - 0.05, e * 1.05 + 0.05, 0.0))!!, 1e-9)
+        assertNull("no quote", ArmLive.bestPx(live, null))
+        assertNull("not a rule trade", ArmLive.bestPx(live.copy(fixed = false), Broker.Quote(e * 1.1, null, null, 0.0)))
+        // Liquidity 15+5: as before - the quote's last, even far outside the book, and its own reads (not the checked ones).
+        val liq = live.copy(key = com.optionslab.engine.orb.LiquidityRules.ARM.source)
+        assertFalse(ArmLive.checkedBest(liq))
+        assertEquals(e * 1.5, ArmLive.bestPx(liq, Broker.Quote(e * 1.5, e, e + 0.1, 0.0))!!, 1e-9)
+        for (bk in com.optionslab.engine.orb.LiquidityRules.BOOKS) assertFalse(ArmLive.checkedBest(live.copy(key = bk.source)))
+    }
+
     /** 20 Nov 2026: the live copy's candle highs ([Paper.closedHigh]) - only today's closed minutes after the entry minute. */
     @Test fun theLiveCandleHighReadsOnlyClosedMinutesAfterTheEntryMinute() {
         val entry = day.atTime(10, 0, 20)
