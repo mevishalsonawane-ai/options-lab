@@ -1471,8 +1471,30 @@ object ArmLive {
         // Review: never a read on the look itself - the read runs in the background ([RuleHighs]: one at a time per trade, the stream's
         // kept ticks and the candles after the entry minute, so a spike while the phone was away or across a restart still counts) and
         // the look takes the last high it found (memory). Asked on the regular look only.
-        if (fresh) (p.paperSymbol ?: p.symbol).let { runCatching { Paper.contractOf(it) }.getOrNull() }?.let { RuleHighs.ask("live:${p.ref}", it, p.entryTime) }
+        // 20 Nov 2026 (deep review of audit B5): only the closed minutes' highs ([RuleHighs.askClosed]) - never the stream's raw ticks, whose
+        // one stray print could raise the Zerodha step lock; the stream counts through [bestPx] alone, each price checked.
+        if (fresh) (p.paperSymbol ?: p.symbol).let { runCatching { Paper.contractOf(it) }.getOrNull() }?.let { RuleHighs.askClosed("live:${p.ref}", it, p.entryTime) }
         return RuleHighs.peek("live:${p.ref}")
+    }
+
+    /**
+     * 20 Nov 2026 (deep review of audit B5: a stray print could raise a live R51 / R72 copy's step lock at Zerodha and sell it early): the
+     * price now that may raise [p]'s best ([withBest]) - the stream's last trade only when it passes the price-now checks
+     * ([com.optionslab.ira.PriceNow.lastCounts] / [com.optionslab.ira.PriceNow.farFromBook]) and traded after the entry minute; else the
+     * sane book's bid ([com.optionslab.ira.PriceNow.bookBid]) of the stream or of [q]. A quote's last price (no trade time) never counts.
+     * The lock levels themselves are unchanged. Memory only (the stream's kept tick).
+     */
+    internal fun bestPx(p: Pos, q: Broker.Quote?): Double? {
+        if (!p.fixed) return null
+        val entrySec = p.entryTime.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        val t = runCatching { Broker.tokenOf("${p.exchange}:${p.symbol}")?.let { KiteStream.freshTick(it) } }.getOrNull()
+        if (t != null) {
+            val ts = t.lastTradeTime
+            if (ts != null && ts >= entrySec + 60 && com.optionslab.ira.PriceNow.lastCounts(t.last, ts, entrySec) &&
+                !com.optionslab.ira.PriceNow.farFromBook(t.last, ts, t.bid, t.ask)) return t.last
+            return com.optionslab.ira.PriceNow.bookBid(t.bid, t.ask)
+        }
+        return q?.let { com.optionslab.ira.PriceNow.bookBid(it.bid, it.ask) }
     }
 
 
@@ -2937,7 +2959,7 @@ object ArmLive {
                     val (pPaper, paperSell, paperWhy) = paperSide(p1, legsOf(spec, stream), fresh = !stream)
                     if (pPaper.detached && !p1.detached && paperSell <= 0) saidDetached(pPaper)
                     // 15 Nov: a stop-rule trade's best price raised to the price now (kept, so its stop never drops after a restart).
-                    val p = withBest(pPaper, ltpOf(pPaper), highSince(pPaper, fresh = !stream))
+                    val p = withBest(pPaper, bestPx(pPaper, q["${pPaper.exchange}:${pPaper.symbol}"]), highSince(pPaper, fresh = !stream))
                     val so = p.slId?.let { orders[it] }
                     val g = p.gttId?.let { gtts?.get(it) }
                     val exitSide = if (p.side > 0) "SELL" else "BUY"
@@ -3092,7 +3114,7 @@ object ArmLive {
         val updates = LinkedHashMap<Pos, List<Pos>>()
         for (p0 in open) {
             val (pPaper, paperSell, paperWhy) = paperSide(p0, legsOf(LiveMirror.spec(p0.key), false))
-            val p = withBest(pPaper, q["${pPaper.exchange}:${pPaper.symbol}"]?.last?.takeIf { it > 0 })
+            val p = withBest(pPaper, bestPx(pPaper, q["${pPaper.exchange}:${pPaper.symbol}"]))
             val quote = q["${p.exchange}:${p.symbol}"]?.takeIf { it.last > 0 }
             val ltp = quote?.last?.also { shadowMarks[p.ref] = it } ?: shadowMarks[p.ref]
             // The moment of its last look (null after a restart: judged on the price now only, as a stop moved up since must

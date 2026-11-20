@@ -406,6 +406,39 @@ class StepTrailPassedTest : RobolectricTest() {
         assertEquals("the lock it earned rests at Zerodha", lockedLive(live), back.stopTrigger!!, 1e-9)
     }
 
+    /**
+     * 20 Nov 2026 (deep review of audit B5): the live copy's best price counts a stream price only once checked - a print with no trade time
+     * far over a sane book never raises the step lock resting at Zerodha (the book's bid counts instead); a real trade after the entry
+     * minute does, at the same level as before.
+     */
+    @Test fun liveOneBadPrintNeverRaisesTheLockARealTradeDoes() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val e = live.entry
+        fun feed(last: Double, bid: Double, ask: Double, traded: Long?) = KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(
+            26_000_001, last, bid = bid, ask = ask, exchangeTime = System.currentTimeMillis() / 1000, bidQty = 65, askQty = 65, lastTradeTime = traded)))
+        try {
+            // A stray print 20% over the book, no trade time: the book's bid (the fill) is the best.
+            feed(e * 1.2, e, e + 0.1, null)
+            runBlocking { ArmLive.watch() }
+            val held = ArmLive.view.value.open.single()
+            assertTrue("best ${held.best} not raised by the stray print", (held.best ?: e) < e * 1.01)
+            assertEquals("its stop not moved", live.stopTrigger!!, held.stopTrigger!!, 1e-9)
+            assertTrue(modifies.isEmpty())
+            // A trade inside the entry minute (it may be from before the fill) does not count either.
+            val entrySec = live.entryTime.withSecond(0).withNano(0).atZone(IST).toEpochSecond()
+            feed(e * 1.105, e, e + 0.1, entrySec + 30)
+            runBlocking { ArmLive.watch() }
+            assertTrue(modifies.isEmpty())
+            // A real trade after the entry minute: the step lock, at the same level as before.
+            feed(e * 1.105, e * 1.105 - 0.05, e * 1.105 + 0.05, entrySec + 120)
+            runBlocking { ArmLive.watch() }
+            assertEquals(e * 1.105, ArmLive.view.value.open.single().best!!, 1e-9)
+            assertEquals(lockedLive(live), ArmLive.view.value.open.single().stopTrigger!!, 1e-9)
+        } finally { KiteStream.stop() }
+    }
+
     @Test fun liveTheAppSaleWaitsWhileBossIsExitingByHand() {
         goLive()
         bought(200.0)
