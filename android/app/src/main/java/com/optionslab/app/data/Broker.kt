@@ -101,10 +101,23 @@ object Broker {
     internal fun quoteLimited(path: String): Boolean = path.startsWith("/quote")
 
     /**
-     * The longest a quote call waits for its turn in [quoteRate]: a quick read's 3 s ([FAST_READ_MS], the event path), else the read's
-     * own budget ([READ_BUDGET_MS]), else 10 s. Pure.
+     * The longest a quote call may still wait for its turn in [quoteRate], [spentMs] into the read: what is left of its deadline - the
+     * read's own budget ([READ_BUDGET_MS], 5 s; 10 s for one with none), and at most a quick read's 3 s ([FAST_READ_MS], the event
+     * path). B5-D: one hard total for the queue, the call and any 429 retry. 0 or less: no time left. Pure.
      */
-    internal fun quoteWaitMs(quick: Boolean, budget: Long?): Long = if (quick) FAST_READ_MS.toLong() else budget ?: 10_000L
+    internal fun quoteWaitMs(quick: Boolean, budget: Long?, spentMs: Long = 0L): Long {
+        val left = (budget ?: 10_000L) - spentMs.coerceAtLeast(0L)
+        return if (quick) minOf(FAST_READ_MS.toLong(), left) else left
+    }
+
+    /**
+     * B5-D: whether a read of a lane above [p] is waiting in Zerodha's quote queue now ([quoteRate]) - a paper arm's exit read then
+     * does without its fresh quote (the stream's last price) and leaves the slot to the live stop's read. Memory only.
+     */
+    internal fun quoteWaitingAbove(p: com.optionslab.ira.RateGate.Priority): Boolean = quoteRate.waitingAbove(p)
+
+    /** TEST ONLY: the quote queue itself (a test holds its slot and queues a stop's read in it). */
+    internal fun quoteGateForTest(): com.optionslab.ira.RateGate { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; return quoteRate }
 
     /**
      * Positions, orders and margins asked for by several workers at once are read once: a caller whose read is already on
@@ -482,7 +495,7 @@ object Broker {
         // (20 s connect, 60 s read), which the HTTP stack's own silent retries and the 429 retries each started afresh. A read
         // now has one budget for the whole call ([readBudgetMs]); past it the connection is cut, and no 429 retry starts.
         val budget = readBudgetMs(method, path, readOnly, viaRelay)
-        var began = System.currentTimeMillis()
+        val began = System.currentTimeMillis()
         while (true) {
             // Orders and every other write go through the static-IP relay when it is on (it throws if it
             // cannot connect, so nothing leaves from another IP); reads go direct ([viaRelay]: a read that
@@ -494,14 +507,12 @@ object Broker {
                     else kotlinx.coroutines.currentCoroutineContext()[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.ENTRY
                 // 20 Nov 2026 (audit: "stop-price quotes compete with about 40 other readers"): a quote call first takes its turn in
                 // Zerodha's own quote limit ([quoteRate], one a second), in lane order - a stop's read before the others. The turn's
-                // wait is not part of the read's own budget (it is a queue, not a slow answer), but it has its own bound ([quoteWaitMs]):
-                // past it the read gives up as on Zerodha's refusal (review: never a queue without end).
+                // wait counts in the read's own budget ([quoteWaitMs], B5-D: one hard deadline for the whole read - the queue, the call and
+                // any 429 retry); past it the read gives up as on Zerodha's refusal, never a queue without end.
                 if (quoteLimited(path)) {
-                    val w0 = System.currentTimeMillis()
-                    val most = quoteWaitMs(kotlinx.coroutines.currentCoroutineContext()[FastRead] != null, budget)
-                    if (!quoteRate.acquireWithin(p, most))
-                        throw KiteError("QuoteLimit", "Zerodha's quote calls are at their limit (one a second): this read gave up after ${most / 1000} s in the queue")
-                    began += (System.currentTimeMillis() - w0).coerceAtLeast(0L)
+                    val most = quoteWaitMs(kotlinx.coroutines.currentCoroutineContext()[FastRead] != null, budget, System.currentTimeMillis() - began)
+                    if (most <= 0L || !quoteRate.acquireWithin(p, most))
+                        throw KiteError("QuoteLimit", "Zerodha's quote calls are at their limit (one a second): this read's time ran out in the queue")
                 }
                 rate.acquire(p)
             }
@@ -1055,7 +1066,7 @@ object Broker {
      * are answered from it at once; only the rest go to Kite's quote API (and are
      * followed by the stream from then on).
      */
-    suspend fun quotes(keys: List<String>, keepStream: Boolean = true): Map<String, Quote> {
+    suspend fun quotes(keys: List<String>, keepStream: Boolean = true, lane: com.optionslab.ira.RateGate.Priority? = null): Map<String, Quote> {
         if (keys.isEmpty()) return emptyMap()
         val tokens = keys.associateWith { tokenOf(it) }
         // [keepStream] false (Battery, 14 Oct: the MCX price reads with nothing held on MCX): answered from the stream if it
@@ -1064,7 +1075,8 @@ object Broker {
         val streamed = keys.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
         val rest = keys.filter { it !in streamed }
         if (rest.isEmpty()) return streamed
-        return streamed + quotesRest(rest)
+        // B5-D: [lane] when the caller says so (an exit's read: SAFETY); else the caller's own, as before.
+        return streamed + (if (lane == null) quotesRest(rest) else kotlinx.coroutines.withContext(Lane(lane)) { quotesRest(rest) })
     }
 
     /**
@@ -1090,13 +1102,20 @@ object Broker {
         // Zerodha's limit is kept.
         // Review: [lane] (or the caller's own) when it says so - an entry's or a shadow's price check is not a stop's read; else SAFETY.
         val p = lane ?: kotlinx.coroutines.currentCoroutineContext()[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.SAFETY
+        // B5-D: the fallback is the latest tick by when it REACHED the phone (5 s at most, as before the late-packet stamp): a tick
+        // stamped back for coming late never leaves a stop with no price when no fresh quote answers.
+        fun older(keys: List<String>) = keys.mapNotNull { k ->
+            tokens[k]?.let { KiteStream.arrivedTick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) }
+        }.toMap()
         val read = try { kotlinx.coroutines.withContext(Lane(p)) { quotesRest(rest) } } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            val older = rest.mapNotNull { k -> tokens[k]?.let { KiteStream.tick(it) }?.takeIf { it.last > 0 }?.let { t -> k to Quote(t.last, t.bid, t.ask, t.open, t.oi, t.volume) } }.toMap()
+            val older = older(rest)
             if (streamed.isEmpty() && older.isEmpty()) throw e
             older
         }
-        return (streamed + read).mapValues { stopGuard(it.value) }
+        // B5-D: one Zerodha did not answer for (none in the reply): its latest tick too, never no price.
+        val unanswered = rest.filter { it !in read }
+        return (streamed + older(unanswered) + read).mapValues { stopGuard(it.value) }
     }
 
     /**
@@ -1357,6 +1376,8 @@ object Broker {
     private val instrumentsLoading = java.util.concurrent.atomic.AtomicBoolean(false)
     /** After a failed background fetch, the next is tried this much later at the soonest. */
     private const val INSTRUMENTS_RETRY_MS = 2 * 60_000L
+    /** B5-D review: logged out, a background list read is tried again this soon (memory and a job only: no vault on the caller). */
+    private const val LOGGED_OUT_RETRY_MS = 10_000L
 
     /**
      * 20 Nov 2026: today's instruments list fetched in the background (logged in only; one at a time; at most every
@@ -1368,8 +1389,12 @@ object Broker {
         if (!instrumentsLoading.compareAndSet(false, true)) return
         instrumentsTriedAt = now
         // The session is looked at on the background thread (it may read the vault): never on the caller's.
+        // B5-D review: logged out, the next try is 10 s later (never a new job per call on the hot paths that ask; soon after a login).
         readScope.launch {
-            try { if (loggedIn) runCatching { instruments() } else instrumentsTriedAt = 0L } finally { instrumentsLoading.set(false) }
+            try {
+                if (loggedIn) runCatching { downloadInstruments() }
+                else instrumentsTriedAt = System.nanoTime() / 1_000_000L - INSTRUMENTS_RETRY_MS + LOGGED_OUT_RETRY_MS
+            } finally { instrumentsLoading.set(false) }
         }
     }
 
@@ -1378,15 +1403,18 @@ object Broker {
 
     /** NIFTY and BANKNIFTY options from GET /instruments/NFO, cached for the day. */
     suspend fun instruments(): List<Kite.Instrument> {
-        val f = File(app.filesDir, "kite_instruments.json")
         val had = instrumentsFile()
         had?.takeIf { instrumentsCurrent(it) }?.let { return it.list }
-        // 20 Nov 2026 (review): a list of today fetched before the morning's dump is read again, but if that read fails it still
-        // answers, as it did before (never a failure where there was a list of the day).
-        val text = try { call("GET", "/instruments/NFO", raw = true) as String } catch (e: Exception) {
-            if (e !is kotlinx.coroutines.CancellationException && had != null && had.day == Market.today().toString()) return had.list
-            throw e
-        }
+        // 20 Nov 2026 (B5-D review): a list of today fetched before the morning's dump answers at once, as before - its re-read is the
+        // background refresh's (one at a time, throttled: [refreshInstrumentsInBackground]), never a download every caller waits on.
+        if (had != null && had.day == Market.today().toString()) { refreshInstrumentsInBackground(); return had.list }
+        return downloadInstruments()
+    }
+
+    /** Today's NFO list downloaded now and kept ([instruments]; the background refresh). A worker thread only. */
+    private suspend fun downloadInstruments(): List<Kite.Instrument> {
+        val f = File(app.filesDir, "kite_instruments.json")
+        val text = call("GET", "/instruments/NFO", raw = true) as String
         val list = com.optionslab.ira.InstrumentsFile.compact(Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")))
         // The market recorder's index futures from the same dump (never a second download for them).
         runCatching { keepNfoFutures(text) }
@@ -1473,7 +1501,8 @@ object Broker {
         readScope.launch {
             try {
                 // Review, 20 Nov 2026: the session is looked at here, on the background thread (it may read the vault), never the caller's.
-                if (!loggedIn) return@launch
+                // B5-D review: logged out, tried again 10 s later (not the 2 minutes after a failure), so a login is picked up at once.
+                if (!loggedIn) { bfoTriedAt = System.nanoTime() / 1_000_000L - BFO_RETRY_MS + LOGGED_OUT_RETRY_MS; return@launch }
                 // 20 Nov 2026: after a restart, today's list saved earlier today is read back first (no download; a background thread).
                 val saved = runCatching { readBfoFile() }.getOrNull()
                 if (saved != null) { keepBfo(saved.first, saved.second); return@launch }

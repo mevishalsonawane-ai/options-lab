@@ -134,6 +134,22 @@ class RateGateTest {
         assertEquals(2L, g.taken)
     }
 
+    /** B5-D: several paper reads waiting in the entries' lane never hold a live stop's read, which asks later but goes first. */
+    @Test fun aStopReadAskingAfterSeveralEntryReadsGoesFirst() = runBlocking {
+        val g = RateGate(perSecond = 1, windowMs = 1_000L)
+        assertTrue(g.acquireWithin(RateGate.Priority.ENTRY, 0L))
+        val order = java.util.Collections.synchronizedList(ArrayList<String>())
+        val papers = (1..3).map { i -> async(Dispatchers.IO) { g.acquire(RateGate.Priority.ENTRY); order += "paper$i" } }
+        val t0 = System.nanoTime()
+        while (g.waitingFor(RateGate.Priority.ENTRY) < 3) { assertTrue(System.nanoTime() - t0 < 5_000_000_000L); Thread.sleep(2) }
+        assertEquals(false, g.waitingAbove(RateGate.Priority.ENTRY))
+        val stop = async(Dispatchers.IO) { g.acquire(RateGate.Priority.SAFETY); order += "stop" }
+        while (g.waitingFor(RateGate.Priority.SAFETY) == 0 && order.isEmpty()) Thread.sleep(1)
+        stop.await(); papers.awaitAll()
+        assertEquals("stop", order.first(), "$order")
+        assertEquals(false, g.waitingAbove(RateGate.Priority.SAFETY), "nothing above the top lane")
+    }
+
     @Test fun onTheQuoteGateAWaitingStopReadGoesBeforeAnEntryRead() = runBlocking {
         val now = java.util.concurrent.atomic.AtomicLong(0L)
         val g = RateGate(perSecond = 1, clock = { now.get() }, windowMs = 1_100L)

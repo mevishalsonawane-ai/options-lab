@@ -356,6 +356,11 @@ object FastPath {
                     // 15 Oct: the passed-research paper arms (R51, R52, Solo 2.0): their open trades' stops, targets, locks, time exits
                     // and square-offs every minute (exits only - their entries' reads run in the watch's arms passes).
                     step(PASSED_ARMS) { PassedArmsHost.manageOnly() }
+                    // 18 Oct: after the paper exits above (R51 and R72 among them), their live trades follow at once ([ArmLive]; nothing
+                    // held: returns at once). B5-D (20 Nov 2026): moved up here, ahead of the paper-only arms below, whose fresh exit reads
+                    // (stream stalled) could otherwise hold the live copies' stop look; the look after the passes below follows theirs.
+                    // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
+                    if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
                     // 25 Oct: ntfy alerts on paper: their stops, targets and square-off every minute (exits only).
                     step(NTFY) { NtfyArm.manageOnly() }
                     // 28 Oct: IraThinker's flow on paper: its stops, index exits and square-off every minute (exits only).
@@ -364,8 +369,7 @@ object FastPath {
                     step(S5) { S5Arm.manageOnly() }
                     // 29 Oct: CISD + network on paper: its index stop, profit lock and square-off every minute (exits only).
                     step(CISD) { CisdArm.manageOnly() }
-                    // 18 Oct: after the paper exits above, their live trades follow at once ([ArmLive]; nothing held: returns at once).
-                    // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
+                    // 18 Oct: the live trades of the paper-only arms just above follow their exits at once.
                     if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
                     // 30 Oct: the three passes moved from the top (their own exits run first inside each), then the live look again
                     // so a paper exit they just made is followed at once.

@@ -275,10 +275,11 @@ class KiteTest {
         try {
             Kite.clearFreezeData()
             assertEquals(1800, Kite.freezeQuantity("NFO", "NIFTY26SEP24500PE"), "no data: the table")
-            // The exchange's freeze levels (the first quantity it refuses): the largest order is one less.
+            // The day's data may only lower the table (taken as given, never one subtracted).
             Kite.freezeFromData(mapOf("NIFTY" to 1301, "SENSEX" to 1001, "JUNK" to 1, "" to 500, "BANKNIFTY" to 1201, "FINNIFTY" to 25))
-            assertEquals(1300, Kite.freezeQuantity("NFO", "NIFTY26SEP24500PE"))
-            assertEquals(1000, Kite.freezeQuantity("BFO", "SENSEX26SEP80000CE"))
+            // Clearly lower than the table's 1800: the data's figure as given (an order is still whole lots: 1300 at 65 a lot).
+            assertEquals(1301, Kite.freezeQuantity("NFO", "NIFTY26SEP24500PE"))
+            assertEquals(1000, Kite.freezeQuantity("BFO", "SENSEX26SEP80000CE"), "the level one over the table: the table")
             assertEquals(2800, Kite.freezeQuantity("NFO", "MIDCPNIFTY26SEP12000CE"), "not in the data: the table")
             // Review: the data only ever lowers the table's figure, and a figure under half of it (lots, junk) is not used.
             assertEquals(900, Kite.freezeQuantity("NFO", "BANKNIFTY26SEP52000CE"), "the data's higher figure is not used")
@@ -288,11 +289,15 @@ class KiteTest {
             assertEquals(450, Kite.freezeOf(900, 450))
             assertEquals(900, Kite.freezeOf(900, 449))
             assertEquals(900, Kite.freezeOf(900, null))
+            // B5-D: the data giving the largest order (1800) or the freeze level (1801) for NIFTY: the table's 1800 either way.
+            assertEquals(1800, Kite.freezeOf(1800, 1800))
+            assertEquals(1800, Kite.freezeOf(1800, 1801))
+            assertEquals(1755, Kite.freezeOf(1800, 1755))
             assertEquals(null, Kite.freezeQuantity("NSE", "NIFTYBEES"))
             // An order above the data's limit is refused (an entry) and sliced (a square-off).
             val o = Kite.Order("NIFTY26SEP24500PE", Kite.Side.SELL, 1365, 65, "NRML", "LIMIT", 5.0)
             val big = Kite.Limits(maxLotsPerOrder = 100, maxOrderValue = 1e9)
-            assertTrue(Kite.refusals(o, big, 0, false, exit = true).any { "freeze quantity of 1300" in it })
+            assertTrue(Kite.refusals(o, big, 0, false, exit = true).any { "freeze quantity of 1301" in it })
             assertEquals(emptyList(), Kite.refusals(o.copy(quantity = 1300), big, 0, false, exit = true))
             val spec = Kite.Spec("NFO", "NIFTY26SEP24500PE", 1L, 65, 0.05)
             assertEquals(listOf(1300, 65), Kite.squareOffSlices(spec, "NRML", 1365, bid = 4.8, ask = 4.93, last = 4.85).map { it.quantity })

@@ -500,7 +500,8 @@ object ArmLive {
     internal suspend fun liveLast(c: Paper.Contract): Double? {
         val ins = runCatching { zerodha(c).first }.getOrNull() ?: return null
         val k = "${ins.exchange}:${ins.symbol}"
-        return runCatching { Broker.stopQuotes(listOf(k))[k]?.last }.getOrNull()?.takeIf { it > 0 && it.isFinite() }
+        // B5-D review: an entry pass's booking read - the entries' lane of the quote queue, never ahead of a held stop's read.
+        return runCatching { Broker.stopQuotes(listOf(k), com.optionslab.ira.RateGate.Priority.ENTRY)[k]?.last }.getOrNull()?.takeIf { it > 0 && it.isFinite() }
     }
 
     /** TEST ONLY: the screen's view set (19 Nov 2026: the paper reset dialog's live-copy line). Debug builds only. */

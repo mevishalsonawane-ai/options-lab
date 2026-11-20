@@ -196,26 +196,34 @@ object Relay {
     /** The last connect's failure while it is still within [FAIL_FAST_MS] of [now], else null. Memory only. */
     internal fun recentFailure(now: Long = clock()): String? {
         val why = failedWhy ?: return null
+        // B5-D: remembered on an older network (before the last change [NetWatch] acted on, at most one each few seconds): not this one's.
+        if (failedGen != netGen) return null
         return if (now - failedAt in 0 until FAIL_FAST_MS) why else null
     }
 
     /** TEST ONLY: as if a connect had just failed with [why]. */
-    internal fun failedForTest(why: String, at: Long = clock()) { failedAt = at; failedWhy = why }
+    internal fun failedForTest(why: String, at: Long = clock()) { failedAt = at; failedWhy = why; failedGen = netGen }
+
+    /** B5-D: the network changes acted on ([networkChanged]), and the one a remembered failure was on. Memory only. */
+    @Volatile private var netGen = 0
+    @Volatile private var failedGen = 0
 
     /** 4 Nov: bumped by [close]: a connect that began before it keeps nothing (the switch went off, or the server changed). */
     private val closes = java.util.concurrent.atomic.AtomicInteger()
 
     /**
-     * [inTunnel]: asked from a tunnel being opened ([serve], itself one of [tunnels]). 20 Nov 2026: a session from before a
-     * network change is not reused once no other tunnel is open on it (one open now - an order - is never cut: it finishes on it).
+     * [self]: the tunnel asking ([serve], itself one of [tunnels]). 20 Nov 2026: a session from before a network change is never
+     * reused for a new call: a new one is made on the new network. B5-D: the old one is not cut while another tunnel has a call in
+     * flight on it ([Tunnel.inFlight]: an order whose reply is awaited finishes on it); [networkChanged] lets it go once none has.
      */
-    @Synchronized private fun connect(inTunnel: Boolean = false): Session {
-        val fresh = staleNetwork && busyTunnels() <= (if (inTunnel) 1 else 0)
+    @Synchronized private fun connect(self: Tunnel? = null): Session {
+        val fresh = staleNetwork
         if (!fresh) session?.takeIf { it.isConnected }?.let { return it }
         recentFailure()?.let { throw IOException(it) }
         val gen = erased
         val closed = closes.get()
-        runCatching { session?.disconnect() }
+        val old = session
+        if (!(fresh && old != null && inFlightOn(old, except = self) > 0)) runCatching { old?.disconnect() }
         val h = host ?: throw IOException("Relay: no server IP set (More → Zerodha → Static IP)")
         val prv = SecurePrefs.getString(K_PRV) ?: throw IOException("Relay: no key yet: tap Create key, then add it to the server")
         val jsch = JSch()
@@ -255,7 +263,7 @@ object Relay {
                 else -> redacted("Relay: $m", h)
             }
             // Only a connect that began after the last close is remembered (a close meanwhile: the next call tries afresh).
-            if (closed == closes.get()) { failedWhy = why; failedAt = clock() }
+            if (closed == closes.get()) { failedWhy = why; failedAt = clock(); failedGen = netGen }
             throw IOException(why)
         }
         // 26 Oct: "Erase everything" ran while this connected (with the key it read before): the session is not kept.
@@ -333,70 +341,92 @@ object Relay {
     // ---- a minimal SOCKS5 CONNECT, loopback only, allow-listed destinations only ----------
 
     /**
-     * 20 Nov 2026: each open tunnel's last moment bytes moved (or its handshake began), on the monotonic clock. One that moved
-     * bytes in the last [BUSY_MS] is carrying a call (an order may be in it); a quiet one is only a pooled connection kept for
-     * the next call. A network change lets the SSH session go once no tunnel is busy ([networkChanged]).
+     * 20 Nov 2026: one open tunnel - when it opened and when bytes last went up (the app to Zerodha: a request) and down (Zerodha's
+     * reply), on the monotonic clock. B5-D (review: an order POST waiting for its reply moves no bytes, and was taken for idle after
+     * 3 s): a tunnel has a call IN FLIGHT while it moved bytes in the last [BUSY_MS], or while the last bytes went up and no reply
+     * has come down since (a request sent, its answer awaited - however long it is quiet). A pooled connection whose last reply came
+     * in full is idle: it never holds the old session.
      */
-    private val tunnels: MutableSet<java.util.concurrent.atomic.AtomicLong> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    internal class Tunnel(val opened: Long) {
+        /** The SSH session its channel runs on (null while it is still being opened). */
+        @Volatile var on: Session? = null
+        @Volatile var up = 0L
+        @Volatile var down = 0L
+        fun inFlight(now: Long): Boolean = now - maxOf(opened, up, down) < BUSY_MS || up > down
+    }
+
+    private val tunnels: MutableSet<Tunnel> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     @Volatile private var staleNetwork = false
     private const val BUSY_MS = 3_000L
-    /** A network change waits this long at most for a busy tunnel before the old session is let go anyway. */
-    private const val STALE_WAIT_MS = 15_000L
+    /**
+     * A network change waits this long at most for the calls in flight before the old session is let go anyway: Zerodha's own
+     * deadline for a write ([Broker]'s order call: 20 s to connect plus 60 s for the reply), so an order is never cut before it.
+     */
+    internal const val STALE_WAIT_MS = 80_000L
     private fun mono(): Long = System.nanoTime() / 1_000_000L
 
-    /** Tunnels that moved bytes in the last [BUSY_MS]. */
-    private fun busyTunnels(): Int { val now = mono(); return tunnels.count { now - it.get() < BUSY_MS } }
+    /** Tunnels with a call in flight ([Tunnel.inFlight]) on session [s], [except] the one asking. */
+    private fun inFlightOn(s: Session, except: Tunnel? = null): Int { val now = mono(); return tunnels.count { it !== except && it.on === s && it.inFlight(now) } }
 
     /**
      * 20 Nov 2026 (audit: "after a network change the relay stays dead for up to 45 seconds"): the phone's network changed
      * ([NetWatch]). The SSH session was made on the old network; JSch calls it connected until 3 keep-alives of 15 s go
-     * unanswered, so every order meanwhile waited on a dead tunnel. It is let go now - unless a call is moving bytes in a tunnel
-     * (an order is not cut): then once it is done, [waitMs] (15 s) at most. The fail-fast memory of a failure on the old network is
-     * forgotten too. Then, in market hours with the relay on, it is connected again at once, so the next order finds it warm.
-     * Never on the order path (the network callback's own background thread); the SOCKS port and the switch are untouched.
+     * unanswered, so every order meanwhile waited on a dead tunnel. It is let go now - unless a call is in flight in a tunnel
+     * ([Tunnel.inFlight]: an order is never cut, even one quietly waiting for its reply): then once none is, [waitMs] (Zerodha's
+     * write deadline, 80 s) at most. A new call meanwhile connects afresh on the new network ([connect]). The fail-fast memory of a
+     * failure is forgotten only once the old session is actually let go (B5-D: a flapping network never wipes it). Then, in market
+     * hours with the relay on, it is connected again at once, so the next order finds it warm. Never on the order path (the network
+     * callback's own background thread, debounced: [NetWatch]); the SOCKS port and the switch are untouched.
      */
     fun networkChanged(waitMs: Long = STALE_WAIT_MS) {
-        // Review: a failure remembered from the old network is forgotten at once (an order is never refused for it).
-        failedAt = 0L; failedWhy = null
-        if (session == null) return
+        netGen++
+        val old = session ?: return
         staleNetwork = true
-        // A call in a tunnel now (bytes moving) is let finish, [waitMs] at most; then the old session goes.
+        // A call in flight on the old session is let finish, [waitMs] at most; then the old session goes (a new call meanwhile has
+        // already connected afresh: [connect]).
         val until = mono() + waitMs
-        while (staleNetwork && busyTunnels() > 0 && mono() < until) Thread.sleep(100)
-        if (dropStale()) runCatching { Diag.record("relay", "the phone's network changed: the old connection to the server was let go; connecting again") }
+        while (inFlightOn(old) > 0 && mono() < until) Thread.sleep(100)
+        if (dropStale(old)) runCatching { Diag.record("relay", "the phone's network changed: the old connection to the server was let go; connecting again") }
         runCatching { if (enabled && Market.isOpen()) warm() }
     }
 
     /**
-     * The stale session let go (once no tunnel is open), and a failure remembered from the old network forgotten (true: let go
-     * here; false: a new session was already made). It is only
+     * The stale session [old] let go (once no call is in flight on it), and a failure remembered from the old network forgotten (true:
+     * let go here; false: a new session was already made, and only the old one is closed). It is only
      * disconnected (never taken out of [session] here, which [connect] owns under its lock): [connect] then finds it not
      * connected and makes a new one, as after any lost connection.
      */
-    @Synchronized private fun dropStale(): Boolean {
-        // Review: under [connect]'s lock - a connect that already made a new session on the new network (and cleared the mark) is
-        // never cut here.
-        if (!staleNetwork) return false
+    @Synchronized private fun dropStale(old: Session): Boolean {
+        // Review: under [connect]'s lock. Still the current session: let go (the next call connects afresh). Already replaced by a
+        // connect on the new network: only the old one goes now - kept until here for the calls that were in flight on it.
+        if (session !== old) { runCatching { old.disconnect() }; return false }
         staleNetwork = false
         failedAt = 0L; failedWhy = null
-        val s = session; runCatching { s?.disconnect() }
+        runCatching { old.disconnect() }
         return true
     }
 
-    /** TEST ONLY: a session as if one were connected (no server is reached); a tunnel as if open, its bytes last moved [quietMs] ago. */
+    /**
+     * TEST ONLY: a session as if one were connected (no server is reached); a tunnel as if open, its bytes last moved [quietMs] ago -
+     * a request whose reply is still awaited when [awaitingReply], else a call answered in full.
+     */
     internal fun sessionForTest(s: Session?) { session = s }
     internal fun staleForTest(): Boolean = staleNetwork
-    internal fun tunnelForTest(quietMs: Long): java.util.concurrent.atomic.AtomicLong =
-        java.util.concurrent.atomic.AtomicLong(mono() - quietMs).also { tunnels += it }
-    internal fun tunnelEndedForTest(t: java.util.concurrent.atomic.AtomicLong) { tunnels -= t }
+    internal fun tunnelForTest(quietMs: Long, awaitingReply: Boolean = false, on: Session? = session): Tunnel {
+        val t0 = mono() - quietMs
+        return Tunnel(t0 - 1).also { t -> t.on = on; if (awaitingReply) { t.down = t0 - 1; t.up = t0 } else { t.up = t0 - 1; t.down = t0 }; tunnels += t }
+    }
+    internal fun tunnelEndedForTest(t: Tunnel) { tunnels -= t }
+    /** TEST ONLY: [t]'s bytes moved now ([up]: a request; else a reply). */
+    internal fun tunnelMovedForTest(t: Tunnel, up: Boolean) { if (up) t.up = mono() else t.down = mono() }
 
     private fun serve(client: Socket) {
-        val io = java.util.concurrent.atomic.AtomicLong(mono())
+        val io = Tunnel(mono())
         tunnels += io
         try { serveTunnel(client, io) } finally { tunnels -= io }
     }
 
-    private fun serveTunnel(client: Socket, io: java.util.concurrent.atomic.AtomicLong) {
+    private fun serveTunnel(client: Socket, io: Tunnel) {
         client.use { c ->
             val inp = DataInputStream(c.getInputStream())
             val out = c.getOutputStream()
@@ -420,15 +450,15 @@ object Relay {
             val port = inp.readUnsignedShort()
             if (port != 443 || !allowed(dest)) { reply(out, 2); return }
             val ch = try {
-                (connect(inTunnel = true).openChannel("direct-tcpip") as ChannelDirectTCPIP).apply { setHost(dest); setPort(port) }
+                connect(self = io).let { s -> io.on = s; s.openChannel("direct-tcpip") as ChannelDirectTCPIP }.apply { setHost(dest); setPort(port) }
             } catch (e: Exception) { reply(out, 1); return }
             val fromServer = ch.inputStream
             val toServer = ch.outputStream
             try { ch.connect(15_000) } catch (e: Exception) { reply(out, 5); return }
             reply(out, 0)
             c.soTimeout = 0                                                    // a quiet tunnel is not an error
-            val up = Thread({ pump(inp, toServer, io); runCatching { ch.disconnect() } }, "relay-up").apply { isDaemon = true; start() }
-            pump(fromServer, out, io)
+            val up = Thread({ pump(inp, toServer) { io.up = mono() }; runCatching { ch.disconnect() } }, "relay-up").apply { isDaemon = true; start() }
+            pump(fromServer, out) { io.down = mono() }
             runCatching { ch.disconnect() }
             up.join(1_000)
         }
@@ -450,13 +480,13 @@ object Relay {
         runCatching { out.write(byteArrayOf(5, code.toByte(), 0, 1, 0, 0, 0, 0, 0, 0)); out.flush() }
     }
 
-    private fun pump(from: InputStream, to: OutputStream, io: java.util.concurrent.atomic.AtomicLong) {
+    private fun pump(from: InputStream, to: OutputStream, moved: () -> Unit) {
         val buf = ByteArray(16 * 1024)
         runCatching {
             while (true) {
                 val n = from.read(buf)
                 if (n < 0) break
-                io.set(mono())
+                moved()
                 to.write(buf, 0, n); to.flush()
             }
         }

@@ -105,6 +105,12 @@ class RateGate(
 
     @Synchronized private fun waiting(p: Priority, d: Int) { waitingNow[p.ordinal] = (waitingNow[p.ordinal] + d).coerceAtLeast(0) }
 
+    /**
+     * 20 Nov 2026 (B5-D): whether a caller of any lane above [p] (a smaller ordinal: every lane listed before it) is waiting now -
+     * a read of [p] that can do without its slot then leaves it to them.
+     */
+    @Synchronized fun waitingAbove(p: Priority): Boolean = (0 until p.ordinal).any { waitingNow[it] > 0 }
+
     /** Callers of [p] waiting now (the tests and the diagnostics). */
     @Synchronized fun waitingFor(p: Priority): Int = waitingNow[p.ordinal]
 }

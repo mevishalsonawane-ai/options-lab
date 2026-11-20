@@ -56,8 +56,11 @@ import java.util.concurrent.atomic.AtomicReference
 object KiteStream {
     enum class Status { OFF, CONNECTING, LIVE, RETRYING }
 
-    /** [conn]: 20 Nov 2026, the connection that brought it (0: the test feed), so a connection's first packet of each instrument is known. */
-    data class Seen(val tick: KiteTicks.Tick, val at: Long, val conn: Int = 0)
+    /**
+     * [conn]: 20 Nov 2026, the connection that brought it (0: the test feed), so a connection's first packet of each instrument is known.
+     * [arrived]: when it reached the phone ([at] is that, or earlier for a packet that came late: [com.optionslab.ira.TickStamp]).
+     */
+    data class Seen(val tick: KiteTicks.Tick, val at: Long, val conn: Int = 0, val arrived: Long = at)
 
     /** 20 Nov 2026: numbers the connections ([Conn.id], [Seen.conn]). */
     private val connIds = java.util.concurrent.atomic.AtomicInteger()
@@ -222,6 +225,14 @@ object KiteStream {
         ticks[token]?.takeIf { System.currentTimeMillis() - it.at in 0..maxAgeMs }?.tick
 
     /**
+     * B5-D: the last tick for [token] when it REACHED the phone at most [maxAgeMs] ago, however late the exchange stamped it - the
+     * stop reads' fallback when no fresh quote answers ([Broker.stopQuotes]), exactly as [tick] was before late packets were stamped
+     * back. Never a price to decide on while a fresh one can be had. Memory only.
+     */
+    fun arrivedTick(token: Long, maxAgeMs: Long = 5_000): KiteTicks.Tick? =
+        ticks[token]?.takeIf { System.currentTimeMillis() - it.arrived in 0..maxAgeMs }?.tick
+
+    /**
      * The last tick for [token] when it is fresh enough to DECIDE on ([com.optionslab.ira.LiveQuote.FRESH_MS], 2 s), else
      * null: the caller then reads Zerodha (the REST fallback).
      */
@@ -243,7 +254,9 @@ object KiteStream {
      */
     fun init(context: android.content.Context) {
         appContext = context.applicationContext
-        runCatching { NetWatch.start(context.applicationContext) }
+        // B5-D review: registered off the main thread (a binder call), never ahead of the start's positions-first work.
+        val app = context.applicationContext
+        scope.launch { runCatching { NetWatch.start(app) } }
     }
 
     /**
@@ -382,7 +395,9 @@ object KiteStream {
         val c = conn
         val ws = socket
         var dropped = false
-        if (c != null && ws != null && !c.done.isCompleted) {
+        // B5-D review: one already open on the network now current (it reconnected by itself inside the debounce) is kept.
+        val onCurrent = c != null && c.opened.get() && c.network != null && c.network == networkId()
+        if (c != null && ws != null && !c.done.isCompleted && !onCurrent) {
             c.byNetwork = true
             c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.NETWORK_CHANGED, message = "the phone's network changed"))
             _status.value = Status.RETRYING
@@ -710,7 +725,7 @@ object KiteStream {
             // carries the exchange's stamp of its last change, minutes ago.
             val first = prevSeen == null || prevSeen.conn != conn
             val at = if (stampLate && !first) runCatching { stamps.at((t.token and 0xFF).toInt(), now, mono, t.exchangeTime) }.getOrDefault(now) else now
-            ticks[t.token] = Seen(t, at, conn)
+            ticks[t.token] = Seen(t, at, conn, now)
             if (t.last > 0 && com.optionslab.ira.PriceNow.newTrade(t.last, tt, prev != null, prev?.last, prev?.lastTradeTime, now / 1000))
                 paths.getOrPut(t.token) { com.optionslab.engine.TickPath() }.record(t.last, now)
             // The local candles by the exchange's own stamp (a tick without one - an index's quote packet - is not used); never from

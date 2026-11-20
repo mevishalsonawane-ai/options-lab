@@ -21,9 +21,24 @@ object NetWatch {
     private val started = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var state = com.optionslab.ira.NetChange.State()
 
-    /** Network changes acted on in this process (the diagnostics and the tests). */
+    /** Network changes seen in this process (the diagnostics and the tests). */
     @Volatile var changes = 0
         private set
+
+    /** B5-D: times the stream and the relay were actually opened again (at most one each [debounceMs]: [available]). */
+    @Volatile var acts = 0
+        private set
+
+    /**
+     * B5-D (a flapping network): the stream and the relay are opened again at most once in this long. A change inside it is acted on
+     * once at its end, on the network then current - never a reconnect per flap.
+     */
+    @Volatile internal var debounceMs = 5_000L
+
+    /** When the last reconnect began (monotonic; [Long.MIN_VALUE]: none yet), and whether one is already waiting to run. */
+    private var lastActAt = Long.MIN_VALUE
+    private var pending = false
+    private fun mono(): Long = System.nanoTime() / 1_000_000L
 
     fun start(context: android.content.Context) {
         if (!started.compareAndSet(false, true)) return
@@ -44,7 +59,15 @@ object NetWatch {
         state = next
         if (!changed) return
         changes++
-        scope.launch { act() }
+        if (pending) return                                  // one is already waiting: it acts on the network current then
+        pending = true
+        val last = lastActAt
+        val wait = if (last == Long.MIN_VALUE) 0L else (last + debounceMs - mono()).coerceIn(0L, debounceMs)
+        scope.launch {
+            if (wait > 0) kotlinx.coroutines.delay(wait)
+            synchronized(this@NetWatch) { pending = false; lastActAt = mono(); acts++ }
+            act()
+        }
     }
 
     @Synchronized
@@ -59,5 +82,7 @@ object NetWatch {
     }
 
     /** TEST ONLY: forget the network seen (as a new process). */
-    internal fun resetForTest() { synchronized(this) { state = com.optionslab.ira.NetChange.State(); changes = 0 } }
+    internal fun resetForTest() {
+        synchronized(this) { state = com.optionslab.ira.NetChange.State(); changes = 0; acts = 0; lastActAt = Long.MIN_VALUE; pending = false; debounceMs = 5_000L }
+    }
 }

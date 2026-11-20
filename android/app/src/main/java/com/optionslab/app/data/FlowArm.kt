@@ -586,14 +586,17 @@ object FlowArm {
 
     /**
      * 20 Nov 2026 (audit: "Flow uses old stream prices when the stream is down"): the index's price for its exit - the stream's (at
-     * most 5 s old, [spot]), else Zerodha's quote of the index read now (the stops' own read, at most [Paper.EXIT_READ_MS]), else
-     * null (as before: no index exit this look; the premium stop and the square-off still act). A background lane only.
+     * most 5 s old, [spot]), else Zerodha's quote of the index read now (the entries' lane, at most [Paper.EXIT_READ_MS]; B5-D: none
+     * while a live stop's read waits, nor past the paper arms' read budget - [Paper.paperExitRead]), else the stream's last index price
+     * up to a minute old, else null (as before: no index exit this look; the premium stop and the square-off still act).
      */
     private suspend fun exitSpot(u: String): Double? {
         spot(u)?.let { return it }
         if (testSpot != null || !Broker.loggedIn) return null
         val key = runCatching { Broker.indexKey(u) }.getOrNull() ?: return null
-        return Paper.boundedRead(Paper.EXIT_READ_MS) { Broker.stopQuotes(listOf(key))[key]?.last }?.takeIf { it.isFinite() && it > 0 }
+        Paper.paperExitRead(Paper.EXIT_READ_MS) { Broker.stopQuotes(listOf(key), com.optionslab.ira.RateGate.Priority.ENTRY)[key]?.last }
+            ?.takeIf { it.isFinite() && it > 0 }?.let { return it }
+        return runCatching { tokenOf(u)?.let { KiteStream.tick(it, 60_000L)?.last } }.getOrNull()?.takeIf { it > 0 }
     }
 
     /** [c]'s price from Zerodha's stream (at most 5 s old; the option followed from now on), or null. Memory only. */

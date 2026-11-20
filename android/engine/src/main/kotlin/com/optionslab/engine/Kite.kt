@@ -424,10 +424,10 @@ object Kite {
 
     /**
      * 20 Nov 2026 (audit: "freeze quantities are hard-coded"): the exchanges' freeze quantities as the day's instrument data gives
-     * them (Upstox's public master, "freeze_quantity"), by underlying; empty until it is read. That figure is the exchange's freeze
-     * level - the first quantity it refuses (NIFTY's "1801" for 1800 at most) - so the largest order is one less. Read wrongly the
-     * other way round, one less is still accepted: it can only ever slice an order a little more, never send one the exchange
-     * refuses for size. It can only lower the table's figure ([freezeQuantity]).
+     * them (Upstox's public master, "freeze_quantity"), by underlying; empty until it is read. B5-D: taken as given, never one
+     * subtracted - whether it is the exchange's freeze level (the first quantity refused, NIFTY's "1801") or the largest order
+     * allowed (1800), the table stands for both ([freezeOf]); and an order is a whole number of lots ([slices]), so a level used as
+     * the largest order still never sends one the exchange refuses. It can only lower the table's figure ([freezeQuantity]).
      */
     @Volatile private var freezeData: Map<String, Int> = emptyMap()
 
@@ -437,8 +437,8 @@ object Kite {
         if (ok.isNotEmpty()) freezeData = freezeData + ok
     }
 
-    /** The largest order for [underlying] by the day's data, or null when the data has none ([freezeFromData]). */
-    fun freezeFromDataOf(underlying: String): Int? = freezeData[underlying]?.let { it - 1 }
+    /** The day's data figure for [underlying] as given, or null when the data has none ([freezeFromData]). */
+    fun freezeFromDataOf(underlying: String): Int? = freezeData[underlying]
 
     /** TEST ONLY: the day's data forgotten (the table alone). */
     fun clearFreezeData() { freezeData = emptyMap() }
@@ -453,11 +453,15 @@ object Kite {
         if (exchange != "NFO" && exchange != "BFO") null
         else underlyingOf(tradingSymbol)?.let { u -> freezeOf(FREEZE_QUANTITY[u], freezeFromDataOf(u)) }
 
-    /** [table] lowered by [data] when the data is sane (at least half the table); either alone when the other is missing. Pure. */
+    /**
+     * [table], unless the day's [data] is clearly lower - under the table (a data figure at or over it, the level "1801" or the largest
+     * order "1800" alike, keeps the table), yet at least half of it (a figure in lots, or junk, is not used). Either alone when the
+     * other is missing. Pure.
+     */
     fun freezeOf(table: Int?, data: Int?): Int? = when {
         table == null -> data
-        data == null || data < table / 2 -> table
-        else -> minOf(table, data)
+        data == null || data < table / 2 || data >= table -> table
+        else -> data
     }
 
     // ---- GTT: a stop-loss / target held at Zerodha, not on the phone --------------
