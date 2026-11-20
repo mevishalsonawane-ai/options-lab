@@ -27,8 +27,8 @@ internal const val SHARE_STATE_LABEL = "Share full settings and state"
  * At the top of Settings and beside Copy diagnostics. None in IraGoldAlgo.
  */
 @Composable
-internal fun ShareStateButton(modifier: Modifier = Modifier, note: Boolean = true) {
-    if (com.optionslab.app.BuildConfig.GOLD) return
+internal fun ShareStateButton(modifier: Modifier = Modifier, note: Boolean = true, gold: Boolean = com.optionslab.app.BuildConfig.GOLD) {
+    if (gold) return
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }

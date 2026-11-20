@@ -5,6 +5,7 @@ import android.content.Intent
 import com.optionslab.engine.orb.LiveMirror
 import com.optionslab.ira.ArmAutoStops
 import com.optionslab.ira.StateShare
+import kotlinx.coroutines.async
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
@@ -30,7 +31,9 @@ object SettingsShare {
     private const val SUB = "exports/state"
     private const val WAIT_MS = 3_000L
     /** The written file is deleted this long after it is written (it holds Boss's P&L outside the app's encryption). */
-    private const val KEEP_MS = 30 * 60_000L
+    internal const val KEEP_MS = 30 * 60_000L
+    /** The full diagnostics report's own bound (it writes the diary first, then reads the strategies' book under its lock). */
+    private const val REPORT_WAIT_MS = 10_000L
     private val TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(com.optionslab.engine.IST)
 
     /** TEST ONLY: the thread the last file was built on (the no-main-thread test). */
@@ -44,16 +47,21 @@ object SettingsShare {
     private suspend fun <T> bounded(f: suspend () -> T): T? =
         runCatching { kotlinx.coroutines.withTimeoutOrNull(WAIT_MS) { f() } }.getOrNull()
 
-    /** Values the app knows are secret, removed wherever they appear (never kept after the build). */
-    private fun known(): List<String> = listOfNotNull(
+    /**
+     * Values the app knows are secret or personal, removed wherever they appear as whole words (never kept after the build): the keys and
+     * addresses, and - as the uploaded day file's scrub does ([DiagDayHost]) - the holder's name whole and word by word, the Zerodha user
+     * id, the GitHub login and the data repository's owner (a personal handle).
+     */
+    internal fun known(): List<String> = listOfNotNull(
         runCatching { Broker.apiKey }.getOrNull(), runCatching { Broker.userId }.getOrNull(), runCatching { Broker.userName }.getOrNull(),
+        runCatching { GitHubSync.login }.getOrNull(), com.optionslab.ira.CloudSync.OWNER,
         runCatching { Broker.streamToken() }.getOrNull(), runCatching { Relay.host }.getOrNull(),
         runCatching { Relay.user }.getOrNull()?.takeIf { it != "ubuntu" }, runCatching { Relay.publicKey }.getOrNull(),
         runCatching { StaticIp.registered }.getOrNull(),
         runCatching { com.optionslab.app.security.SecurePrefs.getString(NtfyReader.K_TOPIC) }.getOrNull(),
         runCatching { com.optionslab.app.security.SecurePrefs.getString(NtfyReader.K_SERVER) }.getOrNull(),
         runCatching { com.optionslab.app.security.SecurePrefs.getString(NtfyReader.K_TOKEN) }.getOrNull(),
-    ).filter { it.isNotBlank() }
+    ).filter { it.isNotBlank() } + runCatching { DiagDayHost.nameWords(Broker.userName) }.getOrDefault(emptyList())
 
     // ---- 1. header ---------------------------------------------------------------------------------------------------------------
 
@@ -107,13 +115,27 @@ object SettingsShare {
             runCatching { Broker.loggedIn }.getOrDefault(false))
     }
 
+    /** One part of a section: a read that fails says so on one line, and the rest of the file still builds. */
+    private suspend fun part(name: String, f: suspend () -> List<String>): List<String> = try {
+        if (testFailPart == name) throw IllegalStateException("test: $name fails")
+        f()
+    } catch (e: kotlinx.coroutines.CancellationException) { throw e      // (the share cancelled: stop, never "could not be read" lines)
+    } catch (e: Exception) { listOf("$name: could not be read (${e.javaClass.simpleName})") }
+
+    /** The report's own worker ([text]): one that runs past its bound finishes there, never holding the share up. */
+    private val reportScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
+    /** TEST ONLY: the part whose read throws (a failing view). Debug builds only. */
+    @Volatile internal var testFailPart: String? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     private fun mirroredArms(c: Common, today: LocalDate): List<String> {
         val v = ArmLive.view.value
         val legs = runCatching { ArmLive.paperLegsNow() }.getOrDefault(emptyMap())
         val out = ArrayList<String>()
         out += "Mirrored arms (each follows its own paper trade at Zerodha): book ${if (!v.loaded) "not read yet" else if (v.unreadable) "UNREADABLE" else "read"}."
-        for (spec in LiveMirror.ARMS) {
-            if (spec.key == LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) continue
+        for (spec in LiveMirror.ARMS) runCatching {
+            if (spec.key == LiveMirror.SOLO_MIDDAY && !com.optionslab.app.BuildConfig.JARVIS) return@runCatching
             val on = v.on(spec.key)
             val shadow = v.shadowOn(spec.key)
             val (n, net) = v.record(spec.key)
@@ -124,7 +146,8 @@ object SettingsShare {
             val mcx = spec.exchange == "MCX"
             val gate = LiveMirror.Gate(appLive = c.appLive, aiLive = c.aiLive, armOn = on, paperOnly = c.paperOnly, kill = c.kill,
                 stopped = if (mcx) c.mcxStopped else c.stopped != null, lossLimit = c.lossLimit, dayLock = c.dayLock,
-                accountStop = c.accountRefusal, loggedIn = c.loggedIn)
+                // 20 Nov 2026 (main, Boss: "make it follow switch"): R51 / R72 pass it while his "Liquidity live stop rule" switch is off.
+                accountStop = if (runCatching { ArmLive.accountStopActs(spec.key) }.getOrDefault(true)) c.accountRefusal else null, loggedIn = c.loggedIn)
             // The entry door's own look: an unread or unreadable book refuses every mirrored entry.
             val refusal = LiveMirror.refusal(gate) ?: if (!v.loaded || v.unreadable) "the arms' live book is not read" else null
             val paper = legs[spec.key].orEmpty()
@@ -142,7 +165,7 @@ object SettingsShare {
             out += "    Paper now: ${paper.size} trade(s) known to the live path, ${paper.count { it.qty > 0 }} held" +
                 paper.filter { it.qty > 0 }.mapNotNull { it.symbol }.takeIf { it.isNotEmpty() }?.let { " (${it.joinToString()})" }.orEmpty()
             runCatching { ArmAutoStopsHost.view.value.rowLine(spec.key) }.getOrNull()?.let { out += "    Automatic stops: $it" }
-        }
+        }.onFailure { out += "- ${spec.label}: could not be read (${it.javaClass.simpleName})" }
         return out
     }
 
@@ -163,7 +186,7 @@ object SettingsShare {
         val out = ArrayList<String>()
         out += "ORB family and Liquidity 15+5 (their own live path; armed in Live with the PIN, Liquidity by your switch on Home):"
         v.stopped?.let { out += "Stopped for today: $it" }
-        for (a in v.arms) {
+        for (a in v.arms) runCatching {
             val todayTrades = a.today.filter { it.day == today }
             out += "- ${a.arm.label} [${a.arm.source}]: ${if (a.armed) "on" else "off"} · ${if (a.automatic) "automatic" else "approve each"}" +
                 " · cleared for Zerodha ${yes(a.cleared)} · would trade live now ${yes(a.liveOk)}" +
@@ -179,7 +202,7 @@ object SettingsShare {
                 runCatching { OrbArms.liquidityBookLines() }.getOrNull()?.forEach { out += "    Book: $it" }
                     ?: run { out += "    Books: not in memory yet" }
             }
-        }
+        }.onFailure { out += "- ${runCatching { a.arm.label }.getOrDefault("an arm")}: could not be read (${it.javaClass.simpleName})" }
         return out
     }
 
@@ -241,7 +264,7 @@ object SettingsShare {
         out += line("Order flow modes") { FlowGate.diagLine() }
         out += "Paper-only period: ${line("Paper-only period") { PaperOnly.entryRefusal() ?: "none now" }}"
         out += "Live lots per arm trade: ${s?.armLiveLots ?: "not read"} · indices the arms trade live: ${s?.liveMarkets?.sorted()?.joinToString() ?: "not read"}"
-        out += "Every saved setting (Settings and Bot settings):"
+        out += "The app settings (every value the app keeps in AppSettings: Settings, Bot settings and Zerodha's limits):"
         out += s?.let { StateShare.fields(it.toString())?.map { f -> "- $f" } } ?: listOf("- the settings could not be read")
         return out
     }
@@ -310,19 +333,27 @@ object SettingsShare {
     suspend fun text(): String {
         builtOn = Thread.currentThread()
         val s = runCatching { AppSettings.load() }.getOrNull()
-        val report = runCatching { Diag.report() }.getOrElse { "The diagnostics report could not be built: ${it.javaClass.simpleName}" }
+        // Bounded: the report reads the strategies' book under its lock (and writes the diary first), and swallows its own reads'
+        // failures, so it is built on its own worker and only WAITED for here; one past the bound finishes there and is dropped.
+        val building = reportScope.async { Diag.report() }
+        val report = try {
+            kotlinx.coroutines.withTimeoutOrNull(REPORT_WAIT_MS) { building.await() }
+                ?: "The diagnostics report could not be built within ${REPORT_WAIT_MS / 1000} s; the sections above and below stand."
+        } catch (e: kotlinx.coroutines.CancellationException) { building.cancel(); throw e
+        } catch (e: Exception) { "The diagnostics report could not be built: ${e.javaClass.simpleName}" }
         val diaryAll = runCatching { Diag.lines() }.getOrDefault(emptyList())
         val day = runCatching { Market.today() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
         val todayLines = StateShare.today(diaryAll, day)
         val c = common(s)
         val sections = listOf(
-            StateShare.Section(StateShare.HEADER, header(s, diaryAll)),
-            StateShare.Section(StateShare.ARMS, mirroredArms(c, day) + passedArms(day) + orbArms(day) + otherArms()),
-            StateShare.Section(StateShare.SWITCHES, switches(s)),
-            StateShare.Section(StateShare.STOPS, stops(s, c)),
+            StateShare.Section(StateShare.HEADER, part("The header") { header(s, diaryAll) }),
+            StateShare.Section(StateShare.ARMS, part("Mirrored arms") { mirroredArms(c, day) } + part("Passed-research arms") { passedArms(day) } +
+                part("ORB family and Liquidity 15+5") { orbArms(day) } + part("Other arms") { otherArms() }),
+            StateShare.Section(StateShare.SWITCHES, part("Switches") { switches(s) }),
+            StateShare.Section(StateShare.STOPS, part("Stops and limits") { stops(s, c) }),
             StateShare.Section(StateShare.REPORT, listOf(report)),
-            StateShare.Section(StateShare.DECISIONS, decisions(todayLines, day)),
-            StateShare.Section(StateShare.DIARY, diary(todayLines)),
+            StateShare.Section(StateShare.DECISIONS, part("Today's decisions") { decisions(todayLines, day) }),
+            StateShare.Section(StateShare.DIARY, part("Today's diary") { diary(todayLines) }),
         )
         return StateShare.build(sections, known())
     }
@@ -334,8 +365,14 @@ object SettingsShare {
 
     /** One daemon thread that deletes each written file after [KEEP_MS] (never the main thread). */
     private val sweeper by lazy {
-        java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "share-sweep").apply { isDaemon = true } }
+        java.util.concurrent.ScheduledThreadPoolExecutor(1) { r -> Thread(r, "share-sweep").apply { isDaemon = true } }
     }
+
+    /** [f] deleted unless a later share wrote it again since [written] (its own sweep deletes that one). */
+    internal fun sweep(f: File, written: Long) { if (f.lastModified() == written) runCatching { f.delete() } }
+
+    /** TEST ONLY: the sweeps waiting now (each written file's delete [KEEP_MS] after it). */
+    internal fun sweepsWaiting(): Int = sweeper.queue.size
 
     /** "Erase everything" ([PersonalStores]): the files written for sharing deleted. Nothing is kept in memory. */
     fun wipe() { folder()?.let { runCatching { it.deleteRecursively() } } }
@@ -355,7 +392,7 @@ object SettingsShare {
         runCatching { Diag.record("share", "settings and state file written (${text.lines().size} lines, redacted)") }
         // Not kept: deleted [KEEP_MS] later (long enough for the app Boss shares it to), at the next share, or by Erase everything.
         val written = f.lastModified()
-        runCatching { sweeper.schedule(Runnable { if (f.lastModified() == written) runCatching { f.delete() } }, KEEP_MS, java.util.concurrent.TimeUnit.MILLISECONDS) }
+        runCatching { sweeper.schedule(Runnable { sweep(f, written) }, KEEP_MS, java.util.concurrent.TimeUnit.MILLISECONDS) }
         return f
     }
 

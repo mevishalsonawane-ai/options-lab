@@ -123,6 +123,74 @@ class SettingsShareTest : RobolectricTest() {
         assertTrue(text, text.contains("held (NIFTY26NOV24500CE)"))
     }
 
+    /** The "A live entry now" line under [label]'s row of the file. */
+    private fun liveEntryOf(text: String, label: String): String {
+        val lines = text.lines()
+        val at = lines.indexOfFirst { it.startsWith("- $label [") }
+        check(at >= 0) { "no row for $label" }
+        return lines.drop(at + 1).first { it.trimStart().startsWith("A live entry now:") }
+    }
+
+    @Test fun theArmsAccountStopFollowsTheSwitchForR51AndR72Only() {
+        val oov = com.optionslab.engine.orb.OovArm.SOURCE
+        try {
+            com.optionslab.app.testing.AutomationSupport.liveSettings()
+            PaperOnly.resetForTest(null)
+            runBlocking { OrbArms.view() }
+            ArmLive.viewForTest(ArmLive.View(switches = mapOf(DonchianArm.SOURCE to true, oov to true),
+                shadow = mapOf(DonchianArm.SOURCE to false, oov to false), loaded = true, closed = listOf(closedLive(-41_000.0))))
+            // Boss's "Liquidity live stop rule" switch is off (the @Before): the reached stop does not act on R51; R52 keeps it.
+            val off = runBlocking { SettingsShare.text() }
+            assertTrue(off, off.contains("not acting on R51 and R72 while your \"Liquidity live stop rule\" switch is off"))
+            assertFalse(liveEntryOf(off, "R51 Donchian 20"), liveEntryOf(off, "R51 Donchian 20").contains("account stop rule"))
+            assertTrue(liveEntryOf(off, "R52 Open outside value"), liveEntryOf(off, "R52 Open outside value").contains("refused: the account stop rule"))
+            // On again: R51 is refused by it as before.
+            ArmAutoStopsHost.resetForTest()
+            val on = runBlocking { SettingsShare.text() }
+            assertFalse(on, on.contains("not acting on R51 and R72"))
+            assertTrue(liveEntryOf(on, "R51 Donchian 20"), liveEntryOf(on, "R51 Donchian 20").contains("refused: the account stop rule"))
+        } finally { com.optionslab.app.testing.AutomationSupport.liveSettings(false) }
+    }
+
+    @Test fun anUnreadableBookAndAFailingReadStillGiveTheWholeFile() {
+        ArmLive.viewForTest(ArmLive.View(loaded = true, unreadable = true))
+        try {
+            SettingsShare.testFailPart = "Passed-research arms"
+            val text = runBlocking { SettingsShare.text() }
+            assertTrue(text, text.contains("Arms' live book: UNREADABLE (no live entries)"))
+            assertTrue(text, text.contains("Mirrored arms (each follows its own paper trade at Zerodha): book UNREADABLE."))
+            assertTrue(text, text.contains("Passed-research arms: could not be read (IllegalStateException)"))
+            // Every other part still built.
+            for (h in StateShare.HEADINGS) assertTrue(h, text.contains("== $h"))
+            assertTrue(text.contains("ORB family and Liquidity 15+5") && text.contains("Daily loss limit:") && text.contains("-- Events (newest first) --"))
+        } finally { SettingsShare.testFailPart = null }
+    }
+
+    @Test fun theFileIsDeletedThirtyMinutesLaterUnlessWrittenAgain() {
+        assertEquals(30 * 60_000L, SettingsShare.KEEP_MS)
+        val f = runBlocking { SettingsShare.write(context) }
+        assertTrue("its delete is waiting", SettingsShare.sweepsWaiting() >= 1)
+        val written = f.lastModified()
+        // Written again since (a later share): this sweep leaves the new file to its own.
+        f.setLastModified(written + 5_000)
+        SettingsShare.sweep(f, written)
+        assertTrue(f.exists())
+        SettingsShare.sweep(f, f.lastModified())
+        assertFalse(f.exists())
+        // The erase deletes the folder.
+        runBlocking { SettingsShare.write(context) }
+        assertTrue(SettingsShare.filesForErase().single().exists())
+        SettingsShare.wipe()
+        assertFalse(SettingsShare.filesForErase().single().exists())
+    }
+
+    @Test fun theNameScrubCoversTheHolderGitHubAndTheOwner() {
+        SecurePrefs.putAll(mapOf("github.token.login" to "boss-handle"))
+        val known = SettingsShare.known()
+        assertTrue(known.toString(), known.contains(com.optionslab.ira.CloudSync.OWNER) && known.contains("boss-handle"))
+        assertTrue(StateShare.redact("synced to ${com.optionslab.ira.CloudSync.OWNER}/IraAlgo", known).contains(StateShare.MASK))
+    }
+
     @Test fun theFileIsWrittenAsOneTextFileInTheSharedFolder() {
         val f = runBlocking { SettingsShare.write(context) }
         assertTrue(f.isFile && f.name.endsWith(".txt") && f.parentFile!!.path.contains("exports"))

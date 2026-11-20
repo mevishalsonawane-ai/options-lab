@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
@@ -82,6 +83,15 @@ class ShareStateButtonTest {
         compose.frames()
         compose.waitForText(SHARE_STATE_LABEL)
         tapAndShare()
+    }
+
+    @Test fun iraGoldAlgoHasNoButton() {
+        compose.setContent { IraAlgoTheme("light") { androidx.compose.foundation.layout.Column {
+            androidx.compose.material3.Text("gold page"); ShareStateButton(gold = true) } } }
+        compose.frames()
+        compose.waitForText("gold page")
+        assertTrue(compose.onAllNodesWithTag("share-state").fetchSemanticsNodes().isEmpty())
+        assertEquals(null, shadowOf(app).peekNextStartedActivity())
     }
 
     @Test fun theButtonIsBesideCopyDiagnosticsAndShares() {

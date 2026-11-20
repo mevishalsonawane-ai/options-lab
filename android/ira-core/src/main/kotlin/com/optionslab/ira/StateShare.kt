@@ -62,6 +62,14 @@ object StateShare {
     private val TRADING_SYMBOL = Regex("\\b[A-Z]{2,20}\\d{2}[A-Z]{3}\\d{2}(?:\\d+(?:\\.\\d+)?(?:CE|PE)|FUT)\\b")
     /** Reason codes of lowercase words and underscores (no_entry_window): kept, as the diary keeps them. */
     private val REASON_CODE = Regex("\\b[a-z]+(?:_[a-z]+)+\\b")
+    /** A reason code is kept only when one of its words is a decision word, as the diary's own redaction keeps it (a passphrase is not). */
+    private val REASON_WORDS = setOf("no", "not", "after", "before", "outside", "entry", "entries", "window", "break", "liquidity", "room",
+        "square", "off", "flat", "refused", "skipped", "signal", "cap", "lock", "day", "time", "hours", "new", "now", "waiting", "closed",
+        "open", "expiry", "quote", "price", "stop", "target", "trail", "guard", "held", "holding", "missed",
+        // 20 Nov 2026 (review): the app's own alert and order words too ("flip_outgoing_exit_rejected" is a strategy's stuck-exit kind).
+        "exit", "exits", "rejected", "failed", "leg", "legs", "run", "order", "orders", "sent", "fill", "filled", "cancelled", "skip",
+        "live", "paper", "shadow", "limit", "loss", "profit", "read", "error", "timeout", "missing", "stale", "flip", "outgoing")
+    private fun reasonCode(m: MatchResult): Boolean = m.value.split('_').any { it in REASON_WORDS }
 
     // Ordered: the specific shapes first, then the generic catch-alls.
     private val KEY_VALUE = Regex("(?i)\\b(access[_ -]?token|request[_ -]?token|refresh[_ -]?token|enctoken|api[_ -]?key|api[_ -]?secret|" +
@@ -83,8 +91,29 @@ object StateShare {
     /** IPv4 (with a port); IPv6 with four or more groups, or with "::" (a clock time, 10:15:00, has three groups and is kept). */
     private val IPV4 = Regex("(?<![\\d.])(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)){3}(?::\\d{1,5})?(?![\\d.])")
     private val IPV6 = Regex("(?<![0-9A-Za-z:])(?:(?:[0-9A-Fa-f]{1,4}:){3,7}[0-9A-Fa-f]{1,4}|(?:[0-9A-Fa-f]{1,4}(?::[0-9A-Fa-f]{1,4})*)?::(?:[0-9A-Fa-f]{1,4}(?::[0-9A-Fa-f]{1,4})*)?)(?![0-9A-Za-z:])")
-    /** Zerodha client ids: two or three capital letters and four to six digits (AB1234); never a year ("FY2026", "CY2025"). */
-    private val CLIENT_ID = Regex("\\b(?!(?:FY|CY|AY|IST|UTC)\\d)[A-Z]{2,3}\\d{4,6}\\b")
+    /**
+     * Zerodha client ids: two capital letters and four to six digits (AB1234), or three and three to six (XYZ123); never a year
+     * ("FY2026", "CY2025"), an indicator's length, a strike word or an exchange ("EMA200", "ATM100", "NSE500"; "MA200", "SL500" are short).
+     */
+    private val CLIENT_ID = Regex("\\b(?:(?!(?:FY|CY|AY)\\d)[A-Z]{2}\\d{4,6}|(?!(?:IST|UTC|EMA|SMA|DMA|WMA|HMA|ATR|RSI|ADX|NSE|BSE|MCX|ATM|OTM|ITM|VIX|ORB|CCI|MFI|OBV|ROC|TSI)\\d)[A-Z]{3}\\d{3,6})\\b")
+    /** An ntfy topic, as a path on its server or after the word ("ntfy.sh/boss-topic", "topic boss-topic"; never "topic set"). */
+    private val NTFY_PATH = Regex("(?i)\\b(ntfy\\.sh)/[^\\s\"'<>)]+")
+    /** (Only a word shaped like a topic - with a digit, '-', '_' or '.' - never "the topic can post".) */
+    private val TOPIC_WORD = Regex("(?i)\\b(topic)\\s+(?=[^\\s,;)]*[0-9_.-])(?=[^\\s(*]*[A-Za-z0-9])[^\\s,;)]+")
+    /**
+     * A host name with no scheme (the relay's "relay.example.net:22/path"), with its port and path: masked unless it is one of the public
+     * services the app talks to by name (Zerodha, Upstox, NSE, GitHub, ntfy). The app's own class names never match (a package's start
+     * is left out, and the name must end the word).
+     */
+    private val HOST = Regex("(?<![\\w.@/-])(?!(?:com\\.optionslab|java|javax|android|androidx|kotlin|kotlinx|org\\.json|dalvik)\\.)" +
+        "((?:[A-Za-z0-9-]+\\.)+(?:com|net|org|io|in|dev|app|cloud|xyz|me|co|trade|ai|info|biz|tech|site|online|host|lan|local|internal|home|" +
+        "de|uk|eu|cc|link|us|ca|au|fr|nl|ru|jp|cn|sg|ly|gg|to|tv|pro|space|store|top|club|vip|work|world|live|fun|run|page|duckdns))" +
+        // (A full stop that ends the sentence still ends the name: "connected to relay.example.net.")
+        "(?!\\w|\\.\\w)((?::\\d{1,5})?(?:/[^\\s\"'<>)]*)?)")
+    private val PUBLIC_HOSTS = setOf("kite.zerodha.com", "zerodha.com", "api.kite.trade", "ws.kite.trade", "kite.trade", "upstox.com",
+        "api.upstox.com", "assets.upstox.com", "nseindia.com", "www.nseindia.com", "nsearchives.nseindia.com", "github.com", "api.github.com",
+        "raw.githubusercontent.com", "objects.githubusercontent.com", "uploads.github.com", "ntfy.sh", "console.zerodha.com",
+        "developers.kite.trade", "huggingface.co", "api.ipify.org", "ifconfig.me", "www.google.com", "nse.in")
     /** Indian phone numbers, with or without +91, and written 98765 43210 / 98765-43210. */
     private val PHONE = Regex("(?<![\\d.,])(?:\\+?91[ -]?)?[6-9]\\d{9}(?![\\d.,])")
     private val PHONE_SPLIT = Regex("(?<![\\d.,])(?:\\+?91[ -]?)?[6-9]\\d{4}[ -]\\d{5}(?![\\d.,])")
@@ -106,6 +135,7 @@ object StateShare {
         fun keep(m: MatchResult): String { kept += m.value; return "\u0000${kept.size - 1}\u0000" }
         var out = text
         // Whole words only ("root" never masks "rooted"); the value itself may hold any characters.
+        // (Three letters at least: a two-letter name part would blank "vs" or "RAM" all through the file.)
         for (k in known.map { it.trim() }.filter { it.length >= 3 }.distinct().sortedByDescending { it.length })
             out = Regex("(?<![A-Za-z0-9])" + Regex.escape(k) + "(?![A-Za-z0-9])", RegexOption.IGNORE_CASE).replace(out, MASK)
         out = KEY_VALUE.replace(out) { m -> "${m.groupValues[1]}=$MASK" }
@@ -114,11 +144,14 @@ object StateShare {
         out = JWT.replace(out, MASK)
         out = URL.replace(out, MASK)
         out = EMAIL.replace(out, MASK)
+        out = NTFY_PATH.replace(out) { m -> "${m.groupValues[1]}/$MASK" }
+        out = TOPIC_WORD.replace(out) { m -> "${m.groupValues[1]} $MASK" }
+        out = HOST.replace(out) { m -> if (m.groupValues[1].lowercase() in PUBLIC_HOSTS) m.value else MASK }
         out = USER_AT_HOST.replace(out, MASK)
         out = IPV4.replace(out, MASK)
         out = IPV6.replace(out, MASK)
         out = TRADING_SYMBOL.replace(out, ::keep)
-        out = REASON_CODE.replace(out, ::keep)
+        out = REASON_CODE.replace(out) { m -> if (reasonCode(m)) keep(m) else m.value }
         out = CLIENT_ID.replace(out, LOGGED_IN_MASK)
         out = PHONE.replace(out, MASK)
         out = PHONE_SPLIT.replace(out, MASK)

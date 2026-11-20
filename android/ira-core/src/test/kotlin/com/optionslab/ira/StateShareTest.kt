@@ -36,6 +36,27 @@ class StateShareTest {
         assertTrue(out.contains(StateShare.MASK), out)
     }
 
+    @Test fun shortIdsHostsWithNoSchemeTopicsAndPassphrasesAreMasked() {
+        val out = StateShare.redact("client XYZ123 and AB12345 · relay relay.example.net:22/tunnel and box.lan · ntfy.sh/boss-alerts-77 · " +
+            "topic boss-alerts-77 · pass correct_horse_battery_staple_extra")
+        for (s in listOf("XYZ123", "AB12345", "relay.example.net", "tunnel", "box.lan", "boss-alerts-77", "correct_horse_battery_staple_extra"))
+            assertFalse(out.contains(s), "$s leaked:\n$out")
+        assertTrue(out.contains("ntfy.sh/${StateShare.MASK}"), out)
+        assertTrue(out.contains("topic ${StateShare.MASK}"), out)
+        // Public services, the app's own class names, indicator lengths, "topic set (****)" and long decision codes stay.
+        val kept = "api.kite.trade timed out · ntfy.sh is up · com.optionslab.app.data.SettingsShare · EMA200 above SMA200 · NSE500 · " +
+            "topic set (****) · no_entry_after_the_window_closed_today"
+        assertEquals(kept, StateShare.redact(kept))
+    }
+
+    @Test fun aHostAtTheEndOfASentenceIsMaskedAndTradingWordsAreNot() {
+        val out = StateShare.redact("[relay] connecting to home-box.duckdns.org. Then box.example.de:22 and relay.example.net.")
+        for (s in listOf("home-box", "box.example.de", "relay.example.net")) assertFalse(out.contains(s), "$s leaked:\n$out")
+        val kept = "MA200 · SL500 · ATM100 · HMA100 · ORB915 · flip_outgoing_exit_rejected · anyone who learns the topic can post · " +
+            "downloading from huggingface.co · run wg-relay-setup.sh · R72 vs R51"
+        assertEquals(kept, StateShare.redact(kept, listOf("vs")))
+    }
+
     @Test fun knownValuesAreMaskedWhereverTheyAppear() {
         val out = StateShare.redact("Welcome Ravi Kumar; topic set; relay my-box.lan", listOf("Ravi Kumar", "my-box.lan", "ab"))
         assertEquals("Welcome ${StateShare.MASK}; topic set; relay ${StateShare.MASK}", out)

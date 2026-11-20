@@ -3798,7 +3798,10 @@ object ArmLive {
         }
         val st = com.optionslab.ira.LiquidityStopRule.check(mine + orb, today)
         val words = "Arms' live-copies account stop (-Rs 40,000 from the best or -Rs 13,000 in a month, over the mirrored arms' and the ORB " +
-            "family's live trades): " + (if (st.stopped) "REACHED, blocking every mirrored live entry: ${st.why}" else "not reached") +
+            "family's live trades): " + (if (st.stopped) "REACHED, blocking every mirrored live entry: ${st.why}" +
+                // 20 Nov 2026 (main, Boss: "make it follow switch"): R51 and R72 pass it while his "Liquidity live stop rule" switch is off.
+                (if (!accountStopActs(com.optionslab.engine.orb.DonchianArm.SOURCE)) "; not acting on R51 and R72 while your \"Liquidity live stop rule\" switch is off" else "")
+                else "not reached") +
             " · ${st.trades} live trade(s), drawdown ${LiveMirror.rs(st.drawdown)}, worst ${LiveMirror.rs(st.worstDrawdown)}, this month ${LiveMirror.rs(st.month)}" +
             (if (orbKept == null) " · the ORB family's live record is not in memory yet (an entry reads it; unread, it refuses)" else "") + "."
         return words to (if (st.stopped) st.why else if (orbKept == null) ACCOUNT_UNCHECKED else null)
