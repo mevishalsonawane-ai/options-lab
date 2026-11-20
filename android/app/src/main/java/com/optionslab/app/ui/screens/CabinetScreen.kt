@@ -158,6 +158,8 @@ private fun Drawers(onPage: (String) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val found = remember(query) { if (query.isBlank()) emptyList() else settingsFound(query, gold = false, pages = SHOWN_PAGES) }
     Page {
+        // 20 Nov 2026 (Boss: "a button where i could share u all the setting details"): one file of every setting and the arms' state.
+        if (!com.optionslab.app.BuildConfig.GOLD) item { LedgerCard { ShareStateButton() } }
         item { SettingsSearchField(query) { query = it } }
         if (query.isNotBlank()) {
             item { SettingsResults(found, query) { e -> openSetting(e, onPage) } }

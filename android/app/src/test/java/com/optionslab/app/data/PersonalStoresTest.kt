@@ -689,6 +689,10 @@ class PersonalStoresTest {
         s("HealthReport") {
             com.optionslab.app.data.HealthReport.write(app)             // cache/exports/health/*.zip (holds() stays false: files only)
         },
+        s("SettingsShare") {
+            // 20 Nov 2026: the shared settings-and-state file (cache/exports/state/*.txt; files only, nothing in memory).
+            kotlinx.coroutines.runBlocking { com.optionslab.app.data.SettingsShare.write(app) }
+        },
         s("GlanceSource") {
             kotlinx.coroutines.runBlocking { com.optionslab.app.data.GlanceSource.read() }   // last card (memory)
             com.optionslab.app.data.GlanceSource.setExpanded(false)
