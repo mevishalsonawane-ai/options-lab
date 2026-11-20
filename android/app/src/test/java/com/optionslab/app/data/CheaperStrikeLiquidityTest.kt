@@ -163,6 +163,35 @@ class CheaperStrikeLiquidityTest : RobolectricTest() {
         } finally { OrbArms.testCheaperFlowSkip = false }
     }
 
+    /** The cheaper strike refused inside the order door: recorded once, nothing of it reached Zerodha, the signal's own strike goes on. */
+    @Test fun aCheaperStrikeRefusedInsideTheDoorIsRecordedOnceAndTheEntryGoesOn() {
+        kite.cash = 5_000.0
+        Broker.testAtDoor = { o -> com.optionslab.app.security.SecurePrefs.put("g.kill", o.tradingSymbol == s52100) }
+        try {
+            state()
+            assertEquals("Entered at Zerodha (live).", approve())
+            assertEquals(listOf(sym), buys().map { it.form["tradingsymbol"] })
+            val r = CheaperStrike.recsOf().single()
+            assertFalse(r.bought); assertTrue(r.why, r.why.startsWith("refused before it went"))
+        } finally { Broker.testAtDoor = null; com.optionslab.app.security.SecurePrefs.put("g.kill", false) }
+    }
+
+    /** One stepped trade is one claim in the portfolio guard and one signal in the flow log (the cheaper re-ask shares the signal's ticket). */
+    @Test fun aSteppedTradeCountsOnceInThePortfolioAndTheFlowLog() {
+        kite.cash = 5_000.0
+        val opened = java.util.Collections.synchronizedList(ArrayList<String>())
+        PortfolioHost.testOpened = opened
+        try {
+            state()
+            assertEquals("Entered at Zerodha (live).", approve())
+            assertEquals(s52100, buys().single().form["tradingsymbol"])
+            assertEquals("one claim: the signal's own", 1, opened.size)
+            assertTrue("no claim under another name", opened.none { it.contains("cheaper") })
+            val signals = FlowGate.signalsForTest()
+            assertTrue(signals.toString(), signals.size <= 1)
+        } finally { PortfolioHost.testOpened = null }
+    }
+
     @Test fun aStrikeNotInTheAppsOwnListIsSkippedAndCounted() {
         contracts(listOf(52_000.0, 52_200.0))                          // 52100 listed at Zerodha, not in the app's list
         kite.cash = 5_000.0
@@ -200,9 +229,11 @@ class CheaperStrikeLiquidityTest : RobolectricTest() {
         kite.requests.clear()
         CheaperStrike.set(true, pinConfirmed = true, log = false)
         com.optionslab.app.security.SecurePrefs.put("g.kill", true)
-        state()
-        assertEquals("Refused: the kill switch is on", approve())
-        assertTrue(kite.placed.isEmpty()); assertTrue(CheaperStrike.recsOf().isEmpty())
+        try {
+            state()
+            assertEquals("Refused: the kill switch is on", approve())
+            assertTrue(kite.placed.isEmpty()); assertTrue(CheaperStrike.recsOf().isEmpty())
+        } finally { com.optionslab.app.security.SecurePrefs.put("g.kill", false) }
     }
 
     /** Its stop missing at Zerodha is put back on the cheaper option; a restart restores the trade on it. */

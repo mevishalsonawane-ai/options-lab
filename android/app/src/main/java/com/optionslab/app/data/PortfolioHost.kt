@@ -141,6 +141,7 @@ object PortfolioHost {
      * entered outcomes): from now on it counts against a later correlated entry. Memory only; never throws.
      */
     fun opened(key: String, side: Int, live: Boolean, nowMs: Long = System.currentTimeMillis(), claim: String = "") {
+        testOpened?.add("$key|$claim")
         runCatching { guard.opened(PortfolioRisk.canon(key), side, live, Market.today(), nowMs, claim) }
     }
 
@@ -182,5 +183,9 @@ object PortfolioHost {
     }.getOrDefault(true)
 
     /** TEST ONLY. */
+    /** TEST ONLY: each entry counted as opened ("key|claim"), while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testOpened: MutableList<String>? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     internal fun resetForTest() { guard.clear(); guard.update(PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap()), emptyMap(), PortfolioGuard.Config()); refreshedAt = 0L; _view.value = View(); testOwners = null }
 }

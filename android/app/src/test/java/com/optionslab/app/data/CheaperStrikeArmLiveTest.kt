@@ -217,12 +217,13 @@ class CheaperStrikeArmLiveTest : RobolectricTest() {
     @Test fun aCheaperStrikeRefusedInsideTheDoorIsRecordedOnceAndTheEntryGoesOn() {
         kite.cash = 5_000.0
         Broker.testAtDoor = { o -> SecurePrefs.put("g.kill", o.tradingSymbol == s52100) }
-        ArmLive.entered(ask(r72, "inside"))
-        assertEquals(listOf(sym), buys().map { it.form["tradingsymbol"] })
-        assertEquals(sym, view().openReal.single().symbol)
-        val r = CheaperStrike.recsOf().single()
-        assertFalse(r.bought); assertTrue(r.why, r.why.startsWith("refused before it went"))
-        SecurePrefs.put("g.kill", false)
+        try {
+            ArmLive.entered(ask(r72, "inside"))
+            assertEquals(listOf(sym), buys().map { it.form["tradingsymbol"] })
+            assertEquals(sym, view().openReal.single().symbol)
+            val r = CheaperStrike.recsOf().single()
+            assertFalse(r.bought); assertTrue(r.why, r.why.startsWith("refused before it went"))
+        } finally { Broker.testAtDoor = null; SecurePrefs.put("g.kill", false) }
     }
 
     /** The 60 s count from the paper fill's request ([ArmLive.Ask.atNanos]), not from when the entry took its lock: a late one never steps. */
@@ -243,8 +244,6 @@ class CheaperStrikeArmLiveTest : RobolectricTest() {
             val p = view().openReal.single()
             assertEquals(s52100, p.symbol); assertEquals(sym, p.stepFrom)
             assertNull("no contract known: no highs read for it", p.liveContract)
-            watch()
-            assertNull(RuleHighs.peek("live:cold"))
         } finally { CheaperStrike.testColdContracts = false }
     }
 
@@ -282,9 +281,10 @@ class CheaperStrikeArmLiveTest : RobolectricTest() {
     @Test fun theKillSwitchAndStopForTodayStillRefuseBeforeAnyStep() {
         kite.cash = 5_000.0
         SecurePrefs.put("g.kill", true)
-        ArmLive.entered(ask(r72, "kill"))
-        assertTrue(kite.placed.isEmpty()); assertTrue(CheaperStrike.recsOf().isEmpty())
-        SecurePrefs.put("g.kill", false)
+        try {
+            ArmLive.entered(ask(r72, "kill"))
+            assertTrue(kite.placed.isEmpty()); assertTrue(CheaperStrike.recsOf().isEmpty())
+        } finally { SecurePrefs.put("g.kill", false) }
         runBlocking { Strategies.stopForToday(false, false, log = false) }
         ArmLive.entered(ask(r72, "stopped"))
         assertTrue(kite.placed.isEmpty()); assertTrue(CheaperStrike.recsOf().isEmpty())
@@ -294,10 +294,11 @@ class CheaperStrikeArmLiveTest : RobolectricTest() {
     @Test fun theCheaperStrikeMeetsTheOrderDoorAgain() {
         kite.cash = 5_000.0
         Broker.testAtDoor = { o -> if (o.tradingSymbol == s52100) SecurePrefs.put("g.kill", true) }
-        ArmLive.entered(ask(r72, "door"))
-        assertTrue("nothing reached Zerodha", buys().isEmpty())
-        assertTrue(view().openReal.isEmpty())
-        SecurePrefs.put("g.kill", false)
+        try {
+            ArmLive.entered(ask(r72, "door"))
+            assertTrue("nothing reached Zerodha", buys().isEmpty())
+            assertTrue(view().openReal.isEmpty())
+        } finally { Broker.testAtDoor = null; SecurePrefs.put("g.kill", false) }
     }
 
     @Test fun tooLateForTheSquareOffNothingIsSteppedOrSent() {

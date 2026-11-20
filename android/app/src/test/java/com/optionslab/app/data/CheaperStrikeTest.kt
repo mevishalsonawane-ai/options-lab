@@ -54,8 +54,10 @@ class CheaperStrikeTest : RobolectricTest() {
         assertEquals(listOf(24850.0, 24800.0, 24700.0), CheaperStrike.ladder(nifty.filter { it != 24900.0 }, 25000.0, Right.PE))
         assertEquals(listOf(25150.0, 25200.0, 25300.0), CheaperStrike.ladder(nifty.filter { it != 25100.0 }, 25000.0, Right.CE))
         // An index whose own gap is wider than 100 steps by its gap.
+        // An index whose own gap is wider than 100 steps by its gap - never beyond 300 points: a 200 grid takes one step, a 500 grid none.
         val wide = (100..140).map { it * 200.0 }
-        assertEquals(listOf(23800.0, 23600.0, 23400.0), CheaperStrike.ladder(wide, 24000.0, Right.PE))
+        assertEquals(listOf(23800.0), CheaperStrike.ladder(wide, 24000.0, Right.PE))
+        assertTrue(CheaperStrike.ladder((40..60).map { it * 500.0 }, 25000.0, Right.PE).isEmpty())
         // Never more than 3 steps out ("up to 300 points"): with 24700 missing, step 3 is "not present" - never 24650.
         assertEquals(listOf(24900.0, 24800.0, 24700.0), CheaperStrike.ladder(nifty.filter { it != 24700.0 }, 25000.0, Right.PE))
         assertEquals(listOf(25100.0, 25200.0, 25300.0), CheaperStrike.ladder(nifty.filter { it != 25300.0 }, 25000.0, Right.CE))
@@ -65,7 +67,7 @@ class CheaperStrikeTest : RobolectricTest() {
         assertEquals(listOf(12100.0, 12200.0, 12300.0), CheaperStrike.ladder(mid, 12000.0, Right.CE))
         assertEquals(listOf(11875.0, 11800.0, 11700.0), CheaperStrike.ladder(mid.filter { it != 11900.0 }, 12000.0, Right.PE))
         assertEquals("never beyond 300 points", listOf(11900.0, 11800.0, 11700.0), CheaperStrike.ladder(mid.filter { it != 11700.0 }, 12000.0, Right.PE))
-        assertEquals(listOf(24200.0, 24400.0, 24600.0), CheaperStrike.ladder(wide, 24000.0, Right.CE))
+        assertEquals(listOf(24200.0), CheaperStrike.ladder(wide, 24000.0, Right.CE))
         val bank = (500..540).map { it * 100.0 }                                                     // BANKNIFTY: 100 apart
         assertEquals(listOf(51900.0, 51800.0, 51700.0), CheaperStrike.ladder(bank, 52000.0, Right.PE))
         assertEquals(listOf(52100.0, 52200.0, 52300.0), CheaperStrike.ladder(bank, 52000.0, Right.CE))
@@ -131,28 +133,48 @@ class CheaperStrikeTest : RobolectricTest() {
     }
 
     /** A backup carries Boss's "off" (never an "on"): restored onto a phone, it stays off; his PIN "on" takes the carried "off" away. */
+    /**
+     * Through Backup's own create and restore: a backup carries Boss's "off" (never an "on") - restored onto a new phone it stays off, and
+     * a backup made while it was on never switches on a phone that has it off. Boss's PIN "on" takes the carried "off" away.
+     */
     @Test fun aBackupCarriesAnOffNeverAnOn() {
+        val pass = "Test-Passphrase-42!".toCharArray()
         assertTrue(com.optionslab.ira.Upkeep.carried(CheaperStrike.K_OFF_CARRIED))
         CheaperStrike.set(false, log = false)
         SecurePrefs.flush()
-        assertEquals(true, SecurePrefs.getBoolean(CheaperStrike.K_OFF_CARRIED, false))
-        // A new phone: nothing of its own (K_ON never set), the backup's "off" restored.
-        SecurePrefs.putAll(mapOf(CheaperStrike.K_ON to null, CheaperStrike.K_OFF_CARRIED to true))
+        val offBackup = runBlocking { Backup.create(context, pass.copyOf()) }
+        // A new phone: nothing of its own; the backup restored.
+        SecurePrefs.wipe()
+        Backup.restore(context, Backup.open(offBackup, pass.copyOf()))
+        assertNull("this phone's own switch is never carried", SecurePrefs.getString(CheaperStrike.K_ON))
         CheaperStrike.resetForTest(on = true, loaded = false)
-        CheaperStrike.load()
+        assertFalse("an off carried in is not a never-set phone (no 'switched on' entry)", CheaperStrike.load())
         assertFalse("restored off, never silently on", CheaperStrike.isOn())
-        // Even over this phone's own "on".
-        SecurePrefs.putAll(mapOf(CheaperStrike.K_ON to true, CheaperStrike.K_OFF_CARRIED to true))
-        CheaperStrike.resetForTest(on = true, loaded = false)
-        CheaperStrike.load()
-        assertFalse(CheaperStrike.isOn())
-        // Boss's PIN "on": both say on, nothing "off" left for a backup.
+        // Boss's PIN "on": nothing "off" left for a backup; a backup made now carries no "on".
         CheaperStrike.set(true, pinConfirmed = true, log = false)
         SecurePrefs.flush()
         assertFalse(SecurePrefs.getBoolean(CheaperStrike.K_OFF_CARRIED, false))
-        CheaperStrike.resetForTest(on = false, loaded = false)
+        val onBackup = runBlocking { Backup.create(context, pass.copyOf()) }
+        // A phone with it off: the "on" backup leaves it off.
+        SecurePrefs.wipe()
+        SecurePrefs.putAll(mapOf(CheaperStrike.K_ON to false, CheaperStrike.K_OFF_CARRIED to true))
+        Backup.restore(context, Backup.open(onBackup, pass.copyOf()))
+        CheaperStrike.resetForTest(on = true, loaded = false)
         CheaperStrike.load()
-        assertTrue(CheaperStrike.isOn())
+        assertFalse("a restore never switches it on", CheaperStrike.isOn())
+    }
+
+    /** After an erase kept Boss's "off" in memory, his "off" again is saved (it outlives the next start) - never an early "already off". */
+    @Test fun offAfterAnEraseIsSavedAgain() {
+        CheaperStrike.set(false, log = false)
+        CheaperStrike.wipe()
+        SecurePrefs.wipe()                                              // the erase takes the settings vault too
+        assertFalse(CheaperStrike.isOn())
+        assertTrue(CheaperStrike.set(false, log = false).startsWith("Off: saved again"))
+        SecurePrefs.flush()
+        assertEquals(false, SecurePrefs.getBoolean(CheaperStrike.K_ON, true))
+        assertEquals(true, SecurePrefs.getBoolean(CheaperStrike.K_OFF_CARRIED, false))
+        assertTrue(CheaperStrike.set(false, log = false).endsWith("Nothing changed."))
     }
 
     @Test fun itCoversR51R72AndEveryLiquidityBookBySourceOnly() {

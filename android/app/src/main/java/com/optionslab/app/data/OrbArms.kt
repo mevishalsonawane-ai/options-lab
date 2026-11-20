@@ -3841,13 +3841,6 @@ object OrbArms {
         return "entered_live"
     }
 
-    /**
-     * 20 Nov 2026 (Boss's exception, [CheaperStrike]): Liquidity's live buy of [c] (Zerodha's [fromSym]) cannot be paid for even one lot
-     * ([free], [trigger]): the cheaper strike chosen - in Zerodha's list AND the app's own (its trade is booked on that contract: the
-     * position's [Position.symbol] and [Position.kite] are both the cheaper option, so every exit, stop, square-off, restart and reconciler
-     * check follows it as any live trade) - entered through the whole live entry again ([enterLiveNow]: every gate, 1 lot). Its answer when
-     * its order went; null when none was chosen or a gate refused it before it went (the arm's own entry then goes on as before).
-     */
     /** TEST ONLY: the order flow's re-ask for the cheaper contract skips it (a CONFIRM disagreement). False in the app; debug builds only. */
     @Volatile internal var testCheaperFlowSkip: Boolean = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
@@ -3868,6 +3861,13 @@ object OrbArms {
     /** 20 Nov 2026: the app's name of the contract a cheaper-strike [r] stepped from ([Position.stepFrom]). */
     private fun stepFromName(r: CheaperStrike.Req): String = r.fromName ?: r.fromSymbol
 
+    /**
+     * 20 Nov 2026 (Boss's exception, [CheaperStrike]): Liquidity's live buy of [c] (Zerodha's [fromSym]) cannot be paid for even one lot
+     * ([free], [trigger]): the cheaper strike chosen - in Zerodha's list AND the app's own (its trade is booked on that contract: the
+     * position's [Position.symbol] and [Position.kite] are both the cheaper option, so every exit, stop, square-off, restart and reconciler
+     * check follows it as any live trade) - entered through the whole live entry again ([enterLiveNow]: every gate, 1 lot). Its answer when
+     * its order went; null when none was chosen or a gate refused it before it went (the arm's own entry then goes on as before).
+     */
     private suspend fun liqStep(b: Book, arm: Arm, c: Paper.Contract, fromSym: String, signalBar: LocalDateTime, liquidity: LiquidityRules.Signal,
                                 near: Boolean?, volSkip: Boolean?, strong: Boolean?, t0: Long, free: Double?, trigger: CheaperStrike.Trigger): String? {
         if (!CheaperStrike.isOn() || !CheaperStrike.covers(arm.source)) return null
@@ -3877,8 +3877,9 @@ object OrbArms {
         // (The arms' exposure cap asked again for the cheaper contract, as its entry asked it for the signal's.)
         exposureRefusal(b, c2, arm, true)?.let { CheaperStrike.notBought(pick, "refused before it went ($it)"); return null }
         // (And the order flow for it: under CONFIRM it can skip.)
-        // (Its own ticket - "|cheaper" - so the flow log keeps the signal's decision and this one apart.)
-        val flow = FlowGate.gate(FlowShadow.liquidityKey(c2.underlying), c2.underlying, liquidity.side, true, signalBar.toString(), "${arm.source}|cheaper", contract = c2)
+        // (The signal's own ticket - same strategy, bar and claim - so the flow log keeps one signal and the portfolio guard one claim: its
+        // outcome is told once, by the signal's caller, never here.)
+        val flow = FlowGate.gate(FlowShadow.liquidityKey(c2.underlying), c2.underlying, liquidity.side, true, signalBar.toString(), arm.source, contract = c2)
         if (flow.skip || testCheaperFlowSkip) { CheaperStrike.notBought(pick, "refused before it went (${flow.pausedWhy ?: FlowGate.SKIPPED})"); return null }
         // (Another Liquidity book already holding the cheaper option live: recorded only, as the signal's own contract's twin is in Live.)
         twinOf(b, arm, c2.symbol, true)?.let { holder ->
@@ -3890,7 +3891,6 @@ object OrbArms {
         // (Arms' lock: a refusal for funds ends the first order's wait at once - its REJECTED is a finished state - so the cheaper strike's own
         // entry adds no more than one ordinary entry's wait to the lock.)
         val r = enterLiveNow(b, arm, c2, signalBar, liquidity, near, volSkip, strong, 1, pick, t0)
-        runCatching { FlowGate.outcome(flow, r) }
         if (pick.sent) return r
         CheaperStrike.notBought(pick, "refused before it went ($r)")
         return null

@@ -74,6 +74,8 @@ object CheaperStrike {
     const val MAX_STEPS = 3
     /** Points a step at least (Boss, 20 Nov: "100-point steps"). */
     const val STEP_POINTS = 100.0
+    /** The furthest a cheaper strike may be from the arm's, on any index (Boss was promised "up to 300 points"). */
+    const val MAX_POINTS = MAX_STEPS * STEP_POINTS
     /** Never chased later than this after the entry began (one bar's decision, the 60 s the arms' entry waits are counted inside). */
     const val CHASE_MS = 60_000L
     /** Bot settings' card and the diagnostics' name. */
@@ -152,7 +154,8 @@ object CheaperStrike {
      * was never set on this phone.
      */
     internal fun load(): Boolean {
-        val never = runCatching { K_ON !in SecurePrefs.keys(K_ON) }.getOrNull()
+        // (Never set: neither this phone's switch nor an "off" a restore carried in - so no "switched on" entry is logged while it is off.)
+        val never = runCatching { K_ON !in SecurePrefs.keys(K_ON) && !SecurePrefs.getBoolean(K_OFF_CARRIED, false) }.getOrNull()
         // (Off when either says off: this phone's own switch, or an "off" a restore carried in.)
         val saved = runCatching { SecurePrefs.getBoolean(K_ON, true) && !SecurePrefs.getBoolean(K_OFF_CARRIED, false) }.getOrNull()
         val kept = runCatching { SecurePrefs.getString(K_LOG).orEmpty().lines().mapNotNull { decode(it) } }.getOrDefault(emptyList())
@@ -209,9 +212,10 @@ object CheaperStrike {
         val gap = near.zipWithNext { a, b -> r2(b - a) }.filter { it > 0 }.groupingBy { it }.eachCount()
             .entries.sortedWith(compareByDescending<Map.Entry<Double, Int>> { it.value }.thenBy { it.key }).firstOrNull()?.key ?: return emptyList()
         val step = maxOf(gap, STEP_POINTS)
-        // (Never further than [max] steps from [from] - "up to 300 points" stays true: the last mark has no strike beyond it.)
-        val far = max * step
-        return (1..max).mapNotNull { k ->
+        // (Never further than [MAX_POINTS] from [from], whatever the grid - "up to 300 points" stays true: a step that would pass it is not
+        // taken, and the last mark has no strike beyond it.)
+        val far = MAX_POINTS
+        return (1..max).filter { it * step <= far + 1e-6 }.mapNotNull { k ->
             if (right == Right.PE) {
                 val mark = r2(from - k * step)
                 if (mark <= 0) null else s.filter { it <= mark + 1e-6 && it > mark - step + 1e-6 && it >= from - far - 1e-6 }.maxOrNull() ?: mark
@@ -299,7 +303,7 @@ object CheaperStrike {
             ?: return gaveUp(r, "Zerodha's instrument list is not read", 0)
         val same = list.filter { it.name == r.underlying && it.expiry == r.expiry && it.right == r.right }
         val steps = ladder(same.map { it.strike }, r.fromStrike, r.right)
-        if (steps.isEmpty()) return gaveUp(r, "no strike grid for this expiry", 0)
+        if (steps.isEmpty()) return gaveUp(r, "no strike within ${MAX_POINTS.toInt()} points on this expiry's grid", 0)
         val ins = steps.map { k -> same.firstOrNull { abs(it.strike - k) < 1e-6 } }
         // (The app's own list from memory only - never a file read under the arms' locks. Liquidity books its trade on it: cold, no step this
         // time. R51 / R72 only read the cheaper option's highs from it: cold, none read.)
@@ -424,10 +428,20 @@ object CheaperStrike {
     fun set(on: Boolean, pinConfirmed: Boolean = false, log: Boolean = true): String {
         if (on && !pinConfirmed) return PIN_ON
         if (!loaded) load()
-        synchronized(lock) {
+        val keptOff = synchronized(lock) {
+            // (An "off" the erase kept only in memory: Boss's "off" again is saved now, so it outlives the next start.)
+            val kept = offKeptByErase && !on && !this.on
             offKeptByErase = false
             // (Boss's own choice either way: a late start read never overrides it.)
-            if (this.on == on) { switched = true; return "The cheaper strike is already ${if (on) "on" else "off"}. Nothing changed." }
+            if (this.on == on && !kept) { switched = true; return "The cheaper strike is already ${if (on) "on" else "off"}. Nothing changed." }
+            kept
+        }
+        if (keptOff) {
+            runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to false, K_OFF_CARRIED to true)) }
+            publish()
+            return "Off: saved again after the erase - such buys are not moved to a cheaper strike."
+        }
+        synchronized(lock) {
             this.on = on
             loaded = true
             switched = true
