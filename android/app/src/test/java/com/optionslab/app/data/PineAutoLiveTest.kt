@@ -162,6 +162,14 @@ class PineAutoLiveTest : RobolectricTest() {
 
     /** In Paper the same late candle is not entered on (said once), and the change is read again on the next, fresh candle. */
     @Test fun inPaperALateNewCandleIsNotEnteredOnAndTheNextFreshOneIsRead() {
+        // (Paper prices its entry from the candle feed: a local fake, never the real host.)
+        val clock = Market.testClock
+        val upstox = com.optionslab.app.testing.FakeUpstox()            // (it clears the market clock: put back)
+        Market.testClock = clock
+        try { paperLateCandle() } finally { upstox.close() }
+    }
+
+    private fun paperLateCandle() {
         AutomationSupport.liveSettings(live = false)
         switchOn()
         pass(51_900.0)                                             // 11:07
