@@ -3054,7 +3054,10 @@ object ArmLive {
                     detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref) }
             }
         }
-        save(b)
+        // 20 Nov 2026 (audit B5, item 5): a look that only raised rule trades' best prices (a new breakeven or step lock earned: [changed])
+        // writes the book on its own writer ([saveAsync], in order), so the stream's look never waits on the vault for it; anything else
+        // (a sale, a stop placed or moved) is written before the look goes on, as before.
+        if (updates.isNotEmpty() && updates.all { (old, now) -> now.size == 1 && now[0] == old.copy(best = now[0].best) }) saveAsync(b) else save(b)
     }
 
     /**
@@ -3808,5 +3811,5 @@ object ArmLive {
     }
 
     /** For tests: as after a restart - the memory gone, the book on disk. */
-    internal fun forgetMemoryForTest() { coldDue = true; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear(); shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims(); blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2() }
+    internal fun forgetMemoryForTest() { runCatching { drainWritesForTest() }; coldDue = true; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear(); shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims(); blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2() }
 }

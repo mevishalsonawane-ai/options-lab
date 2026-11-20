@@ -2696,4 +2696,58 @@ class PassedArmsHostTest : RobolectricTest() {
         at(LocalTime.of(9, 27)); runBlocking { PassedArmsHost.manageOnly() }
         assertEquals(1, view().log.count { "would have been sold at" in it })
     }
+
+    // ---- 20 Nov 2026 (audit B5, item 4): a picker history that does not reach the last trading day, and scores from part of the inputs --
+
+    /** The picker's six histories as [pickerHistory], but ending one trading day early (the last trading day missing). */
+    private fun stalePickerHistory() {
+        val prev = PassedArmsHost.previousSession(day)!!
+        val before = PassedArmsHost.previousSession(prev)!!
+        val base = bases + ("INDIAVIX" to 14.0)
+        val sessions = generateSequence(before) { it.minusDays(1) }.filter { Market.isTradingDay(it) }.take(25).toList()
+        PassedArmsHost.testHistory = { u -> base[u]?.let { b -> sessions.flatMap { d ->
+            (0 until 375).map { m -> val x = b * (1 + 0.0004 * (m % 9)); Bar(d.atTime(9, 15).plusMinutes(m.toLong()), x, x + 1, x - 1, x) } } }.orEmpty() }
+        PassedArmsHost.testDaily = { u -> base[u]?.let { b -> (300 downTo 1).map { k ->
+            Bar(before.minusDays(k.toLong() - 1).atStartOfDay(), b, b * 1.01, b * 0.99, b * (1 + 0.001 * (k % 7))) } }.orEmpty() }
+        runBlocking { PassedArmsHost.prefetchPickerNow(day) }
+    }
+
+    @Test fun aStalePickerHistoryIsMarkedReadAgainAndNeverPutOverAWholeOne() {
+        pickerDay(true, history = false)
+        stalePickerHistory()
+        val prev = PassedArmsHost.previousSession(day)!!
+        val why = PassedArmsHost.pickerStale("NIFTY", day)
+        assertNotNull("marked", why)
+        assertTrue(why!!, why.contains("not $prev"))
+        // It still scores as before (a break is never taken differently for it): the trade gets its score.
+        tick(LocalTime.of(9, 21))
+        assertNotNull(view().open.single { it.arm == BreadthDonchianArm.SOURCE }.pick)
+        // Its score is never kept as whole.
+        assertEquals(false, PassedArmsHost.pickScoreKept("$day|${BreadthDonchianArm.SOURCE}|NIFTY|0|1")?.second)
+        // A whole read replaces it; a stale read after it never puts it back.
+        pickerHistory()
+        assertNull(PassedArmsHost.pickerStale("NIFTY", day))
+        stalePickerHistory()
+        assertNull("a whole one is never replaced by a stale one", PassedArmsHost.pickerStale("NIFTY", day))
+    }
+
+    @Test fun aScoreIsKeptAsWholeOnlyWhenAllItsInputsAreIn() {
+        // SENSEX's minutes are not in this pass (the tests' market lists four indices): the score decides, as before, but is not whole.
+        pickerDay(true)
+        tick(LocalTime.of(9, 21))
+        val key = "$day|${BreadthDonchianArm.SOURCE}|NIFTY|0|1"
+        val part = PassedArmsHost.pickScoreKept(key)
+        assertNotNull(part)
+        assertFalse("made from part of the inputs", part!!.second)
+        assertEquals("the trade carries the score its decision used", part.first, view().open.single { it.arm == BreadthDonchianArm.SOURCE }.pick!!, 1e-12)
+        assertEquals("logged once", 1, view().log.count { "R72 picker 09:20" in it })
+    }
+
+    @Test fun withAllFiveIndicesInTheScoreIsKeptAsWhole() {
+        val key = "${day}|${BreadthDonchianArm.SOURCE}|NIFTY|0|1"
+        pickerDay(true)
+        minutes(indexKeys.getValue("SENSEX"), LocalTime.of(9, 21)) { bases.getValue("SENSEX") }
+        tick(LocalTime.of(9, 21))
+        assertEquals(true, PassedArmsHost.pickScoreKept(key)?.second)
+    }
 }
