@@ -5432,15 +5432,26 @@ object OrbArms {
      * lag-guarded ([ExitCoordinator.held], forced), less the lost sales that may still be filling ([lostPending]) and every other working
      * sale, in whole lots. Unreadable: false (the stop stays resting).
      */
-    private suspend fun saleWillGo(p: Position, sym: String): Boolean = runCatching {
-        // (A fresh read, as the exit turn makes - the pass's may predate a fill the lag guard must see.)
-        val rows = ExitCoordinator.orders("NFO", sym, armOf(p.arm).label)
-        val held = ExitCoordinator.held("NFO", sym, "MIS", armOf(p.arm).label, rows, forceLag = lagForced())
-        val working = rows.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.working &&
-            it.id != p.stopOrderId }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-        val lot = Broker.spec("NFO", sym).lotSize
-        com.optionslab.engine.risk.ExitQty.sendable((held - lostPending(sym, p, rows)).coerceAtLeast(0), working, p.qty, lot) > 0
-    }.getOrDefault(false)
+    private suspend fun saleWillGo(p: Position, sym: String): Boolean {
+        // (Its answer kept [LOST_EXIT_ASK_MS] per stop: an exit due on every look - 15:10, Stop for today - reads Zerodha at most that often.)
+        val sid = p.stopOrderId ?: return false
+        val ms = epochMs(now())
+        saleWillGoAt[sid]?.takeIf { ms - it.first in 0 until LOST_EXIT_ASK_MS }?.let { return it.second }
+        val will = try {
+            // (A fresh read, as the exit turn makes - the pass's may predate a fill the lag guard must see.)
+            val rows = ExitCoordinator.orders("NFO", sym, armOf(p.arm).label)
+            val held = ExitCoordinator.held("NFO", sym, "MIS", armOf(p.arm).label, rows, forceLag = lagForced())
+            val working = rows.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.working &&
+                it.id != p.stopOrderId }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            val lot = Broker.spec("NFO", sym).lotSize
+            com.optionslab.engine.risk.ExitQty.sendable((held - lostPending(sym, p, rows)).coerceAtLeast(0), working, p.qty, lot) > 0
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { false }
+        if (saleWillGoAt.size > 200) saleWillGoAt.clear()
+        saleWillGoAt[sid] = ms to will
+        return will
+    }
+    /** [saleWillGo]'s answers by stop id: when, and whether a sale would go. Memory only. */
+    private val saleWillGoAt = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Boolean>>()
 
     /** 18 Nov 2026 (audit: B1): Zerodha's orders and positions as the pass that decided an exit already read them ([exitLive]). */
     private class Pre(val orders: Collection<Broker.OrderRow>, val net: List<Broker.Position>)
@@ -5673,8 +5684,11 @@ object OrbArms {
             val qtyRaw = com.optionslab.engine.risk.ExitQty.sendable(heldNow, workingLeft, p.qty, spec.lotSize)
             if (qty <= 0 && qtyRaw > 0) {
                 runCatching { Diag.record("orb", "$label: $sym's exit waits for another trade's lost sale to be found") }
-                // (A stop taken out all the same - that sale lost after this exit began: put back as for any sale that did not go.)
-                return if (p.stopOrderId != null) unsold(qtyRaw, book) else p to null
+                // (A stop taken out all the same - the reads changed since [saleWillGo]: never put back for more than may be sold beside
+                // that lost sale, i.e. none; said, and the app watches the level and sells there.)
+                if (p.stopOrderId != null) coverSay(p, "$label: the exit of $sym waits for another trade's lost sale and its stop at Zerodha was " +
+                    "not put back (it could sell more than is held). The app watches it and sells it itself once that sale is known.")
+                return p.copy(stopOrderId = null) to null
             }
             // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
             // gone on this read although the read before showed it held - never a stop that could sell into a short: the price check
@@ -7436,7 +7450,7 @@ object OrbArms {
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         readFails = 0
         forgetHistoryForTest()
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); barWaits.clear(); liqFolds.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); saleWillGoAt.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
     }
 
@@ -7447,7 +7461,7 @@ object OrbArms {
      * set-aside copies of the file. Never reads the vault; safe before [init].
      */
     @Synchronized fun wipe() {
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); barWaits.clear(); liqFolds.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); saleWillGoAt.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
         // (19 Nov 2026: a pending write is dropped; never a wait on one running - the screen may erase - which deletes the file again
         // itself if it finishes after this erase ([flushSoon]).)
