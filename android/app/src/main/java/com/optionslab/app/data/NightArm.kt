@@ -396,6 +396,8 @@ object NightArm {
                         val bought = key in sent || b.positions.any { it.index == u && it.entryDay == now.toLocalDate() }
                         if (!bought) {
                             b.decided -= key
+                            // (Review: the day's failed try is saved with the book, so a restart never takes the retry for a first attempt.)
+                            b.decided += "$key|retried"
                             rollBackHistory(b, u, histBefore)
                             val fails = (retries[key]?.first ?: 0) + 1
                             retries[key] = fails to nowMs + retryWaitMs(fails)
@@ -664,7 +666,7 @@ object NightArm {
         // 20 Nov 2026 (B5 item 5, review P1): a decision made on a RETRY (an earlier try today failed on a read) is a new way to an entry
         // the old code lost, so its live side starts in shadow (CLAUDE.md): it buys on paper, and its live copy is skipped and logged.
         // Only a first-attempt decision mirrors live, as before.
-        if ((retries["$today|$u"]?.first ?: 0) > 0) {
+        if ((retries["$today|$u"]?.first ?: 0) > 0 || "$today|$u|retried" in b.decided) {
             val w = "would have gone live (Night retry): ${c.symbol} 1 lot @ %.2f - not sent; a decision made on a retry stays on paper".format(Locale.ENGLISH, fill.price)
             note(b, "$u: $w")
             runCatching { Diag.record("night", w) }

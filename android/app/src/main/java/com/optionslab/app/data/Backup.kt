@@ -290,8 +290,13 @@ object Backup {
 
     /** This phone's account-stop days ([ACCOUNT_STOP_DAYS]); null when they cannot be read (the vault unreadable, or the read failed). */
     private fun accountStopDaysHere(): List<com.optionslab.ira.AccountStop.Day>? = try {
-        testAccountStopRead?.let { com.optionslab.ira.AccountStop.decode(it()) }
-            ?: if (SecurePrefs.unreadable) null else com.optionslab.ira.AccountStop.decode(SecurePrefs.getString(ACCOUNT_STOP_DAYS))
+        val seam = testAccountStopRead
+        if (seam != null) com.optionslab.ira.AccountStop.decode(seam())
+        else {
+            // (Review: read first, then judge - a failed load marks the vault unreadable and answers empty.)
+            val raw = SecurePrefs.getString(ACCOUNT_STOP_DAYS)
+            if (SecurePrefs.unreadable) null else com.optionslab.ira.AccountStop.decode(raw)
+        }
     } catch (e: Exception) { null }
 
     /** TEST SEAM (JVM tests only): what [liveHeld] answers. Null in the app, always: its setter throws in a release build. */
