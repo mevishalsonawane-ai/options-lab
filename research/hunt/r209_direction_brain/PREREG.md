@@ -103,3 +103,12 @@ The look-ahead guard (every input of a decision point is unchanged when every mi
 is replaced by noise; the label reads only up to e + 14), missing minutes and an index with no options, the
 nearest-expiry choice, the walk-forward split (no training row on or after the quarter's first day), the day-block AUC
 bootstrap (a real signal is found, a coin is not), top-20% accuracy, and the gates (each item fails alone).
+
+## Amendment A (20 Nov 2026, after the input table was built and before any model was fitted)
+
+The table (434,520 decision points, 8 Oct 2021 - 5 Oct 2026) has a few extreme values from bad prints (for example a
+put / call OI ratio of 1,798 and a 5-minute index return of 18%). Gradient-boosted trees are not affected; a linear or
+neural model would be. So for **M-LOG and M-NET only**, each input is clipped to its 0.5% and 99.5% quantiles **learned on
+that fold's training rows** before it is standardised, and a "missing" flag is added only for inputs that have missing
+values in the training rows. Nothing else changes; no number had been computed from the labels except the design-only
+share of "up" (50.85%, a check that the labels are balanced).
