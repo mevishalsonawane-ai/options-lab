@@ -110,6 +110,10 @@ object ExpirySquareOff {
             val read = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }
             val working = read.filter { it.working }
             val positions = Broker.positionBook()
+            // 20 Nov 2026 (deep review): a row left out as malformed may be a contract expiring today: every row that was read is closed
+            // as ever (only a contract whose own row was left out waits), and the pass counts as unread, so the day is not marked done and
+            // the next pass looks again.
+            if (positions.partial) unread = true
             val book = positions.net.filter { it.qty != 0 }
             // A derivative the app's contract list does not know (BFO, a stock option, a list not loaded yet): its
             // expiry cannot be told here, so the owner is told instead of it being held into settlement unseen.

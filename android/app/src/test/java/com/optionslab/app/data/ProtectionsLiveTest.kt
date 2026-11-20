@@ -189,6 +189,7 @@ class ProtectionsLiveTest : RobolectricTest() {
         nextSession(9, 20)
         kite.requests.clear()
         runBlocking { Protections.tick() }
+        com.optionslab.app.testing.SecondRead.clockOn(); runBlocking { Protections.tick() }               // 20 Nov 2026: closed counts on a second agreeing read
         assertTrue(kite.placed.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())
     }

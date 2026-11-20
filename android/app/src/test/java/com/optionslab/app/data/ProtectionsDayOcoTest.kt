@@ -162,6 +162,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         session(10, 5)
         kite.requests.clear()
         tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()                                               // 20 Nov 2026: closed counts on a second agreeing read
         assertTrue(runBlocking { Protections.active() }.isEmpty())
         assertTrue("no new orders or GTTs", writes().none { it.method == "POST" })
         assertTrue(alerted("its GTT fired"))
@@ -172,7 +173,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         DayOco.resetForTest(on = true)
         protect()
         val id = one().gttId!!
-        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)                 // gapped under the stop leg's limit (90 less 5%): rests unfilled
+        kite.quote("NFO:$sym", 80.0, 79.95, 80.05)                 // gapped under the stop leg's limit (90 less 10%, 20 Nov 2026): rests unfilled
         val oid = kite.triggerGtt(id, leg = 0)
         assertEquals("OPEN", kite.order(oid).status)
         session(10, 5)
@@ -180,8 +181,9 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         assertEquals("kept while its sell rests", 1, runBlocking { Protections.active() }.size)
         assertTrue(alerted("rests at Zerodha unfilled"))
         assertTrue("nothing new placed beside it", kite.placed.isEmpty())
-        kite.fill(oid, 85.5)
+        kite.fill(oid, 81.0)
         tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()                                               // 20 Nov 2026: closed counts on a second agreeing read
         assertTrue(runBlocking { Protections.active() }.isEmpty())
         assertTrue(kite.placed.isEmpty())
     }
@@ -190,7 +192,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         DayOco.resetForTest(on = true)
         protect()
         val id = one().gttId!!
-        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)
+        kite.quote("NFO:$sym", 80.0, 79.95, 80.05)                 // under the stop leg's limit (90 less 10%): rests unfilled
         val oid = kite.triggerGtt(id, leg = 0)
         kite.order(oid).status = "CANCELLED"
         session(10, 5)
@@ -308,8 +310,8 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         DayOco.resetForTest(on = true)
         protect()
         session(10, 3)
-        kite.flat()
-        tick()
+        kite.position(sym, 0, 0.0)                                 // 20 Nov 2026: Zerodha's row at 0 (a missing row is not known)
+        tick()                                                     // 20 Nov 2026: the look's two reads agree
         assertEquals(1, gttDeletes.size)
         assertTrue(kite.gtts.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())
@@ -437,6 +439,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
             com.optionslab.app.testing.Background.clearAlerts()
             session(15, 8)
             tick()
+            com.optionslab.app.testing.SecondRead.clockOn(); tick()        // 20 Nov 2026: closed counts on a second agreeing read
             assertTrue(runBlocking { Protections.active() }.none { it.symbol == exp })
             assertFalse("closed, so never said unprotected", alerted("NOT protected"))
         } finally {
@@ -527,7 +530,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         DayOco.resetForTest(on = true)
         protect()
         val id = one().gttId!!
-        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)
+        kite.quote("NFO:$sym", 80.0, 79.95, 80.05)                 // under the stop leg's limit (90 less 10%): rests unfilled
         val oid = kite.triggerGtt(id, leg = 0)
         kite.orders.remove(oid)                                    // the next session: yesterday's order is not in today's book
         session(10, 0, nth = 2)
@@ -546,6 +549,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         kite.position(sym, -75, 88.0)                              // another sell filled beside it
         session(10, 5)
         tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()                                               // 20 Nov 2026: a second agreeing read
         assertTrue(runBlocking { Protections.active() }.isEmpty())
         assertTrue(alerted("other way round"))
         assertFalse(alerted("the position is closed"))
@@ -557,9 +561,9 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         protect(qty = 150)
         val id = one().gttId!!
         // Another exit covered half since: the GTT covers 150 but its sell filled only 75 before Zerodha cancelled the rest.
-        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)
+        kite.quote("NFO:$sym", 80.0, 79.95, 80.05)                 // under the stop leg's limit (90 less 10%): rests unfilled
         val oid = kite.triggerGtt(id, leg = 0)
-        kite.fillPart(oid, 75, 85.5)
+        kite.fillPart(oid, 75, 81.0)
         kite.order(oid).status = "CANCELLED"
         session(10, 5)
         tick()
@@ -572,7 +576,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         DayOco.resetForTest(on = true)
         protect()
         val id = one().gttId!!
-        kite.quote("NFO:$sym", 84.0, 83.95, 84.05)
+        kite.quote("NFO:$sym", 80.0, 79.95, 80.05)                 // under the stop leg's limit (90 less 10%): rests unfilled
         val oid = kite.triggerGtt(id, leg = 0)
         assertEquals("OPEN", kite.order(oid).status)
         assertFalse("the exit waits for its next pass", runBlocking { Protections.dayGttsOut("NFO", sym, "test") })

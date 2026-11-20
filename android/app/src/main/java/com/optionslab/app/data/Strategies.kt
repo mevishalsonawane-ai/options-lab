@@ -994,17 +994,23 @@ object Strategies {
      * Start a run. LIVE only from the app after you have confirmed it (the UI
      * asks for your PIN or fingerprint first) - [confirmedByOwner] records that.
      */
-    suspend fun start(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String = lock.withLock {
+    suspend fun start(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String {
+        val (said, sawFlat) = startLocked(id, mode, trigger, confirmedByOwner, compromised)
+        if (sawFlat) followUp(compromised)
+        return said
+    }
+
+    private suspend fun startLocked(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): Pair<String, Boolean> = ownLook {
         val b = book()
-        val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
-        if (b.runs[id]?.let { Entry(def, it).running } == true) return@withLock "${def.name} is already running."
-        if (needsBreakoutRules(def)) return@withLock BREAKOUT_BLOCK
+        val def = b.defs.firstOrNull { it.id == id } ?: return@ownLook "No such strategy."
+        if (b.runs[id]?.let { Entry(def, it).running } == true) return@ownLook "${def.name} is already running."
+        if (needsBreakoutRules(def)) return@ownLook BREAKOUT_BLOCK
         if (mode == RunMode.LIVE) {
-            if (!confirmedByOwner) return@withLock "A live start needs your confirmation in the app."
-            if (!def.liveEnabled) return@withLock "Enable live trading for ${def.name} first."
+            if (!confirmedByOwner) return@ownLook "A live start needs your confirmation in the app."
+            if (!def.liveEnabled) return@ownLook "Enable live trading for ${def.name} first."
         }
         val now = Market.now()
-        val v = try { venue(mode) } catch (e: Exception) { return@withLock "Could not load the contracts: ${e.message}" }
+        val v = try { venue(mode) } catch (e: Exception) { return@ownLook "Could not load the contracts: ${e.message}" }
         val ltp = runCatching { Market.quote(def.underlying)?.last }.getOrNull()
         val resolved = SymbolResolver.resolve(def, v.master, ltp, now)
         val runId = b.nextRunId++
@@ -1015,8 +1021,12 @@ object Strategies {
         b.runs[id] = run
         b.pending.remove(id)
         finish(b, run)
+        // 20 Nov 2026 (audit): its filled legs' stops at Zerodha now, not on the next look ([stopsNow]).
+        stopsNow(b, def, v, compromised)
         save(b)
-        run.startError ?: "${def.name} started (${mode.wire}): ${run.openLegs().size} of ${def.legs.size} legs open."
+        // (Review: the run as it is now - a leg whose stop already filled is closed by [stopsNow].)
+        val now2 = b.runs[id] ?: run
+        now2.startError ?: "${def.name} started (${mode.wire}): ${now2.openLegs().size} of ${def.legs.size} legs open."
     }
 
     /**
@@ -1358,7 +1368,13 @@ object Strategies {
 
     suspend fun skip(id: Long) = lock.withLock { val b = book(); b.pending.remove(id); save(b) }
 
-    suspend fun tickAll(compromised: Boolean): List<String> = lock.withLock {
+    suspend fun tickAll(compromised: Boolean): List<String> {
+        val (notes, sawFlat) = tickAllOnce(compromised)
+        if (sawFlat) followUp(compromised)
+        return notes
+    }
+
+    private suspend fun tickAllOnce(compromised: Boolean): Pair<List<String>, Boolean> = ownLook {
         val b = book()
         // Orders placed in this pass are written down even when the pass is cancelled part-way (the watch
         // stopped, a time limit): a run's broker ids and state kept only in memory would be lost with the process.
@@ -1430,6 +1446,7 @@ object Strategies {
                             }
                             val v = venueFor(d.mode)
                             if (v == null) { record(b, def, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
+                            // (20 Nov 2026, audit: its stops rest in this run's own look, made straight after this, below.)
                             val run = startRun(b, def, v, d.mode, "scheduler", compromised, now)
                             notes += "${def.name}: scheduled ${if (d.mode == RunMode.LIVE) "live" else "paper"} start"
                             if (d.mode == RunMode.LIVE) Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.SCHEDULE, "${def.name} started (live)",
@@ -1476,6 +1493,19 @@ object Strategies {
         if (next.mode == RunMode.SANDBOX) runCatching { closeFlatPaperLegs(b, def, v, now, compromised) }
     }
 
+    /**
+     * 20 Nov 2026 (audit: the strategies' lock delayed the stop after a live fill - Boss's own start rested its legs' stops only on the
+     * next 15-second look, which waits for this lock, and a scheduled start's only after every other strategy's look): a LIVE run's
+     * own look ([tickOpenRun]: its entries' fills confirmed, then its legs' stops at Zerodha) at once, straight after the entries and
+     * before anything else is read or written for the book (its save included). The same look the watch makes every 15 seconds, made
+     * early; nothing else. Never throws.
+     */
+    private suspend fun stopsNow(b: Book, def: StrategyDef, v: Venue, compromised: Boolean) {
+        val run = b.runs[def.id] ?: return
+        if (run.mode != RunMode.LIVE || !Broker.loggedIn) return
+        runCatching { tickOpenRun(b, def, Market.now(), compromised) { v } }
+    }
+
     private fun legKey(runId: Long, legId: Int) = "$runId:$legId"
 
     /** A leg stop resting as a GTT ("gtt:<id>|trigger|day": an NRML leg's, review C7) - its id, else null (an SL order's). */
@@ -1513,6 +1543,30 @@ object Strategies {
         // A stop of an earlier session (a DAY order, gone with it): nothing of it can fill now.
         if (st == null && stopDay(rest)?.isBefore(Market.today()) == true) return "CANCELLED" to null
         return when (st?.status) { "COMPLETE", "CANCELLED", "REJECTED" -> st.status to st; else -> null }
+    }
+
+    /**
+     * 20 Nov 2026 (audit, as the arms' and [Protections]' since): when each leg ("runId:legId") was first read no longer held at Zerodha.
+     * Memory only (a restart starts the count again); bounded.
+     */
+    private val legFlatSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** 20 Nov 2026: how far apart the two agreeing reads must be (two separate reads of Zerodha, never one shared read). */
+    internal const val FLAT_AGREE_MS = 2_000L
+
+    /** 20 Nov 2026 (review): the pause before the follow-up look's read (past [Broker.SHARE_MS], so it is a read of its own). */
+    private const val FLAT_RECHECK_MS = 2_100L
+
+    /**
+     * 20 Nov 2026 (audit): whether leg [k], read no longer held at Zerodha now, has been read so at least [FLAT_AGREE_MS] ago with no read
+     * between showing it held - two agreeing reads. The first such read starts the count (false). The market's clock.
+     */
+    private fun legFlatConfirmed(k: String): Boolean {
+        if (legFlatSince.size > 500) legFlatSince.clear()
+        val now = Market.now().toInstant().toEpochMilli()
+        val first = legFlatSince.putIfAbsent(k, now) ?: return false
+        // (Kept once confirmed: a stop whose taking out is not confirmed this look is tried again on the next without a new count.)
+        return now - first >= FLAT_AGREE_MS
     }
 
     /** When each leg's "stop not rested" was last told (memory): told at most once in [NOT_RESTED_EVERY_MS] (review C7). */
@@ -1571,7 +1625,8 @@ object Strategies {
         for (key in lostClosed) takeOutLostLegStop(key, def.name)
         if (open.isEmpty() && mine.isEmpty()) return
         val orders = runCatching { Broker.orders().associateBy { it.id } }.getOrNull() ?: return
-        val net = runCatching { Broker.positionBook().net }.getOrNull() ?: return
+        val book = runCatching { Broker.positionBook() }.getOrNull() ?: return
+        val net = book.net
         val gtts = if (mine.any { b.legStops[it]?.let(::gttOf) != null } || open.any { legProduct(run, def, it) != "MIS" })
             runCatching { Broker.gtts().associateBy { it.id } }.getOrNull() ?: return else emptyMap()
         // Stops of legs that are no longer open (closed by the run, or gone): out.
@@ -1627,6 +1682,18 @@ object Strategies {
                 continue
             }
             if (so != null && so.status in setOf("CANCELLED", "REJECTED")) { b.legStops.remove(k) }
+            // 20 Nov 2026 (audit: a malformed or partial positions reply was read as "no positions", and the leg's stop taken out): a
+            // read with no row at all for the contract is not a reading (Zerodha lists every contract held or traded today, at 0 once
+            // closed): nothing is taken out, shrunk or placed on it this look. (A stop resting since an earlier day - a carried leg's
+            // GTT - with no row today: its position closed on that day, a reading as any other.)
+            if (net.none { it.symbol == kiteSym && it.exchange == ex } && cur?.let { stopDay(it)?.isBefore(Market.today()) } != true) continue
+            // (Deep review: nor on a read that left the contract's row out as malformed - its absence or figure tells nothing.)
+            if (book.unknown(kiteSym)) continue
+            // ... and one read showing it no longer held takes nothing out: only a second read at least [FLAT_AGREE_MS] later that
+            // agrees (none between showing it held) does ([legFlatConfirmed]). Review: the first such read asks a follow-up look
+            // [FLAT_RECHECK_MS] later ([manageOnly], the lock let go meanwhile), so a stop never rests on a leg closed by hand until the
+            // next 15-second look.
+            if (held > 0) legFlatSince.remove(k) else if (!legFlatConfirmed(k)) { flatSeen.incrementAndGet(); continue }
             // Held no more at Zerodha (closed by hand): its stop must not rest on a flat position.
             if (held <= 0) {
                 if (cur != null && b.legStops.containsKey(k) && legStopOut(cur) != null) b.legStops.remove(k)
@@ -1650,7 +1717,7 @@ object Strategies {
                     if (gid != null) {
                         val px = q.firstOrNull { it.symbol == leg.symbol }?.ltp ?: error("no price")
                         val trig = cur.split('|').getOrNull(1)?.toDoubleOrNull() ?: error("no trigger")
-                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, room * dir, px, trig, null)
+                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, room * dir, px, trig, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
                         Broker.modifyGtt(gid, requireNotNull(gtt) { why.joinToString("; ") })
                     } else if (so != null) Broker.modify(so, so.filled + room, so.type, so.price.takeIf { it > 0 }, so.trigger.takeIf { it > 0 })
                 }
@@ -1670,7 +1737,7 @@ object Strategies {
                 if (ArmLive.handsOffNow(ex, kiteSym)) continue
                 val id: String? = if (product != "MIS") {
                     // A carried (NRML) leg: a single-leg GTT, the only broker-side stop that outlives the session (review C7).
-                    val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null)
+                    val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
                     // A lost reply never leaves a second GTT ([Broker.placeGttOnce] adopts the one that went through).
                     gtt?.let { x -> Broker.placeGttOnce(x, b.legStops.values.mapNotNull(::gttOf).toSet())?.let { "gtt:$it" } }
                 } else {
@@ -1703,7 +1770,7 @@ object Strategies {
                 val r = if (gid != null) {
                     if (g?.status?.lowercase() != "active") continue
                     runCatching {
-                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, (stopQty(cur) ?: qty) * dir, ltp, to, null)
+                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, (stopQty(cur) ?: qty) * dir, ltp, to, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
                         Broker.modifyGtt(gid, requireNotNull(gtt) { why.joinToString("; ") })
                     }
                 } else {
@@ -1736,18 +1803,43 @@ object Strategies {
      */
     suspend fun manageOnly(compromised: Boolean) {
         if (!runningHint) return
-        lock.withLock {
-            val b = book()
-            try {
-                val now = Market.now()
-                val venues = HashMap<RunMode, Venue?>()
-                for (def in b.defs.toList()) tickOpenRun(b, def, now, compromised) { m -> venues.getOrPut(m) { runCatching { venue(m) }.getOrNull() } }
-                runCatching { cleanLegStops(b) }
-            } finally {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { runCatching { save(b) } }
-            }
-        }
+        if (manageLocked(compromised)) followUp(compromised)
     }
+
+    /**
+     * 20 Nov 2026 (deep review: the confirming read waited while holding [lock]): a leg first read no longer held in the look just made
+     * ([manageOnly], [tickAll], a start's own look) gets its second, separate read in one follow-up look of the open runs
+     * [FLAT_RECHECK_MS] later, the lock let go meanwhile - never a wait under it.
+     */
+    private suspend fun followUp(compromised: Boolean) {
+        kotlinx.coroutines.delay(FLAT_RECHECK_MS)
+        manageLocked(compromised)
+    }
+
+    /**
+     * 20 Nov 2026 (final review): [block] under [lock], and whether THIS look (nobody else's: the lock is held) read a leg no longer held
+     * for the first time - so each caller decides its own follow-up, never one another caller could drop or set.
+     */
+    private suspend fun <T> ownLook(block: suspend () -> T): Pair<T, Boolean> = lock.withLock {
+        val before = flatSeen.get()
+        val r = block()
+        r to (flatSeen.get() != before)
+    }
+
+    /** 20 Nov 2026: counted by [restLegStops] each time a leg is first read no longer held (each caller then makes a follow-up look). */
+    private val flatSeen = java.util.concurrent.atomic.AtomicInteger()
+
+    private suspend fun manageLocked(compromised: Boolean): Boolean = ownLook {
+        val b = book()
+        try {
+            val now = Market.now()
+            val venues = HashMap<RunMode, Venue?>()
+            for (def in b.defs.toList()) tickOpenRun(b, def, now, compromised) { m -> venues.getOrPut(m) { runCatching { venue(m) }.getOrNull() } }
+            runCatching { cleanLegStops(b) }
+        } finally {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { runCatching { save(b) } }
+        }
+    }.second
 
     /** True when any run is live or entering, so the watch keeps polling. */
     suspend fun anyRunning(): Boolean = all().any { it.running }
@@ -1763,7 +1855,7 @@ object Strategies {
     fun wipe() {
         synchronized(ioLock) { synchronized(writeOrder) { wipeGen++; ownersPending = null; saveSeq++; cache = null } }
         ownersSoon.clear()
-        clearHints(); notRestedAt.clear()
+        clearHints(); notRestedAt.clear(); legFlatSince.clear()
         written.forget()
         filesForErase().forEach { runCatching { it.delete() } }
     }

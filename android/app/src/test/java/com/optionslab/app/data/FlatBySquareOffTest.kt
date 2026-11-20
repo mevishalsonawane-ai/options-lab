@@ -209,6 +209,16 @@ class FlatBySquareOffTest : RobolectricTest() {
         assertEquals(1, kite.placed.size)
     }
 
+    /** 20 Nov 2026 (final review): a positions row with no symbol never blocks the flat-by; the day is not marked done on that read. */
+    @Test fun aRowWithNoSymbolNeverBlocksTheFlatBy() {
+        FlatBySquareOff.liveOwner = { if (it == ce) "R51 Donchian 20" else null }
+        kite.position(ce, 30, 200.0, product = "MIS")
+        kite.extraNetRows = listOf(org.json.JSONObject().put("exchange", "NFO").put("product", "NRML").put("quantity", 75))
+        at(15, 26); pass()
+        assertEquals(listOf(Triple(ce, "SELL", "30")), sent())
+        assertFalse(FlatBySquareOff.diagLine().contains("done today"))
+    }
+
     @Test fun theArmsLiveBookNotReadYetMeansNothingLiveIsClosedAndTheDayIsNotDone() {
         // A restart at 15:24: the first pass at 15:25 runs before the arms' live book is read. An arm's position cannot be told
         // from Boss's own, so nothing live goes and the segment is not marked done; the next pass, with the book in, closes it.

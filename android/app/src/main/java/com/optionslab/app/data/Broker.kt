@@ -826,11 +826,35 @@ object Broker {
         val open: Boolean get() = qty != 0
     }
 
-    data class Positions(val net: List<Position>, val day: List<Position>) {
-        val pnl: Double get() = net.sumOf { it.pnl }
-        val m2m: Double get() = net.sumOf { it.m2m }
-        val realised: Double get() = net.sumOf { it.realised }
-        val unrealised: Double get() = net.sumOf { it.unrealised }
+    /**
+     * 20 Nov 2026 (deep review of the audit fix): [skipped] - the net rows Zerodha's reply gave malformed (no quantity, not readable)
+     * and that were left out, by "SYMBOL:PRODUCT" ("SYMBOL:*" when the row named no product), or [ANY] when a row had no symbol at all.
+     * Every exit works on the rows that were read: an exit treats a contract as not known only when its own symbol and product were
+     * left out ([unknownForExit], never on [ANY]). A check that would END something on a contract's absence (a protection, a strategy
+     * leg's stop, a Protect's recheck) counts any skipped row of the contract, or [ANY], as not known ([unknown]).
+     */
+    data class Positions(val net: List<Position>, val day: List<Position>, val skipped: Set<String> = emptySet(),
+                         /** The left-out rows' own money figures (pnl, m2m, realised, unrealised), so the account's totals keep them. */
+                         val skippedMoney: List<Double> = listOf(0.0, 0.0, 0.0, 0.0)) {
+        /** Whether the read had a malformed row it left out. */
+        val partial: Boolean get() = skipped.isNotEmpty()
+        /** For a check that would END something: whether any of [symbol]'s net rows may have been left out (or a row with no symbol). */
+        fun unknown(symbol: String): Boolean = ANY in skipped || skipped.any { it.startsWith("$symbol:") }
+        /**
+         * For an exit: whether [symbol]'s own [product] row was left out. A row with no symbol never blocks an exit on a contract whose
+         * own row was read; only one with no row read at all is then not known (the nameless row may be it - never read as 0).
+         */
+        fun unknownForExit(symbol: String, product: String): Boolean = "$symbol:$product" in skipped || "$symbol:*" in skipped ||
+            (ANY in skipped && net.none { it.symbol == symbol && it.product == product })
+        val pnl: Double get() = net.sumOf { it.pnl } + skippedMoney[0]
+        val m2m: Double get() = net.sumOf { it.m2m } + skippedMoney[1]
+        val realised: Double get() = net.sumOf { it.realised } + skippedMoney[2]
+        val unrealised: Double get() = net.sumOf { it.unrealised } + skippedMoney[3]
+
+        companion object {
+            /** [skipped]'s mark for a malformed row with no symbol: every contract's absence is then not known. */
+            const val ANY = "*"
+        }
     }
 
     data class OrderRow(val id: String, val symbol: String, val side: String, val qty: Int, val filled: Int, val price: Double,
@@ -985,6 +1009,58 @@ object Broker {
         it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0),
         dayQty(it, "day_buy_quantity"), dayQty(it, "day_sell_quantity"))
 
+    /** 20 Nov 2026: when Boss was last told of a partial positions read ([netRows]), and how often at most. Memory only. */
+    @Volatile private var partialSaidAt = 0L
+    internal const val PARTIAL_SAY_MS = 10 * 60_000L
+
+    /** TEST ONLY: the partial-read notice may be said again at once. */
+    internal fun resetPartialSaidForTest() { partialSaidAt = 0L }
+
+    /**
+     * 20 Nov 2026 (audit; deep review): Zerodha's net rows read one by one. A malformed row - not an object, no symbol, no quantity, or
+     * one that does not parse - is never a position at 0 and never fails the whole read (every exit keeps working on the rows read):
+     * it is left out and named in [Positions.skipped] (its symbol, or [Positions.ANY] when it has none).
+     */
+    private fun netRows(a: JSONArray): Triple<List<Position>, Set<String>, List<Double>> {
+        val out = ArrayList<Position>()
+        val skipped = HashSet<String>()
+        val money = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
+        var badRows = 0
+        for (i in 0 until a.length()) {
+            val o = a.optJSONObject(i)
+            val sym = o?.optString("tradingsymbol").orEmpty()
+            // (Review: a quantity given as a number in a string, which Kite's optInt read as ever, is a quantity.)
+            val q = o?.opt("quantity")
+            val qty = q is Number || (q is String && q.trim().toDoubleOrNull()?.let { it.isFinite() && it == kotlin.math.floor(it) } == true)
+            val bad = o == null || sym.isEmpty() || !qty || runCatching { position(o) }.onSuccess { out += it }.isFailure
+            if (!bad) continue
+            badRows++
+            skipped += if (o == null || sym.isEmpty()) Positions.ANY else "$sym:${o.optString("product").ifEmpty { "*" }}"
+            // (Its money figures, when it gives them, still count in the account's totals: a loss is never hidden by a bad row.)
+            if (o != null) listOf("pnl", "m2m", "realised", "unrealised").forEachIndexed { k, f -> money[k] += o.optDouble(f, 0.0).takeIf { it.isFinite() } ?: 0.0 }
+        }
+        if (skipped.isNotEmpty()) {
+            runCatching { Diag.record("zerodha", "positions: $badRows malformed row(s) left out (${skipped.joinToString()}); read as not known") }
+            // Review: Boss told (at most every [PARTIAL_SAY_MS]) while the reads stay partial. Memory only; never blocks.
+            val now = System.currentTimeMillis()
+            if (now - partialSaidAt !in 0 until PARTIAL_SAY_MS) {
+                partialSaidAt = now
+                val what = skipped.map { if (it == Positions.ANY) "a row with no name" else it.substringBefore(':') }.distinct().joinToString()
+                val nameless = if (Positions.ANY in skipped) " A row with no name could be any position: check every open position in Kite." else ""
+                runCatching { com.optionslab.app.work.Alerts.post("Zerodha's positions reply had $badRows unreadable row(s) ($what). Exits " +
+                    "keep working on the rows that were read, and nothing is ended on what could not be read.$nameless Check your positions in Kite.",
+                    com.optionslab.app.work.Alerts.Kind.ERROR, "Positions", throttle = true) }
+            }
+        }
+        return Triple(out, skipped, money.toList())
+    }
+
+    /**
+     * 20 Nov 2026 (audit: [Protections] read Zerodha again for every item): a count bumped by every order, change or cancel from this
+     * phone and every order update on the stream. A read kept while it is unchanged shows everything sent since. Memory only.
+     */
+    fun writeGen(): Long = writes.get()
+
     /** 21 Oct, round 3: a day quantity Zerodha gave (a number); absent or null is "not known", never 0 (review). */
     internal fun dayQty(o: JSONObject, k: String): Int? = if (o.has(k) && !o.isNull(k)) o.optInt(k) else null
 
@@ -999,7 +1075,12 @@ object Broker {
         // Workers asking at once share one read (10 Oct, [SHARE_MS]): never one begun before an order, change or cancel.
         val r = positionsShared.run(shareKey(gen), SHARE_MS, shareContext()) {
             val d = call("GET", "/portfolio/positions") as JSONObject
-            Positions(rows(d.optJSONArray("net")).map(::position), rows(d.optJSONArray("day")).map(::position))
+            // 20 Nov 2026 (audit: a malformed positions reply was read as "no positions"): a reply without its "net" list is a failed
+            // read (thrown), never an empty account. A malformed row is left out and named ([netRows]); the rest is read as ever.
+            val net = d.optJSONArray("net") ?: throw java.io.IOException("Zerodha's positions reply had no net list")
+            val (rows, skipped, money) = netRows(net)
+            val day = d.optJSONArray("day")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { runCatching { position(it) }.getOrNull() } } }.orEmpty()
+            Positions(rows, day, skipped, money)
         }
         passBook.put(ticket, at, r.value)
         keptBook = Kept(r.startedAt, gen, r.value)

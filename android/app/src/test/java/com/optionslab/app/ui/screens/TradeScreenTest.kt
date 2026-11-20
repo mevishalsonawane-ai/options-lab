@@ -551,7 +551,7 @@ class TradeScreenTest {
         assertEquals("typing again drops the old check", Load.Idle, m.gttPlan.value)
         inDialog("Check").performClick().also { frames() }
         pump(20_000) { (m.gttPlan.value as? Load.Done<AppModel.GttPlan>)?.value?.gtt != null }
-        waitText("at 95.00 → SELL 75 LIMIT 90.25")
+        waitText("at 95.00 → SELL 75 LIMIT 85.50")                         // 20 Nov 2026: a stop leg's limit 10% past its trigger
         assertTrue(kite.writes.isEmpty())
         inDialog("Place GTT").assertIsEnabled().performClick().also { frames() }
         enterPin()
