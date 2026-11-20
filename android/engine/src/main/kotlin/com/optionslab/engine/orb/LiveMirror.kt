@@ -549,8 +549,8 @@ object LiveMirror {
      * live copy smaller than its paper trade (1 lot live beside 2 or 4 on paper) is sold whole at the paper's first part-exit (the L25
      * ladder's first step, a half) though the arm's own rule still holds the rest. That stays the live behaviour: it is the lower-risk
      * one (an earlier, whole exit), and CLAUDE.md lets a live change that holds more than today start only in shadow, behind a switch
-     * Boss turns on. What following the paper share more closely would sell instead - the lots kept rounded to the NEAREST lot, a tie
-     * selling - is this; the app only logs it ([partSellsWhole]).
+     * Boss turns on. What following the paper share more closely would sell instead - the lots kept rounded to the NEAREST lot, a half
+     * keeping (so 1 live lot beside a paper trade that sold half keeps its lot) - is this; the app only logs it ([partSellsWhole]).
      */
     fun toSellNearest(liveQty: Int, liveEntryQty: Int, paperEntryQty: Int, paperHeldQty: Int?, lot: Int): Int {
         if (liveQty <= 0) return 0
@@ -558,9 +558,9 @@ object LiveMirror {
         if (paperEntryQty <= 0 || paperHeldQty >= paperEntryQty) return 0
         val l = lot.coerceAtLeast(1)
         val entryLots = liveEntryQty / l
-        // Nearest, a tie down (2 x share > 1 keeps): never more than the live entry's own lots.
+        // Nearest, a half up (floor(share + 1/2)): never more than the live entry's own lots.
         val twice = 2L * entryLots * paperHeldQty
-        val keepLots = ((twice + paperEntryQty - 1) / (2L * paperEntryQty)).toInt().coerceAtMost(entryLots)
+        val keepLots = ((twice + paperEntryQty) / (2L * paperEntryQty)).toInt().coerceAtMost(entryLots)
         return (liveQty - keepLots * l).coerceAtLeast(0)
     }
 

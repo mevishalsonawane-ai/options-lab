@@ -789,12 +789,24 @@ object PineAuto {
         val bars = fetched.filter { it.epochSecond + step <= now }                    // completed candles only
         val last = bars.lastOrNull() ?: return
         // A feed that failed today can hand back yesterday's candles: never trade on those, or on a stalled feed.
-        // 20 Nov 2026 (audit, B5 item 6): stalled is judged on the chart's own candle - the newest completed one closed at most one
-        // candle plus the feed's lag ago ([com.optionslab.ira.CandleFresh.pineFresh]); before, 3 candles plus 2 minutes passed
-        // (about 17 minutes on 5m), and the strike was chosen from that old close. Its stop, target, lock and 15:15 are not held
-        // by this (they ran above).
         if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != todayIst() ||
-                !com.optionslab.ira.CandleFresh.pineFresh(last.epochSecond, step, now))) return
+                now - last.epochSecond > step * 3 + 120)) return
+        // 20 Nov 2026 (audit, B5 item 6: "Pine accepts a candle about 17 minutes old"): with nothing held (so only an entry can follow,
+        // never an exit), a candle older than its own timeframe allows - the newest completed one closed more than one candle plus the
+        // feed's lag ago ([com.optionslab.ira.CandleFresh.pineFresh]) - is not acted on in Paper: the pass ends before the candle is
+        // taken, so the change is read again on the next, fresher one. In Live it is logged only (CLAUDE.md: a new rule that could skip
+        // live trades starts in shadow) and the entry goes as before. Exits and the stop, target, lock and 15:15 are never held by it.
+        if (h == null && step < 86_400 && !com.optionslab.ira.CandleFresh.pineFresh(last.epochSecond, step, now)) {
+            val age = (now - last.epochSecond - step) / 60
+            if (!OrbArms.liveNow()) {
+                if (!quiet && staleSaid.put(id, last.epochSecond) != last.epochSecond)
+                    note(b, id, "${tag}The newest ${item.auto.interval} candle closed $age min ago (over one candle late): no entry on it; read again on the next")
+                return
+            }
+            if (staleSaid.put(id, last.epochSecond) != last.epochSecond)
+                note(b, id, "${tag}shadow (B5 item 6): the newest ${item.auto.interval} candle closed $age min ago (over one candle late); in Paper " +
+                    "no entry would be made on it. Live is unchanged: logged only")
+        }
         if (b.lastBar[id] == last.epochSecond) { owedExit(b, id, item, h); return }
         // Only a pause the owner made (stopped for the day, the kill switch, its daily loss limit) means a signal that changed
         // meanwhile is not chased. Missed candles (a slow pass, a failed fetch, the app away) are not a pause: every pass
@@ -846,6 +858,12 @@ object PineAuto {
         }
         enter(b, item, Right.valueOf(want), last.close, live)
     }
+
+    /** 20 Nov 2026 (audit, B5 item 6): the candle each script was last told is too old to enter on (memory only; once a candle). */
+    private val staleSaid = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+
+    /** TEST ONLY: forget which late candles were told (a new process starts without them). */
+    internal fun forgetStaleForTest() = staleSaid.clear()
 
     /** The option a signal [target] backs ("CE" / "PE"), or null: none (flat, or short with no put). */
     private fun wantFor(item: PineScripts.Item, target: Int): String? = when {

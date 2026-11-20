@@ -385,12 +385,15 @@ object NightArm {
                     val why = try {
                         decide(b, u, now)
                     } catch (e: kotlinx.coroutines.CancellationException) {
-                        b.decided -= key; rollBackHistory(b, u, histBefore); cancelled = e; break
+                        // (Review: a look cancelled once its order was sent keeps the day decided - never a second buy.)
+                        if (key !in sent) { b.decided -= key; rollBackHistory(b, u, histBefore) }
+                        cancelled = e; break
                     } catch (e: Throwable) {
                         // 20 Nov 2026 (audit: "Night loses the day on one failed read"): a failure before any entry is not the day's
-                        // verdict - tried again with back-off inside the entry window. Never after a buy (a trade taken today for [u]
-                        // ends the day as before), so a retry can never buy twice; a build-up recorded by the failed try is taken back.
-                        val bought = b.positions.any { it.index == u && it.entryDay == now.toLocalDate() }
+                        // verdict - tried again with back-off inside the entry window. Never once an order (or a would-be trade) was
+                        // sent for [u] today ([sent], marked before the paper order goes; or a trade taken today), so a retry can never
+                        // buy twice; a build-up recorded by the failed try is taken back.
+                        val bought = key in sent || b.positions.any { it.index == u && it.entryDay == now.toLocalDate() }
                         if (!bought) {
                             b.decided -= key
                             rollBackHistory(b, u, histBefore)
@@ -418,6 +421,16 @@ object NightArm {
         }
     }
 
+    /**
+     * 20 Nov 2026 (audit, B5 item 5, review): the decisions ("day|index") whose paper order, or switched-off would-be trade, was sent:
+     * marked BEFORE it goes, so a failure or cancellation after it (a fill not yet in the book) is never retried. Memory only.
+     */
+    private val sent: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** TEST SEAM: runs once a decision is marked [sent], before its order or would-be trade goes. Null in the app, always. */
+    @Volatile internal var testAfterSend: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
     /** 20 Nov 2026 (audit, B5 item 5): a failed decision's tries ("day|index" -> fails so far, next try at, market-clock ms); memory only. */
     private val retries = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Long>>()
 
@@ -432,7 +445,7 @@ object NightArm {
     }
 
     /** TEST ONLY: forget the failed decisions' back-off (a new process starts without it). */
-    internal fun forgetRetriesForTest() = retries.clear()
+    internal fun forgetRetriesForTest() { retries.clear(); sent.clear() }
 
     /** The 09:16 sale of every open position bought on an earlier session. True when [b] changed. */
     private suspend fun exits(b: Book, now: LocalDateTime): Boolean {
@@ -624,6 +637,8 @@ object NightArm {
         // target: the rule has none). Placed before the flow gate, whose log is the arm's real tickets' (its CONFIRM skip, off by
         // default, is not applied to the would-be trade).
         if (shadow) {
+            sent += "$today|$u"
+            testAfterSend?.invoke()
             val words = OffShadow.enter(OffShadow.Ask(NightRules.SOURCE, NightRules.LABEL, u, c, if (right == Right.CE) 1 else -1,
                 com.optionslab.engine.orb.OffShadow.Exits(exitAt = java.time.LocalTime.of(9, 16), carry = true, exitOn = nextSession(today)),
                 "${d.why} ($facts)"))
@@ -633,6 +648,8 @@ object NightArm {
         val flow = FlowGate.gate(NightRules.SOURCE, u, d.side, false, now.withSecond(0).withNano(0).toString(), right.name, contract = c)
         if (flow.skip) return "${flow.pausedWhy ?: FlowGate.SKIPPED} ($facts)"
         runCatching { LiveRecorder.signal(NightRules.LABEL, c.symbol, u, right.name, null, paper = true) }
+        sent += "$today|$u"
+        testAfterSend?.invoke()
         val r = Paper.place(c, "BUY", 1, "MARKET", "NRML", null, null, auto = NightRules.LABEL)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null) {

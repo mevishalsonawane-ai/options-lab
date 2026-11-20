@@ -279,14 +279,19 @@ object Backup {
     /**
      * 20 Nov 2026 (audit, B5 item 2): the live books holding an open position now, in Boss's words (empty: none). Memory only (each
      * book's own hint, as the watch reads them: never a vault read or the network). A book that cannot tell counts as holding.
+     * (Review: the hints are only right once this start has read the position books ([PositionsFirst], step 1): until then the whole
+     * restore is refused as "still being read"; and the protections' hint not read yet counts as holding.)
      */
     fun liveHeld(): List<String> = testLiveHeld?.invoke() ?: buildList {
         fun held(name: String, f: () -> Boolean) { if (runCatching(f).getOrDefault(true)) add(name) }
+        // (The unit tests' app never runs the start: [PositionsFirst.startedAt] 0.)
+        val started = runCatching { PositionsFirst.startedAt != 0L }.getOrDefault(true)
+        if (started) held("the open positions (still being read after the app's start)") { PositionsFirst.foundOpen == null }
         held("the arms' live trades (R51, R72 and the others)") { ArmLive.holdingHint || ArmLive.recoverHint }
         held("Liquidity 15+5 and the ORB arms' live positions") { OrbArms.liveHint }
         held("Pine's live positions") { PineAuto.held.value.values.any { it.live } }
-        held("a running saved strategy") { Strategies.runningHint }
-        held("your live protections") { Protections.activeHint == true }
+        held("a running saved strategy (paper or live)") { Strategies.runningHint }
+        held("your live protections") { Protections.activeHint == true || (started && Protections.activeHint == null) }
         held("positions at Zerodha") { Reconciler.heldHint() }
     }
 

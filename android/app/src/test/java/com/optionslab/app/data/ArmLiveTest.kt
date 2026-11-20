@@ -1206,6 +1206,19 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("shadow (B5 item 7)") && it.contains("would have kept 30") })
     }
 
+    /** The L25 ladder's half step beside a 1-lot live copy (2 lots on paper): sold whole, and the shadow names the lot it would keep. */
+    @Test fun aOneLotLiveCopyAtTheLaddersHalfStepIsSoldWholeAndNamedInTheShadow() {
+        val ref = "phalf"
+        ArmLive.entered(ask(donchian, ref, qty = 60))               // 2 lots on paper; live is 1 lot by default
+        watch()
+        assertEquals(30, view().open.single().qty)
+        legs[ref] = donchian to 30                                  // the half step sold 1 of 2 on paper
+        watch()
+        assertTrue("sold whole, as before", view().open.isEmpty())
+        Diag.flush()
+        assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("shadow (B5 item 7)") && it.contains("would have kept 30") })
+    }
+
     @Test fun aWholeExitWhoseStopPartFilledSellsTheRestInTheSameLook() {
         ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(donchian, "pf", qty = 60))

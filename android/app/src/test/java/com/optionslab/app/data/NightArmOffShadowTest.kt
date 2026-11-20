@@ -128,6 +128,28 @@ class NightArmOffShadowTest : RobolectricTest() {
         assertEquals(orders, Paper.state.orders.size)
     }
 
+    /**
+     * 20 Nov 2026 (audit, B5 item 5, review): a failure once the decision's would-be trade (or paper order) was sent is the day's
+     * verdict - never retried by the back-off, so a retry can never send twice.
+     */
+    @Test fun aFailureAfterTheSendIsTheDaysVerdictAndIsNeverRetried() {
+        NightArm.forgetRetriesForTest()
+        var sends = 0
+        NightArm.testAfterSend = { sends++; throw java.io.IOException("test: failed after the send") }
+        try {
+            runBlocking { NightArm.tick() }
+            assertEquals("NIFTY's strong close reached the send once", 1, sends)
+            val said = NightArm.view.value.status["NIFTY"].orEmpty()
+            assertEquals("error: IOException", said)
+            at(day, LocalTime.of(15, 21))
+            runBlocking { NightArm.tick() }
+            assertEquals("no second send for the day", 1, sends)
+        } finally {
+            NightArm.testAfterSend = null
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
     @Test fun onThePaperPathIsUnchangedAndTheShadowGetsNothing() {
         assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
         runBlocking { NightArm.tick() }

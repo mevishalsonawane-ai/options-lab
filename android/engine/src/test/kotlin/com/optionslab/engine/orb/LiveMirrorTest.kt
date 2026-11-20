@@ -234,9 +234,10 @@ class LiveMirrorTest {
         assertEquals(30, LiveMirror.toSell(30, 30, 120, 90, 30), "live: sold whole (rounded toward less risk)")
         assertEquals(0, LiveMirror.toSellNearest(30, 30, 120, 90, 30), "nearest: 3/4 of a lot keeps the lot")
         assertTrue(LiveMirror.partSellsWhole(30, 30, 120, 90, 30))
-        // Half on paper: a tie sells, both ways - nothing for the shadow to name.
-        assertEquals(30, LiveMirror.toSellNearest(30, 30, 60, 30, 30))
-        assertFalse(LiveMirror.partSellsWhole(30, 30, 60, 30, 30))
+        // Half on paper (the L25 ladder's step): live sells whole; nearest keeps the lot (a half keeps) - the case the shadow names.
+        assertEquals(30, LiveMirror.toSell(30, 30, 60, 30, 30))
+        assertEquals(0, LiveMirror.toSellNearest(30, 30, 60, 30, 30))
+        assertTrue(LiveMirror.partSellsWhole(30, 30, 60, 30, 30))
         // A quarter left on paper: nearest sells too.
         assertEquals(30, LiveMirror.toSellNearest(30, 30, 120, 30, 30))
         assertFalse(LiveMirror.partSellsWhole(30, 30, 120, 30, 30))
@@ -253,7 +254,8 @@ class LiveMirrorTest {
         assertEquals(0, LiveMirror.toSellNearest(30, 30, 60, 60, 30))
         assertEquals(0, LiveMirror.toSellNearest(0, 30, 60, 30, 30))
         assertEquals(0, LiveMirror.toSellNearest(30, 30, 0, 30, 30))
-        assertEquals(1, LiveMirror.toSellNearest(2, 2, 4, 3, 0))          // an unknown lot counts as 1
+        assertEquals(0, LiveMirror.toSellNearest(2, 2, 4, 3, 0))          // an unknown lot counts as 1 (1.5 of 2 keeps 2)
+        assertEquals(1, LiveMirror.toSellNearest(2, 2, 4, 1, 0))          // (0.5 of 2 keeps 1)
         assertFalse(LiveMirror.partSellsWhole(30, 30, 60, null, 30), "a close is no part-exit")
         assertFalse(LiveMirror.partSellsWhole(30, 30, 60, 0, 30))
         assertFalse(LiveMirror.partSellsWhole(0, 30, 120, 90, 30))

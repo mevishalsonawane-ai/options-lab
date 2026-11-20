@@ -43,18 +43,24 @@ class PaperPriceReadBoundTest : RobolectricTest() {
         assertTrue(Paper.PRICE_READ_WAIT_MS in 1_000L..10_000L)
     }
 
-    @Test fun aSlowCandleReadIsGivenUpAtTheBoundAndTheNextReadWorks() {
+    @Test fun aSlowCandleReadIsNotWaitedForPastTheBoundAndTheNextLookTakesItsAnswer() {
         Paper.priceReadWaitMs = 400L
-        // The feed holds this contract's read for 5 s (a rate limit's wait, a stalled connection).
-        upstox.gate = { key -> if (key == c.feedKey) Thread.sleep(5_000) }
+        // The feed holds this contract's read for 1.5 s (a rate limit's wait, a slow link).
+        upstox.gate = { key -> if (key == c.feedKey) Thread.sleep(1_500) }
+        val reads0 = upstox.requests.count { it.contains(c.feedKey) || it.contains(c.feedKey.replace("|", "%7C")) }
         val t0 = System.currentTimeMillis()
         val px = runBlocking { Paper.lastPrice(c) }
         val took = System.currentTimeMillis() - t0
         assertNull("no price now", px)
-        assertTrue("the caller was held $took ms, not the read's 5 s", took < 3_000)
-        // The feed answers at once again: the price is read as before.
+        assertTrue("the caller was held $took ms, not the read's 1.5 s", took < 1_200)
+        // A second look while it is still running waits on the same read (never a second one beside it).
+        assertNull(runBlocking { Paper.lastPrice(c) })
+        // The read finishes in the background; the next look takes its answer with no new read.
+        Thread.sleep(1_600)
         upstox.gate = null
-        assertNotNull(runBlocking { Paper.lastPrice(c) })
+        assertEquals(100.0, runBlocking { Paper.lastPrice(c) }!!, 0.5)
+        val reads1 = upstox.requests.count { it.contains(c.feedKey) || it.contains(c.feedKey.replace("|", "%7C")) }
+        assertEquals("one read for the three looks", 1, reads1 - reads0)
     }
 
     @Test fun aReadWithinTheBoundIsUsedAsBefore() {

@@ -53,6 +53,8 @@ class PaperSoldElsewhereTest : RobolectricTest() {
         assertEquals(PaperElsewhere.How.SALE, a.how)
         assertEquals(sale.price.toDouble(), a.price.toDouble(), 1e-9)
         assertEquals(sale.timestamp, a.timestamp)
+        // Review: one fill shared by two trades lends each its share of the charges, never all of them.
+        assertEquals(sale.charges.toDouble() / 2, a.charges.toDouble(), 1e-6)
         // The other arm's lot was sold in the same fill: booked at it too.
         val b = Paper.soldElsewhere("B|x", c.symbol, from, "MIS", qty = lot)!!
         assertEquals(PaperElsewhere.How.SALE, b.how)
@@ -62,6 +64,15 @@ class PaperSoldElsewhereTest : RobolectricTest() {
         assertEquals(PaperElsewhere.How.LAST_PRICE, third!!.how)
         // The same trade asking again keeps its own booking.
         assertEquals(PaperElsewhere.How.SALE, Paper.soldElsewhere("A|x", c.symbol, from, "MIS", qty = lot)!!.how)
+    }
+
+    /** Review: an arm's own exit (placed as an exit) is its own - another trade closed elsewhere never books it. */
+    @Test fun anArmsOwnExitIsNeverBookedToAnotherTrade() {
+        val from = since()
+        assertTrue(runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }.ok)
+        assertTrue(runBlocking { Paper.place(c, "SELL", 1, "MARKET", "MIS", null, null, exit = true) }.ok)
+        val other = Paper.soldElsewhere("Other|x", c.symbol, from, "MIS", qty = c.lotSize)!!
+        assertEquals("not the other arm's own sale", PaperElsewhere.How.LAST_PRICE, other.how)
     }
 
     @Test fun anotherProductsSaleIsNeverBooked() {

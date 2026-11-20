@@ -360,10 +360,11 @@ object Paper {
     /**
      * 20 Nov 2026 (audit, B5 item 1: "a paper price read can wait 10-160 s"): how long one candle read for a paper price may hold its
      * caller. The feed's quick read waits out a rate limit (429) for 10 s up to 160 s before its second try; every paper stop, lock and
-     * exit check that prices a contract off the stream waited with it. Past this the read is given up (cancelled: the connection is
-     * closed) and the price is "none now", as for a failed read: the check is made again on the next pass, on the next price.
-     * Only [quote] (every price a check reads) is bounded so; [minutes] is not - its callers wait on it apart ([gapHighSince] waits
-     * [GAP_READ_WAIT_MS] while its read goes on in the background and keeps the candles).
+     * exit check that prices a contract off the stream waited with it. Past this the caller stops waiting and the price is "none now",
+     * as for a failed read: the check is made again on the next pass. (Review: the read itself is not cancelled - it goes on in the
+     * background, one at a time for a contract, and the next look takes its answer when it came in the last [PRICE_READ_KEEP_MS], so a
+     * slow but working feed still prices the contract a pass later.) Only [quote] (every price a check reads) is bounded so; [minutes]
+     * is not - its callers wait on it apart ([gapHighSince] waits [GAP_READ_WAIT_MS] while its read goes on in the background).
      */
     const val PRICE_READ_WAIT_MS = 6_000L
 
@@ -371,11 +372,36 @@ object Paper {
     @Volatile internal var priceReadWaitMs: Long = PRICE_READ_WAIT_MS
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the price-read seam exists only in debug builds" }; field = v }
 
-    /** [c]'s candles of today from the paper feed, waited [priceReadWaitMs] at most; throws when the read failed or took longer. */
+    /** How long a price read that finished after its caller stopped waiting is still taken by the next look. */
+    const val PRICE_READ_KEEP_MS = 30_000L
+
+    /** One candle read for a paper price, run apart from its caller ([candleRead]); [doneAt]: when it finished (0: still running). */
+    private class PriceRead(val job: kotlinx.coroutines.Deferred<List<Upstox.Bar>>) { @Volatile var doneAt = 0L }
+
+    /** The candle read of each contract in flight, or just finished ([PriceRead]); memory only. */
+    private val priceReads = java.util.concurrent.ConcurrentHashMap<String, PriceRead>()
+
+    /**
+     * [c]'s candles from the paper feed, waited [priceReadWaitMs] at most; throws when the read failed or is still running then. A read
+     * already in flight for [c] is waited on (never a second one beside it), and one that finished in the last [PRICE_READ_KEEP_MS]
+     * after its caller stopped waiting is taken as it is.
+     */
     private suspend fun candleRead(c: Contract): List<Upstox.Bar> {
         val wait = priceReadWaitMs
-        return kotlinx.coroutines.withTimeoutOrNull(wait) { Net.intradayQuick(c.feedKey) }
-            ?: throw java.io.IOException("the paper price read of ${c.symbol} took over $wait ms")
+        val now = System.currentTimeMillis()
+        val r = priceReads.compute(c.symbol) { _, cur ->
+            if (cur != null && (!cur.job.isCompleted || now - cur.doneAt <= PRICE_READ_KEEP_MS)) cur
+            else PriceRead(gapReads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { Net.intradayQuick(c.feedKey) }).also { pr ->
+                pr.job.invokeOnCompletion { pr.doneAt = System.currentTimeMillis() }
+            }
+        }!!
+        r.job.start()
+        // (Waiting on a read started in [gapReads]: the timeout ends this wait only, never the read.)
+        // (join, not await, inside the timeout: a failed read's own error is thrown by the await below, never mistaken for the timeout.)
+        kotlinx.coroutines.withTimeoutOrNull(wait) { r.job.join(); true }
+            ?: throw java.io.IOException("the paper price read of ${c.symbol} took over $wait ms (it goes on; the next look takes it)")
+        priceReads.remove(c.symbol, r)
+        return r.job.await()
     }
 
     /** 15 Nov: the start (epoch seconds) of the newest candle [quote] last read for [symbol]; null: none. Memory only ([com.optionslab.ira.PriceNow]). */
@@ -808,16 +834,26 @@ object Paper {
         // The paper book settles an expired NSE/BSE contract after its session (no fill): its row then holds the settlement price.
         val expired = c != null && !c.isMcx && (now.toLocalDate().isAfter(c.expiry) ||
             (now.toLocalDate() == c.expiry && !now.toLocalTime().isBefore(java.time.LocalTime.of(15, 30))))
-        val row = st.positions.filter { it.symbol == symbol && it.quantity == 0 }.maxByOrNull { it.updatedAt }
+        // (Review: the row of the trade's own product, so another product's row closed later that day never lends its price.)
+        val row = st.positions.filter { it.symbol == symbol && it.quantity == 0 && (product == null || it.product.equals(product, ignoreCase = true)) }
+            .maxByOrNull { it.updatedAt }
         val byOthers = { id: String -> elsewhereClaims[id]?.entries?.filter { it.key != owner }?.sumOf { it.value } ?: 0 }
         val x = com.optionslab.ira.PaperElsewhere.pick(sales, product, since, byOthers,
             expired, row?.ltp?.toDouble(), c?.expiry?.atTime(15, 30), memPrice(symbol, ELSEWHERE_LAST_MS), now) ?: return@runCatching null
-        x.orderId?.let { id ->
-            if (elsewhereClaims.size > 2_000) elsewhereClaims.clear()
-            elsewhereClaims.getOrPut(id) { java.util.concurrent.ConcurrentHashMap() }[owner] = qty.coerceAtLeast(1)
-        }
-        SoldElsewhere(BigDecimal.valueOf(x.price), x.at, BigDecimal.valueOf(x.charges), x.how)
+        x.orderId?.let { id -> claimElsewhere(id, owner, qty.coerceAtLeast(1)) }
+        // (Review: a fill shared by several trades lends each its share of the charges, never all of them.)
+        val soldQty = x.orderId?.let { id -> sales.firstOrNull { it.orderId == id }?.quantity } ?: 0
+        val charges = if (soldQty > 0 && qty in 1 until soldQty) x.charges * qty / soldQty else x.charges
+        SoldElsewhere(BigDecimal.valueOf(x.price), x.at, BigDecimal.valueOf(charges), x.how)
     }.getOrNull()
+
+    /** The owner key of an arm's own exit fill in [elsewhereClaims] ([place] with exit). */
+    private const val OWN_EXIT = "own exit"
+
+    private fun claimElsewhere(orderId: String, owner: String, qty: Int) {
+        if (elsewhereClaims.size > 2_000) elsewhereClaims.clear()
+        elsewhereClaims.getOrPut(orderId) { java.util.concurrent.ConcurrentHashMap() }[owner] = qty
+    }
 
     /** TEST SEAM: forget the fills booked to trades closed elsewhere (a new process starts without them). */
     internal fun forgetElsewhereForTest() = elsewhereClaims.clear()
@@ -1296,6 +1332,11 @@ object Paper {
         // The sandbox's modelled slippage (kept apart as paper): a LIMIT from its price, else from the price it read.
         val limit = priceType.equals("LIMIT", true) && price != null
         modelled(r, entry, if (limit) price else q?.ltp?.takeIf { it > 0 }, limit)
+        // 20 Nov 2026 (audit, B5 item 4, review): an arm's own exit that filled is its own: never booked to another trade closed elsewhere.
+        if (exit && r.ok) runCatching {
+            val filled = r.events.filterIsInstance<SandboxEvent.Fill>().sumOf { it.quantity }
+            r.orderId?.let { id -> if (filled > 0) claimElsewhere(id, OWN_EXIT, filled) }
+        }
         // 25 Oct: an entry the 2% cap sized down says so (its fill is recorded above, as every fill).
         if (sized != null && r.ok) return r.copy(rule = sized)
         return r

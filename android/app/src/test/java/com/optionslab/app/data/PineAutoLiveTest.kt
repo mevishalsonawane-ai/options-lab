@@ -55,6 +55,7 @@ class PineAutoLiveTest : RobolectricTest() {
         AutomationSupport.security(compromised = false)
         AutomationSupport.clearAlerts()
         AutomationSupport.freshPine(context)
+        PineAuto.forgetStaleForTest()
         now = AutomationSupport.tradingDayAt(11, 2)
         PineAuto.testNow = now
         PineAuto.testBars = { _, _ -> candles?.invoke() ?: AutomationSupport.bars(now, closes) }
@@ -146,18 +147,35 @@ class PineAutoLiveTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (audit: "Pine accepts a candle about 17 minutes old"): a 5-minute feed one candle behind - its newest closed 7
-     * minutes ago, 12 minutes after it started, which the old rule (3 candles plus 2 minutes) took - is not traded on.
+     * 20 Nov 2026 (audit, B5 item 6: "Pine accepts a candle about 17 minutes old"): a 5-minute feed one candle behind - its newest closed
+     * 7 minutes ago, which the old rule (3 candles plus 2 minutes) took. In Live the new rule is logged only (CLAUDE.md: a new rule that
+     * could skip live trades starts in shadow): the entry goes as before, and the log says what Paper does.
      */
-    @Test fun aFiveMinuteFeedOneCandleBehindIsNotTradedOn() {
+    @Test fun inLiveACandleOneStepBehindIsLoggedInShadowAndTheEntryGoesAsBefore() {
         switchOn()
         pass(51_900.0)                                             // 11:07
         candles = { AutomationSupport.bars(now.minusMinutes(5), List(9) { 51_900.0 } + 52_010.0) }
         pass(52_010.0)                                             // 11:12: the newest candle 11:00-11:05
-        assertTrue("nothing traded on a candle a step behind", kite.placed.isEmpty())
+        assertEquals("live unchanged: it trades", 1, side("BUY").size)
+        assertTrue(log(), log().contains("shadow (B5 item 6)"))
+        assertEquals("told once a candle", 1, Regex("shadow \\(B5 item 6\\)").findAll(log()).count())
+    }
+
+    /** In Paper the same late candle is not entered on, and the change is read again on the next, fresh candle. */
+    @Test fun inPaperACandleOneStepBehindIsNotEnteredOnAndTheNextFreshOneIsRead() {
+        AutomationSupport.liveSettings(live = false)
+        switchOn()
+        pass(51_900.0)                                             // 11:07
+        candles = { AutomationSupport.bars(now.minusMinutes(5), List(9) { 51_900.0 } + 52_010.0) }
+        pass(52_010.0)                                             // 11:12: one candle late
+        assertTrue(log(), log().contains("no entry on it; read again on the next"))
+        assertFalse(log(), log().contains("Signal: BUY"))
+        assertNull(held())
+        assertTrue("nothing at Zerodha in Paper", kite.placed.isEmpty())
         candles = null
         pass(52_010.0, minutes = 1)                                // 11:13: the 11:05-11:10 candle, 3 minutes after its close
-        assertEquals("a candle within its own timeframe does trade", 1, side("BUY").size)
+        assertTrue("the change is read on the fresh candle: ${log()}", log().contains("Signal: BUY"))
+        assertTrue("still nothing at Zerodha in Paper", kite.placed.isEmpty())
     }
 
     @Test fun aChangeMissedWhileTheAppWasAwayIsCaughtUp() {
