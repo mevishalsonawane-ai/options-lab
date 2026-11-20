@@ -1,0 +1,61 @@
+{
+ "m_total": 4811,
+ "tests": {
+  "R72-SX": {
+   "passed": false,
+   "fails": [
+    "W2: net Rs -2,833 not above 0",
+    "twin p 0.1474 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.1474,
+   "q": 1.0,
+   "p_normal": 0.15101838312692628,
+   "wf_positive": 4,
+   "account_stop": {
+    "W1": true,
+    "W2": true,
+    "total": true
+   }
+  },
+  "R51-SX": {
+   "passed": false,
+   "fails": [
+    "W1: net Rs -27,024 not above 0",
+    "W2: net Rs -9,818 not above 0",
+    "walk-forward: 1 of 6 W1 quarters positive < 4",
+    "total: net without the 5 best trades Rs -54,181 not above 0",
+    "twin p 0.8856 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.8856,
+   "q": 1.0,
+   "p_normal": 0.8786892987199821,
+   "wf_positive": 1,
+   "account_stop": {
+    "W1": false,
+    "W2": false,
+    "total": false
+   }
+  },
+  "LIQ-SX": {
+   "passed": false,
+   "fails": [
+    "W2: net Rs -996 not above 0",
+    "total: net without the 5 best trades Rs -29,789 not above 0",
+    "twin p 0.7116 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "twin_p": 0.7116,
+   "q": 1.0,
+   "p_normal": 0.7321637109789381,
+   "wf_positive": 4,
+   "account_stop": {
+    "W1": true,
+    "W2": true,
+    "total": true
+   }
+  }
+ },
+ "passed": []
+}

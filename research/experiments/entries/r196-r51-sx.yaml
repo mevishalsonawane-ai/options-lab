@@ -1,0 +1,32 @@
+id: r196-r51-sx
+title: 'R196 SENSEX: R51 Donchian 20 on SENSEX, live rule (picker + V5)'
+family: patterns-indicators
+date: '2026-11-20'
+doc: research/hunt/r196_sensex_arms/results/report.md
+hypothesis: 'R51 Donchian 20 on SENSEX, live rule (picker + V5) makes money on its own: net > 0 in W1 and W2, >= 40 trades
+  each, 4 of 6 W1 quarters positive, positive without its 5 best trades, beats random-entry twins, after BH'
+data_version: Drive lake copy of 20 Nov 2026 (index_1m and options_rolling_1m WEEK 2024 - 13 Nov 2026, with the 20 Oct - 13
+  Nov fill); R51 clean stores built by R196 from 1 Jan 2024
+period:
+  design: W1 2024-11-01..2026-03-31 (walk-forward by quarter; nothing fitted)
+  holdout: W2 2026-04-01..2026-11-13, read once (results/W2_READ); seen before in pooled totals (R193) and, for Liquidity,
+    R52's SENSEX hold period
+instruments:
+- SENSEX
+features:
+- 'signal source: the index (SENSEX''s own 5-minute / 15-minute bars; R72 counts 4 of 5 indices)'
+- buy the BFO option; stops, breakevens and locks on the premium
+model_or_rule: R51 Donchian 20 on SENSEX, live rule (picker + V5) (r186engine.price; r152picker where it applies)
+settings: research/hunt/r196_sensex_arms/r196cfg.py; PREREG.md section 5
+prereg: research/hunt/r196_sensex_arms/PREREG.md
+variants_tried: 1
+results:
+  summary: 'W1 387 tr, 59.7% win, -Rs 27,024, DD Rs 52,559, worst month -Rs 14,845; W2 156 tr, 57.0% win, -Rs 9,818, DD Rs
+    17,009, worst month -Rs 15,030; total 543 tr, 58.9% win, -Rs 36,842, DD Rs 52,559, worst month -Rs 15,030; twin p 0.8856,
+    BH q 1 (m = 4,811); walk-forward 1/6 W1 quarters positive. Failed: W1: net Rs -27,024 not above 0; W2: net Rs -9,818 not
+    above 0; walk-forward: 1 of 6 W1 quarters positive < 4; total: net without the 5 best trades Rs -54,181 not above 0; twin
+    p 0.8856 >= 0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges (BSE rates), R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes until Boss chooses.
