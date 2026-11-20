@@ -2375,7 +2375,7 @@ object OrbArms {
             runCatching { warmContracts(WARM_WAIT_MS) }
         }
         if (unds.isEmpty()) return IndexData.Reads()
-        return prefetchIndices(t, unds, liq, PASS_READ_MS)
+        return prefetchIndices(t, unds, liq, testPassReadMs ?: PASS_READ_MS)
     }
 
     /**
@@ -6591,6 +6591,21 @@ object OrbArms {
      * this pass: only the books on it say "no data", and its positions keep every exit that needs no index candle. Never throws.
      */
     private suspend fun prefetchIndices(t: LocalDateTime, unds: Collection<String>, liq: Set<String>, budgetMs: Long): IndexData.Reads<List<Upstox.Bar>> {
+        val started = System.nanoTime()
+        try { return prefetchWithin(t, unds, liq, budgetMs) } finally {
+            lastPrefetch = budgetMs to (System.nanoTime() - started) / 1_000_000
+        }
+    }
+
+    /** TEST ONLY (20 Nov 2026): the pass's read budget (null in the app: [PASS_READ_MS]). */
+    @Volatile internal var testPassReadMs: Long? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** 20 Nov 2026: the last read before the lock - its budget and how long it took (ms); memory only (the tests read it). */
+    @Volatile internal var lastPrefetch: Pair<Long, Long>? = null
+        private set
+
+    private suspend fun prefetchWithin(t: LocalDateTime, unds: Collection<String>, liq: Set<String>, budgetMs: Long): IndexData.Reads<List<Upstox.Bar>> {
         val reads = IndexData.Reads<List<Upstox.Bar>>()
         val end = System.currentTimeMillis() + budgetMs
         for (u in unds.distinct()) {
@@ -6884,10 +6899,10 @@ object OrbArms {
         filesForErase().forEach { runCatching { it.delete() } }
     }
 
-    /** TEST ONLY (19 Nov 2026, audit batch 2): holds the arms' lock for [ms], as a pass placing an order does. */
-    internal suspend fun holdLockForTest(ms: Long) {
+    /** TEST ONLY (19 Nov 2026, audit batch 2): holds the arms' lock until [release] opens, as a pass placing an order does. */
+    internal suspend fun holdLockForTest(release: java.util.concurrent.CountDownLatch, held: java.util.concurrent.CountDownLatch? = null) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
-        lock.withLock { kotlinx.coroutines.delay(ms) }
+        lock.withLock { held?.countDown(); kotlinx.coroutines.runInterruptible(kotlinx.coroutines.Dispatchers.IO) { release.await(10, java.util.concurrent.TimeUnit.MINUTES) } }
     }
 
     /** Every hint read without the lock, as before any book is read. */

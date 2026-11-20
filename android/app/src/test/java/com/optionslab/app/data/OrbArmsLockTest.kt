@@ -64,6 +64,10 @@ class OrbArmsLockTest : RobolectricTest() {
             Upstox.Bar(start.atZone(IST).toEpochSecond(), b[0], b[1], b[2], b[3], 1000, 0)
         }
 
+    /** Released at the end of each test too: the arms' lock held by a test ([OrbArms.holdLockForTest]) and a slow history read. */
+    private val release = CountDownLatch(1)
+    private val landing = CountDownLatch(1)
+
     /** BANKNIFTY's feed hung: each read waits (for minutes) until the test ends. */
     private fun hang() { OrbArms.testIndexBars = { t -> gate.await(10, TimeUnit.MINUTES); feed(t) } }
 
@@ -86,8 +90,9 @@ class OrbArmsLockTest : RobolectricTest() {
     }
 
     @After fun down() {
-        gate.countDown()
+        gate.countDown(); release.countDown(); landing.countDown()
         OrbArms.testMinutesInMemory = null
+        OrbArms.testPassReadMs = null
         com.optionslab.ira.ArmExits.clear()
         AutomationSupport.realClocks()
         Market.testClock = null
@@ -123,6 +128,20 @@ class OrbArmsLockTest : RobolectricTest() {
         return p
     }
 
+    /**
+     * 20 Nov 2026: how long a step may take on a loaded CI runner. Never what a test proves: each blocked read or held lock here is held
+     * until the test lets it go (at its end at the latest, ten minutes at most), so a step that ends at all did not wait for it; how long
+     * the look's own read waited is checked against its budget ([lookWaitedItsBudget]).
+     */
+    private val SLOW_RUNNER_MS = 60_000L
+
+    /** The last read before the lock had [budget] and stopped at it: it waited no longer than the budget (plus a slow runner's slack). */
+    private fun lookWaitedItsBudget(budget: Long) {
+        val (b, took) = OrbArms.lastPrefetch!!
+        assertEquals("the look's own read budget", budget, b)
+        assertTrue("it stopped waiting at its budget ($took ms of $b)", took < b + 5_000)
+    }
+
     /** [block] on its own thread; true when it ended within [ms] (it is left to end by itself otherwise - the gate frees it). */
     private fun endsWithin(ms: Long, block: () -> Unit): Boolean {
         val failure = java.util.concurrent.atomic.AtomicReference<Throwable?>()
@@ -136,9 +155,10 @@ class OrbArmsLockTest : RobolectricTest() {
         heldTo1324()
         hang()
         at(LocalTime.of(13, 25))
-        val t0 = System.currentTimeMillis()
-        assertTrue("the 15-second stop look ended although the candle read hangs", endsWithin(15_000) { runBlocking { OrbArms.priceCheckOnly() } })
-        assertTrue("within its read deadline: ${System.currentTimeMillis() - t0} ms", System.currentTimeMillis() - t0 < OrbArms.LOOK_READ_MS + 5_000)
+        // (20 Nov 2026: the read hangs until the test ends - ten minutes at most - so a look that ends at all stopped waiting at its own
+        // deadline; the bound is only what a slow runner may need, never what the read takes.)
+        assertTrue("the 15-second stop look ended although the candle read hangs", endsWithin(SLOW_RUNNER_MS) { runBlocking { OrbArms.priceCheckOnly() } })
+        lookWaitedItsBudget(OrbArms.LOOK_READ_MS)
         val closed = row().today.single()
         assertFalse("the time stop sold it although the index could not be read", closed.open)
         assertEquals("time_stop", closed.why)
@@ -148,16 +168,18 @@ class OrbArmsLockTest : RobolectricTest() {
         heldTo1324()
         hang()
         at(LocalTime.of(13, 24, 30))
+        // (20 Nov 2026: the pass reads until the test lets its read go - never ending by its own deadline in the middle of the checks.)
+        OrbArms.testPassReadMs = 10 * 60_000L
         val pass = Thread { runCatching { runBlocking { OrbArms.tick() } } }.apply { isDaemon = true; start() }
         Thread.sleep(300)
         assertTrue("the pass is still reading", pass.isAlive)
-        val t0 = System.currentTimeMillis()
-        assertTrue("the stream's exit look did not wait for the pass", endsWithin(3_000) { runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) } })
-        assertTrue("the screens' view did not wait for the pass", endsWithin(3_000) { runBlocking { OrbArms.view() } })
-        assertTrue("both at once: ${System.currentTimeMillis() - t0} ms", System.currentTimeMillis() - t0 < 3_000)
-        // The pass gives up on the hung read at its deadline and goes on: the position is still watched, nothing new was bought.
-        pass.join(OrbArms.PASS_READ_MS + 10_000)
-        assertFalse("the pass ended at its read deadline", pass.isAlive)
+        assertTrue("the stream's exit look did not wait for the pass", endsWithin(SLOW_RUNNER_MS) { runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) } })
+        assertTrue("the screens' view did not wait for the pass", endsWithin(SLOW_RUNNER_MS) { runBlocking { OrbArms.view() } })
+        assertTrue("both while the pass was still reading", pass.isAlive)
+        // The read comes back: the pass goes on - the position is still watched, nothing new was bought.
+        gate.countDown()
+        pass.join(SLOW_RUNNER_MS)
+        assertFalse("the pass ended", pass.isAlive)
         assertTrue(row().today.single().open)
         assertEquals("one buy only", 1, Paper.state.orders.count { it.action == "BUY" })
     }
@@ -177,19 +199,21 @@ class OrbArmsLockTest : RobolectricTest() {
     @Test fun aSlowHistoryReadStillLandsAndAnOpenPositionsIndexExitsNeverWaitForIt() {
         boughtOnTheFailDay()
         // A restart mid-day: the earlier sessions, on a slow link, take longer than a look may wait.
+        // (20 Nov 2026, CI on 3d7f620d0: the look was timed with the wall clock, the paper sale and the runner's load included. Now the
+        // read is held by a latch until the look has ended: a look that ends at all did not wait for it.)
         val past = yesterday()
-        OrbArms.testHistoryBars = { Thread.sleep(OrbArms.LOOK_READ_MS + 2_000); past }
+        OrbArms.testHistoryBars = { landing.await(10, TimeUnit.MINUTES); past }
         at(LocalTime.of(13, 10))
-        val t0 = System.currentTimeMillis()
-        runBlocking { OrbArms.priceCheckOnly() }
-        assertTrue("the look stopped waiting at its deadline", System.currentTimeMillis() - t0 < OrbArms.LOOK_READ_MS + 3_000)
+        assertTrue("the look stopped waiting at its deadline", endsWithin(SLOW_RUNNER_MS) { runBlocking { OrbArms.priceCheckOnly() } })
+        lookWaitedItsBudget(OrbArms.LOOK_READ_MS)
         // The failed break needs only today's minutes and the level the position stored: sold now, not after the history.
         val closed = row().today.single()
         assertFalse(closed.open)
         assertEquals("failed_break", closed.why)
         assertEquals("not landed yet", 0, OrbArms.historyKeptForTest("BANKNIFTY"))
-        // The read was not cut: it lands by itself and is kept in memory.
-        val end = System.currentTimeMillis() + 10_000
+        // The read was not cut: once it comes back it lands by itself and is kept in memory.
+        landing.countDown()
+        val end = System.currentTimeMillis() + SLOW_RUNNER_MS
         while (OrbArms.historyKeptForTest("BANKNIFTY") == 0 && System.currentTimeMillis() < end) Thread.sleep(50)
         assertEquals("yesterday's session kept", past.size, OrbArms.historyKeptForTest("BANKNIFTY"))
     }
@@ -219,7 +243,7 @@ class OrbArmsLockTest : RobolectricTest() {
         OrbArms.testMinutesInMemory = { u, t -> if (u == "BANKNIFTY") feed(t) else null }
         hang()                                                              // the feed itself is never read on a fast look
         at(LocalTime.of(13, 10))
-        assertTrue(endsWithin(3_000) { runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) } })
+        assertTrue(endsWithin(SLOW_RUNNER_MS) { runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) } })
         val closed = row().today.single()
         assertFalse(closed.open)
         assertEquals("failed_break", closed.why)
@@ -227,26 +251,37 @@ class OrbArmsLockTest : RobolectricTest() {
 
     @Test fun theStopRescuesFreshViewWaitsForTheBookItself() {
         runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
-        val holder = Thread { runBlocking { OrbArms.holdLockForTest(1_500) } }.apply { isDaemon = true; start() }
-        Thread.sleep(200)
-        val t0 = System.currentTimeMillis()
-        val r = runBlocking { OrbArms.view(fresh = true) }.arms.single { it.arm.source == "liquidity" }
-        assertTrue("waited for the lock, never a copy: ${System.currentTimeMillis() - t0} ms", System.currentTimeMillis() - t0 >= 1_000)
-        assertTrue(r.armed)
-        holder.join(5_000)
+        val held = CountDownLatch(1)
+        val holder = Thread { runBlocking { OrbArms.holdLockForTest(release, held) } }.apply { isDaemon = true; start() }
+        assertTrue(held.await(SLOW_RUNNER_MS, TimeUnit.MILLISECONDS))
+        val got = java.util.concurrent.atomic.AtomicReference<OrbArms.View?>()
+        val failed = java.util.concurrent.atomic.AtomicReference<Throwable?>()
+        val returnedAt = java.util.concurrent.atomic.AtomicLong(0)
+        val reader = Thread { try { got.set(runBlocking { OrbArms.view(fresh = true) }); returnedAt.set(System.nanoTime()) } catch (e: Throwable) { failed.set(e) } }
+            .apply { isDaemon = true; start() }
+        reader.join(2_000)
+        val releasedAt = System.nanoTime()
+        release.countDown()
+        reader.join(SLOW_RUNNER_MS)
+        failed.get()?.let { throw AssertionError("the fresh view failed", it) }
+        assertTrue("it answered only once the lock was let go - never a copy", returnedAt.get() >= releasedAt)
+        assertTrue(got.get()!!.arms.single { it.arm.source == "liquidity" }.armed)
+        holder.join(SLOW_RUNNER_MS)
     }
 
     @Test fun theViewNeverWaitsOnTheLockItShowsTheBookAsLastSaved() {
         runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
         assertTrue(row().armed)
-        val holder = Thread { runBlocking { OrbArms.holdLockForTest(5_000) } }.apply { isDaemon = true; start() }
-        Thread.sleep(200)
-        val t0 = System.currentTimeMillis()
-        val r = runBlocking { OrbArms.view() }.arms.single { it.arm.source == "liquidity" }
-        assertTrue("answered at once while the lock is held: ${System.currentTimeMillis() - t0} ms", System.currentTimeMillis() - t0 < 1_000)
-        assertTrue("the book as last saved", r.armed)
+        // (20 Nov 2026: the lock is held until the view has answered - an answer at all means it never waited for the lock.)
+        val held = CountDownLatch(1)
+        val holder = Thread { runBlocking { OrbArms.holdLockForTest(release, held) } }.apply { isDaemon = true; start() }
+        assertTrue(held.await(SLOW_RUNNER_MS, TimeUnit.MILLISECONDS))
+        val got = java.util.concurrent.atomic.AtomicReference<OrbArms.View?>()
+        assertTrue("answered while the lock is held", endsWithin(SLOW_RUNNER_MS) { got.set(runBlocking { OrbArms.view() }) })
+        assertTrue("the book as last saved", got.get()!!.arms.single { it.arm.source == "liquidity" }.armed)
         assertTrue("the lock was still held", holder.isAlive)
-        holder.join(10_000)
+        release.countDown()
+        holder.join(SLOW_RUNNER_MS)
         // Free again: the book itself, as before.
         runBlocking { OrbArms.setArmed("liquidity", false, automatic = true) }
         assertFalse(row().armed)
