@@ -1208,7 +1208,14 @@ object PassedArmsHost {
      * 20 Nov 2026 (audit B5, item 2: an empty or stale history was kept all day, R51 / R72 then had no signal before 10:55, or a false
      * one): how long after [tries] reads the next may start - 1, 2, then 5 minutes ([backoff]: the picker's own, 10 minutes after that).
      */
-    internal fun backoffMs(tries: Int, backoff: LongArray = HIST_BACKOFF_MS): Long = backoff[(tries - 1).coerceIn(0, backoff.lastIndex)]
+    internal fun backoffMs(tries: Int, backoff: LongArray = HIST_BACKOFF_MS): Long =
+        if (tries >= SLOW_AFTER_TRIES) SLOW_BACKOFF_MS else backoff[(tries - 1).coerceIn(0, backoff.lastIndex)]
+    /**
+     * 20 Nov 2026 (review): after this many reads in a day (about an hour) the reads slow to every [SLOW_BACKOFF_MS] - a day the
+     * calendar counts as trading but the market was shut leaves every history short of it all day, and is never read every 5 minutes.
+     */
+    internal const val SLOW_AFTER_TRIES = 14
+    internal const val SLOW_BACKOFF_MS = 15 * 60_000L
     internal val HIST_BACKOFF_MS = longArrayOf(60_000L, 120_000L, 300_000L)
     internal val PICK_BACKOFF_MS = longArrayOf(60_000L, 120_000L, 300_000L, 600_000L)
 
@@ -1247,6 +1254,18 @@ object PassedArmsHost {
         h.sessions.isEmpty() -> 1
         staleWhy(h.sessions, prev) != null -> 2
         else -> 3
+    }
+
+    /**
+     * 20 Nov 2026 (review): [histRank], and among histories that do not stand, the newer last session first, then the more of its last
+     * [DonchianArm.LOOKBACK] five-minute bars - so a read that misses yesterday never replaces one that lacks only a bar of it.
+     */
+    internal fun histOrder(h: Hist?, prev: LocalDate?): Long {
+        val r = histRank(h, prev).toLong()
+        if (r != 2L || h == null) return r * 100_000_000L
+        val last = h.sessions.last()
+        val tail = PassedArms.Session.N / 5 - DonchianArm.LOOKBACK
+        return r * 100_000_000L + last.date.toEpochDay() * 100L + PassedArms.bars5(last).count { it.b >= tail }
     }
 
     /**
@@ -1611,7 +1630,7 @@ object PassedArmsHost {
         val was = history(u, day)
         val h = Hist(day, sessions, daily.filter { it.start.toLocalDate().isBefore(day) }.ifEmpty { was?.daily.orEmpty() })
         val prev = previousSession(day)
-        if (histRank(h, prev) < histRank(was, prev)) return false
+        if (histOrder(h, prev) < histOrder(was, prev)) return false
         hist[u] = h
         return true
     }
@@ -2538,6 +2557,9 @@ object PassedArmsHost {
     private suspend fun donchian(b: Book, now: LocalDateTime, reads: Reads): Boolean {
         val src = DonchianArm.SOURCE
         val today = now.toLocalDate()
+        // 20 Nov 2026 (audit B5, item 1): each index's stale history read BEFORE the series is built, so a whole read landing in between
+        // never makes a series built on the stale one look whole (a whole history is never replaced by a worse one: [keepHist]).
+        val staleOf = DonchianArm.UNDERLYINGS.associateWith { historyStale(it, today) }
         val all = seriesAll(today, reads)
         // 16 Oct (R72): each of its breaks labelled with whether breadth confirmed it (Boss's comparison; never changes a trade).
         val confirmed = runCatching { BreadthDonchianArm.signals(all, today).map { Triple(it.underlying, it.bar.b, it.side) }.toSet() }.getOrNull()
@@ -2553,7 +2575,7 @@ object PassedArmsHost {
             val gate: ((DonchianArm.Signal) -> Boolean?)? = st?.let { ser -> { x: DonchianArm.Signal -> DonchianArm.supertrendAgrees(ser, x) } }
             val sigs = DonchianArm.signals(u, s, today)
             // 20 Nov 2026 (audit B5, item 1): a break whose channel reads an earlier session that does not stand ([staleWhy]).
-            val stale = historyStale(u, today)
+            val stale = staleOf[u]
             val histStale: ((DonchianArm.Signal) -> String?)? = stale?.let { why -> { x: DonchianArm.Signal ->
                 if (readsHistory(s, today, x.bar.b)) "$u's earlier sessions are not whole ($why)" else null } }
             changed = breaks(b, src, u, sigs, now, gate, stPending = stPending,
@@ -2569,12 +2591,12 @@ object PassedArmsHost {
     private suspend fun breadth(b: Book, now: LocalDateTime, reads: Reads): Boolean {
         val src = BreadthDonchianArm.SOURCE
         val today = now.toLocalDate()
+        // 20 Nov 2026 (audit B5, item 1): a breadth break counts all five indices' channels, so any of them reading an earlier session
+        // that does not stand ([staleWhy]) on that bar holds it. Read BEFORE the series is built (as [donchian]).
+        val staleBy = BreadthDonchianArm.UNDERLYINGS.mapNotNull { i -> historyStale(i, today)?.let { i to it } }
         val all = seriesAll(today, reads)
         val sigs = BreadthDonchianArm.signals(all, today).groupBy { it.underlying }
         val pickSkip = pickSkipR72(b, today, sigs, reads)
-        // 20 Nov 2026 (audit B5, item 1): a breadth break counts all five indices' channels, so any of them reading an earlier session
-        // that does not stand ([staleWhy]) on that bar holds it.
-        val staleBy = BreadthDonchianArm.UNDERLYINGS.mapNotNull { i -> historyStale(i, today)?.let { i to it } }
         val histStale: ((DonchianArm.Signal) -> String?)? = if (staleBy.isEmpty()) null else { x: DonchianArm.Signal ->
             staleBy.firstOrNull { (i, _) -> all[i]?.let { readsHistory(it, today, x.bar.b) } == true }?.let { (i, why) -> "$i's earlier sessions are not whole ($why)" } }
         var changed = false
@@ -2681,7 +2703,10 @@ object PassedArmsHost {
                 // 20 Nov 2026 (audit B5, item 1): a break the stale-history check held to its window's end is let go as one the arm would
                 // have taken: it holds its side and counts in the day's caps ([staleHeld]), so the check never frees a place for a trade
                 // the arm would not have made (it only removes trades).
-                if (b.staleOn && (tried[dk]?.startsWith(STALE_TRIED) == true || histStale?.let { f -> runCatching { f(s) }.getOrNull() } != null) &&
+                // (Held: marked in the book when it first waited, so a restart keeps it. Only one the arm's own filters would have taken:
+                // Supertrend, the wide-day skip and the caps.)
+                if (b.staleOn && "$dk|$STALE_WAIT" in b.decided && (gate == null || runCatching { gate(s) }.getOrNull() == true) &&
+                    runCatching { skipRule?.invoke(s) }.getOrNull() == null &&
                     DonchianArm.mayTake(s, openSides(b, src, u, today, sigs, s), takenToday(b, src, u, today)) == null) b.decided += "$dk|$STALE_HELD"
                 b.decided += dk; changed = say(b, key, DonchianArm.missedWhy(s, tried.remove(dk), looksOf(u), othersOf(src, u)), final = true) || changed; continue
             }
@@ -2696,15 +2721,14 @@ object PassedArmsHost {
                 val what = "${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break"
                 if (b.staleOn) {
                     tried[dk] = "$STALE_TRIED: $staleBreak"
+                    if (b.decided.add("$dk|$STALE_WAIT")) changed = true
                     changed = say(b, key, "$what: waiting - $staleBreak; the history is read again (judged on the next look)") || changed
                     continue
                 }
-                if ("$dk|stale" !in b.decided) {
-                    b.decided += "$dk|stale"
-                    note(b, "${label(src)} $u $what: $STALE_MARK - $staleBreak (the check is off: shadow, taken as before)")
-                    changed = true
-                }
             }
+            // (Off - shadow: logged once, only where the break goes on to be bought, after the arm's own filters and caps.)
+            val staleShadow = staleBreak?.takeIf { "$dk|stale" !in b.decided }?.let { why ->
+                "${label(src)} $u ${s.entryTime.toLocalTime()} ${if (s.side > 0) "call" else "put"} break: $STALE_MARK - $why (the check is off: shadow, taken as before)" }
             // 16 Oct (R73 T7): with the filter on, a break is taken only when Supertrend (10, 3) agrees; one it is against, or
             // cannot judge (no earlier session in, or no direction yet), is skipped - it only ever skips (lowers risk), never
             // adds. Decided once, before the day's caps, as the research filtered the signals before taking them.
@@ -2748,6 +2772,7 @@ object PassedArmsHost {
                 continue
             }
             if (skip != null) { b.decided += dk; changed = say(b, key, "${s.entryTime.toLocalTime()} break skipped: $skip") || changed; continue }
+            staleShadow?.let { b.decided += "$dk|stale"; note(b, it); changed = true }
             val (p, why) = buy(b, src, u, s.side, listOf(s.strike), now, keys = listOf(dk), breadth = confirm(s))
             changed = true
             if (p != null) { b.decided += dk; tried.remove(dk); say(b, key, takenWords(p, "${s.entryTime.toLocalTime()} break")) }
@@ -2760,6 +2785,8 @@ object PassedArmsHost {
     private const val STALE_TRIED = "the history was not ready"
     /** 20 Nov 2026 (audit B5, item 1): the decision mark of a break the stale-history check let go ([breaks]): it counts in the caps. */
     internal const val STALE_HELD = "staleHeld"
+    /** 20 Nov 2026 (review): the decision mark of a break the stale-history check is holding (kept in the book across a restart). */
+    private const val STALE_WAIT = "staleWait"
 
     /**
      * The sides [src] holds on [u] for today's break [s]: its open trades', and (20 Nov 2026, audit B5) each earlier break the stale-history

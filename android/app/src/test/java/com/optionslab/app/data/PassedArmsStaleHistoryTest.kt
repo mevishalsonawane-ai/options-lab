@@ -242,6 +242,41 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         assertTrue(Paper.state.orders.isEmpty())
     }
 
+    @Test fun onAHeldBreakStaysHeldAcrossARestartEvenWhenTheHistoryIsWholeByThen() {
+        history(session(PassedArmsHost.previousSession(prev)!!))
+        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        fun nifty(until: LocalTime) = minutes(niftyKey, until) { t -> when {
+            t.isBefore(LocalTime.of(10, 50)) -> 25_000.0
+            t.isBefore(LocalTime.of(10, 55)) -> 25_100.0
+            else -> 25_200.0 } }
+        nifty(LocalTime.of(10, 55)); tick(LocalTime.of(10, 55))
+        assertTrue(status(), status().contains("waiting"))
+        // A restart (memory gone, the book read back) after a whole read: the hold is still known at the window's end.
+        assertTrue(PassedArmsHost.awaitWrites())
+        AutomationSupport.reloadFromDisk(PassedArmsHost)
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(prev) else emptyList() }
+        runBlocking { PassedArmsHost.prefetchNow(day) }
+        assertNull(PassedArmsHost.historyStale("NIFTY", day))
+        nifty(LocalTime.of(10, 58)); tick(LocalTime.of(10, 58))
+        nifty(LocalTime.of(11, 0)); tick(LocalTime.of(11, 0))
+        assertTrue(status(), status().contains("11:00 break skipped: one position a side"))
+        assertTrue(real().isEmpty())
+    }
+
+    @Test fun aWorseStaleReadNeverReplacesABetterStaleOne() {
+        val before = PassedArmsHost.previousSession(prev)!!
+        // Yesterday read but for its last bar: kept over a read that misses yesterday altogether.
+        history(session(prev, until = LocalTime.of(15, 25)))
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(before) else emptyList() }
+        runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }
+        assertEquals(prev, PassedArmsHost.history("NIFTY", day)!!.sessions.last().date)
+        assertTrue(PassedArmsHost.historyStale("NIFTY", day)!!.contains("lacks 1 of"))
+        // A fuller one of the same day does replace it.
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(prev, until = LocalTime.of(15, 30)) else emptyList() }
+        runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }
+        assertNull(PassedArmsHost.historyStale("NIFTY", day))
+    }
+
     @Test fun offABreakTakenAsBeforeLeavesTheCapsAsBefore() {
         // The same day with the check off (shadow): nothing is marked held; the 10:55 break goes to the buy as before.
         history(session(PassedArmsHost.previousSession(prev)!!))
@@ -269,7 +304,9 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
 
     @Test fun theReadsBackOffOneTwoThenFiveMinutes() {
         assertEquals(60_000L, PassedArmsHost.backoffMs(1)); assertEquals(120_000L, PassedArmsHost.backoffMs(2))
-        assertEquals(300_000L, PassedArmsHost.backoffMs(3)); assertEquals(300_000L, PassedArmsHost.backoffMs(40))
+        assertEquals(300_000L, PassedArmsHost.backoffMs(3)); assertEquals(300_000L, PassedArmsHost.backoffMs(PassedArmsHost.SLOW_AFTER_TRIES - 1))
+        // After about an hour of reads (a day the calendar wrongly counts as trading, say) every 15 minutes, never every 5 all day.
+        assertEquals(900_000L, PassedArmsHost.backoffMs(PassedArmsHost.SLOW_AFTER_TRIES)); assertEquals(900_000L, PassedArmsHost.backoffMs(40))
         assertEquals(600_000L, PassedArmsHost.backoffMs(4, PassedArmsHost.PICK_BACKOFF_MS))
         val t = PassedArmsHost.Tried(day, 1_000_000L, 2)
         assertTrue("none yet", PassedArmsHost.readDue(null, day, 0L, PassedArmsHost.HIST_BACKOFF_MS))

@@ -168,13 +168,14 @@ notes; match the surrounding code.
   own cancel, and with blank or unrecognised words, is Boss's: never put back, the app sells at the level. Exchange / RMS / market
   protection words, or a cancel outside market hours, are Zerodha's: put back. A GTT "deleted" with no app mark is Boss's. The app's own
   cancels (arm exits and Boss's manual exit from the app) are marked before they go and saved in the book, so a restart never misreads them.
-- R51 / R72 STALE HISTORY (20 Nov audit B5). The earlier sessions a break's 20-bar channel reads must reach the last trading day by the
-  calendar, whole in its last 20 five-minute bars. A missing, empty or stale history is read again in the background (1, 2, then every 5
-  minutes); a worse read never replaces a better one. Its Bot settings switch "Hold R51 / R72 breaks on a stale history" is off by default
-  (shadow: taken as before, logged "would have skipped (stale history)"); on, such a break waits in its fill window and is let go when the
-  window ends, paper and live; a break let go holds its side (up to its 30-minute time stop) and counts in the day's caps, as the trade
-  would have, so it never frees a place. On needs no PIN (it lowers risk); off takes the PIN. A picker score made from part of its inputs
-  is never reused as whole (the break is still decided as before).
+- R51 / R72 STALE HISTORY (20 Nov audit B5). The earlier sessions a break's 20-bar channel reads must reach the last trading day by
+  the calendar, whole in its last 20 five-minute bars. A missing, empty or stale history is read again in the background (1, 2, then
+  every 5, then every 15 minutes after about an hour); a worse read never replaces a better one. Its Bot settings switch "Hold R51 /
+  R72 breaks on a stale history" is off by default (shadow: taken as before, logged "would have skipped (stale history)"); on, such
+  a break waits in its fill window and is let go when the window ends, paper and live; a break let go that the arm would have taken
+  holds its side (up to its 30-minute time stop) and counts in the day's caps, as the trade would have, so it never frees a place.
+  On needs no PIN (it lowers risk); off takes the PIN. A picker score made from part of its inputs is never reused as whole (the
+  break is still decided as before).
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
   No main-thread I/O.
 - OPEN POSITIONS AND ORDERS COME FIRST (Boss, 14 Oct: "whenever an order is placed it must be pulled on priority, so we
