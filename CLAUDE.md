@@ -69,8 +69,9 @@ notes; match the surrounding code.
   - Nothing was switched back on by it: an arm a stop had already switched off, parked or paused, and a live or paper stop already
     reached, waits for Boss (his own switch, or his PIN as before).
   - Boss, 20 Nov ("Its off then why separate button" / "Yes, make it follow switch"): the arms' live-copies account stop (ArmLive: the
-    same −₹40k from the best / −₹13k a month, over the arms' whole live record) follows the "Liquidity live stop rule" switch for these
-    three: off, it no longer refuses their live entries, whenever it was reached; on, it refuses as before. Every other arm keeps it.
+    same −₹40k from the best / −₹13k a month, over the arms' whole live record) follows the "Liquidity live stop rule" switch for R51
+    and R72 (Liquidity's live trades never pass through it; their own live stop rule follows the switch as above): off, it no longer
+    refuses their live entries, whenever it was reached; on, it refuses as before. Every other arm keeps it.
   - Every other arm keeps all five. The kill switch, the day lock, the guard and daily loss limit, Stop for today, every live gate
     (PIN, Live, "AI trades go live", each arm's Trade live switch), every exit, the whole-account stop rule's own switch, the funds
     check, the R151 picker and Boss's exit rule V4/V5 still apply to these three.
