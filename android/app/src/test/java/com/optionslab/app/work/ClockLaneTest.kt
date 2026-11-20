@@ -127,8 +127,9 @@ class ClockLaneTest : RobolectricTest() {
 
     /**
      * A stuck clock step never holds the loss limit or the next round back: with the expiry square-off hung, the loss limit runs every
-     * round (each poked once the limit's last run has ended: a round never starts it beside its own run under way). The other square-offs come after it in their one step (19 Nov 2026: one sequence in the pass's order, never two
-     * square-offs selling one contract at once), and run once it ends. The hung one is never started a second time beside itself.
+     * round (each poked once the limit's last run has ended: a round never starts it beside its own run under way). The other
+     * square-offs come after it in their one step (19 Nov 2026: one sequence in the pass's order, never two square-offs selling one
+     * contract at once), and run once it ends. The hung one is never started a second time beside itself.
      */
     @Test fun aStuckClockStepNeverBlocksTheLossLimitAndTheSquareOffsNeverRunTogether() = runBlocking {
         val ran = CopyOnWriteArrayList<String>()
