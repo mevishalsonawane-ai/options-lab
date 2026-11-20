@@ -955,7 +955,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     /**
      * 20 Nov 2026 (final review: a short-sale case): at 15:10 B's stop came out and only A's pending lost sale left nothing to sell, but
      * Zerodha's positions lag a fill - so A's sale may have filled unseen too: no stop is put back beyond what is held (none at all); once
-     * A's sale is let go (not found), B's square-off sells.
+     * A's sale is let go (not found), the square-off sells what Zerodha still holds, once.
      */
     @Test fun at1510WithLaggingPositionsNoStopIsPutBackAndTheExitSellsOnceTheLostSaleResolves() {
         val (s2, gate) = pendingLostAndLaggingPositions(java.time.LocalTime.of(15, 10, 5))
@@ -970,7 +970,8 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
         pass(); pass()
         assertTrue("A's sale let go", !OrbArms.lostExitForTest(sym))
-        assertTrue("B's square-off sold once A's sale resolved", today("liquidity").single { it.arm == "liquidity15" }.exit != null)
+        // (The square-off then sells what Zerodha still holds - once, for 30: A's part goes first and leaves B nothing to sell.)
+        assertEquals("the square-off sold once the lost sale resolved", listOf("30"), marketSells().map { it.form["quantity"] })
         assertTrue("no stop rested meanwhile", kite.placed.none { it.form["order_type"] == "SL" })
     }
 
