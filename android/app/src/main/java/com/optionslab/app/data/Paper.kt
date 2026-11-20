@@ -383,11 +383,14 @@ object Paper {
      */
     private class PriceRead(val job: kotlinx.coroutines.Deferred<List<Upstox.Bar>>, val startedAt: Long) { @Volatile var doneAt = 0L }
 
-    /** The candle read of each contract in flight, or just finished ([PriceRead]); memory only. */
+    /**
+     * The candle read of each contract its caller stopped waiting for ([priceReadWaitMs]) and left running in the background, for the next
+     * look to take up ([PriceRead]); memory only. A read whose caller got its answer, or was itself cancelled, is never kept here.
+     */
     private val priceReads = java.util.concurrent.ConcurrentHashMap<String, PriceRead>()
 
     /**
-     * TEST SEAM (a fake feed going away or starting): the price reads still in flight are stopped and forgotten, waited [waitMs] at most
+     * TEST SEAM (a fake feed going away or starting): the price reads left running are stopped and forgotten, waited [waitMs] at most
      * each, so none outlives its test's feed (it would reach the real host) or lends an earlier test's prices to the next.
      */
     internal fun settlePriceReadsForTest(waitMs: Long = 2_000L) {
@@ -399,27 +402,31 @@ object Paper {
 
     /**
      * [c]'s candles from the paper feed and when they came in, waited [priceReadWaitMs] at most; throws when the read failed or is still
-     * running then. A read already in flight for [c] is waited on (no second one beside it, unless it has run over twice the wait: a
-     * stuck read never blocks the next), and one that finished in the last [PRICE_READ_KEEP_MS] after its caller stopped waiting is
-     * taken as it is, with its own time.
+     * running then. Each look reads afresh, except after a read its caller stopped waiting for: the next look takes that one up - its
+     * answer when it came in the last [PRICE_READ_KEEP_MS] (with its own time), or a wait on it while it has run under twice the wait
+     * (a stuck one is dropped and a fresh read starts). A caller cancelled for its own reasons cancels its read, as before.
      */
     private suspend fun candleRead(c: Contract): Pair<List<Upstox.Bar>, Long> {
         val wait = priceReadWaitMs
         val now = System.currentTimeMillis()
-        val r = priceReads.compute(c.symbol) { _, cur ->
-            val running = cur != null && !cur.job.isCompleted && now - cur.startedAt <= 2 * wait
-            val kept = cur != null && cur.job.isCompleted && now - cur.doneAt <= PRICE_READ_KEEP_MS
-            if (running || kept) cur
-            else PriceRead(gapReads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { Net.intradayQuick(c.feedKey) }, now).also { pr ->
-                pr.job.invokeOnCompletion { pr.doneAt = System.currentTimeMillis() }
-            }
-        }!!
-        r.job.start()
-        // (Waiting on a read started in [gapReads]: the timeout ends this wait only, never the read.)
-        // (join, not await, inside the timeout: a failed read's own error is thrown by the await below, never mistaken for the timeout.)
-        kotlinx.coroutines.withTimeoutOrNull(wait) { r.job.join(); true }
-            ?: throw java.io.IOException("the paper price read of ${c.symbol} took over $wait ms (it goes on; the next look takes it)")
-        priceReads.remove(c.symbol, r)
+        val prev = priceReads.remove(c.symbol)
+        val left = prev?.takeIf { pr ->
+            if (pr.job.isCompleted) now - pr.doneAt <= PRICE_READ_KEEP_MS && !pr.job.isCancelled else now - pr.startedAt <= 2 * wait
+        }
+        if (prev != null && left == null) prev.job.cancel()
+        val r = left ?: PriceRead(gapReads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { Net.intradayQuick(c.feedKey) }, now).also { pr ->
+            pr.job.invokeOnCompletion { pr.doneAt = System.currentTimeMillis() }
+            pr.job.start()
+        }
+        // (join, not await, inside the timeout: a failed read's own error is thrown by the await below, never mistaken for the timeout.
+        // The timeout ends this wait only; the read goes on and is left for the next look.)
+        val done = try {
+            kotlinx.coroutines.withTimeoutOrNull(wait) { r.job.join(); true }
+        } catch (e: kotlinx.coroutines.CancellationException) { r.job.cancel(); throw e }
+        if (done == null) {
+            priceReads[c.symbol] = r
+            throw java.io.IOException("the paper price read of ${c.symbol} took over $wait ms (it goes on; the next look takes it)")
+        }
         return r.job.await() to (r.doneAt.takeIf { it > 0 } ?: System.currentTimeMillis())
     }
 
