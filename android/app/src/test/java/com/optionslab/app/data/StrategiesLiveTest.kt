@@ -398,9 +398,10 @@ class StrategiesLiveTest : RobolectricTest() {
         kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
         kite.trailReads = 50
         Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        // (The book unreadable from the send on: no read ever succeeds, before the window or after it.)
+        kite.down += "/orders"
         startLive(id)
         Broker.lostSearchMsForTest = 0
-        kite.down += "/orders"
         runBlocking { Strategies.tickAll(compromised = false) }
         runBlocking { Strategies.tickAll(compromised = false) }
         assertEquals("never sent again", 1, buys().size)
