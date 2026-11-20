@@ -536,7 +536,7 @@ class OrbArmsLiveTest : RobolectricTest() {
      * lost waits for it (no second stop), the other part rests its own; once the book shows the lost one, only its part takes it.
      */
     @Test fun eachPartOfASplitTradeLooksForItsOwnLostStop() = withUpstox {
-        state(positions = listOf(position("orb", 60, 200.0, "E1"), position("orb", 30, 200.0, "E1")))
+        state(positions = listOf(position("orb", 60, 200.0, "E1", stop = 160.0), position("orb", 30, 200.0, "E1", stop = 160.0)))
         kite.position(sym, 90, 200.0, product = "MIS")
         Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
         // Part A's (60) stop: its answer was lost; it rests at Zerodha but the book does not show it yet.
