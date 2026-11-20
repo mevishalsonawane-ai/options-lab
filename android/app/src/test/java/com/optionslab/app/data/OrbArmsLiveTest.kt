@@ -509,20 +509,23 @@ class OrbArmsLiveTest : RobolectricTest() {
      * 20 Nov 2026 (audit B5 deep review): the entry's stop whose reply is lost and that the book does not show yet is UNKNOWN - looked for
      * on the later passes, never rested a second time beside it; once the book shows it, it is the trade's stop.
      */
-    @Test fun aStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+    @Test fun aStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() = withUpstox {
         state(pending = true)
         kite.afterNext("/orders/regular") { kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
         Broker.lostLookGapMsForTest = 0
         approve()
         fun stops() = kite.placed.count { it.form["order_type"] == "SL" }
         assertEquals(1, stops())
-        assertNull(arm().open!!.stopOrderId)
+        val p = arm().open!!
+        assertNull(p.stopOrderId)
+        // The regular pass would put a missing stop back at Zerodha: while the lost one is looked for, nothing is sent.
         pass()
         assertEquals("no second stop while its lost reply is looked for", 1, stops())
+        val key = "orbstop:${arm().arm.label}:$sym:${p.entry}"
+        assertTrue(Broker.lostPending(key))
+        // Once the book shows it, it is found (the trade's stop: [OrbArms] takes it on its next put-back).
         kite.showInBook()
-        pass()
-        assertEquals(1, stops())
-        assertEquals(kite.orders.values.single { it.type == "SL" }.id, arm().open!!.stopOrderId)
+        assertEquals(kite.orders.values.single { it.type == "SL" }.id, (runBlocking { Broker.lookLost(key) } as Broker.LostLook.Found).id)
     }
 
     @Test fun aLostReplyNotFoundYetIsKeptUnconfirmedNotDropped() {
