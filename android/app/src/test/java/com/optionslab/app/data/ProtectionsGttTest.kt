@@ -302,9 +302,12 @@ class ProtectionsGttTest : RobolectricTest() {
         kite.requests.clear()
         tick()
         assertTrue("nothing placed this pass", kite.placed.isEmpty())
-        com.optionslab.app.testing.SecondRead.clockOn()                     // 20 Nov 2026: closed counts on a second agreeing read
         tick()
         assertTrue("nor on the next: the position is flat", kite.placed.isEmpty())
+        // 20 Nov 2026: the first pass read the position before the GTT fired; closed counts on a second agreeing read.
+        com.optionslab.app.testing.SecondRead.clockOn()
+        tick()
+        assertTrue(kite.placed.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())
         assertEquals("never short", 0, kite.positions.getValue("NFO:$sym:NRML").first)
     }

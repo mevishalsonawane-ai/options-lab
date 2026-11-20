@@ -1283,10 +1283,8 @@ object Strategies {
                             }
                             val v = venueFor(d.mode)
                             if (v == null) { record(b, def, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
-                            val run0 = startRun(b, def, v, d.mode, "scheduler", compromised, now)
-                            // 20 Nov 2026 (audit): its filled legs' stops at Zerodha now, before the notice and the run's next look.
-                            stopsNow(b, def, v, compromised)
-                            val run = b.runs[def.id] ?: run0
+                            // (20 Nov 2026, audit: its stops rest in this run's own look, made straight after this, below.)
+                            val run = startRun(b, def, v, d.mode, "scheduler", compromised, now)
                             notes += "${def.name}: scheduled ${if (d.mode == RunMode.LIVE) "live" else "paper"} start"
                             if (d.mode == RunMode.LIVE) Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.SCHEDULE, "${def.name} started (live)",
                                 run.startError ?: "${run.openLegs().size} of ${def.legs.size} legs open. Stops, targets and square-off run by themselves.", "almanac")
@@ -1333,15 +1331,15 @@ object Strategies {
 
     /**
      * 20 Nov 2026 (audit: the strategies' lock delayed the stop after a live fill - Boss's own start rested its legs' stops only on the
-     * next 15-second look, which waits for this lock, and a scheduled start's only after the run's next prices and checks): a LIVE
-     * run's filled legs get their stops at Zerodha at once, straight after the entries, before anything else is read or written for
-     * the run (the book's save included). Only the leg prices the stop needs are read first. Never throws.
+     * next 15-second look, which waits for this lock, and a scheduled start's only after every other strategy's look): a LIVE run's
+     * own look ([tickOpenRun]: its entries' fills confirmed, then its legs' stops at Zerodha) at once, straight after the entries and
+     * before anything else is read or written for the book (its save included). The same look the watch makes every 15 seconds, made
+     * early; nothing else. Never throws.
      */
     private suspend fun stopsNow(b: Book, def: StrategyDef, v: Venue, compromised: Boolean) {
         val run = b.runs[def.id] ?: return
         if (run.mode != RunMode.LIVE || !Broker.loggedIn) return
-        if (run.legs.values.none { it.status == "open" && it.entryStatus == "complete" }) return
-        runCatching { restLegStops(b, def, v, quotes(run, v), Market.now(), compromised) }
+        runCatching { tickOpenRun(b, def, Market.now(), compromised) { v } }
     }
 
     private fun legKey(runId: Long, legId: Int) = "$runId:$legId"

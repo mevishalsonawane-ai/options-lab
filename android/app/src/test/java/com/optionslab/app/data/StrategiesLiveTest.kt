@@ -195,7 +195,8 @@ class StrategiesLiveTest : RobolectricTest() {
         val exit = sells().last()
         assertEquals("150 held, 75 already working: one lot sent, not two", "75", exit.form["quantity"])
         assertEquals("the owner's order is left alone", "OPEN", kite.order(mine).status)
-        assertTrue(kite.requests.none { it.method == "DELETE" })
+        // (20 Nov 2026: the leg's own stop now rests from the start, and the exit takes it out; the owner's order is never cancelled.)
+        assertTrue(kite.requests.none { it.method == "DELETE" && it.path.endsWith("/$mine") })
     }
 
     @Test fun anExitIsNotSentForALegClosedByHand() {
