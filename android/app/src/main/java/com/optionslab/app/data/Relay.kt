@@ -356,26 +356,31 @@ object Relay {
      * Never on the order path (the network callback's own background thread); the SOCKS port and the switch are untouched.
      */
     fun networkChanged(waitMs: Long = STALE_WAIT_MS) {
-        if (session == null) { failedAt = 0L; failedWhy = null; return }
+        // Review: a failure remembered from the old network is forgotten at once (an order is never refused for it).
+        failedAt = 0L; failedWhy = null
+        if (session == null) return
         staleNetwork = true
         // A call in a tunnel now (bytes moving) is let finish, [waitMs] at most; then the old session goes.
         val until = mono() + waitMs
         while (staleNetwork && busyTunnels() > 0 && mono() < until) Thread.sleep(100)
-        dropStale()
+        if (dropStale()) runCatching { Diag.record("relay", "the phone's network changed: the old connection to the server was let go; connecting again") }
         runCatching { if (enabled && Market.isOpen()) warm() }
     }
 
     /**
-     * The stale session let go (once no tunnel is open), and a failure remembered from the old network forgotten. It is only
+     * The stale session let go (once no tunnel is open), and a failure remembered from the old network forgotten (true: let go
+     * here; false: a new session was already made). It is only
      * disconnected (never taken out of [session] here, which [connect] owns under its lock): [connect] then finds it not
      * connected and makes a new one, as after any lost connection.
      */
-    private fun dropStale() {
-        if (!staleNetwork) return
+    @Synchronized private fun dropStale(): Boolean {
+        // Review: under [connect]'s lock - a connect that already made a new session on the new network (and cleared the mark) is
+        // never cut here.
+        if (!staleNetwork) return false
         staleNetwork = false
         failedAt = 0L; failedWhy = null
         val s = session; runCatching { s?.disconnect() }
-        runCatching { Diag.record("relay", "the phone's network changed: the old connection to the server was let go; connecting again") }
+        return true
     }
 
     /** TEST ONLY: a session as if one were connected (no server is reached); a tunnel as if open, its bytes last moved [quietMs] ago. */

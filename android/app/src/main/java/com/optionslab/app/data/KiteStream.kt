@@ -56,7 +56,11 @@ import java.util.concurrent.atomic.AtomicReference
 object KiteStream {
     enum class Status { OFF, CONNECTING, LIVE, RETRYING }
 
-    data class Seen(val tick: KiteTicks.Tick, val at: Long)
+    /** [conn]: 20 Nov 2026, the connection that brought it (0: the test feed), so a connection's first packet of each instrument is known. */
+    data class Seen(val tick: KiteTicks.Tick, val at: Long, val conn: Int = 0)
+
+    /** 20 Nov 2026: numbers the connections ([Conn.id], [Seen.conn]). */
+    private val connIds = java.util.concurrent.atomic.AtomicInteger()
 
     private val ticks = ConcurrentHashMap<Long, Seen>()
     private val wants = ConcurrentHashMap<String, Set<Long>>()
@@ -247,6 +251,7 @@ object KiteStream {
      * so a socket left over from an earlier loop can never set the status, the subscriptions or the ticks.
      */
     private class Conn {
+        val id = connIds.incrementAndGet()
         val opened = AtomicBoolean(false)
         val done = CompletableDeferred<Unit>()
         val end = AtomicReference<StreamHealth.Drop?>(null)
@@ -682,7 +687,7 @@ object KiteStream {
         if (got.isEmpty()) return
         c.lastTick = mono()
         c.ticks.addAndGet(got.size.toLong())
-        record(got, now)
+        record(got, now, conn = c.id)
     }
 
     /**
@@ -690,18 +695,22 @@ object KiteStream {
      * event-driven checks ([FastPath.offer]: a map put and a wake, never the checks themselves on this socket thread),
      * and one exchange stamp in five seconds to the clock-offset figure ([OrderTiming.clock]).
      */
-    private fun record(got: List<KiteTicks.Tick>, now: Long, stampLate: Boolean = true) {
+    private fun record(got: List<KiteTicks.Tick>, now: Long, stampLate: Boolean = true, conn: Int = 0) {
         var stamp: Long? = null
         val mono = if (stampLate) mono() else 0L
         for (t in got) {
             // 15 Nov ([com.optionslab.ira.PriceNow.newTrade]): the price path a resting stop fills from takes NEW trades only - a
             // thin option's packets repeat its last trade (of another day, before it trades) with every change of its book.
-            val prev = ticks[t.token]?.tick
+            val prevSeen = ticks[t.token]
+            val prev = prevSeen?.tick
             val tt = t.lastTradeTime?.takeIf { it > 0 }
             // 20 Nov 2026 (audit: "a burst of late ticks is stamped now"): a packet that came late is kept with the time the exchange
             // stamped it (on the phone's clock), so it is not taken as fresh by a stop or a screen; any other packet: its arrival, as before.
-            val at = if (stampLate) runCatching { stamps.at((t.token and 0xFF).toInt(), now, mono, t.exchangeTime) }.getOrDefault(now) else now
-            ticks[t.token] = Seen(t, at)
+            // Review: never a connection's first packet of an instrument - Zerodha's snapshot of it as it is NOW, which for a quiet option
+            // carries the exchange's stamp of its last change, minutes ago.
+            val first = prevSeen == null || prevSeen.conn != conn
+            val at = if (stampLate && !first) runCatching { stamps.at((t.token and 0xFF).toInt(), now, mono, t.exchangeTime) }.getOrDefault(now) else now
+            ticks[t.token] = Seen(t, at, conn)
             if (t.last > 0 && com.optionslab.ira.PriceNow.newTrade(t.last, tt, prev != null, prev?.last, prev?.lastTradeTime, now / 1000))
                 paths.getOrPut(t.token) { com.optionslab.engine.TickPath() }.record(t.last, now)
             // The local candles by the exchange's own stamp (a tick without one - an index's quote packet - is not used); never from
@@ -771,9 +780,9 @@ object KiteStream {
      * TEST ONLY: [got] as if the socket had just brought them (kept, pathed and handed on exactly as a live message's).
      * Throws unless BuildConfig.DEBUG (as [testOff]); no app code calls it.
      */
-    internal fun feedForTest(got: List<KiteTicks.Tick>, atMs: Long = System.currentTimeMillis(), stampLate: Boolean = false) {
+    internal fun feedForTest(got: List<KiteTicks.Tick>, atMs: Long = System.currentTimeMillis(), stampLate: Boolean = false, conn: Int = 0) {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test feed exists only in debug builds" }
-        record(got, atMs, stampLate)
+        record(got, atMs, stampLate, conn)
     }
 
     /** TEST ONLY: the stream's status as if the socket were open (the fake Kite has no stream). Throws unless BuildConfig.DEBUG. */

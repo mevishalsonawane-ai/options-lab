@@ -112,7 +112,8 @@ object Market {
     /**
      * 20 Nov 2026 (audit: "Muhurat sessions aren't watched"): NSE's special session ([specialSession], e.g. Diwali's Muhurat hour)
      * is trading at [d] [minute] - its own window, F&O's open to close. No arm trades it (they are not trading days), but the
-     * market is not "closed" then: a hand order or an exit is taken, and held positions' prices stream.
+     * market is not "closed" then for a way out: a close is taken ([acceptsExits]) and held positions' prices stream. Review:
+     * new orders stay refused ([acceptsOrders]) - the watch does not run that session, so nothing would check a new position.
      */
     fun specialOpenAt(d: LocalDate, minute: Int): Boolean = specialSession(d)?.let { s ->
         minute >= s.open.hour * 60 + s.open.minute && minute < s.close.hour * 60 + s.close.minute
@@ -121,11 +122,14 @@ object Market {
     /** [specialOpenAt] now. */
     fun specialOpen(): Boolean = now().let { specialOpenAt(it.toLocalDate(), it.hour * 60 + it.minute) }
 
+    /** Whether a hand order may be placed now: in F&O's hours on a trading day (to 15:40 from 3 Aug 2026). */
+    fun acceptsOrders(): Boolean = testOrdersAnyTime || isOpen()
+
     /**
-     * Whether a hand order may be placed now: in F&O's hours on a trading day (to 15:40 from 3 Aug 2026). 20 Nov 2026: and in an NSE
-     * special session's own window ([specialOpen]), so the Muhurat hour is never refused as "closed".
+     * 20 Nov 2026: whether a position may be CLOSED now - [acceptsOrders], or within NSE's special session ([specialOpen]), so a
+     * way out in the Muhurat hour is never refused as "closed".
      */
-    fun acceptsOrders(): Boolean = testOrdersAnyTime || isOpen() || specialOpen()
+    fun acceptsExits(): Boolean = acceptsOrders() || specialOpen()
 
     data class Quote(val symbol: String, val last: Double, val open: Double, val high: Double, val low: Double,
                      val minute: Int, val spark: List<Double>,

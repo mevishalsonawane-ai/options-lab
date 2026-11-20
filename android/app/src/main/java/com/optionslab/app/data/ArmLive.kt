@@ -1123,7 +1123,8 @@ object ArmLive {
         if (qty <= 0) { notMirrored(a, "the paper trade is under one lot"); return@withLock }
         var cut = LiveMirror.cutWords(lots, qty, ins.lot, s.armLiveLots)
         val qkey = "${ins.exchange}:${ins.symbol}"
-        val quote = runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
+        // 20 Nov 2026 (review): an entry's price check: the entries' lane of the quote queue, never ahead of a held stop's read.
+        val quote = runCatching { Broker.stopQuotes(listOf(qkey), com.optionslab.ira.RateGate.Priority.ENTRY)[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
         // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; "make it default, don't have one
         // more option"): an index option buy of more than one lot is cut to the lots the free cash fits - only ever fewer than his
@@ -3070,7 +3071,8 @@ object ArmLive {
         val t = now()
         val realMs = System.currentTimeMillis()
         val ms = nowMs()
-        val q = if (Broker.loggedIn) runCatching { Broker.stopQuotes(open.map { "${it.exchange}:${it.symbol}" }.distinct()) }.getOrDefault(emptyMap()) else emptyMap()
+        // 20 Nov 2026 (review): shadow positions (logged only) read in the lowest lane of the quote queue, behind every real stop.
+        val q = if (Broker.loggedIn) runCatching { Broker.stopQuotes(open.map { "${it.exchange}:${it.symbol}" }.distinct(), com.optionslab.ira.RateGate.Priority.ANALYSIS) }.getOrDefault(emptyMap()) else emptyMap()
         val exitSlip = measured(com.optionslab.ira.Slippage.Leg.EXIT, EXIT_BASES)
         val stopSlip = measured(com.optionslab.ira.Slippage.Leg.EXIT, STOP_BASES)
         // The minute candles read this look, by contract (one read each), and at most [CANDLE_READS] of them.

@@ -394,7 +394,10 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val booted = intent.action == Intent.ACTION_BOOT_COMPLETED
         // Rebooted or updated during market hours: pick the watch straight back up - first, before anything else here.
-        if (booted || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) runCatching { Jobs.ensureWatch(context) }
+        // (Review: a refused start is put in the diary - off this main thread - never lost without a word.)
+        if (booted || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) runCatching { Jobs.ensureWatch(context) }.onFailure { e ->
+            runCatching { Thread { runCatching { com.optionslab.app.data.Diag.record("watch", "the watch did not start after the ${if (booted) "boot" else "update"}: ${e.javaClass.simpleName}") } }.start() }
+        }
         if (booted || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED || intent.action == "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED") {
             Jobs.scheduleAll(context)
             // Commands Boss set for a time (Jarvis): their alarm too.
@@ -437,7 +440,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         try {
             // An MCX position by MCX's own hours (9 Oct); NSE's exactly as before.
             val mcx = contractOf(symbol)?.isMcx == true
-            val accepts = if (mcx) com.optionslab.app.data.McxMarket.acceptsOrders() else com.optionslab.app.data.Market.acceptsOrders()
+            val accepts = if (mcx) com.optionslab.app.data.McxMarket.acceptsOrders() else com.optionslab.app.data.Market.acceptsExits()   // 20 Nov 2026: a close in the Muhurat hour too
             val open = if (!accepts) {
                 Alerts.post(if (mcx) com.optionslab.app.data.McxMarket.CLOSED_FOR_ORDERS else com.optionslab.app.data.Market.CLOSED_FOR_ORDERS, Alerts.Kind.ERROR); emptyList()
             } else readState().positions.filter { it.symbol == symbol && it.quantity != 0 }

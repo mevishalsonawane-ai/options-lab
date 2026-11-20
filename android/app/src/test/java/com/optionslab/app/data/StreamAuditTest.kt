@@ -178,6 +178,15 @@ class StreamAuditTest : RobolectricTest() {
         assertTrue("stamped back: ${arrived - seen.at} ms", arrived - seen.at >= 5_000)
         assertNull("not fresh enough to decide a stop on", KiteStream.freshTick(token))
         assertNull("nor to show as live", KiteStream.tick(token))
+        // Review: a new connection's first packet of it is Zerodha's snapshot of it NOW - a quiet option's carries the stamp of its
+        // last change, a minute ago - and is kept as arrived. The same connection's next late packet is stamped back again.
+        val reopened = System.currentTimeMillis()
+        KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 91.0, bid = 90.9, ask = 91.1, exchangeTime = (reopened - 60_300) / 1000)), reopened, stampLate = true, conn = 7)
+        assertEquals(reopened, KiteStream.seen(token)!!.at)
+        assertNotNull(KiteStream.freshTick(token))
+        val again = System.currentTimeMillis()
+        KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 92.0, bid = 91.9, ask = 92.1, exchangeTime = (again - 9_300) / 1000)), again, stampLate = true, conn = 7)
+        assertTrue(again - KiteStream.seen(token)!!.at >= 5_000)
     }
 
     // ---- 6: the kept reads ------------------------------------------------------------------------------------------------
@@ -249,7 +258,12 @@ class StreamAuditTest : RobolectricTest() {
         assertFalse(Market.specialOpenAt(d, 14 * 60 + 19))
         assertFalse("an ordinary day has none", Market.specialOpenAt(d.plusDays(1), 14 * 60 + 30))
         Market.testClock = java.time.Clock.fixed(d.atTime(14, 45).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
-        assertTrue("a hand order or an exit is taken", Market.acceptsOrders())
+        Market.testOrdersAnyTime = false
+        try {
+            assertTrue("a close is taken", Market.acceptsExits())
+            // Review: a new order is not (the watch does not run that session, so nothing would check a new position).
+            assertFalse(Market.acceptsOrders())
+        } finally { Market.testOrdersAnyTime = true }
         assertTrue("held prices stream", KiteStream.inHoursNow())
         Market.testClock = java.time.Clock.fixed(d.atTime(17, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
         assertFalse(Market.specialOpen())

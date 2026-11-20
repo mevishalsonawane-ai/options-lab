@@ -22,8 +22,8 @@ import kotlinx.coroutines.delay
  */
 class RateGate(
     private val perSecond: Int = 8,
-    private val clock: () -> Long = { System.nanoTime() / 1_000_000L },
     private val windowMs: Long = 1_000L,
+    private val clock: () -> Long = { System.nanoTime() / 1_000_000L },
 ) {
     enum class Priority(val reserve: Int) { SAFETY(0), ENTRY(1), ANALYSIS(3) }
 
@@ -75,6 +75,29 @@ class RateGate(
                 delay(w)
                 w = tryTake(p)
             }
+        } finally {
+            waiting(p, -1)
+        }
+    }
+
+    /**
+     * 20 Nov 2026 (review): [acquire], but waiting [maxMs] at most (on the gate's clock): true when a slot was taken, false when the
+     * wait ran out (nothing taken - the caller gives up, as on a refusal, instead of queueing without end).
+     */
+    suspend fun acquireWithin(p: Priority, maxMs: Long): Boolean {
+        var w = tryTake(p)
+        if (w <= 0) return true
+        val until = clock() + maxMs
+        waited++
+        waiting(p, +1)
+        try {
+            while (w > 0) {
+                val left = until - clock()
+                if (left <= 0) return false
+                delay(minOf(w, left))
+                w = tryTake(p)
+            }
+            return true
         } finally {
             waiting(p, -1)
         }

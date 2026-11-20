@@ -120,6 +120,20 @@ class RateGateTest {
         assertEquals(0L, g.tryTake(RateGate.Priority.ANALYSIS))
     }
 
+    /** Review, 20 Nov 2026: a read never queues without end - it gives up when its own wait runs out, nothing taken. */
+    @Test fun aBoundedWaitGivesUpWithoutTakingASlot() = runBlocking {
+        val g = RateGate(perSecond = 1, windowMs = 1_100L)
+        assertTrue(g.acquireWithin(RateGate.Priority.ENTRY, 0L), "a free slot at once")
+        val t0 = System.nanoTime()
+        assertEquals(false, g.acquireWithin(RateGate.Priority.ENTRY, 200L))
+        val took = (System.nanoTime() - t0) / 1_000_000
+        assertTrue(took in 150..1_000, "gave up after its 200 ms: $took ms")
+        assertEquals(0, g.waitingFor(RateGate.Priority.ENTRY), "no longer counted as waiting")
+        assertEquals(1L, g.taken, "nothing taken")
+        assertTrue(g.acquireWithin(RateGate.Priority.SAFETY, 3_000L), "a longer wait gets the next window's slot")
+        assertEquals(2L, g.taken)
+    }
+
     @Test fun onTheQuoteGateAWaitingStopReadGoesBeforeAnEntryRead() = runBlocking {
         val now = java.util.concurrent.atomic.AtomicLong(0L)
         val g = RateGate(perSecond = 1, clock = { now.get() }, windowMs = 1_100L)

@@ -593,9 +593,7 @@ object FlowArm {
         spot(u)?.let { return it }
         if (testSpot != null || !Broker.loggedIn) return null
         val key = runCatching { Broker.indexKey(u) }.getOrNull() ?: return null
-        return kotlinx.coroutines.withTimeoutOrNull(Paper.EXIT_READ_MS) {
-            runCatching { Broker.stopQuotes(listOf(key))[key]?.last }.getOrNull()?.takeIf { it.isFinite() && it > 0 }
-        }
+        return Paper.boundedRead(Paper.EXIT_READ_MS) { Broker.stopQuotes(listOf(key))[key]?.last }?.takeIf { it.isFinite() && it > 0 }
     }
 
     /** [c]'s price from Zerodha's stream (at most 5 s old; the option followed from now on), or null. Memory only. */
