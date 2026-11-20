@@ -409,7 +409,7 @@ object OrbArms {
         LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST)
 
     /** One saved position row as [encodeBook] wrote it ([key]: the book's renamed sources). Throws on a row it cannot read. */
-    private fun positionOf(p: JSONObject, key: (String) -> String): Position =
+    private fun positionOf(p: JSONObject, key: (String) -> String, gen: Int? = null): Position =
         Position(key(p.getString("arm")), p.getString("symbol"), p.getString("right"), p.getInt("qty"), p.getDouble("entry"),
             LocalDateTime.parse(p.getString("entryTime")), LocalDateTime.parse(p.getString("signalBar")),
             p.optString("entryOrderId").ifEmpty { null }, p.optString("stopOrderId").ifEmpty { null },
@@ -439,26 +439,32 @@ object OrbArms {
             entryQty = p.optInt("entryQty", 0).takeIf { it > 0 }, stopByYou = p.optBoolean("stopByYou", false),
             appCancelled = p.optBoolean("appCancelled", false), askedLots = p.optInt("askedLots", 0).takeIf { it > 0 },
             sentLots = p.optInt("sentLots", 0).takeIf { it > 0 }).let { pos ->
-            p.optJSONObject("lostExit")?.takeIf { pos.open && pos.live }?.let { l -> runCatching { pos.copy(lostId = restoreLost(pos, l)) }.getOrNull() } ?: pos
+            p.optJSONObject("lostExit")?.takeIf { pos.open && pos.live }?.let { l -> runCatching { pos.copy(lostId = restoreLost(pos, l, gen)) }.getOrNull() } ?: pos
         }
 
     /**
      * 20 Nov 2026: [pos]'s lost exit sale as the book saved it ([l]) taken back into memory after a restart - the same one if it is
      * there already (a book read again in this process) - so its hold, the other trades' wait and its 2-minute window go on. Its id.
      */
-    private fun restoreLost(pos: Position, l: JSONObject): Long? {
+    private fun restoreLost(pos: Position, l: JSONObject, gen: Int? = null): Long? {
         val sym = pos.kite ?: return null
         val since = l.getLong("since")
         val owner = managerId(pos)
-        lostExits.values.firstOrNull { it.sym == sym && it.owner == owner && it.sinceMs == since }?.let { return it.id }
-        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, l.getInt("qty"), pos.lot ?: 1, "MIS", l.getString("type"),
-            null, 0.05, "NFO", l.optString("tag", "iraorb"))
-        val id = lostSeq.incrementAndGet()
-        val known = l.optJSONArray("known")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty()
-        lostExits[id] = LostExit(id, sym, owner, l.optString("why", "exit"), o, known, since, label = l.optString("label"),
-            sentAt = runCatching { LocalDateTime.parse(l.getString("sentAt")) }.getOrDefault(LocalDateTime.MIN),
-            foundId = l.optString("found").ifEmpty { null }, askedMs = l.optLong("asked", 0L))
-        return id
+        val sentAt = runCatching { LocalDateTime.parse(l.getString("sentAt")) }.getOrNull() ?: return null
+        // (Only a sale sent today: an older one is not held after a restart - its day is over.)
+        if (sentAt.toLocalDate() != runCatching { Market.now().toLocalDate() }.getOrDefault(now().toLocalDate())) return null
+        synchronized(lostExits) {
+            // (A read from before "Erase everything" brings nothing back.)
+            if (gen != null && gen != wipeGen) return null
+            lostExits.values.firstOrNull { it.sym == sym && it.owner == owner && it.sinceMs == since }?.let { return it.id }
+            val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, l.getInt("qty"), pos.lot ?: 1, "MIS", l.getString("type"),
+                null, 0.05, "NFO", l.optString("tag", "iraorb"))
+            val id = lostSeq.incrementAndGet()
+            val known = l.optJSONArray("known")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty()
+            lostExits[id] = LostExit(id, sym, owner, l.optString("why", "exit"), o, known, since, label = l.optString("label"),
+                sentAt = sentAt, foundId = l.optString("found").ifEmpty { null }, askedMs = l.optLong("asked", 0L))
+            return id
+        }
     }
 
     private fun book(): Book {
@@ -517,7 +523,7 @@ object OrbArms {
                 part("positions") {
                     o.optJSONArray("positions")?.let { a ->
                         for (i in 0 until a.length()) try {
-                            b.positions += positionOf(a.getJSONObject(i), ::key)
+                            b.positions += positionOf(a.getJSONObject(i), ::key, gen)
                         } catch (e: Exception) {
                             val row = a.optJSONObject(i)
                             val live = row?.optBoolean("live", false) == true
@@ -4036,8 +4042,14 @@ object OrbArms {
         if (!Broker.loggedIn) return
         // [stream]: Zerodha's orders and positions as last read (under 20 s, nothing sent since, the stream live: else read
         // now), and each price from the stream's fresh tick; a contract without one is quoted from Zerodha as before.
-        val orders = (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id }
-        val net = (if (stream) Broker.positionsRecon() else Broker.positionBook()).net
+        // (20 Nov 2026: Zerodha's books unreadable - each lost exit's search still starts in the background (search only: a found or
+        // not-found answer waits for a look that reads), so its failed reads count and Boss is told its state is unknown, at 15:10 again.)
+        val (orders, net) = try {
+            (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id } to (if (stream) Broker.positionsRecon() else Broker.positionBook()).net
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            for (l in lostExits.values.toList()) runCatching { startLostSearch(l) }
+            throw e
+        }
         passIds.entries.removeAll { (id, v) -> if (orders.containsKey(id)) { passPlaced[v.first] = placedNow(v.first) - v.second; true } else false }
         val keys = open.mapNotNull { it.value.kite }.map { "NFO:$it" }.distinct()
         val q = runCatching { liveQuotes(keys, stream) }.getOrDefault(emptyMap())
@@ -5320,10 +5332,9 @@ object OrbArms {
     private val LOST_HOLD = LostLook(hold = true)
 
     /** [p]'s exit [o] ([why]) on [sym] lost its reply and was not found: held for that part ([lostExits]), Boss told. Its id. Memory only. */
-    private fun lostExit(p: Position, sym: String, why: String, o: com.optionslab.engine.Kite.Order, known: Set<String>): Long {
+    private fun lostExit(p: Position, sym: String, why: String, o: com.optionslab.engine.Kite.Order, known: Set<String>, sentAt: LocalDateTime): Long {
         val id = lostSeq.incrementAndGet()
-        lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()), label = armOf(p.arm).label,
-            sentAt = runCatching { Market.now().toLocalDateTime() }.getOrDefault(java.time.ZonedDateTime.now(com.optionslab.engine.IST).toLocalDateTime()))
+        lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()), label = armOf(p.arm).label, sentAt = sentAt)
         com.optionslab.app.work.Alerts.error("${armOf(p.arm).label}: the live exit of $sym got no reply from Zerodha and is not in its order book " +
             "yet. This trade sells nothing more, and the other trades on it with a stop resting wait, until the app finds it or a read of " +
             "the book at least ${LOST_LET_GO_MS / 60_000} minutes after it was sent does not show it; check Kite's order book.", "ORB live")
@@ -5391,6 +5402,16 @@ object OrbArms {
         return LOST_HOLD
     }
 
+    /** 20 Nov 2026: [l]'s background search started when one is due - nothing else (an answer waits for a look; [priceCheckLive]'s outage). */
+    private fun startLostSearch(l: LostExit) {
+        val lost = lostExits[l.id] ?: return
+        if (lost.foundId != null || lost.notFound || lost.searching) return
+        val ms = epochMs(now())
+        if (ms - lost.sinceMs in 0 until LOST_EXIT_HOLD_MS || ms - lost.askedMs in 0 until LOST_EXIT_ASK_MS) return
+        val asked = lost.copy(askedMs = ms, searching = true)
+        if (lostExits.replace(lost.id, lost, asked)) searchLost(asked)
+    }
+
     /** 20 Nov 2026: the background search of [asked] ([lostExitLook]), off the arms' lock. */
     private fun searchLost(asked: LostExit) {
         offLock.launch { runCatching { searchLostNow(asked) } }
@@ -5412,7 +5433,15 @@ object OrbArms {
         val found = try {
             testLostSearch?.let { f -> kotlinx.coroutines.runInterruptible(kotlinx.coroutines.Dispatchers.IO) { f() } }
             kotlinx.coroutines.withTimeoutOrNull(LOST_SEARCH_MS) {
-                Broker.findRecent(asked.order, asked.known, since = asked.sentAt.takeIf { it != LocalDateTime.MIN }?.minusMinutes(3)) ?: ""
+                // (Never an order another trade owns - an owner label, or an id a book row knows: after a restart the sent ids
+                // are gone, and another trade's identical sale must never be taken for this one - and the earliest after it went.)
+                // (Its own label - written when it was found, before a restart could lose that - never excludes it. Labels unreadable:
+                // a failed read, never a search that could take another's sale.)
+                val own = "${asked.label} · ${asked.why}"
+                val labelled = Strategies.owners().filter { (k, v) -> k.startsWith("kite:") && v != own }.keys.map { k -> k.removePrefix("kite:") }
+                val rows = runCatching { cache?.positions?.toList() }.getOrNull().orEmpty().flatMap { listOfNotNull(it.entryOrderId, it.stopOrderId) }
+                val known = asked.known + labelled + rows
+                Broker.findRecent(asked.order, known, since = asked.sentAt.takeIf { it != LocalDateTime.MIN }?.minusMinutes(3), earliest = true) ?: ""
             } ?: run { failed = true; null }
         } catch (e: kotlinx.coroutines.CancellationException) {
             // (Never left "searching" for ever: the next due look searches again.)
@@ -5725,6 +5754,7 @@ object OrbArms {
                 com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
                 return unsold(qty, book, refused = true)
             }
+            val sentAt = runCatching { Market.now().toLocalDateTime() }.getOrDefault(java.time.ZonedDateTime.now(com.optionslab.engine.IST).toLocalDateTime())
             try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
                 val definite = Broker.definite(e)
                 val found = if (definite) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
@@ -5736,7 +5766,7 @@ object OrbArms {
                     }
                     // 20 Nov 2026 (audit PC): held for this part - it sells and rests nothing more while that sale may still be selling
                     // ([lostExits]); then searched for before it sells.
-                    val lostId = lostExit(p, sym, why, o, knownKite(b).toSet() + working.map { it.id })
+                    val lostId = lostExit(p, sym, why, o, knownKite(b).toSet() + working.map { it.id }, sentAt)
                     return p.copy(stopOrderId = null, lostId = lostId) to null
                 }
             }
@@ -7490,6 +7520,7 @@ object OrbArms {
         readFails = 0; strayLeft.clear(); strongAsks.clear(); strongKept.clear()
         erasedAt = runCatching { now().withNano(0).toString() }.getOrNull()
         cache = null; restoppedAt.clear(); writtenText = null; writtenStat = null
+        synchronized(lostExits) { lostExits.clear() }                    // (again, after the gen bump; a read in flight brings none back)
         forgetHints()
         shownParams.clear()
         lastLook.clear(); gapTried.clear(); indexReadSaid.clear(); exitCheckSaid.clear()

@@ -1122,6 +1122,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         lostLiquiditySale(outcome = FakeKite.Outcome.OPEN)
         kite.showInBook()                                                  // the working sale is in the book now
         OrbArms.forgetMemoryForTest()                                      // a restart: the hold is gone
+        Broker.forgetSentForTest()                                         // (the sent ids too)
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
         pass(); pass()
         assertTrue("no stop rested beside the working sale", kite.placed.none { it.form["order_type"] == "SL" })
@@ -1202,6 +1203,55 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (review F1): A's lost sale never reached Zerodha; B (no stop resting) sells the same 30 on the contract and is booked;
+     * then a restart (the sent ids gone too). A's restored search never takes B's sale for its own: past its window A is let go, and B
+     * keeps its own exit.
+     */
+    @Test fun afterARestartALostSaleNeverAdoptsAnotherTradesIdenticalSale() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val b = position("liquidity15", 30, 200.0, "E2", null, null).put("level", 52_050.0).put("lot", 30)
+        state(listOf(liquidity(30, 200.0, s1, 170.0), b))                  // both time stops due
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.NETWORK_EXCEPTION)           // A's sale: nothing reached Zerodha
+        val lostAt = OrbArms.testNow!!
+        pass()
+        assertTrue("A's sale lost and held", OrbArms.lostExitForTest(sym))
+        val bDone = today("liquidity").single { it.arm == "liquidity15" }
+        assertTrue("B sold its own 30 meanwhile (no stop resting: counting A's sale as going)", bDone.exit != null)
+        OrbArms.forgetMemoryForTest(); Broker.forgetSentForTest()          // a restart
+        OrbArms.testNow = pastWindow(lostAt)
+        pass(); searchDone(); pass(); pass()
+        assertTrue("A let go, not found", !OrbArms.lostExitForTest(sym))
+        assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "lost exit of $sym was not found" in it })
+        assertTrue("never 'found' in B's sale", AutomationSupport.alerts().none { "lost exit of $sym was found" in it })
+        assertEquals("B keeps its own exit", bDone.exit, today("liquidity").single { it.arm == "liquidity15" }.exit)
+    }
+
+    /**
+     * 20 Nov 2026 (review F2): an order-book outage - the pass's own read fails before any lost-exit look - still searches for the lost
+     * sale, so Boss is told its state is unknown (once), and again at 15:10; through the regular pass.
+     */
+    @Test fun anOrderBookOutageStillSaysTheLostSaleIsUnknownThroughThePass() {
+        OrbArms.testNow = now.toLocalDate().atTime(15, 8, 0).atZone(com.optionslab.engine.IST)
+        lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)
+        val lostAt = OrbArms.testNow!!
+        fun said() = AutomationSupport.alerts().count { "lost exit of $sym could not be looked for" in it }
+        kite.down += "/orders"
+        try {
+            var t = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+            while (t.isBefore(now.toLocalDate().atTime(15, 9, 50).atZone(com.optionslab.engine.IST))) {
+                OrbArms.testNow = t; pass(); searchDone(); t = t.plusSeconds(10)
+            }
+            assertEquals("said once before 15:10", 1, said())
+            t = now.toLocalDate().atTime(15, 10, 5).atZone(com.optionslab.engine.IST)
+            repeat(4) { OrbArms.testNow = t; pass(); searchDone(); t = t.plusSeconds(10) }
+            assertEquals("said again once at 15:10", 2, said())
+            assertTrue("still held", OrbArms.lostExitForTest(sym))
+        } finally { kite.down.clear() }
+    }
+
+    /**
      * 20 Nov 2026 (review: a restart ended the window): the lost sale is kept in the book - after a restart it is held still, the other
      * trades still wait, and an empty search inside its window does not let it go.
      */
@@ -1210,6 +1260,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         val lostAt = OrbArms.testNow!!
         gate.countDown(); OrbArms.testLostSearch = null
         OrbArms.forgetMemoryForTest()                                      // a restart: memory gone, the book read again
+        Broker.forgetSentForTest()                                         // (the sent ids too)
         kite.requests.clear()
         OrbArms.testNow = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         pass(); searchDone(); pass()

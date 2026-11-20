@@ -871,6 +871,8 @@ object Broker {
 
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null }
+    /** TEST ONLY (20 Nov 2026): the ids of the orders sent from here forgotten, as after a restart (memory only). */
+    internal fun forgetSentForTest() { sentIds.clear() }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -1714,7 +1716,9 @@ object Broker {
      */
     suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false,
                            /** 20 Nov 2026: the earliest an order may be stamped (a lost sale's send time); null: the last 3 minutes, as before. */
-                           since: java.time.LocalDateTime? = null): String? {
+                           since: java.time.LocalDateTime? = null,
+                           /** 20 Nov 2026: the earliest such order after [since] (a lost sale's own), not the latest. */
+                           earliest: Boolean = false): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
@@ -1723,14 +1727,16 @@ object Broker {
         // (the system clock in the app; in a test the pinned market clock, which the fake Zerodha stamps its orders from too).
         val now = rs.mapNotNull(::at).fold(Market.now().toLocalDateTime()) { a, t -> if (t.isAfter(a)) t else a }
         val from = since ?: now.minusMinutes(3)
-        return rs.lastOrNull {
+        val match: (JSONObject) -> Boolean = {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
                 // 18 Oct: the order's own type too (a resting SL of the same size and tag is never taken for a market exit's lost reply).
                 it.optString("order_type") == o.orderType &&
                 it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(from) == false &&
                 (!afterError || adoptableAfterError(o, it))
-        }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it) }
+        }
+        return (if (earliest) rs.firstOrNull(match) else rs.lastOrNull(match))?.optString("order_id")
+            ?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it) }
     }
 
     /**
