@@ -1,0 +1,32 @@
+id: r208-late-r72-15
+title: 'R208 LATE: R72 Breadth Donchian breaks at 15:00 - 15:10, square-off 15:15, standalone'
+family: patterns-indicators
+date: '2026-11-20'
+doc: research/hunt/r207_move_gate_late/results/report.md
+hypothesis: Buying the arm's option on a R72 Breadth Donchian break with an entry minute of 15:00 - 15:10 and squaring off
+  at 15:15 makes money after costs in design and holdout (a slice seen on the index in R206)
+data_version: the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026) in the lake's layout (r202data.py); R51 clean
+  stores 21 Nov 2024 - 5 Oct 2026
+period:
+  design: 2024-11-21..2026-03-31 (four walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-05, a SECOND LOOK (the pattern was seen in slices of the whole span); results/HOLDOUT_READ
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arm''s own break); buy the 1-ITM option; today''s exits on the premium'
+model_or_rule: 'LATE-72-15: late breaks only, today''s exits (V5), square-off 15:15, no picker, 1 lot'
+settings: research/hunt/r207_move_gate_late/r207cfg.py; PREREG.md sections 2 - 4
+prereg: research/hunt/r207_move_gate_late/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 278 tr, 47.48% win, Rs -21,278, DD Rs 36,739; holdout 101 tr, 33.66% win, Rs -26,543, DD Rs 32,137; holdout
+    bootstrap p 0.9700, BH q 1 (m = 4,904). Does not pass: design: net -21,278 not above 0; holdout: net -26,543 not above
+    0; above 0 in 2 of 4 design quarters < 3; holdout bootstrap p 0.9700 >= 0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Holding past 15:15 adds exposure and sits near the broker's own square-off.

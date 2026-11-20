@@ -1,0 +1,37 @@
+id: r207-r51-g-e50
+title: 'R207 R51 Donchian 20 + Supertrend: skip when the expected move is below the median (walk-forward), on top of today''s
+  rule (V5)'
+family: daily-filters
+date: '2026-11-20'
+doc: research/hunt/r207_move_gate_late/results/report.md
+hypothesis: On R51 Donchian 20 + Supertrend, 'skip when the expected move is below the median (walk-forward)' on top of today's
+  rule (V5) is better than V5 alone in design and holdout, in 3 of 4 walk-forward quarters, with no higher drawdown, better
+  than random skips, after BH
+data_version: the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026) in the lake's layout (r202data.py); R51 clean
+  stores 21 Nov 2024 - 5 Oct 2026
+period:
+  design: 2024-11-21..2026-03-31 (four walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-05, a SECOND LOOK (the pattern was seen in slices of the whole span); results/HOLDOUT_READ
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the expected move and the range ratio read index minutes before the entry minute)'
+- buy the option; stops, breakevens and locks on the premium
+model_or_rule: 'G-E50: skip when the expected move is below the median (walk-forward) (r207lib.features, wf_keep / rt_keep)'
+settings: research/hunt/r207_move_gate_late/r207cfg.py; PREREG.md sections 2 - 4
+prereg: research/hunt/r207_move_gate_late/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 1177 tr, 66.86% win, Rs 167,537, DD Rs 36,780, worst month Rs -20,083 (B: 2170 tr, 62.58% win, Rs 147,686,
+    DD Rs 85,937, worst month Rs -36,762); 993 trades removed; holdout 275 tr, 67.27% win, Rs 44,316, DD Rs 45,679, worst
+    month Rs -33,134 (B: 652 tr, 60.43% win, Rs 43,680, DD Rs 45,825, worst month Rs -29,871); 377 trades removed; holdout
+    twin p 0.1024, BH q 1 (m = 4,904). Does not pass: walk-forward: better in 2 of 4 design quarters < 3; holdout twin p 0.1024
+    >= 0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes.

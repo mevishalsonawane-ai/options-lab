@@ -1,0 +1,231 @@
+{
+ "m_total": 4904,
+ "gate": {
+  "R72:G-E33": {
+   "passes": false,
+   "fails": [
+    "design: net 162,428 not better than B's 232,769",
+    "holdout: net 76,202 not better than B's 98,609",
+    "holdout: max drawdown 40,648 above B's 36,477",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.1484 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.14843,
+   "q": 1.0,
+   "p_normal": 0.14786063003522654,
+   "q_family": 0.44358189010567967,
+   "design_twin_p": 0.55472
+  },
+  "R51:G-E33": {
+   "passes": false,
+   "fails": [
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.1304 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.13043,
+   "q": 1.0,
+   "p_normal": 0.12855589358718034,
+   "q_family": 0.44358189010567967,
+   "design_twin_p": 0.01649
+  },
+  "LIQ:G-E33": {
+   "passes": false,
+   "fails": [
+    "holdout: net -17,808 not better than B's 11,087",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.9011 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.90105,
+   "q": 1.0,
+   "p_normal": 0.8955869889051341,
+   "q_family": 0.9759119030214086,
+   "design_twin_p": 0.01049
+  },
+  "R72:G-E50": {
+   "passes": false,
+   "fails": [
+    "design: net 152,835 not better than B's 232,769",
+    "holdout: net 58,385 not better than B's 98,609",
+    "holdout: max drawdown 45,047 above B's 36,477",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.1439 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.14393,
+   "q": 1.0,
+   "p_normal": 0.14134568064187364,
+   "q_family": 0.44358189010567967,
+   "design_twin_p": 0.25737
+  },
+  "R51:G-E50": {
+   "passes": false,
+   "fails": [
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.1024 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.10245,
+   "q": 1.0,
+   "p_normal": 0.10914749906447282,
+   "q_family": 0.44358189010567967,
+   "design_twin_p": 0.01799
+  },
+  "LIQ:G-E50": {
+   "passes": false,
+   "fails": [
+    "design: net 230,341 not better than B's 231,580",
+    "holdout: net -7,391 not better than B's 11,087",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.7291 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.72914,
+   "q": 1.0,
+   "p_normal": 0.7456485745932184,
+   "q_family": 0.9759119030214086,
+   "design_twin_p": 0.001
+  },
+  "LIQ:G-RT85": {
+   "passes": false,
+   "fails": [
+    "design: net 211,293 not better than B's 231,580",
+    "holdout: net 81 not better than B's 11,087",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.6477 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.64768,
+   "q": 1.0,
+   "p_normal": 0.6443315870131217,
+   "q_family": 0.9759119030214086,
+   "design_twin_p": 0.04498
+  }
+ },
+ "index": {
+  "L-I51": {
+   "holds": false,
+   "verdict": "does not hold",
+   "fails": [
+    "share right 58.3% with p 0.1018 (needs above 50% with p < 0.05)",
+    "BH q 1 > 0.1"
+   ],
+   "q": 1.0,
+   "p_normal": 0.0979290008021898,
+   "q_family": 0.44358189010567967
+  },
+  "L-I72": {
+   "holds": false,
+   "verdict": "does not hold",
+   "fails": [
+    "share right 56.9% with p 0.2306 (needs above 50% with p < 0.05)",
+    "BH q 1 > 0.1"
+   ],
+   "q": 1.0,
+   "p_normal": 0.21711684691672098,
+   "q_family": 0.5427921172918024
+  }
+ },
+ "late": {
+  "R72:15": {
+   "passes": false,
+   "fails": [
+    "design: net -21,278 not above 0",
+    "holdout: net -26,543 not above 0",
+    "above 0 in 2 of 4 design quarters < 3",
+    "holdout bootstrap p 0.9700 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_up": 2,
+   "p": 0.97000599880024,
+   "q": 1.0,
+   "p_normal": 0.9759119030214086,
+   "q_family": 0.9759119030214086
+  },
+  "R72:20": {
+   "passes": false,
+   "fails": [
+    "design: net -49,654 not above 0",
+    "holdout: net -34,172 not above 0",
+    "above 0 in 1 of 4 design quarters < 3",
+    "holdout bootstrap p 0.9780 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_up": 1,
+   "p": 0.978004399120176,
+   "q": 1.0,
+   "p_normal": 0.9752717847094187,
+   "q_family": 0.9759119030214086
+  },
+  "R72:25": {
+   "passes": false,
+   "fails": [
+    "design: net -36,830 not above 0",
+    "holdout: net -24,565 not above 0",
+    "above 0 in 2 of 4 design quarters < 3",
+    "holdout bootstrap p 0.9014 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_up": 2,
+   "p": 0.9014197160567886,
+   "q": 1.0,
+   "p_normal": 0.9015349330610386,
+   "q_family": 0.9759119030214086
+  },
+  "R51:15": {
+   "passes": false,
+   "fails": [
+    "design: net -64,179 not above 0",
+    "holdout: net -23,563 not above 0",
+    "above 0 in 2 of 4 design quarters < 3",
+    "holdout bootstrap p 0.9042 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_up": 2,
+   "p": 0.9042191561687662,
+   "q": 1.0,
+   "p_normal": 0.9062179051045798,
+   "q_family": 0.9759119030214086
+  },
+  "R51:20": {
+   "passes": false,
+   "fails": [
+    "design: net -94,087 not above 0",
+    "holdout: net -27,492 not above 0",
+    "above 0 in 1 of 4 design quarters < 3",
+    "holdout bootstrap p 0.9094 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_up": 1,
+   "p": 0.9094181163767247,
+   "q": 1.0,
+   "p_normal": 0.907386734196969,
+   "q_family": 0.9759119030214086
+  },
+  "R51:25": {
+   "passes": false,
+   "fails": [
+    "design: net -69,019 not above 0",
+    "holdout: net -16,013 not above 0",
+    "above 0 in 1 of 4 design quarters < 3",
+    "holdout bootstrap p 0.7720 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_up": 1,
+   "p": 0.7720455908818237,
+   "q": 1.0,
+   "p_normal": 0.7770976241071168,
+   "q_family": 0.9759119030214086
+  }
+ },
+ "clears": []
+}

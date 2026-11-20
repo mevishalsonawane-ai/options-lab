@@ -1,0 +1,38 @@
+id: r207-r72-g-e50
+title: 'R207 R72 Breadth Donchian: skip when the expected move is below the median (walk-forward), on top of today''s rule
+  (V5)'
+family: daily-filters
+date: '2026-11-20'
+doc: research/hunt/r207_move_gate_late/results/report.md
+hypothesis: On R72 Breadth Donchian, 'skip when the expected move is below the median (walk-forward)' on top of today's rule
+  (V5) is better than V5 alone in design and holdout, in 3 of 4 walk-forward quarters, with no higher drawdown, better than
+  random skips, after BH
+data_version: the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026) in the lake's layout (r202data.py); R51 clean
+  stores 21 Nov 2024 - 5 Oct 2026
+period:
+  design: 2024-11-21..2026-03-31 (four walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-05, a SECOND LOOK (the pattern was seen in slices of the whole span); results/HOLDOUT_READ
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the expected move and the range ratio read index minutes before the entry minute)'
+- buy the option; stops, breakevens and locks on the premium
+model_or_rule: 'G-E50: skip when the expected move is below the median (walk-forward) (r207lib.features, wf_keep / rt_keep)'
+settings: research/hunt/r207_move_gate_late/r207cfg.py; PREREG.md sections 2 - 4
+prereg: research/hunt/r207_move_gate_late/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 887 tr, 67.53% win, Rs 152,835, DD Rs 56,786, worst month Rs -16,941 (B: 1561 tr, 65.73% win, Rs 232,769,
+    DD Rs 100,582, worst month Rs -26,420); 674 trades removed; holdout 216 tr, 68.06% win, Rs 58,385, DD Rs 45,047, worst
+    month Rs -33,735 (B: 596 tr, 60.4% win, Rs 98,609, DD Rs 36,477, worst month Rs -13,690); 380 trades removed; holdout
+    twin p 0.1439, BH q 1 (m = 4,904). Does not pass: design: net 152,835 not better than B''s 232,769; holdout: net 58,385
+    not better than B''s 98,609; holdout: max drawdown 45,047 above B''s 36,477; walk-forward: better in 0 of 4 design quarters
+    < 3; holdout twin p 0.1439 >= 0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes.

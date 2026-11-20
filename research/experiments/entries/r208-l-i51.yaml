@@ -1,0 +1,30 @@
+id: r208-l-i51
+title: 'R208 L-I51: are R51 Donchian 20 + Supertrend breaks at 15:00 - 15:10 right more than half the time?'
+family: market-facts
+date: '2026-11-20'
+doc: research/hunt/r207_move_gate_late/results/report.md
+hypothesis: R51 Donchian 20 + Supertrend signals with an entry minute of 15:00 - 15:10 see the index go their way after 15
+  minutes more than 50% of the time, on days never measured (1 Nov 2021 - 31 Mar 2022)
+data_version: the dhan-data branch's 1-minute index candles, 8 Oct 2021 - 5 Oct 2026 (r206data.py); no option data
+period:
+  design: '2022-04-01..2026-10-05 (R206: where the slice was seen)'
+  holdout: 2021-11-01..2022-03-31 (fresh, read once; results/FRESH_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index only'
+model_or_rule: share of late signals with a 15-minute index move their way above 0; day-block bootstrap against 50%
+settings: research/hunt/r207_move_gate_late/r207cfg.py; PREREG.md sections 2 - 4
+prereg: research/hunt/r207_move_gate_late/PREREG.md
+variants_tried: 1
+results:
+  summary: '218 late signals on 50 days: right 58.3% (95% 45.6 - 70.5%), bootstrap p 0.1018, BH q 1; earlier signals right
+    49.8% of 4439. Verdict: does not hold (share right 58.3% with p 0.1018 (needs above 50% with p < 0.05); BH q 1 > 0.1).'
+  costs: none (index direction only)
+holdout_read: true
+verdict: rejected
+notes: Research only. The same sign as R206's two eras, on too few days to stand alone.
