@@ -158,7 +158,7 @@ notes; match the surrounding code.
   - Voice "cancel all" keeps protective SL / SL-M orders.
   - ntfy alerts: its Trade live starts off and is switched off while neither an access token nor Boss's own ntfy server is set
     (anyone who learns a public topic can post). The phones where it was on by the old default were switched off once, logged in the
-    change timeline. Awaiting Boss's confirmation (asked 19 Nov).
+    change timeline. Boss confirmed it on 20 Nov ("Keep ntfy off").
 - PAPER ENDS AND LIVE COPIES (20 Nov audit). Every automatic paper end (square-off, loss limit, sweeper, expiry exit, an unreadable book)
   sells the live copy, as before. Only Boss's own paper reset or hand close leaves a live copy running, and only an NSE intraday (MIS)
   copy, which keeps its own Zerodha stop, its rule exits and the 15:15 square-off; Night (NRML) and MCX copies are sold with the paper.
