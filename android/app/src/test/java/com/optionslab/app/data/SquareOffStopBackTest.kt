@@ -75,6 +75,18 @@ class SquareOffStopBackTest : RobolectricTest() {
         assertFalse("never read as Boss's own cancel", Alerts.posted.any { it.text.contains("cancelled by you") })
     }
 
+    /** Review: the sale filled but Zerodha's positions still show the lots it sold - the stop it took out is never put back on them. */
+    @Test fun aFilledSaleWhosePositionsTrailItGetsNoStopBack() {
+        val p = protect()
+        kite.positionsTrailReads = 6                                        // the positions trail the sale's fill
+        pass()
+        assertEquals(1, kite.placed.count { it.form["tag"] == "iraalgoexpiry" })
+        assertFalse(kite.order(p.stopOrderId!!).working)
+        Market.testClock = MarketClockRule.clockAt(12, 5)
+        repeat(3) { runBlocking { Protections.tick() } }
+        assertTrue("no stop rests on what the sale sold", stops().isEmpty())
+    }
+
     @Test fun aSaleThatGoesLeavesNoStopBehind() {
         val p = protect()
         pass()
