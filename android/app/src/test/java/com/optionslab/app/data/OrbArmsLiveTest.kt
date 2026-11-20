@@ -691,6 +691,77 @@ class OrbArmsLiveTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (delta review): a lock exit (the lock its best price earned, reached) while its lost stop is still looked for is a
+     * stop-level exit whatever the lost stop's own trigger: it waits at most the real 20 s, then sells - never the whole search.
+     */
+    @Test fun aLockExitSellsOnceItsLostStopIsTwentySecondsOld() = withUpstox {
+        state(positions = listOf(position("orb", 30, 200.0, "E1", stop = 160.0).put("ladder", true).put("peak", 240.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val key = "orbstop:${arm().arm.label}:$sym:200.0:30"
+        Broker.noteLost(key, Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 152.0, 0.05, "NFO", "iraorb", triggerPrice = 160.0),
+            emptyList(), "test", liveOnly = true)
+        kite.quote("NFO:$sym", 205.0, 204.95, 205.05)                 // under the lock +40 earned, far above the lost stop's 160
+        fun sales() = kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }
+        pass()
+        assertEquals("younger than 20 s: it waits", 0, sales())
+        Broker.ageLostForTest(key, 25_000)
+        pass()
+        assertEquals("past 20 s: the lock exit sells", 1, sales())
+        assertEquals("profit_lock", arm().today.single().why)
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): with no live trade open at all, a closed trade's lost stop is looked for at once and cancelled; its
+     * cancel failing, it is tried again on every pass, Boss told after the third try, until Zerodha shows it out.
+     */
+    @Test fun withNothingOpenAClosedTradesLostStopIsCancelledAtOnceAndBossToldAfterThreeTries() = withUpstox {
+        state(positions = emptyList())
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val lostId = kite.restingInKite(sym, "SELL", 30, 147.0, type = "SL", trigger = 150.0, tag = "iraorb", product = "MIS")
+        Broker.noteLost("orbstop:${arm().arm.label}:$sym:190.0:30",
+            Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 147.0, 0.05, "NFO", "iraorb", triggerPrice = 150.0), emptyList(), "test", liveOnly = true)
+        kite.down += "/orders/regular/$lostId"
+        fun told() = AutomationSupport.alerts().count { "could not be cancelled yet" in it }
+        pass()
+        assertTrue("looked for at once, its cancel tried", kite.requests.any { it.method == "DELETE" && it.path.endsWith(lostId) })
+        pass()
+        assertEquals("not yet after two tries", 0, told())
+        pass()
+        assertEquals("told after the third", 1, told())
+        assertTrue(kite.order(lostId).working)
+        kite.down.clear()
+        pass()
+        assertEquals("out", "CANCELLED", kite.order(lostId).status)
+        pass()
+        assertEquals("told once", 1, told())
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): a lost stop found for 1 of 2 lots at Boss's Stop for today: the part it covers exits with it (its stop
+     * out, then sold), the other lot is kept as its own row and sold on the next pass - every lot booked once.
+     */
+    @Test fun aLostStopFoundForFewerLotsAtTheExitWhosePartSells() = withUpstox {
+        state(positions = listOf(position("orb", 60, 200.0, "E1", stop = 160.0)))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val lostId = kite.restingInKite(sym, "SELL", 30, 152.0, type = "SL", trigger = 160.0, tag = "iraorb", product = "MIS")
+        Broker.noteLost("orbstop:${arm().arm.label}:$sym:200.0:60",
+            Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 152.0, 0.05, "NFO", "iraorb", triggerPrice = 160.0), emptyList(), "test", liveOnly = true)
+        runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+        fun sold() = kite.placed.filter { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }.sumOf { it.form["quantity"]!!.toInt() }
+        pass()
+        assertEquals("its stop taken out first", "CANCELLED", kite.order(lostId).status)
+        assertEquals("the part sold", 30, sold())
+        assertEquals("the part closed", 30, arm().today.filter { !it.open }.sumOf { it.qty })
+        assertEquals("the other lot open, with none", 30, arm().today.filter { it.open && it.stopOrderId == null }.sumOf { it.qty })
+        pass()
+        assertEquals("then sold", 60, sold())
+        assertTrue(arm().today.none { it.open })
+        assertEquals("every lot booked once", 60, arm().today.sumOf { it.qty })
+    }
+
+    /**
      * 20 Nov 2026 (delta review): a closed trade's lost stop is looked for at once; found resting, it is cancelled as the app's own and
      * confirmed - a cancel that fails is tried again on the next pass until Zerodha shows it ended (never left resting unwatched).
      */

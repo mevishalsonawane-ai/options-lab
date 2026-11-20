@@ -4273,7 +4273,11 @@ object OrbArms {
         }
     }
     private const val LOST_SWEEP_AGE_MS = 30_000L
-    /** 20 Nov 2026 (delta review): closed trades' found lost stops being cancelled (id to "label|contract") and the tries. Memory. */
+    /**
+     * 20 Nov 2026 (delta review): closed trades' found lost stops being cancelled (id to "label|contract") and the tries. Memory only:
+     * a restart forgets them (marked the app's own cancels, which the flat contract's check leaves alone; the start-up sweep and Zerodha's
+     * MIS square-off are behind it). Note: kept with the book if a cancel is ever seen outliving a restart.
+     */
     private val sweepCancels = HashMap<String, String>()
     private val sweepTries = java.util.concurrent.ConcurrentHashMap<String, Int>()
     /** 20 Nov 2026 (delta review): the longest a stop-level exit waits for its own stop whose answer was lost ([exitLive]). */
@@ -5311,8 +5315,9 @@ object OrbArms {
                     runCatching { Diag.record("orb", "$labelG: its lost stop ${l.id} on $sym, found at its exit, covers ${l.qty} of ${given.qty}: " +
                         "that part exits with it; the rest is sold next pass") }
                     val (done, left) = exitLive(b, part, sym, why, pre, ltp)
-                    // (A part of that part left unsold joins the rest - one row, sold next pass; every second row [exitLive] returns has no
-                    // stop of its own: a part sale's rest and a put-back's uncovered part.)
+                    // (A part of that part left unsold with a stop of its own stays its own row - never folded into one with none; one with
+                    // none joins the rest - one row, sold next pass.)
+                    if (left?.stopOrderId != null) { b.positions += left; return done to rest }
                     return done to (left?.let { rest.copy(qty = rest.qty + it.qty, charges = rest.charges + it.charges) } ?: rest)
                 } else if (given.stopOrderId == null &&
                     fitFound(labelG, l, given.qty, specG?.lotSize?.coerceAtLeast(1) ?: 1, specG?.tickSize ?: 0.05)) {
@@ -5339,10 +5344,12 @@ object OrbArms {
                 }
             }
             Broker.LostLook.Searching -> {
-                // (At the higher of the lost stop's trigger and the trade's own level now - a lock or breakeven earned since is its stop;
-                // with no price, a stop or lock exit is one.)
-                val trig = listOfNotNull(Broker.lostTrigger(ownLost), given.stopTrigger).maxOrNull()
-                val stopLevel = if (ltp != null && trig != null) ltp <= trig + 1e-9 else why == "stop" || why == "profit_lock"
+                // (At the highest of the lost stop's trigger, the trade's own level and the lock or rule stop it has earned since - its
+                // trigger cannot catch up while its stop is looked for; and a stop, lock or rule-stop exit is one whatever the price.)
+                val tickG = runCatching { Broker.spec("NFO", sym).tickSize }.getOrDefault(OrbRules.TICK)
+                val trig = listOfNotNull(Broker.lostTrigger(ownLost), given.stopTrigger, lockOrStop(given, tickG), fixedStopOf(given, tickG)).maxOrNull()
+                val stopExit = why == "stop" || why == "profit_lock" || why == ruleWhy(given, tickG) || why == fixedWhy(given)
+                val stopLevel = stopExit || (ltp != null && trig != null && ltp <= trig + 1e-9)
                 // (Every other exit waits for the search's end: an order book that cannot be read keeps it going, but then the exit's own
                 // read of the book fails too - it could not sell meanwhile either.)
                 if (!stopLevel || (Broker.lostAgeMs(ownLost) ?: Long.MAX_VALUE) < LOST_EXIT_WAIT_MS) {
