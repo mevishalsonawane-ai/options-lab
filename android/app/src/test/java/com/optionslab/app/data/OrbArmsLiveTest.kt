@@ -505,6 +505,26 @@ class OrbArmsLiveTest : RobolectricTest() {
      * 19 Nov 2026 (review): an entry whose reply was lost and that the order book does not show yet is kept unconfirmed with no order id
      * (a LIMIT may still rest and fill) - never dropped as unsent; the settle's lost-id search follows it.
      */
+    /**
+     * 20 Nov 2026 (audit B5 deep review): the entry's stop whose reply is lost and that the book does not show yet is UNKNOWN - looked for
+     * on the later passes, never rested a second time beside it; once the book shows it, it is the trade's stop.
+     */
+    @Test fun aStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+        state(pending = true)
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0
+        approve()
+        fun stops() = kite.placed.count { it.form["order_type"] == "SL" }
+        assertEquals(1, stops())
+        assertNull(arm().open!!.stopOrderId)
+        pass()
+        assertEquals("no second stop while its lost reply is looked for", 1, stops())
+        kite.showInBook()
+        pass()
+        assertEquals(1, stops())
+        assertEquals(kite.orders.values.single { it.type == "SL" }.id, arm().open!!.stopOrderId)
+    }
+
     @Test fun aLostReplyNotFoundYetIsKeptUnconfirmedNotDropped() {
         state(pending = true)
         kite.nextPlace(reply = Reply.NETWORK_EXCEPTION)

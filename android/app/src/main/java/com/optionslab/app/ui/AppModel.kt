@@ -1820,7 +1820,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 // 18 Oct, review: legs that already filled are said, never hidden under "Not sent" (a resend would double them).
                 val filledLegs = fills.count { it.filled > 0 }
-                sending.value = Load.Failed(if (filledLegs == 0) "Not sent: ${e.message}"
+                // (20 Nov 2026, audit B5: one that never left the phone is said as such - Zerodha never saw it, so it may be sent again.)
+                val failWhy = if (e is com.optionslab.app.data.Broker.NotSent) "no connection to Zerodha (${e.message}); nothing reached it, so you can try again" else e.message
+                sending.value = Load.Failed(if (filledLegs == 0) "Not sent: $failWhy"
                     else "Not all sent: ${e.message}. $filledLegs earlier leg${if (filledLegs == 1) "" else "s"} filled at Zerodha; check Positions before sending again.")
                 if (fills.isNotEmpty()) cur.session?.let { runCatching { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) } }
                 loadAccount()

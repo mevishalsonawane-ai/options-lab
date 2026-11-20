@@ -1566,6 +1566,18 @@ object ArmLive {
         val exitSide = if (p.side > 0) Kite.Side.SELL else Kite.Side.BUY
         // 18 Nov 2026 (audit A2): an exit whose reply was lost may still be selling it: no stop beside it until that is known.
         if (lostExitHolds(p.contract) || unsearchedLost.containsKey(p.contract)) return p.copy(stopTrigger = trigger)
+        // 20 Nov 2026 (audit B5 deep review): this trade's own stop whose reply was lost and is not found yet is UNKNOWN: looked for again,
+        // and no second stop rests beside it while it may (the app watches the level meanwhile); found, it is the trade's stop. Given up
+        // on after [Broker.LOST_SEARCH_MS] (Boss told), a stop is rested as usual.
+        when (val l = Broker.lookLost(lostStopKey(p))) {
+            is Broker.LostLook.Found -> {
+                placedStops += l.id
+                runCatching { Strategies.tagOwner("kite:${l.id}", "${spec.label} · live ${stopWords(p)}") }
+                return p.copy(stopOrderId = l.id, stopTrigger = trigger, stopBooked = 0, stopQty = l.qty)
+            }
+            Broker.LostLook.Searching -> return p.copy(stopTrigger = trigger)
+            else -> Unit
+        }
         // 20 Oct, enhancement round 2: read and rested in the contract's one exit turn ([ExitCoordinator]; re-entrant when an exit
         // that did not go puts its stop back).
         // (Its id is written with the look's own save, or the entry's; a death before that leaves the stop resting with no trade owning
@@ -1686,10 +1698,22 @@ object ArmLive {
         val o = Kite.Order(p.symbol, exitSide, q, p.lot, p.product, "SL", LiveMirror.stopLimit(trigger, p.tick, p.side), p.tick, p.exchange,
             LiveMirror.TAG, triggerPrice = trigger, multiplier = p.multiplier)
         var refusal: String? = null
+        var notSent = false
+        var lost = false
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             refusal = e.message?.take(160)
-            if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known()) }.getOrNull()
+            notSent = e is Broker.NotSent
+            if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known()) }.getOrNull() ?: null.also { lost = true }
         }
+        // 20 Nov 2026 (audit B5 deep review): its reply lost and not found yet: UNKNOWN - looked for on the next looks, never a second stop
+        // beside it meanwhile ([restStop]); the app watches the level.
+        if (id == null && lost) {
+            Broker.noteLost(lostStopKey(p), o, known(), "${p.label}: its live ${stopWords(p)}")
+            stopFailed(p, trigger, "Zerodha's answer was lost; the app looks for it in the book and rests no second stop meanwhile")
+            return seen.copy(stopTrigger = trigger)
+        }
+        // (Never left the phone: not a refusal - said as such, tried again after the same back-off.)
+        if (id == null && notSent) { backOff(p); stopFailed(p, trigger, "not sent: no connection to Zerodha"); return seen.copy(stopTrigger = trigger) }
         // 19 Nov 2026 (audit batch 2): with its reason, said once, and rested again only after a back-off ([refusedStop]).
         if (id == null) { refusedStop(p, trigger, refusal?.let { "Zerodha refused it: $it" } ?: "Zerodha refused it"); return seen.copy(stopTrigger = trigger) }
         if (placedStops.size > 500) placedStops.clear()
@@ -1697,6 +1721,9 @@ object ArmLive {
         runCatching { Strategies.tagOwner("kite:$id", "${spec.label} · live ${stopWords(p)}") }
         return seen.copy(stopOrderId = id, stopTrigger = trigger, stopQty = q)
     }
+
+    /** 20 Nov 2026 (audit B5 deep review): the key a trade's stop whose reply was lost is looked for under ([Broker.noteLost]). */
+    private fun lostStopKey(p: Pos) = "armstop:${p.ref}"
 
     /** The GTT ids this path already tracks (memory): never adopted for a lost reply. */
     private fun knownGtts(): Set<Long> = _view.value.open.mapNotNull { it.gttId }.toSet()

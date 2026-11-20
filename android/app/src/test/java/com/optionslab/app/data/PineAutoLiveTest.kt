@@ -222,6 +222,24 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue(log(), log().contains("Zerodha confirmed the buy"))
     }
 
+    /**
+     * 20 Nov 2026 (audit B5 deep review): the live stop's reply is lost and the book does not show it yet: UNKNOWN - looked for on the
+     * later passes, never rested a second time; once the book shows it, it is the holding's stop.
+     */
+    @Test fun aLiveStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0
+        bought()
+        assertEquals(1, stops().size)
+        assertNull(held()!!.stop)
+        pass(52_020.0)
+        assertEquals("no second stop while its lost reply is looked for", 1, stops().size)
+        kite.showInBook()
+        pass(52_030.0)
+        assertEquals(1, stops().size)
+        assertEquals(kite.orders.values.single { it.type == "SL" }.id, held()!!.stop)
+    }
+
     @Test fun theDailyLossLimitSellsAndPausesTheScriptForTheDay() {
         auto { it.copy(maxDayLoss = 1_000.0, stopPts = 100.0) }     // a stop wider than the fall: the day's limit sells
         bought()

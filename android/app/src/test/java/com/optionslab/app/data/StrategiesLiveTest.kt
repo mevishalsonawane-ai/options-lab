@@ -237,6 +237,30 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:NRML").first)
     }
 
+    /**
+     * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost and that the book does not show yet is UNKNOWN, never reported
+     * refused (a run could send it again or leave it untracked): looked for on the next passes, and once the book shows it, it is the
+     * leg's entry - one buy, never two.
+     */
+    @Test fun aLostEntryReplyIsLookedForAndNeverReportedRefused() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0
+        startLive(id)
+        assertEquals(1, buys().size)
+        assertTrue("never refused", entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals(1, buys().size)
+        assertTrue(entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        kite.showInBook()
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("one buy, never two", 1, buys().size)
+        assertEquals("complete", entry(id).run!!.legs.values.single().entryStatus)
+    }
+
     @Test fun aStopLossOnTheTickSellsTheLegOnce() {
         live()
         val id = saved(Position.B to OptionType.CE)

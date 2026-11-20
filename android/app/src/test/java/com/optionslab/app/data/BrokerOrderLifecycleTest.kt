@@ -318,6 +318,69 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
      * Autopilot - all through [AppSettings.killSoon] or [AppSettings.saveChanged]) only LOGS the bots' entries it would cancel; Boss's own
      * switch cancels them ([Broker.killEntriesSoon] with act), and a logging request never replaces his.
      */
+    /**
+     * 20 Nov 2026 (deep review): a sweep still due after Boss's kill switch is cleared never cancels a bot's entry sent after it - each
+     * sweep reads the switch first, and clearing it ends the sweeps at once.
+     */
+    @Test fun aClearedKillSwitchCancelsNothingMore() = runBlocking {
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val first = order(price = 100.0, tag = bot)
+        val id1 = Broker.placeOrder(first, verdict = Cleared.live(first))
+        Broker.killSweepOn = true
+        Broker.killSweepAgainMs = 1_500
+        val s = AppSettings.load()
+        AppSettings.saveChanged(s, s.copy(guardKill = true))
+        Broker.killEntriesSoon("your kill switch", act = true)
+        Background.await("the first entry cancelled", 10_000) { kite.order(id1).status == "CANCELLED" }
+        // Cleared behind the sweep's back (the vault alone): the next sweep reads it and cancels nothing.
+        com.optionslab.app.security.SecurePrefs.put(AppSettings.KILL_KEY, false)
+        com.optionslab.app.security.SecurePrefs.flush()
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val second = order(price = 101.0, tag = bot)
+        val id2 = Broker.placeOrder(second, verdict = Cleared.live(second))
+        Thread.sleep(2_500)
+        assertTrue("sent after the clear: never cancelled", kite.order(id2).working)
+        assertTrue(Broker.killSweepRunningForTest())
+        // Cleared the usual way (Boss's switch, Jarvis): the sweeps end at once.
+        AppSettings.saveChanged(AppSettings.load().copy(guardKill = true), AppSettings.load().copy(guardKill = false))
+        assertFalse(Broker.killSweepRunningForTest())
+        Broker.killSweepOn = false
+    }
+
+    /** 20 Nov 2026 (deep review): a write that never left the phone is said as such - never as Zerodha's refusal. */
+    @Test fun aWriteThatNeverLeftIsSaidAsNotSentNeverAsRefused() {
+        val w = Broker.notSentWords("exit of $sym")
+        assertEquals("The exit of $sym was not sent (no connection to Zerodha); trying again.", w)
+        assertFalse(w.contains("refused"))
+    }
+
+    /**
+     * 20 Nov 2026 (deep review): a lost reply not found yet is UNKNOWN ([Broker.lookLost]): still looking within the window, found once the
+     * book shows it, and after the window given up on with Boss told.
+     */
+    @Test fun aLostReplyIsLookedForUntilFoundOrGivenUpWithBossTold() = runBlocking {
+        Broker.lostLookGapMsForTest = 0
+        kite.drop += "/orders/regular"
+        val o = order()
+        try { Broker.placeOrder(o, exit = true); fail() } catch (_: Exception) {}
+        kite.drop.clear()
+        assertNull("nothing kept under another key", Broker.lookLost("other"))
+        Broker.noteLost("k", o, emptyList(), "Test: its stop")
+        assertTrue(Broker.lostPending("k"))
+        assertEquals(Broker.LostLook.Searching, Broker.lookLost("k"))
+        val id = kite.restingInKite(sym, "BUY", 75, 120.0, tag = "iratest", product = "NRML")
+        assertEquals(Broker.LostLook.Found(id, 75), Broker.lookLost("k"))
+        assertFalse(Broker.lostPending("k"))
+        // Never found: given up on after the window, Boss told.
+        val o2 = order(price = 130.0)
+        Broker.noteLost("k2", o2, emptyList(), "Test: its entry")
+        Broker.lostSearchMsForTest = 0
+        assertEquals(Broker.LostLook.GaveUp, Broker.lookLost("k2"))
+        assertTrue(com.optionslab.app.testing.AutomationSupport.alerts().toString(),
+            com.optionslab.app.testing.AutomationSupport.alerts().any { "Test: its entry" in it && "not in its order book" in it })
+        assertNull(Broker.lookLost("k2"))
+    }
+
     @Test fun onlyBossesOwnSwitchCancelsTheGuardAndJarvisOnlyLog() = runBlocking {
         kite.nextPlace(outcome = Outcome.OPEN)
         val entry = order(price = 100.0, tag = bot)

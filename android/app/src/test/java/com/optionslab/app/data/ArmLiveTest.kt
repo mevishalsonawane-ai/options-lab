@@ -377,6 +377,45 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("flat, never short", 0, held())
     }
 
+    /**
+     * 20 Nov 2026 (audit B5 deep review): the stop's reply is lost and the book does not show it yet: UNKNOWN - looked for on the later
+     * looks, never a second stop beside it (the app watches the level); once the book shows it, it is the trade's stop.
+     */
+    @Test fun aStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "lost"))
+        fun stops() = kite.placed.count { it.form["order_type"] == "SL" }
+        assertEquals(1, stops())
+        assertNull(view().open.single().stopOrderId)
+        watch()
+        assertEquals("no second stop while its lost reply is looked for", 1, stops())
+        kite.showInBook()
+        watch()
+        assertEquals(1, stops())
+        assertEquals(kite.orders.values.single { it.type == "SL" }.id, view().open.single().stopOrderId)
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a stop whose reply was lost and that never shows in the book is looked for for two minutes, a
+     * second one never rested meanwhile; then Boss is told and the stop is rested as usual.
+     */
+    @Test fun aLostStopNeverFoundIsRestedOnlyAfterTheSearchAndBossIsTold() {
+        kite.afterNext("/orders/regular") { kite.drop += "/orders/regular" }        // the stop's POST read and dropped: nothing placed
+        Broker.lostLookGapMsForTest = 0
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "never"))
+        kite.drop.clear()
+        assertNull(view().open.single().stopOrderId)
+        val sent = kite.placed.size
+        watch()
+        assertEquals("nothing sent while it is looked for", sent, kite.placed.size)
+        Broker.lostSearchMsForTest = 0
+        watch()
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "not in its order book" in it })
+        assertEquals("rested once the search is over", 1, kite.orders.values.count { it.type == "SL" })
+        assertNotNull(view().open.single().stopOrderId)
+    }
+
     @Test fun aPartPaperSaleSellsTheSameShareLive() {
         val ref = "half"
         ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)

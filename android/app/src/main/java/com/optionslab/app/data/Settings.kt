@@ -369,6 +369,8 @@ data class AppSettings(
             // 20 Nov 2026 (audit B5, item 9): the kill switch turned on here and saved (Jarvis, voice, Autopilot - or Boss's own switch,
             // whose page asks the cancel itself): the bots' working entry orders it would cancel are only LOGGED here (shadow).
             if (!from.guardKill && to.guardKill) runCatching { Broker.killEntriesSoon("the kill switch", act = false) }
+            // (Deep review: cleared - a sweep still due never cancels a bot's entry sent after it.)
+            if (from.guardKill && !to.guardKill) runCatching { Broker.killCleared() }
         }
 
         private fun saveChangedInner(from: AppSettings, to: AppSettings) {

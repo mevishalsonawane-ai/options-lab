@@ -212,7 +212,9 @@ internal object SquareOffExit {
                                 break
                             }
                         }
-                        tell("rejected ${p.symbol} ${e.message}", "Zerodha refused the $exitName exit of ${p.symbol}: ${e.message}. Retrying every pass until the close; close it yourself if it keeps failing.")
+                        // (20 Nov 2026, audit B5: one that never left the phone is no refusal - Zerodha never saw it.)
+                        tell("rejected ${p.symbol} ${e.message}", (if (e is Broker.NotSent) Broker.notSentWords("$exitName exit of ${p.symbol}") + " "
+                            else "Zerodha refused the $exitName exit of ${p.symbol}: ${e.message}. ") + "Retrying every pass until the close; close it yourself if it keeps failing.")
                         break
                     }
                     // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out

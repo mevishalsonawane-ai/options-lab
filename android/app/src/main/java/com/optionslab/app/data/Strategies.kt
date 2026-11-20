@@ -687,6 +687,14 @@ object Strategies {
     }.getOrElse { "\"AI trades go live\" could not be read" }
 
     /** [ownerStart]: the entries of Boss's own start from the app ([start]); false: automatic ones ([autoLiveRefusal] asks them). */
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a live order whose reply was lost and not found yet is accepted under "lost:<n>" ([kiteExec]),
+     * looked for on each status read ([Broker.lookLost]); [lostFound]: the Zerodha id each one turned out to be. Memory only.
+     */
+    internal const val LOST = "lost:"
+    private val lostSeq = java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis())
+    private val lostFound = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, ownerStart: Boolean = false, known: () -> Collection<String>) = object : StrategyHost.Executor {
         override fun place(order: Action.PlaceOrder): StrategyHost.Placed {
             val s = AppSettings.load()
@@ -789,8 +797,17 @@ object Strategies {
                     } catch (e: Exception) {
                         if (Broker.definite(e)) return@runBlocking StrategyHost.Placed.Refused(e.message ?: "Zerodha refused the order")
                         // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
+                        // 20 Nov 2026 (audit B5 deep review): not found yet is UNKNOWN, never "refused" (a run could then send it again,
+                        // or leave a live order untracked): accepted under a lost id ([LOST]), looked for on each later status read for
+                        // [Broker.LOST_SEARCH_MS]; found, it is the order; not there by then, Boss is told and it reads as rejected.
                         runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
-                            ?: return@runBlocking StrategyHost.Placed.Refused("${e.message}; no matching order found at Zerodha")
+                            ?: run {
+                                val lostId = LOST + lostSeq.incrementAndGet()
+                                Broker.noteLost(lostId, o, known().map { it.removePrefix("kite:") }, "Strategy ${def.name}: its ${if (exit) "exit" else "entry"}")
+                                b.owners[lostId] = ownerLabel(def, order)
+                                return@runBlocking StrategyHost.Placed.Accepted(lostId, "UNKNOWN", 0, null,
+                                    "Zerodha's answer was lost (${e.message}); looking for the order in its book")
+                            }
                     }
                 } finally { pass?.leave() }
                 b.owners["kite:$id"] = ownerLabel(def, order)
@@ -802,9 +819,24 @@ object Strategies {
                 StrategyHost.Placed.Accepted("kite:$id", f?.status ?: "UNKNOWN", f?.filled ?: 0, f?.avgPrice?.takeIf { it > 0 }, f?.message)
             }
         }
-        override fun cancel(brokerId: String) = runBlocking { runCatching { Broker.cancel(brokerId.removePrefix("kite:")) }.isSuccess }
+        override fun cancel(brokerId: String) = runBlocking {
+            // (A lost id: cancelled only once found; until then nothing is known to cancel.)
+            val id = if (brokerId.startsWith(LOST)) lostFound[brokerId] ?: return@runBlocking false else brokerId.removePrefix("kite:")
+            runCatching { Broker.cancel(id) }.isSuccess
+        }
         override fun status(brokerId: String): StrategyHost.Status? = runBlocking {
-            runCatching { Broker.orderState(brokerId.removePrefix("kite:")) }.getOrNull()?.let {
+            // 20 Nov 2026 (audit B5 deep review): a lost id is looked for ([Broker.lookLost]) until found or given up on.
+            val id = if (!brokerId.startsWith(LOST)) brokerId.removePrefix("kite:") else lostFound[brokerId] ?: when (val l = Broker.lookLost(brokerId)) {
+                is Broker.LostLook.Found -> {
+                    lostFound[brokerId] = l.id
+                    b.owners["kite:${l.id}"] = b.owners[brokerId] ?: def.name
+                    l.id
+                }
+                Broker.LostLook.Searching -> return@runBlocking StrategyHost.Status("UNKNOWN", 0, null, "looking for the order in Zerodha's book")
+                // Given up on (Boss told), or a lost id from before a restart (nothing left to look for): never sent again by this.
+                else -> return@runBlocking StrategyHost.Status("REJECTED", 0, null, "Zerodha's answer was lost and the order was not found in its book")
+            }
+            runCatching { Broker.orderState(id) }.getOrNull()?.let {
                 StrategyHost.Status(it.status, it.filled, it.avgPrice.takeIf { p -> p > 0 }, it.message)
             }
         }

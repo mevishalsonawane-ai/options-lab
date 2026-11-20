@@ -1104,8 +1104,17 @@ object PineAuto {
                 "the app watches it instead.", "Pine live")
             return h
         }
+        // 20 Nov 2026 (audit B5 deep review): a stop of this holding whose reply was lost and is not found yet is UNKNOWN: looked for again
+        // here, and no second stop is sent beside it while it may rest ([Broker.lookLost], two minutes; then Boss is told).
+        val lostKey = "pinestop:${h.order ?: sym}"
+        when (val l = Broker.lookLost(lostKey)) {
+            is Broker.LostLook.Found -> { ownerTag("kite:${l.id}", "${label(item)} · stop"); return h.copy(stop = l.id, stopAt = trig) }
+            Broker.LostLook.Searching -> return h
+            else -> Unit
+        }
         val oid = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite()) }.getOrNull()
+                ?: null.also { Broker.noteLost(lostKey, o, knownKite(), "${label(item)}: its stop") }
         }
         if (oid == null) {
             com.optionslab.app.work.Alerts.error("${label(item)}: the stop at ${"%.2f".format(java.util.Locale.ENGLISH, trig)} on $sym could not be " +

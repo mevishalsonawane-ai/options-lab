@@ -3517,8 +3517,17 @@ object OrbArms {
             stopLimit(trigger, tick), tick, "NFO", "iraorb", triggerPrice = trigger)
         // 15 Nov: whether Zerodha REFUSED it outright (nothing rests: another stop may go), apart from a lost reply.
         var refused = false
+        // 20 Nov 2026 (audit B5 deep review): a stop of this contract whose reply was lost and is not found yet is UNKNOWN: looked for
+        // again here, and no second stop is sent beside it while it may rest ([Broker.lookLost], two minutes; then Boss is told).
+        val lostKey = "orbstop:$label:$sym"
+        when (val l = Broker.lookLost(lostKey)) {
+            is Broker.LostLook.Found -> { Strategies.tagOwner("kite:${l.id}", "$label · stop"); return Triple(l.id, trigger, false) }
+            Broker.LostLook.Searching -> return Triple(null, trigger, false)
+            else -> Unit
+        }
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             if (Broker.definite(e)) { refused = true; null } else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
+                ?: null.also { Broker.noteLost(lostKey, o, known, "$label: its stop") }
         }
         if (id != null) Strategies.tagOwner("kite:$id", "$label · stop")
         else if (alert || !refused) com.optionslab.app.work.Alerts.error("$label: the ${if (at != null) "%.2f".format(Locale.ENGLISH, trigger) else if (liquidity) "${pts(pct * 100)}%" else "−${pts(points)}"} " +

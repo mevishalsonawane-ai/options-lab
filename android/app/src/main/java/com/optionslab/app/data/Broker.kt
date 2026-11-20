@@ -935,7 +935,8 @@ object Broker {
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
         entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null
-        killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false }
+        killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
+        lostWrites.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -1855,6 +1856,74 @@ object Broker {
     fun definite(e: Throwable): Boolean = e is NotLoggedIn || e is NotSent || (e is KiteError && e.type != "NetworkException")
 
     /**
+     * 20 Nov 2026 (audit B5 deep review): what to say of a write that never left the phone ([NotSent]) - not a refusal by Zerodha, which
+     * never saw it: "The [what] was not sent (no connection to Zerodha); trying again."
+     */
+    fun notSentWords(what: String): String = "The $what was not sent (no connection to Zerodha); trying again."
+
+    // ---- lost replies not found yet (20 Nov 2026, audit B5 deep review) ----------------------------------------------------------
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review: the write's 15 s limit makes lost replies more common, and a caller that took "lost and not found
+     * in ~4 s" as "not placed" could send a second order or rest a second stop): a write whose reply was lost and that the book did not
+     * show yet, kept by the caller's [key] (memory only). Its state is UNKNOWN: the caller never sends it again and never rests a second
+     * stop beside it; it asks [lookLost] on its later looks, which searches the book again (at most every [LOST_LOOK_GAP_MS]) for
+     * [LOST_SEARCH_MS]. Found: the order (adopted, as any lost reply found). Still not there then: Boss is told loudly, once, and the
+     * caller may go on (the book would have shown an order Zerodha took long before).
+     */
+    private class LostWrite(val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val what: String) {
+        @Volatile var lookedMs = 0L
+    }
+    private val lostWrites = java.util.concurrent.ConcurrentHashMap<String, LostWrite>()
+    /** How long a lost reply not found is looked for before it is given up on (and Boss told). */
+    const val LOST_SEARCH_MS = 120_000L
+    /** The least time between two searches of one lost reply (a stream look comes every tick). */
+    private const val LOST_LOOK_GAP_MS = 3_000L
+    /** TEST SEAM: [LOST_SEARCH_MS] shortened. */
+    @Volatile internal var lostSearchMsForTest: Long? = null
+    /** TEST SEAM: [LOST_LOOK_GAP_MS] shortened. */
+    @Volatile internal var lostLookGapMsForTest: Long? = null
+
+    /** What [lookLost] found: the order, still looking (UNKNOWN: send nothing), or given up on (Boss told; the caller may go on). */
+    sealed class LostLook { data class Found(val id: String, val qty: Int) : LostLook(); object Searching : LostLook(); object GaveUp : LostLook() }
+
+    /** [o] ([what], for Boss's words) was sent under [key], its reply lost and not found in the book yet ([known]: never adopted). */
+    fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String) {
+        if (lostWrites.size > 200) lostWrites.entries.removeIf { System.currentTimeMillis() - it.value.sinceMs > 4 * LOST_SEARCH_MS }
+        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what))
+    }
+
+    /** Whether a lost reply is being looked for under [key]. Memory only. */
+    fun lostPending(key: String): Boolean = lostWrites.containsKey(key)
+
+    /**
+     * The lost reply under [key] looked for again: null when none is kept. A background look only (it reads the order book); a book that
+     * cannot be read is still looking.
+     */
+    suspend fun lookLost(key: String): LostLook? {
+        val w = lostWrites[key] ?: return null
+        val now = System.currentTimeMillis()
+        if (now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
+            w.lookedMs = now
+            val found = try { findRecent(w.order, w.known) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+            if (found != null) {
+                lostWrites.remove(key, w)
+                runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
+                return LostLook.Found(found, w.order.quantity)
+            }
+        }
+        if (now - w.sinceMs < (lostSearchMsForTest ?: LOST_SEARCH_MS)) return LostLook.Searching
+        lostWrites.remove(key, w)
+        runCatching {
+            val text = "${w.what} on ${w.order.tradingSymbol}: Zerodha's answer was lost and the order is not in its order book " +
+                "${(now - w.sinceMs) / 1000} s later. Check the order book in Kite; the app goes on as if it was not placed."
+            Diag.record("zerodha", text)
+            com.optionslab.app.work.Alerts.error(text, "Zerodha")
+        }
+        return LostLook.GaveUp
+    }
+
+    /**
      * [findRecent] for a POST whose reply was lost, tried [tries] times [waitMs] apart (the order book can
      * trail the POST by a moment). The order id; null when the book was read and holds no such order;
      * throws when the book could not be read at all, so the caller knows the order's fate is unknown.
@@ -2115,14 +2184,25 @@ object Broker {
                     runCatching { Diag.record("zerodha", "Kill switch ($why): it did not read on, so no entry order was cancelled") }
                     return@launch
                 }
-                runCatching { cancelWorkingEntries(why) }
+                // (Deep review: each sweep only while the kill switch still reads on - cleared meanwhile, a bot's new entry is never
+                // cancelled; [killCleared] also ends the job at once.)
+                suspend fun sweep() { if (runCatching { killOn() }.getOrDefault(false)) runCatching { cancelWorkingEntries(why) } }
+                sweep()
                 delay(killSweepAgainMs)
-                runCatching { cancelWorkingEntries(why) }
+                sweep()
                 delay(WRITE_BUDGET_MS)
-                runCatching { cancelWorkingEntries(why) }
+                sweep()
             }
         }
     }
+
+    /** 20 Nov 2026 (audit B5 deep review): the kill switch cleared - any sweep still due is ended (nothing more is cancelled). */
+    fun killCleared() {
+        synchronized(killLock) { killJob?.cancel(); killJob = null; killJobActs = false }
+    }
+
+    /** TEST ONLY: whether a kill-switch sweep job is still running. */
+    internal fun killSweepRunningForTest(): Boolean = killJob?.isActive == true
     /** How long Boss's cancelling request waits for his kill switch to read on (saved) before it gives up (nothing cancelled). */
     private const val KILL_SAVED_WAIT_MS = 10_000L
     private val killLock = Any()
