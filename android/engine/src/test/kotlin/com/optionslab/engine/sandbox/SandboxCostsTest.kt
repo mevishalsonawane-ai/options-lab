@@ -41,4 +41,18 @@ class SandboxCostsTest {
         assertEquals(10.8, b.getValue("STT"), 1e-9)
         assertEquals(0.0, b.getValue("Stamp duty"), 1e-9)
     }
+
+    /** 20 Nov 2026 (audit, B5 item 4): a BSE leg (SENSEX options, BFO) pays BSE's 0.0325%, not NSE's 0.03553%. */
+    @Test fun aBseLegPaysBsesExchangeRate() {
+        assertEquals(SandboxCosts.BSE_TXN, SandboxCosts.txnRate("BFO"))
+        assertEquals(SandboxCosts.BSE_TXN, SandboxCosts.txnRate("bse"))
+        assertEquals(SandboxCosts.NSE_TXN, SandboxCosts.txnRate("NFO"))
+        // SELL 30 @ 240 = 7,200 on BSE: 20 + STT 10.80 + txn 2.34 + sebi 0.0072 + GST 4.022496 = 37.17 (NSE's: 37.43).
+        assertEquals(d("37.17"), SandboxCosts.charge("SELL", d("240"), 30, BigDecimal.ONE, "BFO", "SENSEX26NOV80000CE"))
+        assertEquals(d("37.43"), SandboxCosts.charge("SELL", d("240"), 30, BigDecimal.ONE, "NFO", "NIFTY26NOV24000CE"))
+        val b = SandboxCosts.breakdown("SELL", 240.0, 30, "BFO", "SENSEX26NOV80000CE")
+        assertEquals(2.34, b.getValue("Exchange"), 1e-9)
+        assertEquals(37.17, BigDecimal(b.values.sum()).setScale(2, java.math.RoundingMode.HALF_EVEN).toDouble())
+        assertEquals(2.55816, SandboxCosts.breakdown("SELL", 240.0, 30, "NFO", "NIFTY26NOV24000CE").getValue("Exchange"), 1e-9)
+    }
 }

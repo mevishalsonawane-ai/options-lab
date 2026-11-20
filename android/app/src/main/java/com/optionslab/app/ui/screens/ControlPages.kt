@@ -1146,12 +1146,21 @@ private fun BackupCard(model: AppModel, wipeOnExhaustion: Boolean) {
                         // In the app's scope and not cancellable: leaving the page must not stop it halfway through the files.
                         model.viewModelScope.launch {
                             kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                // 20 Nov 2026 (audit, B5 item 2): refused (a live position open, or the account stop unreadable) - nothing was written, so
+                                // the app stays open and says why ([com.optionslab.app.data.Backup.Refused]).
+                                var refused: String? = null
                                 val done = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                                     try {
                                         com.optionslab.app.data.Backup.restore(app, c)
                                             // "What's new": the restored seen ids, not the cached ones (a read only; it writes nothing).
                                             .also { runCatching { com.optionslab.app.data.WhatsNewStore.reload() } }
+                                    } catch (e: com.optionslab.app.data.Backup.Refused) { refused = e.message; null
                                     } catch (e: Exception) { null }
+                                }
+                                refused?.let { why ->
+                                    com.optionslab.app.work.Alerts.error(why)
+                                    restoring = false
+                                    return@withContext
                                 }
                                 // Files may have been replaced either way: the app always restarts, never runs on half-restored data.
                                 when {

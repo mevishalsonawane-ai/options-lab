@@ -130,6 +130,24 @@ class IraPageTest {
         compose.until(5_000, "forgotten") { IraHub.state.value.messages.isEmpty() }
     }
 
+    /**
+     * 20 Nov 2026 (audit: the scroll-to-newest race): after each answer the page scrolls itself to the list's end once the answer is
+     * laid out - the link under the newest message comes into view with no scroll by hand.
+     */
+    @Test fun theLinkUnderTheNewestAnswerScrollsIntoViewByItself() {
+        compose.setContent { IraAlgoTheme("dark") { IraPage() } }
+        compose.frames()
+        compose.until(20_000, "the data read") { !IraHub.state.value.loading && IraHub.state.value.snaps.isNotEmpty() }
+        compose.waitForText("pattern outcomes learned", substring = true)
+        for ((i, q) in listOf("who won the match", "who won the toss").withIndex()) {
+            compose.onNodeWithText("Ask Ira about the market").performTextInput(q)
+            compose.frames()
+            compose.onNodeWithText("Ask").performSemanticsAction(SemanticsActions.OnClick); compose.frames()
+            compose.until(10_000, "answer ${i + 1}") { IraHub.state.value.messages.size == 2 * (i + 1) }
+        }
+        compose.waitForText("Forget this conversation", timeoutMs = 10_000)
+    }
+
     /** "buy …" on Paper: Review shows the contract, and only Confirm places it; on Live it opens the order review instead. */
     @Test fun anOrderGoesOnlyThroughConfirmOrTheReview() {
         val placed = ArrayList<com.optionslab.app.ira.IraOrders.Ticket>(); val reviewed = ArrayList<com.optionslab.app.ira.IraOrders.Ticket>()

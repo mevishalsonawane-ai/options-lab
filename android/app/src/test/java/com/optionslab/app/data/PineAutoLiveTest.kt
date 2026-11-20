@@ -55,6 +55,7 @@ class PineAutoLiveTest : RobolectricTest() {
         AutomationSupport.security(compromised = false)
         AutomationSupport.clearAlerts()
         AutomationSupport.freshPine(context)
+        PineAuto.forgetStaleForTest()
         now = AutomationSupport.tradingDayAt(11, 2)
         PineAuto.testNow = now
         PineAuto.testBars = { _, _ -> candles?.invoke() ?: AutomationSupport.bars(now, closes) }
@@ -143,6 +144,48 @@ class PineAutoLiveTest : RobolectricTest() {
         candles = null
         pass(52_010.0)
         assertEquals("fresh candles with the same signal do trade", 1, side("BUY").size)
+    }
+
+    /**
+     * 20 Nov 2026 (audit, B5 item 6: "Pine accepts a candle about 17 minutes old"): after a gap the feed's newest candle is a new one but
+     * one candle behind - 11:10-11:15, read at 11:22 (closed 7 minutes ago), which the old rule (3 candles plus 2 minutes) took. In Live
+     * the new rule is logged only (CLAUDE.md: a new rule that could skip live trades starts in shadow): the entry goes as before.
+     */
+    @Test fun inLiveALateNewCandleIsLoggedInShadowAndTheEntryGoesAsBefore() {
+        switchOn()
+        pass(51_900.0)                                             // 11:07: SELL on the 11:00 candle
+        candles = { AutomationSupport.bars(now.minusMinutes(5), List(9) { 51_900.0 } + 52_010.0) }
+        pass(52_010.0, minutes = 15)                               // 11:22: the newest candle 11:10-11:15
+        assertEquals("live unchanged: it trades", 1, side("BUY").size)
+        assertEquals(log(), 1, Regex("shadow \\(B5 item 6\\)").findAll(log()).count())
+    }
+
+    /** In Paper the same late candle is not entered on (said once), and the change is read again on the next, fresh candle. */
+    @Test fun inPaperALateNewCandleIsNotEnteredOnAndTheNextFreshOneIsRead() {
+        // (Paper prices its entry from the candle feed: a local fake, never the real host.)
+        val clock = Market.testClock
+        val upstox = com.optionslab.app.testing.FakeUpstox()            // (it clears the market clock: put back)
+        Market.testClock = clock
+        try { paperLateCandle() } finally { upstox.close() }
+    }
+
+    private fun paperLateCandle() {
+        AutomationSupport.liveSettings(live = false)
+        switchOn()
+        pass(51_900.0)                                             // 11:07
+        candles = { AutomationSupport.bars(now.minusMinutes(5), List(9) { 51_900.0 } + 52_010.0) }
+        pass(52_010.0, minutes = 15)                               // 11:22: one candle late
+        assertTrue(log(), log().contains("no entry on it; read again on the next"))
+        assertNull(held())
+        pass(52_010.0, minutes = 0)                                // the same late candle on the next pass: said once
+        assertEquals(log(), 1, Regex("no entry on it").findAll(log()).count())
+        assertEquals(log(), 1, Regex("Signal: BUY").findAll(log()).count())
+        assertNull(held())
+        candles = null
+        pass(52_010.0, minutes = 1)                                // 11:23: the 11:15-11:20 candle, 3 minutes after its close
+        assertEquals("the change is read again on the fresh candle: ${log()}", 2, Regex("Signal: BUY").findAll(log()).count())
+        assertFalse(log(), log().contains("shadow (B5 item 6)"))
+        assertTrue("nothing at Zerodha in Paper", kite.placed.isEmpty())
     }
 
     @Test fun aChangeMissedWhileTheAppWasAwayIsCaughtUp() {

@@ -103,12 +103,16 @@ class FakeUpstox : Closeable {
         server.useHttps(HandshakeCertificates.Builder().heldCertificate(cert).build().sslSocketFactory(), false)
         val trust = HandshakeCertificates.Builder().addTrustedCertificate(cert.certificate).build()
         Market.testClock = null
+        // 20 Nov 2026 (B5): no paper price read of an earlier test's feed is taken up by this one.
+        com.optionslab.app.data.Paper.settlePriceReadsForTest()
         Net.testEndpoint = Net.TestEndpoint(server.url("/").toString().trimEnd('/'), trust.sslSocketFactory())
     }
 
     override fun close() {
         // 1 Nov: the switched-off shadow's prices read on its own worker are done (or stopped) before this fake goes, so none reaches the real host.
         com.optionslab.app.data.OffShadow.settleForTest()
+        // 20 Nov 2026 (B5): the paper price reads that run on past their caller end with this fake, never retried at the real host.
+        com.optionslab.app.data.Paper.settlePriceReadsForTest()
         Net.testEndpoint = null
         runCatching { server.shutdown() }
     }

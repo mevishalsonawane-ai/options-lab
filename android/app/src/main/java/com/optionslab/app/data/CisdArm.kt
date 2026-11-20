@@ -773,7 +773,8 @@ object CisdArm {
         // Gone from the paper book without this arm selling it (the paper square-off, the loss limit, or Boss).
         if (Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
             p.lockOrderId?.let { runCatching { Paper.cancel(it, "position_closed") } }
-            val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            // 20 Nov 2026 (audit, B5 item 4): its own product's sale no other trade booked, else its expiry settlement or last price ([Paper.soldElsewhere]).
+            val t = Paper.soldElsewhere("Cisd|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "MIS", qty = p.qty)
             return closed(p, t?.price?.toDouble() ?: p.entry, t?.timestamp ?: now, "closed_elsewhere", t?.charges?.toDouble() ?: 0.0)
         }
         if (!now.isBefore(p.day.atTime(SQ)) || p.day.isBefore(now.toLocalDate())) return sellRest(p, c, "square-off $SQ")
@@ -846,7 +847,8 @@ object CisdArm {
         val r = Paper.place(c, "SELL", p.lots, "MARKET", "MIS", null, null, known = optionQuote(c) ?: optionQuote(c, anyAge = true), exit = true)
         val f = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull() ?: run {
             if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
-                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                // 20 Nov 2026 (audit, B5 item 4): its own product's sale no other trade booked, else its expiry settlement or last price ([Paper.soldElsewhere]).
+                val t = Paper.soldElsewhere("Cisd|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "MIS", qty = p.qty)
                 // 19 Nov 2026 (audit batch 2): the arm's own exit ([why]) decided this sale and lost the race to another paper close: its live copy
                 // is still sold by that exit ([ArmLive.ruleExit]), never only detached as a plain "closed elsewhere" is.
                 runCatching { ArmLive.ruleExit(p.key, why) }

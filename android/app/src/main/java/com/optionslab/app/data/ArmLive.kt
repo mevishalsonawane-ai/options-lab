@@ -2514,8 +2514,20 @@ object ArmLive {
         val gone = closedRefs.containsKey(p.ref) || (fresh && LiveMirror.paperGone(q.seen, legs?.let { leg != null })) || leg?.qty == 0
         val sell = if (gone) q.qty else leg?.let { LiveMirror.toSell(q.qty, q.entryQty, q.paperQty, it.qty, q.lot) } ?: 0
         val why = closedWhy(p.ref) ?: if (gone) "paper_exit" else if (sell > 0) "paper_part" else null
+        // 20 Nov 2026 (audit, B5 item 7): a paper part-exit (the L25 ladder's step, a half) that sells this smaller live copy WHOLE - its
+        // lots kept round down to none - is kept as it is: the lower-risk choice (CLAUDE.md: holding more live than today starts only in
+        // shadow, behind a switch Boss turns on). What keeping the nearest share would do is logged once a trade ([LiveMirror.partSellsWhole]).
+        if (!gone && leg != null && LiveMirror.partSellsWhole(q.qty, q.entryQty, q.paperQty, leg.qty, q.lot) && partWholeSaid.add(p.ref)) {
+            if (partWholeSaid.size > 500) { partWholeSaid.clear(); partWholeSaid.add(p.ref) }
+            val keep = q.qty - LiveMirror.toSellNearest(q.qty, q.entryQty, q.paperQty, leg.qty, q.lot)
+            note(p.key, "shadow (B5 item 7): ${p.symbol}'s paper trade sold part (holds ${leg.qty} of ${q.paperQty}); its live ${q.qty} is sold " +
+                "whole, as before. Following the paper's share to the nearest lot would have kept $keep. Nothing changed live.")
+        }
         return Triple(q, sell, why)
     }
+
+    /** 20 Nov 2026 (audit, B5 item 7): the live trades whose part-exit shadow line was written (memory only; once each). */
+    private val partWholeSaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /** 19 Nov 2026 (audit batch 2): the live trades whose detaching ([detach]) Boss was told of (memory only; once each). */
     private val detachSaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()

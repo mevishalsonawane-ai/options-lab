@@ -144,6 +144,10 @@ class VixDivArmAuditTest : RobolectricTest() {
         market(LocalTime.of(10, 35))
         tick(LocalTime.of(10, 35))
         assertEquals("closed_elsewhere", VixDivArm.view.value.closed.single().why)
+        // 20 Nov 2026 (B5 item 4): booked at Boss's close (its sale's price and time), not the entry price.
+        val sale = Paper.state.trades.last { it.symbol == pos.symbol && it.action == "SELL" }
+        assertEquals(sale.price.toDouble(), VixDivArm.view.value.closed.single().exit!!, 1e-9)
+        assertEquals(sale.timestamp, VixDivArm.view.value.closed.single().exitTime)
         assertEquals("no second sale", sells, Paper.state.trades.count { it.symbol == pos.symbol && it.action == "SELL" })
         assertEquals("flat, never short", 0, held(pos.symbol))
         assertTrue("its resting stop is out of the book", Paper.state.orders.none { it.symbol == pos.symbol && it.status == "trigger pending" })
