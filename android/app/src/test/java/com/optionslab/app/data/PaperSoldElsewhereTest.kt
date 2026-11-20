@@ -66,6 +66,18 @@ class PaperSoldElsewhereTest : RobolectricTest() {
         assertEquals(PaperElsewhere.How.SALE, Paper.soldElsewhere("A|x", c.symbol, from, "MIS", qty = lot)!!.how)
     }
 
+    /** Review: a paper reset numbers orders afresh - an earlier book's claim never blocks the new book's sale. */
+    @Test fun aClaimOfAnEarlierBookNeverBlocksTheNewBooksSale() {
+        val from = since()
+        assertTrue(runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }.ok)
+        assertTrue(runBlocking { Paper.close(c.symbol, "MIS") }.ok)
+        assertEquals(PaperElsewhere.How.SALE, Paper.soldElsewhere("A|x", c.symbol, from, "MIS", qty = c.lotSize)!!.how)
+        Paper.reset(java.math.BigDecimal("1000000"))
+        assertTrue(runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }.ok)
+        assertTrue(runBlocking { Paper.close(c.symbol, "MIS") }.ok)
+        assertEquals("the new book's sale", PaperElsewhere.How.SALE, Paper.soldElsewhere("B|x", c.symbol, from, "MIS", qty = c.lotSize)!!.how)
+    }
+
     @Test fun anotherProductsSaleIsNeverBooked() {
         val from = since()
         assertTrue(runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }.ok)

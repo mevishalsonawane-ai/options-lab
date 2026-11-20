@@ -42,6 +42,7 @@ class StrategiesPaperFlatTest : RobolectricTest() {
         TradeFixtures.seed(context, upstox)
         AutomationSupport.security(compromised = false)
         Paper.forgetElsewhereForTest()
+        Strategies.forgetFlatTriedForTest()
     }
 
     @After fun down() {
@@ -92,5 +93,25 @@ class StrategiesPaperFlatTest : RobolectricTest() {
         runBlocking { Strategies.tickAll(compromised = false) }
         assertTrue(runBlocking { Strategies.all() }.single().running)
         assertEquals(75, Paper.state.positions.filter { it.symbol == sym }.sumOf { it.quantity })
+    }
+
+    /** Review: another owner's opening trade that nets the leg to nothing is not a close - the leg is left to its own exits. */
+    @Test fun aLegNettedToNothingByAnotherOwnersTradeIsNotClosed() {
+        val (_, sym) = running()
+        val c = Paper.contractOf(sym)!!
+        assertTrue(runBlocking { Paper.place(c, "SELL", 1, "MARKET", "MIS", null, null) }.ok)   // someone else's short, not a close
+        assertEquals(0, Paper.state.positions.filter { it.symbol == sym }.sumOf { it.quantity })
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertTrue("still running: nothing plainly closed it", runBlocking { Strategies.all() }.single().running)
+    }
+
+    /** Review: after a paper reset nothing is held at all - the leg is booked closed at its last price and the run finishes. */
+    @Test fun afterAPaperResetTheLegIsClosedAndTheRunFinishes() {
+        running()
+        Paper.reset(java.math.BigDecimal("1000000"))
+        runBlocking { Strategies.tickAll(compromised = false) }
+        val e = runBlocking { Strategies.all() }.single()
+        assertFalse("finished: ${e.run?.status}", e.running)
+        assertTrue(e.run!!.legs.values.single().exitAvg!! > 0)
     }
 }

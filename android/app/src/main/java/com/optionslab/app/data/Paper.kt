@@ -886,7 +886,17 @@ object Paper {
     }
 
     /** TEST SEAM: forget the fills booked to trades closed elsewhere (a new process starts without them). */
-    internal fun forgetElsewhereForTest() = elsewhereClaims.clear()
+    internal fun forgetElsewhereForTest() { elsewhereClaims.clear(); closingFills.clear() }
+
+    /**
+     * 20 Nov 2026 (B5, review P2): the paper orders that only closed what was held (Boss's close and the square-offs, [close]; every exit
+     * placed as one, [place] with exit). Memory only: after a restart none is known. Cleared with a reset or an erase (a new book numbers
+     * its orders afresh).
+     */
+    private val closingFills: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** Whether the paper order [orderId] only closed what was held ([closingFills]). */
+    fun isClosingFill(orderId: String): Boolean = orderId in closingFills
 
     /** When each symbol's paper entry last filled on the book alone (memory only): [ArmLive] never mirrors such a fill live. */
     private val bookFills = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -1362,6 +1372,8 @@ object Paper {
         // The sandbox's modelled slippage (kept apart as paper): a LIMIT from its price, else from the price it read.
         val limit = priceType.equals("LIMIT", true) && price != null
         modelled(r, entry, if (limit) price else q?.ltp?.takeIf { it > 0 }, limit)
+        // 20 Nov 2026 (B5, review P2): an exit only reduces what is held - a known close ([isClosingFill]).
+        if (exit && r.ok) r.orderId?.let { closingFills.add(it) }
         // 25 Oct: an entry the 2% cap sized down says so (its fill is recorded above, as every fill).
         if (sized != null && r.ok) return r.copy(rule = sized)
         return r
@@ -1530,7 +1542,7 @@ object Paper {
         if (heldIn(book(), symbol, product) == 0) return notOpen(symbol)
         val key = "$symbol|${product.uppercase(Locale.ENGLISH)}"
         if (!closing.add(key)) return Result(false, "$symbol: a close is already on its way.", emptyList())
-        try { return closeOnce(symbol, product) } finally { closing.remove(key) }
+        try { return closeOnce(symbol, product).also { r -> if (r.ok) r.orderId?.let { closingFills.add(it) } } } finally { closing.remove(key) }
     }
 
     private suspend fun closeOnce(symbol: String, product: String): Result {
@@ -1774,7 +1786,7 @@ object Paper {
     }
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
-    fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) }; elsewhereClaims.clear() }
+    fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) }; elsewhereClaims.clear(); closingFills.clear() }
 
     /**
      * TEST ONLY: [loadSoon] reads the book on the caller's thread - the background load as fast as it can be, done before
@@ -1812,7 +1824,7 @@ object Paper {
             pending = null; cache = null; savedAtMs = 0L; readFails = 0; firstReadFailMs = 0L; lastReadFailMs = 0L
             filesForErase().forEach { runCatching { it.delete() } }
         } }
-        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear(); priceReads.clear(); elsewhereClaims.clear()
+        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear(); priceReads.clear(); elsewhereClaims.clear(); closingFills.clear()
         heldNoted.clear()
         follow(emptySet())
     }
