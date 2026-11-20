@@ -715,6 +715,8 @@ fun RiskPage(model: AppModel) {
             item { OrderCountCheckCard(model) }
             // 19 Nov 2026 (audit batch 2, B2-B): paper-only refusals of entries that could go live - shadow until switched on (on takes the PIN).
             item { PaperRefusalLiveCard(model) }
+            // 20 Nov 2026 (audit B5): R51 / R72 breaks on a history that does not reach the last trading day - shadow until switched on (off takes the PIN).
+            item { StaleHistoryCard(model) }
             // 19 Nov (Boss: "i want it to run until i stop them"): the four automatic stops on R51, R72 and Liquidity (off by his choice; off takes the PIN).
             item { ArmAutoStopsCard(model) }
             // 25 Oct (Boss's decisions on the app audit): the new risk rules - paper on, live in shadow until switched on.
