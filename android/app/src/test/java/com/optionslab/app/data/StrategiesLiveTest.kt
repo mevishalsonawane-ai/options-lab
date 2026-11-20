@@ -382,7 +382,27 @@ class StrategiesLiveTest : RobolectricTest() {
         runBlocking { Strategies.manageOnly(compromised = false) }
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertEquals("one stop, never two", 1, restingStops().size)
-        assertEquals(1, kite.orders.values.count { it.type == "SL" })
+        val sl = kite.orders.values.single { it.type == "SL" }
+        assertEquals("adopted as the leg's stop", "Test basket · leg 1 stop", runBlocking { Strategies.owners() }["kite:${sl.id}"])
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost before a restart can no longer be looked for: it stays UNKNOWN
+     * (never refused, never sent again) and Boss is told once to check the order book.
+     */
+    @Test fun aLostEntryFromBeforeARestartStaysUnknownAndBossIsTold() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        startLive(id)
+        Broker.forgetLostForTest()                                   // as after a restart: nothing left in memory to look for
+        runBlocking { Strategies.tickAll(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("never sent again", 1, buys().size)
+        assertTrue(entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        assertEquals("told once", 1, AutomationSupport.alerts().count { "cannot be looked for any more" in it })
     }
 
     @Test fun aCarriedLegsStopRestsAtZerodhaAsOneGttNeverADaySlOrder() {

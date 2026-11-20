@@ -366,6 +366,12 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
         val id = kite.restingInKite(sym, "BUY", 75, 120.0, tag = "iratest", product = "NRML")
         assertEquals(Broker.LostLook.Found(id, 75), Broker.lookLost("k"))
         assertFalse(Broker.lostPending("k"))
+        // A stop found keeps the trigger it was sent at (its caller books that level, never one asked for since).
+        val stop = order(type = "SL", price = 79.0, trigger = 80.0, side = Kite.Side.SELL)
+        Broker.noteLost("s", stop, emptyList(), "Test: its stop")
+        assertTrue(Broker.lostKeys("s").contains("s"))
+        val sid = kite.restingInKite(sym, "SELL", 75, 79.0, type = "SL", trigger = 80.0, tag = "iratest", product = "NRML")
+        assertEquals(Broker.LostLook.Found(sid, 75, 80.0), Broker.lookLost("s"))
         // Never found: given up on after the window, Boss told.
         val o2 = order(price = 130.0)
         Broker.noteLost("k2", o2, emptyList(), "Test: its entry")

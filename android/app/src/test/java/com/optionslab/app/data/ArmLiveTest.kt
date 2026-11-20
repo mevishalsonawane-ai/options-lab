@@ -394,6 +394,7 @@ class ArmLiveTest : RobolectricTest() {
         watch()
         assertEquals(1, stops())
         assertEquals(kite.orders.values.single { it.type == "SL" }.id, view().open.single().stopOrderId)
+        assertEquals("with the trigger it rests at", kite.orders.values.single { it.type == "SL" }.trigger, view().open.single().stopTrigger!!, 0.0)
     }
 
     /**

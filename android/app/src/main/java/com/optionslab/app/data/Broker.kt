@@ -1896,6 +1896,12 @@ object Broker {
     /** Whether a lost reply is being looked for under [key]. Memory only. */
     fun lostPending(key: String): Boolean = lostWrites.containsKey(key)
 
+    /** The keys of the lost replies being looked for that start with [prefix]. Memory only. */
+    fun lostKeys(prefix: String): List<String> = lostWrites.keys.filter { it.startsWith(prefix) }
+
+    /** TEST ONLY: every lost reply forgotten, as after a restart. */
+    internal fun forgetLostForTest() = lostWrites.clear()
+
     /**
      * The lost reply under [key] looked for again: null when none is kept. A background look only (it reads the order book); a book that
      * cannot be read is still looking.

@@ -804,7 +804,7 @@ object Strategies {
                         // [Broker.LOST_SEARCH_MS]; found, it is the order; not there by then, Boss is told and it reads as rejected.
                         runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
                             ?: run {
-                                val lostId = LOST + lostSeq.incrementAndGet()
+                                val lostId = LOST + (if (exit) "x" else "e") + lostSeq.incrementAndGet()
                                 Broker.noteLost(lostId, o, known().map { it.removePrefix("kite:") }, "Strategy ${def.name}: its ${if (exit) "exit" else "entry"}")
                                 b.owners[lostId] = ownerLabel(def, order)
                                 return@runBlocking StrategyHost.Placed.Accepted(lostId, "UNKNOWN", 0, null,
@@ -837,9 +837,12 @@ object Strategies {
                 Broker.LostLook.Searching -> return@runBlocking StrategyHost.Status("UNKNOWN", 0, null, "looking for the order in Zerodha's book")
                 // Given up on (Boss told): not placed - the book would have shown it long before.
                 Broker.LostLook.GaveUp -> return@runBlocking StrategyHost.Status("REJECTED", 0, null, "Zerodha's answer was lost and the order was not found in its book")
-                // (Review: a lost id from before a restart - nothing left in memory to look for: it stays UNKNOWN, never taken as refused
-                // and never sent again, and Boss is told once to check the order book.)
+                // (Review: a lost id from before a restart - nothing left in memory to look for. An EXIT reads as rejected, so the run
+                // sends it again - always capped by what Zerodha holds less the exits working, so never into a short. An ENTRY stays
+                // UNKNOWN, never taken as refused and never sent again, and Boss is told once to check the order book.)
                 null -> {
+                    if (brokerId.startsWith(LOST + "x")) return@runBlocking StrategyHost.Status("REJECTED", 0, null,
+                        "its answer was lost before a restart; sent again, capped by what Zerodha holds")
                     if (restartedLost.add(brokerId)) runCatching {
                         com.optionslab.app.work.Alerts.error("Strategy ${def.name}: a live order whose answer was lost before the app restarted " +
                             "cannot be looked for any more. Its state is unknown: check the order book in Kite.", "Strategies")
@@ -1418,12 +1421,31 @@ object Strategies {
      * out (or gone with an earlier session), so none is ever left resting on a flat position. Each pass, logged in only.
      */
     private suspend fun cleanLegStops(b: Book) {
-        if (b.legStops.isEmpty() || !Broker.loggedIn) return
         val running = b.defs.mapNotNull { d -> b.runs[d.id]?.takeIf { Entry(d, it).running }?.runId }.toSet()
+        // (20 Nov 2026, audit B5 deep review: a run no longer running whose leg stop's reply was lost: looked for, taken out once found.)
+        if (Broker.loggedIn) for (key in Broker.lostKeys(LOST_LEG_STOP))
+            if (key.removePrefix(LOST_LEG_STOP).substringBefore(':').toLongOrNull() !in running) takeOutLostLegStop(key, "a strategy")
+        if (b.legStops.isEmpty() || !Broker.loggedIn) return
         for ((k, v) in b.legStops.toMap()) {
             if (k.substringBefore(':').toLongOrNull() in running) continue
             if (legStopOut(v) != null) b.legStops.remove(k)
         }
+    }
+
+    /** 20 Nov 2026 (audit B5 deep review): the key a leg's (or a run's, with [k] its "<runId>:" prefix) lost stop is looked for under. */
+    private const val LOST_LEG_STOP = "stratstop:"
+    private fun lostLegStopKey(k: String) = LOST_LEG_STOP + k
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a leg that is no longer open (or whose run ended) and whose stop's reply was lost: looked for,
+     * and taken out once found - never left resting on a closed leg. Still looking: asked again on the next check.
+     */
+    private suspend fun takeOutLostLegStop(key: String, who: String) {
+        val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: return
+        val ok = runCatching { Broker.cancel(l.id) }.isSuccess
+        runCatching { Diag.record("strategies", "$who: a leg's stop ${l.id}, found after its answer was lost on a leg no longer open: " +
+            if (ok) "taken out" else "its cancel failed - check the order book in Kite") }
+        if (!ok) runCatching { com.optionslab.app.work.Alerts.error("$who: a stop ${l.id} found at Zerodha for a leg no longer open could not be cancelled. Check the order book in Kite.", "Strategies") }
     }
 
     /**
@@ -1438,6 +1460,9 @@ object Strategies {
         val run = b.runs[def.id] ?: return
         val mine = b.legStops.keys.filter { it.startsWith("${run.runId}:") }
         val open = run.legs.values.filter { it.status == "open" && it.entryStatus == "complete" }
+        // (20 Nov 2026, audit B5 deep review: a leg no longer open whose stop's reply was lost: looked for, and taken out once found.)
+        val lostClosed = Broker.lostKeys(lostLegStopKey("${run.runId}:")).filter { key -> open.none { lostLegStopKey(legKey(run.runId, it.legId)) == key } }
+        for (key in lostClosed) takeOutLostLegStop(key, def.name)
         if (open.isEmpty() && mine.isEmpty()) return
         val orders = runCatching { Broker.orders().associateBy { it.id } }.getOrNull() ?: return
         val net = runCatching { Broker.positionBook().net }.getOrNull() ?: return
@@ -1464,6 +1489,22 @@ object Strategies {
             val exitSide = if (dir > 0) Kite.Side.SELL else Kite.Side.BUY
             val held = net.filter { it.symbol == kiteSym && it.exchange == ex && it.product == product }.sumOf { it.qty } * dir
             val cur = b.legStops[k]
+            // 20 Nov 2026 (audit B5 deep review): this leg's stop whose reply was lost and is not found yet is UNKNOWN: looked for again
+            // first (before any room is counted - once the book shows it, it is the room's own order), never a second one beside it
+            // ([Broker.lookLost]: two minutes, then Boss told); found, it is the leg's stop.
+            if (cur == null) when (val l = Broker.lookLost(lostLegStopKey(k))) {
+                is Broker.LostLook.Found -> {
+                    val at = l.trigger ?: 0.0
+                    b.legStops[k] = "${l.id}|$at|${Market.today()}|${l.qty}"
+                    b.owners["kite:${l.id}"] = "${def.name} · leg ${leg.legId} stop"
+                    notRestedAt.remove(k)
+                    record(b, def, Event("stop_rested", "Leg ${leg.legId}'s stop rests at Zerodha at %.2f (SL order, found after its answer was lost)"
+                        .format(Locale.ENGLISH, at), "info"), false)
+                    continue
+                }
+                Broker.LostLook.Searching -> continue
+                else -> Unit
+            }
             val gid = cur?.let(::gttOf)
             val sid = cur?.substringBefore('|')
             val so = if (gid == null) sid?.let { orders[it] } else null
@@ -1527,20 +1568,7 @@ object Strategies {
                     // A lost reply never leaves a second GTT ([Broker.placeGttOnce] adopts the one that went through).
                     gtt?.let { x -> Broker.placeGttOnce(x, b.legStops.values.mapNotNull(::gttOf).toSet())?.let { "gtt:$it" } }
                 } else {
-                    // 20 Nov 2026 (audit B5 deep review): this leg's stop whose reply was lost and is not found yet is UNKNOWN: looked for
-                    // again, never a second one beside it ([Broker.lookLost]: two minutes, then Boss told); found, it is the leg's stop.
-                    val lostKey = "stratstop:$k"
-                    when (val l = Broker.lookLost(lostKey)) {
-                        is Broker.LostLook.Found -> {
-                            val at = l.trigger ?: want
-                            b.legStops[k] = "${l.id}|$at|${Market.today()}|${l.qty}"
-                            b.owners["kite:${l.id}"] = "${def.name} · leg ${leg.legId} stop"; working[l.id] = l.qty
-                            notRestedAt.remove(k)
-                            continue
-                        }
-                        Broker.LostLook.Searching -> continue
-                        else -> Unit
-                    }
+                    val lostKey = lostLegStopKey(k)
                     val o = Kite.Order(kiteSym, exitSide, qty, ref.lot, product, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(want, ref.tick, dir), ref.tick,
                         ex, "iraalgostrat", triggerPrice = want)
                     val known = b.owners.keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") }

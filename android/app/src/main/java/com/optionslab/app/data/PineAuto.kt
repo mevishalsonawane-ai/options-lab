@@ -746,11 +746,6 @@ object PineAuto {
             if (h != null && !h.unconfirmed && h.live && h.stop == null) h = placeLiveStop(item, h.copy(at = System.currentTimeMillis()))
             if (h == null) b.held.remove(id) else b.held[id] = h
         }
-        // 20 Nov 2026 (audit B5 deep review): a live stop whose reply was lost is looked for on each check until found or given up on.
-        if (h != null && !h.unconfirmed && h.live && h.stop == null && Broker.lostPending(lostStopKey(item, h))) {
-            h = placeLiveStop(item, h)
-            b.held[id] = h
-        }
         // The resting stop filled (the paper book or Zerodha sold at it): that was the exit.
         if (h != null && !h.unconfirmed && stopFilled(b, id, item, h)) return
         h = b.held[id]
@@ -765,6 +760,12 @@ object PineAuto {
         }
         if (h != null && (stopped || (item.auto.squareOff && mins >= 15 * 60 + 15) || h.day != todayIst().toString())) {
             exit(b, id, item, h, if (stopped) stopSays else "15:15 square-off"); return
+        }
+        // 20 Nov 2026 (audit B5 deep review): a live stop whose reply was lost is looked for on each check until found or given up on -
+        // only while the holding is still held and due no exit, in market hours before 15:15, at the level it was sent at.
+        if (h != null && !h.unconfirmed && h.live && h.stop == null && isOpen() && mins < 15 * 60 + 15 && Broker.lostPending(lostStopKey(item, h))) {
+            h = placeLiveStop(item, h, h.stopAt)
+            b.held[id] = h
         }
         val a = item.auto
         val today = todayIst().toString()
@@ -1130,8 +1131,8 @@ object PineAuto {
         return h.copy(stop = oid, stopAt = trig)
     }
 
-    /** 20 Nov 2026 (audit B5 deep review): the key [h]'s lost stop is looked for under (the script, the contract, the holding's size and fill). */
-    private fun lostStopKey(item: PineScripts.Item, h: Held) = "pinestop:${item.id}:${h.kite}:${h.qty}:${h.entry}"
+    /** 20 Nov 2026 (audit B5 deep review): the key [h]'s lost stop is looked for under (the script, the contract and the fill: what never changes for the holding). */
+    private fun lostStopKey(item: PineScripts.Item, h: Held) = "pinestop:${item.id}:${h.kite}:${h.entry}"
 
     /** The paper stop-loss placed to rest in the paper book right after a paper buy (an SL-M SELL); null when none could be. */
     private suspend fun placePaperStop(item: PineScripts.Item, c: Paper.Contract, lots: Int, entry: Double): Pair<String, Double>? {
