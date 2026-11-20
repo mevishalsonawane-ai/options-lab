@@ -1777,6 +1777,16 @@ object ArmLive {
         for (key in keys) {
             if (key.removePrefix(LOST_STOP) in openRefs) continue
             val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: continue
+            // (Review: one that already filled sold beside the trade's own exit - a second sale, which may have left the account short:
+            // said plainly with its quantity, never "cancelled".)
+            val st = runCatching { Broker.orderState(l.id) }.getOrNull()
+            if (st != null && (st.status == "COMPLETE" || st.filled > 0)) {
+                val text = "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha after its arm's trade had already closed: " +
+                    "a second sale - the account may now be SHORT on that contract. Check positions in Kite now."
+                runCatching { Diag.record("armlive", text) }
+                com.optionslab.app.work.Alerts.error(text, WHO)
+                if (st.status == "COMPLETE" || st.status == "CANCELLED" || st.status == "REJECTED") continue
+            }
             markOwnCancel(l.id)
             val ok = runCatching { Broker.cancel(l.id) }.isSuccess
             runCatching { Diag.record("armlive", "A stop ${l.id} found after its answer was lost, for a trade no longer open: " +
@@ -2433,7 +2443,9 @@ object ArmLive {
      * F1: it may hold open live trades) - memory only: every lane that watches (the minute lane, the live lane, the 15-second
      * check) and every keep-alive keeps running for it, and the watch reads the book again.
      */
-    val recoverHint: Boolean get() = recoverDue || unreadable || coldPending
+    // (20 Nov 2026, audit B5 deep review: and a lost stop still looked for, so the lanes keep calling [watch] after its trade closed and the
+    // stop is taken out once found - [takeOutClosedLostStops]. Memory only.)
+    val recoverHint: Boolean get() = recoverDue || unreadable || coldPending || Broker.lostKeys(LOST_STOP).isNotEmpty()
 
     /** Whether a look has work now (memory only): a live trade held, a shadow trade open, a damaged or unread book. */
     // (19 Nov 2026, third review: and the start's sweep, so a login later in the day still reaches it on the minute lanes; memory only.)
@@ -2458,7 +2470,7 @@ object ArmLive {
         if (!stream && !sweep) coldPending = false
         // 20 Nov 2026 (audit B5 deep review): a trade that closed while its stop's lost reply was still looked for: looked for on, and the
         // stop taken out once found - never left resting on a closed trade (the book read in the background: [Broker.lookLost]).
-        if (!stream && Broker.lostKeys(LOST_STOP).isNotEmpty()) runCatching { takeOutClosedLostStops() }
+        if (!stream && Broker.lostKeys(LOST_STOP).isNotEmpty()) try { takeOutClosedLostStops() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {}
         if (!holdingHint && !shadowHint && !recoverDue && !sweep) return
         var lookFailed: Exception? = null
         if (holdingHint || recoverDue) {
@@ -2709,7 +2721,8 @@ object ArmLive {
 
     private suspend fun look(stream: Boolean) {
         looksForTest.incrementAndGet()
-        val open = lock.withLock { book().positions.filter { it.open && !it.shadow && it.ref !in resting && !handsOffNow(it.exchange, it.symbol) }.toList() }        // (18 Nov 2026, review: a look that returns early never leaves a short count behind for a later trade on the contract.)
+        val open = lock.withLock { book().positions.filter { it.open && !it.shadow && it.ref !in resting && !handsOffNow(it.exchange, it.symbol) }.toList() }
+        // (18 Nov 2026, review: a look that returns early never leaves a short count behind for a later trade on the contract.)
         if (open.isEmpty()) { shortSince.clear(); shortSaid.clear(); return }
         if (shortSince.size > 200) shortSince.clear()
         if (noRowSaid.size > 200) noRowSaid.clear()

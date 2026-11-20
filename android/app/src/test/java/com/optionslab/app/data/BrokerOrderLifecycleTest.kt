@@ -405,7 +405,11 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
         Broker.noteLost("d", stop, emptyList(), "Test: its stop", liveOnly = true)
         val dead = kite.restingInKite(sym, "SELL", 75, 79.0, type = "SL", trigger = 80.0, tag = "iratest", product = "NRML")
         kite.order(dead).status = "CANCELLED"
-        assertEquals("an ended order is never taken for it", Broker.LostLook.Searching, Broker.lookLost("d"))
+        assertEquals("an order that died unfilled is never taken for it", Broker.LostLook.Searching, Broker.lookLost("d"))
+        // One that FILLED is still found (its caller books the fill).
+        kite.order(dead).status = "COMPLETE"; kite.order(dead).filled = 75
+        assertEquals(Broker.LostLook.Found(dead, 75, 80.0), Broker.lookLost("d"))
+        Broker.noteLost("d", stop, emptyList(), "Test: its stop", liveOnly = true)
         Broker.forgetLost("d")
         assertFalse(Broker.lostPending("d"))
         assertNull(Broker.lookLost("d"))

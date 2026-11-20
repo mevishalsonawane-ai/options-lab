@@ -5026,7 +5026,8 @@ object OrbArms {
         when (val l = Broker.lookLost(lostKey)) {
             is Broker.LostLook.Found -> {
                 runCatching { Strategies.tagOwner("kite:${l.id}", "${armOf(p.arm).label} · stop") }
-                placed(sym, l.qty, l.id)
+                // (Counted as placed this pass only when the pass's read does not already show it working.)
+                if (orders?.any { it.id == l.id } != true) placed(sym, l.qty, l.id)
                 return split(p.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: p.stopTrigger), l.qty)
             }
             Broker.LostLook.Searching -> return null

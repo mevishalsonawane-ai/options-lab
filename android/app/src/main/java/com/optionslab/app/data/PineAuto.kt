@@ -763,7 +763,8 @@ object PineAuto {
         }
         // 20 Nov 2026 (audit B5 deep review): a live stop whose reply was lost is looked for on each check until found or given up on -
         // only while the holding is still held and due no exit, in market hours before 15:15, at the level it was sent at.
-        if (h != null && !h.unconfirmed && h.live && h.stop == null && isOpen() && mins < 15 * 60 + 15 && Broker.lostPending(lostStopKey(item, h))) {
+        if (h != null && !h.unconfirmed && h.live && h.stop == null && isOpen() && mins < 15 * 60 + 15 &&
+            (Broker.lostPending(lostStopKey(item, h)) || lostStopKey(item, h) in stopNotRested)) {
             h = placeLiveStop(b, item, h, h.stopAt)
             b.held[id] = h
         }
@@ -1134,7 +1135,7 @@ object PineAuto {
             sells.filter { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed &&
                 com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) in 1..h.qty }
                 .minByOrNull { kotlin.math.abs(it.trigger - trig) }?.let { orphan ->
-                    Broker.forgetLost(lostKey)
+                    Broker.forgetLost(lostKey); stopNotRested -= lostKey
                     runCatching { Diag.record("pine", "${label(item)}: a stop of the scripts' resting on $sym with no holding claiming it (${orphan.id}): taken as its stop") }
                     ownerTag("kite:${orphan.id}", "${label(item)} · stop")
                     return h.copy(stop = orphan.id, stopAt = orphan.trigger.takeIf { it > 0 } ?: trig)
@@ -1148,8 +1149,12 @@ object PineAuto {
             val lot = spec.lotSize.coerceAtLeast(1)
             stopQty = ((h.qty - (others - extra).coerceAtLeast(0)).coerceAtLeast(0) / lot) * lot
             if (stopQty <= 0) {
-                com.optionslab.app.work.Alerts.error("${label(item)}: the stop on $sym was not placed at Zerodha because other working sell orders " +
-                    "already cover what is held (${sells.joinToString { "${it.type} ${it.id}" }}); the app watches the level instead.", "Pine live")
+                // (Review: tried again on the next checks - the positions may trail the fill, or the other sale end - never given up;
+                // said once until it rests.)
+                if (stopNotRested.size > 200) stopNotRested.clear()
+                if (stopNotRested.add(lostKey)) com.optionslab.app.work.Alerts.error("${label(item)}: the stop on $sym was not placed at Zerodha " +
+                    "because other working sell orders already cover what is held (${sells.joinToString { "${it.type} ${it.id}" }}); the app " +
+                    "watches the level and tries again on each check.", "Pine live")
                 return h
             }
         }
@@ -1163,9 +1168,13 @@ object PineAuto {
                 "placed at Zerodha; the app watches it instead.", "Pine live")
             return h
         }
+        stopNotRested -= lostKey
         ownerTag("kite:$oid", "${label(item)} · stop")
         return h.copy(stop = oid, stopAt = trig)
     }
+
+    /** 20 Nov 2026 (audit B5 deep review): holdings ([lostStopKey]) whose stop found no room to rest: tried again on each check. Memory. */
+    private val stopNotRested: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /** 20 Nov 2026 (audit B5 deep review): the key [h]'s lost stop is looked for under (the script, the contract and the fill: what never changes for the holding). */
     private fun lostStopKey(item: PineScripts.Item, h: Held) = "pinestop:${item.id}:${h.kite}:${h.entry}"

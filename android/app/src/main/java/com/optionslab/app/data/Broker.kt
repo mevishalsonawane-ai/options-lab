@@ -1804,7 +1804,7 @@ object Broker {
         val offNow = serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
         val off = mark?.offset?.takeIf { o -> offNow == null || kotlin.math.abs(offNow - o) <= OFFSET_MOVED_MS }
         val since = mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
-            ?: sentAt?.minusMinutes(3) ?: now.minusMinutes(3)
+            ?: sentAt?.minusMinutes(1) ?: now.minusMinutes(3)
         val before = mark?.before?.mapTo(HashSet()) { it.id }.orEmpty()
         return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
@@ -1886,6 +1886,8 @@ object Broker {
                             /** When it was sent, by the phone's market clock: the search's start even once the send's own mark is gone. */
                             val sentAt: java.time.LocalDateTime) {
         @Volatile var lookedMs = 0L
+        /** When a caller last asked after it ([lookLost]): one no caller has asked after for long belongs to a trade long gone. */
+        @Volatile var askedMs = sinceMs
         @Volatile var foundId: String? = null
         /** When a read of the book last SUCCEEDED without finding it (0: never). */
         @Volatile var readOkAtMs = 0L
@@ -1914,9 +1916,12 @@ object Broker {
      * [o] ([what], for Boss's words) was sent under [key], its reply lost and not found in the book yet ([known]: never adopted).
      * [liveOnly] (a stop): an order that died unfilled (REJECTED, or CANCELLED with nothing filled) is never taken for it - a stale key never
      * adopts a dead stop; one that filled (COMPLETE, or cancelled after a part) is still found, so its caller books the fill. Never pruned
-     * while unresolved (an unknown order dropped could be sent twice): each ends found, given up on after a good read, or forgotten.
+     * while a caller still asks after it (an unknown order dropped could be sent twice): each ends found, given up on after a good read,
+     * or forgotten; only one no caller has asked after for an hour (its trade long gone) is let go, and only past 500 kept.
      */
     fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false) {
+        // (Bounded: only ones no caller has asked after for an hour - their trades long gone - are let go, and only past 500.)
+        if (lostWrites.size > 500) lostWrites.entries.removeIf { System.currentTimeMillis() - it.value.askedMs > 3_600_000L }
         lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what, liveOnly,
             runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }))
     }
@@ -1947,6 +1952,7 @@ object Broker {
     fun lookLost(key: String): LostLook? {
         val w = lostWrites[key] ?: return null
         val now = System.currentTimeMillis()
+        w.askedMs = now
         if (w.foundId == null && w.searching?.isActive != true && now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
             w.lookedMs = now
             if (lostSearchInlineForTest) kotlinx.coroutines.runBlocking { searchLost(w) }
