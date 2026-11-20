@@ -150,7 +150,7 @@ object Guard {
         // Without the account the limits cannot be judged, so entries wait.
         if (account == null) return if (limits.killSwitch) killed
             else listOf("The account could not be read to check its limits; try again in a moment.")
-        val out = AccountGuard.refusals(order, account, limits)
+        val out = countShadow(order, account, limits)
         // G1-1: unknown funds refuse an entry even when no drawdown limit is set (so the engine said nothing about equity).
         // The reason never starts with "Drawdown limit", so it never engages the kill switch ([onRefusal]).
         if (!account.capital.isFinite() && out.none { it.startsWith("Equity is unknown") || it.startsWith("The kill switch") } &&
@@ -166,6 +166,21 @@ object Guard {
         if (out.any { it.startsWith("Drawdown limit") && it.contains("its peak") } && AccountGuard.drawdownNotFromToday(account))
             return out + WITHDRAWAL_HINT
         return out
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 6; coordinator: a new live skip starts in shadow): the guard's refusals of a live entry, with today's
+     * order count unknown judged by the order count check ([OrderCountCheck]). In shadow (its default) the entry is judged as it always
+     * was (the unknown count as 0); when that unknown count alone would refuse it, it is logged and counted ("would have refused: order
+     * count unknown"). On, the refusal stands. A count that was read is judged as ever. Memory only.
+     */
+    internal fun countShadow(order: AccountGuard.Order, account: AccountGuard.Account, limits: AccountGuard.Limits): List<String> {
+        val strict = AccountGuard.refusals(order, account, limits)
+        if (account.ordersKnown) return strict
+        val asBefore = AccountGuard.refusals(order, account.copy(ordersKnown = true), limits)
+        // (Refused anyway for another reason, or not refused at all: the count decides nothing, so nothing is counted.)
+        if (asBefore.isNotEmpty() || strict.isEmpty()) return asBefore
+        return if (OrderCountCheck.judge(order.symbol, order.side, account.minuteOfDay)) strict else asBefore
     }
 
     /** Said beside a drawdown today's trading does not explain. */

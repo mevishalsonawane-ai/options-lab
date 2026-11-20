@@ -416,10 +416,12 @@ class FakeKite : Closeable {
      * unchanged): the phone's clock against Zerodha's is then measured from them.
      */
     @Volatile var dated = false
+    /** 20 Nov 2026 (audit B5): Zerodha's clock in the Date header moved by this many ms (a phone clock stepped, as the phone sees it). */
+    @Volatile var dateShiftMs = 0L
 
     private fun ok(data: Any?): MockResponse = closing(MockResponse().setResponseCode(200))
         .addHeader("Content-Type", "application/json").setBody(JSONObject().put("status", "success").put("data", data ?: JSONObject.NULL).toString())
-        .apply { if (dated) addHeader("Date", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME.format(java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC))) }
+        .apply { if (dated) addHeader("Date", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME.format(java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).plusNanos(dateShiftMs * 1_000_000L))) }
 
     private fun error(code: Int, type: String, message: String): MockResponse = closing(MockResponse().setResponseCode(code))
         .addHeader("Content-Type", "application/json")

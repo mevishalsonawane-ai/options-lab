@@ -301,9 +301,9 @@ data class AppSettings(
             // caller is the order path, which never waits on a vault write): the background write is waited for, and if it
             // failed the key is written directly, tried again a few times. A process death or a failed write no longer loses it.
             runCatching { killWriter.execute { persistKill() } }
-            // 20 Nov 2026 (audit B5, item 9): the app's working ENTRY orders at Zerodha cancelled too (never an exit or a stop), in the
-            // background: nothing here waits on it.
-            runCatching { Broker.killEntriesSoon("the guard") }
+            // 20 Nov 2026 (audit B5, item 9; coordinator: in shadow when it is not Boss's own act): the bots' working entry orders it would
+            // cancel are only LOGGED, in the background; nothing is cancelled and nothing here waits on it.
+            runCatching { Broker.killEntriesSoon("the guard", act = false) }
         }
 
         /** The kill switch's own disk writer (one daemon thread; never the order path's or the screen's). */
@@ -366,9 +366,9 @@ data class AppSettings(
          */
         fun saveChanged(from: AppSettings, to: AppSettings) {
             saveChangedInner(from, to)
-            // 20 Nov 2026 (audit B5, item 9): the kill switch turned on here (Boss's switch, Jarvis's "kill switch on") and saved: the
-            // app's working ENTRY orders at Zerodha are cancelled too (never an exit or a stop), in the background.
-            if (!from.guardKill && to.guardKill) runCatching { Broker.killEntriesSoon("the kill switch") }
+            // 20 Nov 2026 (audit B5, item 9): the kill switch turned on here and saved (Jarvis, voice, Autopilot - or Boss's own switch,
+            // whose page asks the cancel itself): the bots' working entry orders it would cancel are only LOGGED here (shadow).
+            if (!from.guardKill && to.guardKill) runCatching { Broker.killEntriesSoon("the kill switch", act = false) }
         }
 
         private fun saveChangedInner(from: AppSettings, to: AppSettings) {

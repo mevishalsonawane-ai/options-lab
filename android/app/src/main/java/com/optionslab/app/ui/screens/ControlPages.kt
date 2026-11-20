@@ -711,6 +711,8 @@ fun RiskPage(model: AppModel) {
             item { AccountStopCard(model) }
             // 15 Nov (Boss): the funds check on the arms' live entries (in shadow until switched on; off again takes the PIN).
             item { FundsCheckCard(model) }
+            // 20 Nov 2026 (audit B5): live entries while today's order count cannot be read (in shadow until switched on; off takes the PIN).
+            item { OrderCountCheckCard(model) }
             // 19 Nov 2026 (audit batch 2, B2-B): paper-only refusals of entries that could go live - shadow until switched on (on takes the PIN).
             item { PaperRefusalLiveCard(model) }
             // 19 Nov (Boss: "i want it to run until i stop them"): the four automatic stops on R51, R72 and Liquidity (off by his choice; off takes the PIN).
@@ -854,7 +856,12 @@ private fun GuardCard(model: AppModel) {
             text = { Text(if (turnOn) "No new position is opened until you clear it. Exits and the expiry square-off still go through." else "Orders are allowed again, within these limits.", style = Type.bodySmall) },
             confirmButton = { TextButton({
                 confirmKill = null
-                loosen(!turnOn, com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) { model.update { it.copy(guardKill = turnOn) } }
+                loosen(!turnOn, com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) {
+                    model.update { it.copy(guardKill = turnOn) }
+                    // 20 Nov 2026 (audit B5, item 9): Boss's own switch, his explicit act: the bots' working entry orders at Zerodha are
+                    // cancelled too (never an exit, a stop, a possible hedge or his own), in the background (no I/O here).
+                    if (turnOn) runCatching { com.optionslab.app.data.Broker.killEntriesSoon("your kill switch", act = true) }
+                }
             }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
             dismissButton = { TextButton({ confirmKill = null }) { Text("Cancel") } },
         )

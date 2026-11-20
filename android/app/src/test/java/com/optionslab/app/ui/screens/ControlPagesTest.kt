@@ -525,6 +525,10 @@ class ControlPagesTest {
         tap("Turn on")
         waitSettings { it.guardKill }
         compose.onNodeWithText("ON: new entries are refused", substring = true).assertExists()
+        // 20 Nov 2026 (audit B5): Boss's own switch is the one that cancels the bots' working entries (his explicit act); the settings
+        // change itself only asks for the log (shadow), as Jarvis's would.
+        assertTrue(com.optionslab.app.data.Broker.killRequestsForTest.toList().toString(),
+            ("your kill switch" to true) in com.optionslab.app.data.Broker.killRequestsForTest.toList())
         compose.until(10_000) { AppSettings.load().guardKill }
         toggle("Kill switch")
         compose.waitForText("Clear the kill switch?")
