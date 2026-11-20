@@ -5249,10 +5249,22 @@ object OrbArms {
      * that [orders] (this exit's own read of Zerodha's order book) does not show - it may still be filling, unseen - so the contract is
      * never sold beyond what is held. One the read shows is counted there already (working, or filled for the positions-lag guard).
      */
-    private fun lostPending(sym: String, p: Position, orders: Collection<Broker.OrderRow>): Int =
-        lostOn(sym).filter { l -> l.foundId == null && l.id != p.lostId &&
-            orders.none { it.symbol == sym && it.side == "SELL" && it.qty == l.order.quantity && it.type == l.order.orderType && it.id !in l.known }
-        }.sumOf { it.order.quantity }
+    private suspend fun lostPending(sym: String, p: Position, orders: Collection<Broker.OrderRow>): Int {
+        val lost = lostOn(sym).filter { it.foundId == null && it.id != p.lostId }.sortedBy { it.id }
+        if (lost.isEmpty()) return 0
+        // (A row shows a lost sale only when it could be it - NFO MIS, the same side, size, type and tag, not known when that sale went,
+        // and claimed by no owner label (every sale the app knows the id of is labelled) - and each row shows one lost sale at most.)
+        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return lost.sumOf { it.order.quantity }
+        val free = orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && "kite:${it.id}" !in owners }
+            .toMutableList()
+        var pending = 0
+        for (l in lost) {
+            val tag = l.order.tag.filter { c -> c.isLetterOrDigit() }.take(20)
+            val row = free.firstOrNull { it.qty == l.order.quantity && it.type == l.order.orderType && it.tag == tag && it.id !in l.known }
+            if (row != null) free.remove(row) else pending += l.order.quantity
+        }
+        return pending
+    }
 
     /** True while [l] is within its hold (no read). */
     private fun lostExitHolds(l: LostExit): Boolean = epochMs(now()) - l.sinceMs in 0 until LOST_EXIT_HOLD_MS
@@ -5374,9 +5386,9 @@ object OrbArms {
         var room = p0.qty
         if (seen != null) {
             // (20 Nov 2026, deep review F1: less a lost sale of another part that may still be filling, unseen - [lostPending].)
-            val held = (seen.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } - lostPending(sym, p, seen.orders))
-                .coerceAtLeast(0)
-            if (p.stopOrderId != null && held <= 0) return p to null
+            val heldRaw = seen.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
+            val held = (heldRaw - lostPending(sym, p, seen.orders)).coerceAtLeast(0)
+            if (p.stopOrderId != null && heldRaw <= 0) return p to null
             val lot = runCatching { Broker.spec("NFO", sym).lotSize }.getOrNull()
             if (lot != null && held > 0) {
                 fun left(l: List<Broker.OrderRow>) = l.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
@@ -5408,7 +5420,8 @@ object OrbArms {
                         // entry, the arms' live copies' unconfirmed buys - as shrinkToHeld: one may hold nothing and hide Boss's own lots.)
                         val apps = b.positions.filter { it.open && it.live && !it.unconfirmed && it.kite == sym }.sumOf { it.qty } +
                             ArmLive.view.value.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side > 0 && !it.unconfirmed }.sumOf { it.qty }
-                        val cancels = why !in TAKE_EXITS && held <= apps
+                        // (Against what Zerodha holds itself: the app's trades there - a part whose lost sale is pending included.)
+                        val cancels = why !in TAKE_EXITS && heldRaw <= apps
                         var out = cancels
                         if (cancels) for (o in bosses) {
                             runCatching { Broker.cancel(o.id, o.variety) }
