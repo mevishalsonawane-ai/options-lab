@@ -44,6 +44,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  * stop the exchange refused or cancelled giving its reason no longer blocks covering the position again that day; one cancelled
  * with no reason given (Boss in Kite) still does, and Boss is told loudly that the position has no stop ([Protections]).
  *
+ * 20 Nov 2026 (audit: "it runs only in Live and in NSE hours" - kept, on purpose, and why): in Paper Boss has chosen that the app sends
+ * no real order by itself, so nothing new is placed at Zerodha then (CLAUDE.md: real orders only in Live); it covers NSE and BSE
+ * options only (MCX, futures and stock are left alone, [ManualCoverRule.covered]), which trade only in NSE hours, when a DAY stop can
+ * rest (09:15 to 15:24, before the 15:25 flat-by). What it has already placed is NOT limited to those hours or to Live: the
+ * protections' own watch ([Protections.tick]) runs in every pass in Paper and Live - one exit filled cancels the other, a carried
+ * position's stop rests overnight as a GTT and is placed again at the next open.
+ *
  * It only ever ADDS exits (lowers risk, allowed for live by the safety rules). It never places an entry, never resizes and never
  * cancels or changes Boss's orders. It runs in the watch's pass like [Protections.tick], never on the order or tick path; its
  * switch is read once in the background at start and is memory-only for the pass. Never spoken: the app's banners and the

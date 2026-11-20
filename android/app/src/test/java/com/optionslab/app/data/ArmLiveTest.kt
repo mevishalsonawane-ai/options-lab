@@ -357,6 +357,24 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("never more resting than held", 30, kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty - it.filled })
     }
 
+    /** Final review: a positions row with no symbol never stops an arm's live entry resting its stop at Zerodha. */
+    @Test fun aRowWithNoSymbolNeverStopsAnArmsStopPlacement() {
+        kite.extraNetRows = listOf(org.json.JSONObject().put("exchange", "NFO").put("product", "NRML").put("quantity", 75))
+        ArmLive.entered(ask(com.optionslab.engine.orb.VixDivRules.SOURCE, "nosym"))
+        assertNotNull("its stop rests at Zerodha", view().open.single().stopOrderId)
+        assertTrue(kite.placed.any { it.form["order_type"] == "SL" })
+    }
+
+    /** Deep review: a malformed row in Zerodha's positions reply never stops an arm's exit of what was read. */
+    @Test fun aMalformedRowNeverStopsAnArmsSquareOff() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.VixDivRules.SOURCE, "sqm"))
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", "NIFTY26XYZ").put("exchange", "NFO").put("product", "MIS"), org.json.JSONObject().put("exchange", "NFO").put("product", "NRML").put("quantity", 75))
+        ArmLive.testNow = Market.today().atTime(15, 15).atZone(com.optionslab.engine.IST)
+        watch()
+        assertEquals("square_off", view().closed.single().why)
+        assertEquals(0, held())
+    }
+
     @Test fun anIntradayTradeIsSquaredOffAt1515() {
         ArmLive.entered(ask(com.optionslab.engine.orb.VixDivRules.SOURCE, "sq"))
         ArmLive.testNow = Market.today().atTime(15, 15).atZone(com.optionslab.engine.IST)

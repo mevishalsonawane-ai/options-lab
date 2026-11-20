@@ -66,6 +66,23 @@ class LossBreakerTest : RobolectricTest() {
      * and entries in every pass. A hung read of Zerodha's positions holds it 5 s at most, and the read itself gives up within
      * its budget; the paper limit is still checked meanwhile.
      */
+    /** Deep review: a malformed row in Zerodha's positions reply never stops the loss limit's sale of what was read. */
+    @Test fun aMalformedRowNeverStopsTheLossLimitsSale() {
+        kite.login()
+        AutomationSupport.liveSettings()
+        AutomationSupport.security(compromised = false)
+        runBlocking {
+            assertEquals(null, Strategies.save(AutomationSupport.strategy("Breaker test", Position.B to OptionType.CE)))
+            val id = Strategies.all().single().def.id
+            Strategies.setLiveEnabled(id, true)
+            Strategies.start(id, RunMode.LIVE, "manual", confirmedByOwner = true, compromised = false)
+        }
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", "NIFTY26XYZ").put("exchange", "NFO").put("product", "NRML"), org.json.JSONObject().put("exchange", "NFO").put("product", "NRML").put("quantity", 75))
+        losing(3_000.0)
+        check()
+        assertEquals("the run's leg is sold", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+    }
+
     @Test fun aHungPositionsReadHoldsThePassFiveSecondsAtMost() {
         kite.login()
         kite.hang += "/portfolio/positions"

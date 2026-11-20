@@ -55,6 +55,8 @@ class GttLiveTest : RobolectricTest() {
     }
 
     private fun plan(m: AppModel, qty: Int, stop: Double?, target: Double?): AppModel.GttPlan {
+        // 20 Nov 2026 (audit): the position the GTT protects, as Zerodha shows it (the GTT is checked against it just before it goes).
+        kite.position(sym, qty, 100.0)
         m.planGtt("NFO", sym, "NRML", qty, stop, target)
         return BrokerArea.await("the GTT plan") {
             (m.gttPlan.value as? Load.Done)?.value ?: (m.gttPlan.value as? Load.Failed)?.let { throw AssertionError(it.why) }
@@ -107,8 +109,9 @@ class GttLiveTest : RobolectricTest() {
             assertEquals("LIMIT", o.getString("order_type")); assertEquals("NRML", o.getString("product"))
             assertEquals(g.orders[i].price!!, o.getDouble("price"), 1e-9)
         }
-        // Each leg fires a limit 5% beyond its trigger: it fills in a fast market without being a market order.
-        assertEquals(85.5, orders.getJSONObject(0).getDouble("price"), 1e-9)
+        // Each leg fires a limit beyond its trigger: it fills in a fast market without being a market order. 20 Nov 2026 (audit): the
+        // stop leg 10% past its trigger (a gap through the stop still fills), the target leg 5% as before.
+        assertEquals(81.0, orders.getJSONObject(0).getDouble("price"), 1e-9)
         assertEquals(123.5, orders.getJSONObject(1).getDouble("price"), 1e-9)
         BrokerArea.await("the placed message") { BrokerArea.alerted("GTT placed (#1001): Zerodha holds it even when the phone is off.").takeIf { it } }
         BrokerArea.await("the GTT list refreshed") { m.gtts.value.singleOrNull()?.takeIf { it.id == 1001L } }
