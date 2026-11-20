@@ -987,7 +987,7 @@ object ArmLive {
             lossLimit = runCatching { LossBreaker.liveDoorTripped() }.getOrDefault(true))
         if (LiveMirror.refusal(g) != null) return g
         val g2 = g.copy(dayLock = runCatching { DayLockGuard.refusal(true) }.getOrElse { "the day lock could not be checked" },
-            accountStop = if (shadow) null else accountStop(), loggedIn = Broker.loggedIn)
+            accountStop = if (shadow || !accountStopActs(key)) null else accountStop(), loggedIn = Broker.loggedIn)
         if (LiveMirror.refusal(g2) != null) return g2
         return g2.copy(compromised = !shadow && runCatching {
             if (testSecurityFails) throw java.io.IOException("test: the security check could not run")
@@ -1013,6 +1013,17 @@ object ArmLive {
         val st = com.optionslab.ira.LiquidityStopRule.check(mine + orb, now().toLocalDate())
         if (st.stopped) st.why else null
     }.getOrElse { ACCOUNT_UNCHECKED }
+
+    /**
+     * 20 Nov 2026 (Boss: "Yes, make it follow switch", after "Its off then why separate button"): whether [accountStop] refuses arm
+     * [key]'s live entries. For R51, R72 and Liquidity (every book; [com.optionslab.ira.ArmAutoStops.covers], by source) it follows
+     * Boss's "Liquidity live stop rule applies to R51, R72 and Liquidity" switch: off, this same -Rs 40,000 / -Rs 13,000-a-month rule
+     * no longer refuses them, whenever it was reached; on, it refuses as before. Every other arm keeps it always. Before the switches
+     * are read every rule counts as on (the stop keeps acting). Memory only.
+     */
+    internal fun accountStopActs(key: String): Boolean = runCatching {
+        ArmAutoStopsHost.acts(com.optionslab.ira.ArmAutoStops.Rule.LIVE_STOP, key)
+    }.getOrDefault(true)
 
     /** The account stop rule's refusal when its record could not be read (final review F3). */
     internal const val ACCOUNT_UNCHECKED = "the account stop could not be checked"
@@ -3754,6 +3765,46 @@ object ArmLive {
             if (it.stopOrderId != null) " ${stopWords(it)} at Zerodha" else " stop watched by the app" } + ")") +
             ", ${v.openShadow.size} shadow open, ${v.closed.size} closed live; Trade live off: " + (off.joinToString().ifEmpty { "none" }) +
             "; out of shadow: " + (live.joinToString().ifEmpty { "none" }) + (if (v.unreadable) "; BOOK UNREADABLE: no live entries" else "")
+    }
+
+    /**
+     * 20 Nov 2026 (the "Share full settings and state" file, [SettingsShare]): every registered paper book's trades now, by arm key
+     * ([Host.open] is memory only and never blocks). A book not read yet is left out.
+     */
+    internal fun paperLegsNow(): Map<String, List<PaperLeg>> =
+        hosts.values.flatMap { h -> runCatching { h.open() }.getOrNull().orEmpty() }.groupBy { it.key }
+
+    /**
+     * 20 Nov 2026 (the same file): the arms' live-copies account stop ([accountStop]) as an entry would read it now, with its figures -
+     * from memory only (this book's view and the ORB family's copy as last read, [OrbArms.closedLiveKept]), never the locks. The entry
+     * itself still reads the books; a record not in memory is said, never guessed.
+     */
+    internal fun accountStopWords(): String = accountStopNow().first
+
+    /**
+     * [accountStopWords] with the refusal an entry would meet now: the rule's reason once reached, [ACCOUNT_UNCHECKED] while the ORB
+     * family's record is not in memory (as the entry refuses an unread record); null while it may go.
+     */
+    internal fun accountStopNow(): Pair<String, String?> {
+        val today = runCatching { now().toLocalDate() }.getOrElse { LocalDate.now(com.optionslab.engine.IST) }
+        fun trade(t: LocalDateTime, net: Double) =
+            com.optionslab.ira.LiquidityStopRule.Trade(t.atZone(com.optionslab.engine.IST).toInstant().toEpochMilli(), t.toLocalDate(), net)
+        val mine = _view.value.closed.mapNotNull { p -> p.exitTime?.let { trade(it, p.net ?: 0.0) } }
+        val orbKept = runCatching { OrbArms.closedLiveKept() }.getOrNull()
+        val orb = orbKept.orEmpty().mapNotNull { p ->
+            val t = p.exitTime ?: return@mapNotNull null
+            val net = p.exit?.let { (it - p.entry) * p.qty - p.charges } ?: return@mapNotNull null
+            trade(t, net)
+        }
+        val st = com.optionslab.ira.LiquidityStopRule.check(mine + orb, today)
+        val words = "Arms' live-copies account stop (-Rs 40,000 from the best or -Rs 13,000 in a month, over the mirrored arms' and the ORB " +
+            "family's live trades): " + (if (st.stopped) "REACHED, blocking every mirrored live entry: ${st.why}" +
+                // 20 Nov 2026 (main, Boss: "make it follow switch"): R51 and R72 pass it while his "Liquidity live stop rule" switch is off.
+                (if (!accountStopActs(com.optionslab.engine.orb.DonchianArm.SOURCE)) "; not acting on R51 and R72 while your \"Liquidity live stop rule\" switch is off" else "")
+                else "not reached") +
+            " · ${st.trades} live trade(s), drawdown ${LiveMirror.rs(st.drawdown)}, worst ${LiveMirror.rs(st.worstDrawdown)}, this month ${LiveMirror.rs(st.month)}" +
+            (if (orbKept == null) " · the ORB family's live record is not in memory yet (an entry reads it; unread, it refuses)" else "") + "."
+        return words to (if (st.stopped) st.why else if (orbKept == null) ACCOUNT_UNCHECKED else null)
     }
 
     /**

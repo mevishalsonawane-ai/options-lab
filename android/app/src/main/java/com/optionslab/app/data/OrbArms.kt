@@ -1860,6 +1860,26 @@ object OrbArms {
     /** The arms' closed Zerodha positions (the self-review sets them against the backtest apart from paper; reads only). */
     suspend fun closedLive(): List<Position> = lock.withLock { book().positions.filter { !it.open && it.live } }
 
+    /**
+     * 20 Nov 2026 (the "Share full settings and state" file, [SettingsShare]): [closedLive] from the copy as last read or saved
+     * ([viewBook]), never waiting on the arms' lock; null while no copy is in memory. Memory only.
+     */
+    internal fun closedLiveKept(): List<Position>? = viewBook?.takeIf { it.gen == wipeGen }?.positions?.filter { !it.open && it.live }
+
+    /**
+     * 20 Nov 2026 (the same file): each Liquidity 15+5 book on its own line - on or off, cleared for Zerodha by Boss's own switch or
+     * not, its index parked, its status - from the copy as last read or saved ([viewBook]); null while none is in memory. Memory only.
+     */
+    internal fun liquidityBookLines(): List<String>? = viewBook?.takeIf { it.gen == wipeGen }?.let { b ->
+        LiquidityRules.BOOKS.map { a ->
+            val u = LiquidityRules.underlyingOf(a)
+            "${a.label} ($u ${LiquidityRules.minutesOf(a)}-min): " + (if (b.armed[a.source] == true) "on" else "off") +
+                " · cleared for Zerodha by your switch: " + (if (liveCleared(b, a.source)) "yes" else "no (paper until you switch it on on Home)") +
+                (if (u in b.parked) " · its index is parked" else "") + (if (b.auto[a.source] == false) " · approve each entry" else " · automatic") +
+                " · status: " + describe(b.status[a.source] ?: "").ifEmpty { "-" }
+        }
+    }
+
     /** Today's closed positions, paper and live (the findings bus: a stop or a target hit). Reads only. */
     suspend fun closedToday(): List<Position> {
         val d = now().toLocalDate()

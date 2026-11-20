@@ -1189,6 +1189,8 @@ internal fun SelfTestCard() {
                 com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
             }
         }, Modifier.fillMaxWidth()) { Text("Copy diagnostics") }
+        // 20 Nov 2026: beside it, every setting and the arms' live state as ONE file to share (a pasted note is cut at about 140 lines).
+        ShareStateButton(note = false)
         Note("This app: build ${com.optionslab.app.BuildConfig.COMMIT}")
         ToggleRow("Run it by itself at 09:20", "Once on each trading day, in the background: the same check without the stream drop. " +
             "It only reads, plus its own paper trade. Off unless you turn it on.", auto, keepSub = true) { on ->

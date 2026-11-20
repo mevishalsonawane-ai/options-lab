@@ -1335,6 +1335,37 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("both readable: it goes", 2, kite.placed.size)
     }
 
+    /**
+     * 20 Nov 2026 (Boss: "make it follow switch"): the arms' live account stop follows the "Liquidity live stop rule" switch for R51,
+     * R72 and Liquidity only. Off: R51 goes although the stop refuses (here: its record cannot be read); another arm (R52) is still
+     * refused. On again: R51 is refused as before.
+     */
+    @Test fun theArmsLiveAccountStopFollowsBosssSwitchForTheThreeArmsOnly() {
+        val rule = com.optionslab.ira.ArmAutoStops.Rule.LIVE_STOP
+        val oov = com.optionslab.engine.orb.OovArm.SOURCE
+        try {
+            ArmAutoStopsHost.resetForTest()
+            assertTrue(ArmLive.accountStopActs(donchian))
+            assertTrue(ArmAutoStopsHost.set(rule, false, pinConfirmed = true, log = false).startsWith("Off"))
+            assertFalse(ArmLive.accountStopActs(donchian))
+            assertFalse(ArmLive.accountStopActs(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE))
+            assertTrue("another arm keeps it", ArmLive.accountStopActs(oov))
+            ArmLive.testAccountFails = true
+            ArmLive.entered(ask(oov, "oov"))
+            assertTrue("R52 refused", kite.placed.isEmpty())
+            assertEquals(view().refused[oov], true, view().refused[oov]?.contains("account stop could not be checked"))
+            ArmLive.entered(ask(donchian, "r51"))
+            val sent = kite.placed.size
+            assertTrue("R51 goes with the switch off (its buy and its stop)", sent >= 1)
+            assertEquals(null, view().refused[donchian]?.takeIf { "account stop" in it })
+            assertTrue(ArmAutoStopsHost.set(rule, true, log = false).startsWith("On"))
+            assertTrue(ArmLive.accountStopActs(donchian))
+            ArmLive.entered(ask(donchian, "r51b"))
+            assertEquals("R51 refused again with the switch on", sent, kite.placed.size)
+            assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("account stop could not be checked"))
+        } finally { ArmLive.testAccountFails = false; ArmAutoStopsHost.resetForTest() }
+    }
+
     /** F4: a shadow trade bought at the ask, and its stop judged on the minute's low: a wick through it fills it. */
     @Test fun aShadowStopIsJudgedOnTheMinutesLowNotJustThePriceAtTheLook() {
         runBlocking { ArmLive.setShadow(donchian, true, pinConfirmed = false) }
