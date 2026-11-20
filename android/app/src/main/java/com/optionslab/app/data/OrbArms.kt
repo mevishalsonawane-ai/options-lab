@@ -5545,7 +5545,10 @@ object OrbArms {
         // (The part left with none gets a stop from the price check only once the other sales no longer cover it ([restExchangeStop] caps
         // it the same way); meanwhile none rests for it and that is said each minute. Main always put the stop back after a refused
         // sale; this keeps that, capped so it never sells more than is held - only a lower risk, so no CLAUDE.md change.)
-        suspend fun unsold(cap: Int, orders: Collection<Broker.OrderRow>?, refused: Boolean = false): Pair<Position, Position?> {
+        // (20 Nov 2026, final review: [pending] - nothing sold only because another part's lost sale may still be filling: put back with
+        // Stop for today on and from 15:10 too, as a refused sale is - the next look sells once that sale is known - but never beside a
+        // square-off's or its own working sale, and never marked refused.)
+        suspend fun unsold(cap: Int, orders: Collection<Broker.OrderRow>?, refused: Boolean = false, pending: Boolean = false): Pair<Position, Position?> {
             if (p.stopOrderId == null) return p to null
             val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return p.copy(stopOrderId = null) to null
             val lot = spec.lotSize.coerceAtLeast(1)
@@ -5568,8 +5571,8 @@ object OrbArms {
             val heldBack = when {
                 refused -> null
                 p.stopByYou -> "you cancelled its stop yourself"
-                runCatching { Strategies.stoppedToday() }.getOrDefault(false) -> "Stop for today"
-                !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "the square-off time"
+                !pending && runCatching { Strategies.stoppedToday() }.getOrDefault(false) -> "Stop for today"
+                !pending && !t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "the square-off time"
                 expiryClosing(p.symbol, sym, t, list) || list.any { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } ||
                     SquareOffExit.inGap("NFO", sym, "MIS") -> "a square-off is selling it"
                 ownSale -> "its own sale is still working"
@@ -5637,10 +5640,10 @@ object OrbArms {
             val workingLeft = working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
             val qty = com.optionslab.engine.risk.ExitQty.sendable(still, workingLeft, p.qty, spec.lotSize)
             // (20 Nov 2026, final review C2: nothing to sell only because another part's lost sale may still be filling - the stop that came
-            // out goes straight back, capped at what may be sold without that count, with every hold a put-back keeps (a square-off's
-            // sale, the 15:05 expiry square-off, its gap): never no stop and nothing sold.)
+            // out goes straight back, capped at what may be sold without that count - with Stop for today and from 15:10 too, but never
+            // beside a square-off's or its own working sale, at the 15:05 expiry square-off or in its gap: never no stop and nothing sold.)
             val qtyRaw = com.optionslab.engine.risk.ExitQty.sendable(heldNow, workingLeft, p.qty, spec.lotSize)
-            if (qty <= 0 && qtyRaw > 0) return unsold(qtyRaw, book)
+            if (qty <= 0 && qtyRaw > 0) return unsold(qtyRaw, book, pending = true)
             // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
             // gone on this read although the read before showed it held - never a stop that could sell into a short: the price check
             // puts it back within a minute while Zerodha shows it held, [restExchangeStop].)

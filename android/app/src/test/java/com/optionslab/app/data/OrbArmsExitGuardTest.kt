@@ -925,6 +925,41 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (final review): at 15:10 book B's stop came out for its exit, but only the count of book A's unseen lost sale left B
+     * nothing to sell (Zerodha's positions still trail a sale that filled): B's stop rests again at once - the 15:10 hold, which keeps a
+     * stop out for a sale that did not go, never applies to this put-back.
+     */
+    @Test fun at1510AStopTakenOutOnlyForAPendingLostSaleRestsAgainAtOnce() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val s2 = stopOrder(30, 170.0, 161.5)
+        val b = position("liquidity15", 30, 200.0, "E2", s2, 170.0).put("level", 52_050.0).put("lot", 30)
+            .put("entryTime", ago(3).toString()).put("signalBar", ago(15).toString())
+        state(listOf(liquidity(30, 200.0, s1, 170.0), b))                  // A's time stop is due; B's is not
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000                                   // the positions trail every fill below
+        kite.trailReads = 1_000                                            // A's sale never shows in the order book
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        pass()
+        assertTrue("A's sale lost and held", OrbArms.lostExitForTest(sym))
+        // An earlier sale of 30 that filled (another trade's, labelled): the lag guard counts it as sold, the positions do not yet.
+        val earlier = runBlocking { Broker.placeOrder(Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb"), exit = true) }
+        runBlocking { Strategies.tagOwner("kite:$earlier", "Liquidity 30m FINNIFTY · square_off") }
+        // 15:10: B squares off; A's search is held up, so its sale stays pending.
+        val gate = java.util.concurrent.CountDownLatch(1)
+        OrbArms.testLostSearch = { gate.await(30, java.util.concurrent.TimeUnit.SECONDS) }
+        OrbArms.testNow = now.toLocalDate().atTime(15, 10, 5).atZone(com.optionslab.engine.IST)
+        kite.requests.clear()
+        try { pass() } finally { gate.countDown(); OrbArms.testLostSearch = null }
+        assertEquals("nothing more sold", 0, marketSells().size)
+        assertEquals("B's stop came out", "CANCELLED", kite.order(s2).status)
+        val bNow = today("liquidity").single { it.arm == "liquidity15" }
+        assertTrue("B still open", bNow.open)
+        val rested = kite.placed.filter { it.form["order_type"] == "SL" }
+        assertEquals("B's stop rests again at once, for its 30", listOf("30"), rested.map { it.form["quantity"] })
+        assertNotNull("on B", bNow.stopOrderId)
+    }
+
+    /**
      * 20 Nov 2026 (final review, plausible 2): a restart while a lost sale still works at Zerodha (the hold is memory only): the next look
      * never rests a second stop beside that working sale, nor sells again.
      */
