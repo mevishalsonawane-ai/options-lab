@@ -21,8 +21,8 @@ import org.junit.runner.RunWith
 
 /**
  * 20 Nov 2026 (audit B5, item 1): Bot settings' "R51 / R72 stale history" card ([StaleHistoryCardFlow]): off (shadow) by default with
- * today's would-have-skipped counted; on is one tap (it only lowers risk); off asks the PIN first (it adds live entries back) and goes off
- * only once it is given; while the book is being read, no switch is shown.
+ * today's would-have-skipped counted; on and off each ask the PIN first (on lets a better history replace the one in use; off adds live
+ * entries back) and change only once it is given; while the book is being read, no switch is shown.
  */
 @org.robolectric.annotation.Config(qualifiers = "w411dp-h2400dp")
 @RunWith(AndroidJUnit4::class)
@@ -33,7 +33,8 @@ class StaleHistoryCardTest {
 
     private fun show(on: Boolean, today: Int, onOn: () -> Unit, offConfirmed: () -> Unit, loaded: Boolean = true) = compose.setContent {
         IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
-            StaleHistoryCardFlow(on, today, null, onOn = onOn, onOffConfirmed = offConfirmed, loaded = loaded) { ok, cancel ->
+            StaleHistoryCardFlow(on, today, null, onOnConfirmed = onOn, onOffConfirmed = offConfirmed, loaded = loaded) { want, ok, cancel ->
+                Text(if (want) "PIN asked to switch on" else "PIN asked to switch off")
                 Text("PIN asked")
                 androidx.compose.material3.TextButton(onClick = ok) { Text("PIN right") }
                 androidx.compose.material3.TextButton(onClick = cancel) { Text("PIN cancel") }
@@ -41,14 +42,19 @@ class StaleHistoryCardTest {
         } }
     }
 
-    @Test fun offInShadowCountsTodayAndOnIsOneTapWithNoPin() {
+    @Test fun offInShadowCountsTodayAndOnAsksThePinFirst() {
         var ons = 0; var offs = 0
         show(on = false, today = 3, onOn = { ons++ }, offConfirmed = { offs++ })
         compose.waitForIdle()
         assertTrue(shows("Off (shadow): taken as before; each is logged"))
         assertTrue(shows("Today: 3 would have skipped", sub = true))
         compose.onNodeWithText(STALE_HISTORY_SWITCH).performClick(); compose.waitForIdle()
-        assertFalse("on lowers risk: no PIN", shows("PIN asked"))
+        assertTrue("on can change live breaks: the PIN first", shows("PIN asked to switch on"))
+        assertEquals("not on before the PIN", 0, ons)
+        compose.onNodeWithText("PIN cancel").performClick(); compose.waitForIdle()
+        assertEquals(0, ons)
+        compose.onNodeWithText(STALE_HISTORY_SWITCH).performClick(); compose.waitForIdle()
+        compose.onNodeWithText("PIN right").performClick(); compose.waitForIdle()
         assertEquals(1, ons); assertEquals(0, offs)
     }
 
@@ -58,7 +64,7 @@ class StaleHistoryCardTest {
         compose.waitForIdle()
         assertTrue(shows("On: such a break waits while the history is read again, else it is let go (paper and live)"))
         compose.onNodeWithText(STALE_HISTORY_SWITCH).performClick(); compose.waitForIdle()
-        assertTrue("the PIN first", shows("PIN asked"))
+        assertTrue("the PIN first", shows("PIN asked to switch off"))
         assertEquals("not off before the PIN", 0, offs)
         compose.onNodeWithText("PIN cancel").performClick(); compose.waitForIdle()
         assertEquals(0, offs)

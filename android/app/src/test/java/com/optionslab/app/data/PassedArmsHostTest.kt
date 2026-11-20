@@ -2715,7 +2715,7 @@ class PassedArmsHostTest : RobolectricTest() {
     @Test fun aStalePickerHistoryIsMarkedReadAgainAndNeverPutOverAWholeOne() {
         pickerDay(true, history = false)
         // (Replaced by a whole one only with the stale-history check on; off, the first kept stays: [offAStalePickerHistoryInUseStays].)
-        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
         stalePickerHistory()
         val prev = PassedArmsHost.previousSession(day)!!
         val why = PassedArmsHost.pickerStale("NIFTY", day)
@@ -2752,14 +2752,22 @@ class PassedArmsHostTest : RobolectricTest() {
         val loose = DonchianArm.Signal("BANKNIFTY", 1, bar, 56_000)
         val words = { sc: Double -> if (sc < 0.5) "skip %.2f".format(java.util.Locale.ENGLISH, sc) else null }
         val src = BreadthDonchianArm.SOURCE
-        assertEquals("skip 0.10", PassedArmsHost.pickDecide(day, src, skip, { 0.1 }, words))
-        assertEquals("a whole score later: still skipped", "skip 0.10", PassedArmsHost.pickDecide(day, src, skip, { 0.9 }, words))
-        assertNull(PassedArmsHost.pickDecide(day, src, take, { 0.9 }, words))
-        assertNull("a take never turns into a skip", PassedArmsHost.pickDecide(day, src, take, { 0.1 }, words))
-        assertNull("not scored: taken", PassedArmsHost.pickDecide(day, src, loose, { null }, words))
-        assertEquals("not fixed until scored", "skip 0.20", PassedArmsHost.pickDecide(day, src, loose, { 0.2 }, words))
+        assertEquals("skip 0.10", PassedArmsHost.pickDecide(null, day, src, skip, { 0.1 }, words))
+        assertEquals("a whole score later: still skipped", "skip 0.10", PassedArmsHost.pickDecide(null, day, src, skip, { 0.9 }, words))
+        assertNull(PassedArmsHost.pickDecide(null, day, src, take, { 0.9 }, words))
+        assertNull("a take never turns into a skip", PassedArmsHost.pickDecide(null, day, src, take, { 0.1 }, words))
+        assertNull("not scored: taken", PassedArmsHost.pickDecide(null, day, src, loose, { null }, words))
+        assertEquals("not fixed until scored", "skip 0.20", PassedArmsHost.pickDecide(null, day, src, loose, { 0.2 }, words))
         // R51's own: apart from R72's.
-        assertNull(PassedArmsHost.pickDecide(day, DonchianArm.SOURCE, skip, { 0.9 }, words))
+        assertNull(PassedArmsHost.pickDecide(null, day, DonchianArm.SOURCE, skip, { 0.9 }, words))
+        // Kept in the book's decisions: a restart (memory gone) never decides it again.
+        val decided = HashSet<String>()
+        val other = DonchianArm.Signal("FINNIFTY", 1, bar, 26_500)
+        assertEquals("skip 0.30", PassedArmsHost.pickDecide(decided, day, src, other, { 0.3 }, words))
+        PassedArmsHost.wipe()
+        assertEquals("skip 0.30", PassedArmsHost.pickDecide(decided, day, src, other, { 0.9 }, words))
+        // With another threshold since, a fixed skip stays a skip.
+        assertNotNull(PassedArmsHost.pickDecide(decided, day, src, other, { 0.9 }, { null }))
     }
 
     @Test fun aSkipOnAPartialScoreIsNeverBoughtOnALaterLook() {

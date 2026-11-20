@@ -195,7 +195,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
 
     @Test fun onAStaleHistorysBreakWaitsAndIsBoughtOnceAWholeOneIsRead() {
         history(session(PassedArmsHost.previousSession(prev)!!))
-        assertTrue(runBlocking { PassedArmsHost.setStaleSkip(true) }.startsWith("On"))
+        assertTrue(runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }.startsWith("On"))
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
         assertTrue("held", real().isEmpty())
         assertTrue(Paper.state.orders.isEmpty())
@@ -212,7 +212,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
     @Test fun onABreakWhoseHistoryNeverComesWholeIsLetGoWhenItsWindowEnds() {
         history(session(prev, until = LocalTime.of(13, 0)))
         assertTrue(PassedArmsHost.historyStale("NIFTY", day)!!.contains("lacks 20 of its last 20"))
-        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
         market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
         market(LocalTime.of(9, 25)); tick(LocalTime.of(9, 25))
         assertTrue(real().isEmpty())
@@ -225,7 +225,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
 
     @Test fun onABreakLetGoHoldsItsSideAndCountsInTheCapsSoItNeverFreesAPlace() {
         history(session(PassedArmsHost.previousSession(prev)!!))
-        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
         // 10:50-10:55 breaks up (its channel still reads the stale session: held), 10:55-11:00 breaks up again on today's 20 bars alone.
         fun nifty(until: LocalTime) = minutes(niftyKey, until) { t -> when {
             t.isBefore(LocalTime.of(10, 50)) -> 25_000.0
@@ -243,7 +243,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
 
     @Test fun onAHeldBreakStaysHeldAcrossARestartEvenWhenTheHistoryIsWholeByThen() {
         history(session(PassedArmsHost.previousSession(prev)!!))
-        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
         fun nifty(until: LocalTime) = minutes(niftyKey, until) { t -> when {
             t.isBefore(LocalTime.of(10, 50)) -> 25_000.0
             t.isBefore(LocalTime.of(10, 55)) -> 25_100.0
@@ -266,7 +266,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         val before = PassedArmsHost.previousSession(prev)!!
         // Yesterday read but for its last bar: kept over a read that misses yesterday altogether (the check on: a better one may replace it).
         history(session(prev, until = LocalTime.of(15, 25)))
-        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(before) else emptyList() }
         runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }
         assertEquals(prev, PassedArmsHost.history("NIFTY", day)!!.sessions.last().date)
@@ -287,8 +287,11 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         assertEquals(1, view().staleShadowToday)
     }
 
-    @Test fun onIsOneTapOffTakesThePinAndTheSwitchIsKept() {
-        assertTrue(runBlocking { PassedArmsHost.setStaleSkip(true) }.startsWith("On"))
+    @Test fun bothWaysTakeThePinAndTheSwitchIsKept() {
+        // On lets a better history replace the one in use (it can make a new break, live too): the PIN as for off.
+        assertTrue(runBlocking { PassedArmsHost.setStaleSkip(true) }.contains("needs your PIN"))
+        assertFalse("unchanged without the PIN", view().staleOn)
+        assertTrue(runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }.startsWith("On"))
         assertTrue(view().staleOn)
         assertTrue(runBlocking { PassedArmsHost.setStaleSkip(false) }.contains("needs your PIN"))
         assertTrue("unchanged without the PIN", view().staleOn)
@@ -345,7 +348,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
 
     @Test fun aStaleOrEmptyHistoryIsReadAgainInTheBackground() {
         history(session(PassedArmsHost.previousSession(prev)!!))
-        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
         assertTrue(PassedArmsHost.historyWanted("NIFTY", day))
         val reads = java.util.concurrent.atomic.AtomicInteger()
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") { reads.incrementAndGet(); session(prev) } else emptyList() }
@@ -360,7 +363,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         assertEquals(n, reads.get())
         // Daily candles alone (no session) are read again too.
         history(emptyList(), daily = listOf(Bar(prev.atStartOfDay(), 1.0, 2.0, 0.5, 1.5)))
-        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
         assertNotNull(PassedArmsHost.history("NIFTY", day))
         assertTrue(PassedArmsHost.historyWanted("NIFTY", day))
     }
@@ -369,7 +372,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         val before = PassedArmsHost.previousSession(prev)!!
         val daily = listOf(Bar(before.atStartOfDay(), 1.0, 2.0, 0.5, 1.5))
         history(session(before), daily)
-        runBlocking { PassedArmsHost.setStaleSkip(true) }
+        runBlocking { PassedArmsHost.setStaleSkip(true, pinConfirmed = true) }
         // A read that brings nothing but daily candles keeps the stale sessions (they are better than none).
         PassedArmsHost.testHistory = { emptyList() }
         runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }

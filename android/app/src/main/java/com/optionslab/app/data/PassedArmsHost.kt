@@ -1044,18 +1044,20 @@ object PassedArmsHost {
     /**
      * 20 Nov 2026 (audit B5, item 1; Bot settings): R51 and R72's stale-history check on or off. On, a break whose 20-bar channel reads an
      * earlier session that does not reach the last trading day ([staleWhy]: yesterday missing, or read in part) waits inside its fill
-     * window while the history is read again, and is let go when the window ends - on paper and live (it only skips, so it lowers risk:
-     * one tap). Off (the default) is shadow: taken as before, each logged "would have skipped (stale history)". Off adds those live entries
-     * back, so it takes [pinConfirmed].
+     * window while the history is read again, and is let go when the window ends - on paper and live. Off (the default) is shadow: taken
+     * as before, each logged "would have skipped (stale history)". Both ways take [pinConfirmed] (20 Nov 2026, deep review): off adds those
+     * live entries back, and on also lets a better history replace the one in use mid-session ([keepHist]), which moves the channels of
+     * every arm reading it and can make a new break, live too.
      */
     suspend fun setStaleSkip(on: Boolean, pinConfirmed: Boolean = false): String {
         if (!ready()) return "The passed arms are not ready yet."
-        if (!on && !pinConfirmed) return "Switching the stale-history check off lets such breaks go live again: it needs your PIN. Nothing changed."
+        if (!pinConfirmed) return if (on) "Switching the stale-history check on lets a better history replace the one in use, which can change live breaks: it needs your PIN. Nothing changed."
+            else "Switching the stale-history check off lets such breaks go live again: it needs your PIN. Nothing changed."
         return lock.withLock {
             val b = book()
             if (b.staleOn == on) return@withLock "The stale-history check is already ${if (on) "on" else "off (shadow)"}."
             b.staleOn = on
-            note(b, if (on) "stale-history check ON (by you): an R51 / R72 break that reads an earlier session not up to the last trading day waits while the history is read again, then is let go (paper and live)"
+            note(b, if (on) "stale-history check ON (Boss's PIN): an R51 / R72 break that reads an earlier session not up to the last trading day waits while the history is read again, then is let go (paper and live)"
                 else "stale-history check OFF (Boss's PIN): such breaks are taken as before (each logged in shadow)")
             save(b)
             runCatching { Diag.record("passed", "Stale-history check: ${if (on) "shadow → on" else "on → shadow"} (by you)") }
@@ -1360,7 +1362,8 @@ object PassedArmsHost {
             val p = b.positions[i]
             if (p.day != today) continue
             val k = pickKey(p) ?: continue
-            val sc = if (p.pick != null) null else (if (p.arm == BreadthDonchianArm.SOURCE) pickScores[k] else r51Scores[k])?.first
+            // (20 Nov 2026: the score that decided the break, when one did; else the last made.)
+            val sc = if (p.pick != null) null else decidingScore(k) ?: (if (p.arm == BreadthDonchianArm.SOURCE) pickScores[k] else r51Scores[k])?.first
             val w = if (p.arm == DonchianArm.SOURCE && p.w20 == null) w20Labels[k] else null
             if (sc == null && w == null) continue
             b.positions[i] = p.copy(pick = sc ?: p.pick, w20 = w ?: p.w20)
@@ -1410,7 +1413,7 @@ object PassedArmsHost {
                 val skip = W20Rule.skips(h.hist5, t, s.bar.entryRow, s.side) ?: return@forEachIndexed
                 // The features are pure, so a score that cannot be made now would not be made later: the W20 label is kept either way
                 // and the line says the picker could not score it (the trade then counts in W20's record, not the picker's).
-                val score = r51Scores[dk]?.first ?: pickScore(today, src, s, earlier, 0, reads)
+                val score = decidingScore(dk) ?: r51Scores[dk]?.first ?: pickScore(today, src, s, earlier, 0, reads)
                 w20Labels[dk] = skip
                 if ("$dk|w20" in b.decided) return@forEachIndexed
                 b.decided += "$dk|w20"
@@ -1504,18 +1507,34 @@ object PassedArmsHost {
      * on one look is never bought on a later one because a fresher score came (its would-be trade's booking failed and was tried again),
      * nor a take turned into a skip. A break it could not score is taken and not fixed, as before. Memory only.
      */
-    internal fun pickDecide(today: LocalDate, src: String, s: DonchianArm.Signal, score: () -> Double?, words: (Double) -> String?): String? {
+    internal fun pickDecide(decided: MutableSet<String>?, today: LocalDate, src: String, s: DonchianArm.Signal, score: () -> Double?,
+                            words: (Double) -> String?): String? {
         if (pickDecisions.keys.any { !it.startsWith("$today|") }) pickDecisions.keys.removeAll { !it.startsWith("$today|") }
         val dk = "$today|$src|${s.underlying}|${s.bar.b}|${s.side}"
-        pickDecisions[dk]?.let { return it.ifEmpty { null } }
+        // (Kept in the book too - "dk|pickFix:score|skip or take" - so a restart never decides the break again.)
+        val fixed = pickDecisions[dk] ?: decided?.firstOrNull { it.startsWith("$dk|$PICK_FIX") }?.substringAfter("|$PICK_FIX")?.split('|')?.let { f ->
+            val sc = f.getOrNull(0)?.toDoubleOrNull() ?: return@let null
+            val skipped = f.getOrNull(1) == "skip"
+            PickFix(sc, if (skipped) words(sc) ?: "R151's picker skipped it on an earlier look (score %.3f; your exception)".format(Locale.ENGLISH, sc) else null)
+        }?.also { pickDecisions[dk] = it }
+        if (fixed != null) return fixed.words
         val sc = score() ?: return null
         val w = words(sc)
-        pickDecisions[dk] = w ?: ""
+        pickDecisions[dk] = PickFix(sc, w)
+        decided?.add("$dk|$PICK_FIX$sc|${if (w != null) "skip" else "take"}")
         return w
     }
 
-    /** 20 Nov 2026: the picker's decision of each break, by its decision key: its skip words, or "" taken ([pickDecide]). Memory only. */
-    private val pickDecisions = java.util.concurrent.ConcurrentHashMap<String, String>()
+    /** 20 Nov 2026: a break's fixed picker decision - the score that decided it and its skip words (null: taken). */
+    internal class PickFix(val score: Double, val words: String?)
+
+    private const val PICK_FIX = "pickFix:"
+
+    /** 20 Nov 2026: the picker's decision of each break, by its decision key ([pickDecide]). Memory (and the book's decisions). */
+    private val pickDecisions = java.util.concurrent.ConcurrentHashMap<String, PickFix>()
+
+    /** The score that decided the break [dk] ([pickDecide]), or null: none decided yet. */
+    private fun decidingScore(dk: String): Double? = pickDecisions[dk]?.score
 
     /**
      * 20 Nov 2026 (audit B5, item 4): whether [s]'s picker inputs are whole - all six picker histories up to the last trading day, and
@@ -1543,7 +1562,7 @@ object PassedArmsHost {
         val order = sigs.mapValues { (_, l) -> l.sortedBy { it.bar.b } }
         val count = sigs.values.flatten().groupingBy { it.bar.b to it.side }.eachCount()
         return { x ->
-            pickDecide(today, src, x, { pickScore(today, src, x, order[x.underlying]?.indexOf(x)?.coerceAtLeast(0) ?: 0, count[x.bar.b to x.side] ?: 0, reads) },
+            pickDecide(b.decided, today, src, x, { pickScore(today, src, x, order[x.underlying]?.indexOf(x)?.coerceAtLeast(0) ?: 0, count[x.bar.b to x.side] ?: 0, reads) },
                 { sc -> pickWords(sc, R72Picker.MODEL) })
         }
     }
@@ -1558,7 +1577,7 @@ object PassedArmsHost {
         val own by lazy { sigs.filter { gate == null || gate(it) == true }.sortedBy { it.bar.b } }
         return { x ->
             val i = own.indexOf(x)
-            pickDecide(today, DonchianArm.SOURCE, x, { if (i < 0) null else pickScore(today, DonchianArm.SOURCE, x, i, 0, reads) },
+            pickDecide(b.decided, today, DonchianArm.SOURCE, x, { if (i < 0) null else pickScore(today, DonchianArm.SOURCE, x, i, 0, reads) },
                 { sc -> pickWords(sc, R51Picker.MODEL) })
         }
     }
@@ -1594,7 +1613,7 @@ object PassedArmsHost {
                 val dk = "$today|$src|$u|${s.bar.b}|${s.side}"
                 if ("$dk|pick" in b.decided) return@forEachIndexed
                 // (20 Nov 2026: the score the decision used, when one was made; else made now.)
-                val score = pickScores[dk]?.first ?: pickScore(today, src, s, earlier, count[s.bar.b to s.side] ?: 0, reads) ?: return@forEachIndexed
+                val score = decidingScore(dk) ?: pickScores[dk]?.first ?: pickScore(today, src, s, earlier, count[s.bar.b to s.side] ?: 0, reads) ?: return@forEachIndexed
                 b.decided += "$dk|pick"
                 lines.getOrPut(s.bar.b to s.side) { ArrayList() } += R72Picker.part(u, score)
             }
@@ -1637,7 +1656,8 @@ object PassedArmsHost {
                 // not pinned for the day, so a restart reads Upstox again.
                 val whole = ones.any { it.start.toLocalDate().isBefore(day) } && daily.any { it.start.toLocalDate().isBefore(day) }
                 // 20 Nov 2026 (audit B5): and only one up to the last trading day: a stale read is never pinned on the phone for the day.
-                if (keepHist(u, day, ones, daily) && cached && whole && !historyWanted(u, day)) runCatching { writeHistCache(u, day, ones, daily) }
+                // (With the check off, the one kept is pinned as before even when stale, so a restart reads back the history in use.)
+                if (keepHist(u, day, ones, daily) && cached && whole && (!staleActs() || !historyWanted(u, day))) runCatching { writeHistCache(u, day, ones, daily) }
             }
             histRead[u] = day
         }
@@ -1678,10 +1698,10 @@ object PassedArmsHost {
     private fun logHistWould(b: Book): Boolean {
         var any = false
         for ((k, words) in histWould) {
+            histWould.remove(k)
             if ("$k|histWould" in b.decided) continue
             b.decided += "$k|histWould"; note(b, words); any = true
         }
-        if (histWould.size > 50) histWould.clear()
         return any
     }
 
@@ -3118,9 +3138,13 @@ object PassedArmsHost {
         // book, else the sane book's bid, else a checked quote) count - kept across looks as the best seen ([saneHighs]), so one bad print
         // never raises a lock. Memory only.
         val rule = p.arm == DonchianArm.SOURCE || p.arm == BreadthDonchianArm.SOURCE
-        if (rule && !overnight && ltp != null && ltp.isFinite() && ltp > 0 && now.withSecond(0).withNano(0).isAfter(entryMin)) {
-            if (saneHighs.size > 500) saneHighs.clear()
-            saneHighs.merge(highKey(p), ltp) { a, x -> maxOf(a, x) }
+        // (A stream price only when its trade is known to be after the entry minute - never a print from before the fill; else the sane
+        // book's bid.)
+        val saneNow = if (seen != null) (if (streamCounts && (seen.lastTradeSec ?: 0L) >= entrySec + 60) seen.last else null)
+            ?: com.optionslab.ira.PriceNow.bookBid(seen.bid, seen.ask) else ltp
+        if (rule && !overnight && saneNow != null && saneNow.isFinite() && saneNow > 0 && now.withSecond(0).withNano(0).isAfter(entryMin)) {
+            if (saneHighs.size > 200) { val open = b.positions.filter { it.open }.map { highKey(it) }.toSet(); saneHighs.keys.retainAll(open) }
+            saneHighs.merge(highKey(p), saneNow) { a, x -> maxOf(a, x) }
         }
         val bestNow = if (overnight || recentBar != null || !rule || now.withSecond(0).withNano(0).minusMinutes(2).isBefore(entryMin)) null
             else saneHighs[highKey(p)]

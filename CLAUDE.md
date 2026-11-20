@@ -175,13 +175,14 @@ notes; match the surrounding code.
 - R51 / R72 STALE HISTORY (20 Nov audit B5). The earlier sessions a break's 20-bar channel reads must reach the last trading day by
   the calendar, whole in its last 20 five-minute bars. A missing, empty or stale history is read again in the background (1, 2, then
   every 5, then every 15 minutes after about an hour); a worse read never replaces a better one, and a history already in use is
-  replaced only with the switch on (off, the first one kept stays for the day, as before, and a better read is only logged). Its Bot
-  settings switch "Hold R51 / R72 breaks on a stale history" is off by default (shadow: taken as before, logged "would have skipped
-  (stale history)"); on, such a break waits in its fill window and is let go when the window ends, paper and live; a break let go
-  that the arm would have taken holds its side (up to its 30-minute time stop) and counts in the day's caps, as the trade would
-  have, so it never frees a place. On needs no PIN (it lowers risk); off takes the PIN. A picker score made from part of its inputs
-  is never reused as whole; the first score that decides a break (skip or take) fixes that decision for the day. R51 / R72 locks may
-  also rise from the checked prices now while the option's minutes stop coming (the same levels).
+  replaced only with the switch on (off, the first one kept stays for the day and is pinned on the phone, as before, and a better
+  read is only logged). Its Bot settings switch "Hold R51 / R72 breaks on a stale history" is off by default (shadow: taken as
+  before, logged "would have skipped (stale history)"); on, such a break waits in its fill window and is let go when the window
+  ends, paper and live; a break let go that the arm would have taken holds its side (up to its 30-minute time stop) and counts in
+  the day's caps, as the trade would have, so it never frees a place. On and off both take the PIN (on also lets a better history
+  replace the one in use, which can change live breaks). A picker score made from part of its inputs is never reused as whole; the
+  first score that decides a break (skip or take) fixes that decision for the day (kept in the book across a restart). R51 / R72
+  locks may also rise from the checked prices now while the option's minutes stop coming (the same levels).
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
   No main-thread I/O.
 - OPEN POSITIONS AND ORDERS COME FIRST (Boss, 14 Oct: "whenever an order is placed it must be pulled on priority, so we
