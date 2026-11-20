@@ -859,7 +859,9 @@ object Paper {
                       qty: Int = 0, now: java.time.LocalDateTime = Market.now().toLocalDateTime().withNano(0)): SoldElsewhere? = runCatching {
         val st = state
         val sales = st.trades.filter { it.symbol == symbol && it.action.equals(closing, ignoreCase = true) }
-            .map { com.optionslab.ira.PaperElsewhere.Sale(it.orderId, it.product, it.price.toDouble(), it.timestamp, it.charges.toDouble(), it.quantity) }
+            // (Review: a fill is named by its order id AND time - a paper reset or a new book numbers its orders afresh, and a claim kept
+            // in memory for an earlier book's order must never block this one's.)
+            .map { com.optionslab.ira.PaperElsewhere.Sale("${it.orderId}@${it.timestamp}", it.product, it.price.toDouble(), it.timestamp, it.charges.toDouble(), it.quantity) }
         val c = book().contracts[symbol]
         // The paper book settles an expired NSE/BSE contract after its session (no fill): its row then holds the settlement price.
         val expired = c != null && !c.isMcx && (now.toLocalDate().isAfter(c.expiry) ||
@@ -1772,7 +1774,7 @@ object Paper {
     }
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
-    fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) } }
+    fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) }; elsewhereClaims.clear() }
 
     /**
      * TEST ONLY: [loadSoon] reads the book on the caller's thread - the background load as fast as it can be, done before
@@ -1810,7 +1812,7 @@ object Paper {
             pending = null; cache = null; savedAtMs = 0L; readFails = 0; firstReadFailMs = 0L; lastReadFailMs = 0L
             filesForErase().forEach { runCatching { it.delete() } }
         } }
-        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear(); priceReads.clear()
+        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear(); priceReads.clear(); elsewhereClaims.clear()
         heldNoted.clear()
         follow(emptySet())
     }
