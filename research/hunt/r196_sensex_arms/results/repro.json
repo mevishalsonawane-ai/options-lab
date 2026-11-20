@@ -1,0 +1,83 @@
+{
+ "_meta": {
+  "written": "2026-11-20T04:43:56.645507+00:00",
+  "stores": "R196 stores (datetime.date(2024, 1, 1), datetime.date(2024, 3, 1), datetime.date(2026, 11, 13))",
+  "what": "R193's pooled totals (all indices; Liquidity without the SENSEX book), 1 lot"
+ },
+ "A:R72": {
+  "trades": 4571,
+  "net": 390101,
+  "published": [
+   4571,
+   390101
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "R72-V5": {
+  "trades": 2352,
+  "net": 358078,
+  "published": [
+   2352,
+   358078
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "A:R51": {
+  "trades": 6269,
+  "net": 191394,
+  "published": [
+   6269,
+   191394
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "R51-V5": {
+  "trades": 3082,
+  "net": 203580,
+  "published": [
+   3082,
+   203580
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "A:LIQ": {
+  "trades": 1323,
+  "net": 255293,
+  "published": [
+   1323,
+   255293
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "LIQ-V5": {
+  "trades": 1323,
+  "net": 220469,
+  "published": [
+   1323,
+   220469
+  ],
+  "gap_trades": 0,
+  "gap_net": 0,
+  "reproduced": true
+ },
+ "LIQ others unchanged by SENSEX (A)": {
+  "same": true,
+  "with_sx": 1323,
+  "without_sx": 1323
+ },
+ "LIQ others unchanged by SENSEX (V5)": {
+  "same": true,
+  "with_sx": 1323,
+  "without_sx": 1323
+ }
+}
