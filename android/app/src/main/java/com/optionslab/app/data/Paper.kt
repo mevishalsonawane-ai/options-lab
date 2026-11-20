@@ -387,6 +387,17 @@ object Paper {
     private val priceReads = java.util.concurrent.ConcurrentHashMap<String, PriceRead>()
 
     /**
+     * TEST SEAM (a fake feed going away or starting): the price reads still in flight are stopped and forgotten, waited [waitMs] at most
+     * each, so none outlives its test's feed (it would reach the real host) or lends an earlier test's prices to the next.
+     */
+    internal fun settlePriceReadsForTest(waitMs: Long = 2_000L) {
+        val all = priceReads.values.toList()
+        priceReads.clear()
+        all.forEach { it.job.cancel() }
+        kotlinx.coroutines.runBlocking { all.forEach { kotlinx.coroutines.withTimeoutOrNull(waitMs) { it.job.join() } } }
+    }
+
+    /**
      * [c]'s candles from the paper feed and when they came in, waited [priceReadWaitMs] at most; throws when the read failed or is still
      * running then. A read already in flight for [c] is waited on (no second one beside it, unless it has run over twice the wait: a
      * stuck read never blocks the next), and one that finished in the last [PRICE_READ_KEEP_MS] after its caller stopped waiting is

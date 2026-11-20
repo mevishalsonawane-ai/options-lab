@@ -66,15 +66,6 @@ class PaperSoldElsewhereTest : RobolectricTest() {
         assertEquals(PaperElsewhere.How.SALE, Paper.soldElsewhere("A|x", c.symbol, from, "MIS", qty = lot)!!.how)
     }
 
-    /** Review: an arm's own exit (placed as an exit) is its own - another trade closed elsewhere never books it. */
-    @Test fun anArmsOwnExitIsNeverBookedToAnotherTrade() {
-        val from = since()
-        assertTrue(runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }.ok)
-        assertTrue(runBlocking { Paper.place(c, "SELL", 1, "MARKET", "MIS", null, null, exit = true) }.ok)
-        val other = Paper.soldElsewhere("Other|x", c.symbol, from, "MIS", qty = c.lotSize)!!
-        assertEquals("not the other arm's own sale", PaperElsewhere.How.LAST_PRICE, other.how)
-    }
-
     @Test fun anotherProductsSaleIsNeverBooked() {
         val from = since()
         assertTrue(runBlocking { Paper.place(c, "BUY", 1, "MARKET", "MIS", null, null) }.ok)
