@@ -2703,9 +2703,10 @@ object PassedArmsHost {
                 // 20 Nov 2026 (audit B5, item 1): a break the stale-history check held to its window's end is let go as one the arm would
                 // have taken: it holds its side and counts in the day's caps ([staleHeld]), so the check never frees a place for a trade
                 // the arm would not have made (it only removes trades).
-                // (Held: marked in the book when it first waited, so a restart keeps it. Only one the arm's own filters would have taken:
+                // (Held: marked in the book when it first waited, so a restart keeps it - and still held at the end, not tried and refused
+                // since the history came whole (after a restart that is not known: held). Only one the arm's own filters would have taken:
                 // Supertrend, the wide-day skip and the caps.)
-                if (b.staleOn && "$dk|$STALE_WAIT" in b.decided && (gate == null || runCatching { gate(s) }.getOrNull() == true) &&
+                if (b.staleOn && "$dk|$STALE_WAIT" in b.decided && tried[dk].let { it == null || it.startsWith(STALE_TRIED) } && (gate == null || runCatching { gate(s) }.getOrNull() == true) &&
                     runCatching { skipRule?.invoke(s) }.getOrNull() == null &&
                     DonchianArm.mayTake(s, openSides(b, src, u, today, sigs, s), takenToday(b, src, u, today)) == null) b.decided += "$dk|$STALE_HELD"
                 b.decided += dk; changed = say(b, key, DonchianArm.missedWhy(s, tried.remove(dk), looksOf(u), othersOf(src, u)), final = true) || changed; continue

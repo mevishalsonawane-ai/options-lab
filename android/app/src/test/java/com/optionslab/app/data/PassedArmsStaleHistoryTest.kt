@@ -380,7 +380,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
     private fun lv(entry: Double, best: Double): Double =
         StepTrail.levelOf(entry, 65, best, StepTrail.TICK, StepTrail.Ladder(entry, 65, 65, StepTrail.Lock.L500, StepTrail.TICK))!!
 
-    private fun whyAt(level: Double, e: Double): String = StepTrail.whyAt(level, e, 65, ladder = StepTrail.Ladder(e, 65, 65, StepTrail.Lock.L500))
+    private fun whyAt(level: Double, e: Double): String? = StepTrail.whyAt(level, e, 65, ladder = StepTrail.Ladder(e, 65, 65, StepTrail.Lock.L500))
 
     private fun popupStop(p: PassedArmsHost.Pos): Double? = com.optionslab.ira.ArmExits.of(false, p.symbol).single().stop
 
