@@ -310,6 +310,24 @@ class LiquidityFreshBarTest : RobolectricTest() {
         assertFalse(LiquidityFreshBar.listWaitOn())
     }
 
+    /** 20 Nov 2026: the list wait's saved choice is read back at the start; a late start read never overrides Boss's switch; erase clears it. */
+    @Test fun theListWaitIsReadBackNeverOverriddenAndErased() {
+        com.optionslab.app.security.SecurePrefs.put(LiquidityFreshBar.K_LIST, true)
+        LiquidityFreshBar.resetForTest(loaded = false)
+        LiquidityFreshBar.load()
+        assertTrue("read back", LiquidityFreshBar.listWaitOn())
+        LiquidityFreshBar.setListWait(false)
+        LiquidityFreshBar.load()                                           // a late start read
+        assertFalse("Boss's switch stands", LiquidityFreshBar.listWaitOn())
+        LiquidityFreshBar.setListWait(true, pinConfirmed = true)
+        LiquidityFreshBar.listWouldWait("Liquidity 5m", day.atTime(13, 0))
+        assertTrue(LiquidityFreshBar.holdsForErase())
+        LiquidityFreshBar.wipe()
+        assertFalse(LiquidityFreshBar.listWaitOn())
+        assertFalse(LiquidityFreshBar.holdsForErase())
+        assertEquals(0, LiquidityFreshBar.view.value.listWouldWaitToday)
+    }
+
     @Test fun aSignalWaitsForALateInstrumentListAndIsEnteredWhenItLandsInTime() {
         LiquidityFreshBar.setListWait(true, pinConfirmed = true)
         armPaper()

@@ -5795,7 +5795,8 @@ object OrbArms {
             // (Behind its own switch on the fresh-bar card, off by default - it can add a live entry, so it starts in shadow: off, the
             // signal goes on as before (no contract) and "would have waited for the list and entered" is logged and counted.)
             val entersNow = b.auto[arm.source] != false && !(goes && !liveCleared(b, arm.source))
-            if (entersNow && !LiquidityFreshBar.listWaitOn()) runCatching { LiquidityFreshBar.listWouldWait(arm.label, last.start) }
+            // (One that already waited when Boss switched it off is not counted again: it goes on as before.)
+            if (entersNow && !LiquidityFreshBar.listWaitOn()) { if (waitedBefore != WAIT_LIST) runCatching { LiquidityFreshBar.listWouldWait(arm.label, last.start) } }
             else if (entersNow) {
                 if (waits(WAIT_LIST)) runCatching {
                     Diag.record("orb", "${arm.label}: the ${hhmm(last.start)} bar's signal waits for today's instrument list (not loaded " +

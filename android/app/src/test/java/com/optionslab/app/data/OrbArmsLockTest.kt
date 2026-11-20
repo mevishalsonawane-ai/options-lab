@@ -297,6 +297,21 @@ class OrbArmsLockTest : RobolectricTest() {
         // (NetworkGuard, checked after each test: no download was tried, under the lock or off it.)
     }
 
+    /** 20 Nov 2026: with the list wait on, the signal waits within its fill window, then (no list yet) is never bought late - no download. */
+    @Test fun withTheListWaitOnTheBreakWaitsThenBuysNothingAndNothingIsDownloadedUnderTheLock() {
+        LiquidityFreshBar.setListWait(true, pinConfirmed = true)
+        try {
+            java.io.File(context.filesDir, "contracts.json").delete()
+            runBlocking { OrbArms.setArmed("liquidity", true, automatic = true) }
+            passes(LocalTime.of(12, 50), LocalTime.of(13, 5))
+            assertTrue(row().status, row().status.contains(OrbArms.describe(OrbArms.LIST_WAITING)))
+            passes(LocalTime.of(13, 6), LocalTime.of(13, 8))
+            assertTrue("no contract: nothing bought", row().today.isEmpty())
+            assertTrue(Paper.state.orders.isEmpty())
+            assertTrue(row().status, row().status.contains(OrbArms.describe("no_contract")))
+        } finally { LiquidityFreshBar.resetForTest() }
+    }
+
     @Test fun candidateFsFlagIsReadAfterThePassAndStillWrittenOntoTheTrade() {
         // The call's premium rising and the put's at the same strike falling (momentum), but the close only 7.4 bp past the swept level:
         // (f) would not have taken it - false, as before 19 Nov; now read after the pass, off the lock, and written on then.
