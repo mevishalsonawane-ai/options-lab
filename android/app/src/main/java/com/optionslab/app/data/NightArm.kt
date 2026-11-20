@@ -661,7 +661,14 @@ object NightArm {
         val pos = Pos(u, c.symbol, right.name, fill.quantity, fill.price, today, now, r.orderId, charges = chargesOf(r.orderId))
         b.positions += pos
         // 18 Oct: its live path ([ArmLive]): the same option and lot, NRML, sold at 09:16 with its paper trade (the rule has no stop).
-        runCatching { ArmLive.entered(ArmLive.Ask(NightRules.SOURCE, mirrorRef(pos), c, 1, fill.quantity, fill.price)) }
+        // 20 Nov 2026 (B5 item 5, review P1): a decision made on a RETRY (an earlier try today failed on a read) is a new way to an entry
+        // the old code lost, so its live side starts in shadow (CLAUDE.md): it buys on paper, and its live copy is skipped and logged.
+        // Only a first-attempt decision mirrors live, as before.
+        if ((retries["$today|$u"]?.first ?: 0) > 0) {
+            val w = "would have gone live (Night retry): ${c.symbol} 1 lot @ %.2f - not sent; a decision made on a retry stays on paper".format(Locale.ENGLISH, fill.price)
+            note(b, "$u: $w")
+            runCatching { Diag.record("night", w) }
+        } else runCatching { ArmLive.entered(ArmLive.Ask(NightRules.SOURCE, mirrorRef(pos), c, 1, fill.quantity, fill.price)) }
         // 22 Oct: the time machine replays intraday entries only; an overnight trade is noted as such (shadow only; background).
         runCatching { TimeMachineHost.afterEntry(TimeMachineHost.Entry(NightRules.SOURCE, NightRules.LABEL, mirrorRef(pos), u, if (right == Right.CE) 1 else -1, now,
             null, null, exitAt = null, skip = "held overnight by design: no intraday replay")) }

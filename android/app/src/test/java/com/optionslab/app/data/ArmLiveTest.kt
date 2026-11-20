@@ -1279,12 +1279,18 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(donchian, ref))
         assertEquals(30, held())
         watch()                                                    // seen open on paper
+        // 20 Nov 2026 (B5, review C1 and P3): a restore is refused through the real hints (no seam) - open live trades said as open.
+        assertTrue(Backup.liveHeld().toString(), Backup.HELD_ARMS in Backup.liveHeld())
         ArmLive.wipe()                                             // a restart: the memory gone, the book on disk
         ArmLive.testReadFails = java.util.concurrent.atomic.AtomicInteger(1)
         assertTrue("held while it cannot be read (positions first)", runBlocking { ArmLive.holding() })
         assertTrue(view().unreadable)
         assertFalse(ArmLive.holdingHint)
         assertTrue("every lane and keep-alive keeps coming for it", ArmLive.recoverHint && ArmLive.lookDue)
+        // ...and while the book is being read or recovered, the refusal says exactly that, never "open".
+        assertTrue(Backup.liveHeld().toString(), Backup.HELD_ARMS_BOOK in Backup.liveHeld())
+        assertFalse(Backup.HELD_ARMS in Backup.liveHeld())
+        assertTrue(Backup.liveHeldWords(Backup.liveHeld()).contains("log in to Zerodha to finish"))
         legs[ref] = donchian to 0                                  // the paper trade closes meanwhile
         watch()                                                    // within 5 s of the failed read: not hammered
         assertTrue(view().unreadable)
@@ -1294,6 +1300,7 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("paper_exit", view().closed.single().why)
         assertEquals("flat, never short", 0, held())
         assertFalse(ArmLive.recoverHint)
+        assertTrue(Backup.liveHeld().none { it == Backup.HELD_ARMS || it == Backup.HELD_ARMS_BOOK })
         assertTrue(kite.placed.any { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
     }
 

@@ -389,6 +389,9 @@ object Paper {
      */
     private val priceReads = java.util.concurrent.ConcurrentHashMap<String, PriceRead>()
 
+    /** How many reads left for the next look were cancelled because another caller's took their place (the tests read it). */
+    internal val overwrittenReads = java.util.concurrent.atomic.AtomicInteger()
+
     /**
      * TEST SEAM (a fake feed going away or starting): the price reads left running are stopped and forgotten, waited [waitMs] at most
      * each, so none outlives its test's feed (it would reach the real host) or lends an earlier test's prices to the next.
@@ -424,7 +427,8 @@ object Paper {
             kotlinx.coroutines.withTimeoutOrNull(wait) { r.job.join(); true }
         } catch (e: kotlinx.coroutines.CancellationException) { r.job.cancel(); throw e }
         if (done == null) {
-            priceReads[c.symbol] = r
+            // (Review P6: a read another caller left for this contract meanwhile is cancelled, never left running unowned.)
+            priceReads.put(c.symbol, r)?.takeIf { it !== r }?.let { it.job.cancel(); overwrittenReads.incrementAndGet() }
             throw java.io.IOException("the paper price read of ${c.symbol} took over $wait ms (it goes on; the next look takes it)")
         }
         return r.job.await() to (r.doneAt.takeIf { it > 0 } ?: System.currentTimeMillis())

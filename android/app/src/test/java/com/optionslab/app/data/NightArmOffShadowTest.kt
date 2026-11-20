@@ -167,6 +167,49 @@ class NightArmOffShadowTest : RobolectricTest() {
         }
     }
 
+    /**
+     * 20 Nov 2026 (B5 item 5, review P1): a decision made on a retry buys on paper, but its live copy is skipped and logged ("would have
+     * gone live (Night retry)"); a first-attempt decision is handed to the live path as before.
+     */
+    @Test fun aRetriedDecisionBuysOnPaperButItsLiveCopyStaysInShadow() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        NightArm.forgetRetriesForTest()
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        // The first try's previous-close read fails (NIFTY's only).
+        var failed = false
+        NightArm.testPrevClose = { u -> if (u == "NIFTY" && !failed) { failed = true; throw java.io.IOException("test: read failed") }
+            else if (u == "NIFTY") 24_500.0 else 52_040.0 }
+        try {
+            runBlocking { NightArm.tick() }
+            assertTrue(NightArm.view.value.status["NIFTY"].orEmpty(), NightArm.view.value.status["NIFTY"].orEmpty().startsWith("night_retrying"))
+            at(day, LocalTime.of(15, 20, 31))                       // past its 10 s back-off
+            runBlocking { NightArm.tick() }
+            val said = NightArm.view.value.status["NIFTY"].orEmpty()
+            assertTrue(said, said.startsWith("night_buy_ce") || said.startsWith("night_not_filled"))
+            assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
+            if (said.startsWith("night_buy_ce")) {
+                assertEquals(1, NightArm.view.value.open.size)
+                Diag.flush()
+                assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
+            }
+        } finally {
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
+    /** The same strong close decided on its first try is handed to the live path, as on main. */
+    @Test fun aFirstAttemptDecisionIsHandedToTheLivePathAsBefore() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        NightArm.forgetRetriesForTest()
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        runBlocking { NightArm.tick() }
+        val said = NightArm.view.value.status["NIFTY"].orEmpty()
+        if (said.startsWith("night_buy_ce")) assertTrue(heard.toString(), heard.any { it.startsWith("entered|") })
+        else assertTrue(said, said.startsWith("night_not_filled"))
+    }
+
     @Test fun onThePaperPathIsUnchangedAndTheShadowGetsNothing() {
         assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
         runBlocking { NightArm.tick() }

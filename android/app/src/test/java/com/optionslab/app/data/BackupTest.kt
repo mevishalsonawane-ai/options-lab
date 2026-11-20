@@ -274,10 +274,10 @@ class BackupTest : RobolectricTest() {
         Vault.writeFile(orbFile(), JSONObject().put("armed", JSONObject().put("arm2", true)).put("liqLots", 2).toString().toByteArray())
         val orbBefore = String(Vault.readFile(orbFile())!!)
         try {
-            Backup.testLiveHeld = { listOf("Liquidity 15+5 and the ORB arms' live positions") }
+            Backup.testLiveHeld = { listOf(Backup.HELD_ORB) }
             val e = try { Backup.restore(context, Backup.open(bytes, pass.copyOf())); null } catch (x: Backup.LiveHeld) { x }
             assertNotNull("refused", e)
-            assertTrue(e!!.message!!, e.message!!.startsWith("Not restored: Liquidity 15+5 and the ORB arms' live positions is open now"))
+            assertTrue(e!!.message!!, e.message!!.startsWith("Not restored: Liquidity 15+5 or an ORB arm holds a live position. "))
             assertTrue(e.message!!.contains("Nothing on this phone was changed"))
             assertEquals("the phone's book untouched", orbBefore, String(Vault.readFile(orbFile())!!))
             assertFalse("not even the disarm flag", SecurePrefs.getBoolean(Backup.DISARM, false))
@@ -289,12 +289,12 @@ class BackupTest : RobolectricTest() {
     }
 
     @Test fun theRefusalNamesEveryBookHoldingALivePosition() {
-        assertEquals("Not restored: A, B are open now, and a restore replaces the books that record them. Nothing on this phone was " +
-            "changed. Restore once they are closed (after the market's close is safest).", Backup.liveHeldWords(listOf("A", "B")))
+        assertEquals("Not restored: A; B. A restore replaces the books that record them. Nothing on this phone was changed. " +
+            "Restore once nothing is open (after the market's close is safest).", Backup.liveHeldWords(listOf("A", "B")))
         // A fresh phone holds nothing live: nothing refuses.
         assertEquals(emptyList<String>(), Backup.liveHeld())
         // Review: the app's start has begun but not yet read the position books - the hints cannot tell yet: refused.
-        assertEquals(listOf("the open positions (still being read after the app's start)"), Backup.liveHeld(started = true, startRead = false))
+        assertEquals(listOf(Backup.HELD_START), Backup.liveHeld(started = true, startRead = false))
         assertEquals(emptyList<String>(), Backup.liveHeld(started = true, startRead = true))
     }
 
@@ -317,5 +317,45 @@ class BackupTest : RobolectricTest() {
         Backup.restore(context, Backup.open(bytes, pass.copyOf()))
         assertEquals(listOf(com.optionslab.ira.AccountStop.Day(early, -2_000.0)),
             com.optionslab.ira.AccountStop.decode(SecurePrefs.getString(Backup.ACCOUNT_STOP_DAYS)))
+    }
+
+    /** 20 Nov 2026 (B5 item 3, review P4): this phone's account-stop days unreadable - refused, nothing written (not even the disarm flag). */
+    @Test fun aRestoreIsRefusedWhenThePhonesAccountStopDaysCannotBeRead() = runBlocking {
+        seedPhone()
+        val phone = listOf(com.optionslab.ira.AccountStop.Day(Market.today().minusDays(1), -9_000.0))
+        SecurePrefs.putAll(mapOf(Backup.ACCOUNT_STOP_DAYS to com.optionslab.ira.AccountStop.encode(phone)))
+        val bytes = Backup.create(context, pass.copyOf())
+        val orbBefore = String(Vault.readFile(orbFile())!!)
+        try {
+            Backup.testAccountStopRead = { throw java.io.IOException("test: the vault read failed") }
+            val e = try { Backup.restore(context, Backup.open(bytes, pass.copyOf())); null } catch (x: Backup.AccountStopUnread) { x }
+            assertNotNull("refused", e)
+            assertEquals(Backup.ACCOUNT_STOP_UNREAD, e!!.message)
+            assertTrue(e is Backup.Refused)
+            assertFalse("not even the disarm flag", SecurePrefs.getBoolean(Backup.DISARM, false))
+            assertEquals("the phone's book untouched", orbBefore, String(Vault.readFile(orbFile())!!))
+            assertEquals("the days untouched", phone, com.optionslab.ira.AccountStop.decode(SecurePrefs.getString(Backup.ACCOUNT_STOP_DAYS)))
+        } finally { Backup.testAccountStopRead = null }
+    }
+
+    /** Review P4: a restore with nothing to keep (both empty) never writes over the phone's value. */
+    @Test fun nothingToKeepWritesNothingOverTheDays() = runBlocking {
+        SecurePrefs.putAll(mapOf(Backup.ACCOUNT_STOP_DAYS to ""))
+        val bytes = Backup.create(context, pass.copyOf())
+        val raw = "garbage the decoder skips"
+        SecurePrefs.putAll(mapOf(Backup.ACCOUNT_STOP_DAYS to raw))
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertEquals(raw, SecurePrefs.getString(Backup.ACCOUNT_STOP_DAYS))
+    }
+
+    /**
+     * Review C1 (real wiring, no seam): a fresh phone holds nothing; the arms' live book being read or recovered is said as exactly that
+     * (driven through ArmLive's own unreadable book in ArmLiveTest); the words for it name the Zerodha log-in.
+     */
+    @Test fun theRealHintsOnAFreshPhoneHoldNothingAndTheRecoveringBookHasItsOwnWords() {
+        assertEquals(null, Backup.testLiveHeld)
+        assertEquals(emptyList<String>(), Backup.liveHeld())
+        assertTrue(Backup.HELD_ARMS_BOOK.contains("being read or recovered") && Backup.HELD_ARMS_BOOK.contains("log in to Zerodha"))
+        assertFalse(Backup.HELD_ARMS_BOOK.contains("are open"))
     }
 }

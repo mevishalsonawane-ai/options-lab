@@ -76,6 +76,22 @@ class PaperPriceReadBoundTest : RobolectricTest() {
         } finally { stuck.countDown() }
     }
 
+    /** Review P6: two looks that both stop waiting leave one read for the next look; the other is cancelled, never left unowned. */
+    @Test fun twoAbandonedReadsLeaveOneAndCancelTheOther() {
+        Paper.priceReadWaitMs = 300L
+        upstox.gate = { key -> if (key == c.feedKey) Thread.sleep(1_000) }
+        val before = Paper.overwrittenReads.get()
+        runBlocking {
+            val a = kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) { Paper.lastPrice(c) }
+            val b = kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) { Paper.lastPrice(c) }
+            assertNull(a.await()); assertNull(b.await())
+        }
+        val reads = upstox.requests.count { it.contains(c.feedKey) || it.contains(c.feedKey.replace("|", "%7C")) }
+        // Both started a read of their own (none was left yet) and both stopped waiting: one is kept, the other cancelled.
+        if (reads >= 2) assertEquals(1, Paper.overwrittenReads.get() - before)
+        upstox.gate = null
+    }
+
     @Test fun aReadWithinTheBoundIsUsedAsBefore() {
         upstox.gate = { key -> if (key == c.feedKey) Thread.sleep(150) }
         val px = runBlocking { Paper.lastPrice(c) }

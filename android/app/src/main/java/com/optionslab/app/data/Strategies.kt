@@ -661,6 +661,11 @@ object Strategies {
             // square-off) only ever reduces what the paper book holds ([Paper.place]'s exit): after the 15:15 paper square-off it is
             // refused, never a fresh opposite position. Paper only; the live executor is unchanged.
             val r = runBlocking { Paper.place(pc, order.side.wire, order.quantity / ref.lot, "MARKET", order.product, null, null, exit = order.kind != "entry") }
+            // 20 Nov 2026 (B5, review P2): an exit refused because the paper book is already flat in this leg's option (the 15:15 paper
+            // square-off, Boss's close, the loss limit) is that leg closed: booked at the sale that closed it ([Paper.soldElsewhere]), else
+            // the price in memory, so the run can finish instead of holding a leg nothing holds. Paper only.
+            if (!r.ok && order.kind != "entry" && paperFlat(pc.symbol, order.product, order.side.wire))
+                flatExit(def, order)?.let { return it }
             if (!r.ok) return StrategyHost.Placed.Refused(r.message)
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
             b.owners["paper:$id"] = ownerLabel(def, order)
@@ -676,6 +681,44 @@ object Strategies {
                 StrategyHost.Status(it.status, it.filledQuantity, it.averagePrice?.toDouble(), it.rejectionReason)
             }
         override fun event(e: Event, alert: Boolean) = record(b, def, e, alert)
+    }
+
+    /** Whether the paper book holds nothing of [symbol] in [product] that an exit on [exitSide] could close (B5, review P2). */
+    private fun paperFlat(symbol: String, product: String, exitSide: String): Boolean = runCatching {
+        val held = Paper.state.positions.filter { it.symbol == symbol && it.product.equals(product, ignoreCase = true) }.sumOf { it.quantity }
+        if (exitSide.equals("SELL", ignoreCase = true)) held <= 0 else held >= 0
+    }.getOrDefault(false)
+
+    /** A paper leg's exit booked as done because the paper book is already flat in it ([paperFlat]); null: no price is known. */
+    private fun flatExit(def: StrategyDef, order: Action.PlaceOrder): StrategyHost.Placed? {
+        val since = runCatching { Market.today().atStartOfDay() }.getOrElse { java.time.LocalDate.now().atStartOfDay() }
+        val px = runCatching { Paper.soldElsewhere("Strategy|${def.id}|${order.legId}|${order.symbol}", order.symbol, since, order.product,
+            order.side.wire, qty = order.quantity)?.price?.toDouble() }.getOrNull()
+            ?: runCatching { Paper.memPrice(order.symbol, 5 * 60_000L) }.getOrNull() ?: return null
+        runCatching { Diag.record("strategies", "${def.name}: leg ${order.legId} (${order.symbol}) was already flat on paper - closed at %.2f".format(Locale.ENGLISH, px)) }
+        return StrategyHost.Placed.Accepted("paper:flat:${def.id}:${order.legId}:${System.nanoTime()}", "complete", order.quantity, px,
+            "already flat on paper (closed elsewhere)")
+    }
+
+    /**
+     * 20 Nov 2026 (B5, review P2): a paper run's open legs that the paper book no longer holds (the 15:15 paper square-off, Boss's close,
+     * the loss limit) are closed through the run's own exit, which [flatExit] books - so a run nothing holds finishes and does not read as
+     * running for ever. Paper runs only; memory only (the paper book in hand).
+     */
+    private suspend fun closeFlatPaperLegs(b: Book, def: StrategyDef, v: Venue, now: ZonedDateTime, compromised: Boolean) {
+        var run = b.runs[def.id] ?: return
+        if (run.mode != RunMode.SANDBOX || run.stoppedAt != null) return
+        val open = run.legs.values.filter { it.status == "open" && it.entryStatus == "complete" }
+        for (leg in open) {
+            val exitSide = if (leg.position == "B") "SELL" else "BUY"
+            if (!paperFlat(leg.symbol, legProduct(run, def, leg), exitSide)) continue
+            // (An exit of this leg already working on paper closes it by itself.)
+            if (run.orders.values.any { it.legId == leg.legId && it.kind != "entry" && it.status in setOf("pending", "open") }) continue
+            val next = host.closeLeg(run, def, leg.legId, now, exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, def.id))
+            b.runs[def.id] = next; finish(b, next)
+            run = next
+            if (run.stoppedAt != null) return
+        }
     }
 
     /**
@@ -1325,6 +1368,7 @@ object Strategies {
         val next = host.tick(run, def, q, now, banked, exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, def.id))
         b.runs[def.id] = next; finish(b, next)
         if (next.mode == RunMode.LIVE && Broker.loggedIn) runCatching { restLegStops(b, def, v, q, now, compromised) }
+        if (next.mode == RunMode.SANDBOX) runCatching { closeFlatPaperLegs(b, def, v, now, compromised) }
     }
 
     private fun legKey(runId: Long, legId: Int) = "$runId:$legId"
