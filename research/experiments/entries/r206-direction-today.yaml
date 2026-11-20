@@ -1,0 +1,30 @@
+id: r206-direction-today
+title: 'R206 Part 1: how often the index goes the way the arms'' signals say (15 minutes)'
+family: market-facts
+date: '2026-11-20'
+doc: research/hunt/r206_direction/results/report.md
+hypothesis: 'none (descriptive: the share of R72, R51 and Liquidity signals after which the index moved their way)'
+data_version: 'the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026): 1-minute index candles, 8 Oct 2021 - 5 Oct
+  2026 (r206data.py); no option data'
+period:
+  design: 2022-04-01..2026-10-05 (two eras; not a test)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index only (the arms'' own signals on 1-minute index bars; no option file read)'
+model_or_rule: 'r206lib.move: last close before the entry minute against the close 15 (30) minutes later'
+settings: research/hunt/r206_direction/r206cfg.py; PREREG.md sections 2 - 6
+prereg: research/hunt/r206_direction/PREREG.md
+variants_tried: null
+results:
+  summary: 'Right after 15 minutes - R72 Breadth Donchian: OLD 49.3% of 12709 signals, RECENT 51.6% of 9132; R51 Donchian
+    20 + Supertrend: OLD 49.2% of 27101 signals, RECENT 50.2% of 19104; Liquidity 15+5: OLD 51.0% of 1598 signals, RECENT
+    53.2% of 1250.'
+  costs: none (index direction only)
+holdout_read: null
+verdict: not-a-test
+notes: Research only. Signals, not trades; expiry days included.

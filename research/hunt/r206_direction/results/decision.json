@@ -1,0 +1,139 @@
+{
+ "m_total": 4888,
+ "tests": {
+  "H1": {
+   "more_reliable": false,
+   "fails": [
+    "OLD: difference +0.4 points with p 0.3267 (needs above 0 with p < 0.05)",
+    "BH q 1 > 0.1",
+    "OLD: A is +0.2 points above the source's own share right (needs 2 points)"
+   ],
+   "years_up": 2,
+   "edge": 0.0022538402028589033,
+   "q": 1.0,
+   "source": "R51",
+   "what": "an R72 signal on the same index, minute and side",
+   "p": 0.32673465306938615,
+   "p_normal": 0.3329452690550495,
+   "q_family": 0.4439270254067327
+  },
+  "H2": {
+   "more_reliable": false,
+   "fails": [
+    "OLD: difference +1.3 points with p 0.3137 (needs above 0 with p < 0.05)",
+    "BH q 1 > 0.1",
+    "OLD: A is +0.4 points above the source's own share right (needs 2 points)"
+   ],
+   "years_up": 2,
+   "edge": 0.003938879494958192,
+   "q": 1.0,
+   "source": "LIQ",
+   "what": "an R51 or R72 signal on the same index, minute and side",
+   "p": 0.3137372525494901,
+   "p_normal": 0.3224601411017059,
+   "q_family": 0.4439270254067327
+  },
+  "H3": {
+   "more_reliable": false,
+   "fails": [
+    "OLD: difference +2.0 points with p 0.0980 (needs above 0 with p < 0.05)",
+    "BH q 1 > 0.1",
+    "RECENT: difference -0.1 points not above 0",
+    "OLD: A is +1.0 points above the source's own share right (needs 2 points)"
+   ],
+   "years_up": 2,
+   "edge": 0.010451618347254998,
+   "q": 1.0,
+   "source": "R72",
+   "what": "all 5 indices broke (against 4 of 5)",
+   "p": 0.09798040391921616,
+   "p_normal": 0.09884762359987168,
+   "q_family": 0.3953904943994867
+  },
+  "H4": {
+   "more_reliable": false,
+   "fails": [
+    "OLD: difference +3.6 points with p 0.1546 (needs above 0 with p < 0.05)",
+    "BH q 1 > 0.1",
+    "OLD: A is +0.1 points above the source's own share right (needs 2 points)"
+   ],
+   "years_up": 3,
+   "edge": 0.0012483197495886666,
+   "q": 1.0,
+   "source": "R72",
+   "what": "an R51 signal on the same index, minute and side",
+   "p": 0.15456908618276344,
+   "p_normal": 0.15530302404790278,
+   "q_family": 0.4141413974610741
+  },
+  "H5": {
+   "more_reliable": false,
+   "fails": [
+    "OLD: difference -0.1 points with p 0.5219 (needs above 0 with p < 0.05)",
+    "BH q 1 > 0.1",
+    "above 0 in 1 of 3 OLD years < 2",
+    "OLD: A is -0.0 points above the source's own share right (needs 2 points)"
+   ],
+   "years_up": 1,
+   "edge": -0.0002585748672856991,
+   "q": 1.0,
+   "source": "R72",
+   "what": "with the day (index above its first open for a call, below for a put)",
+   "p": 0.5218956208758249,
+   "p_normal": 0.5303480705788602,
+   "q_family": 0.6061120806615545
+  },
+  "H6": {
+   "more_reliable": false,
+   "fails": [
+    "BH q 1 > 0.1",
+    "RECENT: difference -1.1 points not above 0",
+    "OLD: A is +1.6 points above the source's own share right (needs 2 points)"
+   ],
+   "years_up": 3,
+   "edge": 0.015745060113020015,
+   "q": 1.0,
+   "source": "LIQ",
+   "what": "with the day",
+   "p": 0.00599880023995201,
+   "p_normal": 0.00526941895000049,
+   "q_family": 0.04215535160000392
+  },
+  "H7": {
+   "more_reliable": false,
+   "fails": [
+    "OLD: difference +1.1 points with p 0.3195 (needs above 0 with p < 0.05)",
+    "BH q 1 > 0.1",
+    "RECENT: difference -2.4 points not above 0",
+    "OLD: A is +0.2 points above the source's own share right (needs 2 points)"
+   ],
+   "years_up": 2,
+   "edge": 0.0016262526726282256,
+   "q": 1.0,
+   "source": "R72",
+   "what": "with the market (NIFTY's last 15-minute close on the trade's side of its EMA20)",
+   "p": 0.31953609278144374,
+   "p_normal": 0.31254260943968387,
+   "q_family": 0.4439270254067327
+  },
+  "H8": {
+   "more_reliable": false,
+   "fails": [
+    "OLD: difference -1.8 points with p 0.6797 (needs above 0 with p < 0.05)",
+    "BH q 1 > 0.1",
+    "above 0 in 0 of 3 OLD years < 2",
+    "RECENT: difference -6.9 points not above 0",
+    "OLD: A is -0.3 points above the source's own share right (needs 2 points)"
+   ],
+   "years_up": 0,
+   "edge": -0.0031943338263739074,
+   "q": 1.0,
+   "source": "LIQ",
+   "what": "with the market",
+   "p": 0.6796640671865627,
+   "p_normal": 0.6809990632292049,
+   "q_family": 0.6809990632292049
+  }
+ },
+ "more_reliable": []
+}

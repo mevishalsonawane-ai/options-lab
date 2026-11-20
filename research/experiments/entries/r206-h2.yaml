@@ -1,0 +1,35 @@
+id: r206-h2
+title: 'R206 H2: are Liquidity 15+5 signals right more often with an R51 or R72 signal on the same index, minute and side?'
+family: patterns-indicators
+date: '2026-11-20'
+doc: research/hunt/r206_direction/results/report.md
+hypothesis: Liquidity 15+5 signals with 'an R51 or R72 signal on the same index, minute and side' see the index go their way
+  after 15 minutes more often than the others, on 1 Apr 2022 - 19 Nov 2024 (a lead from the Nov 2024 - Oct 2026 diagnosis
+  for H1 - H4)
+data_version: 'the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026): 1-minute index candles, 8 Oct 2021 - 5 Oct
+  2026 (r206data.py); no option data'
+period:
+  design: '2024-11-21..2026-10-05 (RECENT: where the lead was seen; must agree in sign)'
+  holdout: '2022-04-01..2024-11-19 (OLD: the test, read once, results/OLD_READ)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index only (the arms'' own signals on 1-minute index bars; no option file read)'
+model_or_rule: 'H2: A = an R51 or R72 signal on the same index, minute and side; B = the rest; right = index move the signal''s
+  way after 15 minutes above 0'
+settings: research/hunt/r206_direction/r206cfg.py; PREREG.md sections 2 - 6
+prereg: research/hunt/r206_direction/PREREG.md
+variants_tried: 1
+results:
+  summary: 'OLD: A right 51.4% of 1111 signals, B 50.1% of 487; difference +1.3 points, day-block bootstrap p 0.3137, BH q
+    1 (m = 4,888). RECENT: A 53.3% of 866, B 52.9% of 384; difference +0.5 points. Not more reliable: OLD: difference +1.3
+    points with p 0.3137 (needs above 0 with p < 0.05); BH q 1 > 0.1; OLD: A is +0.4 points above the source''s own share
+    right (needs 2 points)'
+  costs: none (index direction only; no trade is priced)
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. A direction condition is not a trading rule.
