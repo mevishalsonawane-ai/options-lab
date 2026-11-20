@@ -843,7 +843,12 @@ object Strategies {
      * Start a run. LIVE only from the app after you have confirmed it (the UI
      * asks for your PIN or fingerprint first) - [confirmedByOwner] records that.
      */
-    suspend fun start(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String = lock.withLock {
+    suspend fun start(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String {
+        flatFollowUp = false
+        return startLocked(id, mode, trigger, confirmedByOwner, compromised).also { followUp(compromised) }
+    }
+
+    private suspend fun startLocked(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String = lock.withLock {
         val b = book()
         val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
         if (b.runs[id]?.let { Entry(def, it).running } == true) return@withLock "${def.name} is already running."
@@ -1211,7 +1216,12 @@ object Strategies {
 
     suspend fun skip(id: Long) = lock.withLock { val b = book(); b.pending.remove(id); save(b) }
 
-    suspend fun tickAll(compromised: Boolean): List<String> = lock.withLock {
+    suspend fun tickAll(compromised: Boolean): List<String> {
+        flatFollowUp = false
+        return tickAllOnce(compromised).also { followUp(compromised) }
+    }
+
+    private suspend fun tickAllOnce(compromised: Boolean): List<String> = lock.withLock {
         val b = book()
         // Orders placed in this pass are written down even when the pass is cancelled part-way (the watch
         // stopped, a time limit): a run's broker ids and state kept only in memory would be lost with the process.
@@ -1600,13 +1610,19 @@ object Strategies {
         if (!runningHint) return
         flatFollowUp = false
         manageLocked(compromised)
-        // 20 Nov 2026 (deep review: the confirming read waited while holding [lock]): a leg first read no longer held gets its second,
-        // separate read in one follow-up look [FLAT_RECHECK_MS] later, the lock let go meanwhile - never a wait under it.
-        if (flatFollowUp) {
-            flatFollowUp = false
-            kotlinx.coroutines.delay(FLAT_RECHECK_MS)
-            manageLocked(compromised)
-        }
+        followUp(compromised)
+    }
+
+    /**
+     * 20 Nov 2026 (deep review: the confirming read waited while holding [lock]): a leg first read no longer held in the look just made
+     * ([manageOnly], [tickAll], a start's own look) gets its second, separate read in one follow-up look of the open runs
+     * [FLAT_RECHECK_MS] later, the lock let go meanwhile - never a wait under it.
+     */
+    private suspend fun followUp(compromised: Boolean) {
+        if (!flatFollowUp) return
+        flatFollowUp = false
+        kotlinx.coroutines.delay(FLAT_RECHECK_MS)
+        manageLocked(compromised)
     }
 
     /** 20 Nov 2026: set by [restLegStops] when a leg was first read no longer held ([manageOnly] makes a follow-up look). */

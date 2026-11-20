@@ -122,6 +122,8 @@ internal object SquareOffExit {
         try {
             // 19 Nov 2026: an exit placed on it a moment ago is still on its way ([GAP_MS]): nothing more now, the next run reads again.
             if (inGap(p.exchange, p.symbol, p.product)) return false
+            // 20 Nov 2026 (deep review): a read that left this contract's row out as malformed: nothing taken out or sent on it now.
+            if (positions.unknown(p.symbol)) return false
             if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
             val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
@@ -169,6 +171,8 @@ internal object SquareOffExit {
             // (Review: the protections' GTT marks, fresh ones included, as [Protections.dayGttsOut] takes them out.)
             val gttMarks = runCatching { Protections.dayGttMarks(p.exchange, p.symbol) }.getOrDefault(emptyList())
             suspend fun takeOut(): Boolean {
+                // (Review: the marks another of the app's paths made already - Boss's exit from the app - are never taken back here.)
+                val premarked = others.map { it.id }.filter { runCatching { Protections.isTakenOver(it) }.getOrDefault(true) }.toSet()
                 markTaken(p.exchange, p.symbol, others.map { it.id }, gttMarks)
                 // A protection's stop and target resting as one GTT ([DayOco]) would still fire after this exit sold the position:
                 // deleted first, confirmed (or the exit waits for the next pass). Not confirmed: the orders' marks taken back (none was
@@ -194,7 +198,7 @@ internal object SquareOffExit {
                 }
                 // 20 Nov 2026 (deep review, "WHO CANCELLED A STOP"): one already CANCELLED before this cancel went (Zerodha refused the
                 // cancel: nothing working to cancel) was not the app's doing: its mark taken back, so its owner reads it as before.
-                untake(notOurs)
+                untake(notOurs.filter { it !in premarked })
                 if (filled || !allOut) {
                     // (Those whose cancel did not take are still their owners': the marks taken back, so a later cancel by Boss is his.)
                     // (Review: the book not read - every mark taken back but those this pass saw cancelled, which stay the app's.)

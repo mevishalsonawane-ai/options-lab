@@ -251,7 +251,10 @@ object ExitCoordinator {
             l
         }.getOrDefault(0)
         // 15 Nov, review: forced ([forceLag]), today's exit fills of any age are compared ([ExitDesk.positionsLag] anyAge), never skipped.
-        if (!forceLag && mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(first ?: Broker.positionBook()).sumOf { it.qty }
+        // 20 Nov 2026 (deep review): a read that left this contract's row out as malformed tells nothing of what is held: thrown (not
+        // read), never 0 - a square-off never takes a stop out, nor a stop is put back, on it.
+        fun known(b: Broker.Positions): Broker.Positions = if (b.unknown(symbol)) throw java.io.IOException("$symbol's positions row could not be read") else b
+        if (!forceLag && mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(known(first ?: Broker.positionBook())).sumOf { it.qty }
         var given = first
         var (book, left) = ExitDesk.settleHeld(guard, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
         if (converted) {
@@ -280,7 +283,7 @@ object ExitCoordinator {
                 record("$who $key: its $product exit's fill shows in the other product's positions row (a conversion today?); not read as trailing [$words]")
             }
         }
-        val net = rows(book).sumOf { it.qty }
+        val net = rows(known(book)).sumOf { it.qty }
         return ExitDesk.heldLess(net, left)
     }
 

@@ -444,6 +444,21 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("kept", 1, kite.gtts.size)
     }
 
+    /** 20 Nov 2026 (deep review): a read that left the leg's row out as malformed never takes its stop out, however often. */
+    @Test fun aSkippedRowNeverTakesALegsStopOut() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, kite.gtts.size)
+        kite.positions.clear()
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", NIFTY_CE).put("exchange", "NFO").put("product", "NRML"))
+        repeat(3) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.FLAT_AGREE_MS + 1_000) }
+        assertEquals("kept", 1, kite.gtts.size)
+        assertTrue(sells().isEmpty())
+    }
+
     /** 20 Nov 2026 (audit): a malformed or partial positions reply is never "no position": the leg's stop stays at Zerodha. */
     @Test fun aMalformedOrPartialPositionsReadNeverTakesALegsStopOut() {
         live()

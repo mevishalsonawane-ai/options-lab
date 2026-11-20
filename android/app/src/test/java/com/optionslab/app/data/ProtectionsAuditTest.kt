@@ -262,7 +262,7 @@ class ProtectionsAuditTest : RobolectricTest() {
         val p = active().single()
         at(12, 5)
         kite.fill(p.stopOrderId!!)
-        kite.cancelsLost = 6                                               // every cancel in this look and the next is lost
+        kite.cancelsLost = 4                                               // the look's three tries, and the next look's one, are lost
         fun said() = Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("could not be cancelled") && it.text.contains("cancel it in Kite now") }
         tick()
         assertEquals("kept while its target may rest", 1, active().size)

@@ -610,6 +610,9 @@ object Protections {
         return (dayGttHint[key].orEmpty() + freshDayGtts[key].orEmpty()).distinct().map { "gtt:$it" }
     }
 
+    /** 20 Nov 2026 (review): whether [id] is already noted taken over by another of the app's paths ([noteTakenOver]). Memory only. */
+    fun isTakenOver(id: String): Boolean = takenOver.containsKey(id)
+
     /**
      * 20 Nov 2026 (audit, the square-offs): [ids] were noted ([noteTakenOver]) but their cancel did not take (still working at Zerodha):
      * forgotten, so a later cancel of them by Boss in Kite is his (never put back). Memory only; never blocks.
@@ -636,9 +639,15 @@ object Protections {
      */
     private fun settleExits(rows: Collection<Broker.OrderRow>?) {
         if (rows == null || exitOrders.isEmpty()) return
-        val ended = rows.filter { it.status == "REJECTED" || it.status == "CANCELLED" }.map { it.id }.toSet()
+        // Review: only an order that ended with NOTHING filled is dropped from what the book must show; one that filled part keeps
+        // the wait (its fill may not show in the positions yet). The wait itself ends only once no order is left to show.
+        val ended = rows.filter { (it.status == "REJECTED" || it.status == "CANCELLED") && it.filled == 0 }.map { it.id }.toSet()
         if (ended.isEmpty()) return
-        for ((id, exits) in exitOrders.entries.toList()) if (exits.keys.any { it in ended }) { exitOrders.remove(id); exitFilled.remove(id) }
+        for ((id, exits) in exitOrders.entries.toList()) {
+            if (exits.keys.none { it in ended }) continue
+            val left = exits.filterKeys { it !in ended }
+            if (left.isEmpty()) { exitOrders.remove(id); exitFilled.remove(id) } else exitOrders[id] = left
+        }
     }
 
     /** 15 Nov, review (F1): Boss's exit orders (id to quantity filled) for each taken-over id said filled ([exitFilledFor]). */
@@ -1327,7 +1336,7 @@ object Protections {
     private fun askFollowUp(ms: Long) { if (!streamLook) followUpMs = if (followUpMs == 0L) ms else minOf(followUpMs, ms) }
 
     /** 20 Nov 2026: follow-up looks after one [tick] at most. */
-    private const val FOLLOW_UPS = 2
+    private const val FOLLOW_UPS = 4
 
     /**
      * 20 Nov 2026 (audit: Protections read Zerodha's orders and positions again for every protection, one after another, in one look):
@@ -1424,7 +1433,8 @@ object Protections {
      */
     private fun heldConfirmed(p: Item, book: Broker.Positions?): Int? {
         val first = confirmedHeld(p, book?.let { heldIn(it, p) })
-        if (first == null && !streamLook && flatSince.containsKey(p.id)) askFollowUp(FLAT_RECHECK_MS)
+        // (Review: asked for the moment it can be confirmed, so a shorter follow-up asked by another protection is not taken for it.)
+        if (first == null && !streamLook) flatSince[p.id]?.let { at -> askFollowUp((FLAT_RECHECK_MS - (nowMs() - at)).coerceIn(OCO_GAP_MS, FLAT_RECHECK_MS)) }
         return first
     }
 
@@ -1518,12 +1528,13 @@ object Protections {
             }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { why = e.message }
         if (gone) { ocoPending.remove(p.id); return true }
-        askFollowUp(OCO_GAP_MS)
         val now = nowMs()
         // Review: every cancel taken (no error), the order perhaps still on its way out at the exchange: said only once it has still
-        // been found resting for [OCO_PENDING_MS], never at once (a false alarm while it is being cancelled).
+        // been found resting for [OCO_PENDING_MS], never at once (a false alarm while it is being cancelled). A clock moved back: said.
         val since = ocoPending.putIfAbsent(p.id, now) ?: now
-        if (why == null && now - since !in OCO_PENDING_MS..Long.MAX_VALUE) return false
+        // Follow-up looks for its first tries only (three in all), so it never crowds out another protection's confirming read.
+        if (now - since in 0 until 2 * OCO_GAP_MS) askFollowUp(OCO_GAP_MS)
+        if (why == null && now - since in 0 until OCO_PENDING_MS) return false
         val last = ocoSaid[p.id]
         if (last == null || now - last !in 0 until OCO_SAY_MS) {
             ocoSaid[p.id] = now
@@ -1718,7 +1729,9 @@ object Protections {
         // 20 Nov 2026 (deep review): a stream look that cannot tell what is held (closed reads count only in a regular look) says
         // nothing and changes nothing: the regular look decides (a closed position ends quietly there).
         // (Nor a regular look whose read showed it closed for the first time: its follow-up read decides.)
-        if ((stream || flatSince.containsKey(p.id)) && net == null && so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) return p
+        // (Review: only while that first read is fresh - a count left by reads that keep failing never hides a refused stop.)
+        val freshFlat = flatSince[p.id]?.let { nowMs() - it in 0 until FLAT_AGREE_MS + FLAT_RECHECK_MS + 1_000L } == true
+        if ((stream || freshFlat) && net == null && so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) return p
         if (so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) {
             // 15 Nov (Boss's diagnostics: a manual position's stop cancelled at the exchange was not covered again that day): told
             // apart by Zerodha's own words. REJECTED, or CANCELLED with the exchange's reason, is the exchange's doing: ended as such

@@ -745,15 +745,17 @@ object Broker {
      * were read; a check that would END something on a contract's absence (a protection, a strategy leg's stop) counts a skipped
      * contract as not known ([unknown]).
      */
-    data class Positions(val net: List<Position>, val day: List<Position>, val skipped: Set<String> = emptySet()) {
+    data class Positions(val net: List<Position>, val day: List<Position>, val skipped: Set<String> = emptySet(),
+                         /** The left-out rows' own money figures (pnl, m2m, realised, unrealised), so the account's totals keep them. */
+                         val skippedMoney: List<Double> = listOf(0.0, 0.0, 0.0, 0.0)) {
         /** Whether the read had a malformed row it left out. */
         val partial: Boolean get() = skipped.isNotEmpty()
         /** Whether [symbol]'s net row may have been one left out (its absence then tells nothing). */
         fun unknown(symbol: String): Boolean = ANY in skipped || symbol in skipped
-        val pnl: Double get() = net.sumOf { it.pnl }
-        val m2m: Double get() = net.sumOf { it.m2m }
-        val realised: Double get() = net.sumOf { it.realised }
-        val unrealised: Double get() = net.sumOf { it.unrealised }
+        val pnl: Double get() = net.sumOf { it.pnl } + skippedMoney[0]
+        val m2m: Double get() = net.sumOf { it.m2m } + skippedMoney[1]
+        val realised: Double get() = net.sumOf { it.realised } + skippedMoney[2]
+        val unrealised: Double get() = net.sumOf { it.unrealised } + skippedMoney[3]
 
         companion object {
             /** [skipped]'s mark for a malformed row with no symbol: every contract's absence is then not known. */
@@ -915,18 +917,22 @@ object Broker {
      * one that does not parse - is never a position at 0 and never fails the whole read (every exit keeps working on the rows read):
      * it is left out and named in [Positions.skipped] (its symbol, or [Positions.ANY] when it has none).
      */
-    private fun netRows(a: JSONArray): Pair<List<Position>, Set<String>> {
+    private fun netRows(a: JSONArray): Triple<List<Position>, Set<String>, List<Double>> {
         val out = ArrayList<Position>()
         val skipped = HashSet<String>()
+        val money = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
         for (i in 0 until a.length()) {
             val o = a.optJSONObject(i)
             val sym = o?.optString("tradingsymbol").orEmpty()
-            if (o == null || sym.isEmpty()) { skipped += Positions.ANY; continue }
-            if (!o.has("quantity") || o.isNull("quantity") || o.opt("quantity") !is Number) { skipped += sym; continue }
-            runCatching { position(o) }.onSuccess { out += it }.onFailure { skipped += sym }
+            val bad = o == null || sym.isEmpty() || !o.has("quantity") || o.isNull("quantity") || o.opt("quantity") !is Number ||
+                runCatching { position(o) }.onSuccess { out += it }.isFailure
+            if (!bad) continue
+            skipped += if (o == null || sym.isEmpty()) Positions.ANY else sym
+            // (Its money figures, when it gives them, still count in the account's totals: a loss is never hidden by a bad row.)
+            if (o != null) listOf("pnl", "m2m", "realised", "unrealised").forEachIndexed { k, f -> money[k] += o.optDouble(f, 0.0).takeIf { it.isFinite() } ?: 0.0 }
         }
         if (skipped.isNotEmpty()) runCatching { Diag.record("zerodha", "positions: ${skipped.size} malformed row(s) left out (${skipped.joinToString()}); read as not known") }
-        return out to skipped
+        return Triple(out, skipped, money.toList())
     }
 
     /**
@@ -952,9 +958,9 @@ object Broker {
             // 20 Nov 2026 (audit: a malformed positions reply was read as "no positions"): a reply without its "net" list is a failed
             // read (thrown), never an empty account. A malformed row is left out and named ([netRows]); the rest is read as ever.
             val net = d.optJSONArray("net") ?: throw java.io.IOException("Zerodha's positions reply had no net list")
-            val (rows, skipped) = netRows(net)
+            val (rows, skipped, money) = netRows(net)
             val day = d.optJSONArray("day")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { runCatching { position(it) }.getOrNull() } } }.orEmpty()
-            Positions(rows, day, skipped)
+            Positions(rows, day, skipped, money)
         }
         passBook.put(ticket, at, r.value)
         keptBook = Kept(r.startedAt, gen, r.value)
