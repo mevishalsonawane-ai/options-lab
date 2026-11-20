@@ -2714,6 +2714,8 @@ class PassedArmsHostTest : RobolectricTest() {
 
     @Test fun aStalePickerHistoryIsMarkedReadAgainAndNeverPutOverAWholeOne() {
         pickerDay(true, history = false)
+        // (Replaced by a whole one only with the stale-history check on; off, the first kept stays: [offAStalePickerHistoryInUseStays].)
+        runBlocking { PassedArmsHost.setStaleSkip(true) }
         stalePickerHistory()
         val prev = PassedArmsHost.previousSession(day)!!
         val why = PassedArmsHost.pickerStale("NIFTY", day)
@@ -2729,6 +2731,54 @@ class PassedArmsHostTest : RobolectricTest() {
         assertNull(PassedArmsHost.pickerStale("NIFTY", day))
         stalePickerHistory()
         assertNull("a whole one is never replaced by a stale one", PassedArmsHost.pickerStale("NIFTY", day))
+    }
+
+    @Test fun offAStalePickerHistoryInUseStays() {
+        pickerDay(true, history = false)
+        stalePickerHistory()
+        assertNotNull(PassedArmsHost.pickerStale("NIFTY", day))
+        pickerHistory()
+        assertNotNull("the check off: the one in use stays", PassedArmsHost.pickerStale("NIFTY", day))
+    }
+
+    /**
+     * 20 Nov 2026 (deep review): the first score that decides a break fixes the decision - a later, different score (whole inputs by
+     * then, the would-be booking tried again) never flips a skip into a buy, nor a take into a skip. Unscored: taken and not fixed.
+     */
+    @Test fun aPickerDecisionNeverFlipsOnALaterScore() {
+        val bar = PassedArms.Bar5(day, 1, 25_000.0, 25_010.0, 24_990.0, 25_005.0)
+        val skip = DonchianArm.Signal("NIFTY", 1, bar, 25_000)
+        val take = DonchianArm.Signal("NIFTY", -1, bar, 25_000)
+        val loose = DonchianArm.Signal("BANKNIFTY", 1, bar, 56_000)
+        val words = { sc: Double -> if (sc < 0.5) "skip %.2f".format(java.util.Locale.ENGLISH, sc) else null }
+        val src = BreadthDonchianArm.SOURCE
+        assertEquals("skip 0.10", PassedArmsHost.pickDecide(day, src, skip, { 0.1 }, words))
+        assertEquals("a whole score later: still skipped", "skip 0.10", PassedArmsHost.pickDecide(day, src, skip, { 0.9 }, words))
+        assertNull(PassedArmsHost.pickDecide(day, src, take, { 0.9 }, words))
+        assertNull("a take never turns into a skip", PassedArmsHost.pickDecide(day, src, take, { 0.1 }, words))
+        assertNull("not scored: taken", PassedArmsHost.pickDecide(day, src, loose, { null }, words))
+        assertEquals("not fixed until scored", "skip 0.20", PassedArmsHost.pickDecide(day, src, loose, { 0.2 }, words))
+        // R51's own: apart from R72's.
+        assertNull(PassedArmsHost.pickDecide(day, DonchianArm.SOURCE, skip, { 0.9 }, words))
+    }
+
+    @Test fun aSkipOnAPartialScoreIsNeverBoughtOnALaterLook() {
+        // Everything skipped by the picker; the 09:20 break is decided on this pass's partial inputs (SENSEX and VIX not read).
+        PassedArmsHost.testPickThreshold = 1.0
+        try {
+            pickerDay(true)
+            tick(LocalTime.of(9, 21))
+            val key = "$day|${BreadthDonchianArm.SOURCE}|NIFTY|0|1"
+            assertEquals(false, PassedArmsHost.pickScoreKept(key)?.second)
+            assertTrue(view().open.filter { it.arm == BreadthDonchianArm.SOURCE }.all { it.shadow == PassedArmsHost.SHADOW_PICK })
+            // The threshold back to the model's and all inputs whole: the next look inside the window never buys it.
+            PassedArmsHost.testPickThreshold = null
+            minutes(indexKeys.getValue("SENSEX"), LocalTime.of(9, 22)) { bases.getValue("SENSEX") }
+            minutes(com.optionslab.engine.Upstox.INDEX_KEYS.getValue("INDIAVIX"), LocalTime.of(9, 22)) { 14.0 }
+            tick(LocalTime.of(9, 22))
+            assertTrue(view().open.none { it.arm == BreadthDonchianArm.SOURCE && it.shadow == null })
+            assertNothingAtZerodha()
+        } finally { PassedArmsHost.testPickThreshold = null }
     }
 
     @Test fun aScoreIsKeptAsWholeOnlyWhenAllItsInputsAreIn() {

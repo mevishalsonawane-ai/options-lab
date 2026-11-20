@@ -253,6 +253,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         // A restart (memory gone, the book read back) after a whole read: the hold is still known at the window's end.
         assertTrue(PassedArmsHost.awaitWrites())
         AutomationSupport.reloadFromDisk(PassedArmsHost)
+        assertTrue("the switch read back", view().staleOn)
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(prev) else emptyList() }
         runBlocking { PassedArmsHost.prefetchNow(day) }
         assertNull(PassedArmsHost.historyStale("NIFTY", day))
@@ -263,8 +264,9 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
 
     @Test fun aWorseStaleReadNeverReplacesABetterStaleOne() {
         val before = PassedArmsHost.previousSession(prev)!!
-        // Yesterday read but for its last bar: kept over a read that misses yesterday altogether.
+        // Yesterday read but for its last bar: kept over a read that misses yesterday altogether (the check on: a better one may replace it).
         history(session(prev, until = LocalTime.of(15, 25)))
+        runBlocking { PassedArmsHost.setStaleSkip(true) }
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(before) else emptyList() }
         runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }
         assertEquals(prev, PassedArmsHost.history("NIFTY", day)!!.sessions.last().date)
@@ -314,8 +316,36 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         assertTrue("a clock set back never stops the reads", PassedArmsHost.readDue(t, day, 999_000L, PassedArmsHost.HIST_BACKOFF_MS))
     }
 
+    @Test fun offAHistoryInUseIsNeverReplacedMidSessionOnlyLogged() {
+        // The check off (the default): the stale history in use stays, so the channels (R51, R72 and every arm reading it) stay as they were.
+        history(session(PassedArmsHost.previousSession(prev)!!))
+        assertFalse(view().staleOn)
+        val before = PassedArmsHost.history("NIFTY", day)!!
+        val series = before.sessions.flatMap { PassedArms.bars5(it) }
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(prev) else emptyList() }
+        runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }
+        val after = PassedArmsHost.history("NIFTY", day)!!
+        assertTrue("the same history object stays", before === after)
+        assertEquals(series, after.sessions.flatMap { PassedArms.bars5(it) })
+        assertNotNull(PassedArmsHost.historyStale("NIFTY", day))
+        // Logged once by the next pass.
+        market(LocalTime.of(9, 20)); tick(LocalTime.of(9, 20))
+        market(LocalTime.of(9, 21)); tick(LocalTime.of(9, 21))
+        assertEquals(1, view().log.count { "NIFTY: a whole history arrived; would have replaced the one in use" in it })
+        // The break on it is taken as before (shadow).
+        assertEquals(1, real().size)
+        // A history missing altogether is still read, as before.
+        history(emptyList())
+        assertNull(PassedArmsHost.history("NIFTY", day))
+        PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(prev) else emptyList() }
+        runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }
+        assertNull(PassedArmsHost.historyStale("NIFTY", day))
+        assertNotNull(PassedArmsHost.history("NIFTY", day))
+    }
+
     @Test fun aStaleOrEmptyHistoryIsReadAgainInTheBackground() {
         history(session(PassedArmsHost.previousSession(prev)!!))
+        runBlocking { PassedArmsHost.setStaleSkip(true) }
         assertTrue(PassedArmsHost.historyWanted("NIFTY", day))
         val reads = java.util.concurrent.atomic.AtomicInteger()
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") { reads.incrementAndGet(); session(prev) } else emptyList() }
@@ -330,6 +360,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         assertEquals(n, reads.get())
         // Daily candles alone (no session) are read again too.
         history(emptyList(), daily = listOf(Bar(prev.atStartOfDay(), 1.0, 2.0, 0.5, 1.5)))
+        runBlocking { PassedArmsHost.setStaleSkip(true) }
         assertNotNull(PassedArmsHost.history("NIFTY", day))
         assertTrue(PassedArmsHost.historyWanted("NIFTY", day))
     }
@@ -338,6 +369,7 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         val before = PassedArmsHost.previousSession(prev)!!
         val daily = listOf(Bar(before.atStartOfDay(), 1.0, 2.0, 0.5, 1.5))
         history(session(before), daily)
+        runBlocking { PassedArmsHost.setStaleSkip(true) }
         // A read that brings nothing but daily candles keeps the stale sessions (they are better than none).
         PassedArmsHost.testHistory = { emptyList() }
         runBlocking { PassedArmsHost.prefetchNow(day, listOf("NIFTY")) }
@@ -417,6 +449,21 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         manage(LocalTime.of(9, 27))
         val sold = view().closed.single { it.shadow == null }
         assertEquals(whyAt(locked, e), sold.why)
+    }
+
+    @Test fun oneBadPrintNeverRaisesTheLock() {
+        listed()
+        val p = bought(200.0)
+        val e = p.entry
+        // The minutes stop at the entry minute; a packet with no trade time far over a sane book (a stray print): the book's bid counts.
+        KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(token, e + 40.0, bid = e, ask = e + 0.1,
+            exchangeTime = System.currentTimeMillis() / 1000, bidQty = 65, askQty = 65, lastTradeTime = 0L)))
+        manage(LocalTime.of(9, 26))
+        assertEquals("its own -15%: no lock from the stray print", e * 0.85, popupStop(real().single())!!, 1e-9)
+        // A real trade at e + 22 afterwards does raise it, as before.
+        fed(e + 22.0, LocalTime.of(9, 27))
+        manage(LocalTime.of(9, 27))
+        assertEquals(lv(e, e + 22.0), popupStop(real().single())!!, 1e-9)
     }
 
     @Test fun withTheMinutesCurrentTheWalkIsTheResearchsOwn() {

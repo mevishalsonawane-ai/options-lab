@@ -382,6 +382,30 @@ class StepTrailPassedTest : RobolectricTest() {
         assertEquals(b, kite.order(live.stopOrderId!!).trigger, 1e-9)
     }
 
+    /**
+     * 20 Nov 2026 (audit B5, item 5): a look whose only change is a higher best price (a lock earned, its Zerodha stop not moved this look)
+     * writes the book on its own writer: the write happens, and a restart keeps the best price and the lock it earned.
+     */
+    @Test fun liveABestOnlyLookIsWrittenAndARestartKeepsIt() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val e = live.entry
+        // Zerodha refuses the stop's move this look: only the best price changes in the book.
+        kite.modifyRefusals = 5
+        quoted(e * 1.105)
+        val now = ArmLive.view.value.open.single()
+        assertEquals("the stop not moved yet", live.stopTrigger!!, now.stopTrigger!!, 1e-9)
+        assertEquals(e * 1.105, now.best!!, 0.051)
+        // A restart (the writer drained first, then memory gone): the best is read back from the book on disk.
+        ArmLive.forgetMemoryForTest()
+        kite.modifyRefusals = 0
+        quoted(e * 1.09)
+        val back = ArmLive.view.value.open.single()
+        assertEquals("its best price kept", e * 1.105, back.best!!, 0.051)
+        assertEquals("the lock it earned rests at Zerodha", lockedLive(live), back.stopTrigger!!, 1e-9)
+    }
+
     @Test fun liveTheAppSaleWaitsWhileBossIsExitingByHand() {
         goLive()
         bought(200.0)

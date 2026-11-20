@@ -1439,7 +1439,7 @@ object PassedArmsHost {
         if (now.toLocalTime().isBefore(LocalTime.of(8, 45))) return
         // 20 Nov 2026 (audit B5, items 2 and 4): read again while any is missing or does not reach the last trading day, 1, 2, 5, then
         // every 10 minutes (it was every 10 from the start, and a stale one was kept all day).
-        if ((R72Picker.INDICES + VIX).all { pickReady(it, day)?.stale == null && pickReady(it, day) != null }) return
+        if ((R72Picker.INDICES + VIX).all { pickReady(it, day).let { h -> h != null && (h.stale == null || !staleActs()) } }) return
         val t = pickTried
         val ms = System.currentTimeMillis()
         if (!readDue(t, day, ms, PICK_BACKOFF_MS)) return
@@ -1452,7 +1452,8 @@ object PassedArmsHost {
     internal suspend fun prefetchPickerNow(day: LocalDate) {
         for (u in R72Picker.INDICES + VIX) {
             val was = pickReady(u, day)
-            if (was != null && was.stale == null) continue
+            // (20 Nov 2026, deep review: one in use is read again only with the stale-history check on; off, the first kept stays, as before.)
+            if (was != null && (was.stale == null || !staleActs())) continue
             runCatching {
                 val key = if (u == VIX) Upstox.INDEX_KEYS.getValue("INDIAVIX") else upKey(u)
                 val ones = testHistory?.invoke(u) ?: toBars(Net.history(key, day.minusDays(40), day.minusDays(1)))
@@ -1482,16 +1483,39 @@ object PassedArmsHost {
         if (cache.keys.any { !it.startsWith("$today|") }) cache.keys.removeAll { !it.startsWith("$today|") }
         val dk = "$today|$src|${s.underlying}|${s.bar.b}|${s.side}"
         // 20 Nov 2026 (audit B5, item 4): only a score made from whole inputs is used again as it is; one made from part of them is made
-        // afresh on the next ask (the reads may be whole by then).
+        // afresh on the next ask (the reads may be whole by then) - for the labels and the log. The skip or take a score DECIDED is kept
+        // apart and never changes ([pickDecide]).
         cache[dk]?.takeIf { it.second }?.let { return it.first }
         if ((R72Picker.INDICES + VIX).any { pickReady(it, today) == null }) return null
         if (reads.vix == null || R72Picker.INDICES.any { reads.bars[it] == null }) return null
+        // (Whether the inputs are whole, read BEFORE the score is made: a whole history landing in between never marks a score made
+        // from the stale one as whole.)
+        val whole = runCatching { pickWhole(today, s, reads) }.getOrDefault(false)
         val model = if (src == BreadthDonchianArm.SOURCE) R72Picker.MODEL else R51Picker.MODEL
         val sc = runCatching { model.score(R72Picker.features(pickInput(today, s, earlier, fCount, reads))) }.getOrNull()?.takeIf { it.isFinite() }
             ?: return null
-        cache[dk] = sc to runCatching { pickWhole(today, s, reads) }.getOrDefault(false)
+        cache[dk] = sc to whole
         return sc
     }
+
+    /**
+     * 20 Nov 2026 (deep review of audit B5, item 4): what the picker decided for today's break [s] of [src] - its skip words, or null
+     * (taken, or not scored). The first score that decides a break (a skip or a take) fixes that decision for the day: a break skipped
+     * on one look is never bought on a later one because a fresher score came (its would-be trade's booking failed and was tried again),
+     * nor a take turned into a skip. A break it could not score is taken and not fixed, as before. Memory only.
+     */
+    internal fun pickDecide(today: LocalDate, src: String, s: DonchianArm.Signal, score: () -> Double?, words: (Double) -> String?): String? {
+        if (pickDecisions.keys.any { !it.startsWith("$today|") }) pickDecisions.keys.removeAll { !it.startsWith("$today|") }
+        val dk = "$today|$src|${s.underlying}|${s.bar.b}|${s.side}"
+        pickDecisions[dk]?.let { return it.ifEmpty { null } }
+        val sc = score() ?: return null
+        val w = words(sc)
+        pickDecisions[dk] = w ?: ""
+        return w
+    }
+
+    /** 20 Nov 2026: the picker's decision of each break, by its decision key: its skip words, or "" taken ([pickDecide]). Memory only. */
+    private val pickDecisions = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /**
      * 20 Nov 2026 (audit B5, item 4): whether [s]'s picker inputs are whole - all six picker histories up to the last trading day, and
@@ -1519,8 +1543,8 @@ object PassedArmsHost {
         val order = sigs.mapValues { (_, l) -> l.sortedBy { it.bar.b } }
         val count = sigs.values.flatten().groupingBy { it.bar.b to it.side }.eachCount()
         return { x ->
-            val sc = pickScore(today, src, x, order[x.underlying]?.indexOf(x)?.coerceAtLeast(0) ?: 0, count[x.bar.b to x.side] ?: 0, reads)
-            pickWords(sc, R72Picker.MODEL)
+            pickDecide(today, src, x, { pickScore(today, src, x, order[x.underlying]?.indexOf(x)?.coerceAtLeast(0) ?: 0, count[x.bar.b to x.side] ?: 0, reads) },
+                { sc -> pickWords(sc, R72Picker.MODEL) })
         }
     }
 
@@ -1534,7 +1558,8 @@ object PassedArmsHost {
         val own by lazy { sigs.filter { gate == null || gate(it) == true }.sortedBy { it.bar.b } }
         return { x ->
             val i = own.indexOf(x)
-            pickWords(if (i < 0) null else pickScore(today, DonchianArm.SOURCE, x, i, 0, reads), R51Picker.MODEL)
+            pickDecide(today, DonchianArm.SOURCE, x, { if (i < 0) null else pickScore(today, DonchianArm.SOURCE, x, i, 0, reads) },
+                { sc -> pickWords(sc, R51Picker.MODEL) })
         }
     }
 
@@ -1631,8 +1656,33 @@ object PassedArmsHost {
         val h = Hist(day, sessions, daily.filter { it.start.toLocalDate().isBefore(day) }.ifEmpty { was?.daily.orEmpty() })
         val prev = previousSession(day)
         if (histOrder(h, prev) < histOrder(was, prev)) return false
+        // 20 Nov 2026 (deep review of audit B5): a history already in use is replaced only with the stale-history check on. Off (the
+        // default), the first one kept stays for the day, as before (a new one would change the channels of R51, R72 and every arm reading
+        // it, live too): a better read is only logged ([histWould]).
+        if (was != null && !staleActs()) {
+            if (histOrder(h, prev) > histOrder(was, prev)) histWould.putIfAbsent("$day|$u", "$u: a ${if (histRank(h, prev) == 3) "whole" else "better"} " +
+                "history arrived; would have replaced the one in use (${staleWhy(was.sessions, prev) ?: "it has no earlier session"}) - the stale-history check is off, so it is kept")
+            return false
+        }
         hist[u] = h
         return true
+    }
+
+    /** 20 Nov 2026: the stale-history check is on ([Book.staleOn]; the book in memory, else the last view). Memory only. */
+    private fun staleActs(): Boolean = cache?.staleOn ?: _view.value.staleOn
+
+    /** 20 Nov 2026: each index's better history that came with the check off ("day|index" -> words), logged once by the next pass. */
+    private val histWould = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** The [histWould] lines not yet logged, put in [b]'s log once a day each; true when one was. */
+    private fun logHistWould(b: Book): Boolean {
+        var any = false
+        for ((k, words) in histWould) {
+            if ("$k|histWould" in b.decided) continue
+            b.decided += "$k|histWould"; note(b, words); any = true
+        }
+        if (histWould.size > 50) histWould.clear()
+        return any
     }
 
     /**
@@ -1867,6 +1917,7 @@ object PassedArmsHost {
             val b = book()
             var changed = runCatching { exits(b, now) }.getOrElse { note(b, "exit check failed: ${it.javaClass.simpleName}"); true }
             changed = runCatching { forward(b) }.getOrDefault(false) || changed
+            changed = runCatching { logHistWould(b) }.getOrDefault(false) || changed
             changed = prune(b) || changed
             if (changed) save(b) else publish(b)
         }
@@ -3059,16 +3110,20 @@ object PassedArmsHost {
         var lockRose = false
         // 20 Nov 2026 (audit B5, item 6: the locks rose only on closed minutes, so they stalled while the option's minutes stopped coming):
         // while the minutes in hand stop short of the one just ended (the same two minutes [recentBar] allows the feed), an R51 / R72
-        // trade's best since its entry also comes from the stream's kept ticks or a fresher candle read ([RuleHighs]: read in the
+        // trade's best since its entry also comes from the checked prices now of the looks since ([saneHighs]: memory, never read on the
         // background, never on this look) and the price now once past the entry minute - the same levels, only no longer waiting. With
         // the minutes current the walk is the research's own, as before. (Only once the minute after the entry minute has had its two
         // minutes to come: before that no closed minute after the entry can be in hand, so none is missing yet.)
-        val bestNow = if (overnight || recentBar != null || (p.arm != DonchianArm.SOURCE && p.arm != BreadthDonchianArm.SOURCE) ||
-            now.withSecond(0).withNano(0).minusMinutes(2).isBefore(entryMin)) null else {
-            val hk = highKey(p)
-            runCatching { RuleHighs.ask(hk, c, p.entryTime) }
-            listOfNotNull(RuleHighs.peek(hk), ltp?.takeIf { now.withSecond(0).withNano(0).isAfter(entryMin) }).filter { it.isFinite() && it > 0 }.maxOrNull()
+        // 20 Nov 2026 (deep review): only prices that passed the price-now checks ([ltp]: a trade since the entry and not far outside a sane
+        // book, else the sane book's bid, else a checked quote) count - kept across looks as the best seen ([saneHighs]), so one bad print
+        // never raises a lock. Memory only.
+        val rule = p.arm == DonchianArm.SOURCE || p.arm == BreadthDonchianArm.SOURCE
+        if (rule && !overnight && ltp != null && ltp.isFinite() && ltp > 0 && now.withSecond(0).withNano(0).isAfter(entryMin)) {
+            if (saneHighs.size > 500) saneHighs.clear()
+            saneHighs.merge(highKey(p), ltp) { a, x -> maxOf(a, x) }
         }
+        val bestNow = if (overnight || recentBar != null || !rule || now.withSecond(0).withNano(0).minusMinutes(2).isBefore(entryMin)) null
+            else saneHighs[highKey(p)]
         // 20 Oct, review: the walk's own exit (its kind and price), so a stop or lock is never booked better than it ([sell]).
         var walked: PassedArms.Exit? = null
         val why: String? = when {
@@ -3258,13 +3313,16 @@ object PassedArmsHost {
      */
     private fun mayShare(a: String, b: String): Boolean = a != b && setOf(a, b) == setOf(DonchianArm.SOURCE, BreadthDonchianArm.SOURCE)
 
-    /** 20 Nov 2026 (audit B5, item 6): [p]'s best-price read in [RuleHighs] (its own, apart from the live books' and another arm's). */
-    private fun highKey(p: Pos): String = "passed:" + lockKey(p) + "|" + p.entryTime
+    /** 20 Nov 2026 (audit B5, item 6): [p]'s key in [saneHighs]. */
+    private fun highKey(p: Pos): String = lockKey(p) + "|" + p.entryTime
+
+    /** 20 Nov 2026 (audit B5, item 6): each open R51 / R72 trade's best checked price now since its entry minute ([exits]). Memory only. */
+    private val saneHighs = java.util.concurrent.ConcurrentHashMap<String, Double>()
 
     /** [p]'s lock and (when no other open trade here holds its option) its last price, forgotten. */
     private fun forget(b: Book, p: Pos) {
         b.locks.remove(lockKey(p)); b.locks.remove(ownLockKey(p))
-        runCatching { RuleHighs.forget(highKey(p)) }
+        saneHighs.remove(highKey(p))
         if (b.positions.none { it.open && it.symbol == p.symbol && !same(it, p) }) b.marks.remove(p.symbol)
     }
 
@@ -3382,7 +3440,7 @@ object PassedArmsHost {
             pendingBytes.set(null)
             written.forget()
         }
-        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; pickHist.clear(); pickTried = null; pickScores.clear(); w20Labels.clear(); r51Scores.clear(); lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
+        cache = null; _view.value = View(); hist.clear(); histRead.clear(); histTried = null; pickHist.clear(); pickTried = null; pickScores.clear(); pickDecisions.clear(); saneHighs.clear(); histWould.clear(); w20Labels.clear(); r51Scores.clear(); lastRead.clear(); looks.clear(); tried.clear(); r72Due = emptyMap(); r72DueBar = null
         runCatching { com.optionslab.ira.ArmExits.set("passed", emptyList()) }
         // 26 Oct: the exit looks' kept minutes and the entry retry are memory too.
         exitReads.clear(); exitBars.clear(); retryJob?.cancel(); retryJob = null; plannedRetry = null; retriesOf = null to 0
