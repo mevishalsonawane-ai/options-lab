@@ -389,6 +389,9 @@ object Paper {
      */
     private val priceReads = java.util.concurrent.ConcurrentHashMap<String, PriceRead>()
 
+    /** Every price read still running, whoever waits on it (memory only): a test's feed going away stops them all ([settlePriceReadsForTest]). */
+    private val readsInFlight: MutableSet<PriceRead> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     /** How many reads left for the next look were cancelled because another caller's took their place (the tests read it). */
     internal val overwrittenReads = java.util.concurrent.atomic.AtomicInteger()
 
@@ -397,7 +400,7 @@ object Paper {
      * each, so none outlives its test's feed (it would reach the real host) or lends an earlier test's prices to the next.
      */
     internal fun settlePriceReadsForTest(waitMs: Long = 2_000L) {
-        val all = priceReads.values.toList()
+        val all = (priceReads.values + readsInFlight).distinct()
         priceReads.clear()
         all.forEach { it.job.cancel() }
         kotlinx.coroutines.runBlocking { all.forEach { kotlinx.coroutines.withTimeoutOrNull(waitMs) { it.job.join() } } }
@@ -418,7 +421,8 @@ object Paper {
         }
         if (prev != null && left == null) prev.job.cancel()
         val r = left ?: PriceRead(gapReads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { Net.intradayQuick(c.feedKey) }, now).also { pr ->
-            pr.job.invokeOnCompletion { pr.doneAt = System.currentTimeMillis() }
+            readsInFlight.add(pr)
+            pr.job.invokeOnCompletion { pr.doneAt = System.currentTimeMillis(); readsInFlight.remove(pr) }
             pr.job.start()
         }
         // (join, not await, inside the timeout: a failed read's own error is thrown by the await below, never mistaken for the timeout.
