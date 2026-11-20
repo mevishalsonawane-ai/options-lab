@@ -146,6 +146,24 @@ class ReconcileTest {
         assertEquals(setOf(ce), t.open())
     }
 
+    @Test fun heldWithABookUnreadKeepsTheHintAndJudgesNothing() {
+        val t = Reconcile.Tracker()
+        val f = listOf(Reconcile.Finding(ce, 75, false))
+        t.heldOnly(0L)
+        assertTrue(t.heldHint(1L), "Zerodha read and holding: held, though a book was unreadable")
+        assertTrue(t.open().isEmpty(), "nothing judged")
+        t.step(10_000L, f, true)
+        t.heldOnly(70_000L)
+        assertTrue(t.step(130_000L, f, true).isEmpty(), "never agreed across an unjudged read: two good reads in a row again")
+        assertEquals(f, t.step(190_000L, f, true), "then told")
+        t.step(200_000L, emptyList(), false)
+        t.heldOnly(500_000L)
+        assertTrue(t.heldHint(500_000L + Reconcile.HINT_MS - 1), "kept fresh")
+        assertTrue(t.heldHint(500_001L), "one flat read before it never turns it flat")
+        t.step(560_000L, emptyList(), false)
+        assertTrue(t.heldHint(560_001L), "its count of flat reads was started again")
+    }
+
     @Test fun theSideMustAgreeBetweenTheTwoReads() {
         val t = Reconcile.Tracker()
         t.step(0L, listOf(Reconcile.Finding(ce, 75, false)), true)

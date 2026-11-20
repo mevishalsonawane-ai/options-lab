@@ -1587,6 +1587,7 @@ class WatchService : Service() {
          * pass fail, now goes to the background writer).
          */
         @Volatile internal var passFailureForTest: Throwable? = null
+            set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }   // (20 Nov 2026: debug builds only)
         /** 19 Nov 2026 (audit batch 2): the last run whose own end cleared [RUN_DAY] (written under [runDayLock]). */
         @Volatile private var endedRun = 0L
         /** Tests run many services in one process: the run count starts again as a new process would. */

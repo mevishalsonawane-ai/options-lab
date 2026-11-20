@@ -97,6 +97,22 @@ class ReconcilerTest : RobolectricTest() {
         assertTrue("still held at Zerodha", Reconciler.heldHint(t0 + 120_000L))
     }
 
+    /**
+     * 20 Nov 2026 (integration review): Zerodha read and holding, a book unreadable (the arms' live copies' book not loaded): "Zerodha
+     * holds something" still counts (the watch never sleeps), and nothing is judged or told.
+     */
+    @Test fun heldAtZerodhaWithABookUnreadableIsHeldButNeverJudged() {
+        kite.position(other, -30, 210.0, product = "NRML")
+        ArmLive.viewForTest(ArmLive.View())                              // the book not read yet
+        assertFalse(ArmLive.view.value.loaded)
+        runBlocking { Reconciler.step(context, t0); Reconciler.step(context, t0 + 60_000L) }
+        assertTrue("Zerodha holds something", Reconciler.heldHint(t0 + 60_000L))
+        assertTrue(HeldNow.any())
+        assertNull("nothing judged, never told", risk())
+        assertTrue(Reconciler.line(), Reconciler.line().contains("a book could not be read; nothing judged"))
+        runBlocking { ArmLive.refresh() }                                // the book back for the next test
+    }
+
     @Test fun flatAtZerodhaIsNothingHeldAfterTwoFlatReads() {
         runBlocking { Reconciler.step(context, t0) }
         assertFalse(Reconciler.heldHint(t0))

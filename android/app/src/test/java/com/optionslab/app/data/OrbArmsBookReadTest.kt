@@ -114,6 +114,17 @@ class OrbArmsBookReadTest : RobolectricTest() {
         assertTrue(alerts().toString(), alerts().none { "set aside" in it })
     }
 
+    /** 20 Nov 2026 (integration review): "set liquidity to 2 lots" with the book unreadable for a moment: said plainly, never a crash. */
+    @Test fun liquidityLotsByVoiceWithTheBookUnreadableIsSaidNotThrown() {
+        state(positions = emptyList())
+        restart()
+        OrbArms.testRead = { throw java.security.KeyStoreException("a Keystore hiccup") }
+        val (said, act) = runBlocking { com.optionslab.app.ira.IraActions.prepare(com.optionslab.ira.Ask.parse("set liquidity to 2 lots").command!!) }
+        assertTrue(said, said.contains("could not read Liquidity 15+5's book right now") && said.contains("not readable"))
+        assertNull("nothing to confirm", act)
+        assertTrue("never set aside", asides().isEmpty())
+    }
+
     @Test fun aReadThatKeepsFailingIsSetAsideOnlyAfterFiveInARowOverHalfAMinute() {
         state(positions = listOf(position(30, 200.0, "E1", stopId = "S1", stop = 160.0)))
         restart()

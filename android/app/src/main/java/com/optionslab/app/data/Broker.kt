@@ -166,7 +166,9 @@ object Broker {
     }
 
     /** TEST SEAM (19 Nov 2026, audit batch 2): run inside the door, just before its own checks (a setting flipped at the last moment). */
+    // (20 Nov 2026, integration review: set only in debug builds.)
     @Volatile internal var testAtDoor: ((Kite.Order) -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     internal fun entryRecheck(o: Kite.Order, arm: String? = null, intended: Double? = null, stop: Double? = null): String? {
         testAtDoor?.invoke(o)

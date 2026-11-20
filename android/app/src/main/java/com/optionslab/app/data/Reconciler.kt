@@ -61,7 +61,15 @@ object Reconciler {
             line = "Reconciler (${hhmm()}): Zerodha or a book could not be read; nothing judged"
             return
         }
-        val (found, held) = read
+        val (judged, held) = read
+        if (judged == null) {
+            // 20 Nov 2026 (integration review): Zerodha read and holding, a book unreadable: "Zerodha holds something" still counts
+            // (HeldNow, the dead-man), and nothing is judged.
+            tracker.heldOnly(now)
+            line = "Reconciler (${hhmm()}): Zerodha holds positions but a book could not be read; nothing judged"
+            return
+        }
+        val found: List<Reconcile.Finding> = judged
         val alerts = tracker.step(now, found, held)
         line = "Reconciler (${hhmm()}): " + if (found.isEmpty()) "every Zerodha position is followed by a book" + (if (held) "" else " (none held)")
             else found.joinToString("; ") { Reconcile.say(it) }
@@ -84,14 +92,14 @@ object Reconciler {
 
     /**
      * Zerodha's positions against the books: the findings and whether Zerodha held anything; null when Zerodha or a book could not
-     * be read in time. Reads only.
+     * be read in time. Reads only. 20 Nov 2026: Zerodha read and holding but a book unreadable: no findings (null) and held (true).
      */
-    internal suspend fun read(): Pair<List<Reconcile.Finding>, Boolean>? {
+    internal suspend fun read(): Pair<List<Reconcile.Finding>?, Boolean>? {
         val book = Broker.within(WAIT_MS) { Broker.positionsRecon() } ?: return null
         val positions = book.net.filter { it.exchange in com.optionslab.engine.Kite.DERIVATIVE_EXCHANGES && it.qty != 0 }
             .groupBy { it.symbol }.mapValues { (_, v) -> v.sumOf { it.qty } }.filterValues { it != 0 }
         if (positions.isEmpty()) return emptyList<Reconcile.Finding>() to false
-        val claims = claims(positions.keys) ?: return null
+        val claims = claims(positions.keys) ?: return null to true
         val owned = claims.map { it.symbol }.toSet()
         val ownedQty = Reconcile.ownedQty(claims)
         if (!Reconcile.unownedOrOversized(positions, owned, ownedQty)) return emptyList<Reconcile.Finding>() to true
@@ -197,7 +205,7 @@ object Reconciler {
     internal const val HELD_MARK = "held.mark"
 
     /** TEST ONLY: as after a good read at [now] in which Zerodha held something. */
-    internal fun heldForTest(now: Long = System.currentTimeMillis()) { tracker.step(now, emptyList(), true) }
+    internal fun heldForTest(now: Long = System.currentTimeMillis()) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; tracker.step(now, emptyList(), true) }
 
     /** TEST ONLY: as a fresh process. */
     internal fun resetForTest() {

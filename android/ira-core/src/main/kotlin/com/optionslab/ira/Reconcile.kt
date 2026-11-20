@@ -191,6 +191,13 @@ object Reconcile {
         /** A read that failed: nothing changes (never "flat", never cleared, never said). */
         @Synchronized fun failed() {}
 
+        /**
+         * 20 Nov 2026 (integration review): Zerodha's positions were read and hold something, but a book could not be read: "Zerodha
+         * holds something" is kept fresh (the watch and the dead-man never sleep), and nothing is judged. The two reads that must agree
+         * before a finding is told start again (never agreed across the gap); when each was told is kept (no repeat sooner).
+         */
+        @Synchronized fun heldOnly(nowMs: Long) { held = true; flatReads = 0; heldAt = nowMs; prev = null; since.clear() }
+
         /** Zerodha held something at the last good read (and that read is at most [HINT_MS] old); false when unknown or flat. */
         @Synchronized fun heldHint(nowMs: Long): Boolean = held == true && nowMs - heldAt in 0 until HINT_MS
 

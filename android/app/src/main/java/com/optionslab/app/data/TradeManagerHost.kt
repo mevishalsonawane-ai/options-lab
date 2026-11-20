@@ -275,9 +275,11 @@ object TradeManagerHost {
      * TEST SEAM: a test sets its own.
      */
     @Volatile internal var liveCopyOf: (String) -> Boolean = { sym -> armLiveCopy(paperSymbol = sym) }
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }   // (20 Nov 2026)
 
     /** 19 Nov 2026 (audit batch 2): the same by the paper trade's own ref (the Hero ticket's Trend watch exit). TEST SEAM. */
     @Volatile internal var liveCopyOfRef: (String) -> Boolean = { ref -> armLiveCopy(ref = ref) }
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /**
      * 19 Nov 2026 (audit batch 2, delta review): whether a live copy of the paper contract [paperSymbol] is KNOWN to be open -
@@ -285,6 +287,7 @@ object TradeManagerHost {
      * Only a known copy turns a manager record to SHADOW for good ([one]). Memory only. TEST SEAM: a test sets its own.
      */
     @Volatile internal var liveCopyKnownOf: (String) -> Boolean = { sym -> armLiveCopyKnown(sym) }
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     internal fun armLiveCopyKnown(paperSymbol: String): Boolean = runCatching {
         val v = ArmLive.view.value
@@ -912,8 +915,12 @@ object TradeManagerHost {
         _policy.value = TradeManager.Policy(); policyLoaded = true; loaded = true; testPolicyRead = null
         lastEval = 0L; minuteSettled = -1L
         // 19 Nov 2026 (audit batch 2): the live-copy seams back to ArmLive's book, nothing held back.
-        liveCopyOf = { sym -> armLiveCopy(paperSymbol = sym) }; liveCopyOfRef = { ref -> armLiveCopy(ref = ref) }; heldBack.clear()
-        liveCopyKnownOf = { sym -> armLiveCopyKnown(sym) }; heldNoted.clear()
+        // (20 Nov 2026: their setters are debug-only.)
+        if (com.optionslab.app.BuildConfig.DEBUG) {
+            liveCopyOf = { sym -> armLiveCopy(paperSymbol = sym) }; liveCopyOfRef = { ref -> armLiveCopy(ref = ref) }
+            liveCopyKnownOf = { sym -> armLiveCopyKnown(sym) }
+        }
+        heldBack.clear(); heldNoted.clear()
         ManagerSpecialists.resetForTest()
         if (com.optionslab.app.BuildConfig.DEBUG) { testSnapshot = null; testBars = null; testNoWake = false }
     }

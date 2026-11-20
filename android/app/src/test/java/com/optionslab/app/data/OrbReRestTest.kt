@@ -249,6 +249,55 @@ class OrbReRestTest : RobolectricTest() {
         assertEquals("put back", 1, slCount())
     }
 
+    /**
+     * 20 Nov 2026 (integration review): Boss's manual exit from the app takes the ORB stop out first (AppModel's takeOverLeg marks it the
+     * app's own before the cancel goes); the exit's sale fails. The stop comes back CANCELLED with no reason given: it is put back at
+     * Zerodha, never stopByYou - in the same process, and after a restart (the mark written on the trade).
+     */
+    @Test fun aManualExitWhoseSaleFailedLeavesTheStopTheAppsOwnAndPutsItBack() {
+        for ((restart, busy) in listOf(false to false, true to false, true to true)) {
+            AutomationSupport.clearAlerts()
+            val s = held("orb")
+            row()                                                         // the book read, as on the screen the exit is made from
+            assertTrue(OrbArms.mayOwnStop(s))
+            assertFalse("another book's order is not claimed", OrbArms.mayOwnStop("not-an-orb-stop"))
+            // busy: a pass holds the arms' lock (placing an order) - the exit's mark never waits on it.
+            val holder = if (busy) Thread { runBlocking { OrbArms.holdLockForTest(1_500) } }.apply { start(); Thread.sleep(200) } else null
+            val t0 = System.nanoTime()
+            val job = OrbArms.markOwnCancels(listOf(s))                   // as takeOverLeg does, right before its cancel
+            assertTrue("never waits on the lock", System.nanoTime() - t0 < 500_000_000L)
+            kite.reject(s, message = "", status = "CANCELLED")            // its cancel; the sale was refused, so the lot is still held
+            holder?.join()
+            runBlocking { job!!.join() }
+            if (restart) {
+                assertTrue(OrbArms.awaitWrites())
+                OrbArms.forgetMemoryForTest()                             // a restart: the memory mark is gone, the trade's is read back
+            }
+            pass()
+            assertFalse("restart=$restart busy=$busy", row().open!!.stopByYou)
+            assertFalse(alerts(), AutomationSupport.alerts().any { it.contains("cancelled by you") })
+            assertEquals("restart=$restart: put back", 1, slCount())
+            kite.requests.clear(); kite.orders.clear()
+        }
+        // The manual exit marks them before its cancels go, and takes the mark back from a stop still working.
+        fun src(f: String) = listOf(java.io.File("src/main/java/com/optionslab/app/$f"), java.io.File("app/src/main/java/com/optionslab/app/$f")).first { it.isFile }.readText()
+        val t = src("ui/AppModel.kt")
+        val take = t.substring(t.indexOf("private suspend fun takeOverLeg"))
+        assertTrue(take.indexOf("OrbArms.markOwnCancels(orbIds)") in 1 until take.indexOf("for (r in rest) runCatching { b.cancel(r.id, r.variety) }"))
+        assertTrue(take.contains("OrbArms.unmarkOwnCancels(still)"))
+    }
+
+    /** 20 Nov 2026: a mark taken back (the cancel did not take) leaves Boss's later cancel in Kite his: never put back. */
+    @Test fun anOrbMarkTakenBackLeavesBossesLaterCancelHis() {
+        val s = held("orb")
+        runBlocking { OrbArms.markOwnCancels(listOf(s))!!.join(); OrbArms.unmarkOwnCancels(listOf(s))!!.join() }
+        pass()                                                            // seen working: the trade's mark ends
+        kite.reject(s, message = "", status = "CANCELLED")                // later, Boss in Kite
+        pass()
+        assertTrue(row().open!!.stopByYou)
+        assertEquals("never put back", 0, slCount())
+    }
+
     /** A fast look (a stream tick's) never places a stop - only the regular pass does. */
     @Test fun aFastLookNeverPutsTheStopBack() {
         val s = held("orb")

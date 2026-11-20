@@ -751,7 +751,8 @@ internal object IraActions {
         val key = SettingsTalk.Key.LIQUIDITY_LOTS
         val n = v.toInt()
         if (v % 1.0 != 0.0 || !com.optionslab.engine.orb.LiquidityLots.valid(n)) return "Liquidity 15+5 trades 1, 2 or 3 lots, Boss - not ${SettingsTalk.show(key, v)}." to null
-        val old = com.optionslab.app.data.OrbArms.liquidityLots()
+        // 20 Nov 2026 (integration review): the arms' book unreadable is said plainly, never a crash.
+        val old = lotsRead() ?: return LIQ_LOTS_UNREAD to null
         if (old == n) return "Liquidity 15+5 already trades ${com.optionslab.engine.orb.LiquidityLots.words(n)}." to null
         // 19 Nov 2026 (audit batch 2): a raise adds live risk (Liquidity trades live by Boss's switch alone): never by voice where the
         // guard's rule asks the PIN (as [LIMIT_PIN] for the guard's limits) - on its row on Home with the PIN. Lowering always may.
@@ -759,11 +760,22 @@ internal object IraActions {
         val more = if (com.optionslab.engine.orb.LiquidityLots.raises(old, n)) " (this allows more risk: each trade wins or loses ${"%.1f".format(java.util.Locale.ENGLISH, n.toDouble() / old).removeSuffix(".0")}x as much)" else ""
         return SettingsTalk.describe(key, old.toDouble(), v) + more to suspend {
             // Checked again at Confirm: changed meanwhile (on the row, or another request), nothing is applied.
-            val now = com.optionslab.app.data.OrbArms.liquidityLots()
-            if (now != old) "Liquidity 15+5's lots changed since you asked (now ${com.optionslab.engine.orb.LiquidityLots.words(now)}), so I left it. Ask again."
+            val now = lotsRead()
+            if (now == null) "$LIQ_LOTS_UNREAD I left it as it was."
+            else if (now != old) "Liquidity 15+5's lots changed since you asked (now ${com.optionslab.engine.orb.LiquidityLots.words(now)}), so I left it. Ask again."
             else com.optionslab.app.data.OrbArms.setLiquidityLots(n, "Jarvis, on Boss's yes")
         }
     }
+
+    /** 20 Nov 2026 (integration review): Liquidity 15+5's lots from the arms' book; null when the book could not be read now. */
+    private suspend fun lotsRead(): Int? = try {
+        com.optionslab.app.data.OrbArms.liquidityLots()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
+    }
+    private const val LIQ_LOTS_UNREAD = "I could not read Liquidity 15+5's book right now, Boss, so its lots are not readable. Try again in a moment."
 
     private fun applySetting(k: SettingsTalk.Key, v: Double, s: AppSettings): AppSettings = when (k) {
         SettingsTalk.Key.DAILY_LOSS -> s.copy(guardDailyLoss = v)

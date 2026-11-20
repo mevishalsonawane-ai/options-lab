@@ -1109,6 +1109,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // (Only the arms' own stops - every id while the arms' book is not read yet; taken back below for any still working.)
         val armIds = rest.map { it.id }.filter { id -> com.optionslab.app.data.ArmLive.view.value.let { v -> !v.loaded || v.open.any { it.stopOrderId == id } } }
         runCatching { com.optionslab.app.data.ArmLive.markOwnCancels(armIds) }
+        // 20 Nov 2026 (integration review): and the ORB / Liquidity book's, so a stop of theirs found CANCELLED after a sale that did not go
+        // is put back at Zerodha, never read as Boss's (memory at once; never a wait on that book's lock).
+        val orbIds = rest.map { it.id }.filter { com.optionslab.app.data.OrbArms.mayOwnStop(it) }
+        runCatching { com.optionslab.app.data.OrbArms.markOwnCancels(orbIds) }
         taken?.addAll(rest.map { it.id })
         for (r in rest) runCatching { b.cancel(r.id, r.variety) }
         // The cancels confirmed (or the check that follows sees what still works and says so).
@@ -1126,8 +1130,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         }
         // (19 Nov 2026, audit batch 2: a stop whose cancel did not take is still the arm's - its mark taken back, so Boss's own later cancel
         // of it in Kite is respected.)
-        runCatching { b.orders().filter { it.working && it.id in armIds }.map { it.id } }.getOrNull()?.takeIf { it.isNotEmpty() }
+        // (20 Nov 2026: one read of the book for both; the ORB / Liquidity marks the same way.)
+        val working = runCatching { b.orders().filter { it.working }.map { it.id }.toSet() }.getOrNull()
+        working?.filter { it in armIds }?.takeIf { it.isNotEmpty() }
             ?.let { still -> runCatching { com.optionslab.app.data.ArmLive.unmarkOwnCancels(still) } }
+        working?.filter { it in orbIds }?.takeIf { it.isNotEmpty() }
+            ?.let { still -> runCatching { com.optionslab.app.data.OrbArms.unmarkOwnCancels(still) } }
         runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: the cancel of its resting exits could not be confirmed (the order book did not answer); checked again before the leg goes") }
         return Took.Cleared
     }
