@@ -5,6 +5,7 @@ import com.optionslab.app.testing.NetworkGuard
 import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.app.testing.TradeFixtures
 import com.optionslab.engine.Right
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -82,8 +83,8 @@ class PaperPriceReadBoundTest : RobolectricTest() {
         upstox.gate = { key -> if (key == c.feedKey) Thread.sleep(1_000) }
         val before = Paper.overwrittenReads.get()
         runBlocking {
-            val a = kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) { Paper.lastPrice(c) }
-            val b = kotlinx.coroutines.async(kotlinx.coroutines.Dispatchers.IO) { Paper.lastPrice(c) }
+            val a = async(kotlinx.coroutines.Dispatchers.IO) { Paper.lastPrice(c) }
+            val b = async(kotlinx.coroutines.Dispatchers.IO) { Paper.lastPrice(c) }
             assertNull(a.await()); assertNull(b.await())
         }
         val reads = upstox.requests.count { it.contains(c.feedKey) || it.contains(c.feedKey.replace("|", "%7C")) }
