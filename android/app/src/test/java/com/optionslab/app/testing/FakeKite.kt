@@ -132,6 +132,8 @@ class FakeKite : Closeable {
     @Volatile var positionReads = 0
     /** 20 Nov 2026 (audit): the positions reply's data as given (a malformed one), instead of the positions above; null: as they are. */
     @Volatile var positionsBody: JSONObject? = null
+    /** 20 Nov 2026 (deep review): raw rows added to the positions reply's net list as given (a malformed row beside the real ones). */
+    @Volatile var extraNetRows: List<Any> = emptyList()
     var cash = 500_000.0
     /** 21 Oct, enhancement round 4 (idea 3): the day's payout in the margins (utilised.payout). */
     @Volatile var payoutToday = 0.0
@@ -523,6 +525,7 @@ class FakeKite : Closeable {
             val moved = row.getInt("quantity") - (carry[k] ?: 0)
             if (carry[k] == null) day.put(row) else if (moved != 0) day.put(JSONObject(row.toString()).put("quantity", moved))
         }
+        for (r in extraNetRows) net.put(r)
         return JSONObject().put("net", net).put("day", day)
     }
 

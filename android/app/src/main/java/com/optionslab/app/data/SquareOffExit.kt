@@ -182,14 +182,19 @@ internal object SquareOffExit {
                 if (others.isEmpty()) return true
                 var filled = false; var allOut = true
                 val cancelled = HashSet<String>()
+                val notOurs = ArrayList<String>()
                 for (o in others) {
-                    runCatching { Broker.cancel(o.id, o.variety) }
+                    // (Refused by Zerodha itself - not a lost reply, which may have gone through.)
+                    val refused = runCatching { Broker.cancel(o.id, o.variety) }.exceptionOrNull()?.let { Broker.definite(it) } == true
                     val st = runCatching { Broker.orderState(o.id) }.getOrNull()
-                    if (st?.status == "CANCELLED") cancelled += o.id
+                    if (st?.status == "CANCELLED") { if (refused) notOurs += o.id else cancelled += o.id }
                     // 19 Nov 2026: more of it filled since the read (a strategy's exit taken over, part filled as it came out) is a
                     // fill too - the next pass reads the books again, never a sale on what this read showed.
                     if (st?.status == "COMPLETE" || (st != null && st.filled > o.filled)) filled = true else if (st?.status !in DONE) allOut = false
                 }
+                // 20 Nov 2026 (deep review, "WHO CANCELLED A STOP"): one already CANCELLED before this cancel went (Zerodha refused the
+                // cancel: nothing working to cancel) was not the app's doing: its mark taken back, so its owner reads it as before.
+                untake(notOurs)
                 if (filled || !allOut) {
                     // (Those whose cancel did not take are still their owners': the marks taken back, so a later cancel by Boss is his.)
                     // (Review: the book not read - every mark taken back but those this pass saw cancelled, which stay the app's.)

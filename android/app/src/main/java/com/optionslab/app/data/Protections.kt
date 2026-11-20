@@ -262,7 +262,7 @@ object Protections {
     suspend fun gttStillFits(g: Kite.Gtt): String? {
         val leg = g.orders.firstOrNull() ?: return "the GTT has no order in it."
         val unread = "Zerodha's positions could not be read just now, so the position could not be checked. Try again."
-        val book = runCatching { Broker.within(5_000) { Broker.positionBook() } }.getOrNull() ?: return unread
+        val book = runCatching { Broker.within(5_000) { Broker.positionBook() } }.getOrNull()?.takeIf { !it.unknown(g.tradingSymbol) } ?: return unread
         var held = book.net.filter { it.symbol == g.tradingSymbol && it.exchange == g.exchange && it.product == leg.product }.sumOf { it.qty }
         if (leg.product == "CNC") held += (runCatching { Broker.within(5_000) { Broker.holdings() } }.getOrNull() ?: return unread)
             .filter { it.symbol == g.tradingSymbol && it.exchange == g.exchange }.sumOf { it.qty + it.t1 }
@@ -342,7 +342,7 @@ object Protections {
         var qty = qty
         var resized = ""
         if (!auto && recheck) {
-            val b = book ?: return "Not protected: Zerodha's positions could not be read just now, so the position could not be checked. Try again."
+            val b = book?.takeIf { !it.unknown(symbol) } ?: return "Not protected: Zerodha's positions could not be read just now, so the position could not be checked. Try again."
             val held = b.net.filter { it.symbol == symbol && it.exchange == exchange && it.product == product }.sumOf { it.qty }
             if (held == 0 || held.sign() != qty.sign()) return "Not protected: Zerodha shows no ${if (qty > 0) "long" else "short"} $symbol $product " +
                 "position now (net $held). Nothing was placed."
@@ -627,6 +627,18 @@ object Protections {
         exitFilled.entries.removeIf { now - it.value > EXIT_DONE_MS }
         exitOrders.keys.retainAll(exitFilled.keys)
         ids.forEach { exitFilled[it] = now; exitOrders[it] = exits }
+    }
+
+    /**
+     * 20 Nov 2026 (deep review: a square-off sale refused after it was placed left the stop it took out away for 120 s): an exit
+     * registered by [exitFilledFor] whose order the book [rows] shows REJECTED or CANCELLED has ended: its wait is dropped at once, so
+     * the stop it took out is put back on the next look (on what is held less every fill of today, the lag guard forced).
+     */
+    private fun settleExits(rows: Collection<Broker.OrderRow>?) {
+        if (rows == null || exitOrders.isEmpty()) return
+        val ended = rows.filter { it.status == "REJECTED" || it.status == "CANCELLED" }.map { it.id }.toSet()
+        if (ended.isEmpty()) return
+        for ((id, exits) in exitOrders.entries.toList()) if (exits.keys.any { it in ended }) { exitOrders.remove(id); exitFilled.remove(id) }
     }
 
     /** 15 Nov, review (F1): Boss's exit orders (id to quantity filled) for each taken-over id said filled ([exitFilledFor]). */
@@ -1005,7 +1017,7 @@ object Protections {
         }
         // 20 Nov 2026 (audit): the look's one positions read ([PassReads]); a read with no row for it is not known, and closed or
         // turned round counts only once two reads agree ([confirmedHeld]).
-        suspend fun netNow(): Int? = heldConfirmed(p, stream = false)
+        suspend fun netNow(): Int? = heldConfirmed(p, runCatching { passPositions(stream = false) }.getOrNull())
         // Review (R2): an id ahead of now (a clock once ahead) is never "its first minute" for ever.
         val net = if (nowMs() - p.id in 0L until 60_000L) null else netNow()
         val closed = net != null && (net == 0 || net.sign() != p.qty.sign())
@@ -1020,6 +1032,7 @@ object Protections {
             // what is held less any exit fill the positions do not show yet (review: never a naked stop on a flat account). Kept
             // marked until it is placed, so every try is made the same careful way.
             if (!closed && takenOver.containsKey("gtt:$gid")) {
+                if (exitFilled.containsKey("gtt:$gid")) settleExits(runCatching { passOrders(stream = false) }.getOrNull())
                 if (ArmLive.handsOffNow(p.exchange, p.symbol) || (exitDone("gtt:$gid") && !dayQtyKnown(p))) return p
                 val next = placeDayExits(p.copy(gttId = null), net, lagSafe = true, mustShow = mustShowFor(listOf("gtt:$gid")))
                 if (next.active && next.gttId == null && next.stopOrderId == null && next.targetOrderId == null) return p
@@ -1287,11 +1300,34 @@ object Protections {
      * position gone? cancel both; trailing? move the stop up to the new level.
      * Called by the market watch and while the app is open.
      */
-    suspend fun tick(fast: Boolean = false, stream: Boolean = false) = lock.withLock {
+    suspend fun tick(fast: Boolean = false, stream: Boolean = false) {
+        var wait = look(fast, stream)
+        // 20 Nov 2026 (deep review: the second read and the other exit's retries waited while holding [lock]): a look that wants another
+        // read soon ([askFollowUp]) gets it as a follow-up look after the pause, made with the lock let go meanwhile - never a wait
+        // under it. At most [FOLLOW_UPS]; a stream look never asks.
+        var rounds = 0
+        while (wait > 0L && rounds < FOLLOW_UPS) {
+            kotlinx.coroutines.delay(wait)
+            rounds++
+            wait = look(fast = false, stream = false)
+        }
+    }
+
+    /** One look, under [lock]; returns the pause a follow-up look was asked after (0: none). */
+    private suspend fun look(fast: Boolean, stream: Boolean): Long = lock.withLock {
         streamLook = fast && stream
         pass = PassReads(streamLook)
+        followUpMs = 0L
         try { tickLocked(fast); WatchClock.stopsChecked() } finally { streamLook = false; pass = null }
+        followUpMs
     }
+
+    /** 20 Nov 2026: the pause a follow-up look was asked after in the look in progress (the shortest asked). Under [lock] only. */
+    @Volatile private var followUpMs = 0L
+    private fun askFollowUp(ms: Long) { if (!streamLook) followUpMs = if (followUpMs == 0L) ms else minOf(followUpMs, ms) }
+
+    /** 20 Nov 2026: follow-up looks after one [tick] at most. */
+    private const val FOLLOW_UPS = 2
 
     /**
      * 20 Nov 2026 (audit: Protections read Zerodha's orders and positions again for every protection, one after another, in one look):
@@ -1352,9 +1388,10 @@ object Protections {
      * 20 Nov 2026 (audit: a malformed or partial positions reply was read as "no positions"): what [book] shows held of [p]'s contract
      * (net, its product), or null when it cannot be told: a read with no row at all for a contract protected today is a bad read
      * (Zerodha lists every contract held or traded today, at 0 once closed), never "flat". A protection from an earlier day with no row
-     * is flat (its position closed on that day).
+     * is flat (its position closed on that day). A read that left [p]'s row out as malformed ([Broker.Positions.unknown]): null too.
      */
     private fun heldIn(book: Broker.Positions, p: Item): Int? {
+        if (book.unknown(p.symbol)) return null
         val rows = book.net.filter { it.symbol == p.symbol && it.exchange == p.exchange }
         if (rows.isEmpty()) return if (p.id < todayStartMs()) 0 else null
         return rows.filter { it.product == p.product }.sumOf { it.qty }
@@ -1381,27 +1418,24 @@ object Protections {
 
     /**
      * 20 Nov 2026 (review: waiting for the next look left a stop resting on a position Boss had closed for up to half a minute): what
-     * [p]'s look may act on of what is held - [confirmedHeld] on the look's read; when that read is the first to show it closed or
-     * turned round, a second, separate read of Zerodha's positions [FLAT_RECHECK_MS] later in this same look, which confirms it when it
-     * agrees (and starts the count again when it shows it held). Never in a stream look. Off the main thread; never on the order path.
+     * [p]'s look may act on of what is held - [confirmedHeld] on the look's read. When that read is the first to show it closed or
+     * turned round, a follow-up look is asked ([askFollowUp]) [FLAT_RECHECK_MS] later: [tick] makes it after letting go of [lock] (deep
+     * review: never waiting while holding it), with a separate read that confirms it when it agrees. Never in a stream look.
      */
-    private suspend fun heldConfirmed(p: Item, stream: Boolean): Int? {
-        val first = confirmedHeld(p, runCatching { heldIn(passPositions(stream), p) }.getOrNull())
-        if (first != null || stream || streamLook || !flatSince.containsKey(p.id)) return first
-        kotlinx.coroutines.delay(FLAT_RECHECK_MS)
-        val again = runCatching { heldIn(Broker.positionBook(), p) }.getOrNull() ?: return null
-        if (again != 0 && again.sign() == p.qty.sign()) { flatSince.remove(p.id); return again }
-        return again
+    private fun heldConfirmed(p: Item, book: Broker.Positions?): Int? {
+        val first = confirmedHeld(p, book?.let { heldIn(it, p) })
+        if (first == null && !streamLook && flatSince.containsKey(p.id)) askFollowUp(FLAT_RECHECK_MS)
+        return first
     }
 
-    /** 20 Nov 2026: the pause before [heldConfirmed]'s second read (past [Broker.SHARE_MS], so it is a read of its own). */
+    /** 20 Nov 2026: the pause before the follow-up look's read (past [Broker.SHARE_MS], so it is a read of its own). */
     private const val FLAT_RECHECK_MS = 2_100L
 
     /** When each protection (by id) was first read closed or turned round ([confirmedHeld]). Memory only. */
     private val flatSince = java.util.concurrent.ConcurrentHashMap<Long, Long>()
 
     /** 20 Nov 2026: how far apart the two agreeing reads must be (two separate reads of Zerodha, never one shared read). */
-    internal const val FLAT_AGREE_MS = 5_000L
+    internal const val FLAT_AGREE_MS = 2_000L
 
     private suspend fun tickLocked(fast: Boolean) {
         val list = load()
@@ -1475,19 +1509,21 @@ object Protections {
         try {
             // Not in the order book just read (a book trailing a fresh order): its own state is read first. Review: a row neither
             // working nor ended (CANCEL PENDING, a modify being validated) is read again too, never taken for gone.
+            // Deep review: one cancel and one read back per look - never a wait under [lock]; not gone, a follow-up look is asked.
             if (row != null && row.status in GONE) gone = true
-            else for (i in 0 until OCO_TRIES) {
-                if ((row == null || !row.working) && i == 0 && over(state())) { gone = true; break }
+            else if ((row == null || !row.working) && over(state())) gone = true
+            else {
                 runCatching { Broker.cancel(id, variety) }.onFailure { why = it.message }
-                if (over(state())) { gone = true; break }
-                if (i < OCO_TRIES - 1) kotlinx.coroutines.delay(OCO_GAP_MS)
+                if (over(state())) gone = true
             }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { why = e.message }
         if (gone) { ocoPending.remove(p.id); return true }
+        askFollowUp(OCO_GAP_MS)
         val now = nowMs()
-        // Review: every cancel taken (no error), the order perhaps still on its way out at the exchange: said only when a later look
-        // still finds it resting, never on the first (a false alarm while it is being cancelled).
-        if (why == null && ocoPending.putIfAbsent(p.id, now) == null) return false
+        // Review: every cancel taken (no error), the order perhaps still on its way out at the exchange: said only once it has still
+        // been found resting for [OCO_PENDING_MS], never at once (a false alarm while it is being cancelled).
+        val since = ocoPending.putIfAbsent(p.id, now) ?: now
+        if (why == null && now - since !in OCO_PENDING_MS..Long.MAX_VALUE) return false
         val last = ocoSaid[p.id]
         if (last == null || now - last !in 0 until OCO_SAY_MS) {
             ocoSaid[p.id] = now
@@ -1506,9 +1542,9 @@ object Protections {
     /** 20 Nov 2026: [ocoOut]'s mark for an order Kite does not know at all. */
     private const val NOT_FOUND = "NOT FOUND"
 
-    /** 20 Nov 2026: tries of [ocoOut] in one look, the pause between them, and how often Boss is told while it rests. */
-    private const val OCO_TRIES = 3
+    /** 20 Nov 2026: the pause before [ocoOut]'s follow-up look, how long a taken cancel may rest unsaid, how often Boss is told. */
     private const val OCO_GAP_MS = 300L
+    private const val OCO_PENDING_MS = 5_000L
     private const val OCO_SAY_MS = 2 * 60_000L
 
     /** 20 Nov 2026: when Boss was last told that a protection's other exit could not be taken out ([ocoOut]). Memory only. */
@@ -1571,12 +1607,13 @@ object Protections {
         val stream = streamLook
         // 20 Nov 2026 (audit): the look's one read of each book, shared by every protection while nothing changed ([PassReads]).
         val rows = passOrders(stream).associateBy { it.id }
+        settleExits(rows.values)
         val so = p.stopOrderId?.let { rows[it] }; val to = p.targetOrderId?.let { rows[it] }
         val stopDone = so?.status == "COMPLETE"; val targetDone = to?.status == "COMPLETE"
         // 20 Nov 2026 (audit): a read with no row for the contract is not known ([heldIn]), never "flat".
         suspend fun heldRead(): Int? = runCatching { heldIn(passPositions(stream), p) }.getOrNull()
         // ... and a read showing it closed or turned round ends nothing until a second read agrees ([heldConfirmed]).
-        suspend fun netNow(): Int? = heldConfirmed(p, stream)
+        suspend fun netNow(): Int? = heldConfirmed(p, runCatching { passPositions(stream) }.getOrNull())
         // 15 Nov, review: the other slices' cover ([protectSliced]) is only what they really have resting in the books just read
         // ([restingCover]); a sibling's GTT list is read only when one has a GTT (never in a stream look: none counted then).
         val gttSibling = siblings(p).any { it.gttId != null }
@@ -1678,6 +1715,10 @@ object Protections {
             return back
         }
         // A stop refused or cancelled at Zerodha leaves the position unprotected: say so.
+        // 20 Nov 2026 (deep review): a stream look that cannot tell what is held (closed reads count only in a regular look) says
+        // nothing and changes nothing: the regular look decides (a closed position ends quietly there).
+        // (Nor a regular look whose read showed it closed for the first time: its follow-up read decides.)
+        if ((stream || flatSince.containsKey(p.id)) && net == null && so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) return p
         if (so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) {
             // 15 Nov (Boss's diagnostics: a manual position's stop cancelled at the exchange was not covered again that day): told
             // apart by Zerodha's own words. REJECTED, or CANCELLED with the exchange's reason, is the exchange's doing: ended as such

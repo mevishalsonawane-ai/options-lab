@@ -81,8 +81,84 @@ class ProtectionsAuditTest : RobolectricTest() {
         repeat(3) { tick(); at(12, 6 + it) }
         assertEquals(p.id, active().single().id)
         assertTrue(working(p.stopOrderId))
-        // The source itself: a read that fails, never an empty account.
-        assertTrue(runCatching { runBlocking { Broker.positionBook() } }.isFailure)
+        // The source itself (deep review): the row is left out and named, never read as a position at 0.
+        val book = runBlocking { Broker.positionBook() }
+        assertTrue(book.partial); assertTrue(book.unknown(sym)); assertTrue(book.net.none { it.symbol == sym })
+    }
+
+    /** Deep review: one malformed row never fails the read - the other rows are read, the row left out is named. */
+    @Test fun aMalformedRowIsLeftOutAndTheRestIsRead() {
+        kite.extraNetRows = listOf(JSONObject().put("tradingsymbol", sym2).put("exchange", "NFO").put("product", "NRML"))
+        val book = runBlocking { Broker.positionBook() }
+        assertEquals(75, book.net.single { it.symbol == sym }.qty)
+        assertTrue(book.partial); assertTrue(book.unknown(sym2)); assertFalse(book.unknown(sym))
+        // A row with no symbol at all: every contract's absence is then not known.
+        kite.extraNetRows = listOf(JSONObject().put("quantity", 0), "not a row")
+        val any = runBlocking { Broker.positionBook() }
+        assertEquals(75, any.net.single { it.symbol == sym }.qty)
+        assertTrue(any.unknown(sym)); assertTrue(any.unknown("ANYTHING"))
+        kite.extraNetRows = emptyList()
+        assertFalse(runBlocking { Broker.positionBook() }.partial)
+    }
+
+    /** Deep review: a protected contract whose row a read left out as malformed is never ended, whatever the reads say after. */
+    @Test fun aSkippedRowNeverEndsAProtection() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.positions.clear()
+        kite.extraNetRows = listOf(JSONObject().put("tradingsymbol", sym).put("exchange", "NFO").put("product", "NRML").put("quantity", JSONObject.NULL))
+        repeat(3) { tick(); com.optionslab.app.testing.SecondRead.clockOn() }
+        assertEquals(p.id, active().single().id)
+        assertTrue(working(p.stopOrderId)); assertTrue(working(p.targetOrderId))
+    }
+
+    /** Deep review: a look never waits while holding the lock - with four protections closing in one look, Protect gets in at once. */
+    @Test fun fourProtectionsClosingInOneLookNeverHoldTheLockWhileTheyWait() {
+        val more = listOf("NIFTY26OCT24800CE", "NIFTY26OCT24900CE")
+        for ((i, s) in more.withIndex()) {
+            kite.instruments += FakeKite.Ins(12_345_700L + i, s, "NIFTY", Market.today().plusDays(20), 24_800.0 + 100 * i, "CE", 75)
+            kite.quote("NFO:$s", 100.0, 99.95, 100.05)
+        }
+        val four = listOf(sym, sym2, sym3, more[0])
+        for (s in four) { kite.position(s, 75, 100.0); protect(s) }
+        assertEquals(4, active().size)
+        at(12, 5)
+        for (s in four) kite.position(s, 0, 0.0)                           // all four sold by hand: each look's first closed read
+        kite.position(more[1], 75, 100.0)
+        val reads = kite.positionReads
+        runBlocking {
+            val look = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { Protections.tick() }
+            try {
+                kotlinx.coroutines.withTimeout(5_000) { while (kite.positionReads == reads) kotlinx.coroutines.delay(5) }
+                kotlinx.coroutines.delay(300)                              // the first look done; its follow-up waits 2.1 s
+                assertTrue("the look is still waiting for its follow-up", look.isActive)
+                val t0 = System.nanoTime()
+                val said = Protections.protectLive(more[1], "NFO", "NRML", 75, 100.0, 90.0, null, null)
+                val ms = (System.nanoTime() - t0) / 1_000_000
+                assertTrue(said, said.startsWith("Protected"))
+                assertTrue("Protect waited $ms ms for the lock", ms < 1_500)
+            } finally { look.join() }
+        }
+        assertEquals("the four ended on their second reads; the new one stays", listOf(more[1]), active().map { it.symbol })
+    }
+
+    /** Deep review: a stream look whose stop was cancelled with the position closed says nothing; the regular look ends it quietly. */
+    @Test fun aStreamLookDefersACancelledStopOnAClosedPositionQuietly() {
+        kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
+        protect(product = "MIS")
+        val p = active().single()
+        at(12, 5)
+        kite.order(p.targetOrderId!!).status = "CANCELLED"
+        kite.order(p.stopOrderId!!).status = "CANCELLED"
+        kite.position(sym, 0, 0.0, product = "MIS")                        // sold by hand
+        fun warned() = Alerts.posted.any { it.kind == Alerts.Kind.ERROR && (it.text.contains("not protected", true) || it.text.contains("cancelled by you")) }
+        runBlocking { Protections.tick(fast = true, stream = true) }
+        assertFalse(warned())
+        assertEquals(1, active().size)
+        tick()
+        assertTrue(active().isEmpty())
+        assertFalse(warned())
     }
 
     @Test fun aReadWithNoRowForAContractProtectedTodayIsNotFlat() {

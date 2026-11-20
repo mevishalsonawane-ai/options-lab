@@ -739,11 +739,26 @@ object Broker {
         val open: Boolean get() = qty != 0
     }
 
-    data class Positions(val net: List<Position>, val day: List<Position>) {
+    /**
+     * 20 Nov 2026 (deep review of the audit fix): [skipped] - the contracts (trading symbols) whose net row Zerodha's reply gave malformed
+     * (no quantity, not readable) and that were left out, or [ANY] when a row had no symbol at all. Every exit works on the rows that
+     * were read; a check that would END something on a contract's absence (a protection, a strategy leg's stop) counts a skipped
+     * contract as not known ([unknown]).
+     */
+    data class Positions(val net: List<Position>, val day: List<Position>, val skipped: Set<String> = emptySet()) {
+        /** Whether the read had a malformed row it left out. */
+        val partial: Boolean get() = skipped.isNotEmpty()
+        /** Whether [symbol]'s net row may have been one left out (its absence then tells nothing). */
+        fun unknown(symbol: String): Boolean = ANY in skipped || symbol in skipped
         val pnl: Double get() = net.sumOf { it.pnl }
         val m2m: Double get() = net.sumOf { it.m2m }
         val realised: Double get() = net.sumOf { it.realised }
         val unrealised: Double get() = net.sumOf { it.unrealised }
+
+        companion object {
+            /** [skipped]'s mark for a malformed row with no symbol: every contract's absence is then not known. */
+            const val ANY = "*"
+        }
     }
 
     data class OrderRow(val id: String, val symbol: String, val side: String, val qty: Int, val filled: Int, val price: Double,
@@ -895,11 +910,23 @@ object Broker {
         it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0),
         dayQty(it, "day_buy_quantity"), dayQty(it, "day_sell_quantity"))
 
-    /** 20 Nov 2026 (audit): a net row with no symbol or no quantity is a malformed reply (the read fails), never a position at 0. */
-    private fun positionChecked(it: JSONObject): Position {
-        if (it.optString("tradingsymbol").isEmpty() || !it.has("quantity") || it.isNull("quantity"))
-            throw java.io.IOException("Zerodha's positions reply had a row with no symbol or quantity")
-        return position(it)
+    /**
+     * 20 Nov 2026 (audit; deep review): Zerodha's net rows read one by one. A malformed row - not an object, no symbol, no quantity, or
+     * one that does not parse - is never a position at 0 and never fails the whole read (every exit keeps working on the rows read):
+     * it is left out and named in [Positions.skipped] (its symbol, or [Positions.ANY] when it has none).
+     */
+    private fun netRows(a: JSONArray): Pair<List<Position>, Set<String>> {
+        val out = ArrayList<Position>()
+        val skipped = HashSet<String>()
+        for (i in 0 until a.length()) {
+            val o = a.optJSONObject(i)
+            val sym = o?.optString("tradingsymbol").orEmpty()
+            if (o == null || sym.isEmpty()) { skipped += Positions.ANY; continue }
+            if (!o.has("quantity") || o.isNull("quantity") || o.opt("quantity") !is Number) { skipped += sym; continue }
+            runCatching { position(o) }.onSuccess { out += it }.onFailure { skipped += sym }
+        }
+        if (skipped.isNotEmpty()) runCatching { Diag.record("zerodha", "positions: ${skipped.size} malformed row(s) left out (${skipped.joinToString()}); read as not known") }
+        return out to skipped
     }
 
     /**
@@ -922,10 +949,12 @@ object Broker {
         // Workers asking at once share one read (10 Oct, [SHARE_MS]): never one begun before an order, change or cancel.
         val r = positionsShared.run(shareKey(gen), SHARE_MS, shareContext()) {
             val d = call("GET", "/portfolio/positions") as JSONObject
-            // 20 Nov 2026 (audit: a malformed positions reply was read as "no positions"): a reply without its "net" list, or with
-            // a row that has no symbol or quantity, is a failed read (thrown), never an empty account or a row at 0.
+            // 20 Nov 2026 (audit: a malformed positions reply was read as "no positions"): a reply without its "net" list is a failed
+            // read (thrown), never an empty account. A malformed row is left out and named ([netRows]); the rest is read as ever.
             val net = d.optJSONArray("net") ?: throw java.io.IOException("Zerodha's positions reply had no net list")
-            Positions(rows(net).map(::positionChecked), rows(d.optJSONArray("day")).map(::position))
+            val (rows, skipped) = netRows(net)
+            val day = d.optJSONArray("day")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { runCatching { position(it) }.getOrNull() } } }.orEmpty()
+            Positions(rows, day, skipped)
         }
         passBook.put(ticket, at, r.value)
         keptBook = Kept(r.startedAt, gen, r.value)

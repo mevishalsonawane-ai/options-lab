@@ -1388,9 +1388,9 @@ object Strategies {
     private val legFlatSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
     /** 20 Nov 2026: how far apart the two agreeing reads must be (two separate reads of Zerodha, never one shared read). */
-    internal const val FLAT_AGREE_MS = 5_000L
+    internal const val FLAT_AGREE_MS = 2_000L
 
-    /** 20 Nov 2026 (review): the pause before a look's own second read (past [Broker.SHARE_MS], so it is a read of its own). */
+    /** 20 Nov 2026 (review): the pause before the follow-up look's read (past [Broker.SHARE_MS], so it is a read of its own). */
     private const val FLAT_RECHECK_MS = 2_100L
 
     /**
@@ -1439,7 +1439,8 @@ object Strategies {
         val open = run.legs.values.filter { it.status == "open" && it.entryStatus == "complete" }
         if (open.isEmpty() && mine.isEmpty()) return
         val orders = runCatching { Broker.orders().associateBy { it.id } }.getOrNull() ?: return
-        val net = runCatching { Broker.positionBook().net }.getOrNull() ?: return
+        val book = runCatching { Broker.positionBook() }.getOrNull() ?: return
+        val net = book.net
         val gtts = if (mine.any { b.legStops[it]?.let(::gttOf) != null } || open.any { legProduct(run, def, it) != "MIS" })
             runCatching { Broker.gtts().associateBy { it.id } }.getOrNull() ?: return else emptyMap()
         // Stops of legs that are no longer open (closed by the run, or gone): out.
@@ -1452,8 +1453,6 @@ object Strategies {
         // The exits working at Zerodha, by order id (kept up to date as stops shrink): what each leg's stop may cover.
         val working = HashMap<String, Int>()
         for (o in orders.values) if (o.working) working[o.id] = com.optionslab.engine.risk.ExitQty.remaining(o.qty, o.filled, o.pending)
-        // 20 Nov 2026 (review): the look's second read of the positions, made only when a leg is first read no longer held.
-        var recheck: List<Broker.Position>? = null
         // Newest legs first: when Zerodha holds less than the stops cover, the newest stop shrinks first (review C2).
         for (leg in open.sortedByDescending { it.legId }) {
             val k = legKey(run.runId, leg.legId)
@@ -1486,19 +1485,13 @@ object Strategies {
             // closed): nothing is taken out, shrunk or placed on it this look. (A stop resting since an earlier day - a carried leg's
             // GTT - with no row today: its position closed on that day, a reading as any other.)
             if (net.none { it.symbol == kiteSym && it.exchange == ex } && cur?.let { stopDay(it)?.isBefore(Market.today()) } != true) continue
+            // (Deep review: nor on a read that left the contract's row out as malformed - its absence or figure tells nothing.)
+            if (book.unknown(kiteSym)) continue
             // ... and one read showing it no longer held takes nothing out: only a second read at least [FLAT_AGREE_MS] later that
-            // agrees (none between showing it held) does ([legFlatConfirmed]). Review: the first such read is checked again in this
-            // same look, by a separate read of Zerodha's positions [FLAT_RECHECK_MS] later (one for the whole look), so a stop never
-            // rests on a leg closed by hand until the next look.
-            if (held > 0) legFlatSince.remove(k)
-            else if (!legFlatConfirmed(k)) {
-                val again = recheck ?: run { kotlinx.coroutines.delay(FLAT_RECHECK_MS); runCatching { Broker.positionBook().net }.getOrNull() }
-                    ?.also { recheck = it } ?: continue
-                if (again.none { it.symbol == kiteSym && it.exchange == ex }) continue
-                if (again.filter { it.symbol == kiteSym && it.exchange == ex && it.product == product }.sumOf { it.qty } * dir > 0) {
-                    legFlatSince.remove(k); continue
-                }
-            }
+            // agrees (none between showing it held) does ([legFlatConfirmed]). Review: the first such read asks a follow-up look
+            // [FLAT_RECHECK_MS] later ([manageOnly], the lock let go meanwhile), so a stop never rests on a leg closed by hand until the
+            // next 15-second look.
+            if (held > 0) legFlatSince.remove(k) else if (!legFlatConfirmed(k)) { flatFollowUp = true; continue }
             // Held no more at Zerodha (closed by hand): its stop must not rest on a flat position.
             if (held <= 0) {
                 if (cur != null && b.legStops.containsKey(k) && legStopOut(cur) != null) b.legStops.remove(k)
@@ -1605,6 +1598,21 @@ object Strategies {
      */
     suspend fun manageOnly(compromised: Boolean) {
         if (!runningHint) return
+        flatFollowUp = false
+        manageLocked(compromised)
+        // 20 Nov 2026 (deep review: the confirming read waited while holding [lock]): a leg first read no longer held gets its second,
+        // separate read in one follow-up look [FLAT_RECHECK_MS] later, the lock let go meanwhile - never a wait under it.
+        if (flatFollowUp) {
+            flatFollowUp = false
+            kotlinx.coroutines.delay(FLAT_RECHECK_MS)
+            manageLocked(compromised)
+        }
+    }
+
+    /** 20 Nov 2026: set by [restLegStops] when a leg was first read no longer held ([manageOnly] makes a follow-up look). */
+    @Volatile private var flatFollowUp = false
+
+    private suspend fun manageLocked(compromised: Boolean) {
         lock.withLock {
             val b = book()
             try {
