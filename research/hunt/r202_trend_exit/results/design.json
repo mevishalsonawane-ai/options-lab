@@ -1,0 +1,6703 @@
+{
+ "_meta": {
+  "written": "2026-11-20T04:11:17.247066+00:00",
+  "phase": "design",
+  "span": "2024-11-21 .. 2026-03-31",
+  "twins": 2000,
+  "seed": 202,
+  "m_total": 4868
+ },
+ "R72": {
+  "B": {
+   "windows": {
+    "design": {
+     "trades": 1561,
+     "win": 65.73,
+     "net": 232769,
+     "avg_win": 1076,
+     "avg_loss": -1629,
+     "max_dd": 100582,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 535,
+     "loss_total": -871695,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 328,
+     "win": 67.38,
+     "net": 65011,
+     "avg_win": 1126,
+     "avg_loss": -1718,
+     "max_dd": 36339,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -12387
+     },
+     "worst_day": -13350,
+     "losers": 107,
+     "loss_total": -183857,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 211,
+     "win": 69.19,
+     "net": 73978,
+     "avg_win": 1021,
+     "avg_loss": -1154,
+     "max_dd": 11863,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 12019
+     },
+     "worst_day": -5770,
+     "losers": 65,
+     "loss_total": -75034,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 45101,
+     "avg_win": 1039,
+     "avg_loss": -1420,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -110796,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 72.82,
+     "net": 88511,
+     "avg_win": 1143,
+     "avg_loss": -1970,
+     "max_dd": 15180,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 81,
+     "loss_total": -159557,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X1": {
+   "changed": {
+    "design": 2
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 1157,
+     "given_up_on_winners": 0
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.93653,
+     "p_normal": 0.9045737638413631,
+     "mean": 235528,
+     "sd": 1090,
+     "actual": 234102
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1561,
+     "win": 65.73,
+     "net": 234102,
+     "avg_win": 1076,
+     "avg_loss": -1627,
+     "max_dd": 99949,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 535,
+     "loss_total": -870362,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 328,
+     "win": 67.38,
+     "net": 65535,
+     "avg_win": 1126,
+     "avg_loss": -1713,
+     "max_dd": 36339,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -11863
+     },
+     "worst_day": -13350,
+     "losers": 107,
+     "loss_total": -183333,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 211,
+     "win": 69.19,
+     "net": 74153,
+     "avg_win": 1021,
+     "avg_loss": -1152,
+     "max_dd": 11687,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 12194
+     },
+     "worst_day": -5770,
+     "losers": 65,
+     "loss_total": -74859,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 45101,
+     "avg_win": 1039,
+     "avg_loss": -1420,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -110796,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 72.82,
+     "net": 88511,
+     "avg_win": 1143,
+     "avg_loss": -1970,
+     "max_dd": 15180,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 81,
+     "loss_total": -159557,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X2": {
+   "changed": {
+    "design": 0
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 0,
+     "given_up_on_winners": 0
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.841284238260461,
+     "mean": 232769,
+     "sd": 0,
+     "actual": 232769
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1561,
+     "win": 65.73,
+     "net": 232769,
+     "avg_win": 1076,
+     "avg_loss": -1629,
+     "max_dd": 100582,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 535,
+     "loss_total": -871695,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 328,
+     "win": 67.38,
+     "net": 65011,
+     "avg_win": 1126,
+     "avg_loss": -1718,
+     "max_dd": 36339,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -12387
+     },
+     "worst_day": -13350,
+     "losers": 107,
+     "loss_total": -183857,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 211,
+     "win": 69.19,
+     "net": 73978,
+     "avg_win": 1021,
+     "avg_loss": -1154,
+     "max_dd": 11863,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 12019
+     },
+     "worst_day": -5770,
+     "losers": 65,
+     "loss_total": -75034,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 45101,
+     "avg_win": 1039,
+     "avg_loss": -1420,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -110796,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 72.82,
+     "net": 88511,
+     "avg_win": 1143,
+     "avg_loss": -1970,
+     "max_dd": 15180,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 81,
+     "loss_total": -159557,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X3": {
+   "changed": {
+    "design": 2
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 1157,
+     "given_up_on_winners": 0
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.93703,
+     "p_normal": 0.9076917423180579,
+     "mean": 235558,
+     "sd": 1097,
+     "actual": 234102
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1561,
+     "win": 65.73,
+     "net": 234102,
+     "avg_win": 1076,
+     "avg_loss": -1627,
+     "max_dd": 99949,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 535,
+     "loss_total": -870362,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 328,
+     "win": 67.38,
+     "net": 65535,
+     "avg_win": 1126,
+     "avg_loss": -1713,
+     "max_dd": 36339,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -11863
+     },
+     "worst_day": -13350,
+     "losers": 107,
+     "loss_total": -183333,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 211,
+     "win": 69.19,
+     "net": 74153,
+     "avg_win": 1021,
+     "avg_loss": -1152,
+     "max_dd": 11687,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 12194
+     },
+     "worst_day": -5770,
+     "losers": 65,
+     "loss_total": -74859,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 45101,
+     "avg_win": 1039,
+     "avg_loss": -1420,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -110796,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 72.82,
+     "net": 88511,
+     "avg_win": 1143,
+     "avg_loss": -1970,
+     "max_dd": 15180,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 81,
+     "loss_total": -159557,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X4": {
+   "changed": {
+    "design": 471
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 187288,
+     "given_up_on_winners": -244437
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999999999999684,
+     "mean": 285922,
+     "sd": 13210,
+     "actual": 186831
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1570,
+     "win": 57.13,
+     "net": 186831,
+     "avg_win": 1087,
+     "avg_loss": -1171,
+     "max_dd": 90980,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26577
+     },
+     "worst_day": -20919,
+     "losers": 673,
+     "loss_total": -787831,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 332,
+     "win": 58.43,
+     "net": 34106,
+     "avg_win": 1098,
+     "avg_loss": -1297,
+     "max_dd": 30264,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -23448
+     },
+     "worst_day": -12761,
+     "losers": 138,
+     "loss_total": -178954,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 211,
+     "win": 65.4,
+     "net": 73877,
+     "avg_win": 1038,
+     "avg_loss": -950,
+     "max_dd": 6204,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 9586
+     },
+     "worst_day": -5798,
+     "losers": 73,
+     "loss_total": -69374,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 59.21,
+     "net": 44711,
+     "avg_win": 1035,
+     "avg_loss": -1022,
+     "max_dd": 14616,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 6594
+     },
+     "worst_day": -7215,
+     "losers": 93,
+     "loss_total": -95079,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 297,
+     "win": 61.28,
+     "net": 73922,
+     "avg_win": 1193,
+     "avg_loss": -1245,
+     "max_dd": 22095,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 9388
+     },
+     "worst_day": -10500,
+     "losers": 115,
+     "loss_total": -143209,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X5": {
+   "changed": {
+    "design": 38
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": -1557,
+     "given_up_on_winners": -5568
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.999999963190498,
+     "mean": 252772,
+     "sd": 4966,
+     "actual": 226043
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1561,
+     "win": 65.66,
+     "net": 226043,
+     "avg_win": 1075,
+     "avg_loss": -1633,
+     "max_dd": 96122,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -25974
+     },
+     "worst_day": -30007,
+     "losers": 536,
+     "loss_total": -875355,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 328,
+     "win": 67.07,
+     "net": 61684,
+     "avg_win": 1117,
+     "avg_loss": -1705,
+     "max_dd": 35153,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -17540
+     },
+     "worst_day": -12761,
+     "losers": 108,
+     "loss_total": -184117,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 211,
+     "win": 69.19,
+     "net": 69442,
+     "avg_win": 1021,
+     "avg_loss": -1224,
+     "max_dd": 11687,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 7443
+     },
+     "worst_day": -5798,
+     "losers": 65,
+     "loss_total": -79569,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 43506,
+     "avg_win": 1039,
+     "avg_loss": -1441,
+     "max_dd": 13006,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2362
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -112390,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 72.82,
+     "net": 87084,
+     "avg_win": 1143,
+     "avg_loss": -1987,
+     "max_dd": 16090,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 81,
+     "loss_total": -160984,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X6": {
+   "changed": {
+    "design": 130
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 31092,
+     "given_up_on_winners": -86387
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999999999973315,
+     "mean": 234994,
+     "sd": 8508,
+     "actual": 176321
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1563,
+     "win": 63.21,
+     "net": 176321,
+     "avg_win": 1074,
+     "avg_loss": -1539,
+     "max_dd": 101319,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -37862
+     },
+     "worst_day": -30007,
+     "losers": 575,
+     "loss_total": -884719,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 330,
+     "win": 65.15,
+     "net": 55303,
+     "avg_win": 1092,
+     "avg_loss": -1561,
+     "max_dd": 31333,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -14690
+     },
+     "worst_day": -12761,
+     "losers": 115,
+     "loss_total": -179549,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 211,
+     "win": 68.72,
+     "net": 73908,
+     "avg_win": 1019,
+     "avg_loss": -1119,
+     "max_dd": 10052,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 9727
+     },
+     "worst_day": -5798,
+     "losers": 66,
+     "loss_total": -73878,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 62.28,
+     "net": 31050,
+     "avg_win": 1048,
+     "avg_loss": -1369,
+     "max_dd": 20732,
+     "worst_month": {
+      "month": "2025-11",
+      "net": 1727
+     },
+     "worst_day": -11526,
+     "losers": 86,
+     "loss_total": -117769,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 69.8,
+     "net": 75992,
+     "avg_win": 1147,
+     "avg_loss": -1807,
+     "max_dd": 16317,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 18774
+     },
+     "worst_day": -13185,
+     "losers": 90,
+     "loss_total": -162592,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X7": {
+   "changed": {
+    "design": 9
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 320,
+     "given_up_on_winners": 0
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.9945,
+     "p_normal": 0.9952615219136208,
+     "mean": 240920,
+     "sd": 2409,
+     "actual": 234670
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1561,
+     "win": 65.73,
+     "net": 234670,
+     "avg_win": 1076,
+     "avg_loss": -1626,
+     "max_dd": 95954,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -24839
+     },
+     "worst_day": -28426,
+     "losers": 535,
+     "loss_total": -869794,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 328,
+     "win": 67.38,
+     "net": 64557,
+     "avg_win": 1126,
+     "avg_loss": -1723,
+     "max_dd": 36536,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -12645
+     },
+     "worst_day": -13350,
+     "losers": 107,
+     "loss_total": -184311,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 211,
+     "win": 69.19,
+     "net": 72418,
+     "avg_win": 1021,
+     "avg_loss": -1178,
+     "max_dd": 11863,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 10459
+     },
+     "worst_day": -5770,
+     "losers": 65,
+     "loss_total": -76594,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 44191,
+     "avg_win": 1039,
+     "avg_loss": -1432,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -111706,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 72.82,
+     "net": 88511,
+     "avg_win": 1143,
+     "avg_loss": -1970,
+     "max_dd": 15180,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 81,
+     "loss_total": -159557,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X8": {
+   "changed": {
+    "design": 89
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 12421,
+     "given_up_on_winners": -58190
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999999999964138,
+     "mean": 236475,
+     "sd": 7552,
+     "actual": 184711
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1563,
+     "win": 64.11,
+     "net": 184711,
+     "avg_win": 1072,
+     "avg_loss": -1586,
+     "max_dd": 100590,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -37367
+     },
+     "worst_day": -30007,
+     "losers": 561,
+     "loss_total": -889493,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 330,
+     "win": 65.45,
+     "net": 55773,
+     "avg_win": 1101,
+     "avg_loss": -1598,
+     "max_dd": 31333,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -12813
+     },
+     "worst_day": -12761,
+     "losers": 114,
+     "loss_total": -182146,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 211,
+     "win": 68.25,
+     "net": 70752,
+     "avg_win": 1019,
+     "avg_loss": -1135,
+     "max_dd": 11373,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 8406
+     },
+     "worst_day": -5798,
+     "losers": 67,
+     "loss_total": -76030,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 63.16,
+     "net": 32365,
+     "avg_win": 1045,
+     "avg_loss": -1407,
+     "max_dd": 17474,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 84,
+     "loss_total": -118147,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 71.81,
+     "net": 81202,
+     "avg_win": 1144,
+     "avg_loss": -1947,
+     "max_dd": 16538,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 20952
+     },
+     "worst_day": -13153,
+     "losers": 84,
+     "loss_total": -163507,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X9": {
+   "changed": {
+    "design": 128
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 46033,
+     "given_up_on_winners": -72781
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.996,
+     "p_normal": 0.9961366752375175,
+     "mean": 227205,
+     "sd": 7856,
+     "actual": 206277
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1570,
+     "win": 63.95,
+     "net": 206277,
+     "avg_win": 1052,
+     "avg_loss": -1502,
+     "max_dd": 104698,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -35718
+     },
+     "worst_day": -30007,
+     "losers": 566,
+     "loss_total": -850393,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 333,
+     "win": 65.47,
+     "net": 47964,
+     "avg_win": 1073,
+     "avg_loss": -1617,
+     "max_dd": 30489,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -10677
+     },
+     "worst_day": -13350,
+     "losers": 115,
+     "loss_total": -185938,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 211,
+     "win": 69.67,
+     "net": 68280,
+     "avg_win": 992,
+     "avg_loss": -1211,
+     "max_dd": 11863,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 7441
+     },
+     "worst_day": -5624,
+     "losers": 64,
+     "loss_total": -77491,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 226,
+     "win": 64.6,
+     "net": 38951,
+     "avg_win": 994,
+     "avg_loss": -1327,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 5161
+     },
+     "worst_day": -11526,
+     "losers": 80,
+     "loss_total": -106122,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 299,
+     "win": 70.57,
+     "net": 106872,
+     "avg_win": 1167,
+     "avg_loss": -1584,
+     "max_dd": 12068,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -10237,
+     "losers": 88,
+     "loss_total": -139412,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-hour": {
+   "changed": {
+    "design": 122
+   },
+   "effect": {
+    "design": {
+     "removed_net": -2208,
+     "removed_losers": 53
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.12094,
+     "p_normal": 0.12017434480809519,
+     "mean": 214463,
+     "sd": 17472,
+     "actual": 234977
+    }
+   },
+   "plan": {
+    "2025-04-01": "11",
+    "2025-07-01": "11",
+    "2025-10-01": "11",
+    "2026-01-01": "11",
+    "2026-04-01": "11",
+    "2026-07-01": "11",
+    "2026-10-01": "11"
+   },
+   "windows": {
+    "design": {
+     "trades": 1439,
+     "win": 66.5,
+     "net": 234977,
+     "avg_win": 1079,
+     "avg_loss": -1656,
+     "max_dd": 100582,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 482,
+     "loss_total": -798058,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 300,
+     "win": 67.67,
+     "net": 60118,
+     "avg_win": 1108,
+     "avg_loss": -1699,
+     "max_dd": 36339,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -10771
+     },
+     "worst_day": -13350,
+     "losers": 97,
+     "loss_total": -164771,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 176,
+     "win": 71.02,
+     "net": 67927,
+     "avg_win": 1046,
+     "avg_loss": -1232,
+     "max_dd": 11863,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 4459
+     },
+     "worst_day": -5770,
+     "losers": 51,
+     "loss_total": -62841,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 204,
+     "win": 68.63,
+     "net": 46773,
+     "avg_win": 1017,
+     "avg_loss": -1495,
+     "max_dd": 12111,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 6882
+     },
+     "worst_day": -9971,
+     "losers": 64,
+     "loss_total": -95657,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 263,
+     "win": 74.9,
+     "net": 99991,
+     "avg_win": 1179,
+     "avg_loss": -2005,
+     "max_dd": 14985,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 18867
+     },
+     "worst_day": -13153,
+     "losers": 66,
+     "loss_total": -132337,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-vix": {
+   "changed": {
+    "design": 401
+   },
+   "effect": {
+    "design": {
+     "removed_net": 156121,
+     "removed_losers": 115
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.999435170949031,
+     "mean": 172512,
+     "sd": 29442,
+     "actual": 76648
+    }
+   },
+   "plan": {
+    "2025-04-01": "HI",
+    "2025-07-01": "LO",
+    "2025-10-01": null,
+    "2026-01-01": null,
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1160,
+     "win": 63.79,
+     "net": 76648,
+     "avg_win": 1070,
+     "avg_loss": -1703,
+     "max_dd": 94929,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 420,
+     "loss_total": -715052,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 138,
+     "win": 58.7,
+     "net": -17133,
+     "avg_win": 1051,
+     "avg_loss": -1794,
+     "max_dd": 28653,
+     "worst_month": {
+      "month": "2025-04",
+      "net": -18096
+     },
+     "worst_day": -12761,
+     "losers": 57,
+     "loss_total": -102248,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 0,
+     "win": null,
+     "net": 0,
+     "avg_win": null,
+     "avg_loss": null,
+     "max_dd": 0,
+     "worst_month": {
+      "month": null,
+      "net": 0
+     },
+     "worst_day": null,
+     "losers": 0,
+     "loss_total": 0,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 45101,
+     "avg_win": 1039,
+     "avg_loss": -1420,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -110796,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 72.82,
+     "net": 88511,
+     "avg_win": 1143,
+     "avg_loss": -1970,
+     "max_dd": 15180,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 81,
+     "loss_total": -159557,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-gap": {
+   "changed": {
+    "design": 274
+   },
+   "effect": {
+    "design": {
+     "removed_net": 112348,
+     "removed_losers": 75
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.9975,
+     "p_normal": 0.9980733085889423,
+     "mean": 192019,
+     "sd": 24775,
+     "actual": 120422
+    }
+   },
+   "plan": {
+    "2025-04-01": "under 0.25%",
+    "2025-07-01": "0.75% or more",
+    "2025-10-01": "0.75% or more",
+    "2026-01-01": "0.75% or more",
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1287,
+     "win": 64.26,
+     "net": 120422,
+     "avg_win": 1041,
+     "avg_loss": -1610,
+     "max_dd": 98613,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 460,
+     "loss_total": -740786,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 177,
+     "win": 64.97,
+     "net": -7501,
+     "avg_win": 1005,
+     "avg_loss": -1985,
+     "max_dd": 27173,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -24139
+     },
+     "worst_day": -12761,
+     "losers": 62,
+     "loss_total": -123100,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 194,
+     "win": 69.07,
+     "net": 60038,
+     "avg_win": 970,
+     "avg_loss": -1165,
+     "max_dd": 12727,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 12149
+     },
+     "worst_day": -5770,
+     "losers": 60,
+     "loss_total": -69927,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 45101,
+     "avg_win": 1039,
+     "avg_loss": -1420,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -110796,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 192,
+     "win": 70.83,
+     "net": 62616,
+     "avg_win": 1155,
+     "avg_loss": -1688,
+     "max_dd": 10750,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 12510
+     },
+     "worst_day": -7580,
+     "losers": 56,
+     "loss_total": -94512,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-dow": {
+   "changed": {
+    "design": 184
+   },
+   "effect": {
+    "design": {
+     "removed_net": 95284,
+     "removed_losers": 47
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9994543629978384,
+     "mean": 205454,
+     "sd": 20812,
+     "actual": 137485
+    }
+   },
+   "plan": {
+    "2025-04-01": "2",
+    "2025-07-01": "0",
+    "2025-10-01": "0",
+    "2026-01-01": "2",
+    "2026-04-01": "3",
+    "2026-07-01": "3",
+    "2026-10-01": "3"
+   },
+   "windows": {
+    "design": {
+     "trades": 1377,
+     "win": 64.56,
+     "net": 137485,
+     "avg_win": 1043,
+     "avg_loss": -1619,
+     "max_dd": 106633,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 488,
+     "loss_total": -790030,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 261,
+     "win": 66.67,
+     "net": 44560,
+     "avg_win": 1094,
+     "avg_loss": -1676,
+     "max_dd": 33615,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -9476
+     },
+     "worst_day": -13350,
+     "losers": 87,
+     "loss_total": -145780,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 69.35,
+     "net": 66263,
+     "avg_win": 982,
+     "avg_loss": -1059,
+     "max_dd": 12727,
+     "worst_month": {
+      "month": "2025-08",
+      "net": 15918
+     },
+     "worst_day": -5770,
+     "losers": 57,
+     "loss_total": -60369,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 192,
+     "win": 64.06,
+     "net": 19316,
+     "avg_win": 992,
+     "avg_loss": -1488,
+     "max_dd": 15755,
+     "worst_month": {
+      "month": "2025-12",
+      "net": -7119
+     },
+     "worst_day": -11526,
+     "losers": 69,
+     "loss_total": -102640,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 242,
+     "win": 70.66,
+     "net": 47177,
+     "avg_win": 1088,
+     "avg_loss": -1955,
+     "max_dd": 24376,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 4268
+     },
+     "worst_day": -13153,
+     "losers": 71,
+     "loss_total": -138790,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-rv": {
+   "changed": {
+    "design": 446
+   },
+   "effect": {
+    "design": {
+     "removed_net": 182949,
+     "removed_losers": 126
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999532957706473,
+     "mean": 166494,
+     "sd": 29862,
+     "actual": 49821
+    }
+   },
+   "plan": {
+    "2025-04-01": "high",
+    "2025-07-01": "low",
+    "2025-10-01": "mid",
+    "2026-01-01": "mid",
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1115,
+     "win": 63.32,
+     "net": 49821,
+     "avg_win": 1041,
+     "avg_loss": -1675,
+     "max_dd": 104649,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 409,
+     "loss_total": -685085,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 129,
+     "win": 57.36,
+     "net": -24303,
+     "avg_win": 1022,
+     "avg_loss": -1817,
+     "max_dd": 32474,
+     "worst_month": {
+      "month": "2025-04",
+      "net": -18086
+     },
+     "worst_day": -11300,
+     "losers": 55,
+     "loss_total": -99962,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 10,
+     "win": 50.0,
+     "net": -2549,
+     "avg_win": 764,
+     "avg_loss": -1274,
+     "max_dd": 4643,
+     "worst_month": {
+      "month": "2025-08",
+      "net": -4091
+     },
+     "worst_day": -2608,
+     "losers": 5,
+     "loss_total": -6368,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 224,
+     "win": 65.62,
+     "net": 39788,
+     "avg_win": 1018,
+     "avg_loss": -1427,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": -2423
+     },
+     "worst_day": -11526,
+     "losers": 77,
+     "loss_total": -109864,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 256,
+     "win": 73.44,
+     "net": 76717,
+     "avg_win": 1081,
+     "avg_loss": -1859,
+     "max_dd": 12693,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 15313
+     },
+     "worst_day": -12693,
+     "losers": 68,
+     "loss_total": -126440,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-und": {
+   "changed": {
+    "design": 114
+   },
+   "effect": {
+    "design": {
+     "removed_net": 42191,
+     "removed_losers": 31
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.93153,
+     "p_normal": 0.9278271276978812,
+     "mean": 215857,
+     "sd": 17317,
+     "actual": 190578
+    }
+   },
+   "plan": {
+    "2025-04-01": "FINNIFTY",
+    "2025-07-01": "NIFTY",
+    "2025-10-01": null,
+    "2026-01-01": null,
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1447,
+     "win": 65.17,
+     "net": 190578,
+     "avg_win": 1077,
+     "avg_loss": -1637,
+     "max_dd": 96579,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 504,
+     "loss_total": -825176,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 258,
+     "win": 66.28,
+     "net": 42381,
+     "avg_win": 1129,
+     "avg_loss": -1732,
+     "max_dd": 28847,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -11487
+     },
+     "worst_day": -13845,
+     "losers": 87,
+     "loss_total": -150722,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 167,
+     "win": 67.66,
+     "net": 54416,
+     "avg_win": 1027,
+     "avg_loss": -1142,
+     "max_dd": 10318,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 8241
+     },
+     "worst_day": -4969,
+     "losers": 54,
+     "loss_total": -61650,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 65.79,
+     "net": 45101,
+     "avg_win": 1039,
+     "avg_loss": -1420,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -110796,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 72.82,
+     "net": 88511,
+     "avg_win": 1143,
+     "avg_loss": -1970,
+     "max_dd": 15180,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 81,
+     "loss_total": -159557,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-trend": {
+   "changed": {
+    "design": 254
+   },
+   "effect": {
+    "design": {
+     "removed_net": 57769,
+     "removed_losers": 90
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.8016,
+     "p_normal": 0.8025107977594678,
+     "mean": 194914,
+     "sd": 23411,
+     "actual": 175000
+    }
+   },
+   "plan": {
+    "2025-04-01": "0.6% or more",
+    "2025-07-01": "0.3-0.6%",
+    "2025-10-01": "0.3-0.6%",
+    "2026-01-01": "0.3-0.6%",
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1307,
+     "win": 65.95,
+     "net": 175000,
+     "avg_win": 1058,
+     "avg_loss": -1656,
+     "max_dd": 97880,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -26420
+     },
+     "worst_day": -30007,
+     "losers": 445,
+     "loss_total": -736805,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 256,
+     "win": 67.97,
+     "net": 45959,
+     "avg_win": 1125,
+     "avg_loss": -1828,
+     "max_dd": 33637,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -21637
+     },
+     "worst_day": -13350,
+     "losers": 82,
+     "loss_total": -149859,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 166,
+     "win": 69.28,
+     "net": 60003,
+     "avg_win": 1018,
+     "avg_loss": -1118,
+     "max_dd": 7636,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 5042
+     },
+     "worst_day": -4290,
+     "losers": 51,
+     "loss_total": -57040,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 161,
+     "win": 70.19,
+     "net": 51366,
+     "avg_win": 1044,
+     "avg_loss": -1387,
+     "max_dd": 10273,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2226
+     },
+     "worst_day": -10273,
+     "losers": 48,
+     "loss_total": -66600,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 228,
+     "win": 73.68,
+     "net": 57503,
+     "avg_win": 1062,
+     "avg_loss": -2014,
+     "max_dd": 10032,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 15679
+     },
+     "worst_day": -7986,
+     "losers": 60,
+     "loss_total": -120856,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "S10": {
+   "changed": {
+    "design": 358
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 100860,
+     "given_up_on_winners": -174756
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 1.0,
+     "mean": 501122,
+     "sd": 12145,
+     "actual": 185683
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1563,
+     "win": 61.55,
+     "net": 185683,
+     "avg_win": 1072,
+     "avg_loss": -1408,
+     "max_dd": 90579,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -25299
+     },
+     "worst_day": -20473,
+     "losers": 601,
+     "loss_total": -845997,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 329,
+     "win": 62.61,
+     "net": 43820,
+     "avg_win": 1101,
+     "avg_loss": -1488,
+     "max_dd": 30623,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -13169
+     },
+     "worst_day": -11091,
+     "losers": 123,
+     "loss_total": -183075,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 211,
+     "win": 67.3,
+     "net": 69661,
+     "avg_win": 1011,
+     "avg_loss": -1070,
+     "max_dd": 12131,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 11961
+     },
+     "worst_day": -5269,
+     "losers": 69,
+     "loss_total": -73834,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 226,
+     "win": 62.83,
+     "net": 40026,
+     "avg_win": 1052,
+     "avg_loss": -1302,
+     "max_dd": 14111,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 6307
+     },
+     "worst_day": -9792,
+     "losers": 84,
+     "loss_total": -109381,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 298,
+     "win": 66.11,
+     "net": 57590,
+     "avg_win": 1146,
+     "avg_loss": -1665,
+     "max_dd": 23807,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 5770
+     },
+     "worst_day": -11874,
+     "losers": 101,
+     "loss_total": -168157,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "DC3": {
+   "changed": {
+    "design": 188
+   },
+   "effect": {
+    "design": {
+     "removed_net": 34905,
+     "removed_losers": 63
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.6052,
+     "p_normal": 0.6221544646295037,
+     "mean": 204357,
+     "sd": 20867,
+     "actual": 197865
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1373,
+     "win": 65.62,
+     "net": 197865,
+     "avg_win": 1075,
+     "avg_loss": -1632,
+     "max_dd": 105698,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -26540
+     },
+     "worst_day": -25077,
+     "losers": 472,
+     "loss_total": -770460,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 278,
+     "win": 67.27,
+     "net": 54711,
+     "avg_win": 1134,
+     "avg_loss": -1730,
+     "max_dd": 39030,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -14774
+     },
+     "worst_day": -17197,
+     "losers": 91,
+     "loss_total": -157390,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 199,
+     "win": 67.84,
+     "net": 63501,
+     "avg_win": 1007,
+     "avg_loss": -1133,
+     "max_dd": 15619,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 9703
+     },
+     "worst_day": -11136,
+     "losers": 64,
+     "loss_total": -72485,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 210,
+     "win": 64.29,
+     "net": 40612,
+     "avg_win": 1098,
+     "avg_loss": -1435,
+     "max_dd": 13321,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -10974,
+     "losers": 75,
+     "loss_total": -107644,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 274,
+     "win": 73.36,
+     "net": 78681,
+     "avg_win": 1125,
+     "avg_loss": -2021,
+     "max_dd": 18758,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 8941
+     },
+     "worst_day": -13153,
+     "losers": 73,
+     "loss_total": -147541,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "DC5": {
+   "changed": {
+    "design": 134
+   },
+   "effect": {
+    "design": {
+     "removed_net": 39510,
+     "removed_losers": 42
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.86407,
+     "p_normal": 0.856868663795556,
+     "mean": 212916,
+     "sd": 18434,
+     "actual": 193259
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1427,
+     "win": 65.45,
+     "net": 193259,
+     "avg_win": 1066,
+     "avg_loss": -1627,
+     "max_dd": 102413,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -24122
+     },
+     "worst_day": -25077,
+     "losers": 493,
+     "loss_total": -802265,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 290,
+     "win": 66.9,
+     "net": 50954,
+     "avg_win": 1120,
+     "avg_loss": -1734,
+     "max_dd": 39030,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -15511
+     },
+     "worst_day": -17197,
+     "losers": 96,
+     "loss_total": -166419,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 199,
+     "win": 67.84,
+     "net": 63501,
+     "avg_win": 1007,
+     "avg_loss": -1133,
+     "max_dd": 15619,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 9703
+     },
+     "worst_day": -11136,
+     "losers": 64,
+     "loss_total": -72485,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 214,
+     "win": 64.49,
+     "net": 42270,
+     "avg_win": 1092,
+     "avg_loss": -1427,
+     "max_dd": 13321,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -10974,
+     "losers": 76,
+     "loss_total": -108451,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 279,
+     "win": 72.76,
+     "net": 71787,
+     "avg_win": 1118,
+     "avg_loss": -2043,
+     "max_dd": 18891,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 8941
+     },
+     "worst_day": -13153,
+     "losers": 76,
+     "loss_total": -155265,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "L2": {
+   "changed": {
+    "design": 25
+   },
+   "effect": {
+    "design": {
+     "removed_net": 707,
+     "removed_losers": 11
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.33983,
+     "p_normal": 0.34237777819795046,
+     "mean": 228777,
+     "sd": 8093,
+     "actual": 232063
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1536,
+     "win": 65.89,
+     "net": 232063,
+     "avg_win": 1073,
+     "avg_loss": -1630,
+     "max_dd": 96317,
+     "worst_month": {
+      "month": "2025-02",
+      "net": -25734
+     },
+     "worst_day": -30007,
+     "losers": 524,
+     "loss_total": -854161,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 325,
+     "win": 68.0,
+     "net": 70081,
+     "avg_win": 1126,
+     "avg_loss": -1719,
+     "max_dd": 36339,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -9213
+     },
+     "worst_day": -13350,
+     "losers": 104,
+     "loss_total": -178787,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 208,
+     "win": 68.75,
+     "net": 69887,
+     "avg_win": 1013,
+     "avg_loss": -1154,
+     "max_dd": 14343,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 12019
+     },
+     "worst_day": -9860,
+     "losers": 65,
+     "loss_total": -75034,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 227,
+     "win": 65.64,
+     "net": 44595,
+     "avg_win": 1043,
+     "avg_loss": -1420,
+     "max_dd": 13873,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2890
+     },
+     "worst_day": -11526,
+     "losers": 78,
+     "loss_total": -110796,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 291,
+     "win": 73.2,
+     "net": 88490,
+     "avg_win": 1146,
+     "avg_loss": -1995,
+     "max_dd": 14985,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 21887
+     },
+     "worst_day": -13153,
+     "losers": 78,
+     "loss_total": -155572,
+     "account_stop_ok": true
+    }
+   ]
+  }
+ },
+ "R51": {
+  "B": {
+   "windows": {
+    "design": {
+     "trades": 2170,
+     "win": 62.58,
+     "net": 147686,
+     "avg_win": 1053,
+     "avg_loss": -1579,
+     "max_dd": 85937,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36762
+     },
+     "worst_day": -19991,
+     "losers": 812,
+     "loss_total": -1281907,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 386,
+     "win": 63.73,
+     "net": 20162,
+     "avg_win": 1102,
+     "avg_loss": -1792,
+     "max_dd": 38574,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -30645
+     },
+     "worst_day": -14222,
+     "losers": 140,
+     "loss_total": -250917,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 59.2,
+     "net": 33401,
+     "avg_win": 960,
+     "avg_loss": -1190,
+     "max_dd": 28162,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 459
+     },
+     "worst_day": -9663,
+     "losers": 164,
+     "loss_total": -195131,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 64.17,
+     "net": 37227,
+     "avg_win": 922,
+     "avg_loss": -1415,
+     "max_dd": 18639,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 4298
+     },
+     "worst_day": -16957,
+     "losers": 158,
+     "loss_total": -223633,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.79,
+     "net": 96314,
+     "avg_win": 1229,
+     "avg_loss": -1749,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 25322
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -201100,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X1": {
+   "changed": {
+    "design": 3
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 1157,
+     "given_up_on_winners": -6262
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.994,
+     "p_normal": 0.9596274894180254,
+     "mean": 146286,
+     "sd": 2165,
+     "actual": 142504
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2170,
+     "win": 62.53,
+     "net": 142504,
+     "avg_win": 1051,
+     "avg_loss": -1579,
+     "max_dd": 91770,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36129
+     },
+     "worst_day": -19358,
+     "losers": 813,
+     "loss_total": -1284088,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 386,
+     "win": 63.47,
+     "net": 14220,
+     "avg_win": 1094,
+     "avg_loss": -1800,
+     "max_dd": 38049,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -30120
+     },
+     "worst_day": -14222,
+     "losers": 141,
+     "loss_total": -253858,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 59.2,
+     "net": 33528,
+     "avg_win": 960,
+     "avg_loss": -1189,
+     "max_dd": 28035,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 459
+     },
+     "worst_day": -9663,
+     "losers": 164,
+     "loss_total": -195004,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 64.17,
+     "net": 37227,
+     "avg_win": 922,
+     "avg_loss": -1415,
+     "max_dd": 18639,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 4298
+     },
+     "worst_day": -16957,
+     "losers": 158,
+     "loss_total": -223633,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.79,
+     "net": 96314,
+     "avg_win": 1229,
+     "avg_loss": -1749,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 25322
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -201100,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X2": {
+   "changed": {
+    "design": 1
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 0,
+     "given_up_on_winners": -6262
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.8959939290206653,
+     "mean": 143572,
+     "sd": 1868,
+     "actual": 141220
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2170,
+     "win": 62.53,
+     "net": 141220,
+     "avg_win": 1051,
+     "avg_loss": -1581,
+     "max_dd": 92403,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36762
+     },
+     "worst_day": -19991,
+     "losers": 813,
+     "loss_total": -1285372,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 386,
+     "win": 63.47,
+     "net": 13696,
+     "avg_win": 1094,
+     "avg_loss": -1804,
+     "max_dd": 38574,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -30645
+     },
+     "worst_day": -14222,
+     "losers": 141,
+     "loss_total": -254382,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 59.2,
+     "net": 33401,
+     "avg_win": 960,
+     "avg_loss": -1190,
+     "max_dd": 28162,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 459
+     },
+     "worst_day": -9663,
+     "losers": 164,
+     "loss_total": -195131,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 64.17,
+     "net": 37227,
+     "avg_win": 922,
+     "avg_loss": -1415,
+     "max_dd": 18639,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 4298
+     },
+     "worst_day": -16957,
+     "losers": 158,
+     "loss_total": -223633,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.79,
+     "net": 96314,
+     "avg_win": 1229,
+     "avg_loss": -1749,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 25322
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -201100,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X3": {
+   "changed": {
+    "design": 3
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 1157,
+     "given_up_on_winners": -6262
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.997,
+     "p_normal": 0.9585970204464986,
+     "mean": 146227,
+     "sd": 2146,
+     "actual": 142504
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2170,
+     "win": 62.53,
+     "net": 142504,
+     "avg_win": 1051,
+     "avg_loss": -1579,
+     "max_dd": 91770,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36129
+     },
+     "worst_day": -19358,
+     "losers": 813,
+     "loss_total": -1284088,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 386,
+     "win": 63.47,
+     "net": 14220,
+     "avg_win": 1094,
+     "avg_loss": -1800,
+     "max_dd": 38049,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -30120
+     },
+     "worst_day": -14222,
+     "losers": 141,
+     "loss_total": -253858,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 59.2,
+     "net": 33528,
+     "avg_win": 960,
+     "avg_loss": -1189,
+     "max_dd": 28035,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 459
+     },
+     "worst_day": -9663,
+     "losers": 164,
+     "loss_total": -195004,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 64.17,
+     "net": 37227,
+     "avg_win": 922,
+     "avg_loss": -1415,
+     "max_dd": 18639,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 4298
+     },
+     "worst_day": -16957,
+     "losers": 158,
+     "loss_total": -223633,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.79,
+     "net": 96314,
+     "avg_win": 1229,
+     "avg_loss": -1749,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 25322
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -201100,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X4": {
+   "changed": {
+    "design": 721
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 260799,
+     "given_up_on_winners": -328716
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999999999999997,
+     "mean": 233627,
+     "sd": 16874,
+     "actual": 97656
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2192,
+     "win": 54.79,
+     "net": 97656,
+     "avg_win": 1050,
+     "avg_loss": -1174,
+     "max_dd": 124387,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -41121
+     },
+     "worst_day": -16892,
+     "losers": 991,
+     "loss_total": -1162963,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 391,
+     "win": 54.48,
+     "net": 4366,
+     "avg_win": 1105,
+     "avg_loss": -1297,
+     "max_dd": 48838,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -41121
+     },
+     "worst_day": -16892,
+     "losers": 178,
+     "loss_total": -230954,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 406,
+     "win": 55.91,
+     "net": 43275,
+     "avg_win": 917,
+     "avg_loss": -921,
+     "max_dd": 18839,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -5704
+     },
+     "worst_day": -9662,
+     "losers": 179,
+     "loss_total": -164943,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 445,
+     "win": 54.83,
+     "net": 24625,
+     "avg_win": 941,
+     "avg_loss": -1020,
+     "max_dd": 33795,
+     "worst_month": {
+      "month": "2025-12",
+      "net": -1195
+     },
+     "worst_day": -13620,
+     "losers": 201,
+     "loss_total": -204976,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 59.94,
+     "net": 87989,
+     "avg_win": 1231,
+     "avg_loss": -1227,
+     "max_dd": 26055,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 31
+     },
+     "worst_day": -13186,
+     "losers": 143,
+     "loss_total": -175457,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X5": {
+   "changed": {
+    "design": 64
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": -10296,
+     "given_up_on_winners": -7869
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999999999999999,
+     "mean": 182988,
+     "sd": 6410,
+     "actual": 130554
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2170,
+     "win": 62.49,
+     "net": 130554,
+     "avg_win": 1052,
+     "avg_loss": -1592,
+     "max_dd": 88665,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -38216
+     },
+     "worst_day": -18264,
+     "losers": 814,
+     "loss_total": -1295571,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 386,
+     "win": 63.47,
+     "net": 18964,
+     "avg_win": 1094,
+     "avg_loss": -1766,
+     "max_dd": 42113,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -34156
+     },
+     "worst_day": -13326,
+     "losers": 141,
+     "loss_total": -249048,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 59.2,
+     "net": 25085,
+     "avg_win": 960,
+     "avg_loss": -1241,
+     "max_dd": 28808,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -5877
+     },
+     "worst_day": -9663,
+     "losers": 164,
+     "loss_total": -203447,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 63.95,
+     "net": 32088,
+     "avg_win": 924,
+     "avg_loss": -1436,
+     "max_dd": 19121,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3815
+     },
+     "worst_day": -17439,
+     "losers": 159,
+     "loss_total": -228372,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.79,
+     "net": 96696,
+     "avg_win": 1229,
+     "avg_loss": -1745,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 24194
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -200718,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X6": {
+   "changed": {
+    "design": 231
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 59949,
+     "given_up_on_winners": -120496
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 1.0,
+     "mean": 202469,
+     "sd": 11398,
+     "actual": 100244
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2172,
+     "win": 60.27,
+     "net": 100244,
+     "avg_win": 1051,
+     "avg_loss": -1478,
+     "max_dd": 108363,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -32838
+     },
+     "worst_day": -16593,
+     "losers": 863,
+     "loss_total": -1275228,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 388,
+     "win": 61.34,
+     "net": 21388,
+     "avg_win": 1087,
+     "avg_loss": -1582,
+     "max_dd": 38379,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -29239
+     },
+     "worst_day": -11450,
+     "losers": 150,
+     "loss_total": -237311,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 58.46,
+     "net": 31368,
+     "avg_win": 946,
+     "avg_loss": -1143,
+     "max_dd": 27660,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -391
+     },
+     "worst_day": -9663,
+     "losers": 167,
+     "loss_total": -190936,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 60.77,
+     "net": 18611,
+     "avg_win": 936,
+     "avg_loss": -1342,
+     "max_dd": 29779,
+     "worst_month": {
+      "month": "2025-11",
+      "net": -1916
+     },
+     "worst_day": -16593,
+     "losers": 173,
+     "loss_total": -232127,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 65.83,
+     "net": 90304,
+     "avg_win": 1226,
+     "avg_loss": -1622,
+     "max_dd": 19155,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 15215
+     },
+     "worst_day": -11556,
+     "losers": 122,
+     "loss_total": -197835,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X7": {
+   "changed": {
+    "design": 17
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": -320,
+     "given_up_on_winners": -8562
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999960298018679,
+     "mean": 154548,
+     "sd": 3542,
+     "actual": 138727
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2170,
+     "win": 62.49,
+     "net": 138727,
+     "avg_win": 1052,
+     "avg_loss": -1582,
+     "max_dd": 89646,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -32615
+     },
+     "worst_day": -16957,
+     "losers": 814,
+     "loss_total": -1287465,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 386,
+     "win": 63.47,
+     "net": 13682,
+     "avg_win": 1094,
+     "avg_loss": -1804,
+     "max_dd": 38049,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -30120
+     },
+     "worst_day": -14222,
+     "losers": 141,
+     "loss_total": -254396,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 59.2,
+     "net": 30536,
+     "avg_win": 960,
+     "avg_loss": -1207,
+     "max_dd": 29468,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -1100
+     },
+     "worst_day": -9663,
+     "losers": 164,
+     "loss_total": -197997,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 63.95,
+     "net": 34017,
+     "avg_win": 924,
+     "avg_loss": -1424,
+     "max_dd": 18639,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 4298
+     },
+     "worst_day": -16957,
+     "losers": 159,
+     "loss_total": -226443,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.79,
+     "net": 96957,
+     "avg_win": 1229,
+     "avg_loss": -1743,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 25994
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -200458,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X8": {
+   "changed": {
+    "design": 192
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 26515,
+     "given_up_on_winners": -88606
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 1.0,
+     "mean": 190425,
+     "sd": 10238,
+     "actual": 99585
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2173,
+     "win": 60.98,
+     "net": 99585,
+     "avg_win": 1049,
+     "avg_loss": -1522,
+     "max_dd": 105565,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -33041
+     },
+     "worst_day": -16957,
+     "losers": 848,
+     "loss_total": -1290716,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 389,
+     "win": 61.7,
+     "net": 14421,
+     "avg_win": 1080,
+     "avg_loss": -1643,
+     "max_dd": 35667,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -25895
+     },
+     "worst_day": -13536,
+     "losers": 149,
+     "loss_total": -244848,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 57.96,
+     "net": 24542,
+     "avg_win": 957,
+     "avg_loss": -1175,
+     "max_dd": 33142,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -4556
+     },
+     "worst_day": -9663,
+     "losers": 169,
+     "loss_total": -198506,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 61.68,
+     "net": 21499,
+     "avg_win": 928,
+     "avg_loss": -1366,
+     "max_dd": 26168,
+     "worst_month": {
+      "month": "2025-11",
+      "net": 1127
+     },
+     "worst_day": -16957,
+     "losers": 169,
+     "loss_total": -230898,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.23,
+     "net": 92595,
+     "avg_win": 1226,
+     "avg_loss": -1723,
+     "max_dd": 20257,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 15652
+     },
+     "worst_day": -15774,
+     "losers": 117,
+     "loss_total": -201622,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X9": {
+   "changed": {
+    "design": 281
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 89440,
+     "given_up_on_winners": -151260
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999761734527105,
+     "mean": 149335,
+     "sd": 11626,
+     "actual": 102052
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2189,
+     "win": 60.21,
+     "net": 102052,
+     "avg_win": 1028,
+     "avg_loss": -1438,
+     "max_dd": 127278,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -47469
+     },
+     "worst_day": -19174,
+     "losers": 871,
+     "loss_total": -1252337,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 390,
+     "win": 60.51,
+     "net": 3655,
+     "avg_win": 1070,
+     "avg_loss": -1617,
+     "max_dd": 37991,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -25374
+     },
+     "worst_day": -19174,
+     "losers": 154,
+     "loss_total": -248958,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 405,
+     "win": 58.27,
+     "net": 21138,
+     "avg_win": 903,
+     "avg_loss": -1136,
+     "max_dd": 29424,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -10778
+     },
+     "worst_day": -9663,
+     "losers": 169,
+     "loss_total": -191977,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 442,
+     "win": 63.12,
+     "net": 36767,
+     "avg_win": 914,
+     "avg_loss": -1339,
+     "max_dd": 17263,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 6420
+     },
+     "worst_day": -16957,
+     "losers": 163,
+     "loss_total": -218211,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 361,
+     "win": 64.82,
+     "net": 103908,
+     "avg_win": 1217,
+     "avg_loss": -1424,
+     "max_dd": 14817,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 28155
+     },
+     "worst_day": -10929,
+     "losers": 127,
+     "loss_total": -180817,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-hour": {
+   "changed": {
+    "design": 163
+   },
+   "effect": {
+    "design": {
+     "removed_net": 35736,
+     "removed_losers": 64
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.88906,
+     "p_normal": 0.8830882639283985,
+     "mean": 136255,
+     "sd": 20415,
+     "actual": 111949
+    }
+   },
+   "plan": {
+    "2025-04-01": "11",
+    "2025-07-01": "12",
+    "2025-10-01": "11",
+    "2026-01-01": "13",
+    "2026-04-01": "11",
+    "2026-07-01": "11",
+    "2026-10-01": "11"
+   },
+   "windows": {
+    "design": {
+     "trades": 2007,
+     "win": 62.73,
+     "net": 111949,
+     "avg_win": 1053,
+     "avg_loss": -1622,
+     "max_dd": 85937,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36762
+     },
+     "worst_day": -19991,
+     "losers": 748,
+     "loss_total": -1213285,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 349,
+     "win": 63.32,
+     "net": 3360,
+     "avg_win": 1096,
+     "avg_loss": -1865,
+     "max_dd": 36906,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -29581
+     },
+     "worst_day": -12343,
+     "losers": 128,
+     "loss_total": -238765,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 366,
+     "win": 60.93,
+     "net": 35122,
+     "avg_win": 917,
+     "avg_loss": -1185,
+     "max_dd": 15769,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -1539
+     },
+     "worst_day": -9663,
+     "losers": 143,
+     "loss_total": -169450,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 375,
+     "win": 64.53,
+     "net": 31697,
+     "avg_win": 944,
+     "avg_loss": -1480,
+     "max_dd": 17250,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3659
+     },
+     "worst_day": -16957,
+     "losers": 133,
+     "loss_total": -196789,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 333,
+     "win": 67.27,
+     "net": 81189,
+     "avg_win": 1243,
+     "avg_loss": -1809,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 18639
+     },
+     "worst_day": -12306,
+     "losers": 109,
+     "loss_total": -197156,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-vix": {
+   "changed": {
+    "design": 767
+   },
+   "effect": {
+    "design": {
+     "removed_net": 34629,
+     "removed_losers": 299
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.32134,
+     "p_normal": 0.31707750724673933,
+     "mean": 95559,
+     "sd": 36769,
+     "actual": 113057
+    }
+   },
+   "plan": {
+    "2025-04-01": "LO",
+    "2025-07-01": "LO",
+    "2025-10-01": "LO",
+    "2026-01-01": null,
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1403,
+     "win": 63.44,
+     "net": 113057,
+     "avg_win": 1096,
+     "avg_loss": -1681,
+     "max_dd": 76457,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36762
+     },
+     "worst_day": -19991,
+     "losers": 513,
+     "loss_total": -862501,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 198,
+     "win": 69.19,
+     "net": 40622,
+     "avg_win": 1130,
+     "avg_loss": -1872,
+     "max_dd": 26989,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -19664
+     },
+     "worst_day": -14222,
+     "losers": 61,
+     "loss_total": -114190,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 0,
+     "win": null,
+     "net": 0,
+     "avg_win": null,
+     "avg_loss": null,
+     "max_dd": 0,
+     "worst_month": {
+      "month": null,
+      "net": 0
+     },
+     "worst_day": null,
+     "losers": 0,
+     "loss_total": 0,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 264,
+     "win": 61.36,
+     "net": 15539,
+     "avg_win": 936,
+     "avg_loss": -1334,
+     "max_dd": 13024,
+     "worst_month": {
+      "month": "2025-10",
+      "net": -2632
+     },
+     "worst_day": -8615,
+     "losers": 102,
+     "loss_total": -136085,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.79,
+     "net": 96314,
+     "avg_win": 1229,
+     "avg_loss": -1749,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 25322
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -201100,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-gap": {
+   "changed": {
+    "design": 308
+   },
+   "effect": {
+    "design": {
+     "removed_net": 60157,
+     "removed_losers": 112
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.91854,
+     "p_normal": 0.9237669872389274,
+     "mean": 126515,
+     "sd": 27247,
+     "actual": 87528
+    }
+   },
+   "plan": {
+    "2025-04-01": "under 0.25%",
+    "2025-07-01": "0.75% or more",
+    "2025-10-01": "0.75% or more",
+    "2026-01-01": "0.75% or more",
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1862,
+     "win": 62.41,
+     "net": 87528,
+     "avg_win": 1009,
+     "avg_loss": -1550,
+     "max_dd": 90849,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36762
+     },
+     "worst_day": -19991,
+     "losers": 700,
+     "loss_total": -1084921,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 207,
+     "win": 67.15,
+     "net": 16672,
+     "avg_win": 1045,
+     "avg_loss": -1891,
+     "max_dd": 29804,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -18682
+     },
+     "worst_day": -11450,
+     "losers": 68,
+     "loss_total": -128587,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 387,
+     "win": 58.4,
+     "net": 14023,
+     "avg_win": 915,
+     "avg_loss": -1198,
+     "max_dd": 26889,
+     "worst_month": {
+      "month": "2025-08",
+      "net": -8182
+     },
+     "worst_day": -9663,
+     "losers": 161,
+     "loss_total": -192811,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 441,
+     "win": 64.17,
+     "net": 37227,
+     "avg_win": 922,
+     "avg_loss": -1415,
+     "max_dd": 18639,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 4298
+     },
+     "worst_day": -16957,
+     "losers": 158,
+     "loss_total": -223633,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 243,
+     "win": 67.9,
+     "net": 59025,
+     "avg_win": 1138,
+     "avg_loss": -1651,
+     "max_dd": 16025,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 6727
+     },
+     "worst_day": -7897,
+     "losers": 78,
+     "loss_total": -128764,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-dow": {
+   "changed": {
+    "design": 259
+   },
+   "effect": {
+    "design": {
+     "removed_net": 3280,
+     "removed_losers": 102
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.26937,
+     "p_normal": 0.26501481021569845,
+     "mean": 129087,
+     "sd": 24394,
+     "actual": 144406
+    }
+   },
+   "plan": {
+    "2025-04-01": "3",
+    "2025-07-01": "0",
+    "2025-10-01": "3",
+    "2026-01-01": "3",
+    "2026-04-01": "3",
+    "2026-07-01": "3",
+    "2026-10-01": "3"
+   },
+   "windows": {
+    "design": {
+     "trades": 1911,
+     "win": 62.85,
+     "net": 144406,
+     "avg_win": 1045,
+     "avg_loss": -1565,
+     "max_dd": 79767,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -38977
+     },
+     "worst_day": -19991,
+     "losers": 710,
+     "loss_total": -1110999,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 332,
+     "win": 64.76,
+     "net": 23249,
+     "avg_win": 1097,
+     "avg_loss": -1818,
+     "max_dd": 44063,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -38977
+     },
+     "worst_day": -14222,
+     "losers": 117,
+     "loss_total": -212685,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 338,
+     "win": 58.28,
+     "net": 18922,
+     "avg_win": 908,
+     "avg_loss": -1134,
+     "max_dd": 25043,
+     "worst_month": {
+      "month": "2025-08",
+      "net": -4760
+     },
+     "worst_day": -6073,
+     "losers": 141,
+     "loss_total": -159922,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 358,
+     "win": 64.53,
+     "net": 36046,
+     "avg_win": 909,
+     "avg_loss": -1370,
+     "max_dd": 17826,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3845
+     },
+     "worst_day": -16957,
+     "losers": 127,
+     "loss_total": -173969,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 299,
+     "win": 69.9,
+     "net": 105608,
+     "avg_win": 1239,
+     "avg_loss": -1703,
+     "max_dd": 12306,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 28123
+     },
+     "worst_day": -12306,
+     "losers": 90,
+     "loss_total": -153296,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-rv": {
+   "changed": {
+    "design": 593
+   },
+   "effect": {
+    "design": {
+     "removed_net": 64417,
+     "removed_losers": 235
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.77211,
+     "p_normal": 0.7639576235474461,
+     "mean": 107386,
+     "sd": 33538,
+     "actual": 83269
+    }
+   },
+   "plan": {
+    "2025-04-01": "low",
+    "2025-07-01": "low",
+    "2025-10-01": "mid",
+    "2026-01-01": "mid",
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1577,
+     "win": 63.41,
+     "net": 83269,
+     "avg_win": 1062,
+     "avg_loss": -1696,
+     "max_dd": 86586,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36762
+     },
+     "worst_day": -19991,
+     "losers": 577,
+     "loss_total": -978712,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 256,
+     "win": 67.97,
+     "net": 39736,
+     "avg_win": 1188,
+     "avg_loss": -2036,
+     "max_dd": 26989,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -10422
+     },
+     "worst_day": -14222,
+     "losers": 82,
+     "loss_total": -166967,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 23,
+     "win": 34.78,
+     "net": -17435,
+     "avg_win": 1366,
+     "avg_loss": -1891,
+     "max_dd": 19549,
+     "worst_month": {
+      "month": "2025-08",
+      "net": -16654
+     },
+     "worst_day": -4728,
+     "losers": 15,
+     "loss_total": -28359,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 424,
+     "win": 63.68,
+     "net": 20493,
+     "avg_win": 897,
+     "avg_loss": -1440,
+     "max_dd": 21896,
+     "worst_month": {
+      "month": "2025-12",
+      "net": -12436
+     },
+     "worst_day": -16957,
+     "losers": 154,
+     "loss_total": -221752,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 290,
+     "win": 68.62,
+     "net": 79893,
+     "avg_win": 1158,
+     "avg_loss": -1654,
+     "max_dd": 10546,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 11222
+     },
+     "worst_day": -7648,
+     "losers": 91,
+     "loss_total": -150508,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-und": {
+   "changed": {
+    "design": 281
+   },
+   "effect": {
+    "design": {
+     "removed_net": -1753,
+     "removed_losers": 108
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.1994,
+     "p_normal": 0.20113627564366757,
+     "mean": 128040,
+     "sd": 25548,
+     "actual": 149438
+    }
+   },
+   "plan": {
+    "2025-04-01": "SENSEX",
+    "2025-07-01": "SENSEX",
+    "2025-10-01": "SENSEX",
+    "2026-01-01": "SENSEX",
+    "2026-04-01": "SENSEX",
+    "2026-07-01": "SENSEX",
+    "2026-10-01": "SENSEX"
+   },
+   "windows": {
+    "design": {
+     "trades": 1889,
+     "win": 62.73,
+     "net": 149438,
+     "avg_win": 1096,
+     "avg_loss": -1633,
+     "max_dd": 82542,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36762
+     },
+     "worst_day": -19991,
+     "losers": 704,
+     "loss_total": -1149516,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 320,
+     "win": 66.25,
+     "net": 36184,
+     "avg_win": 1124,
+     "avg_loss": -1871,
+     "max_dd": 24653,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -22867
+     },
+     "worst_day": -10320,
+     "losers": 108,
+     "loss_total": -202039,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 324,
+     "win": 58.02,
+     "net": 33563,
+     "avg_win": 1069,
+     "avg_loss": -1232,
+     "max_dd": 25252,
+     "worst_month": {
+      "month": "2025-08",
+      "net": 3479
+     },
+     "worst_day": -9160,
+     "losers": 136,
+     "loss_total": -167501,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 370,
+     "win": 64.86,
+     "net": 41534,
+     "avg_win": 983,
+     "avg_loss": -1495,
+     "max_dd": 18099,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 2224
+     },
+     "worst_day": -17458,
+     "losers": 130,
+     "loss_total": -194297,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 291,
+     "win": 67.35,
+     "net": 77576,
+     "avg_win": 1286,
+     "avg_loss": -1837,
+     "max_dd": 15961,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 17719
+     },
+     "worst_day": -9703,
+     "losers": 95,
+     "loss_total": -174553,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-trend": {
+   "changed": {
+    "design": 264
+   },
+   "effect": {
+    "design": {
+     "removed_net": 61138,
+     "removed_losers": 90
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.95752,
+     "p_normal": 0.9566539403838676,
+     "mean": 129272,
+     "sd": 24940,
+     "actual": 86548
+    }
+   },
+   "plan": {
+    "2025-04-01": "0.3-0.6%",
+    "2025-07-01": "under 0",
+    "2025-10-01": "under 0",
+    "2026-01-01": null,
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 1906,
+     "win": 62.12,
+     "net": 86548,
+     "avg_win": 1047,
+     "avg_loss": -1598,
+     "max_dd": 95182,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -42192
+     },
+     "worst_day": -19991,
+     "losers": 722,
+     "loss_total": -1153507,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 291,
+     "win": 60.82,
+     "net": -10466,
+     "avg_win": 1083,
+     "avg_loss": -1773,
+     "max_dd": 50018,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -42192
+     },
+     "worst_day": -11450,
+     "losers": 114,
+     "loss_total": -202131,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 317,
+     "win": 62.15,
+     "net": 43945,
+     "avg_win": 924,
+     "avg_loss": -1151,
+     "max_dd": 12703,
+     "worst_month": {
+      "month": "2025-09",
+      "net": 8418
+     },
+     "worst_day": -6771,
+     "losers": 120,
+     "loss_total": -138068,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 61.34,
+     "net": -3827,
+     "avg_win": 901,
+     "avg_loss": -1457,
+     "max_dd": 25015,
+     "worst_month": {
+      "month": "2025-12",
+      "net": -7847
+     },
+     "worst_day": -16957,
+     "losers": 138,
+     "loss_total": -201082,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 357,
+     "win": 67.79,
+     "net": 96314,
+     "avg_win": 1229,
+     "avg_loss": -1749,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 25322
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -201100,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "S10": {
+   "changed": {
+    "design": 522
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 127631,
+     "given_up_on_winners": -217445
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 1.0,
+     "mean": 535577,
+     "sd": 14806,
+     "actual": 107800
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2177,
+     "win": 59.03,
+     "net": 107800,
+     "avg_win": 1055,
+     "avg_loss": -1399,
+     "max_dd": 76918,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -31733
+     },
+     "worst_day": -14690,
+     "losers": 892,
+     "loss_total": -1247656,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 386,
+     "win": 59.59,
+     "net": 3567,
+     "avg_win": 1092,
+     "avg_loss": -1587,
+     "max_dd": 40752,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -31733
+     },
+     "worst_day": -13781,
+     "losers": 156,
+     "loss_total": -247555,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 402,
+     "win": 55.72,
+     "net": 6454,
+     "avg_win": 950,
+     "avg_loss": -1159,
+     "max_dd": 31199,
+     "worst_month": {
+      "month": "2025-08",
+      "net": -9324
+     },
+     "worst_day": -7628,
+     "losers": 178,
+     "loss_total": -206371,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 443,
+     "win": 60.95,
+     "net": 35577,
+     "avg_win": 941,
+     "avg_loss": -1262,
+     "max_dd": 13677,
+     "worst_month": {
+      "month": "2025-11",
+      "net": 6992
+     },
+     "worst_day": -11340,
+     "losers": 173,
+     "loss_total": -218409,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 359,
+     "win": 63.23,
+     "net": 78153,
+     "avg_win": 1242,
+     "avg_loss": -1543,
+     "max_dd": 20823,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 4877
+     },
+     "worst_day": -14269,
+     "losers": 132,
+     "loss_total": -203682,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "DC3": {
+   "changed": {
+    "design": 319
+   },
+   "effect": {
+    "design": {
+     "removed_net": 78911,
+     "removed_losers": 105
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.97701,
+     "p_normal": 0.9814811807566634,
+     "mean": 125929,
+     "sd": 27408,
+     "actual": 68775
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1851,
+     "win": 61.8,
+     "net": 68775,
+     "avg_win": 1048,
+     "avg_loss": -1598,
+     "max_dd": 109343,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -39701
+     },
+     "worst_day": -17197,
+     "losers": 707,
+     "loss_total": -1129645,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 316,
+     "win": 62.34,
+     "net": -15288,
+     "avg_win": 1090,
+     "avg_loss": -1934,
+     "max_dd": 50241,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -39701
+     },
+     "worst_day": -17197,
+     "losers": 119,
+     "loss_total": -230092,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 370,
+     "win": 58.11,
+     "net": 23484,
+     "avg_win": 975,
+     "avg_loss": -1201,
+     "max_dd": 28663,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -2695
+     },
+     "worst_day": -7596,
+     "losers": 155,
+     "loss_total": -186192,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 386,
+     "win": 63.99,
+     "net": 38714,
+     "avg_win": 936,
+     "avg_loss": -1384,
+     "max_dd": 17978,
+     "worst_month": {
+      "month": "2025-10",
+      "net": 7788
+     },
+     "worst_day": -10397,
+     "losers": 139,
+     "loss_total": -192411,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 310,
+     "win": 66.77,
+     "net": 53755,
+     "avg_win": 1145,
+     "avg_loss": -1780,
+     "max_dd": 21322,
+     "worst_month": {
+      "month": "2026-02",
+      "net": -713
+     },
+     "worst_day": -12202,
+     "losers": 103,
+     "loss_total": -183307,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "DC5": {
+   "changed": {
+    "design": 207
+   },
+   "effect": {
+    "design": {
+     "removed_net": 59231,
+     "removed_losers": 66
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.97751,
+     "p_normal": 0.9764885795186998,
+     "mean": 132967,
+     "sd": 22412,
+     "actual": 88455
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 1963,
+     "win": 62.0,
+     "net": 88455,
+     "avg_win": 1041,
+     "avg_loss": -1580,
+     "max_dd": 97991,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -39383
+     },
+     "worst_day": -17197,
+     "losers": 746,
+     "loss_total": -1178747,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 332,
+     "win": 62.95,
+     "net": -6462,
+     "avg_win": 1083,
+     "avg_loss": -1893,
+     "max_dd": 41915,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -34590
+     },
+     "worst_day": -17197,
+     "losers": 123,
+     "loss_total": -232891,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 393,
+     "win": 58.52,
+     "net": 26133,
+     "avg_win": 962,
+     "avg_loss": -1197,
+     "max_dd": 28162,
+     "worst_month": {
+      "month": "2025-07",
+      "net": -547
+     },
+     "worst_day": -10168,
+     "losers": 163,
+     "loss_total": -195095,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 404,
+     "win": 63.61,
+     "net": 34779,
+     "avg_win": 931,
+     "avg_loss": -1390,
+     "max_dd": 21503,
+     "worst_month": {
+      "month": "2025-10",
+      "net": 4262
+     },
+     "worst_day": -10397,
+     "losers": 147,
+     "loss_total": -204368,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 327,
+     "win": 66.97,
+     "net": 66017,
+     "avg_win": 1163,
+     "avg_loss": -1747,
+     "max_dd": 21322,
+     "worst_month": {
+      "month": "2026-02",
+      "net": -713
+     },
+     "worst_day": -12202,
+     "losers": 108,
+     "loss_total": -188628,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "L2": {
+   "changed": {
+    "design": 43
+   },
+   "effect": {
+    "design": {
+     "removed_net": -16103,
+     "removed_losers": 24
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.03298,
+     "p_normal": 0.03488059341335097,
+     "mean": 144225,
+     "sd": 10788,
+     "actual": 163789
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 2127,
+     "win": 62.95,
+     "net": 163789,
+     "avg_win": 1054,
+     "avg_loss": -1583,
+     "max_dd": 77513,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -36063
+     },
+     "worst_day": -16116,
+     "losers": 788,
+     "loss_total": -1247788,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 380,
+     "win": 63.95,
+     "net": 18853,
+     "avg_win": 1103,
+     "avg_loss": -1819,
+     "max_dd": 38779,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -30850
+     },
+     "worst_day": -14222,
+     "losers": 137,
+     "loss_total": -249225,
+     "account_stop_ok": false
+    },
+    {
+     "trades": 396,
+     "win": 60.1,
+     "net": 41336,
+     "avg_win": 960,
+     "avg_loss": -1185,
+     "max_dd": 26722,
+     "worst_month": {
+      "month": "2025-07",
+      "net": 5306
+     },
+     "worst_day": -9663,
+     "losers": 158,
+     "loss_total": -187197,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 429,
+     "win": 64.1,
+     "net": 42117,
+     "avg_win": 926,
+     "avg_loss": -1380,
+     "max_dd": 13288,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 10904
+     },
+     "worst_day": -11003,
+     "losers": 154,
+     "loss_total": -212456,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 353,
+     "win": 67.42,
+     "net": 92600,
+     "avg_win": 1234,
+     "avg_loss": -1749,
+     "max_dd": 17249,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 23111
+     },
+     "worst_day": -12306,
+     "losers": 115,
+     "loss_total": -201100,
+     "account_stop_ok": true
+    }
+   ]
+  }
+ },
+ "LIQ": {
+  "B": {
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 50.91,
+     "net": 231580,
+     "avg_win": 1395,
+     "avg_loss": -909,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6785,
+     "losers": 431,
+     "loss_total": -391899,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 66119,
+     "avg_win": 1401,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 19763,
+     "avg_win": 919,
+     "avg_loss": -854,
+     "max_dd": 13663,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 18048,
+     "avg_win": 1107,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 45.7,
+     "net": 94271,
+     "avg_win": 2295,
+     "avg_loss": -998,
+     "max_dd": 14072,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 13156
+     },
+     "worst_day": -6785,
+     "losers": 101,
+     "loss_total": -100778,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X1": {
+   "changed": {
+    "design": 10
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 1228,
+     "given_up_on_winners": -17893
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.96152,
+     "p_normal": 0.9652466430501632,
+     "mean": 231690,
+     "sd": 9242,
+     "actual": 214915
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 51.03,
+     "net": 214915,
+     "avg_win": 1353,
+     "avg_loss": -910,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -13143
+     },
+     "worst_day": -6785,
+     "losers": 430,
+     "loss_total": -391197,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 69761,
+     "avg_win": 1440,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 21929,
+     "avg_win": 947,
+     "avg_loss": -854,
+     "max_dd": 11926,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -7549
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 16258,
+     "avg_win": 1083,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 46.24,
+     "net": 80675,
+     "avg_win": 2102,
+     "avg_loss": -1001,
+     "max_dd": 16977,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 1919
+     },
+     "worst_day": -6785,
+     "losers": 100,
+     "loss_total": -100077,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X2": {
+   "changed": {
+    "design": 7
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 0,
+     "given_up_on_winners": -14580
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.91504,
+     "p_normal": 0.9214025412943001,
+     "mean": 229193,
+     "sd": 8620,
+     "actual": 217000
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 50.91,
+     "net": 217000,
+     "avg_win": 1362,
+     "avg_loss": -909,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -13390
+     },
+     "worst_day": -6785,
+     "losers": 431,
+     "loss_total": -391899,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 69761,
+     "avg_win": 1440,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 19763,
+     "avg_win": 919,
+     "avg_loss": -854,
+     "max_dd": 13663,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 16258,
+     "avg_win": 1083,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 45.7,
+     "net": 85173,
+     "avg_win": 2188,
+     "avg_loss": -998,
+     "max_dd": 14072,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 7645
+     },
+     "worst_day": -6785,
+     "losers": 101,
+     "loss_total": -100778,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X3": {
+   "changed": {
+    "design": 10
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 1228,
+     "given_up_on_winners": -17893
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.96052,
+     "p_normal": 0.9635134997376381,
+     "mean": 231420,
+     "sd": 9205,
+     "actual": 214915
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 51.03,
+     "net": 214915,
+     "avg_win": 1353,
+     "avg_loss": -910,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -13143
+     },
+     "worst_day": -6785,
+     "losers": 430,
+     "loss_total": -391197,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 69761,
+     "avg_win": 1440,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 21929,
+     "avg_win": 947,
+     "avg_loss": -854,
+     "max_dd": 11926,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -7549
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 16258,
+     "avg_win": 1083,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 46.24,
+     "net": 80675,
+     "avg_win": 2102,
+     "avg_loss": -1001,
+     "max_dd": 16977,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 1919
+     },
+     "worst_day": -6785,
+     "losers": 100,
+     "loss_total": -100077,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X4": {
+   "changed": {
+    "design": 110
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 26799,
+     "given_up_on_winners": -64165
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999998939244404,
+     "mean": 245917,
+     "sd": 9965,
+     "actual": 194214
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 49.43,
+     "net": 194214,
+     "avg_win": 1322,
+     "avg_loss": -855,
+     "max_dd": 25710,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -8177
+     },
+     "worst_day": -6819,
+     "losers": 444,
+     "loss_total": -379416,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 50.89,
+     "net": 35116,
+     "avg_win": 1178,
+     "avg_loss": -798,
+     "max_dd": 9247,
+     "worst_month": {
+      "month": "2025-06",
+      "net": -955
+     },
+     "worst_day": -4060,
+     "losers": 83,
+     "loss_total": -66206,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 24601,
+     "avg_win": 914,
+     "avg_loss": -770,
+     "max_dd": 13003,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -8177
+     },
+     "worst_day": -6027,
+     "losers": 63,
+     "loss_total": -48479,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 47.47,
+     "net": 24551,
+     "avg_win": 1095,
+     "avg_loss": -694,
+     "max_dd": 6293,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 5241
+     },
+     "worst_day": -2709,
+     "losers": 83,
+     "loss_total": -57588,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 43.55,
+     "net": 76373,
+     "avg_win": 2174,
+     "avg_loss": -950,
+     "max_dd": 16556,
+     "worst_month": {
+      "month": "2026-03",
+      "net": -1055
+     },
+     "worst_day": -6785,
+     "losers": 105,
+     "loss_total": -99736,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X5": {
+   "changed": {
+    "design": 22
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 6209,
+     "given_up_on_winners": -5180
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.48976,
+     "p_normal": 0.47728169325570274,
+     "mean": 231888,
+     "sd": 12661,
+     "actual": 232609
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 51.14,
+     "net": 232609,
+     "avg_win": 1389,
+     "avg_loss": -911,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -12351
+     },
+     "worst_day": -6785,
+     "losers": 429,
+     "loss_total": -390860,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 74347,
+     "avg_win": 1489,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 2526
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 23145,
+     "avg_win": 962,
+     "avg_loss": -854,
+     "max_dd": 11926,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -6332
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 21262,
+     "avg_win": 1150,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 46.77,
+     "net": 91505,
+     "avg_win": 2198,
+     "avg_loss": -1007,
+     "max_dd": 15747,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 5884
+     },
+     "worst_day": -6785,
+     "losers": 99,
+     "loss_total": -99739,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X6": {
+   "changed": {
+    "design": 35
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 14368,
+     "given_up_on_winners": -58659
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 0.9999994800277493,
+     "mean": 236841,
+     "sd": 10025,
+     "actual": 187880
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 50.8,
+     "net": 187880,
+     "avg_win": 1289,
+     "avg_loss": -895,
+     "max_dd": 24506,
+     "worst_month": {
+      "month": "2026-03",
+      "net": -13078
+     },
+     "worst_day": -6785,
+     "losers": 432,
+     "loss_total": -386836,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 69679,
+     "avg_win": 1439,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.24,
+     "net": 26831,
+     "avg_win": 999,
+     "avg_loss": -814,
+     "max_dd": 10939,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -5345
+     },
+     "worst_day": -6363,
+     "losers": 64,
+     "loss_total": -52066,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 47.47,
+     "net": 19795,
+     "avg_win": 1103,
+     "avg_loss": -758,
+     "max_dd": 8593,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 4413
+     },
+     "worst_day": -3554,
+     "losers": 83,
+     "loss_total": -62896,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 45.7,
+     "net": 56047,
+     "avg_win": 1835,
+     "avg_loss": -990,
+     "max_dd": 20023,
+     "worst_month": {
+      "month": "2026-03",
+      "net": -13078
+     },
+     "worst_day": -6785,
+     "losers": 101,
+     "loss_total": -99945,
+     "account_stop_ok": false
+    }
+   ]
+  },
+  "X7": {
+   "changed": {
+    "design": 13
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 1228,
+     "given_up_on_winners": -17992
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.89755,
+     "p_normal": 0.8959743171040495,
+     "mean": 228994,
+     "sd": 11262,
+     "actual": 214816
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 51.03,
+     "net": 214816,
+     "avg_win": 1353,
+     "avg_loss": -910,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -13143
+     },
+     "worst_day": -6785,
+     "losers": 430,
+     "loss_total": -391197,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 72311,
+     "avg_win": 1467,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 23970,
+     "avg_win": 972,
+     "avg_loss": -854,
+     "max_dd": 11926,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -5507
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 16258,
+     "avg_win": 1083,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 46.24,
+     "net": 82741,
+     "avg_win": 2126,
+     "avg_loss": -1001,
+     "max_dd": 16977,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 1919
+     },
+     "worst_day": -6785,
+     "losers": 100,
+     "loss_total": -100077,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X8": {
+   "changed": {
+    "design": 31
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 12989,
+     "given_up_on_winners": -43372
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.9975,
+     "p_normal": 0.9989391600856565,
+     "mean": 233153,
+     "sd": 10208,
+     "actual": 201787
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 51.03,
+     "net": 201787,
+     "avg_win": 1311,
+     "avg_loss": -896,
+     "max_dd": 24506,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -13390
+     },
+     "worst_day": -6785,
+     "losers": 430,
+     "loss_total": -385365,
+     "account_stop_ok": false
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 67241,
+     "avg_win": 1401,
+     "avg_loss": -829,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -63018,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 25808,
+     "avg_win": 964,
+     "avg_loss": -814,
+     "max_dd": 10939,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -6771
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -51309,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 18284,
+     "avg_win": 1105,
+     "avg_loss": -756,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63463,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 46.77,
+     "net": 76134,
+     "avg_win": 2008,
+     "avg_loss": -996,
+     "max_dd": 18049,
+     "worst_month": {
+      "month": "2026-03",
+      "net": -395
+     },
+     "worst_day": -6785,
+     "losers": 99,
+     "loss_total": -98579,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "X9": {
+   "changed": {
+    "design": 27
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 10564,
+     "given_up_on_winners": -42428
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.999,
+     "p_normal": 0.999424532161497,
+     "mean": 224626,
+     "sd": 7722,
+     "actual": 199522
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 879,
+     "win": 50.51,
+     "net": 199522,
+     "avg_win": 1330,
+     "avg_loss": -899,
+     "max_dd": 27825,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6785,
+     "losers": 435,
+     "loss_total": -391030,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 53.85,
+     "net": 53646,
+     "avg_win": 1318,
+     "avg_loss": -850,
+     "max_dd": 7359,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 933
+     },
+     "worst_day": -3868,
+     "losers": 78,
+     "loss_total": -66271,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 23615,
+     "avg_win": 937,
+     "avg_loss": -815,
+     "max_dd": 13663,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -51333,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 15770,
+     "avg_win": 1073,
+     "avg_loss": -758,
+     "max_dd": 9386,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 1156
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63662,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 47.31,
+     "net": 95132,
+     "avg_win": 2205,
+     "avg_loss": -1010,
+     "max_dd": 9986,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 14211
+     },
+     "worst_day": -6785,
+     "losers": 98,
+     "loss_total": -98943,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-hour": {
+   "changed": {
+    "design": 47
+   },
+   "effect": {
+    "design": {
+     "removed_net": -11688,
+     "removed_losers": 30
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.03748,
+     "p_normal": 0.054783973901805075,
+     "mean": 219159,
+     "sd": 15067,
+     "actual": 243268
+    }
+   },
+   "plan": {
+    "2025-04-01": null,
+    "2025-07-01": null,
+    "2025-10-01": "13",
+    "2026-01-01": "13",
+    "2026-04-01": "11",
+    "2026-07-01": "11",
+    "2026-10-01": "11"
+   },
+   "windows": {
+    "design": {
+     "trades": 831,
+     "win": 51.74,
+     "net": 243268,
+     "avg_win": 1432,
+     "avg_loss": -929,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6785,
+     "losers": 401,
+     "loss_total": -372605,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 66119,
+     "avg_win": 1401,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 19763,
+     "avg_win": 919,
+     "avg_loss": -854,
+     "max_dd": 13663,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 138,
+     "win": 50.0,
+     "net": 25072,
+     "avg_win": 1171,
+     "avg_loss": -807,
+     "max_dd": 9330,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 4173
+     },
+     "worst_day": -3554,
+     "losers": 69,
+     "loss_total": -55711,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 159,
+     "win": 45.91,
+     "net": 98935,
+     "avg_win": 2583,
+     "avg_loss": -1042,
+     "max_dd": 15101,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 12222
+     },
+     "worst_day": -6785,
+     "losers": 86,
+     "loss_total": -89622,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-vix": {
+   "changed": {
+    "design": 0
+   },
+   "effect": {
+    "design": {
+     "removed_net": 0,
+     "removed_losers": 0
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 2.8851602421707805e-07,
+     "mean": 231580,
+     "sd": 0,
+     "actual": 231580
+    }
+   },
+   "plan": {
+    "2025-04-01": null,
+    "2025-07-01": null,
+    "2025-10-01": null,
+    "2026-01-01": null,
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 50.91,
+     "net": 231580,
+     "avg_win": 1395,
+     "avg_loss": -909,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6785,
+     "losers": 431,
+     "loss_total": -391899,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 66119,
+     "avg_win": 1401,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 19763,
+     "avg_win": 919,
+     "avg_loss": -854,
+     "max_dd": 13663,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 18048,
+     "avg_win": 1107,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 45.7,
+     "net": 94271,
+     "avg_win": 2295,
+     "avg_loss": -998,
+     "max_dd": 14072,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 13156
+     },
+     "worst_day": -6785,
+     "losers": 101,
+     "loss_total": -100778,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-gap": {
+   "changed": {
+    "design": 0
+   },
+   "effect": {
+    "design": {
+     "removed_net": 0,
+     "removed_losers": 0
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 2.8851602421707805e-07,
+     "mean": 231580,
+     "sd": 0,
+     "actual": 231580
+    }
+   },
+   "plan": {
+    "2025-04-01": null,
+    "2025-07-01": null,
+    "2025-10-01": null,
+    "2026-01-01": null,
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 50.91,
+     "net": 231580,
+     "avg_win": 1395,
+     "avg_loss": -909,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6785,
+     "losers": 431,
+     "loss_total": -391899,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 66119,
+     "avg_win": 1401,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 19763,
+     "avg_win": 919,
+     "avg_loss": -854,
+     "max_dd": 13663,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 18048,
+     "avg_win": 1107,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 45.7,
+     "net": 94271,
+     "avg_win": 2295,
+     "avg_loss": -998,
+     "max_dd": 14072,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 13156
+     },
+     "worst_day": -6785,
+     "losers": 101,
+     "loss_total": -100778,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-dow": {
+   "changed": {
+    "design": 66
+   },
+   "effect": {
+    "design": {
+     "removed_net": 6738,
+     "removed_losers": 31
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.28836,
+     "p_normal": 0.2627308495346262,
+     "mean": 213735,
+     "sd": 17493,
+     "actual": 224842
+    }
+   },
+   "plan": {
+    "2025-04-01": null,
+    "2025-07-01": "2",
+    "2025-10-01": "2",
+    "2026-01-01": null,
+    "2026-04-01": "2",
+    "2026-07-01": "2",
+    "2026-10-01": "2"
+   },
+   "windows": {
+    "design": {
+     "trades": 812,
+     "win": 50.74,
+     "net": 224842,
+     "avg_win": 1425,
+     "avg_loss": -906,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -6056
+     },
+     "worst_day": -6785,
+     "losers": 400,
+     "loss_total": -362310,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 66119,
+     "avg_win": 1401,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 121,
+     "win": 57.02,
+     "net": 23481,
+     "avg_win": 938,
+     "avg_loss": -793,
+     "max_dd": 9050,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -3613
+     },
+     "worst_day": -6363,
+     "losers": 52,
+     "loss_total": -41239,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 114,
+     "win": 43.86,
+     "net": 7592,
+     "avg_win": 1088,
+     "avg_loss": -731,
+     "max_dd": 8366,
+     "worst_month": {
+      "month": "2025-12",
+      "net": -3778
+     },
+     "worst_day": -3502,
+     "losers": 64,
+     "loss_total": -46814,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 45.7,
+     "net": 94271,
+     "avg_win": 2295,
+     "avg_loss": -998,
+     "max_dd": 14072,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 13156
+     },
+     "worst_day": -6785,
+     "losers": 101,
+     "loss_total": -100778,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-rv": {
+   "changed": {
+    "design": 0
+   },
+   "effect": {
+    "design": {
+     "removed_net": 0,
+     "removed_losers": 0
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 2.8851602421707805e-07,
+     "mean": 231580,
+     "sd": 0,
+     "actual": 231580
+    }
+   },
+   "plan": {
+    "2025-04-01": null,
+    "2025-07-01": null,
+    "2025-10-01": null,
+    "2026-01-01": null,
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 50.91,
+     "net": 231580,
+     "avg_win": 1395,
+     "avg_loss": -909,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6785,
+     "losers": 431,
+     "loss_total": -391899,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 66119,
+     "avg_win": 1401,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.94,
+     "net": 19763,
+     "avg_win": 919,
+     "avg_loss": -854,
+     "max_dd": 13663,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -9714
+     },
+     "worst_day": -6363,
+     "losers": 63,
+     "loss_total": -53793,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 18048,
+     "avg_win": 1107,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 45.7,
+     "net": 94271,
+     "avg_win": 2295,
+     "avg_loss": -998,
+     "max_dd": 14072,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 13156
+     },
+     "worst_day": -6785,
+     "losers": 101,
+     "loss_total": -100778,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-und": {
+   "changed": {
+    "design": 227
+   },
+   "effect": {
+    "design": {
+     "removed_net": 59441,
+     "removed_losers": 105
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.50325,
+     "p_normal": 0.4975705548267234,
+     "mean": 171964,
+     "sd": 28703,
+     "actual": 172139
+    }
+   },
+   "plan": {
+    "2025-04-01": "MIDCPNIFTY",
+    "2025-07-01": "MIDCPNIFTY",
+    "2025-10-01": "MIDCPNIFTY",
+    "2026-01-01": "MIDCPNIFTY",
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 651,
+     "win": 49.92,
+     "net": 172139,
+     "avg_win": 1395,
+     "avg_loss": -863,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -6056
+     },
+     "worst_day": -5926,
+     "losers": 326,
+     "loss_total": -281227,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 114,
+     "win": 57.02,
+     "net": 64533,
+     "avg_win": 1638,
+     "avg_loss": -856,
+     "max_dd": 6028,
+     "worst_month": {
+      "month": "2025-05",
+      "net": 8978
+     },
+     "worst_day": -3624,
+     "losers": 49,
+     "loss_total": -41941,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 93,
+     "win": 54.84,
+     "net": 19055,
+     "avg_win": 986,
+     "avg_loss": -744,
+     "max_dd": 7939,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -3814
+     },
+     "worst_day": -3899,
+     "losers": 42,
+     "loss_total": -31248,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 104,
+     "win": 40.38,
+     "net": 3172,
+     "avg_win": 1057,
+     "avg_loss": -665,
+     "max_dd": 8164,
+     "worst_month": {
+      "month": "2025-12",
+      "net": -5152
+     },
+     "worst_day": -3100,
+     "losers": 62,
+     "loss_total": -41236,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 118,
+     "win": 44.07,
+     "net": 52000,
+     "avg_win": 2105,
+     "avg_loss": -871,
+     "max_dd": 8314,
+     "worst_month": {
+      "month": "2026-02",
+      "net": 9703
+     },
+     "worst_day": -5805,
+     "losers": 66,
+     "loss_total": -57464,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "W-trend": {
+   "changed": {
+    "design": 38
+   },
+   "effect": {
+    "design": {
+     "removed_net": 2711,
+     "removed_losers": 19
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.31784,
+     "p_normal": 0.29184066661299035,
+     "mean": 221418,
+     "sd": 13596,
+     "actual": 228869
+    }
+   },
+   "plan": {
+    "2025-04-01": null,
+    "2025-07-01": "0.3-0.6%",
+    "2025-10-01": null,
+    "2026-01-01": null,
+    "2026-04-01": null,
+    "2026-07-01": null,
+    "2026-10-01": null
+   },
+   "windows": {
+    "design": {
+     "trades": 840,
+     "win": 50.95,
+     "net": 228869,
+     "avg_win": 1405,
+     "avg_loss": -904,
+     "max_dd": 25771,
+     "worst_month": {
+      "month": "2025-03",
+      "net": -6056
+     },
+     "worst_day": -6785,
+     "losers": 412,
+     "loss_total": -372552,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 66119,
+     "avg_win": 1401,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 105,
+     "win": 58.1,
+     "net": 17052,
+     "avg_win": 844,
+     "avg_loss": -783,
+     "max_dd": 8131,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -1715
+     },
+     "worst_day": -5618,
+     "losers": 44,
+     "loss_total": -34447,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 18048,
+     "avg_win": 1107,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 45.7,
+     "net": 94271,
+     "avg_win": 2295,
+     "avg_loss": -998,
+     "max_dd": 14072,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 13156
+     },
+     "worst_day": -6785,
+     "losers": 101,
+     "loss_total": -100778,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "S10": {
+   "changed": {
+    "design": 46
+   },
+   "effect": {
+    "design": {
+     "saved_on_losers": 3827,
+     "given_up_on_winners": -69160
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 1.0,
+     "p_normal": 1.0,
+     "mean": 260680,
+     "sd": 10967,
+     "actual": 167883
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 878,
+     "win": 49.66,
+     "net": 167883,
+     "avg_win": 1315,
+     "avg_loss": -917,
+     "max_dd": 26443,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -10727
+     },
+     "worst_day": -6363,
+     "losers": 442,
+     "loss_total": -405499,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 53.25,
+     "net": 30663,
+     "avg_win": 1123,
+     "avg_loss": -891,
+     "max_dd": 6290,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 2342
+     },
+     "worst_day": -2770,
+     "losers": 79,
+     "loss_total": -70374,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 143,
+     "win": 55.24,
+     "net": 19172,
+     "avg_win": 931,
+     "avg_loss": -850,
+     "max_dd": 13663,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -10727
+     },
+     "worst_day": -6363,
+     "losers": 64,
+     "loss_total": -54380,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 18420,
+     "avg_win": 1107,
+     "avg_loss": -756,
+     "max_dd": 9647,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3360
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63476,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 186,
+     "win": 44.09,
+     "net": 70462,
+     "avg_win": 2138,
+     "avg_loss": -1008,
+     "max_dd": 13481,
+     "worst_month": {
+      "month": "2026-03",
+      "net": -904
+     },
+     "worst_day": -5474,
+     "losers": 104,
+     "loss_total": -104829,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "DC3": {
+   "changed": {
+    "design": 28
+   },
+   "effect": {
+    "design": {
+     "removed_net": -6973,
+     "removed_losers": 19
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.07596,
+     "p_normal": 0.10116896863341926,
+     "mean": 224023,
+     "sd": 11397,
+     "actual": 238552
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 850,
+     "win": 51.53,
+     "net": 238552,
+     "avg_win": 1401,
+     "avg_loss": -910,
+     "max_dd": 24434,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -5815
+     },
+     "worst_day": -5305,
+     "losers": 412,
+     "loss_total": -375054,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 162,
+     "win": 54.94,
+     "net": 64102,
+     "avg_win": 1416,
+     "avg_loss": -848,
+     "max_dd": 6666,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1626
+     },
+     "worst_day": -3486,
+     "losers": 73,
+     "loss_total": -61932,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 137,
+     "win": 57.66,
+     "net": 23662,
+     "avg_win": 928,
+     "avg_loss": -856,
+     "max_dd": 9764,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -5815
+     },
+     "worst_day": -4182,
+     "losers": 58,
+     "loss_total": -49654,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 156,
+     "win": 46.79,
+     "net": 18179,
+     "avg_win": 1093,
+     "avg_loss": -743,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3502,
+     "losers": 83,
+     "loss_total": -61645,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 179,
+     "win": 46.93,
+     "net": 98554,
+     "avg_win": 2310,
+     "avg_loss": -1005,
+     "max_dd": 15119,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 14821
+     },
+     "worst_day": -5305,
+     "losers": 95,
+     "loss_total": -95448,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "DC5": {
+   "changed": {
+    "design": 4
+   },
+   "effect": {
+    "design": {
+     "removed_net": -1968,
+     "removed_losers": 3
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.2034,
+     "p_normal": 0.24596940478476068,
+     "mean": 230466,
+     "sd": 4484,
+     "actual": 233547
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 874,
+     "win": 51.03,
+     "net": 233547,
+     "avg_win": 1396,
+     "avg_loss": -909,
+     "max_dd": 26637,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -8621
+     },
+     "worst_day": -5914,
+     "losers": 428,
+     "loss_total": -389065,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 169,
+     "win": 55.03,
+     "net": 66119,
+     "avg_win": 1401,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 142,
+     "win": 56.34,
+     "net": 20856,
+     "avg_win": 919,
+     "avg_loss": -850,
+     "max_dd": 12570,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -8621
+     },
+     "worst_day": -5618,
+     "losers": 62,
+     "loss_total": -52700,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 158,
+     "win": 46.84,
+     "net": 18048,
+     "avg_win": 1107,
+     "avg_loss": -760,
+     "max_dd": 9573,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 3434
+     },
+     "worst_day": -3554,
+     "losers": 84,
+     "loss_total": -63849,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 185,
+     "win": 45.95,
+     "net": 95251,
+     "avg_win": 2295,
+     "avg_loss": -998,
+     "max_dd": 14072,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 14136
+     },
+     "worst_day": -5805,
+     "losers": 100,
+     "loss_total": -99798,
+     "account_stop_ok": true
+    }
+   ]
+  },
+  "L2": {
+   "changed": {
+    "design": 15
+   },
+   "effect": {
+    "design": {
+     "removed_net": 1491,
+     "removed_losers": 6
+    }
+   },
+   "twin": {
+    "design": {
+     "p": 0.43178,
+     "p_normal": 0.37311119192158926,
+     "mean": 227341,
+     "sd": 8490,
+     "actual": 230088
+    }
+   },
+   "windows": {
+    "design": {
+     "trades": 863,
+     "win": 50.75,
+     "net": 230088,
+     "avg_win": 1404,
+     "avg_loss": -906,
+     "max_dd": 27841,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -8133
+     },
+     "worst_day": -6785,
+     "losers": 425,
+     "loss_total": -385005,
+     "account_stop_ok": true
+    }
+   },
+   "folds": [
+    {
+     "trades": 168,
+     "win": 54.76,
+     "net": 64524,
+     "avg_win": 1399,
+     "avg_loss": -844,
+     "max_dd": 7048,
+     "worst_month": {
+      "month": "2025-06",
+      "net": 1245
+     },
+     "worst_day": -3868,
+     "losers": 76,
+     "loss_total": -64140,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 139,
+     "win": 56.12,
+     "net": 19809,
+     "avg_win": 923,
+     "avg_loss": -856,
+     "max_dd": 12959,
+     "worst_month": {
+      "month": "2025-09",
+      "net": -8133
+     },
+     "worst_day": -5658,
+     "losers": 61,
+     "loss_total": -52212,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 155,
+     "win": 46.45,
+     "net": 18390,
+     "avg_win": 1112,
+     "avg_loss": -743,
+     "max_dd": 11434,
+     "worst_month": {
+      "month": "2025-12",
+      "net": 1572
+     },
+     "worst_day": -3502,
+     "losers": 83,
+     "loss_total": -61645,
+     "account_stop_ok": true
+    },
+    {
+     "trades": 181,
+     "win": 45.86,
+     "net": 96056,
+     "avg_win": 2334,
+     "avg_loss": -997,
+     "max_dd": 15119,
+     "worst_month": {
+      "month": "2026-03",
+      "net": 12108
+     },
+     "worst_day": -6785,
+     "losers": 98,
+     "loss_total": -97668,
+     "account_stop_ok": true
+    }
+   ]
+  }
+ }
+}
