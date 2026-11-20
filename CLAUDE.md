@@ -39,6 +39,11 @@ notes; match the surrounding code.
     ORB and Liquidity 15+5), that the free cash cannot pay for even one lot. It reads only the free cash the entry already read; unknown, it
     says nothing. In shadow by default (logged and counted, the order goes as before); its Bot settings switch (off by default)
     makes it skip the entry. On needs no PIN (it lowers risk); off takes the PIN.
+  - The fresh-bar check (20 Nov audit): Liquidity 15+5's live entry (automatic or approval) on a late or stale bar - seen past its fill window
+    (its close + 2 min), its own last minute missing, or the index's newest minute behind. In shadow by default (logged "would have skipped
+    (stale bar)" and counted, the entry goes as before); paper is never skipped, only logged. Its Bot settings switch (off by default) skips
+    such a live entry: the signal waits (in memory) and is decided again if fresh candles land within its fill window, never bought late
+    (after a restart the bar stays spent). On needs no PIN (it lowers risk); off takes the PIN.
 - EVERY ARM CAN GO LIVE (Boss, 30 Oct: "make all arms as live, will stop it if i want, dont keep any in paper only or
   record only, make all live if i move to live market").
   - No arm is paper-only or record-only by design. Each arm's live trade goes only through the same gates: the app in

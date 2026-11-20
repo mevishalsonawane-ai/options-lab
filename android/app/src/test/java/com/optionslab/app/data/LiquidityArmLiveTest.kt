@@ -432,6 +432,7 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("60", stop.form["quantity"]); assertEquals("SL", stop.form["order_type"])
         val p = row().open!!
         assertEquals(60, p.qty); assertEquals(30, p.lot)
+        assertNull("not cut: no lots asked for kept", p.askedLots); assertNull(p.askedWords)
     }
 
     /**
@@ -448,6 +449,8 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("30", stop.form["quantity"]); assertEquals("SL", stop.form["order_type"])
         assertEquals(30, row().open!!.qty)
         assertTrue("the cash covers what was bought: nothing for the funds check", FundsCheck.recsOf().isEmpty())
+        assertEquals(2, row().open!!.askedLots)
+        assertEquals("bought 1 of 2 lots (free cash)", row().open!!.askedWords)
     }
 
     /** 18 Nov 2026 (audit: B6): three lots set, the cash fits two: two are bought - never more than Boss's lots. */
@@ -458,6 +461,20 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
         assertEquals("60", kite.placed.first().form["quantity"])
         assertEquals(60, row().open!!.qty)
+        // 20 Nov 2026 (audit): the lots asked for are kept on the trade, saved and read back, and said on its line.
+        assertEquals(3, row().open!!.askedLots)
+        assertEquals("bought 2 of 3 lots (free cash)", row().open!!.askedWords)
+        OrbArms.forgetMemoryForTest()
+        assertEquals("read back from the book", 3, row().open!!.askedLots)
+    }
+
+    /** 20 Nov 2026 (audit): the words of a cut entry, and none when nothing was cut. */
+    @Test fun theLotsAskedWords() {
+        assertEquals("bought 1 of 2 lots (free cash)", OrbArms.lotsAskedWords(2, 1))
+        assertNull("not cut", OrbArms.lotsAskedWords(2, 2))
+        assertNull("never more than asked", OrbArms.lotsAskedWords(2, 3))
+        assertNull(OrbArms.lotsAskedWords(0, 0))
+        assertEquals("a part fill says what was bought", "bought 0 of 2 lots (free cash)", OrbArms.lotsAskedWords(2, 0))
     }
 
     /** 18 Nov 2026 (audit: B6): not even one lot fitting, the buy goes as before (Boss's lots; the funds check in shadow logs it). */

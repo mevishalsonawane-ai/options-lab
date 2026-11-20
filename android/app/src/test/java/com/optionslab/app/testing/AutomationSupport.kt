@@ -81,7 +81,7 @@ object AutomationSupport {
 
     /** Every test clock back to the real one. */
     fun realClocks() {
-        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; OrbArms.testHeroBars = null; OrbArms.testOptionBars = null; OrbArms.testTwinHolders = null; ExpirySquareOff.testNow = null; FlatBySquareOff.testNow = null; FlatBySquareOff.resetForTest(); PineAuto.testNow = null; PineAuto.testBars = null
+        OrbArms.testNow = null; OrbArms.testIndexBars = null; OrbArms.testHistoryBars = null; OrbArms.testOtherIndexBars = null; OrbArms.testHeroBars = null; OrbArms.testHeroReadMs = null; OrbArms.testWallMs = null; OrbArms.testWarmDownload = null; OrbArms.testOptionBars = null; OrbArms.testTwinHolders = null; ExpirySquareOff.testNow = null; FlatBySquareOff.testNow = null; FlatBySquareOff.resetForTest(); PineAuto.testNow = null; PineAuto.testBars = null
     }
 
     fun clearAlerts() = Alerts.queue.value.forEach { Alerts.dismiss(it.id) }

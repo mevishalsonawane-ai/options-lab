@@ -138,6 +138,8 @@ object ArmLive {
          * level itself and sells there. Persisted.
          */
         val stopByYou: Boolean = false,
+        /** 20 Nov 2026 (audit): the lots asked for when Boss's 4 Nov free-cash cut bought fewer ([entryQty] / [lot] were bought); null: not cut. Persisted. */
+        val askedLots: Int? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -700,7 +702,7 @@ object ArmLive {
             p.optBoolean("shadow"), s("stopKind") ?: OWN, if (p.has("stopQty")) p.getInt("stopQty") else null,
             p.optBoolean("heldSeen", !p.has("heldSeen")), if (p.has("zeroSince")) p.getLong("zeroSince") else null, p.optInt("stopBooked", 0),
             s("paperSymbol"), p.optBoolean("step500", false), d("best"), p.optBoolean("stepLock", false),
-            p.optBoolean("detached", false), p.optBoolean("stopByYou", false))
+            p.optBoolean("detached", false), p.optBoolean("stopByYou", false), p.optInt("askedLots", 0).takeIf { it > 0 })
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("key", p.key).put("ref", p.ref).put("symbol", p.symbol).put("exchange", p.exchange)
@@ -712,7 +714,7 @@ object ArmLive {
         .put("charges", p.charges).put("shadow", p.shadow).put("stopKind", p.stopKind).put("heldSeen", p.heldSeen)
         .apply { p.stopQty?.let { put("stopQty", it) }; p.zeroSinceMs?.let { put("zeroSince", it) }; p.paperSymbol?.let { put("paperSymbol", it) } }
         .put("stopBooked", p.stopBooked).apply { if (p.fixed) put("step500", true); p.best?.let { put("best", it) }; if (p.lock) put("stepLock", true) }
-        .apply { if (p.detached) put("detached", true); if (p.stopByYou) put("stopByYou", true) }
+        .apply { if (p.detached) put("detached", true); if (p.stopByYou) put("stopByYou", true); p.askedLots?.let { put("askedLots", it) } }
 
     /**
      * The book written (and shown). 18 Nov 2026 (audit: a failed write was swallowed): false when it could not be written - Boss is told
@@ -1177,7 +1179,8 @@ object ArmLive {
         val base = Pos(a.key, a.ref, ins.symbol, ins.exchange, spec.product, if (a.side >= 0) 1 else -1, qty, qty, ins.lot, ins.tick, ins.multiplier,
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol,
             fixed = a.fixed && a.side > 0 && com.optionslab.engine.orb.StepTrail.covers(a.key),
-            lock = a.fixed && a.lock && a.side > 0 && com.optionslab.engine.orb.StepTrail.lockFor(a.key) != null)
+            lock = a.fixed && a.lock && a.side > 0 && com.optionslab.engine.orb.StepTrail.lockFor(a.key) != null,
+            askedLots = want.takeIf { optionBuy && qty / ins.lot < it })
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
         // 3 Nov (Boss): an index not selected in Bot settings → Indices stays in shadow (recorded, never sent).
         // (Read again here, just before anything is sent: a change made while this entry was on its way counts.)
@@ -3049,7 +3052,8 @@ object ArmLive {
                 // 16 Nov (review): the rule's exits (breakeven lock, step lock) with their "failed gates, Boss's exception" label.
                 line(b, "%s: %s%s %s %d @ %.2f (%s), %s after charges".format(Locale.ENGLISH, c.label, if (c.shadow) "SHADOW " else "",
                     if (c.side > 0) "sold" else "bought back", c.symbol, c.qty, c.exit ?: 0.0,
-                    c.why?.let { com.optionslab.engine.orb.StepTrail.words(it) }, LiveMirror.rs(c.net ?: 0.0)))
+                    c.why?.let { com.optionslab.engine.orb.StepTrail.words(it) }, LiveMirror.rs(c.net ?: 0.0)) +
+                    (c.askedLots?.let { OrbArms.lotsAskedWords(it, c.entryQty / c.lot.coerceAtLeast(1)) }?.let { " · $it" } ?: ""))
                 if (b.positions.none { it.open && it.ref == c.ref }) { closedRefs.remove(c.ref); levels.remove(c.ref); RuleHighs.forget("live:${c.ref}")
                     detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref) }
             }

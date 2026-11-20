@@ -313,6 +313,37 @@ class HeroArmTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (audit: the read cap had no test): a hung read of the option's minutes ends at its cap ([OrbArms.HERO_STOP_READ_MS], shortened
+     * here), so the next look's read goes - one hung read never holds back every later one.
+     */
+    @Test fun aHungOptionReadEndsAtItsCapAndTheNextReadGoes() {
+        setUp(listOf(day, day.plusDays(7)))
+        armHero()
+        passes(LocalTime.of(13, 44), LocalTime.of(13, 46))
+        assertTrue(hero().today.single().open)
+        val ce = key(day, 25_200.0, Right.CE)
+        val gate = java.util.concurrent.CountDownLatch(1)
+        val feed = OrbArms.testHeroBars!!
+        OrbArms.testHeroReadMs = 300
+        OrbArms.testHeroBars = { k, t -> if (k == ce) gate.await(10, java.util.concurrent.TimeUnit.MINUTES); feed(k, t) }
+        fun waitFor(what: String, ok: () -> Boolean) {
+            val end = System.currentTimeMillis() + 10_000
+            while (!ok() && System.currentTimeMillis() < end) Thread.sleep(20)
+            assertTrue(what, ok())
+        }
+        try {
+            at(LocalTime.of(13, 50))
+            runBlocking { OrbArms.priceCheckOnly() }
+            waitFor("the hung read ended at its cap") { !OrbArms.heroStopReadingForTest() }
+            OrbArms.testHeroBars = feed                                    // the feed answers again
+            requested.clear()
+            at(LocalTime.of(13, 51))
+            runBlocking { OrbArms.priceCheckOnly() }
+            waitFor("the next look's read went") { ce in requested }
+        } finally { gate.countDown(); OrbArms.testHeroReadMs = null }
+    }
+
+    /**
      * 18 Oct (review D8): the Hero arm's paper trades reach the live path ([ArmLive]). Its paper buy is told with its own key, its
      * reference and its quantity; once its -60% stop sells it on paper, the ORB book it registered shows that trade at quantity 0,
      * so its live copy is sold too.

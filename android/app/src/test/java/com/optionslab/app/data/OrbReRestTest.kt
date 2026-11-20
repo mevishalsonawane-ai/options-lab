@@ -302,6 +302,38 @@ class OrbReRestTest : RobolectricTest() {
         assertEquals("never put back", 0, slCount())
     }
 
+    /**
+     * 20 Nov 2026 (audit: the 2-minute own-cancel mark had no test): a mark whose stop is still seen working under [OrbArms.EXIT_MARK_SETTLE_MS]
+     * after it was made stands (its cancel may still land: then put back); seen working at two minutes, the cancel did not take - the mark
+     * ends, and Boss's later cancel in Kite is his (never put back).
+     */
+    @Test fun anOwnCancelMarkLastsTwoMinutesWhileItsStopStillWorks() {
+        var wall = 1_000_000_000L
+        OrbArms.testWallMs = { wall }
+        try {
+            // Within the two minutes: the cancel lands after a look saw the stop working - still the app's own, put back.
+            val s = held("orb")
+            runBlocking { OrbArms.markOwnCancels(listOf(s))!!.join() }
+            wall += OrbArms.EXIT_MARK_SETTLE_MS - 1_000
+            pass()                                                        // seen working, 1 s short of two minutes: the mark stands
+            kite.reject(s, message = "", status = "CANCELLED")
+            pass()
+            assertFalse(row().open!!.stopByYou)
+            assertEquals("put back", 1, slCount())
+            kite.requests.clear(); kite.orders.clear()
+            // Seen working at two minutes: the mark ends; a later blank cancel is Boss's.
+            AutomationSupport.clearAlerts()
+            val s2 = held("orb")
+            runBlocking { OrbArms.markOwnCancels(listOf(s2))!!.join() }
+            wall += OrbArms.EXIT_MARK_SETTLE_MS
+            pass()                                                        // seen working two minutes on: the cancel did not take
+            kite.reject(s2, message = "", status = "CANCELLED")           // later, Boss in Kite
+            pass()
+            assertTrue(row().open!!.stopByYou)
+            assertEquals("never put back", 0, slCount())
+        } finally { OrbArms.testWallMs = null }
+    }
+
     /** A fast look (a stream tick's) never places a stop - only the regular pass does. */
     @Test fun aFastLookNeverPutsTheStopBack() {
         val s = held("orb")

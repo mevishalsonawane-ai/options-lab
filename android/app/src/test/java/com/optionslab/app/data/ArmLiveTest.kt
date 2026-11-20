@@ -569,6 +569,25 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("its stop covers what was bought", "60", stop.form["quantity"])
         assertEquals(60, view().open.single().qty)
         assertTrue(view().log.toString(), view().log.any { "2 of your 3 lots: the free cash (Rs 13,000) fits 2" in it })
+        // 20 Nov 2026 (audit): the lots asked for are kept on the trade (saved and read back) and said on its closed line.
+        assertEquals(3, view().open.single().askedLots)
+        ArmLive.drainWritesForTest()
+        ArmLive.forgetMemoryForTest()
+        watch()
+        assertEquals("read back from the book", 3, view().open.single().askedLots)
+        legs["fit"] = com.optionslab.engine.orb.DonchianArm.SOURCE to 0       // its paper trade exits: the live one is sold
+        watch()
+        assertEquals(3, view().closed.single().askedLots)
+        assertTrue(view().log.toString(), view().log.any { "sold" in it && "bought 2 of 3 lots (free cash)" in it })
+    }
+
+    /** 20 Nov 2026 (audit): an entry the free cash fits whole keeps no "lots asked for". */
+    @Test fun anEntryTheCashFitsWholeKeepsNoAskedLots() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 2, maxLotsPerOrder = 5, guardMaxLots = 10))
+        kite.cash = 100_000.0
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "whole"))
+        assertEquals(60, view().open.single().qty)
+        assertNull(view().open.single().askedLots)
     }
 
     /**

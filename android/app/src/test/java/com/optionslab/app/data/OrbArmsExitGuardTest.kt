@@ -631,4 +631,96 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         pass()
         assertEquals("rested once the gap is over (none here)", 1, kite.placed.count { it.form["order_type"] == "SL" })
     }
+
+    // ---- 20 Nov 2026 (audit PC): a double sell after an exit whose reply was lost ---------------------------------------------------
+
+    /**
+     * 20 Nov 2026 (audit PC): with Boss's positions-lag switch in shadow (its default), an earlier sale of the lot that filled while
+     * Zerodha's positions still trail it is never sold a second time by Liquidity's own exit (the guard acts for these exits whatever its
+     * switch says, as for R51 / R72 since 18 Nov).
+     */
+    @Test fun evenWithTheLagGuardInShadowALiquidityExitNeverSellsAFilledSaleAgain() {
+        ExitCoordinator.resetForTest(lagOn = false)
+        try {
+            val s1 = stopOrder(30, 170.0, 161.5)
+            state(listOf(liquidity(30, 200.0, s1, 170.0)))                 // its time stop is due
+            kite.position(sym, 30, 200.0, product = "MIS")
+            kite.positionsTrailReads = 50                                  // the positions trail the next fill
+            runBlocking { Broker.placeOrder(Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb"), exit = true) }
+            kite.requests.clear()
+            pass()
+            assertTrue("no second market sell: ${marketSells().map { it.form }}", marketSells().isEmpty())
+            assertTrue("no stop rested on the lot already sold", kite.placed.none { it.form["order_type"] == "SL" })
+            assertTrue("Boss's own switch untouched", !ExitCoordinator.isLagOn())
+        } finally { ExitCoordinator.resetForTest() }
+    }
+
+    /** The Liquidity exit of a lot whose sale lost its reply (the order book does not list it yet, the positions trail it). */
+    private fun lostLiquiditySale(reply: FakeKite.Reply = FakeKite.Reply.DROP_AFTER_ACCEPT): String {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        state(listOf(liquidity(30, 200.0, s1, 170.0)))                     // its time stop is due
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.trailReads = 1_000
+        kite.nextPlace(reply = reply)
+        kite.requests.clear()
+        pass()
+        assertEquals("its stop came out first", "CANCELLED", kite.order(s1).status)
+        assertEquals("one sale sent", 1, marketSells().size)
+        assertTrue("held on its contract", OrbArms.lostExitForTest(sym))
+        assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "got no reply from Zerodha" in it })
+        return s1
+    }
+
+    /**
+     * 20 Nov 2026 (audit PC): Liquidity's exit sale lost its reply and was not found at once: within its hold nothing more is sold and no
+     * stop is put back on the contract; past it the order book is searched first - the sale found there is the trade's exit.
+     */
+    @Test fun aLostLiquidityExitIsHeldThenFoundAndBookedNeverSoldTwice() {
+        lostLiquiditySale()
+        pass(); pass()
+        assertEquals("nothing more sold within the hold", 1, marketSells().size)
+        assertTrue("no stop rested beside it", kite.placed.none { it.form["order_type"] == "SL" })
+        assertNotNull("still open meanwhile", open("liquidity"))
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        kite.showInBook()                                                  // the order book lists the sale now
+        pass()
+        assertEquals("still one sale", 1, marketSells().size)
+        assertTrue("no stop rested", kite.placed.none { it.form["order_type"] == "SL" })
+        val done = today("liquidity").single()
+        assertEquals("booked as its exit", "time_stop", done.why)
+        assertEquals(30, done.qty)
+        assertTrue(!OrbArms.lostExitForTest(sym))
+    }
+
+    /**
+     * 20 Nov 2026 (review): a lost exit found by ANOTHER trade's look on the contract (another book's exit) is not dropped: it is kept for
+     * its own trade, nothing is sold meanwhile, and that trade's next look books it as its exit.
+     */
+    @Test fun aLostExitFoundByAnotherTradesLookIsKeptForItsOwnTrade() {
+        lostLiquiditySale()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        kite.showInBook()
+        assertTrue("another trade's look holds", runBlocking { OrbArms.lostExitHoldsForTest(sym, "orb:liquidity15:other") })
+        assertTrue("kept for its own trade", OrbArms.lostExitForTest(sym))
+        assertTrue("held again on the next ask", runBlocking { OrbArms.lostExitHoldsForTest(sym, "orb:liquidity15:other") })
+        pass()
+        assertEquals("never sold twice", 1, marketSells().size)
+        assertEquals("booked as its own trade's exit", "time_stop", today("liquidity").single().why)
+        assertTrue(!OrbArms.lostExitForTest(sym))
+    }
+
+    /** 20 Nov 2026 (audit PC): a lost exit not found within its hold is said; then the exit goes again, once, for what is still held. */
+    @Test fun aLostLiquidityExitNotFoundIsSaidAndTheExitGoesOnce() {
+        lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)                // nothing reached Zerodha
+        kite.positionsTrailReads = 0; kite.trailReads = 0
+        pass()
+        assertEquals("nothing more sold within the hold", 1, marketSells().size)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass()
+        assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "lost exit of $sym was not found" in it })
+        assertTrue(!OrbArms.lostExitForTest(sym))
+        assertEquals("sold again once the search found nothing", 2, marketSells().size)
+        assertEquals("time_stop", today("liquidity").single().why)
+    }
 }

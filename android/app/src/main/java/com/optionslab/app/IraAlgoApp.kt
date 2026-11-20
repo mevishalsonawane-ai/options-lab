@@ -124,6 +124,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.StepTrailExits.init(this)
         // 15 Nov (Boss): the funds check on the arms' live entries (shadow by default), its switch read in the background.
         com.optionslab.app.data.FundsCheck.init(this)
+        // 20 Nov 2026 (audit): Liquidity's fresh-bar check on live entries (shadow by default), its switch read in the background.
+        com.optionslab.app.data.LiquidityFreshBar.init(this)
         // 19 Nov (Boss's choice): the four automatic stops on R51, R72 and Liquidity, read in the background (his one-time choice after).
         com.optionslab.app.data.ArmAutoStopsHost.init(this)
         // 21 Oct, enhancement round 4 (idea 3): the payout-aware drawdown (in shadow by default), read in the background.
