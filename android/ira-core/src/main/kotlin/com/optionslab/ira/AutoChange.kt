@@ -353,7 +353,9 @@ object AutoChange {
             // [PICK_TARGET], act: an entry filter like the others.)
             // 16 Nov: the fourth version's lock ([STEP_LOCK_TARGET]) only raises stops: to V5 lowers risk, back to V4 alone raises it.
             // (An entry the unmerged first build of 16 Nov wrote under this target with on / off reads as the switch it flipped: on lowers.)
+            // 20 Nov 2026: the cheaper strike ([CHEAPER_TARGET]) adds live trades: on raises risk, off lowers it.
             Kind.PAPER_FILTER -> if (c.target == STEP_LOCK_TARGET) { if (c.to == V5_LOCK || c.to == ON) Risk.LOWER else Risk.RAISE }
+                else if (c.target == CHEAPER_TARGET) { if (c.to == ON) Risk.RAISE else Risk.LOWER }
                 else if (c.target == W20_TARGET) Risk.NEUTRAL_SHADOW
                 else if (c.target == BOOK_PRICE_TARGET) { if (c.to == ON) Risk.RAISE else Risk.LOWER } else if (c.to == ON) Risk.LOWER else Risk.RAISE
             // 18 Oct: an arm's own live switch on lets its live entries go (adds live risk); off keeps it on paper.
@@ -1029,6 +1031,24 @@ object AutoChange {
         else "Liquidity 15+5, R51 and R72's new trades are back on V4 alone (the breakeven at +10%; no step lock, no breakeven at +₹1,000; live too)",
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.LOWER else Risk.RAISE, Scope.LIVE,
         what = "step lock (R51, R72) and breakeven at +₹1,000 (Liquidity) on top of V4, paper and live (failed gates, Boss's exception)")
+
+    /** 20 Nov 2026: the target of the cheaper strike when funds are short ([cheaperStrike]; no "liquidity" in it, so the freeze never holds its Undo). */
+    const val CHEAPER_TARGET = "filter:cheaper_strike"
+
+    /**
+     * 20 Nov 2026 (Boss's exception: "if its says insufficient balance for any trade, then try cheaper options increment it 1 by 1"): an
+     * R51 / R72 / Liquidity 15+5 live option buy the free cash cannot pay for even one lot (after the lots cut), or that Zerodha refused for
+     * funds, steps one strike further out at a time (at most three) and buys one lot of the first that fits - switched [on], or off again.
+     * It ADDS live trades: on raises live risk (the PIN, and so its Undo of an off); off lowers it (one tap, and the Undo of an on).
+     */
+    fun cheaperStrike(on: Boolean): Change = Change(Kind.PAPER_FILTER, CHEAPER_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
+        if (on) "your ask (20 Nov, \"if its says insufficient balance for any trade, then try cheaper options increment it 1 by 1\"): an R51, R72 " +
+            "or Liquidity 15+5 live option buy the free cash cannot pay for even one lot (after the lots cut), or that Zerodha refused for funds, " +
+            "steps one strike further out (a put lower, a call higher; same expiry), at most three, and buys one lot of the first that fits, " +
+            "through every live gate again. Boss's exception: live at once, not shadow first"
+        else "an R51, R72 or Liquidity live buy the cash cannot pay for is no longer moved to a cheaper strike (it goes, or is skipped, as before)",
+        Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.RAISE else Risk.LOWER, Scope.LIVE,
+        what = "cheaper strike when funds are short, live (R51, R72, Liquidity; Boss's exception, 20 Nov)")
 
     /** 19 Nov 2026: whether [target] is one of the four automatic stops' switches on R51, R72 and Liquidity ([ArmAutoStops.Rule]). */
     fun isAutoStopTarget(target: String): Boolean = ArmAutoStops.Rule.ofTarget(target) != null

@@ -672,6 +672,13 @@ class PersonalStoresTest {
             check(com.optionslab.app.data.FundsCheck.holdsForErase())
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("CheaperStrike") {
+            // 20 Nov 2026: on by default (TestApp starts it off for the other tests): switched off by Boss, a setting to erase.
+            com.optionslab.app.data.CheaperStrike.resetForTest(on = true)
+            com.optionslab.app.data.CheaperStrike.set(false, log = false)
+            check(com.optionslab.app.data.CheaperStrike.holdsForErase())
+            com.optionslab.app.security.SecurePrefs.flush()
+        },
         s("ArmAutoStopsHost") {
             // 19 Nov: on by default (TestApp starts it all on): one switched off by Boss (with his PIN), a setting to erase.
             com.optionslab.app.data.ArmAutoStopsHost.resetForTest()

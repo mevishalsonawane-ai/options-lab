@@ -682,4 +682,27 @@ class AutoChangeTest {
         val (book, e) = AutoChange.record(AutoChange.Book(), c, AutoChange.Status.KEPT, 0L, LocalDate.of(2026, 11, 19), by = "your choice", note = "")
         assertNull(AutoChange.undo(book, e.id), "no Undo: the way back is the limit itself")
     }
+
+    /**
+     * 20 Nov 2026 (Boss's exception): the cheaper strike when funds are short ADDS live trades - on raises live risk, off lowers it; the
+     * Undo of an off turns it back on (the PIN), the Undo of an on is free; never a target the safety deny list or the freeze catches.
+     */
+    @Test fun theCheaperStrikeOnRaisesLiveRiskAndItsUndoOfAnOffTakesThePin() {
+        val on = AutoChange.cheaperStrike(true)
+        val off = AutoChange.cheaperStrike(false)
+        assertEquals(AutoChange.CHEAPER_TARGET, on.target)
+        assertEquals(AutoChange.Risk.RAISE, AutoChange.riskOf(on))
+        assertEquals(AutoChange.Risk.LOWER, AutoChange.riskOf(off))
+        assertEquals(AutoChange.Scope.LIVE, on.scope)
+        assertEquals(AutoChange.ON, on.to); assertEquals(AutoChange.SWITCHED_OFF, off.to)
+        assertTrue(AutoChange.undoNeedsPin(off), "undoing an off adds live trades back: the PIN")
+        assertFalse(AutoChange.undoNeedsPin(on), "undoing an on only lowers risk")
+        // A claim of LOWER on the on is never trusted: what it does decides.
+        assertEquals(AutoChange.Risk.RAISE, AutoChange.riskOf(on.copy(risk = AutoChange.Risk.LOWER)))
+        assertFalse(AutoChange.never(on)); assertFalse(AutoChange.never(off))
+        assertFalse(on.target.contains("liquidity"))
+        val (book, e) = AutoChange.record(AutoChange.Book(), off, AutoChange.Status.KEPT, 0L, LocalDate.of(2026, 11, 20), by = "your choice", note = "")
+        val u = AutoChange.undo(book, e.id)!!
+        assertEquals(AutoChange.ON, u.inverse.to); assertTrue(u.needsPin)
+    }
 }

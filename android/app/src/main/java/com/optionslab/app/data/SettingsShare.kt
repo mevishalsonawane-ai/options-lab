@@ -241,6 +241,7 @@ object SettingsShare {
         out += line("Exit rule V4 / V5") { StepTrailExits.line() }
         out += "Exit rule switches: V4 (breakeven at +10%) ${onOff(runCatching { StepTrailExits.isOn() }.getOrNull())} · V5 lock on top ${onOff(runCatching { StepTrailExits.lockOn() }.getOrNull())}"
         out += line("Funds check") { FundsCheck.line() }
+        out += line("Cheaper strike") { CheaperStrike.line() }
         out += line("Same-direction cap") { ExposureCapHost.line() }
         out += line("Same-direction cap, only logged") { ExposureCapHost.onlyLoggedLine() }
         out += line("Same-direction cap switches") { ExposureCapHost.view.value.let { "Same-direction cap switches: paper ${onOff(it.paperOn)}, live ${onOff(it.liveOn)}, max ${it.max}" } }

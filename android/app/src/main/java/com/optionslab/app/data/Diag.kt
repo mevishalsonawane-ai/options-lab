@@ -418,6 +418,8 @@ object Diag {
         (runCatching { StepTrailExits.line() }.getOrElse { "breakeven at 10 percent: could not read" }) + "\n" +
         // 15 Nov: the funds check on the arms' live entries ([FundsCheck]; shadow by default): today's would-skips, no rupees.
         (runCatching { FundsCheck.line() }.getOrElse { "Funds check: could not read" }) + "\n" +
+        // 20 Nov 2026 (Boss's exception): the cheaper strike when funds are short ([CheaperStrike]): today's stepped buys and give-ups.
+        (runCatching { CheaperStrike.line() }.getOrElse { "Cheaper strike: could not read" }) + "\n" +
         // 19 Nov (Boss's choice): the four automatic stops on R51, R72 and Liquidity ([ArmAutoStopsHost]).
         (runCatching { ArmAutoStopsHost.line() }.getOrElse { "Automatic stops on R51, R72 and Liquidity: could not read" }) + "\n" +
         (runCatching { PayoutWatch.line() }.getOrElse { "Payout-aware drawdown: could not read" }) + "\n"

@@ -553,6 +553,13 @@ internal object Autopilot {
                 val rule = com.optionslab.ira.ArmAutoStops.Rule.ofTarget(c.target) ?: return null
                 com.optionslab.app.data.ArmAutoStopsHost.set(rule, c.to == AutoChange.ON, pinConfirmed = pinConfirmed, log = false)
                     .takeIf { !it.contains("Nothing changed") }
+            } else if (c.target == AutoChange.CHEAPER_TARGET) {
+                // 20 Nov 2026 (Boss's exception, CLAUDE.md): the cheaper strike when funds are short ([logCheaperStrike]): the Undo switches it
+                // off (one tap) or on again - on adds live trades: the PIN, by the change's live scope, asked before this runs and passed as
+                // given (never assumed); not logged again.
+                if (c.to != AutoChange.ON && c.to != AutoChange.SWITCHED_OFF) return null
+                com.optionslab.app.data.CheaperStrike.set(c.to == AutoChange.ON, pinConfirmed = pinConfirmed, log = false)
+                    .takeIf { !it.contains("Nothing changed") }
             } else if (c.target == AutoChange.PICK_TARGET) {
                 // 6 Nov (Boss's exception, CLAUDE.md): R151's R72 and R51 pickers ([logPassedPickerOn]): the Undo switches them off or on.
                 // Off adds live trades back: the PIN, by the change's live scope ([needsPin]); not logged again.
@@ -1512,6 +1519,32 @@ internal object Autopilot {
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
                         note = if (on) "your choice (Bot settings); R51, R72 and Liquidity" else "your choice (Bot settings, with your PIN); R51, R72 and Liquidity").first
+                    save()
+                }
+            }
+        }
+    }
+
+    /**
+     * 20 Nov 2026 (Boss's exception, CLAUDE.md): the cheaper strike when funds are short, live, on by the update - logged once as Boss's;
+     * its Undo switches it off (one tap: it lowers risk).
+     */
+    fun logCheaperStrikeOnOnce() {
+        if (!enabled()) return
+        logBossOwnOnce(AutoChange.cheaperStrike(true), "the 20 Nov update (your ask: \"try cheaper options increment it 1 by 1\"); Boss's exception - live at once; Undo switches it off (one tap)")
+    }
+
+    /** 20 Nov 2026: Boss flipping the cheaper strike in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
+    fun logCheaperStrike(on: Boolean) {
+        if (!enabled()) return
+        val c = AutoChange.cheaperStrike(on)
+        scope.launch(trailLane) {
+            runCatching {
+                ensureLoaded()
+                val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+                synchronized(lock) {
+                    _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
+                        note = if (on) "your choice (Bot settings, with your PIN); R51, R72 and Liquidity, live" else "your choice (Bot settings); R51, R72 and Liquidity").first
                     save()
                 }
             }

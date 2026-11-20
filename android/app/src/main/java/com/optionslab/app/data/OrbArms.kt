@@ -222,6 +222,12 @@ object OrbArms {
         val stopByYou: Boolean = false,
         /** 16 Nov (review): the app itself cancelled its stop (an exit taking it out first) and Zerodha had not shown it out yet. Persisted. */
         val appCancelled: Boolean = false,
+        /**
+         * 20 Nov 2026 (Boss's exception, [CheaperStrike]): a live trade bought on a cheaper strike than its signal chose because the free cash
+         * could not pay for that one - the app's name of the contract the signal chose; null: the signal's own. Persisted, so its record can
+         * always be told apart from the plain rules' (CLAUDE.md: every Liquidity change stays logged and labelled).
+         */
+        val stepFrom: String? = null,
     ) {
         val open: Boolean get() = exit == null
         /**
@@ -405,7 +411,7 @@ object OrbArms {
             capped = if (p.has("capped")) p.getDouble("capped") else null,
             fixed = p.optBoolean("step500", false), lock = p.optBoolean("stepLock", false),
             entryQty = p.optInt("entryQty", 0).takeIf { it > 0 }, stopByYou = p.optBoolean("stopByYou", false),
-            appCancelled = p.optBoolean("appCancelled", false))
+            appCancelled = p.optBoolean("appCancelled", false), stepFrom = p.optString("stepFrom").ifEmpty { null })
 
     private fun book(): Book {
         cache?.let { return it }
@@ -1277,7 +1283,8 @@ object OrbArms {
                         p.stopPts?.let { put("stopPts", it) }; p.targetPts?.let { put("targetPts", it) }; p.liq?.let { put("liq", liqText(it)) }
                         p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) }; p.be?.let { put("breakeven", it) }
                         if (p.priceRetry) put("priceRetry", true); p.capped?.let { put("capped", it) }; if (p.fixed) put("step500", true); if (p.lock) put("stepLock", true)
-                        p.entryQty?.let { put("entryQty", it) }; if (p.stopByYou) put("stopByYou", true); if (p.appCancelled) put("appCancelled", true) })
+                        p.entryQty?.let { put("entryQty", it) }; if (p.stopByYou) put("stopByYou", true); if (p.appCancelled) put("appCancelled", true)
+                        p.stepFrom?.let { put("stepFrom", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -3593,8 +3600,12 @@ object OrbArms {
     val entryInFlight: Boolean get() = entering.get() > 0
 
     private suspend fun enterLiveNow(b: Book, arm: Arm, c: Paper.Contract, signalBar: LocalDateTime, liquidity: LiquidityRules.Signal?,
-                                     near: Boolean?, volSkip: Boolean?, strong: Boolean?, lots: Int): String {
+                                     near: Boolean?, volSkip: Boolean?, strong: Boolean?, lots: Int,
+                                     /** 20 Nov 2026 (Boss's exception, [CheaperStrike]): this entry is the cheaper strike [c] it chose (every gate again, 1 lot). */
+                                     step: CheaperStrike.Pick? = null, t0: Long = System.nanoTime()): String {
         runCatching { OrderTiming.decided() }
+        // (20 Nov 2026: whether the cheaper strike was already tried for this entry - never twice.)
+        var stepTried = step != null
         // A paper-only arm (the Hero arm among them) never reaches Zerodha, whatever called this.
         liveRefusal(arm.source)?.let { return it }
         val s = AppSettings.load()
@@ -3611,7 +3622,8 @@ object OrbArms {
         // that trade already exists and this entry's checks ran before it was here - no buy now. It could not run (the order book
         // unreadable, the arms' live copies' book not read): the entry goes as before - waiting would be a new skip of live entries, so
         // that is only logged in SHADOW ("would have waited") and said once; the sweep keeps trying on later looks.
-        if (!coldSwept) {
+        // (20 Nov 2026: the cheaper strike's own pass skips it - its arm's entry just ran it, on the same index.)
+        if (!coldSwept && step == null) {
             val rows = b.positions.size
             coldSafety.clear()                                                       // (only this call's safety candidates count below)
             passPlaced.clear(); passIds.clear()
@@ -3687,6 +3699,13 @@ object OrbArms {
         // a buy the free cash cannot pay for even one lot. Its figure is the margins the account read above just used
         // ([Broker.keptFreeCash], memory; nothing new is read); unknown, it says nothing. In SHADOW (its switch off, the default) the
         // order goes exactly as before and the would-skip is logged; on, it is not sent (kept as a would-be entry).
+        // 20 Nov 2026 (Boss's exception, [CheaperStrike]): the lots cut above first; still not even one lot fitting (the same kept free cash),
+        // a Liquidity buy steps to a cheaper strike (up to 3 out, 1 lot) through this whole entry again. It went: its answer. None fits, or a
+        // gate refused the cheaper one before it went: this entry goes on exactly as before (the funds check below included).
+        if (liquidity != null && !stepTried && com.optionslab.engine.orb.LiveMirror.shortOfOneLot(limitPx * ins.lotSize, Broker.keptFreeCash())) {
+            stepTried = true
+            liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, Broker.keptFreeCash(), CheaperStrike.Trigger.PRE_SEND)?.let { return it }
+        }
         FundsCheck.check(arm.label, sym, buyLots, limitPx * ins.lotSize, Broker.keptFreeCash(), limitPx)?.let { return it }
         val known = knownKite(b)
         // 15 Nov (Boss's exception): a Liquidity live entry enters with the breakeven rule while the switch is on (memory only); 16 Nov:
@@ -3709,7 +3728,8 @@ object OrbArms {
         val sent = ArmOrderLabels.sending(o, owner, runCatching { Market.now().toInstant().toEpochMilli() }.getOrDefault(System.currentTimeMillis()))
         val intent = stamped(Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, null, null, null,
             live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ladderOn(arm, today0, true),
-            near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew))
+            near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew,
+            stepFrom = step?.req?.let { stepFromName(it) }))
         b.positions += intent
         // (19 Nov 2026, second review: written on the book's writer thread, so the order below never waits on the disk; any later save
         // of the book writes after it, never under it - [saveSoon].)
@@ -3724,13 +3744,24 @@ object OrbArms {
         val id: String? = try {
             // The arm's key as its entry check asked the portfolio guard (the door refuses only this arm's blocked entry).
             // [last]: the price this entry decided on (its slippage is measured from it once it fills; nothing else changes).
+            step?.sent = true
             Broker.placeOrder(o, arm = armKey, intended = last, verdict = verdict, stop = liveStop)
         } catch (e: Broker.NotLoggedIn) {
             dropIntent()
             return "refused: not logged in to Zerodha today"
         } catch (e: Exception) {
             if (ArmOrderLabels.zerodhaRefused(e)) ArmOrderLabels.refused(sent)
-            if (Broker.definite(e)) { dropIntent(); return "order_refused: " + (e.message ?: "Zerodha refused the order") }
+            if (Broker.definite(e)) {
+                dropIntent()
+                // 20 Nov 2026 (Boss's exception): Zerodha's own refusal for funds (definite - never a lost reply) steps to a cheaper strike once.
+                if (liquidity != null && !stepTried && ArmOrderLabels.zerodhaRefused(e) && CheaperStrike.fundsRefused(e.message)) {
+                    stepTried = true
+                    liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, Broker.keptFreeCash() ?: runCatching { Broker.freeCash() }.getOrNull(),
+                        CheaperStrike.Trigger.REJECTED)?.let { return it }
+                }
+                step?.let { CheaperStrike.notBought(it, e.message ?: "Zerodha refused it") }
+                return "order_refused: " + (e.message ?: "Zerodha refused the order")
+            }
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
             // (19 Nov 2026: not found is not proof it was never placed - a LIMIT may rest and fill later. The intent stays unconfirmed with no
             // order id: the settle's lost-id search finds it, cancels what still works and keeps what filled, or drops it after its wait.)
@@ -3766,8 +3797,16 @@ object OrbArms {
             // (19 Nov 2026: the LIMIT not filled in the wait and cancelled by the app: nothing bought, never chased - said as such.)
             if (cancelledByApp && f.status == "CANCELLED") {
                 runCatching { Diag.record("orb", "${arm.label}: the LIMIT buy of $sym at %.2f did not fill in 5 s; cancelled, nothing bought".format(Locale.ENGLISH, limitPx)) }
+                step?.let { CheaperStrike.notBought(it, "the LIMIT did not fill in 5 s; cancelled") }
                 return "unfilled: the LIMIT buy at %.2f did not fill in 5 s; cancelled, nothing bought".format(Locale.ENGLISH, limitPx)
             }
+            // 20 Nov 2026 (Boss's exception): REJECTED for funds (a definite end in Zerodha's book) steps to a cheaper strike once.
+            if (f.status == "REJECTED" && liquidity != null && !stepTried && CheaperStrike.fundsRefused(f.message)) {
+                stepTried = true
+                liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, Broker.keptFreeCash() ?: runCatching { Broker.freeCash() }.getOrNull(),
+                    CheaperStrike.Trigger.REJECTED)?.let { return it }
+            }
+            step?.let { CheaperStrike.notBought(it, "Zerodha ${f.status.lowercase()}") }
             return "order_refused: Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: "")
         }
         val fill = f.avgPrice.takeIf { it > 0 } ?: last
@@ -3781,7 +3820,8 @@ object OrbArms {
         putIntent(stamped(Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
             ladder = ladderOn(arm, today0, true), near = near, volSkip = volSkip, strong = strong,
-            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew, entryQty = f.filled)))
+            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew, entryQty = f.filled,
+            stepFrom = step?.req?.let { stepFromName(it) })))
         runCatching { save(b) }
         runCatching { Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", "${arm.label} · entry", f.orderId) }
         // 22 Oct: the time machine's reality check on the live entry too (shadow only; background).
@@ -3791,7 +3831,35 @@ object OrbArms {
             exitAt = OrbRules.SQUARE_OFF, live = true)) }
         runCatching { save(b) }   // a live position is written down at once, not at the end of the pass
         marks[c.symbol] = fill
+        // 20 Nov 2026 (Boss's exception): a buy on a cheaper strike is said to Boss ("Liquidity: funds short for BANKNIFTY 52000 CE, bought 52100 CE (1 lot)").
+        step?.let { CheaperStrike.bought(it, (f.filled / ins.lotSize.coerceAtLeast(1)).coerceAtLeast(1)) }
         return "entered_live"
+    }
+
+    /**
+     * 20 Nov 2026 (Boss's exception, [CheaperStrike]): Liquidity's live buy of [c] (Zerodha's [fromSym]) cannot be paid for even one lot
+     * ([free], [trigger]): the cheaper strike chosen - in Zerodha's list AND the app's own (its trade is booked on that contract: the
+     * position's [Position.symbol] and [Position.kite] are both the cheaper option, so every exit, stop, square-off, restart and reconciler
+     * check follows it as any live trade) - entered through the whole live entry again ([enterLiveNow]: every gate, 1 lot). Its answer when
+     * its order went; null when none was chosen or a gate refused it before it went (the arm's own entry then goes on as before).
+     */
+    /** 20 Nov 2026: the app's name of the contract a cheaper-strike [r] stepped from ([Position.stepFrom]). */
+    private fun stepFromName(r: CheaperStrike.Req): String = contractNow(r.underlying, r.expiry, r.fromStrike, r.right)?.symbol ?: r.fromSymbol
+
+    private suspend fun liqStep(b: Book, arm: Arm, c: Paper.Contract, fromSym: String, signalBar: LocalDateTime, liquidity: LiquidityRules.Signal,
+                                near: Boolean?, volSkip: Boolean?, strong: Boolean?, t0: Long, free: Double?, trigger: CheaperStrike.Trigger): String? {
+        if (!CheaperStrike.isOn() || !CheaperStrike.covers(arm.source)) return null
+        val pick = CheaperStrike.find(CheaperStrike.Req(arm.label, arm.source, c.underlying, c.expiry, c.right, c.strike, fromSym, "NFO", "MIS", free,
+            trigger, t0, now(), needContract = true)) ?: return null
+        val c2 = pick.contract ?: return null
+        // (The arms' exposure cap asked again for the cheaper contract, as its entry asked it for the signal's.)
+        exposureRefusal(b, c2, arm, true)?.let { CheaperStrike.notBought(pick, "refused before it went ($it)"); return null }
+        // (Arms' lock: a refusal for funds ends the first order's wait at once - its REJECTED is a finished state - so the cheaper strike's own
+        // entry adds no more than one ordinary entry's wait to the lock.)
+        val r = enterLiveNow(b, arm, c2, signalBar, liquidity, near, volSkip, strong, 1, pick, t0)
+        if (pick.sent) return r
+        CheaperStrike.notBought(pick, "refused before it went ($r)")
+        return null
     }
 
     /**
@@ -5698,6 +5766,8 @@ object OrbArms {
                 .also { r ->
                     if (r == "entered_live") runCatching {
                         val p = b.positions.last { it.arm == arm.source && it.live && it.open }
+                        // (20 Nov 2026: a buy on a cheaper strike, [CheaperStrike], is not measured against this contract's signal price.)
+                        if (p.symbol != c.symbol) return@runCatching
                         LiquidityTest.record(quality(com.optionslab.ira.FillQuality.Kind.ENTRY, System.currentTimeMillis(), arm, c.symbol, true, p.entry,
                             atSignal?.last, Paper.bookNow(c), barCloseMs, sentMs, p.qty))
                     }

@@ -711,6 +711,8 @@ fun RiskPage(model: AppModel) {
             item { AccountStopCard(model) }
             // 15 Nov (Boss): the funds check on the arms' live entries (in shadow until switched on; off again takes the PIN).
             item { FundsCheckCard(model) }
+            // 20 Nov 2026 (Boss's exception): the cheaper strike when funds are short (on by default; off is one tap, on takes the PIN).
+            item { CheaperStrikeCard(model) }
             // 19 Nov 2026 (audit batch 2, B2-B): paper-only refusals of entries that could go live - shadow until switched on (on takes the PIN).
             item { PaperRefusalLiveCard(model) }
             // 20 Nov 2026 (audit B5): R51 / R72 breaks on a history that does not reach the last trading day - shadow until switched on (off takes the PIN).
