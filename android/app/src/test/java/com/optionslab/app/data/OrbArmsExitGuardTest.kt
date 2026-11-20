@@ -766,28 +766,31 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (deep review F1): the price falls through the stop while the owner's lost sale (which never reached Zerodha) is held:
-     * nothing more is sold within the hold; the first fast look past it starts the search, and the next look - a second later - sells:
-     * the gap from the hold's end to the sale stays within a few seconds.
+     * 20 Nov 2026 (deep review F1; re-review finding 4): the price falls through the stop while the owner's lost sale (which never reached
+     * Zerodha) is held: an empty search before [OrbArms.LOST_LET_GO_MS] never lets it go (the book can trail a sale that filled), so
+     * nothing more is sold; the first look past that window starts a search, and the next look - a second later - lets it go and sells.
      */
-    @Test fun aPriceThroughTheStopDuringTheHoldIsSearchedAndSoldPromptly() {
+    @Test fun aPriceThroughTheStopIsSoldPromptlyOnceTheLostSaleIsLetGoPastItsWindow() {
         lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)                // nothing reached Zerodha
+        val lostAt = OrbArms.testNow!!
         kite.positionsTrailReads = 0; kite.trailReads = 0
         kite.quote("NFO:$sym", 150.0, 149.95, 150.05)                      // through its 170 stop
-        runBlocking { OrbArms.priceCheckOnly(fast = true) }
-        pass()
-        assertEquals("held within the hold", 1, marketSells().size)
-        val holdEnd = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000)
-        OrbArms.testNow = holdEnd.plusSeconds(1)
-        runBlocking { OrbArms.priceCheckOnly(fast = true) }
-        searchDone()
+        OrbArms.testNow = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        runBlocking { OrbArms.priceCheckOnly(fast = true) }; searchDone()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_ASK_MS / 1000 + 1)
+        runBlocking { OrbArms.priceCheckOnly(fast = true) }; searchDone(); pass()
+        assertTrue("an empty search inside the window keeps it", OrbArms.lostExitForTest(sym))
+        assertEquals("nothing more sold", 1, marketSells().size)
+        val windowEnd = lostAt.plusSeconds(OrbArms.LOST_LET_GO_MS / 1000)
+        OrbArms.testNow = windowEnd.plusSeconds(1)
+        runBlocking { OrbArms.priceCheckOnly(fast = true) }; searchDone()
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
         runBlocking { OrbArms.priceCheckOnly(fast = true) }
         assertTrue(!OrbArms.lostExitForTest(sym))
-        assertEquals("searched, not found, sold", 2, marketSells().size)
+        assertEquals("let go on a read past the window, then sold", 2, marketSells().size)
         assertTrue(today("liquidity").single().exit != null)
-        val gap = java.time.Duration.between(holdEnd, OrbArms.testNow!!).seconds
-        assertTrue("sold $gap s after the hold ended", gap in 0..6)
+        val gap = java.time.Duration.between(windowEnd, OrbArms.testNow!!).seconds
+        assertTrue("sold $gap s after the window ended", gap in 0..6)
     }
 
     /**
@@ -819,27 +822,28 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (review; deep review F1): a lost exit whose search cannot read Zerodha's order book holds its part for at most
-     * [OrbArms.LOST_EXIT_TRIES] searches [OrbArms.LOST_EXIT_ASK_MS] apart after the hold, then is let go and said - the gap stays bounded.
+     * 20 Nov 2026 (re-review finding 4): a lost exit whose search cannot read Zerodha's order book is never let go on failed reads - not
+     * past [OrbArms.LOST_LET_GO_MS] either; Boss is told once that its state is unknown. Once a read succeeds past that window and still
+     * does not show it, it is let go.
      */
-    @Test fun aLostExitWhoseBookCannotBeReadIsLetGoAfterItsTries() {
-        lostLiquiditySale()
+    @Test fun aFailedReadNeverLetsALostExitGo() {
+        lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)
         val lostAt = OrbArms.testNow!!
-        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.down += "/orders"
         try {
-            repeat(OrbArms.LOST_EXIT_TRIES - 1) { n ->
-                assertEquals("try ${n + 1}: held", "hold", runBlocking { OrbArms.lostExitLookForTest(sym) })
-                assertEquals("asked again only after a pause", "hold", runBlocking { OrbArms.lostExitLookForTest(sym) })
-                OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_ASK_MS / 1000 + 1)
+            var t = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+            while (t.isBefore(lostAt.plusSeconds(OrbArms.LOST_LET_GO_MS / 1000 + 30))) {
+                OrbArms.testNow = t
+                assertEquals("held at ${java.time.Duration.between(lostAt, t).seconds} s", "hold", runBlocking { OrbArms.lostExitLookForTest(sym) })
+                t = t.plusSeconds(20)
             }
-            assertEquals("let go", "none", runBlocking { OrbArms.lostExitLookForTest(sym) })
-            assertTrue(!OrbArms.lostExitForTest(sym))
-            val gapS = java.time.Duration.between(lostAt, OrbArms.testNow!!).seconds
-            assertTrue("bounded: $gapS s", gapS <= OrbArms.LOST_EXIT_HOLD_MS / 1000 + OrbArms.LOST_EXIT_TRIES * (OrbArms.LOST_EXIT_ASK_MS / 1000 + 1) + 1)
-            assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any {
-                "lost exit of $sym was not found: Zerodha's order book could not be read (${OrbArms.LOST_EXIT_TRIES} tries)" in it })
+            assertTrue("never let go on failed reads", OrbArms.lostExitForTest(sym))
+            assertEquals("Boss told once its state is unknown", 1, AutomationSupport.alerts().count { "lost exit of $sym could not be looked for" in it })
+            assertEquals("nothing more sold", 1, marketSells().size)
         } finally { kite.down.clear() }
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_ASK_MS / 1000 + 1)
+        assertEquals("a read that succeeds past the window lets it go", "none", runBlocking { OrbArms.lostExitLookForTest(sym) })
+        assertTrue(!OrbArms.lostExitForTest(sym))
     }
 
     /**
@@ -960,16 +964,21 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         runBlocking { Strategies.tagOwner("kite:$earlier", "Liquidity 30m FINNIFTY · square_off") }
     }
 
+    /** The look time past A's let-go window: [lostAt] plus [OrbArms.LOST_LET_GO_MS] and a second. */
+    private fun pastWindow(lostAt: java.time.ZonedDateTime) = lostAt.plusSeconds(OrbArms.LOST_LET_GO_MS / 1000 + 1)
+
     /**
-     * 20 Nov 2026 (re-review finding 1): B's exit falls due while A's lost sale is unresolved and Zerodha's lag-guarded holding, less that
-     * sale, leaves nothing to sell (positions 60 still show an earlier filled sale of 30): B's stop is never taken out - it stays resting,
-     * on a regular and on a fast look, at 15:10 or with Stop for today as for any exit.
+     * 20 Nov 2026 (re-review): B's exit falls due - at 15:10, with Stop for today, or its own time stop - while A's lost sale is unresolved
+     * (positions 60 still show an earlier filled sale of 30): B's stop is never taken out - it stays resting, on regular and fast looks,
+     * and nothing is sold; no read decides it.
      */
-    private fun bWaitsWithItsStopResting(stopForToday: Boolean) {
-        val (s2, gate) = lostOnAWithBResting(held = 60)
+    private fun bWaitsWithItsStopResting(how: String) {
+        val (s2, gate) = lostOnAWithBResting(held = 60, bAgo = if (how == "time_stop") 30 else 3)
         earlierFilledSale()
-        if (stopForToday) runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
-        else OrbArms.testNow = now.toLocalDate().atTime(15, 10, 5).atZone(com.optionslab.engine.IST)
+        when (how) {
+            "stop_for_today" -> runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
+            "15:10" -> OrbArms.testNow = now.toLocalDate().atTime(15, 10, 5).atZone(com.optionslab.engine.IST)
+        }
         kite.requests.clear()
         try {
             pass(); runBlocking { OrbArms.priceCheckOnly(fast = true) }
@@ -984,51 +993,78 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         searchDone()
     }
 
-    @Test fun at1510BsStopStaysRestingWhileALostSaleLeavesNothingToSell() = bWaitsWithItsStopResting(stopForToday = false)
+    @Test fun at1510BsStopStaysRestingWhileALostSaleIsPending() = bWaitsWithItsStopResting("15:10")
 
-    @Test fun withStopForTodayBsStopStaysRestingWhileALostSaleLeavesNothingToSell() = bWaitsWithItsStopResting(stopForToday = true)
+    @Test fun withStopForTodayBsStopStaysRestingWhileALostSaleIsPending() = bWaitsWithItsStopResting("stop_for_today")
+
+    @Test fun onItsOwnTimeStopBsStopStaysRestingWhileALostSaleIsPending() = bWaitsWithItsStopResting("time_stop")
 
     /**
-     * 20 Nov 2026 (re-review): at 15:10 (or with Stop for today) while A's lost sale - which never reached Zerodha - is unresolved, B's
-     * square-off sells at once when a sale will go (Zerodha holds 90, an earlier 30 sold, A's 30 may still be filling: 30 left for B);
-     * once A's sale is let go (not found), A's part sells too - never more than Zerodha holds.
+     * 20 Nov 2026 (re-review): the wait ends. At 15:10 (or with Stop for today) B waits with its stop resting while A's lost sale - which
+     * never reached Zerodha - is unresolved, even after an empty search inside the window; once a read past the window lets it go, A's
+     * part and B's square-off each sell - 60 in all, never more than Zerodha holds (90 less an earlier sale of 30).
      */
-    private fun squareOffSellsWhatWillGo(stopForToday: Boolean) {
-        val (_, gate) = lostOnAWithBResting(held = 90)
+    private fun theWaitEndsOnceTheLostSaleIsLetGo(stopForToday: Boolean) {
+        // (At 15:10 the sale is lost just before it, so the square-off's first looks fall inside its window.)
+        if (!stopForToday) OrbArms.testNow = now.toLocalDate().atTime(15, 9, 50).atZone(com.optionslab.engine.IST)
+        val (s2, gate) = lostOnAWithBResting(held = 90)
+        val lostAt = OrbArms.testNow!!
         earlierFilledSale()
         if (stopForToday) runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
         else OrbArms.testNow = now.toLocalDate().atTime(15, 10, 5).atZone(com.optionslab.engine.IST)
         kite.requests.clear()
-        try {
-            pass()
-            assertEquals("B sold its 30 at once", listOf("30"), marketSells().map { it.form["quantity"] })
-            assertTrue("B sold", bRow().exit != null)
-            assertTrue("A's sale still held", OrbArms.lostExitForTest(sym))
-            OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
-            pass()                                                         // starts A's search
-        } finally { gate.countDown(); OrbArms.testLostSearch = null }
-        searchDone()
-        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
-        pass(); pass()
+        val start = OrbArms.testNow!!
+        gate.countDown(); OrbArms.testLostSearch = null
+        pass(); searchDone(); pass()                                       // an empty search inside the window keeps it
+        assertTrue("A's sale still held", OrbArms.lostExitForTest(sym))
+        assertEquals("nothing sold while it is pending", 0, marketSells().size)
+        assertTrue("B waited with its stop resting", working(s2))
+        OrbArms.testNow = maxOf(pastWindow(lostAt), start.plusSeconds(1))
+        pass(); searchDone(); pass(); pass()
         assertTrue("A's sale let go", !OrbArms.lostExitForTest(sym))
-        assertEquals("A's part sold once it was let go: 60 in all, what Zerodha holds less the earlier sale", 60,
-            marketSells().sumOf { it.form["quantity"]!!.toInt() })
+        assertTrue("B sold", bRow().exit != null)
+        assertEquals("60 in all: what Zerodha holds less the earlier sale", 60, marketSells().sumOf { it.form["quantity"]!!.toInt() })
     }
 
-    @Test fun at1510BsSquareOffSellsWhatWillGoThenAAfterTheLostSaleResolves() = squareOffSellsWhatWillGo(stopForToday = false)
+    @Test fun at1510TheWaitEndsOnceTheLostSaleIsLetGo() = theWaitEndsOnceTheLostSaleIsLetGo(stopForToday = false)
 
-    @Test fun withStopForTodayBSellsWhatWillGoThenAAfterTheLostSaleResolves() = squareOffSellsWhatWillGo(stopForToday = true)
+    @Test fun withStopForTodayTheWaitEndsOnceTheLostSaleIsLetGo() = theWaitEndsOnceTheLostSaleIsLetGo(stopForToday = true)
 
     /**
-     * 20 Nov 2026 (re-review finding 3, the dangerous case): A's lost sale DID fill, but one empty search lets it go: the exit then sells
-     * only what a fresh, lag-guarded read of Zerodha's positions shows - here nothing (they show the fill), so nothing more is sold.
+     * 20 Nov 2026 (re-review finding 4, the dangerous case with two parts): A's lost sale DID fill but is hidden from the order book, and
+     * Zerodha's positions lag it; an empty search soon after does NOT let it go - B's stop stays resting and nothing more is sold. Past the
+     * window, once the positions show the fill, a read lets it go and the exits sell only what is still held.
+     */
+    @Test fun aFilledLostSaleHiddenFromTheBookIsNeverLetGoOnAnEarlyEmptySearch() {
+        val (s2, gate) = lostOnAWithBResting(held = 60, reply = FakeKite.Reply.DROP_AFTER_ACCEPT)   // it filled; the book never lists it
+        val lostAt = OrbArms.testNow!!
+        gate.countDown(); OrbArms.testLostSearch = null
+        kite.requests.clear()
+        OrbArms.testNow = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone(); pass()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(30)
+        pass(); searchDone(); pass()
+        assertTrue("not let go on an empty search inside the window", OrbArms.lostExitForTest(sym))
+        assertEquals("nothing more sold", 0, marketSells().size)
+        assertTrue("B's stop still resting", working(s2))
+        kite.positionsCatchUp()                                            // Zerodha's positions show A's fill: 30 held, B's
+        OrbArms.testNow = pastWindow(lostAt)
+        pass(); searchDone(); pass(); pass()
+        assertTrue("let go on a read past the window", !OrbArms.lostExitForTest(sym))
+        assertTrue("never more than held: ${marketSells().map { it.form["quantity"] }}", marketSells().sumOf { it.form["quantity"]!!.toInt() } <= 30)
+    }
+
+    /**
+     * 20 Nov 2026 (re-review finding 3): one part alone - A's lost sale DID fill, hidden from the book; past the window a read lets it go
+     * and the exit sells only what a fresh, lag-guarded read of Zerodha's positions shows - here nothing (they show the fill).
      */
     @Test fun aLostSaleThatFilledButWasNotFoundSellsNothingMoreWhenPositionsShowIt() {
         lostLiquiditySale()                                                // DROP_AFTER_ACCEPT: it filled, hidden from the order book
+        val lostAt = OrbArms.testNow!!
         kite.positionsCatchUp()                                            // the positions show that fill now: nothing held
-        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        OrbArms.testNow = pastWindow(lostAt)
         pass(); searchDone(); pass(); pass()
-        assertTrue("let go after an empty search", !OrbArms.lostExitForTest(sym))
+        assertTrue("let go on a read past the window", !OrbArms.lostExitForTest(sym))
         assertEquals("never sold beyond what is held", 1, marketSells().size)
     }
 
@@ -1059,11 +1095,12 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertTrue("B's stop rests again once the block ended", kite.placed.any { it.form["order_type"] == "SL" })
     }
 
-    /** 20 Nov 2026 (re-review): a lost sale known not found no longer blocks another trade's stop from being put back. */
+    /** 20 Nov 2026 (re-review): a lost sale known not found (on a read past its window) no longer blocks another trade's stop put-back. */
     @Test fun aLostSaleKnownNotFoundNoLongerBlocksTheReRest() {
         val (s2, gate) = lostOnAWithBResting(held = 60, bFirst = true)
+        val lostAt = OrbArms.testNow!!
         kite.reject(s2, message = exchangeCancel, status = "CANCELLED")
-        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        OrbArms.testNow = pastWindow(lostAt)
         try { pass() } finally { gate.countDown(); OrbArms.testLostSearch = null }
         searchDone()
         assertTrue("known not found, not yet let go by its own look", OrbArms.lostExitForTest(sym))
@@ -1086,13 +1123,21 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals("nothing sold again", 1, marketSells().size)
     }
 
-    /** 20 Nov 2026 (audit PC): a lost exit not found within its hold is said; then the exit goes again, once, for what is still held. */
+    /**
+     * 20 Nov 2026 (audit PC; re-review finding 4): a lost exit not found is let go only on a read past [OrbArms.LOST_LET_GO_MS] - said; then
+     * the exit goes again, once, for what is still held.
+     */
     @Test fun aLostLiquidityExitNotFoundIsSaidAndTheExitGoesOnce() {
         lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)                // nothing reached Zerodha
+        val lostAt = OrbArms.testNow!!
         kite.positionsTrailReads = 0; kite.trailReads = 0
         pass()
         assertEquals("nothing more sold within the hold", 1, marketSells().size)
-        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        OrbArms.testNow = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone(); pass()
+        assertTrue("an empty search inside the window keeps it", OrbArms.lostExitForTest(sym))
+        assertEquals(1, marketSells().size)
+        OrbArms.testNow = pastWindow(lostAt)
         pass(); searchDone(); pass()                                       // the look starts the search; the next acts on it
         assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "lost exit of $sym was not found" in it })
         assertTrue(!OrbArms.lostExitForTest(sym))

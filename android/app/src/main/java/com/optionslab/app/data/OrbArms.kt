@@ -5241,18 +5241,19 @@ object OrbArms {
      * 20 Nov 2026 (audit PC; deep review F1): an exit sale of these arms ([owner]: its trade's [managerId], for the words; the part that sent
      * it carries its [id] as [Position.lostId]) whose reply was lost and which the search right after could not find. It may still be
      * selling: that part sells nothing more for [LOST_EXIT_HOLD_MS], then it is searched for in Zerodha's order book (at most every
-     * [LOST_EXIT_ASK_MS], on any look) - found, it is that part's exit; not found, Boss is told and its exits go on. Every other trade on the
-     * contract goes on meanwhile, counting the sale as going while no read shows it ([lostPending]). One per lost sale. Memory only.
+     * [LOST_EXIT_ASK_MS], on any look) - found, it is that part's exit; not found on a read past [LOST_LET_GO_MS], Boss is told and its exits
+     * go on. Meanwhile the other trades on the contract with a stop resting wait with it in place ([exitLive]); one with none counts the
+     * sale as going while no read shows it ([lostPending]). One per lost sale. Memory only.
      */
     private data class LostExit(val id: Long, val sym: String, val owner: String, val why: String, val order: com.optionslab.engine.Kite.Order,
                                 val known: Set<String>, val sinceMs: Long, val askedMs: Long = 0L,
-                                /** Searches that could not read Zerodha's book ([LOST_EXIT_TRIES]). */
+                                /** Searches that could not read Zerodha's book (Boss told at [LOST_EXIT_TRIES]). */
                                 val fails: Int = 0,
                                 /** Found in Zerodha's book: its own part's next look books it ([lostExitLook]). */
                                 val foundId: String? = null,
                                 /** A search runs now ([searchLost]: at most one at a time). */
                                 val searching: Boolean = false,
-                                /** Searched and not found (or the book unreadable [LOST_EXIT_TRIES] times): the next look lets it go and sells. */
+                                /** Not found on a read that succeeded past [LOST_LET_GO_MS] from the sale: the next look lets it go and sells. */
                                 val notFound: Boolean = false,
                                 /** The arm's name, for the found sale's owner label. */
                                 val label: String = "",
@@ -5264,14 +5265,20 @@ object OrbArms {
     internal const val LOST_EXIT_HOLD_MS = 10_000L
     internal const val LOST_EXIT_ASK_MS = 3_000L
     /**
-     * A lost exit whose search could not read Zerodha's book this many times past its hold is let go (said): a broken read never holds the
-     * exits long (the arms' live copies search once more after their hold, [ArmLive]).
+     * Failed searches after which Boss is told, once, that the lost exit's state is unknown (it is never let go on failed reads:
+     * [LOST_LET_GO_MS]).
      */
     internal const val LOST_EXIT_TRIES = 3
     /** A lost exit found but not finished in its part's looks' order books this long after is let go (said). */
     internal const val LOST_EXIT_FOUND_KEEP_MS = 60_000L
     /** The most one search of the order book for a lost exit may take (then: one failed try). */
     internal const val LOST_SEARCH_MS = 8_000L
+    /**
+     * 20 Nov 2026 (re-review finding 4, as Broker's lost replies): a lost exit is let go only on a read of the order book that succeeded
+     * this long after it was sent and still does not show it - an empty search before then (the book can trail a sale that filled) keeps
+     * it, and failed reads never let it go (Boss told once that its state is unknown).
+     */
+    internal const val LOST_LET_GO_MS = 120_000L
 
     /** [lostExitLook]'s answer: [hold] the lost sale's own part sells nothing now; else [found], the lost sale's order id. */
     private class LostLook(val hold: Boolean, val found: String? = null, val lost: LostExit? = null)
@@ -5282,8 +5289,8 @@ object OrbArms {
         val id = lostSeq.incrementAndGet()
         lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()), label = armOf(p.arm).label)
         com.optionslab.app.work.Alerts.error("${armOf(p.arm).label}: the live exit of $sym got no reply from Zerodha and is not in its order book " +
-            "yet. This trade sells nothing more for ${LOST_EXIT_HOLD_MS / 1000} s while the app looks for it (other trades on it go on, counting " +
-            "that sale as going); check Kite's order book.", "ORB live")
+            "yet. This trade sells nothing more, and the other trades on it with a stop resting wait, until the app finds it or a read of " +
+            "the book at least ${LOST_LET_GO_MS / 60_000} minutes after it was sent does not show it; check Kite's order book.", "ORB live")
         return id
     }
 
@@ -5321,9 +5328,9 @@ object OrbArms {
 
     /**
      * 20 Nov 2026 (audit PC; deep review F1; coordinator: no network on the tick path): the lost exit [l] as its own part's look sees it.
-     * Null: go on as usual - it was not found (said, and let go: the part's exit sells through the forced lag guard). [LostLook.hold]:
-     * within the hold, a search running or made a moment ago ([LOST_EXIT_ASK_MS]), or the book could not be read (up to [LOST_EXIT_TRIES]
-     * times). Found: its order id (booked from the look's own order book, [bookFoundRow]).
+     * Null: go on as usual - it was not found on a read past [LOST_LET_GO_MS] (said, and let go: the part's exit sells through the forced
+     * lag guard). [LostLook.hold]: within the hold, a search running or made a moment ago ([LOST_EXIT_ASK_MS]), not found yet, or the book
+     * could not be read. Found: its order id (booked from the look's own order book, [bookFoundRow]).
      *
      * Past the hold a search is due at most every [LOST_EXIT_ASK_MS]: any look, regular, fast or stream, starts it in the background
      * ([searchLost], one at a time per lost sale, off the arms' lock) and returns at once - its answer, kept in memory, is acted on by the
@@ -5337,7 +5344,7 @@ object OrbArms {
             return LostLook(hold = false, found = id, lost = lost)
         }
         if (lost.notFound) {
-            if (lostExits.remove(lost.id, lost)) lostNotFound(lost.sym, unread = lost.fails >= LOST_EXIT_TRIES)
+            if (lostExits.remove(lost.id, lost)) lostNotFound(lost.sym)
             return null
         }
         if (ms - lost.sinceMs in 0 until LOST_EXIT_HOLD_MS) return LOST_HOLD
@@ -5376,11 +5383,17 @@ object OrbArms {
         } catch (e: Exception) { failed = true; null }
         val cur = lostExits[asked.id] ?: return
         val next = when {
-            failed -> (cur.fails + 1).let { n -> cur.copy(searching = false, fails = n, notFound = n >= LOST_EXIT_TRIES) }
-            found.isNullOrEmpty() -> cur.copy(searching = false, notFound = true)
-            else -> cur.copy(searching = false, foundId = found)
+            failed -> cur.copy(searching = false, fails = cur.fails + 1)
+            // (Not found: let go only when this successful read STARTED past [LOST_LET_GO_MS] from the sale; sooner, searched again.)
+            found.isNullOrEmpty() -> cur.copy(searching = false, fails = 0, notFound = asked.askedMs - cur.sinceMs >= LOST_LET_GO_MS)
+            else -> cur.copy(searching = false, fails = 0, foundId = found)
         }
         lostExits.replace(asked.id, cur, next)
+        if (failed && next.fails == LOST_EXIT_TRIES) {
+            runCatching { Diag.record("orb", "${asked.sym}: the lost exit could not be searched for ($LOST_EXIT_TRIES reads failed); its state is unknown") }
+            com.optionslab.app.work.Alerts.error("ORB live: the lost exit of ${asked.sym} could not be looked for - Zerodha's order book could not be " +
+                "read. Its state is unknown: the app keeps looking and sells nothing more on it meanwhile; check Kite's order book.", "ORB live")
+        }
         if (found?.isNotEmpty() == true) {
             runCatching { Diag.record("orb", "${asked.sym}: the lost exit found in Zerodha's book ($found): it is the exit") }
             // (Labelled at once, whatever its state - after its id is kept, so it is never counted as pending nor taken for another.)
@@ -5401,8 +5414,8 @@ object OrbArms {
         return bookFilled(p, label, sym, why, row.filled, row.avg, id)
     }
 
-    private fun lostNotFound(sym: String, unread: Boolean) {
-        val what = if (unread) "not found: Zerodha's order book could not be read ($LOST_EXIT_TRIES tries)" else "not found in Zerodha's order book"
+    private fun lostNotFound(sym: String) {
+        val what = "not found in Zerodha's order book on a read at least ${LOST_LET_GO_MS / 60_000} minutes after it was sent"
         runCatching { Diag.record("orb", "$sym: the lost exit was $what; the exit may go again") }
         com.optionslab.app.work.Alerts.error("ORB live: the lost exit of $sym was $what. The app reads Zerodha again and sells only what is still held; " +
             "check Kite's order book.", "ORB live")
@@ -5427,32 +5440,6 @@ object OrbArms {
         return if (look == null) "none" else if (look.hold) "hold" else "found ${look.found}"
     }
 
-    /**
-     * 20 Nov 2026 (re-review): whether [p]'s exit on [sym] can sell anything now beside another part's lost sale: Zerodha's holding,
-     * lag-guarded ([ExitCoordinator.held], forced), less the lost sales that may still be filling ([lostPending]) and every other working
-     * sale, in whole lots. Unreadable: false (the stop stays resting).
-     */
-    private suspend fun saleWillGo(p: Position, sym: String): Boolean {
-        // (Its answer kept [LOST_EXIT_ASK_MS] per stop: an exit due on every look - 15:10, Stop for today - reads Zerodha at most that often.)
-        val sid = p.stopOrderId ?: return false
-        val ms = epochMs(now())
-        saleWillGoAt[sid]?.takeIf { ms - it.first in 0 until LOST_EXIT_ASK_MS }?.let { return it.second }
-        val will = try {
-            // (A fresh read, as the exit turn makes - the pass's may predate a fill the lag guard must see.)
-            val rows = ExitCoordinator.orders("NFO", sym, armOf(p.arm).label)
-            val held = ExitCoordinator.held("NFO", sym, "MIS", armOf(p.arm).label, rows, forceLag = lagForced())
-            val working = rows.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.working &&
-                it.id != p.stopOrderId }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-            val lot = Broker.spec("NFO", sym).lotSize
-            com.optionslab.engine.risk.ExitQty.sendable((held - lostPending(sym, p, rows)).coerceAtLeast(0), working, p.qty, lot) > 0
-        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { false }
-        if (saleWillGoAt.size > 200) saleWillGoAt.clear()
-        saleWillGoAt[sid] = ms to will
-        return will
-    }
-    /** [saleWillGo]'s answers by stop id: when, and whether a sale would go. Memory only. */
-    private val saleWillGoAt = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Boolean>>()
-
     /** 18 Nov 2026 (audit: B1): Zerodha's orders and positions as the pass that decided an exit already read them ([exitLive]). */
     private class Pre(val orders: Collection<Broker.OrderRow>, val net: List<Broker.Position>)
 
@@ -5466,12 +5453,11 @@ object OrbArms {
         // 19 Nov 2026 (review): Stop for today or the session's end refused a moment ago: its stop was put back; not taken out and sold
         // again every look - once every [REFUSED_RETRY_MS] (the stop rests meanwhile).
         if (why in ALWAYS_EXITS && p0.stopOrderId?.let { refusedAt[it] }?.let { epochMs(now()) - it < REFUSED_RETRY_MS } == true) return p0 to null
-        // 20 Nov 2026 (re-review: a stop must never come out unless a sale will go): while another part's lost sale is on the contract -
-        // it may have filled while Zerodha's positions do not show it - a trade with a resting stop takes it out only when a sale will go:
-        // what Zerodha holds, lag-guarded (fills its order book shows that its positions do not yet taken off), less that lost sale and
-        // every other working sale, must leave something to sell. Otherwise - any exit, 15:10 and Stop for today included - its stop
-        // stays resting and the exit waits; it goes once that sale is booked or let go. (A rare read: only while a lost sale is pending.)
-        if (p0.stopOrderId != null && lostOn(sym).any { it.id != p0.lostId } && !saleWillGo(p0, sym)) {
+        // 20 Nov 2026 (re-review: a stop never comes out unless a sale will go): while another part's lost sale on the contract is
+        // unresolved or found but not yet booked - it may have filled while Zerodha's positions do not show it - a trade with a resting
+        // stop leaves it resting and its exit waits, any exit, 15:10 and Stop for today included. No read decides it (memory only); the
+        // exit goes as usual, with its own fresh lag-guarded read, as soon as that sale is booked or let go.
+        if (p0.stopOrderId != null && lostOn(sym).any { it.id != p0.lostId && !it.notFound }) {
             val minute = now().withSecond(0).withNano(0)
             if (coverSaid.size > 200) coverSaid.clear()
             if (coverSaid.put(managerId(p0) + "|lostwait", minute) != minute)
@@ -5486,7 +5472,7 @@ object OrbArms {
         // Any other trade on the contract is never held here: it counts that sale as going ([lostPending]). Memory only.
         lostOf(p0)?.let { own ->
             if (!own.notFound || !lostExits.remove(own.id, own)) return p0 to null
-            lostNotFound(sym, unread = own.fails >= LOST_EXIT_TRIES)
+            lostNotFound(sym)
         }
         runCatching { OrderTiming.decided() }
         val label = armOf(p0.arm).label
@@ -5679,23 +5665,17 @@ object OrbArms {
             val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return unsold(room, book)
             val workingLeft = working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
             val qty = com.optionslab.engine.risk.ExitQty.sendable(still, workingLeft, p.qty, spec.lotSize)
-            // (20 Nov 2026: nothing to sell only because another part's lost sale may still be filling. A trade with a resting stop got
-            // here only if [saleWillGo] said a sale would go and this read differs (a race); with none resting, nothing was taken out.)
-            val qtyRaw = com.optionslab.engine.risk.ExitQty.sendable(heldNow, workingLeft, p.qty, spec.lotSize)
-            if (qty <= 0 && qtyRaw > 0) {
-                runCatching { Diag.record("orb", "$label: $sym's exit waits for another trade's lost sale to be found") }
-                // (A stop taken out all the same - the reads changed since [saleWillGo]: never put back for more than may be sold beside
-                // that lost sale, i.e. none; said, and the app watches the level and sells there.)
-                if (p.stopOrderId != null) coverSay(p, "$label: the exit of $sym waits for another trade's lost sale and its stop at Zerodha was " +
-                    "not put back (it could sell more than is held). The app watches it and sells it itself once that sale is known.")
-                return p.copy(stopOrderId = null) to null
-            }
             // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
             // gone on this read although the read before showed it held - never a stop that could sell into a short: the price check
             // puts it back within a minute while Zerodha shows it held, [restExchangeStop].)
             if (qty <= 0) {
-                if (p.stopOrderId != null) runCatching { Diag.record("orb", "$label: $sym's exit found nothing to sell after its stop came out (held $still); " +
-                    "the price check puts the stop back while Zerodha shows it held") }
+                if (p.stopOrderId != null) {
+                    // (While another part's lost sale is pending no stop goes back on the contract: said loudly, the lot has none.)
+                    if (lostOn(sym).any { !it.notFound && it.id != p.lostId }) coverSay(p, "$label: the exit of $sym found nothing to sell after " +
+                        "its stop came out, and no stop goes back while another trade's lost sale on it is unresolved. Check $sym in Kite.")
+                    else runCatching { Diag.record("orb", "$label: $sym's exit found nothing to sell after its stop came out (held $still); " +
+                        "the price check puts the stop back while Zerodha shows it held") }
+                }
                 return p.copy(stopOrderId = null) to null
             }
             sent = qty
@@ -7450,7 +7430,7 @@ object OrbArms {
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         readFails = 0
         forgetHistoryForTest()
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); saleWillGoAt.clear(); barWaits.clear(); liqFolds.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
     }
 
@@ -7461,7 +7441,7 @@ object OrbArms {
      * set-aside copies of the file. Never reads the vault; safe before [init].
      */
     @Synchronized fun wipe() {
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); saleWillGoAt.clear(); barWaits.clear(); liqFolds.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
         // (19 Nov 2026: a pending write is dropped; never a wait on one running - the screen may erase - which deletes the file again
         // itself if it finishes after this erase ([flushSoon]).)

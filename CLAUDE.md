@@ -211,11 +211,10 @@ notes; match the surrounding code.
     next check (no setting); never beside a square-off's or the arm's own working sale, at the 15:05 expiry square-off, from
     15:10 or with Stop for today. A stop Boss cancelled in Kite is never put back: the app watches the level and sells there.
     One exception (20 Nov audit): while another part's lost exit sale on a contract is unresolved (not yet seen in Zerodha's order
-    book) or found but not yet booked, an arm's exit on that contract - 15:10 and Stop for today included - takes its resting stop out
-    only when a sale will go (Zerodha's lag-guarded holding less that sale and every other working sale leaves something to sell);
-    otherwise its stop stays resting and the exit waits. The price check puts no missing stop back there for any trade,
-    since a stop would be sized from positions that may not show that sale; a trade with no stop resting is watched by the app meanwhile.
-    Once that sale is found and finished, or let go (at most about two minutes), the exits go as usual.
+    book) or found but not yet booked, the stops of the other trades on that contract stay resting and their exits (15:10 and Stop for
+    today included) wait, and the price check puts no missing stop back there for any trade, until the lost sale resolves: found and
+    booked, or let go only on a read of the order book that succeeded at least 2 minutes after the sale was sent and still does not show
+    it (failed reads never let it go; Boss is told its state is unknown). Then the exits run as usual.
   Every change that touches background work must test this.
 - Nothing about the account is spoken on a locked phone.
 - Market times: NSE F&O closes 15:40, index/cash 15:30, expiry square-off 15:05.
