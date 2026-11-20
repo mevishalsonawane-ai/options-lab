@@ -128,6 +128,162 @@ class NightArmOffShadowTest : RobolectricTest() {
         assertEquals(orders, Paper.state.orders.size)
     }
 
+    /**
+     * 20 Nov 2026 (audit, B5 item 5, review): a failure once the decision's would-be trade (or paper order) was sent is the day's
+     * verdict - never retried by the back-off, so a retry can never send twice.
+     */
+    @Test fun aFailureAfterTheSendIsTheDaysVerdictAndIsNeverRetried() {
+        NightArm.forgetRetriesForTest()
+        var sends = 0
+        NightArm.testAfterSend = { sends++; throw java.io.IOException("test: failed after the send") }
+        try {
+            runBlocking { NightArm.tick() }
+            assertEquals("NIFTY's strong close reached the send once", 1, sends)
+            val said = NightArm.view.value.status["NIFTY"].orEmpty()
+            assertEquals("error: IOException", said)
+            at(day, LocalTime.of(15, 21))
+            runBlocking { NightArm.tick() }
+            assertEquals("no second send for the day", 1, sends)
+        } finally {
+            NightArm.testAfterSend = null
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
+    /** Review: a look cancelled once the decision's send began keeps the day decided (saved), so it never sends again. */
+    @Test fun aCancelAfterTheSendKeepsTheDayDecided() {
+        NightArm.forgetRetriesForTest()
+        var sends = 0
+        NightArm.testAfterSend = { sends++; throw kotlinx.coroutines.CancellationException("test: cancelled after the send") }
+        try {
+            try { runBlocking { NightArm.tick() } } catch (_: kotlinx.coroutines.CancellationException) {}
+            assertEquals(1, sends)
+            at(day, LocalTime.of(15, 21))
+            runBlocking { NightArm.tick() }
+            assertEquals("no second send for the day", 1, sends)
+        } finally {
+            NightArm.testAfterSend = null
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
+    /**
+     * 20 Nov 2026 (B5 item 5, review P1): a decision made on a retry buys on paper, but its live copy is skipped and logged ("would have
+     * gone live (Night retry)"); a first-attempt decision is handed to the live path as before.
+     */
+    @Test fun aRetriedDecisionBuysOnPaperButItsLiveCopyStaysInShadow() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        NightArm.forgetRetriesForTest()
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        // The first try's previous-close read fails (NIFTY's only).
+        callPricedThrough(LocalTime.of(15, 22))
+        var failed = false
+        NightArm.testPrevClose = { u -> if (u == "NIFTY" && !failed) { failed = true; throw java.io.IOException("test: read failed") }
+            else if (u == "NIFTY") 24_500.0 else 52_040.0 }
+        try {
+            runBlocking { NightArm.tick() }
+            assertTrue(NightArm.view.value.status["NIFTY"].orEmpty(), NightArm.view.value.status["NIFTY"].orEmpty().startsWith("night_retrying"))
+            at(day, LocalTime.of(15, 20, 31))                       // past its 10 s back-off
+            val shadowLines0 = shadowLines()
+            runBlocking { NightArm.tick() }
+            val said = NightArm.view.value.status["NIFTY"].orEmpty()
+            assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
+            assertEquals(1, NightArm.view.value.open.size)
+            assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
+            Diag.flush()
+            assertTrue("this test's own shadow line: ${Diag.lines()}", shadowLines() > shadowLines0)
+        } finally {
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
+    @Test fun aRetriedDecisionBuysOnPaperButItsLiveCopyStaysInShadowAfterARestart() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        NightArm.forgetRetriesForTest()
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        // The first try's previous-close read fails (NIFTY's only).
+        callPricedThrough(LocalTime.of(15, 22))
+        var failed = false
+        NightArm.testPrevClose = { u -> if (u == "NIFTY" && !failed) { failed = true; throw java.io.IOException("test: read failed") }
+            else if (u == "NIFTY") 24_500.0 else 52_040.0 }
+        try {
+            runBlocking { NightArm.tick() }
+            assertTrue(NightArm.view.value.status["NIFTY"].orEmpty(), NightArm.view.value.status["NIFTY"].orEmpty().startsWith("night_retrying"))
+            at(day, LocalTime.of(15, 20, 31))                       // past its 10 s back-off
+            // (Review: the memory of the failed try gone, as after a restart - the mark kept with the book still makes it a retry.)
+            NightArm.forgetRetriesForTest()
+            val shadowLines0 = shadowLines()
+            runBlocking { NightArm.tick() }
+            val said = NightArm.view.value.status["NIFTY"].orEmpty()
+            assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
+            assertEquals(1, NightArm.view.value.open.size)
+            assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
+            Diag.flush()
+            assertTrue("this test's own shadow line: ${Diag.lines()}", shadowLines() > shadowLines0)
+        } finally {
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
+    /** The same strong close decided on its first try is handed to the live path, as on main. */
+    @Test fun aFirstAttemptDecisionIsHandedToTheLivePathAsBefore() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        NightArm.forgetRetriesForTest()
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        callPricedThrough(LocalTime.of(15, 22))
+        runBlocking { NightArm.tick() }
+        val said = NightArm.view.value.status["NIFTY"].orEmpty()
+        assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
+        assertTrue(heard.toString(), heard.any { it.startsWith("entered|") })
+    }
+
+    /**
+     * 20 Nov 2026 (B5, final review): a look the supervisor's time limit cancels BEFORE its order went un-decides the day and marks it a
+     * retry, so the next decision buys on paper and its live copy stays in shadow (main had no such route to a live entry).
+     */
+    @Test fun aLookCancelledBeforeItsOrderMakesTheNextDecisionARetry() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        NightArm.forgetRetriesForTest()
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        callPricedThrough(LocalTime.of(15, 22))
+        var cancelled = false
+        NightArm.testBuildUp = { u -> if (u == "NIFTY" && !cancelled) { cancelled = true; throw kotlinx.coroutines.CancellationException("test: time limit") }
+            else if (u == "NIFTY") 100.0 else null }
+        try {
+            try { runBlocking { NightArm.tick() } } catch (_: kotlinx.coroutines.CancellationException) {}
+            assertTrue(cancelled)
+            assertTrue("nothing bought by the cancelled look", NightArm.view.value.open.isEmpty())
+            assertTrue(NightArm.view.value.status["NIFTY"].orEmpty(), NightArm.view.value.status["NIFTY"].orEmpty().contains("cancelled before its order"))
+            at(day, LocalTime.of(15, 20, 31))
+            NightArm.forgetRetriesForTest()                         // (the mark is the book's, not the back-off's memory)
+            val shadowLines0 = shadowLines()
+            runBlocking { NightArm.tick() }
+            val said = NightArm.view.value.status["NIFTY"].orEmpty()
+            assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
+            assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
+            Diag.flush()
+            assertTrue("this test's own shadow line: ${Diag.lines()}", shadowLines() > shadowLines0)
+        } finally {
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
+    /** How many "would have gone live (Night retry)" lines the diary holds now (Diag is shared by the tests: compared before and after). */
+    private fun shadowLines(): Int { Diag.flush(); return Diag.lines().count { it.contains("would have gone live (Night retry)") } }
+
+    /** The 1-ITM call (24,600 CE) trades every minute from 15:00 to [until] at 100, so a paper buy at the 15:20 decision fills. */
+    private fun callPricedThrough(until: LocalTime) {
+        val out = ArrayList<FakeUpstox.Candle>()
+        var t = LocalTime.of(15, 0)
+        while (!t.isAfter(until)) { out += FakeUpstox.Candle(t, 100.0, 101.0, 99.0, 100.0); t = t.plusMinutes(1) }
+        upstox.minutes[callKey] = out
+        upstox.price(callKey, 100.0)
+    }
+
     @Test fun onThePaperPathIsUnchangedAndTheShadowGetsNothing() {
         assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
         runBlocking { NightArm.tick() }

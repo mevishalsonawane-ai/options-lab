@@ -441,10 +441,20 @@ private fun GitHubRestoreConfirm(model: AppModel, c: Backup.Contents, onClose: (
             val app = ctx.applicationContext
             model.viewModelScope.launch {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    // 20 Nov 2026 (audit, B5 item 2): refused (a live position open, or the account stop unreadable) - nothing was written, so the app stays open
+                    // and says why ([Backup.Refused]).
+                    var refused: String? = null
                     val done = withContext(Dispatchers.IO) {
                         try {
                             Backup.restore(app, c).also { runCatching { com.optionslab.app.data.WhatsNewStore.reload() } }
+                        } catch (e: Backup.Refused) { refused = e.message; null
                         } catch (e: Exception) { null }
+                    }
+                    refused?.let { why ->
+                        Alerts.error(why)
+                        restoring = false
+                        onClose()
+                        return@withContext
                     }
                     if (done == null) Alerts.error("The restore did not complete. IraAlgo is closing; open it again and restore once more.")
                     else Alerts.success("Restored from GitHub. IraAlgo is closing; open it again.")

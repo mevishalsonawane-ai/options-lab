@@ -2625,6 +2625,13 @@ object PassedArmsHost {
     private fun noProgressWords(x: PassedArms.PremiumExits): String? =
         x.noProgress?.let { "out after %d minutes unless up %.0f%%".format(Locale.ENGLISH, it.minutes, it.gain * 100) }
 
+    /**
+     * Whether S1's premium backstop ([S1_BACKSTOP]) judges it at [now]: its index minutes [ones] unread, or its levels ([idx], [atr])
+     * unknown, or (20 Nov 2026, audit B5 item 8) the newest minute over 3 minutes old ([com.optionslab.ira.CandleFresh.indexStale]).
+     */
+    internal fun s1Backstop(ones: List<Bar>, idx: Double?, atr: Double?, now: LocalDateTime): Boolean =
+        ones.isEmpty() || idx == null || atr == null || com.optionslab.ira.CandleFresh.indexStale(ones.maxOfOrNull { it.start }, now)
+
     /** S1's premium backstop when its index cannot be read: the Solo layer's -30% stop, SoloMidday's 14:30. */
     private val S1_BACKSTOP = PassedArms.PremiumExits(0.30, null, null, emptyList(), SoloMidday.EXIT)
 
@@ -3201,7 +3208,9 @@ object PassedArmsHost {
                 val ones = exitMinutes(upKey(p.index), now)
                 val w = SoloMidday.walk(SoloMidday.Open(p.index, p.side, p.idx ?: Double.NaN, p.atr ?: Double.NaN, p.entryMinute), ones, now)
                 // The index unread (or its levels unknown): the premium backstop, -30% (the Solo layer's stop), so it never runs unwatched.
-                w.exit ?: (if (ones.isEmpty() || p.idx == null || p.atr == null)
+                // 20 Nov 2026 (audit, B5 item 8): so too when the index minutes are stale (the newest over 3 minutes old: a feed that
+                // stopped, or minutes kept from an earlier read) - the walk on them would hold, never stop ([com.optionslab.ira.CandleFresh]).
+                w.exit ?: (if (s1Backstop(ones, p.idx, p.atr, now))
                     PassedArms.exitOnBars(p.entry, p.entryTime.withSecond(0).withNano(0), bars, ltp, now, S1_BACKSTOP).exit?.kind?.let { "backstop_" + it.why } else null)
                     // R64's lock on S1's premium, beside its index exits (A4: S1 keeps them; its own premium stop is none).
                     ?: if (p.lock) PassedArms.exitOnBars(p.entry, p.entryTime.withSecond(0).withNano(0), bars, ltp, now, exitsOf(p), known, breakeven(p)).also { lw ->

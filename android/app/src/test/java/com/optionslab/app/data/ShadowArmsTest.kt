@@ -291,6 +291,38 @@ class ShadowArmsTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (audit, B5 item 4: "shadow variants book the current price, not the sale price"): a re-armed variant's paper trade that
+     * Boss (or the square-off) closed before its own exit is booked "closed_outside" at that closing sale - its price, time and charges -
+     * never at the price its exit read.
+     */
+    @Test fun aReArmedVariantClosedOutsideIsBookedAtTheClosingSale() {
+        bankFeed()
+        upstox.price(bankCe, 290.0)
+        HiddenArms.reloadForTest()
+        assertTrue(runBlocking { ShadowArms.promote(ShadowRules.ORB_P10.id) }.contains("re-armed with OP10 on paper"))
+        tick(LocalTime.of(10, 10))
+        tick(LocalTime.of(10, 11))
+        tick(LocalTime.of(10, 12))
+        val open = row(ShadowRules.ORB_P10).trades.single()
+        assertTrue(open.open); assertTrue(open.paper)
+        // Boss closes it on paper at 305 before its 10:14 exit.
+        upstox.price(bankCe, 305.0)
+        at(LocalTime.of(10, 13), seconds = 30)
+        assertTrue(runBlocking { Paper.close(open.symbol, "MIS") }.ok)
+        val sale = Paper.state.trades.last { it.symbol == open.symbol && it.action == "SELL" }
+        val sells = Paper.state.trades.count { it.symbol == open.symbol && it.action == "SELL" }
+        tick(LocalTime.of(10, 14))
+        val done = row(ShadowRules.ORB_P10).trades.single()
+        assertFalse(done.open)
+        assertEquals("closed_outside", done.why)
+        assertEquals("at the closing sale", sale.price.toDouble(), done.exit!!, 1e-9)
+        assertEquals(sale.timestamp, done.exitTime)
+        assertEquals("its charges: the entry's and the sale's", open.charges + sale.charges.toDouble(), done.charges, 1e-6)
+        assertEquals("no second sale", sells, Paper.state.trades.count { it.symbol == open.symbol && it.action == "SELL" })
+        assertTrue(Paper.state.positions.none { it.symbol == open.symbol && it.quantity < 0 })
+    }
+
+    /**
      * 22 Oct (arms audit): the re-armed shadows are hidden (Boss's 15 Oct cleanup). A re-armed variant's signal while hidden is
      * recorded as a virtual trade, never placed on paper; one already holding a paper position keeps its own exit.
      */

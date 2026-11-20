@@ -111,4 +111,52 @@ class AccountStopTest {
         assertTrue(AccountStop.status(days, d).stopped)
         assertTrue(AccountStop.line(AccountStop.status(days, d), false, 0).contains("after charges"))
     }
+
+    // ---- 20 Nov 2026 (audit, B5 item 3): a restore never lowers the rule's figures ----------------------------------------------
+
+    private fun day(m: Int, d: Int, x: Double) = AccountStop.Day(LocalDate.of(2026, m, d), x)
+
+    @Test fun anOlderBackupNeverLowersThePhonesDrawdown() {
+        // This phone recorded the losing days since the backup was made; the backup has only the days before.
+        val backup = listOf(day(10, 20, 5_000.0), day(10, 21, -2_000.0))
+        val phone = backup + listOf(day(11, 2, -9_000.0), day(11, 3, -3_000.0))
+        val today = LocalDate.of(2026, 11, 3)
+        val kept = AccountStop.restored(phone, backup, today)
+        assertEquals(phone, kept)
+        assertEquals(AccountStop.status(phone, today).drawdown, AccountStop.status(kept, today).drawdown, 1e-9)
+    }
+
+    @Test fun aNewPhoneTakesTheBackupsDays() {
+        val backup = listOf(day(11, 2, -9_000.0), day(11, 3, -3_000.0))
+        val today = LocalDate.of(2026, 11, 4)
+        assertEquals(backup, AccountStop.restored(emptyList(), backup, today))
+        assertEquals(-12_000.0, AccountStop.status(AccountStop.restored(emptyList(), backup, today), today).month, 1e-9)
+    }
+
+    @Test fun daysOnlyTheBackupHasAreAddedWhenTheyMakeTheFiguresNoMilder() {
+        // The backup has a losing day this phone missed (it was off): added, the drawdown deepens.
+        val phone = listOf(day(11, 2, -4_000.0), day(11, 4, -1_000.0))
+        val backup = listOf(day(11, 2, -3_000.0), day(11, 3, -6_000.0))
+        val today = LocalDate.of(2026, 11, 4)
+        val kept = AccountStop.restored(phone, backup, today)
+        assertEquals(listOf(day(11, 2, -4_000.0), day(11, 3, -6_000.0), day(11, 4, -1_000.0)), kept, "a day both have: the phone's figure")
+        assertEquals(-11_000.0, AccountStop.status(kept, today).drawdown, 1e-9)
+    }
+
+    @Test fun aBackupDayThatWouldSoftenTheFiguresIsLeftOut() {
+        // The backup's winning day between the phone's losses would lift the drawdown and the month: the phone's days are kept.
+        val phone = listOf(day(11, 2, -10_000.0), day(11, 4, -2_000.0))
+        val backup = listOf(day(11, 3, 8_000.0))
+        val today = LocalDate.of(2026, 11, 4)
+        assertEquals(phone, AccountStop.restored(phone, backup, today))
+    }
+
+    @Test fun aReachedRuleStaysReachedAfterARestore() {
+        val phone = listOf(day(11, 2, -14_000.0))
+        val backup = listOf(day(11, 3, 20_000.0))
+        val today = LocalDate.of(2026, 11, 3)
+        assertTrue(AccountStop.status(phone, today).stopped)
+        assertTrue(AccountStop.status(AccountStop.restored(phone, backup, today), today).stopped)
+        assertEquals(emptyList(), AccountStop.restored(emptyList(), emptyList(), today))
+    }
 }

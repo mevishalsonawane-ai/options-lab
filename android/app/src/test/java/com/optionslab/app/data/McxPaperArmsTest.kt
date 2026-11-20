@@ -858,6 +858,10 @@ class McxPaperArmsTest : RobolectricTest() {
         assertTrue(runBlocking { Paper.close(pos.symbol, "NRML") }.ok)
         tick(LocalTime.of(10, 1))
         assertEquals("closed_elsewhere", McxPaperArms.view.value.closed.single().why)
+        // 20 Nov 2026 (B5 item 4): a short closed by a BUY is booked at that buy (its price and time), not its entry.
+        val cover = Paper.state.trades.last { it.symbol == pos.symbol && it.action == "BUY" }
+        assertEquals(cover.price.toDouble(), McxPaperArms.view.value.closed.single().exit!!, 1e-9)
+        assertEquals(cover.timestamp, McxPaperArms.view.value.closed.single().exitTime)
         assertEquals("flat, never long", 0, Paper.state.positions.filter { it.symbol == pos.symbol }.sumOf { it.quantity })
         assertTrue("its stop is out of the book", Paper.state.orders.none { it.symbol == pos.symbol && it.status == "trigger pending" })
         assertNothingAtZerodha()

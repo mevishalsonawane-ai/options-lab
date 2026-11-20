@@ -81,6 +81,21 @@ object AccountStop {
         return "Account stop rule ($mode): $now$reached$would."
     }
 
+    /**
+     * 20 Nov 2026 (audit, B5 item 3: "restoring a backup lowers the account-stop drawdown figure"): the days a restore keeps, from
+     * this phone's [phone] and the backup's [backup]. Both together (a day both have: this phone's figure, its read is the newer),
+     * unless that would make the rule on [today] less severe than this phone's own days - a lower drawdown, a smaller month loss, or
+     * no longer reached - when this phone's days are kept as they are. So the figures after a restore are never below this phone's,
+     * and a backup's older days (a new phone, an empty one) still count.
+     */
+    fun restored(phone: List<Day>, backup: List<Day>, today: LocalDate): List<Day> {
+        val merged = (phone + backup.filter { b -> phone.none { it.day == b.day } }).sortedBy { it.day }.takeLast(KEEP)
+        val p = status(phone, today)
+        val m = status(merged, today)
+        val milder = m.drawdown > p.drawdown + 1e-9 || m.month > p.month + 1e-9 || (p.stopped && !m.stopped)
+        return if (milder) phone.sortedBy { it.day }.takeLast(KEEP) else merged
+    }
+
     /** One line a day: "2026-10-20=-1234.50". */
     fun encode(days: List<Day>): String = days.joinToString("\n") { "${it.day}=${"%.2f".format(Locale.ROOT, it.net)}" }
 

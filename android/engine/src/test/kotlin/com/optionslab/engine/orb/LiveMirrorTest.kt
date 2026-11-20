@@ -228,6 +228,40 @@ class LiveMirrorTest {
         assertEquals(1, LiveMirror.toSell(2, 2, 2, 1, 0))                 // an unknown lot counts as 1
     }
 
+    /** 20 Nov 2026 (audit, B5 item 7): 1 lot live beside 4 on paper is sold whole at the ladder's first step; the shadow names it. */
+    @Test fun aOneLotLiveCopyIsSoldWholeAtAPaperPartExitAndTheShadowSaysWhatNearestWouldKeep() {
+        // Live 1 lot (30), paper 4 lots (120): the ladder sells 1 of 4 on paper.
+        assertEquals(30, LiveMirror.toSell(30, 30, 120, 90, 30), "live: sold whole (rounded toward less risk)")
+        assertEquals(0, LiveMirror.toSellNearest(30, 30, 120, 90, 30), "nearest: 3/4 of a lot keeps the lot")
+        assertTrue(LiveMirror.partSellsWhole(30, 30, 120, 90, 30))
+        // Half on paper (the L25 ladder's step): live sells whole; nearest keeps the lot (a half keeps) - the case the shadow names.
+        assertEquals(30, LiveMirror.toSell(30, 30, 60, 30, 30))
+        assertEquals(0, LiveMirror.toSellNearest(30, 30, 60, 30, 30))
+        assertTrue(LiveMirror.partSellsWhole(30, 30, 60, 30, 30))
+        // A quarter left on paper: nearest sells too.
+        assertEquals(30, LiveMirror.toSellNearest(30, 30, 120, 30, 30))
+        assertFalse(LiveMirror.partSellsWhole(30, 30, 120, 30, 30))
+        // 2 lots live beside 5 on paper, 2 of 5 left (0.8 of a live lot): down keeps none, nearest keeps one.
+        assertEquals(60, LiveMirror.toSell(60, 60, 150, 60, 30))
+        assertEquals(30, LiveMirror.toSellNearest(60, 60, 150, 60, 30))
+        assertTrue(LiveMirror.partSellsWhole(60, 60, 150, 60, 30))
+        // 2 lots live, two thirds left on paper: both keep one lot - no shadow line.
+        assertEquals(30, LiveMirror.toSell(60, 60, 90, 60, 30))
+        assertFalse(LiveMirror.partSellsWhole(60, 60, 90, 60, 30))
+        // Closed, untouched, nothing held, a bad entry: as [toSell].
+        assertEquals(30, LiveMirror.toSellNearest(30, 30, 60, null, 30))
+        assertEquals(30, LiveMirror.toSellNearest(30, 30, 60, 0, 30))
+        assertEquals(0, LiveMirror.toSellNearest(30, 30, 60, 60, 30))
+        assertEquals(0, LiveMirror.toSellNearest(0, 30, 60, 30, 30))
+        assertEquals(0, LiveMirror.toSellNearest(30, 30, 0, 30, 30))
+        assertEquals(0, LiveMirror.toSellNearest(2, 2, 4, 3, 0))          // an unknown lot counts as 1 (1.5 of 2 keeps 2)
+        assertEquals(1, LiveMirror.toSellNearest(2, 2, 4, 1, 0))          // (0.5 of 2 keeps 1)
+        assertFalse(LiveMirror.partSellsWhole(30, 30, 60, null, 30), "a close is no part-exit")
+        assertFalse(LiveMirror.partSellsWhole(30, 30, 60, 0, 30))
+        assertFalse(LiveMirror.partSellsWhole(0, 30, 120, 90, 30))
+        assertFalse(LiveMirror.partSellsWhole(30, 30, 120, 120, 30), "paper holds it all: nothing sold")
+    }
+
     // ---- the watch ------------------------------------------------------------------------------------------------------------
 
     private val held = Look(side = 1, qty = 30, held = 30, ltp = 200.0, tick = 0.05, stopTrigger = 170.0, stopResting = true)
