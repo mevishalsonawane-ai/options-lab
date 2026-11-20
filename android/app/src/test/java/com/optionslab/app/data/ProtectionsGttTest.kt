@@ -302,6 +302,7 @@ class ProtectionsGttTest : RobolectricTest() {
         kite.requests.clear()
         tick()
         assertTrue("nothing placed this pass", kite.placed.isEmpty())
+        com.optionslab.app.testing.SecondRead.clockOn()                     // 20 Nov 2026: closed counts on a second agreeing read
         tick()
         assertTrue("nor on the next: the position is flat", kite.placed.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())

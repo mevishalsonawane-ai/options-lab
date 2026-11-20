@@ -181,14 +181,20 @@ class ProtectionsAuditTest : RobolectricTest() {
         val p = active().single()
         at(12, 5)
         kite.fill(p.stopOrderId!!)
-        kite.cancelsLost = 3                                               // every cancel in this look is lost
+        kite.cancelsLost = 6                                               // every cancel in this look and the next is lost
+        fun said() = Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("could not be cancelled") && it.text.contains("cancel it in Kite now") }
         tick()
         assertEquals("kept while its target may rest", 1, active().size)
         assertTrue(working(p.targetOrderId))
-        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("could not be cancelled") && it.text.contains("cancel it in Kite now") })
         assertEquals("three tries in the look", 3, kite.requests.count { it.method == "DELETE" && it.path.endsWith(p.targetOrderId!!) })
-        // The next look takes it out and finishes.
+        // Review: Zerodha took every cancel (it may still be on its way out): not said on the first look, only when the next still finds it.
+        assertFalse(said())
         at(12, 6)
+        tick()
+        assertEquals(1, active().size)
+        assertTrue(said())
+        // The next look takes it out and finishes.
+        at(12, 7)
         tick()
         assertFalse(working(p.targetOrderId))
         assertTrue(active().isEmpty())
