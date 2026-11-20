@@ -38,6 +38,8 @@ object NetWatch {
     /** When the last reconnect began (monotonic; [Long.MIN_VALUE]: none yet), and whether one is already waiting to run. */
     private var lastActAt = Long.MIN_VALUE
     private var pending = false
+    /** When the latest change was seen, on the stream's monotonic clock ([KiteStream.networkChanged]). */
+    private var lastChangeSeen = Long.MAX_VALUE
     private fun mono(): Long = System.nanoTime() / 1_000_000L
 
     fun start(context: android.content.Context) {
@@ -59,14 +61,16 @@ object NetWatch {
         state = next
         if (!changed) return
         changes++
+        // B5-D: when the latest change was seen (the stream's monotonic clock): a connection opened after it is kept.
+        lastChangeSeen = runCatching { KiteStream.monoNow() }.getOrDefault(Long.MAX_VALUE)
         if (pending) return                                  // one is already waiting: it acts on the network current then
         pending = true
         val last = lastActAt
         val wait = if (last == Long.MIN_VALUE) 0L else (last + debounceMs - mono()).coerceIn(0L, debounceMs)
         scope.launch {
             if (wait > 0) kotlinx.coroutines.delay(wait)
-            synchronized(this@NetWatch) { pending = false; lastActAt = mono(); acts++ }
-            act()
+            val seen = synchronized(this@NetWatch) { pending = false; lastActAt = mono(); acts++; lastChangeSeen }
+            act(seen)
         }
     }
 
@@ -74,8 +78,8 @@ object NetWatch {
     internal fun lost(id: String) { state = com.optionslab.ira.NetChange.lost(state, id) }
 
     /** The stream first (a cancel and a kick: memory and the socket only), then the relay (its session let go, then warmed again). */
-    private fun act() {
-        val dropped = runCatching { KiteStream.networkChanged() }.getOrDefault(false)
+    private fun act(seenAt: Long) {
+        val dropped = runCatching { KiteStream.networkChanged(seenAt) }.getOrDefault(false)
         runCatching { Diag.record(com.optionslab.ira.StreamHealth.AREA, "the phone's network changed: " +
             (if (dropped) "the stream is opened again at once on the new network" else "the stream was not connected")) }
         runCatching { Relay.networkChanged() }

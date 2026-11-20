@@ -350,6 +350,8 @@ object Relay {
     internal class Tunnel(val opened: Long) {
         /** The SSH session its channel runs on (null while it is still being opened). */
         @Volatile var on: Session? = null
+        /** The app's own socket to it (the SOCKS client side): closed to end a pooled connection on a dead network. */
+        @Volatile var client: Socket? = null
         @Volatile var up = 0L
         @Volatile var down = 0L
         fun inFlight(now: Long): Boolean = now - maxOf(opened, up, down) < BUSY_MS || up > down
@@ -382,6 +384,10 @@ object Relay {
         netGen++
         val old = session ?: return
         staleNetwork = true
+        // B5-D: every tunnel on the old session with no call in flight (a pooled connection) is closed now, so no new order is sent
+        // on a socket that runs over the dead network; a call in flight finishes first (below).
+        val now0 = mono()
+        for (t in tunnels) if (t.on === old && !t.inFlight(now0)) runCatching { t.client?.close() }
         // A call in flight on the old session is let finish, [waitMs] at most; then the old session goes (a new call meanwhile has
         // already connected afresh: [connect]).
         val until = mono() + waitMs
@@ -412,9 +418,9 @@ object Relay {
      */
     internal fun sessionForTest(s: Session?) { session = s }
     internal fun staleForTest(): Boolean = staleNetwork
-    internal fun tunnelForTest(quietMs: Long, awaitingReply: Boolean = false, on: Session? = session): Tunnel {
+    internal fun tunnelForTest(quietMs: Long, awaitingReply: Boolean = false, on: Session? = session, client: Socket? = null): Tunnel {
         val t0 = mono() - quietMs
-        return Tunnel(t0 - 1).also { t -> t.on = on; if (awaitingReply) { t.down = t0 - 1; t.up = t0 } else { t.up = t0 - 1; t.down = t0 }; tunnels += t }
+        return Tunnel(t0 - 1).also { t -> t.on = on; t.client = client; if (awaitingReply) { t.down = t0 - 1; t.up = t0 } else { t.up = t0 - 1; t.down = t0 }; tunnels += t }
     }
     internal fun tunnelEndedForTest(t: Tunnel) { tunnels -= t }
     /** TEST ONLY: [t]'s bytes moved now ([up]: a request; else a reply). */
@@ -422,6 +428,7 @@ object Relay {
 
     private fun serve(client: Socket) {
         val io = Tunnel(mono())
+        io.client = client
         tunnels += io
         try { serveTunnel(client, io) } finally { tunnels -= io }
     }

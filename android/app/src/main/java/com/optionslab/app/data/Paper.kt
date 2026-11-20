@@ -631,9 +631,9 @@ object Paper {
         runCatching { heldPriceNow(c, since, EXIT_PRICE_MAX_AGE_MS, lookup = true) }.getOrNull()?.let { return it }
         // Review: the read runs on its own background job and is waited for [readMs] at most - the paper feed's read is a blocking
         // HTTP call that a timeout cannot stop, so the arm never waits on it past the bound (a late answer is simply not used).
-        // Zerodha's quote within the paper reads' gate ([paperExitRead]); else, as before, the paper feed's read (bounded, its own job).
-        val read = (if (Broker.loggedIn && !c.isMcx && exitReadForTest == null) paperExitRead(readMs) { zerodhaExitRead(c) } else null)
-            ?: boundedRead(readMs) { kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY)) { feedExitRead(c, since) } }
+        // B5-D: ONE bounded read from the paper reads' budget ([paperExitRead]) - Zerodha's quote, else the paper feed's (and its book
+        // read) - or none at all, straight to the stream's last price, once the budget is spent or a live stop's read waits.
+        val read = paperExitRead(readMs) { freshExitRead(c, since) }
         if (read != null && read.isFinite() && read > 0) return read
         return runCatching { heldPriceNow(c, since, Long.MAX_VALUE, lookup = true) }.getOrNull()
     }
@@ -653,11 +653,10 @@ object Paper {
     internal suspend fun <T> paperExitRead(readMs: Long, block: suspend () -> T?): T? {
         if (runCatching { Broker.quoteWaitingAbove(com.optionslab.ira.RateGate.Priority.ENTRY) }.getOrDefault(false)) return null
         val budget = exitBudget
-        val ms = budget.take(readMs)
-        if (ms <= 0L) return null
+        val got = budget.reserve(readMs) ?: return null
         val t0 = System.nanoTime()
-        try { return boundedRead(ms) { kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY)) { block() } } }
-        finally { budget.spend((System.nanoTime() - t0) / 1_000_000L) }
+        try { return boundedRead(got.ms) { kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY)) { block() } } }
+        finally { budget.settle(got, (System.nanoTime() - t0) / 1_000_000L) }
     }
 
     /** [exitPriceNow]'s fresh reads (their own threads: a blocking read never holds an arm). */
@@ -678,9 +677,13 @@ object Paper {
             q.last.takeIf { it.isFinite() && it > 0 } ?: com.optionslab.ira.PriceNow.bookBid(q.bid, q.ask)
         }
 
-    /** The paper feed's price of [c] ([quote]), judged as [priceNowFor] judges it; null: none. */
-    private suspend fun feedExitRead(c: Contract, since: java.time.LocalDateTime): Double? {
+    /** Zerodha's quote of [c] with a session ([zerodhaExitRead]), else the paper feed's ([quote], its book read included), judged as [priceNowFor] judges it. */
+    private suspend fun freshExitRead(c: Contract, since: java.time.LocalDateTime): Double? {
         exitReadForTest?.let { return runCatching { it(c) }.getOrNull() }
+        if (Broker.loggedIn && !c.isMcx) {
+            val z = try { zerodhaExitRead(c) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+            if (z != null) return z
+        }
         val q = (try { quote(c) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }) ?: return null
         val sinceSec = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
         return com.optionslab.ira.PriceNow.ofQuote(q.ltp, q.noLast, q.bid, q.ask, null, lastCandleSec(c.symbol), sinceSec)

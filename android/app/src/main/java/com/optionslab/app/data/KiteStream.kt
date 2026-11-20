@@ -390,14 +390,15 @@ object KiteStream {
      * cancel never blocks); never on the tick path.
      */
     @Synchronized
-    fun networkChanged(): Boolean {
+    fun networkChanged(seenAt: Long = mono()): Boolean {
         if (loop?.isActive != true) return false
         val c = conn
         val ws = socket
         var dropped = false
-        // B5-D review: one already open on the network now current (it reconnected by itself inside the debounce) is kept.
-        val onCurrent = c != null && c.opened.get() && c.network != null && c.network == networkId()
-        if (c != null && ws != null && !c.done.isCompleted && !onCurrent) {
+        // B5-D: one that OPENED after the change was seen ([seenAt], the monotonic clock: it reconnected by itself, on the new
+        // network, inside the debounce) is kept; any other is closed and opened again.
+        val keep = c != null && keepOnChange(c.opened.get(), c.openedAt, seenAt)
+        if (c != null && ws != null && !c.done.isCompleted && !keep) {
             c.byNetwork = true
             c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.NETWORK_CHANGED, message = "the phone's network changed"))
             _status.value = Status.RETRYING
@@ -408,6 +409,12 @@ object KiteStream {
         kick.trySend(Unit)
         return dropped
     }
+
+    /** B5-D: whether a connection is kept on a network change seen at [seenAt]: only one opened at or after it. Pure. */
+    internal fun keepOnChange(opened: Boolean, openedAt: Long, seenAt: Long): Boolean = opened && openedAt >= seenAt
+
+    /** B5-D: the stream's monotonic clock now (the network watch stamps a change with it). */
+    internal fun monoNow(): Long = mono()
 
     /**
      * TEST ONLY: true keeps the stream from ever opening its socket (the fake Kite has no stream, and a connect the

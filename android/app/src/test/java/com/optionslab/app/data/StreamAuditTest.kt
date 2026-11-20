@@ -192,6 +192,60 @@ class StreamAuditTest : RobolectricTest() {
         Paper.resetExitBudgetForTest()
     }
 
+    /**
+     * B5-D final review (F1): four paper positions held, the stream stalled and every fresh read hanging - Zerodha's and the paper
+     * feed's together in one bounded read from the shared budget - the look's extra time stays within the budget (4 s), and every
+     * position still gets a price (the stream's last one), so no exit is skipped.
+     */
+    @Test fun fourPaperPositionsWithTheStreamStalledHoldTheLookNoLongerThanTheBudget() = runBlocking {
+        Paper.resetExitBudgetForTest()
+        Paper.exitReadForTest = { kotlinx.coroutines.delay(30_000); null }            // Zerodha and the feed both hang
+        try {
+            val since = java.time.LocalDateTime.now(com.optionslab.engine.IST).minusMinutes(30)
+            val t0 = System.currentTimeMillis()
+            val got = (1..4).map { i ->
+                val token = 51_100_000L + i
+                val c = Paper.Contract("NIFTYSTALL${i}CE", "NIFTY", AutomationSupport.expiryAfter(7), 24_000.0 + i, com.optionslab.engine.Right.CE, 75, "NSE_FO|S$i")
+                // Its last stream price, 60 s old (the stream stalled).
+                Paper.tokenForTest(c.symbol, token)
+                val then = System.currentTimeMillis() - 60_000
+                KiteStream.feedForTest(listOf(KiteTicks.Tick(token, 100.0 + i, bid = 99.9 + i, ask = 100.1 + i, lastTradeTime = then / 1000)), then)
+                Paper.exitPriceNow(c, since)
+            }
+            val took = System.currentTimeMillis() - t0
+            assertTrue("the look's extra time is the budget's at most: $took ms", took < 4_000L + 1_000L)
+            assertEquals("each decided on its last price", listOf(101.0, 102.0, 103.0, 104.0), got)
+            (1..4).forEach { Paper.tokenForTest("NIFTYSTALL${it}CE", null) }
+        } finally { Paper.exitReadForTest = null; Paper.resetExitBudgetForTest() }
+    }
+
+    /** B5-D final review (P2): a stream connection is kept on a network change only when it opened after the change was seen. */
+    @Test fun aStreamConnectionIsKeptOnlyWhenItOpenedAfterTheChange() {
+        assertTrue(KiteStream.keepOnChange(opened = true, openedAt = 2_000L, seenAt = 1_500L))
+        assertTrue(KiteStream.keepOnChange(opened = true, openedAt = 1_500L, seenAt = 1_500L))
+        assertFalse("open before the change: on the old network", KiteStream.keepOnChange(opened = true, openedAt = 1_000L, seenAt = 1_500L))
+        assertFalse("still being made: closed and made again", KiteStream.keepOnChange(opened = false, openedAt = 0L, seenAt = 1_500L))
+    }
+
+    /** B5-D final review (P1): on a network change the old session's pooled tunnels (no call in flight) are closed at once. */
+    @Test fun aNetworkChangeClosesTheOldSessionsIdleTunnelsAtOnce() {
+        val s = com.jcraft.jsch.JSch().getSession("ubuntu", "203.0.113.5", 22)
+        Relay.sessionForTest(s)
+        val pooledSocket = java.net.Socket()
+        val busySocket = java.net.Socket()
+        val pooled = Relay.tunnelForTest(quietMs = 10_000, on = s, client = pooledSocket)
+        val busy = Relay.tunnelForTest(quietMs = 10_000, awaitingReply = true, on = s, client = busySocket)
+        val t = Thread { Relay.networkChanged(waitMs = 2_000) }.apply { start() }
+        val end = System.currentTimeMillis() + 1_500
+        while (!pooledSocket.isClosed && System.currentTimeMillis() < end) Thread.sleep(5)
+        assertTrue("the pooled connection on the dead network is closed at once", pooledSocket.isClosed)
+        assertFalse("the order awaiting its reply is not cut", busySocket.isClosed)
+        Relay.tunnelEndedForTest(busy)
+        t.join()
+        Relay.tunnelEndedForTest(pooled)
+        busySocket.close()
+    }
+
     /** B5-D: a tick stamped back for coming late never leaves a stop with no price when Zerodha's quote has no answer for it. */
     @Test fun aLateTickNeverLeavesAStopWithNoPriceWhenNoFreshQuoteAnswers() = runBlocking {
         val sym = "NIFTYLATE24000CE"
