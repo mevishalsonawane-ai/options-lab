@@ -1712,7 +1712,9 @@ object Broker {
      * is adopted only when it is surely this one - a LIMIT's price must match too (to half a tick), and an order the
      * exchange REJECTED, or CANCELLED with nothing filled, is never taken for it (that is no live order; the error stands).
      */
-    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false): String? {
+    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false,
+                           /** 20 Nov 2026: the earliest an order may be stamped (a lost sale's send time); null: the last 3 minutes, as before. */
+                           since: java.time.LocalDateTime? = null): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
@@ -1720,13 +1722,13 @@ object Broker {
         // slow would otherwise widen the window); never earlier than the phone's. 25 Oct: the phone's clock is [Market.now]
         // (the system clock in the app; in a test the pinned market clock, which the fake Zerodha stamps its orders from too).
         val now = rs.mapNotNull(::at).fold(Market.now().toLocalDateTime()) { a, t -> if (t.isAfter(a)) t else a }
-        val since = now.minusMinutes(3)
+        val from = since ?: now.minusMinutes(3)
         return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
                 // 18 Oct: the order's own type too (a resting SL of the same size and tag is never taken for a market exit's lost reply).
                 it.optString("order_type") == o.orderType &&
-                it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false &&
+                it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(from) == false &&
                 (!afterError || adoptableAfterError(o, it))
         }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it) }
     }

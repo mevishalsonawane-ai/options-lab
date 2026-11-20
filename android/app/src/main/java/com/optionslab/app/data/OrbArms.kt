@@ -233,7 +233,8 @@ object OrbArms {
         /**
          * 20 Nov 2026 (deep review F1): the lost exit ([lostExits]) of this part's own sale, whose reply was lost - the one part held from a new
          * exit and a stop put back, and the one that takes that sale when it is found ([lostOf]). Ids are never reused, so a copy of a part
-         * that kept it after its lost exit ended matches nothing. Memory only (never saved: after a restart no lost exit is held).
+         * that kept it after its lost exit ended matches nothing. Memory only; the lost exit itself is saved with an open live row and
+         * taken back after a restart ([restoreLost]), which gives the row a new id.
          */
         val lostId: Long? = null,
     ) {
@@ -437,7 +438,28 @@ object OrbArms {
             fixed = p.optBoolean("step500", false), lock = p.optBoolean("stepLock", false),
             entryQty = p.optInt("entryQty", 0).takeIf { it > 0 }, stopByYou = p.optBoolean("stopByYou", false),
             appCancelled = p.optBoolean("appCancelled", false), askedLots = p.optInt("askedLots", 0).takeIf { it > 0 },
-            sentLots = p.optInt("sentLots", 0).takeIf { it > 0 })
+            sentLots = p.optInt("sentLots", 0).takeIf { it > 0 }).let { pos ->
+            p.optJSONObject("lostExit")?.takeIf { pos.open && pos.live }?.let { l -> runCatching { pos.copy(lostId = restoreLost(pos, l)) }.getOrNull() } ?: pos
+        }
+
+    /**
+     * 20 Nov 2026: [pos]'s lost exit sale as the book saved it ([l]) taken back into memory after a restart - the same one if it is
+     * there already (a book read again in this process) - so its hold, the other trades' wait and its 2-minute window go on. Its id.
+     */
+    private fun restoreLost(pos: Position, l: JSONObject): Long? {
+        val sym = pos.kite ?: return null
+        val since = l.getLong("since")
+        val owner = managerId(pos)
+        lostExits.values.firstOrNull { it.sym == sym && it.owner == owner && it.sinceMs == since }?.let { return it.id }
+        val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, l.getInt("qty"), pos.lot ?: 1, "MIS", l.getString("type"),
+            null, 0.05, "NFO", l.optString("tag", "iraorb"))
+        val id = lostSeq.incrementAndGet()
+        val known = l.optJSONArray("known")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty()
+        lostExits[id] = LostExit(id, sym, owner, l.optString("why", "exit"), o, known, since, label = l.optString("label"),
+            sentAt = runCatching { LocalDateTime.parse(l.getString("sentAt")) }.getOrDefault(LocalDateTime.MIN),
+            foundId = l.optString("found").ifEmpty { null }, askedMs = l.optLong("asked", 0L))
+        return id
+    }
 
     private fun book(): Book {
         cache?.let { return it }
@@ -1310,7 +1332,12 @@ object OrbArms {
                         p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) }; p.be?.let { put("breakeven", it) }
                         if (p.priceRetry) put("priceRetry", true); p.capped?.let { put("capped", it) }; if (p.fixed) put("step500", true); if (p.lock) put("stepLock", true)
                         p.entryQty?.let { put("entryQty", it) }; if (p.stopByYou) put("stopByYou", true); if (p.appCancelled) put("appCancelled", true)
-                        p.askedLots?.let { put("askedLots", it) }; p.sentLots?.let { put("sentLots", it) } })
+                        p.askedLots?.let { put("askedLots", it) }; p.sentLots?.let { put("sentLots", it) }
+                        // (20 Nov 2026: its lost exit sale, so a restart keeps the hold, the others' wait and the 2-minute window.)
+                        p.lostId?.takeIf { p.open && p.live }?.let { lostExits[it] }?.takeIf { !it.notFound }?.let { l -> put("lostExit", JSONObject()
+                            .put("why", l.why).put("qty", l.order.quantity).put("type", l.order.orderType).put("tag", l.order.tag)
+                            .put("since", l.sinceMs).put("sentAt", l.sentAt.toString()).put("label", l.label)
+                            .put("known", org.json.JSONArray(l.known.toList())).apply { l.foundId?.let { put("found", it).put("asked", l.askedMs) } }) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -5243,7 +5270,7 @@ object OrbArms {
      * selling: that part sells nothing more for [LOST_EXIT_HOLD_MS], then it is searched for in Zerodha's order book (at most every
      * [LOST_EXIT_ASK_MS], on any look) - found, it is that part's exit; not found on a read past [LOST_LET_GO_MS], Boss is told and its exits
      * go on. Meanwhile the other trades on the contract with a stop resting wait with it in place ([exitLive]); one with none counts the
-     * sale as going while no read shows it ([lostPending]). One per lost sale. Memory only.
+     * sale as going while no read shows it ([lostPending]). One per lost sale. Saved with its part's row in the book ([restoreLost]).
      */
     private data class LostExit(val id: Long, val sym: String, val owner: String, val why: String, val order: com.optionslab.engine.Kite.Order,
                                 val known: Set<String>, val sinceMs: Long, val askedMs: Long = 0L,
@@ -5258,7 +5285,15 @@ object OrbArms {
                                 /** The arm's name, for the found sale's owner label. */
                                 val label: String = "",
                                 /** Found still working: when its rest was last asked to be cancelled (in the background; again after [LOST_EXIT_ASK_MS]). */
-                                val cancelAskedMs: Long = 0L)
+                                val cancelAskedMs: Long = 0L,
+                                /**
+                                 * 20 Nov 2026: when it was sent by the phone's market clock ([Market.now]): its search looks from 3 minutes
+                                 * before it ([Broker.findRecent]'s since: the same allowance for a phone clock ahead of Zerodha's as before) -
+                                 * never a rolling window that a long run of failed reads could leave it behind.
+                                 */
+                                val sentAt: LocalDateTime = LocalDateTime.MIN,
+                                /** "State unknown" said again at the session's end (15:10) while still unresolved. */
+                                val lateSaid: Boolean = false)
     /** By [LostExit.id] (never reused: a part's stale [Position.lostId] matches nothing). */
     private val lostExits = java.util.concurrent.ConcurrentHashMap<Long, LostExit>()
     private val lostSeq = java.util.concurrent.atomic.AtomicLong()
@@ -5287,7 +5322,8 @@ object OrbArms {
     /** [p]'s exit [o] ([why]) on [sym] lost its reply and was not found: held for that part ([lostExits]), Boss told. Its id. Memory only. */
     private fun lostExit(p: Position, sym: String, why: String, o: com.optionslab.engine.Kite.Order, known: Set<String>): Long {
         val id = lostSeq.incrementAndGet()
-        lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()), label = armOf(p.arm).label)
+        lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()), label = armOf(p.arm).label,
+            sentAt = runCatching { Market.now().toLocalDateTime() }.getOrDefault(java.time.ZonedDateTime.now(com.optionslab.engine.IST).toLocalDateTime()))
         com.optionslab.app.work.Alerts.error("${armOf(p.arm).label}: the live exit of $sym got no reply from Zerodha and is not in its order book " +
             "yet. This trade sells nothing more, and the other trades on it with a stop resting wait, until the app finds it or a read of " +
             "the book at least ${LOST_LET_GO_MS / 60_000} minutes after it was sent does not show it; check Kite's order book.", "ORB live")
@@ -5375,7 +5411,9 @@ object OrbArms {
         var failed = false
         val found = try {
             testLostSearch?.let { f -> kotlinx.coroutines.runInterruptible(kotlinx.coroutines.Dispatchers.IO) { f() } }
-            kotlinx.coroutines.withTimeoutOrNull(LOST_SEARCH_MS) { Broker.findRecent(asked.order, asked.known) ?: "" } ?: run { failed = true; null }
+            kotlinx.coroutines.withTimeoutOrNull(LOST_SEARCH_MS) {
+                Broker.findRecent(asked.order, asked.known, since = asked.sentAt.takeIf { it != LocalDateTime.MIN }?.minusMinutes(3)) ?: ""
+            } ?: run { failed = true; null }
         } catch (e: kotlinx.coroutines.CancellationException) {
             // (Never left "searching" for ever: the next due look searches again.)
             lostExits[asked.id]?.let { cur -> lostExits.replace(asked.id, cur, cur.copy(searching = false)) }
@@ -5388,8 +5426,10 @@ object OrbArms {
             found.isNullOrEmpty() -> cur.copy(searching = false, fails = 0, notFound = asked.askedMs - cur.sinceMs >= LOST_LET_GO_MS)
             else -> cur.copy(searching = false, fails = 0, foundId = found)
         }
-        lostExits.replace(asked.id, cur, next)
-        if (failed && next.fails == LOST_EXIT_TRIES) {
+        // (Said again once at the session's end - 15:10 - while it is still unknown: the trades on the contract are still waiting.)
+        val late = failed && next.fails >= LOST_EXIT_TRIES && !cur.lateSaid && !now().toLocalTime().isBefore(OrbRules.SQUARE_OFF)
+        lostExits.replace(asked.id, cur, if (late) next.copy(lateSaid = true) else next)
+        if (failed && (next.fails == LOST_EXIT_TRIES || late)) {
             runCatching { Diag.record("orb", "${asked.sym}: the lost exit could not be searched for ($LOST_EXIT_TRIES reads failed); its state is unknown") }
             com.optionslab.app.work.Alerts.error("ORB live: the lost exit of ${asked.sym} could not be looked for - Zerodha's order book could not be " +
                 "read. Its state is unknown: the app keeps looking and sells nothing more on it meanwhile; check Kite's order book.", "ORB live")

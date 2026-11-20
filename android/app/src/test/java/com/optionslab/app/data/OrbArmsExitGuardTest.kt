@@ -1051,7 +1051,12 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         OrbArms.testNow = pastWindow(lostAt)
         pass(); searchDone(); pass(); pass()
         assertTrue("let go on a read past the window", !OrbArms.lostExitForTest(sym))
-        assertTrue("never more than held: ${marketSells().map { it.form["quantity"] }}", marketSells().sumOf { it.form["quantity"]!!.toInt() } <= 30)
+        // (Zerodha holds 30 - B's - and B's stop covers them: A, whose lot its lost sale already sold, sends nothing.)
+        assertEquals("A sent nothing more: ${marketSells().map { it.form }}", 0, marketSells().size)
+        assertTrue("B's stop still resting", working(s2))
+        assertEquals("B's book row still holds that stop", s2, bRow().stopOrderId)
+        assertTrue(bRow().open)
+        assertEquals("no other stop placed", 0, kite.placed.count { it.form["order_type"] == "SL" })
     }
 
     /**
@@ -1143,5 +1148,76 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertTrue(!OrbArms.lostExitForTest(sym))
         assertEquals("sold again once the search found nothing", 2, marketSells().size)
         assertEquals("time_stop", today("liquidity").single().why)
+    }
+
+    /**
+     * 20 Nov 2026 (review: findRecent's rolling 3 minutes): a lost sale that really went, and Zerodha's order book unreadable for more
+     * than 3 minutes - the first good read still finds it (searched from its send time, never a rolling window) and it is booked as the
+     * exit, never let go and sold again.
+     */
+    @Test fun aLostSaleIsStillFoundAfterMoreThanThreeMinutesOfFailedReads() {
+        lostLiquiditySale()                                                // it went and filled; its reply was lost
+        val lostAt = OrbArms.testNow!!
+        kite.down += "/orders"
+        try {
+            var t = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+            while (t.isBefore(lostAt.plusSeconds(200))) {
+                OrbArms.testNow = t
+                assertEquals("hold", runBlocking { OrbArms.lostExitLookForTest(sym) })
+                t = t.plusSeconds(30)
+            }
+        } finally { kite.down.clear() }
+        kite.showInBook()                                                  // the book lists it now
+        Market.testClock = java.time.Clock.fixed(java.time.Instant.now().plusSeconds(200), com.optionslab.engine.IST)   // Zerodha's clock 200 s on
+        try {
+            OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_ASK_MS / 1000 + 1)
+            pass(); searchDone(); pass()
+        } finally { Market.testClock = null }
+        assertTrue(!OrbArms.lostExitForTest(sym))
+        assertEquals("booked as its exit", "time_stop", today("liquidity").single().why)
+        assertEquals("never sold again", 1, marketSells().size)
+    }
+
+    /**
+     * 20 Nov 2026 (review): a lost sale whose state stays unknown (the order book unreadable) is said once, and once more at the session's
+     * end (15:10) while still unresolved - never a third time.
+     */
+    @Test fun anUnknownLostSaleIsSaidOnceAndAgainAt1510() {
+        OrbArms.testNow = now.toLocalDate().atTime(15, 8, 0).atZone(com.optionslab.engine.IST)
+        lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)
+        val lostAt = OrbArms.testNow!!
+        fun said() = AutomationSupport.alerts().count { "lost exit of $sym could not be looked for" in it }
+        kite.down += "/orders"
+        try {
+            var t = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+            while (t.isBefore(now.toLocalDate().atTime(15, 9, 50).atZone(com.optionslab.engine.IST))) {
+                OrbArms.testNow = t; runBlocking { OrbArms.lostExitLookForTest(sym) }; t = t.plusSeconds(10)
+            }
+            assertEquals("said once before 15:10", 1, said())
+            t = now.toLocalDate().atTime(15, 10, 5).atZone(com.optionslab.engine.IST)
+            repeat(4) { OrbArms.testNow = t; runBlocking { OrbArms.lostExitLookForTest(sym) }; t = t.plusSeconds(10) }
+            assertEquals("said again once at 15:10", 2, said())
+            assertTrue("still held", OrbArms.lostExitForTest(sym))
+        } finally { kite.down.clear() }
+    }
+
+    /**
+     * 20 Nov 2026 (review: a restart ended the window): the lost sale is kept in the book - after a restart it is held still, the other
+     * trades still wait, and an empty search inside its window does not let it go.
+     */
+    @Test fun aRestartKeepsTheLostSaleItsWaitAndItsWindow() {
+        val (s2, gate) = lostOnAWithBResting(held = 60, bAgo = 30)          // B's time stop is due too
+        val lostAt = OrbArms.testNow!!
+        gate.countDown(); OrbArms.testLostSearch = null
+        OrbArms.forgetMemoryForTest()                                      // a restart: memory gone, the book read again
+        kite.requests.clear()
+        OrbArms.testNow = lostAt.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone(); pass()
+        assertTrue("held again after the restart", OrbArms.lostExitForTest(sym))
+        assertEquals("nothing sold again", 0, marketSells().size)
+        assertTrue("B still waits with its stop resting", working(s2) && bRow().stopOrderId == s2)
+        OrbArms.testNow = pastWindow(lostAt)
+        pass(); searchDone(); pass(); pass()
+        assertTrue("let go only past the window from the sale itself", !OrbArms.lostExitForTest(sym))
     }
 }
