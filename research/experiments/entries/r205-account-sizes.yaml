@@ -1,0 +1,30 @@
+id: r205-account-sizes
+title: 'R205: R72, R51 and Liquidity 15+5 replayed through one pot of money (account sizes)'
+family: sizing-execution
+date: '2026-11-20'
+doc: research/hunt/r204_be_time_funds/results/report.md
+hypothesis: 'none (descriptive: which trades an account of a given size could have paid for, 1 lot, today''s rules)'
+data_version: the baseline trades of r204study.py final (dhan-data build, 21 Nov 2024 - 5 Oct 2026)
+period:
+  design: 2024-11-21..2026-10-05 (one span; not a test)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arms'' own signals); options bought; 1 lot; one shared pot of money'
+model_or_rule: 'r204lib.funded_replay: free cash resets daily; exits before entries; same-minute order R72, Liquidity, R51'
+settings: research/hunt/r204_be_time_funds/r204cfg.py; PREREG.md section 4
+prereg: research/hunt/r204_be_time_funds/PREREG.md
+variants_tried: null
+results:
+  summary: 'All three arms, total span: Rs 56,000: 3830 taken, 2357 not taken, net Rs 293,761, DD Rs 83,161; Rs 100,000: 5077
+    taken, 1110 not taken, net Rs 473,505, DD Rs 127,843; Rs 150,000: 5736 taken, 451 not taken, net Rs 677,031, DD Rs 144,633;
+    Rs 200,000: 6016 taken, 171 not taken, net Rs 760,124, DD Rs 150,211; Rs 300,000: 6175 taken, 12 not taken, net Rs 765,856,
+    DD Rs 148,047; Rs 500,000: 6187 taken, 0 not taken, net Rs 765,411, DD Rs 148,047; no limit: net Rs 765,411, DD Rs 148,047.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: null
+verdict: not-a-test
+notes: Research only. No re-walk (a refused trade does not free the arm's side), lots setting not modelled.

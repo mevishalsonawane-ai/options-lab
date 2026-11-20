@@ -1,0 +1,40 @@
+id: r204-r51-et15
+title: 'R204 R51 Donchian 20 + Supertrend: sold at 15 minutes if never up Rs 250 a lot (net), on top of today''s rule (V5)'
+family: trade-management
+date: '2026-11-20'
+doc: research/hunt/r204_be_time_funds/results/report.md
+hypothesis: On R51 Donchian 20 + Supertrend, 'sold at 15 minutes if never up Rs 250 a lot (net)' on top of today's rule (V5)
+  is better than V5 alone in design and holdout (higher net, or within 5% with drawdown and worst month 20% smaller), in 3
+  of 4 walk-forward quarters, with no higher drawdown, better than random twins, after BH. The idea came from a diagnosis
+  of the whole span, so the holdout is a second look
+data_version: the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026) in the lake's layout (r202data.py); R51 clean
+  stores 21 Nov 2024 - 5 Oct 2026
+period:
+  design: 2024-11-21..2026-03-31 (four walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-05, a SECOND LOOK (read by R202 / R203 and by the diagnosis that suggested this rule); results/HOLDOUT_READ
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arms'' own signals, unchanged)'
+- buy the option; the new rule is an exit on the held option's premium (or a book switch)
+model_or_rule: 'ET15: sold at 15 minutes if never up Rs 250 a lot (net) (r204lib.py; r186engine.price with today''s breakeven
+  and lock)'
+settings: research/hunt/r204_be_time_funds/r204cfg.py; PREREG.md section 2
+prereg: research/hunt/r204_be_time_funds/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 2183 tr, 59.64% win, Rs 134,113, DD Rs 86,088, worst month Rs -36,558, avg loss Rs -1,411 (B: 2170 tr,
+    62.58% win, Rs 147,686, DD Rs 85,937, worst month Rs -36,762, avg loss Rs -1,579); 316 trades changed / removed; holdout
+    658 tr, 56.84% win, Rs 17,332, DD Rs 51,079, worst month Rs -35,298, avg loss Rs -1,265 (B: 652 tr, 60.43% win, Rs 43,680,
+    DD Rs 45,825, worst month Rs -29,871, avg loss Rs -1,429); 138 trades changed / removed; holdout twin p 0.9985, BH q 1
+    (m = 4,879). Does not pass: design: net 134,113 not better than B''s 147,686; design: max drawdown 86,088 above B''s 85,937;
+    holdout: net 17,332 not better than B''s 43,680; holdout: max drawdown 51,079 above B''s 45,825; walk-forward: better
+    in 2 of 4 design quarters < 3; holdout twin p 0.9985 >= 0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Stays a note unless Boss makes it an exception.

@@ -14,6 +14,7 @@ sys.path.insert(0, str(HERE))
 import r204cfg as K  # noqa: E402
 
 K2 = K.K2
+WNAME = dict(K2.WINDOW_NAME, holdout="holdout 1 Apr - 5 Oct 2026 (a second look)")
 ENTRIES = K2.ROOT / "research" / "experiments" / "entries"
 SECOND = ("The holdout is a SECOND LOOK: these ideas came from a diagnosis of the whole span (PREREG section 0), so a rule "
           "that clears the gate is not \"passed\" until new days agree.")
@@ -101,7 +102,7 @@ def report() -> str:
            "", ("The final run's design rows equal `design.json`." if not r["_meta"].get("design_mismatch") else
                 "Design rows that differ from `design.json`: " + ", ".join(r["_meta"]["design_mismatch"]) + ".")]
     for w in ("holdout", "design", "last_year", "total"):
-        out += ["", f"## R204, {K2.WINDOW_NAME[w]}" + (" - a second look" if w == "holdout" else ""), ""]
+        out += ["", f"## R204, {WNAME[w]}", ""]
         out += rule_rows(r, dec, w)
     out += ["", "## R204: why each one fails or clears", ""]
     for a, rule in K.TESTS:
@@ -115,8 +116,8 @@ def report() -> str:
             "for is not taken. Same-minute order: R72, Liquidity, R51. No re-walk (an approximation, PREREG 4)."]
     for name in K.SETS:
         for w in ("total", "last_year", "holdout"):
-            out += ["", f"### {name}, {K2.WINDOW_NAME[w]}", ""] + funds_rows(f, name, w)
-        out += ["", f"### {name}: by arm, {K2.WINDOW_NAME['total']}", ""] + arm_split(f, name, "total")
+            out += ["", f"### {name}, {WNAME[w]}", ""] + funds_rows(f, name, w)
+        out += ["", f"### {name}: by arm, {WNAME['total']}", ""] + arm_split(f, name, "total")
     lq = f["liquidity_from_april_2026"]
     out += ["", "## Liquidity from 1 April 2026 (baseline, descriptive)", "",
             f"All books: {lq['all']['trades']} trades, {lq['all']['win']}% wins, {rs(lq['all']['net'])}; max drawdown "

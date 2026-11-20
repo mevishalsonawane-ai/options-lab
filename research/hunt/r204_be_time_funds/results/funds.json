@@ -1,0 +1,1801 @@
+{
+ "_meta": {
+  "written": "2026-11-20T14:20:44.490844+00:00",
+  "order": [
+   "R72",
+   "LIQ",
+   "R51"
+  ],
+  "note": "descriptive; 1 lot; every day starts with the account size; no re-walk (PREREG 4)"
+ },
+ "all three arms": {
+  "56000": {
+   "most_money_in_use": 78151,
+   "design": {
+    "taken": 2868,
+    "not_taken": 1741,
+    "not_taken_net": 370531,
+    "win": 58.93,
+    "net": 241504,
+    "max_dd": 83161,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -34667
+    },
+    "worst_day": -18422,
+    "by_arm": {
+     "R72": {
+      "taken": 1108,
+      "not_taken": 453,
+      "net": 203564
+     },
+     "LIQ": {
+      "taken": 583,
+      "not_taken": 295,
+      "net": 47258
+     },
+     "R51": {
+      "taken": 1177,
+      "not_taken": 993,
+      "net": -9318
+     }
+    },
+    "net_pct_of_account": 431.3,
+    "max_dd_pct_of_account": 148.5
+   },
+   "holdout": {
+    "taken": 962,
+    "not_taken": 616,
+    "not_taken_net": 101119,
+    "win": 55.82,
+    "net": 52257,
+    "max_dd": 68580,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -35493
+    },
+    "worst_day": -12203,
+    "by_arm": {
+     "R72": {
+      "taken": 421,
+      "not_taken": 175,
+      "net": 70524
+     },
+     "LIQ": {
+      "taken": 222,
+      "not_taken": 108,
+      "net": 10609
+     },
+     "R51": {
+      "taken": 319,
+      "not_taken": 333,
+      "net": -28876
+     }
+    },
+    "net_pct_of_account": 93.3,
+    "max_dd_pct_of_account": 122.5
+   },
+   "total": {
+    "taken": 3830,
+    "not_taken": 2357,
+    "not_taken_net": 471651,
+    "win": 58.15,
+    "net": 293761,
+    "max_dd": 83161,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -35493
+    },
+    "worst_day": -18422,
+    "by_arm": {
+     "R72": {
+      "taken": 1529,
+      "not_taken": 628,
+      "net": 274088
+     },
+     "LIQ": {
+      "taken": 805,
+      "not_taken": 403,
+      "net": 57867
+     },
+     "R51": {
+      "taken": 1496,
+      "not_taken": 1326,
+      "net": -38194
+     }
+    },
+    "net_pct_of_account": 524.6,
+    "max_dd_pct_of_account": 148.5
+   },
+   "last_year": {
+    "taken": 1616,
+    "not_taken": 1077,
+    "not_taken_net": 310057,
+    "win": 57.24,
+    "net": 135248,
+    "max_dd": 78644,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -35493
+    },
+    "worst_day": -12203,
+    "by_arm": {
+     "R72": {
+      "taken": 642,
+      "not_taken": 296,
+      "net": 151693
+     },
+     "LIQ": {
+      "taken": 399,
+      "not_taken": 191,
+      "net": 14019
+     },
+     "R51": {
+      "taken": 575,
+      "not_taken": 590,
+      "net": -30465
+     }
+    },
+    "net_pct_of_account": 241.5,
+    "max_dd_pct_of_account": 140.4
+   }
+  },
+  "100000": {
+   "most_money_in_use": 119497,
+   "design": {
+    "taken": 3788,
+    "not_taken": 821,
+    "not_taken_net": 257857,
+    "win": 59.77,
+    "net": 354177,
+    "max_dd": 127843,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -33076
+    },
+    "worst_day": -26246,
+    "by_arm": {
+     "R72": {
+      "taken": 1426,
+      "not_taken": 135,
+      "net": 213553
+     },
+     "LIQ": {
+      "taken": 767,
+      "not_taken": 111,
+      "net": 106823
+     },
+     "R51": {
+      "taken": 1595,
+      "not_taken": 575,
+      "net": 33801
+     }
+    },
+    "net_pct_of_account": 354.2,
+    "max_dd_pct_of_account": 127.8
+   },
+   "holdout": {
+    "taken": 1289,
+    "not_taken": 289,
+    "not_taken_net": 34049,
+    "win": 56.71,
+    "net": 119328,
+    "max_dd": 64676,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -31346
+    },
+    "worst_day": -19205,
+    "by_arm": {
+     "R72": {
+      "taken": 547,
+      "not_taken": 49,
+      "net": 92748
+     },
+     "LIQ": {
+      "taken": 284,
+      "not_taken": 46,
+      "net": 21698
+     },
+     "R51": {
+      "taken": 458,
+      "not_taken": 194,
+      "net": 4881
+     }
+    },
+    "net_pct_of_account": 119.3,
+    "max_dd_pct_of_account": 64.7
+   },
+   "total": {
+    "taken": 5077,
+    "not_taken": 1110,
+    "not_taken_net": 291906,
+    "win": 58.99,
+    "net": 473505,
+    "max_dd": 127843,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -33076
+    },
+    "worst_day": -26246,
+    "by_arm": {
+     "R72": {
+      "taken": 1973,
+      "not_taken": 184,
+      "net": 306301
+     },
+     "LIQ": {
+      "taken": 1051,
+      "not_taken": 157,
+      "net": 128521
+     },
+     "R51": {
+      "taken": 2053,
+      "not_taken": 769,
+      "net": 38682
+     }
+    },
+    "net_pct_of_account": 473.5,
+    "max_dd_pct_of_account": 127.8
+   },
+   "last_year": {
+    "taken": 2150,
+    "not_taken": 543,
+    "not_taken_net": 172972,
+    "win": 58.28,
+    "net": 272333,
+    "max_dd": 70462,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -31346
+    },
+    "worst_day": -19205,
+    "by_arm": {
+     "R72": {
+      "taken": 837,
+      "not_taken": 101,
+      "net": 186221
+     },
+     "LIQ": {
+      "taken": 507,
+      "not_taken": 83,
+      "net": 60372
+     },
+     "R51": {
+      "taken": 806,
+      "not_taken": 359,
+      "net": 25739
+     }
+    },
+    "net_pct_of_account": 272.3,
+    "max_dd_pct_of_account": 70.5
+   }
+  },
+  "150000": {
+   "most_money_in_use": 165538,
+   "design": {
+    "taken": 4278,
+    "not_taken": 331,
+    "not_taken_net": 119452,
+    "win": 60.73,
+    "net": 492583,
+    "max_dd": 144633,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -45412
+    },
+    "worst_day": -33334,
+    "by_arm": {
+     "R72": {
+      "taken": 1535,
+      "not_taken": 26,
+      "net": 231711
+     },
+     "LIQ": {
+      "taken": 845,
+      "not_taken": 33,
+      "net": 160572
+     },
+     "R51": {
+      "taken": 1898,
+      "not_taken": 272,
+      "net": 100300
+     }
+    },
+    "net_pct_of_account": 328.4,
+    "max_dd_pct_of_account": 96.4
+   },
+   "holdout": {
+    "taken": 1458,
+    "not_taken": 120,
+    "not_taken_net": -31072,
+    "win": 57.34,
+    "net": 184448,
+    "max_dd": 61698,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -24798
+    },
+    "worst_day": -26121,
+    "by_arm": {
+     "R72": {
+      "taken": 586,
+      "not_taken": 10,
+      "net": 94362
+     },
+     "LIQ": {
+      "taken": 310,
+      "not_taken": 20,
+      "net": 22061
+     },
+     "R51": {
+      "taken": 562,
+      "not_taken": 90,
+      "net": 68025
+     }
+    },
+    "net_pct_of_account": 123.0,
+    "max_dd_pct_of_account": 41.1
+   },
+   "total": {
+    "taken": 5736,
+    "not_taken": 451,
+    "not_taken_net": 88380,
+    "win": 59.87,
+    "net": 677031,
+    "max_dd": 144633,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -45412
+    },
+    "worst_day": -33334,
+    "by_arm": {
+     "R72": {
+      "taken": 2121,
+      "not_taken": 36,
+      "net": 326073
+     },
+     "LIQ": {
+      "taken": 1155,
+      "not_taken": 53,
+      "net": 182633
+     },
+     "R51": {
+      "taken": 2460,
+      "not_taken": 362,
+      "net": 168325
+     }
+    },
+    "net_pct_of_account": 451.4,
+    "max_dd_pct_of_account": 96.4
+   },
+   "last_year": {
+    "taken": 2448,
+    "not_taken": 245,
+    "not_taken_net": 28810,
+    "win": 59.31,
+    "net": 416494,
+    "max_dd": 72646,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -24798
+    },
+    "worst_day": -26121,
+    "by_arm": {
+     "R72": {
+      "taken": 920,
+      "not_taken": 18,
+      "net": 196538
+     },
+     "LIQ": {
+      "taken": 557,
+      "not_taken": 33,
+      "net": 76021
+     },
+     "R51": {
+      "taken": 971,
+      "not_taken": 194,
+      "net": 143935
+     }
+    },
+    "net_pct_of_account": 277.7,
+    "max_dd_pct_of_account": 48.4
+   }
+  },
+  "200000": {
+   "most_money_in_use": 207496,
+   "design": {
+    "taken": 4481,
+    "not_taken": 128,
+    "not_taken_net": 39914,
+    "win": 61.15,
+    "net": 572120,
+    "max_dd": 150211,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -55092
+    },
+    "worst_day": -39287,
+    "by_arm": {
+     "R72": {
+      "taken": 1556,
+      "not_taken": 5,
+      "net": 236136
+     },
+     "LIQ": {
+      "taken": 870,
+      "not_taken": 8,
+      "net": 211457
+     },
+     "R51": {
+      "taken": 2055,
+      "not_taken": 115,
+      "net": 124528
+     }
+    },
+    "net_pct_of_account": 286.1,
+    "max_dd_pct_of_account": 75.1
+   },
+   "holdout": {
+    "taken": 1535,
+    "not_taken": 43,
+    "not_taken_net": -34627,
+    "win": 57.33,
+    "net": 188004,
+    "max_dd": 77384,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46725
+    },
+    "worst_day": -35850,
+    "by_arm": {
+     "R72": {
+      "taken": 593,
+      "not_taken": 3,
+      "net": 97572
+     },
+     "LIQ": {
+      "taken": 323,
+      "not_taken": 7,
+      "net": 15151
+     },
+     "R51": {
+      "taken": 619,
+      "not_taken": 33,
+      "net": 75281
+     }
+    },
+    "net_pct_of_account": 94.0,
+    "max_dd_pct_of_account": 38.7
+   },
+   "total": {
+    "taken": 6016,
+    "not_taken": 171,
+    "not_taken_net": 5287,
+    "win": 60.17,
+    "net": 760124,
+    "max_dd": 150211,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -55092
+    },
+    "worst_day": -39287,
+    "by_arm": {
+     "R72": {
+      "taken": 2149,
+      "not_taken": 8,
+      "net": 333708
+     },
+     "LIQ": {
+      "taken": 1193,
+      "not_taken": 15,
+      "net": 226608
+     },
+     "R51": {
+      "taken": 2674,
+      "not_taken": 148,
+      "net": 199809
+     }
+    },
+    "net_pct_of_account": 380.1,
+    "max_dd_pct_of_account": 75.1
+   },
+   "last_year": {
+    "taken": 2589,
+    "not_taken": 104,
+    "not_taken_net": -349,
+    "win": 59.48,
+    "net": 445653,
+    "max_dd": 91731,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46725
+    },
+    "worst_day": -35850,
+    "by_arm": {
+     "R72": {
+      "taken": 933,
+      "not_taken": 5,
+      "net": 198173
+     },
+     "LIQ": {
+      "taken": 579,
+      "not_taken": 11,
+      "net": 92958
+     },
+     "R51": {
+      "taken": 1077,
+      "not_taken": 88,
+      "net": 154522
+     }
+    },
+    "net_pct_of_account": 222.8,
+    "max_dd_pct_of_account": 45.9
+   }
+  },
+  "300000": {
+   "most_money_in_use": 319032,
+   "design": {
+    "taken": 4600,
+    "not_taken": 9,
+    "not_taken_net": 1323,
+    "win": 61.37,
+    "net": 610712,
+    "max_dd": 148047,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -54824
+    },
+    "worst_day": -40097,
+    "by_arm": {
+     "R72": {
+      "taken": 1561,
+      "not_taken": 0,
+      "net": 232769
+     },
+     "LIQ": {
+      "taken": 878,
+      "not_taken": 0,
+      "net": 231580
+     },
+     "R51": {
+      "taken": 2161,
+      "not_taken": 9,
+      "net": 146363
+     }
+    },
+    "net_pct_of_account": 203.6,
+    "max_dd_pct_of_account": 49.3
+   },
+   "holdout": {
+    "taken": 1575,
+    "not_taken": 3,
+    "not_taken_net": -1768,
+    "win": 56.95,
+    "net": 155144,
+    "max_dd": 105122,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -74463
+    },
+    "worst_day": -39779,
+    "by_arm": {
+     "R72": {
+      "taken": 596,
+      "not_taken": 0,
+      "net": 98609
+     },
+     "LIQ": {
+      "taken": 328,
+      "not_taken": 2,
+      "net": 13355
+     },
+     "R51": {
+      "taken": 651,
+      "not_taken": 1,
+      "net": 43180
+     }
+    },
+    "net_pct_of_account": 51.7,
+    "max_dd_pct_of_account": 35.0
+   },
+   "total": {
+    "taken": 6175,
+    "not_taken": 12,
+    "not_taken_net": -445,
+    "win": 60.24,
+    "net": 765856,
+    "max_dd": 148047,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -74463
+    },
+    "worst_day": -40097,
+    "by_arm": {
+     "R72": {
+      "taken": 2157,
+      "not_taken": 0,
+      "net": 331379
+     },
+     "LIQ": {
+      "taken": 1206,
+      "not_taken": 2,
+      "net": 244935
+     },
+     "R51": {
+      "taken": 2812,
+      "not_taken": 10,
+      "net": 189543
+     }
+    },
+    "net_pct_of_account": 255.3,
+    "max_dd_pct_of_account": 49.3
+   },
+   "last_year": {
+    "taken": 2684,
+    "not_taken": 9,
+    "not_taken_net": -2770,
+    "win": 59.54,
+    "net": 448075,
+    "max_dd": 116848,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -74463
+    },
+    "worst_day": -39779,
+    "by_arm": {
+     "R72": {
+      "taken": 938,
+      "not_taken": 0,
+      "net": 195249
+     },
+     "LIQ": {
+      "taken": 588,
+      "not_taken": 2,
+      "net": 108480
+     },
+     "R51": {
+      "taken": 1158,
+      "not_taken": 7,
+      "net": 144345
+     }
+    },
+    "net_pct_of_account": 149.4,
+    "max_dd_pct_of_account": 38.9
+   }
+  },
+  "500000": {
+   "most_money_in_use": 354120,
+   "design": {
+    "taken": 4609,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 61.42,
+    "net": 612035,
+    "max_dd": 148047,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -54824
+    },
+    "worst_day": -40097,
+    "by_arm": {
+     "R72": {
+      "taken": 1561,
+      "not_taken": 0,
+      "net": 232769
+     },
+     "LIQ": {
+      "taken": 878,
+      "not_taken": 0,
+      "net": 231580
+     },
+     "R51": {
+      "taken": 2170,
+      "not_taken": 0,
+      "net": 147686
+     }
+    },
+    "net_pct_of_account": 122.4,
+    "max_dd_pct_of_account": 29.6
+   },
+   "holdout": {
+    "taken": 1578,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 56.97,
+    "net": 153376,
+    "max_dd": 106890,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -76231
+    },
+    "worst_day": -39779,
+    "by_arm": {
+     "R72": {
+      "taken": 596,
+      "not_taken": 0,
+      "net": 98609
+     },
+     "LIQ": {
+      "taken": 330,
+      "not_taken": 0,
+      "net": 11087
+     },
+     "R51": {
+      "taken": 652,
+      "not_taken": 0,
+      "net": 43680
+     }
+    },
+    "net_pct_of_account": 30.7,
+    "max_dd_pct_of_account": 21.4
+   },
+   "total": {
+    "taken": 6187,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 60.29,
+    "net": 765411,
+    "max_dd": 148047,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -76231
+    },
+    "worst_day": -40097,
+    "by_arm": {
+     "R72": {
+      "taken": 2157,
+      "not_taken": 0,
+      "net": 331379
+     },
+     "LIQ": {
+      "taken": 1208,
+      "not_taken": 0,
+      "net": 242666
+     },
+     "R51": {
+      "taken": 2822,
+      "not_taken": 0,
+      "net": 191366
+     }
+    },
+    "net_pct_of_account": 153.1,
+    "max_dd_pct_of_account": 29.6
+   },
+   "last_year": {
+    "taken": 2693,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 59.6,
+    "net": 445305,
+    "max_dd": 118616,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -76231
+    },
+    "worst_day": -39779,
+    "by_arm": {
+     "R72": {
+      "taken": 938,
+      "not_taken": 0,
+      "net": 195249
+     },
+     "LIQ": {
+      "taken": 590,
+      "not_taken": 0,
+      "net": 106212
+     },
+     "R51": {
+      "taken": 1165,
+      "not_taken": 0,
+      "net": 143844
+     }
+    },
+    "net_pct_of_account": 89.1,
+    "max_dd_pct_of_account": 23.7
+   }
+  },
+  "no limit": {
+   "most_money_in_use": 354120,
+   "design": {
+    "taken": 4609,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 61.42,
+    "net": 612035,
+    "max_dd": 148047,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -54824
+    },
+    "worst_day": -40097,
+    "by_arm": {
+     "R72": {
+      "taken": 1561,
+      "not_taken": 0,
+      "net": 232769
+     },
+     "LIQ": {
+      "taken": 878,
+      "not_taken": 0,
+      "net": 231580
+     },
+     "R51": {
+      "taken": 2170,
+      "not_taken": 0,
+      "net": 147686
+     }
+    },
+    "net_pct_of_account": null,
+    "max_dd_pct_of_account": null
+   },
+   "holdout": {
+    "taken": 1578,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 56.97,
+    "net": 153376,
+    "max_dd": 106890,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -76231
+    },
+    "worst_day": -39779,
+    "by_arm": {
+     "R72": {
+      "taken": 596,
+      "not_taken": 0,
+      "net": 98609
+     },
+     "LIQ": {
+      "taken": 330,
+      "not_taken": 0,
+      "net": 11087
+     },
+     "R51": {
+      "taken": 652,
+      "not_taken": 0,
+      "net": 43680
+     }
+    },
+    "net_pct_of_account": null,
+    "max_dd_pct_of_account": null
+   },
+   "total": {
+    "taken": 6187,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 60.29,
+    "net": 765411,
+    "max_dd": 148047,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -76231
+    },
+    "worst_day": -40097,
+    "by_arm": {
+     "R72": {
+      "taken": 2157,
+      "not_taken": 0,
+      "net": 331379
+     },
+     "LIQ": {
+      "taken": 1208,
+      "not_taken": 0,
+      "net": 242666
+     },
+     "R51": {
+      "taken": 2822,
+      "not_taken": 0,
+      "net": 191366
+     }
+    },
+    "net_pct_of_account": null,
+    "max_dd_pct_of_account": null
+   },
+   "last_year": {
+    "taken": 2693,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 59.6,
+    "net": 445305,
+    "max_dd": 118616,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -76231
+    },
+    "worst_day": -39779,
+    "by_arm": {
+     "R72": {
+      "taken": 938,
+      "not_taken": 0,
+      "net": 195249
+     },
+     "LIQ": {
+      "taken": 590,
+      "not_taken": 0,
+      "net": 106212
+     },
+     "R51": {
+      "taken": 1165,
+      "not_taken": 0,
+      "net": 143844
+     }
+    },
+    "net_pct_of_account": null,
+    "max_dd_pct_of_account": null
+   }
+  }
+ },
+ "R72 + Liquidity (no R51)": {
+  "56000": {
+   "most_money_in_use": 69058,
+   "design": {
+    "taken": 1782,
+    "not_taken": 657,
+    "not_taken_net": 215992,
+    "win": 58.36,
+    "net": 248357,
+    "max_dd": 90902,
+    "worst_month": {
+     "month": "2025-03",
+     "net": -21375
+    },
+    "worst_day": -15614,
+    "by_arm": {
+     "R72": {
+      "taken": 1159,
+      "not_taken": 402,
+      "net": 187156
+     },
+     "LIQ": {
+      "taken": 623,
+      "not_taken": 255,
+      "net": 61202
+     }
+    },
+    "net_pct_of_account": 443.5,
+    "max_dd_pct_of_account": 162.3
+   },
+   "holdout": {
+    "taken": 671,
+    "not_taken": 255,
+    "not_taken_net": 25552,
+    "win": 54.4,
+    "net": 84145,
+    "max_dd": 47120,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -24685
+    },
+    "worst_day": -13701,
+    "by_arm": {
+     "R72": {
+      "taken": 435,
+      "not_taken": 161,
+      "net": 74919
+     },
+     "LIQ": {
+      "taken": 236,
+      "not_taken": 94,
+      "net": 9225
+     }
+    },
+    "net_pct_of_account": 150.3,
+    "max_dd_pct_of_account": 84.1
+   },
+   "total": {
+    "taken": 2453,
+    "not_taken": 912,
+    "not_taken_net": 241543,
+    "win": 57.28,
+    "net": 332502,
+    "max_dd": 90902,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -24685
+    },
+    "worst_day": -15614,
+    "by_arm": {
+     "R72": {
+      "taken": 1594,
+      "not_taken": 563,
+      "net": 262075
+     },
+     "LIQ": {
+      "taken": 859,
+      "not_taken": 349,
+      "net": 70427
+     }
+    },
+    "net_pct_of_account": 593.8,
+    "max_dd_pct_of_account": 162.3
+   },
+   "last_year": {
+    "taken": 1090,
+    "not_taken": 438,
+    "not_taken_net": 124309,
+    "win": 55.87,
+    "net": 177152,
+    "max_dd": 52128,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -24685
+    },
+    "worst_day": -13701,
+    "by_arm": {
+     "R72": {
+      "taken": 666,
+      "not_taken": 272,
+      "net": 152990
+     },
+     "LIQ": {
+      "taken": 424,
+      "not_taken": 166,
+      "net": 24161
+     }
+    },
+    "net_pct_of_account": 316.3,
+    "max_dd_pct_of_account": 93.1
+   }
+  },
+  "100000": {
+   "most_money_in_use": 120901,
+   "design": {
+    "taken": 2237,
+    "not_taken": 202,
+    "not_taken_net": 130136,
+    "win": 59.5,
+    "net": 334213,
+    "max_dd": 103339,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -26293
+    },
+    "worst_day": -25208,
+    "by_arm": {
+     "R72": {
+      "taken": 1458,
+      "not_taken": 103,
+      "net": 210787
+     },
+     "LIQ": {
+      "taken": 779,
+      "not_taken": 99,
+      "net": 123426
+     }
+    },
+    "net_pct_of_account": 334.2,
+    "max_dd_pct_of_account": 103.3
+   },
+   "holdout": {
+    "taken": 846,
+    "not_taken": 80,
+    "not_taken_net": -23175,
+    "win": 55.2,
+    "net": 132871,
+    "max_dd": 42525,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -20307
+    },
+    "worst_day": -19705,
+    "by_arm": {
+     "R72": {
+      "taken": 556,
+      "not_taken": 40,
+      "net": 100513
+     },
+     "LIQ": {
+      "taken": 290,
+      "not_taken": 40,
+      "net": 32358
+     }
+    },
+    "net_pct_of_account": 132.9,
+    "max_dd_pct_of_account": 42.5
+   },
+   "total": {
+    "taken": 3083,
+    "not_taken": 282,
+    "not_taken_net": 106962,
+    "win": 58.32,
+    "net": 467084,
+    "max_dd": 103339,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -26293
+    },
+    "worst_day": -25208,
+    "by_arm": {
+     "R72": {
+      "taken": 2014,
+      "not_taken": 143,
+      "net": 311300
+     },
+     "LIQ": {
+      "taken": 1069,
+      "not_taken": 139,
+      "net": 155784
+     }
+    },
+    "net_pct_of_account": 467.1,
+    "max_dd_pct_of_account": 103.3
+   },
+   "last_year": {
+    "taken": 1372,
+    "not_taken": 156,
+    "not_taken_net": 30376,
+    "win": 57.0,
+    "net": 271085,
+    "max_dd": 46235,
+    "worst_month": {
+     "month": "2026-05",
+     "net": -20307
+    },
+    "worst_day": -19705,
+    "by_arm": {
+     "R72": {
+      "taken": 854,
+      "not_taken": 84,
+      "net": 186849
+     },
+     "LIQ": {
+      "taken": 518,
+      "not_taken": 72,
+      "net": 84236
+     }
+    },
+    "net_pct_of_account": 271.1,
+    "max_dd_pct_of_account": 46.2
+   }
+  },
+  "150000": {
+   "most_money_in_use": 153494,
+   "design": {
+    "taken": 2398,
+    "not_taken": 41,
+    "not_taken_net": 80752,
+    "win": 60.13,
+    "net": 383597,
+    "max_dd": 103957,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -24892
+    },
+    "worst_day": -31636,
+    "by_arm": {
+     "R72": {
+      "taken": 1545,
+      "not_taken": 16,
+      "net": 224210
+     },
+     "LIQ": {
+      "taken": 853,
+      "not_taken": 25,
+      "net": 159387
+     }
+    },
+    "net_pct_of_account": 255.7,
+    "max_dd_pct_of_account": 69.3
+   },
+   "holdout": {
+    "taken": 913,
+    "not_taken": 13,
+    "not_taken_net": -9009,
+    "win": 54.44,
+    "net": 118705,
+    "max_dd": 70815,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -41536
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 594,
+      "not_taken": 2,
+      "net": 97428
+     },
+     "LIQ": {
+      "taken": 319,
+      "not_taken": 11,
+      "net": 21277
+     }
+    },
+    "net_pct_of_account": 79.1,
+    "max_dd_pct_of_account": 47.2
+   },
+   "total": {
+    "taken": 3311,
+    "not_taken": 54,
+    "not_taken_net": 71743,
+    "win": 58.56,
+    "net": 502302,
+    "max_dd": 103957,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -41536
+    },
+    "worst_day": -31636,
+    "by_arm": {
+     "R72": {
+      "taken": 2139,
+      "not_taken": 18,
+      "net": 321638
+     },
+     "LIQ": {
+      "taken": 1172,
+      "not_taken": 36,
+      "net": 180664
+     }
+    },
+    "net_pct_of_account": 334.9,
+    "max_dd_pct_of_account": 69.3
+   },
+   "last_year": {
+    "taken": 1498,
+    "not_taken": 30,
+    "not_taken_net": 34779,
+    "win": 56.81,
+    "net": 266682,
+    "max_dd": 74266,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -41536
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 930,
+      "not_taken": 8,
+      "net": 192128
+     },
+     "LIQ": {
+      "taken": 568,
+      "not_taken": 22,
+      "net": 74555
+     }
+    },
+    "net_pct_of_account": 177.8,
+    "max_dd_pct_of_account": 49.5
+   }
+  },
+  "200000": {
+   "most_money_in_use": 204437,
+   "design": {
+    "taken": 2437,
+    "not_taken": 2,
+    "not_taken_net": 2209,
+    "win": 60.4,
+    "net": 462140,
+    "max_dd": 105406,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -25477
+    },
+    "worst_day": -33743,
+    "by_arm": {
+     "R72": {
+      "taken": 1561,
+      "not_taken": 0,
+      "net": 232769
+     },
+     "LIQ": {
+      "taken": 876,
+      "not_taken": 2,
+      "net": 229370
+     }
+    },
+    "net_pct_of_account": 231.1,
+    "max_dd_pct_of_account": 52.7
+   },
+   "holdout": {
+    "taken": 923,
+    "not_taken": 3,
+    "not_taken_net": -1917,
+    "win": 54.5,
+    "net": 111613,
+    "max_dd": 77907,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -44444
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 596,
+      "not_taken": 0,
+      "net": 98609
+     },
+     "LIQ": {
+      "taken": 327,
+      "not_taken": 3,
+      "net": 13004
+     }
+    },
+    "net_pct_of_account": 55.8,
+    "max_dd_pct_of_account": 39.0
+   },
+   "total": {
+    "taken": 3360,
+    "not_taken": 5,
+    "not_taken_net": 292,
+    "win": 58.78,
+    "net": 573753,
+    "max_dd": 105406,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -44444
+    },
+    "worst_day": -33743,
+    "by_arm": {
+     "R72": {
+      "taken": 2157,
+      "not_taken": 0,
+      "net": 331379
+     },
+     "LIQ": {
+      "taken": 1203,
+      "not_taken": 5,
+      "net": 242374
+     }
+    },
+    "net_pct_of_account": 286.9,
+    "max_dd_pct_of_account": 52.7
+   },
+   "last_year": {
+    "taken": 1524,
+    "not_taken": 4,
+    "not_taken_net": -2508,
+    "win": 56.96,
+    "net": 303969,
+    "max_dd": 81358,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -44444
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 938,
+      "not_taken": 0,
+      "net": 195249
+     },
+     "LIQ": {
+      "taken": 586,
+      "not_taken": 4,
+      "net": 108720
+     }
+    },
+    "net_pct_of_account": 152.0,
+    "max_dd_pct_of_account": 40.7
+   }
+  },
+  "300000": {
+   "most_money_in_use": 249385,
+   "design": {
+    "taken": 2439,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 60.39,
+    "net": 464349,
+    "max_dd": 105406,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -25477
+    },
+    "worst_day": -33743,
+    "by_arm": {
+     "R72": {
+      "taken": 1561,
+      "not_taken": 0,
+      "net": 232769
+     },
+     "LIQ": {
+      "taken": 878,
+      "not_taken": 0,
+      "net": 231580
+     }
+    },
+    "net_pct_of_account": 154.8,
+    "max_dd_pct_of_account": 35.1
+   },
+   "holdout": {
+    "taken": 926,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 54.54,
+    "net": 109696,
+    "max_dd": 79824,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 596,
+      "not_taken": 0,
+      "net": 98609
+     },
+     "LIQ": {
+      "taken": 330,
+      "not_taken": 0,
+      "net": 11087
+     }
+    },
+    "net_pct_of_account": 36.6,
+    "max_dd_pct_of_account": 26.6
+   },
+   "total": {
+    "taken": 3365,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 58.78,
+    "net": 574045,
+    "max_dd": 105406,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -33743,
+    "by_arm": {
+     "R72": {
+      "taken": 2157,
+      "not_taken": 0,
+      "net": 331379
+     },
+     "LIQ": {
+      "taken": 1208,
+      "not_taken": 0,
+      "net": 242666
+     }
+    },
+    "net_pct_of_account": 191.3,
+    "max_dd_pct_of_account": 35.1
+   },
+   "last_year": {
+    "taken": 1528,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 56.94,
+    "net": 301461,
+    "max_dd": 83274,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 938,
+      "not_taken": 0,
+      "net": 195249
+     },
+     "LIQ": {
+      "taken": 590,
+      "not_taken": 0,
+      "net": 106212
+     }
+    },
+    "net_pct_of_account": 100.5,
+    "max_dd_pct_of_account": 27.8
+   }
+  },
+  "500000": {
+   "most_money_in_use": 249385,
+   "design": {
+    "taken": 2439,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 60.39,
+    "net": 464349,
+    "max_dd": 105406,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -25477
+    },
+    "worst_day": -33743,
+    "by_arm": {
+     "R72": {
+      "taken": 1561,
+      "not_taken": 0,
+      "net": 232769
+     },
+     "LIQ": {
+      "taken": 878,
+      "not_taken": 0,
+      "net": 231580
+     }
+    },
+    "net_pct_of_account": 92.9,
+    "max_dd_pct_of_account": 21.1
+   },
+   "holdout": {
+    "taken": 926,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 54.54,
+    "net": 109696,
+    "max_dd": 79824,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 596,
+      "not_taken": 0,
+      "net": 98609
+     },
+     "LIQ": {
+      "taken": 330,
+      "not_taken": 0,
+      "net": 11087
+     }
+    },
+    "net_pct_of_account": 21.9,
+    "max_dd_pct_of_account": 16.0
+   },
+   "total": {
+    "taken": 3365,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 58.78,
+    "net": 574045,
+    "max_dd": 105406,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -33743,
+    "by_arm": {
+     "R72": {
+      "taken": 2157,
+      "not_taken": 0,
+      "net": 331379
+     },
+     "LIQ": {
+      "taken": 1208,
+      "not_taken": 0,
+      "net": 242666
+     }
+    },
+    "net_pct_of_account": 114.8,
+    "max_dd_pct_of_account": 21.1
+   },
+   "last_year": {
+    "taken": 1528,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 56.94,
+    "net": 301461,
+    "max_dd": 83274,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 938,
+      "not_taken": 0,
+      "net": 195249
+     },
+     "LIQ": {
+      "taken": 590,
+      "not_taken": 0,
+      "net": 106212
+     }
+    },
+    "net_pct_of_account": 60.3,
+    "max_dd_pct_of_account": 16.7
+   }
+  },
+  "no limit": {
+   "most_money_in_use": 249385,
+   "design": {
+    "taken": 2439,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 60.39,
+    "net": 464349,
+    "max_dd": 105406,
+    "worst_month": {
+     "month": "2025-02",
+     "net": -25477
+    },
+    "worst_day": -33743,
+    "by_arm": {
+     "R72": {
+      "taken": 1561,
+      "not_taken": 0,
+      "net": 232769
+     },
+     "LIQ": {
+      "taken": 878,
+      "not_taken": 0,
+      "net": 231580
+     }
+    },
+    "net_pct_of_account": null,
+    "max_dd_pct_of_account": null
+   },
+   "holdout": {
+    "taken": 926,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 54.54,
+    "net": 109696,
+    "max_dd": 79824,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 596,
+      "not_taken": 0,
+      "net": 98609
+     },
+     "LIQ": {
+      "taken": 330,
+      "not_taken": 0,
+      "net": 11087
+     }
+    },
+    "net_pct_of_account": null,
+    "max_dd_pct_of_account": null
+   },
+   "total": {
+    "taken": 3365,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 58.78,
+    "net": 574045,
+    "max_dd": 105406,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -33743,
+    "by_arm": {
+     "R72": {
+      "taken": 2157,
+      "not_taken": 0,
+      "net": 331379
+     },
+     "LIQ": {
+      "taken": 1208,
+      "not_taken": 0,
+      "net": 242666
+     }
+    },
+    "net_pct_of_account": null,
+    "max_dd_pct_of_account": null
+   },
+   "last_year": {
+    "taken": 1528,
+    "not_taken": 0,
+    "not_taken_net": 0,
+    "win": 56.94,
+    "net": 301461,
+    "max_dd": 83274,
+    "worst_month": {
+     "month": "2026-04",
+     "net": -46360
+    },
+    "worst_day": -23741,
+    "by_arm": {
+     "R72": {
+      "taken": 938,
+      "not_taken": 0,
+      "net": 195249
+     },
+     "LIQ": {
+      "taken": 590,
+      "not_taken": 0,
+      "net": 106212
+     }
+    },
+    "net_pct_of_account": null,
+    "max_dd_pct_of_account": null
+   }
+  }
+ },
+ "liquidity_from_april_2026": {
+  "all": {
+   "trades": 330,
+   "win": 43.9,
+   "net": 11087
+  },
+  "by_month": {
+   "2026-04": {
+    "trades": 54,
+    "win": 33.3,
+    "net": -32670
+   },
+   "2026-05": {
+    "trades": 47,
+    "win": 40.4,
+    "net": -14657
+   },
+   "2026-06": {
+    "trades": 51,
+    "win": 47.1,
+    "net": 707
+   },
+   "2026-07": {
+    "trades": 66,
+    "win": 45.5,
+    "net": 23012
+   },
+   "2026-08": {
+    "trades": 53,
+    "win": 41.5,
+    "net": 2100
+   },
+   "2026-09": {
+    "trades": 50,
+    "win": 58.0,
+    "net": 33938
+   },
+   "2026-10": {
+    "trades": 9,
+    "win": 33.3,
+    "net": -1343
+   }
+  },
+  "by_book": {
+   "BANKNIFTY 15-minute": {
+    "trades": 30,
+    "win": 50.0,
+    "net": 4229
+   },
+   "BANKNIFTY 5-minute": {
+    "trades": 93,
+    "win": 46.2,
+    "net": -1754
+   },
+   "FINNIFTY 30-minute": {
+    "trades": 14,
+    "win": 28.6,
+    "net": -4138
+   },
+   "FINNIFTY 5-minute": {
+    "trades": 76,
+    "win": 38.2,
+    "net": 12956
+   },
+   "MIDCPNIFTY 15-minute": {
+    "trades": 36,
+    "win": 44.4,
+    "net": 7559
+   },
+   "MIDCPNIFTY 5-minute": {
+    "trades": 81,
+    "win": 46.9,
+    "net": -7765
+   }
+  },
+  "stats": {
+   "trades": 330,
+   "win": 43.94,
+   "net": 11087,
+   "avg_win": 1241,
+   "avg_loss": -913,
+   "max_dd": 59441,
+   "worst_month": {
+    "month": "2026-04",
+    "net": -32670
+   },
+   "worst_day": -9918,
+   "losers": 185,
+   "loss_total": -168829,
+   "account_stop_ok": false
+  }
+ }
+}
