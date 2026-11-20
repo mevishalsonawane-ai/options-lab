@@ -1,0 +1,33 @@
+id: r209-t3-liq
+title: 'R209 T3: the direction model as a skip filter on today''s LIQ'
+family: ml
+date: '2026-11-20'
+doc: research/hunt/r209_direction_brain/results/report.md
+data_version: 'the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026): 1-minute index and India VIX candles and
+  the nearest expiry''s rolling option chain, 8 Oct 2021 - 5 Oct 2026 (r209data.py)'
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+period:
+  design: 2024-11-21..2026-03-31 (walk-forward predictions)
+  holdout: 2026-04-01..2026-10-05, read once
+features:
+- 'signal source: the index (its direction is predicted); option-chain data only as context inputs'
+- buy the option; today's rules (V5); 1 lot
+hypothesis: skipping LIQ trades whose side the model gives P < t (t chosen on design) beats today's rule (R202's gate)
+model_or_rule: skip when P(side) < 0.45
+settings: research/hunt/r209_direction_brain/r209cfg.py; PREREG.md sections 3 - 5 and Amendment A
+prereg: research/hunt/r209_direction_brain/PREREG.md
+variants_tried: 4
+results:
+  summary: 'design: 801 tr, Rs 226,492 (today Rs 231,580), 77 removed; holdout: 314 tr, Rs 9,134 (today Rs 11,087), 16 removed.
+    Does not pass: design: net 226,492 not better than B''s 231,580; holdout: net 9,134 not better than B''s 11,087; holdout:
+    16 trades changed / removed < 40; walk-forward: better in 2 of 4 design quarters < 3; holdout twin p 0.6187 >= 0.05; BH
+    q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes.

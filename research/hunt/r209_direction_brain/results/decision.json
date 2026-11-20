@@ -1,0 +1,107 @@
+{
+ "m_total": 4912,
+ "chosen": "LOG",
+ "tests": {
+  "T1-LOG": {
+   "passes": false,
+   "fails": [
+    "holdout AUC 0.5107 < 0.53",
+    "holdout top-20% accuracy 51.2% < 55%",
+    "walk-forward top-20% accuracy >= 55% in 6 of 13 quarters < 9",
+    "BH q 1 > 0.1"
+   ],
+   "quarters_up": 6,
+   "q": 1.0,
+   "q_family": 0.1322698660946845
+  },
+  "T1-GBM": {
+   "passes": false,
+   "fails": [
+    "holdout AUC 0.5133 < 0.53",
+    "holdout top-20% accuracy 51.4% < 55%",
+    "walk-forward top-20% accuracy >= 55% in 4 of 13 quarters < 9",
+    "BH q 1 > 0.1"
+   ],
+   "quarters_up": 4,
+   "q": 1.0,
+   "q_family": 0.04663299907419065
+  },
+  "T1-NET": {
+   "passes": false,
+   "fails": [
+    "holdout AUC 0.5193 < 0.53",
+    "holdout top-20% accuracy 53.0% < 55%",
+    "walk-forward top-20% accuracy >= 55% in 1 of 13 quarters < 9",
+    "BH q 0.195 > 0.1"
+   ],
+   "quarters_up": 1,
+   "q": 0.19479249236080218,
+   "q_family": 0.00031725161622280483
+  },
+  "T2-R72": {
+   "passes": false,
+   "fails": [
+    "difference +1.0 points with p 0.4017",
+    "favoured signals +0.5 points above the source's own (needs 3)",
+    "BH q 1 > 0.1"
+   ],
+   "edge": 0.0053648732220161754,
+   "q": 1.0,
+   "q_family": 0.5298248080566957
+  },
+  "T2-R51": {
+   "passes": false,
+   "fails": [
+    "difference +1.2 points with p 0.3245",
+    "favoured signals +0.7 points above the source's own (needs 3)",
+    "BH q 1 > 0.1"
+   ],
+   "edge": 0.006977336271224099,
+   "q": 1.0,
+   "q_family": 0.5298248080566957
+  },
+  "T2-LIQ": {
+   "passes": false,
+   "fails": [
+    "difference -9.7 points with p 0.9502",
+    "favoured signals -4.7 points above the source's own (needs 3)",
+    "BH q 1 > 0.1"
+   ],
+   "edge": -0.04711828227021603,
+   "q": 1.0,
+   "q_family": 0.9507346611362205
+  },
+  "T3-R72": {
+   "passes": false,
+   "fails": [
+    "design: net 222,516 not better than B's 232,769",
+    "design: max drawdown 110,766 above B's 100,582",
+    "holdout: net 97,587 not better than B's 98,609",
+    "holdout: 27 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.3673 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.36732,
+   "q": 1.0,
+   "q_family": 0.5298248080566957
+  },
+  "T3-LIQ": {
+   "passes": false,
+   "fails": [
+    "design: net 226,492 not better than B's 231,580",
+    "holdout: net 9,134 not better than B's 11,087",
+    "holdout: 16 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.6187 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.61869,
+   "q": 1.0,
+   "q_family": 0.6259473386667961
+  }
+ },
+ "passes": []
+}

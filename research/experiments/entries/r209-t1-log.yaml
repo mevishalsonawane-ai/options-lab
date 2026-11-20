@@ -1,0 +1,32 @@
+id: r209-t1-log
+title: 'R209 T1: does a logistic regression predict the index''s 15-minute direction usefully?'
+family: ml
+date: '2026-11-20'
+doc: research/hunt/r209_direction_brain/results/report.md
+data_version: 'the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026): 1-minute index and India VIX candles and
+  the nearest expiry''s rolling option chain, 8 Oct 2021 - 5 Oct 2026 (r209data.py)'
+period:
+  design: 2022-01-01..2026-03-31 (walk-forward quarters 2023 Q1 - 2026 Q1)
+  holdout: 2026-04-01..2026-10-05, read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (its direction is predicted); option-chain data only as context inputs'
+hypothesis: holdout AUC > 0.5 (p < 0.05) and >= 0.530, most confident 20% right >= 55%, and >= 55% in 9 of 13 walk-forward
+  quarters
+model_or_rule: logistic regression over P + X + V + O inputs (r209study.fit_predict)
+settings: research/hunt/r209_direction_brain/r209cfg.py; PREREG.md sections 3 - 5 and Amendment A
+prereg: research/hunt/r209_direction_brain/PREREG.md
+variants_tried: 1
+results:
+  summary: 'Walk-forward 283953 points: AUC 0.5260, right 51.8%, top 20% right 54.5%. Holdout 45085 points: AUC 0.5107 (p
+    0.0495), right 50.6%, top 20% right 51.2%. Does not pass: holdout AUC 0.5107 < 0.53; holdout top-20% accuracy 51.2% <
+    55%; walk-forward top-20% accuracy >= 55% in 6 of 13 quarters < 9; BH q 1 > 0.1'
+  costs: none (index direction only)
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes.
