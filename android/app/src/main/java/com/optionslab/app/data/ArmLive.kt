@@ -1609,7 +1609,11 @@ object ArmLive {
         // and no second stop rests beside it while it may (the app watches the level meanwhile); found, it is the trade's stop. Given up
         // on after [Broker.LOST_SEARCH_MS] (Boss told), a stop is rested as usual.
         when (val l = Broker.lookLost(lostStopKey(p))) {
-            is Broker.LostLook.Found -> {
+            // (20 Nov 2026, delta review: never one another open trade already owns - taken as its orphan meanwhile; this trade's stop is then rested as
+            // usual, within what the contract's other exits leave. One found for more than this trade holds is shrunk by the next look.)
+            is Broker.LostLook.Found -> if (l.id in placedStops || stopOwnedByOther(p, l.id)) {
+                runCatching { Diag.record("armlive", "${p.label}: its lost stop's search found ${l.id}, which another trade already owns: not taken") }
+            } else {
                 placedStops += l.id
                 runCatching { Strategies.tagOwner("kite:${l.id}", "${spec.label} · live ${stopWords(p)}") }
                 return p.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: trigger, stopBooked = 0, stopQty = l.qty)
@@ -1624,6 +1628,10 @@ object ArmLive {
         return ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label} stop") { restStopInTurn(p, trigger, ltp, spec, exitSide) }
     }
 
+    /** 20 Nov 2026 (delta review): whether an open trade of the book other than [p] owns order [id] as its stop (unreadable: true). */
+    private suspend fun stopOwnedByOther(p: Pos?, id: String): Boolean =
+        runCatching { lock.withLock { book().positions.any { it.open && it.ref != p?.ref && it.slId == id } } }.getOrDefault(true)
+
     /**
      * 18 Nov 2026 (audit A4): a working SL / SL-M of this path ([LiveMirror.TAG]) on [p]'s contract, product and exit side that no open
      * trade of the book owns - [p]'s own stop placed just before a restart, whose id the book never got - newest first, or null. The
@@ -1631,8 +1639,9 @@ object ArmLive {
      */
     private suspend fun orphanStop(p: Pos, rows: Collection<Broker.OrderRow>): Broker.OrderRow? {
         val exitSide = if (p.side > 0) "SELL" else "BUY"
+        // (20 Nov 2026, delta review: never one another trade's lost reply may be - it takes it when found.)
         val cands = rows.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == p.symbol && it.exchange == p.exchange &&
-            it.product == p.product && it.side == exitSide && (it.type == "SL" || it.type == "SL-M") }
+            it.product == p.product && it.side == exitSide && (it.type == "SL" || it.type == "SL-M") && !Broker.lostMayBe(it, lostStopKey(p)) }
         if (cands.isEmpty()) return null
         val owned = runCatching { lock.withLock { book().positions.filter { it.open && !it.shadow }.mapNotNull { it.slId }.toSet() } }.getOrNull() ?: return null
         // (Review: with two trades on the contract, the one that fits this trade - its quantity, then the trigger nearest its own level -
@@ -1706,6 +1715,8 @@ object ArmLive {
         if (p.stopOrderId == null && spec.rest != LiveMirror.Rest.GTT) orphanStop(p.copy(stopTrigger = trigger), book)?.let { o ->
             runCatching { Diag.record("armlive", "${p.label}: its own stop ${o.id} on ${p.symbol} found resting with no trade owning it: taken as its stop") }
             Broker.forgetLost(lostStopKey(p))          // (20 Nov 2026: taken another way - never looked for again)
+            // (20 Nov 2026, delta review: claimed - no other trade's lost reply or orphan look takes it after this.)
+            Broker.claimStop(o.id); placedStops += o.id
             runCatching { Strategies.tagOwner("kite:${o.id}", "${spec.label} · live ${stopWords(p)}") }
             return seen.copy(stopOrderId = o.id, stopTrigger = o.trigger.takeIf { it > 0 } ?: trigger, stopQty = ExitQty.remaining(o.qty, o.filled, o.pending))
         }
@@ -1773,10 +1784,16 @@ object ArmLive {
     private suspend fun takeOutClosedLostStops() {
         val keys = Broker.lostKeys(LOST_STOP)
         if (keys.isEmpty()) return
-        val openRefs = lock.withLock { book().positions.filter { it.open }.map { it.ref }.toSet() }
+        // (20 Nov 2026, delta review: the open trades' stops from the same read - one an open trade owns is never cancelled here.)
+        val (openRefs, ownedStops) = lock.withLock { book().positions.filter { it.open }.let { o -> o.map { it.ref }.toSet() to o.mapNotNull { it.slId }.toSet() } }
         for (key in keys) {
             if (key.removePrefix(LOST_STOP) in openRefs) continue
             val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: continue
+            // (20 Nov 2026, delta review: one an open trade owns - taken as its orphan meanwhile - is that trade's live stop: never cancelled here.)
+            if (l.id in placedStops || l.id in ownedStops) {
+                runCatching { Diag.record("armlive", "A stop ${l.id} found after its answer was lost belongs to an open trade now: left resting") }
+                continue
+            }
             // (Review: one that already filled: if Zerodha now shows the contract SHORT it sold beside the trade's own exit - a second sale,
             // said plainly; flat, it was the trade's own exit (closed as sold at Zerodha) - noted only. Never "cancelled".)
             val st = try { Broker.orderState(l.id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
@@ -1784,6 +1801,9 @@ object ArmLive {
                 val net = try { Broker.positionBook().net } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
                 val short = net?.any { it.qty < 0 && it.symbol == l.symbol }
                 val text = if (short == false) "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha: it was its trade's own exit (the position is flat)."
+                    // (20 Nov 2026, delta review: positions unread - unknown, never guessed.)
+                    else if (short == null) "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha after its arm's trade had closed, " +
+                        "and Zerodha's positions could not be read: whether the account is now short on ${l.symbol} is UNKNOWN. Check positions in Kite."
                     else "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha after its arm's trade had already closed: a second " +
                         "sale - the account may now be SHORT on that contract. Check positions in Kite now."
                 runCatching { Diag.record("armlive", text) }
@@ -3125,7 +3145,14 @@ object ArmLive {
                             "resting at Zerodha for ${(ms - since) / 1000} s because Zerodha's positions do not show its fill (they show " +
                             "$unshownHeld of $through). The app watches %.2f itself; check the position in Kite.".format(Locale.ENGLISH, p.stopTrigger))
                     } else noStopSince.remove(p.ref)
-                    val d = LiveMirror.decide(look)
+                    // 20 Nov 2026 (delta review): a stop resting for more than this trade holds (a lost stop found after a part was sold) is
+                    // shrunk to the trade - never left to sell what is not the trade's - when the look would otherwise only hold it (a move of
+                    // the stop goes first), on a look whose positions were read and are not in doubt.
+                    val d = LiveMirror.decide(look).let { d0 ->
+                        val lotN = p.lot.coerceAtLeast(1)
+                        if (d0.step == LiveMirror.Step.HOLD && contract !in unsure && so != null && stopQty != null && stopQty > p.qty)
+                            LiveMirror.Decision(LiveMirror.Step.SHRINK_STOP, "held_less", p.qty / lotN * lotN) else d0
+                    }
                     val next: List<Pos>? = when (d.step) {
                         LiveMirror.Step.SELL -> {
                             // 15 Nov: a stop resting at the stop rule's levels ([stopWhyOf]) is booked as its own, run through or not.

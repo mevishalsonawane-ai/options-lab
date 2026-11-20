@@ -558,6 +558,29 @@ class OrbArmsLiveTest : RobolectricTest() {
         assertEquals(1, kite.placed.count { it.form["order_type"] == "SL" })
     }
 
+    /**
+     * 20 Nov 2026 (delta review, confirmed): a stop sent for 60 whose answer was lost, and the ladder sold 30 since: the trade (now 30)
+     * still finds it under the key it was sent with - no second stop meanwhile - and, found for more than is held, it is cut to 30.
+     */
+    @Test fun aLostStopFoundAfterAPartSaleIsStillItsOwnAndIsCutToWhatIsHeld() = withUpstox {
+        state(positions = listOf(position("orb", 30, 200.0, "E1", stop = 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val lostId = kite.restingInKite(sym, "SELL", 60, 152.0, type = "SL", trigger = 160.0, tag = "iraorb", product = "MIS")
+        kite.hideFromBook(lostId, 50)
+        Broker.noteLost("orbstop:${arm().arm.label}:$sym:200.0:60",
+            Kite.Order(sym, Kite.Side.SELL, 60, 30, "MIS", "SL", 152.0, 0.05, "NFO", "iraorb", triggerPrice = 160.0), emptyList(), "test", liveOnly = true)
+        kite.requests.clear()
+        pass()
+        assertNull("waits for its lost stop", arm().open!!.stopOrderId)
+        assertEquals("no second stop", 0, kite.placed.count { it.form["order_type"] == "SL" })
+        kite.showInBook()
+        pass()
+        assertEquals("takes its lost stop", lostId, arm().open!!.stopOrderId)
+        assertEquals("cut to what is held", 30, kite.order(lostId).qty - kite.order(lostId).filled)
+        assertEquals(0, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
     @Test fun aLostReplyNotFoundYetIsKeptUnconfirmedNotDropped() {
         state(pending = true)
         kite.nextPlace(reply = Reply.NETWORK_EXCEPTION)

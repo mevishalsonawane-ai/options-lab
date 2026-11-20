@@ -15,6 +15,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -396,6 +397,77 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
         assertEquals("told once", 1, com.optionslab.app.testing.AutomationSupport.alerts().count { "Test: its stop" in it && "UNKNOWN" in it })
         kite.down.clear()
         assertEquals("a read that succeeds after the window: given up", Broker.LostLook.GaveUp, Broker.lookLost("u"))
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): the real background search (no test seam): a look never reads the book itself - the first says
+     * Searching and starts the search; a later look acts on what it found. Two looks at once start one search.
+     */
+    @Test fun aLostReplyIsSearchedInTheBackgroundAndALaterLookActsOnIt() {
+        Broker.lostLookGapMsForTest = 0
+        val stop = order(type = "SL", price = 79.0, trigger = 80.0, side = Kite.Side.SELL)
+        val sid = kite.restingInKite(sym, "SELL", 75, 79.0, type = "SL", trigger = 80.0, tag = "iratest", product = "NRML")
+        kite.hideFromBook(sid, 1)
+        Broker.noteLost("bg", stop, emptyList(), "Test: its stop", liveOnly = true)
+        kite.slowMs["/orders"] = 300L
+        assertEquals("the first look only starts the search", Broker.LostLook.Searching, Broker.lookLost("bg"))
+        val first = Broker.lostSearchForTest("bg")!!
+        assertEquals("a look while it runs starts no second", Broker.LostLook.Searching, Broker.lookLost("bg"))
+        assertSame(first, Broker.lostSearchForTest("bg"))
+        runBlocking { first.join() }
+        kite.slowMs.clear()
+        var l: Broker.LostLook? = Broker.LostLook.Searching
+        val until = System.currentTimeMillis() + 5_000
+        while (l == Broker.LostLook.Searching && System.currentTimeMillis() < until) { l = Broker.lookLost("bg"); Thread.sleep(20) }
+        assertEquals("a later look acts on what the search found", Broker.LostLook.Found(sid, 75, 80.0), l)
+        assertNull("taken once", Broker.lookLost("bg"))
+    }
+
+    /** 20 Nov 2026 (delta review): forgetting a lost reply, and forgetting them all (what a reset does, [Broker.resetForTest]), stop its running search. */
+    @Test fun forgettingALostReplyOrAResetStopsItsSearch() {
+        Broker.lostLookGapMsForTest = 0
+        kite.slowMs["/orders"] = 5_000L
+        Broker.noteLost("f", order(), emptyList(), "Test: its entry")
+        assertEquals(Broker.LostLook.Searching, Broker.lookLost("f"))
+        val job = Broker.lostSearchForTest("f")!!
+        Broker.forgetLost("f")
+        assertTrue("forgotten: its search stopped", job.isCancelled)
+        assertNull(Broker.lookLost("f"))
+        Broker.noteLost("r", order(price = 130.0), emptyList(), "Test: its entry")
+        assertEquals(Broker.LostLook.Searching, Broker.lookLost("r"))
+        val job2 = Broker.lostSearchForTest("r")!!
+        Broker.forgetLostForTest()                                   // (as a reset does, without dropping the session)
+        assertTrue("a reset stops it too", job2.isCancelled)
+        kite.slowMs.clear()
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): a stop another trade took as its own ([Broker.claimStop]) is never found for a lost reply - not by a
+     * later search, nor by one that found it before the claim - and an order a lost reply may be is reported as such ([Broker.lostMayBe]).
+     */
+    @Test fun aClaimedStopIsNeverFoundForALostReply() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val stop = order(type = "SL", price = 79.0, trigger = 80.0, side = Kite.Side.SELL)
+        Broker.noteLost("c", stop, emptyList(), "Test: its stop", liveOnly = true)
+        val sid = kite.restingInKite(sym, "SELL", 75, 79.0, type = "SL", trigger = 80.0, tag = "iratest", product = "NRML")
+        val row = runBlocking { Broker.orders() }.single { it.id == sid }
+        assertTrue("a matching order may be the lost stop", Broker.lostMayBe(row))
+        assertFalse("never for its own key", Broker.lostMayBe(row, exceptKey = "c"))
+        Broker.claimStop(sid)
+        assertEquals("claimed: never found for it", Broker.LostLook.Searching, Broker.lookLost("c"))
+        // Found first, claimed before its caller asked: looked for again, never handed to two owners.
+        val stop2 = order(type = "SL", price = 89.0, trigger = 90.0, side = Kite.Side.SELL)
+        Broker.noteLost("c2", stop2, emptyList(), "Test: its stop", liveOnly = true)
+        val sid2 = kite.restingInKite(sym, "SELL", 75, 89.0, type = "SL", trigger = 90.0, tag = "iratest", product = "NRML")
+        Broker.lostSearchInlineForTest = false
+        assertEquals(Broker.LostLook.Searching, Broker.lookLost("c2"))
+        runBlocking { Broker.lostSearchForTest("c2")!!.join() }
+        val row2 = runBlocking { Broker.orders() }.single { it.id == sid2 }
+        assertTrue("found and not asked yet: it is that lost reply's", Broker.lostMayBe(row2))
+        Broker.claimStop(sid2)
+        assertEquals("claimed before its caller asked: looked for again", Broker.LostLook.Searching, Broker.lookLost("c2"))
+        runBlocking { Broker.lostSearchForTest("c2")?.join() }
+        assertEquals("and never found for it", Broker.LostLook.Searching, Broker.lookLost("c2"))
     }
 
     /** 20 Nov 2026 (deep review): a lost stop never adopts an order that has ended, and a key forgotten is never looked for again. */

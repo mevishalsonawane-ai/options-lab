@@ -767,6 +767,9 @@ object PineAuto {
             (Broker.lostPending(lostStopKey(item, h)) || lostStopKey(item, h) in stopNotRested)) {
             h = placeLiveStop(b, item, h, h.stopAt)
             b.held[id] = h
+        } else if (h != null && !h.unconfirmed && h.live && h.stop != null && isOpen() && mins < 15 * 60 + 15 && stopShort.containsKey(lostStopKey(item, h))) {
+            // (20 Nov 2026, delta review: a stop resting for only part of the holding is grown once room appears.)
+            h = topUpStop(b, item, h)
         }
         val a = item.auto
         val today = todayIst().toString()
@@ -875,7 +878,7 @@ object PineAuto {
     private val staleSaid = java.util.concurrent.ConcurrentHashMap<Long, Long>()
 
     /** TEST ONLY: forget which late candles were told (a new process starts without them). */
-    internal fun forgetStaleForTest() = staleSaid.clear()
+    internal fun forgetStaleForTest() { staleSaid.clear(); stopNotRested.clear(); stopShort.clear(); topUpAt.clear(); topUpGapMsForTest = null }
 
     /** The option a signal [target] backs ("CE" / "PE"), or null: none (flat, or short with no put). */
     private fun wantFor(item: PineScripts.Item, target: Int): String? = when {
@@ -1054,6 +1057,9 @@ object PineAuto {
     /** The trade manager told how [h] really ended ([price] null: no result read). */
     private fun managerClosed(id: Long, h: Held, price: Double?, why: String) {
         runCatching { TradeManagerHost.closed(managerId(id, h), price, why) }
+        // (20 Nov 2026, delta review: its lost stop and retries forgotten - a later holding of the same key never inherits them; its own
+        // exits are taken out at Zerodha as before.)
+        lostStopKeyOf(id, h).let { k -> Broker.forgetLost(k); stopNotRested -= k; stopShort.remove(k) }
     }
 
     /** A sell stop-limit's limit price: 5% (at least 2 points) under its trigger, so it fills in a fast fall (as the ORB arms'). */
@@ -1143,7 +1149,29 @@ object PineAuto {
         // here, and no second stop is sent beside it while it may rest ([Broker.lookLost], two minutes; then Boss is told).
         val lostKey = lostStopKey(item, h)
         when (val l = Broker.lookLost(lostKey)) {
-            is Broker.LostLook.Found -> { ownerTag("kite:${l.id}", "${label(item)} · stop"); return h.copy(stop = l.id, stopAt = l.trigger ?: trig) }
+            // (20 Nov 2026, delta review: never one another holding owns or that is being taken out - then rested as usual below; found for more than
+            // is held now, cut to it first, else taken out and rested again on a later check; for less, the rest asked again ([stopShort]).)
+            is Broker.LostLook.Found -> if (b.held.values.none { it.stop == l.id } && b.removing.none { l.id in it.ids.keys }) {
+                if (l.qty > h.qty) {
+                    val so = runCatching { Broker.orderRow(l.id) }.getOrNull()
+                    // (One that ended, or that cannot be read, is adopted as it is: [stopFilled] books a fill. One not cut is taken out, and
+                    // only once Zerodha shows it out does a stop rest again; not confirmed out, it stays this holding's - never ownerless.)
+                    if (so != null && so.working &&
+                            runCatching { Broker.modify(so, so.filled + h.qty, so.type, so.price.takeIf { it > 0 }, so.trigger.takeIf { it > 0 }) }.isFailure) {
+                        runCatching { Broker.cancel(l.id, so.variety) }
+                        val st = runCatching { Broker.orderState(l.id)?.status }.getOrNull()
+                        if (st == "CANCELLED" || st == "REJECTED") {
+                            stopNotRested += lostKey
+                            note(b, item.id, "$sym: its lost stop ${l.id} was found for ${l.qty}, more than the ${h.qty} held, and could not be cut: taken out; it rests again")
+                            return h
+                        }
+                    }
+                }
+                ownerTag("kite:${l.id}", "${label(item)} · stop")
+                if (l.qty < h.qty) stopShort[lostKey] = l.qty else stopShort.remove(lostKey)
+                stopNotRested -= lostKey
+                return h.copy(stop = l.id, stopAt = l.trigger ?: trig)
+            }
             Broker.LostLook.Searching -> return h
             else -> Unit
         }
@@ -1162,10 +1190,14 @@ object PineAuto {
             val claimed = b.held.values.mapNotNull { it.stop }.toSet() + removingIds
             // (An earlier holding's exits still being taken out are neither this holding's nor its cover: they are on their way out.)
             val sells = book.filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.id !in removingIds }
-            sells.filter { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed &&
+            // (20 Nov 2026, delta review: never one another holding's lost reply may be - it takes it when found; one taken is claimed, and one for
+            // less than is held leaves the rest asked again ([stopShort]).)
+            sells.filter { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed && !Broker.lostMayBe(it, lostKey) &&
                 com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) in 1..h.qty }
                 .minByOrNull { kotlin.math.abs(it.trigger - trig) }?.let { orphan ->
-                    Broker.forgetLost(lostKey); stopNotRested -= lostKey
+                    Broker.forgetLost(lostKey); stopNotRested -= lostKey; Broker.claimStop(orphan.id)
+                    val covers = com.optionslab.engine.risk.ExitQty.remaining(orphan.qty, orphan.filled, orphan.pending)
+                    if (covers < h.qty) stopShort[lostKey] = covers else stopShort.remove(lostKey)
                     runCatching { Diag.record("pine", "${label(item)}: a stop of the scripts' resting on $sym with no holding claiming it (${orphan.id}): taken as its stop") }
                     ownerTag("kite:${orphan.id}", "${label(item)} · stop")
                     return h.copy(stop = orphan.id, stopAt = orphan.trigger.takeIf { it > 0 } ?: trig)
@@ -1200,15 +1232,62 @@ object PineAuto {
             return h
         }
         stopNotRested -= lostKey
+        // (20 Nov 2026, delta review: rested for only a part - the rest grown on later checks once room appears ([topUpStop]).)
+        if (stopQty < h.qty) stopShort[lostKey] = stopQty else stopShort.remove(lostKey)
         ownerTag("kite:$oid", "${label(item)} · stop")
         return h.copy(stop = oid, stopAt = trig)
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): [h]'s stop resting for only a part of it ([stopShort]) grown, by a modify of that same order, to what
+     * Zerodha now leaves room for - what it holds (a fresh read; unreadable: nothing changed) less every other working sale on the
+     * contract - never past the holding. Covering it all, it is no longer asked; one that ended is [stopFilled]'s (a part filled leaves
+     * the rest with no stop, which is rested again: [bookStop]).
+     */
+    private suspend fun topUpStop(b: Book, item: PineScripts.Item, h: Held): Held {
+        val key = lostStopKey(item, h)
+        val sid = h.stop ?: return h
+        val sym = h.kite ?: return h
+        // (At most every [TOP_UP_GAP_MS]: the check comes on every tick.)
+        val now = System.currentTimeMillis()
+        if (now - (topUpAt[key] ?: 0L) < (topUpGapMsForTest ?: TOP_UP_GAP_MS)) return h
+        if (topUpAt.size > 200) topUpAt.clear()
+        topUpAt[key] = now
+        val book = runCatching { Broker.ordersRecon() }.getOrNull() ?: return h
+        val so = book.firstOrNull { it.id == sid } ?: return h
+        if (!so.working) return h
+        val covered = com.optionslab.engine.risk.ExitQty.remaining(so.qty, so.filled, so.pending)
+        if (covered >= h.qty) { stopShort.remove(key); return h }
+        val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return h
+        val removingIds = b.removing.flatMap { it.ids.keys }.toSet()
+        val others = book.filter { it.working && it.id != sid && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" &&
+            it.id !in removingIds }.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+        val heldZ = runCatching { Broker.positionsRecon().net }.getOrNull()
+            ?.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }?.sumOf { it.qty } ?: return h
+        val lot = spec.lotSize.coerceAtLeast(1)
+        val room = (minOf(h.qty, heldZ - others).coerceAtLeast(0) / lot) * lot
+        if (room <= covered) return h
+        val r = runCatching { Broker.modify(so, so.filled + room, so.type, so.price.takeIf { it > 0 }, so.trigger.takeIf { it > 0 }) }
+        if (r.isSuccess) {
+            note(b, item.id, "$sym: resting stop grown to $room of ${h.qty} at Zerodha")
+            if (room >= h.qty) stopShort.remove(key)
+        }
+        return h
     }
 
     /** 20 Nov 2026 (audit B5 deep review): holdings ([lostStopKey]) whose stop found no room to rest: tried again on each check. Memory. */
     private val stopNotRested: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
+    /** 20 Nov 2026 (delta review): holdings ([lostStopKey]) whose stop rests for only part of them: what it covers; grown on each check. Memory. */
+    private val stopShort = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val topUpAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val TOP_UP_GAP_MS = 5_000L
+    /** TEST SEAM: [TOP_UP_GAP_MS] shortened. */
+    @Volatile internal var topUpGapMsForTest: Long? = null
+
     /** 20 Nov 2026 (audit B5 deep review): the key [h]'s lost stop is looked for under (the script, the contract and the fill: what never changes for the holding). */
-    private fun lostStopKey(item: PineScripts.Item, h: Held) = "pinestop:${item.id}:${h.kite}:${h.entry}"
+    private fun lostStopKey(item: PineScripts.Item, h: Held) = lostStopKeyOf(item.id, h)
+    private fun lostStopKeyOf(id: Long, h: Held) = "pinestop:$id:${h.kite}:${h.entry}"
 
     /** The paper stop-loss placed to rest in the paper book right after a paper buy (an SL-M SELL); null when none could be. */
     private suspend fun placePaperStop(item: PineScripts.Item, c: Paper.Contract, lots: Int, entry: Double): Pair<String, Double>? {
@@ -1265,7 +1344,11 @@ object PineAuto {
         val sold = qty.coerceIn(0, h.qty)
         addPnl(b, id, (px - h.entry) * sold)
         if (h.live) h.kite?.let { bookClose(b, it, sold, outside = false) }
-        if (sold >= h.qty) { b.held.remove(id); managerClosed(id, h, px, why) } else b.held[id] = h.copy(qty = h.qty - sold, stop = null)
+        if (sold >= h.qty) { b.held.remove(id); managerClosed(id, h, px, why) } else {
+            b.held[id] = h.copy(qty = h.qty - sold, stop = null)
+            // (20 Nov 2026, delta review: a part sold by the stop - the lots left get a stop again on the next checks.)
+            if (h.live) stopNotRested += lostStopKeyOf(id, h)
+        }
         val sym = if (h.live) h.kite ?: h.symbol else h.symbol
         runCatching { Notifier.orderFilled(app, "SELL", sold, sym, px, if (h.live) "Live" else "Paper", label(item), orderId) }
         note(b, id, "Sold $sold $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} ($why, the resting stop" +

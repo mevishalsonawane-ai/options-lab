@@ -303,6 +303,36 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals("the working stop taken as its own", resting.id, held()!!.stop)
     }
 
+    /**
+     * 20 Nov 2026 (delta review): Boss's own sell order covers one of the two lots when the stop goes, so it rests for one; once his
+     * order is gone, the same stop is grown to both lots (one stop, never more resting than held). A part the stop sold leaves the lot
+     * left with a stop again.
+     */
+    @Test fun aStopRestingForPartOfTheHoldingIsGrownOnceRoomAppears() {
+        auto { it.copy(lots = 2) }
+        PineAuto.topUpGapMsForTest = 0
+        switchOn()
+        pass(51_900.0)
+        val boss = kite.restingInKite(ce, "SELL", 30, 400.0, type = "LIMIT", tag = "", product = "MIS")
+        pass(52_010.0)
+        assertEquals(60, held()!!.qty)
+        val sl = kite.orders.values.single { it.type == "SL" }
+        assertEquals("rests for what Boss's order leaves", 30, sl.qty)
+        kite.order(boss).status = "CANCELLED"
+        pass(52_020.0)
+        assertEquals("one stop, never two", 1, stops().size)
+        assertEquals("grown to the whole holding", 60, kite.order(sl.id).qty)
+        // The stop sells one lot: the lot left gets a stop again.
+        kite.order(sl.id).filled = 30
+        kite.order(sl.id).status = "COMPLETE"
+        kite.position(ce, 30, 300.0, product = "MIS")
+        pass(52_030.0)
+        pass(52_040.0)
+        assertEquals(30, held()!!.qty)
+        assertNotNull("the lot left has a stop again", held()!!.stop)
+        assertEquals(2, stops().size)
+    }
+
     @Test fun theDailyLossLimitSellsAndPausesTheScriptForTheDay() {
         auto { it.copy(maxDayLoss = 1_000.0, stopPts = 100.0) }     // a stop wider than the fall: the day's limit sells
         bought()

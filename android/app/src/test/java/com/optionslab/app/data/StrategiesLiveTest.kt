@@ -387,10 +387,6 @@ class StrategiesLiveTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost before a restart can no longer be looked for: it stays UNKNOWN
-     * (never refused, never sent again) and Boss is told once to check the order book.
-     */
-    /**
      * 20 Nov 2026 (deep review, confirmed): with Zerodha's order book unreadable past the two minutes, a lost entry is never given up and
      * read as rejected (it may have filled): it stays UNKNOWN, nothing is sent again, and Boss is told its state is unknown.
      */
@@ -411,6 +407,10 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "UNKNOWN" in it })
     }
 
+    /**
+     * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost before a restart can no longer be looked for: it stays UNKNOWN
+     * (never refused, never sent again) and Boss is told once to check the order book.
+     */
     @Test fun aLostEntryFromBeforeARestartStaysUnknownAndBossIsTold() {
         midSession()
         live()

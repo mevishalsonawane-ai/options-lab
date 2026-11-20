@@ -415,6 +415,52 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     /**
+     * 20 Nov 2026 (delta review, confirmed): R51 and R72 hold the same option; R51's stop reply is lost while it rests at Zerodha. R72's
+     * stop look never takes that stop as an orphan (it may be R51's lost one): it rests its own, and R51 takes its own when found - two
+     * owners never share one stop, and each lot has its stop.
+     */
+    @Test fun aSiblingNeverTakesALostStopAsItsOrphan() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(donchian, "p1"))
+        assertNull(view().open.single().stopOrderId)
+        val lost = kite.orders.values.single { it.type == "SL" }.id
+        kite.showInBook()                                            // it rests and shows - R51 has not looked yet
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "p2"))
+        val p2 = view().openReal.single { it.ref == "p2" }.stopOrderId
+        assertNotNull("R72 rests its own", p2)
+        assertTrue("never R51's lost stop", p2 != lost)
+        watch()
+        assertEquals("R51 takes its own lost stop", lost, view().openReal.single { it.ref == "p1" }.stopOrderId)
+        assertEquals(p2, view().openReal.single { it.ref == "p2" }.stopOrderId)
+        assertEquals("two stops for two lots", 2, kite.orders.values.count { it.type == "SL" && it.working })
+        assertEquals("never more resting than held", held(), kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty - it.filled })
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): a lost stop found for more than its trade now holds (a part was sold since it went) is shrunk to the
+     * trade on the next look - never left to sell what is not the trade's.
+     */
+    @Test fun aLostStopFoundForMoreThanTheTradeHoldsIsShrunk() {
+        ArmLive.testLotCap = 0
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(donchian, "big", qty = 60))
+        assertNull(view().open.single().stopOrderId)
+        val lost = kite.orders.values.single { it.type == "SL" }.id
+        assertEquals(60, kite.order(lost).qty)
+        legs["big"] = donchian to 30                                 // the paper trade sold half: the live one follows
+        watch()
+        assertEquals(30, view().openReal.single().qty)
+        kite.showInBook()
+        watch()
+        watch()
+        assertEquals(lost, view().openReal.single().stopOrderId)
+        assertEquals("shrunk to the trade", 30, kite.order(lost).qty - kite.order(lost).filled)
+        assertEquals("flat-safe: never more resting than held", held(), kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty - it.filled })
+    }
+
+    /**
      * 20 Nov 2026 (audit B5 deep review): a stop whose reply was lost and that never shows in the book is looked for for two minutes, a
      * second one never rested meanwhile; then Boss is told and the stop is rested as usual.
      */

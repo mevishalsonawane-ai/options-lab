@@ -936,7 +936,7 @@ object Broker {
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
         entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null
         killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
-        lostWrites.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false }
+        cancelLostSearches(); lostWrites.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -1812,6 +1812,8 @@ object Broker {
                 // 18 Oct: the order's own type too (a resting SL of the same size and tag is never taken for a market exit's lost reply).
                 it.optString("order_type") == o.orderType &&
                 it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false &&
+                // (20 Nov 2026, delta review: a stop a trade took as its own another way is never found for another's lost reply.)
+                !claimedIds.containsKey(it.optString("order_id")) &&
                 it.optString("order_id") !in before &&
                 // 20 Nov 2026 (audit B5, item 4): a LIMIT's or SL's price and a stop's trigger must be the ones sent, always (before, only
                 // after Kite's error): a resting order at another level is never taken for this one.
@@ -1934,8 +1936,46 @@ object Broker {
     /** The keys of the lost replies being looked for that start with [prefix]. Memory only. */
     fun lostKeys(prefix: String): List<String> = lostWrites.keys.filter { it.startsWith(prefix) }
 
-    /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed. Memory only. */
+    /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed (its search stopped). Memory only. */
     fun forgetLost(key: String) { lostWrites.remove(key)?.searching?.cancel() }
+
+    /**
+     * 20 Nov 2026 (delta review: two trades on one contract, one's stop reply lost, the other took that stop as an orphan, then the first's
+     * search found the same order - two owners, one lot with no stop): order [id] taken as a trade's stop another way (an orphan adopted).
+     * No lost reply's search finds it from now on, and one that found it already and was not asked yet looks again. Memory only (bounded).
+     */
+    fun claimStop(id: String) {
+        val now = System.currentTimeMillis()
+        if (claimedIds.size > 500) claimedIds.entries.removeIf { now - it.value > 86_400_000L }
+        claimedIds[id] = now
+        for (w in lostWrites.values) synchronized(w) { if (w.foundId == id) w.foundId = null }
+    }
+    private val claimedIds = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /**
+     * 20 Nov 2026 (delta review): whether order [r] may be a lost reply kept under a key other than [exceptKey] - found as it and not
+     * asked after yet, or still looked for with the same contract, side, quantity, order type, tag and trigger and placed no earlier than that search's
+     * window opens (a time that cannot be read: may be). Such an order is left to its own lost reply: never adopted as another's orphan.
+     */
+    fun lostMayBe(r: OrderRow, exceptKey: String? = null): Boolean {
+        val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val placed = runCatching { java.time.LocalDateTime.parse(r.placedAt, fmt) }.getOrNull()
+        return lostWrites.entries.any { (k, w) ->
+            if (k == exceptKey) return@any false
+            w.foundId?.let { return@any it == r.id }
+            val o = w.order
+            o.tradingSymbol == r.symbol && o.side.name == r.side && o.quantity == r.qty && o.orderType == r.type &&
+                o.tag.filter { c -> c.isLetterOrDigit() }.take(20) == r.tag &&
+                (!o.hasTrigger || o.triggerPrice?.let { kotlin.math.abs(it - r.trigger) <= o.tickSize / 2 + 1e-9 } != false) &&
+                (placed == null || !placed.isBefore(w.sentAt.minusMinutes(3)))
+        }
+    }
+
+    /** The background searches of every lost reply stopped (a reset). */
+    private fun cancelLostSearches() { for (w in lostWrites.values) w.searching?.cancel() }
+
+    /** TEST ONLY: the background search of the lost reply under [key] (the last one started), if any. */
+    internal fun lostSearchForTest(key: String): kotlinx.coroutines.Job? = lostWrites[key]?.searching
 
     /** The lost replies under keys starting with [prefix] whose order was for [qty]: forgotten (a stop of that size taken another way). */
     fun forgetLostOfQty(prefix: String, qty: Int) {
@@ -1943,13 +1983,14 @@ object Broker {
     }
 
     /** TEST ONLY: every lost reply forgotten, as after a restart. */
-    internal fun forgetLostForTest() = lostWrites.clear()
+    internal fun forgetLostForTest() { cancelLostSearches(); lostWrites.clear() }
 
     /** One search of the book for [w]: found, or a read that succeeded without it; a read that failed changes nothing. */
     private suspend fun searchLost(w: LostWrite) {
         val found = try { findRecent(w.order, w.known, liveOnly = w.liveOnly, sentAt = w.sentAt) } catch (e: kotlinx.coroutines.CancellationException) { throw e
         } catch (_: Exception) { w.readFailAtMs = System.currentTimeMillis(); return }
-        if (found != null) w.foundId = found else w.readOkAtMs = System.currentTimeMillis()
+        // (20 Nov 2026, delta review: an order claimed by another trade meanwhile ([claimStop]) is not this one: looked for again.)
+        if (found != null) synchronized(w) { if (!claimedIds.containsKey(found)) w.foundId = found } else w.readOkAtMs = System.currentTimeMillis()
     }
 
     /**
@@ -1960,13 +2001,20 @@ object Broker {
         val w = lostWrites[key] ?: return null
         val now = System.currentTimeMillis()
         w.askedMs = now
-        if (w.foundId == null && w.searching?.isActive != true && now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
-            w.lookedMs = now
-            if (lostSearchInlineForTest) kotlinx.coroutines.runBlocking { searchLost(w) }
-            else w.searching = lostScope.launch { searchLost(w) }
+        // (20 Nov 2026, delta review: one search at a time - two looks at the same moment start one; the test seam's runs outside the lock.)
+        var inline = false
+        synchronized(w) {
+            if (w.foundId == null && w.searching?.isActive != true && now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
+                w.lookedMs = now
+                if (lostSearchInlineForTest) inline = true else w.searching = lostScope.launch { searchLost(w) }
+            }
         }
+        if (inline) kotlinx.coroutines.runBlocking { searchLost(w) }
         w.foundId?.let { found ->
-            lostWrites.remove(key, w)
+            // (20 Nov 2026, delta review: only the look that takes it off acts on it - another look at the same moment still reads
+            // Searching, never "none kept" - and its search is stopped.)
+            if (!lostWrites.remove(key, w)) return LostLook.Searching
+            w.searching?.cancel()
             runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
             return LostLook.Found(found, w.order.quantity, w.order.triggerPrice).also { it.symbol = w.order.tradingSymbol }
         }
@@ -1986,7 +2034,8 @@ object Broker {
             }
             return LostLook.Searching
         }
-        lostWrites.remove(key, w)
+        if (!lostWrites.remove(key, w)) return LostLook.Searching
+        w.searching?.cancel()
         runCatching {
             val text = "${w.what} on ${w.order.tradingSymbol}: Zerodha's answer was lost and the order is not in its order book " +
                 "${(now - w.sinceMs) / 1000} s later. Check the order book in Kite; the app goes on as if it was not placed."
