@@ -740,18 +740,21 @@ object Broker {
     }
 
     /**
-     * 20 Nov 2026 (deep review of the audit fix): [skipped] - the contracts (trading symbols) whose net row Zerodha's reply gave malformed
-     * (no quantity, not readable) and that were left out, or [ANY] when a row had no symbol at all. Every exit works on the rows that
-     * were read; a check that would END something on a contract's absence (a protection, a strategy leg's stop) counts a skipped
-     * contract as not known ([unknown]).
+     * 20 Nov 2026 (deep review of the audit fix): [skipped] - the net rows Zerodha's reply gave malformed (no quantity, not readable)
+     * and that were left out, by "SYMBOL:PRODUCT" ("SYMBOL:*" when the row named no product), or [ANY] when a row had no symbol at all.
+     * Every exit works on the rows that were read: an exit treats a contract as not known only when its own symbol and product were
+     * left out ([unknownForExit], never on [ANY]). A check that would END something on a contract's absence (a protection, a strategy
+     * leg's stop, a Protect's recheck) counts any skipped row of the contract, or [ANY], as not known ([unknown]).
      */
     data class Positions(val net: List<Position>, val day: List<Position>, val skipped: Set<String> = emptySet(),
                          /** The left-out rows' own money figures (pnl, m2m, realised, unrealised), so the account's totals keep them. */
                          val skippedMoney: List<Double> = listOf(0.0, 0.0, 0.0, 0.0)) {
         /** Whether the read had a malformed row it left out. */
         val partial: Boolean get() = skipped.isNotEmpty()
-        /** Whether [symbol]'s net row may have been one left out (its absence then tells nothing). */
-        fun unknown(symbol: String): Boolean = ANY in skipped || symbol in skipped
+        /** For a check that would END something: whether any of [symbol]'s net rows may have been left out (or a row with no symbol). */
+        fun unknown(symbol: String): Boolean = ANY in skipped || skipped.any { it.startsWith("$symbol:") }
+        /** For an exit: whether [symbol]'s own [product] row was left out (a row with no symbol never blocks an exit). */
+        fun unknownForExit(symbol: String, product: String): Boolean = "$symbol:$product" in skipped || "$symbol:*" in skipped
         val pnl: Double get() = net.sumOf { it.pnl } + skippedMoney[0]
         val m2m: Double get() = net.sumOf { it.m2m } + skippedMoney[1]
         val realised: Double get() = net.sumOf { it.realised } + skippedMoney[2]
@@ -917,6 +920,13 @@ object Broker {
      * one that does not parse - is never a position at 0 and never fails the whole read (every exit keeps working on the rows read):
      * it is left out and named in [Positions.skipped] (its symbol, or [Positions.ANY] when it has none).
      */
+    /** 20 Nov 2026: when Boss was last told of a partial positions read ([netRows]), and how often at most. Memory only. */
+    @Volatile private var partialSaidAt = 0L
+    internal const val PARTIAL_SAY_MS = 10 * 60_000L
+
+    /** TEST ONLY: the partial-read notice may be said again at once. */
+    internal fun resetPartialSaidForTest() { partialSaidAt = 0L }
+
     private fun netRows(a: JSONArray): Triple<List<Position>, Set<String>, List<Double>> {
         val out = ArrayList<Position>()
         val skipped = HashSet<String>()
@@ -924,14 +934,27 @@ object Broker {
         for (i in 0 until a.length()) {
             val o = a.optJSONObject(i)
             val sym = o?.optString("tradingsymbol").orEmpty()
-            val bad = o == null || sym.isEmpty() || !o.has("quantity") || o.isNull("quantity") || o.opt("quantity") !is Number ||
-                runCatching { position(o) }.onSuccess { out += it }.isFailure
+            // (Review: a quantity given as a number in a string, which Kite's optInt read as ever, is a quantity.)
+            val q = o?.opt("quantity")
+            val qty = q is Number || (q is String && q.trim().toIntOrNull() != null)
+            val bad = o == null || sym.isEmpty() || !qty || runCatching { position(o) }.onSuccess { out += it }.isFailure
             if (!bad) continue
-            skipped += if (o == null || sym.isEmpty()) Positions.ANY else sym
+            skipped += if (o == null || sym.isEmpty()) Positions.ANY else "$sym:${o.optString("product").ifEmpty { "*" }}"
             // (Its money figures, when it gives them, still count in the account's totals: a loss is never hidden by a bad row.)
             if (o != null) listOf("pnl", "m2m", "realised", "unrealised").forEachIndexed { k, f -> money[k] += o.optDouble(f, 0.0).takeIf { it.isFinite() } ?: 0.0 }
         }
-        if (skipped.isNotEmpty()) runCatching { Diag.record("zerodha", "positions: ${skipped.size} malformed row(s) left out (${skipped.joinToString()}); read as not known") }
+        if (skipped.isNotEmpty()) {
+            runCatching { Diag.record("zerodha", "positions: ${skipped.size} malformed row(s) left out (${skipped.joinToString()}); read as not known") }
+            // Review: Boss told (at most every [PARTIAL_SAY_MS]) while the reads stay partial. Memory only; never blocks.
+            val now = System.currentTimeMillis()
+            if (now - partialSaidAt !in 0 until PARTIAL_SAY_MS) {
+                partialSaidAt = now
+                val what = skipped.joinToString { if (it == Positions.ANY) "a row with no name" else it.substringBefore(':') }
+                runCatching { com.optionslab.app.work.Alerts.post("Zerodha's positions reply had ${skipped.size} unreadable row(s) ($what). Exits " +
+                    "keep working on the rest; the stops on those contracts are kept as they are, not ended. Check your positions in Kite.",
+                    com.optionslab.app.work.Alerts.Kind.ERROR, "Positions", throttle = true) }
+            }
+        }
         return Triple(out, skipped, money.toList())
     }
 

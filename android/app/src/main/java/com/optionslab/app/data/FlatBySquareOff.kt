@@ -111,8 +111,9 @@ object FlatBySquareOff {
             val read = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }
             val working = read.filter { it.working }
             val positions = Broker.positionBook()
-            // 20 Nov 2026 (deep review): a row left out as malformed may be a position due now: what was read is closed as ever, and the
-            // pass counts as unread, so the segment is not marked done and the next pass looks again.
+            // 20 Nov 2026 (deep review): a row left out as malformed may be a position due now: every row that was read is closed as ever
+            // (only a contract whose own row was left out waits), and the pass counts as unread, so the segment is not marked done and the
+            // next pass looks again.
             if (positions.partial) unread = true
             val book = positions.net.filter { it.qty != 0 && FlatBy.intraday(it.product) }.sortedBy { if (it.qty < 0) 0 else 1 }
             for (p in book) {

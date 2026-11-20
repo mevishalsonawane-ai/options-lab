@@ -115,7 +115,8 @@ class SquareOffStopBackTest : RobolectricTest() {
 
     /** Deep review: a malformed row in Zerodha's positions reply never stops the square-off of what was read. */
     @Test fun aMalformedRowNeverStopsTheSquareOff() {
-        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", "NIFTY26SEP24600CE").put("exchange", "NFO").put("product", "NRML"))
+        // (Final review: a row with no symbol too - it never blocks an exit.)
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", "NIFTY26SEP24600CE").put("exchange", "NFO").put("product", "NRML"), org.json.JSONObject().put("exchange", "NFO").put("product", "NRML").put("quantity", 75))
         protect()
         pass()
         assertEquals(listOf("SELL"), kite.placed.filter { it.form["tag"] == "iraalgoexpiry" }.map { it.form["transaction_type"] })

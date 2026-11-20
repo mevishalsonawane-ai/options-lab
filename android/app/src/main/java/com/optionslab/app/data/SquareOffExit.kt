@@ -122,8 +122,9 @@ internal object SquareOffExit {
         try {
             // 19 Nov 2026: an exit placed on it a moment ago is still on its way ([GAP_MS]): nothing more now, the next run reads again.
             if (inGap(p.exchange, p.symbol, p.product)) return false
-            // 20 Nov 2026 (deep review): a read that left this contract's row out as malformed: nothing taken out or sent on it now.
-            if (positions.unknown(p.symbol)) return false
+            // 20 Nov 2026 (deep review): a read that left this contract's own row (its symbol and product) out as malformed: nothing taken
+            // out or sent on it now. (Final review: a row with no symbol at all never blocks an exit.)
+            if (positions.unknownForExit(p.symbol, p.product)) return false
             if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
             val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }

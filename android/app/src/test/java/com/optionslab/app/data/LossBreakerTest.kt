@@ -77,7 +77,7 @@ class LossBreakerTest : RobolectricTest() {
             Strategies.setLiveEnabled(id, true)
             Strategies.start(id, RunMode.LIVE, "manual", confirmedByOwner = true, compromised = false)
         }
-        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", "NIFTY26XYZ").put("exchange", "NFO").put("product", "NRML"))
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", "NIFTY26XYZ").put("exchange", "NFO").put("product", "NRML"), org.json.JSONObject().put("exchange", "NFO").put("product", "NRML").put("quantity", 75))
         losing(3_000.0)
         check()
         assertEquals("the run's leg is sold", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })

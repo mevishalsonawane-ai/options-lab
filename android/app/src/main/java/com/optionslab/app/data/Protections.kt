@@ -1314,8 +1314,9 @@ object Protections {
         // 20 Nov 2026 (deep review: the second read and the other exit's retries waited while holding [lock]): a look that wants another
         // read soon ([askFollowUp]) gets it as a follow-up look after the pause, made with the lock let go meanwhile - never a wait
         // under it. At most [FOLLOW_UPS]; a stream look never asks.
+        // (Final review: never after a fast look - FastPath's live lane is not held up; the next regular look confirms.)
         var rounds = 0
-        while (wait > 0L && rounds < FOLLOW_UPS) {
+        while (!fast && wait > 0L && rounds < FOLLOW_UPS) {
             kotlinx.coroutines.delay(wait)
             rounds++
             wait = look(fast = false, stream = false)
@@ -1440,6 +1441,9 @@ object Protections {
 
     /** 20 Nov 2026: the pause before the follow-up look's read (past [Broker.SHARE_MS], so it is a read of its own). */
     private const val FLAT_RECHECK_MS = 2_100L
+
+    /** 20 Nov 2026 (review): whether [p]'s first closed read is still fresh (its confirming look is due, not reads that keep failing). */
+    private fun freshFlat(p: Item): Boolean = flatSince[p.id]?.let { nowMs() - it in 0 until FLAT_AGREE_MS + FLAT_RECHECK_MS + 1_000L } == true
 
     /** When each protection (by id) was first read closed or turned round ([confirmedHeld]). Memory only. */
     private val flatSince = java.util.concurrent.ConcurrentHashMap<Long, Long>()
@@ -1730,8 +1734,7 @@ object Protections {
         // nothing and changes nothing: the regular look decides (a closed position ends quietly there).
         // (Nor a regular look whose read showed it closed for the first time: its follow-up read decides.)
         // (Review: only while that first read is fresh - a count left by reads that keep failing never hides a refused stop.)
-        val freshFlat = flatSince[p.id]?.let { nowMs() - it in 0 until FLAT_AGREE_MS + FLAT_RECHECK_MS + 1_000L } == true
-        if ((stream || freshFlat) && net == null && so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) return p
+        if ((stream || freshFlat(p)) && net == null && so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) return p
         if (so != null && so.status in setOf("REJECTED", "CANCELLED") && p.stopOrderId != null) {
             // 15 Nov (Boss's diagnostics: a manual position's stop cancelled at the exchange was not covered again that day): told
             // apart by Zerodha's own words. REJECTED, or CANCELLED with the exchange's reason, is the exchange's doing: ended as such
@@ -1774,7 +1777,7 @@ object Protections {
             // 20 Nov 2026 (audit): what is held not known (a bad read, or one read showing it closed that a second has not confirmed
             // yet): a carried one is never ended on it (it would lose the open's orders), nor one waiting for its second read.
             // (Review: nor in a stream look, which never counts a closed read: the regular look decides.)
-            if (net == null && (stream || p.id < today0 || p.note == WAITING || flatSince.containsKey(p.id))) return p
+            if (net == null && (stream || p.id < today0 || p.note == WAITING || freshFlat(p))) return p
             if (net != null && net != 0 && net.sign() == p.qty.sign() && (p.id < today0 || p.note == WAITING)) {
                 // Before the open: kept until then (Zerodha would refuse it now). 20 Oct, enhancement round 1: its stop rests as a
                 // GTT meanwhile, when it was not placed at the close (the app was not running then).

@@ -844,8 +844,8 @@ object Strategies {
      * asks for your PIN or fingerprint first) - [confirmedByOwner] records that.
      */
     suspend fun start(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String {
-        flatFollowUp = false
-        return startLocked(id, mode, trigger, confirmedByOwner, compromised).also { followUp(compromised) }
+        val seen = flatSeen.get()
+        return startLocked(id, mode, trigger, confirmedByOwner, compromised).also { followUp(compromised, seen) }
     }
 
     private suspend fun startLocked(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String = lock.withLock {
@@ -1217,8 +1217,8 @@ object Strategies {
     suspend fun skip(id: Long) = lock.withLock { val b = book(); b.pending.remove(id); save(b) }
 
     suspend fun tickAll(compromised: Boolean): List<String> {
-        flatFollowUp = false
-        return tickAllOnce(compromised).also { followUp(compromised) }
+        val seen = flatSeen.get()
+        return tickAllOnce(compromised).also { followUp(compromised, seen) }
     }
 
     private suspend fun tickAllOnce(compromised: Boolean): List<String> = lock.withLock {
@@ -1501,7 +1501,7 @@ object Strategies {
             // agrees (none between showing it held) does ([legFlatConfirmed]). Review: the first such read asks a follow-up look
             // [FLAT_RECHECK_MS] later ([manageOnly], the lock let go meanwhile), so a stop never rests on a leg closed by hand until the
             // next 15-second look.
-            if (held > 0) legFlatSince.remove(k) else if (!legFlatConfirmed(k)) { flatFollowUp = true; continue }
+            if (held > 0) legFlatSince.remove(k) else if (!legFlatConfirmed(k)) { flatSeen.incrementAndGet(); continue }
             // Held no more at Zerodha (closed by hand): its stop must not rest on a flat position.
             if (held <= 0) {
                 if (cur != null && b.legStops.containsKey(k) && legStopOut(cur) != null) b.legStops.remove(k)
@@ -1608,9 +1608,9 @@ object Strategies {
      */
     suspend fun manageOnly(compromised: Boolean) {
         if (!runningHint) return
-        flatFollowUp = false
+        val seen = flatSeen.get()
         manageLocked(compromised)
-        followUp(compromised)
+        followUp(compromised, seen)
     }
 
     /**
@@ -1618,15 +1618,15 @@ object Strategies {
      * ([manageOnly], [tickAll], a start's own look) gets its second, separate read in one follow-up look of the open runs
      * [FLAT_RECHECK_MS] later, the lock let go meanwhile - never a wait under it.
      */
-    private suspend fun followUp(compromised: Boolean) {
-        if (!flatFollowUp) return
-        flatFollowUp = false
+    private suspend fun followUp(compromised: Boolean, seen: Int) {
+        // (Final review: each caller compares the count it saw before its own look - never a flag another caller could clear.)
+        if (flatSeen.get() == seen) return
         kotlinx.coroutines.delay(FLAT_RECHECK_MS)
         manageLocked(compromised)
     }
 
-    /** 20 Nov 2026: set by [restLegStops] when a leg was first read no longer held ([manageOnly] makes a follow-up look). */
-    @Volatile private var flatFollowUp = false
+    /** 20 Nov 2026: counted by [restLegStops] each time a leg is first read no longer held (each caller then makes a follow-up look). */
+    private val flatSeen = java.util.concurrent.atomic.AtomicInteger()
 
     private suspend fun manageLocked(compromised: Boolean) {
         lock.withLock {

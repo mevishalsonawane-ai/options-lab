@@ -92,13 +92,33 @@ class ProtectionsAuditTest : RobolectricTest() {
         val book = runBlocking { Broker.positionBook() }
         assertEquals(75, book.net.single { it.symbol == sym }.qty)
         assertTrue(book.partial); assertTrue(book.unknown(sym2)); assertFalse(book.unknown(sym))
-        // A row with no symbol at all: every contract's absence is then not known.
+        // An exit: only the contract's own symbol and product row left out blocks it (final review).
+        assertTrue(book.unknownForExit(sym2, "NRML")); assertFalse(book.unknownForExit(sym2, "MIS")); assertFalse(book.unknownForExit(sym, "NRML"))
+        // A row with no symbol at all: every contract's absence is then not known for an ending check, but never for an exit.
         kite.extraNetRows = listOf(JSONObject().put("quantity", 0), "not a row")
         val any = runBlocking { Broker.positionBook() }
         assertEquals(75, any.net.single { it.symbol == sym }.qty)
         assertTrue(any.unknown(sym)); assertTrue(any.unknown("ANYTHING"))
+        assertFalse(any.unknownForExit(sym, "NRML"))
+        // A quantity given as a number in a string is read, as Kite's optInt always did.
+        kite.extraNetRows = listOf(JSONObject().put("tradingsymbol", sym2).put("exchange", "NFO").put("product", "NRML").put("quantity", "75"))
+        val str = runBlocking { Broker.positionBook() }
+        assertFalse(str.partial); assertEquals(75, str.net.single { it.symbol == sym2 }.qty)
         kite.extraNetRows = emptyList()
         assertFalse(runBlocking { Broker.positionBook() }.partial)
+    }
+
+    /** Final review: Boss is told (throttled) while a positions read stays partial. */
+    @Test fun aPartialPositionsReadIsSaidToBoss() {
+        Broker.resetPartialSaidForTest()
+        fun said() = Alerts.posted.count { it.kind == Alerts.Kind.ERROR && it.text.contains("unreadable row") }
+        kite.extraNetRows = listOf(JSONObject().put("tradingsymbol", sym2).put("exchange", "NFO").put("product", "NRML"))
+        runBlocking { Broker.positionBook() }
+        assertEquals(1, said())
+        assertTrue(Alerts.posted.last { it.text.contains("unreadable row") }.text.contains(sym2))
+        runBlocking { Broker.positionBook() }
+        assertEquals("throttled", 1, said())
+        Broker.resetPartialSaidForTest()
     }
 
     /** Deep review: a protected contract whose row a read left out as malformed is never ended, whatever the reads say after. */
