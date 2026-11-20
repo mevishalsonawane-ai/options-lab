@@ -521,7 +521,7 @@ class OrbArmsLiveTest : RobolectricTest() {
         // The regular pass would put a missing stop back at Zerodha: while the lost one is looked for, nothing is sent.
         pass()
         assertEquals("no second stop while its lost reply is looked for", 1, stops())
-        assertTrue(Broker.lostPending("orbstop:${arm().arm.label}:$sym:${p.entry}"))
+        assertTrue(Broker.lostPending("orbstop:${arm().arm.label}:$sym:${p.entry}:${p.qty}"))
         pass()
         assertEquals("still none: a search counts no try and places nothing", 1, stops())
         // Once the book shows it, the next regular pass takes it as the trade's stop (never a second one).
@@ -529,6 +529,33 @@ class OrbArmsLiveTest : RobolectricTest() {
         pass()
         assertEquals(1, stops())
         assertEquals(kite.orders.values.single { it.type == "SL" }.id, arm().open!!.stopOrderId)
+    }
+
+    /**
+     * 20 Nov 2026 (Liquidity review): the two parts of a split trade each look for their OWN lost stop - the part whose stop's answer was
+     * lost waits for it (no second stop), the other part rests its own; once the book shows the lost one, only its part takes it.
+     */
+    @Test fun eachPartOfASplitTradeLooksForItsOwnLostStop() = withUpstox {
+        state(positions = listOf(position("orb", 60, 200.0, "E1"), position("orb", 30, 200.0, "E1")))
+        kite.position(sym, 90, 200.0, product = "MIS")
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        // Part A's (60) stop: its answer was lost; it rests at Zerodha but the book does not show it yet.
+        val lostId = kite.restingInKite(sym, "SELL", 60, 152.0, type = "SL", trigger = 160.0, tag = "iraorb", product = "MIS")
+        kite.hideFromBook(lostId, 50)
+        Broker.noteLost("orbstop:${arm().arm.label}:$sym:200.0:60",
+            Kite.Order(sym, Kite.Side.SELL, 60, 30, "MIS", "SL", 152.0, 0.05, "NFO", "iraorb", triggerPrice = 160.0), emptyList(), "test", liveOnly = true)
+        kite.requests.clear()
+        pass()
+        fun parts() = arm().today.filter { it.open }.associateBy { it.qty }
+        assertNull("part A waits for its lost stop", parts().getValue(60).stopOrderId)
+        val bStop = parts().getValue(30).stopOrderId
+        assertNotNull("part B rests its own", bStop)
+        assertEquals("one stop sent: B's", 1, kite.placed.count { it.form["order_type"] == "SL" })
+        kite.showInBook()
+        pass()
+        assertEquals("A takes its lost stop", lostId, parts().getValue(60).stopOrderId)
+        assertEquals("B keeps its own", bStop, parts().getValue(30).stopOrderId)
+        assertEquals(1, kite.placed.count { it.form["order_type"] == "SL" })
     }
 
     @Test fun aLostReplyNotFoundYetIsKeptUnconfirmedNotDropped() {
