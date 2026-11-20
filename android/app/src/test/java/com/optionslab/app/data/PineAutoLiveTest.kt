@@ -145,6 +145,21 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals("fresh candles with the same signal do trade", 1, side("BUY").size)
     }
 
+    /**
+     * 20 Nov 2026 (audit: "Pine accepts a candle about 17 minutes old"): a 5-minute feed one candle behind - its newest closed 7
+     * minutes ago, 12 minutes after it started, which the old rule (3 candles plus 2 minutes) took - is not traded on.
+     */
+    @Test fun aFiveMinuteFeedOneCandleBehindIsNotTradedOn() {
+        switchOn()
+        pass(51_900.0)                                             // 11:07
+        candles = { AutomationSupport.bars(now.minusMinutes(5), List(9) { 51_900.0 } + 52_010.0) }
+        pass(52_010.0)                                             // 11:12: the newest candle 11:00-11:05
+        assertTrue("nothing traded on a candle a step behind", kite.placed.isEmpty())
+        candles = null
+        pass(52_010.0, minutes = 1)                                // 11:13: the 11:05-11:10 candle, 3 minutes after its close
+        assertEquals("a candle within its own timeframe does trade", 1, side("BUY").size)
+    }
+
     @Test fun aChangeMissedWhileTheAppWasAwayIsCaughtUp() {
         switchOn()
         pass(51_900.0)

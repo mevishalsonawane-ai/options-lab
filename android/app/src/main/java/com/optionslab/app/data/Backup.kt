@@ -194,6 +194,10 @@ object Backup {
      * pinned certificates on this phone are kept as they are. The app must restart after.
      */
     fun restore(ctx: Context, c: Contents): Restored {
+        // 20 Nov 2026 (audit, B5 item 2): never while a live position is open - the restore replaces the books that record it (the
+        // ORB and Liquidity book, the strategies' runs, the paper trades a live copy follows, the Zerodha trade record). Refused
+        // before anything is written (not even the disarm flag): this phone's data stays exactly as it is.
+        liveHeld().takeIf { it.isNotEmpty() }?.let { throw LiveHeld(it) }
         // FIRST, before any file is touched: every restored strategy, ORB arm and Pine script starts
         // disarmed, paper only, on the next start (IraAlgoApp). Should the restore stop half-way,
         // the flag is already there.
@@ -222,6 +226,14 @@ object Backup {
         val values = HashMap<String, Any?>()
         prefs.keys().forEach { k -> if (carried(k)) values[k] = prefs.get(k) }
         values[DISARM] = true
+        // 20 Nov 2026 (audit, B5 item 3): the account stop rule's days - this phone's and the backup's together, never milder than this
+        // phone's own ([com.optionslab.ira.AccountStop.restored]): an older backup no longer lowers its drawdown or month figure.
+        if (values.containsKey(ACCOUNT_STOP_DAYS)) {
+            val here = com.optionslab.ira.AccountStop.decode(runCatching { SecurePrefs.getString(ACCOUNT_STOP_DAYS) }.getOrNull())
+            val theirs = com.optionslab.ira.AccountStop.decode(values[ACCOUNT_STOP_DAYS] as? String)
+            val kept = com.optionslab.ira.AccountStop.restored(here, theirs, runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() })
+            values[ACCOUNT_STOP_DAYS] = if (kept.isEmpty()) null else com.optionslab.ira.AccountStop.encode(kept)
+        }
         // 19 Nov (review): Boss's one-time automatic-stops choice is never run by a restore's books (it would switch his stops off with
         // no PIN): marked done, whatever the backup held. His switches stay as this phone has them.
         // 20 Nov 2026 (minor fixes, item 3): on a phone where it had not run yet, the card says it was not applied because of the restore.
@@ -244,6 +256,38 @@ object Backup {
             throw e
         }
         return Restored(changePin = c.pinSealed)
+    }
+
+    /** The account stop rule's recorded days ([AccountStopHost]): carried, and merged on a restore so its figures never drop. */
+    internal const val ACCOUNT_STOP_DAYS = "accountStop.days"
+
+    /**
+     * 20 Nov 2026 (audit, B5 item 2): a restore refused because live positions are open ([books]: what holds them, in Boss's words).
+     * Nothing was written.
+     */
+    class LiveHeld(val books: List<String>) : IllegalStateException(liveHeldWords(books))
+
+    /** What Boss is told when [LiveHeld] refuses a restore. */
+    internal fun liveHeldWords(books: List<String>): String =
+        "Not restored: ${books.joinToString(", ")} ${if (books.size == 1) "is" else "are"} open now, and a restore replaces the books " +
+            "that record them. Nothing on this phone was changed. Restore once they are closed (after the market's close is safest)."
+
+    /** TEST SEAM (JVM tests only): what [liveHeld] answers. Null in the app, always: its setter throws in a release build. */
+    @Volatile internal var testLiveHeld: (() -> List<String>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the live-held seam exists only in debug builds" }; field = v }
+
+    /**
+     * 20 Nov 2026 (audit, B5 item 2): the live books holding an open position now, in Boss's words (empty: none). Memory only (each
+     * book's own hint, as the watch reads them: never a vault read or the network). A book that cannot tell counts as holding.
+     */
+    fun liveHeld(): List<String> = testLiveHeld?.invoke() ?: buildList {
+        fun held(name: String, f: () -> Boolean) { if (runCatching(f).getOrDefault(true)) add(name) }
+        held("the arms' live trades (R51, R72 and the others)") { ArmLive.holdingHint || ArmLive.recoverHint }
+        held("Liquidity 15+5 and the ORB arms' live positions") { OrbArms.liveHint }
+        held("Pine's live positions") { PineAuto.held.value.values.any { it.live } }
+        held("a running saved strategy") { Strategies.runningHint }
+        held("your live protections") { Protections.activeHint == true }
+        held("positions at Zerodha") { Reconciler.heldHint() }
     }
 
     /**

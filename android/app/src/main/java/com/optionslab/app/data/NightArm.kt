@@ -227,7 +227,10 @@ object NightArm {
     /** Whether the arm holds [symbol] overnight now (read without the lock; the expiry square-off leaves it to its 09:16 sale). */
     fun holds(symbol: String): Boolean = _view.value.open.any { it.symbol == symbol }
 
-    /** Switch it on or off (paper only, always). Off never sells what it holds: that still goes at 09:16. */
+    /**
+     * Switch it on or off. Off never sells what it holds: that still goes at 09:16. (20 Nov 2026, audit: this switch is the paper arm's;
+     * its live copy goes only through [ArmLive]'s live gates, as the note at the top of this file says - not "paper only, always".)
+     */
     suspend fun setArmed(on: Boolean): String {
         if (!ready()) return "Night (R3) is not ready yet."
         // 15 Oct (Boss's cleanup): hidden, it is switched on only by its restore from the Hidden arms list.
@@ -367,12 +370,41 @@ object NightArm {
             // 15:20's decisions still run in full and each would-be entry goes to the switched-off shadow ([OffShadow]); nothing is
             // bought. Never in IraGoldAlgo (there a hidden arm only keeps its OI history, as before).
             val shadow = !b.armed && !com.optionslab.app.BuildConfig.GOLD
+            // 20 Nov 2026 (audit, B5 item 5): a cancelled look (the supervisor's time limit) is not a verdict: the day stays open and
+            // what changed is still saved before the cancellation goes up.
+            var cancelled: kotlinx.coroutines.CancellationException? = null
             if ((b.armed || shadow || hidden) && NightRules.entryWindow(now.toLocalTime())) {
                 for (u in NightRules.UNDERLYINGS) {
                     val key = "${now.toLocalDate()}|$u"
                     if (key in b.decided) continue
+                    // A decision that failed on a read waits out its back-off ([retryWaitMs]), then is tried again.
+                    val nowMs = ms(now)
+                    if ((retries[key]?.second ?: 0L) > nowMs) continue
                     b.decided += key
-                    val why = runCatching { decide(b, u, now) }.getOrElse { "error: ${it.javaClass.simpleName}" }
+                    val histBefore = b.history[u]?.size
+                    val why = try {
+                        decide(b, u, now)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        b.decided -= key; rollBackHistory(b, u, histBefore); cancelled = e; break
+                    } catch (e: Throwable) {
+                        // 20 Nov 2026 (audit: "Night loses the day on one failed read"): a failure before any entry is not the day's
+                        // verdict - tried again with back-off inside the entry window. Never after a buy (a trade taken today for [u]
+                        // ends the day as before), so a retry can never buy twice; a build-up recorded by the failed try is taken back.
+                        val bought = b.positions.any { it.index == u && it.entryDay == now.toLocalDate() }
+                        if (!bought) {
+                            b.decided -= key
+                            rollBackHistory(b, u, histBefore)
+                            val fails = (retries[key]?.first ?: 0) + 1
+                            retries[key] = fails to nowMs + retryWaitMs(fails)
+                            val w = "night_retrying: ${e.javaClass.simpleName} (try $fails; again in ${retryWaitMs(fails) / 1000} s, until ${NightRules.ENTRY_UNTIL})"
+                            b.status[u] = w
+                            note(b, "$u ${now.toLocalTime().withNano(0)}: $w")
+                            changed = true
+                            continue
+                        }
+                        "error: ${e.javaClass.simpleName}"
+                    }
+                    retries.remove(key)
                     // The 15:19 minute not in yet (a look at the close itself, before the feed or the stream has it): looked at
                     // again on the next check, not decided on the minute before.
                     if (why == WAITING) { b.decided -= key; continue }
@@ -382,8 +414,25 @@ object NightArm {
                 }
             }
             if (changed) save(b)
+            cancelled?.let { throw it }
         }
     }
+
+    /** 20 Nov 2026 (audit, B5 item 5): a failed decision's tries ("day|index" -> fails so far, next try at, market-clock ms); memory only. */
+    private val retries = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Long>>()
+
+    /** The wait before the next try after [fails] failed ones: 10 s, doubling, at most 40 s (the entry window is 15:20-15:23). */
+    internal fun retryWaitMs(fails: Int): Long = (10_000L shl (fails - 1).coerceIn(0, 2)).coerceAtMost(40_000L)
+
+    /** [u]'s OI history cut back to [size] (what it held before a failed decision); none before (null): dropped, seeded again on use. */
+    private fun rollBackHistory(b: Book, u: String, size: Int?) {
+        if (size == null) { b.history.remove(u); return }
+        val h = b.history[u] ?: return
+        while (h.size > size) h.removeAt(h.size - 1)
+    }
+
+    /** TEST ONLY: forget the failed decisions' back-off (a new process starts without it). */
+    internal fun forgetRetriesForTest() = retries.clear()
 
     /** The 09:16 sale of every open position bought on an earlier session. True when [b] changed. */
     private suspend fun exits(b: Book, now: LocalDateTime): Boolean {
@@ -396,7 +445,10 @@ object NightArm {
             // Gone from the paper book without this arm selling it (Boss's close, an exit-all): booked as closed elsewhere at
             // that sale, never sold again - a SELL on a flat book opens a naked short nothing manages (18 Oct, review).
             val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
-            val gone = closedElsewhere(p, held, Paper.state.trades, now)
+            // 20 Nov 2026 (audit, B5 item 4): its own NRML sale no other trade booked, else its expiry settlement or last price.
+            // (Asked only once flat: the sale it books is kept for this trade.)
+            val gone = closedElsewhere(p, held, if (held > 0) null else
+                Paper.soldElsewhere("Night|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "NRML", qty = p.qty), now)
             if (gone != null) {
                 b.positions[i] = gone
                 // 19 Nov 2026 (audit batch 2: a paper trade closed elsewhere no longer sells its live copy): at its own 09:16 exit the rule's
@@ -443,11 +495,15 @@ object NightArm {
      * [p] booked as closed elsewhere when the paper book holds none of it ([held] <= 0): at the last SELL of its symbol since its
      * entry in [trades] (its entry price and [now] when none is found), that sale's charges added. Null while it is still held.
      */
-    internal fun closedElsewhere(p: Pos, held: Int, trades: List<com.optionslab.engine.sandbox.Trade>, now: LocalDateTime): Pos? {
+    internal fun closedElsewhere(p: Pos, held: Int, trades: List<com.optionslab.engine.sandbox.Trade>, now: LocalDateTime): Pos? =
+        closedElsewhere(p, held, trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            ?.let { Paper.SoldElsewhere(it.price, it.timestamp, it.charges, com.optionslab.ira.PaperElsewhere.How.SALE) }, now)
+
+    /** [closedElsewhere] at [sold] ([Paper.soldElsewhere]; null: none known - its entry price and [now], as before). */
+    internal fun closedElsewhere(p: Pos, held: Int, sold: Paper.SoldElsewhere?, now: LocalDateTime): Pos? {
         if (held > 0) return null
-        val t = trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
-        return p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
-            charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
+        return p.copy(exit = sold?.price?.toDouble() ?: p.entry, exitTime = sold?.timestamp ?: now, why = "closed_elsewhere",
+            charges = p.charges + (sold?.charges?.toDouble() ?: 0.0))
     }
 
     /** The quantity the 09:16 sale sells: the arm's [qty], never more than the paper book still [held] (18 Oct, review). */

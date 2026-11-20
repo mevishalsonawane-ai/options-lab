@@ -723,7 +723,8 @@ object McxPaperArms {
             if (held * p.side <= 0) {
                 p.stopOrderId?.let { runCatching { Paper.cancel(it, "position_closed") } }
                 val closing = if (p.side > 0) "SELL" else "BUY"
-                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == closing && !it.timestamp.isBefore(p.entryTime) }
+                // 20 Nov 2026 (audit, B5 item 4): its own product's sale no other trade booked, else its expiry settlement or last price ([Paper.soldElsewhere]).
+                val t = Paper.soldElsewhere("Mcx|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "NRML", closing, qty = p.qty)
                 val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
                     stopOrderId = null, charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
                 b.positions[i] = done; closed(b, done); changed = true; continue
@@ -800,7 +801,8 @@ object McxPaperArms {
                 runCatching { ArmLive.ruleExit(mirrorRef(p), why) }
                 // Already flat in the paper book: closed by the expiry exit, the sweeper or Boss - booked at that sale's price.
                 val closing = if (p.side > 0) "SELL" else "BUY"
-                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == closing && !it.timestamp.isBefore(p.entryTime) }
+                // 20 Nov 2026 (audit, B5 item 4): its own product's sale no other trade booked, else its expiry settlement or last price ([Paper.soldElsewhere]).
+                val t = Paper.soldElsewhere("Mcx|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "NRML", closing, qty = p.qty)
                 val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: McxMarket.now().withNano(0), why = "closed_elsewhere",
                     stopOrderId = null, charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
                 closed(b, done); return done

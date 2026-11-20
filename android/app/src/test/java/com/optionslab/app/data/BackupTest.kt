@@ -8,6 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -263,5 +264,55 @@ class BackupTest : RobolectricTest() {
             JSONObject().put("f/orb.vault", b64("{}"))), pass.copyOf())
         try { Backup.restore(context, c); fail() } catch (_: IllegalStateException) {}
         assertFalse(orbFile().exists())
+    }
+
+    /** 20 Nov 2026 (audit, B5 item 2): with a live position open a restore is refused, and nothing on the phone is touched. */
+    @Test fun aRestoreIsRefusedWhileALivePositionIsOpenAndNothingIsWritten() = runBlocking {
+        seedPhone()
+        val bytes = Backup.create(context, pass.copyOf())
+        // The phone moved on after the backup: its ORB book now differs from the backup's.
+        Vault.writeFile(orbFile(), JSONObject().put("armed", JSONObject().put("arm2", true)).put("liqLots", 2).toString().toByteArray())
+        val orbBefore = String(Vault.readFile(orbFile())!!)
+        try {
+            Backup.testLiveHeld = { listOf("Liquidity 15+5 and the ORB arms' live positions") }
+            val e = try { Backup.restore(context, Backup.open(bytes, pass.copyOf())); null } catch (x: Backup.LiveHeld) { x }
+            assertNotNull("refused", e)
+            assertTrue(e!!.message!!, e.message!!.startsWith("Not restored: Liquidity 15+5 and the ORB arms' live positions is open now"))
+            assertTrue(e.message!!.contains("Nothing on this phone was changed"))
+            assertEquals("the phone's book untouched", orbBefore, String(Vault.readFile(orbFile())!!))
+            assertFalse("not even the disarm flag", SecurePrefs.getBoolean(Backup.DISARM, false))
+            // Closed: the same restore goes through.
+            Backup.testLiveHeld = { emptyList() }
+            Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+            assertTrue(SecurePrefs.getBoolean(Backup.DISARM, false))
+        } finally { Backup.testLiveHeld = null }
+    }
+
+    @Test fun theRefusalNamesEveryBookHoldingALivePosition() {
+        assertEquals("Not restored: A, B are open now, and a restore replaces the books that record them. Nothing on this phone was " +
+            "changed. Restore once they are closed (after the market's close is safest).", Backup.liveHeldWords(listOf("A", "B")))
+        // A fresh phone holds nothing live: nothing refuses.
+        assertEquals(emptyList<String>(), Backup.liveHeld())
+    }
+
+    /** 20 Nov 2026 (audit, B5 item 3): a restore never lowers the account stop's drawdown or month figure. */
+    @Test fun aRestoreKeepsTheAccountStopsWorseFigure() = runBlocking {
+        val today = Market.today()
+        val early = today.minusDays(3)
+        // The backup was made when only one losing day was recorded.
+        SecurePrefs.putAll(mapOf(Backup.ACCOUNT_STOP_DAYS to com.optionslab.ira.AccountStop.encode(
+            listOf(com.optionslab.ira.AccountStop.Day(early, -2_000.0)))))
+        val bytes = Backup.create(context, pass.copyOf())
+        // Since then this phone recorded a bigger loss.
+        val phone = listOf(com.optionslab.ira.AccountStop.Day(early, -2_000.0), com.optionslab.ira.AccountStop.Day(today.minusDays(1), -9_000.0))
+        SecurePrefs.putAll(mapOf(Backup.ACCOUNT_STOP_DAYS to com.optionslab.ira.AccountStop.encode(phone)))
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertEquals("the phone's days kept: the drawdown is not lowered", phone,
+            com.optionslab.ira.AccountStop.decode(SecurePrefs.getString(Backup.ACCOUNT_STOP_DAYS)))
+        // A new phone with no days takes the backup's.
+        SecurePrefs.putAll(mapOf(Backup.ACCOUNT_STOP_DAYS to null))
+        Backup.restore(context, Backup.open(bytes, pass.copyOf()))
+        assertEquals(listOf(com.optionslab.ira.AccountStop.Day(early, -2_000.0)),
+            com.optionslab.ira.AccountStop.decode(SecurePrefs.getString(Backup.ACCOUNT_STOP_DAYS)))
     }
 }

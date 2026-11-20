@@ -1189,6 +1189,23 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(setOf("paper_part", "stop"), view().closed.map { it.why }.toSet())
     }
 
+    /**
+     * 20 Nov 2026 (audit, B5 item 7): a 1-lot live copy of a 4-lot paper trade is still sold whole at the paper's first part-exit (the
+     * lower-risk choice; holding more live starts only in shadow), and the shadow line says what keeping the nearest share would hold.
+     */
+    @Test fun aOneLotLiveCopyIsStillSoldWholeAtAPaperPartExitAndTheShadowSaysWhatItWouldKeep() {
+        val ref = "p1lot"
+        ArmLive.entered(ask(donchian, ref, qty = 120))              // 4 lots on paper; live is 1 lot by default
+        watch()
+        assertEquals(30, view().open.single().qty)
+        legs[ref] = donchian to 90                                  // the ladder's first step sold 1 of 4 on paper
+        watch()
+        assertTrue("sold whole, as before", view().open.isEmpty())
+        assertEquals("paper_part", view().closed.single().why)
+        Diag.flush()
+        assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("shadow (B5 item 7)") && it.contains("would have kept 30") })
+    }
+
     @Test fun aWholeExitWhoseStopPartFilledSellsTheRestInTheSameLook() {
         ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(donchian, "pf", qty = 60))

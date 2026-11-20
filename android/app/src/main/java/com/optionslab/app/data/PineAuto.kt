@@ -789,8 +789,12 @@ object PineAuto {
         val bars = fetched.filter { it.epochSecond + step <= now }                    // completed candles only
         val last = bars.lastOrNull() ?: return
         // A feed that failed today can hand back yesterday's candles: never trade on those, or on a stalled feed.
+        // 20 Nov 2026 (audit, B5 item 6): stalled is judged on the chart's own candle - the newest completed one closed at most one
+        // candle plus the feed's lag ago ([com.optionslab.ira.CandleFresh.pineFresh]); before, 3 candles plus 2 minutes passed
+        // (about 17 minutes on 5m), and the strike was chosen from that old close. Its stop, target, lock and 15:15 are not held
+        // by this (they ran above).
         if (step < 86_400 && (java.time.Instant.ofEpochSecond(last.epochSecond).atZone(com.optionslab.engine.IST).toLocalDate() != todayIst() ||
-                now - last.epochSecond > step * 3 + 120)) return
+                !com.optionslab.ira.CandleFresh.pineFresh(last.epochSecond, step, now))) return
         if (b.lastBar[id] == last.epochSecond) { owedExit(b, id, item, h); return }
         // Only a pause the owner made (stopped for the day, the kill switch, its daily loss limit) means a signal that changed
         // meanwhile is not chased. Missed candles (a slow pass, a failed fetch, the app away) are not a pause: every pass

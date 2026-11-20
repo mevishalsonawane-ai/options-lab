@@ -657,7 +657,10 @@ object Strategies {
             val gOrder = Guard.paperOrder(pc, order.side.wire, order.quantity / ref.lot, snap?.positions?.positions?.firstOrNull { it.symbol == pc.symbol }?.ltp ?: 0.0)
             Guard.check(gOrder, snap?.let { Guard.paperAccount(it) }, exit = order.kind != "entry", paper = true).takeIf { it.isNotEmpty() }
                 ?.let { return StrategyHost.Placed.Refused("account guard: " + it.joinToString(" ")) }
-            val r = runBlocking { Paper.place(pc, order.side.wire, order.quantity / ref.lot, "MARKET", order.product, null, null) }
+            // 20 Nov 2026 (audit, B5 item 4: "Strategy Lab paper exits can open a reverse paper position"): a leg's exit (its stop, target,
+            // square-off) only ever reduces what the paper book holds ([Paper.place]'s exit): after the 15:15 paper square-off it is
+            // refused, never a fresh opposite position. Paper only; the live executor is unchanged.
+            val r = runBlocking { Paper.place(pc, order.side.wire, order.quantity / ref.lot, "MARKET", order.product, null, null, exit = order.kind != "entry") }
             if (!r.ok) return StrategyHost.Placed.Refused(r.message)
             val id = r.orderId ?: return StrategyHost.Placed.Refused("paper order not recorded")
             b.owners["paper:$id"] = ownerLabel(def, order)

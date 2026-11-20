@@ -147,8 +147,11 @@ fun IraPage(orders: IraOrderPaths? = null, startInChat: Boolean = false) {
     com.optionslab.app.ui.PollWhileStarted { while (true) { IraHub.refreshIfDue(quiet = false); delay(60_000) } }
     val list = rememberLazyListState()
     // The newest message in view: after each new or rewritten one (the cards above it counted).
+    // 20 Nov 2026 (audit, B5 item 9): the effect starts before the frame that lays the new message out, so the item count it read
+    // could be the old one and the scroll stopped one short (the link under the newest message never came into view). It now
+    // waits for that frame ([scrollToNewest]), and scrolls again if the list still grew under it.
     LaunchedEffect(newest) {
-        if (newest != null) list.animateScrollToItem((list.layoutInfo.totalItemsCount - 1).coerceAtLeast(0))
+        if (newest != null) scrollToNewest(list)
     }
     // "Catch me up" ([com.optionslab.ira.CatchUp]): the page was in front of Boss until it paused (screen off, another app)
     // or was left - what was posted after that is what he missed. Only the moment is kept, never a note.
@@ -1309,4 +1312,20 @@ private fun AutomationsCard() {
 internal fun ListenWhenPicker(current: com.optionslab.ira.ListenWhen.Mode, onPick: (com.optionslab.ira.ListenWhen.Mode) -> Unit) {
     val modes = com.optionslab.ira.ListenWhen.Mode.entries
     ParamTokens("Listen for \"Jarvis\"", modes.map { it.label to (it == current) }) { i -> onPick(modes[i]) }
+}
+
+/**
+ * 20 Nov 2026 (audit, B5 item 9): [list] scrolled to its last item once the frame that lays out the newest message has run (a
+ * [androidx.compose.runtime.withFrameNanos] wait first), and again while the item count still grows under the scroll (a message
+ * and the link below it arriving together) - at most [tries] times. Never on a list that is empty.
+ */
+internal suspend fun scrollToNewest(list: androidx.compose.foundation.lazy.LazyListState, tries: Int = 3) {
+    var done = -1
+    repeat(tries) {
+        androidx.compose.runtime.withFrameNanos { }
+        val last = list.layoutInfo.totalItemsCount - 1
+        if (last < 0 || last == done) return
+        list.animateScrollToItem(last)
+        done = last
+    }
 }
