@@ -179,9 +179,7 @@ class ProtectionsGttTest : RobolectricTest() {
         kite.orders.clear()
         kite.flat()
         session(8, 30, nth = 2)
-        tick()
-        assertTrue("one read deletes nothing (20 Nov 2026)", gttDeletes.none { it.path.endsWith("/$id") })
-        com.optionslab.app.testing.SecondRead.clockOn(); tick()
+        tick()                                             // 20 Nov 2026: the look's two reads agree
         assertTrue(gttDeletes.any { it.path.endsWith("/$id") })
         assertTrue(kite.gtts.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())

@@ -413,11 +413,10 @@ class StrategiesLiveTest : RobolectricTest() {
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertEquals(1, kite.gtts.size)
         kite.position(NIFTY_CE, 0, 0.0)
+        // 20 Nov 2026 (audit): one read showing it closed takes nothing out; the look's own second read, which agrees, does.
+        val before = kite.positionReads
         runBlocking { Strategies.manageOnly(compromised = false) }
-        // 20 Nov 2026 (audit): one read showing it closed takes nothing out; a second agreeing read does.
-        assertEquals("one read: kept", 1, kite.gtts.size)
-        later(Strategies.FLAT_AGREE_MS + 1_000)
-        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("two separate reads", kite.positionReads - before >= 2)
         assertTrue("its GTT deleted", kite.gtts.isEmpty())
         assertTrue(sells().isEmpty())
     }
@@ -426,6 +425,23 @@ class StrategiesLiveTest : RobolectricTest() {
     private fun later(ms: Long) {
         val base = Market.testClock ?: java.time.Clock.system(com.optionslab.engine.IST)
         Market.testClock = java.time.Clock.offset(base, java.time.Duration.ofMillis(ms))
+    }
+
+    /** 20 Nov 2026 (audit): one read showing the leg closed, the look's second read showing it held: its stop stays. */
+    @Test fun aSingleZeroReadNeverTakesALegsStopOut() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, kite.gtts.size)
+        repeat(2) {
+            kite.position(NIFTY_CE, 0, 0.0)
+            kite.afterNext("/portfolio/positions") { kite.position(NIFTY_CE, 75, 100.0) }
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            later(Strategies.FLAT_AGREE_MS + 1_000)
+        }
+        assertEquals("kept", 1, kite.gtts.size)
     }
 
     /** 20 Nov 2026 (audit): a malformed or partial positions reply is never "no position": the leg's stop stays at Zerodha. */

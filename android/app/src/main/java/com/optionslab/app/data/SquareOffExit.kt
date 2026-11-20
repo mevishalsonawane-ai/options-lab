@@ -171,9 +171,14 @@ internal object SquareOffExit {
             suspend fun takeOut(): Boolean {
                 markTaken(p.exchange, p.symbol, others.map { it.id }, gttMarks)
                 // A protection's stop and target resting as one GTT ([DayOco]) would still fire after this exit sold the position:
-                // deleted first, confirmed (or the exit waits for the next pass). Not confirmed: every mark taken back (review: a GTT
-                // still resting that Boss deletes later is his own).
-                if (!Protections.dayGttsOut(p.exchange, p.symbol, who)) { untake(others.map { it.id } + gttMarks); return false }
+                // deleted first, confirmed (or the exit waits for the next pass). Not confirmed: the orders' marks taken back (none was
+                // cancelled yet), and the marks of the GTTs still active (review: one still resting that Boss deletes later is his own);
+                // a GTT this pass did delete keeps its mark, so it is put back while the position is held. The list not read: kept.
+                if (!Protections.dayGttsOut(p.exchange, p.symbol, who)) {
+                    val active = runCatching { Broker.gtts().filter { it.active }.map { "gtt:${it.id}" }.toSet() }.getOrNull()
+                    untake(others.map { it.id } + gttMarks.filter { active != null && it in active })
+                    return false
+                }
                 if (others.isEmpty()) return true
                 var filled = false; var allOut = true
                 val cancelled = HashSet<String>()

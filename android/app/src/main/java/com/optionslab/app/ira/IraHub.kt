@@ -1174,7 +1174,8 @@ object IraHub {
             }.getOrDefault(false)
             if (com.optionslab.ira.Rescue.setAlone(clear, p, stop)) {
                 val result = runCatching {
-                    // 20 Nov 2026 (audit): a stop on a held position Boss confirmed reads the position again first (recheck).
+                    // 20 Nov 2026 (audit): the guard's stop on a bare position reads the position again first (recheck): never a stop on
+                    // a position Zerodha no longer shows.
                     if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, p.qty, p.ltp ?: p.avg, stop, null, null, recheck = true)
                     else com.optionslab.app.data.Protections.protectPaper(p.symbol, product, p.qty, p.ltp ?: p.avg, stop, null, null)
                 }.getOrElse { "Not protected: ${it.message}" }

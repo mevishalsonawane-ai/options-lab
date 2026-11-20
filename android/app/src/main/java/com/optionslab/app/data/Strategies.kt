@@ -1390,6 +1390,9 @@ object Strategies {
     /** 20 Nov 2026: how far apart the two agreeing reads must be (two separate reads of Zerodha, never one shared read). */
     internal const val FLAT_AGREE_MS = 5_000L
 
+    /** 20 Nov 2026 (review): the pause before a look's own second read (past [Broker.SHARE_MS], so it is a read of its own). */
+    private const val FLAT_RECHECK_MS = 2_100L
+
     /**
      * 20 Nov 2026 (audit): whether leg [k], read no longer held at Zerodha now, has been read so at least [FLAT_AGREE_MS] ago with no read
      * between showing it held - two agreeing reads. The first such read starts the count (false). The market's clock.
@@ -1449,6 +1452,8 @@ object Strategies {
         // The exits working at Zerodha, by order id (kept up to date as stops shrink): what each leg's stop may cover.
         val working = HashMap<String, Int>()
         for (o in orders.values) if (o.working) working[o.id] = com.optionslab.engine.risk.ExitQty.remaining(o.qty, o.filled, o.pending)
+        // 20 Nov 2026 (review): the look's second read of the positions, made only when a leg is first read no longer held.
+        var recheck: List<Broker.Position>? = null
         // Newest legs first: when Zerodha holds less than the stops cover, the newest stop shrinks first (review C2).
         for (leg in open.sortedByDescending { it.legId }) {
             val k = legKey(run.runId, leg.legId)
@@ -1482,8 +1487,18 @@ object Strategies {
             // GTT - with no row today: its position closed on that day, a reading as any other.)
             if (net.none { it.symbol == kiteSym && it.exchange == ex } && cur?.let { stopDay(it)?.isBefore(Market.today()) } != true) continue
             // ... and one read showing it no longer held takes nothing out: only a second read at least [FLAT_AGREE_MS] later that
-            // agrees (none between showing it held) does ([legFlatConfirmed]).
-            if (held > 0) legFlatSince.remove(k) else if (!legFlatConfirmed(k)) continue
+            // agrees (none between showing it held) does ([legFlatConfirmed]). Review: the first such read is checked again in this
+            // same look, by a separate read of Zerodha's positions [FLAT_RECHECK_MS] later (one for the whole look), so a stop never
+            // rests on a leg closed by hand until the next look.
+            if (held > 0) legFlatSince.remove(k)
+            else if (!legFlatConfirmed(k)) {
+                val again = recheck ?: run { kotlinx.coroutines.delay(FLAT_RECHECK_MS); runCatching { Broker.positionBook().net }.getOrNull() }
+                    ?.also { recheck = it } ?: continue
+                if (again.none { it.symbol == kiteSym && it.exchange == ex }) continue
+                if (again.filter { it.symbol == kiteSym && it.exchange == ex && it.product == product }.sumOf { it.qty } * dir > 0) {
+                    legFlatSince.remove(k); continue
+                }
+            }
             // Held no more at Zerodha (closed by hand): its stop must not rest on a flat position.
             if (held <= 0) {
                 if (cur != null && b.legStops.containsKey(k) && legStopOut(cur) != null) b.legStops.remove(k)

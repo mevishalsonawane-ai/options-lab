@@ -1005,7 +1005,7 @@ object Protections {
         }
         // 20 Nov 2026 (audit): the look's one positions read ([PassReads]); a read with no row for it is not known, and closed or
         // turned round counts only once two reads agree ([confirmedHeld]).
-        suspend fun netNow(): Int? = confirmedHeld(p, runCatching { heldIn(passPositions(stream = false), p) }.getOrNull())
+        suspend fun netNow(): Int? = heldConfirmed(p, stream = false)
         // Review (R2): an id ahead of now (a clock once ahead) is never "its first minute" for ever.
         val net = if (nowMs() - p.id in 0L until 60_000L) null else netNow()
         val closed = net != null && (net == 0 || net.sign() != p.qty.sign())
@@ -1379,6 +1379,24 @@ object Protections {
         return if (now - first >= FLAT_AGREE_MS) net else null
     }
 
+    /**
+     * 20 Nov 2026 (review: waiting for the next look left a stop resting on a position Boss had closed for up to half a minute): what
+     * [p]'s look may act on of what is held - [confirmedHeld] on the look's read; when that read is the first to show it closed or
+     * turned round, a second, separate read of Zerodha's positions [FLAT_RECHECK_MS] later in this same look, which confirms it when it
+     * agrees (and starts the count again when it shows it held). Never in a stream look. Off the main thread; never on the order path.
+     */
+    private suspend fun heldConfirmed(p: Item, stream: Boolean): Int? {
+        val first = confirmedHeld(p, runCatching { heldIn(passPositions(stream), p) }.getOrNull())
+        if (first != null || stream || streamLook || !flatSince.containsKey(p.id)) return first
+        kotlinx.coroutines.delay(FLAT_RECHECK_MS)
+        val again = runCatching { heldIn(Broker.positionBook(), p) }.getOrNull() ?: return null
+        if (again != 0 && again.sign() == p.qty.sign()) { flatSince.remove(p.id); return again }
+        return again
+    }
+
+    /** 20 Nov 2026: the pause before [heldConfirmed]'s second read (past [Broker.SHARE_MS], so it is a read of its own). */
+    private const val FLAT_RECHECK_MS = 2_100L
+
     /** When each protection (by id) was first read closed or turned round ([confirmedHeld]). Memory only. */
     private val flatSince = java.util.concurrent.ConcurrentHashMap<Long, Long>()
 
@@ -1455,13 +1473,15 @@ object Protections {
         var gone = false
         var why: String? = null
         try {
-            // Not in the order book just read (a book trailing a fresh order): its own state is read first.
-            if (row == null || row.working) for (i in 0 until OCO_TRIES) {
-                if (row == null && i == 0 && over(state())) { gone = true; break }
+            // Not in the order book just read (a book trailing a fresh order): its own state is read first. Review: a row neither
+            // working nor ended (CANCEL PENDING, a modify being validated) is read again too, never taken for gone.
+            if (row != null && row.status in GONE) gone = true
+            else for (i in 0 until OCO_TRIES) {
+                if ((row == null || !row.working) && i == 0 && over(state())) { gone = true; break }
                 runCatching { Broker.cancel(id, variety) }.onFailure { why = it.message }
                 if (over(state())) { gone = true; break }
                 if (i < OCO_TRIES - 1) kotlinx.coroutines.delay(OCO_GAP_MS)
-            } else gone = true
+            }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { why = e.message }
         if (gone) { ocoPending.remove(p.id); return true }
         val now = nowMs()
@@ -1555,8 +1575,8 @@ object Protections {
         val stopDone = so?.status == "COMPLETE"; val targetDone = to?.status == "COMPLETE"
         // 20 Nov 2026 (audit): a read with no row for the contract is not known ([heldIn]), never "flat".
         suspend fun heldRead(): Int? = runCatching { heldIn(passPositions(stream), p) }.getOrNull()
-        // ... and a read showing it closed or turned round ends nothing until a second read agrees ([confirmedHeld]).
-        suspend fun netNow(): Int? = confirmedHeld(p, heldRead())
+        // ... and a read showing it closed or turned round ends nothing until a second read agrees ([heldConfirmed]).
+        suspend fun netNow(): Int? = heldConfirmed(p, stream)
         // 15 Nov, review: the other slices' cover ([protectSliced]) is only what they really have resting in the books just read
         // ([restingCover]); a sibling's GTT list is read only when one has a GTT (never in a stream look: none counted then).
         val gttSibling = siblings(p).any { it.gttId != null }

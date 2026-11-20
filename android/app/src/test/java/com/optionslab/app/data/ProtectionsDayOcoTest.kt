@@ -311,10 +311,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         protect()
         session(10, 3)
         kite.position(sym, 0, 0.0)                                 // 20 Nov 2026: Zerodha's row at 0 (a missing row is not known)
-        tick()
-        // 20 Nov 2026 (audit): closed counts on a second agreeing read.
-        assertTrue("one read deletes nothing", gttDeletes.isEmpty())
-        com.optionslab.app.testing.SecondRead.clockOn(); tick()
+        tick()                                                     // 20 Nov 2026: the look's two reads agree
         assertEquals(1, gttDeletes.size)
         assertTrue(kite.gtts.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())

@@ -99,12 +99,17 @@ class ProtectionsAuditTest : RobolectricTest() {
         protect()
         val p = active().single()
         at(12, 5)
-        kite.position(sym, 0, 0.0)                                         // sold by hand: Zerodha shows the row at 0
+        kite.position(sym, 0, 0.0)                                         // one read shows it closed ...
+        kite.afterNext("/portfolio/positions") { kite.position(sym, 75, 100.0) }   // ... the look's second read shows it held
         tick()
         assertEquals("one read ends nothing", p.id, active().single().id)
-        assertTrue(working(p.stopOrderId))
+        assertTrue(working(p.stopOrderId)); assertTrue(working(p.targetOrderId))
+        // Sold by hand for real: the look's two separate reads agree, so it ends in that same look, its stop and target cancelled.
         at(12, 6)
+        kite.position(sym, 0, 0.0)
+        val before = kite.positionReads
         tick()
+        assertTrue("two separate reads", kite.positionReads - before >= 2)
         assertTrue("two agreeing reads end it", active().isEmpty())
         assertFalse(working(p.stopOrderId)); assertFalse(working(p.targetOrderId))
     }
@@ -112,13 +117,13 @@ class ProtectionsAuditTest : RobolectricTest() {
     @Test fun aHeldReadBetweenStartsTheCountAgain() {
         protect()
         val p = active().single()
-        at(12, 5)
-        kite.position(sym, 0, 0.0); tick()
-        at(12, 6)
-        kite.position(sym, 75, 100.0); tick()                             // the zero was a bad read
-        at(12, 7)
-        kite.position(sym, 0, 0.0); tick()
-        assertEquals("a new first read: kept", p.id, active().single().id)
+        repeat(3) { n ->
+            at(12, 5 + n)
+            kite.position(sym, 0, 0.0)                                     // a bad zero each look, a held read straight after
+            kite.afterNext("/portfolio/positions") { kite.position(sym, 75, 100.0) }
+            tick()
+        }
+        assertEquals("never two agreeing reads: kept", p.id, active().single().id)
         assertTrue(working(p.stopOrderId))
     }
 
