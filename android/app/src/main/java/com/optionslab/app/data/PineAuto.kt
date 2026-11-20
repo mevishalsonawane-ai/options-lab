@@ -1152,12 +1152,15 @@ object PineAuto {
             // (20 Nov 2026, delta review: never one another holding owns or that is being taken out - then rested as usual below; found for more than
             // is held now, cut to it first, else taken out and rested again on a later check; for less, the rest asked again ([stopShort]).)
             is Broker.LostLook.Found -> if (b.held.values.none { it.stop == l.id } && b.removing.none { l.id in it.ids.keys }) {
+                var covers = l.qty
                 if (l.qty > h.qty) {
                     val so = runCatching { Broker.orderRow(l.id) }.getOrNull()
                     // (One that ended, or that cannot be read, is adopted as it is: [stopFilled] books a fill. One not cut is taken out, and
                     // only once Zerodha shows it out does a stop rest again; not confirmed out, it stays this holding's - never ownerless.)
-                    if (so != null && so.working &&
-                            runCatching { Broker.modify(so, so.filled + h.qty, so.type, so.price.takeIf { it > 0 }, so.trigger.takeIf { it > 0 }) }.isFailure) {
+                    val cut = so != null && so.working &&
+                        runCatching { Broker.modify(so, so.filled + h.qty, so.type, so.price.takeIf { it > 0 }, so.trigger.takeIf { it > 0 }) }.isSuccess
+                    if (cut) covers = h.qty
+                    if (so != null && so.working && !cut) {
                         runCatching { Broker.cancel(l.id, so.variety) }
                         val st = runCatching { Broker.orderState(l.id)?.status }.getOrNull()
                         if (st == "CANCELLED" || st == "REJECTED") {
@@ -1169,7 +1172,7 @@ object PineAuto {
                 }
                 ownerTag("kite:${l.id}", "${label(item)} · stop")
                 // (For more than held - not cut, not confirmed out - it is kept and cut on the next checks ([topUpStop]).)
-                if (l.qty != h.qty) stopShort[lostKey] = l.qty else stopShort.remove(lostKey)
+                if (covers != h.qty) stopShort[lostKey] = covers else stopShort.remove(lostKey)
                 stopNotRested -= lostKey
                 return h.copy(stop = l.id, stopAt = l.trigger ?: trig)
             }

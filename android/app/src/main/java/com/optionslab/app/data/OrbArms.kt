@@ -2808,6 +2808,10 @@ object OrbArms {
         }
         val liveOpen = b.positions.withIndex().filter { it.value.open && it.value.live }
         if (liveOpen.isNotEmpty()) runCatching { priceCheckLive(b, t, liveOpen, stopped, stream, regular) }
+        // 20 Nov 2026 (delta review): the lost stops no open trade asks after - its trade closed, or a split left none of its size - on
+        // every regular look while there are any (or cancels of them to confirm), whatever is open: never only while a live trade is.
+        if (regular && !stream && (Broker.lostKeys("orbstop:").isNotEmpty() || synchronized(sweepCancels) { sweepCancels.isNotEmpty() }))
+            runCatching { sweepLostStops(b) }
         val open = b.positions.withIndex().filter { it.value.open && !it.value.live }
         if (open.isEmpty()) return
         val orders = Paper.state.orders.associateBy { it.orderId }
@@ -4190,7 +4194,7 @@ object OrbArms {
             // review F4: every exit of its own goes while no stop rests at Zerodha - there is no stop to take out, and nothing else would
             // sell it at its level; [exitLive] reads Zerodha again through the exit coordinator and sells only what is held, nothing if gone.)
             if (goneUnsure && cur.stopOrderId != null && why !in ALWAYS_EXITS) { b.positions[i] = raiseLiveStop(seen, sym, so, ltp, tick); continue }
-            val (done, rest) = exitLive(b, seen, sym, why, Pre(orders.values, net))
+            val (done, rest) = exitLive(b, seen, sym, why, Pre(orders.values, net), ltp)
             b.positions[i] = done
             rest?.let { b.positions += it }
         }
@@ -4198,19 +4202,18 @@ object OrbArms {
         // 19 Nov 2026 (audit batch 2, L1): from this pass's orders read, an unclaimed stop of these arms on a contract where no trade of this
         // book is open now (a trade closed this pass, or one never saved) is followed until it ends or the contract is confirmed flat.
         if (regular && !stream) runCatching { noteFlatOrphans(b, orders.values, t) }
-        // 20 Nov 2026 (delta review): the lost stops no open trade asks after - its trade closed, or a split left none of its size.
-        if (regular && !stream) runCatching { sweepLostStops(b) }
         // 18 Nov 2026 (audit: B3): on the regular pass, a contract Zerodha holds LESS of than the live trades on it (confirmed) has its
         // trades and resting stops cut down to what is held ([shrinkToHeld]) - after the exits above, from this pass's reads.
         if (regular) runCatching { shrinkToHeld(b, t, net, orders, q) }
     }
 
     /**
-     * 20 Nov 2026 (delta review): the lost stops ("orbstop:" keys) no open trade asks after, once older than [LOST_SWEEP_AGE_MS] (a stop
-     * just sent: its trade may not be in the book yet). Its trade closed: looked for, and found resting, taken out as the app's own (as
-     * the arms' live copies do); given up on, it is gone - a stale key holds back a matching orphan's adoption ([Broker.lostMayBe]) only
-     * for the search's two minutes. A split left no open
-     * part of its size: looked for; found, it is the stop of a part of its size with none, else left to the parts' own orphan check
+     * 20 Nov 2026 (delta review): the lost stops ("orbstop:" keys) no open trade asks after. Its trade closed: looked for at once, and
+     * found resting, cancelled as the app's own and confirmed - cancelled again on every regular pass until Zerodha shows it ended
+     * ([sweepCancels]; as the arms' live copies take theirs out); given up on, it is gone - a stale key holds back a matching orphan's
+     * adoption ([Broker.lostMayBe]) only for the search's two minutes. A split left no open part of its size (looked at once past
+     * [LOST_SWEEP_AGE_MS], the moment its trade's own look may still take it): looked for; found, it is the stop of a part of its size
+     * with none (whose own lost stop is not looked for), else left to the parts' own orphan check
      * ([orphanStop]: taken and resized by a part with none - no longer held back as a lost reply; counted as a working sale meanwhile).
      */
     private suspend fun sweepLostStops(b: Book) {
@@ -4222,24 +4225,27 @@ object OrbArms {
             val label = f.dropLast(3).joinToString(":")
             val open = b.positions.filter { it.open && it.live && it.kite == sym && it.entry == fill && armOf(it.arm).label == label }
             if (open.any { lostKeyOf(b, it, label, sym) == key }) continue
-            if ((Broker.lostAgeMs(key) ?: 0L) < (lostSweepAgeMsForTest ?: LOST_SWEEP_AGE_MS)) continue
+            // (Looked for at once when nothing of this arm is open on the contract at all - its trade closed; otherwise only once past the
+            // moment a trade's own look may still take it: a row settling, its entry not yet the fill, a part of a split.)
+            val anyOnIt = b.positions.any { it.open && it.live && it.kite == sym && armOf(it.arm).label == label }
+            if (anyOnIt && (Broker.lostAgeMs(key) ?: 0L) < (lostSweepAgeMsForTest ?: LOST_SWEEP_AGE_MS)) continue
             val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: continue
             if (b.positions.any { it.open && it.stopOrderId == l.id }) continue
             if (open.isEmpty()) {
                 // (Its trade closed: found resting, taken out as the app's own - never left on a closed trade; one that filled is said.)
                 val st = runCatching { Broker.orderState(l.id) }.getOrNull()
-                if (st != null && st.filled > 0) {
-                    com.optionslab.app.work.Alerts.error("$label: a stop ${l.id} on $sym whose answer was lost filled ${st.filled} at Zerodha after its " +
-                        "trade had closed. Check $sym's position in Kite.", "ORB live")
-                    if (st.status in DONE) continue
+                if (st != null && st.status in DONE) {
+                    if (st.filled > 0) com.optionslab.app.work.Alerts.error("$label: a stop ${l.id} on $sym whose answer was lost filled ${st.filled} at " +
+                        "Zerodha after its trade had closed. Check $sym's position in Kite.", "ORB live")
+                    continue
                 }
                 Broker.claimStop(l.id)
-                cancelOwnStop(l.id)
+                synchronized(sweepCancels) { sweepCancels[l.id] = "$label|$sym" }
                 runCatching { Diag.record("orb", "$label: a lost stop ${l.id} on $sym found after its trade closed: taken out") }
                 continue
             }
             val i = b.positions.indexOfFirst { it.open && it.live && it.kite == sym && it.entry == fill && armOf(it.arm).label == label &&
-                it.stopOrderId == null && it.qty == l.qty }
+                it.stopOrderId == null && it.qty == l.qty && !Broker.lostPending(orbLostKey(label, sym, fill, it.qty)) }
             if (i >= 0) {
                 b.positions[i] = b.positions[i].copy(stopOrderId = l.id, stopTrigger = l.trigger ?: b.positions[i].stopTrigger)
                 runCatching { Strategies.tagOwner("kite:${l.id}", "$label · stop") }
@@ -4248,12 +4254,30 @@ object OrbArms {
             } else runCatching { Diag.record("orb", "$label: a lost stop ${l.id} on $sym found after its trade was split, with no part of its " +
                 "size: left to the parts' orphan check") }
         }
+        // (A closed trade's found stop: cancelled as the app's own and confirmed; until Zerodha shows it ended, cancelled again here on
+        // every regular pass, Boss told after a few tries - never left resting unwatched on a contract nothing here holds.)
+        for ((id, what) in synchronized(sweepCancels) { sweepCancels.toMap() }) {
+            if (b.positions.any { it.open && it.stopOrderId == id }) { synchronized(sweepCancels) { sweepCancels.remove(id) }; sweepTries.remove(id); continue }
+            cancelOwnStop(id)
+            val st = runCatching { Broker.orderState(id) }.getOrNull()
+            if (st != null && st.status in DONE) {
+                synchronized(sweepCancels) { sweepCancels.remove(id) }; sweepTries.remove(id)
+                if (st.filled > 0) com.optionslab.app.work.Alerts.error("${what.substringBefore('|')}: a stop $id on ${what.substringAfter('|')} whose answer was " +
+                    "lost filled ${st.filled} at Zerodha after its trade had closed. Check the position in Kite.", "ORB live")
+                continue
+            }
+            val n = (sweepTries[id] ?: 0) + 1
+            sweepTries[id] = n
+            if (n == 3) com.optionslab.app.work.Alerts.error("${what.substringBefore('|')}: a stop $id on ${what.substringAfter('|')}, left by a closed trade, " +
+                "could not be cancelled yet; the app keeps trying. Check the order book in Kite.", "ORB live")
+        }
     }
     private const val LOST_SWEEP_AGE_MS = 30_000L
-    /** 20 Nov 2026 (delta review): the longest an exit waits for its own stop whose answer was lost ([exitLive]). */
+    /** 20 Nov 2026 (delta review): closed trades' found lost stops being cancelled (id to "label|contract") and the tries. Memory. */
+    private val sweepCancels = HashMap<String, String>()
+    private val sweepTries = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    /** 20 Nov 2026 (delta review): the longest a stop-level exit waits for its own stop whose answer was lost ([exitLive]). */
     private const val LOST_EXIT_WAIT_MS = 20_000L
-    /** TEST SEAM: [LOST_EXIT_WAIT_MS] shortened. */
-    @Volatile internal var lostExitWaitMsForTest: Long? = null
     /** TEST SEAM: [LOST_SWEEP_AGE_MS] shortened. */
     @Volatile internal var lostSweepAgeMsForTest: Long? = null
 
@@ -5258,23 +5282,39 @@ object OrbArms {
      * Take the resting stop out first, then MARKET SELL what is held; if the stop filled meanwhile, that is the exit.
      * Returns the position, and (when only part sold) the rest, still open, to be sold on the next pass.
      */
-    private suspend fun exitLive(b: Book, given: Position, sym: String, why: String, pre: Pre? = null): Pair<Position, Position?> {
+    private suspend fun exitLive(b: Book, given: Position, sym: String, why: String, pre: Pre? = null,
+                                 ltp: Double? = null): Pair<Position, Position?> {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): the arm's own sale waits (his covers it; next pass).
         if (ArmLive.handsOffNow("NFO", sym)) return given to null
         // 20 Nov 2026 (delta review): this trade's own stop whose answer was lost may be resting at Zerodha - one of its own sells.
-        //  - Found for all it holds (one for more cut to it first, [fitFound]): it is the trade's stop, taken out first as any.
-        //  - Found for fewer, or beside a stop it already has: claimed and taken out first, confirmed out (a part it sold meanwhile is
-        //    booked closed at the stop, the rest sold next pass); not confirmed out yet: the exit waits a pass (it counts as working then).
-        //  - Still looked for: the exit waits while it is younger than [LOST_EXIT_WAIT_MS] (a stop that landed shows in the book within
-        //    seconds) - never longer: a stop-level exit is never held back for the whole search. Then it sells; a stop found later on a
-        //    closed trade is taken out ([sweepLostStops]).
+        //  - Found for all it holds (one for more cut to it first, [fitFound]): it is the trade's stop, taken out first as any (only when
+        //    its sale will go - the usual path below).
+        //  - Found for fewer: the trade is split - the part it covers keeps it as its stop and exits through the usual path (its stop out
+        //    only when its sale will go; refused, a stop is put back); the rest, with none, is sold on the next pass.
+        //  - Found beside a stop it already has (an extra cover): claimed and taken out, confirmed (a part it sold is booked closed).
+        //  - Still looked for: a stop-level exit (the price [ltp] at or under that stop's trigger - a stop sent late would be refused, and
+        //    one that landed would show in the book within seconds) waits at most [LOST_EXIT_WAIT_MS]; every other exit waits until the
+        //    search ends (found, or given up on after a good read, [Broker.lookLost]) - never a sale beside a stop that may rest.
         val labelG = armOf(given.arm).label
         val ownLost = lostKeyOf(b, given, labelG, sym)
         val p0 = when (val l = Broker.lookLost(ownLost)) {
             is Broker.LostLook.Found -> {
                 val specG = runCatching { Broker.spec("NFO", sym) }.getOrNull()
                 if (b.positions.any { it.open && it.stopOrderId == l.id }) given
-                else if (given.stopOrderId == null && l.qty >= given.qty &&
+                else if (given.stopOrderId == null && l.qty < given.qty) {
+                    runCatching { Strategies.tagOwner("kite:${l.id}", "$labelG · stop") }
+                    Broker.claimStop(l.id)
+                    val share = l.qty.toDouble() / given.qty
+                    val part = given.copy(qty = l.qty, stopOrderId = l.id, stopTrigger = l.trigger ?: given.stopTrigger, appCancelled = false,
+                        charges = given.charges * share)
+                    val rest = given.copy(qty = given.qty - l.qty, charges = given.charges * (1 - share))
+                    runCatching { Diag.record("orb", "$labelG: its lost stop ${l.id} on $sym, found at its exit, covers ${l.qty} of ${given.qty}: " +
+                        "that part exits with it; the rest is sold next pass") }
+                    val (done, left) = exitLive(b, part, sym, why, pre, ltp)
+                    // (A part of that part left unsold joins the rest - one row, sold next pass; every second row [exitLive] returns has no
+                    // stop of its own: a part sale's rest and a put-back's uncovered part.)
+                    return done to (left?.let { rest.copy(qty = rest.qty + it.qty, charges = rest.charges + it.charges) } ?: rest)
+                } else if (given.stopOrderId == null &&
                     fitFound(labelG, l, given.qty, specG?.lotSize?.coerceAtLeast(1) ?: 1, specG?.tickSize ?: 0.05)) {
                     runCatching { Strategies.tagOwner("kite:${l.id}", "$labelG · stop") }
                     Broker.claimStop(l.id)
@@ -5298,10 +5338,19 @@ object OrbArms {
                     given
                 }
             }
-            Broker.LostLook.Searching -> if ((Broker.lostAgeMs(ownLost) ?: Long.MAX_VALUE) < (lostExitWaitMsForTest ?: LOST_EXIT_WAIT_MS)) {
-                runCatching { Diag.record("orb", "$labelG: $sym's exit waits a moment for its stop whose answer was lost (it may be resting)") }
-                return given to null
-            } else given
+            Broker.LostLook.Searching -> {
+                // (At the higher of the lost stop's trigger and the trade's own level now - a lock or breakeven earned since is its stop;
+                // with no price, a stop or lock exit is one.)
+                val trig = listOfNotNull(Broker.lostTrigger(ownLost), given.stopTrigger).maxOrNull()
+                val stopLevel = if (ltp != null && trig != null) ltp <= trig + 1e-9 else why == "stop" || why == "profit_lock"
+                // (Every other exit waits for the search's end: an order book that cannot be read keeps it going, but then the exit's own
+                // read of the book fails too - it could not sell meanwhile either.)
+                if (!stopLevel || (Broker.lostAgeMs(ownLost) ?: Long.MAX_VALUE) < LOST_EXIT_WAIT_MS) {
+                    runCatching { Diag.record("orb", "$labelG: $sym's exit waits for its stop whose answer was lost (it may be resting)") }
+                    return given to null
+                }
+                given
+            }
             else -> given
         }
         // 19 Nov 2026 (review): Stop for today or the session's end refused a moment ago: its stop was put back; not taken out and sold
@@ -7082,7 +7131,7 @@ object OrbArms {
         readFails = 0
         forgetHistoryForTest()
         synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear()
-        forgetStopSaid(); lostSweepAgeMsForTest = null; lostExitWaitMsForTest = null
+        forgetStopSaid(); lostSweepAgeMsForTest = null; synchronized(sweepCancels) { sweepCancels.clear() }; sweepTries.clear()
     }
 
     /**

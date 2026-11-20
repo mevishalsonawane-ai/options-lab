@@ -333,6 +333,31 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals(2, stops().size)
     }
 
+    /**
+     * 20 Nov 2026 (delta review): a lost stop found for more than the holding (sent for 2 lots, 1 held) is cut to the holding at
+     * Zerodha before it is taken as its stop - never left resting for more than is held; no second stop is sent.
+     */
+    @Test fun aLostStopFoundForMoreThanTheHoldingIsCutToIt() {
+        kite.afterNext("/orders/regular") { kite.drop += "/orders/regular" }    // the stop's POST read and dropped: nothing placed
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        kite.drop.clear()
+        val h = held()!!
+        assertNull(h.stop)
+        val key = "pinestop:$id:${h.kite}:${h.entry}"
+        assertTrue(Broker.lostPending(key))
+        // (The stop sent, as this test has it, was for 60 at 250 - and that is what rests.)
+        Broker.forgetLost(key)
+        Broker.noteLost(key, Kite.Order(h.kite!!, Kite.Side.SELL, 60, 30, "MIS", "SL", 237.5, 0.05, "NFO", "irapine", triggerPrice = 250.0),
+            emptyList(), "test", liveOnly = true)
+        val big = kite.restingInKite(h.kite!!, "SELL", 60, 237.5, type = "SL", trigger = 250.0, tag = "irapine", product = "MIS")
+        val sent = stops().size
+        pass(52_020.0)
+        assertEquals("taken as its stop", big, held()!!.stop)
+        assertEquals("cut to the 30 held", 30, kite.order(big).qty - kite.order(big).filled)
+        assertEquals("no second stop", sent, stops().size)
+    }
+
     @Test fun theDailyLossLimitSellsAndPausesTheScriptForTheDay() {
         auto { it.copy(maxDayLoss = 1_000.0, stopPts = 100.0) }     // a stop wider than the fall: the day's limit sells
         bought()

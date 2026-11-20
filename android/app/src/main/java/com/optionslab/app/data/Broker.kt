@@ -1967,9 +1967,11 @@ object Broker {
      * go on - the book would have shown an order Zerodha took long before). A book that cannot be read never gives up: past
      * [LOST_SEARCH_MS] Boss is told the order's state is unknown, and it stays UNKNOWN.
      */
-    private class LostWrite(val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val what: String, val liveOnly: Boolean,
+    private class LostWrite(val order: Kite.Order, val known: Set<String>, sinceMs: Long, val what: String, val liveOnly: Boolean,
                             /** When it was sent, by the phone's market clock: the search's start even once the send's own mark is gone. */
                             val sentAt: java.time.LocalDateTime) {
+        /** When it was noted (phone ms); moved only by [ageLostForTest]. */
+        @Volatile var sinceMs = sinceMs
         @Volatile var lookedMs = 0L
         /** When a caller last asked after it ([lookLost]): one no caller has asked after for long belongs to a trade long gone. */
         @Volatile var askedMs = sinceMs
@@ -2061,6 +2063,12 @@ object Broker {
 
     /** 20 Nov 2026 (delta review): how long ago the lost reply under [key] was noted (null: none kept). */
     fun lostAgeMs(key: String): Long? = lostWrites[key]?.let { System.currentTimeMillis() - it.sinceMs }
+
+    /** 20 Nov 2026 (delta review): the trigger the lost stop under [key] was sent at (null: none kept, or no trigger). */
+    fun lostTrigger(key: String): Double? = lostWrites[key]?.order?.triggerPrice
+
+    /** TEST ONLY: the lost reply under [key] noted [ms] earlier than it was (the real waits judged, never shortened). */
+    internal fun ageLostForTest(key: String, ms: Long) { lostWrites[key]?.let { it.sinceMs -= ms; it.askedMs = it.sinceMs } }
 
     /** TEST ONLY: every lost reply forgotten, as after a restart. */
     internal fun forgetLostForTest() { cancelLostSearches(); lostWrites.clear() }
