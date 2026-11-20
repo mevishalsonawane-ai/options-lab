@@ -114,4 +114,17 @@ class StrategiesPaperFlatTest : RobolectricTest() {
         assertFalse("finished: ${e.run?.status}", e.running)
         assertTrue(e.run!!.legs.values.single().exitAvg!! > 0)
     }
+
+    /** Final review: the flat close's log names the price it really used - the closing fill only when it was one. */
+    @Test fun theFlatCloseSaysWhichPriceItUsed() {
+        val sale = com.optionslab.ira.PaperElsewhere.How.SALE
+        val expiry = com.optionslab.ira.PaperElsewhere.How.EXPIRY
+        val last = com.optionslab.ira.PaperElsewhere.How.LAST_PRICE
+        assertEquals("the fill that closed it", Strategies.flatPriceWords(sale, false))
+        assertTrue(Strategies.flatPriceWords(expiry, false).startsWith("the expiry settlement"))
+        assertTrue(Strategies.flatPriceWords(last, false).startsWith("the last price"))
+        assertTrue(Strategies.flatPriceWords(null, true).startsWith("the last price"))
+        assertTrue(Strategies.flatPriceWords(null, false).startsWith("the leg's last mark"))
+        for (h in listOf(expiry, last)) assertFalse(Strategies.flatPriceWords(h, false).contains("the fill that closed it"))
+    }
 }

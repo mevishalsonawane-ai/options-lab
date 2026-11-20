@@ -177,6 +177,7 @@ class NightArmOffShadowTest : RobolectricTest() {
         NightArm.forgetRetriesForTest()
         assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
         // The first try's previous-close read fails (NIFTY's only).
+        callPricedThrough(LocalTime.of(15, 22))
         var failed = false
         NightArm.testPrevClose = { u -> if (u == "NIFTY" && !failed) { failed = true; throw java.io.IOException("test: read failed") }
             else if (u == "NIFTY") 24_500.0 else 52_040.0 }
@@ -186,13 +187,11 @@ class NightArmOffShadowTest : RobolectricTest() {
             at(day, LocalTime.of(15, 20, 31))                       // past its 10 s back-off
             runBlocking { NightArm.tick() }
             val said = NightArm.view.value.status["NIFTY"].orEmpty()
-            assertTrue(said, said.startsWith("night_buy_ce") || said.startsWith("night_not_filled"))
+            assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
+            assertEquals(1, NightArm.view.value.open.size)
             assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
-            if (said.startsWith("night_buy_ce")) {
-                assertEquals(1, NightArm.view.value.open.size)
-                Diag.flush()
-                assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
-            }
+            Diag.flush()
+            assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
         } finally {
             NightArm.forgetRetriesForTest()
         }
@@ -204,6 +203,7 @@ class NightArmOffShadowTest : RobolectricTest() {
         NightArm.forgetRetriesForTest()
         assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
         // The first try's previous-close read fails (NIFTY's only).
+        callPricedThrough(LocalTime.of(15, 22))
         var failed = false
         NightArm.testPrevClose = { u -> if (u == "NIFTY" && !failed) { failed = true; throw java.io.IOException("test: read failed") }
             else if (u == "NIFTY") 24_500.0 else 52_040.0 }
@@ -215,13 +215,11 @@ class NightArmOffShadowTest : RobolectricTest() {
             NightArm.forgetRetriesForTest()
             runBlocking { NightArm.tick() }
             val said = NightArm.view.value.status["NIFTY"].orEmpty()
-            assertTrue(said, said.startsWith("night_buy_ce") || said.startsWith("night_not_filled"))
+            assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
+            assertEquals(1, NightArm.view.value.open.size)
             assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
-            if (said.startsWith("night_buy_ce")) {
-                assertEquals(1, NightArm.view.value.open.size)
-                Diag.flush()
-                assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
-            }
+            Diag.flush()
+            assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
         } finally {
             NightArm.forgetRetriesForTest()
         }
@@ -233,10 +231,50 @@ class NightArmOffShadowTest : RobolectricTest() {
         ArmLive.testHeard = heard
         NightArm.forgetRetriesForTest()
         assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        callPricedThrough(LocalTime.of(15, 22))
         runBlocking { NightArm.tick() }
         val said = NightArm.view.value.status["NIFTY"].orEmpty()
-        if (said.startsWith("night_buy_ce")) assertTrue(heard.toString(), heard.any { it.startsWith("entered|") })
-        else assertTrue(said, said.startsWith("night_not_filled"))
+        assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
+        assertTrue(heard.toString(), heard.any { it.startsWith("entered|") })
+    }
+
+    /**
+     * 20 Nov 2026 (B5, final review): a look the supervisor's time limit cancels BEFORE its order went un-decides the day and marks it a
+     * retry, so the next decision buys on paper and its live copy stays in shadow (main had no such route to a live entry).
+     */
+    @Test fun aLookCancelledBeforeItsOrderMakesTheNextDecisionARetry() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        NightArm.forgetRetriesForTest()
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        callPricedThrough(LocalTime.of(15, 22))
+        var cancelled = false
+        NightArm.testBuildUp = { u -> if (u == "NIFTY" && !cancelled) { cancelled = true; throw kotlinx.coroutines.CancellationException("test: time limit") }
+            else if (u == "NIFTY") 100.0 else null }
+        try {
+            try { runBlocking { NightArm.tick() } } catch (_: kotlinx.coroutines.CancellationException) {}
+            assertTrue(cancelled)
+            assertTrue("nothing bought by the cancelled look", NightArm.view.value.open.isEmpty())
+            at(day, LocalTime.of(15, 20, 31))
+            NightArm.forgetRetriesForTest()                         // (the mark is the book's, not the back-off's memory)
+            runBlocking { NightArm.tick() }
+            val said = NightArm.view.value.status["NIFTY"].orEmpty()
+            assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
+            assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
+            Diag.flush()
+            assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
+        } finally {
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
+    /** The 1-ITM call (24,600 CE) trades every minute from 15:00 to [until] at 100, so a paper buy at the 15:20 decision fills. */
+    private fun callPricedThrough(until: LocalTime) {
+        val out = ArrayList<FakeUpstox.Candle>()
+        var t = LocalTime.of(15, 0)
+        while (!t.isAfter(until)) { out += FakeUpstox.Candle(t, 100.0, 101.0, 99.0, 100.0); t = t.plusMinutes(1) }
+        upstox.minutes[callKey] = out
+        upstox.price(callKey, 100.0)
     }
 
     @Test fun onThePaperPathIsUnchangedAndTheShadowGetsNothing() {

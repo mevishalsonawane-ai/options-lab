@@ -385,8 +385,11 @@ object NightArm {
                     val why = try {
                         decide(b, u, now)
                     } catch (e: kotlinx.coroutines.CancellationException) {
-                        // (Review: a look cancelled once its order was sent keeps the day decided - never a second buy.)
-                        if (key !in sent) { b.decided -= key; rollBackHistory(b, u, histBefore) } else changed = true
+                        // (Review: a look cancelled once its order was sent keeps the day decided - never a second buy. Final review: one
+                        // cancelled before it un-decides the day and is marked a retry, saved with the book, so the next decision's live
+                        // copy stays in shadow - main had no such route to a live entry.)
+                        if (key !in sent) { b.decided -= key; b.decided += "$key|retried"; rollBackHistory(b, u, histBefore) }
+                        changed = true
                         cancelled = e; break
                     } catch (e: Throwable) {
                         // 20 Nov 2026 (audit: "Night loses the day on one failed read"): a failure before any entry is not the day's

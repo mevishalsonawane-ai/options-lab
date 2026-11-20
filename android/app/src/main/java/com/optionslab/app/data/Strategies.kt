@@ -729,15 +729,24 @@ object Strategies {
         val run = b.runs[def.id]
         val since = run?.startedAt?.withZoneSameInstant(com.optionslab.engine.IST)?.toLocalDateTime()
             ?: runCatching { Market.today().atStartOfDay() }.getOrElse { java.time.LocalDate.now().atStartOfDay() }
-        val sold = runCatching { Paper.soldElsewhere("Strategy|${def.id}|${order.legId}|${order.symbol}", order.symbol, since, order.product,
-            order.side.wire, qty = order.quantity)?.price?.toDouble() }.getOrNull()
+        val elsewhere = runCatching { Paper.soldElsewhere("Strategy|${def.id}|${order.legId}|${order.symbol}", order.symbol, since, order.product,
+            order.side.wire, qty = order.quantity) }.getOrNull()
         val leg = run?.legs?.values?.firstOrNull { it.legId == order.legId }
-        val px = sold ?: runCatching { Paper.memPrice(order.symbol, 5 * 60_000L) }.getOrNull() ?: leg?.ltp?.takeIf { it > 0 }
+        val mem = if (elsewhere == null) runCatching { Paper.memPrice(order.symbol, 5 * 60_000L) }.getOrNull() else null
+        val px = elsewhere?.price?.toDouble() ?: mem ?: leg?.ltp?.takeIf { it > 0 }
             ?: return StrategyHost.Placed.Refused("${order.symbol} is no longer held on paper and no price is known to book its close yet")
         runCatching { Diag.record("strategies", "${def.name}: leg ${order.legId} (${order.symbol}) was already flat on paper - closed at %.2f (%s)"
-            .format(Locale.ENGLISH, px, if (sold != null) "the fill that closed it" else "the last price: no closing fill found")) }
+            .format(Locale.ENGLISH, px, flatPriceWords(elsewhere?.how, mem != null))) }
         return StrategyHost.Placed.Accepted("paper:flat:${def.id}:${order.legId}:${System.nanoTime()}", "complete", order.quantity, px,
             "already flat on paper (closed elsewhere)")
+    }
+
+    /** 20 Nov 2026 (B5, final review): what a flat leg's booked price was ([flatExit]) - the closing fill only when it really was one. */
+    internal fun flatPriceWords(how: com.optionslab.ira.PaperElsewhere.How?, memPrice: Boolean): String = when (how) {
+        com.optionslab.ira.PaperElsewhere.How.SALE -> "the fill that closed it"
+        com.optionslab.ira.PaperElsewhere.How.EXPIRY -> "the expiry settlement: no closing fill found"
+        com.optionslab.ira.PaperElsewhere.How.LAST_PRICE -> "the last price: no closing fill found"
+        null -> if (memPrice) "the last price: no closing fill found" else "the leg's last mark: no closing fill or recent price found"
     }
 
     /** When each paper leg's automatic flat close was last tried ("runId:legId" -> ms; memory only), so a refused one waits 5 minutes. */
