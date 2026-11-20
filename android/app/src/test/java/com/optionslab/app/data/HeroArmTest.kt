@@ -98,6 +98,12 @@ class HeroArmTest : RobolectricTest() {
 
     @After fun down() {
         com.optionslab.ira.ArmExits.clear()
+        // 20 Nov 2026: the Hero stop's background minutes read ([OrbArms.heroStopSoon]) ends before the test feed is taken away - one
+        // that started after it went read the real feed in the next test of this JVM (IndexReadinessTest failed "no test may reach the
+        // internet" on api.upstox.com). Its own deadline bounds the wait.
+        val reading = OrbArms::class.java.getDeclaredField("heroStopReading").apply { isAccessible = true }.get(null) as java.util.concurrent.atomic.AtomicBoolean
+        val until = System.currentTimeMillis() + OrbArms.HERO_STOP_READ_MS + 5_000L
+        while (reading.get() && System.currentTimeMillis() < until) Thread.sleep(10)
         AutomationSupport.realClocks()
         Market.testClock = null
         upstox.close()
