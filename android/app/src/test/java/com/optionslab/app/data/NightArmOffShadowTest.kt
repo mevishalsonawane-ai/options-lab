@@ -184,6 +184,33 @@ class NightArmOffShadowTest : RobolectricTest() {
             runBlocking { NightArm.tick() }
             assertTrue(NightArm.view.value.status["NIFTY"].orEmpty(), NightArm.view.value.status["NIFTY"].orEmpty().startsWith("night_retrying"))
             at(day, LocalTime.of(15, 20, 31))                       // past its 10 s back-off
+            runBlocking { NightArm.tick() }
+            val said = NightArm.view.value.status["NIFTY"].orEmpty()
+            assertTrue(said, said.startsWith("night_buy_ce") || said.startsWith("night_not_filled"))
+            assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
+            if (said.startsWith("night_buy_ce")) {
+                assertEquals(1, NightArm.view.value.open.size)
+                Diag.flush()
+                assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
+            }
+        } finally {
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
+    @Test fun aRetriedDecisionBuysOnPaperButItsLiveCopyStaysInShadowAfterARestart() {
+        val heard = java.util.Collections.synchronizedList(ArrayList<String>())
+        ArmLive.testHeard = heard
+        NightArm.forgetRetriesForTest()
+        assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
+        // The first try's previous-close read fails (NIFTY's only).
+        var failed = false
+        NightArm.testPrevClose = { u -> if (u == "NIFTY" && !failed) { failed = true; throw java.io.IOException("test: read failed") }
+            else if (u == "NIFTY") 24_500.0 else 52_040.0 }
+        try {
+            runBlocking { NightArm.tick() }
+            assertTrue(NightArm.view.value.status["NIFTY"].orEmpty(), NightArm.view.value.status["NIFTY"].orEmpty().startsWith("night_retrying"))
+            at(day, LocalTime.of(15, 20, 31))                       // past its 10 s back-off
             // (Review: the memory of the failed try gone, as after a restart - the mark kept with the book still makes it a retry.)
             NightArm.forgetRetriesForTest()
             runBlocking { NightArm.tick() }
