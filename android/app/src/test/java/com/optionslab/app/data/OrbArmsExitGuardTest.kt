@@ -704,14 +704,14 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         kite.showInBook()
         pass(); searchDone(); pass()                                       // the look starts the search; the next acts on it
         assertNotNull("not booked while it works", open("liquidity"))
-        assertEquals(1, marketSells().size)
+        assertEquals("nothing more sold", 0, marketSells().size)
         val end = System.currentTimeMillis() + 10_000
         fun cancels() = kite.requests.count { it.method == "DELETE" && it.path.startsWith("/orders/") }
         while (cancels() == 0 && System.currentTimeMillis() < end) Thread.sleep(10)
         assertEquals("its rest cancelled once, in the background", 1, cancels())
         pass(); pass()
         assertTrue(!OrbArms.lostExitForTest(sym))
-        assertEquals("the exit went again for what is still held", 2, marketSells().size)
+        assertEquals("the exit went again, once, for what is still held", 1, marketSells().size)
         assertEquals("time_stop", today("liquidity").single().why)
     }
 
