@@ -684,7 +684,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertNotNull("still open meanwhile", open("liquidity"))
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()                                                  // the order book lists the sale now
-        pass()
+        pass(); searchDone(); pass()                                       // the look starts the search; the next acts on it
         assertEquals("still one sale", 1, marketSells().size)
         assertTrue("no stop rested", kite.placed.none { it.form["order_type"] == "SL" })
         val done = today("liquidity").single()
@@ -699,9 +699,10 @@ class OrbArmsExitGuardTest : RobolectricTest() {
      */
     @Test fun aFoundLostExitStillWorkingIsCancelledInTheBackgroundThenTheExitGoesAgain() {
         lostLiquiditySale(outcome = FakeKite.Outcome.OPEN)
+        kite.requests.clear()                                              // (its stop's own cancel is not counted below)
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()
-        pass()
+        pass(); searchDone(); pass()                                       // the look starts the search; the next acts on it
         assertNotNull("not booked while it works", open("liquidity"))
         assertEquals(1, marketSells().size)
         val end = System.currentTimeMillis() + 10_000
@@ -859,12 +860,82 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals("the other part sold its own 60 at once", listOf("30", "60"), marketSells().map { it.form["quantity"] })
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()
-        pass()
+        pass(); searchDone(); pass()                                       // the look starts the search; the next acts on it
         assertEquals("never sold again", 2, marketSells().size)
         val parts = today("liquidity")
         assertEquals(listOf(30, 60), parts.map { it.qty }.sorted())
         assertTrue(parts.toString(), parts.all { it.exit != null && it.why == "time_stop" })
         assertTrue(!OrbArms.lostExitForTest(sym))
+    }
+
+    /**
+     * 20 Nov 2026 (final review C1): a search in flight never holds the arms' lock - a regular look and a stream look both return at once,
+     * and another book's trade on the contract is sold at its level meanwhile.
+     */
+    @Test fun looksRunPromptlyWhileASearchIsInFlight() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val other = position("liquidity15", 30, 200.0, "E2", null, 170.0).put("level", 52_050.0).put("lot", 30).put("stopByYou", true)
+            .put("entryTime", ago(3).toString()).put("signalBar", ago(15).toString())
+        state(listOf(liquidity(30, 200.0, s1, 170.0), other))
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.trailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        pass()
+        assertTrue(OrbArms.lostExitForTest(sym))
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        val gate = java.util.concurrent.CountDownLatch(1)
+        OrbArms.testLostSearch = { gate.await(30, java.util.concurrent.TimeUnit.SECONDS) }
+        try {
+            val regular = Thread { pass() }.apply { start() }
+            regular.join(5_000)
+            assertTrue("the regular look returned while the search is held up", !regular.isAlive)
+            assertTrue("the search is in flight", OrbArms.lostSearchingForTest(sym))
+            kite.quote("NFO:$sym", 165.0, 164.95, 165.05)                  // the other trade's 170 level
+            val stream = Thread { runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) } }.apply { start() }
+            stream.join(5_000)
+            assertTrue("the stream look returned while the search is held up", !stream.isAlive)
+            assertEquals("the other book's trade sold at its level meanwhile", "stop", today("liquidity").single { it.arm == "liquidity15" }.why)
+            assertTrue("the search is still in flight", OrbArms.lostSearchingForTest(sym))
+        } finally { gate.countDown(); OrbArms.testLostSearch = null }
+        searchDone()
+    }
+
+    /**
+     * 20 Nov 2026 (final review C2): book A's lost sale has filled (Zerodha's positions show it, its order book not yet); book B's exit falls
+     * due with its stop resting. Everything B could sell is covered by A's unseen sale: B's stop stays resting - never taken out with
+     * nothing sold.
+     */
+    @Test fun anotherBooksRestingStopStaysWhenALostSaleCoversTheLot() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val s2 = stopOrder(30, 170.0, 161.5)
+        val b = position("liquidity15", 30, 200.0, "E2", s2, 170.0).put("level", 52_050.0).put("lot", 30)
+        state(listOf(liquidity(30, 200.0, s1, 170.0), b))                  // both time stops due
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 0                                       // the positions show A's fill at once
+        kite.trailReads = 1_000                                            // its order book does not
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.requests.clear()
+        pass()
+        assertTrue("A's sale lost and held", OrbArms.lostExitForTest(sym))
+        assertEquals("only A's sale went", 1, marketSells().size)
+        assertTrue("B's stop still resting: ${kite.order(s2).status}", kite.order(s2).status !in setOf("CANCELLED", "COMPLETE", "REJECTED"))
+        val bNow = today("liquidity").single { it.arm == "liquidity15" }
+        assertTrue("B still open, its stop on it", bNow.open && bNow.stopOrderId == s2)
+    }
+
+    /**
+     * 20 Nov 2026 (final review, plausible 2): a restart while a lost sale still works at Zerodha (the hold is memory only): the next look
+     * never rests a second stop beside that working sale, nor sells again.
+     */
+    @Test fun aRestartWhileALostSaleWorksNeverRestsAStopBesideIt() {
+        lostLiquiditySale(outcome = FakeKite.Outcome.OPEN)
+        kite.showInBook()                                                  // the working sale is in the book now
+        OrbArms.forgetMemoryForTest()                                      // a restart: the hold is gone
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
+        pass(); pass()
+        assertTrue("no stop rested beside the working sale", kite.placed.none { it.form["order_type"] == "SL" })
+        assertEquals("nothing sold again", 1, marketSells().size)
     }
 
     /** 20 Nov 2026 (audit PC): a lost exit not found within its hold is said; then the exit goes again, once, for what is still held. */
@@ -874,7 +945,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         pass()
         assertEquals("nothing more sold within the hold", 1, marketSells().size)
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
-        pass()
+        pass(); searchDone(); pass()                                       // the look starts the search; the next acts on it
         assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "lost exit of $sym was not found" in it })
         assertTrue(!OrbArms.lostExitForTest(sym))
         assertEquals("sold again once the search found nothing", 2, marketSells().size)
