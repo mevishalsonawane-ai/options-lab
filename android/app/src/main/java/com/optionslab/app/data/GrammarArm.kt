@@ -35,12 +35,17 @@ import java.util.Locale
  * book (it fills on a minute's low, the wick), the target, the no-progress exit, the time stop, the index-level exit, its
  * square-off, F&O's close and on expiry day the expiry square-off's 15:05.
  *
- * PAPER ONLY, always: every order here is the paper account's ([Paper.place] / [Paper.cancel]); this file never names the
- * broker, there is no live flag, and its file is not in the backup - nothing here can reach Zerodha whatever Live, "AI
- * trades go live" or a voice command says. New entries obey the kill switch, the bot's stop for today (the daily loss limit
- * included), the account day lock, the account-wide guard ([Guard.check], paper), F&O's hours, the entry cut-off (the rules'
- * own last entry, never after the account's) and a fresh index price. Exits always go (they lower risk). Its trades are
- * registered with the trade manager in SHADOW ([TradeManagerHost.sync], family [GrammarPaper.FAMILY]: records only).
+ * No live path is built here today: every order is the paper account's ([Paper.place] / [Paper.cancel]); this file never names
+ * the broker, there is no live flag ([ExposureCapHost.NO_LIVE]), and its file is not in the backup - nothing here reaches
+ * Zerodha whatever Live, "AI trades go live" or a voice command says. 20 Nov 2026 (audit, comments only): that is how the code
+ * stands, NOT a rule that it stays paper forever. Boss's 30 Oct rule (CLAUDE.md: no arm is paper-only by design) applies: a live
+ * path for it, should Boss want one, goes only through the same live gates as every arm (Live with his PIN, "AI trades go live",
+ * its own Trade live switch, every guard and the kill switch). Nothing in its behaviour changed with this note.
+ *
+ * New entries obey the kill switch, the bot's stop for today (the daily loss limit included), the account day lock, the
+ * account-wide guard ([Guard.check], paper), F&O's hours, the entry cut-off (the rules' own last entry, never after the
+ * account's) and a fresh index price. Exits always go (they lower risk). Its trades are registered with the trade manager in
+ * SHADOW ([TradeManagerHost.sync], family [GrammarPaper.FAMILY]: records only).
  *
  * Each idea's paper record is judged against its forward test every pass ([GrammarPaper.judge]): worse than it, or a fall
  * beyond the capital rule, stops the idea (what it holds is sold) and a finding says why. Boss stops one from the Strategy
@@ -467,7 +472,8 @@ object GrammarArm {
             val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
             if (held <= 0) {
                 p.stopOrderId?.let { runCatching { Paper.cancel(it, "position_closed") } }
-                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                // 20 Nov 2026 (audit, B5 item 4): its own product's sale no other trade booked, else its expiry settlement or last price ([Paper.soldElsewhere]).
+                val t = Paper.soldElsewhere("Grammar|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "MIS", qty = p.qty)
                 val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere", stopOrderId = null,
                     charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
                 b.positions[k] = done; closed(b, done); changed = true; continue
@@ -510,7 +516,8 @@ object GrammarArm {
         if (fill == null) {
             if (!r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
                 // Already flat in the paper book (the 15:15 square-off, the sweeper or Boss): booked at that sale's price.
-                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                // 20 Nov 2026 (audit, B5 item 4): its own product's sale no other trade booked, else its expiry settlement or last price ([Paper.soldElsewhere]).
+                val t = Paper.soldElsewhere("Grammar|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "MIS", qty = p.qty)
                 val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: Market.now().toLocalDateTime().withNano(0),
                     why = "closed_elsewhere", stopOrderId = null, charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
                 closed(b, done); return done

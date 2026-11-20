@@ -340,6 +340,146 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(0, held())
     }
 
+    /**
+     * 20 Nov 2026 (audit B5, item 8: "a stop missing from the order read is assumed resting"): a stop of today's missing from a good read
+     * of the order book is read again by its own id; seen resting there, nothing changes - no sale, no second stop.
+     */
+    @Test fun aStopMissingFromTheBookIsReadAgainByItsIdNeverAssumed() {
+        val ref = "m"
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, ref))
+        val sid = view().open.single().stopOrderId!!
+        kite.hideFromBook(sid, 50)
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)              // under the 170 trigger, above its 161.50 limit
+        kite.requests.clear()
+        watch()
+        assertTrue("read again by its id", kite.requests.any { it.method == "GET" && it.path == "/orders/$sid" })
+        assertTrue("seen resting: still resting", kite.order(sid).working)
+        assertTrue("nothing sold, no second stop", kite.placed.isEmpty())
+        assertEquals(sid, view().open.single().stopOrderId)
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 8): a stop missing from the book whose own read fails too is UNKNOWN, never taken as resting: the app
+     * watches its level itself and, at it, takes the stop out first (confirmed) and sells - one exit, never two.
+     */
+    @Test fun aStopMissingFromTheBookAndUnreadableIsWatchedAtItsLevelByTheApp() {
+        val ref = "u"
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, ref))
+        val sid = view().open.single().stopOrderId!!
+        kite.hideFromBook(sid, 50)
+        kite.down += "/orders/$sid"
+        kite.afterNext("/orders/$sid") { kite.down.remove("/orders/$sid") }   // this look's read of it fails; later reads answer
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)              // under the 170 trigger, above its 161.50 limit
+        watch()
+        assertEquals("taken out before the app's sale", "CANCELLED", kite.order(sid).status)
+        assertEquals("one sale", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+        assertEquals("sold at its stop's level, booked as the stop", "stop", view().closed.single().why)
+        assertEquals("flat, never short", 0, held())
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): the stop's reply is lost and the book does not show it yet: UNKNOWN - looked for on the later
+     * looks, never a second stop beside it (the app watches the level); once the book shows it, it is the trade's stop.
+     */
+    @Test fun aStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "lost"))
+        fun stops() = kite.placed.count { it.form["order_type"] == "SL" }
+        assertEquals(1, stops())
+        assertNull(view().open.single().stopOrderId)
+        watch()
+        assertEquals("no second stop while its lost reply is looked for", 1, stops())
+        kite.showInBook()
+        watch()
+        assertEquals(1, stops())
+        assertEquals(kite.orders.values.single { it.type == "SL" }.id, view().open.single().stopOrderId)
+        assertEquals("with the trigger it rests at", kite.orders.values.single { it.type == "SL" }.trigger, view().open.single().stopTrigger!!, 0.0)
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a trade that closes while its stop's lost reply is still looked for: once the book shows that
+     * stop, it is taken out - never left resting on a flat position.
+     */
+    @Test fun aLostStopFoundAfterItsTradeClosedIsTakenOut() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "closed"))
+        assertNull(view().open.single().stopOrderId)
+        legs["closed"] = legs.getValue("closed").first to 0         // the paper trade sold: the live one follows
+        watch()
+        assertTrue("closed", view().open.isEmpty())
+        kite.showInBook()
+        watch()
+        assertEquals("taken out once found", "CANCELLED", kite.orders.values.single { it.type == "SL" }.status)
+    }
+
+    /**
+     * 20 Nov 2026 (delta review, confirmed): R51 and R72 hold the same option; R51's stop reply is lost while it rests at Zerodha. R72's
+     * stop look never takes that stop as an orphan (it may be R51's lost one): it rests its own, and R51 takes its own when found - two
+     * owners never share one stop, and each lot has its stop.
+     */
+    @Test fun aSiblingNeverTakesALostStopAsItsOrphan() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(donchian, "p1"))
+        assertNull(view().open.single().stopOrderId)
+        val lost = kite.orders.values.single { it.type == "SL" }.id
+        kite.showInBook()                                            // it rests and shows - R51 has not looked yet
+        ArmLive.entered(ask(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE, "p2"))
+        val p2 = view().openReal.single { it.ref == "p2" }.stopOrderId
+        assertNotNull("R72 rests its own", p2)
+        assertTrue("never R51's lost stop", p2 != lost)
+        watch()
+        assertEquals("R51 takes its own lost stop", lost, view().openReal.single { it.ref == "p1" }.stopOrderId)
+        assertEquals(p2, view().openReal.single { it.ref == "p2" }.stopOrderId)
+        assertEquals("two stops for two lots", 2, kite.orders.values.count { it.type == "SL" && it.working })
+        assertEquals("never more resting than held", held(), kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty - it.filled })
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): a lost stop found for more than its trade now holds (a part was sold since it went) is shrunk to the
+     * trade on the next look - never left to sell what is not the trade's.
+     */
+    @Test fun aLostStopFoundForMoreThanTheTradeHoldsIsShrunk() {
+        ArmLive.testLotCap = 0
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(donchian, "big", qty = 60))
+        assertNull(view().open.single().stopOrderId)
+        val lost = kite.orders.values.single { it.type == "SL" }.id
+        assertEquals(60, kite.order(lost).qty)
+        legs["big"] = donchian to 30                                 // the paper trade sold half: the live one follows
+        watch()
+        assertEquals(30, view().openReal.single().qty)
+        kite.showInBook()
+        watch()
+        watch()
+        assertEquals(lost, view().openReal.single().stopOrderId)
+        assertEquals("shrunk to the trade", 30, kite.order(lost).qty - kite.order(lost).filled)
+        assertEquals("flat-safe: never more resting than held", held(), kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty - it.filled })
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a stop whose reply was lost and that never shows in the book is looked for for two minutes, a
+     * second one never rested meanwhile; then Boss is told and the stop is rested as usual.
+     */
+    @Test fun aLostStopNeverFoundIsRestedOnlyAfterTheSearchAndBossIsTold() {
+        kite.afterNext("/orders/regular") { kite.drop += "/orders/regular" }        // the stop's POST read and dropped: nothing placed
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "never"))
+        kite.drop.clear()
+        assertNull(view().open.single().stopOrderId)
+        val sent = kite.placed.size
+        watch()
+        assertEquals("nothing sent while it is looked for", sent, kite.placed.size)
+        Broker.lostSearchMsForTest = 0
+        watch()
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "not in its order book" in it })
+        assertEquals("rested once the search is over", 1, kite.orders.values.count { it.type == "SL" })
+        assertNotNull(view().open.single().stopOrderId)
+    }
+
     @Test fun aPartPaperSaleSellsTheSameShareLive() {
         val ref = "half"
         ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
@@ -355,6 +495,24 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(30, kite.order(sid).qty)
         assertTrue(kite.order(sid).working)
         assertEquals("never more resting than held", 30, kite.orders.values.filter { it.working && it.side == "SELL" }.sumOf { it.qty - it.filled })
+    }
+
+    /** Final review: a positions row with no symbol never stops an arm's live entry resting its stop at Zerodha. */
+    @Test fun aRowWithNoSymbolNeverStopsAnArmsStopPlacement() {
+        kite.extraNetRows = listOf(org.json.JSONObject().put("exchange", "NFO").put("product", "NRML").put("quantity", 75))
+        ArmLive.entered(ask(com.optionslab.engine.orb.VixDivRules.SOURCE, "nosym"))
+        assertNotNull("its stop rests at Zerodha", view().open.single().stopOrderId)
+        assertTrue(kite.placed.any { it.form["order_type"] == "SL" })
+    }
+
+    /** Deep review: a malformed row in Zerodha's positions reply never stops an arm's exit of what was read. */
+    @Test fun aMalformedRowNeverStopsAnArmsSquareOff() {
+        ArmLive.entered(ask(com.optionslab.engine.orb.VixDivRules.SOURCE, "sqm"))
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", "NIFTY26XYZ").put("exchange", "NFO").put("product", "MIS"), org.json.JSONObject().put("exchange", "NFO").put("product", "NRML").put("quantity", 75))
+        ArmLive.testNow = Market.today().atTime(15, 15).atZone(com.optionslab.engine.IST)
+        watch()
+        assertEquals("square_off", view().closed.single().why)
+        assertEquals(0, held())
     }
 
     @Test fun anIntradayTradeIsSquaredOffAt1515() {
@@ -1189,6 +1347,36 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(setOf("paper_part", "stop"), view().closed.map { it.why }.toSet())
     }
 
+    /**
+     * 20 Nov 2026 (audit, B5 item 7): a 1-lot live copy of a 4-lot paper trade is still sold whole at the paper's first part-exit (the
+     * lower-risk choice; holding more live starts only in shadow), and the shadow line says what keeping the nearest share would hold.
+     */
+    @Test fun aOneLotLiveCopyIsStillSoldWholeAtAPaperPartExitAndTheShadowSaysWhatItWouldKeep() {
+        val ref = "p1lot"
+        ArmLive.entered(ask(donchian, ref, qty = 120))              // 4 lots on paper; live is 1 lot by default
+        watch()
+        assertEquals(30, view().open.single().qty)
+        legs[ref] = donchian to 90                                  // the ladder's first step sold 1 of 4 on paper
+        watch()
+        assertTrue("sold whole, as before", view().open.isEmpty())
+        assertEquals("paper_part", view().closed.single().why)
+        Diag.flush()
+        assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("shadow (B5 item 7)") && it.contains("would have kept 30") })
+    }
+
+    /** The L25 ladder's half step beside a 1-lot live copy (2 lots on paper): sold whole, and the shadow names the lot it would keep. */
+    @Test fun aOneLotLiveCopyAtTheLaddersHalfStepIsSoldWholeAndNamedInTheShadow() {
+        val ref = "phalf"
+        ArmLive.entered(ask(donchian, ref, qty = 60))               // 2 lots on paper; live is 1 lot by default
+        watch()
+        assertEquals(30, view().open.single().qty)
+        legs[ref] = donchian to 30                                  // the half step sold 1 of 2 on paper
+        watch()
+        assertTrue("sold whole, as before", view().open.isEmpty())
+        Diag.flush()
+        assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("shadow (B5 item 7)") && it.contains("would have kept 30") })
+    }
+
     @Test fun aWholeExitWhoseStopPartFilledSellsTheRestInTheSameLook() {
         ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)
         ArmLive.entered(ask(donchian, "pf", qty = 60))
@@ -1249,12 +1437,18 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(donchian, ref))
         assertEquals(30, held())
         watch()                                                    // seen open on paper
+        // 20 Nov 2026 (B5, review C1 and P3): a restore is refused through the real hints (no seam) - open live trades said as open.
+        assertTrue(Backup.liveHeld().toString(), Backup.HELD_ARMS in Backup.liveHeld())
         ArmLive.wipe()                                             // a restart: the memory gone, the book on disk
         ArmLive.testReadFails = java.util.concurrent.atomic.AtomicInteger(1)
         assertTrue("held while it cannot be read (positions first)", runBlocking { ArmLive.holding() })
         assertTrue(view().unreadable)
         assertFalse(ArmLive.holdingHint)
         assertTrue("every lane and keep-alive keeps coming for it", ArmLive.recoverHint && ArmLive.lookDue)
+        // ...and while the book is being read or recovered, the refusal says exactly that, never "open".
+        assertTrue(Backup.liveHeld().toString(), Backup.HELD_ARMS_BOOK in Backup.liveHeld())
+        assertFalse(Backup.HELD_ARMS in Backup.liveHeld())
+        assertTrue(Backup.liveHeldWords(Backup.liveHeld()).contains("log in to Zerodha to finish"))
         legs[ref] = donchian to 0                                  // the paper trade closes meanwhile
         watch()                                                    // within 5 s of the failed read: not hammered
         assertTrue(view().unreadable)
@@ -1264,6 +1458,7 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals("paper_exit", view().closed.single().why)
         assertEquals("flat, never short", 0, held())
         assertFalse(ArmLive.recoverHint)
+        assertTrue(Backup.liveHeld().none { it == Backup.HELD_ARMS || it == Backup.HELD_ARMS_BOOK })
         assertTrue(kite.placed.any { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
     }
 
@@ -1323,6 +1518,37 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testSecurityFails = false
         ArmLive.entered(ask(donchian, "ok"))
         assertEquals("both readable: it goes", 2, kite.placed.size)
+    }
+
+    /**
+     * 20 Nov 2026 (Boss: "make it follow switch"): the arms' live account stop follows the "Liquidity live stop rule" switch for R51,
+     * R72 and Liquidity only. Off: R51 goes although the stop refuses (here: its record cannot be read); another arm (R52) is still
+     * refused. On again: R51 is refused as before.
+     */
+    @Test fun theArmsLiveAccountStopFollowsBosssSwitchForTheThreeArmsOnly() {
+        val rule = com.optionslab.ira.ArmAutoStops.Rule.LIVE_STOP
+        val oov = com.optionslab.engine.orb.OovArm.SOURCE
+        try {
+            ArmAutoStopsHost.resetForTest()
+            assertTrue(ArmLive.accountStopActs(donchian))
+            assertTrue(ArmAutoStopsHost.set(rule, false, pinConfirmed = true, log = false).startsWith("Off"))
+            assertFalse(ArmLive.accountStopActs(donchian))
+            assertFalse(ArmLive.accountStopActs(com.optionslab.engine.orb.BreadthDonchianArm.SOURCE))
+            assertTrue("another arm keeps it", ArmLive.accountStopActs(oov))
+            ArmLive.testAccountFails = true
+            ArmLive.entered(ask(oov, "oov"))
+            assertTrue("R52 refused", kite.placed.isEmpty())
+            assertEquals(view().refused[oov], true, view().refused[oov]?.contains("account stop could not be checked"))
+            ArmLive.entered(ask(donchian, "r51"))
+            val sent = kite.placed.size
+            assertTrue("R51 goes with the switch off (its buy and its stop)", sent >= 1)
+            assertEquals(null, view().refused[donchian]?.takeIf { "account stop" in it })
+            assertTrue(ArmAutoStopsHost.set(rule, true, log = false).startsWith("On"))
+            assertTrue(ArmLive.accountStopActs(donchian))
+            ArmLive.entered(ask(donchian, "r51b"))
+            assertEquals("R51 refused again with the switch on", sent, kite.placed.size)
+            assertEquals(view().refused[donchian], true, view().refused[donchian]?.contains("account stop could not be checked"))
+        } finally { ArmLive.testAccountFails = false; ArmAutoStopsHost.resetForTest() }
     }
 
     /** F4: a shadow trade bought at the ask, and its stop judged on the minute's low: a wick through it fills it. */

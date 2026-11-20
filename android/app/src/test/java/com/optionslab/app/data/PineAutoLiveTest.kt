@@ -55,6 +55,7 @@ class PineAutoLiveTest : RobolectricTest() {
         AutomationSupport.security(compromised = false)
         AutomationSupport.clearAlerts()
         AutomationSupport.freshPine(context)
+        PineAuto.forgetStaleForTest()
         now = AutomationSupport.tradingDayAt(11, 2)
         PineAuto.testNow = now
         PineAuto.testBars = { _, _ -> candles?.invoke() ?: AutomationSupport.bars(now, closes) }
@@ -145,6 +146,48 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals("fresh candles with the same signal do trade", 1, side("BUY").size)
     }
 
+    /**
+     * 20 Nov 2026 (audit, B5 item 6: "Pine accepts a candle about 17 minutes old"): after a gap the feed's newest candle is a new one but
+     * one candle behind - 11:10-11:15, read at 11:22 (closed 7 minutes ago), which the old rule (3 candles plus 2 minutes) took. In Live
+     * the new rule is logged only (CLAUDE.md: a new rule that could skip live trades starts in shadow): the entry goes as before.
+     */
+    @Test fun inLiveALateNewCandleIsLoggedInShadowAndTheEntryGoesAsBefore() {
+        switchOn()
+        pass(51_900.0)                                             // 11:07: SELL on the 11:00 candle
+        candles = { AutomationSupport.bars(now.minusMinutes(5), List(9) { 51_900.0 } + 52_010.0) }
+        pass(52_010.0, minutes = 15)                               // 11:22: the newest candle 11:10-11:15
+        assertEquals("live unchanged: it trades", 1, side("BUY").size)
+        assertEquals(log(), 1, Regex("shadow \\(B5 item 6\\)").findAll(log()).count())
+    }
+
+    /** In Paper the same late candle is not entered on (said once), and the change is read again on the next, fresh candle. */
+    @Test fun inPaperALateNewCandleIsNotEnteredOnAndTheNextFreshOneIsRead() {
+        // (Paper prices its entry from the candle feed: a local fake, never the real host.)
+        val clock = Market.testClock
+        val upstox = com.optionslab.app.testing.FakeUpstox()            // (it clears the market clock: put back)
+        Market.testClock = clock
+        try { paperLateCandle() } finally { upstox.close() }
+    }
+
+    private fun paperLateCandle() {
+        AutomationSupport.liveSettings(live = false)
+        switchOn()
+        pass(51_900.0)                                             // 11:07
+        candles = { AutomationSupport.bars(now.minusMinutes(5), List(9) { 51_900.0 } + 52_010.0) }
+        pass(52_010.0, minutes = 15)                               // 11:22: one candle late
+        assertTrue(log(), log().contains("no entry on it; read again on the next"))
+        assertNull(held())
+        pass(52_010.0, minutes = 0)                                // the same late candle on the next pass: said once
+        assertEquals(log(), 1, Regex("no entry on it").findAll(log()).count())
+        assertEquals(log(), 1, Regex("Signal: BUY").findAll(log()).count())
+        assertNull(held())
+        candles = null
+        pass(52_010.0, minutes = 1)                                // 11:23: the 11:15-11:20 candle, 3 minutes after its close
+        assertEquals("the change is read again on the fresh candle: ${log()}", 2, Regex("Signal: BUY").findAll(log()).count())
+        assertFalse(log(), log().contains("shadow (B5 item 6)"))
+        assertTrue("nothing at Zerodha in Paper", kite.placed.isEmpty())
+    }
+
     @Test fun aChangeMissedWhileTheAppWasAwayIsCaughtUp() {
         switchOn()
         pass(51_900.0)
@@ -220,6 +263,99 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals(30, settled.qty); assertEquals(300.0, settled.entry, 0.0)
         assertEquals("one buy, never two", 1, side("BUY").size)
         assertTrue(log(), log().contains("Zerodha confirmed the buy"))
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): the live stop's reply is lost and the book does not show it yet: UNKNOWN - looked for on the
+     * later passes, never rested a second time; once the book shows it, it is the holding's stop.
+     */
+    @Test fun aLiveStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        assertEquals(1, stops().size)
+        assertNull(held()!!.stop)
+        pass(52_020.0)
+        assertEquals("no second stop while its lost reply is looked for", 1, stops().size)
+        kite.showInBook()
+        pass(52_030.0)
+        assertEquals(1, stops().size)
+        assertEquals(kite.orders.values.single { it.type == "SL" }.id, held()!!.stop)
+    }
+
+    /**
+     * 20 Nov 2026 (deep review, confirmed): a lost stop given up on (the book read, the order not matched) while a stop of the scripts'
+     * is in fact resting on the contract: that working stop is taken as the holding's own, never a second SL beside it.
+     */
+    @Test fun aLostStopGivenUpWhileAStopRestsTakesThatStopNeverASecond() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        assertEquals(1, stops().size)
+        assertNull(held()!!.stop)
+        // The resting stop no longer matches what was sent (its search will never find it), and the window is over: given up on.
+        val resting = kite.orders.values.single { it.type == "SL" }
+        resting.trigger = resting.trigger - 1.0
+        kite.showInBook()
+        Broker.lostSearchMsForTest = 0
+        pass(52_020.0)
+        assertEquals("no second SL", 1, stops().size)
+        assertEquals("the working stop taken as its own", resting.id, held()!!.stop)
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): Boss's own sell order covers one of the two lots when the stop goes, so it rests for one; once his
+     * order is gone, the same stop is grown to both lots (one stop, never more resting than held). A part the stop sold leaves the lot
+     * left with a stop again.
+     */
+    @Test fun aStopRestingForPartOfTheHoldingIsGrownOnceRoomAppears() {
+        auto { it.copy(lots = 2) }
+        PineAuto.topUpGapMsForTest = 0
+        switchOn()
+        pass(51_900.0)
+        val boss = kite.restingInKite(ce, "SELL", 30, 400.0, type = "LIMIT", tag = "", product = "MIS")
+        pass(52_010.0)
+        assertEquals(60, held()!!.qty)
+        val sl = kite.orders.values.single { it.type == "SL" }
+        assertEquals("rests for what Boss's order leaves", 30, sl.qty)
+        kite.order(boss).status = "CANCELLED"
+        pass(52_020.0)
+        assertEquals("one stop, never two", 1, stops().size)
+        assertEquals("grown to the whole holding", 60, kite.order(sl.id).qty)
+        // The stop sells one lot: the lot left gets a stop again.
+        kite.order(sl.id).filled = 30
+        kite.order(sl.id).status = "COMPLETE"
+        kite.position(ce, 30, 300.0, product = "MIS")
+        pass(52_030.0)
+        pass(52_040.0)
+        assertEquals(30, held()!!.qty)
+        assertNotNull("the lot left has a stop again", held()!!.stop)
+        assertEquals(2, stops().size)
+    }
+
+    /**
+     * 20 Nov 2026 (delta review): a lost stop found for more than the holding (sent for 2 lots, 1 held) is cut to the holding at
+     * Zerodha before it is taken as its stop - never left resting for more than is held; no second stop is sent.
+     */
+    @Test fun aLostStopFoundForMoreThanTheHoldingIsCutToIt() {
+        kite.afterNext("/orders/regular") { kite.drop += "/orders/regular" }    // the stop's POST read and dropped: nothing placed
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        kite.drop.clear()
+        val h = held()!!
+        assertNull(h.stop)
+        val key = "pinestop:$id:${h.kite}:${h.entry}"
+        assertTrue(Broker.lostPending(key))
+        // (The stop sent, as this test has it, was for 60 at 250 - and that is what rests.)
+        Broker.forgetLost(key)
+        Broker.noteLost(key, Kite.Order(h.kite!!, Kite.Side.SELL, 60, 30, "MIS", "SL", 237.5, 0.05, "NFO", "irapine", triggerPrice = 250.0),
+            emptyList(), "test", liveOnly = true)
+        val big = kite.restingInKite(h.kite!!, "SELL", 60, 237.5, type = "SL", trigger = 250.0, tag = "irapine", product = "MIS")
+        val sent = stops().size
+        pass(52_020.0)
+        assertEquals("taken as its stop", big, held()!!.stop)
+        assertEquals("cut to the 30 held", 30, kite.order(big).qty - kite.order(big).filled)
+        assertEquals("no second stop", sent, stops().size)
     }
 
     @Test fun theDailyLossLimitSellsAndPausesTheScriptForTheDay() {

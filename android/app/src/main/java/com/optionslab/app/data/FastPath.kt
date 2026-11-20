@@ -105,19 +105,35 @@ object FastPath {
         runCatching { KiteStream.want(LIVE_OWNER, emptyList()) }
     }
 
-    /** TEST ONLY: no consumer and no owner left from an earlier test. */
+    /**
+     * TEST ONLY: no consumer and no owner left from an earlier test.
+     * 20 Nov 2026 (CI on 82fbc3b41, OrderPathRound2Test): and no lane still running. A test that failed early left its stop sale's lane
+     * following the order (awaitOrder, then a cancel) after the test had closed its fake Zerodha; the lane's next read went to the real
+     * host and was blamed on the next test. The consumer is stopped first (no new lane), then the lanes already running are waited for
+     * ([LANE_SETTLE_MS] at most: longer than a sale's own 15 s wait), so a test closes its fake Zerodha only once they are done. A lane
+     * still running after that fails the reset loudly, naming it, rather than leaving it to reach the network in the next test.
+     */
     internal fun resetForTest() {
-        synchronized(this) { owners = 0; job?.cancel(); job = null }
+        val loopJob = synchronized(this) { owners = 0; job.also { it?.cancel(); job = null } }
+        val end = System.currentTimeMillis() + LANE_SETTLE_MS
+        kotlinx.coroutines.runBlocking { withTimeoutOrNull(LANE_SETTLE_MS) { loopJob?.join() } }
+        while (busy.now().isNotEmpty() && System.currentTimeMillis() < end) Thread.sleep(5)
         warmedAt = 0L; warming.set(false); deadKeys = null
         inbox.drain()
         snap = null
         modeAt = 0L
         faultForTest = null
+        busy.now().takeIf { it.isNotEmpty() }?.let { throw IllegalStateException("fast-path lanes still running ${LANE_SETTLE_MS / 1000} s after the reset: $it") }
     }
+
+    /** TEST ONLY (20 Nov 2026): the lanes running now. */
+    internal fun lanesRunningForTest(): Set<FastLane.Lane> = busy.now()
 
     // ---- what is held and armed, re-read at most every [STATE_MS] -----------------------------------------------------
 
     private const val STATE_MS = 500L
+    /** TEST ONLY (20 Nov 2026): the longest [resetForTest] waits for the lanes still running. */
+    private const val LANE_SETTLE_MS = 20_000L
     /** The stream's follow list of the instruments held at Zerodha (their ticks decide the live exits). */
     private const val LIVE_OWNER = "live-exits"
 
@@ -369,8 +385,9 @@ object FastPath {
                     step(S5) { S5Arm.manageOnly() }
                     // 29 Oct: CISD + network on paper: its index stop, profit lock and square-off every minute (exits only).
                     step(CISD) { CisdArm.manageOnly() }
-                    // 18 Oct: the live trades of the paper-only arms just above follow their exits at once.
-                    if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
+                    // 18 Oct: the live trades of the paper-only arms just above follow their exits at once (merge review: only when one of
+                    // them holds something; else the look above was this pass's).
+                    if (ArmLive.lookDue && (NtfyArm.holding() || FlowArm.holding() || S5Arm.holding() || CisdArm.holding())) step(ARMS_LIVE) { ArmLive.watch() }
                     // 30 Oct: the three passes moved from the top (their own exits run first inside each), then the live look again
                     // so a paper exit they just made is followed at once.
                     // (Only while armed or holding: a switched-off arm's shadow decision runs in the watch's arms rounds, paced by

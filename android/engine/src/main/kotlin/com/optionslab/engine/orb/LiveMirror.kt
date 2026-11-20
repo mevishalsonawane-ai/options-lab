@@ -544,6 +544,35 @@ object LiveMirror {
         return (liveQty - keepLots * l).coerceAtLeast(0)
     }
 
+    /**
+     * 20 Nov 2026 (audit, B5 item 7: "a 1-lot live trade is sold whole on a paper part-exit"). [toSell] rounds the lots kept DOWN, so a
+     * live copy smaller than its paper trade (1 lot live beside 2 or 4 on paper) is sold whole at the paper's first part-exit (the L25
+     * ladder's first step, a half) though the arm's own rule still holds the rest. That stays the live behaviour: it is the lower-risk
+     * one (an earlier, whole exit), and CLAUDE.md lets a live change that holds more than today start only in shadow, behind a switch
+     * Boss turns on. What following the paper share more closely would sell instead - the lots kept rounded to the NEAREST lot, a half
+     * keeping (so 1 live lot beside a paper trade that sold half keeps its lot) - is this; the app only logs it ([partSellsWhole]).
+     */
+    fun toSellNearest(liveQty: Int, liveEntryQty: Int, paperEntryQty: Int, paperHeldQty: Int?, lot: Int): Int {
+        if (liveQty <= 0) return 0
+        if (paperHeldQty == null || paperHeldQty <= 0) return liveQty
+        if (paperEntryQty <= 0 || paperHeldQty >= paperEntryQty) return 0
+        val l = lot.coerceAtLeast(1)
+        val entryLots = liveEntryQty / l
+        // Nearest, a half up (floor(share + 1/2)): never more than the live entry's own lots.
+        val twice = 2L * entryLots * paperHeldQty
+        val keepLots = ((twice + paperEntryQty) / (2L * paperEntryQty)).toInt().coerceAtMost(entryLots)
+        return (liveQty - keepLots * l).coerceAtLeast(0)
+    }
+
+    /**
+     * Whether a paper part-exit (the paper trade still holds [paperHeldQty] > 0 of [paperEntryQty]) sells the WHOLE live trade under
+     * [toSell] while [toSellNearest] would keep some of it: the case the shadow log names (B5 item 7). Arithmetic only.
+     */
+    fun partSellsWhole(liveQty: Int, liveEntryQty: Int, paperEntryQty: Int, paperHeldQty: Int?, lot: Int): Boolean =
+        paperHeldQty != null && paperHeldQty > 0 && liveQty > 0 &&
+            toSell(liveQty, liveEntryQty, paperEntryQty, paperHeldQty, lot) >= liveQty &&
+            toSellNearest(liveQty, liveEntryQty, paperEntryQty, paperHeldQty, lot) < liveQty
+
     // ---- the watch ------------------------------------------------------------------------------------------------------------
 
     /** What the watch does with one live position this look. */

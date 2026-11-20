@@ -176,18 +176,49 @@ class OrderPathRound2Test : RobolectricTest() {
         assertFalse(Paper.loaded())
         Paper.loadInlineForTest = true
         FastPath.start(context)
+        val first = System.currentTimeMillis()
         tick(200.0)
         awaitTrue("the first look loaded the paper book") { Paper.loaded() }
-        Thread.sleep(100)                                   // well inside the 500 ms a covered look is kept
+        // 20 Nov 2026 (CI on 82fbc3b41: 321 ms, once in some 75 runs): the stop's tick comes once the first look's live lane may run
+        // again - it runs at most every FastLane.STREAM_GAP_MS (200 ms) and never beside itself - and still inside the 500 ms the first
+        // look's "not covered" was kept before the 13 Oct fix (the fault this test is about: brought back, no sell comes at all). It came
+        // 100 ms after the load, inside that gap, so the sale waited out the gap before its lane started, by design and the same on
+        // 0980dbd2e (measured here under load: 161-225 ms, 0980dbd2e 179-248 ms, against 50-67 ms from a free lane), and a slow runner
+        // used up the rest of the 300. The bound itself is unchanged.
+        Thread.sleep((first + com.optionslab.ira.FastLane.STREAM_GAP_MS + 150 - System.currentTimeMillis()).coerceAtLeast(0))
+        awaitTrue("the first look's lanes ended") { FastPath.lanesRunningForTest().isEmpty() }
         assertTrue("nothing sold at 200", sells.isEmpty())
+        val after = System.currentTimeMillis() - first
         val t0 = System.nanoTime()
         tick(150.0)
         awaitTrue("the sell") { sells.isNotEmpty() }
         val ms = (sells.first().atNanos - t0) / 1_000_000
+        println("LATENCY stream tick -> live stop sell at Zerodha after the first look loaded the paper book: $ms ms (the stop's tick $after ms after the first)")
         assertTrue("sent $ms ms after the tick (at most 300 ms)", ms <= 300)
         Thread.sleep(1_500)
         assertEquals("exactly one sell", 1, sells.size)
         assertEquals("stop", arm().today.single().why)
+    }
+
+    /**
+     * 20 Nov 2026 (CI on 82fbc3b41): a test that ends right after a stop's sale was sent - as one that fails its timing does - leaves no
+     * lane following that sale once the fast path is reset, so nothing reaches the real Zerodha after the fake one is closed ([down]).
+     */
+    @Test fun theResetWaitsForTheLaneFollowingAStopsSaleBeforeTheFakeZerodhaCloses() {
+        state(listOf(position(30, 200.0, stopId = null, stop = 160.0, byYou = true)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        KiteStream.liveForTest(true)
+        tick(200.0)
+        pass()
+        FastPath.start(context)
+        tick(200.0)
+        Thread.sleep(400)
+        tick(150.0)
+        awaitTrue("the sell") { sells.isNotEmpty() }
+        FastPath.resetForTest()                             // at once: the lane is still following its sale
+        assertEquals("no lane left running", emptySet<com.optionslab.ira.FastLane.Lane>(), FastPath.lanesRunningForTest())
+        assertEquals("the sale followed to its end", "stop", arm().today.single().why)
+        assertEquals("exactly one sell", 1, sells.size)
     }
 
     /**

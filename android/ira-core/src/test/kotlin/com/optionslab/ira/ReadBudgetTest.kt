@@ -31,6 +31,14 @@ class ReadBudgetTest {
         assertEquals(3_800L, b.left(), "a negative time uses nothing")
     }
 
+    /** Merge review: a scrap of budget too small for a useful read is no read at all (the stream's last price). */
+    @Test fun aScrapUnderHalfASecondIsNoRead() {
+        val b = ReadBudget(windowMs = 15_000L, budgetMs = 4_000L) { 0L }
+        b.settle(b.reserve(3_700L)!!, 3_700L)
+        assertNull(b.reserve(3_000L), "300 ms left: none")
+        assertEquals(200L, b.reserve(200L)!!.ms, "a read that asks for less than the floor still gets it")
+    }
+
     /** B5-D: reads side by side reserve before they run, so together they can never pass the budget. */
     @Test fun readsSideBySideCannotOverspend() {
         val b = ReadBudget(windowMs = 15_000L, budgetMs = 4_000L) { 0L }

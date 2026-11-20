@@ -146,8 +146,10 @@ object McxGuard {
                         runCatching { Strategies.tagOwnerSoon("kite:$id", Origins.EXPIRY) }
                         tellOnce(context, "live ${p.symbol}", "MCX expiry exit", "Zerodha ${p.symbol}: close sent. ${due.text}")
                     } catch (e: Exception) {
+                        // (20 Nov 2026, audit B5: one that never left the phone is no refusal - Zerodha never saw it.)
                         if (Broker.definite(e)) tellOnce(context, "rejected ${p.symbol} ${e.message}", "MCX expiry exit",
-                            "Zerodha refused the exit of ${p.symbol}: ${e.message}. Retrying every pass; close it yourself if it keeps failing.")
+                            (if (e is Broker.NotSent) Broker.notSentWords("exit of ${p.symbol}") + " " else "Zerodha refused the exit of ${p.symbol}: ${e.message}. ") +
+                                "Retrying every pass; close it yourself if it keeps failing.")
                         else {
                             // The reply was lost, not necessarily the order (19 Nov 2026: the contract's gap starts either way).
                             SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol, p.product)

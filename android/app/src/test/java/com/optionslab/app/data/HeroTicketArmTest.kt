@@ -576,6 +576,12 @@ class HeroTicketArmTest : RobolectricTest() {
         tick(LocalTime.of(15, 5), seconds = 2)
         assertTrue(HeroTicketArm.view.value.open.isEmpty())
         assertTrue(HeroTicketArm.view.value.closed.all { it.why == "closed_elsewhere" })
+        // 20 Nov 2026 (B5 item 4): each ticket booked at its own option's square-off sale (12.5 and 11.2), never the other's or its entry.
+        for (done in HeroTicketArm.view.value.closed) {
+            val sale = Paper.state.trades.last { it.symbol == done.symbol && it.action == "SELL" }
+            assertEquals(done.symbol, sale.price.toDouble(), done.exit!!, 1e-9)
+            assertEquals(sale.timestamp, done.exitTime)
+        }
         assertEquals("the arm sold nothing more", sells, Paper.state.trades.count { it.action == "SELL" })
         for (p in open) assertEquals("flat, never short", 0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
         assertNothingAtZerodha()

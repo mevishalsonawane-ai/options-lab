@@ -95,6 +95,14 @@ class HeadroomTest {
         assertTrue(s.startsWith("On Zerodha no daily loss or drawdown limit is set (or today's P&L could not be read)."), s)
     }
 
+    /** 20 Nov 2026 (audit B5, item 6): an order count that could not be read is left out, never said as "0 of 10". */
+    @Test fun anUnknownOrderCountIsLeftOutNotSaidAsZero() {
+        val known = Headroom.uses(zerodha(acct(orders = 0)))
+        assertTrue(known.any { it.kind == Headroom.Kind.ORDERS && it.text.startsWith("0 of 10") })
+        val unknown = Headroom.uses(zerodha(acct(orders = 0).copy(ordersKnown = false)))
+        assertTrue(unknown.none { it.kind == Headroom.Kind.ORDERS }, "$unknown")
+    }
+
     @Test fun aPositionsOrAWhatIfsLossIsNotTheDaysRoom() {
         for (q in listOf("how much can i lose if nifty falls 200 points", "how much can i lose on my 24500 put",
                 "how much can i lose on my positions", "how much can i lose on this trade"))

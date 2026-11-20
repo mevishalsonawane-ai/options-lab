@@ -153,9 +153,13 @@ object PersonalStores {
         Entry("StepTrailExits", holds = { com.optionslab.app.data.StepTrailExits.holdsForErase() }) { com.optionslab.app.data.StepTrailExits.wipe() },
         // 15 Nov: the funds check's switch (a settings key; off by default) and its would-be entries (the arms, contracts and prices).
         Entry("FundsCheck", holds = { com.optionslab.app.data.FundsCheck.holdsForErase() }) { com.optionslab.app.data.FundsCheck.wipe() },
+        // 20 Nov 2026 (audit B5): the order count check's switch (a settings key; off by default) and today's counts (memory).
+        Entry("OrderCountCheck", holds = { com.optionslab.app.data.OrderCountCheck.holdsForErase() }) { com.optionslab.app.data.OrderCountCheck.wipe() },
         // 19 Nov: the four automatic stops' switches on R51, R72 and Liquidity (settings keys; on by default, so Boss's "off" is what is erased).
         Entry("ArmAutoStopsHost", holds = { com.optionslab.app.data.ArmAutoStopsHost.holdsForErase() }) { com.optionslab.app.data.ArmAutoStopsHost.wipe() },
         Entry("HealthReport", files = { com.optionslab.app.data.HealthReport.filesForErase() }) { com.optionslab.app.data.HealthReport.wipe() },
+        // 20 Nov 2026: the "Share full settings and state" files (redacted, but Boss's P&L and settings) in the cache's exports/state/.
+        Entry("SettingsShare", files = { com.optionslab.app.data.SettingsShare.filesForErase() }) { com.optionslab.app.data.SettingsShare.wipe() },
         Entry("GlanceSource", holds = { com.optionslab.app.data.GlanceSource.holdsForErase() }) { com.optionslab.app.data.GlanceSource.wipe() },
         Entry("PassedArmsHost", files = { com.optionslab.app.data.PassedArmsHost.filesForErase() }, holds = { com.optionslab.app.data.PassedArmsHost.holdsForErase() }) { com.optionslab.app.data.PassedArmsHost.wipeForErase() },
         Entry("SmartWorkers", files = { com.optionslab.app.data.SmartWorkers.filesForErase() }, holds = { com.optionslab.app.data.SmartWorkers.holdsForErase() }) { com.optionslab.app.data.SmartWorkers.wipe() },

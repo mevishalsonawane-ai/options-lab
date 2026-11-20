@@ -517,12 +517,43 @@ object DailyReports {
         val today = Market.today()
         val onceKey = "jarvis.armWeek.last"
         if (runCatching { com.optionslab.app.security.SecurePrefs.getString(onceKey) == today.toString() }.getOrDefault(false)) return
-        val said = com.optionslab.app.ira.IraBots.armWeek(today) ?: return
+        val said = when (val r = readWeek { com.optionslab.app.ira.IraBots.armWeek(today) }) {
+            WeekRead.None -> return
+            // 20 Nov 2026 (audit): the arms' book not readable just now - said in the chat here (once a day), never only a failed run
+            // that says nothing. Not marked made, and the run still fails, so the worker's own retries make it once the book reads.
+            WeekRead.Unreadable -> {
+                if (weekUnreadableSaid != today) {
+                    weekUnreadableSaid = today
+                    runCatching { com.optionslab.app.ira.IraHub.note(WEEK_UNREADABLE, from = com.optionslab.app.ira.Automations.Auto.WEEK) }
+                }
+                throw java.io.IOException("the arms' book is not readable right now")
+            }
+            is WeekRead.Read -> r.said
+        }
         runCatching { com.optionslab.app.security.SecurePrefs.put(onceKey, today.toString()) }
         com.optionslab.app.ira.IraHub.note(said.chat, from = com.optionslab.app.ira.Automations.Auto.WEEK)
         if (aloud) runCatching { com.optionslab.app.ira.JarvisVoice.announce(said.aloud) }
         runCatching { com.optionslab.app.ira.Automations.acted(com.optionslab.app.ira.Automations.Auto.WEEK, said.aloud) }
     }
+
+    /** 20 Nov 2026 (audit): what the arms' week ([week]) found: made, nothing to say, or the arms' book not readable right now. */
+    internal sealed interface WeekRead {
+        data class Read(val said: com.optionslab.ira.ArmWeek.Said) : WeekRead
+        data object None : WeekRead
+        data object Unreadable : WeekRead
+    }
+
+    /** 20 Nov 2026 (audit): said in the chat when the arms' book cannot be read for the week ([week]). */
+    internal const val WEEK_UNREADABLE = "The arms' week: the arms' book is not readable right now, so this week's paper record " +
+        "could not be made yet. The app tries again shortly; if it still cannot be read, this week's record is skipped."
+
+    /** 20 Nov 2026: the day [WEEK_UNREADABLE] was last said (memory only: the worker's retries say it once). */
+    @Volatile private var weekUnreadableSaid: java.time.LocalDate? = null
+
+    /** 20 Nov 2026 (audit): [read] (the arms' week), a book that cannot be read (an I/O failure) taken as [WeekRead.Unreadable]. */
+    internal suspend fun readWeek(read: suspend () -> com.optionslab.ira.ArmWeek.Said?): WeekRead = try {
+        read()?.let { WeekRead.Read(it) } ?: WeekRead.None
+    } catch (e: java.io.IOException) { WeekRead.Unreadable }
 
     fun post(context: Context, k: Kind, title: String, lines: List<String>) =
         Notifier.post(context, k.id, Notifier.APPROVAL, title, lines.joinToString("\n"),

@@ -36,15 +36,28 @@ internal object RuleHighs {
      * Starts a background read of [c]'s highest price after [since]'s minute for the trade [key] - unless one is running or one started
      * in the last minute (the feed read once a minute a trade, as the paper books' gap read). Trades not asked for a day are dropped.
      */
-    fun ask(key: String, c: Paper.Contract, since: LocalDateTime, nowMs: Long = marketMs()) {
+    fun ask(key: String, c: Paper.Contract, since: LocalDateTime, nowMs: Long = marketMs()) =
+        start(key, nowMs) {
+            // (Its candles read fresh - at most once a minute a trade, in the background - never another reader's older copy.)
+            listOfNotNull(runCatching { Paper.highSince(c, since, maxAgeMs = 0L) }.getOrNull(),
+                runCatching { Paper.gapHighSince(c, since) }.getOrNull()?.high).filter { it.isFinite() && it > 0 }.maxOrNull()
+        }
+
+    /**
+     * 20 Nov 2026 (deep review of audit B5): as [ask], but only the highs of [c]'s CLOSED 1-minute candles after [since]'s minute
+     * ([Paper.closedHighSince]) - never the stream's raw ticks, whose one stray print could raise a lock. For ArmLive's R51 / R72 live
+     * copies, whose stream prices count only once checked ([ArmLive]).
+     */
+    fun askClosed(key: String, c: Paper.Contract, since: LocalDateTime, nowMs: Long = marketMs()) =
+        start(key, nowMs) { runCatching { Paper.closedHighSince(c, since) }.getOrNull()?.takeIf { it.isFinite() && it > 0 } }
+
+    private fun start(key: String, nowMs: Long, read: suspend () -> Double?) {
         if (inFlight[key]?.isActive == true) return
         asked[key]?.let { if (nowMs - it in 0 until EVERY_MS) return }
         asked[key] = nowMs
         if (asked.size > KEPT) asked.entries.filter { nowMs - it.value > DAY_MS }.forEach { forget(it.key) }
         val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
-            // (Its candles read fresh - at most once a minute a trade, in the background - never another reader's older copy.)
-            val h = listOfNotNull(runCatching { Paper.highSince(c, since, maxAgeMs = 0L) }.getOrNull(),
-                runCatching { Paper.gapHighSince(c, since) }.getOrNull()?.high).filter { it.isFinite() && it > 0 }.maxOrNull()
+            val h = read()
             // (A trade forgotten meanwhile - closed, released - takes nothing back.)
             if (h != null && kotlinx.coroutines.currentCoroutineContext()[Job]?.isActive == true && asked.containsKey(key))
                 highs.merge(key, h) { a, b -> maxOf(a, b) }

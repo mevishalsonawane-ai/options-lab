@@ -726,14 +726,13 @@ object ShadowArms {
         // Gone from the paper book without this selling it (the 15:15 square-off, or Boss closed it): booked at the price seen.
         // 19 Nov 2026 (audit batch 2, coordinator's decision): this sale is the arm's own exit ([why]); found flat on paper it lost the race to
         // another paper close, so its live copy is still sold by that exit ([ArmLive.ruleExit]), never only detached.
-        if (held <= 0) { runCatching { ArmLive.ruleExit(mirrorRef(p), why) }; runCatching { ArmLive.closed(mirrorRef(p), "closed_outside", ArmLive.pct(p.entry, ltp)) }; return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp) }
+        if (held <= 0) { runCatching { ArmLive.ruleExit(mirrorRef(p), why) }; return closedOutside(p, ltp) }
         // 22 Oct (arms audit): the sale only reduces what the book holds; closed between the read above and the sale (the
         // square-off), it is refused and booked as closed outside - never a short.
         val sell = Paper.place(c, "SELL", p.qty / c.lotSize.coerceAtLeast(1), "MARKET", "MIS", null, null, exit = true)
         if (!sell.ok && sell.message.contains("already closed")) {
             runCatching { ArmLive.ruleExit(mirrorRef(p), why) }
-            runCatching { ArmLive.closed(mirrorRef(p), "closed_outside", ArmLive.pct(p.entry, ltp)) }
-            return p.copy(exit = ltp, exitTime = now(), why = "closed_outside", last = ltp)
+            return closedOutside(p, ltp)
         }
         val (_, px) = filled(sell) ?: return null
         val v = ShadowRules.of(p.variant)
@@ -741,6 +740,20 @@ object ShadowArms {
         runCatching { ArmLive.closed(mirrorRef(p), why, ArmLive.pct(p.entry, px)) }
         return p.copy(exit = px, exitTime = now(), why = why, last = ltp,
             charges = p.charges + Paper.state.trades.filter { it.orderId == sell.orderId }.sumOf { it.charges.toDouble() })
+    }
+
+    /**
+     * [p] closed outside this arm (the 15:15 square-off, Boss): booked "closed_outside" - its live copy told as before. 20 Nov 2026
+     * (audit, B5 item 4: "shadow variants book the current price, not the sale price"): at the sale that closed it ([Paper.soldElsewhere]:
+     * its MIS sale no other trade booked, else its expiry settlement or last price), with that sale's charges and time; at [ltp] now
+     * only when none is known, as before. Record only.
+     */
+    private fun closedOutside(p: Trade, ltp: Double): Trade {
+        val t = Paper.soldElsewhere("Shadow|${p.variant}|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "MIS", qty = p.qty)
+        val px = t?.price?.toDouble() ?: ltp
+        runCatching { ArmLive.closed(mirrorRef(p), "closed_outside", ArmLive.pct(p.entry, px)) }
+        return p.copy(exit = px, exitTime = t?.timestamp ?: now(), why = "closed_outside", last = ltp,
+            charges = p.charges + (t?.charges?.toDouble() ?: 0.0))
     }
 
     /** The fill of a paper MARKET order just placed (quantity, price); an order left open is cancelled at once. */

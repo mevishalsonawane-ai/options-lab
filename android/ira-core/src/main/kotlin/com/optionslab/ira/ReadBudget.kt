@@ -12,6 +12,8 @@ package com.optionslab.ira
 class ReadBudget(
     private val windowMs: Long = 15_000L,
     private val budgetMs: Long = 4_000L,
+    /** Merge review: less than this left (and asked for) is no read at all - a read cut after a few ms only wastes a quote slot. */
+    private val minMs: Long = 500L,
     private val clock: () -> Long = { System.nanoTime() / 1_000_000L },
 ) {
     /** A reservation: [ms] held in window [window]. */
@@ -26,7 +28,7 @@ class ReadBudget(
     fun reserve(wantMs: Long): Held? {
         roll(clock())
         val ms = minOf(wantMs, budgetMs - spent)
-        if (ms <= 0L) return null
+        if (ms <= 0L || ms < minOf(minMs, wantMs)) return null
         spent += ms
         return Held(ms, windowNo)
     }

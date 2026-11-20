@@ -111,8 +111,9 @@ class StreamAuditTest : RobolectricTest() {
         replied.join()
         assertTrue("held until its reply came and went quiet: $held ms", held >= 400)
         assertFalse(Relay.staleForTest())
-        // A call that never ends does not hold it past the bound (the write deadline in the app: [Relay.STALE_WAIT_MS], 80 s).
-        assertEquals(80_000L, Relay.STALE_WAIT_MS)
+        // A call that never ends does not hold it past the bound (a write's own 15 s deadline and a little: [Relay.STALE_WAIT_MS], 20 s).
+        assertEquals(20_000L, Relay.STALE_WAIT_MS)
+        assertTrue(Relay.STALE_WAIT_MS > Broker.WRITE_BUDGET_MS)
         val stuck = Relay.tunnelForTest(quietMs = 0, awaitingReply = true, on = s)
         Relay.sessionForTest(s)
         val t3 = System.nanoTime()

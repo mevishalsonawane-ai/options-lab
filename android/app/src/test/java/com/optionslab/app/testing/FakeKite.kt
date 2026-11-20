@@ -130,6 +130,10 @@ class FakeKite : Closeable {
     private var trailedLeft = 0
     /** Positions reads answered so far. */
     @Volatile var positionReads = 0
+    /** 20 Nov 2026 (audit): the positions reply's data as given (a malformed one), instead of the positions above; null: as they are. */
+    @Volatile var positionsBody: JSONObject? = null
+    /** 20 Nov 2026 (deep review): raw rows added to the positions reply's net list as given (a malformed row beside the real ones). */
+    @Volatile var extraNetRows: List<Any> = emptyList()
     var cash = 500_000.0
     /** 21 Oct, enhancement round 4 (idea 3): the day's payout in the margins (utilised.payout). */
     @Volatile var payoutToday = 0.0
@@ -263,6 +267,8 @@ class FakeKite : Closeable {
 
     /** 18 Nov 2026 (review F2): every order trailing the book ([trailReads]) is shown in it from now. */
     fun showInBook() = synchronized(lock) { trailing.clear() }
+    /** 20 Nov 2026 (audit B5): order [id] left out of the next [reads] reads of the order book's list (its history still shows it). */
+    fun hideFromBook(id: String, reads: Int) = synchronized(lock) { trailing[id] = reads }
 
     /**
      * 18 Nov 2026 (audit: B2): an order resting at Zerodha that no test path sent - Boss's own LIMIT sell in Kite ([tag] blank), or a stop of
@@ -409,8 +415,17 @@ class FakeKite : Closeable {
 
     private fun closing(r: MockResponse): MockResponse = if (keepAlive) r else r.addHeader("Connection", "close")
 
+    /**
+     * 20 Nov 2026 (audit B5): answers carry a Date header, as Zerodha's do (off by default, so the older tests' clock figures are
+     * unchanged): the phone's clock against Zerodha's is then measured from them.
+     */
+    @Volatile var dated = false
+    /** 20 Nov 2026 (audit B5): Zerodha's clock in the Date header moved by this many ms (a phone clock stepped, as the phone sees it). */
+    @Volatile var dateShiftMs = 0L
+
     private fun ok(data: Any?): MockResponse = closing(MockResponse().setResponseCode(200))
         .addHeader("Content-Type", "application/json").setBody(JSONObject().put("status", "success").put("data", data ?: JSONObject.NULL).toString())
+        .apply { if (dated) addHeader("Date", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME.format(java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).plusNanos(dateShiftMs * 1_000_000L))) }
 
     private fun error(code: Int, type: String, message: String): MockResponse = closing(MockResponse().setResponseCode(code))
         .addHeader("Content-Type", "application/json")
@@ -458,7 +473,7 @@ class FakeKite : Closeable {
             m == "DELETE" && path == "/session/token" -> ok(true)
             m == "GET" && path == "/user/profile" -> ok(JSONObject().put("user_id", "AB1234").put("user_name", "Test User"))
             m == "GET" && path == "/user/margins" -> ok(funds())
-            m == "GET" && path == "/portfolio/positions" -> { positionReads++; ok(trailed() ?: positionsJson()) }
+            m == "GET" && path == "/portfolio/positions" -> { positionReads++; ok(positionsBody ?: trailed() ?: positionsJson()) }
             m == "GET" && path == "/portfolio/holdings" -> ok(holdingsJson())
             m == "GET" && path == "/trades" -> ok(tradesJson())
             m == "GET" && path == "/orders" -> ok(JSONArray().apply { orders.values.filter { o -> shownInBook(o.id) }.forEach { put(orderJson(it)) } })
@@ -521,6 +536,7 @@ class FakeKite : Closeable {
             val moved = row.getInt("quantity") - (carry[k] ?: 0)
             if (carry[k] == null) day.put(row) else if (moved != 0) day.put(JSONObject(row.toString()).put("quantity", moved))
         }
+        for (r in extraNetRows) net.put(r)
         return JSONObject().put("net", net).put("day", day)
     }
 

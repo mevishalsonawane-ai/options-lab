@@ -195,7 +195,8 @@ class StrategiesLiveTest : RobolectricTest() {
         val exit = sells().last()
         assertEquals("150 held, 75 already working: one lot sent, not two", "75", exit.form["quantity"])
         assertEquals("the owner's order is left alone", "OPEN", kite.order(mine).status)
-        assertTrue(kite.requests.none { it.method == "DELETE" })
+        // (20 Nov 2026: the leg's own stop now rests from the start, and the exit takes it out; the owner's order is never cancelled.)
+        assertTrue(kite.requests.none { it.method == "DELETE" && it.path.endsWith("/$mine") })
     }
 
     @Test fun anExitIsNotSentForALegClosedByHand() {
@@ -235,6 +236,30 @@ class StrategiesLiveTest : RobolectricTest() {
         runBlocking { Strategies.stop(id, "manual", compromised = false) }
         assertEquals("nothing more sent", before, kite.placed.size)
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:NRML").first)
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost and that the book does not show yet is UNKNOWN, never reported
+     * refused (a run could send it again or leave it untracked): looked for on the next passes, and once the book shows it, it is the
+     * leg's entry - one buy, never two.
+     */
+    @Test fun aLostEntryReplyIsLookedForAndNeverReportedRefused() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        startLive(id)
+        assertEquals(1, buys().size)
+        assertTrue("never refused", entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals(1, buys().size)
+        assertTrue(entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        kite.showInBook()
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("one buy, never two", 1, buys().size)
+        assertEquals("complete", entry(id).run!!.legs.values.single().entryStatus)
     }
 
     @Test fun aStopLossOnTheTickSellsTheLegOnce() {
@@ -338,6 +363,71 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue("no GTT beside it", kite.gtts.isEmpty())
     }
 
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a leg's stop whose reply is lost and that the book does not show yet is UNKNOWN - looked for on
+     * the next looks, never a second SL beside it; once the book shows it, it is the leg's stop.
+     */
+    @Test fun aLegsStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, restingStops().size)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("no second stop while its lost reply is looked for", 1, restingStops().size)
+        kite.showInBook()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("one stop, never two", 1, restingStops().size)
+        val sl = kite.orders.values.single { it.type == "SL" }
+        assertEquals("adopted as the leg's stop", "Test basket · leg 1 stop", runBlocking { Strategies.owners() }["kite:${sl.id}"])
+    }
+
+    /**
+     * 20 Nov 2026 (deep review, confirmed): with Zerodha's order book unreadable past the two minutes, a lost entry is never given up and
+     * read as rejected (it may have filled): it stays UNKNOWN, nothing is sent again, and Boss is told its state is unknown.
+     */
+    @Test fun aLostEntryWithTheBookUnreadablePastTheWindowStaysUnknown() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        // (The book unreadable from the send on: no read ever succeeds, before the window or after it.)
+        kite.down += "/orders"
+        startLive(id)
+        Broker.lostSearchMsForTest = 0
+        runBlocking { Strategies.tickAll(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("never sent again", 1, buys().size)
+        assertTrue("never read as rejected", entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "UNKNOWN" in it })
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost before a restart can no longer be looked for: it stays UNKNOWN
+     * (never refused, never sent again) and Boss is told once to check the order book.
+     */
+    @Test fun aLostEntryFromBeforeARestartStaysUnknownAndBossIsTold() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        startLive(id)
+        Broker.forgetLostForTest()                                   // as after a restart: nothing left in memory to look for
+        runBlocking { Strategies.tickAll(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("never sent again", 1, buys().size)
+        assertTrue(entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        assertEquals("told once", 1, AutomationSupport.alerts().count { "cannot be looked for any more" in it })
+    }
+
     @Test fun aCarriedLegsStopRestsAtZerodhaAsOneGttNeverADaySlOrder() {
         live()
         midSession()
@@ -412,9 +502,83 @@ class StrategiesLiveTest : RobolectricTest() {
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertEquals(1, kite.gtts.size)
         kite.position(NIFTY_CE, 0, 0.0)
+        // 20 Nov 2026 (audit): one read showing it closed takes nothing out; the look's own second read, which agrees, does.
+        val before = kite.positionReads
         runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("two separate reads", kite.positionReads - before >= 2)
         assertTrue("its GTT deleted", kite.gtts.isEmpty())
         assertTrue(sells().isEmpty())
+    }
+
+    /** The market's clock moved on by [ms] (still ticking). */
+    private fun later(ms: Long) {
+        val base = Market.testClock ?: java.time.Clock.system(com.optionslab.engine.IST)
+        Market.testClock = java.time.Clock.offset(base, java.time.Duration.ofMillis(ms))
+    }
+
+    /** 20 Nov 2026 (audit): one read showing the leg closed, the look's second read showing it held: its stop stays. */
+    @Test fun aSingleZeroReadNeverTakesALegsStopOut() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, kite.gtts.size)
+        repeat(2) {
+            kite.position(NIFTY_CE, 0, 0.0)
+            kite.afterNext("/portfolio/positions") { kite.position(NIFTY_CE, 75, 100.0) }
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            later(Strategies.FLAT_AGREE_MS + 1_000)
+        }
+        assertEquals("kept", 1, kite.gtts.size)
+    }
+
+    /** 20 Nov 2026 (deep review): a read that left the leg's row out as malformed never takes its stop out, however often. */
+    @Test fun aSkippedRowNeverTakesALegsStopOut() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, kite.gtts.size)
+        kite.positions.clear()
+        kite.extraNetRows = listOf(org.json.JSONObject().put("tradingsymbol", NIFTY_CE).put("exchange", "NFO").put("product", "NRML"))
+        repeat(3) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.FLAT_AGREE_MS + 1_000) }
+        assertEquals("kept", 1, kite.gtts.size)
+        assertTrue(sells().isEmpty())
+    }
+
+    /** 20 Nov 2026 (audit): a malformed or partial positions reply is never "no position": the leg's stop stays at Zerodha. */
+    @Test fun aMalformedOrPartialPositionsReadNeverTakesALegsStopOut() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, kite.gtts.size)
+        kite.positionsBody = org.json.JSONObject().put("day", org.json.JSONArray())          // no "net" list
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.FLAT_AGREE_MS + 1_000) }
+        assertEquals("kept on a malformed reply", 1, kite.gtts.size)
+        kite.positionsBody = null
+        kite.positions.clear()                                                                // a reply missing the contract's row
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.FLAT_AGREE_MS + 1_000) }
+        assertEquals("kept on a read with no row for it", 1, kite.gtts.size)
+        assertTrue(sells().isEmpty())
+    }
+
+    /** 20 Nov 2026 (audit): Boss's live start rests its legs' stops at once, never waiting for the next 15-second look. */
+    @Test fun aLiveStartRestsItsLegsStopsStraightAway() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        val sl = restingStops().single()
+        assertEquals("70.00", sl.form["trigger_price"])
+        val entryAt = kite.requests.indexOfFirst { it.method == "POST" && it.form["order_type"] == "MARKET" }
+        val stopAt = kite.requests.indexOfFirst { it.method == "POST" && it.form["order_type"] == "SL" }
+        assertTrue(stopAt > entryAt)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("one stop, not two", 1, restingStops().size)
     }
 
     /** Review C2: part sold by hand in Kite - the resting stop shrinks to what is left, so it can never sell into a short. */

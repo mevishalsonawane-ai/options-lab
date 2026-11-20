@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 
 /**
  * 20 Nov 2026 (audit: "after a network change the relay stays dead for up to 45 seconds"): Android's default-network callback.
@@ -38,6 +39,7 @@ object NetWatch {
     /** When the last reconnect began (monotonic; [Long.MIN_VALUE]: none yet), and whether one is already waiting to run. */
     private var lastActAt = Long.MIN_VALUE
     private var pending = false
+    private val actLock = kotlinx.coroutines.sync.Mutex()
     /** When the latest change was seen, on the stream's monotonic clock ([KiteStream.networkChanged]). */
     private var lastChangeSeen = Long.MAX_VALUE
     private fun mono(): Long = System.nanoTime() / 1_000_000L
@@ -69,8 +71,11 @@ object NetWatch {
         val wait = if (last == Long.MIN_VALUE) 0L else (last + debounceMs - mono()).coerceIn(0L, debounceMs)
         scope.launch {
             if (wait > 0) kotlinx.coroutines.delay(wait)
-            val seen = synchronized(this@NetWatch) { pending = false; lastActAt = mono(); acts++; lastChangeSeen }
-            act(seen)
+            // (Merge review: one act at a time - the relay's wait for its calls in flight can take seconds; a later change waits for it.)
+            actLock.withLock {
+                val seen = synchronized(this@NetWatch) { pending = false; lastActAt = mono(); acts++; lastChangeSeen }
+                act(seen)
+            }
         }
     }
 

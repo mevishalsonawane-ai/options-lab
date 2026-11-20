@@ -68,6 +68,10 @@ notes; match the surrounding code.
     never comes from Jarvis or voice; on is one tap (no PIN).
   - Nothing was switched back on by it: an arm a stop had already switched off, parked or paused, and a live or paper stop already
     reached, waits for Boss (his own switch, or his PIN as before).
+  - Boss, 20 Nov ("Its off then why separate button" / "Yes, make it follow switch"): the arms' live-copies account stop (ArmLive: the
+    same −₹40k from the best / −₹13k a month, over the arms' whole live record) follows the "Liquidity live stop rule" switch for R51
+    and R72 (Liquidity's live trades never pass through it; their own live stop rule follows the switch as above): off, it no longer
+    refuses their live entries, whenever it was reached; on, it refuses as before. Every other arm keeps it.
   - Every other arm keeps all five. The kill switch, the day lock, the guard and daily loss limit, Stop for today, every live gate
     (PIN, Live, "AI trades go live", each arm's Trade live switch), every exit, the whole-account stop rule's own switch, the funds
     check, the R151 picker and Boss's exit rule V4/V5 still apply to these three.
@@ -168,6 +172,29 @@ notes; match the surrounding code.
   own cancel, and with blank or unrecognised words, is Boss's: never put back, the app sells at the level. Exchange / RMS / market
   protection words, or a cancel outside market hours, are Zerodha's: put back. A GTT "deleted" with no app mark is Boss's. The app's own
   cancels (arm exits and Boss's manual exit from the app) are marked before they go and saved in the book, so a restart never misreads them.
+- ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
+  - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
+    live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)
+    refuses such entries; on needs no PIN, off takes the PIN. Exits and stops never look at the count.
+  - Boss's own kill switch in the app (turning it on, or its "Cancel the bots' working entries" while it is on; once the switch reads
+    on) also cancels the bots' working entry orders at Zerodha (told apart by tag: ORB, Pine, strategies, the arms' live copies).
+    It never cancels an exit, a stop, Boss's own entries, a BUY on an underlying with a short held (it may be a hedge) or any BUY
+    when positions cannot be read, and nothing when the order book cannot be read. Turned on by the guard, Jarvis, voice or
+    Autopilot, it only logs which entries it would cancel.
+- R51 / R72 STALE HISTORY (20 Nov audit B5). The earlier sessions a break's 20-bar channel reads must reach the last trading day by
+  the calendar, whole in its last 20 five-minute bars. A missing, empty or stale history is read again in the background (1, 2, then
+  every 5, then every 15 minutes after about an hour); a worse read never replaces a better one, and a history already in use is
+  replaced only with the switch on (off, the first one kept stays for the day and is pinned on the phone, as before, and a better
+  read is only logged). Its Bot settings switch "Hold R51 / R72 breaks on a stale history" is off by default (shadow: taken as
+  before, logged "would have skipped (stale history)"); on, such a break waits in its fill window and is let go when the window
+  ends, paper and live; a break let go that the arm would have taken holds its side (up to its 30-minute time stop) and counts in
+  the day's caps, as the trade would have, so it never frees a place. On and off both take the PIN (on also lets a better history
+  replace the one in use, which can change live breaks). A picker score made from part of its inputs is never reused as whole; the
+  first score that decides a break (skip or take) fixes that decision for the day (kept in the book across a restart). R51 / R72
+  locks may also rise from the checked prices now while the option's minutes stop coming (the same levels). A live R51 / R72 copy's
+  best price counts a stream price only once checked (a trade after the entry minute, not far outside a sane book), else the sane
+  book's bid (not streamed: Zerodha's quote as the live stop judges it, its last price unless far outside a sane book), and candle
+  highs only from closed minutes.
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
   No main-thread I/O.
 - OPEN POSITIONS AND ORDERS COME FIRST (Boss, 14 Oct: "whenever an order is placed it must be pulled on priority, so we

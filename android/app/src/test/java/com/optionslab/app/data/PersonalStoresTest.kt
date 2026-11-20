@@ -672,6 +672,13 @@ class PersonalStoresTest {
             check(com.optionslab.app.data.FundsCheck.holdsForErase())
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("OrderCountCheck") {
+            // 20 Nov 2026: off by default: switched on by Boss, a setting to erase.
+            com.optionslab.app.data.OrderCountCheck.resetForTest(on = false)
+            com.optionslab.app.data.OrderCountCheck.set(true)
+            check(com.optionslab.app.data.OrderCountCheck.holdsForErase())
+            com.optionslab.app.security.SecurePrefs.flush()
+        },
         s("ArmAutoStopsHost") {
             // 19 Nov: on by default (TestApp starts it all on): one switched off by Boss (with his PIN), a setting to erase.
             com.optionslab.app.data.ArmAutoStopsHost.resetForTest()
@@ -681,6 +688,10 @@ class PersonalStoresTest {
         },
         s("HealthReport") {
             com.optionslab.app.data.HealthReport.write(app)             // cache/exports/health/*.zip (holds() stays false: files only)
+        },
+        s("SettingsShare") {
+            // 20 Nov 2026: the shared settings-and-state file (cache/exports/state/*.txt; files only, nothing in memory).
+            kotlinx.coroutines.runBlocking { com.optionslab.app.data.SettingsShare.write(app) }
         },
         s("GlanceSource") {
             kotlinx.coroutines.runBlocking { com.optionslab.app.data.GlanceSource.read() }   // last card (memory)

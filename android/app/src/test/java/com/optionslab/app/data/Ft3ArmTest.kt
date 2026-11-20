@@ -575,6 +575,11 @@ class Ft3ArmTest : RobolectricTest() {
         tick(LocalTime.of(15, 5), seconds = 2)
         assertTrue(Ft3Arm.view.value.open.isEmpty())
         assertEquals("closed_elsewhere", Ft3Arm.view.value.closed.single { it.symbol == p.symbol }.why)
+        // 20 Nov 2026 (B5 item 4): booked at the square-off's own sale (its price and time), not the entry price.
+        val sale = Paper.state.trades.last { it.symbol == p.symbol && it.action == "SELL" }
+        val done = Ft3Arm.view.value.closed.single { it.symbol == p.symbol }
+        assertEquals(sale.price.toDouble(), done.exit!!, 1e-9)
+        assertEquals(sale.timestamp, done.exitTime)
         assertEquals("the arm sold nothing more", sells, Paper.state.trades.count { it.symbol == p.symbol && it.action == "SELL" })
         assertEquals("flat, never short", 0, Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity })
         assertNothingAtZerodha()

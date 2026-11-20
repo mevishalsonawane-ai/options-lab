@@ -361,10 +361,11 @@ object Relay {
     @Volatile private var staleNetwork = false
     private const val BUSY_MS = 3_000L
     /**
-     * A network change waits this long at most for the calls in flight before the old session is let go anyway: Zerodha's own
-     * deadline for a write ([Broker]'s order call: 20 s to connect plus 60 s for the reply), so an order is never cut before it.
+     * A network change waits this long at most for the calls in flight before the old session is let go anyway: a little over a
+     * write's whole deadline ([Broker.WRITE_BUDGET_MS], 15 s since the B5 order audit, past which Broker cuts the call itself), so an
+     * order is never cut by this before its own deadline.
      */
-    internal const val STALE_WAIT_MS = 80_000L
+    internal const val STALE_WAIT_MS = 20_000L
     private fun mono(): Long = System.nanoTime() / 1_000_000L
 
     /** Tunnels with a call in flight ([Tunnel.inFlight]) on session [s], [except] the one asking. */
@@ -375,8 +376,9 @@ object Relay {
      * ([NetWatch]). The SSH session was made on the old network; JSch calls it connected until 3 keep-alives of 15 s go
      * unanswered, so every order meanwhile waited on a dead tunnel. It is let go now - unless a call is in flight in a tunnel
      * ([Tunnel.inFlight]: an order is never cut, even one quietly waiting for its reply): then once none is, [waitMs] (Zerodha's
-     * write deadline, 80 s) at most. A new call meanwhile connects afresh on the new network ([connect]). The fail-fast memory of a
-     * failure is forgotten only once the old session is actually let go (B5-D: a flapping network never wipes it). Then, in market
+     * write deadline and a little more, 20 s) at most. A new call meanwhile connects afresh on the new network ([connect]). The fail-fast memory of a
+     * failure remembered on the old network no longer refuses a call once the change is acted on ([recentFailure]: one change each few
+     * seconds at most, [NetWatch]'s debounce - a flapping network does not wipe it each flap). Then, in market
      * hours with the relay on, it is connected again at once, so the next order finds it warm. Never on the order path (the network
      * callback's own background thread, debounced: [NetWatch]); the SOCKS port and the switch are untouched.
      */

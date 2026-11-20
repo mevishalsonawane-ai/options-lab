@@ -482,7 +482,7 @@ object KiteStream {
                 val check = c.byCheck
                 // Round 2: a drop of a live connection is counted for the order speed card, and the local candles' runs are
                 // broken (a minute that lost ticks is never decided on: the feed is read for it instead).
-                if (opened && !check) {
+                if (opened && !check && !c.byNetwork) {
                     if (downSince == 0L) downSince = now
                     runCatching { OrderTiming.streamDropped() }
                     // The app's own health record: a reconnect of the live stream (a counter; it reconnects by itself).
@@ -496,10 +496,11 @@ object KiteStream {
                 // A connection that never opened is noted once per kind of failure and every tenth try (offline for an hour
                 // is not 120 lines); every live connection lost is noted.
                 if (check) runCatching { Diag.record(StreamHealth.AREA, "live check: closed the connection on purpose to time the reconnect") }
-                else if (opened || fails == 1 || cause != lastCause || fails % 10 == 0)
+                // (Merge review: a close for a network change is planned - noted by [NetWatch], never counted or alerted as a drop.)
+                else if (!c.byNetwork && (opened || fails == 1 || cause != lastCause || fails % 10 == 0))
                     runCatching { Diag.record(StreamHealth.AREA, StreamHealth.diary(d, listOf(token, key))) }
                 lastCause = cause
-                if (opened && !check) {
+                if (opened && !check && !c.byNetwork) {
                     val why = StreamHealth.plain(cause, if (cause == StreamHealth.Cause.PAUSED) d.pausedSec ?: d.silentSec else d.silentSec)
                     com.optionslab.app.work.Alerts.post("Live price stream dropped ($why); reconnecting", com.optionslab.app.work.Alerts.Kind.ERROR, throttle = true,
                         // 20 Oct: it reconnects by itself (each drop is also counted in the stream's own line): a warning, not an error.

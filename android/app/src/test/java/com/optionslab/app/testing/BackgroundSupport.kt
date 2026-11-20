@@ -78,6 +78,8 @@ class UpstoxStub : Closeable {
     override fun close() {
         // 1 Nov: the switched-off shadow's prices read on its own worker are done (or stopped) before this fake goes, so none reaches the real host.
         com.optionslab.app.data.OffShadow.settleForTest()
+        // 20 Nov 2026 (B5): the paper price reads that run on past their caller end with this fake, never retried at the real host.
+        com.optionslab.app.data.Paper.settlePriceReadsForTest()
         Net.testEndpoint = null
         server.shutdown()
     }

@@ -135,6 +135,8 @@ fun DiagnosticsPage() {
                         com.optionslab.app.work.Alerts.success("Diagnostics copied: paste them in the chat. Keys, tokens and passwords are never included.")
                     }
                 }
+                // 20 Nov 2026: beside it, all of it and more as ONE file (a pasted note is cut at about 140 lines).
+                ShareStateButton(Modifier.padding(top = 6.dp), note = false)
             }
         }
     }

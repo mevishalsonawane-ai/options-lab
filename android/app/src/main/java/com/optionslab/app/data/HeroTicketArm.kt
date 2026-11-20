@@ -744,7 +744,8 @@ object HeroTicketArm {
             val held = Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity }
             if (held <= 0) {
                 p.targetOrderId?.let { runCatching { Paper.cancel(it, "position_closed") } }
-                val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+                // 20 Nov 2026 (audit, B5 item 4): its own product's sale no other trade booked, else its expiry settlement or last price ([Paper.soldElsewhere]).
+                val t = Paper.soldElsewhere("Hero|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "MIS", qty = p.qty)
                 val done = p.copy(exit = t?.price?.toDouble() ?: p.entry, exitTime = t?.timestamp ?: now, why = "closed_elsewhere",
                     charges = p.charges + (t?.charges?.toDouble() ?: 0.0), targetOrderId = null)
                 b.positions[i] = done; closed(b, done); changed = true; continue
@@ -795,7 +796,8 @@ object HeroTicketArm {
         val r = if (limit != null) Paper.place(c, "SELL", lots, "LIMIT", "MIS", limit, null, exit = true) else Paper.place(c, "SELL", lots, "MARKET", "MIS", null, null, exit = true)
         val fill = r.events.filterIsInstance<SandboxEvent.Fill>().firstOrNull()
         if (fill == null && !r.ok && Paper.state.positions.filter { it.symbol == p.symbol }.sumOf { it.quantity } <= 0) {
-            val t = Paper.state.trades.lastOrNull { it.symbol == p.symbol && it.action == "SELL" && !it.timestamp.isBefore(p.entryTime) }
+            // 20 Nov 2026 (audit, B5 item 4): its own product's sale no other trade booked, else its expiry settlement or last price ([Paper.soldElsewhere]).
+            val t = Paper.soldElsewhere("Hero|${p.symbol}|${p.entryTime}", p.symbol, p.entryTime, "MIS", qty = p.qty)
             // 19 Nov 2026 (audit batch 2): the arm's own exit ([why]) decided this sale and lost the race to another paper close: its live copy
             // is still sold by that exit ([ArmLive.ruleExit]), never only detached as a plain "closed elsewhere" is.
             runCatching { ArmLive.ruleExit(mirrorRef(p), why) }

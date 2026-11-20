@@ -484,6 +484,12 @@ object Kite {
         }
     }
 
+    /**
+     * 20 Nov 2026 (audit): a stop GTT's limit room past its trigger - 10%, as the app's own resting SL stops have used with Zerodha
+     * since October ([protect]'s [stopSlippage]), so a gap of up to 10% through the stop still fills; the LIMIT never sells under it.
+     */
+    const val STOP_GTT_SLIPPAGE = 0.10
+
     /** Kite refuses a GTT whose trigger is within 0.25% of the last price. */
     const val GTT_MIN_GAP = 0.0025
 
@@ -515,9 +521,12 @@ object Kite {
      * cancels the other). Each fires a LIMIT order [slippage] beyond its
      * trigger, so it fills in a fast market without being an unbounded market
      * order. Returns the GTT, or the reasons it cannot be placed.
+     *
+     * 20 Nov 2026 (audit: a stop GTT's limit only 5% past its trigger can miss in a gap): [stopSlippage] is the stop leg's own room
+     * (the target leg keeps [slippage]); never less than [slippage]. The callers that ask for more pass [STOP_GTT_SLIPPAGE].
      */
     fun protect(spec: Spec, product: String, netQuantity: Int, lastPrice: Double, stop: Double?, target: Double?,
-                slippage: Double = 0.05): Pair<Gtt?, List<String>> {
+                slippage: Double = 0.05, stopSlippage: Double = slippage): Pair<Gtt?, List<String>> {
         val why = ArrayList<String>()
         if (netQuantity == 0) return null to listOf("nothing is open")
         if (stop == null && target == null) return null to listOf("give a stop, a target, or both")
@@ -534,9 +543,12 @@ object Kite {
         for ((name, t) in listOf("stop" to st, "target" to tg)) if (t != null && kotlin.math.abs(t - lastPrice) / lastPrice < GTT_MIN_GAP)
             why += "the $name is within 0.25%% of the last price; Zerodha refuses that".format()
         if (why.isNotEmpty()) return null to why
-        fun leg(trigger: Double) = Order(spec.tradingSymbol, side, qty, spec.lotSize, product, "LIMIT",
-            onTick(if (side == Side.BUY) trigger * (1 + slippage) else trigger * (1 - slippage), spec.tickSize, side).let { maxOf(it, spec.tickSize) },
-            spec.tickSize, spec.exchange)
+        fun leg(trigger: Double): Order {
+            val room = if (st != null && kotlin.math.abs(trigger - st) < 1e-9) maxOf(slippage, stopSlippage) else slippage
+            return Order(spec.tradingSymbol, side, qty, spec.lotSize, product, "LIMIT",
+                onTick(if (side == Side.BUY) trigger * (1 + room) else trigger * (1 - room), spec.tickSize, side).let { maxOf(it, spec.tickSize) },
+                spec.tickSize, spec.exchange)
+        }
         val triggers = listOfNotNull(st, tg).sorted()
         val gtt = Gtt(if (triggers.size == 2) "two-leg" else "single", spec.exchange, spec.tradingSymbol, lastPrice,
             triggers.map { Math.round(it * 100) / 100.0 }, triggers.map(::leg))

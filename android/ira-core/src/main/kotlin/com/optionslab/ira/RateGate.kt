@@ -8,14 +8,22 @@ import kotlinx.coroutines.delay
  * default, under Kite's 10) in ANY rolling second, shared by everything.
  *
  * With priority: near the limit the lower lanes leave room for the higher ones, so an exit or a stop's read is never
- * queued behind analysis - [Priority.SAFETY] (exits, stops, the loss limit, every order) may use the whole budget,
- * [Priority.ENTRY] (entries and ordinary reads) leaves one request a second, [Priority.ANALYSIS] (Jarvis's words, studies)
- * leaves three. A wait is a suspension ([acquire]), never a blocked thread. [tryTake] is the pure decision, clock given.
+ * queued behind analysis - since 20 Nov 2026 four lanes (below): [Priority.EXIT] (exits, stops, stop moves, cancels) may use the
+ * whole budget, [Priority.SAFETY] (the stop checks' and the loss limit's reads) leaves one request a second, [Priority.ENTRY]
+ * (entry orders and ordinary reads) two, [Priority.ANALYSIS] (Jarvis's words, studies) three. A wait is a suspension
+ * ([acquire]), never a blocked thread. [tryTake] is the pure decision, clock given.
  *
- * 20 Nov 2026 (audit: "stop-price quotes compete with about 40 other readers"): the lanes are also served in order. While a
- * caller of a higher lane is waiting in [acquire], a lower lane takes no slot at all, so a stop's quote read, an exit or an
- * order is next through the moment a slot frees, never behind the readers that were already polling for it. The budget
- * itself (at most [perSecond] in any rolling second) is unchanged.
+ * 20 Nov 2026 (audit B5, item 3: "exits get one reserved request a second"): exits, stops, stop moves and cancels had the same lane
+ * as the stop checks' price reads and every entry order, so a busy second of reads and entries left them one request. They now have
+ * a lane of their own above everything, [Priority.EXIT], which may use the whole budget; every other lane leaves it room:
+ * [Priority.SAFETY] (the stop checks' and the loss limit's reads) one request a second, [Priority.ENTRY] (the entry orders and
+ * ordinary reads) two, [Priority.ANALYSIS] three, as before. A lower lane's slot opens later than a higher one's (it needs more of
+ * the second to pass), so a waiting exit is let through first. The total stays [perSecond] (8, under Kite's 10).
+ *
+ * 20 Nov 2026 (B5 stream audit: "stop-price quotes compete with about 40 other readers"): the lanes are also served in order. While a
+ * caller of a higher lane is waiting in [acquire], a lower lane takes no slot at all, so a stop's quote read, an exit or an order is
+ * next through the moment a slot frees, never behind the readers that were already polling for it. The budget itself (at most
+ * [perSecond] in any rolling window) is unchanged.
  *
  * [windowMs]: the "second" itself, 1,000 ms by default. 20 Nov 2026 (review): Zerodha's quote calls have their own limit of one a
  * second; that gate's window is a little longer, so network jitter never lands two inside one of Zerodha's seconds.
@@ -25,7 +33,7 @@ class RateGate(
     private val windowMs: Long = 1_000L,
     private val clock: () -> Long = { System.nanoTime() / 1_000_000L },
 ) {
-    enum class Priority(val reserve: Int) { SAFETY(0), ENTRY(1), ANALYSIS(3) }
+    enum class Priority(val reserve: Int) { EXIT(0), SAFETY(1), ENTRY(2), ANALYSIS(3) }
 
     /** When each request of the last second was let through, oldest first. */
     private val sent = ArrayDeque<Long>()
@@ -42,7 +50,7 @@ class RateGate(
     @Volatile var waited = 0L
         private set
 
-    /** The share of the budget [p] may use: all of it for safety; never less than one request a second. */
+    /** The share of the budget [p] may use: all of it for exits; never less than one request a second. */
     private fun cap(p: Priority): Int = (perSecond - p.reserve).coerceAtLeast(1)
 
     /** Take a slot for [p] at [now]: 0 when taken, else the milliseconds to wait before asking again (nothing taken). */

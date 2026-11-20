@@ -53,7 +53,7 @@ object Headroom {
                 else -> "today's loss is ${rs(lost)} of the ${rs(l.maxDailyLoss)} daily loss limit (${pct(share)}), ${rs(left)} left"
             })
         }
-        if (l.maxTradesPerDay > 0) {
+        if (l.maxTradesPerDay > 0 && a.ordersKnown) {      // (20 Nov 2026, audit B5: a count that could not be read is left out, never 0)
             val n = a.ordersToday; val left = l.maxTradesPerDay - n
             out += Use(Kind.ORDERS, n.toDouble() / l.maxTradesPerDay,
                 if (left <= 0) "$n orders sent today, at the limit of ${l.maxTradesPerDay}"
