@@ -3532,8 +3532,11 @@ object OrbArms {
      */
     private fun orbLostKey(label: String, sym: String, fill: Double, qty: Int) = "orbstop:$label:$sym:$fill:$qty"
 
-    /** 20 Nov 2026 (audit B5 deep review): a stop of [label]'s on [sym] taken as a trade's own another way: no lost one looked for there any more. */
-    private fun forgetLostStops(label: String, sym: String) = Broker.lostKeys("orbstop:$label:$sym:").forEach { Broker.forgetLost(it) }
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a stop of [label]'s on [sym] for [qty] taken as a trade's own another way: the lost stop of that
+     * size there is no longer looked for (another part's, of another size, still is).
+     */
+    private fun forgetLostStops(label: String, sym: String, qty: Int) = Broker.forgetLostOfQty("orbstop:$label:$sym:", qty)
 
     private suspend fun placeStop(label: String, sym: String, qty: Int, lot: Int, tick: Double, fill: Double, known: Collection<String>,
                                   liquidity: Boolean = false, at: Double? = null, points: Double = OrbRules.STOP_POINTS,
@@ -4361,7 +4364,8 @@ object OrbArms {
                         covered = minOf(qty, held - othersAll).coerceAtLeast(0) / lot * lot
                         capLeftNone = covered <= 0
                         if (covered > 0) {
-                            val (id, tr, _) = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig)
+                            val (id, tr, _) = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig,
+                                lostKey = orbLostKey(a.label, sym, fill, qty))      // (the row's own quantity: what the next look asks)
                             stopId = id; stopAt = tr ?: trig
                             if (id != null) placed(sym, covered, id)
                         }
@@ -4967,7 +4971,7 @@ object OrbArms {
         suspend fun took(trig: Double): Orphan {
             runCatching { Strategies.tagOwner("kite:${o.id}", "$label · stop") }
             runCatching { Diag.record("orb", "$label: a stop on $sym that no trade claimed (order ${o.id}, placed ${o.placedAt}) is taken as its stop for $qty") }
-            forgetLostStops(label, sym)
+            forgetLostStops(label, sym, o.qty)
             return Orphan.Took(o.id, trig)
         }
         // (One that sold already: taken as it is only when placed for exactly this trade's quantity - never resized or raised.)
@@ -5194,7 +5198,7 @@ object OrbArms {
                     if (orphan != null) {
                         p = p.copy(stopOrderId = orphan.id, stopTrigger = orphan.trigger.takeIf { it > 0 } ?: p.stopTrigger, appCancelled = false)
                         runCatching { Strategies.tagOwner("kite:${orphan.id}", "$label · stop") }
-                        forgetLostStops(label, sym)
+                        forgetLostStops(label, sym, orphan.qty)
                         runCatching { Diag.record("orb", "$label: a stop of these arms on $sym that no trade claimed (order ${orphan.id}) is taken as this trade's stop") }
                         others = others.filter { it.id != orphan.id }
                         room = com.optionslab.engine.risk.ExitQty.sendable(held, left(others), p.qty, lot)
@@ -5297,10 +5301,12 @@ object OrbArms {
             val liq = armOf(p.arm).liquidity
             val lock = lockOrStop(p, spec.tickSize)?.takeIf { l -> ladderTarget(p) != null && l > (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 }
             if (lock != null) {
-                val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock)
+                val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock,
+                    lostKey = orbLostKey(label, sym, p.entry, p.qty))
                 if (id != null) { putBack(id); placed(sym, qty, id); return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock)) }
             }
-            val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger)
+            val (id, trig) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger,
+                lostKey = orbLostKey(label, sym, p.entry, p.qty))
             putBack(id)
             if (id != null) placed(sym, qty, id)
             return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger))

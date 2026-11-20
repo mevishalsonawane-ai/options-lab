@@ -1804,7 +1804,7 @@ object Broker {
         val offNow = serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
         val off = mark?.offset?.takeIf { o -> offNow == null || kotlin.math.abs(offNow - o) <= OFFSET_MOVED_MS }
         val since = mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
-            ?: sentAt?.minusMinutes(1) ?: now.minusMinutes(3)
+            ?: sentAt?.minusMinutes(3) ?: now.minusMinutes(3)
         val before = mark?.before?.mapTo(HashSet()) { it.id }.orEmpty()
         return rs.lastOrNull {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
@@ -1910,7 +1910,7 @@ object Broker {
     @Volatile internal var lostSearchInlineForTest = false
 
     /** What [lookLost] found: the order, still looking (UNKNOWN: send nothing), or given up on (Boss told; the caller may go on). */
-    sealed class LostLook { data class Found(val id: String, val qty: Int, val trigger: Double? = null) : LostLook(); object Searching : LostLook(); object GaveUp : LostLook() }
+    sealed class LostLook { data class Found(val id: String, val qty: Int, val trigger: Double? = null) : LostLook() { var symbol: String = "" }; object Searching : LostLook(); object GaveUp : LostLook() }
 
     /**
      * [o] ([what], for Boss's words) was sent under [key], its reply lost and not found in the book yet ([known]: never adopted).
@@ -1921,7 +1921,9 @@ object Broker {
      */
     fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false) {
         // (Bounded: only ones no caller has asked after for an hour - their trades long gone - are let go, and only past 500.)
-        if (lostWrites.size > 500) lostWrites.entries.removeIf { System.currentTimeMillis() - it.value.askedMs > 3_600_000L }
+        if (lostWrites.size > 500) lostWrites.entries.removeIf { e ->
+            (System.currentTimeMillis() - e.value.askedMs > 3_600_000L).also { gone -> if (gone) e.value.searching?.cancel() }
+        }
         lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what, liveOnly,
             runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }))
     }
@@ -1934,6 +1936,11 @@ object Broker {
 
     /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed. Memory only. */
     fun forgetLost(key: String) { lostWrites.remove(key)?.searching?.cancel() }
+
+    /** The lost replies under keys starting with [prefix] whose order was for [qty]: forgotten (a stop of that size taken another way). */
+    fun forgetLostOfQty(prefix: String, qty: Int) {
+        for ((k, w) in lostWrites.entries.toList()) if (k.startsWith(prefix) && w.order.quantity == qty) forgetLost(k)
+    }
 
     /** TEST ONLY: every lost reply forgotten, as after a restart. */
     internal fun forgetLostForTest() = lostWrites.clear()
@@ -1961,7 +1968,7 @@ object Broker {
         w.foundId?.let { found ->
             lostWrites.remove(key, w)
             runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
-            return LostLook.Found(found, w.order.quantity, w.order.triggerPrice)
+            return LostLook.Found(found, w.order.quantity, w.order.triggerPrice).also { it.symbol = w.order.tradingSymbol }
         }
         val window = lostSearchMsForTest ?: LOST_SEARCH_MS
         if (now - w.sinceMs < window) return LostLook.Searching

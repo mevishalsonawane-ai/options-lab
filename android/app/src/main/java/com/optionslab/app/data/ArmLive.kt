@@ -1777,18 +1777,21 @@ object ArmLive {
         for (key in keys) {
             if (key.removePrefix(LOST_STOP) in openRefs) continue
             val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: continue
-            // (Review: one that already filled sold beside the trade's own exit - a second sale, which may have left the account short:
-            // said plainly with its quantity, never "cancelled".)
-            val st = runCatching { Broker.orderState(l.id) }.getOrNull()
+            // (Review: one that already filled: if Zerodha now shows the contract SHORT it sold beside the trade's own exit - a second sale,
+            // said plainly; flat, it was the trade's own exit (closed as sold at Zerodha) - noted only. Never "cancelled".)
+            val st = try { Broker.orderState(l.id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
             if (st != null && (st.status == "COMPLETE" || st.filled > 0)) {
-                val text = "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha after its arm's trade had already closed: " +
-                    "a second sale - the account may now be SHORT on that contract. Check positions in Kite now."
+                val net = try { Broker.positionBook().net } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+                val short = net?.any { it.qty < 0 && it.symbol == l.symbol }
+                val text = if (short == false) "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha: it was its trade's own exit (the position is flat)."
+                    else "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha after its arm's trade had already closed: a second " +
+                        "sale - the account may now be SHORT on that contract. Check positions in Kite now."
                 runCatching { Diag.record("armlive", text) }
-                com.optionslab.app.work.Alerts.error(text, WHO)
+                if (short != false) com.optionslab.app.work.Alerts.error(text, WHO)
                 if (st.status == "COMPLETE" || st.status == "CANCELLED" || st.status == "REJECTED") continue
             }
             markOwnCancel(l.id)
-            val ok = runCatching { Broker.cancel(l.id) }.isSuccess
+            val ok = try { Broker.cancel(l.id); true } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
             runCatching { Diag.record("armlive", "A stop ${l.id} found after its answer was lost, for a trade no longer open: " +
                 if (ok) "taken out" else "its cancel failed - check the order book in Kite") }
             if (!ok) com.optionslab.app.work.Alerts.error("A live stop ${l.id} found at Zerodha for an arm's trade no longer open could not be " +
@@ -2445,7 +2448,7 @@ object ArmLive {
      */
     // (20 Nov 2026, audit B5 deep review: and a lost stop still looked for, so the lanes keep calling [watch] after its trade closed and the
     // stop is taken out once found - [takeOutClosedLostStops]. Memory only.)
-    val recoverHint: Boolean get() = recoverDue || unreadable || coldPending || Broker.lostKeys(LOST_STOP).isNotEmpty()
+    val recoverHint: Boolean get() = recoverDue || unreadable || coldPending || (Broker.loggedIn && Broker.lostKeys(LOST_STOP).isNotEmpty())
 
     /** Whether a look has work now (memory only): a live trade held, a shadow trade open, a damaged or unread book. */
     // (19 Nov 2026, third review: and the start's sweep, so a login later in the day still reaches it on the minute lanes; memory only.)

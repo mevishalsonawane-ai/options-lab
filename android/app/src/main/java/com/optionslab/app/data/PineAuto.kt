@@ -1107,6 +1107,7 @@ object PineAuto {
             stopLimit(trig, spec.tickSize), spec.tickSize, "NFO", "irapine", triggerPrice = trig)
         val bad = com.optionslab.engine.Kite.refusals(o0, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
         if (bad.isNotEmpty()) {
+            stopNotRested -= lostStopKey(item, h)       // (20 Nov 2026: refused by the limits - not tried again on every check)
             com.optionslab.app.work.Alerts.error("${label(item)}: the stop on $sym was not placed at Zerodha (${bad.joinToString("; ")}); " +
                 "the app watches it instead.", "Pine live")
             return h
@@ -1166,6 +1167,7 @@ object PineAuto {
                 ?: null.also { Broker.noteLost(lostKey, o, knownKite(), "${label(item)}: its stop", liveOnly = true) }
         }
         if (oid == null) {
+            stopNotRested -= lostKey                    // (20 Nov 2026: refused or lost - never sent again on every check by the retry)
             com.optionslab.app.work.Alerts.error("${label(item)}: the stop at ${"%.2f".format(java.util.Locale.ENGLISH, trig)} on $sym could not be " +
                 "placed at Zerodha; the app watches it instead.", "Pine live")
             return h
