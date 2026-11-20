@@ -949,14 +949,24 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         OrbArms.testLostSearch = { gate.await(30, java.util.concurrent.TimeUnit.SECONDS) }
         OrbArms.testNow = now.toLocalDate().atTime(15, 10, 5).atZone(com.optionslab.engine.IST)
         kite.requests.clear()
-        try { pass() } finally { gate.countDown(); OrbArms.testLostSearch = null }
-        assertEquals("nothing more sold", 0, marketSells().size)
-        assertEquals("B's stop came out", "CANCELLED", kite.order(s2).status)
-        val bNow = today("liquidity").single { it.arm == "liquidity15" }
-        assertTrue("B still open", bNow.open)
-        val rested = kite.placed.filter { it.form["order_type"] == "SL" }
-        assertEquals("B's stop rests again at once, for its 30", listOf("30"), rested.map { it.form["quantity"] })
-        assertNotNull("on B", bNow.stopOrderId)
+        try {
+            pass()
+            assertEquals("nothing more sold", 0, marketSells().size)
+            assertEquals("B's stop came out", "CANCELLED", kite.order(s2).status)
+            val bNow = today("liquidity").single { it.arm == "liquidity15" }
+            assertTrue("B still open", bNow.open)
+            val rested = kite.placed.filter { it.form["order_type"] == "SL" }
+            assertEquals("B's stop rests again at once, for its 30", listOf("30"), rested.map { it.form["quantity"] })
+            val back = bNow.stopOrderId
+            assertNotNull("on B", back)
+            // While A's sale stays pending, B's stop rests: never cancelled and placed again on the next looks.
+            OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
+            pass(); runBlocking { OrbArms.priceCheckOnly(fast = true) }
+            assertEquals("still one stop placed", 1, kite.placed.count { it.form["order_type"] == "SL" })
+            assertTrue("B's stop still resting: ${kite.order(back!!).status}", kite.order(back).status !in setOf("CANCELLED", "COMPLETE", "REJECTED"))
+            assertEquals(back, today("liquidity").single { it.arm == "liquidity15" }.stopOrderId)
+        } finally { gate.countDown(); OrbArms.testLostSearch = null }
+        searchDone()
     }
 
     /**

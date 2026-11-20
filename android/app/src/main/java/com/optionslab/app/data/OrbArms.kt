@@ -5257,6 +5257,8 @@ object OrbArms {
     /** By [LostExit.id] (never reused: a part's stale [Position.lostId] matches nothing). */
     private val lostExits = java.util.concurrent.ConcurrentHashMap<Long, LostExit>()
     private val lostSeq = java.util.concurrent.atomic.AtomicLong()
+    /** 20 Nov 2026 (final review): stops put back only for pending lost sales, by stop id: those lost exits' ids ([exitLive]). Memory only. */
+    private val pendingBack = java.util.concurrent.ConcurrentHashMap<String, Set<Long>>()
     internal const val LOST_EXIT_HOLD_MS = 10_000L
     internal const val LOST_EXIT_ASK_MS = 3_000L
     /**
@@ -5436,6 +5438,9 @@ object OrbArms {
         // 19 Nov 2026 (review): Stop for today or the session's end refused a moment ago: its stop was put back; not taken out and sold
         // again every look - once every [REFUSED_RETRY_MS] (the stop rests meanwhile).
         if (why in ALWAYS_EXITS && p0.stopOrderId?.let { refusedAt[it] }?.let { epochMs(now()) - it < REFUSED_RETRY_MS } == true) return p0 to null
+        // 20 Nov 2026 (final review): a stop put back because only another part's pending lost sale left nothing to sell rests until that
+        // sale is resolved (found or let go) - then the exit goes at once; never taken out and put back every look meanwhile.
+        p0.stopOrderId?.let { sid -> pendingBack[sid]?.let { ids -> if (ids.any { lostExits.containsKey(it) }) return p0 to null; pendingBack.remove(sid, ids) } }
         // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade is unresolved
         // it sells nothing more - held; searched for in the background and booked by a later look ([lostExitLook], never the network under
         // the lock). Known not
@@ -5562,7 +5567,16 @@ object OrbArms {
                 it.type != "SL" && it.type != "SL-M" && (owners["kite:${it.id}"]?.substringBefore(" · ")?.let { l -> l == label } ?: true) }
             // (A refused Stop-for-today or 15:10 sale: the stop put back is not taken out again for [REFUSED_RETRY_MS] - by that stop's id,
             // so a part left with none is never held back.)
-            fun putBack(id: String?) { if (refused && why in ALWAYS_EXITS && id != null) { if (refusedAt.size > 200) refusedAt.clear(); refusedAt[id] = epochMs(t) } }
+            fun putBack(id: String?) {
+                if (refused && why in ALWAYS_EXITS && id != null) { if (refusedAt.size > 200) refusedAt.clear(); refusedAt[id] = epochMs(t) }
+                // (A [pending] put-back: not taken out again while those lost sales are unresolved - never cancelled and placed every look.)
+                if (pending && id != null) {
+                    if (pendingBack.size > 200) pendingBack.clear()
+                    pendingBack[id] = lostOn(sym).map { it.id }.toSet()
+                    runCatching { Diag.record("orb", "$label: $sym's exit (${why.replace('_', ' ')}) waits for another trade's lost sale to be found; " +
+                        "its stop rests again meanwhile") }
+                }
+            }
             if (refused && qty <= 0) {
                 coverSay(p, "$label: the exit of $sym was refused and no stop was put back: other working sales already cover all Zerodha holds " +
                     "of it - they are its only cover. Check $sym in Kite.")
@@ -7404,7 +7418,7 @@ object OrbArms {
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         readFails = 0
         forgetHistoryForTest()
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); barWaits.clear(); liqFolds.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); pendingBack.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
     }
 
@@ -7415,7 +7429,7 @@ object OrbArms {
      * set-aside copies of the file. Never reads the vault; safe before [init].
      */
     @Synchronized fun wipe() {
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); barWaits.clear(); liqFolds.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); pendingBack.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
         // (19 Nov 2026: a pending write is dropped; never a wait on one running - the screen may erase - which deletes the file again
         // itself if it finishes after this erase ([flushSoon]).)
