@@ -4169,7 +4169,10 @@ object OrbArms {
                 !SquareOffExit.inGap("NFO", sym, "MIS") &&
                 // (20 Nov 2026, audit PC: nor while a lost exit on it is neither found nor let go - it may still be selling; every trade's
                 // level is still watched by the app meanwhile and sold there.)
-                lostOf(cur) == null) {
+                lostOf(cur) == null &&
+                // (Nor for any trade on it while another part's lost sale there is unresolved - it may have filled unseen, and the stop is
+                // sized from positions that may not show it; the app watches every level meanwhile and sells there.)
+                lostOn(sym).none { it.foundId == null }) {
                 // (19 Nov 2026, second review: beside its own working sale - or a stop of these arms resting unclaimed - nothing new rests,
                 // but an unclaimed stop placed since its entry is still taken as its own: [restExchangeStop] with adoptOnly.)
                 // (19 Nov 2026, review: a stop of these arms resting unclaimed is [orphanStop]'s to judge - taken, waited on, or a stop capped
@@ -5441,8 +5444,10 @@ object OrbArms {
         // 20 Nov 2026 (final review): a stop put back because only another part's pending lost sale left nothing to sell rests until that
         // sale is resolved (found or let go) - then the exit goes at once; never taken out and put back every look meanwhile.
         // (Only the session's and Boss's exits wait on it - 15:10, Stop for today, the square-offs; a target or an index exit never does.)
-        if (why in ALWAYS_EXITS) p0.stopOrderId?.let { sid ->
-            pendingBack[sid]?.let { ids -> if (ids.any { lostExits.containsKey(it) }) return p0 to null; pendingBack.remove(sid, ids) }
+        p0.stopOrderId?.let { sid ->
+            pendingBack[sid]?.let { ids ->
+                if (ids.none { lostExits.containsKey(it) }) pendingBack.remove(sid, ids) else if (why in ALWAYS_EXITS) return p0 to null
+            }
         }
         // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade is unresolved
         // it sells nothing more - held; searched for in the background and booked by a later look ([lostExitLook], never the network under
@@ -5668,8 +5673,8 @@ object OrbArms {
             if (qty <= 0 && qtyRaw > 0) {
                 val lagged = rawNet?.let { heldNow < it } ?: true
                 if (!lagged) return unsold(qtyRaw, book, pending = true)
-                runCatching { Diag.record("orb", "$label: $sym's exit waits for another trade's lost sale; Zerodha's positions lag a fill, so no " +
-                    "stop is put back meanwhile (it could sell more than is held)") }
+                coverSay(p, "$label: the exit of $sym waits for another trade's lost sale and its stop at Zerodha was not put back: Zerodha's " +
+                    "positions lag a fill, so a stop could sell more than is held. The app watches it and sells it itself once that sale is known.")
                 return p.copy(stopOrderId = null) to null
             }
             // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
