@@ -50,8 +50,9 @@ import kotlin.math.abs
  *    each give-up is logged; today's counts are on the card, the shared settings file and the daily diagnostics.
  *
  * Off the tick path: nothing here runs on a tick. On an entry it reads the switch and the app's own contract list from memory only
- * ([isOn], [Market.contractsInMemory]: never a file read under the arms' locks), Zerodha's instrument list as the entry's own lookup does
- * ([Broker.cachedInstruments]: its memo, the entry has just read it), and - only when the funds are short - ONE quote read for the (at
+ * ([isOn], [Market.contractsInMemory]: never a file read under the arms' locks), and Zerodha's instrument list exactly as the entry's own
+ * contract lookup reads it ([Broker.cachedInstruments] / [Broker.cachedBfoOptions]: its memo, which may stat the day's file and, when the
+ * file changed, parse it - as the entry path already does just before), and - only when the funds are short - ONE quote read for the (at
  * most three) strikes, plus after a refusal one fresh read of the free cash; all on the entry's own worker, as the entry's own reads are.
  * The switch is read once in the background at the start; the record is written in the background.
  */
@@ -60,6 +61,11 @@ object CheaperStrike {
     // a restore can never switch it on without the PIN, nor bring the one-time timeline entry back.)
     internal const val K_ON = "cheaperStrike.on"
     private const val K_LOG = "cheaperStrike.log"
+    /**
+     * Boss's "off", the one part of this switch a backup carries (not under the private prefix): a restore can bring an "off" onto a phone,
+     * never an "on" (an "on" takes the PIN). Written with every off, removed with every on.
+     */
+    internal const val K_OFF_CARRIED = "armsCheaperStrikeOff"
     /** Set once the update's "switched on for Boss" entry was decided on this phone (logged or not): never decided again. */
     internal const val K_ONCE = "cheaperStrike.onceLogged"
     private const val KEPT = 300
@@ -147,7 +153,8 @@ object CheaperStrike {
      */
     internal fun load(): Boolean {
         val never = runCatching { K_ON !in SecurePrefs.keys(K_ON) }.getOrNull()
-        val saved = runCatching { SecurePrefs.getBoolean(K_ON, true) }.getOrNull()
+        // (Off when either says off: this phone's own switch, or an "off" a restore carried in.)
+        val saved = runCatching { SecurePrefs.getBoolean(K_ON, true) && !SecurePrefs.getBoolean(K_OFF_CARRIED, false) }.getOrNull()
         val kept = runCatching { SecurePrefs.getString(K_LOG).orEmpty().lines().mapNotNull { decode(it) } }.getOrDefault(emptyList())
         synchronized(lock) {
             if (!switched && saved != null) on = saved
@@ -202,13 +209,15 @@ object CheaperStrike {
         val gap = near.zipWithNext { a, b -> r2(b - a) }.filter { it > 0 }.groupingBy { it }.eachCount()
             .entries.sortedWith(compareByDescending<Map.Entry<Double, Int>> { it.value }.thenBy { it.key }).firstOrNull()?.key ?: return emptyList()
         val step = maxOf(gap, STEP_POINTS)
+        // (Never further than [max] steps from [from] - "up to 300 points" stays true: the last mark has no strike beyond it.)
+        val far = max * step
         return (1..max).mapNotNull { k ->
             if (right == Right.PE) {
                 val mark = r2(from - k * step)
-                if (mark <= 0) null else s.filter { it <= mark + 1e-6 && it > mark - step + 1e-6 }.maxOrNull() ?: mark
+                if (mark <= 0) null else s.filter { it <= mark + 1e-6 && it > mark - step + 1e-6 && it >= from - far - 1e-6 }.maxOrNull() ?: mark
             } else {
                 val mark = r2(from + k * step)
-                s.filter { it >= mark - 1e-6 && it < mark + step - 1e-6 }.minOrNull() ?: mark
+                s.filter { it >= mark - 1e-6 && it < mark + step - 1e-6 && it <= from + far + 1e-6 }.minOrNull() ?: mark
             }
         }
     }
@@ -326,8 +335,13 @@ object CheaperStrike {
 
     /** Today's app contract list for [exchange], from memory only ([Market.contractsInMemory]); null: not in memory, or another day's. */
     private fun contractsInMemory(exchange: String): List<com.optionslab.engine.Upstox.Contract>? = runCatching {
+        if (testColdContracts) return null
         Market.contractsInMemory(bfo = exchange == "BFO")?.takeIf { it.first == Market.today() }?.second
     }.getOrNull()
+
+    /** TEST ONLY: the app's contract list taken as not in memory (a cold start). False in the app, always; debug builds only. */
+    @Volatile internal var testColdContracts: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /** The app's own contract for a strike in [list]. */
     private fun contractIn(list: List<com.optionslab.engine.Upstox.Contract>, und: String, expiry: LocalDate, strike: Double, right: Right,
@@ -411,13 +425,14 @@ object CheaperStrike {
         if (on && !pinConfirmed) return PIN_ON
         if (!loaded) load()
         synchronized(lock) {
+            offKeptByErase = false
             // (Boss's own choice either way: a late start read never overrides it.)
             if (this.on == on) { switched = true; return "The cheaper strike is already ${if (on) "on" else "off"}. Nothing changed." }
             this.on = on
             loaded = true
             switched = true
         }
-        runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to on)) }
+        runCatching { SecurePrefs.putAllSoon(mapOf(K_ON to on, K_OFF_CARRIED to (if (on) null else true))) }
         runCatching { Diag.record("cheaper", "$SHORT: ${if (on) "off → on (by you, with your PIN)" else "on → off (by you)"}") }
         if (log) runCatching { com.optionslab.app.ira.Autopilot.logCheaperStrike(on) }
         publish()
@@ -425,21 +440,28 @@ object CheaperStrike {
         else "Off: such buys are no longer moved to a cheaper strike; they go (or are skipped) as before."
     }
 
-    /** Erase everything ([PersonalStores]): as on a fresh phone - its default (on), no record; a late start read never brings an old choice back. */
+    /** The erase kept Boss's "off" in memory on purpose (it is a safety choice, not personal data): not counted as held ([holdsForErase]). */
+    @Volatile private var offKeptByErase = false
+
+    /**
+     * Erase everything ([PersonalStores]): the record goes. Boss's switch stays as it is in this process - an "off" stays off (an erase never
+     * switches it on without the PIN); a late start read never changes it. The settings vault itself is erased with everything else, so after
+     * the next start of the app a phone with nothing saved takes the default, ON (Boss's exception: on by default, as on a fresh install).
+     */
     fun wipe() {
         synchronized(writeLock) {
             wipeGen++
-            synchronized(lock) { on = true; loaded = true; switched = true; recs = emptyList() }
+            synchronized(lock) { offKeptByErase = !on; loaded = true; switched = true; recs = emptyList() }
         }
         publish()
     }
 
-    /** Whether Boss's choice (off) or a record is still in memory (the erase's check). Memory only. */
-    internal fun holdsForErase(): Boolean = !on || synchronized(lock) { recs.isNotEmpty() }
+    /** Whether Boss's choice (off, unless the erase kept it on purpose) or a record is still in memory (the erase's check). Memory only. */
+    internal fun holdsForErase(): Boolean = (!on && !offKeptByErase) || synchronized(lock) { recs.isNotEmpty() }
 
     /** TEST ONLY: as a fresh start would have it (read, [on]), nothing switched, no record. */
     internal fun resetForTest(on: Boolean = false, loaded: Boolean = true) {
-        synchronized(lock) { this.on = on; this.loaded = loaded; switched = false; recs = emptyList() }
+        synchronized(lock) { this.on = on; this.loaded = loaded; switched = false; recs = emptyList(); offKeptByErase = false }
         publish()
     }
 }

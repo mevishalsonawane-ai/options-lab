@@ -210,6 +210,44 @@ class CheaperStrikeArmLiveTest : RobolectricTest() {
         assertFalse(r.bought); assertTrue(r.why, r.why.startsWith("refused before it went"))
     }
 
+    /**
+     * The cheaper strike refused INSIDE the order door (the kill switch read there for it): nothing reached Zerodha for it, it is recorded
+     * once, and the arm's own entry goes on (its own door look lets it through).
+     */
+    @Test fun aCheaperStrikeRefusedInsideTheDoorIsRecordedOnceAndTheEntryGoesOn() {
+        kite.cash = 5_000.0
+        Broker.testAtDoor = { o -> SecurePrefs.put("g.kill", o.tradingSymbol == s52100) }
+        ArmLive.entered(ask(r72, "inside"))
+        assertEquals(listOf(sym), buys().map { it.form["tradingsymbol"] })
+        assertEquals(sym, view().openReal.single().symbol)
+        val r = CheaperStrike.recsOf().single()
+        assertFalse(r.bought); assertTrue(r.why, r.why.startsWith("refused before it went"))
+        SecurePrefs.put("g.kill", false)
+    }
+
+    /** The 60 s count from the paper fill's request ([ArmLive.Ask.atNanos]), not from when the entry took its lock: a late one never steps. */
+    @Test fun theSixtySecondsCountFromThePaperFill() {
+        kite.cash = 5_000.0
+        legs["late60"] = r72 to 30
+        ArmLive.entered(ArmLive.Ask(r72, "late60", contract, 1, 30, 200.0, stop = 170.0, atNanos = System.nanoTime() - 61_000_000_000L))
+        assertEquals("as before", listOf(sym), buys().map { it.form["tradingsymbol"] })
+        assertTrue(CheaperStrike.recsOf().single().why.contains("more than 60 s after the signal"))
+    }
+
+    /** The app's contract list not in memory (a cold start): R51 / R72 still step, but read no option highs for the cheaper option. */
+    @Test fun aColdContractListStepsWithNoOptionHighs() {
+        kite.cash = 5_000.0
+        CheaperStrike.testColdContracts = true
+        try {
+            ArmLive.entered(ask(r72, "cold"))
+            val p = view().openReal.single()
+            assertEquals(s52100, p.symbol); assertEquals(sym, p.stepFrom)
+            assertNull("no contract known: no highs read for it", p.liveContract)
+            watch()
+            assertNull(RuleHighs.peek("live:cold"))
+        } finally { CheaperStrike.testColdContracts = false }
+    }
+
     /** A lost reply (the order may exist) never steps: no second entry on an unknown. */
     @Test fun aLostReplyNeverSteps() {
         kite.nextPlace(FakeKite.Reply.NETWORK_EXCEPTION)

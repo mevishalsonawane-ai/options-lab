@@ -1303,7 +1303,8 @@ object ArmLive {
                     stepTried = true
                     if (stepAfterRefusal(a, spec, ins.symbol, ins.exchange, t0, step)) return@withLock
                 }
-                step?.let { CheaperStrike.notBought(it, e.message ?: "Zerodha refused it") }
+                // (A refusal at the app's own door is said once, by [stepEntry], which lets the arm's own entry go on.)
+                if (!CheaperStrike.appRefused(e)) step?.let { CheaperStrike.notBought(it, e.message ?: "Zerodha refused it") }
                 notMirrored(a, e.message ?: "Zerodha refused the order", dropIntent = true); return@withLock
             }
             // The answer was lost, not necessarily the order: look before calling it unsent. 30 Oct (deep review): an order book that

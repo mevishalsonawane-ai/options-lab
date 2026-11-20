@@ -56,6 +56,15 @@ class CheaperStrikeTest : RobolectricTest() {
         // An index whose own gap is wider than 100 steps by its gap.
         val wide = (100..140).map { it * 200.0 }
         assertEquals(listOf(23800.0, 23600.0, 23400.0), CheaperStrike.ladder(wide, 24000.0, Right.PE))
+        // Never more than 3 steps out ("up to 300 points"): with 24700 missing, step 3 is "not present" - never 24650.
+        assertEquals(listOf(24900.0, 24800.0, 24700.0), CheaperStrike.ladder(nifty.filter { it != 24700.0 }, 25000.0, Right.PE))
+        assertEquals(listOf(25100.0, 25200.0, 25300.0), CheaperStrike.ladder(nifty.filter { it != 25300.0 }, 25000.0, Right.CE))
+        // MIDCPNIFTY's 25-point grid: 100 points a step too; a missing mark takes the listed strike just beyond it.
+        val mid = (440..520).map { it * 25.0 }
+        assertEquals(listOf(11900.0, 11800.0, 11700.0), CheaperStrike.ladder(mid, 12000.0, Right.PE))
+        assertEquals(listOf(12100.0, 12200.0, 12300.0), CheaperStrike.ladder(mid, 12000.0, Right.CE))
+        assertEquals(listOf(11875.0, 11800.0, 11700.0), CheaperStrike.ladder(mid.filter { it != 11900.0 }, 12000.0, Right.PE))
+        assertEquals("never beyond 300 points", listOf(11900.0, 11800.0, 11700.0), CheaperStrike.ladder(mid.filter { it != 11700.0 }, 12000.0, Right.PE))
         assertEquals(listOf(24200.0, 24400.0, 24600.0), CheaperStrike.ladder(wide, 24000.0, Right.CE))
         val bank = (500..540).map { it * 100.0 }                                                     // BANKNIFTY: 100 apart
         assertEquals(listOf(51900.0, 51800.0, 51700.0), CheaperStrike.ladder(bank, 52000.0, Right.PE))
@@ -119,6 +128,31 @@ class CheaperStrikeTest : RobolectricTest() {
         assertFalse("Boss set it already", CheaperStrike.onceDue(never = false, ranBefore = true))
         // Never carried by a backup (a restore cannot switch it on nor bring the mark back).
         assertFalse(com.optionslab.ira.Upkeep.carried(CheaperStrike.K_ON)); assertFalse(com.optionslab.ira.Upkeep.carried(CheaperStrike.K_ONCE))
+    }
+
+    /** A backup carries Boss's "off" (never an "on"): restored onto a phone, it stays off; his PIN "on" takes the carried "off" away. */
+    @Test fun aBackupCarriesAnOffNeverAnOn() {
+        assertTrue(com.optionslab.ira.Upkeep.carried(CheaperStrike.K_OFF_CARRIED))
+        CheaperStrike.set(false, log = false)
+        SecurePrefs.flush()
+        assertEquals(true, SecurePrefs.getBoolean(CheaperStrike.K_OFF_CARRIED, false))
+        // A new phone: nothing of its own (K_ON never set), the backup's "off" restored.
+        SecurePrefs.putAll(mapOf(CheaperStrike.K_ON to null, CheaperStrike.K_OFF_CARRIED to true))
+        CheaperStrike.resetForTest(on = true, loaded = false)
+        CheaperStrike.load()
+        assertFalse("restored off, never silently on", CheaperStrike.isOn())
+        // Even over this phone's own "on".
+        SecurePrefs.putAll(mapOf(CheaperStrike.K_ON to true, CheaperStrike.K_OFF_CARRIED to true))
+        CheaperStrike.resetForTest(on = true, loaded = false)
+        CheaperStrike.load()
+        assertFalse(CheaperStrike.isOn())
+        // Boss's PIN "on": both say on, nothing "off" left for a backup.
+        CheaperStrike.set(true, pinConfirmed = true, log = false)
+        SecurePrefs.flush()
+        assertFalse(SecurePrefs.getBoolean(CheaperStrike.K_OFF_CARRIED, false))
+        CheaperStrike.resetForTest(on = false, loaded = false)
+        CheaperStrike.load()
+        assertTrue(CheaperStrike.isOn())
     }
 
     @Test fun itCoversR51R72AndEveryLiquidityBookBySourceOnly() {
@@ -266,14 +300,20 @@ class CheaperStrikeTest : RobolectricTest() {
         assertTrue(CheaperStrike.isOn())
     }
 
-    @Test fun aFreshPhoneHasItOnAndAnEraseGoesBackToThat() {
+    @Test fun aFreshPhoneHasItOnAndAnEraseKeepsBosssOff() {
         CheaperStrike.resetForTest(on = false, loaded = false)
         assertTrue("never set on this phone", CheaperStrike.load())
         assertTrue("on by default (Boss's exception)", CheaperStrike.isOn())
         CheaperStrike.set(false, log = false)
         assertTrue(CheaperStrike.holdsForErase())
         CheaperStrike.wipe()
-        assertTrue(CheaperStrike.isOn()); assertFalse(CheaperStrike.holdsForErase())
+        assertFalse("an erase never switches it on without the PIN", CheaperStrike.isOn()); assertFalse(CheaperStrike.holdsForErase())
+        CheaperStrike.load()
+        assertFalse("nor does a late start read", CheaperStrike.isOn())
+        // An "on" at the erase stays on (as on a fresh phone).
+        CheaperStrike.resetForTest(on = true)
+        CheaperStrike.wipe()
+        assertTrue(CheaperStrike.isOn())
         val before = CheaperStrike.genForTest()
         CheaperStrike.wipe()
         assertFalse("a save from before the erase is skipped", CheaperStrike.persist(before))

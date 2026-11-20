@@ -52,10 +52,11 @@ notes; match the surrounding code.
       names the strike bought. R51 / R72's paper trade keeps its own strike; only the live copy holds the cheaper option (its book row
       keeps the paper contract and the strike it stepped from). Liquidity has no paper twin while live: its live trade is on the
       cheaper contract, labelled with the strike its signal chose. Each stepped buy is said to Boss and logged, each give-up logged.
-      Its Bot settings switch ("Cheaper strike when funds are short (Boss's exception, 20 Nov)") is on by default and never carried by
-      a backup: off is one tap (it lowers risk), on takes the PIN; every flip is in the Autopilot change timeline with an Undo (an Undo
-      that turns it on takes the PIN). It is the one exception to "anything new that could add live trades starts in shadow", by
-      Boss's choice on 20 Nov.
+      Its Bot settings switch ("Cheaper strike when funds are short (Boss's exception, 20 Nov)") is on by default: off is one tap (it
+      lowers risk), on takes the PIN; a backup carries only its "off", never an "on"; an erase keeps an "off" until the app restarts
+      (then the erased phone takes the default, on); every flip is in the Autopilot change timeline with an Undo (an Undo that turns it
+      on takes the PIN). It is the one exception to "anything new that could add live trades starts in shadow", by Boss's choice on
+      20 Nov.
   - The funds check (Boss, 15 Nov: "Yes" to building it in shadow): an arm's live option buy, index or stock options (the arms' live copies,
     ORB and Liquidity 15+5), that the free cash cannot pay for even one lot. It reads only the free cash the entry already read; unknown, it
     says nothing. In shadow by default (logged and counted, the order goes as before); its Bot settings switch (off by default)

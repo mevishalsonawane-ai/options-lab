@@ -3763,7 +3763,8 @@ object OrbArms {
                     liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, runCatching { Broker.freeCash() }.getOrNull(),
                         CheaperStrike.Trigger.REJECTED)?.let { return it }
                 }
-                step?.let { CheaperStrike.notBought(it, e.message ?: "Zerodha refused it") }
+                // (A refusal at the app's own door is said once, by [liqStep], which lets the arm's own entry go on.)
+                if (!CheaperStrike.appRefused(e)) step?.let { CheaperStrike.notBought(it, e.message ?: "Zerodha refused it") }
                 return "order_refused: " + (e.message ?: "Zerodha refused the order")
             }
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
@@ -3847,6 +3848,20 @@ object OrbArms {
      * check follows it as any live trade) - entered through the whole live entry again ([enterLiveNow]: every gate, 1 lot). Its answer when
      * its order went; null when none was chosen or a gate refused it before it went (the arm's own entry then goes on as before).
      */
+    /** TEST ONLY: the order flow's re-ask for the cheaper contract skips it (a CONFIRM disagreement). False in the app; debug builds only. */
+    @Volatile internal var testCheaperFlowSkip: Boolean = false
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /**
+     * Liquidity's approval notice's text: the bar that took the pool, the account and size, and (20 Nov 2026, Boss's choice) in Live while the
+     * cheaper strike is on, that a cheaper strike may be bought; the time it lapses.
+     */
+    internal fun approvalText(und: String, tf: Int, bar: LocalDateTime, side: Int, live: Boolean, lotWords: String, expires: LocalDateTime,
+                              cheaperOn: Boolean = CheaperStrike.isOn()): String =
+        "The $und ${tf}-minute ${hhmm(bar)} bar took a liquidity pool ${if (side > 0) "above" else "below"}. " +
+            (if (live) "LIVE on Zerodha, $lotWords: approve it on Home in the app" + (if (cheaperOn) ". $CHEAPER_ON_APPROVAL" else "")
+            else "Paper account, $lotWords") + ". Approve by ${hhmm(expires)} or it lapses."
+
     /** 20 Nov 2026 (Boss's choice): what an approval notice in Live says while the cheaper strike is on. */
     internal const val CHEAPER_ON_APPROVAL = "If funds are short, a strike up to 300 points cheaper may be bought"
 
@@ -3862,8 +3877,9 @@ object OrbArms {
         // (The arms' exposure cap asked again for the cheaper contract, as its entry asked it for the signal's.)
         exposureRefusal(b, c2, arm, true)?.let { CheaperStrike.notBought(pick, "refused before it went ($it)"); return null }
         // (And the order flow for it: under CONFIRM it can skip.)
-        val flow = FlowGate.gate(FlowShadow.liquidityKey(c2.underlying), c2.underlying, liquidity.side, true, signalBar.toString(), arm.source, contract = c2)
-        if (flow.skip) { CheaperStrike.notBought(pick, "refused before it went (${flow.pausedWhy ?: FlowGate.SKIPPED})"); return null }
+        // (Its own ticket - "|cheaper" - so the flow log keeps the signal's decision and this one apart.)
+        val flow = FlowGate.gate(FlowShadow.liquidityKey(c2.underlying), c2.underlying, liquidity.side, true, signalBar.toString(), "${arm.source}|cheaper", contract = c2)
+        if (flow.skip || testCheaperFlowSkip) { CheaperStrike.notBought(pick, "refused before it went (${flow.pausedWhy ?: FlowGate.SKIPPED})"); return null }
         // (Another Liquidity book already holding the cheaper option live: recorded only, as the signal's own contract's twin is in Live.)
         twinOf(b, arm, c2.symbol, true)?.let { holder ->
             val words = com.optionslab.ira.LiquidityTwin.words(runCatching { armOf(holder.book).label }.getOrDefault(holder.book), c2.symbol, true)
@@ -5666,12 +5682,8 @@ object OrbArms {
             FlowGate.outcome(FlowGate.gate(FlowShadow.liquidityKey(und), und, s.side, live, last.start.toString(), arm.source, decide = false), "awaiting_approval")
             b.pending[arm.source] = Pending(arm.source, right, last.start, expires, strike, s.level, s.target, near, volSkip, strong, live = live)
             Notifier.post(app, 6960 + ALL_ARMS.indexOf(arm), Notifier.APPROVAL, "${LiquidityRules.ARM.label}: approve BUY $und $strike $right",
-                "The $und ${tf}-minute ${hhmm(last.start)} bar took a liquidity pool ${if (s.side > 0) "above" else "below"}. " +
-                    (if (live) "LIVE on Zerodha, ${LiquidityLots.words(lotsOf(b))}: approve it on Home in the app" +
-                        // 20 Nov 2026 (Boss's choice): an approved entry may still step to a cheaper strike ([CheaperStrike]), said here first.
-                        (if (CheaperStrike.isOn()) ". $CHEAPER_ON_APPROVAL" else "")
-                    else "Paper account, ${LiquidityLots.words(lotsOf(b))}") +
-                    ". Approve by ${hhmm(expires)} or it lapses.", "almanac", approve = "orb")
+                // (20 Nov 2026, Boss's choice: in Live, while the cheaper strike is on, it says a cheaper strike may be bought: [approvalText].)
+                approvalText(und, tf, last.start, s.side, live, LiquidityLots.words(lotsOf(b)), expires), "almanac", approve = "orb")
             return kept("awaiting_approval", s)
         }
         return kept(enterLiquidity(b, arm, s, last.start, strike, live, near, volSkip, strong), s)

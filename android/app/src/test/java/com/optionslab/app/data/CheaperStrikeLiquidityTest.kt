@@ -129,6 +129,40 @@ class CheaperStrikeLiquidityTest : RobolectricTest() {
         assertTrue(OrbArms.CHEAPER_ON_APPROVAL.contains("up to 300 points cheaper"))
     }
 
+    /** The approval notice says it before Boss approves (in Live, while it is on); not in Paper, nor while it is off. */
+    @Test fun theApprovalNoticeSaysACheaperStrikeMayBeBought() {
+        val bar = now.withSecond(0)
+        val live = OrbArms.approvalText("BANKNIFTY", 5, bar, 1, true, "1 lot", bar.plusMinutes(5), cheaperOn = true)
+        assertTrue(live, live.contains("approve it on Home in the app. If funds are short, a strike up to 300 points cheaper may be bought. Approve by"))
+        assertFalse(OrbArms.approvalText("BANKNIFTY", 5, bar, 1, true, "1 lot", bar.plusMinutes(5), cheaperOn = false).contains("cheaper"))
+        assertFalse(OrbArms.approvalText("BANKNIFTY", 5, bar, 1, false, "1 lot", bar.plusMinutes(5), cheaperOn = true).contains("cheaper"))
+    }
+
+    /** The app's contract list not in memory: Liquidity (booked on that list) does not step this time; the entry goes as before. */
+    @Test fun aColdContractListMeansNoStep() {
+        kite.cash = 5_000.0
+        CheaperStrike.testColdContracts = true
+        try {
+            state()
+            assertEquals("Entered at Zerodha (live).", approve())
+            assertEquals(sym, buys().single().form["tradingsymbol"])
+            assertTrue(CheaperStrike.recsOf().single().why.contains("not in memory"))
+        } finally { CheaperStrike.testColdContracts = false }
+    }
+
+    /** The order flow, asked again for the cheaper contract, skips it: the stepped buy never goes; the entry goes on as before. */
+    @Test fun aFlowSkipOnTheCheaperContractLetsTheEntryGoOn() {
+        kite.cash = 5_000.0
+        OrbArms.testCheaperFlowSkip = true
+        try {
+            state()
+            assertEquals("Entered at Zerodha (live).", approve())
+            assertEquals(listOf(sym), buys().map { it.form["tradingsymbol"] })
+            val r = CheaperStrike.recsOf().single()
+            assertFalse(r.bought); assertTrue(r.why, r.why.startsWith("refused before it went"))
+        } finally { OrbArms.testCheaperFlowSkip = false }
+    }
+
     @Test fun aStrikeNotInTheAppsOwnListIsSkippedAndCounted() {
         contracts(listOf(52_000.0, 52_200.0))                          // 52100 listed at Zerodha, not in the app's list
         kite.cash = 5_000.0
