@@ -6,6 +6,7 @@ import com.optionslab.app.work.Alerts
 import com.optionslab.engine.Kite
 import com.optionslab.engine.risk.Protection
 import com.optionslab.ira.DayGttTally
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -1314,9 +1315,16 @@ object Protections {
         // 20 Nov 2026 (deep review: the second read and the other exit's retries waited while holding [lock]): a look that wants another
         // read soon ([askFollowUp]) gets it as a follow-up look after the pause, made with the lock let go meanwhile - never a wait
         // under it. At most [FOLLOW_UPS]; a stream look never asks.
-        // (Final review: never after a fast look - FastPath's live lane is not held up; the next regular look confirms.)
+        // (Final review: after a fast look the follow-up is made apart, on this object's own worker - FastPath's live lane is never
+        // held up by it, and the confirming read still comes [FLAT_RECHECK_MS] later, not at the next regular look.)
+        if (fast) {
+            if (wait > 0L && followApart.compareAndSet(false, true)) followScope.launch {
+                try { kotlinx.coroutines.delay(wait); tick() } finally { followApart.set(false) }
+            }
+            return
+        }
         var rounds = 0
-        while (!fast && wait > 0L && rounds < FOLLOW_UPS) {
+        while (wait > 0L && rounds < FOLLOW_UPS) {
             kotlinx.coroutines.delay(wait)
             rounds++
             wait = look(fast = false, stream = false)
@@ -1335,6 +1343,10 @@ object Protections {
     /** 20 Nov 2026: the pause a follow-up look was asked after in the look in progress (the shortest asked). Under [lock] only. */
     @Volatile private var followUpMs = 0L
     private fun askFollowUp(ms: Long) { if (!streamLook) followUpMs = if (followUpMs == 0L) ms else minOf(followUpMs, ms) }
+
+    /** 20 Nov 2026 (final review): a fast look's follow-up, made apart; at most one waiting at a time. */
+    private val followScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val followApart = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /** 20 Nov 2026: follow-up looks after one [tick] at most. */
     private const val FOLLOW_UPS = 4

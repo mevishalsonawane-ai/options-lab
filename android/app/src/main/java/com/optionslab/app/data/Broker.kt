@@ -753,8 +753,12 @@ object Broker {
         val partial: Boolean get() = skipped.isNotEmpty()
         /** For a check that would END something: whether any of [symbol]'s net rows may have been left out (or a row with no symbol). */
         fun unknown(symbol: String): Boolean = ANY in skipped || skipped.any { it.startsWith("$symbol:") }
-        /** For an exit: whether [symbol]'s own [product] row was left out (a row with no symbol never blocks an exit). */
-        fun unknownForExit(symbol: String, product: String): Boolean = "$symbol:$product" in skipped || "$symbol:*" in skipped
+        /**
+         * For an exit: whether [symbol]'s own [product] row was left out. A row with no symbol never blocks an exit on a contract whose
+         * own row was read; only one with no row read at all is then not known (the nameless row may be it - never read as 0).
+         */
+        fun unknownForExit(symbol: String, product: String): Boolean = "$symbol:$product" in skipped || "$symbol:*" in skipped ||
+            (ANY in skipped && net.none { it.symbol == symbol && it.product == product })
         val pnl: Double get() = net.sumOf { it.pnl } + skippedMoney[0]
         val m2m: Double get() = net.sumOf { it.m2m } + skippedMoney[1]
         val realised: Double get() = net.sumOf { it.realised } + skippedMoney[2]
@@ -915,11 +919,6 @@ object Broker {
         it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0),
         dayQty(it, "day_buy_quantity"), dayQty(it, "day_sell_quantity"))
 
-    /**
-     * 20 Nov 2026 (audit; deep review): Zerodha's net rows read one by one. A malformed row - not an object, no symbol, no quantity, or
-     * one that does not parse - is never a position at 0 and never fails the whole read (every exit keeps working on the rows read):
-     * it is left out and named in [Positions.skipped] (its symbol, or [Positions.ANY] when it has none).
-     */
     /** 20 Nov 2026: when Boss was last told of a partial positions read ([netRows]), and how often at most. Memory only. */
     @Volatile private var partialSaidAt = 0L
     internal const val PARTIAL_SAY_MS = 10 * 60_000L
@@ -927,31 +926,39 @@ object Broker {
     /** TEST ONLY: the partial-read notice may be said again at once. */
     internal fun resetPartialSaidForTest() { partialSaidAt = 0L }
 
+    /**
+     * 20 Nov 2026 (audit; deep review): Zerodha's net rows read one by one. A malformed row - not an object, no symbol, no quantity, or
+     * one that does not parse - is never a position at 0 and never fails the whole read (every exit keeps working on the rows read):
+     * it is left out and named in [Positions.skipped] (its symbol, or [Positions.ANY] when it has none).
+     */
     private fun netRows(a: JSONArray): Triple<List<Position>, Set<String>, List<Double>> {
         val out = ArrayList<Position>()
         val skipped = HashSet<String>()
         val money = doubleArrayOf(0.0, 0.0, 0.0, 0.0)
+        var badRows = 0
         for (i in 0 until a.length()) {
             val o = a.optJSONObject(i)
             val sym = o?.optString("tradingsymbol").orEmpty()
             // (Review: a quantity given as a number in a string, which Kite's optInt read as ever, is a quantity.)
             val q = o?.opt("quantity")
-            val qty = q is Number || (q is String && q.trim().toIntOrNull() != null)
+            val qty = q is Number || (q is String && q.trim().toDoubleOrNull()?.let { it.isFinite() && it == kotlin.math.floor(it) } == true)
             val bad = o == null || sym.isEmpty() || !qty || runCatching { position(o) }.onSuccess { out += it }.isFailure
             if (!bad) continue
+            badRows++
             skipped += if (o == null || sym.isEmpty()) Positions.ANY else "$sym:${o.optString("product").ifEmpty { "*" }}"
             // (Its money figures, when it gives them, still count in the account's totals: a loss is never hidden by a bad row.)
             if (o != null) listOf("pnl", "m2m", "realised", "unrealised").forEachIndexed { k, f -> money[k] += o.optDouble(f, 0.0).takeIf { it.isFinite() } ?: 0.0 }
         }
         if (skipped.isNotEmpty()) {
-            runCatching { Diag.record("zerodha", "positions: ${skipped.size} malformed row(s) left out (${skipped.joinToString()}); read as not known") }
+            runCatching { Diag.record("zerodha", "positions: $badRows malformed row(s) left out (${skipped.joinToString()}); read as not known") }
             // Review: Boss told (at most every [PARTIAL_SAY_MS]) while the reads stay partial. Memory only; never blocks.
             val now = System.currentTimeMillis()
             if (now - partialSaidAt !in 0 until PARTIAL_SAY_MS) {
                 partialSaidAt = now
-                val what = skipped.joinToString { if (it == Positions.ANY) "a row with no name" else it.substringBefore(':') }
-                runCatching { com.optionslab.app.work.Alerts.post("Zerodha's positions reply had ${skipped.size} unreadable row(s) ($what). Exits " +
-                    "keep working on the rest; the stops on those contracts are kept as they are, not ended. Check your positions in Kite.",
+                val what = skipped.map { if (it == Positions.ANY) "a row with no name" else it.substringBefore(':') }.distinct().joinToString()
+                val nameless = if (Positions.ANY in skipped) " A row with no name could be any position: check every open position in Kite." else ""
+                runCatching { com.optionslab.app.work.Alerts.post("Zerodha's positions reply had $badRows unreadable row(s) ($what). Exits " +
+                    "keep working on the rows that were read, and nothing is ended on what could not be read.$nameless Check your positions in Kite.",
                     com.optionslab.app.work.Alerts.Kind.ERROR, "Positions", throttle = true) }
             }
         }

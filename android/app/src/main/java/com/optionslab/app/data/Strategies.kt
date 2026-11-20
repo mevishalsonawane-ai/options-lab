@@ -844,21 +844,22 @@ object Strategies {
      * asks for your PIN or fingerprint first) - [confirmedByOwner] records that.
      */
     suspend fun start(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String {
-        val seen = flatSeen.get()
-        return startLocked(id, mode, trigger, confirmedByOwner, compromised).also { followUp(compromised, seen) }
+        val (said, sawFlat) = startLocked(id, mode, trigger, confirmedByOwner, compromised)
+        if (sawFlat) followUp(compromised)
+        return said
     }
 
-    private suspend fun startLocked(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): String = lock.withLock {
+    private suspend fun startLocked(id: Long, mode: RunMode, trigger: String, confirmedByOwner: Boolean, compromised: Boolean): Pair<String, Boolean> = ownLook {
         val b = book()
-        val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
-        if (b.runs[id]?.let { Entry(def, it).running } == true) return@withLock "${def.name} is already running."
-        if (needsBreakoutRules(def)) return@withLock BREAKOUT_BLOCK
+        val def = b.defs.firstOrNull { it.id == id } ?: return@ownLook "No such strategy."
+        if (b.runs[id]?.let { Entry(def, it).running } == true) return@ownLook "${def.name} is already running."
+        if (needsBreakoutRules(def)) return@ownLook BREAKOUT_BLOCK
         if (mode == RunMode.LIVE) {
-            if (!confirmedByOwner) return@withLock "A live start needs your confirmation in the app."
-            if (!def.liveEnabled) return@withLock "Enable live trading for ${def.name} first."
+            if (!confirmedByOwner) return@ownLook "A live start needs your confirmation in the app."
+            if (!def.liveEnabled) return@ownLook "Enable live trading for ${def.name} first."
         }
         val now = Market.now()
-        val v = try { venue(mode) } catch (e: Exception) { return@withLock "Could not load the contracts: ${e.message}" }
+        val v = try { venue(mode) } catch (e: Exception) { return@ownLook "Could not load the contracts: ${e.message}" }
         val ltp = runCatching { Market.quote(def.underlying)?.last }.getOrNull()
         val resolved = SymbolResolver.resolve(def, v.master, ltp, now)
         val runId = b.nextRunId++
@@ -1217,11 +1218,12 @@ object Strategies {
     suspend fun skip(id: Long) = lock.withLock { val b = book(); b.pending.remove(id); save(b) }
 
     suspend fun tickAll(compromised: Boolean): List<String> {
-        val seen = flatSeen.get()
-        return tickAllOnce(compromised).also { followUp(compromised, seen) }
+        val (notes, sawFlat) = tickAllOnce(compromised)
+        if (sawFlat) followUp(compromised)
+        return notes
     }
 
-    private suspend fun tickAllOnce(compromised: Boolean): List<String> = lock.withLock {
+    private suspend fun tickAllOnce(compromised: Boolean): Pair<List<String>, Boolean> = ownLook {
         val b = book()
         // Orders placed in this pass are written down even when the pass is cancelled part-way (the watch
         // stopped, a time limit): a run's broker ids and state kept only in memory would be lost with the process.
@@ -1608,9 +1610,7 @@ object Strategies {
      */
     suspend fun manageOnly(compromised: Boolean) {
         if (!runningHint) return
-        val seen = flatSeen.get()
-        manageLocked(compromised)
-        followUp(compromised, seen)
+        if (manageLocked(compromised)) followUp(compromised)
     }
 
     /**
@@ -1618,29 +1618,35 @@ object Strategies {
      * ([manageOnly], [tickAll], a start's own look) gets its second, separate read in one follow-up look of the open runs
      * [FLAT_RECHECK_MS] later, the lock let go meanwhile - never a wait under it.
      */
-    private suspend fun followUp(compromised: Boolean, seen: Int) {
-        // (Final review: each caller compares the count it saw before its own look - never a flag another caller could clear.)
-        if (flatSeen.get() == seen) return
+    private suspend fun followUp(compromised: Boolean) {
         kotlinx.coroutines.delay(FLAT_RECHECK_MS)
         manageLocked(compromised)
+    }
+
+    /**
+     * 20 Nov 2026 (final review): [block] under [lock], and whether THIS look (nobody else's: the lock is held) read a leg no longer held
+     * for the first time - so each caller decides its own follow-up, never one another caller could drop or set.
+     */
+    private suspend fun <T> ownLook(block: suspend () -> T): Pair<T, Boolean> = lock.withLock {
+        val before = flatSeen.get()
+        val r = block()
+        r to (flatSeen.get() != before)
     }
 
     /** 20 Nov 2026: counted by [restLegStops] each time a leg is first read no longer held (each caller then makes a follow-up look). */
     private val flatSeen = java.util.concurrent.atomic.AtomicInteger()
 
-    private suspend fun manageLocked(compromised: Boolean) {
-        lock.withLock {
-            val b = book()
-            try {
-                val now = Market.now()
-                val venues = HashMap<RunMode, Venue?>()
-                for (def in b.defs.toList()) tickOpenRun(b, def, now, compromised) { m -> venues.getOrPut(m) { runCatching { venue(m) }.getOrNull() } }
-                runCatching { cleanLegStops(b) }
-            } finally {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { runCatching { save(b) } }
-            }
+    private suspend fun manageLocked(compromised: Boolean): Boolean = ownLook {
+        val b = book()
+        try {
+            val now = Market.now()
+            val venues = HashMap<RunMode, Venue?>()
+            for (def in b.defs.toList()) tickOpenRun(b, def, now, compromised) { m -> venues.getOrPut(m) { runCatching { venue(m) }.getOrNull() } }
+            runCatching { cleanLegStops(b) }
+        } finally {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { runCatching { save(b) } }
         }
-    }
+    }.second
 
     /** True when any run is live or entering, so the watch keeps polling. */
     suspend fun anyRunning(): Boolean = all().any { it.running }

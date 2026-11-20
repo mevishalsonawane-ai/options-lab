@@ -100,12 +100,30 @@ class ProtectionsAuditTest : RobolectricTest() {
         assertEquals(75, any.net.single { it.symbol == sym }.qty)
         assertTrue(any.unknown(sym)); assertTrue(any.unknown("ANYTHING"))
         assertFalse(any.unknownForExit(sym, "NRML"))
+        assertTrue("a contract with no row read at all may be the nameless row", any.unknownForExit("NIFTY26OCT99999CE", "NRML"))
         // A quantity given as a number in a string is read, as Kite's optInt always did.
         kite.extraNetRows = listOf(JSONObject().put("tradingsymbol", sym2).put("exchange", "NFO").put("product", "NRML").put("quantity", "75"))
         val str = runBlocking { Broker.positionBook() }
         assertFalse(str.partial); assertEquals(75, str.net.single { it.symbol == sym2 }.qty)
         kite.extraNetRows = emptyList()
         assertFalse(runBlocking { Broker.positionBook() }.partial)
+    }
+
+    /** Final review: a fast look never waits for its follow-up on the fast lane; the follow-up, made apart, still confirms and ends it. */
+    @Test fun aFastLooksFollowUpIsMadeApartAndStillConfirms() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.position(sym, 0, 0.0)                                         // sold by hand
+        val t0 = System.nanoTime()
+        runBlocking { Protections.tick(fast = true) }
+        val ms = (System.nanoTime() - t0) / 1_000_000
+        assertTrue("the fast look returned in $ms ms", ms < 1_500)
+        assertEquals("one read ends nothing", 1, active().size)
+        val until = System.nanoTime() + 8_000_000_000L
+        while (active().isNotEmpty() && System.nanoTime() < until) Thread.sleep(50)
+        assertTrue("the follow-up confirmed it", active().isEmpty())
+        assertFalse(working(p.stopOrderId)); assertFalse(working(p.targetOrderId))
     }
 
     /** Final review: Boss is told (throttled) while a positions read stays partial. */

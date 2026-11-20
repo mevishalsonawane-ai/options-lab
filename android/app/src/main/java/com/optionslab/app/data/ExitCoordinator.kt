@@ -241,7 +241,11 @@ object ExitCoordinator {
                 return if (list.isEmpty() || day.any { it == null }) null else day.sumOf { it ?: 0 }
             }
             val every = b.net.filter { it.symbol == symbol && it.exchange == exchange }
-            return ExitDesk.positionsLag(net, exitDay(rs), own, mine, now, anyAge = forceLag) to
+            val ownLag = ExitDesk.positionsLag(net, exitDay(rs), own, mine, now, anyAge = forceLag)
+            // 20 Nov 2026 (final review): another product's row of this contract left out as malformed: the whole contract's figure
+            // cannot be told, so this product's own lag stands (never a conversion judged on a missing row).
+            if (b.unknown(symbol)) return ownLag to ownLag
+            return ownLag to
                 ExitDesk.positionsLagAcross(net, exitDay(rs), own, mine, now, exitDay(every), all, anyAge = forceLag)
         }
         var converted = false
