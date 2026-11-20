@@ -178,8 +178,9 @@ object Guard {
         val strict = AccountGuard.refusals(order, account, limits)
         if (account.ordersKnown) return strict
         val asBefore = AccountGuard.refusals(order, account.copy(ordersKnown = true), limits)
-        // (Refused anyway for another reason, or not refused at all: the count decides nothing, so nothing is counted.)
-        if (asBefore.isNotEmpty() || strict.isEmpty()) return asBefore
+        // (Refused anyway for another reason, or not refused at all: the count decides nothing, so nothing is counted; on, every
+        // reason is said, the unknown count among them - review: never one fixed only to meet the next.)
+        if (asBefore.isNotEmpty() || strict.isEmpty()) return if (OrderCountCheck.isOn()) strict else asBefore
         return if (OrderCountCheck.judge(order.symbol, order.side, account.minuteOfDay)) strict else asBefore
     }
 

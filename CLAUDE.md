@@ -176,10 +176,11 @@ notes; match the surrounding code.
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)
     refuses such entries; on needs no PIN, off takes the PIN. Exits and stops never look at the count.
-  - Boss's own kill switch in the app also cancels the bots' working entry orders at Zerodha (told apart by tag: ORB, Pine, strategies,
-    the arms' live copies). It never cancels an exit, a stop, Boss's own entries, a BUY on an underlying with a short held (it may be a
-    hedge) or any BUY when positions cannot be read, and nothing when the order book cannot be read. Turned on by the guard, Jarvis,
-    voice or Autopilot, it only logs which entries it would cancel.
+  - Boss's own kill switch in the app (turning it on, or its "Cancel the bots' working entries" while it is on; once the switch reads
+    on) also cancels the bots' working entry orders at Zerodha (told apart by tag: ORB, Pine, strategies, the arms' live copies).
+    It never cancels an exit, a stop, Boss's own entries, a BUY on an underlying with a short held (it may be a hedge) or any BUY
+    when positions cannot be read, and nothing when the order book cannot be read. Turned on by the guard, Jarvis, voice or
+    Autopilot, it only logs which entries it would cancel.
 - Nothing on the order or tick path touches disk, SecurePrefs or the network, or blocks (OrderPathRound2Test stays 0).
   No main-thread I/O.
 - OPEN POSITIONS AND ORDERS COME FIRST (Boss, 14 Oct: "whenever an order is placed it must be pulled on priority, so we

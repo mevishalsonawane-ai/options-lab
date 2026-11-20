@@ -2022,7 +2022,8 @@ object Broker {
         val bookQ = async { runCatching { if (needed != null) positionsRecon() else positionBook() }.getOrNull() }
         val fundsQ = async { kept ?: runCatching { funds() }.getOrNull() }
         // 20 Nov 2026 (audit B5, item 6: "a failed order-count read counts as zero"): a failed read is read once more, afresh; still
-        // unreadable, the count is UNKNOWN (null), which refuses an entry while the trades-a-day limit is on and never an exit.
+        // unreadable, the count is UNKNOWN (null), judged by the order count check ([OrderCountCheck]: in shadow by default the entry
+        // goes as before, logged; on, it is refused). An exit never looks at it.
         val countQ = async {
             runCatching { (if (needed != null) ordersRecon() else orders()).size }.getOrNull()
                 ?: runCatching { kotlinx.coroutines.withContext(FastRead()) { orders(fresh = true) }.size }.getOrNull()   // (3 s sockets: review)
@@ -2059,10 +2060,10 @@ object Broker {
 
     /**
      * 20 Nov 2026 (audit B5, item 9: "the kill switch does not cancel working entry orders"): whether the kill switch cancels [r]: a
-     * working order of the app's own (its tag starts "ira") that is an ENTRY - one this phone sent as an entry ([entryIds]), or, when
+     * working order of the bots' and arms' ([BOT_TAGS]) that is an ENTRY - one this phone sent as an entry ([entryIds]), or, when
      * this phone does not know it (sent before a restart), a plain LIMIT or MARKET BUY that would open or add to a long by a good
      * positions read ([net]). Never one it sent as an exit ([exitIds]), never a stop (SL, SL-M) it does not know as an entry, never a
-     * sale it does not know, never anything not tagged as the app's (Boss's own orders in Kite).
+     * sale it does not know, never anything not a bot's (Boss's own orders, in Kite or sent from the app).
      * Review (20 Nov 2026): a BUY is cancelled only on a good positions read showing no short position of the same underlying on the
      * same exchange - a working BUY there may be a hedge (a strategy's protective leg, a cover) and cancelling it could leave a short
      * uncovered; with no positions read no BUY is cancelled at all (a known SELL entry still is: it only opens a short).
@@ -2086,17 +2087,17 @@ object Broker {
     private val killScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
     /**
-     * 20 Nov 2026 (audit B5, item 9): the kill switch just went on ([why]). [act] (only when Boss turned it on himself with his own
-     * switch in the app - his explicit act): the bots' working entry orders at Zerodha are cancelled ([cancelWorkingEntries]) in the
-     * background - at once, again a few seconds later, and once more after a whole write's budget ([WRITE_BUDGET_MS]: an entry whose
-     * POST was already on its way may reach Zerodha that late). Otherwise (the guard tripping by itself, Jarvis, voice, Autopilot -
-     * coordinator, 20 Nov 2026, CLAUDE.md's shadow rule): the same sweeps only LOG which entries they would cancel; nothing is cancelled.
-     * A logging request never replaces Boss's cancelling one. Returns at once; nothing here waits, reads the disk or blocks the caller
-     * (the guard's order path can turn it on).
+     * 20 Nov 2026 (audit B5, item 9): the kill switch just went on ([why]). [act] (only Boss's own act in the app: his kill switch, or
+     * its "cancel the bots' working entries" while it is on): the bots' working entry orders at Zerodha are cancelled
+     * ([cancelWorkingEntries]) in the background - once the kill switch reads on (review: never before Boss's switch is saved, so no
+     * bot re-enters meanwhile; not on within [KILL_SAVED_WAIT_MS], nothing is cancelled) - at once, again a few seconds later, and once
+     * more after a whole write's budget ([WRITE_BUDGET_MS]: an entry whose POST was already on its way may reach Zerodha that late).
+     * Otherwise (the guard tripping by itself, Jarvis, voice, Autopilot - coordinator, 20 Nov 2026, CLAUDE.md's shadow rule): ONE sweep
+     * in the ordinary reads' lane only LOGS which entries it would cancel; nothing is cancelled. A logging request never replaces Boss's
+     * cancelling one. Returns at once; nothing here waits, reads the disk or blocks the caller (the guard's order path can turn it on).
      */
     fun killEntriesSoon(why: String, act: Boolean) {
-        if (killRequestsForTest.size > 50) killRequestsForTest.clear()
-        killRequestsForTest += why to act
+        if (com.optionslab.app.BuildConfig.DEBUG) { if (killRequestsForTest.size > 50) killRequestsForTest.clear(); killRequestsForTest += why to act }
         if (!killSweepOn) return
         synchronized(killLock) {
             val running = killJob?.takeIf { it.isActive }
@@ -2104,18 +2105,30 @@ object Broker {
             running?.cancel()
             killJobActs = act
             killJob = killScope.launch {
-                runCatching { cancelWorkingEntries(why, act) }
+                if (!act) { runCatching { cancelWorkingEntries(why, act = false) }; return@launch }
+                // (Boss's switch saved first: the kill switch reads on, from the vault - this background thread only.)
+                val saved = kotlinx.coroutines.withTimeoutOrNull(KILL_SAVED_WAIT_MS) {
+                    while (!runCatching { killOn() }.getOrDefault(false)) delay(100)
+                    true
+                } ?: false
+                if (!saved) {
+                    runCatching { Diag.record("zerodha", "Kill switch ($why): it did not read on, so no entry order was cancelled") }
+                    return@launch
+                }
+                runCatching { cancelWorkingEntries(why) }
                 delay(killSweepAgainMs)
-                runCatching { cancelWorkingEntries(why, act) }
+                runCatching { cancelWorkingEntries(why) }
                 delay(WRITE_BUDGET_MS)
-                runCatching { cancelWorkingEntries(why, act) }
+                runCatching { cancelWorkingEntries(why) }
             }
         }
     }
+    /** How long Boss's cancelling request waits for his kill switch to read on (saved) before it gives up (nothing cancelled). */
+    private const val KILL_SAVED_WAIT_MS = 10_000L
     private val killLock = Any()
     @Volatile private var killJob: kotlinx.coroutines.Job? = null
     @Volatile private var killJobActs = false
-    /** TEST ONLY: every kill-switch request ([killEntriesSoon]): why, and whether it cancels. Memory only, a handful a day. */
+    /** TEST ONLY (debug builds): every kill-switch request ([killEntriesSoon]): why, and whether it cancels. Memory only. */
     internal val killRequestsForTest: MutableList<Pair<String, Boolean>> = java.util.Collections.synchronizedList(ArrayList())
     /** How long after the first sweep the second runs (tests shorten it). */
     @Volatile internal var killSweepAgainMs = 3_000L
@@ -2131,7 +2144,8 @@ object Broker {
      * own. [act]: cancelled; else only logged as what would be cancelled (shadow). Reads the order book afresh (tried three times); an
      * unreadable book cancels nothing. With no positions read, no BUY is cancelled ([killCancels]). The ids cancelled (or that would be).
      */
-    suspend fun cancelWorkingEntries(why: String, act: Boolean = true): List<String> = kotlinx.coroutines.withContext(Lane(com.optionslab.ira.RateGate.Priority.SAFETY)) {
+    suspend fun cancelWorkingEntries(why: String, act: Boolean = true): List<String> = kotlinx.coroutines.withContext(
+        Lane(if (act) com.optionslab.ira.RateGate.Priority.SAFETY else com.optionslab.ira.RateGate.Priority.ENTRY)) {
         if (!loggedIn) return@withContext emptyList<String>()
         var rows: List<OrderRow>? = null
         for (i in 0 until 3) {

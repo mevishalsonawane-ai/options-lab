@@ -55,8 +55,9 @@ object AccountGuard {
         val minuteOfDay: Int,
         /**
          * 20 Nov 2026 (audit B5, item 6): false when today's order count could not be read. [ordersToday] is then not a count (it
-         * was read as 0 before, so a failed read let every entry past the trades-a-day limit): an entry is refused while the limit
-         * is on; an exit never looks at it.
+         * was read as 0 before, so a failed read let every entry past the trades-a-day limit): this guard refuses an entry while the
+         * limit is on; an exit never looks at it. (The app judges that refusal through its order count check, in shadow by default:
+         * there the entry goes as before and is only logged.)
          */
         val ordersKnown: Boolean = true,
     )
