@@ -6,6 +6,8 @@ import com.optionslab.app.work.Alerts
 import com.optionslab.engine.Kite
 import com.optionslab.engine.risk.Protection
 import com.optionslab.ira.DayGttTally
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -1318,8 +1320,19 @@ object Protections {
         // (Final review: after a fast look the follow-up is made apart, on this object's own worker - FastPath's live lane is never
         // held up by it, and the confirming read still comes [FLAT_RECHECK_MS] later, not at the next regular look.)
         if (fast) {
-            if (wait > 0L && followApart.compareAndSet(false, true)) followScope.launch {
-                try { kotlinx.coroutines.delay(wait); tick() } finally { followApart.set(false) }
+            // (Final review: a failure of the follow-up - a disk or Keystore fault saving the list - is logged, never thrown out of the
+            // worker, which would end the app and the position watch with it.)
+            if (wait > 0L && followApart.compareAndSet(false, true)) followJob = followScope.launch {
+                try {
+                    kotlinx.coroutines.delay(wait)
+                    runCatching { tick() }.onFailure { e ->
+                        // (Only this worker's own cancel ends it quietly; any other failure, a timeout's included, is told.)
+                        if (e is kotlinx.coroutines.CancellationException && !kotlinx.coroutines.currentCoroutineContext().isActive) throw e
+                        runCatching { Diag.record("protection", "a fast look's follow-up failed: ${e.javaClass.simpleName}: ${e.message}") }
+                        // The watch's health counts it, as every other stop check's failure (throttled by itself).
+                        runCatching { com.optionslab.app.work.Tasks.stepFailed("stops and targets (follow-up)", e) }
+                    }
+                } finally { followApart.set(false) }
             }
             return
         }
@@ -1345,8 +1358,21 @@ object Protections {
     private fun askFollowUp(ms: Long) { if (!streamLook) followUpMs = if (followUpMs == 0L) ms else minOf(followUpMs, ms) }
 
     /** 20 Nov 2026 (final review): a fast look's follow-up, made apart; at most one waiting at a time. */
-    private val followScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val followScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+        kotlinx.coroutines.CoroutineExceptionHandler { _, e ->
+            runCatching { Diag.record("protection", "follow-up worker: ${e.javaClass.simpleName}: ${e.message}") }
+        })
     private val followApart = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var followJob: kotlinx.coroutines.Job? = null
+
+    /** TEST ONLY: whether a fast look's follow-up is waiting or running. */
+    internal fun followUpPendingForTest(): Boolean = followApart.get()
+
+    /** TEST ONLY: a fast look's follow-up cancelled and forgotten (no worker left behind for the next test). */
+    internal fun resetFollowUpForTest() {
+        followJob?.let { j -> kotlinx.coroutines.runBlocking { j.cancelAndJoin() } }
+        followJob = null; followApart.set(false)
+    }
 
     /** 20 Nov 2026: follow-up looks after one [tick] at most. */
     private const val FOLLOW_UPS = 4
@@ -1980,5 +2006,5 @@ object Protections {
     /** TEST ONLY: this object's lock held until [release] completes (a look holding it across Zerodha calls). */
     internal suspend fun holdLockForTest(release: kotlinx.coroutines.CompletableDeferred<Unit>) { lock.withLock { release.await() } }
 
-    internal fun forgetMemoryForTest() { cache = null; published = null; gttTries.clear(); flatSince.clear(); synchronized(this) { lastId = 0L } }
+    internal fun forgetMemoryForTest() { resetFollowUpForTest(); cache = null; published = null; gttTries.clear(); flatSince.clear(); synchronized(this) { lastId = 0L } }
 }

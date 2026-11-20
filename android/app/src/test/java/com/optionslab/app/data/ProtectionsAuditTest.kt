@@ -46,7 +46,11 @@ class ProtectionsAuditTest : RobolectricTest() {
         DayOco.resetForTest()
     }
 
-    @After fun down() { Market.testClock = null; kite.close(); assertEquals(emptyList<String>(), NetworkGuard.blocked.toList()) }
+    @After fun down() {
+        Protections.resetFollowUpForTest()
+        com.optionslab.app.security.Vault.testFailWrites = emptySet()
+        Market.testClock = null; kite.close(); assertEquals(emptyList<String>(), NetworkGuard.blocked.toList())
+    }
 
     private fun at(h: Int, m: Int) { Market.testClock = MarketClockRule.clockAt(h, m) }
     private fun tick() = runBlocking { Protections.tick() }
@@ -124,6 +128,29 @@ class ProtectionsAuditTest : RobolectricTest() {
         while (active().isNotEmpty() && System.nanoTime() < until) Thread.sleep(50)
         assertTrue("the follow-up confirmed it", active().isEmpty())
         assertFalse(working(p.stopOrderId)); assertFalse(working(p.targetOrderId))
+    }
+
+    /** Final review: a fast look's follow-up whose save fails (a disk fault) is logged, never thrown; its flag is cleared. */
+    @Test fun aFollowUpWhoseSaveFailsNeverCrashesAndClearsItsFlag() {
+        protect()
+        at(12, 5)
+        kite.position(sym, 0, 0.0)                                         // sold by hand: the fast look asks a follow-up
+        val crashes = java.util.concurrent.atomic.AtomicInteger()
+        val before = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { _, _ -> crashes.incrementAndGet() }
+        try {
+            runBlocking { Protections.tick(fast = true) }
+            assertTrue("a follow-up is waiting", Protections.followUpPendingForTest())
+            com.optionslab.app.security.Vault.testFailWrites = setOf("protections.vault")
+            val until = System.nanoTime() + 15_000_000_000L
+            while (Protections.followUpPendingForTest() && System.nanoTime() < until) Thread.sleep(50)
+            assertFalse("the flag is cleared", Protections.followUpPendingForTest())
+            assertEquals("nothing thrown out of the worker", 0, crashes.get())
+            assertTrue("the follow-up reached the failing save and said so", Diag.lines().any { it.contains("a fast look's follow-up failed") })
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(before)
+            com.optionslab.app.security.Vault.testFailWrites = emptySet()
+        }
     }
 
     /** Final review: Boss is told (throttled) while a positions read stays partial. */
