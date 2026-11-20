@@ -233,9 +233,8 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
             else -> 25_200.0 } }
         nifty(LocalTime.of(10, 55)); tick(LocalTime.of(10, 55))
         assertTrue(status(), status().contains("waiting"))
-        nifty(LocalTime.of(10, 58)); tick(LocalTime.of(10, 58))
-        assertTrue(status(), status().contains("end of its fill window"))
-        // The 11:00 break is skipped by the cap, as it would have been behind the 10:55 trade (its 30-minute time stop not reached).
+        // The next look (the 11:00 bar's) lets the 10:55 break go (its window ended), then skips the 11:00 break by the cap, as it would
+        // have been behind the 10:55 trade (its 30-minute time stop not reached).
         nifty(LocalTime.of(11, 0)); tick(LocalTime.of(11, 0))
         assertTrue(status(), status().contains("11:00 break skipped: one position a side"))
         assertTrue(real().isEmpty())
@@ -257,7 +256,6 @@ class PassedArmsStaleHistoryTest : RobolectricTest() {
         PassedArmsHost.testHistory = { u -> if (u == "NIFTY") session(prev) else emptyList() }
         runBlocking { PassedArmsHost.prefetchNow(day) }
         assertNull(PassedArmsHost.historyStale("NIFTY", day))
-        nifty(LocalTime.of(10, 58)); tick(LocalTime.of(10, 58))
         nifty(LocalTime.of(11, 0)); tick(LocalTime.of(11, 0))
         assertTrue(status(), status().contains("11:00 break skipped: one position a side"))
         assertTrue(real().isEmpty())

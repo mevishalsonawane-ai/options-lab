@@ -2732,7 +2732,8 @@ class PassedArmsHostTest : RobolectricTest() {
     }
 
     @Test fun aScoreIsKeptAsWholeOnlyWhenAllItsInputsAreIn() {
-        // SENSEX's minutes are not in this pass (the tests' market lists four indices): the score decides, as before, but is not whole.
+        // SENSEX's and India VIX's minutes are not in this pass (the tests' market lists four indices): the score decides, as before,
+        // but is not whole.
         pickerDay(true)
         tick(LocalTime.of(9, 21))
         val key = "$day|${BreadthDonchianArm.SOURCE}|NIFTY|0|1"
@@ -2747,6 +2748,7 @@ class PassedArmsHostTest : RobolectricTest() {
         val key = "${day}|${BreadthDonchianArm.SOURCE}|NIFTY|0|1"
         pickerDay(true)
         minutes(indexKeys.getValue("SENSEX"), LocalTime.of(9, 21)) { bases.getValue("SENSEX") }
+        minutes(com.optionslab.engine.Upstox.INDEX_KEYS.getValue("INDIAVIX"), LocalTime.of(9, 21)) { 14.0 }
         tick(LocalTime.of(9, 21))
         assertEquals(true, PassedArmsHost.pickScoreKept(key)?.second)
     }
