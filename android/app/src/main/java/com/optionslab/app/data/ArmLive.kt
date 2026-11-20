@@ -988,7 +988,7 @@ object ArmLive {
             lossLimit = runCatching { LossBreaker.liveDoorTripped() }.getOrDefault(true))
         if (LiveMirror.refusal(g) != null) return g
         val g2 = g.copy(dayLock = runCatching { DayLockGuard.refusal(true) }.getOrElse { "the day lock could not be checked" },
-            accountStop = if (shadow) null else accountStop(), loggedIn = Broker.loggedIn)
+            accountStop = if (shadow || !accountStopActs(key)) null else accountStop(), loggedIn = Broker.loggedIn)
         if (LiveMirror.refusal(g2) != null) return g2
         return g2.copy(compromised = !shadow && runCatching {
             if (testSecurityFails) throw java.io.IOException("test: the security check could not run")
@@ -1014,6 +1014,17 @@ object ArmLive {
         val st = com.optionslab.ira.LiquidityStopRule.check(mine + orb, now().toLocalDate())
         if (st.stopped) st.why else null
     }.getOrElse { ACCOUNT_UNCHECKED }
+
+    /**
+     * 20 Nov 2026 (Boss: "Yes, make it follow switch", after "Its off then why separate button"): whether [accountStop] refuses arm
+     * [key]'s live entries. For R51, R72 and Liquidity (every book; [com.optionslab.ira.ArmAutoStops.covers], by source) it follows
+     * Boss's "Liquidity live stop rule applies to R51, R72 and Liquidity" switch: off, this same -Rs 40,000 / -Rs 13,000-a-month rule
+     * no longer refuses them, whenever it was reached; on, it refuses as before. Every other arm keeps it always. Before the switches
+     * are read every rule counts as on (the stop keeps acting). Memory only.
+     */
+    internal fun accountStopActs(key: String): Boolean = runCatching {
+        ArmAutoStopsHost.acts(com.optionslab.ira.ArmAutoStops.Rule.LIVE_STOP, key)
+    }.getOrDefault(true)
 
     /** The account stop rule's refusal when its record could not be read (final review F3). */
     internal const val ACCOUNT_UNCHECKED = "the account stop could not be checked"
