@@ -207,7 +207,9 @@ class PineAutoLiveTest : RobolectricTest() {
         switchOn()
         pass(51_900.0)
         kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
-        kite.down += "/orders"
+        // The order book unreadable from the lost POST on (20 Nov 2026, audit B5: before it, the entry's own order count could not be
+        // read and the guard would rightly refuse the entry - an unknown count is never 0).
+        kite.afterNext("/orders/regular") { kite.down += "/orders" }
         pass(52_010.0)
         val h = held()!!
         assertTrue("held, unconfirmed: nothing more is bought meanwhile", h.unconfirmed)
