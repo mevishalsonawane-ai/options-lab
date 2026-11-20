@@ -1498,8 +1498,9 @@ object ArmLive {
             val book = com.optionslab.ira.PriceNow.bookBid(t.bid, t.ask)
             // A trade after the entry minute, and - with a sane book there - not more than [PriceNow.FAR] outside it (a stray print with a
             // trade time is as stray as one without).
-            val inBook = book == null || t.ask == null ||
-                (t.last >= book * (1 - com.optionslab.ira.PriceNow.FAR) && t.last <= t.ask * (1 + com.optionslab.ira.PriceNow.FAR))
+            val ask = t.ask
+            val inBook = book == null || ask == null ||
+                (t.last >= book * (1 - com.optionslab.ira.PriceNow.FAR) && t.last <= ask * (1 + com.optionslab.ira.PriceNow.FAR))
             if (ts != null && ts >= entrySec + 60 && com.optionslab.ira.PriceNow.lastCounts(t.last, ts, entrySec) &&
                 !com.optionslab.ira.PriceNow.farFromBook(t.last, ts, t.bid, t.ask) && inBook) return t.last
             book?.let { return it }
