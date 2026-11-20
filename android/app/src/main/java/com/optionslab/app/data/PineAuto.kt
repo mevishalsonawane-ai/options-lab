@@ -1130,8 +1130,10 @@ object PineAuto {
         var stopQty = h.qty
         val book = runCatching { Broker.ordersRecon() }.getOrNull()
         if (book != null) {
-            val claimed = b.held.values.mapNotNull { it.stop }.toSet() + b.removing.flatMap { it.ids.keys }
-            val sells = book.filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" }
+            val removingIds = b.removing.flatMap { it.ids.keys }.toSet()
+            val claimed = b.held.values.mapNotNull { it.stop }.toSet() + removingIds
+            // (An earlier holding's exits still being taken out are neither this holding's nor its cover: they are on their way out.)
+            val sells = book.filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.id !in removingIds }
             sells.filter { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed &&
                 com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) in 1..h.qty }
                 .minByOrNull { kotlin.math.abs(it.trigger - trig) }?.let { orphan ->
