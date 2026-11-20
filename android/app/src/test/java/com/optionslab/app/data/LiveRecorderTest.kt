@@ -88,7 +88,9 @@ class LiveRecorderTest : RobolectricTest() {
         assertEquals(1, LiveRecorder.queuedForTest())
         runBlocking { LiveRecorder.drain() }
         val file = dayDirs().map { File(it, LiveRecord.TRADES_FILE) }.single { it.exists() }
-        assertFalse("encrypted on disk", file.readText().contains("BANKNIFTY"))
+        // 20 Nov 2026: the plain record's own text (quotes and a colon, which Base64 never holds), not the bare word BANKNIFTY,
+        // which Base64 ciphertext can hold by chance; the lines decrypting below is what proves the encryption.
+        assertFalse("encrypted on disk", file.readText().contains("\"arm\":\"Liquidity BANKNIFTY\""))
         val lines = tradeLines()
         assertTrue(lines[0], lines[0].startsWith("{\"t\":\"H\",\"schema\":1,"))
         val s = lines[1]
@@ -183,10 +185,28 @@ class LiveRecorderTest : RobolectricTest() {
         val zip = LiveRecorder.exportZip(context)
         val names = java.util.zip.ZipFile(zip).use { z -> z.entries().toList().map { it.name } }
         assertTrue(names.toString(), "README.txt" in names && names.any { it.endsWith("/" + LiveRecord.TRADES_FILE) } && names.any { it.endsWith("/" + LiveRecord.MARKET_FILE) })
-        // The trades part stays encrypted in the zip.
+        // The trades part stays encrypted in the zip: the very bytes on disk, Base64 lines only, which open to the signal.
+        // 20 Nov 2026: this read "no ORB anywhere in the bytes", but a Base64 line of ciphertext holds the three letters O, R, B
+        // by chance (a ~1,050-character line did in 20 of 5,000 fresh encryptions), so it failed about 1 run in 250 (CI on
+        // 2eaae66dd). Now the plain record's own text ("arm":"ORB", with quotes and a colon no Base64 line can hold) is what
+        // must be absent, and the lines must decrypt back to it, so nothing it proved is lost.
+        val onDisk = dayDirs().map { File(it, LiveRecord.TRADES_FILE) }.single { it.exists() }.readBytes()
         java.util.zip.ZipFile(zip).use { z ->
-            val e = z.entries().toList().first { it.name.endsWith(LiveRecord.TRADES_FILE) }
-            assertFalse(z.getInputStream(e).readBytes().toString(Charsets.US_ASCII).contains("ORB"))
+            val e = z.entries().toList().single { it.name.endsWith("/" + LiveRecord.TRADES_FILE) }
+            val stored = z.getInputStream(e).readBytes()
+            assertTrue("zipped as stored", stored.contentEquals(onDisk))
+            val text = stored.toString(Charsets.US_ASCII)
+            val lines = text.lines().filter { it.isNotEmpty() }
+            assertTrue(text, lines.isNotEmpty() && lines.all { Regex("[A-Za-z0-9+/]+=*").matches(it) })
+            assertFalse(text, "\"arm\":\"ORB\"" in text)
+            val opened = lines.flatMap { l ->
+                val blob = android.util.Base64.decode(l, android.util.Base64.NO_WRAP)
+                val gz = Vault.decrypt(blob)
+                // Ciphertext, not the gzip itself under Base64: the opened bytes appear nowhere in what was stored.
+                assertFalse("not stored plain", (0..blob.size - gz.size).any { blob.copyOfRange(it, it + gz.size).contentEquals(gz) })
+                GZIPInputStream(gz.inputStream()).bufferedReader().readLines()
+            }
+            assertTrue(opened.toString(), opened.any { it.startsWith("{\"t\":\"S\",") && "\"arm\":\"ORB\"" in it })
         }
         runBlocking { LiveRecorder.rotate(Market.today()) }
         assertFalse(old.exists())
