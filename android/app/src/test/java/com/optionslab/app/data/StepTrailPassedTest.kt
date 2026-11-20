@@ -382,6 +382,105 @@ class StepTrailPassedTest : RobolectricTest() {
         assertEquals(b, kite.order(live.stopOrderId!!).trigger, 1e-9)
     }
 
+    /**
+     * 20 Nov 2026 (audit B5, item 5): a look whose only change is a higher best price (a lock earned, its Zerodha stop not moved this look)
+     * writes the book on its own writer: the write happens, and a restart keeps the best price and the lock it earned.
+     */
+    @Test fun liveABestOnlyLookIsWrittenAndARestartKeepsIt() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val e = live.entry
+        // Zerodha refuses the stop's move this look: only the best price changes in the book.
+        kite.modifyRefusals = 5
+        quoted(e * 1.105)
+        val now = ArmLive.view.value.open.single()
+        assertEquals("the stop not moved yet", live.stopTrigger!!, now.stopTrigger!!, 1e-9)
+        assertEquals(e * 1.105, now.best!!, 0.051)
+        // A restart (the writer drained first, then memory gone): the best is read back from the book on disk.
+        ArmLive.forgetMemoryForTest()
+        kite.modifyRefusals = 0
+        quoted(e * 1.09)
+        val back = ArmLive.view.value.open.single()
+        assertEquals("its best price kept", e * 1.105, back.best!!, 0.051)
+        assertEquals("the lock it earned rests at Zerodha", lockedLive(live), back.stopTrigger!!, 1e-9)
+    }
+
+    /**
+     * 20 Nov 2026 (deep review of audit B5): the live copy's best price counts a stream price only once checked - a print with no trade time
+     * far over a sane book never raises the step lock resting at Zerodha (the book's bid counts instead); a real trade after the entry
+     * minute does, at the same level as before.
+     */
+    @Test fun liveOneBadPrintNeverRaisesTheLockARealTradeDoes() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val e = live.entry
+        fun feed(last: Double, bid: Double, ask: Double, traded: Long?) = KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(
+            26_000_001, last, bid = bid, ask = ask, exchangeTime = System.currentTimeMillis() / 1000, bidQty = 65, askQty = 65, lastTradeTime = traded)))
+        try {
+            // A stray print 20% over the book, no trade time: the book's bid (the fill) is the best.
+            feed(e * 1.2, e, e + 0.1, null)
+            runBlocking { ArmLive.watch() }
+            val held = ArmLive.view.value.open.single()
+            assertTrue("best ${held.best} not raised by the stray print", (held.best ?: e) < e * 1.01)
+            assertEquals("its stop not moved", live.stopTrigger!!, held.stopTrigger!!, 1e-9)
+            assertTrue(modifies.isEmpty())
+            // A stray print WITH a trade time after the entry minute, 20% over a sane book: not counted either.
+            val entrySec0 = live.entryTime.withSecond(0).withNano(0).atZone(IST).toEpochSecond()
+            feed(e * 1.2, e, e + 0.1, entrySec0 + 120)
+            runBlocking { ArmLive.watch() }
+            assertTrue("best ${ArmLive.view.value.open.single().best}", (ArmLive.view.value.open.single().best ?: e) < e * 1.01)
+            assertTrue(modifies.isEmpty())
+            // A trade inside the entry minute (it may be from before the fill) does not count either.
+            val entrySec = entrySec0
+            feed(e * 1.105, e, e + 0.1, entrySec + 30)
+            runBlocking { ArmLive.watch() }
+            assertTrue(modifies.isEmpty())
+            // A real trade after the entry minute: the step lock, at the same level as before.
+            feed(e * 1.105, e * 1.105 - 0.05, e * 1.105 + 0.05, entrySec + 120)
+            runBlocking { ArmLive.watch() }
+            assertEquals(e * 1.105, ArmLive.view.value.open.single().best!!, 1e-9)
+            assertEquals(lockedLive(live), ArmLive.view.value.open.single().stopTrigger!!, 1e-9)
+        } finally { KiteStream.stop() }
+    }
+
+    /**
+     * 20 Nov 2026 (final review): [ArmLive.bestPx] off the stream - Zerodha's quote as the live stop judges it: with no book its last price,
+     * far outside a sane book the bid, inside it the last. Liquidity 15+5's live trades keep the quote's last price and their raw reads.
+     */
+    @Test fun theLiveBestFromAQuoteAndLiquidityUnchanged() {
+        goLive()
+        bought(200.0)
+        val live = ArmLive.view.value.open.single()
+        val e = live.entry
+        assertTrue(ArmLive.checkedBest(live))
+        assertEquals("an empty book: the last price", e * 1.1, ArmLive.bestPx(live, Broker.Quote(e * 1.1, null, null, 0.0))!!, 1e-9)
+        assertEquals("a far book: its bid", e, ArmLive.bestPx(live, Broker.Quote(e * 1.5, e, e + 0.1, 0.0))!!, 1e-9)
+        assertEquals("inside a sane book: the last", e * 1.05, ArmLive.bestPx(live, Broker.Quote(e * 1.05, e * 1.05 - 0.05, e * 1.05 + 0.05, 0.0))!!, 1e-9)
+        assertNull("no quote", ArmLive.bestPx(live, null))
+        assertNull("not a rule trade", ArmLive.bestPx(live.copy(fixed = false), Broker.Quote(e * 1.1, null, null, 0.0)))
+        // Liquidity 15+5: as before - the quote's last, even far outside the book, and its own reads (not the checked ones).
+        val liq = live.copy(key = com.optionslab.engine.orb.LiquidityRules.ARM.source)
+        assertFalse(ArmLive.checkedBest(liq))
+        assertEquals(e * 1.5, ArmLive.bestPx(liq, Broker.Quote(e * 1.5, e, e + 0.1, 0.0))!!, 1e-9)
+        for (bk in com.optionslab.engine.orb.LiquidityRules.BOOKS) assertFalse(ArmLive.checkedBest(live.copy(key = bk.source)))
+    }
+
+    /** 20 Nov 2026: the live copy's candle highs ([Paper.closedHigh]) - only today's closed minutes after the entry minute. */
+    @Test fun theLiveCandleHighReadsOnlyClosedMinutesAfterTheEntryMinute() {
+        val entry = day.atTime(10, 0, 20)
+        fun bar(h: Int, m: Int, high: Double, d: LocalDate = day) =
+            Upstox.Bar(d.atTime(h, m).atZone(IST).toEpochSecond(), 100.0, high, 99.0, 100.0, 10, 0)
+        val now = day.atTime(10, 3, 30).atZone(IST).toEpochSecond()
+        val bars = listOf(bar(10, 0, 150.0), bar(10, 1, 110.0), bar(10, 2, 120.0), bar(10, 3, 140.0), bar(10, 2, 300.0, day.minusDays(1)))
+        assertEquals("10:01 and 10:02 only (not the entry minute, the 10:03 minute still forming, nor yesterday's)", 120.0,
+            Paper.closedHigh(bars, entry, now, day)!!, 1e-9)
+        assertNull("none closed yet", Paper.closedHigh(bars, entry, day.atTime(10, 1, 59).atZone(IST).toEpochSecond(), day))
+        assertNull(Paper.closedHigh(emptyList(), entry, now, day))
+        assertNull("a bad bar is never a high", Paper.closedHigh(listOf(bar(10, 1, Double.NaN)), entry, now, day))
+    }
+
     @Test fun liveTheAppSaleWaitsWhileBossIsExitingByHand() {
         goLive()
         bought(200.0)

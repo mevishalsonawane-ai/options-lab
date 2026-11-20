@@ -226,7 +226,14 @@ object PassedArms {
                    /** The price a NaN-keep step locks (breakeven: the fill plus the round-trip charges); null: the fill + [ProfitLock.FALLBACK_COST_PCT]. */
                    breakeven: Double? = null,
                    /** 16 Nov: the arm's OWN lock (without [StepTrail]'s levels) an earlier look saw earned, for [Walk.ownLock]. */
-                   knownOwn: Pair<LocalDateTime, Double>? = null): Walk {
+                   knownOwn: Pair<LocalDateTime, Double>? = null,
+                   /**
+                    * 20 Nov 2026 (audit B5, item 6: the locks stalled on stale candles): the highest price the option traded after its entry
+                    * that the caller knows now apart from [bars] (the stream's kept ticks, else a fresher candle read, or the price now). Null
+                    * (the default, and the research): the closed minutes' highs alone, as before. It only raises the best the locks are worked
+                    * out from (the same levels, [steps] and [StepTrail]); it never lowers a level, sets a target or sells by itself.
+                    */
+                   high: Double? = null): Walk {
         if (!(entry > 0)) return Walk(null, entry, null)
         // 16 Oct: a lock seen before this trade's entry minute belongs to an earlier trade on the same option (a re-entry):
         // never this one's.
@@ -302,6 +309,23 @@ object PassedArms {
                     return Walk(Exit(ExitKind.NO_PROGRESS, b.start.plusMinutes(1), b.close), peak, lock, ownLock)
             }
             if (tend != null && b.start == tend) return Walk(Exit(ExitKind.TIME, b.start.plusMinutes(1), b.close), peak, lock, ownLock)
+        }
+        // 20 Nov 2026 (audit B5, item 6): a best the closed minutes do not show yet (they stopped coming, or lag) raises the locks now, by
+        // the same levels as a minute's high would ([high]; null: as before). Only after the entry minute's own exits were judged.
+        if (high != null && high.isFinite() && high > 0) {
+            if (high > peak) {
+                peak = high
+                val g = peak / entry - 1
+                for ((trig, keep) in x.steps) if (g >= trig - 1e-12) {
+                    val l = if (keep.isNaN()) breakeven ?: (entry * (1 + ProfitLock.FALLBACK_COST_PCT / 100)) else entry * (1 + keep)
+                    if (lock == null || l > lock!!) lock = l
+                    if (ownLock == null || l > ownLock!!) ownLock = l
+                }
+            }
+            if (st != null && high > stepPeak) {
+                stepPeak = high
+                StepTrail.trailLevel(entry, st.lot, stepPeak, st.tick, ladder)?.let { if (lock == null || it > lock!!) lock = it }
+            }
         }
         // Between bars: the price now against the same levels (and a lock seen earned before), then the clock.
         known?.let { (_, lv) -> if (lock == null || lv > lock!!) lock = lv }

@@ -310,4 +310,37 @@ class StepLockTest {
         val s = LiveMirror.decide(base.copy(ltp = 321.0))
         assertEquals(Step.SELL, s.step); assertEquals(StepTrail.WHY_LOCK, s.why)
     }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 6: the locks stalled while the option's minutes stopped coming): a best the closed minutes do not show
+     * ([PassedArms.exitOnBars]' high: the stream's ticks, a fresher read, the price now) raises the same lock a minute's high would, and
+     * nothing else; without it (null, the research) the walk is exactly as before.
+     */
+    @Test fun aBestTheMinutesDoNotShowRaisesTheSameLock() {
+        // The minutes stop at 10:00 (the entry minute); the option traded at 331.75 since: +1,000 locked at 322.15, as from a 10:01 minute.
+        val stale = listOf(bar(10, 0, 300.0, 300.0, 300.0, 300.0))
+        assertNull(PassedArms.exitOnBars(300.0, t(10, 0), stale, 331.0, t(10, 4), v5).lock, "before: the lock waited for the minutes")
+        val w = PassedArms.exitOnBars(300.0, t(10, 0), stale, 331.0, t(10, 4), v5, high = 331.75)
+        assertNull(w.exit); assertEquals(322.15, w.lock!!, 1e-9)
+        assertEquals(PassedArms.exitOnBars(300.0, t(10, 0), stale + bar(10, 1, 300.0, 331.75, 300.0, 331.0), 331.0, t(10, 4), v5).lock!!, w.lock!!, 1e-9,
+            "the same level as the minute's high")
+        // The price now back under it: out at the lock, named the step lock.
+        val out = PassedArms.exitOnBars(300.0, t(10, 0), stale, 321.0, t(10, 4), v5, high = 331.75)
+        assertEquals(PassedArms.ExitKind.STEP_LOCK, out.exit!!.kind)
+        // A lower best than the minutes already show, or none, a NaN or zero: nothing changes.
+        val bars = stale + bar(10, 1, 300.0, 331.75, 300.0, 331.0)
+        for (h in listOf(null, 310.0, Double.NaN, 0.0, -5.0))
+            assertEquals(322.15, PassedArms.exitOnBars(300.0, t(10, 0), bars, 331.0, t(10, 2), v5, high = h).lock!!, 1e-9)
+        for (h in listOf(310.0, Double.NaN, 0.0)) assertNull(PassedArms.exitOnBars(300.0, t(10, 0), stale, 305.0, t(10, 2), v5, high = h).lock)
+        // Never a target by itself, never a sale above the price now, and the arm's own stop stays.
+        val plain = DonchianArm.EXITS
+        assertNull(PassedArms.exitOnBars(300.0, t(10, 0), stale, 330.0, t(10, 2), plain, high = 400.0).exit, "the +30% target is for the price itself")
+        // R64's ladder (the arm's own lock) rises the same way, and its own lock apart.
+        val x = PassedArms.withLock(v5)
+        val r = PassedArms.exitOnBars(300.0, t(10, 0), stale, 392.0, t(10, 2), x, breakeven = 301.0, high = 393.0)
+        assertEquals(301.0, r.ownLock!!, 1e-9, "R64's +30% rung: breakeven")
+        assertTrue(r.lock!! > r.ownLock!!)
+        // Never down: a remembered higher lock stays.
+        assertEquals(330.0, PassedArms.exitOnBars(300.0, t(10, 0), stale, 335.0, t(10, 4), v5, known = t(10, 2) to 330.0, high = 331.75).lock!!, 1e-9)
+    }
 }
