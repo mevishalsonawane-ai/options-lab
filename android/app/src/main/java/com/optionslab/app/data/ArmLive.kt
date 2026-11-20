@@ -138,8 +138,13 @@ object ArmLive {
          * level itself and sells there. Persisted.
          */
         val stopByYou: Boolean = false,
-        /** 20 Nov 2026 (audit): the lots asked for when Boss's 4 Nov free-cash cut bought fewer ([entryQty] / [lot] were bought); null: not cut. Persisted. */
+        /**
+         * 20 Nov 2026 (audit): the lots asked for when fewer were bought - Boss's 4 Nov free-cash cut, or a part fill ([entryQty] / [lot] were
+         * bought); null: all bought. Persisted.
+         */
         val askedLots: Int? = null,
+        /** 20 Nov 2026: with [askedLots], the lots sent after the free-cash cut (a part fill bought fewer). Null: as many as bought. Persisted. */
+        val sentLots: Int? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -702,7 +707,8 @@ object ArmLive {
             p.optBoolean("shadow"), s("stopKind") ?: OWN, if (p.has("stopQty")) p.getInt("stopQty") else null,
             p.optBoolean("heldSeen", !p.has("heldSeen")), if (p.has("zeroSince")) p.getLong("zeroSince") else null, p.optInt("stopBooked", 0),
             s("paperSymbol"), p.optBoolean("step500", false), d("best"), p.optBoolean("stepLock", false),
-            p.optBoolean("detached", false), p.optBoolean("stopByYou", false), p.optInt("askedLots", 0).takeIf { it > 0 })
+            p.optBoolean("detached", false), p.optBoolean("stopByYou", false), p.optInt("askedLots", 0).takeIf { it > 0 },
+            p.optInt("sentLots", 0).takeIf { it > 0 })
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("key", p.key).put("ref", p.ref).put("symbol", p.symbol).put("exchange", p.exchange)
@@ -714,7 +720,7 @@ object ArmLive {
         .put("charges", p.charges).put("shadow", p.shadow).put("stopKind", p.stopKind).put("heldSeen", p.heldSeen)
         .apply { p.stopQty?.let { put("stopQty", it) }; p.zeroSinceMs?.let { put("zeroSince", it) }; p.paperSymbol?.let { put("paperSymbol", it) } }
         .put("stopBooked", p.stopBooked).apply { if (p.fixed) put("step500", true); p.best?.let { put("best", it) }; if (p.lock) put("stepLock", true) }
-        .apply { if (p.detached) put("detached", true); if (p.stopByYou) put("stopByYou", true); p.askedLots?.let { put("askedLots", it) } }
+        .apply { if (p.detached) put("detached", true); if (p.stopByYou) put("stopByYou", true); p.askedLots?.let { put("askedLots", it) }; p.sentLots?.let { put("sentLots", it) } }
 
     /**
      * The book written (and shown). 18 Nov 2026 (audit: a failed write was swallowed): false when it could not be written - Boss is told
@@ -1180,7 +1186,7 @@ object ArmLive {
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol,
             fixed = a.fixed && a.side > 0 && com.optionslab.engine.orb.StepTrail.covers(a.key),
             lock = a.fixed && a.lock && a.side > 0 && com.optionslab.engine.orb.StepTrail.lockFor(a.key) != null,
-            askedLots = want.takeIf { optionBuy && qty / ins.lot < it })
+            askedLots = want.takeIf { optionBuy && qty / ins.lot < it }, sentLots = (qty / ins.lot).takeIf { optionBuy && it < want })
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
         // 3 Nov (Boss): an index not selected in Bot settings → Indices stays in shadow (recorded, never sent).
         // (Read again here, just before anything is sent: a change made while this entry was on its way counts.)
@@ -1304,6 +1310,8 @@ object ArmLive {
         // Seen held only once Zerodha's position book shows it (review C3): a book that lags the fill never closes the trade.
         var p = base.copy(entryOrderId = id, qty = f.filled, entryQty = f.filled, entry = fill, heldSeen = false,
             charges = charge(side.name, fill, f.filled, ins.exchange, ins.symbol, ins.multiplier))
+        // 20 Nov 2026: a part fill of an option buy bought fewer lots than asked too: kept with the lots sent, for the trade's words.
+        if (optionBuy && f.filled < qty && p.askedLots == null) p = p.copy(askedLots = want, sentLots = qty / ins.lot)
         val (stop, kind) = firstStop(spec, p)
         p = p.copy(stopKind = kind, stopTrigger = stop)
         // 30 Oct (deep review): the filled trade is WRITTEN before its stop is rested, so a process death in between still finds it
@@ -3053,7 +3061,7 @@ object ArmLive {
                 line(b, "%s: %s%s %s %d @ %.2f (%s), %s after charges".format(Locale.ENGLISH, c.label, if (c.shadow) "SHADOW " else "",
                     if (c.side > 0) "sold" else "bought back", c.symbol, c.qty, c.exit ?: 0.0,
                     c.why?.let { com.optionslab.engine.orb.StepTrail.words(it) }, LiveMirror.rs(c.net ?: 0.0)) +
-                    (c.askedLots?.let { OrbArms.lotsAskedWords(it, c.entryQty / c.lot.coerceAtLeast(1)) }?.let { " · $it" } ?: ""))
+                    (c.askedLots?.let { val bought = c.entryQty / c.lot.coerceAtLeast(1); OrbArms.lotsAskedWords(it, c.sentLots ?: bought, bought) }?.let { " · $it" } ?: ""))
                 if (b.positions.none { it.open && it.ref == c.ref }) { closedRefs.remove(c.ref); levels.remove(c.ref); RuleHighs.forget("live:${c.ref}")
                     detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref) }
             }

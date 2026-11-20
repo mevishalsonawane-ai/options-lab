@@ -223,14 +223,20 @@ object OrbArms {
         /** 16 Nov (review): the app itself cancelled its stop (an exit taking it out first) and Zerodha had not shown it out yet. Persisted. */
         val appCancelled: Boolean = false,
         /**
-         * 20 Nov 2026 (audit: lots asked for vs lots bought): a live entry Boss's 4 Nov free-cash cut made smaller - the lots his setting
-         * asked for ([lot]s of the contract; [entryQty] is what was bought). Null: not cut (every other trade). A label only. Persisted.
+         * 20 Nov 2026 (audit: lots asked for vs lots bought): a live entry that bought fewer lots than Boss's setting asked for - Boss's 4 Nov
+         * free-cash cut, or a part fill - the lots his setting asked for ([lot]s of the contract; [entryQty] is what was bought). Null:
+         * all bought (every other trade). A label only. Persisted.
          */
         val askedLots: Int? = null,
+        /** 20 Nov 2026: with [askedLots], the lots sent after the free-cash cut (a part fill bought fewer). Null: as many as bought. Persisted. */
+        val sentLots: Int? = null,
     ) {
         val open: Boolean get() = exit == null
-        /** 20 Nov 2026: "bought 2 of 3 lots (free cash)" when the free-cash cut made this entry smaller ([askedLots]); else null. */
-        val askedWords: String? get() = askedLots?.let { asked -> lotsAskedWords(asked, (entryQty ?: (qty + sold)) / (lot?.takeIf { it > 0 } ?: return null)) }
+        /** 20 Nov 2026: "bought 2 of 3 lots (free cash)" or "(part filled)" when this entry bought fewer lots than asked ([askedLots]); else null. */
+        val askedWords: String? get() = askedLots?.let { asked ->
+            val bought = (entryQty ?: (qty + sold)) / (lot?.takeIf { it > 0 } ?: return null)
+            lotsAskedWords(asked, sentLots ?: bought, bought)
+        }
         /**
          * A paper trade on exit rules Boss's switches added (a trail, the breakeven): kept out of the plain-rules record. 25 Oct (review):
          * h14's capped limit changes only how the entry is bought (never above the cap), not the rules, so a capped trade stays in the
@@ -259,11 +265,16 @@ object OrbArms {
     }
 
     /**
-     * 20 Nov 2026 (audit: lots asked for vs lots bought): a live entry's journal words when Boss's 4 Nov free-cash cut bought [bought] of the
-     * [asked] lots ("bought 2 of 3 lots (free cash)"); null when nothing was cut. Pure (the arms' live copies' lines use it too).
+     * 20 Nov 2026 (audit: lots asked for vs lots bought): a live entry's journal words when it bought [bought] of the [asked] lots, with the
+     * reason: Boss's 4 Nov free-cash cut sent [sent] ("bought 2 of 3 lots (free cash)"), the order part filled ("bought 1 of 3 lots (part
+     * filled)"), or both ("bought 1 of 3 lots (2 fit the free cash, 1 filled)"). Null when all were bought. Pure (the arms' live copies too).
      */
-    internal fun lotsAskedWords(asked: Int, bought: Int): String? =
-        if (asked <= 0 || bought < 0 || bought >= asked) null else "bought $bought of $asked lots (free cash)"
+    internal fun lotsAskedWords(asked: Int, sent: Int, bought: Int): String? = when {
+        asked <= 0 || bought < 0 || bought >= asked -> null
+        sent in (bought + 1) until asked -> "bought $bought of $asked lots ($sent fit the free cash, $bought filled)"
+        sent < asked -> "bought $bought of $asked lots (free cash)"
+        else -> "bought $bought of $asked lots (part filled)"
+    }
 
     /** A signal waiting for approval. Liquidity 15+5 also keeps its strike and the index levels (the ORB uses the day's legs). */
     data class Pending(val arm: String, val right: String, val signalBar: LocalDateTime, val expires: LocalDateTime,
@@ -419,7 +430,8 @@ object OrbArms {
             capped = if (p.has("capped")) p.getDouble("capped") else null,
             fixed = p.optBoolean("step500", false), lock = p.optBoolean("stepLock", false),
             entryQty = p.optInt("entryQty", 0).takeIf { it > 0 }, stopByYou = p.optBoolean("stopByYou", false),
-            appCancelled = p.optBoolean("appCancelled", false), askedLots = p.optInt("askedLots", 0).takeIf { it > 0 })
+            appCancelled = p.optBoolean("appCancelled", false), askedLots = p.optInt("askedLots", 0).takeIf { it > 0 },
+            sentLots = p.optInt("sentLots", 0).takeIf { it > 0 })
 
     private fun book(): Book {
         cache?.let { return it }
@@ -1292,7 +1304,7 @@ object OrbArms {
                         p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) }; p.be?.let { put("breakeven", it) }
                         if (p.priceRetry) put("priceRetry", true); p.capped?.let { put("capped", it) }; if (p.fixed) put("step500", true); if (p.lock) put("stepLock", true)
                         p.entryQty?.let { put("entryQty", it) }; if (p.stopByYou) put("stopByYou", true); if (p.appCancelled) put("appCancelled", true)
-                        p.askedLots?.let { put("askedLots", it) } })
+                        p.askedLots?.let { put("askedLots", it) }; p.sentLots?.let { put("sentLots", it) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -3729,7 +3741,7 @@ object OrbArms {
         val intent = stamped(Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, null, null, null,
             live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ladderOn(arm, today0, true),
             near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew,
-            askedLots = asked))
+            askedLots = asked, sentLots = asked?.let { buyLots }))
         b.positions += intent
         // (19 Nov 2026, second review: written on the book's writer thread, so the order below never waits on the disk; any later save
         // of the book writes after it, never under it - [saveSoon].)
@@ -3801,7 +3813,10 @@ object OrbArms {
         putIntent(stamped(Position(arm.source, c.symbol, c.right.name, f.filled, fill, now(), signalBar, id, stopId, trigger,
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
             ladder = ladderOn(arm, today0, true), near = near, volSkip = volSkip, strong = strong,
-            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew, entryQty = f.filled, askedLots = asked)))
+            lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew, entryQty = f.filled,
+            // (20 Nov 2026: fewer lots than asked - the free-cash cut, or a part fill - kept with the lots sent, for the trade's words.)
+            askedLots = want.takeIf { liquidity != null && (buyLots < it || f.filled < buyLots * ins.lotSize) },
+            sentLots = buyLots.takeIf { liquidity != null && (buyLots < want || f.filled < buyLots * ins.lotSize) })))
         runCatching { save(b) }
         runCatching { Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", "${arm.label} · entry", f.orderId) }
         // 22 Oct: the time machine's reality check on the live entry too (shadow only; background).
@@ -5773,11 +5788,15 @@ object OrbArms {
         }
         // 20 Nov 2026 (audit: a signal was lost as "no_contract" when today's instrument list was late): an entry that would go now while the
         // list is not loaded yet waits for it - decided again by the next look once the list lands ([warmContracts] loads it off the lock),
-        // within the bar's own fill window only; past that window it is "no_contract" as before (never bought late). Said once.
-        // (Before the expiry-day check too, which reads the same list. An approval is asked for as before: it enters when Boss approves.)
+        // within the bar's own fill window only; past that window it is "no_contract" as before (never bought late). Said once. Only with
+        // its switch on ([LiquidityFreshBar.listWaitOn]). (Before the expiry-day check too, which reads the same list. An approval is asked for as before: it enters when Boss approves.)
         if (listedNow() == null && !late) {
             val goes = runCatching { ArmAccount.entry(arm, appLive ?: liveNow(), liqToPaper(b, arm)) }.getOrDefault(false)
-            if (b.auto[arm.source] != false && !(goes && !liveCleared(b, arm.source))) {
+            // (Behind its own switch on the fresh-bar card, off by default - it can add a live entry, so it starts in shadow: off, the
+            // signal goes on as before (no contract) and "would have waited for the list and entered" is logged and counted.)
+            val entersNow = b.auto[arm.source] != false && !(goes && !liveCleared(b, arm.source))
+            if (entersNow && !LiquidityFreshBar.listWaitOn()) runCatching { LiquidityFreshBar.listWouldWait(arm.label, last.start) }
+            else if (entersNow) {
                 if (waits(WAIT_LIST)) runCatching {
                     Diag.record("orb", "${arm.label}: the ${hhmm(last.start)} bar's signal waits for today's instrument list (not loaded " +
                         "yet); decided again on the next look within its fill window")

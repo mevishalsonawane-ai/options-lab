@@ -44,6 +44,10 @@ notes; match the surrounding code.
     (stale bar)" and counted, the entry goes as before); paper is never skipped, only logged. Its Bot settings switch (off by default) skips
     such a live entry: the signal waits (in memory) and is decided again if fresh candles land within its fill window, never bought late
     (after a restart the bar stays spent). On needs no PIN (it lowers risk); off takes the PIN.
+  - The list wait (20 Nov audit, a sibling switch on the same card): a Liquidity signal decided while today's instrument list is not
+    loaded. Off by default, as before: lost as "no_contract", logged "would have waited for the list and entered" and counted. On, the
+    signal waits (in memory) and is decided again within its fill window once the list lands, never bought late. On adds live entries,
+    so it takes the PIN; off needs none.
 - EVERY ARM CAN GO LIVE (Boss, 30 Oct: "make all arms as live, will stop it if i want, dont keep any in paper only or
   record only, make all live if i move to live market").
   - No arm is paper-only or record-only by design. Each arm's live trade goes only through the same gates: the app in

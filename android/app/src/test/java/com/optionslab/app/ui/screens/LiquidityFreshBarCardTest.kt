@@ -32,10 +32,11 @@ class LiquidityFreshBarCardTest {
 
     private fun shows(t: String, sub: Boolean = false) = compose.onAllNodesWithText(t, substring = sub).fetchSemanticsNodes().isNotEmpty()
 
-    private fun show(view: LiquidityFreshBar.View, on: () -> Unit, offConfirmed: () -> Unit) = compose.setContent {
+    private fun show(view: LiquidityFreshBar.View, on: () -> Unit, offConfirmed: () -> Unit, listOn: () -> Unit = {}, listOff: () -> Unit = {}) = compose.setContent {
         IraAlgoTheme("light") { Column(Modifier.verticalScroll(rememberScrollState())) {
-            LiquidityFreshBarCardFlow(view, null, onOn = on, onOffConfirmed = offConfirmed) { ok, cancel ->
+            LiquidityFreshBarCardFlow(view, null, onOn = on, onOffConfirmed = offConfirmed, onListOnConfirmed = listOn, onListOff = listOff) { why, ok, cancel ->
                 Text("PIN asked")
+                Text(why)
                 androidx.compose.material3.TextButton(onClick = ok) { Text("PIN right") }
                 androidx.compose.material3.TextButton(onClick = cancel) { Text("PIN cancel") }
             }
@@ -72,6 +73,32 @@ class LiquidityFreshBarCardTest {
         compose.waitForIdle()
         compose.onNodeWithText("PIN right").performClick()
         compose.waitForIdle()
+        assertEquals(1, offs); assertEquals(0, ons)
+    }
+
+    /** 20 Nov 2026 (coordinator): the list wait is off by default; on adds live entries, so it asks the PIN first. */
+    @Test fun theListWaitOnAsksThePinFirst() {
+        var ons = 0; var offs = 0
+        show(LiquidityFreshBar.View(loaded = true, listWouldWaitToday = 1), {}, {}, { ons++ }, { offs++ })
+        compose.waitForIdle()
+        assertTrue(shows("Off: such a signal is lost as before (no contract); each is logged"))
+        assertTrue(shows("1 it would have waited for the list", sub = true))
+        compose.onNodeWithText(LIST_WAIT_SWITCH).performClick()
+        compose.waitForIdle()
+        assertTrue(shows(LIST_WAIT_PIN))
+        assertEquals("not on before the PIN", 0, ons)
+        compose.onNodeWithText("PIN right").performClick()
+        compose.waitForIdle()
+        assertEquals(1, ons); assertEquals(0, offs)
+    }
+
+    @Test fun theListWaitOffIsOneTapWithNoPin() {
+        var ons = 0; var offs = 0
+        show(LiquidityFreshBar.View(loaded = true, listOn = true), {}, {}, { ons++ }, { offs++ })
+        compose.waitForIdle()
+        compose.onNodeWithText(LIST_WAIT_SWITCH).performClick()
+        compose.waitForIdle()
+        assertFalse("no PIN to switch it off", shows("PIN asked"))
         assertEquals(1, offs); assertEquals(0, ons)
     }
 

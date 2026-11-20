@@ -285,7 +285,33 @@ class LiquidityFreshBarTest : RobolectricTest() {
 
     private fun listGone() { File(context.filesDir, "contracts.json").delete() }
 
+    /** 20 Nov 2026 (coordinator): the list wait off (its default): the signal is lost as before (no contract), logged and counted. */
+    @Test fun withTheListWaitOffASignalIsLostAsBeforeAndLogged() {
+        armPaper()
+        passes(LocalTime.of(12, 50), LocalTime.of(13, 4))
+        listGone()
+        tick(LocalTime.of(13, 5))
+        assertTrue(row().status, row().status.contains(OrbArms.describe("no_contract")))
+        assertTrue(diagHas(LiquidityFreshBar.WOULD_WAIT))
+        assertEquals(1, LiquidityFreshBar.view.value.listWouldWaitToday)
+        AutomationSupport.contracts(context, contracts)                    // the list lands in the fill window: the bar is spent, as on main
+        passes(LocalTime.of(13, 6), LocalTime.of(13, 7))
+        assertTrue("never entered", row().today.isEmpty())
+    }
+
+    @Test fun theListWaitOnTakesThePinOffDoesNot() {
+        assertFalse("off by default", LiquidityFreshBar.listWaitOn())
+        val refused = LiquidityFreshBar.setListWait(true)
+        assertTrue(refused, refused.contains("takes your PIN"))
+        assertFalse(LiquidityFreshBar.listWaitOn())
+        assertTrue(LiquidityFreshBar.setListWait(true, pinConfirmed = true).startsWith("On:"))
+        assertTrue(LiquidityFreshBar.listWaitOn())
+        assertTrue(LiquidityFreshBar.setListWait(false).startsWith("Off:"))
+        assertFalse(LiquidityFreshBar.listWaitOn())
+    }
+
     @Test fun aSignalWaitsForALateInstrumentListAndIsEnteredWhenItLandsInTime() {
+        LiquidityFreshBar.setListWait(true, pinConfirmed = true)
         armPaper()
         passes(LocalTime.of(12, 50), LocalTime.of(13, 4))
         listGone()
@@ -299,6 +325,7 @@ class LiquidityFreshBarTest : RobolectricTest() {
     }
 
     @Test fun aSignalWhoseListLandsAfterItsFillWindowIsNeverBoughtLate() {
+        LiquidityFreshBar.setListWait(true, pinConfirmed = true)
         armPaper()
         passes(LocalTime.of(12, 50), LocalTime.of(13, 4))
         listGone()

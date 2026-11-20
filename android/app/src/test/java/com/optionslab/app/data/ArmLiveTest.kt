@@ -590,6 +590,19 @@ class ArmLiveTest : RobolectricTest() {
         assertNull(view().open.single().askedLots)
     }
 
+    /** 20 Nov 2026 (coordinator): two lots the cash fits, one filled: kept as a part fill (lots sent 2), never blamed on the free cash. */
+    @Test fun aPartFillKeepsTheLotsAskedAndSent() {
+        AppSettings.save(AppSettings.load().copy(armLiveLots = 2, maxLotsPerOrder = 5, guardMaxLots = 10))
+        kite.cash = 100_000.0
+        kite.nextPlace(outcome = FakeKite.Outcome.PARTIAL_THEN_CANCEL, partialQty = 30)
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "part"))
+        val p = view().open.single()
+        assertEquals(30, p.qty)
+        assertEquals(2, p.askedLots)
+        assertEquals(2, p.sentLots)
+        assertEquals("bought 1 of 2 lots (part filled)", OrbArms.lotsAskedWords(p.askedLots!!, p.sentLots!!, p.entryQty / p.lot))
+    }
+
     /**
      * 4 Nov: a LIMIT entry is fitted at the price it is sent at. 19 Nov 2026 (Boss: "Go"): that is the offer plus its buffer (201.10),
      * never above the paper arm's own limit - a 210 paper limit is not paid, and the lots are fitted at 201.10; a 200.50 one caps it.
