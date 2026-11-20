@@ -718,9 +718,10 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         lostLiquiditySale()
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()
-        kite.requests.clear()
+        fun bookReads() = kite.requests.count { it.method == "GET" && it.path == "/orders" }
+        val reads = bookReads()
         assertEquals("hold", runBlocking { OrbArms.lostExitLookForTest(sym, "", search = false) })
-        assertTrue("no order-book read: ${kite.requests.map { it.path }}", kite.requests.none { it.method == "GET" && it.path == "/orders" })
+        assertEquals("no order-book read", reads, bookReads())
         runBlocking { OrbArms.priceCheckOnly(fast = true) }
         assertEquals("nothing sold on a fast look", 1, marketSells().size)
         assertNotNull("still open", open("liquidity"))
