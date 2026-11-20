@@ -231,10 +231,11 @@ object OrbArms {
         /** 20 Nov 2026: with [askedLots], the lots sent after the free-cash cut (a part fill bought fewer). Null: as many as bought. Persisted. */
         val sentLots: Int? = null,
         /**
-         * 20 Nov 2026 (deep review F1): this part's own exit sale lost its reply ([lostExits]) - the one part held from a new exit and a stop
-         * put back, and the one that takes that sale when it is found. Memory only (never saved: after a restart no lost exit is held).
+         * 20 Nov 2026 (deep review F1): the lost exit ([lostExits]) of this part's own sale, whose reply was lost - the one part held from a new
+         * exit and a stop put back, and the one that takes that sale when it is found ([lostOf]). Ids are never reused, so a copy of a part
+         * that kept it after its lost exit ended matches nothing. Memory only (never saved: after a restart no lost exit is held).
          */
-        val lostSale: Boolean = false,
+        val lostId: Long? = null,
     ) {
         val open: Boolean get() = exit == null
         /** 20 Nov 2026: "bought 2 of 3 lots (free cash)" or "(part filled)" when this entry bought fewer lots than asked ([askedLots]); else null. */
@@ -4004,26 +4005,21 @@ object OrbArms {
                 if (settled == null) drop += i else b.positions[i] = settled
                 continue
             }
-            // 20 Nov 2026 (audit PC; deep review F1): a lost exit on the contract holds only the SALE side of the part whose sale was lost
-            // ([lostAsker]): no new exit ([exitLive]) and no stop put back (below) for it. Every look's price, stop and lock checks run as
-            // usual, for it and every other trade on the contract. Past the hold, the first look (fast or regular) searches for it at most
-            // every [LOST_EXIT_ASK_MS] - found: booked as that part's exit. One whose part is no longer open here is let go.
+            // 20 Nov 2026 (audit PC; deep review F1): a lost exit holds only the SALE side of the part that sent it ([lostOf]): no new exit
+            // ([exitLive]) and no stop put back (below) for it; while held that part's look waits (it has no stop, sells nothing, and is
+            // never booked gone at the last price meanwhile). Every other trade on the contract keeps its full look. Past the hold, the
+            // first look (fast or regular) searches for it at most every [LOST_EXIT_ASK_MS] - found: booked as that part's exit.
+            // (A lost exit whose part is no longer open here - closed another way - is let go, said in the diary.)
+            for (l in lostOn(sym)) if (b.positions.none { it.open && it.live && it.lostId == l.id } && lostExits.remove(l.id, l))
+                runCatching { Diag.record("orb", "$sym: the lost exit's part is no longer open here; let go") }
             var lostSkip = false
-            val lostNow = lostExits[sym]
-            if (lostNow == null && p.lostSale) b.positions[i] = p.copy(lostSale = false)
-            lostNow?.let { lost ->
-                if (b.positions.none { it.open && it.live && lostAsker(it) == lost.owner }) {
-                    if (lostExits.remove(sym, lost)) lostNotFound(sym, unread = false, gone = true)
-                    return@let
-                }
-                if (lost.owner != lostAsker(p)) return@let
-                // (Its own part: while held, the rest of its look waits too - never booked gone at the last price meanwhile.)
-                if (lostExitHolds(sym)) { lostSkip = true; return@let }
-                val look = lostExitLook(sym, lostAsker(p))
+            lostOf(p)?.let { lost ->
+                if (lostExitHolds(lost)) { lostSkip = true; return@let }
+                val look = lostExitLook(lost, mine = true)
                 if (look?.hold == true) { lostSkip = true; return@let }
                 val id = look?.found ?: return@let
                 val mine = look.lost
-                if (mine != null && mine.owner == lostAsker(p)) {
+                if (mine != null) {
                     val (done, rest) = bookFoundLost(p, armOf(p.arm).label, sym, mine.why, id)
                     b.positions[i] = done
                     rest?.let { b.positions += it }
@@ -4138,7 +4134,7 @@ object OrbArms {
                 !SquareOffExit.inGap("NFO", sym, "MIS") &&
                 // (20 Nov 2026, audit PC: nor while a lost exit on it is neither found nor let go - it may still be selling; every trade's
                 // level is still watched by the app meanwhile and sold there.)
-                lostExits[sym]?.let { it.foundId == null || it.owner == lostAsker(cur) } != true) {
+                lostOf(cur) == null) {
                 // (19 Nov 2026, second review: beside its own working sale - or a stop of these arms resting unclaimed - nothing new rests,
                 // but an unclaimed stop placed since its entry is still taken as its own: [restExchangeStop] with adoptOnly.)
                 // (19 Nov 2026, review: a stop of these arms resting unclaimed is [orphanStop]'s to judge - taken, waited on, or a stop capped
@@ -5203,20 +5199,21 @@ object OrbArms {
     @Volatile private var lagForcedSaid = false
 
     /**
-     * 20 Nov 2026 (audit PC; deep review F1): an exit sale of these arms ([owner]: its trade, [managerId]; the part that sent it is marked
-     * [Position.lostSale]) whose reply was lost and which the search right after could not find. It may still be selling: that part sells
-     * nothing more for [LOST_EXIT_HOLD_MS], then it is searched for in Zerodha's order book (at most every [LOST_EXIT_ASK_MS]) - found, it
-     * is that part's exit; not found, Boss is told and its exits go on. Other trades on the contract go on meanwhile, counting the sale as
-     * going ([lostPending]); no stop is put back on the contract until it is found or let go. Memory only.
+     * 20 Nov 2026 (audit PC; deep review F1): an exit sale of these arms ([owner]: its trade's [managerId], for the words; the part that sent
+     * it carries its [id] as [Position.lostId]) whose reply was lost and which the search right after could not find. It may still be
+     * selling: that part sells nothing more for [LOST_EXIT_HOLD_MS], then it is searched for in Zerodha's order book (at most every
+     * [LOST_EXIT_ASK_MS], on any look) - found, it is that part's exit; not found, Boss is told and its exits go on. Every other trade on the
+     * contract goes on meanwhile, counting the sale as going while no read shows it ([lostPending]). One per lost sale. Memory only.
      */
-    private data class LostExit(val owner: String, val why: String, val order: com.optionslab.engine.Kite.Order, val known: Set<String>,
-                                val sinceMs: Long, val askedMs: Long = 0L,
+    private data class LostExit(val id: Long, val sym: String, val owner: String, val why: String, val order: com.optionslab.engine.Kite.Order,
+                                val known: Set<String>, val sinceMs: Long, val askedMs: Long = 0L,
                                 /** Searches that could not read Zerodha's book ([LOST_EXIT_TRIES]). */
                                 val fails: Int = 0,
-                                /** Found in Zerodha's book by another trade's look on the contract: its own trade books it ([lostExitLook]). */
+                                /** Found in Zerodha's book by another trade's look on the contract: its own part books it ([lostExitLook]). */
                                 val foundId: String? = null)
-    /** By Zerodha's symbol. */
-    private val lostExits = java.util.concurrent.ConcurrentHashMap<String, LostExit>()
+    /** By [LostExit.id] (never reused: a part's stale [Position.lostId] matches nothing). */
+    private val lostExits = java.util.concurrent.ConcurrentHashMap<Long, LostExit>()
+    private val lostSeq = java.util.concurrent.atomic.AtomicLong()
     internal const val LOST_EXIT_HOLD_MS = 10_000L
     internal const val LOST_EXIT_ASK_MS = 3_000L
     /**
@@ -5224,107 +5221,108 @@ object OrbArms {
      * exits long (the arms' live copies search once more after their hold, [ArmLive]).
      */
     internal const val LOST_EXIT_TRIES = 3
-    /** A lost exit found by another trade's look and not taken by its own trade's look this long after is let go (said). */
+    /** A lost exit found by another trade's look and not taken by its own part's look this long after is let go (said). */
     internal const val LOST_EXIT_FOUND_KEEP_MS = 60_000L
 
     /** [lostExitLook]'s answer: [hold] the lost sale's own part sells nothing now; else [found], the lost sale's order id. */
     private class LostLook(val hold: Boolean, val found: String? = null, val lost: LostExit? = null)
     private val LOST_HOLD = LostLook(hold = true)
 
-    /** [p]'s exit [o] ([why]) on [sym] lost its reply and was not found: held on its contract ([lostExits]), Boss told. Memory only. */
-    private fun lostExit(p: Position, sym: String, why: String, o: com.optionslab.engine.Kite.Order, known: Set<String>) {
-        lostExits[sym] = LostExit(managerId(p), why, o, known, epochMs(now()))
+    /** [p]'s exit [o] ([why]) on [sym] lost its reply and was not found: held for that part ([lostExits]), Boss told. Its id. Memory only. */
+    private fun lostExit(p: Position, sym: String, why: String, o: com.optionslab.engine.Kite.Order, known: Set<String>): Long {
+        val id = lostSeq.incrementAndGet()
+        lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()))
         com.optionslab.app.work.Alerts.error("${armOf(p.arm).label}: the live exit of $sym got no reply from Zerodha and is not in its order book " +
             "yet. This trade sells nothing more for ${LOST_EXIT_HOLD_MS / 1000} s while the app looks for it (other trades on it go on, counting " +
             "that sale as going); check Kite's order book.", "ORB live")
+        return id
     }
 
-    /**
-     * 20 Nov 2026 (review; deep review: only the part that sent it): who [p] is to a lost exit on its contract - its trade ([managerId])
-     * only for the part marked [Position.lostSale] when its sale was lost; any other part of the same trade, and every other trade, is "".
-     */
-    private fun lostAsker(p: Position): String = if (p.lostSale) managerId(p) else ""
+    /** The lost exits on [sym]. Memory only. */
+    private fun lostOn(sym: String): List<LostExit> = lostExits.values.filter { it.sym == sym }
+
+    /** 20 Nov 2026 (deep review F1): [p]'s own lost sale, while it is held for it (the part that sent it has no stop resting). Memory only. */
+    private fun lostOf(p: Position): LostExit? = p.lostId?.let { lostExits[it] }?.takeIf { p.stopOrderId == null }
 
     /**
-     * 20 Nov 2026 (deep review F1): what another trade's sale or stop on [sym] counts as already going - the lost sale's quantity while it is
-     * neither found nor let go (it may still be filling, unseen in Zerodha's books) - so the contract is never sold beyond what is held.
+     * 20 Nov 2026 (deep review F1): what [p]'s sale on [sym] counts as already going: every other part's lost sale neither found nor let go
+     * that [orders] (this exit's own read of Zerodha's order book) does not show - it may still be filling, unseen - so the contract is
+     * never sold beyond what is held. One the read shows is counted there already (working, or filled for the positions-lag guard).
      */
-    private fun lostPending(sym: String, p: Position): Int =
-        lostExits[sym]?.takeIf { it.foundId == null && it.owner != lostAsker(p) }?.order?.quantity ?: 0
+    private fun lostPending(sym: String, p: Position, orders: Collection<Broker.OrderRow>): Int =
+        lostOn(sym).filter { l -> l.foundId == null && l.id != p.lostId &&
+            orders.none { it.symbol == sym && it.side == "SELL" && it.qty == l.order.quantity && it.type == l.order.orderType && it.id !in l.known }
+        }.sumOf { it.order.quantity }
 
-    /** True while a lost exit on [sym] is within its hold (no read). */
-    private fun lostExitHolds(sym: String): Boolean = lostExits[sym]?.let { epochMs(now()) - it.sinceMs in 0 until LOST_EXIT_HOLD_MS } == true
+    /** True while [l] is within its hold (no read). */
+    private fun lostExitHolds(l: LostExit): Boolean = epochMs(now()) - l.sinceMs in 0 until LOST_EXIT_HOLD_MS
 
     /**
-     * 20 Nov 2026 (audit PC; deep review F1): the lost exit on [sym] as the look of [asker] ([lostAsker]) sees it. Null: go on as usual - no
-     * lost exit, it was not found (said, and let go), or [asker] is not the part whose sale was lost (another trade is never held: when a
-     * search is due it makes it, and goes on once it answers). [LostLook.hold], for that part only: within the hold, searched a moment ago
-     * ([LOST_EXIT_ASK_MS]), or the search could not read the book (up to [LOST_EXIT_TRIES] times). Found: its order id, to that part's look
-     * only; found by another's look, it is kept for that part ([LOST_EXIT_FOUND_KEEP_MS] at most). Any look may search, fast or regular.
+     * 20 Nov 2026 (audit PC; deep review F1): the lost exit [l] as a look sees it - its own part's ([mine]) or another trade's. Null: go on as
+     * usual - it was not found (said, and let go), or it is not [mine] (another trade is never held: when a search is due it makes it, and
+     * goes on once it answers). [LostLook.hold], for its own part only: within the hold, searched a moment ago ([LOST_EXIT_ASK_MS]), or the
+     * search could not read the book (up to [LOST_EXIT_TRIES] times). Found: its order id, to its own part's look only; found by another's
+     * look, it is kept for that part ([LOST_EXIT_FOUND_KEEP_MS] at most). Any look may search, fast or regular.
      */
-    private suspend fun lostExitLook(sym: String, asker: String): LostLook? {
-        val lost = lostExits[sym] ?: return null
-        val held = if (lost.owner == asker) LOST_HOLD else null
+    private suspend fun lostExitLook(l: LostExit, mine: Boolean): LostLook? {
+        val lost = lostExits[l.id] ?: return null
+        val held = if (mine) LOST_HOLD else null
         val ms = epochMs(now())
         lost.foundId?.let { id ->
-            if (lost.owner == asker) {
-                if (!lostExits.remove(sym, lost)) return LOST_HOLD
+            if (mine) {
+                if (!lostExits.remove(lost.id, lost)) return LOST_HOLD
                 return LostLook(hold = false, found = id, lost = lost)
             }
-            if (ms - lost.askedMs !in 0 until LOST_EXIT_FOUND_KEEP_MS && lostExits.remove(sym, lost)) {
-                runCatching { Diag.record("orb", "$sym: the lost exit found in Zerodha's book ($id) was not taken by its trade; let go") }
-                com.optionslab.app.work.Alerts.error("ORB live: the lost exit of $sym was found in Zerodha's order book ($id) but its trade was not " +
-                    "closed by it. The app reads Zerodha again and sells only what is still held; check Kite's positions.", "ORB live")
+            if (ms - lost.askedMs !in 0 until LOST_EXIT_FOUND_KEEP_MS && lostExits.remove(lost.id, lost)) {
+                runCatching { Diag.record("orb", "${lost.sym}: the lost exit found in Zerodha's book ($id) was not taken by its trade; let go") }
+                com.optionslab.app.work.Alerts.error("ORB live: the lost exit of ${lost.sym} was found in Zerodha's order book ($id) but its trade was " +
+                    "not closed by it. The app reads Zerodha again and sells only what is still held; check Kite's positions.", "ORB live")
             }
             return null
         }
         if (ms - lost.sinceMs in 0 until LOST_EXIT_HOLD_MS) return held
         if (ms - lost.askedMs in 0 until LOST_EXIT_ASK_MS) return held
         val asked = lost.copy(askedMs = ms)
-        if (!lostExits.replace(sym, lost, asked)) return held
+        if (!lostExits.replace(lost.id, lost, asked)) return held
         val found = try { Broker.findRecent(lost.order, lost.known) } catch (e: kotlinx.coroutines.CancellationException) { throw e
         } catch (e: Exception) {
             val failed = asked.copy(fails = asked.fails + 1)
-            if (failed.fails < LOST_EXIT_TRIES) { lostExits.replace(sym, asked, failed); return held }
-            if (lostExits.remove(sym, asked)) lostNotFound(sym, unread = true)
+            if (failed.fails < LOST_EXIT_TRIES) { lostExits.replace(lost.id, asked, failed); return held }
+            if (lostExits.remove(lost.id, asked)) lostNotFound(lost.sym, unread = true)
             return null
         }
-        if (found != null) runCatching { Diag.record("orb", "$sym: the lost exit found in Zerodha's book ($found): it is the exit") }
+        if (found != null) runCatching { Diag.record("orb", "${lost.sym}: the lost exit found in Zerodha's book ($found): it is the exit") }
         // (Found by another trade's look on the contract: kept for its own part, which books it on its next look.)
-        if (found != null && lost.owner != asker) { lostExits.replace(sym, asked, asked.copy(foundId = found)); return null }
+        if (found != null && !mine) { lostExits.replace(lost.id, asked, asked.copy(foundId = found)); return null }
         // (Taken meanwhile by another look: that one decides.)
-        if (!lostExits.remove(sym, asked)) return held
-        if (found == null) { lostNotFound(sym, unread = false); return null }
+        if (!lostExits.remove(lost.id, asked)) return held
+        if (found == null) { lostNotFound(lost.sym, unread = false); return null }
         return LostLook(hold = false, found = found, lost = lost)
     }
 
     /**
      * 20 Nov 2026 (review): [p]'s lost exit [id] ([why]) found in Zerodha's book, booked as its exit ([bookSale]). [p] has no stop resting
-     * (only such a part takes it, [lostAsker]). Found with nothing filled and finished, [p] stays open with no stop: the next look rests one.
+     * (only such a part takes it, [lostOf]). Found with nothing filled and finished, [p] stays open with no stop: the next look rests one.
      */
     private suspend fun bookFoundLost(p: Position, label: String, sym: String, why: String, id: String): Pair<Position, Position?> =
         bookSale(p, label, sym, why, id) { p.copy(stopOrderId = null) to null }
 
-    private fun lostNotFound(sym: String, unread: Boolean, gone: Boolean = false) {
-        val what = when {
-            gone -> "let go: its trade is no longer open as it was here"
-            unread -> "not found: Zerodha's order book could not be read ($LOST_EXIT_TRIES tries)"
-            else -> "not found in Zerodha's order book"
-        }
+    private fun lostNotFound(sym: String, unread: Boolean) {
+        val what = if (unread) "not found: Zerodha's order book could not be read ($LOST_EXIT_TRIES tries)" else "not found in Zerodha's order book"
         runCatching { Diag.record("orb", "$sym: the lost exit was $what; the exit may go again") }
         com.optionslab.app.work.Alerts.error("ORB live: the lost exit of $sym was $what. The app reads Zerodha again and sells only what is still held; " +
             "check Kite's order book.", "ORB live")
     }
 
     /** TEST ONLY: whether a lost exit is held on [sym]. */
-    internal fun lostExitForTest(sym: String): Boolean = lostExits.containsKey(sym)
+    internal fun lostExitForTest(sym: String): Boolean = lostOn(sym).isNotEmpty()
 
     /**
-     * TEST ONLY: a look on [sym]'s lost exit by the part whose sale was lost ([owner]) or by another trade, as [exitLive] makes it: "hold",
-     * "none" (go on), or "found <id>".
+     * TEST ONLY: a look on [sym]'s (first) lost exit by the part whose sale was lost ([owner]) or by another trade, as [exitLive] makes it:
+     * "hold", "none" (go on), or "found <id>".
      */
     internal suspend fun lostExitLookForTest(sym: String, owner: Boolean): String =
-        lostExitLook(sym, if (owner) lostExits[sym]?.owner ?: "" else "another").let { if (it == null) "none" else if (it.hold) "hold" else "found ${it.found}" }
+        lostOn(sym).minByOrNull { it.id }?.let { lostExitLook(it, owner) }.let { if (it == null) "none" else if (it.hold) "hold" else "found ${it.found}" }
 
     /** 18 Nov 2026 (audit: B1): Zerodha's orders and positions as the pass that decided an exit already read them ([exitLive]). */
     private class Pre(val orders: Collection<Broker.OrderRow>, val net: List<Broker.Position>)
@@ -5344,14 +5342,15 @@ object OrbArms {
         // every [LOST_EXIT_ASK_MS], on any look) - found, it is this part's exit, booked from its fill; not found, Boss is told and the exit
         // goes on as below (reading Zerodha's books first). Any other trade on the contract is never held: when a search is due its exit
         // makes it first and is decided as soon as it answers (the forced lag guard counts what is still held).
-        val lostLook = lostExitLook(sym, lostAsker(p0))
+        val own = lostOf(p0)
+        // (Another part's lost sales on the contract: searched first when due - kept for their parts when found - and never held here.)
+        for (l in lostOn(sym)) if (l.id != own?.id) lostExitLook(l, mine = false)
+        val lostLook = own?.let { lostExitLook(it, mine = true) }
         if (lostLook?.hold == true) return p0 to null
         runCatching { OrderTiming.decided() }
         val label = armOf(p0.arm).label
         lostLook?.found?.let { id ->
             val lost = lostLook.lost ?: return p0 to null
-            // (Only ever this trade's own sale here ([lostExitLook] keeps another's for its trade): booked as its exit, never sold again.)
-            if (lost.owner != lostAsker(p0)) return p0 to null
             return bookFoundLost(p0, label, sym, lost.why, id)
         }
         // 18 Nov 2026 (audit: B1, Liquidity's index and time exits skipped the "shown gone but not confirmed" guard - they took the
@@ -5375,7 +5374,7 @@ object OrbArms {
         var room = p0.qty
         if (seen != null) {
             // (20 Nov 2026, deep review F1: less a lost sale of another part that may still be filling, unseen - [lostPending].)
-            val held = (seen.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } - lostPending(sym, p))
+            val held = (seen.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty } - lostPending(sym, p, seen.orders))
                 .coerceAtLeast(0)
             if (p.stopOrderId != null && held <= 0) return p to null
             val lot = runCatching { Broker.spec("NFO", sym).lotSize }.getOrNull()
@@ -5537,7 +5536,7 @@ object OrbArms {
             // 20 Nov 2026 (audit PC, as the arms' live copies since 18 Nov): the positions-lag guard acts here whatever its switch says
             // (forceLag: it only ever sends less) - an exit that filled a moment ago is never sold again while the positions catch up.
             val still = (runCatching { ExitCoordinator.held("NFO", sym, "MIS", label, book, forceLag = lagForced()) }.getOrNull() ?: return unsold(room, book))
-                .let { (it - lostPending(sym, p)).coerceAtLeast(0) }
+                .let { (it - lostPending(sym, p, book)).coerceAtLeast(0) }
             val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return unsold(room, book)
             val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
                 p.qty, spec.lotSize)
@@ -5565,10 +5564,10 @@ object OrbArms {
                         com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
                         return unsold(qty, book, refused = true)
                     }
-                    // 20 Nov 2026 (audit PC): held on its contract - nothing more is sold or rested there while it may still be selling
-                    // ([lostExits]); then searched for before anything is sold.
-                    lostExit(p, sym, why, o, knownKite(b).toSet() + working.map { it.id })
-                    return p.copy(stopOrderId = null, lostSale = true) to null
+                    // 20 Nov 2026 (audit PC): held for this part - it sells and rests nothing more while that sale may still be selling
+                    // ([lostExits]); then searched for before it sells.
+                    val lostId = lostExit(p, sym, why, o, knownKite(b).toSet() + working.map { it.id })
+                    return p.copy(stopOrderId = null, lostId = lostId) to null
                 }
             }
         }
