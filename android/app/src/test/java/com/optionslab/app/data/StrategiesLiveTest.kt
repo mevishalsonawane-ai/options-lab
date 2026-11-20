@@ -413,8 +413,51 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals(1, kite.gtts.size)
         kite.position(NIFTY_CE, 0, 0.0)
         runBlocking { Strategies.manageOnly(compromised = false) }
+        // 20 Nov 2026 (audit): one read showing it closed takes nothing out; a second agreeing read does.
+        assertEquals("one read: kept", 1, kite.gtts.size)
+        later(Strategies.FLAT_AGREE_MS + 1_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
         assertTrue("its GTT deleted", kite.gtts.isEmpty())
         assertTrue(sells().isEmpty())
+    }
+
+    /** The market's clock moved on by [ms] (still ticking). */
+    private fun later(ms: Long) {
+        val base = Market.testClock ?: java.time.Clock.system(com.optionslab.engine.IST)
+        Market.testClock = java.time.Clock.offset(base, java.time.Duration.ofMillis(ms))
+    }
+
+    /** 20 Nov 2026 (audit): a malformed or partial positions reply is never "no position": the leg's stop stays at Zerodha. */
+    @Test fun aMalformedOrPartialPositionsReadNeverTakesALegsStopOut() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, kite.gtts.size)
+        kite.positionsBody = org.json.JSONObject().put("day", org.json.JSONArray())          // no "net" list
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.FLAT_AGREE_MS + 1_000) }
+        assertEquals("kept on a malformed reply", 1, kite.gtts.size)
+        kite.positionsBody = null
+        kite.positions.clear()                                                                // a reply missing the contract's row
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.FLAT_AGREE_MS + 1_000) }
+        assertEquals("kept on a read with no row for it", 1, kite.gtts.size)
+        assertTrue(sells().isEmpty())
+    }
+
+    /** 20 Nov 2026 (audit): Boss's live start rests its legs' stops at once, never waiting for the next 15-second look. */
+    @Test fun aLiveStartRestsItsLegsStopsStraightAway() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        val sl = restingStops().single()
+        assertEquals("70.00", sl.form["trigger_price"])
+        val entryAt = kite.requests.indexOfFirst { it.method == "POST" && it.form["order_type"] == "MARKET" }
+        val stopAt = kite.requests.indexOfFirst { it.method == "POST" && it.form["order_type"] == "SL" }
+        assertTrue(stopAt > entryAt)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("one stop, not two", 1, restingStops().size)
     }
 
     /** Review C2: part sold by hand in Kite - the resting stop shrinks to what is left, so it can never sell into a short. */

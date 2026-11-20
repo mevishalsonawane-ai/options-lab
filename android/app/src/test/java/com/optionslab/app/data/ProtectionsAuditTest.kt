@@ -1,0 +1,263 @@
+package com.optionslab.app.data
+
+import com.optionslab.app.testing.FakeKite
+import com.optionslab.app.testing.MarketClockRule
+import com.optionslab.app.testing.NetworkGuard
+import com.optionslab.app.testing.RobolectricTest
+import com.optionslab.app.work.Alerts
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.robolectric.annotation.ConscryptMode
+
+/**
+ * 20 Nov 2026 (audit, the protections): a malformed or partial positions reply is never read as "flat", and closed counts only on two
+ * agreeing reads; one look reads Zerodha's books once; the readers never wait on a look; an intraday stop and target (two orders)
+ * take the other out robustly and say so loudly when they cannot; Boss's own Protect reads the position again before placing; a
+ * stop GTT's limit has 10% room.
+ */
+@ConscryptMode(ConscryptMode.Mode.OFF)
+class ProtectionsAuditTest : RobolectricTest() {
+    private lateinit var kite: FakeKite
+    private val sym = "NIFTY26OCT24500CE"
+    private val sym2 = "NIFTY26OCT24600CE"
+    private val sym3 = "NIFTY26OCT24700CE"
+
+    @Before fun up() {
+        kite = FakeKite()
+        for ((i, s) in listOf(sym, sym2, sym3).withIndex())
+            kite.instruments += FakeKite.Ins(12_345_678L + i, s, "NIFTY", Market.today().plusDays(20), 24_500.0 + 100 * i, "CE", 75)
+        kite.quote("NFO:$sym", 100.0, 99.95, 100.05)
+        kite.quote("NFO:$sym2", 100.0, 99.95, 100.05)
+        kite.quote("NFO:$sym3", 100.0, 99.95, 100.05)
+        kite.position(sym, 75, 100.0)
+        kite.login()
+        Alerts.forgetPosted()
+        com.optionslab.app.testing.Background.clearAlerts()
+        DayOco.resetForTest()
+    }
+
+    @After fun down() { Market.testClock = null; kite.close(); assertEquals(emptyList<String>(), NetworkGuard.blocked.toList()) }
+
+    private fun at(h: Int, m: Int) { Market.testClock = MarketClockRule.clockAt(h, m) }
+    private fun tick() = runBlocking { Protections.tick() }
+    private fun active() = runBlocking { Protections.active() }
+
+    private fun protect(s: String = sym, product: String = "NRML", stop: Double? = 90.0, target: Double? = 130.0): String = runBlocking {
+        Protections.protectLive(s, "NFO", product, 75, 100.0, stop, null, target, recheck = true)
+    }
+
+    private fun working(id: String?) = id != null && kite.order(id).working
+
+    // ---- item 1: a malformed or partial positions reply is never "flat"; two agreeing reads -----------------------------------------
+
+    @Test fun aPositionsReplyWithNoNetListEndsNothing() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.positionsBody = JSONObject().put("day", JSONArray())          // no "net" at all
+        repeat(3) { tick(); at(12, 6 + it) }
+        val now = active().single()
+        assertEquals(p.id, now.id)
+        assertTrue("its stop still rests", working(p.stopOrderId))
+        assertTrue("its target still rests", working(p.targetOrderId))
+    }
+
+    @Test fun aPositionsRowWithNoQuantityIsAFailedReadNotAPositionAtZero() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.positionsBody = JSONObject().put("net", JSONArray().put(JSONObject().put("tradingsymbol", sym).put("exchange", "NFO")
+            .put("product", "NRML"))).put("day", JSONArray())
+        repeat(3) { tick(); at(12, 6 + it) }
+        assertEquals(p.id, active().single().id)
+        assertTrue(working(p.stopOrderId))
+        // The source itself: a read that fails, never an empty account.
+        assertTrue(runCatching { runBlocking { Broker.positionBook() } }.isFailure)
+    }
+
+    @Test fun aReadWithNoRowForAContractProtectedTodayIsNotFlat() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.positions.clear()                                             // a partial reply: the contract's row missing
+        repeat(3) { tick(); at(12, 6 + it) }
+        assertEquals(p.id, active().single().id)
+        assertTrue(working(p.stopOrderId)); assertTrue(working(p.targetOrderId))
+    }
+
+    @Test fun closedEndsOnlyOnASecondAgreeingRead() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.position(sym, 0, 0.0)                                         // sold by hand: Zerodha shows the row at 0
+        tick()
+        assertEquals("one read ends nothing", p.id, active().single().id)
+        assertTrue(working(p.stopOrderId))
+        at(12, 6)
+        tick()
+        assertTrue("two agreeing reads end it", active().isEmpty())
+        assertFalse(working(p.stopOrderId)); assertFalse(working(p.targetOrderId))
+    }
+
+    @Test fun aHeldReadBetweenStartsTheCountAgain() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.position(sym, 0, 0.0); tick()
+        at(12, 6)
+        kite.position(sym, 75, 100.0); tick()                             // the zero was a bad read
+        at(12, 7)
+        kite.position(sym, 0, 0.0); tick()
+        assertEquals("a new first read: kept", p.id, active().single().id)
+        assertTrue(working(p.stopOrderId))
+    }
+
+    // ---- item 2: one read of each book per look; the readers never wait on a look -------------------------------------------------
+
+    @Test fun oneLookReadsTheOrdersAndPositionsOnceForEveryProtection() {
+        kite.position(sym2, 75, 100.0); kite.position(sym3, 75, 100.0)
+        protect(sym); protect(sym2); protect(sym3)
+        assertEquals(3, active().size)
+        at(12, 5)
+        kite.requests.clear()
+        tick()
+        val gets = kite.requests.filter { it.method == "GET" }.map { it.path }
+        assertEquals(gets.toString(), 1, gets.count { it == "/orders" })
+        assertEquals(gets.toString(), 1, gets.count { it == "/portfolio/positions" })
+        assertTrue("the orders first", gets.indexOf("/orders") < gets.indexOf("/portfolio/positions"))
+    }
+
+    @Test fun afterAChangeAtZerodhaTheNextProtectionReadsTheBooksAgain() {
+        kite.position(sym2, 75, 100.0)
+        protect(sym); protect(sym2)
+        val first = active().first { it.symbol == sym }
+        at(12, 5)
+        kite.fill(first.stopOrderId!!)                                     // the first's stop filled: its target is cancelled
+        kite.requests.clear()
+        tick()
+        val gets = kite.requests.filter { it.method == "GET" }.map { it.path }
+        assertTrue(gets.toString(), gets.count { it == "/orders" } >= 2)
+        assertEquals(1, active().size)
+    }
+
+    @Test fun theReadersNeverWaitForALook() = runBlocking {
+        protect()
+        val release = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val holder = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { Protections.holdLockForTest(release) }
+        try {
+            kotlinx.coroutines.delay(300)                                  // the lock taken, as by a look waiting on Zerodha
+            val read = kotlinx.coroutines.withTimeout(2_000) { Protections.active() }
+            assertEquals(1, read.size)
+            assertNotNull(kotlinx.coroutines.withTimeout(2_000) { Protections.forSymbol(true, sym) })
+            assertEquals(1, kotlinx.coroutines.withTimeout(2_000) { Protections.since(0L) }.size)
+        } finally { release.complete(Unit); holder.join() }
+    }
+
+    // ---- item 3: an intraday stop and target, two orders ------------------------------------------------------------------------
+
+    @Test fun anIntradayProtectionSaysItRestsAsTwoOrders() {
+        kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
+        val msg = protect(product = "MIS")
+        assertTrue(msg, msg.contains(Protections.INTRADAY_TWO_ORDERS))
+        // A carried one is not told so.
+        kite.position(sym2, 75, 100.0)
+        val carried = protect(sym2)
+        assertFalse(carried, carried.contains(Protections.INTRADAY_TWO_ORDERS))
+    }
+
+    @Test fun aTargetThatCannotBeCancelledAfterTheStopFilledIsSaidLoudlyAndTriedAgain() {
+        kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
+        protect(product = "MIS")
+        val p = active().single()
+        at(12, 5)
+        kite.fill(p.stopOrderId!!)
+        kite.cancelsLost = 3                                               // every cancel in this look is lost
+        tick()
+        assertEquals("kept while its target may rest", 1, active().size)
+        assertTrue(working(p.targetOrderId))
+        assertTrue(Alerts.posted.any { it.kind == Alerts.Kind.ERROR && it.text.contains("could not be cancelled") && it.text.contains("cancel it in Kite now") })
+        assertEquals("three tries in the look", 3, kite.requests.count { it.method == "DELETE" && it.path.endsWith(p.targetOrderId!!) })
+        // The next look takes it out and finishes.
+        at(12, 6)
+        tick()
+        assertFalse(working(p.targetOrderId))
+        assertTrue(active().isEmpty())
+    }
+
+    // ---- item 5: Boss's own Protect reads the position again --------------------------------------------------------------------
+
+    @Test fun bossesProtectOfAPositionSoldSinceIsRefusedAndNothingIsSent() {
+        kite.position(sym, 0, 0.0)
+        val msg = protect()
+        assertTrue(msg, msg.startsWith("Not protected: Zerodha shows no long"))
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    @Test fun bossesProtectOfAPositionPartSoldSinceCoversOnlyWhatIsHeld() {
+        kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0)
+        val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 150, 100.0, 90.0, null, 130.0, recheck = true) }
+        assertTrue(msg, msg.contains("only 75 is protected"))
+        assertTrue(kite.placed.all { it.form["quantity"] == "75" })
+        assertEquals(75, active().single().qty)
+    }
+
+    /** Review: a bracket's or news trade's stop straight after its fill is never refused on a positions read that trails the fill. */
+    @Test fun aFreshFillsStopIsPlacedEvenWhileThePositionsTrailIt() {
+        kite.position(sym, 0, 0.0)                                         // Zerodha's positions not showing the fill yet
+        val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0, recheck = false) }
+        assertTrue(msg, msg.startsWith("Protected"))
+        assertTrue(kite.placed.any { it.form["order_type"] == "SL" && it.form["quantity"] == "75" } || kite.gtts.isNotEmpty())
+        kite.down += "/portfolio/positions"                                // nor on a read that fails
+        val msg2 = runBlocking { Protections.protectLive(sym2, "NFO", "NRML", 75, 100.0, 90.0, null, null, recheck = false) }
+        assertTrue(msg2, msg2.startsWith("Protected"))
+    }
+
+    /** Every other caller (no recheck) as before: a position the positions read does not show yet still gets its stop. */
+    @Test fun withoutARecheckThePositionIsNotReadFirst() {
+        kite.position(sym, 0, 0.0)
+        val msg = runBlocking { Protections.protectLive(sym, "NFO", "NRML", 75, 100.0, 90.0, null, null) }
+        assertTrue(msg, msg.startsWith("Protected"))
+    }
+
+    @Test fun bossesProtectWithThePositionsUnreadPlacesNothing() {
+        kite.down += "/portfolio/positions"
+        val msg = protect()
+        assertTrue(msg, msg.startsWith("Not protected: Zerodha's positions could not be read"))
+        assertTrue(kite.placed.isEmpty())
+    }
+
+    @Test fun aManualGttIsCheckedAgainstThePositionJustBeforeItGoes() = runBlocking {
+        val spec = com.optionslab.engine.Kite.Spec("NFO", sym, 12_345_678L, 75, 0.05)
+        val (g, _) = com.optionslab.engine.Kite.protect(spec, "NRML", 75, 100.0, 90.0, 130.0)
+        assertNull(Protections.gttStillFits(g!!))
+        kite.position(sym, 0, 0.0)
+        assertTrue(Protections.gttStillFits(g)!!.contains("would not close a position"))
+        kite.position(sym, 50, 100.0)
+        assertTrue(Protections.gttStillFits(g)!!.contains("less than the GTT's 75"))
+        kite.down += "/portfolio/positions"
+        assertTrue(Protections.gttStillFits(g)!!.contains("could not be read"))
+    }
+
+    // ---- item 4: a stop GTT's limit has 10% room -----------------------------------------------------------------------------
+
+    @Test fun aCarriedStopRestingOvernightAsAGttSellsWithTenPercentRoom() {
+        protect(stop = 90.0, target = null)
+        val p = active().single()
+        at(15, 45)
+        kite.order(p.stopOrderId!!).status = "CANCELLED"                  // the session's DAY stop ended at the close
+        tick()
+        val g = kite.gtts.values.single()
+        val legs = g.getJSONArray("orders")
+        assertEquals(81.0, legs.getJSONObject(0).getDouble("price"), 1e-9)   // 90 less 10%, not 85.50 (5%)
+    }
+}

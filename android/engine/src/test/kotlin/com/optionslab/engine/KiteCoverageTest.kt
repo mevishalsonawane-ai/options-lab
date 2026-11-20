@@ -313,6 +313,23 @@ class KiteCoverageTest {
         assertEquals(4, both.size)
     }
 
+    /** 20 Nov 2026 (audit): a stop leg's limit can have more room than the target leg's, so a gap through the stop still fills. */
+    @Test fun `the stop leg takes its own wider room and the target leg keeps its own`() {
+        val (g, why) = Kite.protect(spec, "NRML", 65, 100.0, 90.0, 130.0, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
+        assertEquals(emptyList<String>(), why)
+        assertEquals(listOf(90.0, 130.0), g!!.triggers)
+        assertEquals(81.0, g.orders[0].price!!, 1e-9, "the stop: 10% under its trigger")
+        assertEquals(123.5, g.orders[1].price!!, 1e-9, "the target: 5% under its trigger, as before")
+        // A short: the stop above, its BUY limit 10% over it.
+        val (s, _) = Kite.protect(spec, "NRML", -65, 100.0, 110.0, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
+        assertEquals(121.0, s!!.orders.single().price!!, 1e-9)
+        // Not asked: as before (5%); never less room than the target's.
+        assertEquals(85.5, Kite.protect(spec, "NRML", 65, 100.0, 90.0, null).first!!.orders.single().price!!, 1e-9)
+        assertEquals(85.5, Kite.protect(spec, "NRML", 65, 100.0, 90.0, null, stopSlippage = 0.01).first!!.orders.single().price!!, 1e-9)
+        // Never under one tick.
+        assertEquals(0.05, Kite.protect(spec, "NRML", 65, 1.0, 0.05, null, stopSlippage = 0.99).first!!.orders.single().price!!, 1e-9)
+    }
+
     @Test fun `overnight fallback stop when the own stop cannot rest`() {
         // A long whose stop is already through the price (6 Nov): the nearest level Zerodha takes, 0.30% below, on the tick, down.
         assertEquals(99.70, Kite.overnightFallbackStop(true, 100.0, 105.0, 0.05)!!, 1e-9)

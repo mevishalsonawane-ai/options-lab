@@ -310,6 +310,9 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         session(10, 3)
         kite.flat()
         tick()
+        // 20 Nov 2026 (audit): closed counts on a second agreeing read.
+        assertTrue("one read deletes nothing", gttDeletes.isEmpty())
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()
         assertEquals(1, gttDeletes.size)
         assertTrue(kite.gtts.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())
@@ -546,6 +549,7 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         kite.position(sym, -75, 88.0)                              // another sell filled beside it
         session(10, 5)
         tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()                                               // 20 Nov 2026: a second agreeing read
         assertTrue(runBlocking { Protections.active() }.isEmpty())
         assertTrue(alerted("other way round"))
         assertFalse(alerted("the position is closed"))

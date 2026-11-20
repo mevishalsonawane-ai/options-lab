@@ -147,6 +147,7 @@ class ProtectionsGttTest : RobolectricTest() {
         kite.flat()
         kite.requests.clear()
         tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()                                       // 20 Nov 2026: closed counts on a second agreeing read
         assertTrue("no stop placed for a position no longer held", kite.placed.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())
     }
@@ -179,6 +180,8 @@ class ProtectionsGttTest : RobolectricTest() {
         kite.flat()
         session(8, 30, nth = 2)
         tick()
+        assertTrue("one read deletes nothing (20 Nov 2026)", gttDeletes.none { it.path.endsWith("/$id") })
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()
         assertTrue(gttDeletes.any { it.path.endsWith("/$id") })
         assertTrue(kite.gtts.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())

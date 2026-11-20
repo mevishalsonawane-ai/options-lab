@@ -895,6 +895,19 @@ object Broker {
         it.optInt("sell_quantity"), it.optDouble("sell_price", 0.0),
         dayQty(it, "day_buy_quantity"), dayQty(it, "day_sell_quantity"))
 
+    /** 20 Nov 2026 (audit): a net row with no symbol or no quantity is a malformed reply (the read fails), never a position at 0. */
+    private fun positionChecked(it: JSONObject): Position {
+        if (it.optString("tradingsymbol").isEmpty() || !it.has("quantity") || it.isNull("quantity"))
+            throw java.io.IOException("Zerodha's positions reply had a row with no symbol or quantity")
+        return position(it)
+    }
+
+    /**
+     * 20 Nov 2026 (audit: [Protections] read Zerodha again for every item): a count bumped by every order, change or cancel from this
+     * phone and every order update on the stream. A read kept while it is unchanged shows everything sent since. Memory only.
+     */
+    fun writeGen(): Long = writes.get()
+
     /** 21 Oct, round 3: a day quantity Zerodha gave (a number); absent or null is "not known", never 0 (review). */
     internal fun dayQty(o: JSONObject, k: String): Int? = if (o.has(k) && !o.isNull(k)) o.optInt(k) else null
 
@@ -909,7 +922,10 @@ object Broker {
         // Workers asking at once share one read (10 Oct, [SHARE_MS]): never one begun before an order, change or cancel.
         val r = positionsShared.run(shareKey(gen), SHARE_MS, shareContext()) {
             val d = call("GET", "/portfolio/positions") as JSONObject
-            Positions(rows(d.optJSONArray("net")).map(::position), rows(d.optJSONArray("day")).map(::position))
+            // 20 Nov 2026 (audit: a malformed positions reply was read as "no positions"): a reply without its "net" list, or with
+            // a row that has no symbol or quantity, is a failed read (thrown), never an empty account or a row at 0.
+            val net = d.optJSONArray("net") ?: throw java.io.IOException("Zerodha's positions reply had no net list")
+            Positions(rows(net).map(::positionChecked), rows(d.optJSONArray("day")).map(::position))
         }
         passBook.put(ticket, at, r.value)
         keptBook = Kept(r.startedAt, gen, r.value)

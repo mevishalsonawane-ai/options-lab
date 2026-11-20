@@ -864,8 +864,12 @@ object Strategies {
         b.runs[id] = run
         b.pending.remove(id)
         finish(b, run)
+        // 20 Nov 2026 (audit): its filled legs' stops at Zerodha now, not on the next look ([stopsNow]).
+        stopsNow(b, def, v, compromised)
         save(b)
-        run.startError ?: "${def.name} started (${mode.wire}): ${run.openLegs().size} of ${def.legs.size} legs open."
+        // (Review: the run as it is now - a leg whose stop already filled is closed by [stopsNow].)
+        val now2 = b.runs[id] ?: run
+        now2.startError ?: "${def.name} started (${mode.wire}): ${now2.openLegs().size} of ${def.legs.size} legs open."
     }
 
     /**
@@ -1279,7 +1283,10 @@ object Strategies {
                             }
                             val v = venueFor(d.mode)
                             if (v == null) { record(b, def, Event("start_refused", "Scheduled start skipped: the contract list could not be loaded", "warn"), true); continue }
-                            val run = startRun(b, def, v, d.mode, "scheduler", compromised, now)
+                            val run0 = startRun(b, def, v, d.mode, "scheduler", compromised, now)
+                            // 20 Nov 2026 (audit): its filled legs' stops at Zerodha now, before the notice and the run's next look.
+                            stopsNow(b, def, v, compromised)
+                            val run = b.runs[def.id] ?: run0
                             notes += "${def.name}: scheduled ${if (d.mode == RunMode.LIVE) "live" else "paper"} start"
                             if (d.mode == RunMode.LIVE) Notifier.post(app, 6600 + (def.id.toInt() and 0xff), Notifier.SCHEDULE, "${def.name} started (live)",
                                 run.startError ?: "${run.openLegs().size} of ${def.legs.size} legs open. Stops, targets and square-off run by themselves.", "almanac")
@@ -1324,6 +1331,19 @@ object Strategies {
         if (next.mode == RunMode.LIVE && Broker.loggedIn) runCatching { restLegStops(b, def, v, q, now, compromised) }
     }
 
+    /**
+     * 20 Nov 2026 (audit: the strategies' lock delayed the stop after a live fill - Boss's own start rested its legs' stops only on the
+     * next 15-second look, which waits for this lock, and a scheduled start's only after the run's next prices and checks): a LIVE
+     * run's filled legs get their stops at Zerodha at once, straight after the entries, before anything else is read or written for
+     * the run (the book's save included). Only the leg prices the stop needs are read first. Never throws.
+     */
+    private suspend fun stopsNow(b: Book, def: StrategyDef, v: Venue, compromised: Boolean) {
+        val run = b.runs[def.id] ?: return
+        if (run.mode != RunMode.LIVE || !Broker.loggedIn) return
+        if (run.legs.values.none { it.status == "open" && it.entryStatus == "complete" }) return
+        runCatching { restLegStops(b, def, v, quotes(run, v), Market.now(), compromised) }
+    }
+
     private fun legKey(runId: Long, legId: Int) = "$runId:$legId"
 
     /** A leg stop resting as a GTT ("gtt:<id>|trigger|day": an NRML leg's, review C7) - its id, else null (an SL order's). */
@@ -1361,6 +1381,27 @@ object Strategies {
         // A stop of an earlier session (a DAY order, gone with it): nothing of it can fill now.
         if (st == null && stopDay(rest)?.isBefore(Market.today()) == true) return "CANCELLED" to null
         return when (st?.status) { "COMPLETE", "CANCELLED", "REJECTED" -> st.status to st; else -> null }
+    }
+
+    /**
+     * 20 Nov 2026 (audit, as the arms' and [Protections]' since): when each leg ("runId:legId") was first read no longer held at Zerodha.
+     * Memory only (a restart starts the count again); bounded.
+     */
+    private val legFlatSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** 20 Nov 2026: how far apart the two agreeing reads must be (two separate reads of Zerodha, never one shared read). */
+    internal const val FLAT_AGREE_MS = 5_000L
+
+    /**
+     * 20 Nov 2026 (audit): whether leg [k], read no longer held at Zerodha now, has been read so at least [FLAT_AGREE_MS] ago with no read
+     * between showing it held - two agreeing reads. The first such read starts the count (false). The market's clock.
+     */
+    private fun legFlatConfirmed(k: String): Boolean {
+        if (legFlatSince.size > 500) legFlatSince.clear()
+        val now = Market.now().toInstant().toEpochMilli()
+        val first = legFlatSince.putIfAbsent(k, now) ?: return false
+        // (Kept once confirmed: a stop whose taking out is not confirmed this look is tried again on the next without a new count.)
+        return now - first >= FLAT_AGREE_MS
     }
 
     /** When each leg's "stop not rested" was last told (memory): told at most once in [NOT_RESTED_EVERY_MS] (review C7). */
@@ -1437,6 +1478,14 @@ object Strategies {
                 continue
             }
             if (so != null && so.status in setOf("CANCELLED", "REJECTED")) { b.legStops.remove(k) }
+            // 20 Nov 2026 (audit: a malformed or partial positions reply was read as "no positions", and the leg's stop taken out): a
+            // read with no row at all for the contract is not a reading (Zerodha lists every contract held or traded today, at 0 once
+            // closed): nothing is taken out, shrunk or placed on it this look. (A stop resting since an earlier day - a carried leg's
+            // GTT - with no row today: its position closed on that day, a reading as any other.)
+            if (net.none { it.symbol == kiteSym && it.exchange == ex } && cur?.let { stopDay(it)?.isBefore(Market.today()) } != true) continue
+            // ... and one read showing it no longer held takes nothing out: only a second read at least [FLAT_AGREE_MS] later that
+            // agrees (none between showing it held) does ([legFlatConfirmed]).
+            if (held > 0) legFlatSince.remove(k) else if (!legFlatConfirmed(k)) continue
             // Held no more at Zerodha (closed by hand): its stop must not rest on a flat position.
             if (held <= 0) {
                 if (cur != null && b.legStops.containsKey(k) && legStopOut(cur) != null) b.legStops.remove(k)
@@ -1460,7 +1509,7 @@ object Strategies {
                     if (gid != null) {
                         val px = q.firstOrNull { it.symbol == leg.symbol }?.ltp ?: error("no price")
                         val trig = cur.split('|').getOrNull(1)?.toDoubleOrNull() ?: error("no trigger")
-                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, room * dir, px, trig, null)
+                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, room * dir, px, trig, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
                         Broker.modifyGtt(gid, requireNotNull(gtt) { why.joinToString("; ") })
                     } else if (so != null) Broker.modify(so, so.filled + room, so.type, so.price.takeIf { it > 0 }, so.trigger.takeIf { it > 0 })
                 }
@@ -1480,7 +1529,7 @@ object Strategies {
                 if (ArmLive.handsOffNow(ex, kiteSym)) continue
                 val id: String? = if (product != "MIS") {
                     // A carried (NRML) leg: a single-leg GTT, the only broker-side stop that outlives the session (review C7).
-                    val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null)
+                    val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
                     // A lost reply never leaves a second GTT ([Broker.placeGttOnce] adopts the one that went through).
                     gtt?.let { x -> Broker.placeGttOnce(x, b.legStops.values.mapNotNull(::gttOf).toSet())?.let { "gtt:$it" } }
                 } else {
@@ -1510,7 +1559,7 @@ object Strategies {
                 val r = if (gid != null) {
                     if (g?.status?.lowercase() != "active") continue
                     runCatching {
-                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, (stopQty(cur) ?: qty) * dir, ltp, to, null)
+                        val (gtt, why) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, (stopQty(cur) ?: qty) * dir, ltp, to, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
                         Broker.modifyGtt(gid, requireNotNull(gtt) { why.joinToString("; ") })
                     }
                 } else {
@@ -1570,7 +1619,7 @@ object Strategies {
     fun wipe() {
         synchronized(ioLock) { synchronized(writeOrder) { wipeGen++; ownersPending = null; saveSeq++; cache = null } }
         ownersSoon.clear()
-        clearHints(); notRestedAt.clear()
+        clearHints(); notRestedAt.clear(); legFlatSince.clear()
         written.forget()
         filesForErase().forEach { runCatching { it.delete() } }
     }

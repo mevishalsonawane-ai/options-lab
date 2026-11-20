@@ -103,10 +103,11 @@ class ProtectionsTakeoverTest : RobolectricTest() {
     @Test fun anExitThatFilledEndsTheProtectionAndPlacesNothing() {
         val p = protect()
         takeOver(p)
-        kite.flat()
+        kite.position(sym, 0, 0.0)                                          // 20 Nov 2026: Zerodha's row at 0 (a missing row is not known)
         later()
         kite.requests.clear()
         tick()
+        com.optionslab.app.testing.SecondRead.clockOn(); tick()                                                        // closed counts on a second agreeing read
         assertTrue(kite.placed.isEmpty())
         assertTrue(runBlocking { Protections.active() }.isEmpty())
     }

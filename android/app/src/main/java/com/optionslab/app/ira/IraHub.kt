@@ -1174,7 +1174,8 @@ object IraHub {
             }.getOrDefault(false)
             if (com.optionslab.ira.Rescue.setAlone(clear, p, stop)) {
                 val result = runCatching {
-                    if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, p.qty, p.ltp ?: p.avg, stop, null, null)
+                    // 20 Nov 2026 (audit): a stop on a held position Boss confirmed reads the position again first (recheck).
+                    if (p.live) com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, p.qty, p.ltp ?: p.avg, stop, null, null, recheck = true)
                     else com.optionslab.app.data.Protections.protectPaper(p.symbol, product, p.qty, p.ltp ?: p.avg, stop, null, null)
                 }.getOrElse { "Not protected: ${it.message}" }
                 val said = com.optionslab.ira.Rescue.saySet(p, stop, result)
@@ -1212,7 +1213,7 @@ object IraHub {
                     slWorking == true -> "${p.symbol} has a stop order or GTT working now, so I did not place a second one."
                     slWorking == null -> "I could not read ${p.symbol}'s orders just now, so no stop was placed - ask me again in a moment."
                     ltp == null || ltp <= stop -> "${p.symbol} is already at or under " + "%.2f".format(java.util.Locale.ENGLISH, stop) + ": close it or set a stop from the position."
-                    p.live -> com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, qty, ltp, stop, null, null)
+                    p.live -> com.optionslab.app.data.Protections.protectLive(p.symbol, "NFO", product, qty, ltp, stop, null, null, recheck = true)
                     else -> com.optionslab.app.data.Protections.protectPaper(p.symbol, product, qty, ltp, stop, null, null)
                 }
             }, "$text Tap Confirm to $what.", kind = com.optionslab.ira.Requests.Kind.GUARD,

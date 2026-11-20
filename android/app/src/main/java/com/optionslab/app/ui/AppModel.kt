@@ -710,7 +710,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun protect(live: Boolean, symbol: String, exchange: String, product: String, qty: Int, price: Double, spec: ProtectSpec) {
         viewModelScope.launch(Dispatchers.IO) {
             val d = com.optionslab.app.data.Protections
-            say(if (live) { if (compromisedFresh()) "Refused: this device shows signs of compromise." else d.protectLive(symbol, exchange, product, qty, price, spec.stop, spec.trail, spec.target) }
+            // 20 Nov 2026 (audit): Boss's own Protect reads the position again before placing ([Protections.protectLive]'s recheck).
+            say(if (live) { if (compromisedFresh()) "Refused: this device shows signs of compromise." else d.protectLive(symbol, exchange, product, qty, price, spec.stop, spec.trail, spec.target, recheck = true) }
                 else d.protectPaper(symbol, product, qty, price, spec.stop, spec.trail, spec.target))
             protections.value = d.active()
             if (live) loadAccount(quiet = true) else loadPaper(quiet = true)
@@ -1226,7 +1227,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val b = com.optionslab.app.data.Broker
                 val spec = b.spec(exchange, symbol)
                 val last = b.quotes(listOf("$exchange:$symbol"))["$exchange:$symbol"]?.last ?: error("no last price for $symbol")
-                val (g, why) = com.optionslab.engine.Kite.protect(spec, product, netQty, last, stop, target)
+                // 20 Nov 2026 (audit): the stop leg's limit 10% past its trigger, so a gap through the stop still fills.
+                val (g, why) = com.optionslab.engine.Kite.protect(spec, product, netQty, last, stop, target,
+                    stopSlippage = com.optionslab.engine.Kite.STOP_GTT_SLIPPAGE)
                 Load.Done(GttPlan("Protect $symbol", g, why))
             } catch (e: Exception) { Load.Failed(e.message ?: "could not prepare the GTT") }
         }
@@ -1242,6 +1245,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (compromisedFresh()) error("this device shows signs of compromise")
+                // 20 Nov 2026 (audit): the position read again just before placing (it may have been sold since the GTT was prepared).
+                com.optionslab.app.data.Protections.gttStillFits(g)?.let { error(it) }
                 val id = com.optionslab.app.data.Broker.placeGtt(g)
                 say("GTT placed (#$id): Zerodha holds it even when the phone is off.")
                 gttPlan.value = Load.Idle
