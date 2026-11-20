@@ -58,6 +58,26 @@ class ClockLaneTest : RobolectricTest() {
     private fun alarms() = am.scheduledAlarms.filter { shadowOf(it.operation).savedIntent.action == ClockAlarm.ACTION }
 
     /**
+     * 20 Nov 2026 (CI on 80aa50e15: "timed out waiting for loss limit round 2"): a poke is one round, and a round never starts the
+     * loss limit beside its own run still under way (never two at once) - and the test counts a run as done when its work is done, a
+     * moment before its supervisor step ends. A poke in that moment found the last run still going, so that round's limit fell to the
+     * next 15 s mark, past the test's wait. Poked only once that step has ended - by the same look the supervisor's start makes (a run
+     * not completed, [com.optionslab.ira.Supervisor.kick]) - the poked round must run the limit itself.
+     */
+    private fun pokeOnceTheLossLimitEnded() {
+        Background.await("the loss limit's run before ended", 10_000) { !lossStepUnderWay() }
+        ClockLane.poke()
+    }
+
+    /** The loss limit's supervisor step claimed and not completed (the supervisor's own map, read as a test may). */
+    private fun lossStepUnderWay(): Boolean {
+        val sup = WatchWorkers.supervisor ?: return false
+        val f = com.optionslab.ira.Supervisor::class.java.getDeclaredField("inFlight").apply { isAccessible = true }
+        val job = (f.get(sup) as Map<*, *>)[ClockLane.LOSS] as? kotlinx.coroutines.Job
+        return job != null && !job.isCompleted
+    }
+
+    /**
      * The pass stuck for minutes on one inline step (on 18 Nov the stop rescue: 8 min 45 s). Before, the expiry square-off, the
      * flat-by and the loss limit waited for it; now they run from the lane at once, with nothing held (they read the books themselves).
      */
@@ -107,7 +127,7 @@ class ClockLaneTest : RobolectricTest() {
 
     /**
      * A stuck clock step never holds the loss limit or the next round back: with the expiry square-off hung, the loss limit runs every
-     * round. The other square-offs come after it in their one step (19 Nov 2026: one sequence in the pass's order, never two
+     * round (each poked once the limit's last run has ended: a round never starts it beside its own run under way). The other square-offs come after it in their one step (19 Nov 2026: one sequence in the pass's order, never two
      * square-offs selling one contract at once), and run once it ends. The hung one is never started a second time beside itself.
      */
     @Test fun aStuckClockStepNeverBlocksTheLossLimitAndTheSquareOffsNeverRunTogether() = runBlocking {
@@ -134,7 +154,7 @@ class ClockLaneTest : RobolectricTest() {
             Background.await("the square-off hung", 10_000) { expiryStarts.get() == 1 }
             val lossBefore = ran.count { it == ClockLane.LOSS }
             for (i in 1..3) {
-                ClockLane.poke()
+                pokeOnceTheLossLimitEnded()
                 Background.await("loss limit round $i", 10_000) { ran.count { it == ClockLane.LOSS } >= lossBefore + i }
             }
             assertEquals("never started again beside itself", 1, expiryStarts.get())
@@ -208,7 +228,7 @@ class ClockLaneTest : RobolectricTest() {
             // Positions open: told once, the hung one only.
             held = true
             fake += 20_000
-            ClockLane.poke()
+            pokeOnceTheLossLimitEnded()
             Background.await("the late alert", 5_000) { lateAlerts().isNotEmpty() }
             val at = fake
             Background.await("that round's loss limit", 5_000) { ClockLane.lastDone(ClockLane.LOSS) == at }
@@ -218,7 +238,7 @@ class ClockLaneTest : RobolectricTest() {
             assertFalse(lateAlerts().any { it.text.contains(ClockLane.LOSS) })
             fake += 20_000
             val next = fake
-            ClockLane.poke()
+            pokeOnceTheLossLimitEnded()
             Background.await("the next round", 5_000) { ClockLane.lastDone(ClockLane.LOSS) == next }
             assertEquals("told once", 3, lateAlerts().size)
             ctl.ended = true; ClockLane.poke(); lane.join()
