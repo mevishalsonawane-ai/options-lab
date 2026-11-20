@@ -55,7 +55,8 @@ object Guard {
         )
     }
 
-    fun liveAccount(book: Broker.Positions, funds: Broker.Funds?, ordersToday: Int): AccountGuard.Account {
+    /** [ordersToday]: today's orders at Zerodha; null when they could not be read (20 Nov 2026, audit B5: unknown, never 0). */
+    fun liveAccount(book: Broker.Positions, funds: Broker.Funds?, ordersToday: Int?): AccountGuard.Account {
         val ins = instruments()
         // Zerodha's own m2m, as this guard always read it (Zerodha keeps no after-charges figure); the charges estimate the
         // screens show beside it is display only and never moves this limit.
@@ -88,8 +89,9 @@ object Guard {
                 val i = ins[p.symbol]
                 AccountGuard.Holding(p.symbol, p.qty, i?.lotSize ?: 1, i?.name, i?.expiry, i?.right?.name)
             },
-            ordersToday = ordersToday,
+            ordersToday = ordersToday ?: 0,
             minuteOfDay = Market.minuteNow(),
+            ordersKnown = ordersToday != null,
         )
     }
 

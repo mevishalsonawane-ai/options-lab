@@ -2642,6 +2642,9 @@ object ArmLive {
         val unsure = HashSet<String>()
         // (And the contracts shown short this look, confirmed or not: only their counts are kept.)
         val shortNow = HashSet<String>()
+        // 20 Nov 2026 (audit B5, item 8): trades whose stop of today is missing from this look's good orders read, and could not be read
+        // by its own id either: its state is unknown this look (never taken as resting) - the app watches its level itself.
+        val stopUnknown = HashSet<String>()
         suspend fun reread() {
             runCatching { Broker.orders() }.getOrNull()?.let { orders = it.associateBy { o -> o.id } }
             runCatching { Broker.positionBook().net }.getOrNull()?.let { net = it }
@@ -2658,7 +2661,15 @@ object ArmLive {
             try {
                 if (p0.unconfirmed) { if (settleNow(p0, stream)) set(p0, listOfNotNull(settle(p0, claimed))); continue }
                 var p = p0
-                val so = p.slId?.let { orders[it] }
+                // 20 Nov 2026 (audit B5, item 8: "a stop missing from the order read is assumed resting"): a stop of today's missing from
+                // this good orders read is read again by its own id on a regular look (its end - filled, cancelled, rejected - then handled
+                // below as ever). Still not known (a stream look, or that read failed): unknown this look, never taken as resting - the app
+                // watches its level itself (step 3: it sells there, taking the stop out first; never a second stop beside it).
+                val so = p.slId?.let { id ->
+                    orders[id] ?: if (p.day.isBefore(t.toLocalDate())) null
+                        else (if (stream) null else runCatching { Broker.orderRow(id) }.getOrNull())?.also { orders = orders + (it.id to it) }
+                            ?: run { stopUnknown += p.ref; null }
+                }
                 val g = p.gttId?.let { gtts?.get(it) }
                 // Its stop filled at Zerodha - all of it, or a part while the rest still works: what is new of its fill is booked once.
                 val newFill = if (so == null) 0 else ((if (so.status == "COMPLETE" && so.filled <= 0) so.qty else so.filled) - p.stopBooked).coerceAtLeast(0)
@@ -2944,6 +2955,8 @@ object ArmLive {
                     val ltp = ltpOf(p)
                     val stopLimit = when {
                         p.gttId != null -> g?.legPrices?.firstOrNull()?.takeIf { it > 0 } ?: p.stopTrigger?.let { gttLeg(it, p.tick, p.side) }
+                        // 20 Nov 2026 (audit B5, item 8): its stop's state unknown this look: the app sells at the stop's level itself.
+                        so == null && p.ref in stopUnknown -> p.stopTrigger
                         else -> so?.price?.takeIf { it > 0 }
                     }
                     // 18 Nov 2026: a short read not confirmed yet (step 2) counts as what these trades hold: their stop is moved up and

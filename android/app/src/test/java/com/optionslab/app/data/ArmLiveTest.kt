@@ -340,6 +340,43 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(0, held())
     }
 
+    /**
+     * 20 Nov 2026 (audit B5, item 8: "a stop missing from the order read is assumed resting"): a stop of today's missing from a good read
+     * of the order book is read again by its own id; seen resting there, nothing changes - no sale, no second stop.
+     */
+    @Test fun aStopMissingFromTheBookIsReadAgainByItsIdNeverAssumed() {
+        val ref = "m"
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, ref))
+        val sid = view().open.single().stopOrderId!!
+        kite.hideFromBook(sid, 50)
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)              // under the 170 trigger, above its 161.50 limit
+        kite.requests.clear()
+        watch()
+        assertTrue("read again by its id", kite.requests.any { it.method == "GET" && it.path == "/orders/$sid" })
+        assertTrue("seen resting: still resting", kite.order(sid).working)
+        assertTrue("nothing sold, no second stop", kite.placed.isEmpty())
+        assertEquals(sid, view().open.single().stopOrderId)
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 8): a stop missing from the book whose own read fails too is UNKNOWN, never taken as resting: the app
+     * watches its level itself and, at it, takes the stop out first (confirmed) and sells - one exit, never two.
+     */
+    @Test fun aStopMissingFromTheBookAndUnreadableIsWatchedAtItsLevelByTheApp() {
+        val ref = "u"
+        ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, ref))
+        val sid = view().open.single().stopOrderId!!
+        kite.hideFromBook(sid, 50)
+        kite.down += "/orders/$sid"
+        kite.afterNext("/orders/$sid") { kite.down.remove("/orders/$sid") }   // this look's read of it fails; later reads answer
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)              // under the 170 trigger, above its 161.50 limit
+        watch()
+        assertEquals("taken out before the app's sale", "CANCELLED", kite.order(sid).status)
+        assertEquals("one sale", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
+        assertEquals("stop_run_through", view().closed.single().why)
+        assertEquals("flat, never short", 0, held())
+    }
+
     @Test fun aPartPaperSaleSellsTheSameShareLive() {
         val ref = "half"
         ArmLive.testLotCap = 0                                       // 30 Oct: a multi-lot trade (live is 1 lot by default)

@@ -301,6 +301,9 @@ data class AppSettings(
             // caller is the order path, which never waits on a vault write): the background write is waited for, and if it
             // failed the key is written directly, tried again a few times. A process death or a failed write no longer loses it.
             runCatching { killWriter.execute { persistKill() } }
+            // 20 Nov 2026 (audit B5, item 9): the app's working ENTRY orders at Zerodha cancelled too (never an exit or a stop), in the
+            // background: nothing here waits on it.
+            runCatching { Broker.killEntriesSoon("the guard") }
         }
 
         /** The kill switch's own disk writer (one daemon thread; never the order path's or the screen's). */
@@ -362,6 +365,14 @@ data class AppSettings(
          * stored), so a value written meanwhile by someone else - the guard's kill switch - is never written back over.
          */
         fun saveChanged(from: AppSettings, to: AppSettings) {
+            try { saveChangedInner(from, to) } finally {
+                // 20 Nov 2026 (audit B5, item 9): the kill switch turned on here (Boss's switch, Jarvis's "kill switch on"): the app's
+                // working ENTRY orders at Zerodha are cancelled too (never an exit or a stop), in the background.
+                if (!from.guardKill && to.guardKill) runCatching { Broker.killEntriesSoon("the kill switch") }
+            }
+        }
+
+        private fun saveChangedInner(from: AppSettings, to: AppSettings) {
             // Settings from before the guard's v2 defaults are read through a migration (see [load]): written whole once.
             // 18 Oct, review: a kill switch the guard turned on since [from] was read (this change did not touch it) is kept in that
             // whole write too - CI's SettingsUpdateTest caught the first change on a fresh vault writing it back off.

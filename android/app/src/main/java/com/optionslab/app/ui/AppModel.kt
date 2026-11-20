@@ -1287,7 +1287,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // Only making a working entry smaller (nothing else changed) lowers risk, and goes.
                 val smallerOnly = quantity < now.qty && type == now.type && samePx(price, now.price) && samePx(trigger, now.trigger)
                 if (!exit && !smallerOnly) com.optionslab.app.data.PaperOnly.entryRefusal()?.let { error(it) }
-                val acct = com.optionslab.app.data.Guard.liveAccount(book, runCatching { b.funds() }.getOrNull(), runCatching { b.orders().size }.getOrDefault(0))
+                val acct = com.optionslab.app.data.Guard.liveAccount(book, runCatching { b.funds() }.getOrNull(), runCatching { b.orders().size }.getOrNull())   // (20 Nov 2026, audit B5: unknown, never 0)
                 val why = com.optionslab.engine.Kite.refusals(probe, s.limits(), 0, false, exit) +
                     com.optionslab.app.data.Guard.check(com.optionslab.app.data.Guard.liveOrder(probe), acct, exit)
                 if (why.isNotEmpty()) error(why.joinToString("; "))
