@@ -735,10 +735,18 @@ object Paper {
         val read = paperExitRead(readMs) { freshExitRead(c, since) }
         if (read != null && read.isFinite() && read > 0) return read
         runCatching { heldPriceNow(c, since, Long.MAX_VALUE, lookup = true) }.getOrNull()?.let { return it }
-        // Merge review: no stream packet at all (a paper-only phone): the paper feed as before this change (bounded, its own job), so a
-        // stop is never left unchecked for want of a price; it never touches Zerodha's quote queue.
-        return boundedRead(readMs) { kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY)) { feedExitRead(c, since) } }
+        // Merge review: no stream packet at all: the paper feed as before this change (bounded, its own job), so a stop is never left
+        // unchecked for want of a price. B5 merge review: never Zerodha's quote here, outside the paper reads' budget - the feed's book read
+        // ([restBook]) is left out ([NoZerodhaRead]).
+        return boundedRead(readMs) {
+            kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY) + NoZerodhaRead()) { feedExitRead(c, since) }
+        }
             ?.takeIf { it.isFinite() && it > 0 }
+    }
+
+    /** B5 merge review: on a coroutine's context, no Zerodha read ([restBook]) - the paper feed alone. */
+    class NoZerodhaRead : kotlin.coroutines.AbstractCoroutineContextElement(NoZerodhaRead) {
+        companion object Key : kotlin.coroutines.CoroutineContext.Key<NoZerodhaRead>
     }
 
     /** B5-D: the paper arms' fresh exit reads together: at most 4 s in any 15 s ([com.optionslab.ira.ReadBudget]). */
@@ -936,6 +944,8 @@ object Paper {
         // 28 Oct, review: only while the market is open (no pre-open book), and one Zerodha read per symbol per [REST_BOOK_MS] at
         // most: a held untraded option priced every pass never piles quote calls up (Zerodha's rate limit).
         if (!runCatching { Market.isOpen() }.getOrDefault(false)) { noPrice(c.symbol, "no trade today and the market is closed"); return null }
+        // (B5 merge review: an exit read made outside the paper reads' budget never asks Zerodha: [exitPriceNow].)
+        if (kotlinx.coroutines.currentCoroutineContext()[NoZerodhaRead] != null) return null
         val nowMs = quoteClock()
         val last = restBookAt[c.symbol]
         if (last != null && nowMs - last in 0 until REST_BOOK_MS) { noPrice(c.symbol, "no trade today; its book was read moments ago"); return null }

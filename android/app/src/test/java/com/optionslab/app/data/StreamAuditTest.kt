@@ -247,6 +247,83 @@ class StreamAuditTest : RobolectricTest() {
         busySocket.close()
     }
 
+    /** B5 merge review: the lost replies' searches read the book in the stop checks' lane; a read's main-gate wait leaves the call time. */
+    @Test fun lostSearchesReadInSafetyAndAReadWithNoTimeLeftTakesNoSlot() {
+        assertEquals(com.optionslab.ira.RateGate.Priority.SAFETY, Broker.lostLaneForTest())
+        assertEquals("5 s budget, nothing spent: 4 s for the gate, 1 s kept for the call", 4_000L, Broker.mainGateWaitMs(5_000L, 0L))
+        assertTrue("its time spent: no slot taken", Broker.mainGateWaitMs(5_000L, 4_500L) <= 0L)
+        assertTrue(Broker.mainGateWaitMs(5_000L, 6_000L) <= 0L)
+    }
+
+    /** B5 merge review: the minute lane's follow-up live look runs when a paper-only arm held something before its exits, or still does. */
+    @Test fun anArmClosingItsLastPaperPositionStillGetsTheLiveCopysLook() {
+        assertTrue("held before, closed its last now: the live copy follows at once", FastPath.followUpLook(heldBefore = true, heldAfter = false))
+        assertTrue(FastPath.followUpLook(heldBefore = false, heldAfter = true))
+        assertTrue(FastPath.followUpLook(heldBefore = true, heldAfter = true))
+        assertFalse("none of them in: the look after the passed arms was this pass's", FastPath.followUpLook(heldBefore = false, heldAfter = false))
+    }
+
+    /** B5 merge review: the stream's reconnect never waits behind the relay's part of an earlier change (its calls in flight, an SSH connect). */
+    @Test fun theStreamReconnectNeverWaitsBehindTheRelay() {
+        NetWatch.debounceMs = 200L
+        val relayHeld = java.util.concurrent.CountDownLatch(1)
+        val streamActs = java.util.concurrent.atomic.AtomicInteger()
+        val relayActs = java.util.concurrent.atomic.AtomicInteger()
+        NetWatch.streamActForTest = { streamActs.incrementAndGet(); false }
+        NetWatch.relayActForTest = { relayHeld.await(20, java.util.concurrent.TimeUnit.SECONDS); relayActs.incrementAndGet() }
+        try {
+            NetWatch.available("wifi-1")
+            NetWatch.available("mobile-2")                                    // the first act: its relay part hangs
+            val end = System.currentTimeMillis() + 5_000
+            while (streamActs.get() < 1 && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertEquals(1, streamActs.get())
+            NetWatch.available("wifi-1")                                      // a second change while the relay's part still hangs
+            while (streamActs.get() < 2 && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertEquals("the stream reopened again, not held behind the relay", 2, streamActs.get())
+            assertEquals("the relay's parts still wait", 0, relayActs.get())
+        } finally {
+            relayHeld.countDown()
+            // Both relay parts run (with the test's hook) before the test ends: nothing real runs after it.
+            val end = System.currentTimeMillis() + 5_000
+            while (relayActs.get() < 2 && System.currentTimeMillis() < end) Thread.sleep(10)
+        }
+        assertEquals(2, relayActs.get())
+    }
+
+    /**
+     * B5 merge review: a paper position with no stream packet at all still gets the paper feed's read when the budget is spent (its stop is
+     * never left unchecked), and that read never asks Zerodha (outside the budget).
+     */
+    @Test fun aPositionWithNoPacketStillGetsTheFeedsReadNeverZerodhasOutsideTheBudget() = runBlocking {
+        Paper.resetExitBudgetForTest()
+        val c = Paper.Contract("NIFTYNOPACKET24000CE", "NIFTY", AutomationSupport.expiryAfter(7), 24_000.0, com.optionslab.engine.Right.CE, 75, "NSE_FO|NP")
+        val since = java.time.LocalDateTime.now(com.optionslab.engine.IST).minusMinutes(5)
+        val noZerodha = java.util.concurrent.CopyOnWriteArrayList<Boolean>()
+        Paper.exitReadForTest = { noZerodha += (kotlinx.coroutines.currentCoroutineContext()[Paper.NoZerodhaRead] != null); null }
+        try {
+            // Spend the paper reads' budget.
+            assertNull(Paper.paperExitRead(4_000L) { kotlinx.coroutines.delay(6_000); 1.0 })
+            Paper.exitReadForTest = { noZerodha += (kotlinx.coroutines.currentCoroutineContext()[Paper.NoZerodhaRead] != null); 88.0 }
+            assertEquals("the feed's price, read past the spent budget", 88.0, Paper.exitPriceNow(c, since))
+            assertEquals("one read, marked: no Zerodha", listOf(true), noZerodha.toList())
+        } finally { Paper.exitReadForTest = null; Paper.resetExitBudgetForTest() }
+    }
+
+    /** B5 merge review: SENSEX's list fetched before the morning's dump is served to the lookups but refused for the morning check. */
+    @Test fun aSensexListFromBeforeTheDumpIsRefusedForTheMorningCheck() = runBlocking {
+        kite.instruments += FakeKite.Ins(52_000_002L, "SENSEXPRE82000CE", "SENSEX", AutomationSupport.expiryAfter(7), 82_000.0, "CE", 20, exchange = "BFO")
+        Broker.resetBfoForTest()
+        val day = Market.today()
+        Market.testClock = java.time.Clock.fixed(day.atTime(7, 50).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+        assertEquals(1, Broker.bfoOptionsNow().size)
+        assertNotNull("07:50: today's as far as there is one", Broker.currentBfoOptions())
+        Market.testClock = java.time.Clock.fixed(day.atTime(9, 20).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+        assertNull("refused for the morning check and the expiry square-off's wait", Broker.currentBfoOptions())
+        assertNotNull("still served to the lookups meanwhile (today's is read behind it)", Broker.cachedBfoOptions())
+        assertEquals("the morning check reads today's", 1, Broker.bfoOptionsNow().size)
+        assertNotNull(Broker.currentBfoOptions())
+    }
+
     /** B5-D: a tick stamped back for coming late never leaves a stop with no price when Zerodha's quote has no answer for it. */
     @Test fun aLateTickNeverLeavesAStopWithNoPriceWhenNoFreshQuoteAnswers() = runBlocking {
         val sym = "NIFTYLATE24000CE"

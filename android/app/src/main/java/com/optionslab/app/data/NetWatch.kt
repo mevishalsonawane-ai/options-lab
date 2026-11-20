@@ -71,27 +71,34 @@ object NetWatch {
         val wait = if (last == Long.MIN_VALUE) 0L else (last + debounceMs - mono()).coerceIn(0L, debounceMs)
         scope.launch {
             if (wait > 0) kotlinx.coroutines.delay(wait)
-            // (Merge review: one act at a time - the relay's wait for its calls in flight can take seconds; a later change waits for it.)
-            actLock.withLock {
-                val seen = synchronized(this@NetWatch) { pending = false; lastActAt = mono(); acts++; lastChangeSeen }
-                act(seen)
-            }
+            // (B5 merge review: the stream's part at once; only the relay's part runs one at a time - [act].)
+            val seen = synchronized(this@NetWatch) { pending = false; lastActAt = mono(); acts++; lastChangeSeen }
+            act(seen)
         }
     }
 
     @Synchronized
     internal fun lost(id: String) { state = com.optionslab.ira.NetChange.lost(state, id) }
 
-    /** The stream first (a cancel and a kick: memory and the socket only), then the relay (its session let go, then warmed again). */
-    private fun act(seenAt: Long) {
-        val dropped = runCatching { KiteStream.networkChanged(seenAt) }.getOrDefault(false)
+    /**
+     * The stream first (a cancel and a kick: memory and the socket only), then the relay (its session let go, then warmed again).
+     * B5 merge review: only the relay's part runs one at a time ([actLock]: it can wait for calls in flight and an SSH connect); the
+     * stream's never waits behind it.
+     */
+    private suspend fun act(seenAt: Long) {
+        val dropped = runCatching { (streamActForTest ?: KiteStream::networkChanged)(seenAt) }.getOrDefault(false)
         runCatching { Diag.record(com.optionslab.ira.StreamHealth.AREA, "the phone's network changed: " +
             (if (dropped) "the stream is opened again at once on the new network" else "the stream was not connected")) }
-        runCatching { Relay.networkChanged() }
+        actLock.withLock { runCatching { (relayActForTest ?: { Relay.networkChanged() })() } }
     }
+
+    /** TEST ONLY: the stream's and the relay's parts of [act] in place of the real ones (null: as in the app). */
+    @Volatile internal var streamActForTest: ((Long) -> Boolean)? = null
+    @Volatile internal var relayActForTest: (() -> Unit)? = null
 
     /** TEST ONLY: forget the network seen (as a new process). */
     internal fun resetForTest() {
         synchronized(this) { state = com.optionslab.ira.NetChange.State(); changes = 0; acts = 0; lastActAt = Long.MIN_VALUE; pending = false; debounceMs = 5_000L }
+        streamActForTest = null; relayActForTest = null
     }
 }

@@ -102,7 +102,9 @@ object ExpirySquareOff {
         if (Broker.loggedIn) runCatching {
             // 20 Oct, review: SENSEX's options (BFO) too, from the day's list in memory: they were all "unknown", so Boss's own
             // SENSEX options were never closed and an arm's SENSEX trade raised a false "NOT closed automatically" notice.
-            val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).associateBy { it.tradingSymbol }
+            // (B5 merge review: SENSEX's list fetched after the morning's dump only, until the backstop - as the notice's wait below.)
+            val bfo = if (minuteNow() < BACKSTOP_MINUTE) Broker.currentBfoOptions() else Broker.cachedBfoOptions()
+            val ins = (Broker.cachedInstruments().orEmpty() + bfo.orEmpty()).associateBy { it.tradingSymbol }
             // 20 Oct, review: the orders are read BEFORE the positions (as [McxGuard] has since 18 Oct). Read the other way, an
             // exit resting from the last pass that filled between the two reads showed the position still open and no exit
             // working, and a second MARKET sell went out and left the account short on expiry day. In this order a fill
@@ -119,8 +121,9 @@ object ExpirySquareOff {
             // expiry cannot be told here, so the owner is told instead of it being held into settlement unseen.
             // SENSEX's list not read yet today: asked for now (in the background) and the notice waits for the next passes, until
             // the backstop minute, when it is said whatever.
-            val bfoWait = Broker.cachedBfoOptions() == null && minuteNow() < BACKSTOP_MINUTE
-            if (Broker.cachedBfoOptions() == null && book.any { it.exchange == "BFO" }) {
+            // (B5 merge review: a list fetched before the morning's dump is waited past, as before - [Broker.currentBfoOptions].)
+            val bfoWait = Broker.currentBfoOptions() == null && minuteNow() < BACKSTOP_MINUTE
+            if (Broker.currentBfoOptions() == null && book.any { it.exchange == "BFO" }) {
                 runCatching { Broker.loadBfoOptionsInBackground() }
                 // Its expiry not known yet: the day is not done (a later pass, with the list in, closes or reports it).
                 unread = true

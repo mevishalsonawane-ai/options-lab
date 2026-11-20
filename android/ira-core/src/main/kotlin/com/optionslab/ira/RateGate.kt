@@ -92,24 +92,41 @@ class RateGate(
      * 20 Nov 2026 (review): [acquire], but waiting [maxMs] at most (on the gate's clock): true when a slot was taken, false when the
      * wait ran out (nothing taken - the caller gives up, as on a refusal, instead of queueing without end).
      */
-    suspend fun acquireWithin(p: Priority, maxMs: Long): Boolean {
-        var w = tryTake(p)
-        if (w <= 0) return true
+    suspend fun acquireWithin(p: Priority, maxMs: Long): Boolean = acquireStamp(p, maxMs) != null
+
+    /** One attempt: the wait before asking again (0: taken) and the clock it was judged at (the slot's stamp when taken). */
+    private class Attempt(val wait: Long, val at: Long)
+
+    @Synchronized private fun attempt(p: Priority): Attempt { val now = clock(); return Attempt(tryTake(p, now), now) }
+
+    /**
+     * 20 Nov 2026 (B5 merge review): [acquireWithin] that says WHICH slot it took (its stamp, for [giveBack]); null: none in [maxMs]
+     * (nothing taken).
+     */
+    suspend fun acquireStamp(p: Priority, maxMs: Long): Long? {
+        var a = attempt(p)
+        if (a.wait <= 0) return a.at
         val until = clock() + maxMs
         waited++
         waiting(p, +1)
         try {
-            while (w > 0) {
+            while (true) {
                 val left = until - clock()
-                if (left <= 0) return false
-                delay(minOf(w, left))
-                w = tryTake(p)
+                if (left <= 0) return null
+                delay(minOf(a.wait, left))
+                a = attempt(p)
+                if (a.wait <= 0) return a.at
             }
-            return true
         } finally {
             waiting(p, -1)
         }
     }
+
+    /**
+     * 20 Nov 2026 (B5 merge review): the slot taken at [at] ([acquireStamp]) given back - its request was never sent (its quote turn ran
+     * out), so it no longer counts in the window. Exactly that slot, never a later one (a later one's request went).
+     */
+    @Synchronized fun giveBack(at: Long) { if (sent.remove(at)) taken-- }
 
     @Synchronized private fun waiting(p: Priority, d: Int) { waitingNow[p.ordinal] = (waitingNow[p.ordinal] + d).coerceAtLeast(0) }
 

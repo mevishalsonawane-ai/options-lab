@@ -325,6 +325,12 @@ object FastPath {
         return true
     }
 
+    /** B5 merge review: whether ntfy, Flow, S5 or CISD holds a paper position now (memory only). */
+    internal fun paperOnlyHolding(): Boolean = runCatching { NtfyArm.holding() || FlowArm.holding() || S5Arm.holding() || CisdArm.holding() }.getOrDefault(true)
+
+    /** B5 merge review: the minute lane's follow-up live look is due when the paper-only arms held something before their exits, or still do. Pure. */
+    internal fun followUpLook(heldBefore: Boolean, heldAfter: Boolean): Boolean = heldBefore || heldAfter
+
     /** One lane's steps, each in its own try (one failing never skips the next), timed from [triggerMs]. */
     private suspend fun runLane(ctx: Context, lane: FastLane.Lane, triggerMs: Long, exchMs: Long?, source: OrderSpeed.Source, s: Snap?) {
         // 10 Oct: the exits' lanes go first in Zerodha's shared request budget (the entries' lanes as ordinary requests).
@@ -377,6 +383,9 @@ object FastPath {
                     // (stream stalled) could otherwise hold the live copies' stop look; the look after the passes below follows theirs.
                     // (A shadow trade or a damaged book's recovery too: no order for a shadow, its record checked every minute.)
                     if (ArmLive.lookDue) step(ARMS_LIVE) { ArmLive.watch() }
+                    // (B5 merge review: whether the paper-only arms below held anything BEFORE their exits - one that closes its last paper
+                    // position here still gets its live copy's look right after.)
+                    val paperOnlyHeld = paperOnlyHolding()
                     // 25 Oct: ntfy alerts on paper: their stops, targets and square-off every minute (exits only).
                     step(NTFY) { NtfyArm.manageOnly() }
                     // 28 Oct: IraThinker's flow on paper: its stops, index exits and square-off every minute (exits only).
@@ -385,9 +394,10 @@ object FastPath {
                     step(S5) { S5Arm.manageOnly() }
                     // 29 Oct: CISD + network on paper: its index stop, profit lock and square-off every minute (exits only).
                     step(CISD) { CisdArm.manageOnly() }
-                    // 18 Oct: the live trades of the paper-only arms just above follow their exits at once (merge review: only when one of
-                    // them holds something; else the look above was this pass's).
-                    if (ArmLive.lookDue && (NtfyArm.holding() || FlowArm.holding() || S5Arm.holding() || CisdArm.holding())) step(ARMS_LIVE) { ArmLive.watch() }
+                    // 18 Oct: the live trades of the paper-only arms just above follow their exits at once. B5 merge review: when one of them
+                    // held something before its exits ran (one just closed its last: its live copy follows now) or holds something now; with
+                    // none of them in, the look after PASSED_ARMS above was this pass's.
+                    if (ArmLive.lookDue && followUpLook(paperOnlyHeld, paperOnlyHolding())) step(ARMS_LIVE) { ArmLive.watch() }
                     // 30 Oct: the three passes moved from the top (their own exits run first inside each), then the live look again
                     // so a paper exit they just made is followed at once.
                     // (Only while armed or holding: a switched-off arm's shadow decision runs in the watch's arms rounds, paced by

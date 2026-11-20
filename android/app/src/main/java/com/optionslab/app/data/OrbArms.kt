@@ -5350,8 +5350,9 @@ object OrbArms {
                 val trig = listOfNotNull(Broker.lostTrigger(ownLost), given.stopTrigger, lockOrStop(given, tickG), fixedStopOf(given, tickG)).maxOrNull()
                 val stopExit = why == "stop" || why == "profit_lock" || why == ruleWhy(given, tickG) || why == fixedWhy(given)
                 val stopLevel = stopExit || (ltp != null && trig != null && ltp <= trig + 1e-9)
-                // (Every other exit waits for the search's end: an order book that cannot be read keeps it going, but then the exit's own
-                // read of the book fails too - it could not sell meanwhile either.)
+                // (Every other exit waits for the search's end. The search reads the book in the stop checks' lane (SAFETY: only exits and
+                // stops go first, never entries or Jarvis), so it is not starved; a book that cannot be read keeps it going, and then the
+                // exit's own read of the book fails too - it could not sell meanwhile either.)
                 if (!stopLevel || (Broker.lostAgeMs(ownLost) ?: Long.MAX_VALUE) < LOST_EXIT_WAIT_MS) {
                     runCatching { Diag.record("orb", "$labelG: $sym's exit waits for its stop whose answer was lost (it may be resting)") }
                     return given to null
