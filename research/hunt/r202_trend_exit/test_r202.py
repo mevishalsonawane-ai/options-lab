@@ -370,3 +370,28 @@ def test_twin_p_normal_p_skip_twins_bh():
 def test_no_trade_changed_means_no_twin_test():
     assert G.p_for_bh(0, 0.0) == 1.0 and G.p_for_bh(0, 0.3) == 1.0      # Amendment A
     assert G.p_for_bh(5, 0.0) == 0.0 and G.p_for_bh(41, 0.02) == 0.02
+
+
+def _t(und, er, xr, net, strike=100.0, side="C", day=date(2026, 1, 5), price=10.0, qty=50.0):
+    return dict(und=und, day=day, side=side, strike=strike, er=er, er_sig=er, xr=xr, net=net, rE=price, qty=qty)
+
+
+def test_split_twins_and_dedupe():
+    a = [_t("NIFTY", 5, 20, 100.0), _t("NIFTY", 40, 60, -50.0), _t("SENSEX", 5, 9, 7.0)]
+    b = [_t("NIFTY", 5, 25, 90.0), _t("NIFTY", 40, 60, -50.0, strike=150.0), _t("NIFTY", 41, 60, 1.0)]
+    twins, only = G.split_twins(a, b)
+    assert [t["net"] for t in twins] == [100.0]                  # same option, same minute
+    assert [t["net"] for t in only] == [-50.0, 7.0]              # another strike or another minute is not the same trade
+    d = G.dedupe(dict(X=b, Y=a), ("X", "Y"))
+    assert len(d) == 5 and sum(t["net"] for t in d) == 90.0 + -50.0 + 1.0 + -50.0 + 7.0
+    assert G.dedupe(dict(X=[], Y=[]), ("X", "Y")) == []
+    other_day = [_t("NIFTY", 5, 20, 1.0, day=date(2026, 1, 6))]
+    assert G.split_twins(other_day, b)[0] == []
+
+
+def test_peak_use():
+    tr = [_t("NIFTY", 5, 20, 0.0), _t("SENSEX", 10, 30, 0.0, price=20.0), _t("NIFTY", 20, 25, 0.0),
+          _t("NIFTY", 5, 20, 0.0, day=date(2026, 1, 6))]
+    n, c = G.peak_use(tr)
+    assert n == 2 and c == 10.0 * 50 + 20.0 * 50                  # the exit at minute 20 frees its place before the entry
+    assert G.peak_use([]) == (0, 0.0)

@@ -1,0 +1,33 @@
+id: r202-arms-diagnosis
+title: 'R202 diagnosis: where R72, R51 and Liquidity 15+5 make and lose money under today''s rules (V5)'
+family: diagnosis
+date: '2026-11-20'
+doc: research/HUNT_R202_ARMS_DIAGNOSIS.md
+hypothesis: none (descriptive slices of the R202 baseline trades, looked at after the holdout read; leads only)
+data_version: the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026) in the lake's layout (r202data.py); R51 clean
+  stores 21 Nov 2024 - 5 Oct 2026; the baseline trades of r202study.py final
+period:
+  design: 2024-11-21..2026-10-05 (one span; not a test)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the arms'' own signals); options bought; 1 lot, dated charges, R17 fills'
+model_or_rule: today's rules (V5) of R72 Breadth Donchian (2,157 trades), R51 Donchian 20 (2,822) and Liquidity 15+5 (1,208)
+settings: research/hunt/r202_trend_exit/r202diag.py; results/diagnosis.json
+prereg: null
+variants_tried: null
+results:
+  summary: 'R51 alone (1,685 trades R72 did not take) lost Rs 21,863; the 1,137 it shares with R72 made Rs 213,228. R72 + R51
+    both buying: drawdown Rs 172,369, worst month Rs -48,768 (R72 alone Rs 100,582 / Rs -26,420). All three: worst month
+    Rs -76,231 (Apr 2026), up to 13 positions and Rs 354,120 premium at once. Liquidity: Rs 327 a trade in Oct 2025 - Mar
+    2026, Rs 34 in Apr - Oct 2026 (330 trades); 5 best days are 62% of its net; MIDCPNIFTY 5-minute book Rs 412 on 293
+    trades. 37% of losers were once up Rs 500 a lot.'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: null
+verdict: not-a-test
+notes: Research only; nothing in the app changes. Hindsight slices - every pattern is a lead for a pre-registered test or for
+  Boss's own switches, never a result.

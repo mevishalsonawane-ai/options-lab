@@ -461,3 +461,45 @@ def gate(v: dict, b: dict, folds_v: list, folds_b: list, changed: dict, p_hold, 
     if q is None or not q <= K.GATE_Q:
         fails.append("BH q " + ("n/a" if q is None else f"{q:.3g}") + f" > {K.GATE_Q}")
     return dict(passes=not fails, fails=fails, folds_better=ok, twin_p=p_hold, q=q)
+
+
+# ================================================================================================ diagnosis (r202diag.py)
+def contract_key(t: dict) -> tuple:
+    """The same trade in two arms: the same option (index, day, side, strike) bought at the same fill minute."""
+    return (t["und"], t["day"], t["side"], float(t["strike"]), int(t["er"]))
+
+
+def split_twins(a: list, b: list) -> tuple:
+    """(trades of `a` that `b` also took (same option, same minute), trades only `a` took)."""
+    kb = {contract_key(t) for t in b}
+    return [t for t in a if contract_key(t) in kb], [t for t in a if contract_key(t) not in kb]
+
+
+def dedupe(by_arm: dict, order: tuple) -> list:
+    """One position per option and minute across the arms: the first arm in `order` keeps a shared trade (how the paper
+    book treats two arms that want the same option)."""
+    seen, out = set(), []
+    for arm in order:
+        for t in by_arm[arm]:
+            k = contract_key(t)
+            if k not in seen:
+                seen.add(k)
+                out.append(t)
+    return out
+
+
+def peak_use(trades: list) -> tuple:
+    """(most positions open at once, most premium in use at once) from fill minute to exit minute (exit minute excluded)."""
+    ev = []
+    for t in trades:
+        cost = float(t["rE"]) * float(t["qty"])
+        ev.append((t["day"], int(t["er"]), 1, cost))
+        ev.append((t["day"], int(t["xr"]), -1, -cost))
+    ev.sort(key=lambda e: (e[0], e[1], e[2]))                # at the same minute an exit (-1) frees its place first
+    n = c = mx_n = 0
+    mx_c = 0.0
+    for _, _, dn, dc in ev:
+        n += dn
+        c += dc
+        mx_n, mx_c = max(mx_n, n), max(mx_c, c)
+    return mx_n, mx_c
