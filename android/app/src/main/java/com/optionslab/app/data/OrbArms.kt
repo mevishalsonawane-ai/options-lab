@@ -450,9 +450,20 @@ object OrbArms {
         val sym = pos.kite ?: return null
         val since = l.getLong("since")
         val owner = managerId(pos)
-        val sentAt = runCatching { LocalDateTime.parse(l.getString("sentAt")) }.getOrNull() ?: return null
-        // (Only a sale sent today: an older one is not held after a restart - its day is over.)
-        if (sentAt.toLocalDate() != runCatching { Market.now().toLocalDate() }.getOrDefault(now().toLocalDate())) return null
+        // (A read from before "Erase everything" brings nothing back, and says nothing.)
+        if (gen != null && gen != wipeGen) return null
+        // (Only a sale sent today: an older one - or one with no readable send time - is not held after a restart; said once.)
+        fun dropped(why: String): Long? {
+            if (lostDropSaid.size > 200) lostDropSaid.clear()
+            if (lostDropSaid.add("$sym|$since")) {
+                runCatching { Diag.record("orb", "$sym: a saved lost exit was not taken back after the restart ($why)") }
+                runCatching { com.optionslab.app.work.Alerts.error("ORB live: a lost exit sale of $sym saved before the restart was not taken back " +
+                    "($why). The app reads Zerodha and sells only what is still held; check Kite's order book.", "ORB live") }
+            }
+            return null
+        }
+        val sentAt = runCatching { LocalDateTime.parse(l.getString("sentAt")) }.getOrNull() ?: return dropped("its send time is missing or unreadable")
+        if (sentAt.toLocalDate() != runCatching { Market.now().toLocalDate() }.getOrDefault(now().toLocalDate())) return dropped("it was sent on ${sentAt.toLocalDate()}")
         synchronized(lostExits) {
             // (A read from before "Erase everything" brings nothing back.)
             if (gen != null && gen != wipeGen) return null
@@ -519,6 +530,11 @@ object OrbArms {
                 part("range") { o.optJSONArray("range")?.let { b.range = it.getDouble(0) to it.getDouble(1); b.rangeDay = LocalDate.parse(it.getString(2)) } }
                 part("decided") { o.optJSONObject("decided")?.let { m -> m.keys().forEach { k -> val a = m.getJSONArray(k); b.decided[k] = (0 until a.length()).map { a.getString(it) }.toMutableSet() } } }
                 part("watched") { o.optJSONObject("watched")?.let { m -> m.keys().forEach { k -> b.watched[k] = m.getString(k) } } }
+                // (Today's only, by the day each was booked; none from a read made before "Erase everything".)
+                runCatching {
+                    val d = today().toString()
+                    o.optJSONObject("exitSales")?.let { m -> if (gen == wipeGen) m.keys().forEach { k -> if (m.optString(k) == d) exitSales.putIfAbsent(k, d) } }
+                }
                 // One row that cannot be read never drops the others: it is named, and a live one is taken back from Zerodha (below).
                 part("positions") {
                     o.optJSONArray("positions")?.let { a ->
@@ -1320,6 +1336,9 @@ object OrbArms {
         val day = today().toString()
         o.put("decided", JSONObject().apply { b.decided.filterKeys { it.endsWith(day) }.forEach { (k, v) -> put(k, JSONArray(v.toList())) } })
         o.put("watched", JSONObject().apply { b.watched.filterKeys { it.endsWith(day) }.forEach { (k, v) -> put(k, v) } })
+        // (20 Nov 2026: today's booked exit sales - a lost exit's search never takes one for its own after a restart.)
+        // (Each with its own day, so a restart never stamps an older one as today's.)
+        o.put("exitSales", JSONObject().apply { exitSales.filterValues { it == day }.keys.forEach { put(it, day) } })
         o.put("positions", JSONArray().apply {
             keptPositions(b.positions).forEach { p ->
                 put(JSONObject().put("arm", p.arm).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty).put("entry", p.entry)
@@ -5306,6 +5325,19 @@ object OrbArms {
                                 val sentAt: LocalDateTime = LocalDateTime.MIN,
                                 /** "State unknown" said again at the session's end (15:10) while still unresolved. */
                                 val lateSaid: Boolean = false)
+    /**
+     * 20 Nov 2026 (review: the twin edge): today's exit sales booked by these arms ([bookSale], [bookFoundRow]), by order id -> day: a lost
+     * exit's search never takes one of them for its own. Saved with the book ([encodeBook]), today's only.
+     */
+    private val exitSales = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun noteExitSale(id: String) {
+        val day = runCatching { today().toString() }.getOrDefault("")
+        if (exitSales.size > 500) exitSales.entries.removeIf { it.value != day }
+        exitSales[id] = day
+    }
+    /** "Saved lost exit dropped" said once per sale ([restoreLost]). */
+    private val lostDropSaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     /** By [LostExit.id] (never reused: a part's stale [Position.lostId] matches nothing). */
     private val lostExits = java.util.concurrent.ConcurrentHashMap<Long, LostExit>()
     private val lostSeq = java.util.concurrent.atomic.AtomicLong()
@@ -5412,6 +5444,12 @@ object OrbArms {
         if (lostExits.replace(lost.id, lost, asked)) searchLost(asked)
     }
 
+    /** 20 Nov 2026 (review: the twin edge): a found lost sale's own owner label - unique to that sale (its send time), never a plain exit's. */
+    private fun lostLabel(l: LostExit): String {
+        val at = runCatching { java.time.Instant.ofEpochMilli(l.sinceMs).atZone(com.optionslab.engine.IST).toLocalTime().toString() }.getOrDefault("${l.sinceMs}")
+        return "${l.label} · ${l.why} (lost sale sent $at)"
+    }
+
     /** 20 Nov 2026: the background search of [asked] ([lostExitLook]), off the arms' lock. */
     private fun searchLost(asked: LostExit) {
         offLock.launch { runCatching { searchLostNow(asked) } }
@@ -5437,10 +5475,11 @@ object OrbArms {
                 // are gone, and another trade's identical sale must never be taken for this one - and the earliest after it went.)
                 // (Its own label - written when it was found, before a restart could lose that - never excludes it. Labels unreadable:
                 // a failed read, never a search that could take another's sale.)
-                val own = "${asked.label} · ${asked.why}"
+                val own = lostLabel(asked)
                 val labelled = Strategies.owners().filter { (k, v) -> k.startsWith("kite:") && v != own }.keys.map { k -> k.removePrefix("kite:") }
                 val rows = runCatching { cache?.positions?.toList() }.getOrNull().orEmpty().flatMap { listOfNotNull(it.entryOrderId, it.stopOrderId) }
-                val known = asked.known + labelled + rows
+                val others = lostExits.values.filter { it.id != asked.id }.mapNotNull { it.foundId }
+                val known = asked.known + labelled + rows + others + exitSales.keys
                 Broker.findRecent(asked.order, known, since = asked.sentAt.takeIf { it != LocalDateTime.MIN }?.minusMinutes(3), earliest = true) ?: ""
             } ?: run { failed = true; null }
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -5465,8 +5504,10 @@ object OrbArms {
         }
         if (found?.isNotEmpty() == true) {
             runCatching { Diag.record("orb", "${asked.sym}: the lost exit found in Zerodha's book ($found): it is the exit") }
-            // (Labelled at once, whatever its state - after its id is kept, so it is never counted as pending nor taken for another.)
-            runCatching { Strategies.tagOwner("kite:$found", "${asked.label} · ${asked.why}") }
+            // (Labelled at once with its own lost sale's label - never one another exit of the same arm and reason writes - after its id
+            // is kept; and the book saved now, off the lock, so a restart keeps the found id.)
+            runCatching { Strategies.tagOwner("kite:$found", lostLabel(asked)) }
+            offLock.launch { runCatching { lock.withLock { saveSoon(book()) } } }
         }
     }
 
@@ -5478,7 +5519,8 @@ object OrbArms {
      */
     private suspend fun bookFoundRow(p: Position, label: String, sym: String, why: String, id: String, row: Broker.OrderRow?): Pair<Position, Position?>? {
         if (row == null || row.status !in DONE) return null
-        runCatching { Strategies.tagOwner("kite:$id", "$label · $why") }
+        runCatching { Strategies.tagOwner("kite:$id", "$label · $why") }           // (relabelled at booking: plain, as any exit sale)
+        runCatching { noteExitSale(id) }
         if (row.filled <= 0) return p.copy(stopOrderId = null) to null
         return bookFilled(p, label, sym, why, row.filled, row.avg, id)
     }
@@ -5492,6 +5534,10 @@ object OrbArms {
 
     /** TEST ONLY: whether a lost exit is held on [sym]. */
     internal fun lostExitForTest(sym: String): Boolean = lostOn(sym).isNotEmpty()
+    /** TEST ONLY: the found order id of [sym]'s lost exit, if any. */
+    internal fun lostFoundForTest(sym: String): String? = lostOn(sym).firstNotNullOfOrNull { it.foundId }
+    /** TEST ONLY: today's booked exit sales the lost search leaves out. */
+    internal fun exitSalesForTest(): Set<String> = exitSales.keys.toSet()
 
     /**
      * TEST ONLY: a look on [sym]'s (first) lost exit by the part whose sale was lost, then - a search started - the next look on its answer:
@@ -5783,6 +5829,7 @@ object OrbArms {
     private suspend fun bookSale(p: Position, label: String, sym: String, why: String, id: String,
                                  nothing: suspend () -> Pair<Position, Position?>): Pair<Position, Position?> {
         Strategies.tagOwner("kite:$id", "$label · $why")
+        runCatching { noteExitSale(id) }
         var f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
         if (f?.status !in DONE) {
             // Not finished in 15 s: the rest is cancelled (and tried afresh next pass); only what filled is booked.
@@ -7500,7 +7547,7 @@ object OrbArms {
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         readFails = 0
         forgetHistoryForTest()
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); barWaits.clear(); liqFolds.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); exitSales.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
     }
 
@@ -7511,7 +7558,7 @@ object OrbArms {
      * set-aside copies of the file. Never reads the vault; safe before [init].
      */
     @Synchronized fun wipe() {
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); barWaits.clear(); liqFolds.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); exitSales.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
         // (19 Nov 2026: a pending write is dropped; never a wait on one running - the screen may erase - which deletes the file again
         // itself if it finishes after this erase ([flushSoon]).)

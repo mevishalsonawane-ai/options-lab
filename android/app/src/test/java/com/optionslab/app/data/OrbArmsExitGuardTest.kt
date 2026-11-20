@@ -72,12 +72,12 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     private fun liquidity(qty: Int, entry: Double, stopId: String?, stop: Double?) =
         position("liquidity5", qty, entry, "E1", stopId, stop).put("level", 52_050.0).put("lot", 30)
 
-    private fun state(positions: List<JSONObject>) {
+    private fun state(positions: List<JSONObject>, extra: JSONObject.() -> Unit = {}) {
         AutomationSupport.orbState(context, JSONObject()
             .put("armed", JSONObject().put("orb", true)).put("auto", JSONObject().put("orb", true)).put("liveOk", JSONObject().put("orb", true))
             .put("legs", JSONObject().put("day", now.toLocalDate().toString()).put("strike", 52_000).put("expiry", expiry.toString())
                 .put("ce", contract(paperCe, "CE")).put("pe", contract(paperPe, "PE")))
-            .put("positions", JSONArray(positions)))
+            .put("positions", JSONArray(positions)).apply(extra))
     }
 
     private fun view() = runBlocking { OrbArms.view() }.arms
@@ -1226,6 +1226,94 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "lost exit of $sym was not found" in it })
         assertTrue("never 'found' in B's sale", AutomationSupport.alerts().none { "lost exit of $sym was found" in it })
         assertEquals("B keeps its own exit", bDone.exit, today("liquidity").single { it.arm == "liquidity15" }.exit)
+    }
+
+    /**
+     * 20 Nov 2026 (review: the twin edge): two equal parts of one trade with the same exit reason (their exit sales get the same plain
+     * owner label); A's sale never reaches Zerodha, B sells and is booked; after a restart A's search never takes B's sale for its own.
+     */
+    @Test fun twinPartsWithTheSameLabelNeverAdoptEachOthersSale() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val twin = position("liquidity5", 30, 200.0, "E1", null, null).put("level", 52_050.0).put("lot", 30)
+        state(listOf(liquidity(30, 200.0, s1, 170.0), twin))               // one trade in two parts of 30; both time stops due
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.NETWORK_EXCEPTION)           // A's sale: nothing reached Zerodha
+        val lostAt = OrbArms.testNow!!
+        pass()
+        assertTrue("A's sale lost and held", OrbArms.lostExitForTest(sym))
+        val parts = today("liquidity")
+        assertEquals("the twin sold its own 30, booked", 1, parts.count { it.exit != null })
+        OrbArms.forgetMemoryForTest(); Broker.forgetSentForTest()          // a restart
+        OrbArms.testNow = pastWindow(lostAt)
+        pass(); searchDone(); pass(); pass()
+        assertTrue("A let go, not found", !OrbArms.lostExitForTest(sym))
+        assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any { "lost exit of $sym was not found" in it })
+    }
+
+    /** 20 Nov 2026 (review): a lost sale's search takes the EARLIEST of two matching orders after it went, not the latest. */
+    @Test fun theLostSearchTakesTheEarliestOfTwoCandidates() {
+        val o = Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
+        val since = Market.now().toLocalDateTime().minusMinutes(1)
+        val first = runBlocking { Broker.placeOrder(o, exit = true) }
+        val second = runBlocking { Broker.placeOrder(o, exit = true) }
+        Broker.forgetSentForTest()                                         // (as after a restart: neither is known as sent)
+        assertEquals("earliest", first, runBlocking { Broker.findRecent(o, emptySet(), since = since, earliest = true) })
+        Broker.forgetSentForTest()
+        assertEquals("the latest, as before, without it", second, runBlocking { Broker.findRecent(o, emptySet()) })
+    }
+
+    /**
+     * 20 Nov 2026 (review: the twin edge, (c)): a lost sale found in Zerodha's book is saved with the book at once (no pass needed), so a
+     * restart right after keeps its found id - never searched again from nothing.
+     */
+    @Test fun aFoundLostSaleIsSavedAtOnceAndKeptAcrossARestart() {
+        lostLiquiditySale(outcome = FakeKite.Outcome.OPEN)                 // it went and still works at Zerodha
+        kite.showInBook()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone()
+        val found = OrbArms.lostFoundForTest(sym)
+        assertNotNull("found by the search", found)
+        val file = java.io.File(context.filesDir, "orb.vault")
+        val end = System.currentTimeMillis() + 10_000
+        fun saved() = runCatching { String(com.optionslab.app.security.Vault.readFile(file)!!, Charsets.UTF_8) }.getOrDefault("").contains("\"found\":\"$found\"")
+        while (!saved() && System.currentTimeMillis() < end) { OrbArms.awaitWrites(200); Thread.sleep(10) }
+        assertTrue("the found id saved with the book, before any further pass", saved())
+        OrbArms.forgetMemoryForTest(); Broker.forgetSentForTest()          // a restart
+        view()
+        assertEquals("the found id taken back after the restart", found, OrbArms.lostFoundForTest(sym))
+    }
+
+    /**
+     * 20 Nov 2026 (review: restoreLost): a saved lost exit that cannot be taken back after a restart - sent on another day, or with no
+     * readable send time - is written in the diary and said once, never again on the next read.
+     */
+    @Test fun aSavedLostExitThatCannotBeTakenBackIsSaidOnce() {
+        fun lost(since: Long, sentAt: String?) = JSONObject().put("why", "time_stop").put("qty", 30).put("type", "MARKET").put("tag", "iraorb")
+            .put("since", since).put("label", "Liquidity 5m").put("known", JSONArray()).apply { sentAt?.let { put("sentAt", it) } }
+        val old = liquidity(30, 200.0, null, null).put("lostExit", lost(1L, now.minusDays(1).toString()))
+        val bad = position("liquidity15", 30, 200.0, "E2", null, null).put("level", 52_050.0).put("lot", 30).put("lostExit", lost(2L, null))
+        state(listOf(old, bad))
+        view()
+        fun said(why: String) = AutomationSupport.alerts().count { "lost exit sale of $sym saved before the restart was not taken back ($why" in it }
+        assertEquals(AutomationSupport.alerts().joinToString(), 1, said("it was sent on ${now.toLocalDate().minusDays(1)}"))
+        assertEquals(1, said("its send time is missing"))
+        assertTrue("neither held", !OrbArms.lostExitForTest(sym))
+        OrbArms.forgetMemoryForTest()                                      // read again
+        view()
+        assertEquals("never said a second time", 2, said("it was sent on") + said("its send time"))
+    }
+
+    /**
+     * 20 Nov 2026 (review: the saved exit sales grew every day): the book keeps each booked exit sale with its own day; a read takes back
+     * only today's, never one from an earlier day as today's.
+     */
+    @Test fun savedExitSalesAreTakenBackForTodayOnly() {
+        state(listOf()) {
+            put("exitSales", JSONObject().put("X-OLD", now.toLocalDate().minusDays(1).toString()).put("X-TODAY", now.toLocalDate().toString()))
+        }
+        view()
+        assertEquals(setOf("X-TODAY"), OrbArms.exitSalesForTest())
     }
 
     /**
