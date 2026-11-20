@@ -3526,6 +3526,9 @@ object OrbArms {
      * The resting SL SELL 40 below a live fill. Its trigger, and its order id or null when it could not be
      * placed (the app then watches the stop itself). A lost reply is looked for before it counts as unplaced.
      */
+    /** 20 Nov 2026 (audit B5 deep review): the key a trade's lost stop is looked for under (its arm, contract and fill: what never changes). */
+    private fun orbLostKey(label: String, sym: String, fill: Double) = "orbstop:$label:$sym:$fill"
+
     private suspend fun placeStop(label: String, sym: String, qty: Int, lot: Int, tick: Double, fill: Double, known: Collection<String>,
                                   liquidity: Boolean = false, at: Double? = null, points: Double = OrbRules.STOP_POINTS,
                                   pct: Double = LiquidityRules.PREMIUM_STOP, alert: Boolean = true): Triple<String?, Double?, Boolean> {
@@ -3539,7 +3542,7 @@ object OrbArms {
         var refused = false
         // 20 Nov 2026 (audit B5 deep review): a stop of this contract whose reply was lost and is not found yet is UNKNOWN: looked for
         // again here, and no second stop is sent beside it while it may rest ([Broker.lookLost], two minutes; then Boss is told).
-        val lostKey = "orbstop:$label:$sym:$fill"
+        val lostKey = orbLostKey(label, sym, fill)
         when (val l = Broker.lookLost(lostKey)) {
             is Broker.LostLook.Found -> { Strategies.tagOwner("kite:${l.id}", "$label · stop"); return Triple(l.id, l.trigger ?: trigger, false) }
             Broker.LostLook.Searching -> return Triple(null, trigger, false)
@@ -3547,7 +3550,7 @@ object OrbArms {
         }
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             if (Broker.definite(e)) { refused = true; null } else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
-                ?: null.also { Broker.noteLost(lostKey, o, known, "$label: its stop") }
+                ?: null.also { Broker.noteLost(lostKey, o, known, "$label: its stop", liveOnly = true) }
         }
         if (id != null) Strategies.tagOwner("kite:$id", "$label · stop")
         else if (alert || !refused) com.optionslab.app.work.Alerts.error("$label: the ${if (at != null) "%.2f".format(Locale.ENGLISH, trigger) else if (liquidity) "${pts(pct * 100)}%" else "−${pts(points)}"} " +
@@ -5011,6 +5014,17 @@ object OrbArms {
         // ORB arms by Boss's "yes" the same day). [AppSettings.exchangeStops] is no longer read. The caller's guards decide when.
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no new stop beside his sale (asked again next look).
         if (ArmLive.handsOffNow("NFO", sym)) return null
+        // 20 Nov 2026 (audit B5 deep review): this trade's stop whose reply was lost and is not found yet: looked for first (the book read
+        // in the background, never here), nothing new placed meanwhile and no try or back-off counted; found, it is the trade's stop.
+        val lostKey = orbLostKey(armOf(p.arm).label, sym, p.entry)
+        when (val l = Broker.lookLost(lostKey)) {
+            is Broker.LostLook.Found -> {
+                runCatching { Strategies.tagOwner("kite:${l.id}", "${armOf(p.arm).label} · stop") }
+                return p.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: p.stopTrigger) to null
+            }
+            Broker.LostLook.Searching -> return null
+            else -> Unit
+        }
         // 19 Nov 2026 (coordinator): other working sales already cover everything held: no stop can rest - said each minute, before the
         // re-rest's back-off (which would otherwise say it at 1, 3, 7... minutes).
         val lot0 = runCatching { Broker.spec("NFO", sym).lotSize }.getOrNull()?.coerceAtLeast(1)
@@ -5065,6 +5079,7 @@ object OrbArms {
             is Orphan.Wait, Orphan.Unread -> return null
             is Orphan.Took -> {
                 orders?.firstOrNull { it.id == o.id }?.let { r -> placed(sym, want - com.optionslab.engine.risk.ExitQty.remaining(r.qty, r.filled, r.pending), o.id) }
+                Broker.forgetLost(lostKey)            // (20 Nov 2026: taken as its stop another way - never looked for again)
                 return split(p.copy(stopOrderId = o.id, stopTrigger = o.trigger), want)
             }
             Orphan.None, Orphan.Other -> if (adoptOnly) return null

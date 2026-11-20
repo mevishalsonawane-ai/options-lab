@@ -1574,7 +1574,7 @@ object Strategies {
                     val known = b.owners.keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") }
                     try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
                         if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
-                            ?: null.also { Broker.noteLost(lostKey, o, known, "Strategy ${def.name}: leg ${leg.legId}'s stop") }
+                            ?: null.also { Broker.noteLost(lostKey, o, known, "Strategy ${def.name}: leg ${leg.legId}'s stop", liveOnly = true) }
                     }
                 }
                 if (id == null) {

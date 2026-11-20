@@ -1666,6 +1666,7 @@ object ArmLive {
         // its id never written) is this trade's: taken as its stop, never counted as another order beside a second one.
         if (p.stopOrderId == null && spec.rest != LiveMirror.Rest.GTT) orphanStop(p.copy(stopTrigger = trigger), book)?.let { o ->
             runCatching { Diag.record("armlive", "${p.label}: its own stop ${o.id} on ${p.symbol} found resting with no trade owning it: taken as its stop") }
+            Broker.forgetLost(lostStopKey(p))          // (20 Nov 2026: taken another way - never looked for again)
             runCatching { Strategies.tagOwner("kite:${o.id}", "${spec.label} · live ${stopWords(p)}") }
             return seen.copy(stopOrderId = o.id, stopTrigger = o.trigger.takeIf { it > 0 } ?: trigger, stopQty = ExitQty.remaining(o.qty, o.filled, o.pending))
         }
@@ -1708,7 +1709,7 @@ object ArmLive {
         // 20 Nov 2026 (audit B5 deep review): its reply lost and not found yet: UNKNOWN - looked for on the next looks, never a second stop
         // beside it meanwhile ([restStop]); the app watches the level.
         if (id == null && lost) {
-            Broker.noteLost(lostStopKey(p), o, known(), "${p.label}: its live ${stopWords(p)}")
+            Broker.noteLost(lostStopKey(p), o, known(), "${p.label}: its live ${stopWords(p)}", liveOnly = true)
             stopFailed(p, trigger, "Zerodha's answer was lost; the app looks for it in the book and rests no second stop meanwhile")
             return seen.copy(stopTrigger = trigger)
         }
@@ -3113,7 +3114,8 @@ object ArmLive {
                     if (c.side > 0) "sold" else "bought back", c.symbol, c.qty, c.exit ?: 0.0,
                     c.why?.let { com.optionslab.engine.orb.StepTrail.words(it) }, LiveMirror.rs(c.net ?: 0.0)))
                 if (b.positions.none { it.open && it.ref == c.ref }) { closedRefs.remove(c.ref); levels.remove(c.ref); RuleHighs.forget("live:${c.ref}")
-                    detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref) }
+                    detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref)
+                    Broker.forgetLost(lostStopKey(c)) }   // (20 Nov 2026: the trade closed - its lost stop never looked for again)
             }
         }
         save(b)

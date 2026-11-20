@@ -936,7 +936,7 @@ object Broker {
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
         entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null
         killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
-        lostWrites.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null }
+        lostWrites.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -1785,7 +1785,7 @@ object Broker {
      * is adopted only when it is surely this one - a LIMIT's price must match too (to half a tick), and an order the
      * exchange REJECTED, or CANCELLED with nothing filled, is never taken for it (that is no live order; the error stands).
      */
-    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false): String? {
+    suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false, liveOnly: Boolean = false): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
@@ -1815,6 +1815,8 @@ object Broker {
                 // 20 Nov 2026 (audit B5, item 4): a LIMIT's or SL's price and a stop's trigger must be the ones sent, always (before, only
                 // after Kite's error): a resting order at another level is never taken for this one.
                 samePrices(o, it) &&
+                // (20 Nov 2026, audit B5 deep review: a lost stop's search never takes an order that has ended.)
+                (!liveOnly || it.optString("status").uppercase() !in setOf("COMPLETE", "CANCELLED", "REJECTED")) &&
                 (!afterError || adoptableAfterError(o, it))
         }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it)
             // (20 Nov 2026, review: a lost reply found is kept as the entry or exit it was sent as, for the kill switch.)
@@ -1867,15 +1869,23 @@ object Broker {
      * 20 Nov 2026 (audit B5 deep review: the write's 15 s limit makes lost replies more common, and a caller that took "lost and not found
      * in ~4 s" as "not placed" could send a second order or rest a second stop): a write whose reply was lost and that the book did not
      * show yet, kept by the caller's [key] (memory only). Its state is UNKNOWN: the caller never sends it again and never rests a second
-     * stop beside it; it asks [lookLost] on its later looks, which searches the book again (at most every [LOST_LOOK_GAP_MS]) for
-     * [LOST_SEARCH_MS]. Found: the order (adopted, as any lost reply found). Still not there then: Boss is told loudly, once, and the
-     * caller may go on (the book would have shown an order Zerodha took long before).
+     * stop beside it; it asks [lookLost] on its later looks. The book is searched in the BACKGROUND (never on the caller's lock; at most
+     * every [LOST_LOOK_GAP_MS]) and the next look acts on what was found. Found: the order (adopted, as any lost reply found). Given up
+     * on only once a read of the book that SUCCEEDED after [LOST_SEARCH_MS] still does not show it (Boss told loudly, once; the caller may
+     * go on - the book would have shown an order Zerodha took long before). A book that cannot be read never gives up: past
+     * [LOST_SEARCH_MS] Boss is told the order's state is unknown, and it stays UNKNOWN.
      */
-    private class LostWrite(val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val what: String) {
+    private class LostWrite(val order: Kite.Order, val known: Set<String>, val sinceMs: Long, val what: String, val liveOnly: Boolean) {
         @Volatile var lookedMs = 0L
+        @Volatile var foundId: String? = null
+        /** When a read of the book last SUCCEEDED without finding it (0: never). */
+        @Volatile var readOkAtMs = 0L
+        @Volatile var searching: kotlinx.coroutines.Job? = null
+        @Volatile var unknownSaid = false
     }
     private val lostWrites = java.util.concurrent.ConcurrentHashMap<String, LostWrite>()
-    /** How long a lost reply not found is looked for before it is given up on (and Boss told). */
+    private val lostScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    /** How long a lost reply not found is looked for before it may be given up on (and Boss told). */
     const val LOST_SEARCH_MS = 120_000L
     /** The least time between two searches of one lost reply (a stream look comes every tick). */
     private const val LOST_LOOK_GAP_MS = 3_000L
@@ -1883,14 +1893,20 @@ object Broker {
     @Volatile internal var lostSearchMsForTest: Long? = null
     /** TEST SEAM: [LOST_LOOK_GAP_MS] shortened. */
     @Volatile internal var lostLookGapMsForTest: Long? = null
+    /** TEST SEAM: the book searched on the caller's thread (the tests' looks are one after another), not in the background. */
+    @Volatile internal var lostSearchInlineForTest = false
 
     /** What [lookLost] found: the order, still looking (UNKNOWN: send nothing), or given up on (Boss told; the caller may go on). */
     sealed class LostLook { data class Found(val id: String, val qty: Int, val trigger: Double? = null) : LostLook(); object Searching : LostLook(); object GaveUp : LostLook() }
 
-    /** [o] ([what], for Boss's words) was sent under [key], its reply lost and not found in the book yet ([known]: never adopted). */
-    fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String) {
+    /**
+     * [o] ([what], for Boss's words) was sent under [key], its reply lost and not found in the book yet ([known]: never adopted).
+     * [liveOnly] (a stop): an order the book shows ended (COMPLETE, CANCELLED, REJECTED) is never taken for it - a stale key never adopts a
+     * dead stop.
+     */
+    fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false) {
         if (lostWrites.size > 200) lostWrites.entries.removeIf { System.currentTimeMillis() - it.value.sinceMs > 4 * LOST_SEARCH_MS }
-        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what))
+        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what, liveOnly))
     }
 
     /** Whether a lost reply is being looked for under [key]. Memory only. */
@@ -1899,26 +1915,51 @@ object Broker {
     /** The keys of the lost replies being looked for that start with [prefix]. Memory only. */
     fun lostKeys(prefix: String): List<String> = lostWrites.keys.filter { it.startsWith(prefix) }
 
+    /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed. Memory only. */
+    fun forgetLost(key: String) { lostWrites.remove(key)?.searching?.cancel() }
+
     /** TEST ONLY: every lost reply forgotten, as after a restart. */
     internal fun forgetLostForTest() = lostWrites.clear()
 
+    /** One search of the book for [w]: found, or a read that succeeded without it; a read that failed changes nothing. */
+    private suspend fun searchLost(w: LostWrite) {
+        val found = try { findRecent(w.order, w.known, liveOnly = w.liveOnly) } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (_: Exception) { return }
+        if (found != null) w.foundId = found else w.readOkAtMs = System.currentTimeMillis()
+    }
+
     /**
-     * The lost reply under [key] looked for again: null when none is kept. A background look only (it reads the order book); a book that
-     * cannot be read is still looking.
+     * The lost reply under [key]: null when none is kept. Memory only - it never reads the book itself: a search runs in the background
+     * when due ([LOST_LOOK_GAP_MS]) and the next call acts on it ([lostSearchInlineForTest]: on this thread).
      */
-    suspend fun lookLost(key: String): LostLook? {
+    fun lookLost(key: String): LostLook? {
         val w = lostWrites[key] ?: return null
         val now = System.currentTimeMillis()
-        if (now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
+        if (w.foundId == null && w.searching?.isActive != true && now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
             w.lookedMs = now
-            val found = try { findRecent(w.order, w.known) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
-            if (found != null) {
-                lostWrites.remove(key, w)
-                runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
-                return LostLook.Found(found, w.order.quantity, w.order.triggerPrice)
-            }
+            if (lostSearchInlineForTest) kotlinx.coroutines.runBlocking { searchLost(w) }
+            else w.searching = lostScope.launch { searchLost(w) }
         }
-        if (now - w.sinceMs < (lostSearchMsForTest ?: LOST_SEARCH_MS)) return LostLook.Searching
+        w.foundId?.let { found ->
+            lostWrites.remove(key, w)
+            runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
+            return LostLook.Found(found, w.order.quantity, w.order.triggerPrice)
+        }
+        val window = lostSearchMsForTest ?: LOST_SEARCH_MS
+        if (now - w.sinceMs < window) return LostLook.Searching
+        // Past the window: given up on only on a read that succeeded after it; a book never read stays UNKNOWN (Boss told once).
+        if (w.readOkAtMs - w.sinceMs < window) {
+            if (!w.unknownSaid) {
+                w.unknownSaid = true
+                runCatching {
+                    val text = "${w.what} on ${w.order.tradingSymbol}: Zerodha's answer was lost and its order book could not be read for " +
+                        "${(now - w.sinceMs) / 1000} s, so the order's state is UNKNOWN. Nothing is sent again meanwhile; check the order book in Kite."
+                    Diag.record("zerodha", text)
+                    com.optionslab.app.work.Alerts.error(text, "Zerodha")
+                }
+            }
+            return LostLook.Searching
+        }
         lostWrites.remove(key, w)
         runCatching {
             val text = "${w.what} on ${w.order.tradingSymbol}: Zerodha's answer was lost and the order is not in its order book " +

@@ -354,7 +354,7 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
      * book shows it, and after the window given up on with Boss told.
      */
     @Test fun aLostReplyIsLookedForUntilFoundOrGivenUpWithBossTold() = runBlocking {
-        Broker.lostLookGapMsForTest = 0
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
         kite.drop += "/orders/regular"
         val o = order()
         try { Broker.placeOrder(o, exit = true); fail() } catch (_: Exception) {}
@@ -380,6 +380,35 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
         assertTrue(com.optionslab.app.testing.AutomationSupport.alerts().toString(),
             com.optionslab.app.testing.AutomationSupport.alerts().any { "Test: its entry" in it && "not in its order book" in it })
         assertNull(Broker.lookLost("k2"))
+    }
+
+    /**
+     * 20 Nov 2026 (deep review, confirmed): a book that cannot be read for the whole window never gives a lost reply up - it stays
+     * Searching (nothing sent again, no second stop) and Boss is told once that the order's state is unknown; only a read that succeeds
+     * after the window may give it up.
+     */
+    @Test fun aBookUnreadableForTheWholeWindowNeverGivesALostReplyUp() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        Broker.lostSearchMsForTest = 0
+        kite.down += "/orders"
+        Broker.noteLost("u", order(), emptyList(), "Test: its stop", liveOnly = true)
+        repeat(3) { assertEquals(Broker.LostLook.Searching, Broker.lookLost("u")) }
+        assertEquals("told once", 1, com.optionslab.app.testing.AutomationSupport.alerts().count { "Test: its stop" in it && "UNKNOWN" in it })
+        kite.down.clear()
+        assertEquals("a read that succeeds after the window: given up", Broker.LostLook.GaveUp, Broker.lookLost("u"))
+    }
+
+    /** 20 Nov 2026 (deep review): a lost stop never adopts an order that has ended, and a key forgotten is never looked for again. */
+    @Test fun aLostStopNeverAdoptsAnEndedOrderAndAForgottenKeyIsGone() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        val stop = order(type = "SL", price = 79.0, trigger = 80.0, side = Kite.Side.SELL)
+        Broker.noteLost("d", stop, emptyList(), "Test: its stop", liveOnly = true)
+        val dead = kite.restingInKite(sym, "SELL", 75, 79.0, type = "SL", trigger = 80.0, tag = "iratest", product = "NRML")
+        kite.order(dead).status = "CANCELLED"
+        assertEquals("an ended order is never taken for it", Broker.LostLook.Searching, Broker.lookLost("d"))
+        Broker.forgetLost("d")
+        assertFalse(Broker.lostPending("d"))
+        assertNull(Broker.lookLost("d"))
     }
 
     /**

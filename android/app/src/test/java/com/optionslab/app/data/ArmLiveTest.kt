@@ -383,7 +383,7 @@ class ArmLiveTest : RobolectricTest() {
      */
     @Test fun aStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
         kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
-        Broker.lostLookGapMsForTest = 0
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "lost"))
         fun stops() = kite.placed.count { it.form["order_type"] == "SL" }
         assertEquals(1, stops())
@@ -403,7 +403,7 @@ class ArmLiveTest : RobolectricTest() {
      */
     @Test fun aLostStopNeverFoundIsRestedOnlyAfterTheSearchAndBossIsTold() {
         kite.afterNext("/orders/regular") { kite.drop += "/orders/regular" }        // the stop's POST read and dropped: nothing placed
-        Broker.lostLookGapMsForTest = 0
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
         ArmLive.entered(ask(com.optionslab.engine.orb.DonchianArm.SOURCE, "never"))
         kite.drop.clear()
         assertNull(view().open.single().stopOrderId)

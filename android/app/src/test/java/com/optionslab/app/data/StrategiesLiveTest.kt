@@ -248,7 +248,7 @@ class StrategiesLiveTest : RobolectricTest() {
         val id = saved(Position.B to OptionType.CE, sl = null)
         kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
         kite.trailReads = 50
-        Broker.lostLookGapMsForTest = 0
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
         startLive(id)
         assertEquals(1, buys().size)
         assertTrue("never refused", entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
@@ -373,7 +373,7 @@ class StrategiesLiveTest : RobolectricTest() {
         startLive(id)
         kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
         kite.trailReads = 50
-        Broker.lostLookGapMsForTest = 0
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertEquals(1, restingStops().size)
         runBlocking { Strategies.manageOnly(compromised = false) }
@@ -390,6 +390,27 @@ class StrategiesLiveTest : RobolectricTest() {
      * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost before a restart can no longer be looked for: it stays UNKNOWN
      * (never refused, never sent again) and Boss is told once to check the order book.
      */
+    /**
+     * 20 Nov 2026 (deep review, confirmed): with Zerodha's order book unreadable past the two minutes, a lost entry is never given up and
+     * read as rejected (it may have filled): it stays UNKNOWN, nothing is sent again, and Boss is told its state is unknown.
+     */
+    @Test fun aLostEntryWithTheBookUnreadablePastTheWindowStaysUnknown() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        startLive(id)
+        Broker.lostSearchMsForTest = 0
+        kite.down += "/orders"
+        runBlocking { Strategies.tickAll(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("never sent again", 1, buys().size)
+        assertTrue("never read as rejected", entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "UNKNOWN" in it })
+    }
+
     @Test fun aLostEntryFromBeforeARestartStaysUnknownAndBossIsTold() {
         midSession()
         live()

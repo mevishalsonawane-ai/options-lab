@@ -1118,9 +1118,29 @@ object PineAuto {
             Broker.LostLook.Searching -> return h
             else -> Unit
         }
+        // 20 Nov 2026 (audit B5 deep review, as ArmLive and the ORB arms do): from a fresh read of the order book, a working stop of the
+        // scripts' on the contract that no holding claims is this holding's own (one whose answer was lost, given up on too early, or
+        // placed just before a restart): taken as its stop, never a second one beside it. Another working sale on the contract leaves no
+        // room for a full stop: none is placed (never more resting than held), the app watches the level and Boss is told. A book that
+        // cannot be read: placed as before.
+        runCatching { Broker.orders(fresh = true) }.getOrNull()?.let { book ->
+            val claimed = held.value.values.mapNotNull { it.stop }.toSet()
+            val mine = book.filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" }
+            mine.firstOrNull { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed }?.let { orphan ->
+                Broker.forgetLost(lostKey)
+                runCatching { Diag.record("pine", "${label(item)}: a stop of the scripts' resting on $sym with no holding claiming it (${orphan.id}): taken as its stop") }
+                ownerTag("kite:${orphan.id}", "${label(item)} · stop")
+                return h.copy(stop = orphan.id, stopAt = orphan.trigger.takeIf { it > 0 } ?: trig)
+            }
+            if (mine.isNotEmpty()) {
+                com.optionslab.app.work.Alerts.error("${label(item)}: the stop on $sym was not placed at Zerodha because another sell order is working on " +
+                    "it (${mine.joinToString { "${it.type} ${it.id}" }}); the app watches the level instead.", "Pine live")
+                return h
+            }
+        }
         val oid = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite()) }.getOrNull()
-                ?: null.also { Broker.noteLost(lostKey, o, knownKite(), "${label(item)}: its stop") }
+                ?: null.also { Broker.noteLost(lostKey, o, knownKite(), "${label(item)}: its stop", liveOnly = true) }
         }
         if (oid == null) {
             com.optionslab.app.work.Alerts.error("${label(item)}: the stop at ${"%.2f".format(java.util.Locale.ENGLISH, trig)} on $sym could not be " +

@@ -228,7 +228,7 @@ class PineAutoLiveTest : RobolectricTest() {
      */
     @Test fun aLiveStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
         kite.afterNext("/orders/regular") { kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
-        Broker.lostLookGapMsForTest = 0
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
         bought()
         assertEquals(1, stops().size)
         assertNull(held()!!.stop)
@@ -238,6 +238,26 @@ class PineAutoLiveTest : RobolectricTest() {
         pass(52_030.0)
         assertEquals(1, stops().size)
         assertEquals(kite.orders.values.single { it.type == "SL" }.id, held()!!.stop)
+    }
+
+    /**
+     * 20 Nov 2026 (deep review, confirmed): a lost stop given up on (the book read, the order not matched) while a stop of the scripts'
+     * is in fact resting on the contract: that working stop is taken as the holding's own, never a second SL beside it.
+     */
+    @Test fun aLostStopGivenUpWhileAStopRestsTakesThatStopNeverASecond() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        assertEquals(1, stops().size)
+        assertNull(held()!!.stop)
+        // The resting stop no longer matches what was sent (its search will never find it), and the window is over: given up on.
+        val resting = kite.orders.values.single { it.type == "SL" }
+        resting.trigger = resting.trigger - 1.0
+        kite.showInBook()
+        Broker.lostSearchMsForTest = 0
+        pass(52_020.0)
+        assertEquals("no second SL", 1, stops().size)
+        assertEquals("the working stop taken as its own", resting.id, held()!!.stop)
     }
 
     @Test fun theDailyLossLimitSellsAndPausesTheScriptForTheDay() {
