@@ -45,10 +45,18 @@ class CheaperStrikeTest : RobolectricTest() {
 
     // ---- the strike grid (pure) -------------------------------------------------------------------------------------------------
 
-    @Test fun aPutStepsLowerAndACallHigherOnTheExpirysGrid() {
+    /** Boss, 20 Nov: "100-point steps" - NIFTY 25000 PE -> 24900 -> 24800 -> 24700, CE -> 25100 -> 25200 -> 25300, on a 50-point list. */
+    @Test fun aPutStepsLowerAndACallHigherA100PointsAStep() {
         val nifty = (240..260).map { it * 100.0 } + (240..259).map { it * 100.0 + 50 }          // NIFTY: 50 apart near the money
-        assertEquals(listOf(24950.0, 24900.0, 24850.0), CheaperStrike.ladder(nifty, 25000.0, Right.PE))
-        assertEquals(listOf(25050.0, 25100.0, 25150.0), CheaperStrike.ladder(nifty, 25000.0, Right.CE))
+        assertEquals(listOf(24900.0, 24800.0, 24700.0), CheaperStrike.ladder(nifty, 25000.0, Right.PE))
+        assertEquals(listOf(25100.0, 25200.0, 25300.0), CheaperStrike.ladder(nifty, 25000.0, Right.CE))
+        // A 50-point list with the 100-point mark missing: the listed strike at or beyond the mark, before the next one.
+        assertEquals(listOf(24850.0, 24800.0, 24700.0), CheaperStrike.ladder(nifty.filter { it != 24900.0 }, 25000.0, Right.PE))
+        assertEquals(listOf(25150.0, 25200.0, 25300.0), CheaperStrike.ladder(nifty.filter { it != 25100.0 }, 25000.0, Right.CE))
+        // An index whose own gap is wider than 100 steps by its gap.
+        val wide = (100..140).map { it * 200.0 }
+        assertEquals(listOf(23800.0, 23600.0, 23400.0), CheaperStrike.ladder(wide, 24000.0, Right.PE))
+        assertEquals(listOf(24200.0, 24400.0, 24600.0), CheaperStrike.ladder(wide, 24000.0, Right.CE))
         val bank = (500..540).map { it * 100.0 }                                                     // BANKNIFTY: 100 apart
         assertEquals(listOf(51900.0, 51800.0, 51700.0), CheaperStrike.ladder(bank, 52000.0, Right.PE))
         assertEquals(listOf(52100.0, 52200.0, 52300.0), CheaperStrike.ladder(bank, 52000.0, Right.CE))
@@ -82,6 +90,35 @@ class CheaperStrikeTest : RobolectricTest() {
         assertEquals(CheaperStrike.Outcome.GaveUp("the free cash is not known", 0), CheaperStrike.choose(tries, null))
         assertEquals(CheaperStrike.Outcome.GaveUp("the free cash is not known", 0), CheaperStrike.choose(tries, Double.NaN))
         assertTrue(CheaperStrike.choose(emptyList(), 5_000.0) is CheaperStrike.Outcome.GaveUp)
+    }
+
+    /** Only Zerodha's definite refusal for funds steps - never an unsure DataException / GeneralException, a lost reply or the app's own door. */
+    @Test fun onlyADefiniteZerodhaFundsRefusalCounts() {
+        assertTrue(CheaperStrike.definiteRefusal(Broker.KiteError("InputException", "Insufficient funds. Required margin is 6000.00")))
+        assertTrue(CheaperStrike.definiteRefusal(Broker.KiteError("MarginException", "RMS:Margin Exceeds, Required:6,000.00")))
+        assertFalse(CheaperStrike.definiteRefusal(Broker.KiteError("GeneralException", "Insufficient funds.")))
+        assertFalse(CheaperStrike.definiteRefusal(Broker.KiteError("DataException", "Insufficient funds.")))
+        assertFalse(CheaperStrike.definiteRefusal(Broker.KiteError("NetworkException", "Insufficient funds.")))
+        assertFalse(CheaperStrike.definiteRefusal(Broker.KiteError("entry_gate", "refused: insufficient funds")))
+        assertFalse(CheaperStrike.definiteRefusal(Broker.KiteError("InputException", "Quantity exceeds the freeze limit.")))
+        assertFalse(CheaperStrike.definiteRefusal(java.io.IOException("Insufficient funds")))
+    }
+
+    /**
+     * The update's "switched on for Boss" timeline entry: decided once per phone (the mark), logged only on a phone that ran an earlier build,
+     * never re-logged after the timeline prunes it, never on a fresh install, never once Boss set the switch.
+     */
+    @Test fun theOneTimeTimelineEntryIsDecidedOncePerPhone() {
+        assertTrue("a phone that ran an earlier build: logged", CheaperStrike.onceDue(never = true, ranBefore = true))
+        SecurePrefs.flush()
+        assertFalse("never again, even after the timeline pruned it", CheaperStrike.onceDue(never = true, ranBefore = true))
+        SecurePrefs.put(CheaperStrike.K_ONCE, null)
+        assertFalse("a fresh install: not logged", CheaperStrike.onceDue(never = true, ranBefore = false))
+        assertFalse("and decided for good", CheaperStrike.onceDue(never = true, ranBefore = true))
+        SecurePrefs.put(CheaperStrike.K_ONCE, null)
+        assertFalse("Boss set it already", CheaperStrike.onceDue(never = false, ranBefore = true))
+        // Never carried by a backup (a restore cannot switch it on nor bring the mark back).
+        assertFalse(com.optionslab.ira.Upkeep.carried(CheaperStrike.K_ON)); assertFalse(com.optionslab.ira.Upkeep.carried(CheaperStrike.K_ONCE))
     }
 
     @Test fun itCoversR51R72AndEveryLiquidityBookBySourceOnly() {

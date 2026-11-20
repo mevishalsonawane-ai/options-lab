@@ -36,20 +36,26 @@ notes; match the surrounding code.
     have 1 more option"): an arm's live index option buy of more than one lot is cut to the lots the free cash fits, always on,
     no switch. It never buys more than Boss's lots setting and still passes every live gate.
     - The cheaper strike (Boss, 20 Nov: "if its says insufficient balance for any trade, then try cheaper options increment it 1 by 1";
-      live now with the switch on, at most 3 strikes further out, lots first then strikes; R51, R72 and Liquidity 15+5): an R51
-      Donchian 20, R72 Breadth Donchian or Liquidity 15+5 (every book, told apart by source, never by name) live option buy that, after
-      the lots cut, the free cash the entry already read cannot pay for even one lot, or that Zerodha definitely REJECTED for funds or
-      margin (never a lost or unknown reply), steps one strike further out on that expiry's strike grid (a put lower, a call higher;
-      same expiry, side and exchange, SENSEX on BFO), at most 3 steps, a strike not listed or with no live quote skipped and counted,
-      and buys 1 lot (never more than Boss's lots setting) of the first that fits. Each try runs the arm's whole live entry path again
-      (PIN, Live, "AI trades go live", the arm's Trade live, the guard, the exposure cap, the order door and fingerprint, Kite.refusals,
-      kill switch, day lock, Stop for today, the square-off time), only within 60 s of the entry, once per signal. None fits: the entry
-      goes on as before (logged). R51 / R72's paper trade keeps its own strike; only the live copy holds the cheaper option (its book
-      row keeps the paper contract and the strike it stepped from). Liquidity has no paper twin while live: its live trade is on the
-      cheaper contract. Each stepped buy is said to Boss and logged, each give-up logged. Its Bot settings switch ("Cheaper strike when
-      funds are short (Boss's exception, 20 Nov)") is on by default: off is one tap (it lowers risk), on takes the PIN; every flip is
-      in the Autopilot change timeline with an Undo (an Undo that turns it on takes the PIN). It is the one exception to "anything new
-      that could add live trades starts in shadow", by Boss's choice on 20 Nov.
+      live now with the switch on, at most 3 strikes further out, lots first then strikes, 100-point steps; R51, R72 and Liquidity
+      15+5): an R51 Donchian 20, R72 Breadth Donchian or Liquidity 15+5 (every book, told apart by source, never by name) live option
+      buy that, after the lots cut, the free cash the entry already read cannot pay for even one lot, or that Zerodha definitely
+      refused for funds or margin (its own refusal or REJECTED in its book; never a lost or unknown reply, nor Kite's unsure
+      DataException / GeneralException; after a refusal the free cash is read fresh, unknown means no step), steps 100 points further
+      out at a time (an index whose strike gap is wider uses its gap): NIFTY 25000 PE -> 24900 -> 24800 -> 24700, 25000 CE -> 25100
+      -> 25200 -> 25300, the listed strike at or beyond each mark (same expiry, side and exchange, SENSEX on BFO), at most 3 steps, a
+      strike not listed or with no live quote skipped and counted, and buys 1 lot (never more than Boss's lots setting) of the first
+      that fits. Each try runs the arm's whole live entry path again (PIN, Live, "AI trades go live", the arm's Trade live, the guard,
+      the exposure cap, Liquidity's order flow, the order door and fingerprint, Kite.refusals, kill switch, day lock, Stop for today, the
+      square-off time), only within 60 s of the entry's request (R51 / R72: the paper fill; Liquidity: its entry or Boss's approval),
+      once per signal. None fits: the entry goes on as before (logged). Liquidity in approve mode (Boss, 20 Nov): the approved strike
+      may be swapped for one up to 300 points cheaper without asking again; the approval notice says so and the alert after the fill
+      names the strike bought. R51 / R72's paper trade keeps its own strike; only the live copy holds the cheaper option (its book row
+      keeps the paper contract and the strike it stepped from). Liquidity has no paper twin while live: its live trade is on the
+      cheaper contract, labelled with the strike its signal chose. Each stepped buy is said to Boss and logged, each give-up logged.
+      Its Bot settings switch ("Cheaper strike when funds are short (Boss's exception, 20 Nov)") is on by default and never carried by
+      a backup: off is one tap (it lowers risk), on takes the PIN; every flip is in the Autopilot change timeline with an Undo (an Undo
+      that turns it on takes the PIN). It is the one exception to "anything new that could add live trades starts in shadow", by
+      Boss's choice on 20 Nov.
   - The funds check (Boss, 15 Nov: "Yes" to building it in shadow): an arm's live option buy, index or stock options (the arms' live copies,
     ORB and Liquidity 15+5), that the free cash cannot pay for even one lot. It reads only the free cash the entry already read; unknown, it
     says nothing. In shadow by default (logged and counted, the order goes as before); its Bot settings switch (off by default)

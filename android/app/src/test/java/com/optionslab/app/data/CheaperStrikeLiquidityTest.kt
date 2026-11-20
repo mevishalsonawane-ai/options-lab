@@ -113,6 +113,22 @@ class CheaperStrikeLiquidityTest : RobolectricTest() {
         assertTrue(FundsCheck.recsOf().isEmpty())
     }
 
+    /**
+     * Boss's choice (20 Nov): in approve mode the strike approved with the PIN may be swapped for a cheaper one without asking again; the
+     * approval notice says so beforehand and Boss is alerted after the fill with the strike bought.
+     */
+    @Test fun anApprovedEntryBuysTheCheaperStrikeWithoutAskingAgainAndAlertsAfterTheFill() {
+        com.optionslab.app.work.Alerts.forgetPosted()
+        kite.cash = 5_000.0
+        state()                                                         // approve mode ("auto" off), the signal waiting
+        assertEquals("one PIN approval, no second ask", "Entered at Zerodha (live).", approve())
+        assertEquals(s52100, buys().single().form["tradingsymbol"])
+        assertNull("the approval used up", row().pending)
+        val said = com.optionslab.app.work.Alerts.posted.map { it.text }
+        assertTrue(said.toString(), said.any { it.endsWith("funds short for BANKNIFTY 52000 CE, bought 52100 CE (1 lot)") })
+        assertTrue(OrbArms.CHEAPER_ON_APPROVAL.contains("up to 300 points cheaper"))
+    }
+
     @Test fun aStrikeNotInTheAppsOwnListIsSkippedAndCounted() {
         contracts(listOf(52_000.0, 52_200.0))                          // 52100 listed at Zerodha, not in the app's list
         kite.cash = 5_000.0

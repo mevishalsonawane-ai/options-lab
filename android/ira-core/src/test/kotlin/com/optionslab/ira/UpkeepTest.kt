@@ -31,6 +31,12 @@ class UpkeepTest {
             "github.live.done").forEach { assertFalse(Upkeep.carried(it), it) }
     }
 
+    @Test fun theCheaperStrikesKeysNeverTravel() {
+        // 20 Nov 2026 (Boss's exception): its switch adds live trades (a restore must never switch it on without the PIN), its record is this
+        // phone's, and its one-time timeline mark must never come back from a backup.
+        listOf("cheaperStrike.on", "cheaperStrike.log", "cheaperStrike.onceLogged").forEach { assertFalse(Upkeep.carried(it), it) }
+    }
+
     @Test fun theDayLockNeverTravels() {
         // 08 Oct: the day lock's amount (Bot settings, never by voice) and the day it was reached are this phone's alone, as
         // the guard: a restored backup can never switch it off or raise it.

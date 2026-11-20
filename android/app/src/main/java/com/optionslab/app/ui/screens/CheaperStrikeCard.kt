@@ -55,8 +55,8 @@ internal fun CheaperStrikeCardFlow(view: CheaperStrike.View, said: String?, onOf
 internal fun CheaperStrikeCardContent(view: CheaperStrike.View, said: String?, onSwitch: (Boolean) -> Unit) {
     LedgerCard(title = CheaperStrike.SHORT) {
         Note("R51 Donchian 20, R72 Breadth Donchian and Liquidity 15+5 (every book): a live option buy the free cash cannot pay for even one lot " +
-            "(after the lots are cut 3 -> 2 -> 1), or that Zerodha refuses for funds, moves one strike further out at a time - a put lower, a " +
-            "call higher, same expiry - up to ${CheaperStrike.MAX_STEPS} strikes, and buys 1 lot of the first that fits, through every live gate " +
+            "(after the lots are cut 3 -> 2 -> 1), or that Zerodha refuses for funds, moves 100 points further out at a time - NIFTY 25000 PE to 24900, 24800, 24700; a " +
+            "call higher; same expiry - up to ${CheaperStrike.MAX_STEPS} steps, and buys 1 lot of the first that fits, through every live gate " +
             "again. R51 / R72's paper trade keeps its own strike. Live at once, by your choice (not shadow first).")
         if (!view.loaded) Note("Reading the switch...", Modifier.padding(top = 4.dp))
         else ToggleRow(CHEAPER_STRIKE_SWITCH, if (view.on) "On: such a buy steps to a cheaper strike (1 lot)"

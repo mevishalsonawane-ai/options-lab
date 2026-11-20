@@ -363,7 +363,9 @@ object ArmLive {
                    /** 15 Nov: the paper trade entered with the breakeven rule ([Pos.fixed]; only R51 / R72 ever set it). */
                    val fixed: Boolean = false,
                    /** 16 Nov: and with the fourth version's step lock ([Pos.lock]). */
-                   val lock: Boolean = false)
+                   val lock: Boolean = false,
+                   /** 20 Nov 2026: when the paper fill asked it ([System.nanoTime]): the cheaper strike's 60 s are counted from here ([CheaperStrike]). */
+                   val atNanos: Long = System.nanoTime())
 
     /** The paper trade [ref]'s stop or lock is at [paperLevel] now: the live stop follows on the next look (memory only). */
     fun level(ref: String, paperLevel: Double?) {
@@ -1110,7 +1112,7 @@ object ArmLive {
     }
 
     /** The live (or shadow) entry for [a], when the gate allows it. */
-    private suspend fun enterNow(a: Ask) = entryLock.withLock { enterLocked(a) }
+    private suspend fun enterNow(a: Ask) = entryLock.withLock { enterLocked(a, t0 = a.atNanos) }
 
     /**
      * [enterNow]'s body, under the entry lock. 20 Nov 2026 (Boss's exception, [CheaperStrike]): with [step], the same entry once more on the
@@ -1267,8 +1269,11 @@ object ArmLive {
         val id: String? = try {
             Broker.placeOrder(o, arm = "arm:${a.key}", intended = last, verdict = verdict, stop = a.stop)
         } catch (e: Broker.NotLoggedIn) {
+            step?.sent = false                                      // (nothing reached Zerodha: the arm's own entry decides as before)
             notMirrored(a, "not logged in to Zerodha today", dropIntent = true); return@withLock
         } catch (e: Exception) {
+            // 20 Nov 2026: the app's own door refused the cheaper strike - nothing reached Zerodha, so it never "went".
+            if (CheaperStrike.appRefused(e)) step?.sent = false
             // 15 Nov: Zerodha's own refusal (no id): its try may name the REJECTED order in Zerodha's book. A lost reply, or the app's
             // own refusal at the door (nothing was sent), is left alone.
             if (ArmOrderLabels.zerodhaRefused(e)) ArmOrderLabels.refused(sent)
@@ -1294,7 +1299,7 @@ object ArmLive {
             if (Broker.definite(e)) {
                 // 20 Nov 2026 (Boss's exception): Zerodha's own refusal for funds (a definite answer - never a lost reply) steps to a cheaper
                 // strike once ([stepAfterRefusal]); the stepped order's own refusal is said by it.
-                if (optionBuy && !stepTried && ArmOrderLabels.zerodhaRefused(e) && CheaperStrike.fundsRefused(e.message)) {
+                if (optionBuy && !stepTried && CheaperStrike.definiteRefusal(e)) {
                     stepTried = true
                     if (stepAfterRefusal(a, spec, ins.symbol, ins.exchange, t0, step)) return@withLock
                 }
@@ -1406,6 +1411,8 @@ object ArmLive {
         enterLocked(a.copy(stop = stop, limit = null), pick, t0)
         // (Sent, or the path ended with a row for this paper trade - a shadow trade when Shadow came on meanwhile: one row per paper trade.)
         if (pick.sent || runCatching { lock.withLock { book().positions.any { it.ref == a.ref } } }.getOrDefault(true)) return true
+        // (Its paper trade closed meanwhile: the arm's own entry does not go on either.)
+        (closedWhy(a.ref) ?: detachNotes[a.ref]?.second)?.let { notMirrored(a, "its paper trade is already closed ($it)"); return true }
         // Refused before it went: the arm's own entry goes on; the cheaper strike's refusal stays in the diary, not on the arm's row.
         CheaperStrike.notBought(pick, "refused before it went (${runCatching { lock.withLock { book().refused[a.key] } }.getOrNull() ?: "a gate"})")
         if (before != null) runCatching { lock.withLock {
@@ -1429,9 +1436,9 @@ object ArmLive {
             val b = book()
             if (b.positions.removeAll { it.ref == a.ref && it.open && !it.shadow && it.unconfirmed && it.entryOrderId == null }) save(b)
         } }
-        val free = Broker.keptFreeCash() ?: runCatching { Broker.freeCash() }.getOrNull()
-        val went = stepEntry(a, spec, fromSymbol, exchange, free, CheaperStrike.Trigger.REJECTED, t0)
-        return went
+        // (Read fresh from Zerodha: the kept figure is what let the refused order go. Unknown: no step.)
+        val free = runCatching { Broker.freeCash() }.getOrNull()
+        return stepEntry(a, spec, fromSymbol, exchange, free, CheaperStrike.Trigger.REJECTED, t0)
     }
 
     private fun stopWords(p: Pos): String = when (p.stopKind) { SAFETY -> "safety stop"; DISASTER -> "disaster stop"

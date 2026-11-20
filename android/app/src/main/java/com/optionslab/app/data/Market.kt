@@ -183,6 +183,12 @@ object Market {
         return parseContracts()?.also { mem = stamp to it }
     }
 
+    /**
+     * 20 Nov 2026 ([CheaperStrike]): the parsed list as it is in memory now (null: not read since the start) - no file read, no stat, no
+     * lock, so an entry under an arms' lock never waits on the disk. [bfo]: SENSEX's list.
+     */
+    fun contractsInMemory(bfo: Boolean = false): Pair<LocalDate, List<Upstox.Contract>>? = (if (bfo) bfoMem else mem)?.second
+
     private fun parseContracts(): Pair<LocalDate, List<Upstox.Contract>>? = runCatching {
         val o = JSONObject(contractsFile().readText())
         val day = LocalDate.parse(o.getString("day"))

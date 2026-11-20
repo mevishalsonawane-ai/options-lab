@@ -27,15 +27,20 @@ import kotlin.math.abs
  *    [OrbArms]) - told apart by source ([covers]), never by name. Only an option BUY.
  *  - When: the lots cut (4 Nov: 3 -> 2 -> 1 lots as the free cash fits) runs first. Then (a) before sending, the free cash the entry already
  *    read cannot pay even one lot of the arm's strike at the entry LIMIT plus the fit's room ([LiveMirror.shortOfOneLot]); or (b) Zerodha
- *    REJECTED the entry for funds or margin ([fundsRefused]: a definite answer only - never a lost or unknown reply, which may hide an
- *    order and must never lead to a second entry).
- *  - How: one strike further out at a time on the expiry's own strike grid ([ladder]: a put lower, a call higher; same expiry, side and
- *    exchange - SENSEX on BFO), at most [MAX_STEPS]. A strike that is not listed (or, for Liquidity, not in the app's own contract list), or
- *    has no live quote, is skipped and still counts as a step. The first that one lot fits ([choose]) is bought: ONE lot, never more than
+ *    REJECTED the entry for funds or margin ([fundsRefused], [definiteRefusal]: a definite answer only - never a lost or unknown reply,
+ *    nor Kite's unsure DataException / GeneralException, which may hide an order and must never lead to a second entry). After a refusal
+ *    the free cash is read fresh from Zerodha (the kept figure was what let the refused order go); unknown: no step.
+ *  - Liquidity in approve mode: the strike Boss approved with the PIN may be swapped for a cheaper one (up to 300 points) without asking
+ *    again - Boss's choice, 20 Nov; the approval notice says so and the alert after the fill names the strike bought.
+ *  - How: 100 points further out a step (Boss, 20 Nov: "100-point steps"; an index whose own strike gap is wider uses its gap) - NIFTY
+ *    25000 PE -> 24900 -> 24800 -> 24700, 25000 CE -> 25100 -> 25200 -> 25300 ([ladder]: a put lower, a call higher; same expiry, side
+ *    and exchange - SENSEX on BFO), at most [MAX_STEPS]. A strike that is not listed (or, for Liquidity, not in the app's own contract list,
+ *    or that list not in memory), or has no live quote, is skipped and still counts as a step. The first that one lot fits ([choose]) is bought: ONE lot, never more than
  *    Boss's lots setting. None within three: it gives up and the entry goes on exactly as before (logged).
  *  - Gates: the chosen strike's entry runs the arm's whole live entry path again - PIN / Live / "AI trades go live" / the arm's Trade live,
  *    the guard, the exposure cap and the order door, Kite.refusals, the kill switch, the day lock, Stop for today, the arm's square-off
- *    time ([LiveMirror.tooLate]) - and never more than [CHASE_MS] after the entry began (one bar's decision, never chased later).
+ *    time ([LiveMirror.tooLate]) - and never more than [CHASE_MS] after the entry was asked (R51 / R72: their paper fill's request,
+ *    [ArmLive.Ask.atNanos]; Liquidity: its entry - or Boss's approval - began). One bar's decision, never chased later.
  *  - Paper vs live: R51 / R72's paper trade keeps its own strike; only the live copy holds the cheaper option (its book row keeps the
  *    paper contract and the strike it stepped from). Liquidity has no paper twin while it trades live: its live trade is simply on the
  *    cheaper contract.
@@ -44,17 +49,25 @@ import kotlin.math.abs
  *    the Autopilot change timeline with an Undo (an Undo that turns it on takes the PIN). Each stepped buy is said to Boss and logged;
  *    each give-up is logged; today's counts are on the card, the shared settings file and the daily diagnostics.
  *
- * Off the tick path: nothing here runs on a tick. On an entry it reads only memory ([isOn], the kept instrument lists, the kept free cash)
- * plus, only when the funds are short, ONE quote read for the (at most three) strikes - on the entry's own worker, as the entry's own
- * quote read is. The switch is read once in the background at the start; the record is written in the background.
+ * Off the tick path: nothing here runs on a tick. On an entry it reads the switch and the app's own contract list from memory only
+ * ([isOn], [Market.contractsInMemory]: never a file read under the arms' locks), Zerodha's instrument list as the entry's own lookup does
+ * ([Broker.cachedInstruments]: its memo, the entry has just read it), and - only when the funds are short - ONE quote read for the (at
+ * most three) strikes, plus after a refusal one fresh read of the free cash; all on the entry's own worker, as the entry's own reads are.
+ * The switch is read once in the background at the start; the record is written in the background.
  */
 object CheaperStrike {
-    internal const val K_ON = "g.cheaperStrike.live"
+    // (20 Nov 2026, review: every key under "cheaperStrike." - never carried by a backup nor taken from one ([com.optionslab.ira.Upkeep]):
+    // a restore can never switch it on without the PIN, nor bring the one-time timeline entry back.)
+    internal const val K_ON = "cheaperStrike.on"
     private const val K_LOG = "cheaperStrike.log"
+    /** Set once the update's "switched on for Boss" entry was decided on this phone (logged or not): never decided again. */
+    internal const val K_ONCE = "cheaperStrike.onceLogged"
     private const val KEPT = 300
 
     /** At most this many strikes further out (Boss, 20 Nov). */
     const val MAX_STEPS = 3
+    /** Points a step at least (Boss, 20 Nov: "100-point steps"). */
+    const val STEP_POINTS = 100.0
     /** Never chased later than this after the entry began (one bar's decision, the 60 s the arms' entry waits are counted inside). */
     const val CHASE_MS = 60_000L
     /** Bot settings' card and the diagnostics' name. */
@@ -99,10 +112,33 @@ object CheaperStrike {
     fun init(@Suppress("UNUSED_PARAMETER") context: Context) {
         if (com.optionslab.app.BuildConfig.GOLD) return
         scope.launch {
-            // The update switched it on for Boss (his exception): in the change timeline once, with its Undo (one tap off). (The app's start
-            // only, never a later read: Autopilot's own record keeps it to once.)
-            if (load() && !switched) runCatching { com.optionslab.app.ira.Autopilot.logCheaperStrikeOnOnce() }
+            val never = load()
+            // The update switched it on for Boss (his exception): in the change timeline once, with its Undo (one tap off) - only on a phone
+            // that ran an earlier build (a fresh install had nothing switched for it), and never again once decided ([K_ONCE]: not even
+            // after the timeline prunes the entry).
+            if (onceDue(never, ranBefore(context))) runCatching { com.optionslab.app.ira.Autopilot.logCheaperStrikeOnOnce() }
         }
+    }
+
+    /**
+     * Whether this phone ran an earlier build before this start: the 19 Nov automatic-stops choice marked run, or a live book of the arms on
+     * disk. A worker thread only (a settings read and two file checks).
+     */
+    private fun ranBefore(context: Context): Boolean = runCatching {
+        SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.MIGRATION_KEY, false) ||
+            java.io.File(context.filesDir, "orb.vault").exists() || java.io.File(context.noBackupFilesDir, "arm_live.vault").exists()
+    }.getOrDefault(false)
+
+    /**
+     * The one-time timeline entry's decision: due when the switch was [never] set, Boss has not switched it in this process, it was never
+     * decided on this phone ([K_ONCE]) and the phone [ranBefore] this build. Decided either way, the mark is written, so it is never asked
+     * again. A worker thread only.
+     */
+    internal fun onceDue(never: Boolean, ranBefore: Boolean): Boolean {
+        val decided = runCatching { SecurePrefs.getBoolean(K_ONCE, false) }.getOrDefault(true)
+        if (decided || !never || switched) return false
+        runCatching { SecurePrefs.putAllSoon(mapOf(K_ONCE to true)) }
+        return ranBefore
     }
 
     /**
@@ -136,12 +172,26 @@ object CheaperStrike {
     fun fundsRefused(message: String?): Boolean = message != null &&
         listOf("insufficient funds", "insufficient fund", "margin required", "margin exceeds", "insufficient margin").any { message.contains(it, ignoreCase = true) }
 
+    /** Kite's error types after which an order may still exist ([Broker.sendChecked] rethrows them when its book search found nothing). */
+    private val UNSURE = setOf("DataException", "GeneralException", "NetworkException")
+
+    /**
+     * Whether [e] is Zerodha's own definite refusal for funds: a Kite error of a definite type (InputException, OrderException,
+     * MarginException ...) - never a lost reply, the app's own door, or an unsure error - whose words are a funds refusal.
+     */
+    fun definiteRefusal(e: Throwable): Boolean = e is Broker.KiteError && e.type.endsWith("Exception") && e.type !in UNSURE && fundsRefused(e.message)
+
+    /** The app's own door refused the order before anything reached Zerodha ([Broker.placeOrder]: fingerprint, paper-only, static IP, the door, no login). */
+    fun appRefused(e: Throwable): Boolean = e is Broker.NotLoggedIn ||
+        (e is Broker.KiteError && e.type in setOf("fingerprint", "paper_only", "static_ip", "entry_gate"))
+
     // ---- the stepping itself (pure) -----------------------------------------------------------------------------------------------
 
     /**
-     * The strikes [MAX_STEPS] (or [max]) steps further out from [from] on the expiry's grid: a put lower, a call higher. The grid is the
-     * commonest gap among the ten [listed] strikes nearest [from] (50 for NIFTY near the money, 100 for BANKNIFTY), so a strike missing
-     * from the list still takes its step ("if not present try the next"). Empty for anything but CE / PE, or with no grid.
+     * The strikes [MAX_STEPS] (or [max]) steps further out from [from]: a put lower, a call higher, [STEP_POINTS] a step (Boss: "100-point
+     * steps") - or the expiry's own strike gap where that is wider (the commonest gap among the ten [listed] strikes nearest [from]). Each
+     * step is the listed strike at or beyond its mark, before the next mark; none listed there: the mark itself, which is "not present"
+     * (skipped, and still a step). Empty for anything but CE / PE, or with no grid.
      */
     fun ladder(listed: Collection<Double>, from: Double, right: Right, max: Int = MAX_STEPS): List<Double> {
         if (right != Right.CE && right != Right.PE) return emptyList()
@@ -151,8 +201,16 @@ object CheaperStrike {
         val near = s.sortedBy { abs(it - from) }.take(10).sorted()
         val gap = near.zipWithNext { a, b -> r2(b - a) }.filter { it > 0 }.groupingBy { it }.eachCount()
             .entries.sortedWith(compareByDescending<Map.Entry<Double, Int>> { it.value }.thenBy { it.key }).firstOrNull()?.key ?: return emptyList()
-        val dir = if (right == Right.PE) -1 else 1
-        return (1..max).map { r2(from + dir * it * gap) }.filter { it > 0 }
+        val step = maxOf(gap, STEP_POINTS)
+        return (1..max).mapNotNull { k ->
+            if (right == Right.PE) {
+                val mark = r2(from - k * step)
+                if (mark <= 0) null else s.filter { it <= mark + 1e-6 && it > mark - step + 1e-6 }.maxOrNull() ?: mark
+            } else {
+                val mark = r2(from + k * step)
+                s.filter { it >= mark - 1e-6 && it < mark + step - 1e-6 }.minOrNull() ?: mark
+            }
+        }
     }
 
     private fun r2(x: Double) = Math.round(x * 100) / 100.0
@@ -197,7 +255,9 @@ object CheaperStrike {
                    /** [System.nanoTime] when the entry began. */
                    val t0Nanos: Long, val now: LocalDateTime,
                    /** Liquidity: the cheaper strike must be in the app's own contract list too (its trade is booked on it). */
-                   val needContract: Boolean = false)
+                   val needContract: Boolean = false,
+                   /** The app's own name of the contract the arm chose (Liquidity's label of a stepped trade); null: not given. */
+                   val fromName: String? = null)
 
     /**
      * The cheaper strike chosen: Zerodha's [symbol] on [exchange] ([lot], [tick]), its quote now ([last], [ask]), [steps] strikes out from the
@@ -232,7 +292,11 @@ object CheaperStrike {
         val steps = ladder(same.map { it.strike }, r.fromStrike, r.right)
         if (steps.isEmpty()) return gaveUp(r, "no strike grid for this expiry", 0)
         val ins = steps.map { k -> same.firstOrNull { abs(it.strike - k) < 1e-6 } }
-        val contracts = steps.map { k -> contractFor(r.underlying, r.expiry, k, r.right, r.exchange) }
+        // (The app's own list from memory only - never a file read under the arms' locks. Liquidity books its trade on it: cold, no step this
+        // time. R51 / R72 only read the cheaper option's highs from it: cold, none read.)
+        val mem = contractsInMemory(r.exchange)
+        if (r.needContract && mem == null) return gaveUp(r, "the app's contract list is not in memory yet", 0)
+        val contracts = steps.map { k -> mem?.let { contractIn(it, r.underlying, r.expiry, k, r.right, r.exchange) } }
         // (Liquidity books its trade on the app's own contract: a strike not in that list is "not present" too.)
         val usable = ins.indices.map { i -> ins[i]?.takeIf { !r.needContract || contracts[i] != null } }
         val keys = usable.mapNotNull { it?.let { i -> "${r.exchange}:${i.tradingSymbol}" } }
@@ -260,14 +324,17 @@ object CheaperStrike {
         }
     }
 
-    /** The app's own contract for a strike (today's kept list only: never a download on the entry). */
-    private fun contractFor(und: String, expiry: LocalDate, strike: Double, right: Right, exchange: String): Paper.Contract? = runCatching {
-        val list = (if (exchange == "BFO") Market.cachedBfoContracts() else Market.cachedContracts())?.takeIf { it.first == Market.today() }?.second
-            ?: return null
+    /** Today's app contract list for [exchange], from memory only ([Market.contractsInMemory]); null: not in memory, or another day's. */
+    private fun contractsInMemory(exchange: String): List<com.optionslab.engine.Upstox.Contract>? = runCatching {
+        Market.contractsInMemory(bfo = exchange == "BFO")?.takeIf { it.first == Market.today() }?.second
+    }.getOrNull()
+
+    /** The app's own contract for a strike in [list]. */
+    private fun contractIn(list: List<com.optionslab.engine.Upstox.Contract>, und: String, expiry: LocalDate, strike: Double, right: Right,
+                           exchange: String): Paper.Contract? =
         list.firstOrNull { it.underlying == und && it.expiry == expiry && it.right == right && abs(it.strike - strike) < 1e-6 }?.let { c ->
             Paper.Contract(Paper.symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey, exchange = exchange)
         }
-    }.getOrNull()
 
     /** [r] gave up ([why], after [steps]): logged and counted; the entry goes on as before. Null. */
     private fun gaveUp(r: Req, why: String, steps: Int): Pick? {

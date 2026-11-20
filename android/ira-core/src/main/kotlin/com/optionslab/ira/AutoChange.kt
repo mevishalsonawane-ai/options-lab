@@ -1038,13 +1038,13 @@ object AutoChange {
     /**
      * 20 Nov 2026 (Boss's exception: "if its says insufficient balance for any trade, then try cheaper options increment it 1 by 1"): an
      * R51 / R72 / Liquidity 15+5 live option buy the free cash cannot pay for even one lot (after the lots cut), or that Zerodha refused for
-     * funds, steps one strike further out at a time (at most three) and buys one lot of the first that fits - switched [on], or off again.
+     * funds, steps 100 points further out at a time (at most three) and buys one lot of the first that fits - switched [on], or off again.
      * It ADDS live trades: on raises live risk (the PIN, and so its Undo of an off); off lowers it (one tap, and the Undo of an on).
      */
     fun cheaperStrike(on: Boolean): Change = Change(Kind.PAPER_FILTER, CHEAPER_TARGET, if (on) SWITCHED_OFF else ON, if (on) ON else SWITCHED_OFF,
         if (on) "your ask (20 Nov, \"if its says insufficient balance for any trade, then try cheaper options increment it 1 by 1\"): an R51, R72 " +
             "or Liquidity 15+5 live option buy the free cash cannot pay for even one lot (after the lots cut), or that Zerodha refused for funds, " +
-            "steps one strike further out (a put lower, a call higher; same expiry), at most three, and buys one lot of the first that fits, " +
+            "steps 100 points further out (NIFTY 25000 PE -> 24900 -> 24800 -> 24700; a call higher; same expiry), at most three, and buys one lot of the first that fits, " +
             "through every live gate again. Boss's exception: live at once, not shadow first"
         else "an R51, R72 or Liquidity live buy the cash cannot pay for is no longer moved to a cheaper strike (it goes, or is skipped, as before)",
         Evidence(0, 0.0, AgentLessons.Confidence.WEAK), if (on) Risk.RAISE else Risk.LOWER, Scope.LIVE,

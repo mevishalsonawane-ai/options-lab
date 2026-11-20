@@ -57,9 +57,10 @@ class CheaperStrikeArmLiveTest : RobolectricTest() {
         kite.quote("NFO:$s52200", 100.0, 99.95, 100.05)
         kite.quote("NFO:BANKNIFTY26OCT52300CE", 60.0, 59.95, 60.05)
         runBlocking { Broker.instruments() }
-        // The app's own list (the cheaper option's highs are read from it).
+        // The app's own list (the cheaper option's highs are read from it), in memory as the paper books' reads leave it.
         AutomationSupport.contracts(context, listOf(52_000.0, 52_100.0, 52_200.0).map {
             Upstox.Contract("BANKNIFTY", expiry, it, Right.CE, 30, "NSE_FO|C${it.toInt()}", "BANKNIFTY-TEST-${it.toInt()}CE") })
+        Market.cachedContracts()
         IraNewsTrades.paperFirst = false
         ArmLive.testSync = true
         ArmLive.testDefaultOff = false
@@ -170,6 +171,43 @@ class CheaperStrikeArmLiveTest : RobolectricTest() {
         kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "RMS:Trigger price is outside the circuit limit")
         ArmLive.entered(ask(r72, "other"))
         assertEquals(listOf(sym), buys().map { it.form["tradingsymbol"] })
+    }
+
+    /**
+     * After Zerodha's funds refusal the free cash is read FRESH: the kept figure (Rs 5 lakh, what let the order go) would pick 52100; the
+     * fresh Rs 3,500 fits only 52200 - so 52200 is bought.
+     */
+    @Test fun afterARefusalTheFreeCashIsReadFresh() {
+        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "Insufficient funds. Required margin is 6000.00 but available margin is 3500.00.")
+        // (The guard's drawdown peak follows the smaller account, as a payout restarted it would: this test is about the step.)
+        kite.afterNext("/orders/regular") { kite.cash = 3_500.0; SecurePrefs.put("guard.peak.live", 3_500.0) }
+        ArmLive.entered(ask(r72, "fresh"))
+        assertEquals(listOf(sym, s52200), buys().map { it.form["tradingsymbol"] })
+        assertEquals(2, CheaperStrike.recsOf().single().steps)
+    }
+
+    /** Kite's unsure GeneralException (the order may exist; its book search found nothing) never steps, whatever its words. */
+    @Test fun anUnsureErrorWithFundsWordsNeverSteps() {
+        kite.nextPlace(FakeKite.Reply.GENERAL_EXCEPTION, message = "Insufficient funds.")
+        ArmLive.entered(ask(r72, "unsure"))
+        assertTrue(buys().none { it.form["tradingsymbol"] != sym })
+        assertTrue(CheaperStrike.recsOf().isEmpty())
+    }
+
+    /**
+     * The cheaper strike refused by a gate before it went (Zerodha holds it the other way): the arm's own entry goes on as before, and
+     * the refusal's notes on its row are taken back.
+     */
+    @Test fun aSteppedPassRefusedAtAGateLetsTheEntryGoOnAndRollsItsNotesBack() {
+        kite.cash = 5_000.0
+        kite.position(s52100, -30, 150.0, product = "MIS")             // held short at Zerodha (MIS): no live buy against it
+        ArmLive.entered(ask(r72, "gated"))
+        assertEquals(listOf(sym), buys().map { it.form["tradingsymbol"] })
+        assertEquals(sym, view().openReal.single().symbol)
+        assertTrue("its row is not 'not mirrored'", view().notMirrored.none { it.ref == "gated" })
+        assertNull("no refusal left on its row", view().refused[r72])
+        val r = CheaperStrike.recsOf().single()
+        assertFalse(r.bought); assertTrue(r.why, r.why.startsWith("refused before it went"))
     }
 
     /** A lost reply (the order may exist) never steps: no second entry on an unknown. */

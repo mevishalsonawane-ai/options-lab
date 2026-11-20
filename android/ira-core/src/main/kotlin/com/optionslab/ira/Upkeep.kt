@@ -70,7 +70,10 @@ object Upkeep {
         "regime.", "learn.freeze",
         // GitHub sync (13 Oct, TODO G1/G2): the token (PIN-sealed, and the device copy the evening upload uses), the backup
         // passphrase's keys and the upload record are this phone's alone - a backup never carries a token or a key.
-        "github.")
+        "github.",
+        // 20 Nov 2026 (Boss's exception, the cheaper strike): its switch adds live trades (on takes the PIN, so a file must never switch
+        // it on), its record is this phone's, and its one-time timeline mark must never come back from a backup.
+        "cheaperStrike.")
 
     /** May the setting [key] go into a backup, or be taken from one? */
     fun carried(key: String): Boolean = PRIVATE.none { key.startsWith(it) }
