@@ -1885,7 +1885,7 @@ object Broker {
     @Volatile internal var lostLookGapMsForTest: Long? = null
 
     /** What [lookLost] found: the order, still looking (UNKNOWN: send nothing), or given up on (Boss told; the caller may go on). */
-    sealed class LostLook { data class Found(val id: String, val qty: Int) : LostLook(); object Searching : LostLook(); object GaveUp : LostLook() }
+    sealed class LostLook { data class Found(val id: String, val qty: Int, val trigger: Double? = null) : LostLook(); object Searching : LostLook(); object GaveUp : LostLook() }
 
     /** [o] ([what], for Boss's words) was sent under [key], its reply lost and not found in the book yet ([known]: never adopted). */
     fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String) {
@@ -1909,7 +1909,7 @@ object Broker {
             if (found != null) {
                 lostWrites.remove(key, w)
                 runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
-                return LostLook.Found(found, w.order.quantity)
+                return LostLook.Found(found, w.order.quantity, w.order.triggerPrice)
             }
         }
         if (now - w.sinceMs < (lostSearchMsForTest ?: LOST_SEARCH_MS)) return LostLook.Searching

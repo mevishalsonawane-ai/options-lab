@@ -3519,9 +3519,9 @@ object OrbArms {
         var refused = false
         // 20 Nov 2026 (audit B5 deep review): a stop of this contract whose reply was lost and is not found yet is UNKNOWN: looked for
         // again here, and no second stop is sent beside it while it may rest ([Broker.lookLost], two minutes; then Boss is told).
-        val lostKey = "orbstop:$label:$sym"
+        val lostKey = "orbstop:$label:$sym:$qty:$fill"
         when (val l = Broker.lookLost(lostKey)) {
-            is Broker.LostLook.Found -> { Strategies.tagOwner("kite:${l.id}", "$label · stop"); return Triple(l.id, trigger, false) }
+            is Broker.LostLook.Found -> { Strategies.tagOwner("kite:${l.id}", "$label · stop"); return Triple(l.id, l.trigger ?: trigger, false) }
             Broker.LostLook.Searching -> return Triple(null, trigger, false)
             else -> Unit
         }

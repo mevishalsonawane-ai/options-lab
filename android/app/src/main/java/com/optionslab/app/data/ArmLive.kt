@@ -1573,7 +1573,7 @@ object ArmLive {
             is Broker.LostLook.Found -> {
                 placedStops += l.id
                 runCatching { Strategies.tagOwner("kite:${l.id}", "${spec.label} · live ${stopWords(p)}") }
-                return p.copy(stopOrderId = l.id, stopTrigger = trigger, stopBooked = 0, stopQty = l.qty)
+                return p.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: trigger, stopBooked = 0, stopQty = l.qty)
             }
             Broker.LostLook.Searching -> return p.copy(stopTrigger = trigger)
             else -> Unit

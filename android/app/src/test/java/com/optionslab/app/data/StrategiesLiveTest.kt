@@ -362,6 +362,29 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue("no GTT beside it", kite.gtts.isEmpty())
     }
 
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a leg's stop whose reply is lost and that the book does not show yet is UNKNOWN - looked for on
+     * the next looks, never a second SL beside it; once the book shows it, it is the leg's stop.
+     */
+    @Test fun aLegsStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, restingStops().size)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("no second stop while its lost reply is looked for", 1, restingStops().size)
+        kite.showInBook()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("one stop, never two", 1, restingStops().size)
+        assertEquals(1, kite.orders.values.count { it.type == "SL" })
+    }
+
     @Test fun aCarriedLegsStopRestsAtZerodhaAsOneGttNeverADaySlOrder() {
         live()
         midSession()

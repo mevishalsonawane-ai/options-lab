@@ -314,11 +314,6 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
     }
 
     /**
-     * Coordinator, 20 Nov 2026: the kill switch turned on by anything but Boss's own switch (the guard tripping, Jarvis, voice,
-     * Autopilot - all through [AppSettings.killSoon] or [AppSettings.saveChanged]) only LOGS the bots' entries it would cancel; Boss's own
-     * switch cancels them ([Broker.killEntriesSoon] with act), and a logging request never replaces his.
-     */
-    /**
      * 20 Nov 2026 (deep review): a sweep still due after Boss's kill switch is cleared never cancels a bot's entry sent after it - each
      * sweep reads the switch first, and clearing it ends the sweeps at once.
      */
@@ -381,6 +376,11 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
         assertNull(Broker.lookLost("k2"))
     }
 
+    /**
+     * Coordinator, 20 Nov 2026: the kill switch turned on by anything but Boss's own switch (the guard tripping, Jarvis, voice,
+     * Autopilot - all through [AppSettings.killSoon] or [AppSettings.saveChanged]) only LOGS the bots' entries it would cancel; Boss's own
+     * switch cancels them ([Broker.killEntriesSoon] with act), and a logging request never replaces his.
+     */
     @Test fun onlyBossesOwnSwitchCancelsTheGuardAndJarvisOnlyLog() = runBlocking {
         kite.nextPlace(outcome = Outcome.OPEN)
         val entry = order(price = 100.0, tag = bot)
