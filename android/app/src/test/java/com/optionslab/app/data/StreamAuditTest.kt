@@ -253,6 +253,7 @@ class StreamAuditTest : RobolectricTest() {
         assertEquals("5 s budget, nothing spent: 4 s for the gate, 1 s kept for the call", 4_000L, Broker.mainGateWaitMs(5_000L, 0L))
         assertTrue("its time spent: no slot taken", Broker.mainGateWaitMs(5_000L, 4_500L) <= 0L)
         assertTrue(Broker.mainGateWaitMs(5_000L, 6_000L) <= 0L)
+        assertEquals("an order poll's last 1 s read: half of it to wait for a slot", 500L, Broker.mainGateWaitMs(1_000L, 0L))
     }
 
     /** B5 merge review: the minute lane's follow-up live look runs when a paper-only arm held something before its exits, or still does. */

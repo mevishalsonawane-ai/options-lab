@@ -195,6 +195,29 @@ class ExpirySquareOffTest : RobolectricTest() {
         assertTrue("no false 'cannot tell when it expires' notice", texts().none { it.contains("cannot tell when it expires") })
     }
 
+    /**
+     * B5 review: a SENSEX list fetched before the morning's dump already lists today's expiries, so an expiring SENSEX position is
+     * closed at 15:05 from it - even while today's list cannot be read again - and no "cannot tell when it expires" notice is said.
+     */
+    @Test fun aSensexListFromBeforeTheDumpStillClosesItsExpiryAt1505() {
+        val sx = "SENSEX26OCT82000CE"
+        kite.instruments += FakeKite.Ins(2_002, sx, "SENSEX", today, 82_000.0, "CE", 20, exchange = "BFO")
+        kite.quote("BFO:$sx", 50.0, 49.9, 50.1)
+        kite.position(sx, 40, 60.0, exchange = "BFO")
+        Broker.resetBfoForTest()
+        Market.testClock = java.time.Clock.fixed(today.atTime(7, 50).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+        try {
+            assertEquals(1, runBlocking { Broker.bfoOptionsNow() }.count { it.tradingSymbol == sx })   // read at 07:50, before the dump
+            kite.drop += "/instruments/BFO"                                                          // today's cannot be read again
+            Market.testClock = java.time.Clock.fixed(today.atTime(15, 5).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+            assertTrue("not today's for the notice", Broker.currentBfoOptions() == null)
+            at(15, 5); pass()
+            val o = kite.placed.single().form
+            assertEquals(listOf(sx, "SELL", "40", "BFO"), listOf(o["tradingsymbol"], o["transaction_type"], o["quantity"], o["exchange"]))
+            assertTrue("no false 'cannot tell when it expires' notice", texts().none { it.contains("cannot tell when it expires") })
+        } finally { Market.testClock = null; kite.drop -= "/instruments/BFO" }
+    }
+
     @Test fun shortsAreBoughtBackBeforeLongsAreSold() {
         kite.position(ce, 75, 20.0)
         kite.position(pe, -150, 30.0)

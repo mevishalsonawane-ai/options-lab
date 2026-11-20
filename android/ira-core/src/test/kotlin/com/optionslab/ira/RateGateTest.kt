@@ -195,6 +195,8 @@ class RateGateTest {
         assertTrue(g.tryTake(RateGate.Priority.EXIT) > 0)
         g.giveBack(12_345L)                                                     // not a slot: nothing changes
         assertEquals(2L, g.taken)
+        assertEquals(null, g.acquireStamp(RateGate.Priority.EXIT, 0L), "full, no time to wait: nothing taken")
+        assertEquals(2L, g.taken)
     }
 
     /**

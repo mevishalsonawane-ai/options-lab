@@ -101,8 +101,13 @@ object Broker {
     /** B5 merge review: what a budgeted read keeps for the call itself after its waits (else it gives up before taking a slot). */
     const val MIN_CALL_MS = 1_000L
 
-    /** B5 merge review: how long a read with [budget], [spentMs] into it, may wait for the main gate (0 or less: none - no slot). Pure. */
-    internal fun mainGateWaitMs(budget: Long, spentMs: Long): Long = budget - spentMs.coerceAtLeast(0L) - MIN_CALL_MS
+    /**
+     * B5 merge review: how long a read with [budget], [spentMs] into it, may wait for the main gate (0 or less: none - no slot). It keeps
+     * [MIN_CALL_MS] for the call - or half the budget for a short one (B5 review: an order poll's last 1 s read waits up to half of it
+     * for a slot rather than failing at once). Pure.
+     */
+    internal fun mainGateWaitMs(budget: Long, spentMs: Long): Long =
+        budget - spentMs.coerceAtLeast(0L) - (if (budget < 2 * MIN_CALL_MS) budget / 2 else MIN_CALL_MS)
 
     /**
      * B5 merge review: the most a call under it waits for the request budget and for its quote turn ([quoteRate]) - a live copy's entry
@@ -1733,8 +1738,20 @@ object Broker {
     /** 3 Nov: today's SENSEX options, read now when not yet in memory (a worker thread only: the morning check). */
     suspend fun bfoOptionsNow(): List<Kite.Instrument> {
         currentBfoOptions()?.let { return it }
+        // (B5 review: a background read already on its way is waited for - 15 s at most - never a second download beside it.)
+        val until = System.nanoTime() / 1_000_000L + 15_000L
+        while (bfoLoading.get() && System.nanoTime() / 1_000_000L < until) kotlinx.coroutines.delay(100)
+        currentBfoOptions()?.let { return it }
         runCatching { readBfoFile() }.getOrNull()?.let { keepBfo(it.first, it.second); return it.first }
-        val text = call("GET", "/instruments/BFO", raw = true) as String
+        val text = try { call("GET", "/instruments/BFO", raw = true) as String } catch (e: Exception) {
+            // (B5 review: today's could not be read - the list in memory, fetched before the morning's dump, still answers, with a note.)
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            cachedBfoOptions()?.let { earlier ->
+                runCatching { Diag.record("zerodha", "SENSEX's list for today could not be read (${e.javaClass.simpleName}): the earlier one (before the morning's dump) is used") }
+                return earlier
+            }
+            throw e
+        }
         return Kite.parseInstruments(text.lineSequence(), setOf("SENSEX"), segment = "BFO-OPT").also {
             keepBfo(it, Market.now().toLocalDateTime())
             runCatching { writeBfoFile(it) }

@@ -1141,12 +1141,13 @@ object ArmLive {
         // (B5 merge review, 20 Nov 2026: first in the entries' lane for 2 s at most - behind any held stop's read waiting for the same quote
         // turn - and, only when no turn came, in the stop checks' lane, as before the quote queue: it never times out and skips the live
         // copy, and takes a stop read's turn only when the stops kept the queue busy for 2 s.)
-        // (Never an old tick from the first try: one that got no turn falls through to the fresh read.)
-        val quote = runCatching {
+        // (Never an old tick from the first try: one that got no turn falls through to the fresh read. B5 review: one 2 s deadline for
+        // the whole first try - its waits and its call - on its own job ([Broker.within]), so the time here stays about 2 s plus one read.)
+        val quote = Broker.within(LIVE_ENTRY_QUOTE_WAIT_MS) {
             kotlinx.coroutines.withContext(Broker.QuoteQueueCap(LIVE_ENTRY_QUOTE_WAIT_MS)) {
                 Broker.stopQuotes(listOf(qkey), com.optionslab.ira.RateGate.Priority.ENTRY, staleFallback = false)[qkey]
             }
-        }.getOrNull() ?: runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
+        } ?: runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
         // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; "make it default, don't have one
         // more option"): an index option buy of more than one lot is cut to the lots the free cash fits - only ever fewer than his
