@@ -185,13 +185,14 @@ class NightArmOffShadowTest : RobolectricTest() {
             runBlocking { NightArm.tick() }
             assertTrue(NightArm.view.value.status["NIFTY"].orEmpty(), NightArm.view.value.status["NIFTY"].orEmpty().startsWith("night_retrying"))
             at(day, LocalTime.of(15, 20, 31))                       // past its 10 s back-off
+            val shadowLines0 = shadowLines()
             runBlocking { NightArm.tick() }
             val said = NightArm.view.value.status["NIFTY"].orEmpty()
             assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
             assertEquals(1, NightArm.view.value.open.size)
             assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
             Diag.flush()
-            assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
+            assertEquals("this test's own shadow line: ${Diag.lines()}", shadowLines0 + 1, shadowLines())
         } finally {
             NightArm.forgetRetriesForTest()
         }
@@ -213,13 +214,14 @@ class NightArmOffShadowTest : RobolectricTest() {
             at(day, LocalTime.of(15, 20, 31))                       // past its 10 s back-off
             // (Review: the memory of the failed try gone, as after a restart - the mark kept with the book still makes it a retry.)
             NightArm.forgetRetriesForTest()
+            val shadowLines0 = shadowLines()
             runBlocking { NightArm.tick() }
             val said = NightArm.view.value.status["NIFTY"].orEmpty()
             assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
             assertEquals(1, NightArm.view.value.open.size)
             assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
             Diag.flush()
-            assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
+            assertEquals("this test's own shadow line: ${Diag.lines()}", shadowLines0 + 1, shadowLines())
         } finally {
             NightArm.forgetRetriesForTest()
         }
@@ -255,18 +257,23 @@ class NightArmOffShadowTest : RobolectricTest() {
             try { runBlocking { NightArm.tick() } } catch (_: kotlinx.coroutines.CancellationException) {}
             assertTrue(cancelled)
             assertTrue("nothing bought by the cancelled look", NightArm.view.value.open.isEmpty())
+            assertTrue(NightArm.view.value.status["NIFTY"].orEmpty(), NightArm.view.value.status["NIFTY"].orEmpty().contains("cancelled before its order"))
             at(day, LocalTime.of(15, 20, 31))
             NightArm.forgetRetriesForTest()                         // (the mark is the book's, not the back-off's memory)
+            val shadowLines0 = shadowLines()
             runBlocking { NightArm.tick() }
             val said = NightArm.view.value.status["NIFTY"].orEmpty()
             assertTrue("bought on paper: $said", said.startsWith("night_buy_ce"))
             assertTrue("never handed to the live path: $heard", heard.none { it.startsWith("entered|") })
             Diag.flush()
-            assertTrue(Diag.lines().toString(), Diag.lines().any { it.contains("would have gone live (Night retry)") })
+            assertEquals("this test's own shadow line: ${Diag.lines()}", shadowLines0 + 1, shadowLines())
         } finally {
             NightArm.forgetRetriesForTest()
         }
     }
+
+    /** How many "would have gone live (Night retry)" lines the diary holds now (Diag is shared by the tests: compared before and after). */
+    private fun shadowLines(): Int { Diag.flush(); return Diag.lines().count { it.contains("would have gone live (Night retry)") } }
 
     /** The 1-ITM call (24,600 CE) trades every minute from 15:00 to [until] at 100, so a paper buy at the 15:20 decision fills. */
     private fun callPricedThrough(until: LocalTime) {

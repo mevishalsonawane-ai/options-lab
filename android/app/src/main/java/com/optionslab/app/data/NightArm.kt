@@ -385,10 +385,16 @@ object NightArm {
                     val why = try {
                         decide(b, u, now)
                     } catch (e: kotlinx.coroutines.CancellationException) {
-                        // (Review: a look cancelled once its order was sent keeps the day decided - never a second buy. Final review: one
-                        // cancelled before it un-decides the day and is marked a retry, saved with the book, so the next decision's live
-                        // copy stays in shadow - main had no such route to a live entry.)
-                        if (key !in sent) { b.decided -= key; b.decided += "$key|retried"; rollBackHistory(b, u, histBefore) }
+                        // (Review: a look cancelled once its order was sent keeps the day decided - never a second buy.)
+                        // 20 Nov 2026 (B5, final review, coordinator's call): one cancelled before its order un-decides the day (so the
+                        // decision is made again on the next look, a route to an entry this branch added) and is marked a retry, saved with
+                        // the book, so that decision's live copy stays in shadow. Said in the status and the notes, as a failed try is.
+                        if (key !in sent) {
+                            b.decided -= key; b.decided += "$key|retried"; rollBackHistory(b, u, histBefore)
+                            val w = "night_retrying: the look was cancelled before its order (decided again on the next look, until ${NightRules.ENTRY_UNTIL})"
+                            b.status[u] = w
+                            note(b, "$u ${now.toLocalTime().withNano(0)}: $w")
+                        }
                         changed = true
                         cancelled = e; break
                     } catch (e: Throwable) {
