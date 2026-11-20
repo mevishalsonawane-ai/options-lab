@@ -241,6 +241,8 @@ object SettingsShare {
         out += line("Exit rule V4 / V5") { StepTrailExits.line() }
         out += "Exit rule switches: V4 (breakeven at +10%) ${onOff(runCatching { StepTrailExits.isOn() }.getOrNull())} · V5 lock on top ${onOff(runCatching { StepTrailExits.lockOn() }.getOrNull())}"
         out += line("Funds check") { FundsCheck.line() }
+        // (20 Nov 2026, audit B5: the order count check, shadow by default.)
+        out += line("Order count check") { OrderCountCheck.line() }
         out += line("Same-direction cap") { ExposureCapHost.line() }
         out += line("Same-direction cap, only logged") { ExposureCapHost.onlyLoggedLine() }
         out += line("Same-direction cap switches") { ExposureCapHost.view.value.let { "Same-direction cap switches: paper ${onOff(it.paperOn)}, live ${onOff(it.liveOn)}, max ${it.max}" } }

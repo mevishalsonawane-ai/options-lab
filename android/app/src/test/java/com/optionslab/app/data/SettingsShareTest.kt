@@ -71,7 +71,7 @@ class SettingsShareTest : RobolectricTest() {
         // Every arm the live path copies, the stops and the saved settings.
         for (w in listOf("R51 Donchian 20 [", "R72 Breadth Donchian", "Gates: ", "A live entry now: ", "Arms' live-copies account stop",
                 "Daily loss limit:", "Day lock:", "Liquidity's live stop rule", "Weekly loss stop", "liveMarkets: ", "armLiveLots: ",
-                "Exit coordinator", "R151 picker", "Paper refusals go live", "Funds check", "Trade manager modes"))
+                "Exit coordinator", "R151 picker", "Paper refusals go live", "Funds check", "Order count check", "Trade manager modes"))
             assertTrue(w, text.contains(w))
         // Not cut: the whole report and today's 200 diary lines of the arms' live path.
         assertTrue("${lines.size} lines", lines.size > 140)
