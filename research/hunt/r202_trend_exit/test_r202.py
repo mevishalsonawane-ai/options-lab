@@ -365,3 +365,8 @@ def test_twin_p_normal_p_skip_twins_bh():
     q = G.bh_total([1e-9, 0.5], 4868)
     assert q[0] == pytest.approx(1e-9 * 4868) and q[1] == 1.0
     assert G.bh_total([0.01, 0.02], 2) == pytest.approx([0.02, 0.02])
+
+
+def test_no_trade_changed_means_no_twin_test():
+    assert G.p_for_bh(0, 0.0) == 1.0 and G.p_for_bh(0, 0.3) == 1.0      # Amendment A
+    assert G.p_for_bh(5, 0.0) == 0.0 and G.p_for_bh(41, 0.02) == 0.02

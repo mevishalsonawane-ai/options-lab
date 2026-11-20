@@ -177,3 +177,15 @@ with gaps, a holiday gap in the EMA / Supertrend carry, an entry too late for an
 market-closed minutes (NaN), the opposite-signal row, the earlier-of with the arm's own index exit, the bucket functions
 (unknown value), the day loss cap and two-losers rule (only closed trades count), the windows, the statistics, the gate
 (each item fails alone), twin p and BH.
+
+## Amendment A (20 Nov 2026, AFTER the holdout read; no rule, no gate item and no verdict changes)
+
+Found when the gate was first computed: a rule that changed or removed **no trade** in the holdout (16 of the 60, for
+example an opposite arm signal that never arrived while a trade was open) has twins that all equal the rule itself. Its
+normal-tail p should be 1, but float rounding (twin sd = 0, the rule's total a hair above the twins') turned it into 0 for
+six of them, which gave those six a BH q near 0 and made every other rule's q a little smaller than it should be.
+
+Fix (`r202lib.p_for_bh`, `r202study.decide`): a rule with no changed / removed trade in the holdout has no twin test and
+enters BH with p = 1. Effect: the six false q values become 1 and no other q falls. **0 of 60 tests passed before the fix
+and 0 of 60 pass after it**; all sixteen already failed item 5 (fewer than 40 trades changed). Nothing was re-run on data:
+only `decide` and the report were re-computed from the same `final.json`.

@@ -1,0 +1,40 @@
+id: r203-r51-w-vix
+title: 'R203 R51 Donchian 20 + Supertrend: skip the worst VIX regime (walk-forward), on top of today''s rule (V5)'
+family: daily-filters
+date: '2026-11-20'
+doc: research/hunt/r202_trend_exit/results/report.md
+hypothesis: On R51 Donchian 20 + Supertrend, 'skip the worst VIX regime (walk-forward)' on top of today's rule (V5) is better
+  than V5 alone in design and holdout (higher net, or within 5% with drawdown and worst month 20% smaller), in 3 of 4 walk-forward
+  quarters, with no higher drawdown, better than random twins, after BH
+data_version: the dhan-data branch of options-lab (Dhan v2, fetched 6 Oct 2026) in the lake's layout (r202data.py); R51 clean
+  stores 21 Nov 2024 - 5 Oct 2026 built here; reproduces R193's months within 2.5%
+period:
+  design: 2024-11-21..2026-03-31 (four walk-forward quarters Apr 2025 - Mar 2026)
+  holdout: 2026-04-01..2026-10-05, read once (results/HOLDOUT_READ); locked for these rules only
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (the trade''s own index; the five indices for breadth; NIFTY for the market rule; the arms'' own
+  index signals)'
+- buy the option; stops, breakevens and locks on the premium
+model_or_rule: 'W-vix: skip the worst VIX regime (walk-forward) (r202lib.py; r186engine.price with today''s breakeven and
+  lock)'
+settings: research/hunt/r202_trend_exit/r202cfg.py; PREREG.md sections 3-4
+prereg: research/hunt/r202_trend_exit/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 1403 tr, 63.44% win, Rs 113,057, DD Rs 76,457, worst month Rs -36,762, avg loss Rs -1,681 (B: 2170 tr,
+    62.58% win, Rs 147,686, DD Rs 85,937, worst month Rs -36,762, avg loss Rs -1,579); 767 trades changed / removed; holdout
+    652 tr, 60.43% win, Rs 43,680, DD Rs 45,825, worst month Rs -29,871, avg loss Rs -1,429 (B: 652 tr, 60.43% win, Rs 43,680,
+    DD Rs 45,825, worst month Rs -29,871, avg loss Rs -1,429); 0 trades changed / removed; holdout twin p 1.0000, BH q 1 (m
+    = 4,868). Does not pass: design: net 113,057 not better than B''s 147,686; holdout: net 43,680 not better than B''s 43,680;
+    holdout: 0 trades changed / removed < 40; walk-forward: better in 1 of 4 design quarters < 3; holdout twin p 1.0000 >=
+    0.05; BH q 1 > 0.1'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Stays a note unless Boss makes it an exception.

@@ -395,6 +395,12 @@ def normal_p(actual: float, twins: np.ndarray) -> float:
     return float(0.5 * math.erfc(z / math.sqrt(2.0)))
 
 
+def p_for_bh(changed: int, p_normal: float) -> float:
+    """Amendment A: a rule that changed or removed no trade in the window has no twin test, so its p is 1 (its twins all
+    equal the rule; float rounding must not turn that into p = 0)."""
+    return 1.0 if int(changed) <= 0 else float(p_normal)
+
+
 def skip_twins(nets: np.ndarray, k: int, n: int, rng) -> np.ndarray:
     """Totals of n twins: k of the trades removed at random (the skip twin)."""
     nets = np.asarray(nets, float)

@@ -318,14 +318,15 @@ def final() -> dict:
 
 def decide() -> dict:
     r = json.loads((K.RESULTS / "final.json").read_text())
-    ps = [r[a][rule]["twin"]["holdout"]["p_normal"] for a, rule in K.TESTS]
+    ps = [G.p_for_bh(r[a][rule]["changed"]["holdout"], r[a][rule]["twin"]["holdout"]["p_normal"]) for a, rule in K.TESTS]
     qs = G.bh_total(ps, K.M_TOTAL)
     qf = G.bh_total(ps, len(K.TESTS))
     out = {"m_total": K.M_TOTAL, "tests": {}}
     for (a, rule), q, q60 in zip(K.TESTS, qs, qf):
         v, b = r[a][rule], r[a]["B"]
         g = G.gate(v["windows"], b["windows"], v["folds"], b["folds"], v["changed"], v["twin"]["holdout"]["p"], q)
-        g.update(arm=a, rule=rule, study=K.STUDY[rule], p_normal=v["twin"]["holdout"]["p_normal"], q_family=q60,
+        g.update(arm=a, rule=rule, study=K.STUDY[rule],
+                 p_normal=G.p_for_bh(v["changed"]["holdout"], v["twin"]["holdout"]["p_normal"]), q_family=q60,
                  design_twin_p=v["twin"]["design"]["p"])
         out["tests"][f"{a}:{rule}"] = g
     out["passes"] = [k for k, g in out["tests"].items() if g["passes"]]

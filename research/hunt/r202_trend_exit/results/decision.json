@@ -1,0 +1,1205 @@
+{
+ "m_total": 4868,
+ "tests": {
+  "R72:X1": {
+   "passes": false,
+   "fails": [
+    "design: 2 trades changed / removed < 40",
+    "holdout: net 98,609 not better than B's 98,609",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X1",
+   "study": "R202",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.93653
+  },
+  "R51:X1": {
+   "passes": false,
+   "fails": [
+    "design: net 142,504 not better than B's 147,686",
+    "design: max drawdown 91,770 above B's 85,937",
+    "design: 3 trades changed / removed < 40",
+    "holdout: 1 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.7002 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.70015,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X1",
+   "study": "R202",
+   "p_normal": 0.758326174364206,
+   "q_family": 1.0,
+   "design_twin_p": 0.994
+  },
+  "LIQ:X1": {
+   "passes": false,
+   "fails": [
+    "design: net 214,915 not better than B's 231,580",
+    "design: 10 trades changed / removed < 40",
+    "holdout: net 11,087 not better than B's 11,087",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X1",
+   "study": "R202",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.96152
+  },
+  "R72:X2": {
+   "passes": false,
+   "fails": [
+    "design: net 232,769 not better than B's 232,769",
+    "design: 0 trades changed / removed < 40",
+    "holdout: net 98,609 not better than B's 98,609",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X2",
+   "study": "R202",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:X2": {
+   "passes": false,
+   "fails": [
+    "design: net 141,220 not better than B's 147,686",
+    "design: max drawdown 92,403 above B's 85,937",
+    "design: 1 trades changed / removed < 40",
+    "holdout: 1 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.4113 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.41129,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X2",
+   "study": "R202",
+   "p_normal": 0.5280495726307486,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "LIQ:X2": {
+   "passes": false,
+   "fails": [
+    "design: net 217,000 not better than B's 231,580",
+    "design: 7 trades changed / removed < 40",
+    "holdout: net 11,087 not better than B's 11,087",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X2",
+   "study": "R202",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.91504
+  },
+  "R72:X3": {
+   "passes": false,
+   "fails": [
+    "design: 2 trades changed / removed < 40",
+    "holdout: net 98,609 not better than B's 98,609",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X3",
+   "study": "R202",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.93703
+  },
+  "R51:X3": {
+   "passes": false,
+   "fails": [
+    "design: net 142,504 not better than B's 147,686",
+    "design: max drawdown 91,770 above B's 85,937",
+    "design: 3 trades changed / removed < 40",
+    "holdout: 1 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.4013 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.4013,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X3",
+   "study": "R202",
+   "p_normal": 0.5269025888640606,
+   "q_family": 1.0,
+   "design_twin_p": 0.997
+  },
+  "LIQ:X3": {
+   "passes": false,
+   "fails": [
+    "design: net 214,915 not better than B's 231,580",
+    "design: 10 trades changed / removed < 40",
+    "holdout: net 11,087 not better than B's 11,087",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X3",
+   "study": "R202",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.96052
+  },
+  "R72:X4": {
+   "passes": false,
+   "fails": [
+    "design: net 186,831 not better than B's 232,769",
+    "holdout: net 82,344 not better than B's 98,609",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X4",
+   "study": "R202",
+   "p_normal": 0.999999778632917,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:X4": {
+   "passes": false,
+   "fails": [
+    "design: net 97,656 not better than B's 147,686",
+    "design: max drawdown 124,387 above B's 85,937",
+    "holdout: net 4,733 not better than B's 43,680",
+    "holdout: max drawdown 51,337 above B's 45,825",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X4",
+   "study": "R202",
+   "p_normal": 0.9999999958354795,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "LIQ:X4": {
+   "passes": false,
+   "fails": [
+    "design: net 194,214 not better than B's 231,580",
+    "holdout: net 7,998 not better than B's 11,087",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.9970 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.997,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X4",
+   "study": "R202",
+   "p_normal": 0.9984817998899468,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R72:X5": {
+   "passes": false,
+   "fails": [
+    "design: net 226,043 not better than B's 232,769",
+    "design: 38 trades changed / removed < 40",
+    "holdout: 14 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.9995 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.9995,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X5",
+   "study": "R202",
+   "p_normal": 0.9974061515165541,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:X5": {
+   "passes": false,
+   "fails": [
+    "design: net 130,554 not better than B's 147,686",
+    "design: max drawdown 88,665 above B's 85,937",
+    "holdout: 21 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X5",
+   "study": "R202",
+   "p_normal": 0.9994246109192534,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "LIQ:X5": {
+   "passes": false,
+   "fails": [
+    "design: 22 trades changed / removed < 40",
+    "holdout: net 760 not better than B's 11,087",
+    "holdout: max drawdown 63,382 above B's 59,441",
+    "holdout: 7 trades changed / removed < 40",
+    "holdout twin p 0.9535 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 3,
+   "twin_p": 0.95352,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X5",
+   "study": "R202",
+   "p_normal": 0.9607453403478206,
+   "q_family": 1.0,
+   "design_twin_p": 0.48976
+  },
+  "R72:X6": {
+   "passes": false,
+   "fails": [
+    "design: net 176,321 not better than B's 232,769",
+    "design: max drawdown 101,319 above B's 100,582",
+    "holdout: net 93,132 not better than B's 98,609",
+    "holdout: max drawdown 36,639 above B's 36,477",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X6",
+   "study": "R202",
+   "p_normal": 0.9997955270835513,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:X6": {
+   "passes": false,
+   "fails": [
+    "design: net 100,244 not better than B's 147,686",
+    "design: max drawdown 108,363 above B's 85,937",
+    "holdout: net 24,220 not better than B's 43,680",
+    "holdout: max drawdown 47,271 above B's 45,825",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X6",
+   "study": "R202",
+   "p_normal": 0.9999986624856017,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "LIQ:X6": {
+   "passes": false,
+   "fails": [
+    "design: net 187,880 not better than B's 231,580",
+    "design: 35 trades changed / removed < 40",
+    "holdout: 28 trades changed / removed < 40",
+    "holdout twin p 0.9760 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 3,
+   "twin_p": 0.97601,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X6",
+   "study": "R202",
+   "p_normal": 0.9771286789840066,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R72:X7": {
+   "passes": false,
+   "fails": [
+    "design: 9 trades changed / removed < 40",
+    "holdout: net 98,609 not better than B's 98,609",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X7",
+   "study": "R202",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.9945
+  },
+  "R51:X7": {
+   "passes": false,
+   "fails": [
+    "design: net 138,727 not better than B's 147,686",
+    "design: max drawdown 89,646 above B's 85,937",
+    "design: 17 trades changed / removed < 40",
+    "holdout: 5 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.9950 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.995,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X7",
+   "study": "R202",
+   "p_normal": 0.988243173166975,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "LIQ:X7": {
+   "passes": false,
+   "fails": [
+    "design: net 214,816 not better than B's 231,580",
+    "design: 13 trades changed / removed < 40",
+    "holdout: net 10,683 not better than B's 11,087",
+    "holdout: 2 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.5867 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.58671,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X7",
+   "study": "R202",
+   "p_normal": 0.5956551793351057,
+   "q_family": 1.0,
+   "design_twin_p": 0.89755
+  },
+  "R72:X8": {
+   "passes": false,
+   "fails": [
+    "design: net 184,711 not better than B's 232,769",
+    "design: max drawdown 100,590 above B's 100,582",
+    "holdout: net 82,196 not better than B's 98,609",
+    "holdout: max drawdown 41,869 above B's 36,477",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X8",
+   "study": "R202",
+   "p_normal": 0.9998938567428666,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:X8": {
+   "passes": false,
+   "fails": [
+    "design: net 99,585 not better than B's 147,686",
+    "design: max drawdown 105,565 above B's 85,937",
+    "holdout: net 13,964 not better than B's 43,680",
+    "holdout: max drawdown 51,806 above B's 45,825",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X8",
+   "study": "R202",
+   "p_normal": 0.9999995560144167,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "LIQ:X8": {
+   "passes": false,
+   "fails": [
+    "design: net 201,787 not better than B's 231,580",
+    "design: 31 trades changed / removed < 40",
+    "holdout: net -1,483 not better than B's 11,087",
+    "holdout: max drawdown 60,616 above B's 59,441",
+    "holdout: 22 trades changed / removed < 40",
+    "holdout twin p 0.9570 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 3,
+   "twin_p": 0.95702,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X8",
+   "study": "R202",
+   "p_normal": 0.9532723408623595,
+   "q_family": 1.0,
+   "design_twin_p": 0.9975
+  },
+  "R72:X9": {
+   "passes": false,
+   "fails": [
+    "design: net 206,277 not better than B's 232,769",
+    "design: max drawdown 104,698 above B's 100,582",
+    "holdout: net 62,933 not better than B's 98,609",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.9300 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.93003,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "X9",
+   "study": "R202",
+   "p_normal": 0.9208268853391925,
+   "q_family": 1.0,
+   "design_twin_p": 0.996
+  },
+  "R51:X9": {
+   "passes": false,
+   "fails": [
+    "design: net 102,052 not better than B's 147,686",
+    "design: max drawdown 127,278 above B's 85,937",
+    "holdout: net 26,284 not better than B's 43,680",
+    "holdout: max drawdown 48,060 above B's 45,825",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.9820 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.98201,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "X9",
+   "study": "R202",
+   "p_normal": 0.9814705477665551,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "LIQ:X9": {
+   "passes": false,
+   "fails": [
+    "design: net 199,522 not better than B's 231,580",
+    "design: max drawdown 27,825 above B's 25,771",
+    "design: 27 trades changed / removed < 40",
+    "holdout: net 9,594 not better than B's 11,087",
+    "holdout: max drawdown 59,693 above B's 59,441",
+    "holdout: 6 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.4343 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.43428,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "X9",
+   "study": "R202",
+   "p_normal": 0.44864851523978666,
+   "q_family": 1.0,
+   "design_twin_p": 0.999
+  },
+  "R72:W-hour": {
+   "passes": false,
+   "fails": [
+    "holdout: net 92,498 not better than B's 98,609",
+    "holdout: max drawdown 47,315 above B's 36,477",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.3108 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.31084,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "W-hour",
+   "study": "R203",
+   "p_normal": 0.31163442147568654,
+   "q_family": 1.0,
+   "design_twin_p": 0.12094
+  },
+  "R51:W-hour": {
+   "passes": false,
+   "fails": [
+    "design: net 111,949 not better than B's 147,686",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.1399 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.13993,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "W-hour",
+   "study": "R203",
+   "p_normal": 0.1387719073324223,
+   "q_family": 1.0,
+   "design_twin_p": 0.88906
+  },
+  "LIQ:W-hour": {
+   "passes": false,
+   "fails": [
+    "holdout: net 10,785 not better than B's 11,087",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.4873 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.48726,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "W-hour",
+   "study": "R203",
+   "p_normal": 0.45168423986986495,
+   "q_family": 1.0,
+   "design_twin_p": 0.03748
+  },
+  "R72:W-vix": {
+   "passes": false,
+   "fails": [
+    "design: net 76,648 not better than B's 232,769",
+    "holdout: net 98,609 not better than B's 98,609",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "W-vix",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:W-vix": {
+   "passes": false,
+   "fails": [
+    "design: net 113,057 not better than B's 147,686",
+    "holdout: net 43,680 not better than B's 43,680",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "W-vix",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.32134
+  },
+  "LIQ:W-vix": {
+   "passes": false,
+   "fails": [
+    "design: net 231,580 not better than B's 231,580",
+    "design: 0 trades changed / removed < 40",
+    "holdout: net 11,087 not better than B's 11,087",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "W-vix",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R72:W-gap": {
+   "passes": false,
+   "fails": [
+    "design: net 120,422 not better than B's 232,769",
+    "holdout: net 55,371 not better than B's 98,609",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.9960 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.996,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "W-gap",
+   "study": "R203",
+   "p_normal": 0.9976596111177987,
+   "q_family": 1.0,
+   "design_twin_p": 0.9975
+  },
+  "R51:W-gap": {
+   "passes": false,
+   "fails": [
+    "design: net 87,528 not better than B's 147,686",
+    "design: max drawdown 90,849 above B's 85,937",
+    "holdout: net 35,998 not better than B's 43,680",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.6562 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.65617,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "W-gap",
+   "study": "R203",
+   "p_normal": 0.6506027886681232,
+   "q_family": 1.0,
+   "design_twin_p": 0.91854
+  },
+  "LIQ:W-gap": {
+   "passes": false,
+   "fails": [
+    "design: net 231,580 not better than B's 231,580",
+    "design: 0 trades changed / removed < 40",
+    "holdout: net 11,087 not better than B's 11,087",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "W-gap",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R72:W-dow": {
+   "passes": false,
+   "fails": [
+    "design: net 137,485 not better than B's 232,769",
+    "design: max drawdown 106,633 above B's 100,582",
+    "holdout: net 51,741 not better than B's 98,609",
+    "holdout: max drawdown 46,871 above B's 36,477",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.9045 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.90455,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "W-dow",
+   "study": "R203",
+   "p_normal": 0.9101222996946635,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:W-dow": {
+   "passes": false,
+   "fails": [
+    "design: net 144,406 not better than B's 147,686",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.0765 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.07646,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "W-dow",
+   "study": "R203",
+   "p_normal": 0.07616615127613337,
+   "q_family": 0.9699626071124257,
+   "design_twin_p": 0.26937
+  },
+  "LIQ:W-dow": {
+   "passes": false,
+   "fails": [
+    "design: net 224,842 not better than B's 231,580",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.3183 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.31834,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "W-dow",
+   "study": "R203",
+   "p_normal": 0.2997054265803378,
+   "q_family": 1.0,
+   "design_twin_p": 0.28836
+  },
+  "R72:W-rv": {
+   "passes": false,
+   "fails": [
+    "design: net 49,821 not better than B's 232,769",
+    "design: max drawdown 104,649 above B's 100,582",
+    "holdout: net 16,258 not better than B's 98,609",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.9995 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.9995,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "W-rv",
+   "study": "R203",
+   "p_normal": 0.9996749420342352,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:W-rv": {
+   "passes": false,
+   "fails": [
+    "design: net 83,269 not better than B's 147,686",
+    "design: max drawdown 86,586 above B's 85,937",
+    "holdout: net -11,997 not better than B's 43,680",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.9945 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.9945,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "W-rv",
+   "study": "R203",
+   "p_normal": 0.9963531232159136,
+   "q_family": 1.0,
+   "design_twin_p": 0.77211
+  },
+  "LIQ:W-rv": {
+   "passes": false,
+   "fails": [
+    "design: net 231,580 not better than B's 231,580",
+    "design: 0 trades changed / removed < 40",
+    "holdout: net 11,087 not better than B's 11,087",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "W-rv",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R72:W-und": {
+   "passes": false,
+   "fails": [
+    "design: net 190,578 not better than B's 232,769",
+    "holdout: net 98,609 not better than B's 98,609",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "W-und",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.93153
+  },
+  "R51:W-und": {
+   "passes": false,
+   "fails": [
+    "holdout twin p 0.1664 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 3,
+   "twin_p": 0.16642,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "W-und",
+   "study": "R203",
+   "p_normal": 0.1632749763444865,
+   "q_family": 1.0,
+   "design_twin_p": 0.1994
+  },
+  "LIQ:W-und": {
+   "passes": false,
+   "fails": [
+    "design: net 172,139 not better than B's 231,580",
+    "holdout: net 11,087 not better than B's 11,087",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "W-und",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.50325
+  },
+  "R72:W-trend": {
+   "passes": false,
+   "fails": [
+    "design: net 175,000 not better than B's 232,769",
+    "holdout: net 98,609 not better than B's 98,609",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "W-trend",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.8016
+  },
+  "R51:W-trend": {
+   "passes": false,
+   "fails": [
+    "design: net 86,548 not better than B's 147,686",
+    "design: max drawdown 95,182 above B's 85,937",
+    "holdout: net 43,680 not better than B's 43,680",
+    "holdout: 0 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "W-trend",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 0.95752
+  },
+  "LIQ:W-trend": {
+   "passes": false,
+   "fails": [
+    "design: net 228,869 not better than B's 231,580",
+    "design: 38 trades changed / removed < 40",
+    "holdout: net 2,428 not better than B's 11,087",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.7067 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.70665,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "W-trend",
+   "study": "R203",
+   "p_normal": 0.6806529893467619,
+   "q_family": 1.0,
+   "design_twin_p": 0.31784
+  },
+  "R72:S10": {
+   "passes": false,
+   "fails": [
+    "design: net 185,683 not better than B's 232,769",
+    "holdout: max drawdown 36,726 above B's 36,477",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "S10",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R51:S10": {
+   "passes": false,
+   "fails": [
+    "design: net 107,800 not better than B's 147,686",
+    "holdout: net 23,649 not better than B's 43,680",
+    "holdout: max drawdown 48,263 above B's 45,825",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "S10",
+   "study": "R203",
+   "p_normal": 1.0,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "LIQ:S10": {
+   "passes": false,
+   "fails": [
+    "design: net 167,883 not better than B's 231,580",
+    "design: max drawdown 26,443 above B's 25,771",
+    "holdout: 20 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 1.0000 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 1.0,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "S10",
+   "study": "R203",
+   "p_normal": 0.9999999993591654,
+   "q_family": 1.0,
+   "design_twin_p": 1.0
+  },
+  "R72:DC3": {
+   "passes": false,
+   "fails": [
+    "design: net 197,865 not better than B's 232,769",
+    "design: max drawdown 105,698 above B's 100,582",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.0005,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "DC3",
+   "study": "R203",
+   "p_normal": 0.0005189031087754962,
+   "q_family": 0.031134186526529772,
+   "design_twin_p": 0.6052
+  },
+  "R51:DC3": {
+   "passes": false,
+   "fails": [
+    "design: net 68,775 not better than B's 147,686",
+    "design: max drawdown 109,343 above B's 85,937",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "holdout twin p 0.1114 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.11144,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "DC3",
+   "study": "R203",
+   "p_normal": 0.11418322486444296,
+   "q_family": 1.0,
+   "design_twin_p": 0.97701
+  },
+  "LIQ:DC3": {
+   "passes": false,
+   "fails": [
+    "design: 28 trades changed / removed < 40",
+    "holdout: net 7,925 not better than B's 11,087",
+    "holdout: 15 trades changed / removed < 40",
+    "holdout twin p 0.7256 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 3,
+   "twin_p": 0.72564,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "DC3",
+   "study": "R203",
+   "p_normal": 0.6486065067494241,
+   "q_family": 1.0,
+   "design_twin_p": 0.07596
+  },
+  "R72:DC5": {
+   "passes": false,
+   "fails": [
+    "design: net 193,259 not better than B's 232,769",
+    "design: max drawdown 102,413 above B's 100,582",
+    "holdout: 37 trades changed / removed < 40",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.0005,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "DC5",
+   "study": "R203",
+   "p_normal": 0.0019015441446300501,
+   "q_family": 0.057046324338901507,
+   "design_twin_p": 0.86407
+  },
+  "R51:DC5": {
+   "passes": false,
+   "fails": [
+    "design: net 88,455 not better than B's 147,686",
+    "design: max drawdown 97,991 above B's 85,937",
+    "walk-forward: better in 0 of 4 design quarters < 3",
+    "holdout twin p 0.0765 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 0,
+   "twin_p": 0.07646,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "DC5",
+   "study": "R203",
+   "p_normal": 0.08083021725936881,
+   "q_family": 0.9699626071124257,
+   "design_twin_p": 0.97751
+  },
+  "LIQ:DC5": {
+   "passes": false,
+   "fails": [
+    "design: max drawdown 26,637 above B's 25,771",
+    "design: 4 trades changed / removed < 40",
+    "holdout: 6 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.3448 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.34483,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "DC5",
+   "study": "R203",
+   "p_normal": 0.31974156923889896,
+   "q_family": 1.0,
+   "design_twin_p": 0.2034
+  },
+  "R72:L2": {
+   "passes": false,
+   "fails": [
+    "design: net 232,063 not better than B's 232,769",
+    "design: 25 trades changed / removed < 40",
+    "holdout: 7 trades changed / removed < 40",
+    "walk-forward: better in 1 of 4 design quarters < 3",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 1,
+   "twin_p": 0.04398,
+   "q": 1.0,
+   "arm": "R72",
+   "rule": "L2",
+   "study": "R203",
+   "p_normal": 0.054656549897379045,
+   "q_family": 0.9699626071124257,
+   "design_twin_p": 0.33983
+  },
+  "R51:L2": {
+   "passes": false,
+   "fails": [
+    "holdout: max drawdown 46,454 above B's 45,825",
+    "holdout: 15 trades changed / removed < 40",
+    "walk-forward: better in 2 of 4 design quarters < 3",
+    "holdout twin p 0.2749 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 2,
+   "twin_p": 0.27486,
+   "q": 1.0,
+   "arm": "R51",
+   "rule": "L2",
+   "study": "R203",
+   "p_normal": 0.2884648990442424,
+   "q_family": 1.0,
+   "design_twin_p": 0.03298
+  },
+  "LIQ:L2": {
+   "passes": false,
+   "fails": [
+    "design: net 230,088 not better than B's 231,580",
+    "design: max drawdown 27,841 above B's 25,771",
+    "design: 15 trades changed / removed < 40",
+    "holdout: net 995 not better than B's 11,087",
+    "holdout: 12 trades changed / removed < 40",
+    "holdout twin p 0.9165 >= 0.05",
+    "BH q 1 > 0.1"
+   ],
+   "folds_better": 3,
+   "twin_p": 0.91654,
+   "q": 1.0,
+   "arm": "LIQ",
+   "rule": "L2",
+   "study": "R203",
+   "p_normal": 0.9275338538245999,
+   "q_family": 1.0,
+   "design_twin_p": 0.43178
+  }
+ },
+ "passes": []
+}
