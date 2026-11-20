@@ -214,6 +214,8 @@ notes; match the surrounding code.
     order book) left nothing to sell, goes back at once, for no more than Zerodha holds less every other working sale, even from 15:10 or
     with Stop for today. It is never put back beside a square-off's or the arm's own working sale, at the 15:05 expiry square-off or in its
     gap, or when Boss cancelled it himself. It rests until that sale is found and finished, or let go; then the exit sells.
+    While such a lost sale is unresolved (or found but not yet booked), the price check puts no missing stop back on that contract for
+    any trade, since a stop would be sized from positions that may not show it; the app watches each level and sells there meanwhile.
   Every change that touches background work must test this.
 - Nothing about the account is spoken on a locked phone.
 - Market times: NSE F&O closes 15:40, index/cash 15:30, expiry square-off 15:05.

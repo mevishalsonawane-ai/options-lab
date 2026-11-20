@@ -4170,9 +4170,10 @@ object OrbArms {
                 // (20 Nov 2026, audit PC: nor while a lost exit on it is neither found nor let go - it may still be selling; every trade's
                 // level is still watched by the app meanwhile and sold there.)
                 lostOf(cur) == null &&
-                // (Nor for any trade on it while another part's lost sale there is unresolved - it may have filled unseen, and the stop is
-                // sized from positions that may not show it; the app watches every level meanwhile and sells there.)
-                lostOn(sym).none { it.foundId == null }) {
+                // (Nor for any trade on it while another part's lost sale there is unresolved or found but not yet booked - it may have
+                // filled while the positions do not show it, and the stop is sized from them; the app watches every level meanwhile and
+                // sells there. One known not found no longer holds it.)
+                lostOn(sym).none { !it.notFound }) {
                 // (19 Nov 2026, second review: beside its own working sale - or a stop of these arms resting unclaimed - nothing new rests,
                 // but an unclaimed stop placed since its entry is still taken as its own: [restExchangeStop] with adoptOnly.)
                 // (19 Nov 2026, review: a stop of these arms resting unclaimed is [orphanStop]'s to judge - taken, waited on, or a stop capped
@@ -5673,8 +5674,16 @@ object OrbArms {
             if (qty <= 0 && qtyRaw > 0) {
                 val lagged = rawNet?.let { heldNow < it } ?: true
                 if (!lagged) return unsold(qtyRaw, book, pending = true)
-                coverSay(p, "$label: the exit of $sym waits for another trade's lost sale and its stop at Zerodha was not put back: Zerodha's " +
-                    "positions lag a fill, so a stop could sell more than is held. The app watches it and sells it itself once that sale is known.")
+                // (Said loudly only when this exit took a stop out - once a minute, on its own key; later looks with none write the diary.)
+                val minute = now().withSecond(0).withNano(0)
+                if (p0.stopOrderId != null) {
+                    if (coverSaid.size > 200) coverSaid.clear()
+                    if (coverSaid.put(managerId(p) + "|lagged", minute) != minute) runCatching {
+                        com.optionslab.app.work.Alerts.error("$label: the exit of $sym waits for another trade's lost sale and its stop at Zerodha " +
+                            "was not put back: Zerodha's positions lag a fill, so a stop could sell more than is held. The app watches it and " +
+                            "sells it itself once that sale is known.", "ORB live")
+                    }
+                } else runCatching { Diag.record("orb", "$label: $sym's exit waits for another trade's lost sale (positions lag a fill; no stop rests)") }
                 return p.copy(stopOrderId = null) to null
             }
             // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
