@@ -822,7 +822,10 @@ object PineAuto {
             if (a.mode != "alert" && h != null && h.right != want) exit(b, id, item, h, "signal changed during a pause")
             return
         }
-        note(b, id, "${tag}Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
+        // (B5 item 6: a late candle given back below is read again each pass until a fresh one comes - its signal is said once.)
+        val lateCandle = step < 86_400 && !com.optionslab.ira.CandleFresh.pineFresh(last.epochSecond, step, now)
+        if (!(lateCandle && staleSaid[id] == last.epochSecond))
+            note(b, id, "${tag}Signal: ${describe(target)} at ${"%.2f".format(java.util.Locale.ENGLISH, last.close)}")
         if (a.mode == "alert" && entries) {
             // Alerts only: tell the owner, place nothing. 16 Oct: the banner (and so the diary) as information, not an error -
             // "jarvis: breakout above ... flat" was counted among the day's errors by the order review.
@@ -842,6 +845,24 @@ object PineAuto {
                 .onFailure { e -> runCatching { Diag.record("pine", "${label(item)} (shadow): ${e.javaClass.simpleName}") } }
             return
         }
+        // 20 Nov 2026 (audit, B5 item 6: "Pine accepts a candle about 17 minutes old"): an ENTRY on a candle older than its own timeframe
+        // allows - the newest completed one closed more than one candle plus the feed's lag ago ([com.optionslab.ira.CandleFresh.pineFresh])
+        // - is not made in Paper: the candle is given back (its signal and candle as before it), so the change is read again on the next,
+        // fresher one. In Live it is logged only (CLAUDE.md: a new rule that could skip live trades starts in shadow) and the entry goes as
+        // before. Everything above - the exit of what was held, the signal exits, the stop, target, lock and 15:15 - is never held by it.
+        if (lateCandle) {
+            val age = (now - last.epochSecond - step) / 60
+            if (!OrbArms.liveNow()) {
+                if (watchedBefore == null) b.lastBar.remove(id) else b.lastBar[id] = watchedBefore
+                b.lastTarget[id] = prev
+                if (staleSaid.put(id, last.epochSecond) != last.epochSecond)
+                    note(b, id, "${tag}The newest ${item.auto.interval} candle closed $age min ago (over one candle late): no entry on it; read again on the next")
+                return
+            }
+            if (staleSaid.put(id, last.epochSecond) != last.epochSecond)
+                note(b, id, "${tag}shadow (B5 item 6): the newest ${item.auto.interval} candle closed $age min ago (over one candle late); in Paper " +
+                    "no entry would be made on it. Live is unchanged: logged only")
+        }
         val live = OrbArms.liveNow()
         if (live && b.liveOk[id] != true) {
             note(b, id, "Live needs your PIN once: switch auto-trade off and on again for this script. Nothing was sent.")
@@ -849,6 +870,12 @@ object PineAuto {
         }
         enter(b, item, Right.valueOf(want), last.close, live)
     }
+
+    /** 20 Nov 2026 (audit, B5 item 6): the candle each script was last told is too old to enter on (memory only; once a candle). */
+    private val staleSaid = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+
+    /** TEST ONLY: forget which late candles were told (a new process starts without them). */
+    internal fun forgetStaleForTest() = staleSaid.clear()
 
     /** The option a signal [target] backs ("CE" / "PE"), or null: none (flat, or short with no put). */
     private fun wantFor(item: PineScripts.Item, target: Int): String? = when {

@@ -349,12 +349,93 @@ object Paper {
         streamQuote(c)?.let { return it.also { remember(c.symbol, it) } }
         // 12 Oct: the quick read (5 s connect, 10 s read, one retry): the full one's 3 tries x 45 s and its rate-limit waits
         // held a paper pass for minutes ("fast check: paper orders" 4 min 15 s), and every stop check behind it.
-        val bars = Net.intradayQuick(c.feedKey).filter { it.istDate == Market.today() }
+        val (read, readAt) = candleRead(c)
+        val bars = read.filter { it.istDate == Market.today() }
         // 28 Oct (FINNIFTY's untraded options): no trade today, so no candles - Zerodha's live book, when it has one ([restBook]).
         if (bars.isEmpty()) return restBook(c)
-        candleBars[c.symbol] = System.currentTimeMillis() to bars
+        // (20 Nov 2026, review: stamped with when the read came in, never later - a read taken up by a later look is not "just read".)
+        candleBars[c.symbol] = readAt to bars
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
-            volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = System.currentTimeMillis() to it }
+            volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = readAt to it }
+    }
+
+    /**
+     * 20 Nov 2026 (audit, B5 item 1: "a paper price read can wait 10-160 s"): how long one candle read for a paper price may hold its
+     * caller. The feed's quick read waits out a rate limit (429) for 10 s up to 160 s before its second try; every paper stop, lock and
+     * exit check that prices a contract off the stream waited with it. Past this the caller stops waiting and the price is "none now",
+     * as for a failed read: the check is made again on the next pass. (Review: the read itself is not cancelled - it goes on in the
+     * background, one at a time for a contract, and the next look takes its answer when it came in the last [PRICE_READ_KEEP_MS], so a
+     * slow but working feed still prices the contract a pass later.) Only [quote] (every price a check reads) is bounded so; [minutes]
+     * is not - its callers wait on it apart ([gapHighSince] waits [GAP_READ_WAIT_MS] while its read goes on in the background).
+     */
+    const val PRICE_READ_WAIT_MS = 6_000L
+
+    /** TEST SEAM: [PRICE_READ_WAIT_MS] in the app, always (its setter throws in a release build). */
+    @Volatile internal var priceReadWaitMs: Long = PRICE_READ_WAIT_MS
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the price-read seam exists only in debug builds" }; field = v }
+
+    /** How long a price read that finished after its caller stopped waiting is still taken by the next look. */
+    const val PRICE_READ_KEEP_MS = 15_000L
+
+    /**
+     * One candle read for a paper price, run apart from its caller ([candleRead]), started at [startedAt]; [doneAt]: when it finished
+     * (0: still running).
+     */
+    private class PriceRead(val job: kotlinx.coroutines.Deferred<List<Upstox.Bar>>, val startedAt: Long) { @Volatile var doneAt = 0L }
+
+    /**
+     * The candle read of each contract its caller stopped waiting for ([priceReadWaitMs]) and left running in the background, for the next
+     * look to take up ([PriceRead]); memory only. A read whose caller got its answer, or was itself cancelled, is never kept here.
+     */
+    private val priceReads = java.util.concurrent.ConcurrentHashMap<String, PriceRead>()
+
+    /** Every price read still running, whoever waits on it (memory only): a test's feed going away stops them all ([settlePriceReadsForTest]). */
+    private val readsInFlight: MutableSet<PriceRead> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** How many reads left for the next look were cancelled because another caller's took their place (the tests read it). */
+    internal val overwrittenReads = java.util.concurrent.atomic.AtomicInteger()
+
+    /**
+     * TEST SEAM (a fake feed going away or starting): the price reads left running are stopped and forgotten, waited [waitMs] at most
+     * each, so none outlives its test's feed (it would reach the real host) or lends an earlier test's prices to the next.
+     */
+    internal fun settlePriceReadsForTest(waitMs: Long = 2_000L) {
+        val all = (priceReads.values + readsInFlight).distinct()
+        priceReads.clear()
+        all.forEach { it.job.cancel() }
+        kotlinx.coroutines.runBlocking { all.forEach { kotlinx.coroutines.withTimeoutOrNull(waitMs) { it.job.join() } } }
+    }
+
+    /**
+     * [c]'s candles from the paper feed and when they came in, waited [priceReadWaitMs] at most; throws when the read failed or is still
+     * running then. Each look reads afresh, except after a read its caller stopped waiting for: the next look takes that one up - its
+     * answer when it came in the last [PRICE_READ_KEEP_MS] (with its own time), or a wait on it while it has run under twice the wait
+     * (a stuck one is dropped and a fresh read starts). A caller cancelled for its own reasons cancels its read, as before.
+     */
+    private suspend fun candleRead(c: Contract): Pair<List<Upstox.Bar>, Long> {
+        val wait = priceReadWaitMs
+        val now = System.currentTimeMillis()
+        val prev = priceReads.remove(c.symbol)
+        val left = prev?.takeIf { pr ->
+            if (pr.job.isCompleted) now - pr.doneAt <= PRICE_READ_KEEP_MS && !pr.job.isCancelled else now - pr.startedAt <= 2 * wait
+        }
+        if (prev != null && left == null) prev.job.cancel()
+        val r = left ?: PriceRead(gapReads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { Net.intradayQuick(c.feedKey) }, now).also { pr ->
+            readsInFlight.add(pr)
+            pr.job.invokeOnCompletion { pr.doneAt = System.currentTimeMillis(); readsInFlight.remove(pr) }
+            pr.job.start()
+        }
+        // (join, not await, inside the timeout: a failed read's own error is thrown by the await below, never mistaken for the timeout.
+        // The timeout ends this wait only; the read goes on and is left for the next look.)
+        val done = try {
+            kotlinx.coroutines.withTimeoutOrNull(wait) { r.job.join(); true }
+        } catch (e: kotlinx.coroutines.CancellationException) { r.job.cancel(); throw e }
+        if (done == null) {
+            // (Review P6: a read another caller left for this contract meanwhile is cancelled, never left running unowned.)
+            priceReads.put(c.symbol, r)?.takeIf { it !== r }?.let { it.job.cancel(); overwrittenReads.incrementAndGet() }
+            throw java.io.IOException("the paper price read of ${c.symbol} took over $wait ms (it goes on; the next look takes it)")
+        }
+        return r.job.await() to (r.doneAt.takeIf { it > 0 } ?: System.currentTimeMillis())
     }
 
     /** 15 Nov: the start (epoch seconds) of the newest candle [quote] last read for [symbol]; null: none. Memory only ([com.optionslab.ira.PriceNow]). */
@@ -775,6 +856,59 @@ object Paper {
     /** When [restBook] last read each symbol from Zerodha (market clock, memory only). */
     private val restBookAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private const val REST_BOOK_MS = 5_000L
+
+    // ---- 20 Nov 2026 (audit, B5 item 4): what a paper trade closed elsewhere is booked at ------------------------------------------
+
+    /** [soldElsewhere]'s answer, with the names of a paper fill ([com.optionslab.engine.sandbox.Trade]) so the arms read it the same. */
+    data class SoldElsewhere(val price: BigDecimal, val timestamp: java.time.LocalDateTime, val charges: BigDecimal,
+                             val how: com.optionslab.ira.PaperElsewhere.How)
+
+    /** The closing fills already booked to trades closed elsewhere (order id -> each trade's owner key -> its quantity). Memory only. */
+    private val elsewhereClaims = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.ConcurrentHashMap<String, Int>>()
+
+    /** How old a last price may be when a trade closed elsewhere with no fill is booked at it ([soldElsewhere]). */
+    private const val ELSEWHERE_LAST_MS = 5 * 60_000L
+
+    /**
+     * What a paper trade ([owner]: its own key, the same on every look) of [qty] [symbol], entered at [since] in [product] (null: any),
+     * is booked at when it left the paper book without its arm's own sale ([com.optionslab.ira.PaperElsewhere]): the last [closing]
+     * fill of its product since then that other trades have not booked in full, else its expiry settlement, else its last price of the
+     * last 5 minutes; null when none is known (the arm keeps its entry price, as before). The fill taken is kept for [owner] with [qty],
+     * so other arms' trades on the same option never book more of it than it sold. Record only; memory and the paper book in hand (no
+     * network). Never throws.
+     */
+    fun soldElsewhere(owner: String, symbol: String, since: java.time.LocalDateTime, product: String? = null, closing: String = "SELL",
+                      qty: Int = 0, now: java.time.LocalDateTime = Market.now().toLocalDateTime().withNano(0)): SoldElsewhere? = runCatching {
+        val st = state
+        val sales = st.trades.filter { it.symbol == symbol && it.action.equals(closing, ignoreCase = true) }
+            // (Review: a fill is named by its order id AND time - a paper reset or a new book numbers its orders afresh, and a claim kept
+            // in memory for an earlier book's order must never block this one's.)
+            .map { com.optionslab.ira.PaperElsewhere.Sale("${it.orderId}@${it.timestamp}", it.product, it.price.toDouble(), it.timestamp, it.charges.toDouble(), it.quantity) }
+        val c = book().contracts[symbol]
+        // The paper book settles an expired NSE/BSE contract after its session (no fill): its row then holds the settlement price.
+        val expired = c != null && !c.isMcx && (now.toLocalDate().isAfter(c.expiry) ||
+            (now.toLocalDate() == c.expiry && !now.toLocalTime().isBefore(java.time.LocalTime.of(15, 30))))
+        // (Review: the row of the trade's own product, so another product's row closed later that day never lends its price.)
+        val row = st.positions.filter { it.symbol == symbol && it.quantity == 0 && (product == null || it.product.equals(product, ignoreCase = true)) }
+            .maxByOrNull { it.updatedAt }
+        val byOthers = { id: String -> elsewhereClaims[id]?.entries?.filter { it.key != owner }?.sumOf { it.value } ?: 0 }
+        val x = com.optionslab.ira.PaperElsewhere.pick(sales, product, since, byOthers,
+            expired, row?.ltp?.toDouble(), c?.expiry?.atTime(15, 30), memPrice(symbol, ELSEWHERE_LAST_MS), now) ?: return@runCatching null
+        x.orderId?.let { id -> claimElsewhere(id, owner, qty.coerceAtLeast(1)) }
+        // (Review: a fill shared by several trades lends each its share of the order's charges - all its fill rows - never all of them.)
+        val rows = x.orderId?.let { id -> sales.filter { it.orderId == id } }.orEmpty()
+        val soldQty = rows.sumOf { it.quantity.toLong() }
+        val charges = if (soldQty > 0 && qty in 1 until soldQty) rows.sumOf { it.charges } * qty / soldQty else x.charges
+        SoldElsewhere(BigDecimal.valueOf(x.price), x.at, BigDecimal.valueOf(charges), x.how)
+    }.getOrNull()
+
+    private fun claimElsewhere(orderId: String, owner: String, qty: Int) {
+        if (elsewhereClaims.size > 2_000) elsewhereClaims.clear()
+        elsewhereClaims.getOrPut(orderId) { java.util.concurrent.ConcurrentHashMap() }[owner] = qty
+    }
+
+    /** TEST SEAM: forget the fills booked to trades closed elsewhere (a new process starts without them). */
+    internal fun forgetElsewhereForTest() = elsewhereClaims.clear()
 
     /** When each symbol's paper entry last filled on the book alone (memory only): [ArmLive] never mirrors such a fill live. */
     private val bookFills = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -1662,7 +1796,7 @@ object Paper {
     }
 
     /** Back to a fresh account with [capital]; the contracts seen are kept. */
-    fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) } }
+    fun reset(capital: BigDecimal) { locked { save(fresh(capital, book().contracts)) }; elsewhereClaims.clear() }
 
     /**
      * TEST ONLY: [loadSoon] reads the book on the caller's thread - the background load as fast as it can be, done before
@@ -1700,7 +1834,7 @@ object Paper {
             pending = null; cache = null; savedAtMs = 0L; readFails = 0; firstReadFailMs = 0L; lastReadFailMs = 0L
             filesForErase().forEach { runCatching { it.delete() } }
         } }
-        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear()
+        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear(); priceReads.clear(); elsewhereClaims.clear()
         heldNoted.clear()
         follow(emptySet())
     }

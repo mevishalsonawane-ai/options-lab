@@ -194,6 +194,13 @@ object Backup {
      * pinned certificates on this phone are kept as they are. The app must restart after.
      */
     fun restore(ctx: Context, c: Contents): Restored {
+        // 20 Nov 2026 (audit, B5 item 2): never while a live position is open - the restore replaces the books that record it (the
+        // ORB and Liquidity book, the strategies' runs, the paper trades a live copy follows, the Zerodha trade record). Refused
+        // before anything is written (not even the disarm flag): this phone's data stays exactly as it is.
+        liveHeld().takeIf { it.isNotEmpty() }?.let { throw LiveHeld(it) }
+        // 20 Nov 2026 (B5 item 3, review P4): this phone's account-stop days, read before anything is written. Unreadable, the restore is
+        // refused: they are never taken as empty, and never written over.
+        val stopDaysHere = accountStopDaysHere() ?: throw AccountStopUnread()
         // FIRST, before any file is touched: every restored strategy, ORB arm and Pine script starts
         // disarmed, paper only, on the next start (IraAlgoApp). Should the restore stop half-way,
         // the flag is already there.
@@ -222,6 +229,14 @@ object Backup {
         val values = HashMap<String, Any?>()
         prefs.keys().forEach { k -> if (carried(k)) values[k] = prefs.get(k) }
         values[DISARM] = true
+        // 20 Nov 2026 (audit, B5 item 3): the account stop rule's days - this phone's and the backup's together, never milder than this
+        // phone's own ([com.optionslab.ira.AccountStop.restored]): an older backup no longer lowers its drawdown or month figure.
+        if (values.containsKey(ACCOUNT_STOP_DAYS)) {
+            val theirs = com.optionslab.ira.AccountStop.decode(values[ACCOUNT_STOP_DAYS] as? String)
+            val kept = com.optionslab.ira.AccountStop.restored(stopDaysHere, theirs, runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() })
+            // (Review P4: nothing to keep leaves this phone's value as it is - never a null written over it.)
+            if (kept.isEmpty()) values.remove(ACCOUNT_STOP_DAYS) else values[ACCOUNT_STOP_DAYS] = com.optionslab.ira.AccountStop.encode(kept)
+        }
         // 19 Nov (review): Boss's one-time automatic-stops choice is never run by a restore's books (it would switch his stops off with
         // no PIN): marked done, whatever the backup held. His switches stay as this phone has them.
         // 20 Nov 2026 (minor fixes, item 3): on a phone where it had not run yet, the card says it was not applied because of the restore.
@@ -244,6 +259,79 @@ object Backup {
             throw e
         }
         return Restored(changePin = c.pinSealed)
+    }
+
+    /** The account stop rule's recorded days ([AccountStopHost]): carried, and merged on a restore so its figures never drop. */
+    internal const val ACCOUNT_STOP_DAYS = "accountStop.days"
+
+    /**
+     * 20 Nov 2026 (audit, B5 item 2): a restore refused because live positions are open, or a live book cannot tell yet ([books]: each
+     * reason, in Boss's words). Nothing was written.
+     */
+    class LiveHeld(val books: List<String>) : Refused(liveHeldWords(books))
+
+    /** 20 Nov 2026 (B5): a restore refused before anything was written; its message is for Boss, and the app stays open. */
+    open class Refused(message: String) : IllegalStateException(message)
+
+    /** What Boss is told when [LiveHeld] refuses a restore: each reason a whole clause. */
+    internal fun liveHeldWords(books: List<String>): String =
+        "Not restored: ${books.joinToString("; ")}. A restore replaces the books that record them. Nothing on this phone was changed. " +
+            "Restore once nothing is open (after the market's close is safest)."
+
+    /** 20 Nov 2026 (B5 item 3, review P4): a restore refused because this phone's account-stop days could not be read. Nothing was written. */
+    class AccountStopUnread : Refused(ACCOUNT_STOP_UNREAD)
+
+    internal const val ACCOUNT_STOP_UNREAD = "Not restored: this phone's account stop record could not be read, and a restore must never " +
+        "lower it. Nothing on this phone was changed. Try again in a minute, or after opening the app again."
+
+    /** TEST SEAM: reads this phone's account-stop days in place of the settings vault (it may throw). Null in the app, always. */
+    @Volatile internal var testAccountStopRead: (() -> String?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the account-stop seam exists only in debug builds" }; field = v }
+
+    /** This phone's account-stop days ([ACCOUNT_STOP_DAYS]); null when they cannot be read (the vault unreadable, or the read failed). */
+    private fun accountStopDaysHere(): List<com.optionslab.ira.AccountStop.Day>? = try {
+        val seam = testAccountStopRead
+        if (seam != null) com.optionslab.ira.AccountStop.decode(seam())
+        else {
+            // (Review: read first, then judge - a failed load marks the vault unreadable and answers empty.)
+            val raw = SecurePrefs.getString(ACCOUNT_STOP_DAYS)
+            if (SecurePrefs.unreadable) null else com.optionslab.ira.AccountStop.decode(raw)
+        }
+    } catch (e: Exception) { null }
+
+    /** TEST SEAM (JVM tests only): what [liveHeld] answers. Null in the app, always: its setter throws in a release build. */
+    @Volatile internal var testLiveHeld: (() -> List<String>)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the live-held seam exists only in debug builds" }; field = v }
+
+    /** The reasons [liveHeld] gives, as whole clauses (the tests read them). */
+    internal const val HELD_START = "the open positions are still being read after the app's start"
+    internal const val HELD_ARMS = "the arms' live trades (R51, R72 and the others) are open"
+    internal const val HELD_ARMS_BOOK = "the arms' live book is being read or recovered (log in to Zerodha to finish)"
+    internal const val HELD_ORB = "Liquidity 15+5 or an ORB arm holds a live position"
+    internal const val HELD_PINE = "Pine holds a live position"
+    internal const val HELD_STRATEGY = "a saved strategy is running (paper or live)"
+    internal const val HELD_PROTECT = "a live protection is active"
+    internal const val HELD_ZERODHA = "Zerodha shows open positions"
+
+    /**
+     * 20 Nov 2026 (audit, B5 item 2): the live books holding an open position now, in Boss's words (empty: none). Memory only (each
+     * book's own hint, as the watch reads them: never a vault read or the network). A book that cannot tell counts as holding.
+     * (Review: the hints are only right once this start has read the position books ([PositionsFirst], step 1): until then the whole
+     * restore is refused as "still being read". [started] / [startRead]: the start began / its read is done - the unit tests' app never
+     * runs the start.)
+     */
+    fun liveHeld(started: Boolean = runCatching { PositionsFirst.startedAt != 0L }.getOrDefault(true),
+                 startRead: Boolean = runCatching { PositionsFirst.foundOpen != null }.getOrDefault(false)): List<String> = testLiveHeld?.invoke() ?: buildList {
+        fun held(name: String, f: () -> Boolean) { if (runCatching(f).getOrDefault(true)) add(name) }
+        if (started && !startRead) add(HELD_START)
+        // (Review P3: a book being read or recovered is said as such, not as open trades.)
+        val armsOpen = runCatching { ArmLive.holdingHint }.getOrDefault(true)
+        if (armsOpen) add(HELD_ARMS) else held(HELD_ARMS_BOOK) { ArmLive.recoverHint }
+        held(HELD_ORB) { OrbArms.liveHint }
+        held(HELD_PINE) { PineAuto.held.value.values.any { it.live } }
+        held(HELD_STRATEGY) { Strategies.runningHint }
+        held(HELD_PROTECT) { Protections.activeHint == true }
+        held(HELD_ZERODHA) { Reconciler.heldHint() }
     }
 
     /**
