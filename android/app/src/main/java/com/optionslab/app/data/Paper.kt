@@ -446,6 +446,24 @@ object Paper {
     data class GapHigh(val read: Boolean, val high: Double?)
 
     /**
+     * 20 Nov 2026 (deep review of audit B5): the highest high of [c]'s CLOSED 1-minute candles today that started after [since]'s minute
+     * (the minute in progress left out: as the research's minute highs). Read as [gapHighSince] does (never held longer than [waitMs]);
+     * null: none, or not read in time. Never on the order or tick path.
+     */
+    suspend fun closedHighSince(c: Contract, since: java.time.LocalDateTime, waitMs: Long = GAP_READ_WAIT_MS): Double? {
+        // (Read fresh each time - its caller asks at most once a minute a trade, in the background - never another reader's older copy.)
+        val bars = kotlinx.coroutines.withTimeoutOrNull(waitMs) { runCatching { minutes(c) }.getOrNull() } ?: return null
+        return closedHigh(bars, since, runCatching { Market.now().toEpochSecond() }.getOrElse { System.currentTimeMillis() / 1000 }, Market.today())
+    }
+
+    /** [closedHighSince]'s pick from [bars]: today's ([day]) minutes that started after [since]'s minute and had closed by [nowSec]. Pure. */
+    internal fun closedHigh(bars: List<Upstox.Bar>, since: java.time.LocalDateTime, nowSec: Long, day: java.time.LocalDate): Double? {
+        val from = since.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        return bars.filter { it.istDate == day && it.epochSecond > from && it.epochSecond + 60 <= nowSec && it.high.isFinite() && it.high > 0 }
+            .maxOfOrNull { it.high }
+    }
+
+    /**
      * Where a resting SELL SL-M at [trigger], resting since [since] (placed or last moved), filled between two looks, as an
      * exchange fills it: at the trigger, or at the price that was already under it (a minute's open, a stream tick) - F1/F6.
      * The stream's ticks when it streams the contract, else the 1-minute candles [quote] read this pass; null: not reached

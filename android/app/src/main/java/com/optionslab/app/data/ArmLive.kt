@@ -1482,9 +1482,48 @@ object ArmLive {
         // Review: never a read on the look itself - the read runs in the background ([RuleHighs]: one at a time per trade, the stream's
         // kept ticks and the candles after the entry minute, so a spike while the phone was away or across a restart still counts) and
         // the look takes the last high it found (memory). Asked on the regular look only.
-        if (fresh) (p.paperSymbol ?: p.symbol).let { runCatching { Paper.contractOf(it) }.getOrNull() }?.let { RuleHighs.ask("live:${p.ref}", it, p.entryTime) }
+        // 20 Nov 2026 (deep review of audit B5): only the closed minutes' highs ([RuleHighs.askClosed]) - never the stream's raw ticks, whose
+        // one stray print could raise the Zerodha step lock; the stream counts through [bestPx] alone, each price checked.
+        // (R51 / R72 only: every other rule trade - Liquidity 15+5 - keeps its reads as they were.)
+        if (fresh) (p.paperSymbol ?: p.symbol).let { runCatching { Paper.contractOf(it) }.getOrNull() }?.let {
+            if (checkedBest(p)) RuleHighs.askClosed("live:${p.ref}", it, p.entryTime) else RuleHighs.ask("live:${p.ref}", it, p.entryTime) }
         return RuleHighs.peek("live:${p.ref}")
     }
+
+    /**
+     * 20 Nov 2026 (deep review of audit B5: a stray print could raise a live R51 / R72 copy's step lock at Zerodha and sell it early): the
+     * price now that may raise [p]'s best ([withBest]) - the stream's last trade only when it passes the price-now checks
+     * ([com.optionslab.ira.PriceNow.lastCounts] / [com.optionslab.ira.PriceNow.farFromBook]) and traded after the entry minute; else the
+     * sane book's bid ([com.optionslab.ira.PriceNow.bookBid]). Not streamed, Zerodha's quote [q] as the live stop judges it
+     * ([com.optionslab.ira.PriceNow.stopLast]: its last price unless far outside a sane book).
+     * The lock levels themselves are unchanged. Memory only (the stream's kept tick).
+     */
+    internal fun bestPx(p: Pos, q: Broker.Quote?): Double? {
+        if (!p.fixed) return null
+        // (Every other rule trade - Liquidity 15+5 - as before: the quote's last price.)
+        if (!checkedBest(p)) return q?.last?.takeIf { it > 0 }
+        val entrySec = p.entryTime.withSecond(0).withNano(0).atZone(com.optionslab.engine.IST).toEpochSecond()
+        // (The token from memory only: never the day's list built from its file on the stream's look.)
+        val t = runCatching { Broker.tokenKnown("${p.exchange}:${p.symbol}")?.let { KiteStream.freshTick(it) } }.getOrNull()
+        if (t != null) {
+            val ts = t.lastTradeTime
+            val book = com.optionslab.ira.PriceNow.bookBid(t.bid, t.ask)
+            // A trade after the entry minute, and - with a sane book there - not more than [PriceNow.FAR] outside it (a stray print with a
+            // trade time is as stray as one without).
+            val ask = t.ask
+            val inBook = book == null || ask == null ||
+                (t.last >= book * (1 - com.optionslab.ira.PriceNow.FAR) && t.last <= ask * (1 + com.optionslab.ira.PriceNow.FAR))
+            if (ts != null && ts >= entrySec + 60 && com.optionslab.ira.PriceNow.lastCounts(t.last, ts, entrySec) &&
+                !com.optionslab.ira.PriceNow.farFromBook(t.last, ts, t.bid, t.ask) && inBook) return t.last
+            return book ?: q?.let { com.optionslab.ira.PriceNow.bookBid(it.bid, it.ask) }
+        }
+        // Not streamed: Zerodha's quote, whose last price carries no trade time here - judged as the live stop's price is
+        // ([com.optionslab.ira.PriceNow.stopLast]: the last price unless it lies far outside a sane book, then the bid).
+        return q?.takeIf { it.last > 0 && it.last.isFinite() }?.let { com.optionslab.ira.PriceNow.stopLast(it.last, it.bid, it.ask) }
+    }
+
+    /** 20 Nov 2026: [p] is an R51 / R72 rule trade, whose best counts checked prices only ([bestPx], [highSince]). */
+    internal fun checkedBest(p: Pos): Boolean = p.key == com.optionslab.engine.orb.DonchianArm.SOURCE || p.key == com.optionslab.engine.orb.BreadthDonchianArm.SOURCE
 
 
     /**
@@ -2948,7 +2987,7 @@ object ArmLive {
                     val (pPaper, paperSell, paperWhy) = paperSide(p1, legsOf(spec, stream), fresh = !stream)
                     if (pPaper.detached && !p1.detached && paperSell <= 0) saidDetached(pPaper)
                     // 15 Nov: a stop-rule trade's best price raised to the price now (kept, so its stop never drops after a restart).
-                    val p = withBest(pPaper, ltpOf(pPaper), highSince(pPaper, fresh = !stream))
+                    val p = withBest(pPaper, bestPx(pPaper, q["${pPaper.exchange}:${pPaper.symbol}"]), highSince(pPaper, fresh = !stream))
                     val so = p.slId?.let { orders[it] }
                     val g = p.gttId?.let { gtts?.get(it) }
                     val exitSide = if (p.side > 0) "SELL" else "BUY"
@@ -3077,7 +3116,10 @@ object ArmLive {
                     detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref) }
             }
         }
-        save(b)
+        // 20 Nov 2026 (audit B5, item 5): a look that only raised rule trades' best prices (a new breakeven or step lock earned: [changed])
+        // writes the book on its own writer ([saveAsync], in order), so the stream's look never waits on the vault for it; anything else
+        // (a sale, a stop placed or moved) is written before the look goes on, as before.
+        if (updates.isNotEmpty() && updates.all { (old, now) -> now.size == 1 && now[0] == old.copy(best = now[0].best) }) saveAsync(b) else save(b)
     }
 
     /**
@@ -3101,7 +3143,8 @@ object ArmLive {
         val updates = LinkedHashMap<Pos, List<Pos>>()
         for (p0 in open) {
             val (pPaper, paperSell, paperWhy) = paperSide(p0, legsOf(LiveMirror.spec(p0.key), false))
-            val p = withBest(pPaper, q["${pPaper.exchange}:${pPaper.symbol}"]?.last?.takeIf { it > 0 })
+            // (20 Nov 2026: an R51 / R72 shadow trade's best also from the closed minutes' highs, as its live trade's would be.)
+            val p = withBest(pPaper, bestPx(pPaper, q["${pPaper.exchange}:${pPaper.symbol}"]), if (checkedBest(pPaper)) highSince(pPaper, fresh = true) else null)
             val quote = q["${p.exchange}:${p.symbol}"]?.takeIf { it.last > 0 }
             val ltp = quote?.last?.also { shadowMarks[p.ref] = it } ?: shadowMarks[p.ref]
             // The moment of its last look (null after a restart: judged on the price now only, as a stop moved up since must
@@ -3871,5 +3914,5 @@ object ArmLive {
     }
 
     /** For tests: as after a restart - the memory gone, the book on disk. */
-    internal fun forgetMemoryForTest() { coldDue = true; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear(); shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims(); blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2() }
+    internal fun forgetMemoryForTest() { runCatching { drainWritesForTest() }; coldDue = true; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear(); shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims(); blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2() }
 }
