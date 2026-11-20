@@ -386,7 +386,7 @@ object NightArm {
                         decide(b, u, now)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         // (Review: a look cancelled once its order was sent keeps the day decided - never a second buy.)
-                        if (key !in sent) { b.decided -= key; rollBackHistory(b, u, histBefore) }
+                        if (key !in sent) { b.decided -= key; rollBackHistory(b, u, histBefore) } else changed = true
                         cancelled = e; break
                     } catch (e: Throwable) {
                         // 20 Nov 2026 (audit: "Night loses the day on one failed read"): a failure before any entry is not the day's

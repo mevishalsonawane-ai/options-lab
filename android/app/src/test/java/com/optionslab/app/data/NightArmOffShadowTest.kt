@@ -150,6 +150,23 @@ class NightArmOffShadowTest : RobolectricTest() {
         }
     }
 
+    /** Review: a look cancelled once the decision's send began keeps the day decided (saved), so it never sends again. */
+    @Test fun aCancelAfterTheSendKeepsTheDayDecided() {
+        NightArm.forgetRetriesForTest()
+        var sends = 0
+        NightArm.testAfterSend = { sends++; throw kotlinx.coroutines.CancellationException("test: cancelled after the send") }
+        try {
+            try { runBlocking { NightArm.tick() } } catch (_: kotlinx.coroutines.CancellationException) {}
+            assertEquals(1, sends)
+            at(day, LocalTime.of(15, 21))
+            runBlocking { NightArm.tick() }
+            assertEquals("no second send for the day", 1, sends)
+        } finally {
+            NightArm.testAfterSend = null
+            NightArm.forgetRetriesForTest()
+        }
+    }
+
     @Test fun onThePaperPathIsUnchangedAndTheShadowGetsNothing() {
         assertTrue(runBlocking { NightArm.setArmed(true) }.contains("armed on paper"))
         runBlocking { NightArm.tick() }

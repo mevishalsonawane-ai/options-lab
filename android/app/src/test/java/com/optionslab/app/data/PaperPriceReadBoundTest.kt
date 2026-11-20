@@ -63,6 +63,19 @@ class PaperPriceReadBoundTest : RobolectricTest() {
         assertEquals("one read for the three looks", 1, reads1 - reads0)
     }
 
+    /** Review: a read stuck past twice the bound never blocks the next look - a fresh read starts beside it. */
+    @Test fun aStuckReadDoesNotBlockAFreshOne() {
+        Paper.priceReadWaitMs = 300L
+        val stuck = java.util.concurrent.CountDownLatch(1)
+        var first = true
+        upstox.gate = { key -> if (key == c.feedKey && first) { first = false; stuck.await(10, java.util.concurrent.TimeUnit.SECONDS) } }
+        try {
+            assertNull(runBlocking { Paper.lastPrice(c) })
+            Thread.sleep(700)                                       // past twice the bound: the read counts as stuck
+            assertEquals(100.0, runBlocking { Paper.lastPrice(c) }!!, 0.5)
+        } finally { stuck.countDown() }
+    }
+
     @Test fun aReadWithinTheBoundIsUsedAsBefore() {
         upstox.gate = { key -> if (key == c.feedKey) Thread.sleep(150) }
         val px = runBlocking { Paper.lastPrice(c) }

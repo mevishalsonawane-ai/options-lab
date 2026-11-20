@@ -293,6 +293,9 @@ class BackupTest : RobolectricTest() {
             "changed. Restore once they are closed (after the market's close is safest).", Backup.liveHeldWords(listOf("A", "B")))
         // A fresh phone holds nothing live: nothing refuses.
         assertEquals(emptyList<String>(), Backup.liveHeld())
+        // Review: the app's start has begun but not yet read the position books - the hints cannot tell yet: refused.
+        assertEquals(listOf("the open positions (still being read after the app's start)"), Backup.liveHeld(started = true, startRead = false))
+        assertEquals(emptyList<String>(), Backup.liveHeld(started = true, startRead = true))
     }
 
     /** 20 Nov 2026 (audit, B5 item 3): a restore never lowers the account stop's drawdown or month figure. */

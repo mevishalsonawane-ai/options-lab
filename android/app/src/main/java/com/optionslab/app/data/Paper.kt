@@ -349,12 +349,14 @@ object Paper {
         streamQuote(c)?.let { return it.also { remember(c.symbol, it) } }
         // 12 Oct: the quick read (5 s connect, 10 s read, one retry): the full one's 3 tries x 45 s and its rate-limit waits
         // held a paper pass for minutes ("fast check: paper orders" 4 min 15 s), and every stop check behind it.
-        val bars = candleRead(c).filter { it.istDate == Market.today() }
+        val (read, readAt) = candleRead(c)
+        val bars = read.filter { it.istDate == Market.today() }
         // 28 Oct (FINNIFTY's untraded options): no trade today, so no candles - Zerodha's live book, when it has one ([restBook]).
         if (bars.isEmpty()) return restBook(c)
-        candleBars[c.symbol] = System.currentTimeMillis() to bars
+        // (20 Nov 2026, review: stamped with when the read came in, never later - a read taken up by a later look is not "just read".)
+        candleBars[c.symbol] = readAt to bars
         return Quote(bars.last().close, high = bars.maxOf { it.high }, low = bars.minOf { it.low }, open = bars.first().open,
-            volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = System.currentTimeMillis() to it }
+            volume = bars.sumOf { it.volume }).also { remember(c.symbol, it); candleQuotes[c.symbol] = readAt to it }
     }
 
     /**
@@ -373,25 +375,31 @@ object Paper {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the price-read seam exists only in debug builds" }; field = v }
 
     /** How long a price read that finished after its caller stopped waiting is still taken by the next look. */
-    const val PRICE_READ_KEEP_MS = 30_000L
+    const val PRICE_READ_KEEP_MS = 15_000L
 
-    /** One candle read for a paper price, run apart from its caller ([candleRead]); [doneAt]: when it finished (0: still running). */
-    private class PriceRead(val job: kotlinx.coroutines.Deferred<List<Upstox.Bar>>) { @Volatile var doneAt = 0L }
+    /**
+     * One candle read for a paper price, run apart from its caller ([candleRead]), started at [startedAt]; [doneAt]: when it finished
+     * (0: still running).
+     */
+    private class PriceRead(val job: kotlinx.coroutines.Deferred<List<Upstox.Bar>>, val startedAt: Long) { @Volatile var doneAt = 0L }
 
     /** The candle read of each contract in flight, or just finished ([PriceRead]); memory only. */
     private val priceReads = java.util.concurrent.ConcurrentHashMap<String, PriceRead>()
 
     /**
-     * [c]'s candles from the paper feed, waited [priceReadWaitMs] at most; throws when the read failed or is still running then. A read
-     * already in flight for [c] is waited on (never a second one beside it), and one that finished in the last [PRICE_READ_KEEP_MS]
-     * after its caller stopped waiting is taken as it is.
+     * [c]'s candles from the paper feed and when they came in, waited [priceReadWaitMs] at most; throws when the read failed or is still
+     * running then. A read already in flight for [c] is waited on (no second one beside it, unless it has run over twice the wait: a
+     * stuck read never blocks the next), and one that finished in the last [PRICE_READ_KEEP_MS] after its caller stopped waiting is
+     * taken as it is, with its own time.
      */
-    private suspend fun candleRead(c: Contract): List<Upstox.Bar> {
+    private suspend fun candleRead(c: Contract): Pair<List<Upstox.Bar>, Long> {
         val wait = priceReadWaitMs
         val now = System.currentTimeMillis()
         val r = priceReads.compute(c.symbol) { _, cur ->
-            if (cur != null && (!cur.job.isCompleted || now - cur.doneAt <= PRICE_READ_KEEP_MS)) cur
-            else PriceRead(gapReads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { Net.intradayQuick(c.feedKey) }).also { pr ->
+            val running = cur != null && !cur.job.isCompleted && now - cur.startedAt <= 2 * wait
+            val kept = cur != null && cur.job.isCompleted && now - cur.doneAt <= PRICE_READ_KEEP_MS
+            if (running || kept) cur
+            else PriceRead(gapReads.async(start = kotlinx.coroutines.CoroutineStart.LAZY) { Net.intradayQuick(c.feedKey) }, now).also { pr ->
                 pr.job.invokeOnCompletion { pr.doneAt = System.currentTimeMillis() }
             }
         }!!
@@ -401,7 +409,7 @@ object Paper {
         kotlinx.coroutines.withTimeoutOrNull(wait) { r.job.join(); true }
             ?: throw java.io.IOException("the paper price read of ${c.symbol} took over $wait ms (it goes on; the next look takes it)")
         priceReads.remove(c.symbol, r)
-        return r.job.await()
+        return r.job.await() to (r.doneAt.takeIf { it > 0 } ?: System.currentTimeMillis())
     }
 
     /** 15 Nov: the start (epoch seconds) of the newest candle [quote] last read for [symbol]; null: none. Memory only ([com.optionslab.ira.PriceNow]). */
@@ -841,14 +849,12 @@ object Paper {
         val x = com.optionslab.ira.PaperElsewhere.pick(sales, product, since, byOthers,
             expired, row?.ltp?.toDouble(), c?.expiry?.atTime(15, 30), memPrice(symbol, ELSEWHERE_LAST_MS), now) ?: return@runCatching null
         x.orderId?.let { id -> claimElsewhere(id, owner, qty.coerceAtLeast(1)) }
-        // (Review: a fill shared by several trades lends each its share of the charges, never all of them.)
-        val soldQty = x.orderId?.let { id -> sales.firstOrNull { it.orderId == id }?.quantity } ?: 0
-        val charges = if (soldQty > 0 && qty in 1 until soldQty) x.charges * qty / soldQty else x.charges
+        // (Review: a fill shared by several trades lends each its share of the order's charges - all its fill rows - never all of them.)
+        val rows = x.orderId?.let { id -> sales.filter { it.orderId == id } }.orEmpty()
+        val soldQty = rows.sumOf { it.quantity.toLong() }
+        val charges = if (soldQty > 0 && qty in 1 until soldQty) rows.sumOf { it.charges } * qty / soldQty else x.charges
         SoldElsewhere(BigDecimal.valueOf(x.price), x.at, BigDecimal.valueOf(charges), x.how)
     }.getOrNull()
-
-    /** The owner key of an arm's own exit fill in [elsewhereClaims] ([place] with exit). */
-    private const val OWN_EXIT = "own exit"
 
     private fun claimElsewhere(orderId: String, owner: String, qty: Int) {
         if (elsewhereClaims.size > 2_000) elsewhereClaims.clear()
@@ -1332,11 +1338,6 @@ object Paper {
         // The sandbox's modelled slippage (kept apart as paper): a LIMIT from its price, else from the price it read.
         val limit = priceType.equals("LIMIT", true) && price != null
         modelled(r, entry, if (limit) price else q?.ltp?.takeIf { it > 0 }, limit)
-        // 20 Nov 2026 (audit, B5 item 4, review): an arm's own exit that filled is its own: never booked to another trade closed elsewhere.
-        if (exit && r.ok) runCatching {
-            val filled = r.events.filterIsInstance<SandboxEvent.Fill>().sumOf { it.quantity }
-            r.orderId?.let { id -> if (filled > 0) claimElsewhere(id, OWN_EXIT, filled) }
-        }
         // 25 Oct: an entry the 2% cap sized down says so (its fill is recorded above, as every fill).
         if (sized != null && r.ok) return r.copy(rule = sized)
         return r
@@ -1787,7 +1788,7 @@ object Paper {
             pending = null; cache = null; savedAtMs = 0L; readFails = 0; firstReadFailMs = 0L; lastReadFailMs = 0L
             filesForErase().forEach { runCatching { it.delete() } }
         } }
-        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear()
+        lastQuotes.clear(); candleQuotes.clear(); candleBars.clear(); tickCandles = emptyMap(); kiteTokens.clear(); kiteKeys.clear(); priceReads.clear()
         heldNoted.clear()
         follow(emptySet())
     }
