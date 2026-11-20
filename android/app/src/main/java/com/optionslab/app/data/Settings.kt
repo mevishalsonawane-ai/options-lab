@@ -365,11 +365,10 @@ data class AppSettings(
          * stored), so a value written meanwhile by someone else - the guard's kill switch - is never written back over.
          */
         fun saveChanged(from: AppSettings, to: AppSettings) {
-            try { saveChangedInner(from, to) } finally {
-                // 20 Nov 2026 (audit B5, item 9): the kill switch turned on here (Boss's switch, Jarvis's "kill switch on"): the app's
-                // working ENTRY orders at Zerodha are cancelled too (never an exit or a stop), in the background.
-                if (!from.guardKill && to.guardKill) runCatching { Broker.killEntriesSoon("the kill switch") }
-            }
+            saveChangedInner(from, to)
+            // 20 Nov 2026 (audit B5, item 9): the kill switch turned on here (Boss's switch, Jarvis's "kill switch on") and saved: the
+            // app's working ENTRY orders at Zerodha are cancelled too (never an exit or a stop), in the background.
+            if (!from.guardKill && to.guardKill) runCatching { Broker.killEntriesSoon("the kill switch") }
         }
 
         private fun saveChangedInner(from: AppSettings, to: AppSettings) {

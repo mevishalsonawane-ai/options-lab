@@ -89,10 +89,10 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
 
     // ---- item 3: the exits' lane ------------------------------------------------------------------------------------------------
 
-    @Test fun exitsAndStopChangesTakeTheTopLaneAndEntriesTheOneBelow() {
+    @Test fun exitsAndStopChangesTakeTheTopLaneAndEntriesGoBelowTheStopChecks() {
         assertEquals(RateGate.Priority.EXIT, Broker.writePriority(true, kotlin.coroutines.EmptyCoroutineContext))
         assertEquals(RateGate.Priority.EXIT, Broker.writePriority(true, Broker.Lane(RateGate.Priority.ANALYSIS)))
-        assertEquals(RateGate.Priority.SAFETY, Broker.entryWritePriorityForTest())
+        assertEquals(RateGate.Priority.ENTRY, Broker.entryWritePriorityForTest())
         assertEquals(RateGate.Priority.ENTRY, Broker.writePriority(false, kotlin.coroutines.EmptyCoroutineContext))
         assertEquals(RateGate.Priority.SAFETY, Broker.writePriority(false, Broker.Lane(RateGate.Priority.SAFETY)))
         assertTrue("an exit is ahead of every other lane", RateGate.Priority.values().all { it == RateGate.Priority.EXIT ||
@@ -178,11 +178,15 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
 
     // ---- item 9: the kill switch -----------------------------------------------------------------------------------------------
 
-    @Test fun theKillSwitchCancelsTheAppsWorkingEntriesAndNeverAnExitAStopOrBossesOwn() = runBlocking {
-        kite.position("NIFTY26OCT24400PE", -75, 50.0)
+    @Test fun theKillSwitchCancelsTheAppsWorkingEntriesAndNeverAnExitAStopAHedgeOrBossesOwn() = runBlocking {
+        kite.position("BANKNIFTY26OCT52000PE", -75, 50.0)          // a short BANKNIFTY put: a BUY on BANKNIFTY may be its hedge
         kite.nextPlace(outcome = Outcome.OPEN)
         val entry = order(price = 100.0)
         val entryId = Broker.placeOrder(entry, verdict = Cleared.live(entry))
+        // (Review: a working BUY the app sent as an entry on the short's underlying - a strategy's protective leg - is never cancelled.)
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val hedge = order(price = 20.0, symbol = "BANKNIFTY26OCT51000PE")
+        val hedgeId = Broker.placeOrder(hedge, verdict = Cleared.live(hedge))
         val stopId = Broker.placeOrder(order(type = "SL", price = 79.0, trigger = 80.0, side = Kite.Side.SELL), exit = true)
         kite.nextPlace(outcome = Outcome.OPEN)
         val exitId = Broker.placeOrder(order(price = 200.0, side = Kite.Side.SELL), exit = true)
@@ -190,14 +194,51 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
         // covers a short, and Boss's own order in Kite are not.
         val strayEntry = kite.restingInKite("NIFTY26OCT24600CE", "BUY", 75, 50.0, tag = "iraorb", product = "NRML")
         val straySale = kite.restingInKite("NIFTY26OCT24600CE", "SELL", 75, 90.0, tag = "iraorb", product = "NRML")
-        val cover = kite.restingInKite("NIFTY26OCT24400PE", "BUY", 75, 40.0, tag = "iraorb", product = "NRML")
+        val cover = kite.restingInKite("BANKNIFTY26OCT52000PE", "BUY", 75, 40.0, tag = "iraorb", product = "NRML")
         val boss = kite.restingInKite("NIFTY26OCT24700CE", "BUY", 75, 30.0, product = "NRML")
         val gone = Broker.cancelWorkingEntries("test")
         assertEquals(setOf(entryId, strayEntry), gone.toSet())
         assertEquals("CANCELLED", kite.order(entryId).status)
         assertEquals("CANCELLED", kite.order(strayEntry).status)
-        for (id in listOf(stopId, exitId, straySale, cover, boss)) assertTrue("$id still working", kite.order(id).working)
+        for (id in listOf(hedgeId, stopId, exitId, straySale, cover, boss)) assertTrue("$id still working", kite.order(id).working)
         assertTrue("only cancels were sent", kite.writes.filter { it.method == "DELETE" }.size == 2)
+    }
+
+    @Test fun withNoPositionsReadNoBuyIsCancelled() = runBlocking {
+        kite.nextPlace(outcome = Outcome.OPEN)
+        val entry = order(price = 100.0)
+        val id = Broker.placeOrder(entry, verdict = Cleared.live(entry))
+        kite.down += "/portfolio/positions"
+        assertTrue("a BUY may be a hedge: never cancelled blind", Broker.cancelWorkingEntries("test").isEmpty())
+        assertTrue(kite.order(id).working)
+        kite.down.clear()
+        assertEquals(listOf(id), Broker.cancelWorkingEntries("test"))
+    }
+
+    @Test fun aLostEntryReplyFoundInTheBookIsKeptAsAnEntryForTheKillSwitch() = runBlocking {
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT, outcome = Outcome.OPEN)
+        val o = order(price = 100.0)
+        try { Broker.placeOrder(o, verdict = Cleared.live(o)); fail() } catch (_: Exception) {}
+        val found = Broker.findRecentRetrying(o, emptyList(), tries = 1, waitMs = 10)
+        assertNotNull(found)
+        kite.restingInKite(sym, "SELL", 75, 300.0, tag = "iratest", product = "NRML")   // a sale it does not know: never cancelled
+        assertEquals(listOf(found), Broker.cancelWorkingEntries("test"))
+    }
+
+    @Test fun aRelayThatCannotConnectInTimeIsNotSentAndOneConnectIsShared() = runBlocking {
+        val calls = java.util.concurrent.atomic.AtomicInteger()
+        val slow = { calls.incrementAndGet(); Thread.sleep(800); null as java.net.Proxy? }
+        val t0 = System.nanoTime()
+        val e = try { Broker.relayWithin(100, on = { true }, proxy = slow); null } catch (x: Exception) { x }
+        assertTrue("not connected in time: nothing left ($e)", e is Broker.NotSent)
+        assertTrue("given up on time", (System.nanoTime() - t0) / 1_000_000 < 700)
+        // The next write joins the connect still running, never a second one beside it; it ends with the relay's answer.
+        assertNull(Broker.relayWithin(5_000, on = { true }, proxy = slow))
+        assertEquals(1, calls.get())
+        // A relay that refuses: not sent. The relay off: no proxy, nothing started.
+        val r = try { Broker.relayWithin(1_000, on = { true }, proxy = { throw java.io.IOException("Relay: cannot reach") }); null } catch (x: Exception) { x }
+        assertTrue("$r", r is Broker.NotSent && Broker.definite(r))
+        assertNull(Broker.relayWithin(1_000, on = { false }, proxy = { fail(); null }))
     }
 
     @Test fun anUnreadableBookCancelsNothing() = runBlocking {

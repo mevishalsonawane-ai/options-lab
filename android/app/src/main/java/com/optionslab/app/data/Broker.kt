@@ -480,7 +480,7 @@ object Broker {
             val test = testEndpoint
             // One budget for every request from this phone (10 Oct): orders first, then the caller's lane. A wait suspends.
             // 20 Nov 2026 (audit B5, item 3): exits, stops, stop moves, cancels and GTTs in the top lane of their own (EXIT); a new
-            // entry's order ([EntrySend]) one below it, with the stop checks' reads.
+            // entry's order ([EntrySend]) with the ordinary reads (ENTRY), below the stop checks' reads.
             if (test == null) rate.acquire(writePriority(write, kotlinx.coroutines.currentCoroutineContext()))
             val relay = if ((write || viaRelay) && test == null) {
                 // 20 Nov 2026 (audit B5, items 1 and 2): the relay not reachable, or not connected within what is left of the write's
@@ -627,22 +627,29 @@ object Broker {
      * 20 Nov 2026 (audit B5, item 1): the relay's proxy for a write, waited for at most [ms] (what is left of the write's budget). The
      * relay's SSH connect is a blocking call of up to 15 s a try (and waits on any connect already running), so on its own it could hold
      * an order past its budget; it now runs beside the write, which gives up when [ms] has passed. Either way nothing left the phone
-     * ([NotSent]: the order never went from another IP, and it may be sent again). The relay off: null at once, no other thread.
+     * ([NotSent]: the order never went from another IP, and it may be sent again). The relay off: null at once, no other thread. One
+     * connect at a time is shared by every write waiting on it (review: a connect left behind by a write that gave up is joined by the
+     * next write, never started again beside it, so a hung relay never piles up blocked threads). [on] and [proxy]: test seams.
      */
-    private suspend fun relayWithin(ms: Long): java.net.Proxy? {
-        if (!Relay.enabled) return null
-        val d = relayScope.async { Relay.proxy() }
+    internal suspend fun relayWithin(ms: Long, on: () -> Boolean = { Relay.enabled },
+                                     proxy: () -> java.net.Proxy? = { Relay.proxy() }): java.net.Proxy? {
+        if (!on()) return null
+        val d = synchronized(relayLock) {
+            relayConnect?.takeIf { it.isActive } ?: relayScope.async { proxy() }.also { relayConnect = it }
+        }
         val got = try {
             kotlinx.coroutines.withTimeoutOrNull(ms) { listOf(d.await()) }
-        } catch (e: kotlinx.coroutines.CancellationException) { d.cancel(); throw e
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e
         } catch (e: IOException) { throw NotSent(e.message ?: "The relay could not connect") }
         if (got == null) throw NotSent("The relay did not connect within ${ms / 1000} s; nothing was sent")
         return got.single()
     }
+    private val relayLock = Any()
+    @Volatile private var relayConnect: kotlinx.coroutines.Deferred<java.net.Proxy?>? = null
 
     /**
-     * 20 Nov 2026 (audit B5, item 3): marks a NEW entry's order on its coroutine ([placeOrder]), so its POST takes the lane below the
-     * exits' ([writePriority]). Memory only.
+     * 20 Nov 2026 (audit B5, item 3): marks a NEW entry's order on its coroutine ([placeOrder]), so its POST takes the entries' lane,
+     * below the exits' and the stop checks' reads ([writePriority]). Memory only.
      */
     private class EntrySend : kotlin.coroutines.AbstractCoroutineContextElement(EntrySend) {
         companion object Key : kotlin.coroutines.CoroutineContext.Key<EntrySend>
@@ -650,10 +657,10 @@ object Broker {
 
     /**
      * The request budget's lane for one call: a write is an exit's (EXIT: exits, stops, stop moves, cancels, GTTs - first of all)
-     * unless it is a new entry's order ([EntrySend]: SAFETY); a read takes its caller's [Lane] (ENTRY when none).
+     * unless it is a new entry's order ([EntrySend]: ENTRY); a read takes its caller's [Lane] (ENTRY when none).
      */
     internal fun writePriority(write: Boolean, ctx: kotlin.coroutines.CoroutineContext): com.optionslab.ira.RateGate.Priority = when {
-        write && ctx[EntrySend] != null -> com.optionslab.ira.RateGate.Priority.SAFETY
+        write && ctx[EntrySend] != null -> com.optionslab.ira.RateGate.Priority.ENTRY
         write -> com.optionslab.ira.RateGate.Priority.EXIT
         else -> ctx[Lane]?.priority ?: com.optionslab.ira.RateGate.Priority.ENTRY
     }
@@ -926,7 +933,7 @@ object Broker {
 
     /** TEST ONLY: nothing kept in memory from an earlier test (the session, the kept reads, today's count). */
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
-        entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L
+        entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null
         killJob?.cancel(); killJob = null; killSweepOn = false }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
@@ -1640,14 +1647,14 @@ object Broker {
      * ([at]), and the order book as last read before it ([before]: every order in it was there before this one, so none of them
      * is ever taken for its lost reply). Set before the POST, from memory alone: nothing is read for it on the order path.
      */
-    private class SendMark(val at: java.time.LocalDateTime, val atMs: Long, val before: List<OrderRow>?)
+    private class SendMark(val at: java.time.LocalDateTime, val atMs: Long, val before: List<OrderRow>?, val exit: Boolean)
     private val sendMarks: MutableMap<Kite.Order, SendMark> = java.util.Collections.synchronizedMap(java.util.IdentityHashMap())
 
-    private fun markSend(o: Kite.Order) {
+    private fun markSend(o: Kite.Order, exit: Boolean) {
         val now = System.currentTimeMillis()
         synchronized(sendMarks) {
             if (sendMarks.size > 100) sendMarks.entries.removeIf { now - it.value.atMs > SENT_KEEP_MS }
-            sendMarks[o] = SendMark(Market.now().toLocalDateTime(), now, keptOrders?.value)
+            sendMarks[o] = SendMark(Market.now().toLocalDateTime(), now, keptOrders?.value, exit)
         }
     }
 
@@ -1685,7 +1692,7 @@ object Broker {
         val body = o.formBody()
         val stamp = runCatching { tokenKnown("${o.exchange}:${o.tradingSymbol}")?.let { KiteStream.seen(it)?.tick?.exchangeTime } }.getOrNull()
         val t0 = runCatching { OrderTiming.sending(live = true, exchSec = stamp) }.getOrDefault(System.currentTimeMillis())
-        runCatching { markSend(o) }
+        runCatching { markSend(o, exit) }
         val data = call("POST", "/orders/regular", body) as JSONObject
         runCatching { OrderTiming.answered(live = true, startedAt = t0) }
         countSent()
@@ -1799,7 +1806,9 @@ object Broker {
                 // after Kite's error): a resting order at another level is never taken for this one.
                 samePrices(o, it) &&
                 (!afterError || adoptableAfterError(o, it))
-        }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it) }
+        }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it)
+            // (20 Nov 2026, review: a lost reply found is kept as the entry or exit it was sent as, for the kill switch.)
+            mark?.let { m -> noteKind(it, entry = !m.exit) } }
     }
 
     /** [r]'s price (a LIMIT's or an SL's) and trigger (an SL's or an SL-M's) are [o]'s, to half a tick. */
@@ -2015,10 +2024,10 @@ object Broker {
     /**
      * 20 Nov 2026 (audit B5, item 8): one order as a row of the order book ([OrderRow]), from its own history's last entry (GET
      * /orders/{id}): a stop missing from a good read of the book is read again by its id, never assumed resting. Null when Kite has
-     * no history for it yet; throws when it cannot be read.
+     * no history for it yet; throws when it cannot be read. [budgetMs]: a whole limit shorter than a read's own.
      */
-    suspend fun orderRow(orderId: String): OrderRow? {
-        val hist = call("GET", "/orders/${Kite.enc(orderId)}") as JSONArray
+    suspend fun orderRow(orderId: String, budgetMs: Long? = null): OrderRow? {
+        val hist = call("GET", "/orders/${Kite.enc(orderId)}", budgetMs = budgetMs) as JSONArray
         if (hist.length() == 0) return null
         return orderRow(hist.getJSONObject(hist.length() - 1)).takeIf { it.id.isNotBlank() }
     }
@@ -2042,14 +2051,21 @@ object Broker {
      * working order of the app's own (its tag starts "ira") that is an ENTRY - one this phone sent as an entry ([entryIds]), or, when
      * this phone does not know it (sent before a restart), a plain LIMIT or MARKET BUY that would open or add to a long by a good
      * positions read ([net]). Never one it sent as an exit ([exitIds]), never a stop (SL, SL-M) it does not know as an entry, never a
-     * sale it does not know, never anything not tagged as the app's (Boss's own orders in Kite), and with no positions read only the
-     * known entries.
+     * sale it does not know, never anything not tagged as the app's (Boss's own orders in Kite).
+     * Review (20 Nov 2026): a BUY is cancelled only on a good positions read showing no short position of the same underlying on the
+     * same exchange - a working BUY there may be a hedge (a strategy's protective leg, a cover) and cancelling it could leave a short
+     * uncovered; with no positions read no BUY is cancelled at all (a known SELL entry still is: it only opens a short).
      */
     internal fun killCancels(r: OrderRow, net: List<Position>?): Boolean {
         if (!r.working || !r.tag.startsWith("ira")) return false
         if (exitIds.containsKey(r.id)) return false
-        if (entryIds.containsKey(r.id)) return true
-        if (net == null || r.side != "BUY" || r.type !in setOf("LIMIT", "MARKET")) return false
+        val known = entryIds.containsKey(r.id)
+        if (r.side != "BUY") return known
+        if (net == null) return false
+        fun root(s: String) = Kite.underlyingOf(s) ?: s.takeWhile { !it.isDigit() }
+        if (net.any { it.qty < 0 && it.exchange == r.exchange && root(it.symbol) == root(r.symbol) }) return false
+        if (known) return true
+        if (r.type !in setOf("LIMIT", "MARKET")) return false
         val held = net.filter { it.symbol == r.symbol && it.exchange == r.exchange && it.product == r.product }.sumOf { it.qty }
         return held >= 0
     }
@@ -2058,14 +2074,17 @@ object Broker {
 
     /**
      * 20 Nov 2026 (audit B5, item 9): the kill switch just went on ([why]): the app's working entry orders at Zerodha are cancelled
-     * ([cancelWorkingEntries]) in the background - at once, and again a few seconds later for an entry whose POST was already on its
-     * way. Returns at once; nothing here waits, reads the disk or blocks the caller (the guard's order path can turn it on).
+     * ([cancelWorkingEntries]) in the background - at once, again a few seconds later, and once more after a whole write's budget
+     * ([WRITE_BUDGET_MS]; review: an entry whose POST was already on its way may reach Zerodha that late). Returns at once; nothing here
+     * waits, reads the disk or blocks the caller (the guard's order path can turn it on).
      */
     fun killEntriesSoon(why: String) {
         if (!killSweepOn) return
         killJob = killScope.launch {
             runCatching { cancelWorkingEntries(why) }
             delay(killSweepAgainMs)
+            runCatching { cancelWorkingEntries(why) }
+            delay(WRITE_BUDGET_MS)
             runCatching { cancelWorkingEntries(why) }
         }
     }
@@ -2081,8 +2100,8 @@ object Broker {
 
     /**
      * 20 Nov 2026 (audit B5, item 9): cancels the app's working ENTRY orders ([killCancels]); never an exit or a stop. Reads the order
-     * book afresh (tried three times); an unreadable book cancels nothing. The positions read (for orders sent before a restart) is
-     * optional. The ids cancelled.
+     * book afresh (tried three times); an unreadable book cancels nothing. With no positions read, no BUY is cancelled ([killCancels]).
+     * The ids cancelled.
      */
     suspend fun cancelWorkingEntries(why: String): List<String> = kotlinx.coroutines.withContext(Lane(com.optionslab.ira.RateGate.Priority.SAFETY)) {
         if (!loggedIn) return@withContext emptyList<String>()
@@ -2093,7 +2112,8 @@ object Broker {
             if (rows != null) break
         }
         val book = rows ?: run { runCatching { Diag.record("zerodha", "Kill switch ($why): the order book could not be read; no entry order cancelled") }; return@withContext emptyList<String>() }
-        val net = if (book.none { it.working && it.tag.startsWith("ira") }) null else runCatching { positionBook().net }.getOrNull()
+        val net = if (book.none { it.working && it.tag.startsWith("ira") }) null
+            else runCatching { positionBook().net }.getOrNull() ?: run { delay(1_000); runCatching { positionBook().net }.getOrNull() }
         val out = ArrayList<String>()
         for (r in book) if (killCancels(r, net)) {
             runCatching { cancel(r.id, r.variety) }.onSuccess { out += r.id }

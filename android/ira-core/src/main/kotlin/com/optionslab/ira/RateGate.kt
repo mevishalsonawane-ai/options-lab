@@ -15,15 +15,15 @@ import kotlinx.coroutines.delay
  * 20 Nov 2026 (audit B5, item 3: "exits get one reserved request a second"): exits, stops, stop moves and cancels had the same lane
  * as the stop checks' price reads and every entry order, so a busy second of reads and entries left them one request. They now have
  * a lane of their own above everything, [Priority.EXIT], which may use the whole budget; every other lane leaves it room:
- * [Priority.SAFETY] (the stop checks' and the loss limit's reads, and since today the entry orders themselves) two requests a
- * second, [Priority.ENTRY] (ordinary reads) three, [Priority.ANALYSIS] five. A lower lane's slot opens later than a higher one's
- * (it needs more of the second to pass), so a waiting exit is let through first. The total stays [perSecond] (8, under Kite's 10).
+ * [Priority.SAFETY] (the stop checks' and the loss limit's reads) one request a second, [Priority.ENTRY] (the entry orders and
+ * ordinary reads) two, [Priority.ANALYSIS] three, as before. A lower lane's slot opens later than a higher one's (it needs more of
+ * the second to pass), so a waiting exit is let through first. The total stays [perSecond] (8, under Kite's 10).
  */
 class RateGate(
     private val perSecond: Int = 8,
     private val clock: () -> Long = { System.nanoTime() / 1_000_000L },
 ) {
-    enum class Priority(val reserve: Int) { EXIT(0), SAFETY(2), ENTRY(3), ANALYSIS(5) }
+    enum class Priority(val reserve: Int) { EXIT(0), SAFETY(1), ENTRY(2), ANALYSIS(3) }
 
     /** When each request of the last second was let through, oldest first. */
     private val sent = ArrayDeque<Long>()
