@@ -713,6 +713,8 @@ fun RiskPage(model: AppModel) {
             item { FundsCheckCard(model) }
             // 20 Nov 2026 (audit): Liquidity's fresh-bar check on live entries (in shadow until switched on; off again takes the PIN).
             item { LiquidityFreshBarCard(model) }
+            // 20 Nov 2026 (audit B5): live entries while today's order count cannot be read (in shadow until switched on; off takes the PIN).
+            item { OrderCountCheckCard(model) }
             // 19 Nov 2026 (audit batch 2, B2-B): paper-only refusals of entries that could go live - shadow until switched on (on takes the PIN).
             item { PaperRefusalLiveCard(model) }
             // 20 Nov 2026 (audit B5): R51 / R72 breaks on a history that does not reach the last trading day - shadow until switched on (off takes the PIN).
@@ -858,7 +860,12 @@ private fun GuardCard(model: AppModel) {
             text = { Text(if (turnOn) "No new position is opened until you clear it. Exits and the expiry square-off still go through." else "Orders are allowed again, within these limits.", style = Type.bodySmall) },
             confirmButton = { TextButton({
                 confirmKill = null
-                loosen(!turnOn, com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) { model.update { it.copy(guardKill = turnOn) } }
+                loosen(!turnOn, com.optionslab.app.security.GuardPin.CLEAR_KILL_WHY) {
+                    model.update { it.copy(guardKill = turnOn) }
+                    // 20 Nov 2026 (audit B5, item 9): Boss's own switch, his explicit act: the bots' working entry orders at Zerodha are
+                    // cancelled too (never an exit, a stop, a possible hedge or his own), in the background (no I/O here).
+                    if (turnOn) runCatching { com.optionslab.app.data.Broker.killEntriesSoon("your kill switch", act = true) }
+                }
             }) { Text(if (turnOn) "Turn on" else "Clear", color = if (turnOn) p.oxblood else p.verdigris) } },
             dismissButton = { TextButton({ confirmKill = null }) { Text("Cancel") } },
         )
@@ -867,6 +874,11 @@ private fun GuardCard(model: AppModel) {
     LedgerCard(title = "Account guard", accent = if (s.guardKill) p.oxblood else null) {
         Note("Checked on every Zerodha order, from a strategy or by hand (paper is never refused). Closing a position is never blocked, not even by the kill switch.")
         ToggleRow("Kill switch", if (s.guardKill) "ON: new entries are refused until you turn it off; exits and square-offs still go through" else "Off. Turn on to stop all new entries at once", s.guardKill, keepSub = true) { on -> confirmKill = on }
+        // 20 Nov 2026 (audit B5, review): a kill switch the guard, Jarvis or voice turned on only logs the bots' working entries; Boss
+        // cancels them here himself (his act; it only lowers risk, so no PIN). Never an exit, a stop, a possible hedge or his own order.
+        if (s.guardKill) TextButton({ runCatching { com.optionslab.app.data.Broker.killEntriesSoon("your cancel of the bots' entries", act = true) } }) {
+            Text(KILL_CANCEL_ENTRIES, color = p.oxblood)
+        }
         val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
         ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> loosenLimit(com.optionslab.app.data.LossBreaker.Limit.ZERODHA, s.guardDailyLoss, loss[i], askLimit) { model.update { it.copy(guardDailyLoss = loss[i]) } } }
         val dd = listOf(5.0, 10.0, 20.0, 0.0)
@@ -1202,3 +1214,5 @@ internal fun CommoditiesLimits(s: com.optionslab.app.data.AppSettings, rupees: (
 /** 25 Oct (app audit): what the PIN dialog says when the paper bots' daily loss limit is loosened. */
 internal const val ASK_PAPER_LOSS = "Enter your app PIN to loosen the paper bots' daily loss limit."
 internal const val ASK_PAPER_WEEK = "Enter your app PIN to loosen the paper bots' weekly loss stop."
+/** 20 Nov 2026 (audit B5): the kill switch card's action while it is on: Boss cancels the bots' working entry orders himself. */
+internal const val KILL_CANCEL_ENTRIES = "Cancel the bots' working entries at Zerodha"

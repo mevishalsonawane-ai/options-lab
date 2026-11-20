@@ -107,4 +107,36 @@ class AccountGuardTest {
         assertFalse(AccountGuard.drawdownNotFromToday(calm.copy(peakEquity = 0.0, equity = 500_000.0)))
         assertFalse(AccountGuard.drawdownNotFromToday(calm.copy(equity = 800_000.0, dayPnl = Double.NaN)))
     }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 6): an order count that could not be read is UNKNOWN, never zero - an entry is refused while the
+     * trades-a-day limit is on; with the limit off it is not asked; an exit (and a stop, which only reduces what is held) never is.
+     */
+    @Test fun anUnknownOrderCountRefusesEntriesButNeverExitsOrStops() {
+        val unknown = calm.copy(ordersToday = 0, ordersKnown = false)
+        assertTrue(reasons(a = unknown).any { "order count could not be read" in it })
+        assertFalse(reasons(a = unknown).any { "Trades per day limit:" in it })
+        assertEquals(emptyList(), reasons(a = unknown, l = limits.copy(maxTradesPerDay = 0)))
+        val held = unknown.copy(holdings = listOf(AccountGuard.Holding("NIFTY24800CE", 75, 75, "NIFTY", exp, "CE")))
+        assertEquals(emptyList(), reasons(buyCe.copy(side = "SELL"), held), "an exit or a stop sale never waits on the count")
+        // A count that was read still refuses at the limit, and passes below it, as before.
+        assertTrue(reasons(a = calm.copy(ordersToday = 10)).any { "Trades per day limit:" in it })
+        assertEquals(emptyList(), reasons(a = calm.copy(ordersToday = 9)))
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 7): the daily cap counts every order sent (its setting says entries, stops and exits), and it only
+     * ever refuses an entry: a stop or an exit at a full cap still goes, through both caps (this guard and Kite's order checks).
+     */
+    @Test fun aFullDailyCapNeverRefusesAStopOrAnExit() {
+        val full = calm.copy(ordersToday = 50, holdings = listOf(AccountGuard.Holding("NIFTY24800CE", 75, 75, "NIFTY", exp, "CE")))
+        assertEquals(emptyList(), reasons(buyCe.copy(side = "SELL"), full))
+        assertTrue(reasons(a = full).any { "Trades per day" in it }, "an entry at the cap is still refused")
+        val stop = com.optionslab.engine.Kite.Order("NIFTY24800CE", com.optionslab.engine.Kite.Side.SELL, 75, 75, "NRML", "SL", 84.0,
+            triggerPrice = 85.0)
+        val lim = com.optionslab.engine.Kite.Limits(maxOrdersPerDay = 10)
+        assertEquals(emptyList(), com.optionslab.engine.Kite.refusals(stop, lim, sentToday = 50, holdToSettlement = false, exit = true))
+        assertTrue(com.optionslab.engine.Kite.refusals(stop.copy(side = com.optionslab.engine.Kite.Side.BUY, orderType = "LIMIT", triggerPrice = null),
+            lim, sentToday = 50, holdToSettlement = false).any { "daily order limit" in it })
+    }
 }

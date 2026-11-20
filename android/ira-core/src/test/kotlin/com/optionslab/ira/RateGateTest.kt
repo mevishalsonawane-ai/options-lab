@@ -13,11 +13,11 @@ class RateGateTest {
     @Test fun eightInASecondThenTheNinthWaits() {
         var now = 1_000_000L
         val g = RateGate(perSecond = 8) { now }
-        repeat(8) { assertEquals(0L, g.tryTake(RateGate.Priority.SAFETY), "request $it"); now += 10 }
+        repeat(8) { assertEquals(0L, g.tryTake(RateGate.Priority.EXIT), "request $it"); now += 10 }
         // The first left at 1_000_000: the ninth fits at 1_001_000, 920 ms from now.
-        assertEquals(920L, g.tryTake(RateGate.Priority.SAFETY))
+        assertEquals(920L, g.tryTake(RateGate.Priority.EXIT))
         now += 920
-        assertEquals(0L, g.tryTake(RateGate.Priority.SAFETY))
+        assertEquals(0L, g.tryTake(RateGate.Priority.EXIT))
         assertEquals(9L, g.taken)
     }
 
@@ -26,7 +26,7 @@ class RateGateTest {
         val g = RateGate(perSecond = 8) { now }
         val sent = ArrayList<Long>()
         // Ten seconds of callers asking every 7 ms.
-        while (now < 10_000) { if (g.tryTake(RateGate.Priority.SAFETY) == 0L) sent += now; now += 7 }
+        while (now < 10_000) { if (g.tryTake(RateGate.Priority.EXIT) == 0L) sent += now; now += 7 }
         for (t in sent) {
             val n = sent.count { it in t until t + 1_000 }
             assertTrue(n <= 8, "at $t: $n in a second")
@@ -39,17 +39,43 @@ class RateGateTest {
         val g = RateGate(perSecond = 8) { now }
         repeat(5) { assertEquals(0L, g.tryTake(RateGate.Priority.ANALYSIS)) }
         assertTrue(g.tryTake(RateGate.Priority.ANALYSIS) > 0, "analysis leaves three")
-        repeat(2) { assertEquals(0L, g.tryTake(RateGate.Priority.ENTRY)) }
-        assertTrue(g.tryTake(RateGate.Priority.ENTRY) > 0, "entries leave one")
-        assertEquals(0L, g.tryTake(RateGate.Priority.SAFETY), "an exit takes the last")
-        assertTrue(g.tryTake(RateGate.Priority.SAFETY) > 0)
+        assertEquals(0L, g.tryTake(RateGate.Priority.ENTRY))
+        assertTrue(g.tryTake(RateGate.Priority.ENTRY) > 0, "entry orders and ordinary reads leave two")
+        assertEquals(0L, g.tryTake(RateGate.Priority.SAFETY))
+        assertTrue(g.tryTake(RateGate.Priority.SAFETY) > 0, "the stop checks' reads leave one")
+        // 20 Nov 2026 (audit B5, item 3): the last request of the second is the exits' alone (exits, stops, stop moves, cancels).
+        assertEquals(0L, g.tryTake(RateGate.Priority.EXIT), "an exit takes the reserved one")
+        assertTrue(g.tryTake(RateGate.Priority.EXIT) > 0, "and never more than the budget")
         // A clock set back by more than the window starts it again (never stuck for the size of the jump).
         now = -60_000
         assertEquals(0L, g.tryTake(RateGate.Priority.SAFETY))
-        // A tiny budget still lets each lane send one a second.
+        // Never below one a second, however small the budget.
         val tiny = RateGate(perSecond = 2) { now }
         assertEquals(0L, tiny.tryTake(RateGate.Priority.ANALYSIS))
         assertTrue(tiny.tryTake(RateGate.Priority.ANALYSIS) > 0)
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5, item 3): a second filled by entry orders and reads still lets exits through (two above the entries, one
+     * above the stop checks' reads), and a waiting exit's slot opens before any lower lane's (nothing of a lower lane is taken in between).
+     */
+    @Test fun aSecondFullOfReadsAndEntriesStillLetsExitsThroughFirst() {
+        var now = 0L
+        val g = RateGate(perSecond = 8) { now }
+        repeat(6) { assertEquals(0L, g.tryTake(RateGate.Priority.ENTRY)); now += 10 }
+        assertTrue(g.tryTake(RateGate.Priority.ENTRY) > 0)
+        assertEquals(0L, g.tryTake(RateGate.Priority.EXIT)); assertEquals(0L, g.tryTake(RateGate.Priority.EXIT))
+        // The second is full: each lane is told when its own slot opens - the exit's first.
+        val exit = g.tryTake(RateGate.Priority.EXIT)
+        val safety = g.tryTake(RateGate.Priority.SAFETY)
+        val entry = g.tryTake(RateGate.Priority.ENTRY)
+        assertTrue(exit in 1..safety - 1, "exit $exit before safety $safety")
+        assertTrue(safety < entry, "safety $safety before entry $entry")
+        now += exit
+        assertTrue(g.tryTake(RateGate.Priority.SAFETY) > 0, "a read never takes the exit's slot")
+        assertEquals(0L, g.tryTake(RateGate.Priority.EXIT))
+        // Never more than the budget in any second.
+        assertTrue(g.tryTake(RateGate.Priority.EXIT) > 0)
     }
 
     @Test fun workersWaitBySuspendingAndNeverPassTheBudget() = runBlocking {
@@ -61,8 +87,8 @@ class RateGateTest {
         }.awaitAll()
         val took = System.nanoTime() / 1_000_000 - t0
         assertEquals(20, at.size)
-        // 7 a second for entries: 20 requests take at least two full seconds.
-        assertTrue(took >= 2_000, "$took ms")
+        // 6 a second for ordinary reads: 20 requests take at least three full seconds.
+        assertTrue(took >= 3_000, "$took ms")
         assertTrue(g.waited >= 1)
         assertEquals(20L, g.taken)
     }

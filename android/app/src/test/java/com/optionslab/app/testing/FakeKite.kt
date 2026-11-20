@@ -269,6 +269,8 @@ class FakeKite : Closeable {
 
     /** 18 Nov 2026 (review F2): every order trailing the book ([trailReads]) is shown in it from now. */
     fun showInBook() = synchronized(lock) { trailing.clear() }
+    /** 20 Nov 2026 (audit B5): order [id] left out of the next [reads] reads of the order book's list (its history still shows it). */
+    fun hideFromBook(id: String, reads: Int) = synchronized(lock) { trailing[id] = reads }
 
     /**
      * 18 Nov 2026 (audit: B2): an order resting at Zerodha that no test path sent - Boss's own LIMIT sell in Kite ([tag] blank), or a stop of
@@ -415,8 +417,17 @@ class FakeKite : Closeable {
 
     private fun closing(r: MockResponse): MockResponse = if (keepAlive) r else r.addHeader("Connection", "close")
 
+    /**
+     * 20 Nov 2026 (audit B5): answers carry a Date header, as Zerodha's do (off by default, so the older tests' clock figures are
+     * unchanged): the phone's clock against Zerodha's is then measured from them.
+     */
+    @Volatile var dated = false
+    /** 20 Nov 2026 (audit B5): Zerodha's clock in the Date header moved by this many ms (a phone clock stepped, as the phone sees it). */
+    @Volatile var dateShiftMs = 0L
+
     private fun ok(data: Any?): MockResponse = closing(MockResponse().setResponseCode(200))
         .addHeader("Content-Type", "application/json").setBody(JSONObject().put("status", "success").put("data", data ?: JSONObject.NULL).toString())
+        .apply { if (dated) addHeader("Date", java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME.format(java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).plusNanos(dateShiftMs * 1_000_000L))) }
 
     private fun error(code: Int, type: String, message: String): MockResponse = closing(MockResponse().setResponseCode(code))
         .addHeader("Content-Type", "application/json")

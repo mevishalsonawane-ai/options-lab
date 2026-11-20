@@ -238,6 +238,30 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:NRML").first)
     }
 
+    /**
+     * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost and that the book does not show yet is UNKNOWN, never reported
+     * refused (a run could send it again or leave it untracked): looked for on the next passes, and once the book shows it, it is the
+     * leg's entry - one buy, never two.
+     */
+    @Test fun aLostEntryReplyIsLookedForAndNeverReportedRefused() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        startLive(id)
+        assertEquals(1, buys().size)
+        assertTrue("never refused", entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals(1, buys().size)
+        assertTrue(entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        kite.showInBook()
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("one buy, never two", 1, buys().size)
+        assertEquals("complete", entry(id).run!!.legs.values.single().entryStatus)
+    }
+
     @Test fun aStopLossOnTheTickSellsTheLegOnce() {
         live()
         val id = saved(Position.B to OptionType.CE)
@@ -337,6 +361,71 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("one stop, not two", 1, restingStops().size)
         assertEquals("TRIGGER PENDING", kite.order(kite.orders.keys.last()).status)
         assertTrue("no GTT beside it", kite.gtts.isEmpty())
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): a leg's stop whose reply is lost and that the book does not show yet is UNKNOWN - looked for on
+     * the next looks, never a second SL beside it; once the book shows it, it is the leg's stop.
+     */
+    @Test fun aLegsStopWhoseReplyIsLostIsLookedForAndNeverRestedTwice() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, restingStops().size)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("no second stop while its lost reply is looked for", 1, restingStops().size)
+        kite.showInBook()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("one stop, never two", 1, restingStops().size)
+        val sl = kite.orders.values.single { it.type == "SL" }
+        assertEquals("adopted as the leg's stop", "Test basket · leg 1 stop", runBlocking { Strategies.owners() }["kite:${sl.id}"])
+    }
+
+    /**
+     * 20 Nov 2026 (deep review, confirmed): with Zerodha's order book unreadable past the two minutes, a lost entry is never given up and
+     * read as rejected (it may have filled): it stays UNKNOWN, nothing is sent again, and Boss is told its state is unknown.
+     */
+    @Test fun aLostEntryWithTheBookUnreadablePastTheWindowStaysUnknown() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        // (The book unreadable from the send on: no read ever succeeds, before the window or after it.)
+        kite.down += "/orders"
+        startLive(id)
+        Broker.lostSearchMsForTest = 0
+        runBlocking { Strategies.tickAll(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("never sent again", 1, buys().size)
+        assertTrue("never read as rejected", entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "UNKNOWN" in it })
+    }
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): an entry whose reply was lost before a restart can no longer be looked for: it stays UNKNOWN
+     * (never refused, never sent again) and Boss is told once to check the order book.
+     */
+    @Test fun aLostEntryFromBeforeARestartStaysUnknownAndBossIsTold() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, sl = null)
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 50
+        startLive(id)
+        Broker.forgetLostForTest()                                   // as after a restart: nothing left in memory to look for
+        runBlocking { Strategies.tickAll(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("never sent again", 1, buys().size)
+        assertTrue(entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        assertEquals("told once", 1, AutomationSupport.alerts().count { "cannot be looked for any more" in it })
     }
 
     @Test fun aCarriedLegsStopRestsAtZerodhaAsOneGttNeverADaySlOrder() {

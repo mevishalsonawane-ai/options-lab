@@ -181,6 +181,15 @@ notes; match the surrounding code.
   own cancel, and with blank or unrecognised words, is Boss's: never put back, the app sells at the level. Exchange / RMS / market
   protection words, or a cancel outside market hours, are Zerodha's: put back. A GTT "deleted" with no app mark is Boss's. The app's own
   cancels (arm exits and Boss's manual exit from the app) are marked before they go and saved in the book, so a restart never misreads them.
+- ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
+  - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
+    live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)
+    refuses such entries; on needs no PIN, off takes the PIN. Exits and stops never look at the count.
+  - Boss's own kill switch in the app (turning it on, or its "Cancel the bots' working entries" while it is on; once the switch reads
+    on) also cancels the bots' working entry orders at Zerodha (told apart by tag: ORB, Pine, strategies, the arms' live copies).
+    It never cancels an exit, a stop, Boss's own entries, a BUY on an underlying with a short held (it may be a hedge) or any BUY
+    when positions cannot be read, and nothing when the order book cannot be read. Turned on by the guard, Jarvis, voice or
+    Autopilot, it only logs which entries it would cancel.
 - R51 / R72 STALE HISTORY (20 Nov audit B5). The earlier sessions a break's 20-bar channel reads must reach the last trading day by
   the calendar, whole in its last 20 five-minute bars. A missing, empty or stale history is read again in the background (1, 2, then
   every 5, then every 15 minutes after about an hour); a worse read never replaces a better one, and a history already in use is

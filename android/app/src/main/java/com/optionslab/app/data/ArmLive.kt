@@ -11,6 +11,7 @@ import com.optionslab.engine.risk.ExitQty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -1615,12 +1616,32 @@ object ArmLive {
         val exitSide = if (p.side > 0) Kite.Side.SELL else Kite.Side.BUY
         // 18 Nov 2026 (audit A2): an exit whose reply was lost may still be selling it: no stop beside it until that is known.
         if (lostExitHolds(p.contract) || unsearchedLost.containsKey(p.contract)) return p.copy(stopTrigger = trigger)
+        // 20 Nov 2026 (audit B5 deep review): this trade's own stop whose reply was lost and is not found yet is UNKNOWN: looked for again,
+        // and no second stop rests beside it while it may (the app watches the level meanwhile); found, it is the trade's stop. Given up
+        // on after [Broker.LOST_SEARCH_MS] (Boss told), a stop is rested as usual.
+        when (val l = Broker.lookLost(lostStopKey(p))) {
+            // (20 Nov 2026, delta review: never one another open trade already owns - taken as its orphan meanwhile; this trade's stop is then rested as
+            // usual, within what the contract's other exits leave. One found for more than this trade holds is shrunk by the next look.)
+            is Broker.LostLook.Found -> if (l.id in placedStops || stopOwnedByOther(p, l.id)) {
+                runCatching { Diag.record("armlive", "${p.label}: its lost stop's search found ${l.id}, which another trade already owns: not taken") }
+            } else {
+                placedStops += l.id
+                runCatching { Strategies.tagOwner("kite:${l.id}", "${spec.label} · live ${stopWords(p)}") }
+                return p.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: trigger, stopBooked = 0, stopQty = l.qty)
+            }
+            Broker.LostLook.Searching -> return p.copy(stopTrigger = trigger)
+            else -> Unit
+        }
         // 20 Oct, enhancement round 2: read and rested in the contract's one exit turn ([ExitCoordinator]; re-entrant when an exit
         // that did not go puts its stop back).
         // (Its id is written with the look's own save, or the entry's; a death before that leaves the stop resting with no trade owning
         // it, which the restart takes back as this trade's own: [orphanStop].)
         return ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label} stop") { restStopInTurn(p, trigger, ltp, spec, exitSide) }
     }
+
+    /** 20 Nov 2026 (delta review): whether an open trade of the book other than [p] owns order [id] as its stop (unreadable: true). */
+    private suspend fun stopOwnedByOther(p: Pos?, id: String): Boolean =
+        runCatching { lock.withLock { book().positions.any { it.open && it.ref != p?.ref && it.slId == id } } }.getOrDefault(true)
 
     /**
      * 18 Nov 2026 (audit A4): a working SL / SL-M of this path ([LiveMirror.TAG]) on [p]'s contract, product and exit side that no open
@@ -1629,8 +1650,9 @@ object ArmLive {
      */
     private suspend fun orphanStop(p: Pos, rows: Collection<Broker.OrderRow>): Broker.OrderRow? {
         val exitSide = if (p.side > 0) "SELL" else "BUY"
+        // (20 Nov 2026, delta review: never one another trade's lost reply may be - it takes it when found.)
         val cands = rows.filter { it.working && it.tag == LiveMirror.TAG && it.symbol == p.symbol && it.exchange == p.exchange &&
-            it.product == p.product && it.side == exitSide && (it.type == "SL" || it.type == "SL-M") }
+            it.product == p.product && it.side == exitSide && (it.type == "SL" || it.type == "SL-M") && !Broker.lostMayBe(it, lostStopKey(p)) }
         if (cands.isEmpty()) return null
         val owned = runCatching { lock.withLock { book().positions.filter { it.open && !it.shadow }.mapNotNull { it.slId }.toSet() } }.getOrNull() ?: return null
         // (Review: with two trades on the contract, the one that fits this trade - its quantity, then the trigger nearest its own level -
@@ -1703,6 +1725,9 @@ object ArmLive {
         // its id never written) is this trade's: taken as its stop, never counted as another order beside a second one.
         if (p.stopOrderId == null && spec.rest != LiveMirror.Rest.GTT) orphanStop(p.copy(stopTrigger = trigger), book)?.let { o ->
             runCatching { Diag.record("armlive", "${p.label}: its own stop ${o.id} on ${p.symbol} found resting with no trade owning it: taken as its stop") }
+            Broker.forgetLost(lostStopKey(p))          // (20 Nov 2026: taken another way - never looked for again)
+            // (20 Nov 2026, delta review: claimed - no other trade's lost reply or orphan look takes it after this.)
+            Broker.claimStop(o.id); placedStops += o.id
             runCatching { Strategies.tagOwner("kite:${o.id}", "${spec.label} · live ${stopWords(p)}") }
             return seen.copy(stopOrderId = o.id, stopTrigger = o.trigger.takeIf { it > 0 } ?: trigger, stopQty = ExitQty.remaining(o.qty, o.filled, o.pending))
         }
@@ -1735,16 +1760,74 @@ object ArmLive {
         val o = Kite.Order(p.symbol, exitSide, q, p.lot, p.product, "SL", LiveMirror.stopLimit(trigger, p.tick, p.side), p.tick, p.exchange,
             LiveMirror.TAG, triggerPrice = trigger, multiplier = p.multiplier)
         var refusal: String? = null
+        var notSent = false
+        var lost = false
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
             refusal = e.message?.take(160)
-            if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known()) }.getOrNull()
+            notSent = e is Broker.NotSent
+            if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known()) }.getOrNull() ?: null.also { lost = true }
         }
+        // 20 Nov 2026 (audit B5 deep review): its reply lost and not found yet: UNKNOWN - looked for on the next looks, never a second stop
+        // beside it meanwhile ([restStop]); the app watches the level.
+        if (id == null && lost) {
+            Broker.noteLost(lostStopKey(p), o, known(), "${p.label}: its live ${stopWords(p)}", liveOnly = true)
+            stopFailed(p, trigger, "Zerodha's answer was lost; the app looks for it in the book and rests no second stop meanwhile")
+            return seen.copy(stopTrigger = trigger)
+        }
+        // (Never left the phone: not a refusal - said as such, tried again after the same back-off.)
+        if (id == null && notSent) { backOff(p); stopFailed(p, trigger, "not sent: no connection to Zerodha"); return seen.copy(stopTrigger = trigger) }
         // 19 Nov 2026 (audit batch 2): with its reason, said once, and rested again only after a back-off ([refusedStop]).
         if (id == null) { refusedStop(p, trigger, refusal?.let { "Zerodha refused it: $it" } ?: "Zerodha refused it"); return seen.copy(stopTrigger = trigger) }
         if (placedStops.size > 500) placedStops.clear()
         placedStops += id
         runCatching { Strategies.tagOwner("kite:$id", "${spec.label} · live ${stopWords(p)}") }
         return seen.copy(stopOrderId = id, stopTrigger = trigger, stopQty = q)
+    }
+
+    /** 20 Nov 2026 (audit B5 deep review): the key a trade's stop whose reply was lost is looked for under ([Broker.noteLost]). */
+    private fun lostStopKey(p: Pos) = LOST_STOP + p.ref
+    private const val LOST_STOP = "armstop:"
+
+    /**
+     * 20 Nov 2026 (audit B5 deep review): the lost stops of trades no longer open: each found is cancelled (marked the app's own cancel
+     * first), never left resting on a closed trade; still looked for: asked again next look; given up on: nothing rests.
+     */
+    private suspend fun takeOutClosedLostStops() {
+        val keys = Broker.lostKeys(LOST_STOP)
+        if (keys.isEmpty()) return
+        // (20 Nov 2026, delta review: the open trades' stops from the same read - one an open trade owns is never cancelled here.)
+        val (openRefs, ownedStops) = lock.withLock { book().positions.filter { it.open }.let { o -> o.map { it.ref }.toSet() to o.mapNotNull { it.slId }.toSet() } }
+        for (key in keys) {
+            if (key.removePrefix(LOST_STOP) in openRefs) continue
+            val l = Broker.lookLost(key) as? Broker.LostLook.Found ?: continue
+            // (20 Nov 2026, delta review: one an open trade owns - taken as its orphan meanwhile - is that trade's live stop: never cancelled here.)
+            if (l.id in placedStops || l.id in ownedStops) {
+                runCatching { Diag.record("armlive", "A stop ${l.id} found after its answer was lost belongs to an open trade now: left resting") }
+                continue
+            }
+            // (Review: one that already filled: if Zerodha now shows the contract SHORT it sold beside the trade's own exit - a second sale,
+            // said plainly; flat, it was the trade's own exit (closed as sold at Zerodha) - noted only. Never "cancelled".)
+            val st = try { Broker.orderState(l.id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+            if (st != null && (st.status == "COMPLETE" || st.filled > 0)) {
+                val net = try { Broker.positionBook().net } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+                val short = net?.any { it.qty < 0 && it.symbol == l.symbol }
+                val text = if (short == false) "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha: it was its trade's own exit (the position is flat)."
+                    // (20 Nov 2026, delta review: positions unread - unknown, never guessed.)
+                    else if (short == null) "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha after its arm's trade had closed, " +
+                        "and Zerodha's positions could not be read: whether the account is now short on ${l.symbol} is UNKNOWN. Check positions in Kite."
+                    else "A live stop ${l.id}, whose answer was lost, filled ${st.filled} at Zerodha after its arm's trade had already closed: a second " +
+                        "sale - the account may now be SHORT on that contract. Check positions in Kite now."
+                runCatching { Diag.record("armlive", text) }
+                if (short != false) com.optionslab.app.work.Alerts.error(text, WHO)
+                if (st.status == "COMPLETE" || st.status == "CANCELLED" || st.status == "REJECTED") continue
+            }
+            markOwnCancel(l.id)
+            val ok = try { Broker.cancel(l.id); true } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
+            runCatching { Diag.record("armlive", "A stop ${l.id} found after its answer was lost, for a trade no longer open: " +
+                if (ok) "taken out" else "its cancel failed - check the order book in Kite") }
+            if (!ok) com.optionslab.app.work.Alerts.error("A live stop ${l.id} found at Zerodha for an arm's trade no longer open could not be " +
+                "cancelled. Check the order book in Kite.", WHO)
+        }
     }
 
     /** The GTT ids this path already tracks (memory): never adopted for a lost reply. */
@@ -2394,7 +2477,9 @@ object ArmLive {
      * F1: it may hold open live trades) - memory only: every lane that watches (the minute lane, the live lane, the 15-second
      * check) and every keep-alive keeps running for it, and the watch reads the book again.
      */
-    val recoverHint: Boolean get() = recoverDue || unreadable || coldPending
+    // (20 Nov 2026, audit B5 deep review: and a lost stop still looked for, so the lanes keep calling [watch] after its trade closed and the
+    // stop is taken out once found - [takeOutClosedLostStops]. Memory only.)
+    val recoverHint: Boolean get() = recoverDue || unreadable || coldPending || (Broker.loggedIn && Broker.lostKeys(LOST_STOP).isNotEmpty())
 
     /** Whether a look has work now (memory only): a live trade held, a shadow trade open, a damaged or unread book. */
     // (19 Nov 2026, third review: and the start's sweep, so a login later in the day still reaches it on the minute lanes; memory only.)
@@ -2417,6 +2502,9 @@ object ArmLive {
         if (saveDue && !stream) runCatching { lock.withLock { cache?.let { save(it) } } }
         val sweep = coldDue && !stream && runCatching { Broker.loggedIn }.getOrDefault(false)
         if (!stream && !sweep) coldPending = false
+        // 20 Nov 2026 (audit B5 deep review): a trade that closed while its stop's lost reply was still looked for: looked for on, and the
+        // stop taken out once found - never left resting on a closed trade (the book read in the background: [Broker.lookLost]).
+        if (!stream && Broker.lostKeys(LOST_STOP).isNotEmpty()) try { takeOutClosedLostStops() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {}
         if (!holdingHint && !shadowHint && !recoverDue && !sweep) return
         var lookFailed: Exception? = null
         if (holdingHint || recoverDue) {
@@ -2715,8 +2803,27 @@ object ArmLive {
         val unsure = HashSet<String>()
         // (And the contracts shown short this look, confirmed or not: only their counts are kept.)
         val shortNow = HashSet<String>()
+        // 20 Nov 2026 (audit B5, item 8: "a stop missing from the order read is assumed resting"): on a regular look (a fresh orders
+        // read), a stop of today's missing from it is read again by its own id - all of them at once, each held to 3 s, so the look (and
+        // the live lane waiting on it) is never held long. Seen there, it is handled below as ever (filled, cancelled, rejected, resting).
+        // Still not known, its trade's stop is UNKNOWN this look (never taken as resting): the app watches its level itself (step 3:
+        // it sells there, taking the stop out first; never a second stop beside it). A stream look's kept book cannot say a stop is
+        // gone (it may simply be older than the stop): there it is left as before.
+        val stopUnknown = HashSet<String>()
+        var byId = emptyMap<String, Broker.OrderRow>()
+        if (!stream) {
+            val missing = open.filter { !it.unconfirmed && !it.day.isBefore(t.toLocalDate()) }.mapNotNull { it.slId }.filter { it !in orders }.distinct()
+            if (missing.isNotEmpty()) {
+                val got = kotlinx.coroutines.coroutineScope {
+                    missing.map { id -> async { runCatching { Broker.orderRow(id, budgetMs = Broker.FAST_READ_MS.toLong()) }.getOrNull() } }.map { it.await() }
+                }.filterNotNull()
+                byId = got.associateBy { it.id }
+                if (got.isNotEmpty()) orders = orders + byId
+            }
+        }
         suspend fun reread() {
-            runCatching { Broker.orders() }.getOrNull()?.let { orders = it.associateBy { o -> o.id } }
+            // (20 Nov 2026, audit B5 review: a stop read by its own id above and still missing from the book stays as it was read.)
+            runCatching { Broker.orders() }.getOrNull()?.let { orders = it.associateBy { o -> o.id }.let { fresh -> byId.filterKeys { k -> k !in fresh } + fresh } }
             runCatching { Broker.positionBook().net }.getOrNull()?.let { net = it }
             // GTTs too (review: one deleted earlier in this look must not still count against a sibling's stop).
             if (gtts.orEmpty().isNotEmpty() || open.any { it.gttId != null })
@@ -2731,7 +2838,8 @@ object ArmLive {
             try {
                 if (p0.unconfirmed) { if (settleNow(p0, stream)) set(p0, listOfNotNull(settle(p0, claimed))); continue }
                 var p = p0
-                val so = p.slId?.let { orders[it] }
+                // (20 Nov 2026, audit B5, item 8: a stop of today's not in a regular look's orders, nor in its own read above: unknown.)
+                val so = p.slId?.let { id -> orders[id] ?: run { if (!stream && !p.day.isBefore(t.toLocalDate())) stopUnknown += p.ref; null } }
                 val g = p.gttId?.let { gtts?.get(it) }
                 // Its stop filled at Zerodha - all of it, or a part while the rest still works: what is new of its fill is booked once.
                 val newFill = if (so == null) 0 else ((if (so.status == "COMPLETE" && so.filled <= 0) so.qty else so.filled) - p.stopBooked).coerceAtLeast(0)
@@ -3017,6 +3125,8 @@ object ArmLive {
                     val ltp = ltpOf(p)
                     val stopLimit = when {
                         p.gttId != null -> g?.legPrices?.firstOrNull()?.takeIf { it > 0 } ?: p.stopTrigger?.let { gttLeg(it, p.tick, p.side) }
+                        // 20 Nov 2026 (audit B5, item 8): its stop's state unknown this look: the app sells at the stop's level itself.
+                        so == null && p.ref in stopUnknown -> p.stopTrigger
                         else -> so?.price?.takeIf { it > 0 }
                     }
                     // 18 Nov 2026: a short read not confirmed yet (step 2) counts as what these trades hold: their stop is moved up and
@@ -3046,11 +3156,19 @@ object ArmLive {
                             "resting at Zerodha for ${(ms - since) / 1000} s because Zerodha's positions do not show its fill (they show " +
                             "$unshownHeld of $through). The app watches %.2f itself; check the position in Kite.".format(Locale.ENGLISH, p.stopTrigger))
                     } else noStopSince.remove(p.ref)
-                    val d = LiveMirror.decide(look)
+                    // 20 Nov 2026 (delta review): a stop resting for more than this trade holds (a lost stop found after a part was sold) is
+                    // shrunk to the trade - never left to sell what is not the trade's - when the look would otherwise only hold it (a move of
+                    // the stop goes first), on a look whose positions were read and are not in doubt.
+                    val d = LiveMirror.decide(look).let { d0 ->
+                        val lotN = p.lot.coerceAtLeast(1)
+                        if (d0.step == LiveMirror.Step.HOLD && contract !in unsure && so != null && stopQty != null && stopQty > p.qty)
+                            LiveMirror.Decision(LiveMirror.Step.SHRINK_STOP, "held_less", p.qty / lotN * lotN) else d0
+                    }
                     val next: List<Pos>? = when (d.step) {
                         LiveMirror.Step.SELL -> {
                             // 15 Nov: a stop resting at the stop rule's levels ([stopWhyOf]) is booked as its own, run through or not.
-                            val why = sellWhy(d.why, p)
+                            // (20 Nov 2026, audit B5 review: sold at the level of a stop whose state is unknown: booked as the stop, not a run-through.)
+                            val why = sellWhy(if (d.why == "stop_run_through" && so == null && p.ref in stopUnknown) "stop" else d.why, p)
                             dirty += contract
                             exitLive(p, d.qty, why, ltp, g)
                         }

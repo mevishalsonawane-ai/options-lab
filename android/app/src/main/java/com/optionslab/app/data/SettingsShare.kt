@@ -245,6 +245,8 @@ object SettingsShare {
         out += line("Liquidity fresh-bar check") { LiquidityFreshBar.view.value.let { v -> if (!v.loaded) "not read yet (off)" else
             "fresh-bar check ${onOff(v.on)} (${v.wouldSkipToday} would-skips, ${v.skippedToday} skipped today) · list wait ${onOff(v.listOn)} " +
                 "(${v.listWouldWaitToday} would-waits today)" } }
+        // (20 Nov 2026, audit B5: the order count check, shadow by default.)
+        out += line("Order count check") { OrderCountCheck.line() }
         out += line("Same-direction cap") { ExposureCapHost.line() }
         out += line("Same-direction cap, only logged") { ExposureCapHost.onlyLoggedLine() }
         out += line("Same-direction cap switches") { ExposureCapHost.view.value.let { "Same-direction cap switches: paper ${onOff(it.paperOn)}, live ${onOff(it.liveOn)}, max ${it.max}" } }

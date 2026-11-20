@@ -53,6 +53,13 @@ object AccountGuard {
         val holdings: List<Holding>,
         val ordersToday: Int,
         val minuteOfDay: Int,
+        /**
+         * 20 Nov 2026 (audit B5, item 6): false when today's order count could not be read. [ordersToday] is then not a count (it
+         * was read as 0 before, so a failed read let every entry past the trades-a-day limit): this guard refuses an entry while the
+         * limit is on; an exit never looks at it. (The app judges that refusal through its order count check, in shadow by default:
+         * there the entry goes as before and is only logged.)
+         */
+        val ordersKnown: Boolean = true,
     )
 
     /** The order being judged. [right] is "CE"/"PE" for an option, null otherwise. */
@@ -103,7 +110,9 @@ object AccountGuard {
         val heldSymbols = a.holdings.filter { it.qty != 0 }.map { it.symbol }.toSet()
         if (l.maxOpenPositions > 0 && o.symbol !in heldSymbols && heldSymbols.size >= l.maxOpenPositions)
             out += "Open positions limit: ${heldSymbols.size} already held (limit ${l.maxOpenPositions})."
-        if (l.maxTradesPerDay > 0 && a.ordersToday >= l.maxTradesPerDay)
+        if (l.maxTradesPerDay > 0 && !a.ordersKnown)
+            out += "Today's order count could not be read, so the trades-per-day limit cannot be checked; the entry waits - try again in a moment."
+        else if (l.maxTradesPerDay > 0 && a.ordersToday >= l.maxTradesPerDay)
             out += "Trades per day limit: ${a.ordersToday} sent today (limit ${l.maxTradesPerDay})."
         if (l.maxOrderValue > 0 && o.qty * o.price > l.maxOrderValue)
             out += "Order value Rs %,.0f is over the Rs %,.0f limit.".format(o.qty * o.price, l.maxOrderValue)
