@@ -1362,13 +1362,13 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals("booked as its exit", "time_stop", today("liquidity").single().why)
     }
 
-    /** A lost stop of the Liquidity part (its reply lost; it rests at Zerodha, in the book): its id. */
-    private fun lostLiquidityStop(): String {
+    /** A lost stop of [qty] of the Liquidity part (its reply lost; it rests at Zerodha, in the book): its id. */
+    private fun lostLiquidityStop(qty: Int = 30): String {
         Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
         val label = com.optionslab.engine.orb.LiquidityRules.ARM5.label             // (the 5-minute book's own)
-        val id = kite.restingInKite(sym, "SELL", 30, 161.5, type = "SL", trigger = 170.0, tag = "iraorb")
-        val key = "orbstop:$label:$sym:200.0:30"
-        Broker.noteLost(key, Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "SL", 161.5, 0.05, "NFO", "iraorb", triggerPrice = 170.0),
+        val id = kite.restingInKite(sym, "SELL", qty, 161.5, type = "SL", trigger = 170.0, tag = "iraorb")
+        val key = "orbstop:$label:$sym:200.0:$qty"
+        Broker.noteLost(key, Kite.Order(sym, Kite.Side.SELL, qty, 30, "MIS", "SL", 161.5, 0.05, "NFO", "iraorb", triggerPrice = 170.0),
             emptyList(), "test", liveOnly = true)
         return id
     }
@@ -1381,10 +1381,11 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         lostLiquiditySale()                                                // the sale went and filled; its reply lost
         val stop = lostLiquidityStop()
         kite.positionsCatchUp()                                            // the positions show the sale
+        kite.showInBook()                                                  // and the order book: the part's own lost sale, filled
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         pass(); searchDone()
         assertEquals("the found stop taken out", "CANCELLED", kite.order(stop).status)
-        assertTrue("still held meanwhile", OrbArms.lostExitForTest(sym))
+        assertTrue("as the app's own cancel", OrbArms.ownCancelForTest(stop))
         assertEquals("nothing sold again", 1, marketSells().size)
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
         pass()                                                             // the regular pass confirms it out (its cancel no longer asked)
@@ -1412,6 +1413,44 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertEquals("the stop taken out first", "CANCELLED", kite.order(stop).status)
         assertEquals("then sold once", 2, marketSells().size)
         assertEquals("time_stop", today("liquidity").single().why)
+    }
+
+    /**
+     * 20 Nov 2026 (coordinator): one part of 60 whose lost sale filled only 30 (the positions show 30 held): its found lost stop of 60 is
+     * cut to the 30 it still holds - never left to sell more than is held.
+     */
+    @Test fun aFoundLostStopIsCutWhenThePartsSaleFilledInPart() {
+        val s1 = stopOrder(60, 170.0, 161.5)
+        state(listOf(liquidity(60, 200.0, s1, 170.0)))                     // its time stop is due
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.trailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.PARTIAL, partialQty = 30)
+        pass()
+        assertTrue("held for its lost sale", OrbArms.lostExitForTest(sym))
+        val stop = lostLiquidityStop(60)
+        kite.positionsCatchUp()                                            // 30 held now
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone()
+        assertTrue("the stop still rests", working(stop))
+        assertEquals("cut to the 30 held", 30, kite.order(stop).qty)
+        assertEquals("nothing sold again", 1, marketSells().size)
+    }
+
+    /**
+     * 20 Nov 2026 (merge review F1): two parts on the contract - A's lost sale filled, B's stop filled and not booked yet; the positions
+     * show nothing held. Not unambiguous: A's found lost stop rests (the tiebreaker acts only for a single part).
+     */
+    @Test fun aFoundLostStopRestsWhenAnotherPartIsOnTheContract() {
+        val (s2, gate) = lostOnAWithBResting(held = 60, reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        val stop = lostLiquidityStop()
+        kite.fill(s2)                                                      // B's stop filled; no pass has booked it
+        kite.positionsCatchUp()
+        gate.countDown(); OrbArms.testLostSearch = null
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        runBlocking { OrbArms.lostExitLookForTest(sym) }                   // the search, with no pass between
+        assertTrue("A's found stop rests", working(stop))
+        assertEquals(kite.order(stop).qty, 30)
     }
 
     /** 20 Nov 2026 (coordinator): Zerodha's positions cannot be read: the found lost stop rests (the sale may not have gone). */
