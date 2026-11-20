@@ -78,9 +78,10 @@ object Broker {
     // ---- the watch's workers (10 Oct): one request budget, shared reads, one door for entries ----------------------
 
     /**
-     * Which lane a Zerodha request belongs to (Boss, 10 Oct: the watch's workers run side by side): exits, stops and the
-     * loss limit first ([com.optionslab.ira.RateGate.Priority.SAFETY]), then entries and ordinary reads, then Jarvis's
-     * analysis. Put on a coroutine's context; a request with none is an ordinary read. Every order is SAFETY.
+     * Which lane a Zerodha READ belongs to (Boss, 10 Oct: the watch's workers run side by side): the stop checks' and the loss
+     * limit's reads first ([com.optionslab.ira.RateGate.Priority.SAFETY]), then ordinary reads, then Jarvis's analysis. Put on a
+     * coroutine's context; a request with none is an ordinary read. A write's lane is its own (20 Nov 2026, [writePriority]): exits,
+     * stops, stop moves and cancels EXIT, above every read; a new entry's order ENTRY.
      */
     class Lane(val priority: com.optionslab.ira.RateGate.Priority) : kotlin.coroutines.AbstractCoroutineContextElement(Lane) {
         companion object Key : kotlin.coroutines.CoroutineContext.Key<Lane>
@@ -1647,14 +1648,17 @@ object Broker {
      * ([at]), and the order book as last read before it ([before]: every order in it was there before this one, so none of them
      * is ever taken for its lost reply). Set before the POST, from memory alone: nothing is read for it on the order path.
      */
-    private class SendMark(val at: java.time.LocalDateTime, val atMs: Long, val before: List<OrderRow>?, val exit: Boolean)
+    private class SendMark(val at: java.time.LocalDateTime, val atMs: Long, val before: List<OrderRow>?, val exit: Boolean,
+        /** The phone clock's offset to Zerodha's as measured in the last [OFFSET_FRESH_MS] at the send (null: none fresh), so a clock stepped after the send never moves the window. */
+        val offset: Long?)
     private val sendMarks: MutableMap<Kite.Order, SendMark> = java.util.Collections.synchronizedMap(java.util.IdentityHashMap())
 
     private fun markSend(o: Kite.Order, exit: Boolean) {
         val now = System.currentTimeMillis()
         synchronized(sendMarks) {
             if (sendMarks.size > 100) sendMarks.entries.removeIf { now - it.value.atMs > SENT_KEEP_MS }
-            sendMarks[o] = SendMark(Market.now().toLocalDateTime(), now, keptOrders?.value, exit)
+            sendMarks[o] = SendMark(Market.now().toLocalDateTime(), now, keptOrders?.value, exit,
+                serverOffset?.takeIf { (_, at) -> now - at in 0..OFFSET_FRESH_MS }?.first)
         }
     }
 
@@ -1667,6 +1671,8 @@ object Broker {
     private const val OFFSET_FRESH_MS = 10 * 60_000L
     /** The tight window's allowance before the send (Zerodha's stamps are whole seconds; the offset is good to about a second). */
     private const val SENT_SLACK_S = 5L
+    /** An offset that moved more than this between the send and the search: the phone's clock was stepped; the wide window is used. */
+    private const val OFFSET_MOVED_MS = 2_000L
 
     /**
      * 20 Nov 2026 (audit B5, item 9: the kill switch did not cancel working entry orders): the ids of orders this phone sent, as an
@@ -1791,7 +1797,10 @@ object Broker {
         // from three minutes before the send (never narrower than the old three minutes before now, so its own order is never missed
         // for a clock it cannot trust). An order in the book read before the send is never taken, whatever its time.
         val mark = synchronized(sendMarks) { sendMarks[o] }
-        val off = serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
+        // (Review: the offset as it was at the send, never one measured later; one that moved since by more than [OFFSET_MOVED_MS] - the
+        // phone's clock stepped - leaves the tight window for the three minutes.)
+        val offNow = serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
+        val off = mark?.offset?.takeIf { o -> offNow == null || kotlin.math.abs(offNow - o) <= OFFSET_MOVED_MS }
         val since = mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
             ?: now.minusMinutes(3)
         val before = mark?.before?.mapTo(HashSet()) { it.id }.orEmpty()
@@ -1936,6 +1945,8 @@ object Broker {
     suspend fun placeGttSure(g: Kite.Gtt, known: Set<Long>): GttSent {
         return try { GttSent.Placed(placeGtt(g)) } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
+            // (20 Nov 2026, audit B5 review: never left the phone - not a refusal: nothing rests, and it is simply tried again.)
+            if (e is NotSent) return GttSent.Unknown
             if (definite(e)) return GttSent.Refused
             val q = g.orders.firstOrNull()?.quantity ?: return GttSent.Unknown
             runCatching {
@@ -2014,7 +2025,7 @@ object Broker {
         // unreadable, the count is UNKNOWN (null), which refuses an entry while the trades-a-day limit is on and never an exit.
         val countQ = async {
             runCatching { (if (needed != null) ordersRecon() else orders()).size }.getOrNull()
-                ?: runCatching { orders(fresh = true).size }.getOrNull()
+                ?: runCatching { kotlinx.coroutines.withContext(FastRead()) { orders(fresh = true) }.size }.getOrNull()   // (3 s sockets: review)
         }
         val out = bookQ.await()?.let { runCatching { Guard.liveAccount(it, fundsQ.await(), countQ.await()) }.getOrNull() }
         if (needed != null) runCatching { OrderTiming.marginCheck(System.currentTimeMillis() - t0) }

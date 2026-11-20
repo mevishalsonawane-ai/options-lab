@@ -72,6 +72,9 @@ class BrokerOrderLifecycleTest : RobolectricTest() {
             assertTrue(Broker.definite(e!!))
             val c = try { Broker.cancel("1"); null } catch (x: Exception) { x }
             assertTrue("a cancel that could not connect is not sent either ($c)", c is Broker.NotSent)
+            // (Review: a GTT that never left is not a refusal - nothing rests, and its protection simply tries again.)
+            val g = Kite.Gtt("single", "NFO", sym, 200.0, listOf(160.0), listOf(order(type = "LIMIT", price = 158.0, side = Kite.Side.SELL)))
+            assertTrue(Broker.placeGttSure(g, emptySet()) is Broker.GttSent.Unknown)
         } finally {
             Broker.testEndpoint = was
         }

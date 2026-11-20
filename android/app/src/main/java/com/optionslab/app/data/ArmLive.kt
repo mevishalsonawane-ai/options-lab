@@ -2644,23 +2644,26 @@ object ArmLive {
         // (And the contracts shown short this look, confirmed or not: only their counts are kept.)
         val shortNow = HashSet<String>()
         // 20 Nov 2026 (audit B5, item 8: "a stop missing from the order read is assumed resting"): on a regular look (a fresh orders
-        // read), a stop of today's missing from it is read again by its own id - all of them at once, each held to 1.5 s, so the look (and
+        // read), a stop of today's missing from it is read again by its own id - all of them at once, each held to 3 s, so the look (and
         // the live lane waiting on it) is never held long. Seen there, it is handled below as ever (filled, cancelled, rejected, resting).
         // Still not known, its trade's stop is UNKNOWN this look (never taken as resting): the app watches its level itself (step 3:
         // it sells there, taking the stop out first; never a second stop beside it). A stream look's kept book cannot say a stop is
         // gone (it may simply be older than the stop): there it is left as before.
         val stopUnknown = HashSet<String>()
+        var byId = emptyMap<String, Broker.OrderRow>()
         if (!stream) {
             val missing = open.filter { !it.unconfirmed && !it.day.isBefore(t.toLocalDate()) }.mapNotNull { it.slId }.filter { it !in orders }.distinct()
             if (missing.isNotEmpty()) {
                 val got = kotlinx.coroutines.coroutineScope {
-                    missing.map { id -> async { runCatching { Broker.orderRow(id, budgetMs = 1_500L) }.getOrNull() } }.map { it.await() }
+                    missing.map { id -> async { runCatching { Broker.orderRow(id, budgetMs = Broker.FAST_READ_MS.toLong()) }.getOrNull() } }.map { it.await() }
                 }.filterNotNull()
-                if (got.isNotEmpty()) orders = orders + got.associateBy { it.id }
+                byId = got.associateBy { it.id }
+                if (got.isNotEmpty()) orders = orders + byId
             }
         }
         suspend fun reread() {
-            runCatching { Broker.orders() }.getOrNull()?.let { orders = it.associateBy { o -> o.id } }
+            // (20 Nov 2026, audit B5 review: a stop read by its own id above and still missing from the book stays as it was read.)
+            runCatching { Broker.orders() }.getOrNull()?.let { orders = it.associateBy { o -> o.id }.let { fresh -> byId.filterKeys { k -> k !in fresh } + fresh } }
             runCatching { Broker.positionBook().net }.getOrNull()?.let { net = it }
             // GTTs too (review: one deleted earlier in this look must not still count against a sibling's stop).
             if (gtts.orEmpty().isNotEmpty() || open.any { it.gttId != null })
@@ -2997,7 +3000,8 @@ object ArmLive {
                     val next: List<Pos>? = when (d.step) {
                         LiveMirror.Step.SELL -> {
                             // 15 Nov: a stop resting at the stop rule's levels ([stopWhyOf]) is booked as its own, run through or not.
-                            val why = sellWhy(d.why, p)
+                            // (20 Nov 2026, audit B5 review: sold at the level of a stop whose state is unknown: booked as the stop, not a run-through.)
+                            val why = sellWhy(if (d.why == "stop_run_through" && so == null && p.ref in stopUnknown) "stop" else d.why, p)
                             dirty += contract
                             exitLive(p, d.qty, why, ltp, g)
                         }

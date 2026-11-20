@@ -373,7 +373,7 @@ class ArmLiveTest : RobolectricTest() {
         watch()
         assertEquals("taken out before the app's sale", "CANCELLED", kite.order(sid).status)
         assertEquals("one sale", 1, kite.placed.count { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" })
-        assertEquals("stop_run_through", view().closed.single().why)
+        assertEquals("sold at its stop's level, booked as the stop", "stop", view().closed.single().why)
         assertEquals("flat, never short", 0, held())
     }
 

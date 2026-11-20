@@ -8,9 +8,10 @@ import kotlinx.coroutines.delay
  * default, under Kite's 10) in ANY rolling second, shared by everything.
  *
  * With priority: near the limit the lower lanes leave room for the higher ones, so an exit or a stop's read is never
- * queued behind analysis - [Priority.SAFETY] (exits, stops, the loss limit, every order) may use the whole budget,
- * [Priority.ENTRY] (entries and ordinary reads) leaves one request a second, [Priority.ANALYSIS] (Jarvis's words, studies)
- * leaves three. A wait is a suspension ([acquire]), never a blocked thread. [tryTake] is the pure decision, clock given.
+ * queued behind analysis - since 20 Nov 2026 four lanes (below): [Priority.EXIT] (exits, stops, stop moves, cancels) may use the
+ * whole budget, [Priority.SAFETY] (the stop checks' and the loss limit's reads) leaves one request a second, [Priority.ENTRY]
+ * (entry orders and ordinary reads) two, [Priority.ANALYSIS] (Jarvis's words, studies) three. A wait is a suspension
+ * ([acquire]), never a blocked thread. [tryTake] is the pure decision, clock given.
  *
  * 20 Nov 2026 (audit B5, item 3: "exits get one reserved request a second"): exits, stops, stop moves and cancels had the same lane
  * as the stop checks' price reads and every entry order, so a busy second of reads and entries left them one request. They now have
