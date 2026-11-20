@@ -694,16 +694,17 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (review): a lost exit found by ANOTHER trade's look on the contract (another book's exit) is not dropped: it is kept for
-     * its own trade, nothing is sold meanwhile, and that trade's next look books it as its exit.
+     * 20 Nov 2026 (review; deep review F1): a lost exit found by ANOTHER trade's look on the contract (another book's exit) is not dropped:
+     * that look goes on (never held), the sale is kept for its own trade, and that trade's next look books it as its exit.
      */
     @Test fun aLostExitFoundByAnotherTradesLookIsKeptForItsOwnTrade() {
         lostLiquiditySale()
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()
-        assertTrue("another trade's look holds", "hold" == runBlocking { OrbArms.lostExitLookForTest(sym, "orb:liquidity15:other") })
+        assertEquals("another trade's look goes on", "none", runBlocking { OrbArms.lostExitLookForTest(sym, owner = false) })
         assertTrue("kept for its own trade", OrbArms.lostExitForTest(sym))
-        assertTrue("held again on the next ask", "hold" == runBlocking { OrbArms.lostExitLookForTest(sym, "orb:liquidity15:other") })
+        assertEquals("still kept: another's look never takes it", "none", runBlocking { OrbArms.lostExitLookForTest(sym, owner = false) })
+        assertTrue(OrbArms.lostExitForTest(sym))
         pass()
         assertEquals("never sold twice", 1, marketSells().size)
         assertEquals("booked as its own trade's exit", "time_stop", today("liquidity").single().why)
@@ -711,45 +712,114 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (review): past its hold, a fast look (the stream's) never searches Zerodha's order book for a lost exit - it holds, with no
-     * read - and the trade's own fast look sells nothing; the next regular look searches and books it.
+     * 20 Nov 2026 (deep review F1): the first look past the hold - a fast one (the stream's) too - searches Zerodha's order book for the lost
+     * exit, and the sale found is booked at once; the owner is never left bare until a regular look.
      */
-    @Test fun aFastLookNeverSearchesForALostExitItHolds() {
+    @Test fun aFastLookPastTheHoldSearchesAndBooksTheLostExit() {
         lostLiquiditySale()
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()
-        fun bookReads() = kite.requests.count { it.method == "GET" && it.path == "/orders" }
-        val reads = bookReads()
-        assertEquals("hold", runBlocking { OrbArms.lostExitLookForTest(sym, "", search = false) })
-        assertEquals("no order-book read", reads, bookReads())
         runBlocking { OrbArms.priceCheckOnly(fast = true) }
-        assertEquals("nothing sold on a fast look", 1, marketSells().size)
-        assertNotNull("still open", open("liquidity"))
-        assertTrue(OrbArms.lostExitForTest(sym))
-        pass()
-        assertEquals("booked by the regular look", "time_stop", today("liquidity").single().why)
-        assertEquals(1, marketSells().size)
+        assertEquals("booked by the fast look", "time_stop", today("liquidity").single().why)
+        assertEquals("never sold twice", 1, marketSells().size)
+        assertTrue(!OrbArms.lostExitForTest(sym))
     }
 
     /**
-     * 20 Nov 2026 (review): a lost exit whose search cannot read Zerodha's order book is held for [OrbArms.LOST_EXIT_TRIES] searches, then
-     * let go and said - a broken read never holds the exits long.
+     * 20 Nov 2026 (deep review F1): the price falls through the stop while the owner's lost sale (which never reached Zerodha) is held:
+     * nothing more is sold within the hold; the first look past it - a fast one - searches, finds nothing and sells at once.
+     */
+    @Test fun aPriceThroughTheStopDuringTheHoldIsSearchedAndSoldPromptly() {
+        lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)                // nothing reached Zerodha
+        kite.positionsTrailReads = 0; kite.trailReads = 0
+        kite.quote("NFO:$sym", 150.0, 149.95, 150.05)                      // through its 170 stop
+        runBlocking { OrbArms.priceCheckOnly(fast = true) }
+        pass()
+        assertEquals("held within the hold", 1, marketSells().size)
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        runBlocking { OrbArms.priceCheckOnly(fast = true) }
+        assertTrue(!OrbArms.lostExitForTest(sym))
+        assertEquals("searched, not found, sold on that same look", 2, marketSells().size)
+        assertTrue(today("liquidity").single().exit != null)
+    }
+
+    /**
+     * 20 Nov 2026 (deep review F1): during one book's lost-exit hold, another book's trade on the same contract with no Zerodha stop (Boss
+     * cancelled it in Kite: stopByYou) is still watched at full cadence and sold at its level - only the lost sale's own part is held.
+     */
+    @Test fun anotherBooksStopByYouTradeIsStillSoldAtItsLevelDuringTheHold() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val other = position("liquidity15", 30, 200.0, "E2", null, 170.0).put("level", 52_050.0).put("lot", 30).put("stopByYou", true)
+            .put("entryTime", ago(3).toString()).put("signalBar", ago(15).toString())
+        state(listOf(liquidity(30, 200.0, s1, 170.0), other))              // the 5-minute book's time stop is due; the 15-minute one's not
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.trailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.requests.clear()
+        pass()
+        assertTrue("the 5-minute book's sale was lost and is held", OrbArms.lostExitForTest(sym))
+        assertEquals(1, marketSells().size)
+        assertTrue("the other is still open", today("liquidity").any { it.arm == "liquidity15" && it.open })
+        // Within the hold the price reaches the other's 170 level: it is sold there, at once.
+        kite.quote("NFO:$sym", 165.0, 164.95, 165.05)
+        runBlocking { OrbArms.priceCheckOnly(fast = true) }
+        assertEquals("the other book's sale went within the hold", 2, marketSells().size)
+        assertEquals("30", marketSells().last().form["quantity"])
+        val done = today("liquidity").single { it.arm == "liquidity15" }
+        assertEquals("stop", done.why)
+        assertTrue("the lost sale is still held for its own part", OrbArms.lostExitForTest(sym))
+    }
+
+    /**
+     * 20 Nov 2026 (review; deep review F1): a lost exit whose search cannot read Zerodha's order book holds its part for at most
+     * [OrbArms.LOST_EXIT_TRIES] searches [OrbArms.LOST_EXIT_ASK_MS] apart after the hold, then is let go and said - the gap stays bounded.
      */
     @Test fun aLostExitWhoseBookCannotBeReadIsLetGoAfterItsTries() {
         lostLiquiditySale()
+        val lostAt = OrbArms.testNow!!
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.down += "/orders"
         try {
             repeat(OrbArms.LOST_EXIT_TRIES - 1) { n ->
-                assertEquals("try ${n + 1}: held", "hold", runBlocking { OrbArms.lostExitLookForTest(sym, "") })
-                assertEquals("asked again only after a pause", "hold", runBlocking { OrbArms.lostExitLookForTest(sym, "") })
+                assertEquals("try ${n + 1}: held", "hold", runBlocking { OrbArms.lostExitLookForTest(sym, owner = true) })
+                assertEquals("asked again only after a pause", "hold", runBlocking { OrbArms.lostExitLookForTest(sym, owner = true) })
+                assertEquals("another trade is never held", "none", runBlocking { OrbArms.lostExitLookForTest(sym, owner = false) })
                 OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_ASK_MS / 1000 + 1)
             }
-            assertEquals("let go", "none", runBlocking { OrbArms.lostExitLookForTest(sym, "") })
+            assertEquals("let go", "none", runBlocking { OrbArms.lostExitLookForTest(sym, owner = true) })
             assertTrue(!OrbArms.lostExitForTest(sym))
+            val gapS = java.time.Duration.between(lostAt, OrbArms.testNow!!).seconds
+            assertTrue("bounded: $gapS s", gapS <= OrbArms.LOST_EXIT_HOLD_MS / 1000 + OrbArms.LOST_EXIT_TRIES * (OrbArms.LOST_EXIT_ASK_MS / 1000 + 1) + 1)
             assertTrue(AutomationSupport.alerts().joinToString(), AutomationSupport.alerts().any {
                 "lost exit of $sym was not found: Zerodha's order book could not be read (${OrbArms.LOST_EXIT_TRIES} tries)" in it })
         } finally { kite.down.clear() }
+    }
+
+    /**
+     * 20 Nov 2026 (deep review, plausible 2): on a split trade only the part that sent the lost sale is held and takes it (capped at that
+     * part): the other part of the same trade (another quantity) sells its own lots at once, and the lost sale is booked on its own part.
+     */
+    @Test fun onASplitTradeOnlyThePartThatSentTheLostSaleTakesIt() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        val rest = position("liquidity5", 60, 200.0, "E1", null, null).put("level", 52_050.0).put("lot", 30)
+        state(listOf(liquidity(30, 200.0, s1, 170.0), rest))               // one trade split in two parts; both time stops due
+        kite.position(sym, 90, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000
+        kite.trailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        kite.requests.clear()
+        pass()
+        assertTrue("the 30's sale was lost and is held", OrbArms.lostExitForTest(sym))
+        assertEquals("the other part sold its own 60 at once", listOf("30", "60"), marketSells().map { it.form["quantity"] })
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        kite.showInBook()
+        pass()
+        assertEquals("never sold again", 2, marketSells().size)
+        val parts = today("liquidity")
+        assertEquals(listOf(30, 60), parts.map { it.qty }.sorted())
+        assertTrue(parts.toString(), parts.all { it.exit != null && it.why == "time_stop" })
+        assertTrue(!OrbArms.lostExitForTest(sym))
     }
 
     /** 20 Nov 2026 (audit PC): a lost exit not found within its hold is said; then the exit goes again, once, for what is still held. */
