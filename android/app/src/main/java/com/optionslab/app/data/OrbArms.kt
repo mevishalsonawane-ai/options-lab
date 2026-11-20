@@ -4015,17 +4015,24 @@ object OrbArms {
             var lostSkip = false
             lostOf(p)?.let { lost ->
                 if (lostExitHolds(lost)) { lostSkip = true; return@let }
-                val look = lostExitLook(lost, mine = true)
+                // (A regular look searches in line; a fast or stream look only starts a background search - never the network here.)
+                val look = lostExitLook(lost, inline = regular)
                 if (look?.hold == true) { lostSkip = true; return@let }
                 val id = look?.found ?: return@let
-                val mine = look.lost
-                if (mine != null) {
-                    val (done, rest) = bookFoundLost(p, armOf(p.arm).label, sym, mine.why, id)
-                    b.positions[i] = done
-                    rest?.let { b.positions += it }
-                }
-                // (Found: this look ends here for it - booked; the next look reads both books, which now show that sale.)
+                val found = look.lost ?: return@let
                 lostSkip = true
+                // (Booked from this look's own order book, never awaited: not finished, or not in it yet, the next look books it.)
+                val booked = bookFoundRow(p, armOf(p.arm).label, sym, found.why, id, orders[id])
+                if (booked != null) {
+                    b.positions[i] = booked.first
+                    booked.second?.let { b.positions += it }
+                } else if (epochMs(now()) - found.askedMs in 0 until LOST_EXIT_FOUND_KEEP_MS) {
+                    lostExits.putIfAbsent(found.id, found.copy(foundId = id))
+                } else {
+                    runCatching { Diag.record("orb", "$sym: the lost exit found ($id) did not finish in Zerodha's book; let go") }
+                    com.optionslab.app.work.Alerts.error("ORB live: the lost exit of $sym was found in Zerodha's order book ($id) but has not finished. " +
+                        "The app reads Zerodha again and sells only what is still held; check Kite's order book.", "ORB live")
+                }
             }
             if (lostSkip) continue
             val so = p.stopOrderId?.let { orders[it] }
@@ -5209,8 +5216,12 @@ object OrbArms {
                                 val known: Set<String>, val sinceMs: Long, val askedMs: Long = 0L,
                                 /** Searches that could not read Zerodha's book ([LOST_EXIT_TRIES]). */
                                 val fails: Int = 0,
-                                /** Found in Zerodha's book by another trade's look on the contract: its own part books it ([lostExitLook]). */
-                                val foundId: String? = null)
+                                /** Found in Zerodha's book: its own part's next look books it ([lostExitLook]). */
+                                val foundId: String? = null,
+                                /** A search runs now ([searchLost]: at most one at a time). */
+                                val searching: Boolean = false,
+                                /** Searched and not found (or the book unreadable [LOST_EXIT_TRIES] times): the next look lets it go and sells. */
+                                val notFound: Boolean = false)
     /** By [LostExit.id] (never reused: a part's stale [Position.lostId] matches nothing). */
     private val lostExits = java.util.concurrent.ConcurrentHashMap<Long, LostExit>()
     private val lostSeq = java.util.concurrent.atomic.AtomicLong()
@@ -5221,8 +5232,10 @@ object OrbArms {
      * exits long (the arms' live copies search once more after their hold, [ArmLive]).
      */
     internal const val LOST_EXIT_TRIES = 3
-    /** A lost exit found by another trade's look and not taken by its own part's look this long after is let go (said). */
+    /** A lost exit found but not finished in its part's looks' order books this long after is let go (said). */
     internal const val LOST_EXIT_FOUND_KEEP_MS = 60_000L
+    /** The most one search of the order book for a lost exit may take (then: one failed try). */
+    internal const val LOST_SEARCH_MS = 8_000L
 
     /** [lostExitLook]'s answer: [hold] the lost sale's own part sells nothing now; else [found], the lost sale's order id. */
     private class LostLook(val hold: Boolean, val found: String? = null, val lost: LostExit? = null)
@@ -5270,54 +5283,84 @@ object OrbArms {
     private fun lostExitHolds(l: LostExit): Boolean = epochMs(now()) - l.sinceMs in 0 until LOST_EXIT_HOLD_MS
 
     /**
-     * 20 Nov 2026 (audit PC; deep review F1): the lost exit [l] as a look sees it - its own part's ([mine]) or another trade's. Null: go on as
-     * usual - it was not found (said, and let go), or it is not [mine] (another trade is never held: when a search is due it makes it, and
-     * goes on once it answers). [LostLook.hold], for its own part only: within the hold, searched a moment ago ([LOST_EXIT_ASK_MS]), or the
-     * search could not read the book (up to [LOST_EXIT_TRIES] times). Found: its order id, to its own part's look only; found by another's
-     * look, it is kept for that part ([LOST_EXIT_FOUND_KEEP_MS] at most). Any look may search, fast or regular.
+     * 20 Nov 2026 (audit PC; deep review F1; coordinator: no network on the tick path): the lost exit [l] as its own part's look sees it.
+     * Null: go on as usual - it was not found (said, and let go: the part's exit sells through the forced lag guard). [LostLook.hold]:
+     * within the hold, a search running or made a moment ago ([LOST_EXIT_ASK_MS]), or the book could not be read (up to [LOST_EXIT_TRIES]
+     * times). Found: its order id (booked from the look's own order book, [bookFoundRow]).
+     *
+     * Past the hold a search is due at most every [LOST_EXIT_ASK_MS]: a regular look ([inline]: never the tick or stream path) makes it here,
+     * under the arms' lock as its other reads; a fast or stream look starts it in the background ([searchLost], one at a time per lost
+     * sale) and returns at once - its answer, kept in memory, is acted on by the next look, fast or regular, with no wait.
      */
-    private suspend fun lostExitLook(l: LostExit, mine: Boolean): LostLook? {
+    private suspend fun lostExitLook(l: LostExit, inline: Boolean): LostLook? {
         val lost = lostExits[l.id] ?: return null
-        val held = if (mine) LOST_HOLD else null
         val ms = epochMs(now())
         lost.foundId?.let { id ->
-            if (mine) {
-                if (!lostExits.remove(lost.id, lost)) return LOST_HOLD
-                return LostLook(hold = false, found = id, lost = lost)
-            }
-            if (ms - lost.askedMs !in 0 until LOST_EXIT_FOUND_KEEP_MS && lostExits.remove(lost.id, lost)) {
-                runCatching { Diag.record("orb", "${lost.sym}: the lost exit found in Zerodha's book ($id) was not taken by its trade; let go") }
-                com.optionslab.app.work.Alerts.error("ORB live: the lost exit of ${lost.sym} was found in Zerodha's order book ($id) but its trade was " +
-                    "not closed by it. The app reads Zerodha again and sells only what is still held; check Kite's positions.", "ORB live")
-            }
+            if (!lostExits.remove(lost.id, lost)) return LOST_HOLD
+            return LostLook(hold = false, found = id, lost = lost)
+        }
+        if (lost.notFound) {
+            if (lostExits.remove(lost.id, lost)) lostNotFound(lost.sym, unread = lost.fails >= LOST_EXIT_TRIES)
             return null
         }
-        if (ms - lost.sinceMs in 0 until LOST_EXIT_HOLD_MS) return held
-        if (ms - lost.askedMs in 0 until LOST_EXIT_ASK_MS) return held
-        val asked = lost.copy(askedMs = ms)
-        if (!lostExits.replace(lost.id, lost, asked)) return held
-        val found = try { Broker.findRecent(lost.order, lost.known) } catch (e: kotlinx.coroutines.CancellationException) { throw e
-        } catch (e: Exception) {
-            val failed = asked.copy(fails = asked.fails + 1)
-            if (failed.fails < LOST_EXIT_TRIES) { lostExits.replace(lost.id, asked, failed); return held }
-            if (lostExits.remove(lost.id, asked)) lostNotFound(lost.sym, unread = true)
-            return null
+        if (ms - lost.sinceMs in 0 until LOST_EXIT_HOLD_MS) return LOST_HOLD
+        if (lost.searching || ms - lost.askedMs in 0 until LOST_EXIT_ASK_MS) return LOST_HOLD
+        val asked = lost.copy(askedMs = ms, searching = true)
+        if (!lostExits.replace(lost.id, lost, asked)) return LOST_HOLD
+        if (!inline) { searchLost(asked); return LOST_HOLD }
+        searchLostNow(asked)
+        // (Its answer acted on at once; a failed read keeps the hold until the next try is due.)
+        return lostExitLook(asked, inline = false)
+    }
+
+    /** 20 Nov 2026: the background search of [asked] ([lostExitLook] on a fast or stream look), off the arms' lock. */
+    private fun searchLost(asked: LostExit) {
+        offLock.launch { runCatching { searchLostNow(asked) } }
+    }
+
+    /** TEST ONLY (20 Nov 2026): run before each search of a lost exit (null in the app). Debug builds only. */
+    @Volatile internal var testLostSearch: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** TEST ONLY: whether a background search of a lost exit on [sym] is running. */
+    internal fun lostSearchingForTest(sym: String): Boolean = lostOn(sym).any { it.searching }
+
+    /**
+     * 20 Nov 2026: one search of the order book for [asked] ([LOST_SEARCH_MS] at most), its answer kept in memory on the lost exit: found
+     * ([LostExit.foundId]), not found ([LostExit.notFound]), or unreadable (one more failed try; the last one is "not found, unread").
+     */
+    private suspend fun searchLostNow(asked: LostExit) {
+        var failed = false
+        val found = try {
+            testLostSearch?.let { f -> kotlinx.coroutines.runInterruptible(kotlinx.coroutines.Dispatchers.IO) { f() } }
+            kotlinx.coroutines.withTimeoutOrNull(LOST_SEARCH_MS) { Broker.findRecent(asked.order, asked.known) ?: "" } ?: run { failed = true; null }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // (Never left "searching" for ever: the next due look searches again.)
+            lostExits[asked.id]?.let { cur -> lostExits.replace(asked.id, cur, cur.copy(searching = false)) }
+            throw e
+        } catch (e: Exception) { failed = true; null }
+        val cur = lostExits[asked.id] ?: return
+        val next = when {
+            failed -> (cur.fails + 1).let { n -> cur.copy(searching = false, fails = n, notFound = n >= LOST_EXIT_TRIES) }
+            found.isNullOrEmpty() -> cur.copy(searching = false, notFound = true)
+            else -> cur.copy(searching = false, foundId = found)
         }
-        if (found != null) runCatching { Diag.record("orb", "${lost.sym}: the lost exit found in Zerodha's book ($found): it is the exit") }
-        // (Found by another trade's look on the contract: kept for its own part, which books it on its next look.)
-        if (found != null && !mine) { lostExits.replace(lost.id, asked, asked.copy(foundId = found)); return null }
-        // (Taken meanwhile by another look: that one decides.)
-        if (!lostExits.remove(lost.id, asked)) return held
-        if (found == null) { lostNotFound(lost.sym, unread = false); return null }
-        return LostLook(hold = false, found = found, lost = lost)
+        if (found?.isNotEmpty() == true) runCatching { Diag.record("orb", "${asked.sym}: the lost exit found in Zerodha's book ($found): it is the exit") }
+        lostExits.replace(asked.id, cur, next)
     }
 
     /**
-     * 20 Nov 2026 (review): [p]'s lost exit [id] ([why]) found in Zerodha's book, booked as its exit ([bookSale]). [p] has no stop resting
-     * (only such a part takes it, [lostOf]). Found with nothing filled and finished, [p] stays open with no stop: the next look rests one.
+     * 20 Nov 2026 (review; coordinator: never a wait under the lock): [p]'s lost exit [id] ([why]) found in Zerodha's book, booked from the
+     * look's own read of it ([row]) - never awaited. Finished with a fill: that is the exit ([bookFilled]: a part fill leaves the rest open with
+     * no stop). Finished with nothing filled: [p] stays open with no stop (the next look rests one or sells). Not finished, or not in that
+     * read: null - the next look books it. [p] has no stop resting (only such a part takes it, [lostOf]).
      */
-    private suspend fun bookFoundLost(p: Position, label: String, sym: String, why: String, id: String): Pair<Position, Position?> =
-        bookSale(p, label, sym, why, id) { p.copy(stopOrderId = null) to null }
+    private suspend fun bookFoundRow(p: Position, label: String, sym: String, why: String, id: String, row: Broker.OrderRow?): Pair<Position, Position?>? {
+        if (row == null || row.status !in DONE) return null
+        runCatching { Strategies.tagOwner("kite:$id", "$label · $why") }
+        if (row.filled <= 0) return p.copy(stopOrderId = null) to null
+        return bookFilled(p, label, sym, why, row.filled, row.avg, id)
+    }
 
     private fun lostNotFound(sym: String, unread: Boolean) {
         val what = if (unread) "not found: Zerodha's order book could not be read ($LOST_EXIT_TRIES tries)" else "not found in Zerodha's order book"
@@ -5334,7 +5377,8 @@ object OrbArms {
      * "hold", "none" (go on), or "found <id>".
      */
     internal suspend fun lostExitLookForTest(sym: String, owner: Boolean): String =
-        lostOn(sym).minByOrNull { it.id }?.let { lostExitLook(it, owner) }.let { if (it == null) "none" else if (it.hold) "hold" else "found ${it.found}" }
+        (if (owner) lostOn(sym).minByOrNull { it.id }?.let { lostExitLook(it, inline = true) } else null)
+            .let { if (it == null) "none" else if (it.hold) "hold" else "found ${it.found}" }
 
     /** 18 Nov 2026 (audit: B1): Zerodha's orders and positions as the pass that decided an exit already read them ([exitLive]). */
     private class Pre(val orders: Collection<Broker.OrderRow>, val net: List<Broker.Position>)
@@ -5349,22 +5393,16 @@ object OrbArms {
         // 19 Nov 2026 (review): Stop for today or the session's end refused a moment ago: its stop was put back; not taken out and sold
         // again every look - once every [REFUSED_RETRY_MS] (the stop rests meanwhile).
         if (why in ALWAYS_EXITS && p0.stopOrderId?.let { refusedAt[it] }?.let { epochMs(now()) - it < REFUSED_RETRY_MS } == true) return p0 to null
-        // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade may still be
-        // selling, it sells nothing more ([LOST_EXIT_HOLD_MS]); past that hold the lost sale is searched for in Zerodha's book first (at most
-        // every [LOST_EXIT_ASK_MS], on any look) - found, it is this part's exit, booked from its fill; not found, Boss is told and the exit
-        // goes on as below (reading Zerodha's books first). Any other trade on the contract is never held: when a search is due its exit
-        // makes it first and is decided as soon as it answers (the forced lag guard counts what is still held).
-        val own = lostOf(p0)
-        // (Another part's lost sales on the contract: searched first when due - kept for their parts when found - and never held here.)
-        for (l in lostOn(sym)) if (l.id != own?.id) lostExitLook(l, mine = false)
-        val lostLook = own?.let { lostExitLook(it, mine = true) }
-        if (lostLook?.hold == true) return p0 to null
+        // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade is unresolved
+        // it sells nothing more - held, searched for and booked by its look ([lostExitLook], never the network on a fast look). Known not
+        // found, it is said and the exit goes on as below (reading Zerodha's books first, the forced lag guard counting what is still held).
+        // Any other trade on the contract is never held here: it counts that sale as going ([lostPending]). Memory only.
+        lostOf(p0)?.let { own ->
+            if (!own.notFound || !lostExits.remove(own.id, own)) return p0 to null
+            lostNotFound(sym, unread = own.fails >= LOST_EXIT_TRIES)
+        }
         runCatching { OrderTiming.decided() }
         val label = armOf(p0.arm).label
-        lostLook?.found?.let { id ->
-            val lost = lostLook.lost ?: return p0 to null
-            return bookFoundLost(p0, label, sym, lost.why, id)
-        }
         // 18 Nov 2026 (audit: B1, Liquidity's index and time exits skipped the "shown gone but not confirmed" guard - they took the
         // resting stop out, read nothing held on the same bad read and left the lot with no stop): what is held is read BEFORE a resting
         // stop is touched - the pass's own reads ([pre]) when the caller has them, else read now (orders first, then positions). Shown
@@ -5525,7 +5563,7 @@ object OrbArms {
             if (st?.status == "COMPLETE") {
                 val px = st.avgPrice.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
                 return p.copy(exit = px, exitTime = now(), why = stopWhy(p), stopOrderId = null,
-                    charges = p.charges + kiteCharge("SELL", px, p.qty)) to null
+                    charges = p.charges + kiteCharge("SELL", px, filled)) to null
             }
             // Only sell once the stop is known to be out: a stop still working plus a market sell could both fill.
             // (16 Nov review: marked as the app's own cancel, so the next look - after a restart too - never takes it as Boss's.)
@@ -5604,15 +5642,20 @@ object OrbArms {
         }
         // Known to have filled nothing and to be finished (cancelled or rejected): the stop goes back.
         if (f == null || f.filled <= 0) return if (f != null && f.status in DONE) nothing() else p.copy(stopOrderId = null) to null
-        val px = f.avgPrice.takeIf { it > 0 } ?: p.entry
+        return bookFilled(p, label, sym, why, f.filled, f.avgPrice, f.orderId)
+    }
+
+    /** [p]'s exit sale [orderId] ([why]) filled [filled] at [avg]: booked (a part: the rest stays open with no stop, sold next pass). Pure. */
+    private fun bookFilled(p: Position, label: String, sym: String, why: String, filled: Int, avg: Double, orderId: String): Pair<Position, Position?> {
+        val px = avg.takeIf { it > 0 } ?: p.entry
         // 15 Nov: the stop rule's exits named with their label on the card.
-        Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", if (FIXED.words(why) != why) "$label · ${FIXED.words(why)}" else label, f.orderId)
-        if (f.filled >= p.qty) return p.copy(stopOrderId = null, exit = px, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", px, f.filled)) to null
+        runCatching { Notifier.orderFilled(app, "SELL", filled, sym, px, "Live", if (FIXED.words(why) != why) "$label · ${FIXED.words(why)}" else label, orderId) }
+        if (filled >= p.qty) return p.copy(stopOrderId = null, exit = px, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", px, filled)) to null
         // Only part sold: that part is booked as closed, the rest stays open (no stop: the app watches it) and is sold next pass.
-        val share = f.filled.toDouble() / p.qty
-        return p.copy(qty = f.filled, stopOrderId = null, exit = px, exitTime = now(), why = why,
-            charges = p.charges * share + kiteCharge("SELL", px, f.filled)) to
-            p.copy(qty = p.qty - f.filled, stopOrderId = null, charges = p.charges * (1 - share))
+        val share = filled.toDouble() / p.qty
+        return p.copy(qty = filled, stopOrderId = null, exit = px, exitTime = now(), why = why,
+            charges = p.charges * share + kiteCharge("SELL", px, filled)) to
+            p.copy(qty = p.qty - filled, stopOrderId = null, charges = p.charges * (1 - share))
     }
 
     data class Filled(val quantity: Int, val symbol: String, val price: Double)

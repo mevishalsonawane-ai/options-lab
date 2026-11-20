@@ -694,10 +694,10 @@ class OrbArmsExitGuardTest : RobolectricTest() {
     }
 
     /**
-     * 20 Nov 2026 (review; deep review F1): a lost exit found by ANOTHER trade's look on the contract (another book's exit) is not dropped:
-     * that look goes on (never held), the sale is kept for its own trade, and that trade's next look books it as its exit.
+     * 20 Nov 2026 (review; deep review F1): ANOTHER trade's look on the contract is never held by a lost exit and never takes it: the sale
+     * is kept for its own trade, whose next look searches and books it as its exit.
      */
-    @Test fun aLostExitFoundByAnotherTradesLookIsKeptForItsOwnTrade() {
+    @Test fun aLostExitIsKeptForItsOwnTradeNeverTakenByAnother() {
         lostLiquiditySale()
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()
@@ -711,23 +711,60 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertTrue(!OrbArms.lostExitForTest(sym))
     }
 
+    /** Waits (wall clock, at most 10 s) until no background search of a lost exit on [sym] runs. */
+    private fun searchDone() {
+        val end = System.currentTimeMillis() + 10_000
+        while (OrbArms.lostSearchingForTest(sym) && System.currentTimeMillis() < end) Thread.sleep(10)
+        assertTrue("the background search ended", !OrbArms.lostSearchingForTest(sym))
+    }
+
     /**
-     * 20 Nov 2026 (deep review F1): the first look past the hold - a fast one (the stream's) too - searches Zerodha's order book for the lost
-     * exit, and the sale found is booked at once; the owner is never left bare until a regular look.
+     * 20 Nov 2026 (deep review F1; coordinator: no network on the tick path): the first fast look past the hold only starts a background
+     * search and returns; its answer, kept in memory, is booked by the next look from that look's own order book - never awaited.
      */
-    @Test fun aFastLookPastTheHoldSearchesAndBooksTheLostExit() {
+    @Test fun aFastLookPastTheHoldStartsABackgroundSearchAndTheNextLookBooksIt() {
         lostLiquiditySale()
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         kite.showInBook()
         runBlocking { OrbArms.priceCheckOnly(fast = true) }
-        assertEquals("booked by the fast look", "time_stop", today("liquidity").single().why)
+        assertNotNull("not booked by the look that started the search", open("liquidity"))
+        searchDone()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
+        runBlocking { OrbArms.priceCheckOnly(fast = true) }
+        assertEquals("booked by the next look", "time_stop", today("liquidity").single().why)
         assertEquals("never sold twice", 1, marketSells().size)
         assertTrue(!OrbArms.lostExitForTest(sym))
     }
 
     /**
+     * 20 Nov 2026 (coordinator: nothing on the tick or stream path touches the network or blocks): a stream look past the hold never makes
+     * the order-book search itself - with the search held up, the look still returns at once, the search running in the background.
+     */
+    @Test fun aStreamLookNeverMakesTheSearchItself() {
+        lostLiquiditySale()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        val gate = java.util.concurrent.CountDownLatch(1)
+        val searches = java.util.concurrent.atomic.AtomicInteger()
+        OrbArms.testLostSearch = { searches.incrementAndGet(); gate.await(30, java.util.concurrent.TimeUnit.SECONDS) }
+        try {
+            val look = Thread { runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) } }.apply { start() }
+            look.join(5_000)
+            assertTrue("the stream look returned while the search is held up", !look.isAlive)
+            val end = System.currentTimeMillis() + 5_000
+            while (searches.get() == 0 && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertEquals("one search, in the background", 1, searches.get())
+            assertTrue(OrbArms.lostSearchingForTest(sym))
+            runBlocking { OrbArms.priceCheckOnly(fast = true, stream = true) }
+            assertEquals("never a second search while one runs", 1, searches.get())
+            assertEquals("nothing more sold meanwhile", 1, marketSells().size)
+        } finally { gate.countDown(); OrbArms.testLostSearch = null }
+        searchDone()
+    }
+
+    /**
      * 20 Nov 2026 (deep review F1): the price falls through the stop while the owner's lost sale (which never reached Zerodha) is held:
-     * nothing more is sold within the hold; the first look past it - a fast one - searches, finds nothing and sells at once.
+     * nothing more is sold within the hold; the first fast look past it starts the search, and the next look - a second later - sells:
+     * the gap from the hold's end to the sale stays within a few seconds.
      */
     @Test fun aPriceThroughTheStopDuringTheHoldIsSearchedAndSoldPromptly() {
         lostLiquiditySale(FakeKite.Reply.NETWORK_EXCEPTION)                // nothing reached Zerodha
@@ -736,11 +773,17 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         runBlocking { OrbArms.priceCheckOnly(fast = true) }
         pass()
         assertEquals("held within the hold", 1, marketSells().size)
-        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        val holdEnd = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000)
+        OrbArms.testNow = holdEnd.plusSeconds(1)
+        runBlocking { OrbArms.priceCheckOnly(fast = true) }
+        searchDone()
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(1)
         runBlocking { OrbArms.priceCheckOnly(fast = true) }
         assertTrue(!OrbArms.lostExitForTest(sym))
-        assertEquals("searched, not found, sold on that same look", 2, marketSells().size)
+        assertEquals("searched, not found, sold", 2, marketSells().size)
         assertTrue(today("liquidity").single().exit != null)
+        val gap = java.time.Duration.between(holdEnd, OrbArms.testNow!!).seconds
+        assertTrue("sold $gap s after the hold ended", gap in 0..6)
     }
 
     /**
