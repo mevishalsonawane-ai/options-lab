@@ -1379,8 +1379,14 @@ object Broker {
     /** NIFTY and BANKNIFTY options from GET /instruments/NFO, cached for the day. */
     suspend fun instruments(): List<Kite.Instrument> {
         val f = File(app.filesDir, "kite_instruments.json")
-        instrumentsFile()?.takeIf { instrumentsCurrent(it) }?.let { return it.list }
-        val text = call("GET", "/instruments/NFO", raw = true) as String
+        val had = instrumentsFile()
+        had?.takeIf { instrumentsCurrent(it) }?.let { return it.list }
+        // 20 Nov 2026 (review): a list of today fetched before the morning's dump is read again, but if that read fails it still
+        // answers, as it did before (never a failure where there was a list of the day).
+        val text = try { call("GET", "/instruments/NFO", raw = true) as String } catch (e: Exception) {
+            if (e !is kotlinx.coroutines.CancellationException && had != null && had.day == Market.today().toString()) return had.list
+            throw e
+        }
         val list = com.optionslab.ira.InstrumentsFile.compact(Kite.parseInstruments(text.lineSequence(), setOf("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY")))
         // The market recorder's index futures from the same dump (never a second download for them).
         runCatching { keepNfoFutures(text) }
