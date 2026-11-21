@@ -1,0 +1,36 @@
+id: r202-p11-v
+title: 'R202 price action: 11 Double top, V5 as the arms (XL + breakeven +10% + L500 step lock)'
+family: patterns-indicators
+date: '2026-11-21'
+doc: research/hunt/r202_price_action25/RESULT.md
+hypothesis: 11 Double top on the index's 5-minute bars, buying the 1-ITM option, makes money after charges in the walk-forward
+  design and the holdout, beats random entries, inside the account stop, after BH
+data_version: 'Drive lake copy of 21 Nov 2026 (~/.cache/iraalgo/r202/lake: index_1m, options_rolling_1m WEEK with the 20 Oct
+  - 13 Nov 2026 fill); R51 clean stores 1 Dec 2021 - 13 Nov 2026'
+period:
+  design: '2021-12-01..2026-03-31 (walk-forward: 5 folds in time order; nothing fitted)'
+  holdout: 2026-04-01..2026-11-13; read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute bars from 1-minute index minutes; pivots known 3 bars late)'
+- buy the 1-ITM option; never on the index's expiry day; one position at a time, 3 a day
+model_or_rule: two pivot highs within 0.25 ATR, 5-40 bars apart, a 1 ATR dip between; the first close below that dip -> put;
+  exit V5 as the arms (XL + breakeven +10% + L500 step lock)
+settings: research/hunt/r202_price_action25/r202pat.py, r202cfg.py; PREREG.md sections 3-5
+prereg: research/hunt/r202_price_action25/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 591 tr, 46.36% win, Rs -82,487, worst month Rs -13,482 (2025-03), DD Rs 91,232; 1 of 5 folds positive;
+    holdout 133 tr, 47.37% win, Rs -30,580, worst month Rs -18,470 (2026-06), DD Rs 35,345; twin p 0.995, BH q 1 (m = 4,850).
+    Fails: design net -82,487 not > 0; design net without top 5 -97,207 not > 0; 1 of 5 folds positive (< 3); twin p 0.995
+    >= 0.05; BH q 1 > 0.1; design worst month -13,482 < -13,000; design max drawdown 91,232 > 40,000; holdout net -30,580
+    not > 0; holdout worst month -18,470 < -13,000'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Earlier tests of the same concept are cited in RESULT.md.

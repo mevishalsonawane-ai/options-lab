@@ -1,0 +1,668 @@
+{
+ "_meta": {
+  "written": "2026-11-21T20:21:12.747075+00:00",
+  "lots": 1,
+  "money": 1,
+  "data": "Drive lake copy of 21 Nov 2026 (~/.cache/iraalgo/r202/lake); R51 clean stores 1 Dec 2021 - 13 Nov 2026",
+  "m_total": 4850,
+  "twins": 200
+ },
+ "P01-X": {
+  "name": "1 Support bounce",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -1,009,786 not > 0",
+   "design net without top 5 -1,050,959 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 0.975 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -80,161 < -13,000",
+   "design max drawdown 1,011,288 > 40,000",
+   "holdout net -155,273 not > 0",
+   "holdout worst month -42,932 < -13,000",
+   "holdout max drawdown 199,372 > 40,000"
+  ]
+ },
+ "P01-V": {
+  "name": "1 Support bounce",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -1,045,491 not > 0",
+   "design net without top 5 -1,073,261 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 0.975 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -62,735 < -13,000",
+   "design max drawdown 1,045,491 > 40,000",
+   "holdout net -192,651 not > 0",
+   "holdout worst month -62,031 < -13,000",
+   "holdout max drawdown 226,308 > 40,000"
+  ]
+ },
+ "P02-X": {
+  "name": "2 Resistance rejection",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -554,907 not > 0",
+   "design net without top 5 -602,877 not > 0",
+   "1 of 5 folds positive (< 3)",
+   "twin p 0.269 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -62,214 < -13,000",
+   "design max drawdown 604,838 > 40,000",
+   "holdout net -161,837 not > 0",
+   "holdout worst month -63,800 < -13,000",
+   "holdout max drawdown 194,055 > 40,000"
+  ]
+ },
+ "P02-V": {
+  "name": "2 Resistance rejection",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -599,301 not > 0",
+   "design net without top 5 -634,590 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 0.224 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -76,299 < -13,000",
+   "design max drawdown 622,003 > 40,000",
+   "holdout net -143,833 not > 0",
+   "holdout worst month -51,322 < -13,000",
+   "holdout max drawdown 153,266 > 40,000"
+  ]
+ },
+ "P03-X": {
+  "name": "3 Trend (pullback to EMA20 with HH/HL or LH/LL)",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -859,473 not > 0",
+   "design net without top 5 -908,377 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -105,151 < -13,000",
+   "design max drawdown 872,842 > 40,000",
+   "holdout net -130,714 not > 0",
+   "holdout worst month -63,562 < -13,000",
+   "holdout max drawdown 149,747 > 40,000"
+  ]
+ },
+ "P03-V": {
+  "name": "3 Trend (pullback to EMA20 with HH/HL or LH/LL)",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -863,727 not > 0",
+   "design net without top 5 -895,258 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -86,053 < -13,000",
+   "design max drawdown 872,319 > 40,000",
+   "holdout net -162,156 not > 0",
+   "holdout worst month -53,471 < -13,000",
+   "holdout max drawdown 167,831 > 40,000"
+  ]
+ },
+ "P04-X": {
+  "name": "4 Trendline bounce",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -954,141 not > 0",
+   "design net without top 5 -992,714 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -68,949 < -13,000",
+   "design max drawdown 958,427 > 40,000",
+   "holdout net -164,067 not > 0",
+   "holdout worst month -55,244 < -13,000",
+   "holdout max drawdown 166,017 > 40,000"
+  ]
+ },
+ "P04-V": {
+  "name": "4 Trendline bounce",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -906,276 not > 0",
+   "design net without top 5 -937,264 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -55,689 < -13,000",
+   "design max drawdown 927,004 > 40,000",
+   "holdout net -165,559 not > 0",
+   "holdout worst month -50,675 < -13,000",
+   "holdout max drawdown 167,743 > 40,000"
+  ]
+ },
+ "P06-X": {
+  "name": "6 Retest of a broken level",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -803,257 not > 0",
+   "design net without top 5 -850,854 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 0.990 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -99,309 < -13,000",
+   "design max drawdown 867,308 > 40,000",
+   "holdout net -175,847 not > 0",
+   "holdout worst month -85,122 < -13,000",
+   "holdout max drawdown 217,895 > 40,000"
+  ]
+ },
+ "P06-V": {
+  "name": "6 Retest of a broken level",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -830,770 not > 0",
+   "design net without top 5 -867,418 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 0.985 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -60,003 < -13,000",
+   "design max drawdown 841,465 > 40,000",
+   "holdout net -212,723 not > 0",
+   "holdout worst month -58,219 < -13,000",
+   "holdout max drawdown 224,133 > 40,000"
+  ]
+ },
+ "P07-X": {
+  "name": "7 Consolidation (tight box) breakout",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design 20 trades < 100",
+   "design net -6,636 not > 0",
+   "design net without top 5 -10,426 not > 0",
+   "1 of 5 folds positive (< 3)",
+   "twin p 0.985 >= 0.05",
+   "BH q 1 > 0.1",
+   "holdout 5 trades < 40",
+   "holdout net -3,692 not > 0"
+  ]
+ },
+ "P07-V": {
+  "name": "7 Consolidation (tight box) breakout",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design 20 trades < 100",
+   "design net -3,632 not > 0",
+   "design net without top 5 -8,944 not > 0",
+   "1 of 5 folds positive (< 3)",
+   "twin p 0.925 >= 0.05",
+   "BH q 1 > 0.1",
+   "holdout 5 trades < 40",
+   "holdout net -3,692 not > 0"
+  ]
+ },
+ "P09-X": {
+  "name": "9 Higher high / higher low (buy the new HL)",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -584,483 not > 0",
+   "design net without top 5 -627,159 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -47,756 < -13,000",
+   "design max drawdown 591,545 > 40,000",
+   "holdout net -191,186 not > 0",
+   "holdout worst month -59,994 < -13,000",
+   "holdout max drawdown 231,920 > 40,000"
+  ]
+ },
+ "P09-V": {
+  "name": "9 Higher high / higher low (buy the new HL)",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -650,269 not > 0",
+   "design net without top 5 -677,781 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -46,215 < -13,000",
+   "design max drawdown 650,269 > 40,000",
+   "holdout net -222,094 not > 0",
+   "holdout worst month -50,123 < -13,000",
+   "holdout max drawdown 231,218 > 40,000"
+  ]
+ },
+ "P10-X": {
+  "name": "10 Lower high / lower low (sell the new LH)",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -643,381 not > 0",
+   "design net without top 5 -680,399 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -72,782 < -13,000",
+   "design max drawdown 696,036 > 40,000",
+   "holdout net -83,008 not > 0",
+   "holdout worst month -31,268 < -13,000",
+   "holdout max drawdown 99,390 > 40,000"
+  ]
+ },
+ "P10-V": {
+  "name": "10 Lower high / lower low (sell the new LH)",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -651,818 not > 0",
+   "design net without top 5 -675,984 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -65,305 < -13,000",
+   "design max drawdown 674,694 > 40,000",
+   "holdout net -81,352 not > 0",
+   "holdout worst month -33,881 < -13,000",
+   "holdout max drawdown 96,314 > 40,000"
+  ]
+ },
+ "P11-X": {
+  "name": "11 Double top",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -71,116 not > 0",
+   "design net without top 5 -90,295 not > 0",
+   "1 of 5 folds positive (< 3)",
+   "twin p 0.985 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -18,078 < -13,000",
+   "design max drawdown 87,838 > 40,000",
+   "holdout net -29,887 not > 0",
+   "holdout worst month -20,217 < -13,000",
+   "holdout max drawdown 44,884 > 40,000"
+  ]
+ },
+ "P11-V": {
+  "name": "11 Double top",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -82,487 not > 0",
+   "design net without top 5 -97,207 not > 0",
+   "1 of 5 folds positive (< 3)",
+   "twin p 0.995 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -13,482 < -13,000",
+   "design max drawdown 91,232 > 40,000",
+   "holdout net -30,580 not > 0",
+   "holdout worst month -18,470 < -13,000"
+  ]
+ },
+ "P12-X": {
+  "name": "12 Double bottom",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -30,523 not > 0",
+   "design net without top 5 -56,172 not > 0",
+   "2 of 5 folds positive (< 3)",
+   "twin p 0.706 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -15,056 < -13,000",
+   "design max drawdown 62,872 > 40,000",
+   "holdout net -4,058 not > 0"
+  ]
+ },
+ "P12-V": {
+  "name": "12 Double bottom",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -36,142 not > 0",
+   "design net without top 5 -55,185 not > 0",
+   "2 of 5 folds positive (< 3)",
+   "twin p 0.766 >= 0.05",
+   "BH q 1 > 0.1",
+   "design max drawdown 55,311 > 40,000"
+  ]
+ },
+ "P13-X": {
+  "name": "13 Head and shoulders",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "BH q 1 > 0.1",
+   "holdout 28 trades < 40",
+   "holdout net -4,063 not > 0"
+  ]
+ },
+ "P13-V": {
+  "name": "13 Head and shoulders",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net without top 5 -8,434 not > 0",
+   "2 of 5 folds positive (< 3)",
+   "twin p 0.199 >= 0.05",
+   "BH q 1 > 0.1",
+   "holdout 28 trades < 40",
+   "holdout net -1,892 not > 0"
+  ]
+ },
+ "P14-X": {
+  "name": "14 Inverse head and shoulders",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -3,881 not > 0",
+   "design net without top 5 -20,731 not > 0",
+   "twin p 0.269 >= 0.05",
+   "BH q 1 > 0.1",
+   "holdout 20 trades < 40"
+  ]
+ },
+ "P14-V": {
+  "name": "14 Inverse head and shoulders",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -15,470 not > 0",
+   "design net without top 5 -24,003 not > 0",
+   "1 of 5 folds positive (< 3)",
+   "twin p 0.587 >= 0.05",
+   "BH q 1 > 0.1",
+   "holdout 20 trades < 40"
+  ]
+ },
+ "P15-X": {
+  "name": "15 Ascending triangle",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -65,952 not > 0",
+   "design net without top 5 -95,169 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design max drawdown 79,744 > 40,000",
+   "holdout net -20,350 not > 0"
+  ]
+ },
+ "P15-V": {
+  "name": "15 Ascending triangle",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -76,972 not > 0",
+   "design net without top 5 -92,230 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design max drawdown 78,473 > 40,000",
+   "holdout net -12,059 not > 0"
+  ]
+ },
+ "P16-X": {
+  "name": "16 Descending triangle",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -3,749 not > 0",
+   "design net without top 5 -24,439 not > 0",
+   "twin p 0.801 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -15,894 < -13,000",
+   "holdout net -8,493 not > 0"
+  ]
+ },
+ "P16-V": {
+  "name": "16 Descending triangle",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net without top 5 -11,054 not > 0",
+   "twin p 0.463 >= 0.05",
+   "BH q 1 > 0.1"
+  ]
+ },
+ "P17-X": {
+  "name": "17 Symmetrical triangle",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -278,851 not > 0",
+   "design net without top 5 -313,951 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 0.726 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -50,368 < -13,000",
+   "design max drawdown 291,080 > 40,000",
+   "holdout net -83,102 not > 0",
+   "holdout worst month -34,818 < -13,000",
+   "holdout max drawdown 99,300 > 40,000"
+  ]
+ },
+ "P17-V": {
+  "name": "17 Symmetrical triangle",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -284,013 not > 0",
+   "design net without top 5 -307,441 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 0.711 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -38,202 < -13,000",
+   "design max drawdown 297,415 > 40,000",
+   "holdout net -73,970 not > 0",
+   "holdout worst month -19,410 < -13,000",
+   "holdout max drawdown 88,424 > 40,000"
+  ]
+ },
+ "P18-X": {
+  "name": "18 Flag",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -581,356 not > 0",
+   "design net without top 5 -618,105 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -101,811 < -13,000",
+   "design max drawdown 645,359 > 40,000",
+   "holdout net -21,227 not > 0",
+   "holdout worst month -29,148 < -13,000",
+   "holdout max drawdown 72,729 > 40,000"
+  ]
+ },
+ "P18-V": {
+  "name": "18 Flag",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -474,588 not > 0",
+   "design net without top 5 -501,588 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -77,629 < -13,000",
+   "design max drawdown 514,045 > 40,000",
+   "holdout net -52,930 not > 0",
+   "holdout worst month -24,888 < -13,000",
+   "holdout max drawdown 87,861 > 40,000"
+  ]
+ },
+ "P19-X": {
+  "name": "19 Wedge (rising = put, falling = call)",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -524,678 not > 0",
+   "design net without top 5 -560,574 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "design worst month -51,995 < -13,000",
+   "design max drawdown 557,605 > 40,000",
+   "holdout net -41,248 not > 0",
+   "holdout worst month -35,649 < -13,000",
+   "holdout max drawdown 84,645 > 40,000"
+  ]
+ },
+ "P19-V": {
+  "name": "19 Wedge (rising = put, falling = call)",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -565,530 not > 0",
+   "design net without top 5 -587,113 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "design worst month -48,019 < -13,000",
+   "design max drawdown 586,225 > 40,000",
+   "holdout net -29,121 not > 0",
+   "holdout worst month -24,072 < -13,000",
+   "holdout max drawdown 67,651 > 40,000"
+  ]
+ },
+ "P21-X": {
+  "name": "21 Order block",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -417,194 not > 0",
+   "design net without top 5 -444,007 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -37,475 < -13,000",
+   "design max drawdown 424,546 > 40,000",
+   "holdout net -106,945 not > 0",
+   "holdout worst month -33,767 < -13,000",
+   "holdout max drawdown 123,313 > 40,000"
+  ]
+ },
+ "P21-V": {
+  "name": "21 Order block",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -376,311 not > 0",
+   "design net without top 5 -402,827 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -36,243 < -13,000",
+   "design max drawdown 388,966 > 40,000",
+   "holdout net -116,197 not > 0",
+   "holdout worst month -38,129 < -13,000",
+   "holdout max drawdown 124,907 > 40,000"
+  ]
+ },
+ "P22-X": {
+  "name": "22 Fair value gap",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -1,042,169 not > 0",
+   "design net without top 5 -1,086,355 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -86,534 < -13,000",
+   "design max drawdown 1,061,932 > 40,000",
+   "holdout net -188,743 not > 0",
+   "holdout worst month -49,304 < -13,000",
+   "holdout max drawdown 227,690 > 40,000"
+  ]
+ },
+ "P22-V": {
+  "name": "22 Fair value gap",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -994,235 not > 0",
+   "design net without top 5 -1,033,904 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 1.000 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -72,522 < -13,000",
+   "design max drawdown 1,022,324 > 40,000",
+   "holdout net -248,448 not > 0",
+   "holdout worst month -63,597 < -13,000",
+   "holdout max drawdown 281,311 > 40,000"
+  ]
+ },
+ "P24-X": {
+  "name": "24 Equal highs / lows sweep",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -280,788 not > 0",
+   "design net without top 5 -307,461 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "BH q 1 > 0.1",
+   "design worst month -23,142 < -13,000",
+   "design max drawdown 286,933 > 40,000",
+   "holdout net -78,667 not > 0",
+   "holdout worst month -24,559 < -13,000",
+   "holdout max drawdown 78,667 > 40,000"
+  ]
+ },
+ "P24-V": {
+  "name": "24 Equal highs / lows sweep",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -353,583 not > 0",
+   "design net without top 5 -376,596 not > 0",
+   "0 of 5 folds positive (< 3)",
+   "twin p 0.512 >= 0.05",
+   "BH q 1 > 0.1",
+   "design worst month -25,286 < -13,000",
+   "design max drawdown 353,583 > 40,000",
+   "holdout net -80,711 not > 0",
+   "holdout worst month -21,772 < -13,000",
+   "holdout max drawdown 84,882 > 40,000"
+  ]
+ },
+ "P25-X": {
+  "name": "25 Candlestick rejection (long wick)",
+  "exit": "X",
+  "passes": false,
+  "fails": [
+   "design net -359,779 not > 0",
+   "design net without top 5 -406,287 not > 0",
+   "1 of 5 folds positive (< 3)",
+   "design worst month -59,751 < -13,000",
+   "design max drawdown 429,904 > 40,000",
+   "holdout net -204,593 not > 0",
+   "holdout worst month -72,237 < -13,000",
+   "holdout max drawdown 207,609 > 40,000"
+  ]
+ },
+ "P25-V": {
+  "name": "25 Candlestick rejection (long wick)",
+  "exit": "V",
+  "passes": false,
+  "fails": [
+   "design net -446,788 not > 0",
+   "design net without top 5 -474,662 not > 0",
+   "1 of 5 folds positive (< 3)",
+   "design worst month -57,860 < -13,000",
+   "design max drawdown 475,054 > 40,000",
+   "holdout net -178,173 not > 0",
+   "holdout worst month -70,754 < -13,000",
+   "holdout max drawdown 189,822 > 40,000"
+  ]
+ },
+ "_passed": []
+}

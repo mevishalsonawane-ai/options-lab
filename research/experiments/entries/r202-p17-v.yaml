@@ -1,0 +1,36 @@
+id: r202-p17-v
+title: 'R202 price action: 17 Symmetrical triangle, V5 as the arms (XL + breakeven +10% + L500 step lock)'
+family: patterns-indicators
+date: '2026-11-21'
+doc: research/hunt/r202_price_action25/RESULT.md
+hypothesis: 17 Symmetrical triangle on the index's 5-minute bars, buying the 1-ITM option, makes money after charges in the
+  walk-forward design and the holdout, beats random entries, inside the account stop, after BH
+data_version: 'Drive lake copy of 21 Nov 2026 (~/.cache/iraalgo/r202/lake: index_1m, options_rolling_1m WEEK with the 20 Oct
+  - 13 Nov 2026 fill); R51 clean stores 1 Dec 2021 - 13 Nov 2026'
+period:
+  design: '2021-12-01..2026-03-31 (walk-forward: 5 folds in time order; nothing fitted)'
+  holdout: 2026-04-01..2026-11-13; read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute bars from 1-minute index minutes; pivots known 3 bars late)'
+- buy the 1-ITM option; never on the index's expiry day; one position at a time, 3 a day
+model_or_rule: falling highs and rising lows; the first close beyond either line; exit V5 as the arms (XL + breakeven +10%
+  + L500 step lock)
+settings: research/hunt/r202_price_action25/r202pat.py, r202cfg.py; PREREG.md sections 3-5
+prereg: research/hunt/r202_price_action25/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 3,208 tr, 49.56% win, Rs -284,013, worst month Rs -38,202 (2026-01), DD Rs 297,415; 0 of 5 folds positive;
+    holdout 624 tr, 47.76% win, Rs -73,970, worst month Rs -19,410 (2026-07), DD Rs 88,424; twin p 0.711, BH q 1 (m = 4,850).
+    Fails: design net -284,013 not > 0; design net without top 5 -307,441 not > 0; 0 of 5 folds positive (< 3); twin p 0.711
+    >= 0.05; BH q 1 > 0.1; design worst month -38,202 < -13,000; design max drawdown 297,415 > 40,000; holdout net -73,970
+    not > 0; holdout worst month -19,410 < -13,000; holdout max drawdown 88,424 > 40,000'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Earlier tests of the same concept are cited in RESULT.md.

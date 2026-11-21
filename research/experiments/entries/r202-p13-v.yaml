@@ -1,0 +1,35 @@
+id: r202-p13-v
+title: 'R202 price action: 13 Head and shoulders, V5 as the arms (XL + breakeven +10% + L500 step lock)'
+family: patterns-indicators
+date: '2026-11-21'
+doc: research/hunt/r202_price_action25/RESULT.md
+hypothesis: 13 Head and shoulders on the index's 5-minute bars, buying the 1-ITM option, makes money after charges in the
+  walk-forward design and the holdout, beats random entries, inside the account stop, after BH
+data_version: 'Drive lake copy of 21 Nov 2026 (~/.cache/iraalgo/r202/lake: index_1m, options_rolling_1m WEEK with the 20 Oct
+  - 13 Nov 2026 fill); R51 clean stores 1 Dec 2021 - 13 Nov 2026'
+period:
+  design: '2021-12-01..2026-03-31 (walk-forward: 5 folds in time order; nothing fitted)'
+  holdout: 2026-04-01..2026-11-13; read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute bars from 1-minute index minutes; pivots known 3 bars late)'
+- buy the 1-ITM option; never on the index's expiry day; one position at a time, 3 a day
+model_or_rule: three pivot highs with the middle >= 0.5 ATR above both shoulders (within 0.5 ATR of each other); close below
+  the neckline -> put; exit V5 as the arms (XL + breakeven +10% + L500 step lock)
+settings: research/hunt/r202_price_action25/r202pat.py, r202cfg.py; PREREG.md sections 3-5
+prereg: research/hunt/r202_price_action25/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 163 tr, 60.12% win, Rs 4,464, worst month Rs -3,773 (2026-02), DD Rs 8,541; 2 of 5 folds positive; holdout
+    28 tr, 60.71% win, Rs -1,892, worst month Rs -5,494 (2026-09), DD Rs 10,747; twin p 0.199, BH q 1 (m = 4,850). Fails:
+    design net without top 5 -8,434 not > 0; 2 of 5 folds positive (< 3); twin p 0.199 >= 0.05; BH q 1 > 0.1; holdout 28 trades
+    < 40; holdout net -1,892 not > 0'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Earlier tests of the same concept are cited in RESULT.md.

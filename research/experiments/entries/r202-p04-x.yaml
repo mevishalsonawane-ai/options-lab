@@ -1,0 +1,36 @@
+id: r202-p04-x
+title: 'R202 price action: 4 Trendline bounce, plain exit (XB: -15% / +30% / 30 min)'
+family: patterns-indicators
+date: '2026-11-21'
+doc: research/hunt/r202_price_action25/RESULT.md
+hypothesis: 4 Trendline bounce on the index's 5-minute bars, buying the 1-ITM option, makes money after charges in the walk-forward
+  design and the holdout, beats random entries, inside the account stop, after BH
+data_version: 'Drive lake copy of 21 Nov 2026 (~/.cache/iraalgo/r202/lake: index_1m, options_rolling_1m WEEK with the 20 Oct
+  - 13 Nov 2026 fill); R51 clean stores 1 Dec 2021 - 13 Nov 2026'
+period:
+  design: '2021-12-01..2026-03-31 (walk-forward: 5 folds in time order; nothing fitted)'
+  holdout: 2026-04-01..2026-11-13; read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute bars from 1-minute index minutes; pivots known 3 bars late)'
+- buy the 1-ITM option; never on the index's expiry day; one position at a time, 3 a day
+model_or_rule: 'a touch of the line through the last two rising pivot lows (falling highs) that holds and closes with the
+  line; exit plain exit (XB: -15% / +30% / 30 min)'
+settings: research/hunt/r202_price_action25/r202pat.py, r202cfg.py; PREREG.md sections 3-5
+prereg: research/hunt/r202_price_action25/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 6,710 tr, 38.93% win, Rs -954,141, worst month Rs -68,949 (2025-08), DD Rs 958,427; 0 of 5 folds positive;
+    holdout 1,144 tr, 41.61% win, Rs -164,067, worst month Rs -55,244 (2026-06), DD Rs 166,017; twin p 1.000, BH q 1 (m =
+    4,850). Fails: design net -954,141 not > 0; design net without top 5 -992,714 not > 0; 0 of 5 folds positive (< 3); twin
+    p 1.000 >= 0.05; BH q 1 > 0.1; design worst month -68,949 < -13,000; design max drawdown 958,427 > 40,000; holdout net
+    -164,067 not > 0; holdout worst month -55,244 < -13,000; holdout max drawdown 166,017 > 40,000'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Earlier tests of the same concept are cited in RESULT.md.

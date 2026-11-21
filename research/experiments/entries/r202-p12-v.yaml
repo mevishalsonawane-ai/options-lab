@@ -1,0 +1,34 @@
+id: r202-p12-v
+title: 'R202 price action: 12 Double bottom, V5 as the arms (XL + breakeven +10% + L500 step lock)'
+family: patterns-indicators
+date: '2026-11-21'
+doc: research/hunt/r202_price_action25/RESULT.md
+hypothesis: 12 Double bottom on the index's 5-minute bars, buying the 1-ITM option, makes money after charges in the walk-forward
+  design and the holdout, beats random entries, inside the account stop, after BH
+data_version: 'Drive lake copy of 21 Nov 2026 (~/.cache/iraalgo/r202/lake: index_1m, options_rolling_1m WEEK with the 20 Oct
+  - 13 Nov 2026 fill); R51 clean stores 1 Dec 2021 - 13 Nov 2026'
+period:
+  design: '2021-12-01..2026-03-31 (walk-forward: 5 folds in time order; nothing fitted)'
+  holdout: 2026-04-01..2026-11-13; read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute bars from 1-minute index minutes; pivots known 3 bars late)'
+- buy the 1-ITM option; never on the index's expiry day; one position at a time, 3 a day
+model_or_rule: the mirror of the double top -> call; exit V5 as the arms (XL + breakeven +10% + L500 step lock)
+settings: research/hunt/r202_price_action25/r202pat.py, r202cfg.py; PREREG.md sections 3-5
+prereg: research/hunt/r202_price_action25/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 553 tr, 48.64% win, Rs -36,142, worst month Rs -10,862 (2025-08), DD Rs 55,311; 2 of 5 folds positive;
+    holdout 107 tr, 55.14% win, Rs 5,444, worst month Rs -8,538 (2026-06), DD Rs 18,270; twin p 0.766, BH q 1 (m = 4,850).
+    Fails: design net -36,142 not > 0; design net without top 5 -55,185 not > 0; 2 of 5 folds positive (< 3); twin p 0.766
+    >= 0.05; BH q 1 > 0.1; design max drawdown 55,311 > 40,000'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Earlier tests of the same concept are cited in RESULT.md.

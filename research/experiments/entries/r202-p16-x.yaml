@@ -1,0 +1,35 @@
+id: r202-p16-x
+title: 'R202 price action: 16 Descending triangle, plain exit (XB: -15% / +30% / 30 min)'
+family: patterns-indicators
+date: '2026-11-21'
+doc: research/hunt/r202_price_action25/RESULT.md
+hypothesis: 16 Descending triangle on the index's 5-minute bars, buying the 1-ITM option, makes money after charges in the
+  walk-forward design and the holdout, beats random entries, inside the account stop, after BH
+data_version: 'Drive lake copy of 21 Nov 2026 (~/.cache/iraalgo/r202/lake: index_1m, options_rolling_1m WEEK with the 20 Oct
+  - 13 Nov 2026 fill); R51 clean stores 1 Dec 2021 - 13 Nov 2026'
+period:
+  design: '2021-12-01..2026-03-31 (walk-forward: 5 folds in time order; nothing fitted)'
+  holdout: 2026-04-01..2026-11-13; read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute bars from 1-minute index minutes; pivots known 3 bars late)'
+- buy the 1-ITM option; never on the index's expiry day; one position at a time, 3 a day
+model_or_rule: 'flat bottom and falling highs; the first close below the bottom -> put; exit plain exit (XB: -15% / +30% /
+  30 min)'
+settings: research/hunt/r202_price_action25/r202pat.py, r202cfg.py; PREREG.md sections 3-5
+prereg: research/hunt/r202_price_action25/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 422 tr, 41.0% win, Rs -3,749, worst month Rs -15,894 (2026-02), DD Rs 28,782; 3 of 5 folds positive; holdout
+    106 tr, 46.23% win, Rs -8,493, worst month Rs -11,238 (2026-11), DD Rs 17,455; twin p 0.801, BH q 1 (m = 4,850). Fails:
+    design net -3,749 not > 0; design net without top 5 -24,439 not > 0; twin p 0.801 >= 0.05; BH q 1 > 0.1; design worst
+    month -15,894 < -13,000; holdout net -8,493 not > 0'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Earlier tests of the same concept are cited in RESULT.md.

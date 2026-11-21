@@ -1,0 +1,36 @@
+id: r202-p01-v
+title: 'R202 price action: 1 Support bounce, V5 as the arms (XL + breakeven +10% + L500 step lock)'
+family: patterns-indicators
+date: '2026-11-21'
+doc: research/hunt/r202_price_action25/RESULT.md
+hypothesis: 1 Support bounce on the index's 5-minute bars, buying the 1-ITM option, makes money after charges in the walk-forward
+  design and the holdout, beats random entries, inside the account stop, after BH
+data_version: 'Drive lake copy of 21 Nov 2026 (~/.cache/iraalgo/r202/lake: index_1m, options_rolling_1m WEEK with the 20 Oct
+  - 13 Nov 2026 fill); R51 clean stores 1 Dec 2021 - 13 Nov 2026'
+period:
+  design: '2021-12-01..2026-03-31 (walk-forward: 5 folds in time order; nothing fitted)'
+  holdout: 2026-04-01..2026-11-13; read once (results/HOLDOUT_READ)
+instruments:
+- NIFTY
+- BANKNIFTY
+- FINNIFTY
+- MIDCPNIFTY
+- SENSEX
+features:
+- 'signal source: the index (5-minute bars from 1-minute index minutes; pivots known 3 bars late)'
+- buy the 1-ITM option; never on the index's expiry day; one position at a time, 3 a day
+model_or_rule: a bullish 5-min bar that dips to within 0.25 ATR of a 3+-touch level from above and closes above it -> call;
+  exit V5 as the arms (XL + breakeven +10% + L500 step lock)
+settings: research/hunt/r202_price_action25/r202pat.py, r202cfg.py; PREREG.md sections 3-5
+prereg: research/hunt/r202_price_action25/PREREG.md
+variants_tried: 1
+results:
+  summary: 'design 7,400 tr, 48.46% win, Rs -1,045,491, worst month Rs -62,735 (2026-03), DD Rs 1,045,491; 0 of 5 folds positive;
+    holdout 1,350 tr, 48.15% win, Rs -192,651, worst month Rs -62,031 (2026-10), DD Rs 226,308; twin p 0.975, BH q 1 (m =
+    4,850). Fails: design net -1,045,491 not > 0; design net without top 5 -1,073,261 not > 0; 0 of 5 folds positive (< 3);
+    twin p 0.975 >= 0.05; BH q 1 > 0.1; design worst month -62,735 < -13,000; design max drawdown 1,045,491 > 40,000; holdout
+    net -192,651 not > 0; holdout worst month -62,031 < -13,000; holdout max drawdown 226,308 > 40,000'
+  costs: dated Zerodha charges, R17 fills, 1 lot
+holdout_read: true
+verdict: rejected
+notes: Research only; nothing in the app changes. Earlier tests of the same concept are cited in RESULT.md.
