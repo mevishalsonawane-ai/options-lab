@@ -5656,9 +5656,14 @@ object OrbArms {
         if (!so.working || so.filled > 0) return
         val entries = parts.mapNotNull { it.entryOrderId }.toSet()
         if (orders.any { it.symbol == asked.sym && it.filled > 0 && it.id != ownSale && !exitSales.containsKey(it.id) && it.id !in entries }) return
+        // (Final review: only when the part's own found sale explains the drop - never the positions alone: a blank or partial reply, or a
+        // conversion to NRML, could show the lots gone while they are held. Its sale not found: the stop rests.)
+        val sale = ownSale?.let { o -> orders.firstOrNull { it.id == o } } ?: return
         val held = runCatching { ExitCoordinator.held("NFO", asked.sym, "MIS", label, orders, forceLag = true) }.getOrNull() ?: return
         if (held >= p.qty) return
+        if (held <= 0 && sale.filled < p.qty) return
         if (held > 0) {
+            if (sale.filled != p.qty - held) return
             // (Its sale filled in part: the stop cut to what this part still holds; one that cannot be cut rests as it was.)
             val spec = runCatching { Broker.spec("NFO", asked.sym) }.getOrNull() ?: return
             val to = com.optionslab.engine.risk.ExitQty.shrinkTo(so.qty, so.filled, held, spec.lotSize.coerceAtLeast(1)) ?: return
@@ -5771,7 +5776,7 @@ object OrbArms {
         if (row.filled <= 0) return p to null
         p.stopOrderId?.let { s ->
             runCatching { Diag.record("orb", "$label: $sym's lost exit $id found filled while a stop $s rested: the stop taken out") }
-            offLock.launch { runCatching { cancelOwnStop(s) } }
+            offLock.launch(SAFETY_LANE) { runCatching { cancelOwnStop(s) } }
         }
         return bookFilled(p, label, sym, why, row.filled, row.avg, id)
     }

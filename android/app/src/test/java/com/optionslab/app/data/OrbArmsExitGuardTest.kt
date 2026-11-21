@@ -1430,6 +1430,7 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         assertTrue("held for its lost sale", OrbArms.lostExitForTest(sym))
         val stop = lostLiquidityStop(60)
         kite.positionsCatchUp()                                            // 30 held now
+        kite.showInBook()                                                  // and its own sale, 30 of 60 filled, in the order book
         OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
         pass(); searchDone()
         assertTrue("the stop still rests", working(stop))
@@ -1451,6 +1452,20 @@ class OrbArmsExitGuardTest : RobolectricTest() {
         runBlocking { OrbArms.lostExitLookForTest(sym) }                   // the search, with no pass between
         assertTrue("A's found stop rests", working(stop))
         assertEquals(kite.order(stop).qty, 30)
+    }
+
+    /**
+     * 20 Nov 2026 (final review): the positions show nothing held, but the part's lost sale is not found in the order book - the drop is not
+     * explained by its own sale (a blank reply, a conversion): the found lost stop rests.
+     */
+    @Test fun aFoundLostStopRestsWhenThePositionsShowNothingButTheSaleIsNotFound() {
+        lostLiquiditySale()                                                // its sale hidden from the order book
+        val stop = lostLiquidityStop()
+        kite.positionsCatchUp()                                            // the positions show 0
+        OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+        pass(); searchDone()
+        assertTrue("the stop rests", working(stop))
+        assertEquals("nothing sold again", 1, marketSells().size)
     }
 
     /** 20 Nov 2026 (coordinator): Zerodha's positions cannot be read: the found lost stop rests (the sale may not have gone). */
