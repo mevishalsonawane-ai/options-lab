@@ -228,8 +228,28 @@ object OrbArms {
          * always be told apart from the plain rules' (CLAUDE.md: every Liquidity change stays logged and labelled).
          */
         val stepFrom: String? = null,
+        /**
+         * 20 Nov 2026 (audit: lots asked for vs lots bought): a live entry that bought fewer lots than Boss's setting asked for - Boss's 4 Nov
+         * free-cash cut, or a part fill - the lots his setting asked for ([lot]s of the contract; [entryQty] is what was bought). Null:
+         * all bought (every other trade). A label only. Persisted.
+         */
+        val askedLots: Int? = null,
+        /** 20 Nov 2026: with [askedLots], the lots sent after the free-cash cut (a part fill bought fewer). Null: as many as bought. Persisted. */
+        val sentLots: Int? = null,
+        /**
+         * 20 Nov 2026 (deep review F1): the lost exit ([lostExits]) of this part's own sale, whose reply was lost - the one part held from a new
+         * exit and a stop put back, and the one that takes that sale when it is found ([lostOf]). Ids are never reused, so a copy of a part
+         * that kept it after its lost exit ended matches nothing. Memory only; the lost exit itself is saved with an open live row and
+         * taken back after a restart ([restoreLost]), which gives the row a new id.
+         */
+        val lostId: Long? = null,
     ) {
         val open: Boolean get() = exit == null
+        /** 20 Nov 2026: "bought 2 of 3 lots (free cash)" or "(part filled)" when this entry bought fewer lots than asked ([askedLots]); else null. */
+        val askedWords: String? get() = askedLots?.let { asked ->
+            val bought = (entryQty ?: (qty + sold)) / (lot?.takeIf { it > 0 } ?: return null)
+            lotsAskedWords(asked, sentLots ?: bought, bought)
+        }
         /**
          * A paper trade on exit rules Boss's switches added (a trail, the breakeven): kept out of the plain-rules record. 25 Oct (review):
          * h14's capped limit changes only how the entry is bought (never above the cap), not the rules, so a capped trade stays in the
@@ -255,6 +275,18 @@ object OrbArms {
         val grossPnl: Double? get() = points?.let { it * qty + ((soldAt ?: entry) - entry) * sold }
         /** Lots bought ([lot] known): [qty] plus any part sold early, over the lot; 1 when not known (before the size setting). */
         val lots: Double get() = lot?.takeIf { it > 0 }?.let { (qty + sold).toDouble() / it } ?: 1.0
+    }
+
+    /**
+     * 20 Nov 2026 (audit: lots asked for vs lots bought): a live entry's journal words when it bought [bought] of the [asked] lots, with the
+     * reason: Boss's 4 Nov free-cash cut sent [sent] ("bought 2 of 3 lots (free cash)"), the order part filled ("bought 1 of 3 lots (part
+     * filled)"), or both ("bought 1 of 3 lots (2 fit the free cash, 1 filled)"). Null when all were bought. Pure (the arms' live copies too).
+     */
+    internal fun lotsAskedWords(asked: Int, sent: Int, bought: Int): String? = when {
+        asked <= 0 || bought < 0 || bought >= asked -> null
+        sent in (bought + 1) until asked -> "bought $bought of $asked lots ($sent fit the free cash, $bought filled)"
+        sent < asked -> "bought $bought of $asked lots (free cash)"
+        else -> "bought $bought of $asked lots (part filled)"
     }
 
     /** A signal waiting for approval. Liquidity 15+5 also keeps its strike and the index levels (the ORB uses the day's legs). */
@@ -383,7 +415,7 @@ object OrbArms {
         LiquidityLots.ONE_LOT_MIGRATION, ParkedArms.MIGRATION, FamilyPark.MIGRATION, ArmsCleanup.LIQ_MIGRATION, LIQ_SWITCH_CLEAR, ORB_REREST)
 
     /** One saved position row as [encodeBook] wrote it ([key]: the book's renamed sources). Throws on a row it cannot read. */
-    private fun positionOf(p: JSONObject, key: (String) -> String): Position =
+    private fun positionOf(p: JSONObject, key: (String) -> String, gen: Int? = null): Position =
         Position(key(p.getString("arm")), p.getString("symbol"), p.getString("right"), p.getInt("qty"), p.getDouble("entry"),
             LocalDateTime.parse(p.getString("entryTime")), LocalDateTime.parse(p.getString("signalBar")),
             p.optString("entryOrderId").ifEmpty { null }, p.optString("stopOrderId").ifEmpty { null },
@@ -411,7 +443,47 @@ object OrbArms {
             capped = if (p.has("capped")) p.getDouble("capped") else null,
             fixed = p.optBoolean("step500", false), lock = p.optBoolean("stepLock", false),
             entryQty = p.optInt("entryQty", 0).takeIf { it > 0 }, stopByYou = p.optBoolean("stopByYou", false),
-            appCancelled = p.optBoolean("appCancelled", false), stepFrom = p.optString("stepFrom").ifEmpty { null })
+            appCancelled = p.optBoolean("appCancelled", false), stepFrom = p.optString("stepFrom").ifEmpty { null },
+            askedLots = p.optInt("askedLots", 0).takeIf { it > 0 },
+            sentLots = p.optInt("sentLots", 0).takeIf { it > 0 }).let { pos ->
+            p.optJSONObject("lostExit")?.takeIf { pos.open && pos.live }?.let { l -> runCatching { pos.copy(lostId = restoreLost(pos, l, gen)) }.getOrNull() } ?: pos
+        }
+
+    /**
+     * 20 Nov 2026: [pos]'s lost exit sale as the book saved it ([l]) taken back into memory after a restart - the same one if it is
+     * there already (a book read again in this process) - so its hold, the other trades' wait and its 2-minute window go on. Its id.
+     */
+    private fun restoreLost(pos: Position, l: JSONObject, gen: Int? = null): Long? {
+        val sym = pos.kite ?: return null
+        val since = l.getLong("since")
+        val owner = managerId(pos)
+        // (A read from before "Erase everything" brings nothing back, and says nothing.)
+        if (gen != null && gen != wipeGen) return null
+        // (Only a sale sent today: an older one - or one with no readable send time - is not held after a restart; said once.)
+        fun dropped(why: String): Long? {
+            if (lostDropSaid.size > 200) lostDropSaid.clear()
+            if (lostDropSaid.add("$sym|$since")) {
+                runCatching { Diag.record("orb", "$sym: a saved lost exit was not taken back after the restart ($why)") }
+                runCatching { com.optionslab.app.work.Alerts.error("ORB live: a lost exit sale of $sym saved before the restart was not taken back " +
+                    "($why). The app reads Zerodha and sells only what is still held; check Kite's order book.", "ORB live") }
+            }
+            return null
+        }
+        val sentAt = runCatching { LocalDateTime.parse(l.getString("sentAt")) }.getOrNull() ?: return dropped("its send time is missing or unreadable")
+        if (sentAt.toLocalDate() != runCatching { Market.now().toLocalDate() }.getOrDefault(now().toLocalDate())) return dropped("it was sent on ${sentAt.toLocalDate()}")
+        synchronized(lostExits) {
+            // (A read from before "Erase everything" brings nothing back.)
+            if (gen != null && gen != wipeGen) return null
+            lostExits.values.firstOrNull { it.sym == sym && it.owner == owner && it.sinceMs == since }?.let { return it.id }
+            val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, l.getInt("qty"), pos.lot ?: 1, "MIS", l.getString("type"),
+                null, 0.05, "NFO", l.optString("tag", "iraorb"))
+            val id = lostSeq.incrementAndGet()
+            val known = l.optJSONArray("known")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }.orEmpty()
+            lostExits[id] = LostExit(id, sym, owner, l.optString("why", "exit"), o, known, since, label = l.optString("label"),
+                sentAt = sentAt, foundId = l.optString("found").ifEmpty { null }, askedMs = l.optLong("asked", 0L))
+            return id
+        }
+    }
 
     private fun book(): Book {
         cache?.let { return it }
@@ -465,11 +537,16 @@ object OrbArms {
                 part("range") { o.optJSONArray("range")?.let { b.range = it.getDouble(0) to it.getDouble(1); b.rangeDay = LocalDate.parse(it.getString(2)) } }
                 part("decided") { o.optJSONObject("decided")?.let { m -> m.keys().forEach { k -> val a = m.getJSONArray(k); b.decided[k] = (0 until a.length()).map { a.getString(it) }.toMutableSet() } } }
                 part("watched") { o.optJSONObject("watched")?.let { m -> m.keys().forEach { k -> b.watched[k] = m.getString(k) } } }
+                // (Today's only, by the day each was booked; none from a read made before "Erase everything".)
+                runCatching {
+                    val d = today().toString()
+                    o.optJSONObject("exitSales")?.let { m -> if (gen == wipeGen) m.keys().forEach { k -> if (m.optString(k) == d) exitSales.putIfAbsent(k, d) } }
+                }
                 // One row that cannot be read never drops the others: it is named, and a live one is taken back from Zerodha (below).
                 part("positions") {
                     o.optJSONArray("positions")?.let { a ->
                         for (i in 0 until a.length()) try {
-                            b.positions += positionOf(a.getJSONObject(i), ::key)
+                            b.positions += positionOf(a.getJSONObject(i), ::key, gen)
                         } catch (e: Exception) {
                             val row = a.optJSONObject(i)
                             val live = row?.optBoolean("live", false) == true
@@ -1266,6 +1343,9 @@ object OrbArms {
         val day = today().toString()
         o.put("decided", JSONObject().apply { b.decided.filterKeys { it.endsWith(day) }.forEach { (k, v) -> put(k, JSONArray(v.toList())) } })
         o.put("watched", JSONObject().apply { b.watched.filterKeys { it.endsWith(day) }.forEach { (k, v) -> put(k, v) } })
+        // (20 Nov 2026: today's booked exit sales - a lost exit's search never takes one for its own after a restart.)
+        // (Each with its own day, so a restart never stamps an older one as today's.)
+        o.put("exitSales", JSONObject().apply { exitSales.filterValues { it == day }.keys.forEach { put(it, day) } })
         o.put("positions", JSONArray().apply {
             keptPositions(b.positions).forEach { p ->
                 put(JSONObject().put("arm", p.arm).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty).put("entry", p.entry)
@@ -1284,7 +1364,13 @@ object OrbArms {
                         p.trail?.let { put("trail", it) }; p.trailFrom?.let { put("trailFrom", it) }; p.be?.let { put("breakeven", it) }
                         if (p.priceRetry) put("priceRetry", true); p.capped?.let { put("capped", it) }; if (p.fixed) put("step500", true); if (p.lock) put("stepLock", true)
                         p.entryQty?.let { put("entryQty", it) }; if (p.stopByYou) put("stopByYou", true); if (p.appCancelled) put("appCancelled", true)
-                        p.stepFrom?.let { put("stepFrom", it) } })
+                        p.stepFrom?.let { put("stepFrom", it) }
+                        p.askedLots?.let { put("askedLots", it) }; p.sentLots?.let { put("sentLots", it) }
+                        // (20 Nov 2026: its lost exit sale, so a restart keeps the hold, the others' wait and the 2-minute window.)
+                        p.lostId?.takeIf { p.open && p.live }?.let { lostExits[it] }?.takeIf { !it.notFound }?.let { l -> put("lostExit", JSONObject()
+                            .put("why", l.why).put("qty", l.order.quantity).put("type", l.order.orderType).put("tag", l.order.tag)
+                            .put("since", l.sinceMs).put("sentAt", l.sentAt.toString()).put("label", l.label)
+                            .put("known", org.json.JSONArray(l.known.toList())).apply { l.foundId?.let { put("found", it).put("asked", l.askedMs) } }) } })
             }
         })
         o.put("pending", JSONObject().apply { b.pending.forEach { (k, p) -> put(k, JSONObject().put("right", p.right).put("bar", p.signalBar.toString()).put("expires", p.expires.toString())
@@ -2498,6 +2584,8 @@ object OrbArms {
         // stops, targets and the clock first, under the lock, from memory and Zerodha's books as before; the Liquidity index exits with
         // them when this minute's candles are already in memory. Otherwise a regular look reads them OFF the lock within [LOOK_READ_MS]
         // and takes the lock again for those exits alone; a fast look (the stream's) reads nothing - the next regular look or pass does.
+        // 20 Nov 2026 (audit): the open Liquidity positions' charts folded from memory before the lock (pure maths, off it; [warmLiqFolds]).
+        runCatching { warmLiqFolds(t) }
         val need = lock.withLock {
             val b = book()
             // [fast]: an event-driven look ([FastPath], up to several a second). A look that changed only the best or lowest
@@ -2508,6 +2596,7 @@ object OrbArms {
             val before = if (fast) untracked(b) else null
             runCatching { priceCheck(b, t, stream = fast && stream, regular = !fast) }
             val unds = liquidityIndicesOpen(b)
+            runCatching { liqFoldPlan = liquidityChartsOpen(b) }
             val mem = unds.mapNotNull { u -> minutesInMemory(u, t)?.let { u to it } }.toMap()
             val ready = mem.size == unds.size
             // (A fast look judges every open Liquidity position now - the time stop on every look: those whose index minutes are in memory on
@@ -2550,6 +2639,11 @@ object OrbArms {
     /** 19 Nov 2026 (audit batch 2): the indices of [b]'s open Liquidity positions (their index exits read these candles). */
     private fun liquidityIndicesOpen(b: Book): Set<String> = b.positions.filter { it.open && !it.unconfirmed }
         .mapNotNull { p -> runCatching { armOf(p.arm) }.getOrNull()?.takeIf { it.liquidity }?.let { LiquidityRules.underlyingOf(it) } }.toSet()
+
+    /** 20 Nov 2026 (audit): the (index, chart minutes) of [b]'s open Liquidity positions ([warmLiqFolds]). */
+    private fun liquidityChartsOpen(b: Book): Set<Pair<String, Int>> = b.positions.filter { it.open && !it.unconfirmed }
+        .mapNotNull { p -> runCatching { armOf(p.arm) }.getOrNull()?.takeIf { it.liquidity }?.let { LiquidityRules.underlyingOf(it) to LiquidityRules.minutesOf(it) } }
+        .toSet()
 
     /** [b]'s positions without the premiums tracked on every price (what [priceCheckOnly]'s fast look may leave unsaved). */
     private fun untracked(b: Book): List<Position> = b.positions.map { it.copy(peak = null, low = null) }
@@ -2704,19 +2798,28 @@ object OrbArms {
 
     /** 19 Nov 2026 (audit batch 2): the arms' own work off the lock (the instrument list's download). */
     private val offLock = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    /** 20 Nov 2026 (b5-stream merge): a lost exit sale's background search and its cancels read and write in the stop checks' lane. */
+    private val SAFETY_LANE = Broker.Lane(com.optionslab.ira.RateGate.Priority.SAFETY)
     @Volatile private var warming: kotlinx.coroutines.Deferred<Unit>? = null
     internal const val WARM_WAIT_MS = 5_000L
+
+    /** TEST ONLY (20 Nov 2026): the instrument list's download in [warmContracts] (null in the app: [Market.contracts]). Debug builds only. */
+    @Volatile internal var testWarmDownload: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** TEST ONLY (20 Nov 2026): [warmContracts] itself. */
+    internal suspend fun warmContractsForTest(waitMs: Long) = warmContracts(waitMs)
 
     /**
      * 19 Nov 2026 (audit batch 2): today's instrument list loaded OFF the arms' lock when it is not yet ([Market.contracts]: a download of
      * tens of megabytes), waited for [waitMs] at most - the download goes on by itself and a later pass finds it. Never in a test with the
-     * arms' feeds set (their list is the one the test saved).
+     * arms' feeds set (their list is the one the test saved), unless the test gives the download ([testWarmDownload]).
      */
     private suspend fun warmContracts(waitMs: Long) {
-        if (testFeeds() || listedNow() != null) return
+        if ((testFeeds() && testWarmDownload == null) || listedNow() != null) return
         val job = synchronized(offLock) {
             // (P2: read back once here, off the lock, so [listedNow] under it never parses the file.)
-            warming?.takeIf { it.isActive } ?: offLock.async { runCatching { Market.contracts() }; runCatching { Market.cachedContracts() }; Unit }.also { warming = it }
+            warming?.takeIf { it.isActive } ?: offLock.async { runCatching { testWarmDownload?.invoke() ?: Market.contracts() }; runCatching { Market.cachedContracts() }; Unit }.also { warming = it }
         }
         kotlinx.coroutines.withTimeoutOrNull(waitMs) { job.await() }
     }
@@ -3405,6 +3508,13 @@ object OrbArms {
     /** 19 Nov 2026 (audit batch 2, F3): the most a background read of the Hero position's option minutes may take. */
     internal const val HERO_STOP_READ_MS = 20_000L
 
+    /** TEST ONLY (20 Nov 2026): [HERO_STOP_READ_MS] shortened (null in the app). Debug builds only. */
+    @Volatile internal var testHeroReadMs: Long? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** TEST ONLY (20 Nov 2026): whether a background read of the Hero position's option minutes runs now ([heroStopSoon]). */
+    internal fun heroStopReadingForTest(): Boolean = heroStopReading.get()
+
     /** 19 Nov 2026 (audit batch 2, F3): one background read of the Hero position's option minutes at a time ([heroStopSoon]). */
     private val heroStopReading = java.util.concurrent.atomic.AtomicBoolean(false)
 
@@ -3416,7 +3526,7 @@ object OrbArms {
             try {
                 // (A deadline: one hung read never holds back every later one. A test feed is read so that the deadline ends it too.)
                 val raw = runCatching {
-                    kotlinx.coroutines.withTimeoutOrNull(HERO_STOP_READ_MS) {
+                    kotlinx.coroutines.withTimeoutOrNull(testHeroReadMs ?: HERO_STOP_READ_MS) {
                         val f = testHeroBars
                         if (f != null) kotlinx.coroutines.runInterruptible(kotlinx.coroutines.Dispatchers.IO) { f(key, t) } else Net.intraday(key)
                     }
@@ -3762,6 +3872,10 @@ object OrbArms {
                 runCatching { Diag.record("orb", "${arm.label}: $sym" + com.optionslab.engine.orb.LiveMirror.fitWords(want, fit, free)) }
             }
         }
+        // 20 Nov 2026 (audit): the lots Boss's setting asked for, kept on the trade when the cut above bought fewer (its journal line says so).
+        // (20 Nov 2026: on the cheaper strike's pass, the lots the signal's own entry asked for - [CheaperStrike.Req.askedLots].)
+        val wantAll = step?.req?.askedLots?.takeIf { it > want } ?: want
+        val asked = wantAll.takeIf { buyLots < it && liquidity != null }
         val refusals = Guard.check(Guard.liveOrder(o).copy(price = limitPx), acct)
         if (refusals.isNotEmpty()) return "guard_refused: " + refusals.joinToString(" ")
         val why = com.optionslab.engine.Kite.refusals(o, s.limits(), Broker.sentToday(), false, refPrice = last)
@@ -3775,7 +3889,7 @@ object OrbArms {
         // gate refused the cheaper one before it went: this entry goes on exactly as before (the funds check below included).
         if (liquidity != null && !stepTried && com.optionslab.engine.orb.LiveMirror.shortOfOneLot(limitPx * ins.lotSize, Broker.keptFreeCash())) {
             stepTried = true
-            liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, Broker.keptFreeCash(), CheaperStrike.Trigger.PRE_SEND)?.let { return it }
+            liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, want, Broker.keptFreeCash(), CheaperStrike.Trigger.PRE_SEND)?.let { return it }
         }
         FundsCheck.check(arm.label, sym, buyLots, limitPx * ins.lotSize, Broker.keptFreeCash(), limitPx)?.let { return it }
         val known = knownKite(b)
@@ -3800,7 +3914,7 @@ object OrbArms {
         val intent = stamped(Position(arm.source, c.symbol, c.right.name, o.quantity, last, now(), signalBar, null, null, null,
             live = true, kite = sym, unconfirmed = true, level = liquidity?.level, target = liquidity?.target, ladder = ladderOn(arm, today0, true),
             near = near, volSkip = volSkip, strong = strong, lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew,
-            stepFrom = step?.req?.let { stepFromName(it) }))
+            stepFrom = step?.req?.let { stepFromName(it) }, askedLots = asked, sentLots = asked?.let { buyLots }))
         b.positions += intent
         // (19 Nov 2026, second review: written on the book's writer thread, so the order below never waits on the disk; any later save
         // of the book writes after it, never under it - [saveSoon].)
@@ -3831,7 +3945,7 @@ object OrbArms {
                 if (liquidity != null && !stepTried && CheaperStrike.definiteRefusal(e)) {
                     stepTried = true
                     // (The free cash read fresh: the kept figure is what let the refused order go. Unknown: no step.)
-                    liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, CheaperStrike.freshFreeCash(),
+                    liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, want, CheaperStrike.freshFreeCash(),
                         CheaperStrike.Trigger.REJECTED)?.let { return it }
                 }
                 // (A refusal at the app's own door is said once, by [liqStep], which lets the arm's own entry go on.)
@@ -3879,7 +3993,7 @@ object OrbArms {
             // 20 Nov 2026 (Boss's exception): REJECTED for funds (a definite end in Zerodha's book) steps to a cheaper strike once.
             if (f.status == "REJECTED" && liquidity != null && !stepTried && CheaperStrike.fundsRefused(f.message)) {
                 stepTried = true
-                liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, CheaperStrike.freshFreeCash(),
+                liqStep(b, arm, c, sym, signalBar, liquidity, near, volSkip, strong, t0, want, CheaperStrike.freshFreeCash(),
                     CheaperStrike.Trigger.REJECTED)?.let { return it }
             }
             step?.let { CheaperStrike.notBought(it, "Zerodha ${f.status.lowercase()}") }
@@ -3897,7 +4011,10 @@ object OrbArms {
             charges = kiteCharge("BUY", fill, f.filled), live = true, kite = sym, level = liquidity?.level, target = liquidity?.target,
             ladder = ladderOn(arm, today0, true), near = near, volSkip = volSkip, strong = strong,
             lot = ins.lotSize.takeIf { liquidity != null && it > 0 }, fixed = fixed, lock = lockNew, entryQty = f.filled,
-            stepFrom = step?.req?.let { stepFromName(it) })))
+            stepFrom = step?.req?.let { stepFromName(it) },
+            // (20 Nov 2026: fewer lots than asked - the free-cash cut, or a part fill - kept with the lots sent, for the trade's words.)
+            askedLots = wantAll.takeIf { liquidity != null && (buyLots < it || f.filled < buyLots * ins.lotSize) },
+            sentLots = buyLots.takeIf { liquidity != null && (buyLots < wantAll || f.filled < buyLots * ins.lotSize) })))
         runCatching { save(b) }
         runCatching { Notifier.orderFilled(app, "BUY", f.filled, sym, fill, "Live", "${arm.label} · entry", f.orderId) }
         // 22 Oct: the time machine's reality check on the live entry too (shadow only; background).
@@ -3940,10 +4057,10 @@ object OrbArms {
      * its order went; null when none was chosen or a gate refused it before it went (the arm's own entry then goes on as before).
      */
     private suspend fun liqStep(b: Book, arm: Arm, c: Paper.Contract, fromSym: String, signalBar: LocalDateTime, liquidity: LiquidityRules.Signal,
-                                near: Boolean?, volSkip: Boolean?, strong: Boolean?, t0: Long, free: Double?, trigger: CheaperStrike.Trigger): String? {
+                                near: Boolean?, volSkip: Boolean?, strong: Boolean?, t0: Long, askedLots: Int, free: Double?, trigger: CheaperStrike.Trigger): String? {
         if (!CheaperStrike.isOn() || !CheaperStrike.covers(arm.source)) return null
         val pick = CheaperStrike.find(CheaperStrike.Req(arm.label, arm.source, c.underlying, c.expiry, c.right, c.strike, fromSym, "NFO", "MIS", free,
-            trigger, t0, now(), needContract = true, fromName = c.symbol)) ?: return null
+            trigger, t0, now(), needContract = true, fromName = c.symbol, askedLots = askedLots)) ?: return null
         val c2 = pick.contract ?: return null
         // (The arms' exposure cap asked again for the cheaper contract, as its entry asked it for the signal's.)
         exposureRefusal(b, c2, arm, true)?.let { CheaperStrike.notBought(pick, "refused before it went ($it)"); return null }
@@ -4044,7 +4161,8 @@ object OrbArms {
             if (rows.sumOf { it.qty } <= 0) return nothingHeld()
             // (Never while an arm's live copy is entering, nor before its book is read: a fill could be taken for this one's. Next pass.)
             if (ArmLive.entryInFlight || !ArmLive.view.value.loaded) return null
-            val lagFree = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "ORB live", orders, first = pb) }.getOrNull() ?: return null
+            // (20 Nov 2026, audit PC: the positions-lag guard acts whatever its switch says - it only ever counts less as held.)
+            val lagFree = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "ORB live", orders, first = pb, forceLag = lagForced()) }.getOrNull() ?: return null
             if (lagFree <= 0) return nothingHeld()
             // (What explains it: this book's other open live trades on it - one still settling from its own order id too - and the arms'
             // live copies' open buys of it, from memory.)
@@ -4120,8 +4238,14 @@ object OrbArms {
         if (!Broker.loggedIn) return
         // [stream]: Zerodha's orders and positions as last read (under 20 s, nothing sent since, the stream live: else read
         // now), and each price from the stream's fresh tick; a contract without one is quoted from Zerodha as before.
-        val orders = (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id }
-        val net = (if (stream) Broker.positionsRecon() else Broker.positionBook()).net
+        // (20 Nov 2026: Zerodha's books unreadable - each lost exit's search still starts in the background (search only: a found or
+        // not-found answer waits for a look that reads), so its failed reads count and Boss is told its state is unknown, at 15:10 again.)
+        val (orders, net) = try {
+            (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id } to (if (stream) Broker.positionsRecon() else Broker.positionBook()).net
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            for (l in lostExits.values.toList()) runCatching { startLostSearch(l) }
+            throw e
+        }
         passIds.entries.removeAll { (id, v) -> if (orders.containsKey(id)) { passPlaced[v.first] = placedNow(v.first) - v.second; true } else false }
         val keys = open.mapNotNull { it.value.kite }.map { "NFO:$it" }.distinct()
         val q = runCatching { liveQuotes(keys, stream) }.getOrDefault(emptyMap())
@@ -4136,6 +4260,44 @@ object OrbArms {
                 if (settled == null) drop += i else b.positions[i] = settled
                 continue
             }
+            // 20 Nov 2026 (audit PC; deep review F1): a lost exit holds only the SALE side of the part that sent it ([lostOf]): no new exit
+            // ([exitLive]) and no stop put back (below) for it; while held that part's look waits (it has no stop, sells nothing, and is
+            // never booked gone at the last price meanwhile). Every other trade on the contract keeps its full look. Past the hold, the
+            // first look (any) starts a background search, at most every [LOST_EXIT_ASK_MS]; a later look acts on its answer - found:
+            // booked as that part's exit from that look's order book; not found: its exit goes.
+            // (A lost exit whose part is no longer open here - closed another way - is let go, said in the diary.)
+            for (l in lostOn(sym)) if (b.positions.none { it.open && it.live && it.lostId == l.id } && lostExits.remove(l.id, l))
+                runCatching { Diag.record("orb", "$sym: the lost exit's part is no longer open here; let go") }
+            var lostSkip = false
+            lostOf(p)?.let { lost ->
+                if (lostExitHolds(lost)) { lostSkip = true; return@let }
+                // (Any look only starts a background search - never the network under the lock; the next look acts on its answer.)
+                val look = lostExitLook(lost)
+                if (look?.hold == true) { lostSkip = true; return@let }
+                val id = look?.found ?: return@let
+                val found = look.lost ?: return@let
+                lostSkip = true
+                // (Booked from this look's own order book, never awaited: not finished, or not in it yet, the next look books it.)
+                val booked = bookFoundRow(p, armOf(p.arm).label, sym, found.why, id, orders[id])
+                if (booked != null) {
+                    b.positions[i] = booked.first
+                    booked.second?.let { b.positions += it }
+                } else if (epochMs(now()) - found.askedMs in 0 until LOST_EXIT_FOUND_KEEP_MS) {
+                    // (Still working - a market sale's protection turned into a resting limit: the rest is cancelled once, in the
+                    // background, as an exit not finished in time always was; the next look books what filled.)
+                    // (Asked again while it still works, at most every [LOST_EXIT_ASK_MS]: a cancel that failed is retried, never every tick.)
+                    val ms = epochMs(now())
+                    val ask = orders[id]?.working == true && ms - found.cancelAskedMs !in 0 until LOST_EXIT_ASK_MS
+                    lostExits.putIfAbsent(found.id, found.copy(foundId = id, cancelAskedMs = if (ask) ms else found.cancelAskedMs))
+                    if (ask) offLock.launch(SAFETY_LANE) { runCatching { Broker.cancel(id) } }
+                } else {
+                    runCatching { Diag.record("orb", "$sym: the lost exit found ($id) did not finish in Zerodha's book; let go") }
+                    offLock.launch(SAFETY_LANE) { runCatching { Broker.cancel(id) } }
+                    com.optionslab.app.work.Alerts.error("ORB live: the lost exit of $sym was found in Zerodha's order book ($id) but has not finished. " +
+                        "The app reads Zerodha again and sells only what is still held; check Kite's order book.", "ORB live")
+                }
+            }
+            if (lostSkip) continue
             val so = p.stopOrderId?.let { orders[it] }
             if (so != null && so.status == "COMPLETE") {
                 val px = so.avg.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
@@ -4239,7 +4401,14 @@ object OrbArms {
                 !expiryClosing(cur.symbol, sym, t, orders.values) &&
                 orders.values.none { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } &&
                 // (19 Nov 2026, final check: nor in the gap after a square-off's exit on it - a read can miss an order placed a moment ago.)
-                !SquareOffExit.inGap("NFO", sym, "MIS")) {
+                !SquareOffExit.inGap("NFO", sym, "MIS") &&
+                // (20 Nov 2026, audit PC: nor while a lost exit on it is neither found nor let go - it may still be selling; every trade's
+                // level is still watched by the app meanwhile and sold there.)
+                lostOf(cur) == null &&
+                // (Nor for any trade on it while another part's lost sale there is unresolved or found but not yet booked - it may have
+                // filled while the positions do not show it, and the stop is sized from them; the app watches every level meanwhile and
+                // sells there. One known not found no longer holds it.)
+                lostOn(sym).none { !it.notFound }) {
                 // (19 Nov 2026, second review: beside its own working sale - or a stop of these arms resting unclaimed - nothing new rests,
                 // but an unclaimed stop placed since its entry is still taken as its own: [restExchangeStop] with adoptOnly.)
                 // (19 Nov 2026, review: a stop of these arms resting unclaimed is [orphanStop]'s to judge - taken, waited on, or a stop capped
@@ -4347,7 +4516,11 @@ object OrbArms {
                 continue
             }
             val i = b.positions.indexOfFirst { it.open && it.live && it.kite == sym && it.entry == fill && armOf(it.arm).label == label &&
-                it.stopOrderId == null && it.qty == l.qty && !Broker.lostPending(orbLostKey(label, sym, fill, it.qty)) }
+                it.stopOrderId == null && it.qty == l.qty && !Broker.lostPending(orbLostKey(label, sym, fill, it.qty)) &&
+                // (Review of the b5-orders merge, C1: never a part whose own lost sale is pending.)
+                lostOf(it) == null }
+            // (A part of its size held for its own lost sale: the stop rests as its cover, left to its own look - nothing said each pass.)
+            if (i < 0 && open.any { it.stopOrderId == null && it.qty == l.qty && lostOf(it) != null }) continue
             if (i >= 0) {
                 b.positions[i] = b.positions[i].copy(stopOrderId = l.id, stopTrigger = l.trigger ?: b.positions[i].stopTrigger)
                 runCatching { Strategies.tagOwner("kite:${l.id}", "$label · stop") }
@@ -4519,7 +4692,9 @@ object OrbArms {
             val ins = instruments.firstOrNull { it.tradingSymbol == sym } ?: run { again = true; null } ?: continue
             val lot = ins.lotSize.coerceAtLeast(1)
             val rows = net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }
-            val lagFree = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "ORB live", ordersNow, first = pb) }.getOrNull() ?: run { again = true; null } ?: continue
+            // (20 Nov 2026, audit PC: the positions-lag guard acts whatever its switch says - it only ever counts less as held.)
+            val lagFree = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "ORB live", ordersNow, first = pb, forceLag = lagForced()) }.getOrNull()
+                ?: run { again = true; null } ?: continue
             val held = minOf(rows.sumOf { it.qty }, lagFree)
             if (held <= 0) continue
             val boughtToday = com.optionslab.engine.orb.LiveMirror.boughtTodayCap(rows.map { it.dayBuyQty }, rows.sumOf { it.overnight }, held,
@@ -4940,7 +5115,7 @@ object OrbArms {
      */
     internal fun markOwnCancels(ids: Collection<String>): kotlinx.coroutines.Job? {
         if (ids.isEmpty()) return null
-        val at = System.currentTimeMillis()
+        val at = wallMs()
         for (id in ids) exitMarks[id] = at
         if (exitMarks.size > 500) exitMarks.entries.sortedBy { it.value }.take(exitMarks.size - 500).forEach { exitMarks.remove(it.key, it.value) }
         val marked = ids.toSet()
@@ -4974,11 +5149,15 @@ object OrbArms {
     /** By order id, when Boss's manual exit from the app marked that stop its own ([markOwnCancels]). Memory only, bounded. */
     private val exitMarks = java.util.concurrent.ConcurrentHashMap<String, Long>()
     /** A stop seen working this long after its mark: that cancel did not take. */
-    private const val EXIT_MARK_SETTLE_MS = 2 * 60_000L
+    internal const val EXIT_MARK_SETTLE_MS = 2 * 60_000L
+    /** TEST ONLY (20 Nov 2026): the wall clock the own-cancel marks are timed by (null in the app: the system clock). Debug builds only. */
+    @Volatile internal var testWallMs: (() -> Long)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+    private fun wallMs(): Long = testWallMs?.invoke() ?: System.currentTimeMillis()
     private fun exitMarked(id: String): Boolean = exitMarks.containsKey(id)
     private fun exitMarkSeenWorking(id: String) {
         val at = exitMarks[id] ?: return
-        if (System.currentTimeMillis() - at !in 0 until EXIT_MARK_SETTLE_MS) exitMarks.remove(id, at)
+        if (wallMs() - at !in 0 until EXIT_MARK_SETTLE_MS) exitMarks.remove(id, at)
     }
 
     /** 20 Nov 2026: true when [id] may be one of these arms' live stops (an open live trade claims it, or no book is read yet). Memory only. */
@@ -5255,6 +5434,9 @@ object OrbArms {
         // ORB arms by Boss's "yes" the same day). [AppSettings.exchangeStops] is no longer read. The caller's guards decide when.
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no new stop beside his sale (asked again next look).
         if (ArmLive.handsOffNow("NFO", sym)) return null
+        // (Review of the b5-orders merge, C1: never for a part whose own lost sale is pending - no stop placed, and a lost stop found is not
+        // attached; it rests as cover, left to its own lost reply, until that sale is booked or let go.)
+        if (lostOf(p) != null) return null
         // 20 Nov 2026 (audit B5 deep review): this trade's stop whose reply was lost and is not found yet: looked for first (the book read
         // in the background, never here), nothing new placed meanwhile and no try or back-off counted; found, it is the trade's stop.
         // (The trade split when its stop covers less: the part it covers keeps it, the rest has none - asked again next look.)
@@ -5381,6 +5563,362 @@ object OrbArms {
         return p
     }
 
+    // ---- 20 Nov 2026 (audit PC: a double sell after a Liquidity / ORB exit whose reply was lost) --------------------------------------
+
+    /**
+     * 20 Nov 2026 (audit PC): the positions-lag guard acts on these arms' live exits and their lost-entry and start-up checks whatever its
+     * own switch says ([ExitCoordinator.held]'s forceLag), as on the arms' live copies since 18 Nov ([ArmLive]): it only ever sends, rests
+     * or counts less. Said once in the diary while that switch is in shadow. Memory only.
+     */
+    private fun lagForced(): Boolean {
+        if (!lagForcedSaid && runCatching { !ExitCoordinator.isLagOn() }.getOrDefault(false)) {
+            lagForcedSaid = true
+            runCatching { Diag.record("orb", "The positions-lag guard acts on Liquidity's and the ORB family's live exits although its switch is in " +
+                "shadow (audit, 20 Nov 2026: an exit that filled a moment ago could be sold again). It only ever sends or rests less.") }
+        }
+        return true
+    }
+    @Volatile private var lagForcedSaid = false
+
+    /**
+     * 20 Nov 2026 (audit PC; deep review F1): an exit sale of these arms ([owner]: its trade's [managerId], for the words; the part that sent
+     * it carries its [id] as [Position.lostId]) whose reply was lost and which the search right after could not find. It may still be
+     * selling: that part sells nothing more for [LOST_EXIT_HOLD_MS], then it is searched for in Zerodha's order book (at most every
+     * [LOST_EXIT_ASK_MS], on any look) - found, it is that part's exit; not found on a read past [LOST_LET_GO_MS], Boss is told and its exits
+     * go on. Meanwhile the other trades on the contract with a stop resting wait with it in place ([exitLive]); one with none counts the
+     * sale as going while no read shows it ([lostPending]). One per lost sale. Saved with its part's row in the book ([restoreLost]).
+     */
+    private data class LostExit(val id: Long, val sym: String, val owner: String, val why: String, val order: com.optionslab.engine.Kite.Order,
+                                val known: Set<String>, val sinceMs: Long, val askedMs: Long = 0L,
+                                /** Searches that could not read Zerodha's book (Boss told at [LOST_EXIT_TRIES]). */
+                                val fails: Int = 0,
+                                /** Found in Zerodha's book: its own part's next look books it ([lostExitLook]). */
+                                val foundId: String? = null,
+                                /** A search runs now ([searchLost]: at most one at a time). */
+                                val searching: Boolean = false,
+                                /** Not found on a read that succeeded past [LOST_LET_GO_MS] from the sale: the next look lets it go and sells. */
+                                val notFound: Boolean = false,
+                                /** The arm's name, for the found sale's owner label. */
+                                val label: String = "",
+                                /** Found still working: when its rest was last asked to be cancelled (in the background; again after [LOST_EXIT_ASK_MS]). */
+                                val cancelAskedMs: Long = 0L,
+                                /**
+                                 * 20 Nov 2026: when it was sent by the phone's market clock ([Market.now]): its search looks from 3 minutes
+                                 * before it ([Broker.findRecent]'s since: the same allowance for a phone clock ahead of Zerodha's as before) -
+                                 * never a rolling window that a long run of failed reads could leave it behind.
+                                 */
+                                val sentAt: LocalDateTime = LocalDateTime.MIN,
+                                /** "State unknown" said again at the session's end (15:10) while still unresolved. */
+                                val lateSaid: Boolean = false)
+    /**
+     * 20 Nov 2026 (review: the twin edge): today's exit sales booked by these arms ([bookSale], [bookFoundRow]), by order id -> day: a lost
+     * exit's search never takes one of them for its own. Saved with the book ([encodeBook]), today's only.
+     */
+    private val exitSales = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun noteExitSale(id: String) {
+        val day = runCatching { today().toString() }.getOrDefault("")
+        if (exitSales.size > 500) exitSales.entries.removeIf { it.value != day }
+        exitSales[id] = day
+    }
+    /** "Saved lost exit dropped" said once per sale ([restoreLost]). */
+    private val lostDropSaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** By [LostExit.id] (never reused: a part's stale [Position.lostId] matches nothing). */
+    private val lostExits = java.util.concurrent.ConcurrentHashMap<Long, LostExit>()
+    private val lostSeq = java.util.concurrent.atomic.AtomicLong()
+    internal const val LOST_EXIT_HOLD_MS = 10_000L
+    internal const val LOST_EXIT_ASK_MS = 3_000L
+    /**
+     * Failed searches after which Boss is told, once, that the lost exit's state is unknown (it is never let go on failed reads:
+     * [LOST_LET_GO_MS]).
+     */
+    internal const val LOST_EXIT_TRIES = 3
+    /** A lost exit found but not finished in its part's looks' order books this long after is let go (said). */
+    internal const val LOST_EXIT_FOUND_KEEP_MS = 60_000L
+    /** The most one search of the order book for a lost exit may take (then: one failed try). */
+    internal const val LOST_SEARCH_MS = 8_000L
+    /**
+     * 20 Nov 2026 (re-review finding 4, as Broker's lost replies): a lost exit is let go only on a read of the order book that succeeded
+     * this long after it was sent and still does not show it - an empty search before then (the book can trail a sale that filled) keeps
+     * it, and failed reads never let it go (Boss told once that its state is unknown).
+     */
+    internal const val LOST_LET_GO_MS = 120_000L
+
+    /** [lostExitLook]'s answer: [hold] the lost sale's own part sells nothing now; else [found], the lost sale's order id. */
+    private class LostLook(val hold: Boolean, val found: String? = null, val lost: LostExit? = null)
+    private val LOST_HOLD = LostLook(hold = true)
+
+    /** [p]'s exit [o] ([why]) on [sym] lost its reply and was not found: held for that part ([lostExits]), Boss told. Its id. Memory only. */
+    private fun lostExit(p: Position, sym: String, why: String, o: com.optionslab.engine.Kite.Order, known: Set<String>, sentAt: LocalDateTime): Long {
+        val id = lostSeq.incrementAndGet()
+        lostExits[id] = LostExit(id, sym, managerId(p), why, o, known, epochMs(now()), label = armOf(p.arm).label, sentAt = sentAt)
+        com.optionslab.app.work.Alerts.error("${armOf(p.arm).label}: the live exit of $sym got no reply from Zerodha and is not in its order book " +
+            "yet. This trade sells nothing more, and the other trades on it with a stop resting wait, until the app finds it or a read of " +
+            "the book at least ${LOST_LET_GO_MS / 60_000} minutes after it was sent does not show it; check Kite's order book.", "ORB live")
+        return id
+    }
+
+    /** The lost exits on [sym]. Memory only. */
+    private fun lostOn(sym: String): List<LostExit> = lostExits.values.filter { it.sym == sym }
+
+    /**
+     * 20 Nov 2026 (deep review F1): [p]'s own lost sale, while it is held for it. Memory only. (Review of the b5-orders merge: by [Position.lostId]
+     * alone, whatever its stop - a part with a stop and a pending lost sale is still held and still searched; a lost stop found meanwhile is
+     * never attached to it, [exitLive] and [restExchangeStop].)
+     */
+    private fun lostOf(p: Position): LostExit? = p.lostId?.let { lostExits[it] }
+
+    /**
+     * 20 Nov 2026 (deep review F1): what [p]'s sale on [sym] counts as already going: every other part's lost sale neither found nor let go
+     * that [orders] (this exit's own read of Zerodha's order book) does not show - it may still be filling, unseen - so the contract is
+     * never sold beyond what is held. One the read shows is counted there already (working, or filled for the positions-lag guard).
+     */
+    private suspend fun lostPending(sym: String, p: Position, orders: Collection<Broker.OrderRow>): Int {
+        val lost = lostOn(sym).filter { it.foundId == null && it.id != p.lostId }.sortedBy { it.id }
+        if (lost.isEmpty()) return 0
+        // (A row shows a lost sale only when it could be it - NFO MIS, the same side, size, type and tag, not known when that sale went,
+        // and claimed by no owner label (every sale the app knows the id of is labelled) - and each row shows one lost sale at most.)
+        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return lost.sumOf { it.order.quantity }
+        val foundIds = lostExits.values.mapNotNull { it.foundId }.toSet()
+        val free = orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && "kite:${it.id}" !in owners &&
+            it.id !in foundIds }.toMutableList()
+        var pending = 0
+        for (l in lost) {
+            val tag = l.order.tag.filter { c -> c.isLetterOrDigit() }.take(20)
+            val row = free.firstOrNull { it.qty == l.order.quantity && it.type == l.order.orderType && it.tag == tag && it.id !in l.known }
+            if (row != null) free.remove(row) else pending += l.order.quantity
+        }
+        return pending
+    }
+
+    /** True while [l] is within its hold (no read). */
+    private fun lostExitHolds(l: LostExit): Boolean = epochMs(now()) - l.sinceMs in 0 until LOST_EXIT_HOLD_MS
+
+    /**
+     * 20 Nov 2026 (audit PC; deep review F1; coordinator: no network on the tick path): the lost exit [l] as its own part's look sees it.
+     * Null: go on as usual - it was not found on a read past [LOST_LET_GO_MS] (said, and let go: the part's exit sells through the forced
+     * lag guard). [LostLook.hold]: within the hold, a search running or made a moment ago ([LOST_EXIT_ASK_MS]), not found yet, or the book
+     * could not be read. Found: its order id (booked from the look's own order book, [bookFoundRow]).
+     *
+     * Past the hold a search is due at most every [LOST_EXIT_ASK_MS]: any look, regular, fast or stream, starts it in the background
+     * ([searchLost], one at a time per lost sale, off the arms' lock) and returns at once - its answer, kept in memory, is acted on by the
+     * next look with no wait (final review C1: never an order-book read holding the lock).
+     */
+    private fun lostExitLook(l: LostExit): LostLook? {
+        val lost = lostExits[l.id] ?: return null
+        val ms = epochMs(now())
+        lost.foundId?.let { id ->
+            if (!lostExits.remove(lost.id, lost)) return LOST_HOLD
+            return LostLook(hold = false, found = id, lost = lost)
+        }
+        if (lost.notFound) {
+            if (lostExits.remove(lost.id, lost)) lostNotFound(lost.sym)
+            return null
+        }
+        if (ms - lost.sinceMs in 0 until LOST_EXIT_HOLD_MS) return LOST_HOLD
+        if (lost.searching || ms - lost.askedMs in 0 until LOST_EXIT_ASK_MS) return LOST_HOLD
+        val asked = lost.copy(askedMs = ms, searching = true)
+        if (!lostExits.replace(lost.id, lost, asked)) return LOST_HOLD
+        searchLost(asked)
+        return LOST_HOLD
+    }
+
+    /** 20 Nov 2026: [l]'s background search started when one is due - nothing else (an answer waits for a look; [priceCheckLive]'s outage). */
+    private fun startLostSearch(l: LostExit) {
+        val lost = lostExits[l.id] ?: return
+        if (lost.foundId != null || lost.notFound || lost.searching) return
+        val ms = epochMs(now())
+        if (ms - lost.sinceMs in 0 until LOST_EXIT_HOLD_MS || ms - lost.askedMs in 0 until LOST_EXIT_ASK_MS) return
+        val asked = lost.copy(askedMs = ms, searching = true)
+        if (lostExits.replace(lost.id, lost, asked)) searchLost(asked)
+    }
+
+    /**
+     * 20 Nov 2026 (coordinator, on the found stop of a part held for its lost sale): in the background search, before its answer is
+     * published (one at a time per lost sale), never under the arms' lock, at most [TIEBREAK_MS] (then the stop rests). The part's own lost
+     * stop, once found ([Broker.peekLost], never taken) and still working at Zerodha with nothing filled, rests as its cover - except when
+     * it is unambiguous that this part's lots are gone:
+     *  - this part is the ONLY open live part on the contract (no other part of any book - open, settling or unconfirmed);
+     *  - a fresh read of the orders shows no fill on the contract that no book accounts for: every order with a fill is this part's own
+     *    lost sale (found, [ownSale]), an exit sale booked ([exitSales]) or an entry a book row holds - anything else, or a read that
+     *    fails, and the stop rests;
+     *  - Zerodha's positions, read fresh and lag-guarded ([ExitCoordinator.held], forced), then decide: nothing held - the stop is claimed
+     *    and taken out as the app's own, confirmed by the regular pass ([sweepLostStops]' cancels: again each pass until Zerodha shows it
+     *    ended, Boss told after three tries); less than the part's lots - the stop is cut to what is held; otherwise it rests.
+     * Any case with more than one part on the contract: the stop rests, as before.
+     */
+    private suspend fun foundStopTiebreak(asked: LostExit, ownSale: String?) {
+        val bk = cache ?: return
+        val parts = runCatching { bk.positions.toList() }.getOrNull() ?: return
+        val p = parts.firstOrNull { it.open && it.live && it.lostId == asked.id } ?: return
+        if (parts.any { it !== p && it.open && it.kite == asked.sym }) return
+        val label = armOf(p.arm).label
+        val key = runCatching { lostKeyOf(bk, p, label, asked.sym) }.getOrNull() ?: return
+        val id = Broker.peekLost(key) ?: return
+        val orders = runCatching { Broker.orders(fresh = true) }.getOrNull() ?: return
+        val so = orders.firstOrNull { it.id == id } ?: return
+        if (!so.working || so.filled > 0) return
+        val entries = parts.mapNotNull { it.entryOrderId }.toSet()
+        if (orders.any { it.symbol == asked.sym && it.filled > 0 && it.id != ownSale && !exitSales.containsKey(it.id) && it.id !in entries }) return
+        // (Final review: only when the part's own found sale explains the drop - never the positions alone: a blank or partial reply, or a
+        // conversion to NRML, could show the lots gone while they are held. Its sale not found: the stop rests.)
+        val sale = ownSale?.let { o -> orders.firstOrNull { it.id == o } } ?: return
+        val held = runCatching { ExitCoordinator.held("NFO", asked.sym, "MIS", label, orders, forceLag = true) }.getOrNull() ?: return
+        if (held >= p.qty) return
+        if (held <= 0 && sale.filled < p.qty) return
+        if (held > 0) {
+            if (sale.filled != p.qty - held) return
+            // (Its sale filled in part: the stop cut to what this part still holds; one that cannot be cut rests as it was.)
+            val spec = runCatching { Broker.spec("NFO", asked.sym) }.getOrNull() ?: return
+            val to = com.optionslab.engine.risk.ExitQty.shrinkTo(so.qty, so.filled, held, spec.lotSize.coerceAtLeast(1)) ?: return
+            if (to >= so.qty) return
+            val cut = runCatching {
+                if (so.type == "SL-M") Broker.modify(so, to, "SL-M", null, so.trigger) else Broker.modify(so, to, "SL", stopLimit(so.trigger, spec.tickSize), so.trigger)
+            }.isSuccess
+            runCatching { Diag.record("orb", "$label: ${asked.sym} held $held of this part's ${p.qty} - its lost sale filled in part: its found lost stop " +
+                "$id ${if (cut) "cut to $to" else "could not be cut; it rests as it was"}") }
+            return
+        }
+        // (Its key forgotten only while it still holds this stop - never a newer lost reply under the same key.)
+        if (Broker.peekLost(key) != id) return
+        runCatching { Diag.record("orb", "$label: ${asked.sym} held $held - this part's lost sale filled: its found lost stop $id taken out") }
+        Broker.forgetLost(key)
+        Broker.claimStop(id)
+        synchronized(sweepCancels) { sweepCancels[id] = "$label|${asked.sym}" }
+        cancelOwnStop(id)
+    }
+    /** The longest the found stop's tiebreaker may take ([foundStopTiebreak]); past it, the stop rests. */
+    private const val TIEBREAK_MS = 8_000L
+
+    /** 20 Nov 2026 (review: the twin edge): a found lost sale's own owner label - unique to that sale (its send time), never a plain exit's. */
+    private fun lostLabel(l: LostExit): String {
+        val at = runCatching { java.time.Instant.ofEpochMilli(l.sinceMs).atZone(com.optionslab.engine.IST).toLocalTime().toString() }.getOrDefault("${l.sinceMs}")
+        return "${l.label} · ${l.why} (lost sale sent $at)"
+    }
+
+    /** 20 Nov 2026: the background search of [asked] ([lostExitLook]), off the arms' lock. */
+    private fun searchLost(asked: LostExit) {
+        offLock.launch(SAFETY_LANE) { runCatching { searchLostNow(asked) } }
+    }
+
+    /** TEST ONLY (20 Nov 2026): run before each search of a lost exit (null in the app). Debug builds only. */
+    @Volatile internal var testLostSearch: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; field = v }
+
+    /** TEST ONLY: whether a background search of a lost exit on [sym] is running. */
+    internal fun lostSearchingForTest(sym: String): Boolean = lostOn(sym).any { it.searching }
+
+    /**
+     * 20 Nov 2026: one search of the order book for [asked] ([LOST_SEARCH_MS] at most), its answer kept in memory on the lost exit: found
+     * ([LostExit.foundId]), not found ([LostExit.notFound]), or unreadable (one more failed try; the last one is "not found, unread").
+     */
+    private suspend fun searchLostNow(asked: LostExit) {
+        var failed = false
+        val found = try {
+            testLostSearch?.let { f -> kotlinx.coroutines.runInterruptible(kotlinx.coroutines.Dispatchers.IO) { f() } }
+            kotlinx.coroutines.withTimeoutOrNull(LOST_SEARCH_MS) {
+                // (Never an order another trade owns - an owner label, or an id a book row knows: after a restart the sent ids
+                // are gone, and another trade's identical sale must never be taken for this one - and the earliest after it went.)
+                // (Its own label - written when it was found, before a restart could lose that - never excludes it. Labels unreadable:
+                // a failed read, never a search that could take another's sale.)
+                val own = lostLabel(asked)
+                val labelled = Strategies.owners().filter { (k, v) -> k.startsWith("kite:") && v != own }.keys.map { k -> k.removePrefix("kite:") }
+                val rows = runCatching { cache?.positions?.toList() }.getOrNull().orEmpty().flatMap { listOfNotNull(it.entryOrderId, it.stopOrderId) }
+                val others = lostExits.values.filter { it.id != asked.id }.mapNotNull { it.foundId }
+                val known = asked.known + labelled + rows + others + exitSales.keys
+                Broker.findRecent(asked.order, known, since = asked.sentAt.takeIf { it != LocalDateTime.MIN }?.minusMinutes(3), earliest = true) ?: ""
+            } ?: run { failed = true; null }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // (Never left "searching" for ever: the next due look searches again.)
+            lostExits[asked.id]?.let { cur -> lostExits.replace(asked.id, cur, cur.copy(searching = false)) }
+            throw e
+        } catch (e: Exception) { failed = true; null }
+        val cur = lostExits[asked.id] ?: return
+        val next = when {
+            failed -> cur.copy(searching = false, fails = cur.fails + 1)
+            // (Not found: let go only when this successful read STARTED past [LOST_LET_GO_MS] from the sale; sooner, searched again.)
+            found.isNullOrEmpty() -> cur.copy(searching = false, fails = 0, notFound = asked.askedMs - cur.sinceMs >= LOST_LET_GO_MS)
+            else -> cur.copy(searching = false, fails = 0, foundId = found)
+        }
+        // (Said again once at the session's end - 15:10 - while it is still unknown: the trades on the contract are still waiting.)
+        val late = failed && next.fails >= LOST_EXIT_TRIES && !cur.lateSaid && !now().toLocalTime().isBefore(OrbRules.SQUARE_OFF)
+        // (The found stop's tiebreaker first, while this search still counts as running - never two at once, nor a let-go acted on meanwhile.)
+        if (!failed) try {
+            kotlinx.coroutines.withTimeoutOrNull(TIEBREAK_MS) { foundStopTiebreak(asked, found?.takeIf { it.isNotEmpty() }) }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // (Never left "searching" for ever: the next due look searches again.)
+            lostExits[asked.id]?.let { c -> lostExits.replace(asked.id, c, c.copy(searching = false)) }
+            throw e
+        } catch (_: Exception) { }
+        lostExits.replace(asked.id, cur, if (late) next.copy(lateSaid = true) else next)
+        if (failed && (next.fails == LOST_EXIT_TRIES || late)) {
+            runCatching { Diag.record("orb", "${asked.sym}: the lost exit could not be searched for ($LOST_EXIT_TRIES reads failed); its state is unknown") }
+            com.optionslab.app.work.Alerts.error("ORB live: the lost exit of ${asked.sym} could not be looked for - Zerodha's order book could not be " +
+                "read. Its state is unknown: the app keeps looking and sells nothing more on it meanwhile; check Kite's order book.", "ORB live")
+        }
+        if (found?.isNotEmpty() == true) {
+            runCatching { Diag.record("orb", "${asked.sym}: the lost exit found in Zerodha's book ($found): it is the exit") }
+            // (Labelled at once with its own lost sale's label - never one another exit of the same arm and reason writes - after its id
+            // is kept; and the book saved now, off the lock, so a restart keeps the found id.)
+            runCatching { Strategies.tagOwner("kite:$found", lostLabel(asked)) }
+            offLock.launch { runCatching { lock.withLock { saveSoon(book()) } } }
+        }
+    }
+
+    /**
+     * 20 Nov 2026 (review; coordinator: never a wait under the lock): [p]'s lost exit [id] ([why]) found in Zerodha's book, booked from the
+     * look's own read of it ([row]) - never awaited. Finished with a fill: that is the exit ([bookFilled]: a part fill leaves the rest open with
+     * no stop). Finished with nothing filled: [p] stays open with no stop (the next look rests one or sells). Not finished, or not in that
+     * read: null - the next look books it. [p] normally has no stop resting (nothing attaches one while its lost sale is pending); one it
+     * has all the same (a book saved by an earlier build) is kept when nothing filled, and taken out as the app's own - in the background -
+     * when the found sale filled, never left resting unwatched beside it.
+     */
+    private suspend fun bookFoundRow(p: Position, label: String, sym: String, why: String, id: String, row: Broker.OrderRow?): Pair<Position, Position?>? {
+        if (row == null || row.status !in DONE) return null
+        runCatching { Strategies.tagOwner("kite:$id", "$label · $why") }           // (relabelled at booking: plain, as any exit sale)
+        runCatching { noteExitSale(id) }
+        if (row.filled <= 0) return p to null
+        p.stopOrderId?.let { s ->
+            runCatching { Diag.record("orb", "$label: $sym's lost exit $id found filled while a stop $s rested: the stop taken out") }
+            offLock.launch(SAFETY_LANE) { runCatching { cancelOwnStop(s) } }
+        }
+        return bookFilled(p, label, sym, why, row.filled, row.avg, id)
+    }
+
+    private fun lostNotFound(sym: String) {
+        val what = "not found in Zerodha's order book on a read at least ${LOST_LET_GO_MS / 60_000} minutes after it was sent"
+        runCatching { Diag.record("orb", "$sym: the lost exit was $what; the exit may go again") }
+        com.optionslab.app.work.Alerts.error("ORB live: the lost exit of $sym was $what. The app reads Zerodha again and sells only what is still held; " +
+            "check Kite's order book.", "ORB live")
+    }
+
+    /** TEST ONLY: whether a lost exit is held on [sym]. */
+    internal fun lostExitForTest(sym: String): Boolean = lostOn(sym).isNotEmpty()
+    /** TEST ONLY: the found order id of [sym]'s lost exit, if any. */
+    internal fun lostFoundForTest(sym: String): String? = lostOn(sym).firstNotNullOfOrNull { it.foundId }
+    /** TEST ONLY: today's booked exit sales the lost search leaves out. */
+    internal fun exitSalesForTest(): Set<String> = exitSales.keys.toSet()
+    /** TEST ONLY: whether order [id] is marked as the app's own cancel. */
+    internal fun ownCancelForTest(id: String): Boolean = ownCancel(id)
+    /** TEST ONLY: the owner label [sym]'s (first) lost exit would give its sale when found. */
+    internal fun lostLabelForTest(sym: String): String? = lostOn(sym).minByOrNull { it.id }?.let { lostLabel(it) }
+
+    /**
+     * TEST ONLY: a look on [sym]'s (first) lost exit by the part whose sale was lost, then - a search started - the next look on its answer:
+     * "hold", "none" (go on), or "found <id>".
+     */
+    internal suspend fun lostExitLookForTest(sym: String): String {
+        val first = lostOn(sym).minByOrNull { it.id } ?: return "none"
+        var look = lostExitLook(first)
+        // (A search it started is waited for here - in the test only, off the lock - and its answer taken as the next look would.)
+        if (lostExits[first.id]?.searching == true) {
+            val end = System.currentTimeMillis() + 15_000
+            while (lostExits[first.id]?.searching == true && System.currentTimeMillis() < end) kotlinx.coroutines.delay(10)
+            look = lostExits[first.id]?.let { lostExitLook(it) }
+        }
+        return if (look == null) "none" else if (look.hold) "hold" else "found ${look.found}"
+    }
+
     /** 18 Nov 2026 (audit: B1): Zerodha's orders and positions as the pass that decided an exit already read them ([exitLive]). */
     private class Pre(val orders: Collection<Broker.OrderRow>, val net: List<Broker.Position>)
 
@@ -5392,6 +5930,16 @@ object OrbArms {
                                  ltp: Double? = null): Pair<Position, Position?> {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): the arm's own sale waits (his covers it; next pass).
         if (ArmLive.handsOffNow("NFO", sym)) return given to null
+        // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade is unresolved
+        // it sells nothing more - held; searched for in the background and booked by a later look ([lostExitLook], never the network under
+        // the lock). Known not found, it is said and the exit goes on as below (reading Zerodha's books first, the forced lag guard counting
+        // what is still held). Any other trade on the contract is never held here: it counts that sale as going ([lostPending]). Memory only.
+        // (Review of the b5-orders merge, C1: FIRST, before this trade's lost stop is looked at - a found lost stop attached here would have
+        // let the part sell again beside its first sale; it is never attached while that sale is pending, and rests as cover meanwhile.)
+        lostOf(given)?.let { own ->
+            if (!own.notFound || !lostExits.remove(own.id, own)) return given to null
+            lostNotFound(sym)
+        }
         // 20 Nov 2026 (delta review): this trade's own stop whose answer was lost may be resting at Zerodha - one of its own sells.
         //  - Found for all it holds (one for more cut to it first, [fitFound]): it is the trade's stop, taken out first as any (only when
         //    its sale will go - the usual path below).
@@ -5466,6 +6014,18 @@ object OrbArms {
         // 19 Nov 2026 (review): Stop for today or the session's end refused a moment ago: its stop was put back; not taken out and sold
         // again every look - once every [REFUSED_RETRY_MS] (the stop rests meanwhile).
         if (why in ALWAYS_EXITS && p0.stopOrderId?.let { refusedAt[it] }?.let { epochMs(now()) - it < REFUSED_RETRY_MS } == true) return p0 to null
+        // 20 Nov 2026 (re-review: a stop never comes out unless a sale will go): while another part's lost sale on the contract is
+        // unresolved or found but not yet booked - it may have filled while Zerodha's positions do not show it - a trade with a resting
+        // stop leaves it resting and its exit waits, any exit, 15:10 and Stop for today included. No read decides it (memory only); the
+        // exit goes as usual, with its own fresh lag-guarded read, as soon as that sale is booked or let go.
+        if (p0.stopOrderId != null && lostOn(sym).any { it.id != p0.lostId && !it.notFound }) {
+            val minute = now().withSecond(0).withNano(0)
+            if (coverSaid.size > 200) coverSaid.clear()
+            if (coverSaid.put(managerId(p0) + "|lostwait", minute) != minute)
+                runCatching { Diag.record("orb", "${armOf(p0.arm).label}: $sym's exit (${why.replace('_', ' ')}) waits for another trade's lost sale " +
+                    "to be found; its stop rests at Zerodha meanwhile") }
+            return p0 to null
+        }
         runCatching { OrderTiming.decided() }
         val label = armOf(p0.arm).label
         // 18 Nov 2026 (audit: B1, Liquidity's index and time exits skipped the "shown gone but not confirmed" guard - they took the
@@ -5488,7 +6048,10 @@ object OrbArms {
         // What a sell may still cover beside the other working sales (the pre-read's): the most a stop put back may rest for.
         var room = p0.qty
         if (seen != null) {
-            val held = seen.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
+            // (20 Nov 2026, deep review F1: less a lost sale of another part that may still be filling, unseen - [lostPending].)
+            val heldRaw = seen.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }.sumOf { it.qty }
+            val held = (heldRaw - lostPending(sym, p, seen.orders)).coerceAtLeast(0)
+            // (Shown gone - or all of it covered by another part's lost sale that may still be filling: the stop stays resting.)
             if (p.stopOrderId != null && held <= 0) return p to null
             val lot = runCatching { Broker.spec("NFO", sym).lotSize }.getOrNull()
             if (lot != null && held > 0) {
@@ -5522,7 +6085,8 @@ object OrbArms {
                         // entry, the arms' live copies' unconfirmed buys - as shrinkToHeld: one may hold nothing and hide Boss's own lots.)
                         val apps = b.positions.filter { it.open && it.live && !it.unconfirmed && it.kite == sym }.sumOf { it.qty } +
                             ArmLive.view.value.openReal.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side > 0 && !it.unconfirmed }.sumOf { it.qty }
-                        val cancels = why !in TAKE_EXITS && held <= apps
+                        // (Against what Zerodha holds itself: the app's trades there - a part whose lost sale is pending included.)
+                        val cancels = why !in TAKE_EXITS && heldRaw <= apps
                         var out = cancels
                         if (cancels) for (o in bosses) {
                             runCatching { Broker.cancel(o.id, o.variety) }
@@ -5650,16 +6214,24 @@ object OrbArms {
             read = book
             val working = book.filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" }
             // 21 Oct, enhancement round 3 (idea 1): held, checked against that read's fills ([ExitCoordinator.held]).
-            val still = runCatching { ExitCoordinator.held("NFO", sym, "MIS", label, book) }.getOrNull() ?: return unsold(room, book)
+            // 20 Nov 2026 (audit PC, as the arms' live copies since 18 Nov): the positions-lag guard acts here whatever its switch says
+            // (forceLag: it only ever sends less) - an exit that filled a moment ago is never sold again while the positions catch up.
+            val heldNow = runCatching { ExitCoordinator.held("NFO", sym, "MIS", label, book, forceLag = lagForced()) }.getOrNull() ?: return unsold(room, book)
+            val still = (heldNow - lostPending(sym, p, book)).coerceAtLeast(0)
             val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return unsold(room, book)
-            val qty = com.optionslab.engine.risk.ExitQty.sendable(still, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
-                p.qty, spec.lotSize)
+            val workingLeft = working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+            val qty = com.optionslab.engine.risk.ExitQty.sendable(still, workingLeft, p.qty, spec.lotSize)
             // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
             // gone on this read although the read before showed it held - never a stop that could sell into a short: the price check
             // puts it back within a minute while Zerodha shows it held, [restExchangeStop].)
             if (qty <= 0) {
-                if (p.stopOrderId != null) runCatching { Diag.record("orb", "$label: $sym's exit found nothing to sell after its stop came out (held $still); " +
-                    "the price check puts the stop back while Zerodha shows it held") }
+                if (p.stopOrderId != null) {
+                    // (While another part's lost sale is pending no stop goes back on the contract: said loudly, the lot has none.)
+                    if (lostOn(sym).any { !it.notFound && it.id != p.lostId }) coverSay(p, "$label: the exit of $sym found nothing to sell after " +
+                        "its stop came out, and no stop goes back while another trade's lost sale on it is unresolved. Check $sym in Kite.")
+                    else runCatching { Diag.record("orb", "$label: $sym's exit found nothing to sell after its stop came out (held $still); " +
+                        "the price check puts the stop back while Zerodha shows it held") }
+                }
                 return p.copy(stopOrderId = null) to null
             }
             sent = qty
@@ -5669,17 +6241,36 @@ object OrbArms {
                 com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
                 return unsold(qty, book, refused = true)
             }
+            val sentAt = runCatching { Market.now().toLocalDateTime() }.getOrDefault(java.time.ZonedDateTime.now(com.optionslab.engine.IST).toLocalDateTime())
             try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
                 val definite = Broker.definite(e)
                 val found = if (definite) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
                 found ?: run {
-                    com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
                     // Refused outright: nothing went, so the stop goes back. A lost reply with no order found may still have gone.
-                    return if (definite) unsold(qty, book, refused = true) else p.copy(stopOrderId = null) to null
+                    if (definite) {
+                        com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
+                        return unsold(qty, book, refused = true)
+                    }
+                    // 20 Nov 2026 (audit PC): held for this part - it sells and rests nothing more while that sale may still be selling
+                    // ([lostExits]); then searched for before it sells.
+                    val lostId = lostExit(p, sym, why, o, knownKite(b).toSet() + working.map { it.id }, sentAt)
+                    return p.copy(stopOrderId = null, lostId = lostId) to null
                 }
             }
         }
+        return bookSale(p, label, sym, why, id) { unsold(sent, read, refused = true) }
+    }
+
+    /**
+     * The exit sale [id] of [p] ([why]) waited for and booked: what filled is the exit (a part: the rest stays open with no stop, sold next
+     * pass). Not finished in 15 s, the rest is cancelled; known to have filled nothing and to be finished, [nothing] is what the trade
+     * becomes (its stop put back). 20 Nov 2026 (audit PC): taken out of [exitLive] unchanged, so a lost exit found later in Zerodha's
+     * book is booked the same way ([lostExitLook]).
+     */
+    private suspend fun bookSale(p: Position, label: String, sym: String, why: String, id: String,
+                                 nothing: suspend () -> Pair<Position, Position?>): Pair<Position, Position?> {
         Strategies.tagOwner("kite:$id", "$label · $why")
+        runCatching { noteExitSale(id) }
         var f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
         if (f?.status !in DONE) {
             // Not finished in 15 s: the rest is cancelled (and tried afresh next pass); only what filled is booked.
@@ -5687,16 +6278,21 @@ object OrbArms {
             f = runCatching { Broker.orderState(id) }.getOrNull() ?: f
         }
         // Known to have filled nothing and to be finished (cancelled or rejected): the stop goes back.
-        if (f == null || f.filled <= 0) return if (f != null && f.status in DONE) unsold(sent, read, refused = true) else p.copy(stopOrderId = null) to null
-        val px = f.avgPrice.takeIf { it > 0 } ?: p.entry
+        if (f == null || f.filled <= 0) return if (f != null && f.status in DONE) nothing() else p.copy(stopOrderId = null) to null
+        return bookFilled(p, label, sym, why, f.filled, f.avgPrice, f.orderId)
+    }
+
+    /** [p]'s exit sale [orderId] ([why]) filled [filled] at [avg]: booked (a part: the rest stays open with no stop, sold next pass). Pure. */
+    private fun bookFilled(p: Position, label: String, sym: String, why: String, filled: Int, avg: Double, orderId: String): Pair<Position, Position?> {
+        val px = avg.takeIf { it > 0 } ?: p.entry
         // 15 Nov: the stop rule's exits named with their label on the card.
-        Notifier.orderFilled(app, "SELL", f.filled, sym, px, "Live", if (FIXED.words(why) != why) "$label · ${FIXED.words(why)}" else label, f.orderId)
-        if (f.filled >= p.qty) return p.copy(stopOrderId = null, exit = px, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", px, f.filled)) to null
+        runCatching { Notifier.orderFilled(app, "SELL", filled, sym, px, "Live", if (FIXED.words(why) != why) "$label · ${FIXED.words(why)}" else label, orderId) }
+        if (filled >= p.qty) return p.copy(stopOrderId = null, exit = px, exitTime = now(), why = why, charges = p.charges + kiteCharge("SELL", px, filled)) to null
         // Only part sold: that part is booked as closed, the rest stays open (no stop: the app watches it) and is sold next pass.
-        val share = f.filled.toDouble() / p.qty
-        return p.copy(qty = f.filled, stopOrderId = null, exit = px, exitTime = now(), why = why,
-            charges = p.charges * share + kiteCharge("SELL", px, f.filled)) to
-            p.copy(qty = p.qty - f.filled, stopOrderId = null, charges = p.charges * (1 - share))
+        val share = filled.toDouble() / p.qty
+        return p.copy(qty = filled, stopOrderId = null, exit = px, exitTime = now(), why = why,
+            charges = p.charges * share + kiteCharge("SELL", px, filled)) to
+            p.copy(qty = p.qty - filled, stopOrderId = null, charges = p.charges * (1 - share))
     }
 
     data class Filled(val quantity: Int, val symbol: String, val price: Double)
@@ -5862,15 +6458,72 @@ object OrbArms {
         val last = bars.last()
         val day = t.toLocalDate()
         if (last.start.toLocalDate() != day) return "no_decision_bar"
-        if (!b.decided.getOrPut("${arm.source}|$day") { HashSet() }.add(last.start.toString())) return "no_decision_bar"
+        val decidedBars = b.decided.getOrPut("${arm.source}|$day") { HashSet() }
+        val late = LiquidityRules.window(last.start, tf, t) == LiquidityRules.Window.LATE
+        val waitKey = "${arm.source}|${last.start}"
+        // 20 Nov 2026 (audit): a bar is marked decided (saved) as before, BEFORE anything else; a signal that waits - for fresh candles
+        // (the fresh-bar check on) or for today's instrument list - is kept in memory only ([barWaits]) and decided again by the next look
+        // within its own fill window. Past that window, or after a restart (the memory is gone), it stays spent: never bought late.
+        if (last.start.toString() in decidedBars) {
+            val waited = barWaits[waitKey] ?: return "no_decision_bar"
+            if (late) {
+                if (!barWaits.remove(waitKey, waited)) return "no_decision_bar"
+                val verdict = if (waited == WAIT_LIST) "no_contract"
+                    else "refused: stale bar - its fill window passed while it waited for fresh candles (fresh-bar check on; never bought late)"
+                runCatching { noteLiquidity(t, arm.source, verdict, last.start, null, last.close) }
+                runCatching { Diag.record("orb", "${arm.label}: the ${hhmm(last.start)} bar's waiting signal: $verdict") }
+                return verdict
+            }
+        }
+        decidedBars.add(last.start.toString())
+        val waitedBefore = barWaits.remove(waitKey)
         // Each decision bar's verdict (and a break's level, target and close) is kept for Jarvis's words ([noteLiquidity]):
         // returned exactly as before; nothing reads it back to decide.
         fun kept(verdict: String, sig: LiquidityRules.Signal? = null): String {
             runCatching { noteLiquidity(t, arm.source, verdict, last.start, sig, last.close) }
             return verdict
         }
+        // (A signal kept waiting, its bar decided again by the next look within its fill window; bounded by the day. True: new, said.)
+        fun waits(kind: String): Boolean {
+            if (barWaits.size > 200) barWaits.keys.removeIf { !it.contains("|${day}T") }
+            barWaits[waitKey] = kind
+            return waitedBefore != kind
+        }
         if (!LiquidityRules.mayEnterAt(last.start.plusMinutes(tf.toLong()))) return kept("liquidity_outside_entry_hours")
         val s = LiquidityRules.signal(bars, LiquidityRules.zones(bars)) ?: return kept("no_liquidity_break")
+        // 20 Nov 2026 (audit: "Liquidity has no fresh-bar check"): a signal on a bar seen past its fill window, missing its own last minute,
+        // or with the index's newest minute behind ([staleBar]). SHADOW by default ([LiquidityFreshBar]): logged "would have skipped (stale
+        // bar)" and entered as before; paper always so. With Boss's switch on, a LIVE entry on it is not made: within its fill window the
+        // signal waits for fresh candles (decided again by the next look); past that window it is refused - never bought late. (Only a
+        // signal is judged: a bar with none is decided as before, so the check never adds an entry the old way would not have made.)
+        val stale = runCatching { staleBar(ones, last, tf, t) }.getOrNull()
+        if (stale != null) {
+            // (Goes live as the entry itself would decide it: the app's account, the book's clearance and park, and its live stop rule.)
+            val goesLive = runCatching { ArmAccount.entry(arm, appLive ?: liveNow(), liqToPaper(b, arm)) && !liveStopped(arm) }.getOrDefault(false)
+            if (LiquidityFreshBar.judge(arm.label, last.start, stale, goesLive)) {
+                if (!late) { waits(WAIT_STALE); return STALE_WAITING }
+                return kept("refused: stale bar - $stale (fresh-bar check on; never bought late)", s)
+            }
+        }
+        // 20 Nov 2026 (audit: a signal was lost as "no_contract" when today's instrument list was late): an entry that would go now while the
+        // list is not loaded yet waits for it - decided again by the next look once the list lands ([warmContracts] loads it off the lock),
+        // within the bar's own fill window only; past that window it is "no_contract" as before (never bought late). Said once. Only with
+        // its switch on ([LiquidityFreshBar.listWaitOn]). (Before the expiry-day check too, which reads the same list. An approval is asked for as before: it enters when Boss approves.)
+        if (listedNow() == null && !late) {
+            val goes = runCatching { ArmAccount.entry(arm, appLive ?: liveNow(), liqToPaper(b, arm)) }.getOrDefault(false)
+            // (Behind its own switch on the fresh-bar card, off by default - it can add a live entry, so it starts in shadow: off, the
+            // signal goes on as before (no contract) and "would have waited for the list and entered" is logged and counted.)
+            val entersNow = b.auto[arm.source] != false && !(goes && !liveCleared(b, arm.source))
+            // (One that already waited when Boss switched it off is not counted again: it goes on as before.)
+            if (entersNow && !LiquidityFreshBar.listWaitOn()) { if (waitedBefore != WAIT_LIST) runCatching { LiquidityFreshBar.listWouldWait(arm.label, last.start) } }
+            else if (entersNow) {
+                if (waits(WAIT_LIST)) runCatching {
+                    Diag.record("orb", "${arm.label}: the ${hhmm(last.start)} bar's signal waits for today's instrument list (not loaded " +
+                        "yet); decided again on the next look within its fill window")
+                }
+                return LIST_WAITING
+            }
+        }
         // 25 Oct (Boss's decision on the arms audit; the 22 Oct audit's F3 rule): every study Liquidity rests on skipped its index's
         // own expiry day, so on PAPER a book takes no entry that day (open positions keep their exits) - the 26 Oct comparison is like
         // for like. Its switch is on the Account guard page, logged in the Autopilot timeline (one tap back). A LIVE entry is only
@@ -6224,8 +6877,9 @@ object OrbArms {
             val und = LiquidityRules.underlyingOf(arm)
             val tf = LiquidityRules.minutesOf(arm)
             val book = com.optionslab.ira.LiquidityNotice.Book(und, tf)
-            val bars = (liquidityPass[und]?.second ?: liquidityMinutesKept(und, t)).orEmpty()
-                .let { LiquidityRules.completed(LiquidityRules.fold(it, tf), tf, t) }
+            // (20 Nov 2026, audit: folded once a minute and reused by the minute's looks - [liqFold]; the same bars.)
+            val src = (liquidityPass[und]?.second ?: liquidityMinutesKept(und, t)).orEmpty()
+            val bars = liqFold(und, src, tf, t)?.noticeBars ?: LiquidityRules.completed(LiquidityRules.fold(src, tf), tf, t)
             val strike = Paper.contractOf(p.symbol)?.strike
             val lots = p.lot?.let { p.lots }
             val key = "${p.arm}|${p.symbol}|${p.entryTime}"
@@ -6251,6 +6905,93 @@ object OrbArms {
                 }
             }
         }
+    }
+
+    // ---- 20 Nov 2026 (audit: heavy maths under the Liquidity lock on every tick) ------------------------------------------------------
+
+    /**
+     * An index's 1-minute candles [src] as one [tf]-minute book's exits and notices read them at [t] (its [minute]): the minutes closed by
+     * then ([ones]), the chart's completed bars ([bars], [liquidityBars]), their liquidity levels ([zones]) and the notices' bars
+     * ([noticeBars]). Each worked out once, when first asked. Every comparison with [t] is against a whole minute (the candles start on
+     * whole minutes, [liqFold] checks it), so any moment of that minute gives the same lists. Pure, memory only.
+     */
+    private class LiqFold(val src: List<Bar>, val tf: Int, val t0: LocalDateTime, val minute: LocalDateTime) {
+        val ones: List<Bar> by lazy { src.filter { !it.start.plusMinutes(1).isAfter(t0) } }
+        val bars: List<Bar> by lazy { liquidityBars(ones, tf, t0) }
+        val zones: List<LiquidityRules.Zone> by lazy { LiquidityRules.zones(bars) }
+        val noticeBars: List<Bar> by lazy { LiquidityRules.completed(LiquidityRules.fold(src, tf), tf, t0) }
+    }
+    private val liqFolds = java.util.concurrent.ConcurrentHashMap<String, LiqFold>()
+
+    /**
+     * 20 Nov 2026 (audit): [src]'s fold for [und]'s [tf]-minute book at [t] - the one already made this minute from this very list, else a new
+     * one (kept for the minute's later looks). Null (the caller works it out as before) when a candle does not start on a whole minute.
+     */
+    private fun liqFold(und: String, src: List<Bar>, tf: Int, t: LocalDateTime): LiqFold? {
+        val minute = t.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        val key = "$und|$tf|${System.identityHashCode(src)}"
+        liqFolds[key]?.takeIf { it.src === src && it.minute == minute }?.let { return it }
+        if (src.any { it.start.second != 0 || it.start.nano != 0 }) return null
+        if (liqFolds.size > 48) liqFolds.clear()
+        return LiqFold(src, tf, t, minute).also { liqFolds[key] = it }
+    }
+
+    /** 20 Nov 2026 (audit): the open Liquidity positions' (index, chart minutes) as the last look under the lock saw them ([warmLiqFolds]). */
+    @Volatile private var liqFoldPlan: Set<Pair<String, Int>> = emptySet()
+
+    /**
+     * 20 Nov 2026 (audit): BEFORE the arms' lock, each open Liquidity position's index minutes kept in memory for this minute folded and their
+     * levels found ([liqFold]), so the look under the lock only reuses them. Memory only (no read, no disk); a failure leaves the look to do it.
+     */
+    private fun warmLiqFolds(t: LocalDateTime) {
+        for ((und, tf) in liqFoldPlan) runCatching {
+            val src = minutesInMemory(und, t) ?: return@runCatching
+            liqFold(und, src, tf, t)?.let { it.zones; it.noticeBars }
+        }
+    }
+
+    /**
+     * TEST ONLY: [src]'s fold made at [t] against the same lists worked out directly at [t2] (true: all equal), and whether an ask at [t2]
+     * reused that fold. (false, false): no fold (a candle not on a whole minute).
+     */
+    internal fun liqFoldForTest(src: List<Bar>, tf: Int, t: LocalDateTime, t2: LocalDateTime): Pair<Boolean, Boolean> {
+        val f = liqFold("TEST", src, tf, t) ?: return false to false
+        val ones = src.filter { !it.start.plusMinutes(1).isAfter(t2) }
+        val bars = liquidityBars(ones, tf, t2)
+        fun z(l: List<LiquidityRules.Zone>) = l.map { listOf(it.kind, it.side, it.top, it.bottom, it.origin, it.known) }
+        val same = f.ones == ones && f.bars == bars && z(f.zones) == z(LiquidityRules.zones(bars)) &&
+            f.noticeBars == LiquidityRules.completed(LiquidityRules.fold(src, tf), tf, t2)
+        return same to (liqFold("TEST", src, tf, t2) === f)
+    }
+
+    /** 20 Nov 2026 (audit): a signal whose bar waits for today's instrument list (decided again in its fill window; [liquidityCycle]). */
+    internal const val LIST_WAITING = "instrument_list_loading"
+    /** 20 Nov 2026 (audit): a live entry on a stale bar waiting for fresh candles, the fresh-bar check on (decided again; [LiquidityFreshBar]). */
+    internal const val STALE_WAITING = "liquidity_stale_bar_waiting"
+    private const val WAIT_LIST = "list"
+    private const val WAIT_STALE = "stale"
+    /**
+     * 20 Nov 2026 (audit): the decided bars whose signal waits ("book|bar" -> [WAIT_LIST] or [WAIT_STALE]), decided again by the next look
+     * within their fill window. Memory only, on purpose: after a restart such a bar stays decided (saved), so it is never bought late.
+     */
+    private val barWaits = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * 20 Nov 2026 (audit: "Liquidity has no fresh-bar check"): why the [tf]-minute bar [last], built from the index's 1-minute candles
+     * [ones], is too stale to enter on at [t] - seen past its fill window ([LiquidityRules.window]: its close plus
+     * [LiquidityRules.FILL_SLACK_MINUTES]), its own last minute missing from [ones] (built from part of its minutes), or the index's
+     * newest minute more than [LiquidityRules.FILL_SLACK_MINUTES] behind [t] (the feed fell behind) - or null: fresh. Pure.
+     */
+    internal fun staleBar(ones: List<Bar>, last: Bar, tf: Int, t: LocalDateTime): String? {
+        fun hm(x: LocalDateTime) = "%02d:%02d".format(Locale.ENGLISH, x.hour, x.minute)
+        val close = last.start.plusMinutes(tf.toLong())
+        if (LiquidityRules.window(last.start, tf, t) == LiquidityRules.Window.LATE)
+            return "the ${hm(last.start)} bar is seen at ${hm(t)}, past its fill window (its close ${hm(close)} + ${LiquidityRules.FILL_SLACK_MINUTES} min)"
+        val lastMinute = last.start.plusMinutes(tf - 1L)
+        if (ones.none { it.start == lastMinute }) return "the ${hm(last.start)} bar's last minute (${hm(lastMinute)}) is missing from the index's candles"
+        val newest = ones.maxOfOrNull { it.start } ?: return "no index candles"
+        if (newest.plusMinutes(1 + LiquidityRules.FILL_SLACK_MINUTES).isBefore(t)) return "the index's newest minute is ${hm(newest)} at ${hm(t)}"
+        return null
     }
 
     /**
@@ -6286,7 +7027,12 @@ object OrbArms {
             // (other indices too) got no index exit and no time stop on that pass. Now a failed read stops only the index exits of
             // that index's own positions ([indexReadFailed]: no bars, so no index stop, target, failed break or new level can be
             // judged); their time stop, which reads only the option's price, still decides, and the other indices go on as before.
-            val ones = minutes.getOrPut(und) {
+            val tf = LiquidityRules.minutesOf(armOf(p.arm))
+            // 20 Nov 2026 (audit: heavy maths under the Liquidity lock on every tick): the index minutes kept in memory for this minute
+            // ([pre]) are filtered, folded into the book's chart and their levels found once a minute - before the lock where it can
+            // ([warmLiqFolds]) - and reused by every look of that minute ([liqFold]); the same lists from the same minutes, so the same exits.
+            val fold = pre[und]?.let { liqFold(und, it, tf, t) }
+            val ones = fold?.ones ?: minutes.getOrPut(und) {
                 (pre[und] ?: try { liquidityMinutes(t, und, reads = reads, offline = true) } catch (e: kotlinx.coroutines.CancellationException) { throw e }
                     catch (e: HistoryNotKept) {
                         val today = reads?.takeIf { und in it.fetched && !it.failed(und) }?.read(und) { throw e }
@@ -6296,8 +7042,7 @@ object OrbArms {
                     catch (e: Exception) { if (!quiet) indexReadFailed(und, t, e); emptyList() })
                     .filter { !it.start.plusMinutes(1).isAfter(t) }
             }
-            val tf = LiquidityRules.minutesOf(armOf(p.arm))
-            val bars = liquidityBars(ones, tf, t)
+            val bars = fold?.bars ?: liquidityBars(ones, tf, t)
             val side = if (p.right == "CE") 1 else -1
             val since = ones.filter { !it.start.isBefore(p.entryTime.withSecond(0).withNano(0)) }
             val level = p.level ?: continue
@@ -6311,7 +7056,8 @@ object OrbArms {
             // day's and account's exit parameters (S9; its constants unless a variant is in force).
             val look = if (und in todayOnly) LiquidityRules.exitNow(side, level, p.target, p.signalBar, p.entry, p.entryTime, t, bars, since, und, fresh,
                 p.timed, liqParams(p), levels = { emptyList() })
-                else LiquidityRules.exitNow(side, level, p.target, p.signalBar, p.entry, p.entryTime, t, bars, since, und, fresh, p.timed, liqParams(p))
+                else LiquidityRules.exitNow(side, level, p.target, p.signalBar, p.entry, p.entryTime, t, bars, since, und, fresh, p.timed, liqParams(p),
+                    levels = fold?.let { f -> { f.zones } } ?: { LiquidityRules.zones(bars) })
             if (look.timed && !p.timed) { cur = p.copy(timed = true); b.positions[i] = cur }
             val why = look.why ?: continue
             if (p.live) {
@@ -7214,6 +7960,8 @@ object OrbArms {
         IndexData.isNone(s) -> "No ${IndexData.indexOf(s) ?: OrbRules.UNDERLYING} bars yet."
         s == "no_liquidity_break" -> "Waiting for a close through a liquidity pool that sits on a swing zone."
         s == "liquidity_history_loading" -> "Loading the last days' index candles for the liquidity levels."
+        s == LIST_WAITING -> "A liquidity break waits for today's instrument list (still loading); decided again within its fill window."
+        s == STALE_WAITING -> "A liquidity break on a late or stale bar is not entered live (fresh-bar check on); decided again if fresh candles land in time."
         s == "liquidity_outside_entry_hours" -> "No new entries now (liquidity entries 09:20-14:00)."
         s == FlowGate.SKIPPED -> "Skipped by the order flow (CONFIRM): the flow did not agree with this entry at the decision."
         s.startsWith(com.optionslab.ira.LiquidityTwin.SKIPPED) -> "Not bought (a would-be trade, counted apart): " +
@@ -7241,7 +7989,7 @@ object OrbArms {
         lastLook.clear(); gapTried.clear(); watchFrom = null; indexReadSaid.clear(); exitCheckSaid.clear()   // as a new process
         readFails = 0
         forgetHistoryForTest()
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); exitSales.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid(); lostSweepAgeMsForTest = null; synchronized(sweepCancels) { sweepCancels.clear() }; sweepTries.clear()
     }
 
@@ -7252,7 +8000,7 @@ object OrbArms {
      * set-aside copies of the file. Never reads the vault; safe before [init].
      */
     @Synchronized fun wipe() {
-        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear()
+        synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); exitSales.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid()
         // (19 Nov 2026: a pending write is dropped; never a wait on one running - the screen may erase - which deletes the file again
         // itself if it finishes after this erase ([flushSoon]).)
@@ -7261,6 +8009,7 @@ object OrbArms {
         readFails = 0; strayLeft.clear(); strongAsks.clear(); strongKept.clear()
         erasedAt = runCatching { now().withNano(0).toString() }.getOrNull()
         cache = null; restoppedAt.clear(); writtenText = null; writtenStat = null
+        synchronized(lostExits) { lostExits.clear() }                    // (again, after the gen bump; a read in flight brings none back)
         forgetHints()
         shownParams.clear()
         lastLook.clear(); gapTried.clear(); indexReadSaid.clear(); exitCheckSaid.clear()

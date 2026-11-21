@@ -278,7 +278,9 @@ object CheaperStrike {
                    /** Liquidity: the cheaper strike must be in the app's own contract list too (its trade is booked on it). */
                    val needContract: Boolean = false,
                    /** The app's own name of the contract the arm chose (Liquidity's label of a stepped trade); null: not given. */
-                   val fromName: String? = null)
+                   val fromName: String? = null,
+                   /** The lots Boss's setting asked for (the cheaper strike buys one): its trade's "asked / sent" lots label. */
+                   val askedLots: Int = 1)
 
     /**
      * The cheaper strike chosen: Zerodha's [symbol] on [exchange] ([lot], [tick]), its quote now ([last], [ask]), [steps] strikes out from the

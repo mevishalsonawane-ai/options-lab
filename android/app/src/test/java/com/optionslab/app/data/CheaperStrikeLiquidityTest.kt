@@ -192,6 +192,41 @@ class CheaperStrikeLiquidityTest : RobolectricTest() {
         } finally { PortfolioHost.testOpened = null }
     }
 
+    /**
+     * A stepped trade with a lost exit sale (b5-liquidity's lost exits): its row - the cheaper symbol, Zerodha's, its "stepped from" label -
+     * and its saved lost exit are written with the book and read back together after a restart; the hold stays on the cheaper option.
+     */
+    @Test fun aSteppedTradesRowAndItsLostExitAreSavedAndRestoredTogether() {
+        val sentAt = now.minusMinutes(1)
+        val row = JSONObject().put("arm", "liquidity5").put("symbol", paperSym(52_100.0)).put("right", "CE").put("qty", 30).put("entry", 150.0)
+            .put("entryTime", now.minusMinutes(10).toString()).put("signalBar", now.minusMinutes(15).toString())
+            .put("entryOrderId", "77001").put("stopOrderId", "").put("exitTime", "").put("why", "").put("charges", 0.0)
+            .put("live", true).put("kite", s52100).put("unconfirmed", false).put("level", 52_050.0).put("lot", 30).put("entryQty", 30)
+            .put("stepFrom", paperSym(52_000.0))
+            .put("lostExit", JSONObject().put("why", "time_stop").put("qty", 30).put("type", "MARKET").put("tag", "iraorb")
+                .put("since", System.currentTimeMillis() - 60_000).put("sentAt", sentAt.toString()).put("label", "Liquidity 15+5 · exit")
+                .put("known", JSONArray()))
+        AutomationSupport.orbState(context, JSONObject().put("armed", JSONObject().put("liquidity5", true)).put("auto", JSONObject().put("liquidity5", true))
+            .put("liveOk", JSONObject().put("liquidity5", true)).put("positions", JSONArray().put(row)).put("liqLots", 1).put("liqLotsChosen", true))
+        fun check(where: String) {
+            val p = row().open!!
+            assertEquals(where, paperSym(52_100.0), p.symbol); assertEquals(where, s52100, p.kite); assertEquals(where, paperSym(52_000.0), p.stepFrom)
+            assertTrue("$where: its lost exit held on the cheaper option", OrbArms.lostExitForTest(s52100))
+            assertFalse("$where: never on the signal's own strike", OrbArms.lostExitForTest(sym))
+        }
+        check("read")
+        // Written again (any save of the book), then a restart.
+        runBlocking { OrbArms.setLiquidityLots(2, "test", pinConfirmed = true) }
+        OrbArms.awaitWrites()
+        val saved = JSONObject(String(com.optionslab.app.security.Vault.readFile(java.io.File(context.filesDir, "orb.vault"))!!, Charsets.UTF_8))
+            .getJSONArray("positions").getJSONObject(0)
+        assertEquals(paperSym(52_000.0), saved.getString("stepFrom")); assertEquals(s52100, saved.getString("kite"))
+        assertEquals("time_stop", saved.getJSONObject("lostExit").getString("why"))
+        OrbArms.forgetMemoryForTest()
+        AutomationSupport.reloadFromDisk(OrbArms)
+        check("after the restart")
+    }
+
     @Test fun aStrikeNotInTheAppsOwnListIsSkippedAndCounted() {
         contracts(listOf(52_000.0, 52_200.0))                          // 52100 listed at Zerodha, not in the app's list
         kite.cash = 5_000.0

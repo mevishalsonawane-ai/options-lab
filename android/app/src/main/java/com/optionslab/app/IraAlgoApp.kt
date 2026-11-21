@@ -126,6 +126,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.FundsCheck.init(this)
         // 20 Nov 2026 (Boss's exception): the cheaper strike when funds are short (on by default), its switch read in the background.
         com.optionslab.app.data.CheaperStrike.init(this)
+        // 20 Nov 2026 (audit): Liquidity's fresh-bar check on live entries (shadow by default), its switch read in the background.
+        com.optionslab.app.data.LiquidityFreshBar.init(this)
         // 20 Nov 2026 (audit B5): the order count check on live entries (shadow by default), its switch read in the background.
         com.optionslab.app.data.OrderCountCheck.init(this)
         // 19 Nov (Boss's choice): the four automatic stops on R51, R72 and Liquidity, read in the background (his one-time choice after).

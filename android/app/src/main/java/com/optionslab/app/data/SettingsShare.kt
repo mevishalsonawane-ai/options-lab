@@ -242,6 +242,10 @@ object SettingsShare {
         out += "Exit rule switches: V4 (breakeven at +10%) ${onOff(runCatching { StepTrailExits.isOn() }.getOrNull())} · V5 lock on top ${onOff(runCatching { StepTrailExits.lockOn() }.getOrNull())}"
         out += line("Funds check") { FundsCheck.line() }
         out += line("Cheaper strike") { CheaperStrike.line() }
+        // 20 Nov 2026: Liquidity's fresh-bar check (shadow until on) and its list wait (off until on with the PIN).
+        out += line("Liquidity fresh-bar check") { LiquidityFreshBar.view.value.let { v -> if (!v.loaded) "not read yet (off)" else
+            "fresh-bar check ${onOff(v.on)} (${v.wouldSkipToday} would-skips, ${v.skippedToday} skipped today) · list wait ${onOff(v.listOn)} " +
+                "(${v.listWouldWaitToday} would-waits today)" } }
         // (20 Nov 2026, audit B5: the order count check, shadow by default.)
         out += line("Order count check") { OrderCountCheck.line() }
         out += line("Same-direction cap") { ExposureCapHost.line() }

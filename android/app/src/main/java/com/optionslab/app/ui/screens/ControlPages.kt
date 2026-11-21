@@ -713,6 +713,8 @@ fun RiskPage(model: AppModel) {
             item { FundsCheckCard(model) }
             // 20 Nov 2026 (Boss's exception): the cheaper strike when funds are short (on by default; off is one tap, on takes the PIN).
             item { CheaperStrikeCard(model) }
+            // 20 Nov 2026 (audit): Liquidity's fresh-bar check on live entries (in shadow until switched on; off again takes the PIN).
+            item { LiquidityFreshBarCard(model) }
             // 20 Nov 2026 (audit B5): live entries while today's order count cannot be read (in shadow until switched on; off takes the PIN).
             item { OrderCountCheckCard(model) }
             // 19 Nov 2026 (audit batch 2, B2-B): paper-only refusals of entries that could go live - shadow until switched on (on takes the PIN).

@@ -96,6 +96,7 @@ class LiquidityWhyNotTest {
             LiquidityWhyNot.LAPSED to Kind.LAPSED, "skipped_by_you" to Kind.SKIPPED_BY_YOU, "liquidity_no_room" to Kind.NO_ROOM,
             "no_liquidity_break" to Kind.NO_BREAK, "liquidity_outside_entry_hours" to Kind.OUTSIDE_HOURS, "holding" to Kind.HOLDING,
             "stopped_for_today" to Kind.STOPPED, "flat_after_square_off" to Kind.SQUARED_OFF, "liquidity_history_loading" to Kind.LOADING,
+            "instrument_list_loading" to Kind.LOADING, "liquidity_stale_bar_waiting" to Kind.LOADING,
             "no_index_data" to Kind.NO_DATA, "no_index_data: MIDCPNIFTY" to Kind.NO_DATA, "no_index_data: FINNIFTY" to Kind.NO_DATA,
             "no_index_datax" to Kind.OTHER, "no_contract" to Kind.NO_CONTRACT, "refused: no quote" to Kind.NO_QUOTE,
             "refused: no quote for BANKNIFTY27OCT2655700CE after 2 reads" to Kind.NO_QUOTE, "refused: no quotes" to Kind.REFUSED,

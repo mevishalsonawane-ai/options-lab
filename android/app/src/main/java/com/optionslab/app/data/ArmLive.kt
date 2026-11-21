@@ -148,6 +148,13 @@ object ArmLive {
         val stepFrom: String? = null,
         /** 20 Nov 2026: with [stepFrom], the app's own contract name of the cheaper option held (its option highs); null: none known. Persisted. */
         val liveContract: String? = null,
+        /**
+         * 20 Nov 2026 (audit): the lots asked for when fewer were bought - Boss's 4 Nov free-cash cut, or a part fill ([entryQty] / [lot] were
+         * bought); null: all bought. Persisted.
+         */
+        val askedLots: Int? = null,
+        /** 20 Nov 2026: with [askedLots], the lots sent after the free-cash cut (a part fill bought fewer). Null: as many as bought. Persisted. */
+        val sentLots: Int? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -713,7 +720,8 @@ object ArmLive {
             p.optBoolean("shadow"), s("stopKind") ?: OWN, if (p.has("stopQty")) p.getInt("stopQty") else null,
             p.optBoolean("heldSeen", !p.has("heldSeen")), if (p.has("zeroSince")) p.getLong("zeroSince") else null, p.optInt("stopBooked", 0),
             s("paperSymbol"), p.optBoolean("step500", false), d("best"), p.optBoolean("stepLock", false),
-            p.optBoolean("detached", false), p.optBoolean("stopByYou", false), s("stepFrom"), s("liveContract"))
+            p.optBoolean("detached", false), p.optBoolean("stopByYou", false), s("stepFrom"), s("liveContract"),
+            p.optInt("askedLots", 0).takeIf { it > 0 }, p.optInt("sentLots", 0).takeIf { it > 0 })
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("key", p.key).put("ref", p.ref).put("symbol", p.symbol).put("exchange", p.exchange)
@@ -725,7 +733,7 @@ object ArmLive {
         .put("charges", p.charges).put("shadow", p.shadow).put("stopKind", p.stopKind).put("heldSeen", p.heldSeen)
         .apply { p.stopQty?.let { put("stopQty", it) }; p.zeroSinceMs?.let { put("zeroSince", it) }; p.paperSymbol?.let { put("paperSymbol", it) } }
         .put("stopBooked", p.stopBooked).apply { if (p.fixed) put("step500", true); p.best?.let { put("best", it) }; if (p.lock) put("stepLock", true) }
-        .apply { if (p.detached) put("detached", true); if (p.stopByYou) put("stopByYou", true) }
+        .apply { if (p.detached) put("detached", true); if (p.stopByYou) put("stopByYou", true); p.askedLots?.let { put("askedLots", it) }; p.sentLots?.let { put("sentLots", it) } }
         .apply { p.stepFrom?.let { put("stepFrom", it) }; p.liveContract?.let { put("liveContract", it) } }
 
     /**
@@ -1175,6 +1183,8 @@ object ArmLive {
         // is sent at, [LiveMirror.entryLimit] - the offer plus its buffer, capped). A sale, a future or an MCX
         // option (its own segment's money) is never cut; not even one lot fitting, or the cash unreadable, goes as before.
         val want = qty / ins.lot
+        // (20 Nov 2026: the lots Boss's setting asked for - on the cheaper strike's pass, the arm's own entry's: its "asked / sent" label.)
+        val wantAll = step?.req?.askedLots?.takeIf { it > want } ?: want
         // 15 Nov: the funds check below reuses the fit's own read when it ran (nothing new is read for it).
         val optionBuy = a.side > 0 && a.contract.right != Right.IX && ins.exchange != "MCX"
         // 19 Nov 2026 (Boss's explicit choice: "Go" - no shadow phase; Zerodha refused MARKET option buys for "Insufficient funds", as it
@@ -1222,7 +1232,8 @@ object ArmLive {
             last, now(), a.paperEntry, a.paperQty, a.contract.expiry, null, seen = paperOpen(spec, a.ref) == true, paperSymbol = a.contract.symbol,
             fixed = a.fixed && a.side > 0 && com.optionslab.engine.orb.StepTrail.covers(a.key),
             lock = a.fixed && a.lock && a.side > 0 && com.optionslab.engine.orb.StepTrail.lockFor(a.key) != null,
-            stepFrom = step?.req?.fromSymbol, liveContract = step?.contract?.symbol)
+            stepFrom = step?.req?.fromSymbol, liveContract = step?.contract?.symbol,
+            askedLots = wantAll.takeIf { optionBuy && qty / ins.lot < it }, sentLots = (qty / ins.lot).takeIf { optionBuy && it < wantAll })
         // Shadow read again right before anything is sent (review: Shadow turned on while this entry was on its way).
         // 3 Nov (Boss): an index not selected in Bot settings → Indices stays in shadow (recorded, never sent).
         // (Read again here, just before anything is sent: a change made while this entry was on its way counts.)
@@ -1252,7 +1263,7 @@ object ArmLive {
         // refused the cheaper one before it went: this entry goes on exactly as before (the funds check below included).
         if (optionBuy && !stepTried && LiveMirror.shortOfOneLot(fitPx * ins.lot * ins.multiplier, fitFree ?: Broker.keptFreeCash())) {
             stepTried = true
-            if (stepEntry(a, spec, ins.symbol, ins.exchange, fitFree ?: Broker.keptFreeCash(), CheaperStrike.Trigger.PRE_SEND, t0)) return@withLock
+            if (stepEntry(a, spec, ins.symbol, ins.exchange, fitFree ?: Broker.keptFreeCash(), CheaperStrike.Trigger.PRE_SEND, t0, wantAll)) return@withLock
         }
         if (optionBuy) {
             val free = fitFree ?: Broker.keptFreeCash()
@@ -1314,7 +1325,7 @@ object ArmLive {
                 // strike once ([stepAfterRefusal]); the stepped order's own refusal is said by it.
                 if (optionBuy && !stepTried && CheaperStrike.definiteRefusal(e)) {
                     stepTried = true
-                    if (stepAfterRefusal(a, spec, ins.symbol, ins.exchange, t0, step)) return@withLock
+                    if (stepAfterRefusal(a, spec, ins.symbol, ins.exchange, t0, step, wantAll)) return@withLock
                 }
                 // (A refusal at the app's own door is said once, by [stepEntry], which lets the arm's own entry go on.)
                 if (!CheaperStrike.appRefused(e)) step?.let { CheaperStrike.notBought(it, e.message ?: "Zerodha refused it") }
@@ -1362,7 +1373,7 @@ object ArmLive {
             // 20 Nov 2026 (Boss's exception): REJECTED for funds (a definite end in Zerodha's book) steps to a cheaper strike once.
             if (f.status == "REJECTED" && optionBuy && !stepTried && CheaperStrike.fundsRefused(f.message)) {
                 stepTried = true
-                if (stepAfterRefusal(a, spec, ins.symbol, ins.exchange, t0, step)) return@withLock
+                if (stepAfterRefusal(a, spec, ins.symbol, ins.exchange, t0, step, wantAll)) return@withLock
             }
             step?.let { CheaperStrike.notBought(it, "Zerodha ${f.status.lowercase()}" + (f.message.takeIf { m -> m.isNotBlank() }?.let { m -> ": $m" } ?: "")) }
             notMirrored(a, "Zerodha ${f.status.lowercase()}" + (f.message.takeIf { it.isNotBlank() }?.let { ": $it" } ?: ""), dropIntent = true); return@withLock
@@ -1375,6 +1386,8 @@ object ArmLive {
         // Seen held only once Zerodha's position book shows it (review C3): a book that lags the fill never closes the trade.
         var p = base.copy(entryOrderId = id, qty = f.filled, entryQty = f.filled, entry = fill, heldSeen = false,
             charges = charge(side.name, fill, f.filled, ins.exchange, ins.symbol, ins.multiplier))
+        // 20 Nov 2026: a part fill of an option buy bought fewer lots than asked too: kept with the lots sent, for the trade's words.
+        if (optionBuy && f.filled < qty && p.askedLots == null) p = p.copy(askedLots = wantAll, sentLots = qty / ins.lot)
         val (stop, kind) = firstStop(spec, p)
         p = p.copy(stopKind = kind, stopTrigger = stop)
         // 30 Oct (deep review): the filled trade is WRITTEN before its stop is rested, so a process death in between still finds it
@@ -1415,10 +1428,10 @@ object ArmLive {
      * (this entry then goes on as before, and the refusal's note on the arm's row is taken back). Under the entry lock; the entry's worker.
      */
     private suspend fun stepEntry(a: Ask, spec: LiveMirror.Spec, fromSymbol: String, exchange: String, free: Double?, trigger: CheaperStrike.Trigger,
-                                  t0: Long): Boolean {
+                                  t0: Long, askedLots: Int = 1): Boolean {
         if (!CheaperStrike.isOn() || !CheaperStrike.covers(a.key) || a.side <= 0) return false
         val pick = CheaperStrike.find(CheaperStrike.Req(spec.label, a.key, a.contract.underlying, a.contract.expiry, a.contract.right, a.contract.strike,
-            fromSymbol, exchange, spec.product, free, trigger, t0, now())) ?: return false
+            fromSymbol, exchange, spec.product, free, trigger, t0, now(), askedLots = askedLots)) ?: return false
         // Its stop as the paper trade's on this price (the order door checks the stop it rests with), and no paper LIMIT of another strike.
         val stop = a.stop?.let { LiveMirror.level(a.paperEntry, it, pick.last, spec.scale, a.side, pick.tick) }
         val before = runCatching { lock.withLock { val b = book(); (b.notMirrored.any { it.ref == a.ref }) to b.refused[a.key] } }.getOrNull()
@@ -1444,7 +1457,8 @@ object ArmLive {
      * refusal). True when the cheaper strike's path handled it (bought, or said why not); false: none chosen - the refusal is said as before.
      * [step]: this was already the cheaper strike's own order (never stepped again).
      */
-    private suspend fun stepAfterRefusal(a: Ask, spec: LiveMirror.Spec, fromSymbol: String, exchange: String, t0: Long, step: CheaperStrike.Pick?): Boolean {
+    private suspend fun stepAfterRefusal(a: Ask, spec: LiveMirror.Spec, fromSymbol: String, exchange: String, t0: Long, step: CheaperStrike.Pick?,
+                                         askedLots: Int = 1): Boolean {
         if (step != null || !CheaperStrike.isOn() || !CheaperStrike.covers(a.key)) return false
         runCatching { lock.withLock {
             val b = book()
@@ -1452,7 +1466,7 @@ object ArmLive {
         } }
         // (Read fresh from Zerodha: the kept figure is what let the refused order go. Unknown: no step.)
         val free = CheaperStrike.freshFreeCash()
-        return stepEntry(a, spec, fromSymbol, exchange, free, CheaperStrike.Trigger.REJECTED, t0)
+        return stepEntry(a, spec, fromSymbol, exchange, free, CheaperStrike.Trigger.REJECTED, t0, askedLots)
     }
 
     private fun stopWords(p: Pos): String = when (p.stopKind) { SAFETY -> "safety stop"; DISASTER -> "disaster stop"
@@ -3342,7 +3356,8 @@ object ArmLive {
                 // 16 Nov (review): the rule's exits (breakeven lock, step lock) with their "failed gates, Boss's exception" label.
                 line(b, "%s: %s%s %s %d @ %.2f (%s), %s after charges".format(Locale.ENGLISH, c.label, if (c.shadow) "SHADOW " else "",
                     if (c.side > 0) "sold" else "bought back", c.symbol, c.qty, c.exit ?: 0.0,
-                    c.why?.let { com.optionslab.engine.orb.StepTrail.words(it) }, LiveMirror.rs(c.net ?: 0.0)))
+                    c.why?.let { com.optionslab.engine.orb.StepTrail.words(it) }, LiveMirror.rs(c.net ?: 0.0)) +
+                    (c.askedLots?.let { val bought = c.entryQty / c.lot.coerceAtLeast(1); OrbArms.lotsAskedWords(it, c.sentLots ?: bought, bought) }?.let { " · $it" } ?: ""))
                 if (b.positions.none { it.open && it.ref == c.ref }) { closedRefs.remove(c.ref); levels.remove(c.ref); RuleHighs.forget("live:${c.ref}")
                     detachNotes.remove(c.ref); detachSaid.remove(c.ref); restBackoff.remove(c.ref); restRefusedSaid.remove(c.ref); endedSaid.remove(c.ref) }
             }

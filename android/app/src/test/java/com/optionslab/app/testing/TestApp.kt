@@ -161,6 +161,8 @@ class TestApp : Application() {
         // 20 Nov 2026: the cheaper strike (Boss's exception) is on in the app, but OFF for every other test (their entries' funds paths are
         // what they test, unchanged); its own tests turn it on.
         com.optionslab.app.data.CheaperStrike.resetForTest(on = false)
+        // 20 Nov 2026: Liquidity's fresh-bar check as on a fresh phone (off: shadow), nothing seen.
+        com.optionslab.app.data.LiquidityFreshBar.resetForTest(on = false)
         com.optionslab.app.data.OrderCountCheck.resetForTest(on = false)
         // 19 Nov: the four automatic stops on R51, R72 and Liquidity as before Boss's choice (all on, his one-time choice marked run), so
         // every other test's arms stop as they did; their own tests switch them off.

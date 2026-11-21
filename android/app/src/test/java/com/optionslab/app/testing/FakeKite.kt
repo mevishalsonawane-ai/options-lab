@@ -128,6 +128,8 @@ class FakeKite : Closeable {
     @Volatile var gttLostHides = 0
     private var trailedPositions: JSONObject? = null
     private var trailedLeft = 0
+    /** 20 Nov 2026: the positions catch up at once - every fill so far shows in them (ends [positionsTrailReads]' trail). */
+    fun positionsCatchUp() = synchronized(lock) { trailedPositions = null; trailedLeft = 0; positionsTrailReads = 0 }
     /** Positions reads answered so far. */
     @Volatile var positionReads = 0
     /** 20 Nov 2026 (audit): the positions reply's data as given (a malformed one), instead of the positions above; null: as they are. */

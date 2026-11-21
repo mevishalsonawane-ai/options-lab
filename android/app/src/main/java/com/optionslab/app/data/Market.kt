@@ -195,6 +195,12 @@ object Market {
     private val downloadLock = Any()
     private val refreshing = java.util.concurrent.atomic.AtomicBoolean(false)
 
+    /** TEST ONLY (20 Nov 2026): whether the saved list is parsed in memory as the file now stands (a read would not parse it again). */
+    internal fun contractsInMemoryForTest(): Boolean = synchronized(readLock) {
+        val f = contractsFile()
+        f.exists() && mem?.first == f.lastModified()
+    }
+
     fun cachedContracts(): Pair<LocalDate, List<Upstox.Contract>>? = synchronized(readLock) {
         val f = contractsFile()
         val stamp = f.lastModified()

@@ -99,6 +99,21 @@ class LiquidityReplayCardTest {
         assertTrue(shown(keepNumbersWhole("Net after charges +₹1,158 · +₹1,158 a lot · charges ₹42")))
     }
 
+    /** 20 Nov 2026 (audit): a live trade the free-cash cut made smaller says it on its line in the day's detail. */
+    @Test fun aCutLiveTradeSaysTheLotsAskedFor() {
+        val v0 = StrategyFakes.orbView(armed = true, live = true)
+        val view = v0.copy(arms = v0.arms.map { a ->
+            if (a.arm.source != "liquidity") a else a.copy(today = a.today.map { it.copy(qty = 60, entryQty = 60, lot = 30, askedLots = 3) })
+        })
+        compose.setContent {
+            IraAlgoTheme("light") { Column { OrbRowsContent(view, true, RecordingStrategyActions(), StrategyFakes.reauthWhy, replay = { null }) } }
+        }
+        compose.waitForIdle()
+        tap("ARMED · LIVE")
+        assertTrue(shown("Arms · today"))
+        assertTrue(compose.onAllNodesWithText("bought 2 of 3 lots (free cash)", substring = true).fetchSemanticsNodes().isNotEmpty())
+    }
+
     @Test fun aLiveTradeHasNoReplay() {
         compose.setContent {
             IraAlgoTheme("light") {

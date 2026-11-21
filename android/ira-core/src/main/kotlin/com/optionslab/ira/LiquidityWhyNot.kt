@@ -117,7 +117,8 @@ object LiquidityWhyNot {
         verdict == "holding" -> Kind.HOLDING
         verdict == "stopped_for_today" -> Kind.STOPPED
         verdict == "flat_after_square_off" -> Kind.SQUARED_OFF
-        verdict == "liquidity_history_loading" -> Kind.LOADING
+        // 20 Nov 2026: a signal waiting for today's instrument list, or (fresh-bar check on) for fresh candles - its bar not spent yet.
+        verdict == "liquidity_history_loading" || verdict == "instrument_list_loading" || verdict == "liquidity_stale_bar_waiting" -> Kind.LOADING
         com.optionslab.engine.orb.IndexData.isNone(verdict) -> Kind.NO_DATA      // named by index since 13 Oct
         verdict == "no_contract" -> Kind.NO_CONTRACT
         // 22 Oct: the verdict now names the option and the reads ("refused: no quote for <option> after 2 reads").

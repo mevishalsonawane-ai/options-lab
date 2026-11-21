@@ -61,6 +61,15 @@ notes; match the surrounding code.
     ORB and Liquidity 15+5), that the free cash cannot pay for even one lot. It reads only the free cash the entry already read; unknown, it
     says nothing. In shadow by default (logged and counted, the order goes as before); its Bot settings switch (off by default)
     makes it skip the entry. On needs no PIN (it lowers risk); off takes the PIN.
+  - The fresh-bar check (20 Nov audit): Liquidity 15+5's live entry (automatic or approval) on a late or stale bar - seen past its fill window
+    (its close + 2 min), its own last minute missing, or the index's newest minute behind. In shadow by default (logged "would have skipped
+    (stale bar)" and counted, the entry goes as before); paper is never skipped, only logged. Its Bot settings switch (off by default) skips
+    such a live entry: the signal waits (in memory) and is decided again if fresh candles land within its fill window, never bought late
+    (after a restart the bar stays spent). On needs no PIN (it lowers risk); off takes the PIN.
+  - The list wait (20 Nov audit, a sibling switch on the same card): a Liquidity signal decided while today's instrument list is not
+    loaded. Off by default, as before: lost as "no_contract", logged "would have waited for the list and entered" and counted. On, the
+    signal waits (in memory) and is decided again within its fill window once the list lands, never bought late. On adds live entries,
+    so it takes the PIN; off needs none.
 - EVERY ARM CAN GO LIVE (Boss, 30 Oct: "make all arms as live, will stop it if i want, dont keep any in paper only or
   record only, make all live if i move to live market").
   - No arm is paper-only or record-only by design. Each arm's live trade goes only through the same gates: the app in
@@ -232,6 +241,13 @@ notes; match the surrounding code.
     that is missing at Zerodha (not placed, or cancelled or refused by the exchange or Zerodha) is always put back there on the
     next check (no setting); never beside a square-off's or the arm's own working sale, at the 15:05 expiry square-off, from
     15:10 or with Stop for today. A stop Boss cancelled in Kite is never put back: the app watches the level and sells there.
+    One exception (20 Nov audit): while another part's lost exit sale on a contract is unresolved (not yet seen in Zerodha's order
+    book) or found but not yet booked, every other trade on that contract WITH A STOP RESTING keeps it resting and its exit (15:10 and
+    Stop for today included) waits; a trade with no stop resting still exits, counting the lost sale as already going (sold less by
+    it); and the price check puts no missing stop back on that contract for any trade - until the lost sale resolves: found and booked,
+    or let go only on a read of the order book that started at least 2 minutes after the sale was sent and still does not show it
+    (searched from 3 minutes before its send time; failed reads never let it go; Boss is told its state is unknown, and again at 15:10). The lost sale is
+    kept in the book, so a restart keeps the wait and the window. Then the exits run as usual.
   Every change that touches background work must test this.
 - Nothing about the account is spoken on a locked phone.
 - Market times: NSE F&O closes 15:40, index/cash 15:30, expiry square-off 15:05.

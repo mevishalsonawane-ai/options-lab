@@ -432,6 +432,7 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("60", stop.form["quantity"]); assertEquals("SL", stop.form["order_type"])
         val p = row().open!!
         assertEquals(60, p.qty); assertEquals(30, p.lot)
+        assertNull("not cut: no lots asked for kept", p.askedLots); assertNull(p.askedWords)
     }
 
     /**
@@ -448,6 +449,8 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("30", stop.form["quantity"]); assertEquals("SL", stop.form["order_type"])
         assertEquals(30, row().open!!.qty)
         assertTrue("the cash covers what was bought: nothing for the funds check", FundsCheck.recsOf().isEmpty())
+        assertEquals(2, row().open!!.askedLots)
+        assertEquals("bought 1 of 2 lots (free cash)", row().open!!.askedWords)
     }
 
     /** 18 Nov 2026 (audit: B6): three lots set, the cash fits two: two are bought - never more than Boss's lots. */
@@ -458,6 +461,46 @@ class LiquidityArmLiveTest : RobolectricTest() {
         assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
         assertEquals("60", kite.placed.first().form["quantity"])
         assertEquals(60, row().open!!.qty)
+        // 20 Nov 2026 (audit): the lots asked for are kept on the trade, saved and read back, and said on its line.
+        assertEquals(3, row().open!!.askedLots)
+        assertEquals("bought 2 of 3 lots (free cash)", row().open!!.askedWords)
+        OrbArms.forgetMemoryForTest()
+        assertEquals("read back from the book", 3, row().open!!.askedLots)
+    }
+
+    /** 20 Nov 2026 (audit): the words of an entry that bought fewer lots than asked, with the reason; none when all were bought. */
+    @Test fun theLotsAskedWords() {
+        assertEquals("bought 1 of 2 lots (free cash)", OrbArms.lotsAskedWords(2, 1, 1))
+        assertEquals("bought 1 of 3 lots (part filled)", OrbArms.lotsAskedWords(3, 3, 1))
+        assertEquals("bought 1 of 3 lots (2 fit the free cash, 1 filled)", OrbArms.lotsAskedWords(3, 2, 1))
+        assertEquals("bought 0 of 2 lots (part filled)", OrbArms.lotsAskedWords(2, 2, 0))
+        assertNull("all bought", OrbArms.lotsAskedWords(2, 2, 2))
+        assertNull("never more than asked", OrbArms.lotsAskedWords(2, 2, 3))
+        assertNull(OrbArms.lotsAskedWords(0, 0, 0))
+    }
+
+    /** 20 Nov 2026 (coordinator): two lots, the cash fits both, only one fills: the trade says a part fill, not the free cash. */
+    @Test fun aPartFillSaysPartFilledNotFreeCash() {
+        kite.cash = 100_000.0
+        state(lots = 2)
+        kite.nextPlace(outcome = FakeKite.Outcome.PARTIAL_THEN_CANCEL, partialQty = 30)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("60", kite.placed.first().form["quantity"])
+        assertEquals(30, row().open!!.qty)
+        assertEquals("bought 1 of 2 lots (part filled)", row().open!!.askedWords)
+        OrbArms.forgetMemoryForTest()
+        assertEquals("read back from the book", "bought 1 of 2 lots (part filled)", row().open!!.askedWords)
+    }
+
+    /** 20 Nov 2026 (coordinator): three lots, the cash fits two, one fills: both reasons said. */
+    @Test fun aCutAndAPartFillSayBoth() {
+        SecurePrefs.put("g.lots", 3)
+        kite.cash = 13_000.0
+        state(lots = 3)
+        kite.nextPlace(outcome = FakeKite.Outcome.PARTIAL_THEN_CANCEL, partialQty = 30)
+        assertEquals("Entered at Zerodha (live).", runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) })
+        assertEquals("60", kite.placed.first().form["quantity"])
+        assertEquals("bought 1 of 3 lots (2 fit the free cash, 1 filled)", row().open!!.askedWords)
     }
 
     /** 18 Nov 2026 (audit: B6): not even one lot fitting, the buy goes as before (Boss's lots; the funds check in shadow logs it). */

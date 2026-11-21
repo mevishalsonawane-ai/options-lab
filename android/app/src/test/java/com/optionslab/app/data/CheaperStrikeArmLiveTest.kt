@@ -131,6 +131,7 @@ class CheaperStrikeArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(r72, "none"))
         val b = buys().singleOrNull() ?: error("nothing bought: ${view().refused}")
         assertEquals(s52100, b.form["tradingsymbol"]); assertEquals("1 lot, never Boss's 3", "30", b.form["quantity"])
+        view().openReal.single().let { p -> assertEquals("labelled: 3 asked", 3, p.askedLots); assertEquals("1 sent", 1, p.sentLots) }
         kite.flat(); kite.orders.values.filter { it.working }.forEach { it.status = "CANCELLED" }
         kite.requests.clear()
         val before = CheaperStrike.recsOf().size

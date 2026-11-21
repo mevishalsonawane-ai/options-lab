@@ -1037,6 +1037,8 @@ object Broker {
         entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null
         killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
         cancelLostSearches(); lostWrites.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false }
+    /** TEST ONLY (20 Nov 2026): the ids of the orders sent from here forgotten, as after a restart (memory only). */
+    internal fun forgetSentForTest() { sentIds.clear() }
 
     private fun <T> keptValue(k: Kept<T>?): T? = k?.takeIf {
         it.gen == writes.get() && System.currentTimeMillis() - it.at in 0..RECON_MS && KiteStream.status.value == KiteStream.Status.LIVE
@@ -2092,7 +2094,12 @@ object Broker {
      * exchange REJECTED, or CANCELLED with nothing filled, is never taken for it (that is no live order; the error stands).
      */
     suspend fun findRecent(o: Kite.Order, known: Collection<String>, afterError: Boolean = false, liveOnly: Boolean = false,
-                           sentAt: java.time.LocalDateTime? = null): String? {
+                           sentAt: java.time.LocalDateTime? = null,
+                           /** 20 Nov 2026: the earliest an order may be stamped (a lost exit sale's send less 3 minutes, from its caller) when
+                            *  this process has no send mark for [o] (after a restart); the mark's window and its "before" list come first. */
+                           since: java.time.LocalDateTime? = null,
+                           /** 20 Nov 2026: the earliest such order after [since] (a lost sale's own), not the latest. */
+                           earliest: Boolean = false): String? {
         val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val rs = rows(call("GET", "/orders") as JSONArray)
         fun at(r: JSONObject) = runCatching { java.time.LocalDateTime.parse(r.optString("order_timestamp"), fmt) }.getOrNull()
@@ -2104,20 +2111,22 @@ object Broker {
         // time on Zerodha's clock less [SENT_SLACK_S] when the phone's offset to it was measured in the last [OFFSET_FRESH_MS], else
         // from three minutes before the send (never narrower than the old three minutes before now, so its own order is never missed
         // for a clock it cannot trust). An order in the book read before the send is never taken, whatever its time.
+        // (20 Nov 2026, merge review P1: the send mark - kept by the order object itself, so a twin's identical order never shares it - comes
+        // first; a caller's own [since] only when there is none, after a restart.)
         val mark = synchronized(sendMarks) { sendMarks[o] }
         // (Review: the offset as it was at the send, never one measured later; one that moved since by more than [OFFSET_MOVED_MS] - the
         // phone's clock stepped - leaves the tight window for the three minutes.)
         val offNow = serverOffset?.takeIf { (_, at) -> System.currentTimeMillis() - at in 0..OFFSET_FRESH_MS }?.first
         val off = mark?.offset?.takeIf { o -> offNow == null || kotlin.math.abs(offNow - o) <= OFFSET_MOVED_MS }
-        val since = mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
-            ?: sentAt?.minusMinutes(3) ?: now.minusMinutes(3)
+        val from = mark?.let { m -> if (off != null) m.at.minusNanos(off * 1_000_000L).minusSeconds(SENT_SLACK_S) else m.at.minusMinutes(3) }
+            ?: since ?: sentAt?.minusMinutes(3) ?: now.minusMinutes(3)
         val before = mark?.before?.mapTo(HashSet()) { it.id }.orEmpty()
-        return rs.lastOrNull {
+        val match: (JSONObject) -> Boolean = {
             it.optString("tradingsymbol") == o.tradingSymbol && it.optString("transaction_type") == o.side.name &&
                 it.optInt("quantity") == o.quantity && it.optString("tag") == o.tag.filter { c -> c.isLetterOrDigit() }.take(20) &&
                 // 18 Oct: the order's own type too (a resting SL of the same size and tag is never taken for a market exit's lost reply).
                 it.optString("order_type") == o.orderType &&
-                it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(since) == false &&
+                it.optString("order_id") !in known && !sentIds.containsKey(it.optString("order_id")) && at(it)?.isBefore(from) == false &&
                 // (20 Nov 2026, delta review: a stop a trade took as its own another way is never found for another's lost reply.)
                 !claimedIds.containsKey(it.optString("order_id")) &&
                 it.optString("order_id") !in before &&
@@ -2127,7 +2136,8 @@ object Broker {
                 // (20 Nov 2026, audit B5 deep review: a lost stop's search never takes an order that has ended.)
                 (!liveOnly || !diedUnfilled(it)) &&
                 (!afterError || adoptableAfterError(o, it))
-        }?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it)
+        }
+        return (if (earliest) rs.firstOrNull(match) else rs.lastOrNull(match))?.optString("order_id")?.also { countSent(); noteSent(it); ExitCoordinator.adopted(o, it)
             // (20 Nov 2026, review: a lost reply found is kept as the entry or exit it was sent as, for the kill switch.)
             mark?.let { m -> noteKind(it, entry = !m.exit) } }
     }
@@ -2307,6 +2317,24 @@ object Broker {
         } catch (_: Exception) { w.readFailAtMs = System.currentTimeMillis(); return }
         // (20 Nov 2026, delta review: an order claimed by another trade meanwhile ([claimStop]) is not this one: looked for again.)
         if (found != null) synchronized(w) { if (!claimedIds.containsKey(found)) w.foundId = found } else w.readOkAtMs = System.currentTimeMillis()
+    }
+
+    /**
+     * 20 Nov 2026 (merge review, the found stop's tiebreaker): the order found for the lost reply under [key] so far, if any, WITHOUT taking it
+     * (the caller's own [lookLost] still does) - a search started when one is due, as [lookLost] does. Memory, and the background search.
+     */
+    fun peekLost(key: String): String? {
+        val w = lostWrites[key] ?: return null
+        val now = System.currentTimeMillis()
+        var inline = false
+        synchronized(w) {
+            if (w.foundId == null && w.searching?.isActive != true && now - w.lookedMs >= (lostLookGapMsForTest ?: LOST_LOOK_GAP_MS)) {
+                w.lookedMs = now
+                if (lostSearchInlineForTest) inline = true else w.searching = lostScope.launch { searchLost(w) }
+            }
+        }
+        if (inline) kotlinx.coroutines.runBlocking { searchLost(w) }
+        return w.foundId
     }
 
     /**

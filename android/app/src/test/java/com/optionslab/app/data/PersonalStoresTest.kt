@@ -679,6 +679,13 @@ class PersonalStoresTest {
             check(com.optionslab.app.data.CheaperStrike.holdsForErase())
             com.optionslab.app.security.SecurePrefs.flush()
         },
+        s("LiquidityFreshBar") {
+            // 20 Nov 2026: off by default (shadow): switched on by Boss, a setting to erase.
+            com.optionslab.app.data.LiquidityFreshBar.resetForTest(on = false)
+            com.optionslab.app.data.LiquidityFreshBar.set(true)
+            check(com.optionslab.app.data.LiquidityFreshBar.holdsForErase())
+            com.optionslab.app.security.SecurePrefs.flush()
+        },
         s("OrderCountCheck") {
             // 20 Nov 2026: off by default: switched on by Boss, a setting to erase.
             com.optionslab.app.data.OrderCountCheck.resetForTest(on = false)
