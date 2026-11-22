@@ -4357,6 +4357,9 @@ object OrbArms {
         // now), and each price from the stream's fresh tick; a contract without one is quoted from Zerodha as before.
         // (20 Nov 2026: Zerodha's books unreadable - each lost exit's search still starts in the background (search only: a found or
         // not-found answer waits for a look that reads), so its failed reads count and Boss is told its state is unknown, at 15:10 again.)
+        // (22 Nov 2026, B6 review, fourth round: when these reads were asked for, by the square-offs' clock - a square-off's sale on a row
+        // since then ([SquareOffExit.lastSaleAt]) may not be in them, so no stop is put back there from them: [putBackHeld].)
+        val readAt = SquareOffExit.clock()
         val (orders, pbook) = try {
             (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id } to (if (stream) Broker.positionsRecon() else Broker.positionBook())
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
@@ -4528,7 +4531,7 @@ object OrbArms {
                 // (19 Nov 2026, final check: nor in the gap after a square-off's exit on it - a read can miss an order placed a moment ago.)
                 !SquareOffExit.inGap("NFO", sym, "MIS") &&
                 // (22 Nov 2026, B6 review, third round: nor while another seller holds the row - a square-off working out its sale.)
-                SquareOffExit.exitClaimedBy("NFO", sym, "MIS").let { it == null || it == CLAIM_OWNER } &&
+                SquareOffExit.exitClaimedBy("NFO", sym, "MIS") == null &&
                 // (20 Nov 2026, audit PC: nor while a lost exit on it is neither found nor let go - it may still be selling; every trade's
                 // level is still watched by the app meanwhile and sold there.)
                 lostOf(cur) == null &&
@@ -4542,10 +4545,12 @@ object OrbArms {
                 // beside it - never a reason by itself to place nothing.)
                 val adoptOnly = ownSaleWorking(cur, sym, orders.values, b.positions.mapNotNull { it.stopOrderId }.toSet(), ownStops = false)
                 // (22 Nov 2026, B6 review, third round: the row claimed while its stop goes in - a square-off is refused it meanwhile, so it
-                // never works its sale out from a read made without this stop; held by another seller: nothing put back this look.)
-                val rowClaim = SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_OWNER)
+                // never works its sale out from a read made without this stop; held by another seller: nothing put back this look. Fourth
+                // round: with the claim held, looked at again by the clock now - [putBackHeld].)
+                val rowClaim = SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_STOP_OWNER)
                 val rested = if (rowClaim == null) null else try {
-                    runCatching { restExchangeStop(b, cur, sym, held, ltp, tick, orders.values, adoptOnly, positions = pbook) }.getOrNull()
+                    if (putBackHeld(cur.symbol, sym, readAt, orders.values, armOf(cur.arm).label) != null) null
+                    else runCatching { restExchangeStop(b, cur, sym, held, ltp, tick, orders.values, adoptOnly, positions = pbook) }.getOrNull()
                 } finally { rowClaim.release() }
                 if (rested != null) { b.positions[i] = rested.first; rested.second?.let { b.positions += it }; continue }
             }
@@ -4797,6 +4802,8 @@ object OrbArms {
      * could not be judged yet (its contract not in the instrument list, no fill price, still working).
      */
     private suspend fun coldSweep(b: Book, t: LocalDateTime, stopped: Boolean): Boolean {
+        // (22 Nov 2026, B6 review, fourth round: when this sweep's reads were asked for - [putBackHeld] for the stops placed below.)
+        val readAt = SquareOffExit.clock()
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return false
         // 19 Nov 2026 (audit batch 2, L1): a stop of these arms left resting with no trade (a crash before its trade was saved) is followed.
         runCatching { noteFlatOrphans(b, orders, t) }
@@ -4896,7 +4903,7 @@ object OrbArms {
                 val mayRest = !stopped && t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) && !expiryClosing(paperSym, sym, t, orders) &&
                     !SquareOffExit.inGap("NFO", sym, "MIS") &&
                     // (22 Nov 2026, B6 review, third round: nor while another seller holds the row.)
-                    SquareOffExit.exitClaimedBy("NFO", sym, "MIS").let { it == null || it == CLAIM_OWNER }
+                    SquareOffExit.exitClaimedBy("NFO", sym, "MIS") == null
                 var stopId: String? = null
                 var stopAt: Double = trig
                 // (19 Nov 2026, review / final check: never a stop - taken or placed - for more than is held less every other working sale on
@@ -4921,15 +4928,18 @@ object OrbArms {
                     Orphan.None, Orphan.Other -> if (mayRest) {
                         covered = minOf(qty, held - othersAll).coerceAtLeast(0) / lot * lot
                         capLeftNone = covered <= 0
-                        // (22 Nov 2026, B6 review, third round: placed with the row claimed, as [restExchangeStop]; held by another seller: none now.)
-                        val rowClaim = if (covered > 0) SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_OWNER) else null
+                        // (22 Nov 2026, B6 review, third round: placed with the row claimed, as [restExchangeStop]; held by another seller: none now.
+                        // Fourth round: with the claim held, looked at again by the clock now - [putBackHeld].)
+                        val rowClaim = if (covered > 0) SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_STOP_OWNER) else null
                         if (rowClaim != null) try {
-                            val r = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig,
-                                lostKey = orbLostKey(a.label, sym, fill, qty))      // (the row's own quantity: what the next look asks)
-                            stopSoldPart = r.sold
-                            val (id, tr, _, cov) = r
-                            stopId = id; stopAt = tr ?: trig
-                            if (id != null) { covered = cov; placed(sym, covered, id) }
+                            if (putBackHeld(paperSym, sym, readAt, orders, a.label) == null) {
+                                val r = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig,
+                                    lostKey = orbLostKey(a.label, sym, fill, qty))      // (the row's own quantity: what the next look asks)
+                                stopSoldPart = r.sold
+                                val (id, tr, _, cov) = r
+                                stopId = id; stopAt = tr ?: trig
+                                if (id != null) { covered = cov; placed(sym, covered, id) }
+                            }
                         } finally { rowClaim.release() }
                     }
                     else -> {}
@@ -6287,7 +6297,7 @@ object OrbArms {
             if (coverSaid.size > 200) coverSaid.clear()
             if (coverSaid.put(managerId(given) + "|claim", minute) != minute)
                 runCatching { Diag.record("orb", "${armOf(given.arm).label}: $sym's exit (${why.replace('_', ' ')}) waits: " +
-                    "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))} is selling it; this exit takes no stop out meanwhile") }
+                    "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))} holds the row; this exit takes no stop out meanwhile") }
             return given to null
         }
         try { return exitLiveClaimed(b, given, sym, why, pre, ltp) } finally { claim.release() }
@@ -6295,6 +6305,29 @@ object OrbArms {
 
     /** 22 Nov 2026 (B6 review): these arms' name on a contract's exit claim ([SquareOffExit.claimExit]). */
     internal const val CLAIM_OWNER = "orb"
+    /** 22 Nov 2026 (B6 review, fourth round): these arms' name on the row's claim while a stop of theirs goes back at Zerodha. */
+    internal const val CLAIM_STOP_OWNER = "orb-stop"
+
+    /**
+     * 22 Nov 2026 (B6 review, fourth round: a look that began at 15:04:58 and reached a row 20 s later - a square-off had sold it at 15:05:01,
+     * its gap over at 15:05:16 - put a stop back on the flat position from its old reads): with the row's claim held, whether a stop of these
+     * arms may NOT go back on Zerodha contract [kite] ([symbol]: the paper contract) now, and why - by the clock at this moment, not the
+     * look's start: a square-off's gap on it ([SquareOffExit.inGap]), a square-off's sale on it not older than this look's reads
+     * ([readAt]: [SquareOffExit.lastSaleAt] - the row waits for a look that reads again), from 15:10, or the 15:05 expiry square-off.
+     * Null: it may. Memory only (the diary told).
+     */
+    private fun putBackHeld(symbol: String, kite: String, readAt: Long, orders: Collection<Broker.OrderRow>, label: String): String? {
+        val tc = now()
+        val why = when {
+            SquareOffExit.inGap("NFO", kite, "MIS") -> "a square-off sold it a moment ago"
+            SquareOffExit.lastSaleAt("NFO", kite, "MIS")?.let { it >= readAt } == true -> "a square-off sold it after this look read the books"
+            !tc.toLocalTime().isBefore(OrbRules.SQUARE_OFF) -> "it is the square-off time"
+            expiryClosing(symbol, kite, tc, orders) -> "the expiry square-off is selling it"
+            else -> return null
+        }
+        runCatching { Diag.record("orb", "$label: $kite's stop not put back at Zerodha this look: $why") }
+        return why
+    }
 
     /** [exitLive] with the contract's exit claim held. */
     private suspend fun exitLiveClaimed(b: Book, given: Position, sym: String, why: String, pre: Pre?,

@@ -11,6 +11,7 @@ import com.optionslab.engine.Kite
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -358,6 +359,8 @@ class ExpirySquareOffTest : RobolectricTest() {
         pass()
         assertEquals(listOf("MARKET", "LIMIT"), kite.placed.map { it.form["order_type"] })
         assertEquals("CANCELLED", kite.orders.values.single { it.type == "LIMIT" }.status)
+        // (22 Nov 2026, B6 review, fourth round: nothing of it went - no sale stamp left on the row to hold an arm's stop back.)
+        assertNull(SquareOffExit.lastSaleAt("NFO", ce, "NRML"))
         at(15, 7); pass()
         assertEquals("tried again at once", listOf("MARKET", "LIMIT", "MARKET"), kite.placed.map { it.form["order_type"] })
     }
