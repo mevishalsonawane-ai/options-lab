@@ -86,7 +86,19 @@ internal object SquareOffExit {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear() }
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear() }
+
+    /**
+     * 22 Nov 2026 (B6 review, fourth round: an arm's look that began before a square-off sold its row, and reached the row after the gap,
+     * put a stop back on a flat position from its old reads): by position row ("EXCHANGE:SYMBOL:PRODUCT"), when (by [clock]) a square-off
+     * last sent a sale on it - placed, or its reply lost ([send]). A book putting a stop back puts none when this is not older than its
+     * own read of the positions ([OrbArms]); the row waits for a look that reads again. Memory only.
+     */
+    private val soldAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** 22 Nov 2026 (B6 review, fourth round): when a square-off last sent a sale on the row ([soldAt]); null: none in this process. */
+    fun lastSaleAt(exchange: String, symbol: String, product: String): Long? = soldAt["$exchange:$symbol:$product"]
+    /** A square-off sent a sale on the row now (placed, or its reply lost): [soldAt]. */
+    internal fun noteSold(exchange: String, symbol: String, product: String) { soldAt["$exchange:$symbol:$product"] = clock() }
 
     /**
      * 22 Nov 2026 (B6 review: a Liquidity exit sale whose reply was lost at 15:04:50, then the 15:05 square-off sold the whole position and
@@ -117,9 +129,9 @@ internal object SquareOffExit {
     /**
      * 22 Nov 2026 (B6 review, second pass: one arm's sale ending and another's starting between [send]'s two looks left the total the
      * same): by Zerodha trading symbol and product ("SYMBOL:PRODUCT", one position row - 22 Nov 2026, second round), bumped by a book each
-     * time it counts a new sale of its own there as on its way ([lostPendingProviders]), before it checks [inGap]. A caller of [send] takes
-     * [salesSnapshot] BEFORE it reads Zerodha's books and hands it in: a sale started since (the books may not show it) and [send] sells
-     * nothing on that row this pass; [send] also looks again just before anything is taken out. Memory only.
+     * time it counts a new sale of its own there as on its way ([lostPendingProviders]), before it checks [inGap]. [send] looks at it with
+     * its first look and again just before anything is taken out. (22 Nov 2026, fourth round: a sale started since the pass's own reads no
+     * longer puts the row off - the fresh read under the row's claim shows it.) Memory only.
      */
     private val salesStarted = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
@@ -128,9 +140,6 @@ internal object SquareOffExit {
      * Memory only, never blocks.
      */
     internal fun saleStarting(symbol: String, product: String = "MIS") { salesStarted.merge("$symbol:$product", 1L, Long::plus) }
-
-    /** 22 Nov 2026 (B6 review): [salesStarted] as it is now - taken by a square-off before it reads Zerodha's books ([send]). Memory only. */
-    internal fun salesSnapshot(): Map<String, Long> = HashMap(salesStarted)
 
     /**
      * 22 Nov 2026 (B6 review, second round: two senders on one row each checked the other and both could act - or both back off with a stop
@@ -152,16 +161,20 @@ internal object SquareOffExit {
     /** 22 Nov 2026 (B6 review): who holds the row's claim now ([claimExit]); null: nobody. Memory only. */
     fun exitClaimedBy(exchange: String, symbol: String, product: String): String? = claims["$exchange:$symbol:$product"]?.owner
 
-    /** 22 Nov 2026 (B6 review): a claim's owner in plain words, for the diary ([claimExit]'s owners: the square-offs' tags, a book's name). */
+    /**
+     * 22 Nov 2026 (B6 review): a claim's owner in plain words, for the diary and Boss's notices ([claimExit]'s owners: the square-offs' tags,
+     * a book's name - "orb" and "orb-stop" ([OrbArms]), "armlive" ([ArmLive]) and "protections" ([Protections]) from B6-B, "boss" for
+     * Boss's own exit from the app).
+     */
     fun claimWords(owner: String?): String = when (owner) {
         null -> "another seller"
         "iraalgoexpiry" -> "the expiry square-off"
         "iraalgoflat" -> "the flat-by"
         "orb" -> "an ORB / Liquidity 15+5 exit"
-        // (22 Nov 2026, B6 review: the arms' live copies' exits and the protections' app-watched targets claim their rows too.)
+        "orb-stop" -> "an ORB / Liquidity 15+5 stop going back at Zerodha"
         "armlive" -> "an arm's live exit"
-        "protections" -> "a protection's target sale"
-        BOSS_OWNER -> "your exit from the app"
+        "protections" -> "a protection's exit"
+        BOSS_OWNER -> "your own exit from the app"
         else -> "another seller ($owner)"
     }
 
@@ -183,18 +196,21 @@ internal object SquareOffExit {
      * 22 Nov 2026 (B6 review, third round: a row skipped every pass - an arm's sale on it that keeps failing, holding the row or starting
      * again each time - was put off with only a diary line): by square-off and position row ("TAG|EXCHANGE:SYMBOL:PRODUCT"), the passes in
      * a row (none more than [SKIP_STREAK_MS] after the last) that left it unsold - an arm selling it, a sale on it not in the books yet, or
-     * its books, what is held or its resting orders' cancels not readable or confirmed ([send]) - and when the last was. Boss is told once
-     * from [SKIPS_TOLD] in a row, and at once from the expiry square-off's backstop minute. A pass that sells it, or finds nothing left to
-     * sell, starts it again. Memory only.
+     * its books, what is held or its resting orders' cancels not readable or confirmed ([send]) - with when that streak began and when its
+     * last pass was. Boss is told once a streak has lasted [SKIP_TELL_MS] (fourth round: by time - the clock lane runs the square-offs
+     * every 15 s, and an arm's sale can take that long to fill), and at once from the expiry square-off's backstop minute; each streak is
+     * told on its own (its start is in the notice's key). A pass that sells it, or finds nothing left to sell, ends the streak. Memory only.
      */
-    private val skips = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Long>>()
-    const val SKIPS_TOLD = 3
+    private val skips = java.util.concurrent.ConcurrentHashMap<String, Skips>()
+    private class Skips(val count: Int, val since: Long, val last: Long)
+    /** A streak told once it is this old. */
+    const val SKIP_TELL_MS = 2 * 60_000L
     /** Passes further apart than this are not "in a row" (the square-offs look every minute or more often). */
     const val SKIP_STREAK_MS = 3 * 60_000L
 
     /** TEST ONLY (22 Nov 2026): the passes in a row that left [exchange]:[symbol] [product] unsold ([skips]), by either square-off. */
     internal fun skipsForTest(exchange: String, symbol: String, product: String): Int =
-        skips.filterKeys { it.endsWith("|$exchange:$symbol:$product") }.values.sumOf { it.first }
+        skips.filterKeys { it.endsWith("|$exchange:$symbol:$product") }.values.sumOf { it.count }
 
     /**
      * The unresolved lost exit sales on [symbol]'s [product] row across [lostPendingProviders]: their quantity, or null when a book cannot
@@ -238,9 +254,6 @@ internal object SquareOffExit {
     }
 
     /**
-     * [salesBefore]: [salesSnapshot] taken before the caller read [read] and [positions] (22 Nov 2026, B6 review: an arm's sale started and
-     * booked after the pass's reads, before it reached this contract, was sold again); null: not checked (the caller's reads are taken as
-     * newer than any sale started).
      * [read], [positions]: the pass's own reads - since the third round of that review used only to leave a row alone early (a stale or
      * unreadable row); [working] is no longer read. What is taken out and sold is worked out from a fresh read of the orders made under the
      * row's claim.
@@ -248,25 +261,27 @@ internal object SquareOffExit {
     suspend fun send(p: Broker.Position, lotSize: Int, tickSize: Double, read: List<Broker.OrderRow>, working: List<Broker.OrderRow>,
                      positions: Broker.Positions, limits: Kite.Limits, who: String, tag: String, origin: String,
                      aboutIt: String, exitName: String, multiplier: Int = 1, backstop: Boolean = false, minutesLeft: Int? = null,
-                     salesBefore: Map<String, Long>? = null, tell: (String, String) -> Unit): Boolean {
+                     tell: (String, String) -> Unit): Boolean {
         val pass = ExitCoordinator.enter(p.exchange, p.symbol, who)
         var claim: ExitClaim? = null
         val rowKey = "${p.exchange}:${p.symbol}:${p.product}"
         val skipKey = "$tag|$rowKey"
+        val soldBefore = soldAt[rowKey]
         /**
          * 22 Nov 2026 (B6 review, third round): this pass leaves the row unsold ([why]); counted, and Boss told as [skips] says. [armSelling]:
          * an arm's own sale on it is going out - Boss is told to let it finish, never to sell beside it.
          */
         fun skipped(why: String, armSelling: Boolean = false) {
             val now = clock()
-            val n = skips.compute(skipKey) { _, cur -> if (cur == null || now - cur.second !in 0..SKIP_STREAK_MS) 1 to now else (cur.first + 1) to now }!!.first
-            runCatching { Diag.record("exits", "$who $rowKey: $why; nothing taken out or sent this pass ($n in a row)") }
+            val k = skips.compute(skipKey) { _, cur -> if (cur == null || now - cur.last !in 0..SKIP_STREAK_MS) Skips(1, now, now) else Skips(cur.count + 1, cur.since, now) }!!
+            runCatching { Diag.record("exits", "$who $rowKey: $why; nothing taken out or sent this pass (${k.count} in a row)") }
             fun words(at: String) = "${p.symbol} $aboutIt, and the $exitName has left it unsold $at ($why). It tries again on every pass. " +
-                if (armSelling) "An arm's own exit sale on it is going out: let it finish - do not sell ${p.symbol} yourself while an exit sale " +
-                    "for it is working in Kite's orders; if it is still open with none working, close it there."
+                if (armSelling) "Another exit on it is going out: let it finish - do not sell ${p.symbol} yourself while an exit sale for it " +
+                    "is working in Kite's orders; if it is still open with none working, close it there."
                 else "Check ${p.symbol} in Kite and close it yourself if it is still open."
-            if (n >= SKIPS_TOLD) tell("skipped $rowKey", words("on $n passes in a row"))
-            if (backstop) tell("skipped at the backstop $rowKey", words("at its last minutes"))
+            val minutes = (now - k.since) / 60_000
+            if (now - k.since >= SKIP_TELL_MS) tell("skipped $rowKey ${k.since}", words("for $minutes minutes, ${k.count} passes in a row"))
+            if (backstop) tell("skipped at the backstop $rowKey ${k.since}", words("at its last minutes"))
         }
         /** 22 Nov 2026 (B6 review, third round): the row worked out this pass (sold, or nothing left to sell): its count starts again. */
         fun workedOut() { skips.remove(skipKey) }
@@ -275,31 +290,33 @@ internal object SquareOffExit {
             if (inGap(p.exchange, p.symbol, p.product)) return false
             // 20 Nov 2026 (deep review): a read that left this contract's own row (its symbol and product) out as malformed: nothing taken
             // out or sent on it now. (Final review: a row with no symbol at all never blocks an exit.)
-            if (positions.unknownForExit(p.symbol, p.product)) return false
-            if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
+            if (positions.unknownForExit(p.symbol, p.product)) { skipped("its row in Zerodha's positions could not be read"); return false }
+            if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) { skipped("this pass's read of the orders missed an exit sent a moment ago", armSelling = true); return false }
             // 22 Nov 2026 (B6 review): one seller at a time on the row ([claimExit]): an arm is selling it now - nothing taken out or sent;
             // the next pass looks again.
             claim = claimExit(p.exchange, p.symbol, p.product, tag) ?: run {
-                skipped("${claimWords(exitClaimedBy(p.exchange, p.symbol, p.product))} was selling it", armSelling = true)
+                val holder = exitClaimedBy(p.exchange, p.symbol, p.product)
+                // (Review: a stop of an arm going back at Zerodha holds the row a moment - no sale of its is going out.)
+                skipped("${claimWords(holder)} held it", armSelling = holder != OrbArms.CLAIM_STOP_OWNER)
                 return false
             }
             // 22 Nov 2026 (B6 review): an arm's exit sale on this row not settled yet - its reply lost, or on its way ([lostPendingProviders])
             // - may still fill: nothing resting on it is taken out meanwhile, and only what is held less that sale is sold (below). Null: a
-            // book could not tell its size. (Looked at again just before anything is taken out.) One started since this pass read the books
-            // ([salesBefore]) may not show in them: nothing this pass.
+            // book could not tell its size. (Looked at again just before anything is taken out.) (Fourth round: one started since this pass
+            // read the books no longer puts the row off - pass after pass, while an arm kept restarting a refused sale - as the fresh read
+            // below, under the claim, shows it: booked, lost (counted here) or refused.)
             val row = "${p.symbol}:${p.product}"
             val started = salesStarted[row] ?: 0L
-            val startedSinceReads = salesBefore != null && started != (salesBefore[row] ?: 0L)
-            // (One started since this pass read the books: nothing this pass - the next pass, a moment later, reads again. From the expiry
-            // square-off's backstop minute it is not put off: the fresh read below, under the claim, shows that sale.)
-            if (startedSinceReads && !backstop) { skipped("an arm's exit sale on it started after this pass read the books", armSelling = true); return false }
             // 22 Nov 2026 (B6 review, third round: an arm's sale started just before this pass's reads, missed by them, and booked more than
             // the gap before this row was reached - shorts first, a LIMIT's 10 s wait, cancels confirmed - was sold again): with the claim
             // held no arm's sale can start on the row, so what is sold is worked out from a FRESH read of the orders (never one shared with
             // another reader, nor a kept copy) and a positions read after it, through the lag guard: an arm's sale booked before the claim
             // shows as a fill, whenever it was booked and however old this pass's reads are. That read failing, or missing an exit sent from
             // here in the last minute whose id Zerodha gave (its book trailing it, [ExitCoordinator.missesAnswered]): nothing taken out or
-            // sent this pass, every stop resting. (The positions are always read fresh, [Broker.positionBook].)
+            // sent this pass, every stop resting. (Fourth round: the positions read, [Broker.positionBook], may join one already on its way,
+            // begun up to 2 s earlier - never one begun before an order, change or cancel of this phone. That is safe here: the lag guard,
+            // forced and comparing fills of any age, counts every fill in the fresh orders read those positions do not show yet as sold, so
+            // it only ever sells less.)
             val booksNow = runCatching { Broker.orders(fresh = true) }.getOrNull()
                 ?: run { skipped("its orders could not be read again"); return false }
             if (ExitCoordinator.missesAnswered(p.exchange, p.symbol, who, booksNow)) { skipped("Zerodha's order book did not show an exit sent a moment ago yet"); return false }
@@ -307,15 +324,15 @@ internal object SquareOffExit {
             val lost = lostPending(p.symbol, p.product)
             val lostOpen = lost != 0
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
-            // (Also another sender's exit on it - a protection's, the Strategy Module's, Boss's from the app, or any stop whose reply was
-            // lost - sent a moment ago, still on its way or its reply lost, that the fresh read does not show and no book counts
-            // ([lostPendingTags]): nothing this pass. The square-offs' own sales are held by their gap and their own look for a lost reply; a
-            // counting book's sales by its count, [lost].)
+            // (Also an exit on it - a protection's, the Strategy Module's, Boss's from the app, a square-off's own (fourth round), or any stop
+            // whose reply was lost - sent in the last minute, still on its way or its reply lost and not found since ([Broker.findRecent]
+            // gives it its id), that the fresh read does not show and no book counts ([lostPendingTags]): nothing this pass. A counting
+            // book's sales are its count, [lost].)
             // (22 Nov 2026, B6-B: a book's count is subtracted from a SALE only ([lostQty] below) - a buy back of a short under its tag is
             // never left to it.)
             val unshown = ExitCoordinator.unshownPending(p.exchange, p.symbol, side.name, booksNow,
-                exceptBy = TAGS + tag + (if (side == Kite.Side.SELL) lostPendingTags else emptySet()))
-            if (unshown > 0) { skipped("another exit sale on it, sent a moment ago, is not in Zerodha's order book yet"); return false }
+                exceptBy = if (side == Kite.Side.SELL) lostPendingTags else emptySet())
+            if (unshown > 0) { skipped("another exit sale on it, sent a moment ago, is not in Zerodha's order book yet", armSelling = true); return false }
             val same = workingNow.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
             // 25 Oct review: a plain exit already working on it - this square-off's own, the other square-off's, or the arm's own
             // market or limit sell ([LiveMirror.TAG]: its closing in progress) - is COVER: subtracted below, never cancelled (a
@@ -405,7 +422,8 @@ internal object SquareOffExit {
             // ([forceLag], as [Protections] has since 15 Nov), whatever its switch says - it only ever lowers what is sent. Boss's
             // choice (19 Nov 2026, "Go"): the square-offs ALWAYS use the positions-lag guard ([noteBossChoice] says so once in the diary).
             noteBossChoice()
-            // (22 Nov 2026, B6 review, third round: on the fresh read under the claim, and a positions read made after it - [booksNow].)
+            // (22 Nov 2026, B6 review, third round: on the fresh read under the claim, and a positions read after it - [booksNow]; a shared one
+            // begun up to 2 s before it is safe, as said above.)
             val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, booksNow, forceLag = true) }.getOrNull()
                 ?: run { skipped("what is held of it could not be read"); return false }
             // 22 Nov 2026 (B6 review): while an arm's lost exit sale on it is unresolved, nothing resting on it is taken out (it may fill
@@ -467,7 +485,7 @@ internal object SquareOffExit {
                         runCatching { Diag.record("exits", "$who ${p.exchange}:${p.symbol}: an arm's exit sale on it came up (${lostAfter ?: "size unknown"}) " +
                             "while its resting orders came out: nothing sold") }
                         tell("unsettled out $row ${salesStarted[row] ?: 0L}", "${p.symbol} $aboutIt. Its stop at Zerodha is OUT: the $exitName " +
-                            "took its resting orders out to sell it, and an arm's own exit sale on it came up meanwhile and is still pending, so " +
+                            "took its resting orders out to sell it, and an arm's own exit sale on it (${lostAfter ?: "size unknown"}) came up meanwhile and is still pending, so " +
                             "nothing was sold beside that sale. The $exitName looks again on its next pass; check ${p.symbol} in Kite now.")
                         return false
                     }
@@ -480,7 +498,8 @@ internal object SquareOffExit {
             for (o in orders) {
                 try {
                     // 19 Nov 2026 (third review): the contract's gap starts with each order placed, not after the whole loop.
-                    placed += Broker.placeOrder(o, exit = true).also { notePlaced(p.exchange, p.symbol, p.product); runCatching { Strategies.tagOwnerSoon("kite:$it", origin) } }
+                    placed += Broker.placeOrder(o, exit = true).also { notePlaced(p.exchange, p.symbol, p.product); noteSold(p.exchange, p.symbol, p.product)
+                        runCatching { Strategies.tagOwnerSoon("kite:$it", origin) } }
                 } catch (e: Exception) {
                     if (Broker.definite(e)) {
                         // 10 Nov (the 3 Nov refusal, for an exit): MARKET blocked on a low-open-interest contract - the same slice once as a
@@ -496,13 +515,13 @@ internal object SquareOffExit {
                             var limitLost = false
                             val sent = limit?.let { l ->
                                 try {
-                                    Broker.placeOrder(l, exit = true).also { notePlaced(p.exchange, p.symbol, p.product) }
+                                    Broker.placeOrder(l, exit = true).also { notePlaced(p.exchange, p.symbol, p.product); noteSold(p.exchange, p.symbol, p.product) }
                                 } catch (e2: kotlinx.coroutines.CancellationException) {
                                     throw e2
                                 } catch (e2: Exception) {
                                     if (Broker.definite(e2)) null else {
                                         limitLost = true; unsure = true
-                                        notePlaced(p.exchange, p.symbol, p.product)
+                                        notePlaced(p.exchange, p.symbol, p.product); noteSold(p.exchange, p.symbol, p.product)
                                         runCatching { Broker.findRecentRetrying(l, placed + workingNow.map { it.id }) }.getOrNull()
                                     }
                                 }
@@ -529,7 +548,7 @@ internal object SquareOffExit {
                     }
                     // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out
                     // either way, so the contract's gap starts ([GAP_MS]).
-                    notePlaced(p.exchange, p.symbol, p.product); unsure = true
+                    notePlaced(p.exchange, p.symbol, p.product); noteSold(p.exchange, p.symbol, p.product); unsure = true
                     runCatching { Broker.findRecentRetrying(o, placed + workingNow.map { it.id }) }.getOrNull()?.let { placed += it }
                     break
                 }
@@ -540,7 +559,11 @@ internal object SquareOffExit {
             if (placed.isNotEmpty() && (others.isNotEmpty() || gttMarks.isNotEmpty()))
                 runCatching { Protections.exitFilledFor(others.map { it.id } + gttMarks, placed.associateWith { 1 }) }
             // (22 Nov 2026: nothing went out - refused, or a LIMIT confirmed cancelled unfilled: the gap started before it ends again.)
-            if (placed.isEmpty() && !unsure) clearPlaced(p.exchange, p.symbol, p.product)
+            if (placed.isEmpty() && !unsure) {
+                clearPlaced(p.exchange, p.symbol, p.product)
+                // (Review: nothing of it went - a LIMIT confirmed cancelled unfilled: the row's sale stamp as it was before this pass.)
+                soldBefore?.let { soldAt[rowKey] = it } ?: soldAt.remove(rowKey)
+            }
             if (placed.isNotEmpty()) workedOut()
             return placed.isNotEmpty()
         } finally { claim?.release(); pass.leave() }

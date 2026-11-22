@@ -112,8 +112,6 @@ object FlatBySquareOff {
             // is closed and the day is not marked done; the next pass, with the book in, looks again.
             if (!runCatching { liveBooksReady() }.getOrDefault(false)) { unread = true; return@runCatching }
             val ins = (Broker.cachedInstruments().orEmpty() + Broker.cachedBfoOptions().orEmpty()).associateBy { it.tradingSymbol }
-            // 22 Nov 2026 (B6 review): the arms' sales started so far, taken BEFORE the reads, as the expiry square-off ([SquareOffExit.send]).
-            val salesBefore = SquareOffExit.salesSnapshot()
             val read = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }
             val working = read.filter { it.working }
             val positions = Broker.positionBook()
@@ -141,7 +139,7 @@ object FlatBySquareOff {
                 val lot = if (seg == FlatBy.Segment.MCX) mcx?.let { 1 } else i?.lotSize
                 if (lot == null || lot <= 0) { tellOnce(context, "unknown ${p.symbol}", "$owner's ${p.symbol} (${p.qty}) is past its flat-by time and the app cannot tell its lot size, so it is NOT closed automatically. Close it yourself in Trade."); continue }
                 val placed = SquareOffExit.send(p, lot, mcx?.tick ?: i?.tickSize ?: 0.05, read, working, positions, s.limits(), "flat-by", "iraalgoflat",
-                    "${Origins.FLAT_BY} · $owner", "is past its flat-by time", "flat-by", multiplier = mcx?.multiplier ?: 1, salesBefore = salesBefore,
+                    "${Origins.FLAT_BY} · $owner", "is past its flat-by time", "flat-by", multiplier = mcx?.multiplier ?: 1,
                     // 19 Nov 2026: a strategy's exit resting on it two minutes is taken over (never one just sent: it may be filling),
                     // and one still resting is said once (a reminder at most every 15 minutes, 20 Nov 2026) with the minutes left (NSE cash to 15:30, F&O to its close).
                     minutesLeft = if (seg == FlatBy.Segment.MCX) null

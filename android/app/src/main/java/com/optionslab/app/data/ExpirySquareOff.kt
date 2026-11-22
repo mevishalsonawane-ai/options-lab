@@ -115,10 +115,6 @@ object ExpirySquareOff {
             // exit resting from the last pass that filled between the two reads showed the position still open and no exit
             // working, and a second MARKET sell went out and left the account short on expiry day. In this order a fill
             // between the reads shows as still working (nothing more is sent) and the next pass sees the position gone.
-            // 22 Nov 2026 (B6 review: an arm's exit sale that started after these reads and was booked before this pass reached its contract
-            // showed in neither, and the position was sold a second time): the arms' sales started so far, taken BEFORE the reads - one
-            // started since leaves its contract to the next pass ([SquareOffExit.send]).
-            val salesBefore = SquareOffExit.salesSnapshot()
             val read = runCatching { Broker.orders() }.getOrElse { unread = true; return@runCatching }
             val working = read.filter { it.working }
             val positions = Broker.positionBook()
@@ -178,7 +174,7 @@ object ExpirySquareOff {
                 // 22 Oct: the exit itself as the flat-by sends it too ([SquareOffExit]: one exit turn, other resting exits cancelled
                 // first, the day's GTT out first, fills checked, freeze slices, refusals said once, a lost reply looked for).
                 val placed = SquareOffExit.send(p, i.lotSize, i.tickSize, read, working, positions, s.limits(), "expiry square-off", "iraalgoexpiry",
-                    Origins.EXPIRY, "expires today", "expiry", backstop = backstop, salesBefore = salesBefore,
+                    Origins.EXPIRY, "expires today", "expiry", backstop = backstop,
                     // 19 Nov 2026: from 15:15 a strategy's exit still resting is said each minute, with the minutes left to F&O's close.
                     minutesLeft = (Market.foClose(today) - minuteNow()).takeIf { minuteNow() >= REPEAT_FROM }) { key, text -> tellOnce(context, key, text) }
                 if (placed) closed += "live ${p.symbol}"
