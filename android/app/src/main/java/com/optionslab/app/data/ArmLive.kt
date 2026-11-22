@@ -81,6 +81,9 @@ object ArmLive {
         // one ([unsettledSales]); a lost exit kept in the book is known once the book is read in this process (at most [LOST_LET_GO_MS]).
         lostUnknownUntil = System.currentTimeMillis() + LOST_LET_GO_MS
         SquareOffExit.lostPendingProviders["armlive"] = { sym, product -> unsettledSales(sym, product) }
+        // (22 Nov 2026, B6 review, second round: with the square-offs' third round - these sales, counted there, are left to that count, never
+        // read as another sender's sale the fresh read does not show yet.)
+        SquareOffExit.lostPendingTags += LiveMirror.TAG
     }
 
     private const val FILE = "arm_live.vault"
@@ -1753,8 +1756,10 @@ object ArmLive {
         restBackoff[p.ref]?.let { (_, until) -> if (runCatching { nowMs() }.getOrDefault(Long.MAX_VALUE) < until) return p.copy(stopTrigger = trigger) }
         val exitSide = if (p.side > 0) Kite.Side.SELL else Kite.Side.BUY
         // 18 Nov 2026 (audit A2): an exit whose reply was lost may still be selling it: no stop beside it until that is known.
-        // (22 Nov 2026, B6 review: nor while a square-off's sale on the contract is on its way - its gap: the app watches the level meanwhile.)
-        if (lostExitHolds(p.contract) || SquareOffExit.inGap(p.exchange, p.symbol, p.product)) return p.copy(stopTrigger = trigger)
+        // (22 Nov 2026, B6 review: nor while a square-off's sale on the contract is on its way - its gap: the app watches the level meanwhile.
+        // Second round, m-2: nor while another seller holds the row's claim - a square-off whose stops take longer to come out than its gap
+        // would otherwise see this stop rest again beside its sale.)
+        if (lostExitHolds(p.contract) || SquareOffExit.inGap(p.exchange, p.symbol, p.product) || rowClaimedByOther(p)) return p.copy(stopTrigger = trigger)
         // 20 Nov 2026 (audit B5 deep review): this trade's own stop whose reply was lost and is not found yet is UNKNOWN: looked for again,
         // and no second stop rests beside it while it may (the app watches the level meanwhile); found, it is the trade's stop. Given up
         // on after [Broker.LOST_SEARCH_MS] (Boss told), a stop is rested as usual.
@@ -1775,7 +1780,12 @@ object ArmLive {
         // that did not go puts its stop back).
         // (Its id is written with the look's own save, or the entry's; a death before that leaves the stop resting with no trade owning
         // it, which the restart takes back as this trade's own: [orphanStop].)
-        return ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label} stop") { restStopInTurn(p, trigger, ltp, spec, exitSide) }
+        // 22 Nov 2026 (B6 review, second round, with the square-offs' protocol): the row's claim held while the stop goes in ([CLAIM_OWNER];
+        // this trade's own exit putting it back holds it already) - another seller on the row: not rested this pass, the app watches the level.
+        val claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER) ?: return p.copy(stopTrigger = trigger)
+        try {
+            return ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label} stop") { restStopInTurn(p, trigger, ltp, spec, exitSide) }
+        } finally { claim.release() }
     }
 
     /** 20 Nov 2026 (delta review): whether an open trade of the book other than [p] owns order [id] as its stop (unreadable: true). */
@@ -1956,10 +1966,11 @@ object ArmLive {
             // (Review: one that already filled: if Zerodha now shows the contract SHORT it sold beside the trade's own exit - a second sale,
             // said plainly; flat, it was the trade's own exit (closed as sold at Zerodha) - noted only. Never "cancelled".)
             val st0 = try { Broker.orderState(id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+            var accepted = false                                           // (Zerodha took this pass's cancel)
             val st = if (st0 != null && st0.status in DONE) st0 else {
                 val premarked = ownCancel(id)
                 markOwnCancel(id)
-                val refused = try { Broker.cancel(id); false } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Broker.definite(e) }
+                val refused = try { Broker.cancel(id); accepted = true; false } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { Broker.definite(e) }
                 val after = (try { Broker.orderState(id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }) ?: st0
                 if (refused && !premarked && after?.status != "COMPLETE") unmarkOwnCancels(listOf(id))
                 after
@@ -1978,13 +1989,23 @@ object ArmLive {
             }
             // (Confirmed ended - cancelled, refused or filled: done. Still working, or not read: kept, and cancelled again on the next pass.)
             if (st != null && st.status in DONE) {
-                closedStopCancels.remove(id); closedStopSaid.remove(id); closedStopSaid.remove("fill:$id"); closedStopSaid.remove("tried:$id")
+                closedStopCancels.remove(id); closedStopTries.remove(id); closedStopSaid.remove(id); closedStopSaid.remove("fill:$id"); closedStopSaid.remove("tried:$id")
                 if (st.filled <= 0) runCatching { Diag.record("armlive", "A stop $id found after its answer was lost, for a trade no longer open: taken out") }
                 continue
             }
             // (Said only when it is still not confirmed out on a later pass - a cancel often shows a moment after its reply.)
             if (!closedStopSaid.add("tried:$id") && closedStopSaid.add(id)) com.optionslab.app.work.Alerts.error("A live stop $id found at Zerodha for an " +
                 "arm's trade no longer open could not be confirmed cancelled yet; the app cancels it again on each pass. Check the order book in Kite.", WHO)
+            // (22 Nov 2026, B6 review, second round: tried at most [CLOSED_STOP_TRIES] passes, then left to Boss - told once, loudly. Only a pass
+            // whose cancel Zerodha took and whose stop was read still working counts: one that could not reach Zerodha is tried again, never
+            // counted towards giving up.)
+            if (!accepted || st == null) continue
+            val n = closedStopTries.merge(id, 1, Int::plus) ?: 1
+            if (n >= CLOSED_STOP_TRIES) {
+                closedStopCancels.remove(id); closedStopTries.remove(id)
+                com.optionslab.app.work.Alerts.error("A live stop $id found at Zerodha for an arm's trade no longer open could still not be confirmed " +
+                    "cancelled after $n tries; the app has stopped trying. Cancel it in Kite now - it could sell a position the arm no longer holds.", WHO)
+            }
         }
     }
 
@@ -1995,6 +2016,10 @@ object ArmLive {
     private val closedStopCancels = java.util.concurrent.ConcurrentHashMap<String, String>()
     /** 22 Nov 2026 (B6 review): the found lost stops whose unconfirmed cancel Boss was told of (once each). Memory only. */
     private val closedStopSaid: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    /** 22 Nov 2026 (B6 review, second round): by found stop id, the passes its cancel was tried without Zerodha confirming it ended. Memory. */
+    private val closedStopTries = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    /** 22 Nov 2026 (B6 review, second round): how many passes a closed trade's found lost stop is cancelled again before Boss is left to it. */
+    internal const val CLOSED_STOP_TRIES = 20
 
     /** The GTT ids this path already tracks (memory): never adopted for a lost reply. */
     private fun knownGtts(): Set<Long> = _view.value.open.mapNotNull { it.gttId }.toSet()
@@ -2269,27 +2294,46 @@ object ArmLive {
      * the closed parts and the rest still open.
      */
     private suspend fun exitLive(p0: Pos, qty: Int, why: String, ltp: Double?, g: Broker.GttRow? = null): List<Pos> {
-        // 22 Nov 2026 (B6 review, with the square-offs' protocol): one seller at a time on the position row ([SquareOffExit.claimExit]) - taken
-        // FIRST, before this trade's stop comes out, and let go once its sale went or it gave up. Held by a square-off: this exit waits with
-        // its stop resting (the square-off sells the row); the next look tries again.
-        val claim = SquareOffExit.claimExit(p0.exchange, p0.symbol, p0.product, CLAIM_OWNER) ?: run {
-            // (In the diary at most once a minute for the trade: the live lane comes every tick.)
-            val minute = runCatching { nowMs() / 60_000 }.getOrDefault(0L)
-            if (claimSaid.size > 200) claimSaid.clear()
-            if (claimSaid.put(p0.ref, minute) != minute) runCatching { Diag.record("armlive", "${p0.label}: ${p0.symbol}'s live exit ($why) waits: " +
-                "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(p0.exchange, p0.symbol, p0.product))} is selling it; its stop stays") }
-            return listOf(p0)
-        }
-        try { return exitLiveClaimed(p0, qty, why, ltp, g) } finally { claim.release() }
+        // 22 Nov 2026 (B6 review, with the square-offs' protocol): one seller at a time on the position row ([SquareOffExit.claimExit]), let go
+        // once its sale went or it gave up. Held by a square-off: this exit waits with its stop resting (the square-off sells the row); the
+        // next look tries again. (Second round, m-3: taken only once the books and the gates say this exit can go - just before anything is
+        // taken out, Boss's blocking order or the stop - and the books read again under it ([RowClaim]): an exit that is due but blocked never
+        // holds the row, which a square-off's backstop tries once a pass.)
+        val claim = RowClaim(p0, why)
+        try { return exitLiveSteps(p0, qty, why, ltp, g, claim) } finally { claim.release() }
     }
 
     /** 22 Nov 2026 (B6 review): these arms' name on a position row's exit claim ([SquareOffExit.claimExit]). */
     internal const val CLAIM_OWNER = "armlive"
+    /** 22 Nov 2026 (B6 review, second round, m-2): another seller holds [p]'s position row ([SquareOffExit.claimExit]). Memory only. */
+    private fun rowClaimedByOther(p: Pos): Boolean = SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)?.let { it != CLAIM_OWNER } == true
     /** 22 Nov 2026 (B6 review): by trade (ref), the minute its exit's wait for another seller's claim was last written in the diary. Memory. */
     private val claimSaid = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** TEST ONLY: how many times these arms' exits took a row's claim. */
+    internal val claimsTakenForTest = java.util.concurrent.atomic.AtomicInteger()
 
-    /** [exitLive] with the row's exit claim held. */
-    private suspend fun exitLiveClaimed(p0: Pos, qty: Int, why: String, ltp: Double?, g: Broker.GttRow?): List<Pos> {
+    /** 22 Nov 2026 (B6 review, second round): what [RowClaim.take] found - not taken (another seller), taken now, or held from before. */
+    private enum class Claimed { NO, NOW, BEFORE }
+
+    /** 22 Nov 2026 (B6 review, second round, m-3): one exit's claim on [p]'s position row, taken at most once ([take]); [exitLive] lets it go. */
+    private class RowClaim(private val p: Pos, private val why: String) {
+        private var held: SquareOffExit.ExitClaim? = null
+        fun take(): Claimed {
+            if (held != null) return Claimed.BEFORE
+            held = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
+            if (held != null) { claimsTakenForTest.incrementAndGet(); return Claimed.NOW }
+            // (In the diary at most once a minute for the trade: the live lane comes every tick.)
+            val minute = runCatching { nowMs() / 60_000 }.getOrDefault(0L)
+            if (claimSaid.size > 200) claimSaid.clear()
+            if (claimSaid.put(p.ref, minute) != minute) runCatching { Diag.record("armlive", "${p.label}: ${p.symbol}'s live exit ($why) waits: " +
+                "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product))} is selling it; its stop stays") }
+            return Claimed.NO
+        }
+        fun release() { held?.release(); held = null }
+    }
+
+    /** [exitLive]'s steps; the row's claim taken through [claim] just before anything is taken out. */
+    private suspend fun exitLiveSteps(p0: Pos, qty: Int, why: String, ltp: Double?, g: Broker.GttRow?, claim: RowClaim): List<Pos> {
         runCatching { OrderTiming.decided() }
         val exitSide = if (p0.side > 0) Kite.Side.SELL else Kite.Side.BUY
         // 18 Nov 2026 (audit A2): never a second exit on a contract while one whose reply was lost may still be selling it. 22 Nov 2026 (B6
@@ -2322,7 +2366,7 @@ object ArmLive {
         // (Never cancelled for a sale the order gates would refuse anyway: that is said below, his order left as it is.)
         if (planned < most && Kite.refusals(Kite.Order(p.symbol, exitSide, most, p.lot, p.product, "MARKET", null, p.tick, p.exchange, LiveMirror.TAG,
                 multiplier = p.multiplier), AppSettings.load().limits(), Broker.sentToday(), false, exit = true).isEmpty()) {
-            when (freeBlocked(p, want, why, mineOf(orders0, stopIds), held0)) {
+            when (freeBlocked(p, want, why, mineOf(orders0, stopIds), held0, claim)) {
                 Freed.NONE -> Unit
                 Freed.WAIT -> return listOf(p)
                 Freed.CANCELLED -> {
@@ -2344,6 +2388,19 @@ object ArmLive {
             com.optionslab.app.work.Alerts.post("${p.label}: the live exit was not sent (${bad.joinToString("; ")}); its stop stays at Zerodha. Close ${p.symbol} in Trade.",
                 com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)
             return listOf(p)
+        }
+        // 22 Nov 2026 (B6 review, second round, m-3): the row's claim now, before the stop is touched; taken just now, the books are read again
+        // under it (fresh), and the exit goes only if they still say so.
+        when (claim.take()) {
+            Claimed.NO -> return listOf(p)
+            Claimed.NOW -> {
+                orders0 = runCatching { Broker.orders(fresh = true) }.getOrNull() ?: return listOf(p)
+                if (squareOffSelling(p, orders0)) return listOf(p)
+                held0 = runCatching { heldNow(p) }.getOrNull() ?: return listOf(p)
+                if (ExitQty.sendable(held0.coerceAtLeast(0), mineOf(orders0, stopIds).sumOf { ExitQty.remaining(it.qty, it.filled, it.pending) }, want, p.lot) <= 0)
+                    return listOf(p)
+            }
+            Claimed.BEFORE -> if (squareOffSelling(p, orders0)) return listOf(p)
         }
         // 2. The stop: shrunk for a part, out (confirmed) for a whole sale or a fired GTT.
         val closed = ArrayList<Pos>()
@@ -2590,7 +2647,7 @@ object ArmLive {
      * meanwhile, or a cancel not confirmed: [Freed.WAIT] (the next look reads the books again). Nothing that may be cancelled: said to
      * Boss loudly, each minute while the exit is due ([Freed.NONE]).
      */
-    private suspend fun freeBlocked(p: Pos, want: Int, why: String, blockers: List<Broker.OrderRow>, held: Int): Freed {
+    private suspend fun freeBlocked(p: Pos, want: Int, why: String, blockers: List<Broker.OrderRow>, held: Int, claim: RowClaim): Freed {
         // (The orders a fired GTT put in carry no tag either - an arm's, a protection's, Liquidity's - and are never taken for Boss's: a
         // GTT list that cannot be read leaves nothing cancellable.)
         val gttOrders = if (blockers.none { it.type == "LIMIT" && it.tag.isBlank() }) emptySet()
@@ -2619,6 +2676,8 @@ object ArmLive {
                 "other orders at Zerodha already cover the lot (${words(others)}). Cancel them in Kite or close ${p.symbol} yourself.")
             return Freed.NONE
         }
+        // (22 Nov 2026, B6 review, second round: his order is cancelled only holding the row's claim - another seller on it: nothing cancelled.)
+        if (claim.take() == Claimed.NO) return Freed.WAIT
         return ExitCoordinator.turn(p.exchange, p.symbol, "arm ${p.label}") { cancelBlockers(p, ids, why, mine) }
     }
 
@@ -2648,6 +2707,8 @@ object ArmLive {
     /** 18 Nov 2026 (audit A1): [freeBlocked]'s cancels, in the contract's exit turn, each confirmed out on a fresh read. */
     private suspend fun cancelBlockers(p: Pos, ids: List<String>, why: String, mine: Set<String>): Freed {
         val rows = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, "arm ${p.label}") }.getOrNull() ?: return Freed.WAIT
+        // (22 Nov 2026, B6 review, second round: read under the row's claim - a square-off's sale going on it: his order is left as it is.)
+        if (squareOffSelling(p, rows)) return Freed.WAIT
         val done = ArrayList<Broker.OrderRow>()
         for (id in ids) {
             val o = rows.firstOrNull { it.id == id } ?: continue
@@ -3034,7 +3095,8 @@ object ArmLive {
      */
     internal fun unsettledSales(symbol: String, product: String): Int {
         val wall = System.currentTimeMillis()
-        if (wall < lostAsideUntil || (cache == null && wall < lostUnknownUntil)) return -1
+        // (Second round, m-7: only for a row these arms may hold - Boss's own stocks and the like were told "an arm's exit sale has not settled".)
+        if ((wall < lostAsideUntil || (cache == null && wall < lostUnknownUntil)) && armsMayHold(symbol, product)) return -1
         val gapNow = runCatching { SquareOffExit.clock() }.getOrDefault(wall)
         return lostExits.values.filter { it.order.tradingSymbol == symbol && it.order.product == product }.sumOf { it.order.quantity } +
             (salesInFlight["$symbol|$product"] ?: 0) +
@@ -3071,11 +3133,27 @@ object ArmLive {
      * book written. False (nothing counted) when another look took it first.
      */
     private fun takeFound(contract: String, lost: LostExit): Boolean {
-        salesInFlight.merge(flightKey(lost.order), lost.order.quantity, Int::plus)
-        if (lostExits.remove(contract, lost)) { saveLostSoon(); return true }
-        unflight(flightKey(lost.order), lost.order.quantity)
-        return false
+        // (Second round: moved from the lost exits to the sales on their way in one step on its entry - a second look at once finds it gone and
+        // adds nothing. [unsettledSales], reading both without a lock, may count it twice for that instant - only ever less sold - never in
+        // neither.)
+        var moved = false
+        lostExits.computeIfPresent(contract) { _, cur ->
+            if (cur != lost) cur else { salesInFlight.merge(flightKey(lost.order), lost.order.quantity, Int::plus); moved = true; null }
+        }
+        if (moved) saveLostSoon()
+        return moved
     }
+    /**
+     * 22 Nov 2026 (B6 review, second round, m-7): whether these arms may hold Zerodha's [symbol] [product] row - an option (NFO / BFO, MCX)
+     * or a future, in a product they trade (MIS, NRML). Any other row (Boss's stocks, holdings) is never theirs. The symbol only (memory).
+     */
+    internal fun armsMayHold(symbol: String, product: String): Boolean =
+        product in setOf("MIS", "NRML") && (OPTION_FORM.containsMatchIn(symbol) || FUTURE_FORM.containsMatchIn(symbol))
+    /** (Review: by the symbol's form - a strike's digits before CE / PE, a month before FUT - never a stock whose name ends in CE.) */
+    private val OPTION_FORM = Regex("\\d(CE|PE)$")
+    private val FUTURE_FORM = Regex("\\d[A-Z]{3}FUT$")
+
+
     /** 22 Nov 2026 (B6 review): until when (wall clock) a lost exit saved in a book not read yet in this process is not known ([unsettledSales]). */
     @Volatile private var lostUnknownUntil = 0L
     /** 22 Nov 2026 (B6 review): until when (wall clock) a lost exit kept in a book set aside as damaged is not known ([tampered]). */
@@ -4442,7 +4520,7 @@ object ArmLive {
         written.forget()
         cache = null; unreadable = false; recoverDue = false; coldDue = false; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; runCatching { eraseMark()?.delete() }; gttsKept = null; legsKept.clear(); shadowMarks.clear(); shadowSeen.clear()
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L; shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims()
-        saveDue = false; blockSaid.clear(); lostExits.clear(); salesInFlight.clear(); bookedSales.clear(); closedStopCancels.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2()
+        saveDue = false; blockSaid.clear(); lostExits.clear(); salesInFlight.clear(); bookedSales.clear(); closedStopCancels.clear(); closedStopTries.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2()
         // (22 Nov 2026, B6 review: erased - no lost exit is kept in a book any more: the square-offs know them all, [unsettledSales].)
         lostUnknownUntil = 0L; lostAsideUntil = 0L
         _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); handsOffUntil.clear(); levels.clear(); closedRefs.clear()
@@ -4487,6 +4565,6 @@ object ArmLive {
     }
 
     /** For tests: as after a restart - the memory gone, the book on disk. */
-    internal fun forgetMemoryForTest() { runCatching { drainWritesForTest() }; coldDue = true; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear(); shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims(); blockSaid.clear(); lostExits.clear(); salesInFlight.clear(); bookedSales.clear(); closedStopCancels.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2()
+    internal fun forgetMemoryForTest() { runCatching { drainWritesForTest() }; coldDue = true; coldPending = false; coldFirstMs = 0L; coldPendingSince = 0L; erasedAt = null; cache = null; legsKept.clear(); gttsKept = null; levels.clear(); com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); closedRefs.clear(); shadowSeen.clear(); loginAsked.clear(); handsOffUntil.clear(); shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims(); blockSaid.clear(); lostExits.clear(); salesInFlight.clear(); bookedSales.clear(); closedStopCancels.clear(); closedStopTries.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2()
         lostUnknownUntil = System.currentTimeMillis() + LOST_LET_GO_MS }
 }

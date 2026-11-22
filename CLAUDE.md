@@ -210,6 +210,8 @@ notes; match the surrounding code.
   goes, so a restart does not misread them (one written just after, while the book is busy, can be misread only in that moment).
   (22 Nov) The protections' marks (a square-off's, Boss's exit from the app, an app-watched target's sale) are saved the same way. Any
   mark whose cancel never took (refused, or its stop still seen working well after the cancel) ends, so Boss's later cancel of it is his.
+  A protection's stop that its target's sale finds already cancelled (Zerodha refuses the app's cancel) is not the app's: its mark ends,
+  nothing is sold, and the next look reads that cancel by the rule above.
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)

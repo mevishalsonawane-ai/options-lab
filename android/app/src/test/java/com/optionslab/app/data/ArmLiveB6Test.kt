@@ -327,6 +327,118 @@ class ArmLiveB6Test : RobolectricTest() {
         assertEquals("nor on its next pass", 0, expirySells())
     }
 
+    // ---- second round of the B6 review ---------------------------------------------------------------------------------------
+
+    /** m-2: a square-off holding the row past its gap (its stops slow to come out): the arm never rests its stop again beside its sale. */
+    @Test fun theArmsStopIsNotRestedAgainWhileASquareOffHoldsTheRowPastItsGap() {
+        ArmLive.entered(ask(donchian, "past"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", "iraalgoexpiry")!!
+        try {
+            runBlocking { ArmLive.markOwnCancels(listOf(sid)) }               // the square-off's takeOut: marked, then cancelled
+            runBlocking { Broker.cancel(sid) }
+            later(20); watch()                                               // past any gap: its claim still held
+            assertEquals("no stop beside its sale", 0, kite.orders.values.count { it.working && it.side == "SELL" })
+        } finally { claim.release() }
+        var claimedWhileRested: String? = "not rested"
+        kite.afterNext("/orders/regular") { claimedWhileRested = SquareOffExit.exitClaimedBy("NFO", sym, "MIS") }
+        later(5); watch()
+        assertEquals("rested again once it let go", 1, kite.orders.values.count { it.working && it.side == "SELL" })
+        assertEquals("the row claimed as the arms' while it went in", ArmLive.CLAIM_OWNER, claimedWhileRested)
+        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+        assertEquals(30, held())
+    }
+
+    /**
+     * With the square-offs' third round: an arm's exit sale whose reply was lost is counted once - by the arms' own count ([ArmLive.unsettledSales],
+     * its tag in [SquareOffExit.lostPendingTags]) - and never also holds the row back as another sender's sale the fresh read does not show:
+     * at the 15:08 backstop the square-off sells Boss's own 30 beside it, never the arm's 30 again - flat.
+     */
+    @Test fun anArmsLostSaleIsCountedOnceAndNeverHoldsTheRowBack() {
+        val today = Market.today()
+        val s = "BANKNIFTY26NOV52000CE"
+        kite.instruments += FakeKite.Ins(22_000_050, s, "BANKNIFTY", today, 52_000.0, "CE", 30)
+        kite.quote("NFO:$s", 200.0, 199.95, 200.05)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        kite.position(s, 30, 190.0, product = "MIS")                         // Boss's own lot
+        val c = Paper.Contract("BANKNIFTY-TEST-52000CE-X", "BANKNIFTY", today, 52_000.0, Right.CE, 30, "NSE_FO|TESTX")
+        ArmLive.entered(ask(donchian, "once", c = c))
+        watch()
+        assertEquals(60, held(s))
+        assertTrue(LiveMirror.TAG in SquareOffExit.lostPendingTags)
+        kite.trailReads = 1_000; kite.positionsTrailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)             // the arm's sale fills; its reply is lost, neither book shows it
+        legs["once"] = donchian to 0
+        watch()
+        assertEquals(30, ArmLive.unsettledSales(s, "MIS"))
+        ExpirySquareOff.testNow = today.atTime(15, 8).atZone(com.optionslab.engine.IST)
+        runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
+        assertEquals("Boss's 30 sold beside it, the arm's never again", listOf("30"),
+            kite.placed.filter { it.form["tag"] == "iraalgoexpiry" }.map { it.form["quantity"] })
+        assertEquals("flat, never short", 0, held(s))
+    }
+
+    /**
+     * m-3: the claim is taken only once the books and the gates say the exit can go. Boss's own SL-M covering the lot (never cancelled for
+     * him) blocks the due exit: the row is never claimed meanwhile; once his order is gone, the exit claims it once and sells.
+     */
+    @Test fun aBlockedExitNeverHoldsTheRowsClaim() {
+        ArmLive.entered(ask(donchian, "blocked"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        kite.nextPlace(outcome = FakeKite.Outcome.OPEN)
+        val his = runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, 30, 30, "MIS", "SL-M", null, 0.05,
+            "NFO", "", triggerPrice = 150.0), exit = true) }
+        val before = ArmLive.claimsTakenForTest.get()
+        legs["blocked"] = donchian to 0
+        later(5); watch()
+        later(5); watch()
+        assertEquals("never claimed while blocked", before, ArmLive.claimsTakenForTest.get())
+        assertEquals("nothing sold", 0, marketSells())
+        assertTrue("its stop left resting", kite.order(sid).working)
+        runBlocking { Broker.cancel(his) }
+        later(65); watch()
+        assertEquals("claimed once to sell", before + 1, ArmLive.claimsTakenForTest.get())
+        assertEquals(1, marketSells())
+        assertEquals(0, held())
+        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+    }
+
+    /**
+     * m-7: before the book is read, "not known" only for the rows these arms may hold - never Boss's stocks; known once the start's positions
+     * step reads it ([PositionsFirst] asks [ArmLive.holding] first thing).
+     */
+    @Test fun theProviderIsUnknownOnlyForRowsTheArmsMayHold() {
+        ArmLive.forgetMemoryForTest(); ArmLive.startedForTest(0)
+        assertEquals(-1, ArmLive.unsettledSales(sym, "MIS"))
+        assertEquals(-1, ArmLive.unsettledSales("SENSEX26NOV80000PE", "NRML"))
+        assertEquals("Boss's stock", 0, ArmLive.unsettledSales("RELIANCE", "CNC"))
+        assertEquals("Boss's intraday stock", 0, ArmLive.unsettledSales("INFY", "MIS"))
+        assertEquals("a stock whose name ends in CE", 0, ArmLive.unsettledSales("RELIANCE", "MIS"))
+        assertEquals(-1, ArmLive.unsettledSales("CRUDEOIL26DECFUT", "NRML"))
+        runBlocking { ArmLive.holding() }
+        assertEquals("known once read", 0, ArmLive.unsettledSales(sym, "MIS"))
+    }
+
+    /** Nit: a closed trade's found lost stop is cancelled at most [ArmLive.CLOSED_STOP_TRIES] passes, then left to Boss - told once. */
+    @Test fun aClosedTradesLostStopIsTriedAtMostTwentyPasses() {
+        kite.afterNext("/orders/regular") { kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT); kite.trailReads = 50 }
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        ArmLive.entered(ask(donchian, "capped"))                              // its stop's reply lost
+        legs["capped"] = donchian to 0
+        watch()
+        assertTrue("closed", view().openReal.isEmpty())
+        val lost = kite.orders.values.single { it.type == "SL" && it.symbol == sym }
+        kite.showInBook()
+        kite.cancelsLost = 1_000                                             // its cancels are taken but never land
+        kite.requests.clear()
+        repeat(ArmLive.CLOSED_STOP_TRIES + 3) { watch() }
+        assertEquals("tried at most twenty passes", ArmLive.CLOSED_STOP_TRIES, kite.requests.count { it.method == "DELETE" && it.path.endsWith(lost.id) })
+        assertEquals("told once", 1, posted("could still not be confirmed cancelled after"))
+        assertTrue(lost.working)
+    }
+
     // ---- m1: the arms' GTT stops ----------------------------------------------------------------------------------------------
 
     @Test fun theArmsGttStopsFireWithTenPercentRoom() {

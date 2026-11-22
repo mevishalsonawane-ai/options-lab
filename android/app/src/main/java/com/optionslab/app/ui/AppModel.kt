@@ -1061,11 +1061,33 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      *  - Otherwise (several, a part, a sliced leg, no price, or the modify refused - e.g. Zerodha's limit on modifications): they
      *    are cancelled, the cancels confirmed, and the leg goes as reviewed.
      * A protection's day GTT on the contract is deleted first. null: nothing done (the check that follows says why).
+     * 22 Nov 2026 (B6 review, second round, m-6: an app-watched target's sale, past its own hands-off check, could sell beside this exit): done
+     * holding the position row's exit claim ([com.optionslab.app.data.SquareOffExit.claimExit], "boss") - one seller at a time - waited for
+     * at most 3 seconds while another of the app's sales holds it; still held then, the leg is not sent and Boss is told a sale is
+     * already going (never a second one beside it). From his confirmation the arms and protections keep their hands off the contract
+     * ([com.optionslab.app.data.ArmLive.handsOff]), so none starts after the claim is let go.
      */
     private suspend fun takeOverLeg(legs: List<com.optionslab.engine.Kite.Order>, i: Int, taken: MutableList<String>? = null): Took? {
-        val b = com.optionslab.app.data.Broker
         val o = legs[i]
         if (o.product == "CNC") return null
+        val sq = com.optionslab.app.data.SquareOffExit
+        val owner = com.optionslab.app.data.SquareOffExit.BOSS_OWNER
+        var claim = sq.claimExit(o.exchange, o.tradingSymbol, o.product, owner)
+        val until = System.currentTimeMillis() + 3_000L
+        while (claim == null && System.currentTimeMillis() < until) {
+            kotlinx.coroutines.delay(200)
+            claim = sq.claimExit(o.exchange, o.tradingSymbol, o.product, owner)
+        }
+        if (claim == null) throw java.io.IOException("${sq.claimWords(sq.exitClaimedBy(o.exchange, o.tradingSymbol, o.product))} is already selling " +
+            "${o.tradingSymbol} at Zerodha, so your exit was not sent beside it. Look at Kite's orders and positions: if that sale went, the " +
+            "position is closing; if not, review the exit again.")
+        try { return takeOverLegClaimed(legs, i, taken) } finally { claim.release() }
+    }
+
+    /** [takeOverLeg] with the position row's exit claim held. */
+    private suspend fun takeOverLegClaimed(legs: List<com.optionslab.engine.Kite.Order>, i: Int, taken: MutableList<String>?): Took? {
+        val b = com.optionslab.app.data.Broker
+        val o = legs[i]
         fun same(l: com.optionslab.engine.Kite.Order) = l.tradingSymbol == o.tradingSymbol && l.exchange == o.exchange && l.product == o.product && l.side == o.side
         if (legs.indexOfFirst { same(it) } != i) return Took.Cleared              // the contract's first leg took them over already
         val row = b.positionBook().net.firstOrNull { it.symbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product }
@@ -1073,6 +1095,16 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val closes = (o.side == com.optionslab.engine.Kite.Side.SELL && open > 0) || (o.side == com.optionslab.engine.Kite.Side.BUY && open < 0)
         val total = legs.drop(i).filter { same(it) }.sumOf { it.quantity }
         if (!closes || total > kotlin.math.abs(open)) return null
+        // 22 Nov 2026 (B6 review, second round, m-6): through the lag guard - an exit sale that filled a moment ago (an app-watched target's, an
+        // arm's) and that Zerodha's positions do not show yet counts as sold: the leg is not sent beside it (it would sell into a short), and
+        // Boss is told why. (A failed read: as before, the check that follows reads the positions again.)
+        val guarded = runCatching {
+            com.optionslab.app.data.ExitCoordinator.held(o.exchange, o.tradingSymbol, o.product, "your exit", b.orders(fresh = true), forceLag = true)
+        }.getOrNull()
+        if (guarded != null && (guarded == 0 || (guarded > 0) != (open > 0) || total > kotlin.math.abs(guarded)))
+            throw java.io.IOException("an exit sale on ${o.tradingSymbol} filled a moment ago and Zerodha's positions do not show it yet " +
+                "(held ${kotlin.math.abs(guarded)} after it, not ${kotlin.math.abs(open)}), so your exit was not sent beside it. Look at Kite's " +
+                "positions and review the exit again.")
         val key = "${o.exchange}:${o.tradingSymbol}"
         com.optionslab.app.data.ArmLive.handsOff(o.exchange, o.tradingSymbol)
         com.optionslab.app.data.Protections.dayGttHint[key].orEmpty().forEach { id ->

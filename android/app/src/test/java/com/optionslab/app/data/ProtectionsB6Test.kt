@@ -167,7 +167,10 @@ class ProtectionsB6Test : RobolectricTest() {
         assertEquals("flat, never short", 0, held())
     }
 
-    /** A stop still working after its cancel (not confirmed out): nothing is sold beside it; the next look tries again. */
+    /**
+     * A stop still working after its cancel (not confirmed out): nothing is sold beside it. Second round: no second cancel while the first
+     * may still land (its marks younger than [Protections.TAKEN_SETTLE_MS]); once they end, the next look cancels afresh and sells.
+     */
     @Test fun aStopNotConfirmedOutSellsNothing() {
         protect()
         val p = active().single()
@@ -178,9 +181,232 @@ class ProtectionsB6Test : RobolectricTest() {
         assertTrue("its stop still rests", kite.order(p.stopOrderId!!).working)
         assertTrue("nothing beside it", sales().isEmpty())
         tick()
+        assertEquals("one cancel while it may still land", 1, kite.requests.count { it.method == "DELETE" })
+        assertTrue(sales().isEmpty())
+        Protections.ageTakenOverForTest(p.stopOrderId!!, Protections.TAKEN_SETTLE_MS + 1_000)
+        Protections.ageTakenOverForTest(Protections.TARGET_CANCEL + p.stopOrderId!!, Protections.TAKEN_SETTLE_MS + 1_000)
+        tick()
         assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
         assertEquals(1, sales().size)
         assertEquals(0, held())
+    }
+
+    // ---- second round of the B6 review ------------------------------------------------------------------------------------------
+
+    /** A cancel Zerodha's book shows a moment late (pending at the first read) is read again: the target sells in the same look. */
+    @Test fun aCancelShownPendingAtFirstIsReadAgainAndTheTargetSells() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.cancelLagReads = 3
+        fastLookAlone()
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals(listOf("75"), sales().map { it.form["quantity"] })
+        assertEquals("no stop put back", 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertEquals(0, held())
+    }
+
+    /**
+     * The loop the review found: a cancel still pending after a second of reads left the stop out; the next look put it back ("cancelled for
+     * your exit") and the look after cancelled it again - the target never sold. Now the next look that finds it cancelled sells at once.
+     */
+    @Test fun aStopWhoseCancelShowsLateIsSoldOnTheNextLookNeverPutBack() {
+        protect()
+        val p = active().single()
+        val sid = p.stopOrderId!!
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.cancelLagReads = 50
+        fastLookAlone()
+        assertTrue("nothing sold while its cancel has not shown", sales().isEmpty())
+        assertTrue(Protections.takenOverForTest(sid))
+        kite.order(sid).status = "CANCELLED"                                 // the cancel shows now
+        tick()
+        assertEquals("sold at once", listOf("75"), sales().map { it.form["quantity"] })
+        assertEquals("never put back", 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertFalse(Alerts.posted.any { it.text.contains("cancelled them for your exit") })
+        assertEquals(1, kite.requests.count { it.method == "DELETE" })
+        assertEquals(0, held())
+    }
+
+    /** The same, but the price fell back below the target by the time the cancel showed (and some seconds passed): put back, as before. */
+    @Test fun aStopWhoseCancelShowsLateIsPutBackWhenTheTargetIsGone() {
+        protect()
+        val p = active().single()
+        val sid = p.stopOrderId!!
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.cancelLagReads = 50
+        fastLookAlone()
+        kite.order(sid).status = "CANCELLED"
+        kite.quote("NFO:$sym", 120.0, 119.95, 120.05)
+        Protections.ageTakenOverForTest(Protections.TARGET_CANCEL + sid, 6_000)
+        tick()
+        assertTrue("nothing sold", sales().isEmpty())
+        val now = active().single()
+        assertTrue("its stop rests again", now.stopOrderId != sid && kite.order(now.stopOrderId!!).working)
+        assertFalse(Protections.takenOverForTest(Protections.TARGET_CANCEL + sid))
+    }
+
+    /** A sale on a cancel that showed late, refused by Zerodha: the stop goes back at once (one try for that cancel, never one each look). */
+    @Test fun aSaleOnALateCancelThatIsRefusedPutsTheStopBack() {
+        protect()
+        val p = active().single()
+        val sid = p.stopOrderId!!
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.cancelLagReads = 50
+        fastLookAlone()
+        kite.order(sid).status = "CANCELLED"
+        kite.nextPlace(FakeKite.Reply.INPUT_EXCEPTION, message = "MARKET orders are blocked for this contract.")
+        tick()
+        val now = active().single()
+        assertTrue("its stop rests again", now.stopOrderId != sid && kite.order(now.stopOrderId!!).working)
+        assertFalse(Protections.takenOverForTest(Protections.TARGET_CANCEL + sid))
+        assertEquals(75, held())
+    }
+
+    /**
+     * WHO CANCELLED A STOP: Boss cancels the stop in Kite just as the target is reached - the app's cancel is refused and the stop shows
+     * cancelled. Not the app's doing: its marks end, nothing is sold, and the stop is never put back; the next look says it is his.
+     */
+    @Test fun aStopBossCancelledAsTheTargetWasReachedIsNeverPutBack() {
+        protect()
+        val p = active().single()
+        val sid = p.stopOrderId!!
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        Protections.testBeforeTargetCancel = { kite.order(sid).status = "CANCELLED"; kite.order(sid).message = "" }
+        try { tick() } finally { Protections.testBeforeTargetCancel = null }
+        assertTrue("nothing sold", sales().isEmpty())
+        assertFalse("its marks ended", Protections.takenOverForTest(sid) || Protections.takenOverForTest(Protections.TARGET_CANCEL + sid))
+        tick()
+        assertEquals("never put back", 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertTrue("ended", active().isEmpty())
+        assertTrue(Alerts.posted.any { it.text.contains("cancelled by you") && it.text.contains("is not watched any more") })
+    }
+
+    /** m-2: a square-off holding the row past its gap (its stops slow to come out): no stop goes back beside it; once it lets go, it does. */
+    @Test fun noStopGoesBackWhileASquareOffHoldsTheRowPastItsGap() {
+        kite.position(sym, 0, 0.0, product = "MIS"); kite.position(sym, 75, 100.0)
+        protect(product = "NRML", target = null)
+        val p = active().single()
+        val sid = p.stopOrderId!!
+        val claim = SquareOffExit.claimExit("NFO", sym, "NRML", "iraalgoflat")!!
+        try {
+            Protections.noteTakenOver(listOf(sid))                           // the square-off's takeOut: marked, then cancelled
+            runBlocking { Broker.cancel(sid) }
+            at(12, 5)
+            tick()
+            assertEquals("nothing put back beside its sale", 1, kite.placed.count { it.form["order_type"] == "SL" })
+        } finally { claim.release() }
+        var claimedWhilePut: String? = "not put back"
+        kite.afterNext("/orders/regular") { claimedWhilePut = SquareOffExit.exitClaimedBy("NFO", sym, "NRML") }
+        tick()
+        val now = active().single()
+        assertTrue("put back once it let go", now.stopOrderId != sid && kite.order(now.stopOrderId!!).working)
+        assertEquals("the row claimed as the protections' while it went in", Protections.CLAIM_OWNER, claimedWhilePut)
+        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "NRML"))
+    }
+
+    /** m-4: after a restart, a lost target sale's saved mark makes its row "not known" to the square-offs until its search would have ended. */
+    @Test fun aLostTargetSaleIsNotKnownToTheSquareOffsAfterARestart() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.trailReads = 1_000
+        kite.positionsTrailReads = 1_000
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)
+        tick()
+        assertEquals(1, sales().size)
+        Protections.restartForTest(); Broker.forgetLostForTest()
+        active()
+        assertEquals("not known", -1, Protections.targetSalesGoing(sym, "MIS"))
+        assertEquals("another row is", 0, Protections.targetSalesGoing("NIFTY26OCT24600CE", "MIS"))
+        assertEquals("another product is", 0, Protections.targetSalesGoing(sym, "NRML"))
+        Protections.ageTakenOverForTest("prottarget:${p.id}", Broker.LOST_SEARCH_MS)
+        assertEquals("the order book shows it by now", 0, Protections.targetSalesGoing(sym, "MIS"))
+    }
+
+    /**
+     * m-4 (review): after a start, before the list is read every row is "not known", and with the marks' file not read yet a row with an
+     * app-watched target is - only within the lost search's time from the start.
+     */
+    @Test fun theSquareOffsAreToldNotKnownBeforeTheListOrTheMarksAreRead() {
+        protect()
+        Protections.restartForTest(); Protections.startedForTest(0)
+        assertEquals("the list not read: any row", -1, Protections.targetSalesGoing("RELIANCE", "CNC"))
+        Protections.marksReadForTest = { throw java.io.IOException("test: the Keystore is busy") }
+        try {
+            active()
+            assertEquals("its app-watched target's row", -1, Protections.targetSalesGoing(sym, "MIS"))
+            assertEquals("another row", 0, Protections.targetSalesGoing("RELIANCE", "CNC"))
+            Protections.startedForTest(Broker.LOST_SEARCH_MS)
+            assertEquals("the order book shows any such sale by now", 0, Protections.targetSalesGoing(sym, "MIS"))
+        } finally { Protections.marksReadForTest = null }
+    }
+
+    /** m-4: a target sale is counted for the square-offs' gap from when Zerodha took it, not from when it started. */
+    @Test fun aTargetSaleIsCountedForTheGapFromWhenZerodhaTookIt() {
+        SquareOffExit.resetForTest(gap = SquareOffExit.GAP_MS)
+        var t = 50_000_000L
+        SquareOffExit.clock = { t }
+        protect()
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.afterNext("/orders/regular") { t += 10_000 }                    // its placing took 10 s
+        tick()
+        assertEquals(1, sales().size)
+        t += 10_000                                                          // 20 s after it started, 10 s after Zerodha took it
+        assertEquals(75, Protections.targetSalesGoing(sym, "MIS"))
+        t += 6_000
+        assertEquals(0, Protections.targetSalesGoing(sym, "MIS"))
+    }
+
+    /** m-1: a target sale held back (here a square-off's claim) leaves the stream looks quiet for a while - no flag, no look apart. */
+    @Test fun aHeldBackTargetSaleDoesNotAskLookAfterLook() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", "iraalgoflat")!!
+        try {
+            tick()                                                           // tried: held back, nothing taken out
+            assertTrue(sales().isEmpty())
+            KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(12_345_678L, 131.0)))
+            runBlocking { Protections.tick(fast = true, stream = true) }
+            assertFalse("not marked", Protections.targetMarkedForTest(p.id))
+            assertFalse("no look apart asked", Protections.followUpPendingForTest())
+            // Its quiet time over: marked again (the look apart held back here, as when one is already waiting).
+            at(12, 6)
+            val apart = Protections::class.java.getDeclaredField("followApart").apply { isAccessible = true }.get(Protections) as java.util.concurrent.atomic.AtomicBoolean
+            apart.set(true)
+            try {
+                KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(12_345_678L, 131.0)))
+                runBlocking { Protections.tick(fast = true, stream = true) }
+                assertTrue("marked again", Protections.targetMarkedForTest(p.id))
+            } finally { apart.set(false) }
+        } finally { claim.release() }
+    }
+
+    /** With the app's own target (no order at Zerodha) a filled stop never says "the other exit was cancelled". */
+    @Test fun aFilledStopWithTheAppsTargetSaysNoOtherExit() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.fill(p.stopOrderId!!, 90.0)
+        tick()
+        assertFalse(Alerts.posted.any { it.text.contains("the other exit was cancelled") })
+        assertTrue(Alerts.posted.any { it.text.contains("stop filled at Zerodha; its target, which the app watched, ends with it") })
+    }
+
+    /** One look alone (its follow-up held back, as one already waiting), so a test sees what that look did. */
+    private fun fastLookAlone() {
+        val apart = Protections::class.java.getDeclaredField("followApart").apply { isAccessible = true }.get(Protections) as java.util.concurrent.atomic.AtomicBoolean
+        apart.set(true)
+        try { runBlocking { Protections.tick(fast = true) } } finally { apart.set(false) }
     }
 
     /**
@@ -355,6 +581,67 @@ class ProtectionsB6Test : RobolectricTest() {
         active()
         assertFalse(Protections.takenOverForTest("old-1"))
         assertTrue(Protections.takenOverForTest("fresh-1"))
+    }
+
+    /**
+     * Second round (nit with a safety effect): a read of the marks' file that fails for a moment (the Keystore) leaves them not loaded, and no
+     * write replaces the file meanwhile; read later, its marks come back beside the new ones. One that fails authentication, or does not
+     * parse, is set aside and the marks start afresh.
+     */
+    @Test fun aMarksFileThatCannotBeReadNowIsNeverWrittenOver() {
+        Protections.noteTakenOver(listOf("kept-1"))
+        Protections.drainMarksForTest()
+        val f = java.io.File(context.noBackupFilesDir, "protections_marks.vault")
+        val before = f.readBytes()
+        Protections.restartForTest()
+        Protections.marksReadForTest = { throw java.io.IOException("test: the Keystore is busy") }
+        try {
+            active()
+            assertFalse(Protections.marksLoadedForTest())
+            Protections.noteTakenOver(listOf("new-1"))
+            Protections.drainMarksForTest()
+            assertTrue("the file is as it was", before.contentEquals(f.readBytes()))
+        } finally { Protections.marksReadForTest = null }
+        Protections.noteTakenOver(listOf("new-2"))                         // the next write reads it first
+        Protections.drainMarksForTest()
+        assertTrue(Protections.marksLoadedForTest())
+        Protections.restartForTest(); active()
+        assertTrue(Protections.takenOverForTest("kept-1")); assertTrue(Protections.takenOverForTest("new-1")); assertTrue(Protections.takenOverForTest("new-2"))
+        // Failed authentication: set aside, never overwritten; the marks start afresh.
+        Protections.restartForTest()
+        Protections.marksReadForTest = { throw com.optionslab.app.security.Vault.Tampered() }
+        try { active() } finally { Protections.marksReadForTest = null }
+        assertTrue(Protections.marksLoadedForTest())
+        assertTrue("kept aside", f.parentFile!!.listFiles()!!.any { it.name.startsWith("protections_marks.vault.unreadable.") })
+        // Not parsed: the same.
+        Thread.sleep(5)                                                      // (a second set-aside copy under its own time)
+        Protections.drainMarksForTest()
+        com.optionslab.app.security.Vault.writeFile(f, "not json".toByteArray(Charsets.UTF_8))
+        Protections.restartForTest(); active()
+        assertTrue(Protections.marksLoadedForTest())
+        assertEquals(2, f.parentFile!!.listFiles()!!.count { it.name.startsWith("protections_marks.vault.unreadable.") })
+    }
+
+    /** Review: a marks' file that never reads again (its key gone) is set aside after a few tries over minutes - new marks are saved again. */
+    @Test fun aMarksFileThatNeverReadsIsSetAsideAfterAFewTries() {
+        Protections.noteTakenOver(listOf("old-1"))
+        Protections.drainMarksForTest()
+        Protections.restartForTest()
+        Protections.marksReadForTest = { throw java.io.IOException("test: the key is gone") }
+        try {
+            active()
+            repeat(Protections.MARKS_FAILS_BEFORE_ASIDE) { Protections.noteTakenOver(listOf("n$it")); Protections.drainMarksForTest() }
+            assertFalse("not within minutes", Protections.marksLoadedForTest())
+            Protections.ageMarksFailsForTest(Protections.MARKS_FAIL_ASIDE_MS)
+            Protections.noteTakenOver(listOf("last")); Protections.drainMarksForTest()
+            assertTrue(Protections.marksLoadedForTest())
+        } finally { Protections.marksReadForTest = null }
+        val dir = java.io.File(context.noBackupFilesDir, "protections_marks.vault").parentFile!!
+        assertTrue("kept aside", dir.listFiles()!!.any { it.name.startsWith("protections_marks.vault.unreadable.") })
+        assertTrue(Alerts.posted.any { it.text.contains("could not be read and was set aside") })
+        Protections.restartForTest(); active()
+        assertTrue("new marks saved again", Protections.takenOverForTest("last") && Protections.takenOverForTest("n0"))
+        assertFalse(Protections.takenOverForTest("old-1"))
     }
 
     /** "Erase everything": the marks' file goes with the rest. */
