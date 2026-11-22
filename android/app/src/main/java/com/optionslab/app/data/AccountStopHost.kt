@@ -134,6 +134,7 @@ object AccountStopHost {
      * recorded (once a day per owner and contract) and null is returned. Memory only; never throws.
      */
     fun doorCheck(symbol: String, owner: String): String? = runCatching {
+        testDoorThrows?.let { throw it }
         val st = status
         val why = AccountStop.refusal(st) ?: return@runCatching null
         if (on) return@runCatching why
@@ -144,7 +145,16 @@ object AccountStopHost {
         }
         if (first) runCatching { Diag.record("risk", "$owner $symbol: $why (live, shadow: logged only, nothing changed)") }
         null
-    }.getOrNull()
+    // 22 Nov 2026 (B6 review, item 4: the door's checks failed open): a check that throws refuses the entry while the rule's switch is on;
+    // in shadow (off, the default) it goes as before.
+    }.getOrElse { e -> Broker.doorUnread("the account stop rule", on, e) }
+
+    /** 22 Nov 2026 (B6 review, item 4): whether the rule acts on live entries (its switch; memory only). */
+    fun doorActs(): Boolean = on
+
+    /** TEST ONLY (22 Nov 2026, B6 review): the door's check throws this, while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testDoorThrows: Exception? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /** 25 Oct: the Zerodha days recorded (the live weekly loss stop's shadow, [BossRiskHost]). Memory only. */
     fun daysNow(): List<AccountStop.Day> = synchronized(lock) { days }
@@ -230,7 +240,7 @@ object AccountStopHost {
 
     /** TEST ONLY: off, no days, nothing seen. */
     internal fun resetForTest() {
-        on = false; since = null; reached = null; loaded = true; writtenAt = 0L
+        on = false; since = null; reached = null; loaded = true; writtenAt = 0L; testDoorThrows = null
         synchronized(lock) { days = emptyList(); shadowSeen.clear(); shadowDay = null; status = AccountStop.status(emptyList(), today()) }
         _view.value = View()
     }

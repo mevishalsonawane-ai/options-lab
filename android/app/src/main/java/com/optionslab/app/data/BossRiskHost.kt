@@ -303,45 +303,80 @@ object BossRiskHost {
      * its live switch is on, else (the default) the refusal it would have given is logged and null returned. Memory only; never throws.
      */
     fun liveDoor(symbol: String, exchange: String, owner: String, qty: Int, lotSize: Int, price: Double?, stop: Double?): String? = runCatching {
-        val token = Broker.tokenKnown("$exchange:$symbol")
-        val tick = token?.let { runCatching { KiteStream.tick(it) }.getOrNull() }
-        val px = price?.takeIf { it > 0 } ?: tick?.last?.takeIf { it > 0 }
-        // The spread check: shadow only, live too (on the stream's book; with no tick there is no book to judge).
-        if (tick != null) spreadShadow(owner, symbol, tick.bid, tick.ask, live = true)
+        testDoorThrows?.let { throw it }
+        // 22 Nov 2026 (B6 review): each rule on its own ([part]) - one that throws refuses only while ITS live switch is on; the shadow-only
+        // parts (the spread check, h14's capped limit) never refuse. The price read only prices the 2% risk cap: its failure counts there.
+        val read = runCatching {
+            val token = Broker.tokenKnown("$exchange:$symbol")
+            val tick = token?.let { runCatching { KiteStream.tick(it) }.getOrNull() }
+            tick to (price?.takeIf { it > 0 } ?: tick?.last?.takeIf { it > 0 })
+        }
+        val tick = read.getOrNull()?.first
+        val px = price?.takeIf { it > 0 } ?: read.getOrNull()?.second
+        // The spread check: shadow only, live too (on the stream's book; with no tick there is no book to judge). (A throw refuses nothing.)
+        if (tick != null) runCatching { spreadShadow(owner, symbol, tick.bid, tick.ask, live = true) }
         fun gate(rule: Rule, why: String?): String? {
             if (why == null) return null
             val on = liveOn[rule] == true
             note(rule, owner, symbol, live = true, applied = on, why = if (on) why else "$why (live, shadow: logged only, nothing changed)")
             return if (on) "refused: $why" else null
         }
-        val days = runCatching { AccountStopHost.daysNow() }.getOrDefault(emptyList())
-        // Live's own limit (review: never the paper setting, so switching the paper stop off never switches live's off).
-        gate(Rule.WEEKLY, BossRisk.weeklyRefusal(BossRisk.weekly(days, today(), BossRisk.LIVE_WEEKLY)))?.let { return@runCatching it }
-        val u = com.optionslab.engine.Kite.underlyingOf(symbol)
-        val dir = u?.let { com.optionslab.ira.SameDirectionCap.direction(it, exchange, symbol.takeLast(2)) }
-        if (u != null && dir != null) {
-            val open = runCatching { ExposureCapHost.liveOpen() }.getOrDefault(emptyList()).mapNotNull { o ->
-                com.optionslab.engine.Kite.underlyingOf(o.symbol)?.let { BossRisk.Bet(o.owner, it, o.dir, o.symbol) }
+        fun part(rule: Rule, check: () -> String?): String? = try {
+            testPartThrows?.takeIf { it == rule }?.let { throw IllegalStateException("test: ${rule.key}") }
+            check()
+        } catch (e: Exception) { Broker.doorUnread("your risk rules (${rule.words})", liveOn[rule] == true, e) }
+        part(Rule.WEEKLY) {
+            val days = runCatching { AccountStopHost.daysNow() }.getOrDefault(emptyList())
+            // Live's own limit (review: never the paper setting, so switching the paper stop off never switches live's off).
+            gate(Rule.WEEKLY, BossRisk.weeklyRefusal(BossRisk.weekly(days, today(), BossRisk.LIVE_WEEKLY)))
+        }?.let { return@runCatching it }
+        part(Rule.OPPOSITE) {
+            val u = com.optionslab.engine.Kite.underlyingOf(symbol)
+            val dir = u?.let { com.optionslab.ira.SameDirectionCap.direction(it, exchange, symbol.takeLast(2)) }
+            if (u == null || dir == null) null else {
+                val open = runCatching { ExposureCapHost.liveOpen() }.getOrDefault(emptyList()).mapNotNull { o ->
+                    com.optionslab.engine.Kite.underlyingOf(o.symbol)?.let { BossRisk.Bet(o.owner, it, o.dir, o.symbol) }
+                }
+                gate(Rule.OPPOSITE, BossRisk.opposite(open, owner, u, dir))
             }
-            gate(Rule.OPPOSITE, BossRisk.opposite(open, owner, u, dir))?.let { return@runCatching it }
-        }
-        val lots = if (lotSize > 0) qty / lotSize else 0
-        val capital = liveCapital
-        if (px != null && capital != null && lots > 0) {
-            val cap = BossRisk.riskCap(lots, lotSize, px, BossRisk.stopShare(owner, px, stop), capital)
-            // Live never sizes an order inside the door (it was priced and stamped before): over the cap, on, it is refused whole.
-            val why = if (cap.lots >= lots) null else "2% risk cap: $lots ${if (lots == 1) "lot risks" else "lots risk"} " +
-                "${BossRisk.rs(cap.riskPerLot * lots)} to the stop, over 2% of the account (${BossRisk.rs(cap.cap)})" +
-                (if (cap.lots > 0) "; ${cap.lots} would fit" else "")
-            gate(Rule.RISK, why)?.let { return@runCatching it }
-        }
-        // h14's capped limit, live: shadow only (the order type is not changed inside the door) - what the cap would have been.
-        if (px != null) BossRisk.cap(px)?.let { c ->
-            note(Rule.CAPPED, owner, symbol, live = true, applied = false,
-                why = "capped limit: would buy at most %.2f (+0.5%% over %.2f), worked 3 minutes, never moved (live, shadow: logged only)".format(Locale.ENGLISH, c, px))
+        }?.let { return@runCatching it }
+        part(Rule.RISK) {
+            // (The read only prices the cap when no price was passed: then its failure counts here.)
+            if (price == null || price <= 0) read.getOrThrow()
+            val lots = if (lotSize > 0) qty / lotSize else 0
+            val capital = liveCapital
+            if (px == null || capital == null || lots <= 0) null else {
+                val cap = BossRisk.riskCap(lots, lotSize, px, BossRisk.stopShare(owner, px, stop), capital)
+                // Live never sizes an order inside the door (it was priced and stamped before): over the cap, on, it is refused whole.
+                val why = if (cap.lots >= lots) null else "2% risk cap: $lots ${if (lots == 1) "lot risks" else "lots risk"} " +
+                    "${BossRisk.rs(cap.riskPerLot * lots)} to the stop, over 2% of the account (${BossRisk.rs(cap.cap)})" +
+                    (if (cap.lots > 0) "; ${cap.lots} would fit" else "")
+                gate(Rule.RISK, why)
+            }
+        }?.let { return@runCatching it }
+        // h14's capped limit, live: shadow only (the order type is not changed inside the door) - what the cap would have been. (22 Nov 2026,
+        // B6 review: a throw here refuses nothing.)
+        runCatching {
+            testPartThrows?.takeIf { it == Rule.CAPPED }?.let { throw IllegalStateException("test: capped") }
+            if (px != null) BossRisk.cap(px)?.let { c ->
+                note(Rule.CAPPED, owner, symbol, live = true, applied = false,
+                    why = "capped limit: would buy at most %.2f (+0.5%% over %.2f), worked 3 minutes, never moved (live, shadow: logged only)".format(Locale.ENGLISH, c, px))
+            }
         }
         null
-    }.getOrNull()
+    // 22 Nov 2026 (B6 review, item 4: the door's checks failed open): a throw outside the rules' own parts refuses the BUY while any of these
+    // rules' live switches is on ([liveActs]); all in shadow (the default) it goes as before.
+    }.getOrElse { e -> Broker.doorUnread("your risk rules", liveActs(), e) }
+
+    /** 22 Nov 2026 (B6 review, item 4): whether any of the live rules acts (a live switch on; memory only). Unreadable: true. */
+    fun liveActs(): Boolean = runCatching { LIVE_RULES.any { liveOn[it] == true } }.getOrDefault(true)
+
+    /** TEST ONLY (22 Nov 2026, B6 review): the door's check throws this, while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testDoorThrows: Exception? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+    /** TEST ONLY (22 Nov 2026, B6 review): the door's part for this rule throws, while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testPartThrows: Rule? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     // ---- IV at entry (record only) --------------------------------------------------------------------------------------------
 
@@ -603,6 +638,7 @@ object BossRiskHost {
     internal fun resetForTest(paperOn: Boolean = true) {
         PAPER_RULES.forEach { this.paperOn[it] = paperOn }
         LIVE_RULES.forEach { liveOn[it] = false }
+        testDoorThrows = null; testPartThrows = null
         loaded = true; readOk = true; daysReadAt = Long.MAX_VALUE / 2
         acctSince = null; acctReached = null; weekReachedOn = null; weekLimit = BossRisk.PAPER_WEEKLY_DEFAULT; liveCapital = null
         synchronized(lock) { paperDays = emptyList(); log = emptyList(); ivs = emptyList() }
