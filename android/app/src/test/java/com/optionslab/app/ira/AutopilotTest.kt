@@ -377,6 +377,64 @@ class AutopilotTest : RobolectricTest() {
         assertTrue("kept aside", dir.listFiles()!!.any { it.name.startsWith("log.vault.unreadable.") })
     }
 
+    /**
+     * 22 Nov 2026 (B6 review, second look): a timeline that could not be read just now (a Keystore hiccup, not a tampered file) is never set
+     * aside nor written over, and no pass runs on it; a later read loads it, with what memory recorded meanwhile on top.
+     */
+    @Test fun aTimelineThatCannotBeReadJustNowIsKeptAndReadLater() = runBlocking<Unit> {
+        val (b, e) = AutoChange.record(AutoChange.Book(lastRun = day.minusDays(1)), paperMute(), AutoChange.Status.PROBATION, ms(day.minusDays(1)),
+            day.minusDays(1))
+        Autopilot.setForTest(b)
+        Autopilot.saveNow()
+        val dir = File(context.noBackupFilesDir, "autopilot")
+        val enc = File(dir, "log.vault")
+        val before = enc.readBytes()
+        Autopilot.unloadForTest()
+        Autopilot.testReadLog = { throw java.security.KeyStoreException("the key was not returned; try again") }
+        Autopilot.ensureLoaded()
+        assertTrue(Autopilot.book.value.entries.isEmpty())
+        assertFalse("nothing set aside", dir.listFiles()!!.any { it.name.contains(".unreadable.") })
+        Autopilot.saveNow()
+        assertTrue("never written over", before.contentEquals(enc.readBytes()))
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
+        assertFalse("no pass on a timeline not read", Autopilot.runIfDue(context))
+        assertFalse("night_r3" in SmartWorkers.settings.value.paused)
+        // Readable again (the next look after the wait): the file's timeline; then the pass runs and saves on top of it.
+        Autopilot.testReadLog = null
+        Autopilot.ensureLoaded()
+        assertTrue("not before the wait", Autopilot.book.value.entries.isEmpty())
+        Autopilot.readAgainNowForTest()
+        Autopilot.ensureLoaded()
+        assertEquals(listOf(e.id), Autopilot.book.value.entries.map { it.id })
+        assertTrue(Autopilot.runIfDue(context))
+        assertEquals(2, AutoChange.decode(logText(enc)).entries.size)
+        // A tampered file is still set aside (its check failed), as before.
+        Autopilot.unloadForTest()
+        Autopilot.testReadLog = { throw com.optionslab.app.security.Vault.Tampered() }
+        Autopilot.ensureLoaded()
+        assertTrue(dir.listFiles()!!.any { it.name.startsWith("log.vault.unreadable.") })
+    }
+
+    /** 22 Nov 2026 (B6 review, second look): what memory recorded before the read goes on top of the file's timeline - nothing lost. */
+    @Test fun theMemorysEntriesGoOnTopOfTheFilesTimeline() {
+        val d = day.minusDays(1)
+        val (disk, e1) = AutoChange.record(AutoChange.Book(lastRun = d.minusDays(1), trials = 3, blacklist = mapOf("x" to d)), paperMute(),
+            AutoChange.Status.KEPT, ms(d), d)
+        val (mem, e2) = AutoChange.record(AutoChange.Book(lastRun = d, trials = 1, blacklist = mapOf("x" to d.minusDays(9), "y" to d)),
+            paperMute("orb"), AutoChange.Status.PROBATION, ms(d, 12), d)
+        assertEquals("the same first id", e1.id, e2.id)
+        val m = Autopilot.withEarlier(disk, mem)
+        assertEquals(2, m.entries.size)
+        assertEquals(e1, m.entries[0])
+        assertEquals(e2.copy(id = m.entries[1].id), m.entries[1])
+        assertTrue(m.entries[1].id != e1.id)
+        assertEquals(d, m.lastRun)
+        assertEquals(4, m.trials)
+        assertEquals(mapOf("x" to d, "y" to d), m.blacklist)
+        // An entry already in the file is not added twice.
+        assertEquals(1, Autopilot.withEarlier(disk, disk).entries.size)
+    }
+
     @Test fun undoingAPaperMuteWhereTheManagerActsLiveTakesThePin() {
         // Review 2 #12: a paper mute also mutes the live book; with the manager acting on live, its undo raises live risk.
         ManagerSpecialists.mute("pine", "oi", by = "Autopilot")

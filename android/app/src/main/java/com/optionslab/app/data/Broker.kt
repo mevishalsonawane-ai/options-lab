@@ -225,6 +225,8 @@ object Broker {
         // The kill switch kept in memory and read again only when a kept-elsewhere setting changed (g.kill is one of them):
         // the door reads nothing from the settings store on the order path (round 2's rule), yet sees a flip at once.
         if (killOn()) return "refused: the kill switch is on"
+        // 22 Nov 2026 (B6 review): no entry while a backup is being restored (until the restart) - memory only. Exits never come here.
+        Backup.restoringRefusal()?.let { return it }
         // 18 Oct (review): the paper-only period read again inside the door too (memory only), so a period set while this entry
         // waited its turn still refuses it. [placeOrder] asks it first; this is the door's own look.
         PaperOnly.entryRefusal()?.let { return it }

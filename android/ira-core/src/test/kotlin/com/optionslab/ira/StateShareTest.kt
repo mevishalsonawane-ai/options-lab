@@ -64,6 +64,26 @@ class StateShareTest {
         assertEquals("user ${StateShare.MASK}", StateShare.redact("user CE1234", listOf("CE1234")))
     }
 
+    /**
+     * 22 Nov 2026 (B6 review, second look): a client id that only starts like an option's side ("PE4821": not a strike's shape), a phone
+     * number after the word "order", a host with a '-' after it, a capitalised two-part host ("MyRelay.com") and a "dated" id of an older
+     * year with no order word are masked; a strike, this year's and last year's order ids and the arms' own words stay.
+     */
+    @Test fun theSecondLooksGapsAreMasked() {
+        assertEquals("client ${StateShare.LOGGED_IN_MASK}", StateShare.redact("client PE4821", year = 2026))
+        assertEquals("order ${StateShare.MASK}", StateShare.redact("order 919876543210", year = 2026))
+        assertEquals("ssh to ${StateShare.MASK}-2 failed", StateShare.redact("ssh to vps.example.com-2 failed", year = 2026))
+        assertEquals("relay ${StateShare.MASK} up · box ${StateShare.MASK} down", StateShare.redact("relay MyRelay.com up · box MyBox.in down", year = 2026))
+        assertEquals("ref ${StateShare.MASK}", StateShare.redact("ref 230115000123456", year = 2026))
+        val kept = "bought CE24500 and PE4850 · ref 260115000123456 · ref 251231000123456 · R72.live · NIFTY.IN · MIDCPNIFTY.NFO · " +
+            "OrbArms.view · Liquidity.run"
+        assertEquals(kept, StateShare.redact(kept, year = 2026))
+        // The same "dated" id a year on is an old one: masked (the order's word keeps any).
+        assertEquals("ref ${StateShare.MASK} · order 250115000123456", StateShare.redact("ref 250115000123456 · order 250115000123456", year = 2027))
+        assertEquals("ref ${StateShare.MASK}", StateShare.build(listOf(StateShare.Section("x", listOf("ref 230115000123456"))), year = 2026)
+            .lines().first { it.startsWith("ref") })
+    }
+
     @Test fun shortIdsHostsWithNoSchemeTopicsAndPassphrasesAreMasked() {
         val out = StateShare.redact("client XYZ123 and AB12345 · relay relay.example.net:22/tunnel and box.lan · ntfy.sh/boss-alerts-77 · " +
             "topic boss-alerts-77 · pass correct_horse_battery_staple_extra")

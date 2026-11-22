@@ -554,4 +554,185 @@ class BackupTest : RobolectricTest() {
             assertEquals(com.optionslab.ira.ArmAutoStops.NotApplied.CUT_SHORT.key, SecurePrefs.getString(com.optionslab.ira.ArmAutoStops.NOT_APPLIED_KEY))
         } finally { ArmAutoStopsHost.resetForTest() }
     }
+
+    // ---- 22 Nov 2026 (B6 review, second look) ------------------------------------------------------------------------------------------
+
+    private fun stratFile() = File(context.filesDir, "strategies.vault")
+
+    /** A strategies' book as Strategies saves it, with [stops] (its stop fields) on it. */
+    private fun stratBook(vararg stops: Pair<String, Any>) = JSONObject().put("defs", JSONArray()).put("runs", JSONObject())
+        .put("history", JSONArray()).put("brokerIds", JSONObject()).put("log", JSONArray()).put("nextRunId", 4).put("nextStrategyId", 7)
+        .apply { stops.forEach { (k, v) -> put(k, v) } }
+
+    private fun phoneStrategies(book: JSONObject) { Vault.writeFile(stratFile(), book.toString().toByteArray()); Strategies.forgetCacheForTest() }
+
+    /** A crafted backup holding [strategies] (null: no strategies' book in it) and [prefs]. */
+    private fun backupWith(strategies: JSONObject?, prefs: JSONObject = JSONObject(), orb: JSONObject? = null) = Backup.open(craft("IRABK3", 600_000,
+        "Test-Passphrase-42!", prefs, JSONObject().apply { strategies?.let { put("f/strategies.vault", b64(it.toString())) }
+            orb?.let { put("f/orb.vault", b64(it.toString())) } }), pass.copyOf())
+
+    /** The restart after a restore: the restored files read afresh. */
+    private fun restarted() { Vault.thaw(); Strategies.forgetCacheForTest() }
+
+    /** Item 1: today's Stop for today on each side, with its reason, time and the MCX sale, is never lifted by an older backup. */
+    @Test fun aRestoreNeverLiftsTodaysStopForTodayOnEitherSide() = runBlocking {
+        val t = today.toString()
+        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "10:15", "stopSides" to 1,
+            "mcxStoppedDay" to t, "mcxStoppedWhy" to "tile", "mcxStoppedAt" to "11:00", "mcxStopSells" to false))
+        val r = Backup.restore(context, backupWith(stratBook("stoppedDay" to today.minusDays(1).toString(), "stoppedWhy" to "loss", "stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "10:15"), Strategies.stoppedKept())
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "11:00"), Strategies.mcxStoppedKept())
+        assertFalse("its sale kept as set", Strategies.mcxStopSells())
+        assertTrue(r.notes.toString(), r.notes.any { it.startsWith("Today's Stop for today on the index side is kept as this phone had it (since 10:15)") })
+        assertTrue(r.notes.toString(), r.notes.any { it.startsWith("Today's Stop for today on the commodity (MCX) side is kept") })
+        // The restored book is the backup's otherwise (its counters).
+        assertEquals(7, JSONObject(String(Vault.readFile(stratFile())!!)).getLong("nextStrategyId"))
+    }
+
+    /** Item 1: the later stop wins on each side - the backup's when it is today's; and an older build's one stop counts for both sides. */
+    @Test fun theLaterStopWinsOnEachSideAndAnOlderBooksOneStopCountsForBoth() = runBlocking {
+        val t = today.toString()
+        phoneStrategies(stratBook("stoppedDay" to today.minusDays(1).toString(), "stoppedWhy" to "boss", "stopSides" to 1))
+        Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "loss", "stoppedAt" to "09:40", "stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.LOSS, "09:40"), Strategies.stoppedKept())
+        assertNull(Strategies.mcxStoppedKept())
+        // An older build's book (no "stopSides"): its one stop is both sides' (a loss stop only the index side's), kept in this build's form.
+        phoneStrategies(stratBook())
+        val r = Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "09:30")))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "09:30"), Strategies.stoppedKept())
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "09:30"), Strategies.mcxStoppedKept())
+        assertEquals(1, JSONObject(String(Vault.readFile(stratFile())!!)).getInt("stopSides"))
+        assertTrue("the backup's own stop is no news", r.notes.none { it.contains("Stop for today") })
+        // This phone's older-build book stopped today, the backup's not stopped: both sides stay stopped.
+        Vault.writeFile(stratFile(), stratBook("stoppedDay" to t, "stoppedWhy" to "tile", "stoppedAt" to "12:05").toString().toByteArray())
+        Backup.restore(context, backupWith(stratBook("stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "12:05"), Strategies.stoppedKept())
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "12:05"), Strategies.mcxStoppedKept())
+        // Both today: this phone's, unless only the backup's is the daily loss limit's (the one Start cannot lift).
+        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "10:15", "stopSides" to 1))
+        Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "loss", "stoppedAt" to "09:40", "stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.LOSS, "09:40"), Strategies.stoppedKept())
+        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "tile", "stoppedAt" to "10:15", "stopSides" to 1))
+        Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "09:40", "stopSides" to 1)))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "10:15"), Strategies.stoppedKept())
+    }
+
+    /** Item 1: a backup with no strategies' book still keeps today's stop (an empty book that holds it); none today: removed, as before. */
+    @Test fun aBackupWithNoStrategiesBookStillKeepsTodaysStop() = runBlocking {
+        phoneStrategies(stratBook("stoppedDay" to today.toString(), "stoppedWhy" to "boss", "stoppedAt" to "10:00", "stopSides" to 1))
+        Backup.restore(context, backupWith(null))
+        restarted()
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "10:00"), Strategies.stoppedKept())
+        assertTrue(Strategies.all().isEmpty())
+        assertEquals("this phone's counters", 4, JSONObject(String(Vault.readFile(stratFile())!!)).getLong("nextRunId"))
+        // Stopped only yesterday: nothing to keep, the book goes.
+        phoneStrategies(stratBook("stoppedDay" to today.minusDays(1).toString(), "stopSides" to 1))
+        Backup.restore(context, backupWith(null))
+        assertFalse(stratFile().exists())
+    }
+
+    /** Item 1: this phone's strategies' book there but unreadable - refused, nothing written; one simply absent is no refusal. */
+    @Test fun anUnreadableStrategiesBookRefusesTheRestore() {
+        stratFile().writeBytes(ByteArray(64) { 5 })
+        val before = stratFile().readBytes()
+        val e = try { Backup.restore(context, backupWith(stratBook(), JSONObject().put("s.capital", 1.0))); null } catch (x: Backup.StrategiesBookUnread) { x }
+        assertNotNull("refused", e)
+        assertEquals(Backup.STRATEGIES_UNREAD, e!!.message)
+        assertTrue(e is Backup.Refused)
+        assertFalse(SecurePrefs.getBoolean(Backup.DISARM, false))
+        assertTrue("the book untouched", before.contentEquals(stratFile().readBytes()))
+        assertEquals(0.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+        assertNull("entries go again", Backup.restoringRefusal())
+        stratFile().delete()
+        Backup.restore(context, backupWith(stratBook(), JSONObject().put("s.capital", 1.0)))
+        assertEquals(1.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+    }
+
+    /** Item 2: the backup's open live trades that match nothing here are left out (named in the notice); its paper ones stay. */
+    @Test fun theBackupsOpenLiveTradesThatMatchNothingHereAreLeftOut() {
+        val open = liveRow("liquidity15", today, 100.0, 0.0, 30, id = "260122000123456", h = 11).apply { remove("exit"); put("exitTime", "") }
+        val paperOpen = liveRow("orb", today, 100.0, 0.0, 30, h = 12).put("live", false).apply { remove("exit"); put("exitTime", "") }
+        val closed = liveRow("liquidity5", today.minusDays(1), 100.0, 80.0, 30, id = "251121000999999")
+        val r = Backup.restore(context, backupWith(null, orb = book(open, paperOpen, closed)))
+        val rows = JSONObject(String(Vault.readFile(orbFile())!!)).getJSONArray("positions")
+        assertEquals(listOf("", "251121000999999"), (0 until rows.length()).map { rows.getJSONObject(it).getString("entryOrderId") }.sorted())
+        val note = r.notes.single { it.startsWith("Left out of the backup") }
+        assertTrue(note, note.contains("BANKNIFTY26NOV52000CE (liquidity15, entered ${today} 11:00)"))
+        assertTrue(note, note.contains("Check Kite"))
+        // The same trade closed on this phone: this phone's row stands in for it, nothing left out.
+        Vault.thaw()
+        Vault.writeFile(orbFile(), book(liveRow("liquidity15", today, 100.0, 70.0, 30, id = "260122000123456", h = 11)).toString().toByteArray())
+        val r2 = Backup.restore(context, backupWith(null, orb = book(open)))
+        assertTrue(r2.notes.toString(), r2.notes.none { it.startsWith("Left out") })
+        val kept = JSONObject(String(Vault.readFile(orbFile())!!)).getJSONArray("positions")
+        assertEquals(1, kept.length())
+        assertEquals(70.0, kept.getJSONObject(0).getDouble("exit"), 0.0)
+        // A paper row is never taken for a live trade of this phone's (the backup's row must be live).
+        assertEquals(2, Backup.withClosedLive(book(paperOpen.put("entryOrderId", "X1")), listOf(liveRow("orb", today, 1.0, 2.0, 1, id = "X1")))
+            .getJSONArray("positions").length())
+    }
+
+    /** Item 7: a peak the restore raised above this phone's own is said (a payout-lowered one is lowered again with the PIN). */
+    @Test fun aRaisedLivePeakIsSaid() {
+        SecurePrefs.putAll(mapOf(Backup.LIVE_PEAK to 50_000.0))
+        val r = Backup.restore(context, backupWith(null, JSONObject().put(Backup.LIVE_PEAK, 90_000.0)))
+        assertEquals(90_000.0, SecurePrefs.getDouble(Backup.LIVE_PEAK, 0.0), 0.0)
+        assertTrue(r.notes.toString(), r.notes.any { it.startsWith("The live account's drawdown peak was raised to the backup's (Rs 90,000, this phone had Rs 50,000)") })
+        SecurePrefs.putAll(mapOf(Backup.LIVE_PEAK to 120_000.0))
+        assertTrue(Backup.restore(context, backupWith(null, JSONObject().put(Backup.LIVE_PEAK, 90_000.0))).notes.none { it.contains("peak") })
+    }
+
+    /** Item 4: with the self-review's stop off (Boss's 19 Nov choice), R51 / R72 / Liquidity's parks and pauses stay as this phone has them. */
+    @Test fun aRestoreKeepsBosssChoiceOnTheThreeArmsParksAndPauses() {
+        val review = com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW.prefKey
+        val theirs = JSONObject().put(SmartWorkers.K_PARKED, "liquidity,solo").put(SmartWorkers.K_PAUSED, "liquidity")
+        SecurePrefs.putAll(mapOf(review to false, SmartWorkers.K_PARKED to "hero", SmartWorkers.K_PAUSED to ""))
+        Backup.restore(context, backupWith(null, theirs))
+        assertEquals("the backup's other park still added", "hero,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        assertEquals("", SecurePrefs.getString(SmartWorkers.K_PAUSED))
+        // This phone's own park of it is kept (only Boss lifts it).
+        SecurePrefs.putAll(mapOf(SmartWorkers.K_PARKED to "liquidity"))
+        Backup.restore(context, backupWith(null, JSONObject().put(SmartWorkers.K_PARKED, "")))
+        assertEquals("liquidity", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        // The review's stop on here (or switched on by the backup): both sets, as before.
+        SecurePrefs.putAll(mapOf(review to true, SmartWorkers.K_PARKED to "hero"))
+        Backup.restore(context, backupWith(null, theirs))
+        assertEquals("hero,liquidity,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        SecurePrefs.putAll(mapOf(review to false, SmartWorkers.K_PARKED to "hero"))
+        Backup.restore(context, backupWith(null, JSONObject(theirs.toString()).put(review, true)))
+        assertEquals("hero,liquidity,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        assertTrue(SecurePrefs.getBoolean(review, false))
+    }
+
+    /** Item 3: from the restore's start no entry goes through the door (exits never come there); refused or failed, entries go again. */
+    @Test fun noEntryGoesWhileARestoreRunsAndARefusedOneLetsThemGoAgain() {
+        val o = com.optionslab.engine.Kite.Order("NIFTY26NOV25000CE", com.optionslab.engine.Kite.Side.BUY, 65, 65, "MIS", "MARKET", null, exchange = "NFO")
+        assertNull(Backup.restoringRefusal())
+        var atDoor: String? = null
+        try {
+            Backup.testLiveHeld = { atDoor = Broker.entryRecheck(o); listOf(Backup.HELD_ORB) }
+            try { Backup.restore(context, backupWith(null)); fail() } catch (_: Backup.LiveHeld) {}
+            assertEquals(Backup.RESTORING, atDoor)
+            assertNull("refused: entries go again", Backup.restoringRefusal())
+            assertNull(Broker.entryRecheck(o))
+            // One that went through holds them until the restart.
+            Backup.testLiveHeld = { emptyList() }
+            Backup.restore(context, backupWith(null))
+            assertEquals(Backup.RESTORING, Broker.entryRecheck(o))
+            Backup.restoreEndedForTest()
+            // One that fails part-way (the settings vault unreadable) lets them go again too.
+            SecurePrefs.put("x", 1)
+            Vault.destroy()
+            assertFalse(SecurePrefs.reload())
+            val failed = try { Backup.restore(context, backupWith(null)); null } catch (x: Exception) { x }
+            assertNotNull(failed)
+            assertNull(Backup.restoringRefusal())
+        } finally { Backup.testLiveHeld = null; Backup.restoreEndedForTest() }
+    }
 }

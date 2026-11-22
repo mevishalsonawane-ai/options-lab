@@ -278,8 +278,8 @@ object SettingsShare {
     }
 
     /**
-     * 22 Nov 2026 (B6 review): AppSettings' old order limits, still saved but enforced nowhere (voice no longer sets them: "lots per order"
-     * sets the guard's max lots, "manual orders per day" its max orders per day).
+     * 22 Nov 2026 (B6 review): AppSettings' old order limits, still saved but enforced nowhere. Since B6-F (22 Nov 2026) voice no longer
+     * sets them either: "lots per order" sets the guard's max lots, "manual orders per day" its max orders per day.
      */
     internal val NOT_ENFORCED = setOf("maxOrdersPerDay", "maxLotsPerOrder", "maxOrderValue")
 

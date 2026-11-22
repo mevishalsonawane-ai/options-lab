@@ -119,7 +119,8 @@ internal object Autopilot {
         if (loaded && modeLoaded) return
         synchronized(lock) {
             if (loaded && modeLoaded) return
-            if (!loaded) loadFiles()
+            // (22 Nov 2026, B6 review: after a read that failed, read again no sooner than [READ_AGAIN_MS] - each look waits on the Keystore.)
+            if (!loaded && System.currentTimeMillis() - unreadAtMs >= READ_AGAIN_MS) loadFiles()
             readMode()
         }
     }
@@ -136,32 +137,75 @@ internal object Autopilot {
 
     private fun loadFiles() {
         val d = dir()
-        val text = runCatching { d?.let { readLog(it) } }.getOrNull()
-        if (_book.value == AutoChange.Book()) _book.value = AutoChange.decode(text)
         val kn = runCatching { d?.let { File(it, KNOBS) }?.takeIf { it.isFile }?.readLines() }.getOrNull().orEmpty()
             .mapNotNull { l -> l.split('=').takeIf { it.size == 2 }?.let { (k, v) -> v.toDoubleOrNull()?.let { x -> k to x } } }
             .filter { (k, v) -> AutoChange.knob(k)?.let { v in it.min..it.max } == true }.toMap()
         if (_knobs.value.isEmpty()) _knobs.value = kn
+        // 22 Nov 2026 (B6 review): a log there that could not be read just now (a Keystore hiccup, not a tampered file) leaves the
+        // timeline not read: nothing is saved over it ([save]) and no pass runs ([runIfDue]) until a later look reads it ([ensureLoaded]).
+        val text = try { d?.let { readLog(it) } } catch (e: LogUnread) {
+            unreadAtMs = System.currentTimeMillis()
+            if (!unreadTold) { unreadTold = true; runCatching { Diag.record("autopilot", "the change timeline could not be read just now (${e.cause?.javaClass?.simpleName}); kept, read again later") } }
+            return
+        } catch (e: Exception) { null }
+        val disk = AutoChange.decode(text)
+        // (What was recorded in memory before the read - a test's book, or changes while it could not be read - is kept on top.)
+        _book.value = if (_book.value == AutoChange.Book()) disk else withEarlier(disk, _book.value)
         loaded = true
+        unreadTold = false
+    }
+
+    /** 22 Nov 2026 (B6 review): the read failure was said once (in the diagnostics) until a read succeeds; and when it last failed. */
+    @Volatile private var unreadTold = false
+    @Volatile private var unreadAtMs = 0L
+    private const val READ_AGAIN_MS = 30_000L
+
+    /** TEST ONLY: the next look reads the timeline again at once. */
+    internal fun readAgainNowForTest() { unreadAtMs = 0L }
+
+    /** 22 Nov 2026 (B6 review): the timeline's file is there but could not be read now ([cause]: not a tampered file): read again later. */
+    private class LogUnread(cause: Exception) : Exception(cause)
+
+    /** TEST ONLY: the timeline file's read instead of the vault's (a throw: as the vault's). */
+    @Volatile internal var testReadLog: ((File) -> ByteArray?)? = null
+
+    /**
+     * 22 Nov 2026 (B6 review): the timeline as read from its file ([disk]) with what memory recorded before the read ([mem]) on top: its
+     * entries added (a clashing id numbered on), and its dates, rests, trials and experiments kept with the file's - nothing lost.
+     */
+    internal fun withEarlier(disk: AutoChange.Book, mem: AutoChange.Book): AutoChange.Book {
+        val entries = disk.entries.toMutableList()
+        for (e in mem.entries) {
+            if (entries.any { it == e }) continue
+            var id = e.id; var k = entries.size + 1
+            while (entries.any { it.id == id }) id = "${e.day}#${k++}"
+            entries += e.copy(id = id)
+        }
+        fun later(a: Map<String, LocalDate>, b: Map<String, LocalDate>) = (a.keys + b.keys).associateWith { k -> listOfNotNull(a[k], b[k]).max() }
+        fun max(a: LocalDate?, b: LocalDate?) = listOfNotNull(a, b).maxOrNull()
+        return disk.copy(entries = entries, blacklist = later(disk.blacklist, mem.blacklist), rest = later(disk.rest, mem.rest),
+            lastRun = max(disk.lastRun, mem.lastRun), lastMidday = max(disk.lastMidday, mem.lastMidday), trials = disk.trials + mem.trials,
+            experiments = disk.experiments + mem.experiments.filter { x -> disk.experiments.none { it.id == x.id } })
     }
 
     /**
      * 22 Nov 2026 (B6 review, item 5): the change timeline's text from its encrypted file in [d] (as the diagnostics' diary is kept); null:
      * none yet. A phone's plain log.txt of before is read once, written again encrypted and only then deleted (a write that did not land
-     * keeps it, for the next start). An encrypted file that cannot be read is set aside - never written over - and the timeline starts
-     * afresh, said in the diagnostics. A worker thread only (a Keystore read).
+     * keeps it, for the next start). An encrypted file that fails its check (tampered or damaged) is set aside - never written over - and
+     * the timeline starts afresh, said in the diagnostics; any other failure ([LogUnread], e.g. the Keystore not ready) sets nothing aside
+     * and is read again later. A worker thread only (a Keystore read).
      */
     private fun readLog(d: File): String? {
         val f = File(d, LOG)
         val old = File(d, OLD_LOG)
         if (f.isFile) {
-            val text = try { Vault.readFileSteady(f)?.let { String(it, Charsets.UTF_8) } } catch (e: Exception) {
+            val text = try { (testReadLog?.invoke(f) ?: Vault.readFileSteady(f))?.let { String(it, Charsets.UTF_8) } } catch (e: Vault.Tampered) {
                 runCatching { Vault.setAside(f) }
                 runCatching { Diag.record("autopilot", "the change timeline could not be read (${e.javaClass.simpleName}); it was set aside and starts afresh") }
                 // (Its "switched on by the update" entries, with their Undo, are logged again: their one-time marks go.)
                 com.optionslab.app.data.TimelineOnce.forgetAll()
                 null
-            }
+            } catch (e: Exception) { throw LogUnread(e) }
             // (A plain copy left by a move cut short after its encrypted write: the encrypted one stands.)
             if (text != null) { runCatching { old.delete() }; return text }
         }
@@ -173,6 +217,9 @@ internal object Autopilot {
     /** The log and the knobs written (under [lock]); true when the log's write landed (22 Nov 2026: [logBossOwnOnce]'s one-time marks). */
     private fun save(): Boolean {
         val d = dir() ?: return false
+        // 22 Nov 2026 (B6 review): never before the timeline was read - a save then would write a part over the whole (kept in memory, and
+        // saved on top of the file's once it is read: [loadFiles]).
+        if (!loaded) return false
         // 26 Oct: after "Erase everything" an empty log writes no files (a save may still be queued).
         if (_book.value == AutoChange.Book() && _knobs.value.isEmpty() && !File(d, LOG).exists() && !File(d, OLD_LOG).exists() &&
             !File(d, KNOBS).exists()) return false
@@ -244,8 +291,9 @@ internal object Autopilot {
         if (!Market.isTradingDay(today)) return false
         val minute = Market.minuteNow()
         withContext(Dispatchers.IO) { ensureLoaded() }
-        // Boss's setting not read (the vault could not be read): no pass until it is - tried again on the next look (G5-4).
-        if (!modeLoaded) return false
+        // Boss's setting not read (the vault could not be read): no pass until it is - tried again on the next look (G5-4). So with the
+        // change timeline (22 Nov 2026, B6 review): a pass needs what it changed before (its probations, rests and trials).
+        if (!modeLoaded || !loaded) return false
         val b = _book.value
         return when {
             minute >= NIGHT && b.lastRun != today && (JarvisLearning.book.value.lastPass == today || testInputs != null) -> { run(today, healthOnly = false); true }
@@ -986,6 +1034,8 @@ internal object Autopilot {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
                 ensureLoaded()
+                // 22 Nov 2026 (B6 review): the timeline not read (a hiccup): not logged now - a later start logs it (its once-mark unwritten).
+                if (!loaded) { runCatching { Diag.record("autopilot", "not logged yet (the timeline could not be read): ${c.what}") }; return@runCatching }
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     if (once != null && com.optionslab.app.data.TimelineOnce.done(once) != false) return@runCatching
@@ -2069,13 +2119,14 @@ internal object Autopilot {
         synchronized(lock) { _book.value = AutoChange.Book(); _knobs.value = emptyMap() }
         _mode.value = AutoChange.Mode.SAFE
         loaded = true; modeLoaded = true; running.set(false); notified = null; testInputs = null; testLive = null; testReplay = null; testModeRead = null
+        testReadLog = null; unreadTold = false; unreadAtMs = 0L
     }
 
     /** TEST ONLY: as at a cold start - nothing read yet (the log and knobs kept in memory are dropped). */
     internal fun unloadForTest() {
         synchronized(lock) { _book.value = AutoChange.Book(); _knobs.value = emptyMap() }
         _mode.value = AutoChange.Mode.SAFE
-        loaded = false; modeLoaded = false
+        loaded = false; modeLoaded = false; unreadAtMs = 0L
     }
 
     /** TEST ONLY: [b] as the log. */

@@ -100,9 +100,15 @@ object Upkeep {
     fun higherPeak(here: Double?, theirs: Double?): Double? =
         listOfNotNull(here?.takeIf { it.isFinite() && it > 0 }, theirs?.takeIf { it.isFinite() && it > 0 }).maxOrNull()
 
-    /** A comma-separated set (the self-review's parks or pauses) after a restore: this phone's and the backup's together, never fewer. */
-    fun union(here: String?, theirs: String?): String =
-        listOf(here, theirs).flatMap { it.orEmpty().split(',') }.map { it.trim() }.filter { it.isNotEmpty() }.toSortedSet().joinToString(",")
+    /**
+     * A comma-separated set (the self-review's parks or pauses) after a restore: this phone's and the backup's together, never fewer.
+     * 22 Nov 2026 (B6 review): an item [hereOnly] says is this phone's alone keeps this phone's membership (the backup's never adds it) -
+     * R51, R72 and Liquidity while Boss's 19 Nov choice keeps the self-review's park and pause off them.
+     */
+    fun union(here: String?, theirs: String?, hereOnly: (String) -> Boolean = { false }): String {
+        fun items(s: String?) = s.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        return (items(here) + items(theirs).filterNot(hereOnly)).toSortedSet().joinToString(",")
+    }
 
     /** The brain's entry pause ([MarketBrain.Policy]) after a restore: for each cause the stricter of the two (OFF < SHADOW < ON). */
     fun stricterPause(here: String?, theirs: String?): String {

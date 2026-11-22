@@ -53,6 +53,8 @@ class TestApp : Application() {
         com.optionslab.app.security.Vault.testWriteDelayMs = 0L
         // 20 Oct: a backup restore freezes its vault files until the restart (no restart in a test): every test starts thawed.
         com.optionslab.app.security.Vault.thaw()
+        // 22 Nov 2026 (B6 review): a test's restore is never followed by the restart that ends it - entries go again in the next test.
+        com.optionslab.app.data.Backup.restoreEndedForTest()
         com.optionslab.app.security.Vault.testFailWrites = emptySet()
         // 26 Oct: no erase held over from another test, and no erase hook.
         com.optionslab.app.security.Vault.resetEraseForTest()

@@ -97,6 +97,11 @@ class UpkeepTest {
         assertEquals("liquidity", Upkeep.union("liquidity", null))
         assertEquals("liquidity", Upkeep.union("", "liquidity"))
         assertEquals("", Upkeep.union(null, ""))
+        // 22 Nov 2026 (B6 review): an item this phone keeps as its own - the backup's never adds it; this phone's stays.
+        val covered = { k: String -> ArmAutoStops.covers(k) }
+        assertEquals("hero,solo", Upkeep.union("hero", "solo,liquidity", hereOnly = covered))
+        assertEquals("hero,liquidity,solo", Upkeep.union("liquidity,hero", "solo", hereOnly = covered))
+        assertEquals("", Upkeep.union(null, "liquidity", hereOnly = covered))
         // The brain's pause: each cause the stricter (a missing one counts as its default: news ON).
         val p = MarketBrain.decode(Upkeep.stricterPause("news=OFF;traps=ON;feed=OFF", "news=SHADOW;traps=OFF;bigmove=ON"))
         assertEquals(MarketBrain.Mode.SHADOW, p.mode(MarketBrain.Cause.NEWS))
