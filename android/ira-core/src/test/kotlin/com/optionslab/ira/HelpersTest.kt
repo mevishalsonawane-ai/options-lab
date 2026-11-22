@@ -171,4 +171,38 @@ class SettingsTalkTest {
         assertFalse(SettingsTalk.loosens(SettingsTalk.Key.LOSS_ALERT, 3000.0, 0.0))
         assertEquals("change the daily loss limit from Rs 2,000 to Rs 5,000", SettingsTalk.describe(k, 2000.0, 5000.0))
     }
+
+    /**
+     * 22 Nov 2026 (B6 review): "max lots per order" and "max manual orders per day" named two older settings the order checks never read;
+     * they now set the account guard's own (enforced) limits, said back by those names.
+     */
+    @Test fun theOrderLimitsSaidAreTheEnforcedOnes() {
+        assertEquals("MAX_LOTS" to 3.0, set("set max lots per order to 3"))
+        assertEquals("MAX_LOTS" to 2.0, set("change lots per order to 2"))
+        assertEquals("MAX_TRADES" to 5.0, set("set max manual orders per day to 5"))
+        assertEquals("MAX_TRADES" to 8.0, set("set manual orders a day to 8"))
+        // "Manual orders" names the limit only beside "max", "limit", "per day" or "a day": never "disable my manual orders".
+        for (t in listOf("disable my manual orders", "remove manual orders", "turn off manual orders", "block manual orders"))
+            assertTrue(c(t)?.let { it.kind == Command.Kind.SET_LIMIT && it.target == "MAX_TRADES" } != true, t)
+        assertEquals("MAX_TRADES" to 0.0, set("turn off the manual orders limit"))
+        assertEquals("MAX_TRADES" to 0.0, set("disable max manual orders per day"))
+        // The older keys are gone: nothing can set what nothing reads.
+        assertTrue(SettingsTalk.Key.entries.none { it.name == "LOTS_PER_ORDER" || it.name == "ORDERS_PER_DAY" })
+        assertEquals("change max lots per instrument from 2 to 3", SettingsTalk.describe(SettingsTalk.Key.MAX_LOTS, 2.0, 3.0))
+    }
+
+    /** 22 Nov 2026 (B6 review): the Account guard page's PIN list, shared with Jarvis: both protection switches are in it. */
+    @Test fun thePinListHoldsTheGuardsLimitsAndProtections() {
+        assertEquals(setOf(SettingsTalk.Key.DAILY_LOSS, SettingsTalk.Key.DRAWDOWN, SettingsTalk.Key.MAX_OPEN, SettingsTalk.Key.MAX_TRADES,
+            SettingsTalk.Key.ORDER_VALUE, SettingsTalk.Key.MAX_LOTS, SettingsTalk.Key.EXPOSURE, SettingsTalk.Key.CUTOFF, SettingsTalk.Key.PAPER_DAILY_LOSS,
+            SettingsTalk.Key.PAPER_WEEKLY_LOSS, SettingsTalk.Key.EXPIRY_SQUARE_OFF, SettingsTalk.Key.NAKED_SHORTS), SettingsTalk.PIN_TO_LOOSEN)
+        // Switching either protection off loosens it; on never does.
+        for (k in listOf(SettingsTalk.Key.EXPIRY_SQUARE_OFF, SettingsTalk.Key.NAKED_SHORTS)) {
+            assertTrue(SettingsTalk.loosens(k, 1.0, 0.0), k.name)
+            assertFalse(SettingsTalk.loosens(k, 0.0, 1.0), k.name)
+        }
+        // Alerts, the product and the paper orders-a-day count are not the guard's.
+        for (k in listOf(SettingsTalk.Key.LOSS_ALERT, SettingsTalk.Key.PROFIT_ALERT, SettingsTalk.Key.PRODUCT, SettingsTalk.Key.PAPER_TRADES))
+            assertFalse(k in SettingsTalk.PIN_TO_LOOSEN, k.name)
+    }
 }

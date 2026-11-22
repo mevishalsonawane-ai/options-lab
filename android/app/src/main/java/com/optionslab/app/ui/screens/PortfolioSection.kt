@@ -160,8 +160,11 @@ internal fun PortfolioSheet(onClose: () -> Unit) {
  */
 internal typealias PinStep = @Composable (onOk: () -> Unit, onCancel: () -> Unit) -> Unit
 
-/** 19 Nov 2026 (audit batch 2): the PIN prompt's words for a live risk rule switched off or put back in shadow. */
-internal const val LIVE_RULE_PIN = "Enter your app PIN to switch off a live risk rule (it lets more of the bots' live entries through)."
+/**
+ * 19 Nov 2026 (audit batch 2): the PIN prompt's words for a live risk rule switched off or put back in shadow; 22 Nov 2026 (B6 review):
+ * or its cap raised.
+ */
+internal const val LIVE_RULE_PIN = "Enter your app PIN to switch off a live risk rule, or raise its cap (it lets more of the bots' live entries through)."
 
 /** 19 Nov 2026 (audit batch 2): whether switching a live risk rule off asks the PIN now (the guard's own rule, [com.optionslab.app.security.GuardPin]). */
 internal fun liveRulePinAsks(model: com.optionslab.app.ui.AppModel): Boolean =
@@ -174,13 +177,15 @@ internal fun liveRulePin(model: com.optionslab.app.ui.AppModel): PinStep = { onO
 @Composable
 internal fun PortfolioSettingCard(model: com.optionslab.app.ui.AppModel) = PortfolioSettingCard(pinAsks = { liveRulePinAsks(model) }, pin = liveRulePin(model))
 
-/** The card with its PIN step ([pinAsks]: whether switching off asks it now; tests give their own). */
+/** The card with its PIN step ([pinAsks]: whether switching off, or a higher cap while on, asks it now; tests give their own). */
 @Composable
 internal fun PortfolioSettingCard(pinAsks: () -> Boolean = { false }, pin: PinStep = { _, _ -> }) {
     val view by PortfolioHost.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var said by remember { mutableStateOf<String?>(null) }
     var askOff by remember { mutableStateOf(false) }
+    // 22 Nov 2026 (B6 review): a higher cap while the guard is on lets more correlated live entries through - the PIN first (the cap asked).
+    var askRaise by remember { mutableStateOf<Double?>(null) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { PortfolioHost.refresh() } } }
     fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
     LedgerCard(title = "Portfolio guard") {
@@ -192,11 +197,20 @@ internal fun PortfolioSettingCard(pinAsks: () -> Boolean = { false }, pin: PinSt
         }
         ParamTokens("Cap for correlated arms together (% of capital)", PortfolioRisk.CAP_CHOICES.map {
             (if (it % 1.0 == 0.0) "${it.toInt()}%" else "$it%") to (kotlin.math.abs(it - view.capPct) < 1e-9)
-        }) { i -> save { PortfolioHost.setCapPct(PortfolioRisk.CAP_CHOICES[i]) } }
+        }) { i ->
+            val to = PortfolioRisk.CAP_CHOICES[i]
+            if (view.on && to > view.capPct + 1e-9 && pinAsks()) askRaise = to
+            // (The setter's own refusal - a saved cap the view has not read yet - opens the PIN step too, never a dead end.)
+            else scope.launch(Dispatchers.IO) {
+                val m = runCatching { PortfolioHost.setCapPct(to) }.getOrElse { "Could not save that." }
+                withContext(Dispatchers.Main) { if (m == PortfolioHost.PIN_RAISE) askRaise = to else said = m }
+            }
+        }
         if (view.capRs > 0) Note("Now: ${PortfolioRisk.rs(view.capRs)} of your capital.")
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }
     if (askOff) pin({ askOff = false; save { PortfolioHost.setOn(false, pinConfirmed = true) } }, { askOff = false })
+    askRaise?.let { to -> pin({ askRaise = null; save { PortfolioHost.setCapPct(to, pinConfirmed = true) } }, { askRaise = null }) }
 }
 
 /**
@@ -207,13 +221,18 @@ internal fun PortfolioSettingCard(pinAsks: () -> Boolean = { false }, pin: PinSt
 @Composable
 internal fun SameDirectionCapCard(model: com.optionslab.app.ui.AppModel) = SameDirectionCapCard(pinAsks = { liveRulePinAsks(model) }, pin = liveRulePin(model))
 
-/** The card with its PIN step for the live switch going back to shadow (19 Nov 2026, audit batch 2; tests give their own). */
+/**
+ * The card with its PIN step for the live switch going back to shadow (19 Nov 2026, audit batch 2), and for a higher number while live
+ * is on (22 Nov 2026, B6 review); tests give their own.
+ */
 @Composable
 internal fun SameDirectionCapCard(pinAsks: () -> Boolean = { false }, pin: PinStep = { _, _ -> }) {
     val view by com.optionslab.app.data.ExposureCapHost.view.collectAsState(Dispatchers.Main.immediate)
     val scope = rememberCoroutineScope()
     var said by remember { mutableStateOf<String?>(null) }
     var askOff by remember { mutableStateOf(false) }
+    // 22 Nov 2026 (B6 review): a higher number while live is on lets more same-way live entries through - the PIN first (the number asked).
+    var askRaise by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { com.optionslab.app.data.ExposureCapHost.refresh() } } }
     fun save(f: () -> String) { scope.launch(Dispatchers.IO) { val m = runCatching { f() }.getOrElse { "Could not save that." }; withContext(Dispatchers.Main) { said = m } } }
     LedgerCard(title = "Same-direction cap") {
@@ -223,7 +242,13 @@ internal fun SameDirectionCapCard(pinAsks: () -> Boolean = { false }, pin: PinSt
             save { com.optionslab.app.data.ExposureCapHost.setPaperOn(on) }
         }
         ParamTokens("Most open the same way", com.optionslab.ira.SameDirectionCap.CHOICES.map { "$it" to (it == view.max) }) { i ->
-            save { com.optionslab.app.data.ExposureCapHost.setMax(com.optionslab.ira.SameDirectionCap.CHOICES[i]) }
+            val to = com.optionslab.ira.SameDirectionCap.CHOICES[i]
+            if (view.liveOn && to > view.max && pinAsks()) askRaise = to
+            // (The setter's own refusal - a saved live switch the view has not read yet - opens the PIN step too, never a dead end.)
+            else scope.launch(Dispatchers.IO) {
+                val m = runCatching { com.optionslab.app.data.ExposureCapHost.setMax(to) }.getOrElse { "Could not save that." }
+                withContext(Dispatchers.Main) { if (m == com.optionslab.app.data.ExposureCapHost.PIN_RAISE) askRaise = to else said = m }
+            }
         }
         // 19 Nov 2026 (audit batch 2): back to shadow lets more live entries through - the PIN first where the guard's rule asks it.
         ToggleRow("Also refuse the bots' live entries", if (view.liveOn) "On: live entries past the cap are refused" else "Off: live only logs what it would refuse", view.liveOn) { on ->
@@ -234,6 +259,7 @@ internal fun SameDirectionCapCard(pinAsks: () -> Boolean = { false }, pin: PinSt
         said?.let { Note(it, Modifier.padding(top = 4.dp)) }
     }
     if (askOff) pin({ askOff = false; save { com.optionslab.app.data.ExposureCapHost.setLiveOn(false, pinConfirmed = true) } }, { askOff = false })
+    askRaise?.let { to -> pin({ askRaise = null; save { com.optionslab.app.data.ExposureCapHost.setMax(to, pinConfirmed = true) } }, { askRaise = null }) }
 }
 
 /**
@@ -307,6 +333,13 @@ internal fun ExitCoordinatorCard() {
     }
 }
 
+/**
+ * 22 Nov 2026 (B6 review): what the positions-lag guard's switch off really leaves: the exits that use it whatever the switch says
+ * ([com.optionslab.app.data.ExitCoordinator.held]'s forceLag), and the ones whose check it puts in shadow.
+ */
+internal const val LAG_OFF_WORDS = "Off: the square-offs, strategy exits, the arms' live exits, the MCX expiry exit and a stop put back " +
+    "after your exit still use it; for Pine's live exits and the stops and targets the app rests on your positions it only logs what it would do"
+
 /** The card from plain state (tests drive it). */
 @Composable
 internal fun ExitCoordinatorCardContent(view: com.optionslab.app.data.ExitCoordinator.View, said: String?, onLagSwitch: (Boolean) -> Unit = {},
@@ -316,9 +349,11 @@ internal fun ExitCoordinatorCardContent(view: com.optionslab.app.data.ExitCoordi
             "each waits its turn and reads Zerodha's books again, so one contract is never sold twice. Your own exits never wait.")
         ToggleRow("Make exits take turns", if (view.on) "On: one exit at a time per contract" else "Off: only logs what it would do", view.on, keepSub = true, onChange = onSwitch)
         if (view.line.isNotEmpty()) Note(view.line, Modifier.padding(top = 4.dp))
-        // 21 Oct, enhancement round 3 (idea 1): the positions-lag guard, its own switch (off: logged only).
+        // 21 Oct, enhancement round 3 (idea 1): the positions-lag guard, its own switch. 22 Nov 2026 (B6 review): off no longer "only
+        // logs" - since 15-20 Nov the square-offs, strategy exits, the arms' (ORB, Liquidity and their live copies') exits and lost-exit
+        // checks, the MCX expiry exit and a stop put back after your exit always use it; off affects only the others ([LAG_OFF_WORDS]).
         ToggleRow("Never sell a filled exit twice", if (view.lagOn) "On: a positions read behind an exit's fill is read again"
-            else "Off: only logs what it would do", view.lagOn, keepSub = true, onChange = onLagSwitch)
+            else LAG_OFF_WORDS, view.lagOn, keepSub = true, onChange = onLagSwitch)
         Note("Zerodha's positions can trail an exit that already filled by a moment. On, the next exit reads them again, and " +
             "counts the fill as sold if they still trail; it only ever sends less.", Modifier.padding(top = 2.dp))
         if (view.lagLine.isNotEmpty()) Note(view.lagLine, Modifier.padding(top = 4.dp))
