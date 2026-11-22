@@ -553,6 +553,14 @@ object OrbArms {
                         m.keys().forEach { k -> val at = m.optLong(k, 0L); if (at > 0 && now - at < OWN_CANCEL_KEEP_MS && ownCancels.putIfAbsent(k, at) == null) ownCancelsRestored += k }
                     }
                 }
+                // (22 Nov 2026, B6 review, second round: and the stops Boss's manual exit from the app or a square-off marked as the app's
+                // own cancels ([markOwnCancels]) - each ends the first time its stop is seen working again.)
+                runCatching {
+                    if (gen == wipeGen) o.optJSONObject("exitMarks")?.let { m ->
+                        val now = wallMs()
+                        m.keys().forEach { k -> val at = m.optLong(k, 0L); if (at > 0 && now - at < OWN_CANCEL_KEEP_MS && exitMarks.putIfAbsent(k, at) == null) exitMarksRestored += k }
+                    }
+                }
                 runCatching {
                     val d = today().toString()
                     if (gen == wipeGen) o.optJSONObject("sweepCancels")?.let { m -> m.keys().forEach { k ->
@@ -1372,6 +1380,8 @@ object OrbArms {
         // (22 Nov 2026, B6 review: the app's own stop cancels, by order id and when marked - a restart never reads one as Boss's; and a
         // closed trade's found lost stop still being cancelled, with the day it was taken out - the sweep goes on after a restart that day.)
         ownCancelsKept().takeIf { it.isNotEmpty() }?.let { kept -> o.put("ownCancels", JSONObject().apply { kept.forEach { (id, at) -> put(id, at) } }) }
+        // (22 Nov 2026, B6 review, second round: and the stops Boss's manual exit from the app or a square-off marked ([exitMarks]).)
+        marksKept(exitMarks).takeIf { it.isNotEmpty() }?.let { kept -> o.put("exitMarks", JSONObject().apply { kept.forEach { (id, at) -> put(id, at) } }) }
         synchronized(sweepCancels) { if (sweepCancels.isNotEmpty()) o.put("sweepCancels", JSONObject().apply {
             sweepCancels.forEach { (id, what) -> put(id, JSONObject().put("what", what).put("day", sweepDays[id] ?: day)) } }) }
         o.put("positions", JSONArray().apply {
@@ -3736,6 +3746,8 @@ object OrbArms {
         cancelOwnStop(l.id, b)
         val st = runCatching { Broker.orderState(l.id) }.getOrNull()
         if (st == null || (st.status != "CANCELLED" && st.status != "REJECTED")) {
+            // (22 Nov 2026, B6 review: still working - the cancel may not have taken: its own-cancel mark ends soon, [ownCancelDidNotTake].)
+            if (st != null && st.status in STILL_WORKING) ownCancelDidNotTake(l.id)
             runCatching { Diag.record("orb", "$label: its lost stop ${l.id} was found for ${l.qty}, more than the $qty it holds now; it could not be cut " +
                 "or confirmed out, so it is kept as its stop") }
             return Fit.Kept
@@ -4349,7 +4361,7 @@ object OrbArms {
         passIds.entries.removeAll { (id, v) -> if (orders.containsKey(id)) { passPlaced[v.first] = placedNow(v.first) - v.second; true } else false }
         // 22 Nov 2026 (B6 review): an own-cancel mark whose stop this read still shows working long after it - that cancel never took (the
         // book saved without it, so a restart never brings it back).
-        if (ownCancels.keys.toList().count { orders[it]?.working == true && ownCancelSeenWorking(it) } > 0) runCatching { saveSoon(b) }
+        if (ownCancels.keys.toList().count { orders[it]?.working == true && ownCancelSeenWorking(it, fresh = !stream) } > 0) runCatching { saveSoon(b) }
         val keys = open.mapNotNull { it.value.kite }.map { "NFO:$it" }.distinct()
         val q = runCatching { liveQuotes(keys, stream) }.getOrDefault(emptyMap())
         val drop = ArrayList<Int>()
@@ -5207,7 +5219,7 @@ object OrbArms {
      * 16 Nov (review): the stop orders this process cancelled itself (an exit taking its stop out first, a gone position's stop): a
      * cancel of one of these is the app's, never taken as Boss's ([Position.stopByYou]). Bounded (the oldest dropped first).
      * 22 Nov 2026 (B6 review, WHO CANCELLED A STOP): by order id, when it was marked ([wallMs]); kept in the book too ([encodeBook]) and
-     * handed to its writer before the cancel goes ([cancelOwnStop]), so a restart between a cancel and the pass's own save never reads it
+     * queued to be saved before the cancel goes ([cancelOwnStop]), so a restart between a cancel and the pass's own save never reads it
      * as Boss's. A mark whose cancel never took ends ([ownCancelSeenWorking], [cancelOwnStop]), so Boss's own later cancel of it is his.
      */
     private val ownCancels = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -5220,7 +5232,7 @@ object OrbArms {
 
     /** 22 Nov 2026 (B6 review): [id] marked the app's own cancel now; true when it was not marked before. Memory (bounded). */
     private fun markOwnCancel(id: String): Boolean {
-        ownCancelsRestored -= id
+        ownCancelsRestored -= id; ownCancelsUnsure.remove(id)
         val fresh = ownCancels.put(id, wallMs()) == null
         if (ownCancels.size > OWN_CANCELS_MEMORY) ownCancels.entries.sortedBy { it.value }.take(ownCancels.size - OWN_CANCELS_MEMORY)
             .forEach { ownCancels.remove(it.key, it.value) }
@@ -5233,19 +5245,26 @@ object OrbArms {
      * by Boss in Kite is his. One taken back from the book after a restart ends the first time its stop is seen working. A cancel the app
      * sends again marks it afresh. True when the mark ended.
      */
-    private fun ownCancelSeenWorking(id: String): Boolean {
+    private fun ownCancelSeenWorking(id: String, fresh: Boolean = true): Boolean {
         val at = ownCancels[id] ?: return false
         // (One taken back from the book after a restart ends at once: its cancel never took - the phone may have died before it went.)
-        return (id in ownCancelsRestored || wallMs() - at !in 0 until EXIT_MARK_SETTLE_MS) && ownCancels.remove(id, at).also { if (it) ownCancelsRestored -= id }
+        // (One seen still working right after its cancel ends once a FRESH read - [fresh]: never the stream's kept copy, which can be up to
+        // [Broker.RECON_MS] old - still shows it working [OWN_CANCEL_RECHECK_MS] later: [ownCancelDidNotTake].)
+        val unsure = fresh && ownCancelsUnsure[id]?.let { wallMs() - it !in 0 until OWN_CANCEL_RECHECK_MS } == true
+        return (id in ownCancelsRestored || unsure || wallMs() - at !in 0 until EXIT_MARK_SETTLE_MS) &&
+            ownCancels.remove(id, at).also { if (it) { ownCancelsRestored -= id; ownCancelsUnsure.remove(id) } }
     }
 
     /** 22 Nov 2026 (B6 review): the own-cancel marks taken back from the book after a restart, not made again since. Memory only. */
     private val ownCancelsRestored: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /** 22 Nov 2026 (B6 review): the own-cancel marks the book keeps ([encodeBook]): the newest [OWN_CANCELS_KEPT] of the last day. */
-    private fun ownCancelsKept(): List<Pair<String, Long>> {
+    private fun ownCancelsKept(): List<Pair<String, Long>> = marksKept(ownCancels)
+
+    /** 22 Nov 2026 (B6 review): of the marks [m] (by order id, when marked), the newest [OWN_CANCELS_KEPT] of the last day - those the book keeps. */
+    private fun marksKept(m: Map<String, Long>): List<Pair<String, Long>> {
         val now = wallMs()
-        return ownCancels.entries.map { it.key to it.value }.filter { now - it.second < OWN_CANCEL_KEEP_MS }
+        return m.entries.map { it.key to it.value }.filter { now - it.second < OWN_CANCEL_KEEP_MS }
             .sortedByDescending { it.second }.take(OWN_CANCELS_KEPT)
     }
 
@@ -5282,13 +5301,22 @@ object OrbArms {
      * the lock, the encoding or the disk. A restart in the moment before that write reads such a cancel as before.
      * The memory mark ends when the stop is seen working again [EXIT_MARK_SETTLE_MS] after it was made (the cancel did not take: a later
      * cancel is Boss's), or when [unmarkOwnCancels] takes it back. Returns the book's write job (for the tests).
+     * 22 Nov 2026 (B6 review, second round: the marks were memory only until that later write): the marks are kept in the book too
+     * ([encodeBook], as [ownCancels]) and taken back after a restart (each ending the first time its stop is seen working). With the lock
+     * free and the book read, the trades are marked and the book queued to be saved ([saveSoon]: encoded here, written to the disk by its
+     * own writer thread) at once, before the caller's cancels go - the caller never waits on the lock or the disk; otherwise on this
+     * object's IO scope as before (then it may be written after the cancels went: a restart in that moment reads them as before).
      */
     internal fun markOwnCancels(ids: Collection<String>): kotlinx.coroutines.Job? {
         if (ids.isEmpty()) return null
         val at = wallMs()
-        for (id in ids) exitMarks[id] = at
+        for (id in ids) { exitMarks[id] = at; exitMarksRestored -= id }
         if (exitMarks.size > 500) exitMarks.entries.sortedBy { it.value }.take(exitMarks.size - 500).forEach { exitMarks.remove(it.key, it.value) }
         val marked = ids.toSet()
+        if (lock.tryLock()) try {
+            val b = cache
+            if (b != null) { markTradesOn(b, marked, true); runCatching { saveSoon(b) }; return kotlinx.coroutines.CompletableDeferred(Unit) }
+        } finally { lock.unlock() }
         return offLock.launch { runCatching { lock.withLock { markTrades(marked, true) } } }
     }
 
@@ -5299,13 +5327,22 @@ object OrbArms {
     internal fun unmarkOwnCancels(ids: Collection<String>): kotlinx.coroutines.Job? {
         if (ids.isEmpty()) return null
         val gone = ids.toSet()
-        for (id in gone) exitMarks.remove(id)
+        for (id in gone) { exitMarks.remove(id); exitMarksRestored -= id }
         return offLock.launch { runCatching { lock.withLock { markTrades(gone, false) } } }
     }
 
-    /** Under [lock]: each open live trade whose stop is one of [ids] marked ([on]) or unmarked as the app's own cancel; written if changed. */
+    /**
+     * Under [lock]: each open live trade whose stop is one of [ids] marked ([on]) or unmarked as the app's own cancel; the book written
+     * (22 Nov 2026, B6 review: always - the marks themselves are kept in it, [exitMarks]).
+     */
     private suspend fun markTrades(ids: Set<String>, on: Boolean) {
         val b = book()
+        markTradesOn(b, ids, on)
+        saveSoon(b)
+    }
+
+    /** Under [lock]: [markTrades] on [b] itself, nothing written; true when a trade changed. */
+    private fun markTradesOn(b: Book, ids: Set<String>, on: Boolean): Boolean {
         var changed = false
         for (i in b.positions.indices) {
             val p = b.positions[i]
@@ -5313,11 +5350,16 @@ object OrbArms {
             // (A mark taken back meanwhile is never written on.)
             if (p.open && p.live && sid in ids && p.appCancelled != on && (!on || exitMarks.containsKey(sid))) { b.positions[i] = p.copy(appCancelled = on); changed = true }
         }
-        if (changed) saveSoon(b)
+        return changed
     }
 
-    /** By order id, when Boss's manual exit from the app marked that stop its own ([markOwnCancels]). Memory only, bounded. */
+    /**
+     * By order id, when Boss's manual exit from the app or a square-off marked that stop its own ([markOwnCancels]). Memory, bounded; kept in
+     * the book too (22 Nov 2026, B6 review: [encodeBook]).
+     */
     private val exitMarks = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** 22 Nov 2026 (B6 review): the [exitMarks] taken back from the book after a restart, not made again since. Memory only. */
+    private val exitMarksRestored: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     /** A stop seen working this long after its mark: that cancel did not take. */
     internal const val EXIT_MARK_SETTLE_MS = 2 * 60_000L
     /** TEST ONLY (20 Nov 2026): the wall clock the own-cancel marks are timed by (null in the app: the system clock). Debug builds only. */
@@ -5327,7 +5369,8 @@ object OrbArms {
     private fun exitMarked(id: String): Boolean = exitMarks.containsKey(id)
     private fun exitMarkSeenWorking(id: String) {
         val at = exitMarks[id] ?: return
-        if (wallMs() - at !in 0 until EXIT_MARK_SETTLE_MS) exitMarks.remove(id, at)
+        // (22 Nov 2026, B6 review: one taken back from the book after a restart ends at once - its cancel never took.)
+        if ((id in exitMarksRestored || wallMs() - at !in 0 until EXIT_MARK_SETTLE_MS) && exitMarks.remove(id, at)) exitMarksRestored -= id
     }
 
     /** 20 Nov 2026: true when [id] may be one of these arms' live stops (an open live trade claims it, or no book is read yet). Memory only. */
@@ -5338,9 +5381,10 @@ object OrbArms {
     /**
      * Cancels the stop [id] as the app's own ([ownCancels]). 22 Nov 2026 (B6 review, WHO CANCELLED A STOP: the mark was memory only and the
      * book was saved after the pass - a restart between a confirmed cancel and that save read the stop CANCELLED with blank words as
-     * Boss's, never put it back and told him he had cancelled it): a new mark goes into the book BEFORE the cancel is sent - [b], the book
-     * of a caller holding the arms' lock, handed to its writer ([saveSoon]: encoded here, written on the writer's own thread, never the
-     * disk on this path); with none, the same when the lock is free now, else asked on this object's own worker. A cancel Zerodha refused
+     * Boss's, never put it back and told him he had cancelled it): a new mark is queued to be saved with the book BEFORE the cancel is sent
+     * - [b], the book of a caller holding the arms' lock, handed to its writer ([saveSoon]: encoded here, written on the writer's own
+     * thread, never the disk on this path); with none, the same when the lock is free now, else asked on this object's own worker (then
+     * it may be saved just after the cancel went - [keepOwnCancels]). A cancel Zerodha refused
      * outright for a mark this call made (nothing of the app's was cancelled: the stop had ended already, or still works) takes it back.
      */
     private suspend fun cancelOwnStop(id: String, b: Book? = null) {
@@ -5351,12 +5395,38 @@ object OrbArms {
         if (refused && fresh && ownCancels.remove(id) != null) keepOwnCancels(b)
     }
 
-    /** 22 Nov 2026 (B6 review): the own-cancel marks handed to the book's writer ([cancelOwnStop]); never the disk, nor a wait on the lock. */
+    /**
+     * 22 Nov 2026 (B6 review): the own-cancel marks queued to be saved with the book ([saveSoon]: encoded here, written to the disk by the
+     * book's own writer thread), before the cancel goes ([cancelOwnStop]); never the disk here, nor a wait on the lock. With no book in hand and the
+     * lock busy, the save is queued once the lock is free - it may then be written after the cancel went. That is acceptable: only that
+     * moment's restart could read the cancel as Boss's, and the pass holding the lock saves the book itself as it ends (with the mark).
+     */
     private fun keepOwnCancels(b: Book?) {
         if (b != null) { runCatching { saveSoon(b) }; return }
         if (lock.tryLock()) try { cache?.let { runCatching { saveSoon(it) } } } finally { lock.unlock() }
         else offLock.launch { runCatching { lock.withLock { cache?.let { saveSoon(it) } } } }
     }
+
+    /**
+     * 22 Nov 2026 (B6 review, second round: "drop the mark when the cancel did not take"): Zerodha shows the stop [id] still working right
+     * after the app's cancel of it. That cancel may not have taken - or Zerodha shows it a moment late (its book can show a cancel a moment
+     * after the reply; the fake Kite's cancelLagReads since 19 Nov), and a mark dropped now would read the app's own cancel as Boss's (never
+     * put back). So its mark no longer waits [EXIT_MARK_SETTLE_MS]: it ends the first time a fresh read of the order book still shows the
+     * stop working [OWN_CANCEL_RECHECK_MS] or more after this ([ownCancelSeenWorking]), and Boss's own cancel of it in Kite after that is
+     * his. A cancel the app sends again marks it afresh. Memory only.
+     */
+    private fun ownCancelDidNotTake(id: String) {
+        if (!ownCancels.containsKey(id)) return
+        if (ownCancelsUnsure.size > OWN_CANCELS_MEMORY) ownCancelsUnsure.clear()
+        ownCancelsUnsure[id] = wallMs()
+    }
+    /** 22 Nov 2026 (B6 review): by order id, when the app's cancel of that stop was seen not taken right after ([ownCancelDidNotTake]). */
+    private val ownCancelsUnsure = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** 22 Nov 2026 (B6 review): how long after such a sighting a stop still seen working ends its mark (as the square-offs' gap). */
+    internal const val OWN_CANCEL_RECHECK_MS = 15_000L
+
+    /** 22 Nov 2026 (B6 review): an order status Zerodha shows for an order still working (as [Broker.OrderRow.working]). */
+    private val STILL_WORKING = setOf("OPEN", "TRIGGER PENDING", "AMO REQ RECEIVED", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING")
 
     /**
      * 19 Nov 2026 (review): before a lost entry is looked for in Zerodha's positions ([settleEntry], no order found for it), a buy of these
@@ -5868,12 +5938,34 @@ object OrbArms {
     /**
      * 22 Nov 2026 (B6 review): the square-offs' look at these arms' unsettled exit sales on Zerodha contract [kite]
      * ([SquareOffExit.lostPendingProviders]): each lost sale neither let go nor booked - not found yet, or found and not booked yet, as this
-     * book's own other trades wait for it ([exitLive]) - and each sale on its way ([salesInFlight]), by quantity. Memory only: never the
+     * book's own other trades wait for it ([exitLive]) - each sale on its way ([salesInFlight]), and (second round) each booked a moment
+     * ago ([salesBooked]), by quantity. Memory only: never the
      * arms' lock, the book or the network. (Before this process has read the book its saved lost sales are not known: the square-offs
      * wait for it, [bookReadHint].)
      */
     internal fun unsettledSales(kite: String): Int =
-        lostExits.values.filter { it.sym == kite && !it.notFound }.sumOf { it.order.quantity } + (salesInFlight[kite] ?: 0)
+        lostExits.values.filter { it.sym == kite && !it.notFound }.sumOf { it.order.quantity } + (salesInFlight[kite] ?: 0) + bookedLately(kite)
+
+    /**
+     * 22 Nov 2026 (B6 review, second round: a sale booked a moment ago may not show in a square-off's read of the books yet - an orders read
+     * can miss an order placed a moment ago and a positions read can trail its fill): by Zerodha contract, each live exit sale of these arms
+     * booked by its own exit ([bookSale]) - when, by the square-offs' clock, and how many filled - kept counted for the square-offs' gap after it
+     * ([SquareOffExit.gapMs]). A square-off that sees it in its read as well sells less than it might (the rest goes on a later pass) -
+     * never more. Memory only.
+     */
+    private val salesBooked = java.util.concurrent.ConcurrentHashMap<String, List<Pair<Long, Int>>>()
+    private fun noteBooked(kite: String, qty: Int) {
+        if (qty <= 0) return
+        val now = runCatching { SquareOffExit.clock() }.getOrDefault(System.currentTimeMillis())
+        val gap = SquareOffExit.gapMs
+        salesBooked.compute(kite) { _, l -> l.orEmpty().filter { now - it.first in 0 until gap } + (now to qty) }
+    }
+    private fun bookedLately(kite: String): Int {
+        val l = salesBooked[kite] ?: return 0
+        val now = runCatching { SquareOffExit.clock() }.getOrDefault(System.currentTimeMillis())
+        val gap = SquareOffExit.gapMs
+        return l.filter { now - it.first in 0 until gap }.sumOf { it.second }
+    }
 
     /**
      * 22 Nov 2026 (B6 review): by Zerodha contract, the quantity of these arms' exit sales on their way - from just before the order goes
@@ -6131,6 +6223,16 @@ object OrbArms {
     internal fun exitSalesForTest(): Set<String> = exitSales.keys.toSet()
     /** TEST ONLY: whether order [id] is marked as the app's own cancel. */
     internal fun ownCancelForTest(id: String): Boolean = ownCancel(id)
+    /** TEST ONLY (22 Nov 2026): whether order [id] is marked by Boss's manual exit from the app or a square-off ([markOwnCancels]). */
+    internal fun exitMarkedForTest(id: String): Boolean = exitMarked(id)
+    /**
+     * TEST ONLY (22 Nov 2026): the sizes of the cancels' memory - the stops being cancelled for closed trades, their days and tries (an
+     * erase keeps them), and the own-cancel and exit marks taken back from the book (an erase drops them).
+     */
+    internal fun cancelMemoryForTest(): List<Int> =
+        listOf(synchronized(sweepCancels) { sweepCancels.size }, sweepDays.size, sweepTries.size, ownCancelsRestored.size, exitMarksRestored.size)
+    /** TEST ONLY (22 Nov 2026): the sales booked a moment ago ([salesBooked]) forgotten, as by a new process (each test's own start). */
+    internal fun forgetSalesBookedForTest() { check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }; salesBooked.clear() }
     /** TEST ONLY: the owner label [sym]'s (first) lost exit would give its sale when found. */
     internal fun lostLabelForTest(sym: String): String? = lostOn(sym).minByOrNull { it.id }?.let { lostLabel(it) }
 
@@ -6159,6 +6261,27 @@ object OrbArms {
      */
     private suspend fun exitLive(b: Book, given: Position, sym: String, why: String, pre: Pre? = null,
                                  ltp: Double? = null): Pair<Position, Position?> {
+        // 22 Nov 2026 (B6 review, second round: this exit and a square-off each looked at the other, then both could back off with a stop
+        // already out, or both sell): one seller at a time on the contract ([SquareOffExit.claimExit]) - taken FIRST, before any stop of it
+        // comes out, and released once this exit's sale went or it gave up. Held by a square-off: this exit waits, every stop resting (the
+        // square-off sells it); the next look tries again. (A part's own exit inside this one - a split - holds it too.)
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_OWNER) ?: run {
+            val minute = now().withSecond(0).withNano(0)
+            if (coverSaid.size > 200) coverSaid.clear()
+            if (coverSaid.put(managerId(given) + "|claim", minute) != minute)
+                runCatching { Diag.record("orb", "${armOf(given.arm).label}: $sym's exit (${why.replace('_', ' ')}) waits: " +
+                    "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))} is selling it; this exit takes no stop out meanwhile") }
+            return given to null
+        }
+        try { return exitLiveClaimed(b, given, sym, why, pre, ltp) } finally { claim.release() }
+    }
+
+    /** 22 Nov 2026 (B6 review): these arms' name on a contract's exit claim ([SquareOffExit.claimExit]). */
+    internal const val CLAIM_OWNER = "orb"
+
+    /** [exitLive] with the contract's exit claim held. */
+    private suspend fun exitLiveClaimed(b: Book, given: Position, sym: String, why: String, pre: Pre?,
+                                        ltp: Double?): Pair<Position, Position?> {
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): the arm's own sale waits (his covers it; next pass).
         if (ArmLive.handsOffNow("NFO", sym)) return given to null
         // 20 Nov 2026 (audit PC: a sale whose reply was lost could be sent again): while the lost sale of THIS part of a trade is unresolved
@@ -6211,6 +6334,8 @@ object OrbArms {
                     cancelOwnStop(l.id, b)
                     val st = runCatching { Broker.orderState(l.id) }.getOrNull()
                     if (st == null || st.status !in DONE) {
+                        // (22 Nov 2026, B6 review: still working - the cancel may not have taken: its own-cancel mark ends soon, [ownCancelDidNotTake].)
+                        if (st != null && st.status in STILL_WORKING) ownCancelDidNotTake(l.id)
                         runCatching { Diag.record("orb", "$labelG: its lost stop ${l.id} on $sym, found at its exit, is not confirmed out yet: the exit waits a pass") }
                         return given to null
                     }
@@ -6446,6 +6571,10 @@ object OrbArms {
             }
             // Only sell once the stop is known to be out: a stop still working plus a market sell could both fill.
             // (16 Nov review: marked as the app's own cancel, so the next look - after a restart too - never takes it as Boss's.)
+            // (22 Nov 2026, B6 review: Zerodha shows it still working - the cancel may not have taken: its own-cancel mark ends once the stop
+            // is still seen working a moment later ([ownCancelDidNotTake]), so Boss's own later cancel of it in Kite is his; the next look
+            // that sells sends the cancel again, marked afresh.)
+            if (st != null && st.status in STILL_WORKING) ownCancelDidNotTake(id)
             if (st == null || st.status !in setOf("CANCELLED", "REJECTED")) return p.copy(appCancelled = true) to null
         }
         // What is held and what is already on its way out, read again after the stop came out. Only this position's own
@@ -6544,6 +6673,10 @@ object OrbArms {
         }
         // Known to have filled nothing and to be finished (cancelled or rejected): the stop goes back.
         if (f == null || f.filled <= 0) return if (f != null && f.status in DONE) nothing() else p.copy(stopOrderId = null) to null
+        // (22 Nov 2026, B6 review: kept counted for the square-offs a moment more, in memory - [salesBooked]: their reads may trail it. Only
+        // here, this exit's own sale just booked: a lost sale found later is booked by [bookFoundRow] and not counted - it is in the order
+        // book they read, its fill counted by their lag guard.)
+        noteBooked(sym, f.filled)
         return bookFilled(p, label, sym, why, f.filled, f.avgPrice, f.orderId)
     }
 
@@ -8256,6 +8389,7 @@ object OrbArms {
         forgetHistoryForTest()
         synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); exitSales.clear(); barWaits.clear(); liqFolds.clear()
         forgetStopSaid(); lostSweepAgeMsForTest = null; synchronized(sweepCancels) { sweepCancels.clear() }; sweepTries.clear()
+        sweepDays.clear(); ownCancelsRestored.clear(); ownCancelsUnsure.clear(); exitMarksRestored.clear(); salesBooked.clear()
     }
 
     /**
@@ -8266,6 +8400,11 @@ object OrbArms {
      */
     @Synchronized fun wipe() {
         synchronized(ownCancels) { ownCancels.clear() }; exitMarks.clear(); lostExits.clear(); exitSales.clear(); barWaits.clear(); liqFolds.clear()
+        // (22 Nov 2026, B6 review: the marks taken back with the erased book go with it. The closed trades' stops still being cancelled
+        // ([sweepCancels], their days and tries) are NOT dropped: they are orders resting at Zerodha, not the book's record - forgotten, one
+        // could rest unwatched on a contract still held (Boss's own lots) and sell them, or open a short; nothing else would take it out
+        // after an erase. The sweep ends each once Zerodha shows it ended, and at the day's end.)
+        ownCancelsRestored.clear(); ownCancelsUnsure.clear(); exitMarksRestored.clear()
         forgetStopSaid()
         // (19 Nov 2026: a pending write is dropped; never a wait on one running - the screen may erase - which deletes the file again
         // itself if it finishes after this erase ([flushSoon]).)

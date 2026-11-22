@@ -138,7 +138,8 @@ class OrbStopCancelsTest : RobolectricTest() {
 
     /**
      * A cancel of the app's own that never took (its stop still working two minutes after): the mark ends, so Boss's own later cancel of
-     * that stop in Kite is his - not put back, and said so.
+     * that stop in Kite is his - not put back, and said so. (22 Nov 2026, second round: the stop's state right after the cancel could not be
+     * read here - one read as still working right after ends the mark once it is still seen working 15 s on, the next test.)
      */
     @Test fun anOwnCancelThatNeverTookEndsSoBossesLaterCancelIsHis() {
         var wall = 1_000_000_000L
@@ -148,8 +149,10 @@ class OrbStopCancelsTest : RobolectricTest() {
         kite.position(sym, 30, 200.0, product = "MIS")
         kite.quote("NFO:$sym", 245.0, 244.95, 245.05)                       // the ORB's +40 target
         kite.cancelsLost = 1                                                // the app's cancel is answered, but never lands
+        kite.down += "/orders/$s1"                                          // and its state right after cannot be read
         kite.requests.clear()
         pass()
+        kite.down.clear()
         assertTrue("its cancel did not take", kite.order(s1).working)
         assertTrue("marked the app's own meanwhile", OrbArms.ownCancelForTest(s1))
         assertTrue("nothing sold beside a stop still working", marketSells().isEmpty())
@@ -167,6 +170,66 @@ class OrbStopCancelsTest : RobolectricTest() {
         assertNull(row.stopOrderId)
         assertTrue(saidYours())
         assertTrue("never put back", stopsPlaced().isEmpty())
+    }
+
+    /**
+     * 22 Nov 2026 (second round of the review): the exit's cancel of its stop did not take - Zerodha shows the stop still working right
+     * after: its own-cancel mark no longer waits two minutes - it ends once the stop is still seen working 15 s later
+     * ([OrbArms.OWN_CANCEL_RECHECK_MS]), so Boss's own cancel of it in Kite after that is his: never put back, and said so.
+     */
+    @Test fun anOwnCancelSeenNotTakenEndsOnceStillSeenWorkingAMomentLater() {
+        var wall = 1_000_000_000L
+        OrbArms.testWallMs = { wall }
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 245.0, 244.95, 245.05)                       // the ORB's +40 target
+        kite.cancelsLost = 1                                                // the app's cancel is answered, but never lands
+        kite.requests.clear()
+        pass()
+        assertTrue("its cancel did not take", kite.order(s1).working)
+        assertTrue("nothing sold beside a stop still working", marketSells().isEmpty())
+        assertTrue("still the app's a moment (Zerodha can show a cancel late)", OrbArms.ownCancelForTest(s1))
+        kite.quote("NFO:$sym", 220.0, 219.95, 220.05)                       // back under the target: no exit due
+        wall += OrbArms.OWN_CANCEL_RECHECK_MS - 1_000
+        pass()
+        assertTrue("still marked inside the 15 s", OrbArms.ownCancelForTest(s1))
+        wall += 2_000
+        pass()
+        assertFalse("still working 15 s on: the mark ended (not two minutes)", OrbArms.ownCancelForTest(s1))
+        assertTrue("and left out of the book", OrbArms.awaitWrites() &&
+            JSONObject(String(Vault.readFile(file)!!, Charsets.UTF_8)).optJSONObject("ownCancels")?.has(s1) != true)
+        kite.reject(s1, message = "", status = "CANCELLED")                 // Boss cancels it in Kite
+        pass()
+        val row = arm("orb").open!!
+        assertTrue("his own cancel", row.stopByYou)
+        assertTrue(saidYours())
+        assertTrue("never put back", stopsPlaced().isEmpty())
+    }
+
+    /**
+     * ...and the case that keeps the mark for those 15 s: the app's cancel was taken but Zerodha shows it a moment late (the stop still
+     * working right after the cancel, CANCELLED a few seconds on) - still the app's own cancel, never read as Boss's: the stop goes back.
+     */
+    @Test fun aCancelZerodhaShowsAMomentLateIsStillTheAppsOwn() {
+        var wall = 1_000_000_000L
+        OrbArms.testWallMs = { wall }
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.quote("NFO:$sym", 245.0, 244.95, 245.05)                       // the ORB's +40 target
+        kite.cancelsLost = 1                                                // still working when read right after the cancel
+        pass()
+        assertTrue(kite.order(s1).working)
+        kite.quote("NFO:$sym", 220.0, 219.95, 220.05)                       // no exit due any more
+        wall += 5_000
+        kite.reject(s1, message = "", status = "CANCELLED")                 // the app's cancel shows, a moment late
+        kite.requests.clear()
+        pass()
+        val row = arm("orb").open!!
+        assertFalse("the app's own cancel", row.stopByYou)
+        assertFalse(saidYours())
+        assertEquals("put back at Zerodha", 1, stopsPlaced().size)
     }
 
     /**
@@ -243,6 +306,99 @@ class OrbStopCancelsTest : RobolectricTest() {
         assertTrue("said as his", saidYours())
         assertTrue(today("orb").single().stopByYou)
         assertEquals("Stop for today still sold it", 1, marketSells().size)
+    }
+
+    // ---- second round: Boss's exit from the app's marks kept in the book; an erase drops the cancels' memory ------------------------------
+
+    /**
+     * Boss's manual exit from the app (or a square-off) marks the stops it takes out as the app's own ([OrbArms.markOwnCancels]): with the
+     * book's lock free the marks are in the book at once, before its cancels go - so the phone restarting after the cancel (the sale refused)
+     * never reads it as Boss's: the stop is put back.
+     */
+    @Test fun theMarksOfBossesExitFromTheAppAreInTheBookBeforeItsCancelsGo() {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        runBlocking { OrbArms.view() }                                     // the book read, its lock free
+        val job = OrbArms.markOwnCancels(listOf(s1))!!
+        assertTrue("marked at once with the lock free", job.isCompleted)
+        assertTrue(OrbArms.awaitWrites())
+        val saved = JSONObject(String(Vault.readFile(file)!!, Charsets.UTF_8))
+        assertTrue("the mark is in the book", saved.optJSONObject("exitMarks")?.has(s1) == true)
+        // The exit's cancel goes and its sale is refused; the phone restarts before anything else is written.
+        kite.reject(s1, message = "", status = "CANCELLED")
+        OrbArms.forgetMemoryForTest()
+        runBlocking { OrbArms.view() }
+        assertTrue("taken back from the book", OrbArms.exitMarkedForTest(s1))
+        kite.requests.clear()
+        pass()
+        assertFalse("the app's own cancel, never Boss's", arm("orb").open!!.stopByYou)
+        assertFalse(saidYours())
+        assertEquals("put back at Zerodha", 1, stopsPlaced().size)
+    }
+
+    /**
+     * With the book's lock busy the caller never waits: the mark is in memory at once and in the book as soon as the lock is free; taken
+     * back after a restart, it ends the first time its stop is seen working (that cancel never took).
+     */
+    @Test fun withTheBooksLockBusyTheMarksAreSavedOnceItIsFreeAndEndWhenSeenWorking() {
+        val s1 = stopOrder(30, 160.0, 152.0)
+        state(listOf(position("orb", 30, 200.0, "E1", s1, 160.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        runBlocking { OrbArms.view() }
+        val release = java.util.concurrent.CountDownLatch(1)
+        val held = java.util.concurrent.CountDownLatch(1)
+        val holder = CoroutineScope(Dispatchers.IO).launch { OrbArms.holdLockForTest(release, held) }
+        assertTrue(held.await(10, java.util.concurrent.TimeUnit.SECONDS))
+        val job = try {
+            OrbArms.markOwnCancels(listOf(s1))!!.also {
+                assertTrue("in memory at once", OrbArms.exitMarkedForTest(s1))
+                assertFalse("never a wait on the lock", it.isCompleted)
+            }
+        } finally { release.countDown() }
+        runBlocking { job.join(); holder.join() }
+        assertTrue(OrbArms.awaitWrites())
+        assertTrue("in the book once the lock was free",
+            JSONObject(String(Vault.readFile(file)!!, Charsets.UTF_8)).optJSONObject("exitMarks")?.has(s1) == true)
+        assertTrue(arm("orb").open!!.appCancelled)
+        // A restart; the stop is seen still working (its cancel never went): the mark taken back ends.
+        OrbArms.forgetMemoryForTest()
+        runBlocking { OrbArms.view() }
+        assertTrue(OrbArms.exitMarkedForTest(s1))
+        pass()
+        assertFalse("seen working: the mark ended", OrbArms.exitMarkedForTest(s1))
+        assertFalse(arm("orb").open!!.appCancelled)
+    }
+
+    /**
+     * "Erase everything" drops the own-cancel and exit marks taken back from the book with the rest; the closed trades' stops still being
+     * cancelled are orders resting at Zerodha, not the book's record - kept, and cancelled after the erase as before (forgotten, one could
+     * rest unwatched on a contract still held).
+     */
+    @Test fun anEraseDropsTheMarksTakenBackButStillCancelsAClosedTradesRestingStop() {
+        val wall = 1_000_000_000L
+        OrbArms.testWallMs = { wall }
+        val day = OrbArms.testNow!!.toLocalDate().toString()
+        AutomationSupport.orbState(context, JSONObject()
+            .put("armed", JSONObject().put("orb", true)).put("auto", JSONObject().put("orb", true)).put("liveOk", JSONObject().put("orb", true))
+            .put("legs", JSONObject().put("day", now.toLocalDate().toString()).put("strike", 52_000).put("expiry", expiry.toString())
+                .put("ce", contract(paperCe, "CE")).put("pe", contract(paperPe, "PE")))
+            .put("positions", JSONArray())
+            .put("ownCancels", JSONObject().put("9001", wall)).put("exitMarks", JSONObject().put("9002", wall))
+            .put("sweepCancels", JSONObject().put("9003", JSONObject().put("what", "ORB|$sym").put("day", day))))
+        runBlocking { OrbArms.view() }
+        assertEquals("read back: one stop being cancelled (its day) and one mark of each", listOf(1, 1, 0, 1, 1), OrbArms.cancelMemoryForTest())
+        OrbArms.wipe()
+        assertEquals("the marks gone with the erase; the stop being cancelled kept", listOf(1, 1, 0, 0, 0), OrbArms.cancelMemoryForTest())
+        assertFalse(OrbArms.ownCancelForTest("9001"))
+        assertFalse(OrbArms.exitMarkedForTest("9002"))
+        // After the erase the closed trade's stop is still cancelled at Zerodha.
+        Broker.forgetLostForTest()
+        state(emptyList())
+        kite.requests.clear()
+        pass()
+        assertTrue("still cancelled after the erase", kite.requests.any { it.method == "DELETE" && it.path.endsWith("/9003") })
+        OrbArms.forgetMemoryForTest()                                       // (nothing carried into the next test)
     }
 
     // ---- item 3: a found lost stop taken out after part of it filled --------------------------------------------------------------------

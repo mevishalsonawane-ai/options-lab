@@ -93,6 +93,8 @@ object CheaperStrike {
     @Volatile private var wipeGen = 0
     private val writeLock = Any()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** 22 Nov 2026 (B6 review): the app, for the bought notice ([bought]); set at [init] (a test sets it itself). */
+    @Volatile internal var app: Context? = null
 
     /** Why the step started: (a) the free cash before sending, (b) Zerodha's definite funds refusal. */
     enum class Trigger(val words: String) { PRE_SEND("free cash short before sending"), REJECTED("Zerodha refused it for funds") }
@@ -117,8 +119,9 @@ object CheaperStrike {
 
     private fun marketDay(): LocalDate = runCatching { Market.today() }.getOrElse { LocalDate.now() }
 
-    fun init(@Suppress("UNUSED_PARAMETER") context: Context) {
+    fun init(context: Context) {
         if (com.optionslab.app.BuildConfig.GOLD) return
+        app = context.applicationContext
         scope.launch {
             val never = load()
             // The update switched it on for Boss (his exception): in the change timeline once, with its Undo (one tap off) - only on a phone
@@ -383,13 +386,36 @@ object CheaperStrike {
     /** The words said for a stepped buy: "R72 Breadth Donchian: funds short for NIFTY 25000 PE, bought 24900 PE (1 lot)". */
     fun boughtWords(p: Pick, lots: Int): String = "${p.req.owner}: funds short for ${p.fromWords}, bought ${p.toWords} ($lots lot${if (lots == 1) "" else "s"})"
 
-    /** The stepped buy filled ([lots]): said to Boss, logged and counted. Memory and a queued write; never throws. */
+    /**
+     * The stepped buy filled ([lots]): said to Boss, logged and counted. Memory and a queued write on the caller's thread; never throws.
+     * 22 Nov 2026 (B6 review): it was only an in-app banner, missed with the app closed - now also a notification in the shade (the buys'
+     * channel; private on a locked phone while "hide amounts on the lock screen" is on, as every notice is: [com.optionslab.app.work.Notifier.builder])
+     * and a line in Jarvis's activity, both from this object's own worker (never the entry's thread: a settings read and a vault write).
+     */
     fun bought(p: Pick, lots: Int) {
         val words = boughtWords(p, lots)
         record(Rec(System.currentTimeMillis(), marketDay(), p.req.owner, p.req.source, p.fromWords, p.toWords, p.steps, true, p.req.trigger.words))
         runCatching { Diag.record("cheaper", "$words - ${p.steps} strike${if (p.steps == 1) "" else "s"} out (${p.req.trigger.words})") }
-        runCatching { com.optionslab.app.work.Alerts.success(words, "Live") }
+        // The banner at once, as before (memory only).
+        runCatching { com.optionslab.app.work.Alerts.success(words, NOTICE_TITLE) }
+        val ctx = app
+        runCatching {
+            scope.launch {
+                if (ctx != null) runCatching {
+                    if (com.optionslab.app.work.Notifier.canPost(ctx)) androidx.core.app.NotificationManagerCompat.from(ctx).notify(noticeId(p.symbol),
+                        com.optionslab.app.work.Notifier.builder(ctx, com.optionslab.app.work.Notifier.BUY, NOTICE_TITLE, words, "trade", side = "BUY").build())
+                }
+                runCatching { com.optionslab.app.ira.IraActivity.add("$NOTICE_TITLE: $words.") }
+            }
+        }
     }
+
+    /**
+     * 22 Nov 2026 (B6 review): the bought notice's id for the option bought ([bought]): 9700-9739, by its symbol (a second buy of another
+     * strike never replaces the first in the shade; 9700-9739 is used by nothing else), and its title.
+     */
+    internal fun noticeId(symbol: String): Int = 9700 + (symbol.hashCode() and Int.MAX_VALUE) % 40
+    internal const val NOTICE_TITLE = "Cheaper strike bought · Live"
 
     private fun record(r: Rec) {
         val gen = wipeGen

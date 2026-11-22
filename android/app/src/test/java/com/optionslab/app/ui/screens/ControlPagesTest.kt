@@ -715,6 +715,19 @@ class ControlPagesTest {
         toggle("Block naked option shorts")
         reauth(pin, "Enter your app PIN to loosen the account guard on Zerodha.")
         waitSettings { !it.guardNakedShort }
+        // 22 Nov 2026 (B6 review): the expiry-day square-off by the same list Jarvis uses (SettingsTalk.PIN_TO_LOOSEN): off asks, on never.
+        val sq = "Square off on expiry day at 15:05"
+        compose.reveal(sq)
+        if (!model.settings.value.expirySquareOff) { toggle(sq); waitSettings { it.expirySquareOff } }
+        assertFalse("switching it on never asks", compose.has("Confirm it is you"))
+        toggle(sq)
+        compose.waitForText("Confirm it is you")
+        tap("Cancel")
+        compose.waitForNoText("Confirm it is you")
+        assertTrue(model.settings.value.expirySquareOff)
+        toggle(sq)
+        reauth(pin, "Enter your app PIN to loosen the account guard on Zerodha.")
+        waitSettings { !it.expirySquareOff }
     }
 
     /**
