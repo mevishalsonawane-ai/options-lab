@@ -241,10 +241,12 @@ notes; match the surrounding code.
     that is missing at Zerodha (not placed, or cancelled or refused by the exchange or Zerodha) is always put back there on the
     next check (no setting); never beside a square-off's or the arm's own working sale, at the 15:05 expiry square-off, from
     15:10 or with Stop for today. A stop Boss cancelled in Kite is never put back: the app watches the level and sells there.
-    One exception (20 Nov audit): while another part's lost exit sale on a contract is unresolved (not yet seen in Zerodha's order
-    book) or found but not yet booked, every other trade on that contract WITH A STOP RESTING keeps it resting and its exit (15:10 and
-    Stop for today included) waits; a trade with no stop resting still exits, counting the lost sale as already going (sold less by
-    it); and the price check puts no missing stop back on that contract for any trade - until the lost sale resolves: found and booked,
+    One exception (20 Nov audit): while a lost exit sale of an ORB-family or Liquidity 15+5 trade on a contract is unresolved (not yet
+    seen in Zerodha's order book) or found but not yet booked, every other trade of those arms on that contract WITH A STOP RESTING keeps
+    it resting and its exit (15:10 and Stop for today included) waits; a trade with no stop resting still exits, counting the lost sale
+    as already going (sold less by it); the price check puts no missing stop back on that contract for any trade; and (22 Nov) the 15:05
+    expiry square-off and the flat-by take no stop, target or GTT out on that contract and sell only what is held less that sale
+    (nothing while anything rests there) - until the lost sale resolves: found and booked,
     or let go only on a read of the order book that started at least 2 minutes after the sale was sent and still does not show it
     (searched from 3 minutes before its send time; failed reads never let it go; Boss is told its state is unknown, and again at 15:10). The lost sale is
     kept in the book, so a restart keeps the wait and the window. Then the exits run as usual.

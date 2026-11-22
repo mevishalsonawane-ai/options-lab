@@ -41,8 +41,10 @@ object ExpirySquareOff {
      * 19 Nov 2026 (second review of the clock lane: it runs this from the watch's first seconds, a restart at 15:06 included): whether
      * the arms' live book is read, as [FlatBySquareOff.liveBooksReady]. Until it is, every live position counts as an arm's (never
      * sold as Boss's own before the backstop) and the day is not marked done. Replaceable in tests.
+     * 22 Nov 2026 (B6 review): the ORB / Liquidity book read in this process too ([OrbArms.bookReadHint]) - its lost exit sales, kept in
+     * that book across a restart, are known only then ([SquareOffExit.lostPendingProviders]).
      */
-    @Volatile internal var liveBooksReady: () -> Boolean = { ArmLive.view.value.let { it.loaded && !it.unreadable } }
+    @Volatile internal var liveBooksReady: () -> Boolean = { ArmLive.view.value.let { it.loaded && !it.unreadable } && OrbArms.bookReadHint }
 
     /** What the owner was already told today ("day|what"), so a retry every pass does not repeat it. */
     private val told = HashSet<String>()

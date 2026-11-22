@@ -8,7 +8,8 @@ import kotlin.math.abs
  * sends it from 22 Oct ([FlatBySquareOff]): each contract in its one exit turn ([ExitCoordinator]), other resting exits on it
  * cancelled first (the exit goes on the next pass), the day's GTT deleted first, what is held checked against the orders
  * read's fills, exits already working subtracted, the quantity in freeze-size slices of MARKET orders in the position's own
- * product, every refusal said once, and a lost reply looked for before the order is called unsent.
+ * product, every refusal said once, and a lost reply looked for before the order is called unsent. 22 Nov 2026: an arm's exit sale
+ * whose reply was lost and is not resolved yet ([lostPendingProviders]) is subtracted too, and nothing resting is taken out meanwhile.
  *
  * [aboutIt] / [exitName]: the words of the notices ("expires today", "expiry"). MCX: [lotSize] 1 (Zerodha keeps MCX in lots) and
  * the contract's [multiplier].
@@ -87,6 +88,47 @@ internal object SquareOffExit {
     /** TEST ONLY. */
     internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap }
 
+    /**
+     * 22 Nov 2026 (B6 review: a Liquidity exit sale whose reply was lost at 15:04:50, then the 15:05 square-off sold the whole position and
+     * took its stop out - had the lost sale filled too, the account was short): the books' unresolved lost exit sales, one provider per book
+     * (by its name; putting it again replaces it). Asked with a Zerodha trading symbol and a product ("MIS", "NRML" - one position row),
+     * each answers the quantity of that book's own exit SALES of that row not settled yet: whose reply was lost and which are not resolved
+     * yet - neither found in Zerodha's order book and booked, nor let go after a read that does not show them - and (a book that keeps them)
+     * any on its way, sent or about to be, and not yet booked, which this pass's read may not show: 0 when none. It must answer from memory
+     * only: it is asked inside the contract's exit turn, so never a lock wait, the disk or the network. A book whose sale is about to go
+     * counts it here and calls [saleStarting] BEFORE it checks [inGap], as [send] starts the gap before its last look here: of two senders
+     * at once, at most one sells. A negative answer, or one that throws, is a book that cannot tell now: counted as an unresolved sale of
+     * unknown size. While any is unresolved on a row, [send] takes nothing resting on it out (a stop, a target, a GTT) and sells only what
+     * is held less those sales - nothing while anything rests there or the size is unknown; the next pass reads again. [OrbArms] puts its
+     * own in at start ("orb"); another book puts its own the same way, under its own name.
+     */
+    internal val lostPendingProviders = java.util.concurrent.ConcurrentHashMap<String, (symbol: String, product: String) -> Int>()
+
+    /**
+     * 22 Nov 2026 (B6 review, second pass: one arm's sale ending and another's starting between [send]'s two looks left the total the
+     * same): by Zerodha trading symbol, bumped by a book each time it counts a new sale of its own there as on its way
+     * ([lostPendingProviders]), before it checks [inGap]. [send] reads it with its first look and again at its last: any change, and
+     * nothing is sold on that contract this pass. Memory only.
+     */
+    private val salesStarted = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** A book's own exit sale on [symbol] is about to go (counted in its provider first): see [salesStarted]. Memory only, never blocks. */
+    internal fun saleStarting(symbol: String) { salesStarted.merge(symbol, 1L, Long::plus) }
+
+    /**
+     * The unresolved lost exit sales on [symbol]'s [product] row across [lostPendingProviders]: their quantity, or null when a book cannot
+     * tell. Memory only.
+     */
+    internal fun lostPending(symbol: String, product: String): Int? {
+        var n = 0
+        for (f in lostPendingProviders.values) {
+            val q = runCatching { f(symbol, product) }.getOrNull() ?: return null
+            if (q < 0) return null
+            n += q
+        }
+        return n
+    }
+
     /** A stop-type order (waits for a trigger): the kind that is cancelled before the exit. A plain MARKET or LIMIT sell is an exit. */
     private fun isStop(o: Broker.OrderRow): Boolean = o.type.equals("SL", true) || o.type.equals("SL-M", true) || o.status == "TRIGGER PENDING"
 
@@ -126,6 +168,12 @@ internal object SquareOffExit {
             // out or sent on it now. (Final review: a row with no symbol at all never blocks an exit.)
             if (positions.unknownForExit(p.symbol, p.product)) return false
             if (ExitCoordinator.stale(p.exchange, p.symbol, who, read)) return false
+            // 22 Nov 2026 (B6 review): an arm's exit sale on this row not settled yet - its reply lost, or on its way ([lostPendingProviders])
+            // - may still fill: nothing resting on it is taken out meanwhile, and only what is held less that sale is sold (below). Null: a
+            // book could not tell its size. (Looked at again just before the sale goes.)
+            val started = salesStarted[p.symbol]
+            val lost = lostPending(p.symbol, p.product)
+            val lostOpen = lost != 0
             val side = if (p.qty < 0) Kite.Side.BUY else Kite.Side.SELL
             val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
             // 25 Oct review: a plain exit already working on it - this square-off's own, the other square-off's, or the arm's own
@@ -217,11 +265,25 @@ internal object SquareOffExit {
             // choice (19 Nov 2026, "Go"): the square-offs ALWAYS use the positions-lag guard ([noteBossChoice] says so once in the diary).
             noteBossChoice()
             val heldNow = runCatching { ExitCoordinator.held(p.exchange, p.symbol, p.product, who, read, positions, forceLag = true) }.getOrNull() ?: return false
+            // 22 Nov 2026 (B6 review): while an arm's lost exit sale on it is unresolved, nothing resting on it is taken out (it may fill
+            // beside them, into a short) - said once; the next pass reads again (that sale is found and booked, or let go, in about two
+            // minutes).
+            fun lostWaits(what: String) {
+                runCatching { Diag.record("exits", "$who ${p.exchange}:${p.symbol}: an arm's exit sale on it is not settled " +
+                    "(${lost ?: "size unknown"}); $what") }
+                tell("lost exit ${p.symbol}", "${p.symbol} $aboutIt, and an arm's own exit sale on it is not settled yet (its reply from Zerodha " +
+                    "was lost and it is still being looked for, or it went a moment ago). The $exitName takes no stop or target on it out " +
+                    "meanwhile and sells only what that sale leaves, once it is settled (about two minutes at most). Check ${p.symbol} in Kite.")
+            }
             // Closed meanwhile, or still closing (an exit already working covers it): what rests on it is taken out as before (two
-            // exits never both fill), and nothing more is sent; the next pass reads the books again.
-            if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) { takeOut(); return false }
-            val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending, abs(heldNow), lotSize)
-            if (qty <= 0) { takeOut(); return false }
+            // exits never both fill), and nothing more is sent; the next pass reads the books again. (22 Nov 2026: not while a lost
+            // exit sale on it is unresolved - left resting.)
+            if (heldNow == 0 || (heldNow > 0) != (p.qty > 0)) { if (lostOpen) lostWaits("nothing taken out (nothing to sell)") else takeOut(); return false }
+            // (22 Nov 2026: such a lost sale counts as already going - it sells the long side, so it lowers a SALE only; of unknown size,
+            // nothing is sold.)
+            val lostQty = if (side == Kite.Side.SELL) lost ?: abs(heldNow) else 0
+            val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, pending + lostQty, abs(heldNow), lotSize)
+            if (qty <= 0) { if (lostOpen) lostWaits("nothing sold or taken out") else takeOut(); return false }
             // Above the exchange freeze quantity the exit goes as several orders, each one the exchange accepts.
             val orders = Kite.slices(qty, lotSize, Kite.freezeQuantity(p.exchange, p.symbol))
                 .map { Kite.Order(p.symbol, side, it, lotSize, p.product, "MARKET", null, tickSize, p.exchange, tag, multiplier = multiplier) }
@@ -230,7 +292,25 @@ internal object SquareOffExit {
                 tell("refused ${p.symbol}", "${p.symbol} $aboutIt and its exit was not sent (${bad.joinToString("; ")}). Close it yourself in Trade.")
                 return false
             }
+            // 22 Nov 2026 (B6 review): a stop, target or GTT resting on it would have to come out before this sale: not while a lost exit
+            // sale on it is unresolved - nothing sent this pass (a resting stop and a sale could both fill).
+            if (lostOpen && (others.isNotEmpty() || gttMarks.isNotEmpty())) { lostWaits("its resting orders left in place, nothing sold"); return false }
             if (!takeOut()) return false
+            // 22 Nov 2026 (B6 review: this square-off and an arm's own exit each looked at the other once, before the slow part - with the
+            // exit coordinator in shadow both could still sell): the contract's gap starts NOW, before the last look at the arms' unsettled
+            // sales, while an arm's exit counts its own sale as on its way before it looks at the gap ([OrbArms]) - so of the two, at most
+            // one sells. A sale that came up meanwhile (more unsettled, or any new one started - one ending as another starts leaves the
+            // total the same): nothing sent this pass (what was taken out is put back by its owner, as after a refused sale), and the gap
+            // ended again.
+            notePlaced(p.exchange, p.symbol, p.product)
+            val lostNow = lostPending(p.symbol, p.product)
+            if (side == Kite.Side.SELL && (lostNow == null || lostNow > (lost ?: 0) || salesStarted[p.symbol] != started)) {
+                clearPlaced(p.exchange, p.symbol, p.product)
+                lostWaits("one came up as this sale was about to go: nothing sold")
+                return false
+            }
+            // (A reply lost on the way: the sale may be out, so the gap stays; nothing went at all: it ends below.)
+            var unsure = false
             val placed = ArrayList<String>()
             for (o in orders) {
                 try {
@@ -256,7 +336,7 @@ internal object SquareOffExit {
                                     throw e2
                                 } catch (e2: Exception) {
                                     if (Broker.definite(e2)) null else {
-                                        limitLost = true
+                                        limitLost = true; unsure = true
                                         notePlaced(p.exchange, p.symbol, p.product)
                                         runCatching { Broker.findRecentRetrying(l, placed + working.map { it.id }) }.getOrNull()
                                     }
@@ -284,7 +364,7 @@ internal object SquareOffExit {
                     }
                     // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out
                     // either way, so the contract's gap starts ([GAP_MS]).
-                    notePlaced(p.exchange, p.symbol, p.product)
+                    notePlaced(p.exchange, p.symbol, p.product); unsure = true
                     runCatching { Broker.findRecentRetrying(o, placed + working.map { it.id }) }.getOrNull()?.let { placed += it }
                     break
                 }
@@ -294,6 +374,8 @@ internal object SquareOffExit {
             // positions read that still shows what the sale sold. A sale refused or not filled: put back after that wait.
             if (placed.isNotEmpty() && (others.isNotEmpty() || gttMarks.isNotEmpty()))
                 runCatching { Protections.exitFilledFor(others.map { it.id } + gttMarks, placed.associateWith { 1 }) }
+            // (22 Nov 2026: nothing went out - refused, or a LIMIT confirmed cancelled unfilled: the gap started before it ends again.)
+            if (placed.isEmpty() && !unsure) clearPlaced(p.exchange, p.symbol, p.product)
             return placed.isNotEmpty()
         } finally { pass.leave() }
     }

@@ -43,8 +43,12 @@ object FlatBySquareOff {
             ?: runCatching { PineAuto.liveSymbols() }.getOrDefault(emptyList()).firstOrNull { it == sym }?.let { "Pine" }
     }
 
-    /** Whether the arms' live book is read (memory): until it is, no live position can be told an arm's, so the pass is not done. */
-    @Volatile internal var liveBooksReady: () -> Boolean = { ArmLive.view.value.let { it.loaded && !it.unreadable } }
+    /**
+     * Whether the arms' live book is read (memory): until it is, no live position can be told an arm's, so the pass is not done.
+     * 22 Nov 2026 (B6 review): the ORB / Liquidity book read in this process too ([OrbArms.bookReadHint]) - its lost exit sales, kept in
+     * that book across a restart, are known only then ([SquareOffExit.lostPendingProviders]).
+     */
+    @Volatile internal var liveBooksReady: () -> Boolean = { ArmLive.view.value.let { it.loaded && !it.unreadable } && OrbArms.bookReadHint }
 
     /** "day|segment" done for the day (memory only: after a restart the pass just looks again, which is cheap). */
     private val done = HashSet<String>()

@@ -65,7 +65,7 @@ class FlatBySquareOffTest : RobolectricTest() {
 
     @After fun down() {
         FlatBySquareOff.liveOwner = { sym -> ArmLive.ownerOf(sym) }
-        FlatBySquareOff.liveBooksReady = { ArmLive.view.value.let { it.loaded && !it.unreadable } }
+        FlatBySquareOff.liveBooksReady = { ArmLive.view.value.let { it.loaded && !it.unreadable } && OrbArms.bookReadHint }
         AutomationSupport.realClocks()
         Paper.testSkipFeedChecks = false
         Market.testClock = null

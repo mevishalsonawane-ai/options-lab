@@ -77,6 +77,8 @@ object OrbArms {
         file = File(app.filesDir, "orb.vault")
         // 18 Oct (Boss: every paper strategy present for live too): the paper-only arms' trades, for their live path ([ArmLive]).
         ArmLive.register(com.optionslab.engine.orb.LiveMirror.ORB) { mirrorLegs }
+        // 22 Nov 2026 (B6 review): the square-offs subtract these arms' unsettled exit sales (lost, or on their way) and take no stop out beside one.
+        SquareOffExit.lostPendingProviders["orb"] = { sym, product -> if (product == "MIS") unsettledSales(sym) else 0 }
     }
 
     /**
@@ -542,6 +544,24 @@ object OrbArms {
                     val d = today().toString()
                     o.optJSONObject("exitSales")?.let { m -> if (gen == wipeGen) m.keys().forEach { k -> if (m.optString(k) == d) exitSales.putIfAbsent(k, d) } }
                 }
+                // (22 Nov 2026, B6 review: the app's own stop cancels of the last day - a cancel made before a restart stays the app's - and the
+                // pending cancels of closed trades' found lost stops from today, taken up again (claimed: never another's lost reply or
+                // orphan) and confirmed on the next regular looks. None from a read made before "Erase everything".)
+                runCatching {
+                    if (gen == wipeGen) o.optJSONObject("ownCancels")?.let { m ->
+                        val now = wallMs()
+                        m.keys().forEach { k -> val at = m.optLong(k, 0L); if (at > 0 && now - at < OWN_CANCEL_KEEP_MS && ownCancels.putIfAbsent(k, at) == null) ownCancelsRestored += k }
+                    }
+                }
+                runCatching {
+                    val d = today().toString()
+                    if (gen == wipeGen) o.optJSONObject("sweepCancels")?.let { m -> m.keys().forEach { k ->
+                        val e = m.optJSONObject(k) ?: return@forEach
+                        val what = e.optString("what")
+                        if (e.optString("day") != d || '|' !in what) return@forEach
+                        if (synchronized(sweepCancels) { sweepCancels.putIfAbsent(k, what) } == null) { sweepDays[k] = d; runCatching { Broker.claimStop(k) } }
+                    } }
+                }
                 // One row that cannot be read never drops the others: it is named, and a live one is taken back from Zerodha (below).
                 part("positions") {
                     o.optJSONArray("positions")?.let { a ->
@@ -645,6 +665,9 @@ object OrbArms {
      */
     private fun rebuildFromZerodha(words: String) {
         coldSwept = false; coldNextAt = 0L; coldFailSince = null; coldFailSaid = false
+        // (22 Nov 2026, B6 review: a lost exit sale kept in what could not be read is not known - the square-offs wait [LOST_LET_GO_MS],
+        // the most such a sale is held, for Zerodha's books to show what it did: [bookReadHint].)
+        lostUnknownUntil = wallMs() + LOST_LET_GO_MS
         runCatching { com.optionslab.app.work.Alerts.error(words, "ORB live") }
     }
 
@@ -1346,6 +1369,11 @@ object OrbArms {
         // (20 Nov 2026: today's booked exit sales - a lost exit's search never takes one for its own after a restart.)
         // (Each with its own day, so a restart never stamps an older one as today's.)
         o.put("exitSales", JSONObject().apply { exitSales.filterValues { it == day }.keys.forEach { put(it, day) } })
+        // (22 Nov 2026, B6 review: the app's own stop cancels, by order id and when marked - a restart never reads one as Boss's; and a
+        // closed trade's found lost stop still being cancelled, with the day it was taken out - the sweep goes on after a restart that day.)
+        ownCancelsKept().takeIf { it.isNotEmpty() }?.let { kept -> o.put("ownCancels", JSONObject().apply { kept.forEach { (id, at) -> put(id, at) } }) }
+        synchronized(sweepCancels) { if (sweepCancels.isNotEmpty()) o.put("sweepCancels", JSONObject().apply {
+            sweepCancels.forEach { (id, what) -> put(id, JSONObject().put("what", what).put("day", sweepDays[id] ?: day)) } }) }
         o.put("positions", JSONArray().apply {
             keptPositions(b.positions).forEach { p ->
                 put(JSONObject().put("arm", p.arm).put("symbol", p.symbol).put("right", p.right).put("qty", p.qty).put("entry", p.entry)
@@ -3067,6 +3095,25 @@ object OrbArms {
     private fun alreadyClosed(r: Paper.Result): Boolean = !r.ok && "already closed" in r.message
 
     /**
+     * 22 Nov 2026 (B6 review, WHO CANCELLED A STOP, as the arms' live copies): whether stop [so]'s end came while the market takes orders -
+     * at Zerodha's own time of it (its exchange update time) when it gives one, never by how late this look came; else now. Not known:
+     * false (Zerodha's: put back).
+     */
+    private fun cancelInHours(so: Broker.OrderRow): Boolean = runCatching {
+        val at = so.updatedAt.takeIf { it.isNotBlank() }?.let { runCatching { LocalDateTime.parse(it, ZERODHA_STAMP) }.getOrNull() }
+        if (at != null) Market.testOrdersAnyTime || Market.isOpenAt(at.toLocalDate(), at.hour * 60 + at.minute) else Market.acceptsOrders()
+    }.getOrDefault(false)
+    private val ZERODHA_STAMP: java.time.format.DateTimeFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+    /**
+     * 22 Nov 2026 (B6 review): a square-off ([SquareOffExit]: the 15:05 expiry square-off, the flat-by) is selling Zerodha contract [kite]'s
+     * MIS row (these arms' own): its sale working in [orders] (a read of the order book; null: none in hand) or its gap on
+     * ([SquareOffExit.inGap], memory: started just before its sale goes).
+     */
+    private fun squareOffSelling(kite: String, orders: Collection<Broker.OrderRow>?): Boolean = SquareOffExit.inGap("NFO", kite, "MIS") ||
+        orders.orEmpty().any { it.symbol == kite && it.exchange == "NFO" && it.product == "MIS" && it.working && it.tag in SquareOffExit.TAGS }
+
+    /**
      * 22 Oct (arms audit): the app's expiry square-off is closing [symbol] (Zerodha's [kite]) now - its contract expires today, it
      * is 15:05 or later and the square-off is on, or one of its orders ("iraalgoexpiry") is already there. The orders as read.
      */
@@ -3671,27 +3718,66 @@ object OrbArms {
      * that could not be cut is taken out (marked the app's own) and, once Zerodha shows it out, false returned (a stop rests again on a
      * later look). True: it is the trade's stop - covering no more than [qty], ended (its fill, if any, is the trade's, booked as usual),
      * unreadable, or not confirmed out (kept as the trade's own, never left resting with no owner beside a second one).
+     * 22 Nov 2026 (B6 review: a stop taken out after part of it filled was said to "rest again" and that fill never booked): [Fit.Kept]
+     * (true before), [Fit.Out] (false before: nothing of it filled) or [Fit.Filled] - taken out after part of it filled: the caller books
+     * that part closed at the stop ([stopSold]). [b]: the book, the caller holding the arms' lock ([cancelOwnStop]).
      */
-    private suspend fun fitFound(label: String, l: Broker.LostLook.Found, qty: Int, lot: Int, tick: Double): Boolean {
-        if (l.qty <= qty) return true
-        val so = runCatching { Broker.orderRow(l.id) }.getOrNull() ?: return true
-        if (!so.working) return true
+    private suspend fun fitFound(label: String, l: Broker.LostLook.Found, qty: Int, lot: Int, tick: Double, b: Book?): Fit {
+        if (l.qty <= qty) return Fit.Kept
+        val so = runCatching { Broker.orderRow(l.id) }.getOrNull() ?: return Fit.Kept
+        if (!so.working) return Fit.Kept
         val to = com.optionslab.engine.risk.ExitQty.shrinkTo(so.qty, so.filled, qty, lot)
         if (to == null || (to > so.filled && runCatching {
                 if (so.type == "SL-M") Broker.modify(so, to, "SL-M", null, so.trigger) else Broker.modify(so, to, "SL", stopLimit(so.trigger, tick), so.trigger)
             }.isSuccess)) {
             runCatching { Diag.record("orb", "$label: its lost stop ${l.id} was found for ${l.qty}, more than the $qty it holds now: cut to $qty") }
-            return true
+            return Fit.Kept
         }
-        cancelOwnStop(l.id)
-        val st = runCatching { Broker.orderState(l.id)?.status }.getOrNull()
-        if (st != "CANCELLED" && st != "REJECTED") {
+        cancelOwnStop(l.id, b)
+        val st = runCatching { Broker.orderState(l.id) }.getOrNull()
+        if (st == null || (st.status != "CANCELLED" && st.status != "REJECTED")) {
             runCatching { Diag.record("orb", "$label: its lost stop ${l.id} was found for ${l.qty}, more than the $qty it holds now; it could not be cut " +
                 "or confirmed out, so it is kept as its stop") }
-            return true
+            return Fit.Kept
+        }
+        if (st.filled > 0) {
+            runCatching { Diag.record("orb", "$label: its lost stop ${l.id} was found for ${l.qty}, more than the $qty it holds now, and could not be cut: " +
+                "taken out after ${st.filled} of it filled - that part is booked closed at the stop") }
+            return Fit.Filled(l.id, st.filled, st.avgPrice.takeIf { it > 0 } ?: so.trigger.takeIf { it > 0 } ?: 0.0)
         }
         runCatching { Diag.record("orb", "$label: its lost stop ${l.id} was found for ${l.qty}, more than the $qty it holds now, and could not be cut: taken out; it rests again") }
-        return false
+        return Fit.Out
+    }
+
+    /** 22 Nov 2026 (B6 review): what [fitFound] made of a found lost stop. */
+    private sealed class Fit {
+        /** It is the trade's stop (covering no more than asked, ended, unreadable, or not confirmed out). */
+        object Kept : Fit()
+        /** Taken out with nothing of it filled: a stop rests again on a later look. */
+        object Out : Fit()
+        /** Order [id] taken out after [qty] of it filled at [avg] (0: not known): that part of the trade is booked closed ([stopSold]). */
+        data class Filled(val id: String, val qty: Int, val avg: Double) : Fit()
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): [p] on [sym], whose found lost stop [f] was taken out after part of it filled ([Fit.Filled]): that part booked
+     * closed at the stop (its fill's price, else the stop's trigger), the rest left open with no stop - a stop rests for it on a later look.
+     * One that sold more than [p] holds is said loudly (Zerodha may show a short).
+     */
+    private fun stopSold(p: Position, f: Fit.Filled, sym: String): Pair<Position, Position?> {
+        val sold = minOf(f.qty, p.qty)
+        val px = f.avg.takeIf { it > 0 } ?: p.stopTrigger ?: p.entry
+        val label = armOf(p.arm).label
+        // (Labelled and kept as a booked exit sale, as every booked sale: a lost exit's search never takes it for its own.)
+        runCatching { Strategies.tagOwnerSoon("kite:${f.id}", "$label · ${stopWhy(p)}") }
+        runCatching { noteExitSale(f.id) }
+        runCatching { Notifier.orderFilled(app, "SELL", sold, sym, px, "Live", "$label · ${FIXED.words(stopWhy(p).replace('_', ' '))}", f.id) }
+        if (f.qty > p.qty) runCatching { com.optionslab.app.work.Alerts.error("$label: a stop ${f.id} on $sym whose answer was lost sold ${f.qty} " +
+            "before it was taken out, more than the ${p.qty} this trade holds. Check $sym's position in Kite.", "ORB live") }
+        val share = sold.toDouble() / p.qty
+        val closed = p.copy(qty = sold, exit = px, exitTime = now(), why = stopWhy(p), stopOrderId = null,
+            charges = p.charges * share + kiteCharge("SELL", px, sold))
+        return if (sold >= p.qty) closed to null else closed to p.copy(qty = p.qty - sold, stopOrderId = null, charges = p.charges * (1 - share))
     }
 
     private suspend fun placeStop(label: String, sym: String, qty: Int, lot: Int, tick: Double, fill: Double, known: Collection<String>,
@@ -3712,8 +3798,14 @@ object OrbArms {
             // (20 Nov 2026, delta review: never one the book already knows - another trade's - and cut to [qty] when found for more.)
             // (A found stop for fewer than [qty] covers only its own: [StopPlaced.covers] - the rest stays with none and rests again.)
             is Broker.LostLook.Found -> if (l.id !in known) {
-                if (!fitFound(label, l, qty, lot, tick)) return StopPlaced(null, trigger, false, 0)
-                Strategies.tagOwner("kite:${l.id}", "$label · stop"); return StopPlaced(l.id, l.trigger ?: trigger, false, minOf(l.qty, qty))
+                // (22 Nov 2026, B6 review: taken out after part of it filled - that fill handed back to the caller to book, [StopPlaced.sold].)
+                when (val f = fitFound(label, l, qty, lot, tick, cache)) {
+                    Fit.Out -> return StopPlaced(null, trigger, false, 0)
+                    is Fit.Filled -> return StopPlaced(null, trigger, false, 0, sold = f)
+                    Fit.Kept -> Unit
+                }
+                // (22 Nov 2026, B6 review: labelled without waiting on the Strategy Module's lock, held across its Zerodha calls.)
+                runCatching { Strategies.tagOwnerSoon("kite:${l.id}", "$label · stop") }; return StopPlaced(l.id, l.trigger ?: trigger, false, minOf(l.qty, qty))
             }
             Broker.LostLook.Searching -> return StopPlaced(null, trigger, false, 0)
             else -> Unit
@@ -3722,7 +3814,8 @@ object OrbArms {
             if (Broker.definite(e)) { refused = true; null } else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
                 ?: null.also { Broker.noteLost(lostKey, o, known, "$label: its stop", liveOnly = true) }
         }
-        if (id != null) Strategies.tagOwner("kite:$id", "$label · stop")
+        // (22 Nov 2026, B6 review: labelled without waiting on the Strategy Module's lock, held across its Zerodha calls - as the square-offs.)
+        if (id != null) runCatching { Strategies.tagOwnerSoon("kite:$id", "$label · stop") }
         else if (alert || !refused) com.optionslab.app.work.Alerts.error("$label: the ${if (at != null) "%.2f".format(Locale.ENGLISH, trigger) else if (liquidity) "${pts(pct * 100)}%" else "−${pts(points)}"} " +
             "stop could not be placed at Zerodha; the app watches it instead.", "ORB live")
         return StopPlaced(id, trigger, refused, if (id != null) qty else 0)
@@ -3731,8 +3824,11 @@ object OrbArms {
     /**
      * 20 Nov 2026 (delta review): what [placeStop] did - the stop's id (null: none rests), its trigger, whether Zerodha refused it
      * outright, and the quantity it covers (a lost stop found for fewer than asked covers only its own; the caller splits on it).
+     * 22 Nov 2026 (B6 review): [sold] - the trade's own lost stop found for more than asked, taken out after part of it filled: none rests,
+     * and the caller books that part closed ([stopSold]). (Only a key sent for more than asked now can be found so: an entry's first stop
+     * looks for its own exact quantity, so it is never set there.)
      */
-    private data class StopPlaced(val id: String?, val trigger: Double?, val refused: Boolean, val covers: Int)
+    private data class StopPlaced(val id: String?, val trigger: Double?, val refused: Boolean, val covers: Int, val sold: Fit.Filled? = null)
 
     /**
      * 15 Nov (a Liquidity live trade always ends with a resting stop when one can rest): the first stop of a Liquidity live fill of [qty]
@@ -4156,6 +4252,9 @@ object OrbArms {
             // sale that already filled - [ExitCoordinator.held] - and a lot just sold is never kept with a stop on a flat position.)
             val orders = runCatching { Broker.orders() }.getOrNull() ?: return null
             val pb = runCatching { Broker.positionBook() }.getOrNull() ?: return null
+            // (22 Nov 2026, B6 review: a read that left this contract's own row out as malformed tells nothing of what is held - not read,
+            // asked again next pass - never "nothing held" toward calling the entry never bought.)
+            if (pb.unknownForExit(sym, "MIS")) return null
             val rows = pb.net.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" }
             if (rows.isEmpty() && java.time.Duration.between(p.entryTime, now()).toMillis() < NO_ROW_WAIT_MS) return null
             if (rows.sumOf { it.qty } <= 0) return nothingHeld()
@@ -4240,13 +4339,17 @@ object OrbArms {
         // now), and each price from the stream's fresh tick; a contract without one is quoted from Zerodha as before.
         // (20 Nov 2026: Zerodha's books unreadable - each lost exit's search still starts in the background (search only: a found or
         // not-found answer waits for a look that reads), so its failed reads count and Boss is told its state is unknown, at 15:10 again.)
-        val (orders, net) = try {
-            (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id } to (if (stream) Broker.positionsRecon() else Broker.positionBook()).net
+        val (orders, pbook) = try {
+            (if (stream) Broker.ordersRecon() else Broker.orders()).associateBy { it.id } to (if (stream) Broker.positionsRecon() else Broker.positionBook())
         } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
             for (l in lostExits.values.toList()) runCatching { startLostSearch(l) }
             throw e
         }
+        val net = pbook.net
         passIds.entries.removeAll { (id, v) -> if (orders.containsKey(id)) { passPlaced[v.first] = placedNow(v.first) - v.second; true } else false }
+        // 22 Nov 2026 (B6 review): an own-cancel mark whose stop this read still shows working long after it - that cancel never took (the
+        // book saved without it, so a restart never brings it back).
+        if (ownCancels.keys.toList().count { orders[it]?.working == true && ownCancelSeenWorking(it) } > 0) runCatching { saveSoon(b) }
         val keys = open.mapNotNull { it.value.kite }.map { "NFO:$it" }.distinct()
         val q = runCatching { liveQuotes(keys, stream) }.getOrDefault(emptyMap())
         val drop = ArrayList<Int>()
@@ -4322,9 +4425,13 @@ object OrbArms {
             // (Also any other of the app's own takers: a square-off's sale on the contract, Stop for today - never Boss's.)
             // (20 Nov 2026: a stop Boss's manual exit from the app took out - [exitMarks] - is the app's own too.)
             if (so != null && so.working) exitMarkSeenWorking(so.id)
-            val appsOwn = ended && (ownCancel(so!!.id) || exitMarked(so.id) || p.appCancelled || stopped ||
+            // (22 Nov 2026, B6 review: Stop for today no longer makes every cancel the app's own - only one the app marked (its exits with
+            // Stop for today mark theirs, [cancelOwnStop]); an unmarked one follows the rule below like any other.)
+            val appsOwn = ended && (ownCancel(so!!.id) || exitMarked(so.id) || p.appCancelled ||
                 orders.values.any { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } || SquareOffExit.inGap("NFO", sym, "MIS"))
-            val byExchange = ended && (com.optionslab.ira.ManualCoverRule.endedByExchange(so!!.status, so.message) || appsOwn)
+            // (22 Nov 2026, B6 review, as the arms' live copies: a cancel with no mark of the app's own and blank or unrecognised words is
+            // Boss's only while the market takes orders ([cancelInHours]); one outside market hours - the day's end - is Zerodha's.)
+            val byExchange = ended && (com.optionslab.ira.ManualCoverRule.endedByExchange(so!!.status, so.message) || appsOwn || !cancelInHours(so))
             val level = p.stopTrigger?.let { "the stop at %.2f".format(Locale.ENGLISH, it) } ?: "the stop"
             // (Review: a stop Zerodha keeps refusing at each re-rest is said once, not at every try: said again only after a stop of
             // this trade was seen resting at Zerodha since ([endedSaid]).)
@@ -4359,7 +4466,7 @@ object OrbArms {
                 // Its stop must be confirmed out first: left resting, it would sell into a short.
                 val sid = cur.stopOrderId
                 if (sid != null) {
-                    cancelOwnStop(sid)
+                    cancelOwnStop(sid, b)
                     if (runCatching { Broker.orderState(sid)?.status }.getOrNull() !in DONE) continue
                 }
                 // 22 Oct (arms audit): the app's expiry square-off ("iraalgoexpiry") sold it: said so, never "closed by you".
@@ -4414,7 +4521,7 @@ object OrbArms {
                 // (19 Nov 2026, review: a stop of these arms resting unclaimed is [orphanStop]'s to judge - taken, waited on, or a stop capped
                 // beside it - never a reason by itself to place nothing.)
                 val adoptOnly = ownSaleWorking(cur, sym, orders.values, b.positions.mapNotNull { it.stopOrderId }.toSet(), ownStops = false)
-                val rested = runCatching { restExchangeStop(b, cur, sym, held, ltp, tick, orders.values, adoptOnly) }.getOrNull()
+                val rested = runCatching { restExchangeStop(b, cur, sym, held, ltp, tick, orders.values, adoptOnly, positions = pbook) }.getOrNull()
                 if (rested != null) { b.positions[i] = rested.first; rested.second?.let { b.positions += it }; continue }
             }
             val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
@@ -4511,7 +4618,7 @@ object OrbArms {
                     continue
                 }
                 Broker.claimStop(l.id)
-                synchronized(sweepCancels) { sweepCancels[l.id] = "$label|$sym" }
+                sweepCancel(l.id, "$label|$sym")
                 runCatching { Diag.record("orb", "$label: a lost stop ${l.id} on $sym found after its trade closed: taken out") }
                 continue
             }
@@ -4523,7 +4630,7 @@ object OrbArms {
             if (i < 0 && open.any { it.stopOrderId == null && it.qty == l.qty && lostOf(it) != null }) continue
             if (i >= 0) {
                 b.positions[i] = b.positions[i].copy(stopOrderId = l.id, stopTrigger = l.trigger ?: b.positions[i].stopTrigger)
-                runCatching { Strategies.tagOwner("kite:${l.id}", "$label · stop") }
+                runCatching { Strategies.tagOwnerSoon("kite:${l.id}", "$label · stop") }
                 Broker.claimStop(l.id); placed(sym, l.qty, l.id)
                 runCatching { Diag.record("orb", "$label: a lost stop ${l.id} on $sym found after its trade was split: taken by the part of its size") }
             } else runCatching { Diag.record("orb", "$label: a lost stop ${l.id} on $sym found after its trade was split, with no part of its " +
@@ -4531,12 +4638,19 @@ object OrbArms {
         }
         // (A closed trade's found stop: cancelled as the app's own and confirmed; until Zerodha shows it ended, cancelled again here on
         // every regular pass, Boss told after a few tries - never left resting unwatched on a contract nothing here holds.)
+        val todayIso = runCatching { today().toString() }.getOrDefault("")
         for ((id, what) in synchronized(sweepCancels) { sweepCancels.toMap() }) {
-            if (b.positions.any { it.open && it.stopOrderId == id }) { synchronized(sweepCancels) { sweepCancels.remove(id) }; sweepTries.remove(id); continue }
-            cancelOwnStop(id)
+            if (b.positions.any { it.open && it.stopOrderId == id }) { synchronized(sweepCancels) { sweepCancels.remove(id) }; sweepTries.remove(id); sweepDays.remove(id); continue }
+            // (22 Nov 2026, B6 review: one from an earlier day - an intraday stop Zerodha ended at that day's close - is let go, said.)
+            if (sweepDays[id]?.let { it != todayIso } == true) {
+                synchronized(sweepCancels) { sweepCancels.remove(id) }; sweepTries.remove(id); sweepDays.remove(id)
+                runCatching { Diag.record("orb", "${what.substringBefore('|')}: a closed trade's stop $id on ${what.substringAfter('|')} from an earlier day: no longer cancelled") }
+                continue
+            }
+            cancelOwnStop(id, b)
             val st = runCatching { Broker.orderState(id) }.getOrNull()
             if (st != null && st.status in DONE) {
-                synchronized(sweepCancels) { sweepCancels.remove(id) }; sweepTries.remove(id)
+                synchronized(sweepCancels) { sweepCancels.remove(id) }; sweepTries.remove(id); sweepDays.remove(id)
                 if (st.filled > 0) com.optionslab.app.work.Alerts.error("${what.substringBefore('|')}: a stop $id on ${what.substringAfter('|')} whose answer was " +
                     "lost filled ${st.filled} at Zerodha after its trade had closed. Check the position in Kite.", "ORB live")
                 continue
@@ -4549,11 +4663,21 @@ object OrbArms {
     }
     private const val LOST_SWEEP_AGE_MS = 30_000L
     /**
-     * 20 Nov 2026 (delta review): closed trades' found lost stops being cancelled (id to "label|contract") and the tries. Memory only:
-     * a restart forgets them (marked the app's own cancels, which the flat contract's check leaves alone; the start-up sweep and Zerodha's
-     * MIS square-off are behind it). Note: kept with the book if a cancel is ever seen outliving a restart.
+     * 20 Nov 2026 (delta review): closed trades' found lost stops being cancelled (id to "label|contract") and the tries.
+     * 22 Nov 2026 (B6 review: memory only, a restart forgot them - and their own-cancel marks, kept in the book now, keep the flat contract's
+     * check off them - so such a stop could be left resting with nothing watching it): kept in the book with the day each was taken out
+     * ([sweepDays], [encodeBook]), taken up again when it is read the same day - claimed again ([Broker.claimStop]) - and cancelled and
+     * confirmed on the next regular looks; one from an earlier day is let go. The tries are memory only (counted again after a restart).
      */
     private val sweepCancels = HashMap<String, String>()
+    /** 22 Nov 2026 (B6 review): the day (ISO) each of [sweepCancels] was taken out ([sweepCancel]). Memory, and kept with it in the book. */
+    private val sweepDays = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** 22 Nov 2026 (B6 review): [id] ([what]: "label|contract") taken out as a closed trade's found lost stop today ([sweepCancels]). */
+    private fun sweepCancel(id: String, what: String) {
+        runCatching { today().toString() }.getOrNull()?.let { sweepDays[id] = it }
+        synchronized(sweepCancels) { sweepCancels[id] = what }
+    }
     private val sweepTries = java.util.concurrent.ConcurrentHashMap<String, Int>()
     /** 20 Nov 2026 (delta review): the longest a stop-level exit waits for its own stop whose answer was lost ([exitLive]). */
     private const val LOST_EXIT_WAIT_MS = 20_000L
@@ -4759,6 +4883,8 @@ object OrbArms {
                 val want = minOf(qty, held - othersButOrphans).coerceAtLeast(0) / lot * lot
                 var covered = 0
                 var capLeftNone = false
+                // (22 Nov 2026, B6 review: its lost stop - sent for more under this key - found and taken out after part of it filled.)
+                var stopSoldPart: Fit.Filled? = null
                 val so = if (want > 0) orphanStop(b, a.label, sym, at, want, ins.tickSize, orders, at = if (mayRest) trig else null, entryOid = o.id) else Orphan.None
                 when (so) {
                     is Orphan.Took -> {
@@ -4769,8 +4895,10 @@ object OrbArms {
                         covered = minOf(qty, held - othersAll).coerceAtLeast(0) / lot * lot
                         capLeftNone = covered <= 0
                         if (covered > 0) {
-                            val (id, tr, _, cov) = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig,
+                            val r = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig,
                                 lostKey = orbLostKey(a.label, sym, fill, qty))      // (the row's own quantity: what the next look asks)
+                            stopSoldPart = r.sold
+                            val (id, tr, _, cov) = r
                             stopId = id; stopAt = tr ?: trig
                             if (id != null) { covered = cov; placed(sym, covered, id) }
                         }
@@ -4781,7 +4909,13 @@ object OrbArms {
                 val row = stamped(Position(a.source, paperSym, ins.right.name, qty, fill, at, at.withSecond(0).withNano(0), o.id, stopId, stopAt,
                     charges = kiteCharge("BUY", fill, qty), live = true, kite = sym, ladder = ladderOn(a, today, true),
                     lot = lot.takeIf { a.liquidity }, fixed = fixed, lock = fixed && StepTrailExits.lockOn(), entryQty = qty))
-                if (stopId != null && covered in 1 until qty) {
+                val soldPart = stopSoldPart
+                if (soldPart != null) {
+                    // (That part booked closed at the stop, the rest with none - it rests one on a later look.)
+                    val (closed, left) = stopSold(row, soldPart, sym)
+                    b.positions += closed
+                    left?.let { b.positions += it }
+                } else if (stopId != null && covered in 1 until qty) {
                     val part = covered.toDouble() / qty
                     b.positions += row.copy(qty = covered, charges = row.charges * part)
                     b.positions += row.copy(qty = qty - covered, stopOrderId = null, charges = row.charges * (1 - part))
@@ -4895,7 +5029,7 @@ object OrbArms {
                             }.isFailure) out = true
                     }
                     if (out) {
-                        cancelOwnStop(stopId)
+                        cancelOwnStop(stopId, b)
                         val st = runCatching { Broker.orderState(stopId)?.status }.getOrNull()
                         // (Filled meanwhile - booked from its fill next pass - or not out yet: nothing more on this contract this pass.)
                         if (st != "CANCELLED" && st != "REJECTED") break
@@ -5071,13 +5205,49 @@ object OrbArms {
 
     /**
      * 16 Nov (review): the stop orders this process cancelled itself (an exit taking its stop out first, a gone position's stop): a
-     * cancel of one of these is the app's, never taken as Boss's ([Position.stopByYou]). Memory only, bounded.
+     * cancel of one of these is the app's, never taken as Boss's ([Position.stopByYou]). Bounded (the oldest dropped first).
+     * 22 Nov 2026 (B6 review, WHO CANCELLED A STOP): by order id, when it was marked ([wallMs]); kept in the book too ([encodeBook]) and
+     * handed to its writer before the cancel goes ([cancelOwnStop]), so a restart between a cancel and the pass's own save never reads it
+     * as Boss's. A mark whose cancel never took ends ([ownCancelSeenWorking], [cancelOwnStop]), so Boss's own later cancel of it is his.
      */
-    private val ownCancels: MutableSet<String> = java.util.Collections.newSetFromMap(object : java.util.LinkedHashMap<String, Boolean>() {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?): Boolean = size > 500   // the oldest first
-    })
+    private val ownCancels = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val OWN_CANCELS_MEMORY = 500
+    /** 22 Nov 2026 (B6 review): the newest own-cancel marks kept in the book, from the last day ([OWN_CANCEL_KEEP_MS]). */
+    private const val OWN_CANCELS_KEPT = 200
+    private const val OWN_CANCEL_KEEP_MS = 24 * 60 * 60_000L
 
-    private fun ownCancel(id: String): Boolean = synchronized(ownCancels) { id in ownCancels }
+    private fun ownCancel(id: String): Boolean = ownCancels.containsKey(id)
+
+    /** 22 Nov 2026 (B6 review): [id] marked the app's own cancel now; true when it was not marked before. Memory (bounded). */
+    private fun markOwnCancel(id: String): Boolean {
+        ownCancelsRestored -= id
+        val fresh = ownCancels.put(id, wallMs()) == null
+        if (ownCancels.size > OWN_CANCELS_MEMORY) ownCancels.entries.sortedBy { it.value }.take(ownCancels.size - OWN_CANCELS_MEMORY)
+            .forEach { ownCancels.remove(it.key, it.value) }
+        return fresh
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review: "expire own-cancel marks that never took"): the stop [id] seen still working [EXIT_MARK_SETTLE_MS] or more after
+     * the app marked its cancel - that cancel never took: the mark ends (dropped from the book with its next save), so a later cancel of it
+     * by Boss in Kite is his. One taken back from the book after a restart ends the first time its stop is seen working. A cancel the app
+     * sends again marks it afresh. True when the mark ended.
+     */
+    private fun ownCancelSeenWorking(id: String): Boolean {
+        val at = ownCancels[id] ?: return false
+        // (One taken back from the book after a restart ends at once: its cancel never took - the phone may have died before it went.)
+        return (id in ownCancelsRestored || wallMs() - at !in 0 until EXIT_MARK_SETTLE_MS) && ownCancels.remove(id, at).also { if (it) ownCancelsRestored -= id }
+    }
+
+    /** 22 Nov 2026 (B6 review): the own-cancel marks taken back from the book after a restart, not made again since. Memory only. */
+    private val ownCancelsRestored: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /** 22 Nov 2026 (B6 review): the own-cancel marks the book keeps ([encodeBook]): the newest [OWN_CANCELS_KEPT] of the last day. */
+    private fun ownCancelsKept(): List<Pair<String, Long>> {
+        val now = wallMs()
+        return ownCancels.entries.map { it.key to it.value }.filter { now - it.second < OWN_CANCEL_KEEP_MS }
+            .sortedByDescending { it.second }.take(OWN_CANCELS_KEPT)
+    }
 
     /**
      * 16 Nov (review): by trade ([managerId]), how its stop's last end was said ("status|message"): the same end again is not said
@@ -5165,10 +5335,27 @@ object OrbArms {
         cache?.positions?.toList()?.any { it.open && it.live && it.stopOrderId == id } ?: true
     }.getOrDefault(true)
 
-    /** Cancels the stop [id] as the app's own ([ownCancels]). */
-    private suspend fun cancelOwnStop(id: String) {
-        synchronized(ownCancels) { ownCancels += id }
-        runCatching { Broker.cancel(id) }
+    /**
+     * Cancels the stop [id] as the app's own ([ownCancels]). 22 Nov 2026 (B6 review, WHO CANCELLED A STOP: the mark was memory only and the
+     * book was saved after the pass - a restart between a confirmed cancel and that save read the stop CANCELLED with blank words as
+     * Boss's, never put it back and told him he had cancelled it): a new mark goes into the book BEFORE the cancel is sent - [b], the book
+     * of a caller holding the arms' lock, handed to its writer ([saveSoon]: encoded here, written on the writer's own thread, never the
+     * disk on this path); with none, the same when the lock is free now, else asked on this object's own worker. A cancel Zerodha refused
+     * outright for a mark this call made (nothing of the app's was cancelled: the stop had ended already, or still works) takes it back.
+     */
+    private suspend fun cancelOwnStop(id: String, b: Book? = null) {
+        val fresh = markOwnCancel(id)
+        if (fresh) keepOwnCancels(b)
+        val refused = runCatching { Broker.cancel(id) }.exceptionOrNull()?.let { Broker.definite(it) } == true
+        // (Taken back in the book too: a restart never brings the mark back.)
+        if (refused && fresh && ownCancels.remove(id) != null) keepOwnCancels(b)
+    }
+
+    /** 22 Nov 2026 (B6 review): the own-cancel marks handed to the book's writer ([cancelOwnStop]); never the disk, nor a wait on the lock. */
+    private fun keepOwnCancels(b: Book?) {
+        if (b != null) { runCatching { saveSoon(b) }; return }
+        if (lock.tryLock()) try { cache?.let { runCatching { saveSoon(it) } } } finally { lock.unlock() }
+        else offLock.launch { runCatching { lock.withLock { cache?.let { saveSoon(it) } } } }
     }
 
     /**
@@ -5300,7 +5487,7 @@ object OrbArms {
             val first = flatSince.putIfAbsent(f.sym, ms) ?: ms
             val sale = orders.values.any { it.symbol == f.sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.filled > 0 }
             if (!com.optionslab.engine.orb.LiveMirror.shortConfirmed(true, false, first, ms, sale)) continue
-            cancelOwnStop(id)
+            cancelOwnStop(id, b)
             val st = runCatching { Broker.orderState(id)?.status }.getOrNull()
             if (st !in DONE) continue
             flatOrphans.remove(id)
@@ -5378,7 +5565,7 @@ object OrbArms {
         }
         val own = o.trigger.takeIf { it > 0 } ?: return Orphan.Wait
         suspend fun took(trig: Double): Orphan {
-            runCatching { Strategies.tagOwner("kite:${o.id}", "$label · stop") }
+            runCatching { Strategies.tagOwnerSoon("kite:${o.id}", "$label · stop") }
             runCatching { Diag.record("orb", "$label: a stop on $sym that no trade claimed (order ${o.id}, placed ${o.placedAt}) is taken as its stop for $qty") }
             Broker.claimStop(o.id)          // (20 Nov 2026, delta review: claimed; the caller forgets only its own trade's lost key)
             return Orphan.Took(o.id, trig)
@@ -5398,7 +5585,7 @@ object OrbArms {
         }.isSuccess
         if (!modified && resize) {
             // (Not resized: taken out, confirmed out, before another may rest - never two stops selling more than is held.)
-            cancelOwnStop(o.id)
+            cancelOwnStop(o.id, b)
             val st = runCatching { Broker.orderState(o.id)?.status }.getOrNull()
             return if (st == "CANCELLED" || st == "REJECTED") Orphan.None else Orphan.Wait
         }
@@ -5427,8 +5614,9 @@ object OrbArms {
      * never a stop for more than is held less every other working sale); null when nothing was placed (too soon, no level, nothing left to
      * cover - said each minute - or Zerodha refused: the app keeps watching it).
      */
-    private suspend fun restExchangeStop(b: Book, p: Position, sym: String, held: Int, ltp: Double, tick: Double,
-                                         orders: Collection<Broker.OrderRow>? = null, adoptOnly: Boolean = false): Pair<Position, Position?>? {
+    private suspend fun restExchangeStop(b: Book, p: Position, sym: String, heldRead: Int, ltp: Double, tick: Double,
+                                         orders: Collection<Broker.OrderRow>? = null, adoptOnly: Boolean = false,
+                                         positions: Broker.Positions? = null): Pair<Position, Position?>? {
         // 16 Nov (Boss: "All the stops and profit locks should be on zerodha"): every arm's stop - the ORB family's own and its lock,
         // Liquidity 15+5's -15%, the breakeven, the breakeven at +₹1,000, its lock - is always put back at Zerodha (Liquidity first; the
         // ORB arms by Boss's "yes" the same day). [AppSettings.exchangeStops] is no longer read. The caller's guards decide when.
@@ -5437,6 +5625,14 @@ object OrbArms {
         // (Review of the b5-orders merge, C1: never for a part whose own lost sale is pending - no stop placed, and a lost stop found is not
         // attached; it rests as cover, left to its own lost reply, until that sale is booked or let go.)
         if (lostOf(p) != null) return null
+        // 22 Nov 2026 (B6 review: the stop was sized from the pass's raw positions read - one trailing a sale that filled a moment ago, Boss's
+        // own in Kite included, still showed the lots it sold, and a stop for them could sell into a short): what is held, lag-guarded against
+        // the pass's own reads ([ExitCoordinator.held], forced - as the arms' live copies rest theirs), never more than the pass read. Never
+        // read again here (no wait under the arms' lock): a fill the positions still trail counts as sold this pass - a smaller stop, or
+        // none, until a later look sees them caught up. Not readable: nothing placed now.
+        val held = if (orders == null || positions == null) heldRead else (runCatching {
+            ExitCoordinator.held("NFO", sym, "MIS", armOf(p.arm).label, orders.toList(), first = positions, forceLag = lagForced(), readAgain = false)
+        }.getOrNull() ?: return null).coerceAtMost(heldRead)
         // 20 Nov 2026 (audit B5 deep review): this trade's stop whose reply was lost and is not found yet: looked for first (the book read
         // in the background, never here), nothing new placed meanwhile and no try or back-off counted; found, it is the trade's stop.
         // (The trade split when its stop covers less: the part it covers keeps it, the rest has none - asked again next look.)
@@ -5452,8 +5648,13 @@ object OrbArms {
             is Broker.LostLook.Found -> if (b.positions.none { it.open && it.stopOrderId == l.id }) {
                 val lotF = runCatching { Broker.spec("NFO", sym) }.getOrNull()
                 val fit = if (held > 0) minOf(p.qty, held) else p.qty
-                if (!fitFound(armOf(p.arm).label, l, fit, lotF?.lotSize?.coerceAtLeast(1) ?: 1, lotF?.tickSize ?: 0.05)) return null
-                runCatching { Strategies.tagOwner("kite:${l.id}", "${armOf(p.arm).label} · stop") }
+                // (22 Nov 2026, B6 review: taken out after part of it filled - that part booked closed at the stop, never "rests again" alone.)
+                when (val f = fitFound(armOf(p.arm).label, l, fit, lotF?.lotSize?.coerceAtLeast(1) ?: 1, lotF?.tickSize ?: 0.05, b)) {
+                    Fit.Out -> return null
+                    is Fit.Filled -> return stopSold(p, f, sym)
+                    Fit.Kept -> Unit
+                }
+                runCatching { Strategies.tagOwnerSoon("kite:${l.id}", "${armOf(p.arm).label} · stop") }
                 val covers = minOf(l.qty, fit)
                 // (Counted as placed this pass only when the pass's read does not already show it working.)
                 if (orders?.any { it.id == l.id } != true) placed(sym, covers, l.id)
@@ -5527,8 +5728,11 @@ object OrbArms {
                 "its only cover, and the app watches its level. Check $sym in Kite.")
             return null
         }
-        val (id, trig, refused, covers) = placeStop(armOf(p.arm).label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b),
+        val rest = placeStop(armOf(p.arm).label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b),
             liquidity = armOf(p.arm).liquidity, at = level, alert = key !in restRefusedSaid, lostKey = lostKey)
+        // (22 Nov 2026, B6 review: its own lost stop found meanwhile and taken out after part of it filled - that part booked closed.)
+        rest.sold?.let { return stopSold(p, it, sym) }
+        val (id, trig, refused, covers) = rest
         if (id == null && refused) restRefusedSaid += key
         if (id == null) return null
         placed(sym, covers, id)
@@ -5662,6 +5866,33 @@ object OrbArms {
     private fun lostOn(sym: String): List<LostExit> = lostExits.values.filter { it.sym == sym }
 
     /**
+     * 22 Nov 2026 (B6 review): the square-offs' look at these arms' unsettled exit sales on Zerodha contract [kite]
+     * ([SquareOffExit.lostPendingProviders]): each lost sale neither let go nor booked - not found yet, or found and not booked yet, as this
+     * book's own other trades wait for it ([exitLive]) - and each sale on its way ([salesInFlight]), by quantity. Memory only: never the
+     * arms' lock, the book or the network. (Before this process has read the book its saved lost sales are not known: the square-offs
+     * wait for it, [bookReadHint].)
+     */
+    internal fun unsettledSales(kite: String): Int =
+        lostExits.values.filter { it.sym == kite && !it.notFound }.sumOf { it.order.quantity } + (salesInFlight[kite] ?: 0)
+
+    /**
+     * 22 Nov 2026 (B6 review): by Zerodha contract, the quantity of these arms' exit sales on their way - from just before the order goes
+     * until it is booked, refused or held as a lost sale ([exitLive]) - so a square-off whose read of the books came before it counts it as
+     * going ([unsettledSales]), whatever the exit coordinator's switch says. Memory only.
+     */
+    private val salesInFlight = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    /**
+     * 22 Nov 2026 (B6 review): whether this process has read the arms' book (memory): only then are its lost exit sales, kept in it across a
+     * restart ([restoreLost]), known to the square-offs ([ExpirySquareOff.liveBooksReady], [FlatBySquareOff.liveBooksReady]). A book that
+     * could not be read (set aside, or a live row of it dropped: [rebuildFromZerodha]) counts as read only [LOST_LET_GO_MS] later - a lost
+     * sale it held is let go by then, and Zerodha's books show what it did.
+     */
+    internal val bookReadHint: Boolean get() = cache != null && wallMs() >= lostUnknownUntil
+    /** 22 Nov 2026 (B6 review): until when (wall clock) a lost exit sale of a book that could not be read is not known ([bookReadHint]). */
+    @Volatile private var lostUnknownUntil = 0L
+
+    /**
      * 20 Nov 2026 (deep review F1): [p]'s own lost sale, while it is held for it. Memory only. (Review of the b5-orders merge: by [Position.lostId]
      * alone, whatever its stop - a part with a stop and a pending lost sale is still held and still searched; a lost stop found meanwhile is
      * never attached to it, [exitLive] and [restExchangeStop].)
@@ -5784,7 +6015,7 @@ object OrbArms {
         runCatching { Diag.record("orb", "$label: ${asked.sym} held $held - this part's lost sale filled: its found lost stop $id taken out") }
         Broker.forgetLost(key)
         Broker.claimStop(id)
-        synchronized(sweepCancels) { sweepCancels[id] = "$label|${asked.sym}" }
+        sweepCancel(id, "$label|${asked.sym}")
         cancelOwnStop(id)
     }
     /** The longest the found stop's tiebreaker may take ([foundStopTiebreak]); past it, the stop rests. */
@@ -5875,7 +6106,7 @@ object OrbArms {
      */
     private suspend fun bookFoundRow(p: Position, label: String, sym: String, why: String, id: String, row: Broker.OrderRow?): Pair<Position, Position?>? {
         if (row == null || row.status !in DONE) return null
-        runCatching { Strategies.tagOwner("kite:$id", "$label · $why") }           // (relabelled at booking: plain, as any exit sale)
+        runCatching { Strategies.tagOwnerSoon("kite:$id", "$label · $why") }           // (relabelled at booking: plain, as any exit sale)
         runCatching { noteExitSale(id) }
         if (row.filled <= 0) return p to null
         p.stopOrderId?.let { s ->
@@ -5956,7 +6187,7 @@ object OrbArms {
                 val specG = runCatching { Broker.spec("NFO", sym) }.getOrNull()
                 if (b.positions.any { it.open && it.stopOrderId == l.id }) given
                 else if (given.stopOrderId == null && l.qty < given.qty) {
-                    runCatching { Strategies.tagOwner("kite:${l.id}", "$labelG · stop") }
+                    runCatching { Strategies.tagOwnerSoon("kite:${l.id}", "$labelG · stop") }
                     Broker.claimStop(l.id)
                     val share = l.qty.toDouble() / given.qty
                     val part = given.copy(qty = l.qty, stopOrderId = l.id, stopTrigger = l.trigger ?: given.stopTrigger, appCancelled = false,
@@ -5970,13 +6201,14 @@ object OrbArms {
                     if (left?.stopOrderId != null) { b.positions += left; return done to rest }
                     return done to (left?.let { rest.copy(qty = rest.qty + it.qty, charges = rest.charges + it.charges) } ?: rest)
                 } else if (given.stopOrderId == null &&
-                    fitFound(labelG, l, given.qty, specG?.lotSize?.coerceAtLeast(1) ?: 1, specG?.tickSize ?: 0.05)) {
-                    runCatching { Strategies.tagOwner("kite:${l.id}", "$labelG · stop") }
+                    // (22 Nov 2026, B6 review: taken out - with or without a part filled - it goes on below, which books what it sold.)
+                    fitFound(labelG, l, given.qty, specG?.lotSize?.coerceAtLeast(1) ?: 1, specG?.tickSize ?: 0.05, b) == Fit.Kept) {
+                    runCatching { Strategies.tagOwnerSoon("kite:${l.id}", "$labelG · stop") }
                     Broker.claimStop(l.id)
                     given.copy(stopOrderId = l.id, stopTrigger = l.trigger ?: given.stopTrigger, appCancelled = false)
                 } else {
                     Broker.claimStop(l.id)
-                    cancelOwnStop(l.id)
+                    cancelOwnStop(l.id, b)
                     val st = runCatching { Broker.orderState(l.id) }.getOrNull()
                     if (st == null || st.status !in DONE) {
                         runCatching { Diag.record("orb", "$labelG: its lost stop ${l.id} on $sym, found at its exit, is not confirmed out yet: the exit waits a pass") }
@@ -6026,6 +6258,18 @@ object OrbArms {
                     "to be found; its stop rests at Zerodha meanwhile") }
             return p0 to null
         }
+        // 22 Nov 2026 (B6 review: from 15:05 the expiry square-off sells an expiring lot of these arms itself, and the flat-by one still open
+        // later; with the exit coordinator in shadow - its default - nothing kept the two senders apart): a square-off's sale working on the
+        // contract (in the read this exit was decided on) or sent on it within its gap ([SquareOffExit.inGap]: a read can miss one sent a
+        // moment ago) is selling it - this exit waits, its stop resting (the square-off takes it out itself), and the next look reads again.
+        // Checked again just before the sale ([squareOffSelling]).
+        if (squareOffSelling(sym, pre?.orders)) {
+            val minute = now().withSecond(0).withNano(0)
+            if (coverSaid.size > 200) coverSaid.clear()
+            if (coverSaid.put(managerId(p0) + "|squareoff", minute) != minute)
+                runCatching { Diag.record("orb", "${armOf(p0.arm).label}: $sym's exit (${why.replace('_', ' ')}) waits: a square-off is selling it") }
+            return p0 to null
+        }
         runCatching { OrderTiming.decided() }
         val label = armOf(p0.arm).label
         // 18 Nov 2026 (audit: B1, Liquidity's index and time exits skipped the "shown gone but not confirmed" guard - they took the
@@ -6068,7 +6312,7 @@ object OrbArms {
                         it.id !in stops && "kite:${it.id}" !in owners && !Broker.lostMayBe(it, ownLost) }
                     if (orphan != null) {
                         p = p.copy(stopOrderId = orphan.id, stopTrigger = orphan.trigger.takeIf { it > 0 } ?: p.stopTrigger, appCancelled = false)
-                        runCatching { Strategies.tagOwner("kite:${orphan.id}", "$label · stop") }
+                        runCatching { Strategies.tagOwnerSoon("kite:${orphan.id}", "$label · stop") }
                         Broker.forgetLost(ownLost); Broker.claimStop(orphan.id)
                         runCatching { Diag.record("orb", "$label: a stop of these arms on $sym that no trade claimed (order ${orphan.id}) is taken as this trade's stop") }
                         others = others.filter { it.id != orphan.id }
@@ -6174,12 +6418,17 @@ object OrbArms {
             val liq = armOf(p.arm).liquidity
             val lock = lockOrStop(p, spec.tickSize)?.takeIf { l -> ladderTarget(p) != null && l > (p.stopTrigger ?: Double.NEGATIVE_INFINITY) + 1e-9 }
             if (lock != null) {
-                val (id, trig, _, covers) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock,
+                val atLock = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = lock,
                     lostKey = ownLost)
+                // (22 Nov 2026, B6 review: its own lost stop found meanwhile and taken out after part of it filled - that part booked closed.)
+                atLock.sold?.let { return stopSold(p, it, sym) }
+                val (id, trig, _, covers) = atLock
                 if (id != null) { putBack(id); placed(sym, covers, id); return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: lock), covers) }
             }
-            val (id, trig, _, covers) = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger,
+            val again = placeStop(label, sym, qty, spec.lotSize, spec.tickSize, p.entry, knownKite(b), liquidity = liq, at = p.stopTrigger,
                 lostKey = ownLost)
+            again.sold?.let { return stopSold(p, it, sym) }
+            val (id, trig, _, covers) = again
             putBack(id)
             if (id != null) placed(sym, covers, id)
             return rested(p.copy(stopOrderId = id, stopTrigger = trig ?: p.stopTrigger), covers)
@@ -6187,7 +6436,7 @@ object OrbArms {
         p.stopOrderId?.let { id ->
             // The resting exchange stop comes out FIRST (timed for the order speed card); one that already filled is the exit.
             val c0 = System.currentTimeMillis()
-            cancelOwnStop(id)
+            cancelOwnStop(id, b)
             val st = runCatching { Broker.orderState(id) }.getOrNull()
             runCatching { OrderTiming.stopCancel(System.currentTimeMillis() - c0) }
             if (st?.status == "COMPLETE") {
@@ -6209,56 +6458,70 @@ object OrbArms {
         // quantity and the read it came from are kept for that.
         var sent = 0
         var read: Collection<Broker.OrderRow>? = seen?.orders
-        val id = ExitCoordinator.turn("NFO", sym, label) {
-            val book = runCatching { ExitCoordinator.orders("NFO", sym, label) }.getOrNull() ?: return unsold(room, read)
-            read = book
-            val working = book.filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" }
-            // 21 Oct, enhancement round 3 (idea 1): held, checked against that read's fills ([ExitCoordinator.held]).
-            // 20 Nov 2026 (audit PC, as the arms' live copies since 18 Nov): the positions-lag guard acts here whatever its switch says
-            // (forceLag: it only ever sends less) - an exit that filled a moment ago is never sold again while the positions catch up.
-            val heldNow = runCatching { ExitCoordinator.held("NFO", sym, "MIS", label, book, forceLag = lagForced()) }.getOrNull() ?: return unsold(room, book)
-            val still = (heldNow - lostPending(sym, p, book)).coerceAtLeast(0)
-            val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return unsold(room, book)
-            val workingLeft = working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
-            val qty = com.optionslab.engine.risk.ExitQty.sendable(still, workingLeft, p.qty, spec.lotSize)
-            // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
-            // gone on this read although the read before showed it held - never a stop that could sell into a short: the price check
-            // puts it back within a minute while Zerodha shows it held, [restExchangeStop].)
-            if (qty <= 0) {
-                if (p.stopOrderId != null) {
-                    // (While another part's lost sale is pending no stop goes back on the contract: said loudly, the lot has none.)
-                    if (lostOn(sym).any { !it.notFound && it.id != p.lostId }) coverSay(p, "$label: the exit of $sym found nothing to sell after " +
-                        "its stop came out, and no stop goes back while another trade's lost sale on it is unresolved. Check $sym in Kite.")
-                    else runCatching { Diag.record("orb", "$label: $sym's exit found nothing to sell after its stop came out (held $still); " +
-                        "the price check puts the stop back while Zerodha shows it held") }
-                }
-                return p.copy(stopOrderId = null) to null
-            }
-            sent = qty
-            val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "iraorb")
-            val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
-            if (bad.isNotEmpty()) {
-                com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
-                return unsold(qty, book, refused = true)
-            }
-            val sentAt = runCatching { Market.now().toLocalDateTime() }.getOrDefault(java.time.ZonedDateTime.now(com.optionslab.engine.IST).toLocalDateTime())
-            try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-                val definite = Broker.definite(e)
-                val found = if (definite) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
-                found ?: run {
-                    // Refused outright: nothing went, so the stop goes back. A lost reply with no order found may still have gone.
-                    if (definite) {
-                        com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
-                        return unsold(qty, book, refused = true)
+        // 22 Nov 2026 (B6 review): this sale counted as unsettled ([salesInFlight]) from just before it goes until it is booked, refused or
+        // held as a lost sale - a square-off that read the books before it went never sells beside it.
+        var inFlight = 0
+        try {
+            val id = ExitCoordinator.turn("NFO", sym, label) {
+                val book = runCatching { ExitCoordinator.orders("NFO", sym, label) }.getOrNull() ?: return unsold(room, read)
+                read = book
+                val working = book.filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" }
+                // 21 Oct, enhancement round 3 (idea 1): held, checked against that read's fills ([ExitCoordinator.held]).
+                // 20 Nov 2026 (audit PC, as the arms' live copies since 18 Nov): the positions-lag guard acts here whatever its switch says
+                // (forceLag: it only ever sends less) - an exit that filled a moment ago is never sold again while the positions catch up.
+                val heldNow = runCatching { ExitCoordinator.held("NFO", sym, "MIS", label, book, forceLag = lagForced()) }.getOrNull() ?: return unsold(room, book)
+                val still = (heldNow - lostPending(sym, p, book)).coerceAtLeast(0)
+                val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return unsold(room, book)
+                val workingLeft = working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
+                val qty = com.optionslab.engine.risk.ExitQty.sendable(still, workingLeft, p.qty, spec.lotSize)
+                // Gone, or covered by what is working: next pass. (B2: covered by another sale that appeared since - never a stop beside it;
+                // gone on this read although the read before showed it held - never a stop that could sell into a short: the price check
+                // puts it back within a minute while Zerodha shows it held, [restExchangeStop].)
+                if (qty <= 0) {
+                    if (p.stopOrderId != null) {
+                        // (While another part's lost sale is pending no stop goes back on the contract: said loudly, the lot has none.)
+                        if (lostOn(sym).any { !it.notFound && it.id != p.lostId }) coverSay(p, "$label: the exit of $sym found nothing to sell after " +
+                            "its stop came out, and no stop goes back while another trade's lost sale on it is unresolved. Check $sym in Kite.")
+                        else runCatching { Diag.record("orb", "$label: $sym's exit found nothing to sell after its stop came out (held $still); " +
+                            "the price check puts the stop back while Zerodha shows it held") }
                     }
-                    // 20 Nov 2026 (audit PC): held for this part - it sells and rests nothing more while that sale may still be selling
-                    // ([lostExits]); then searched for before it sells.
-                    val lostId = lostExit(p, sym, why, o, knownKite(b).toSet() + working.map { it.id }, sentAt)
-                    return p.copy(stopOrderId = null, lostId = lostId) to null
+                    return p.copy(stopOrderId = null) to null
+                }
+                sent = qty
+                val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "iraorb")
+                val bad = com.optionslab.engine.Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
+                if (bad.isNotEmpty()) {
+                    com.optionslab.app.work.Alerts.error("$label: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "ORB live")
+                    return unsold(qty, book, refused = true)
+                }
+                // 22 Nov 2026 (B6 review): a square-off's sale sent on it since this exit was decided is selling it - nothing from here beside
+                // it ([unsold] puts no stop back beside a square-off's sale; the app watches the level, and the square-off sells what is left).
+                // This sale counts as on its way FIRST, then the gap is looked at - a square-off starts its gap before its own last look at
+                // these sales ([SquareOffExit.lostPendingProviders]): of the two senders, at most one sells.
+                salesInFlight.merge(sym, qty, Int::plus); inFlight = qty
+                SquareOffExit.saleStarting(sym)
+                if (squareOffSelling(sym, book)) return unsold(qty, book)
+                val sentAt = runCatching { Market.now().toLocalDateTime() }.getOrDefault(java.time.ZonedDateTime.now(com.optionslab.engine.IST).toLocalDateTime())
+                try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
+                    val definite = Broker.definite(e)
+                    val found = if (definite) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
+                    found ?: run {
+                        // Refused outright: nothing went, so the stop goes back. A lost reply with no order found may still have gone.
+                        if (definite) {
+                            com.optionslab.app.work.Alerts.error("$label: the Zerodha exit failed (${e.message}); retrying on the next pass.", "ORB live")
+                            return unsold(qty, book, refused = true)
+                        }
+                        // 20 Nov 2026 (audit PC): held for this part - it sells and rests nothing more while that sale may still be selling
+                        // ([lostExits]); then searched for before it sells.
+                        val lostId = lostExit(p, sym, why, o, knownKite(b).toSet() + working.map { it.id }, sentAt)
+                        return p.copy(stopOrderId = null, lostId = lostId) to null
+                    }
                 }
             }
+            return bookSale(p, label, sym, why, id) { unsold(sent, read, refused = true) }
+        } finally {
+            if (inFlight > 0) salesInFlight.computeIfPresent(sym) { _, v -> (v - inFlight).takeIf { it > 0 } }
         }
-        return bookSale(p, label, sym, why, id) { unsold(sent, read, refused = true) }
     }
 
     /**
@@ -6269,7 +6532,9 @@ object OrbArms {
      */
     private suspend fun bookSale(p: Position, label: String, sym: String, why: String, id: String,
                                  nothing: suspend () -> Pair<Position, Position?>): Pair<Position, Position?> {
-        Strategies.tagOwner("kite:$id", "$label · $why")
+        // (22 Nov 2026, B6 review: labelled without waiting under the arms' lock on the Strategy Module's own, held across its Zerodha
+        // calls - as the square-offs label theirs, [Strategies.tagOwnerSoon]; every later read of the labels sees it.)
+        runCatching { Strategies.tagOwnerSoon("kite:$id", "$label · $why") }
         runCatching { noteExitSale(id) }
         var f = runCatching { Broker.awaitOrder(id, 15_000) }.getOrNull()
         if (f?.status !in DONE) {

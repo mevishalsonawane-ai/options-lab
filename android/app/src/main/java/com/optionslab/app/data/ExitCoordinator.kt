@@ -213,9 +213,12 @@ object ExitCoordinator {
      * positions cannot be read (as the senders' own reads did). Memory and Zerodha's reads only (no disk, no settings).
      * [first]: a positions read the caller already made after [orders] (a pass over many contracts): used as the first read,
      * so a contract with no exit of ours just filled costs no read at all.
+     * 22 Nov 2026 (B6 review): [readAgain] false - for a caller holding a book's lock on its stop checks (the ORB family's stop put back
+     * at Zerodha): nothing is read again, neither the positions nor the orders - a fill the positions trail counts as sold at once (as
+     * after the last read again), so it only ever lowers what is held, and never waits.
      */
     suspend fun held(exchange: String, symbol: String, product: String, who: String, orders: List<Broker.OrderRow>,
-                     first: Broker.Positions? = null, forceLag: Boolean = false): Int {
+                     first: Broker.Positions? = null, forceLag: Boolean = false, readAgain: Boolean = true): Int {
         // 15 Nov, review: [forceLag] - the guard acts (reads again, then counts a trailing fill as sold) whatever its switch says, for a
         // caller putting a stop back after Boss's exit (Protections): it only ever lowers what is held, so what is placed.
         val guard = lagOn || forceLag
@@ -261,7 +264,13 @@ object ExitCoordinator {
         fun known(b: Broker.Positions): Broker.Positions = if (b.unknownForExit(symbol, product)) throw java.io.IOException("$symbol's positions row could not be read") else b
         if (!forceLag && mine.isEmpty() && fills.none { ExitDesk.filledRecently(it, now) }) return rows(known(first ?: Broker.positionBook())).sumOf { it.qty }
         var given = first
-        var (book, left) = ExitDesk.settleHeld(guard, { given?.also { given = null } ?: Broker.positionBook() }, ::lag) { how, n -> noteLag(key, who, how, n) }
+        var (book, left) = ExitDesk.settleHeld(guard, { given?.also { given = null } ?: Broker.positionBook() }, ::lag,
+            waits = if (readAgain) ExitDesk.REREAD_MS else LongArray(0)) { how, n ->
+            // (Not read again: said as it is - the trailing fill counted as sold at once.)
+            if (!readAgain && how == ExitDesk.Lag.SUBTRACTED) { count { it.copy(lagSubtracted = it.lagSubtracted + 1) }
+                record("$who $key: its positions read did not show $n filled by an exit; counted as sold (not read again)") }
+            else noteLag(key, who, how, n)
+        }
         if (converted) {
             // Review (round 5): the other product's row may show a fill that came AFTER the orders were read (Boss's MIS sell, an MIS
             // stop): that is not a conversion, and taking it as one would hide a real lag. On, the orders are read again (they lead
@@ -269,7 +278,7 @@ object ExitCoordinator {
             // this product's own lag stands, as before this round. Off (shadow): logged only, nothing read.
             val words = rowsWords(book, symbol, exchange)
             if (guard) {
-                val fresh = runCatching { Broker.orders(fresh = true) }.getOrNull()
+                val fresh = if (readAgain) runCatching { Broker.orders(fresh = true) }.getOrNull() else null
                 val again = runCatching {
                     if (fresh == null) lags(book, fills, allFills).first
                     else lags(book, fillsOf(fresh, oneProduct = true), fillsOf(fresh, oneProduct = false)).second
