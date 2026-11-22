@@ -361,9 +361,12 @@ class SplitStopBotTest : RobolectricTest() {
         assertEquals("daystop:mcx", e.change.target)
         assertEquals(com.optionslab.ira.AutoChange.STOPPED, e.change.to)
         assertTrue(e.change.reason, e.change.reason.contains("at 10:42"))
-        // Its Undo starts the commodity side again (no PIN: paper).
-        assertFalse(com.optionslab.app.ira.Autopilot.undoNeedsPin(e.id))
-        val said = com.optionslab.app.ira.Autopilot.undo(e.id)
+        // Its Undo starts the commodity side again. 22 Nov 2026 (B6 review): the MCX arms trade live too, so it takes the PIN (LIVE scope,
+        // as the index side's): without it nothing is started.
+        assertTrue(com.optionslab.app.ira.Autopilot.undoNeedsPin(e.id))
+        assertEquals(com.optionslab.app.ira.Autopilot.PIN_UNDO, com.optionslab.app.ira.Autopilot.undo(e.id))
+        assertTrue("still stopped", mcxStopped())
+        val said = com.optionslab.app.ira.Autopilot.undo(e.id, pinConfirmed = true)
         assertTrue(said, !mcxStopped())
         // A loss stop is never logged as Boss's.
         at(11, 30); paper(nse = -6_500.0, mcx = 0.0); check()

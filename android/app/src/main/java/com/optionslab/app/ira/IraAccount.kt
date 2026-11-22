@@ -171,6 +171,17 @@ internal object IraAccount {
     internal fun holdsForErase(): Boolean =
         synchronized(cache) { cache.isNotEmpty() || cacheMode != null } || liveNamed.held || paperNamed.held
 
+    /**
+     * 22 Nov 2026 (B6 review): the order limits the app's checks apply to Zerodha orders ([AppSettings.limits]: the account guard's), for
+     * the settings answer; it named three older limits nothing read. Each "no ... limit" when off. Words only.
+     */
+    internal fun orderLimitsLine(s: AppSettings): String {
+        val trades = if (s.guardMaxTrades > 0) "at most ${s.guardMaxTrades} orders a day" else "no orders-a-day limit"
+        val lots = if (s.guardMaxLots > 0) "${s.guardMaxLots} lots in one instrument" else "no lots limit"
+        val value = if (s.guardMaxValue > 0) "${AppFacts.amt(s.guardMaxValue)} an order" else "no order value limit"
+        return "the account guard's order limits on Zerodha: $trades, $lots, $value."
+    }
+
     /** TEST ONLY: [v] kept as a read just made (the erase's test). */
     internal fun keepForTest(v: AppView) = keep(v, android.os.SystemClock.elapsedRealtime(), generationNow())
 
@@ -422,8 +433,8 @@ internal object IraAccount {
 
             if (wants(Section.SETTINGS)) out[Section.SETTINGS] = listOf(
                 "Mode: $mode${if (s.live) "; real orders ${if (s.allowRealOrders) "allowed" else "not allowed"}" else " (orders go to the paper account)"}.",
-                "Order product ${s.orderProduct}; one-tap orders ${if (s.oneTapOrders) "on" else "off"}; at most ${s.maxOrdersPerDay} orders a day, " +
-                    "${s.maxLotsPerOrder} lots and ${AppFacts.amt(s.maxOrderValue)} an order.",
+                // 22 Nov 2026 (B6 review): the order limits the checks apply (the account guard's), never the older ones nothing read.
+                "Order product ${s.orderProduct}; one-tap orders ${if (s.oneTapOrders) "on" else "off"}; ${orderLimitsLine(s)}",
                 "Fingerprint unlock ${if (s.biometric) "on" else "off"}; app locks after ${s.idleSeconds} seconds idle; nightly harvest ${if (s.nightlyHarvest) "on" else "off"}; " +
                     "market watch ${if (s.liveWatch) "on" else "off"}; theme ${s.theme}.",
             )

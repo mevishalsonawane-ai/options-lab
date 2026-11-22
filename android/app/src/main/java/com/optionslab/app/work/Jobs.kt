@@ -446,7 +446,9 @@ class NotificationActionReceiver : BroadcastReceiver() {
             } else readState().positions.filter { it.symbol == symbol && it.quantity != 0 }
             if (open.isEmpty() && accepts) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
             for (p in open) {
-                val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
+                // 22 Nov 2026 (B6 review): Boss's own close, as Trade's: an NSE intraday live copy of the row keeps running with its own stop
+                // (said); a carried or MCX one is sold with it ([com.optionslab.app.data.PaperHandClose]).
+                val r = com.optionslab.app.data.PaperHandClose.close(p.symbol, p.product, "paper row closed from the notification")
                 r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
                 Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
             }

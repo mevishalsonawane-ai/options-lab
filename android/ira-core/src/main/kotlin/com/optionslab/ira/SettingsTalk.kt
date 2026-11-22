@@ -15,12 +15,12 @@ object SettingsTalk {
         PAPER_DAILY_LOSS("the paper daily loss limit", Unit.RUPEES, canOff = false),
         /** 25 Oct (Boss's decision on the app audit, R7): the paper bots' weekly loss stop; loosening it takes the PIN. */
         PAPER_WEEKLY_LOSS("the paper weekly loss stop", Unit.RUPEES),
+        // 22 Nov 2026 (B6 review): "max lots per order" and "max manual orders per day" were two older settings the order checks never
+        // read (they use these two, MAX_LOTS and MAX_TRADES): they are gone, and their words name these ([NAMES]).
         MAX_LOTS("max lots per instrument", Unit.COUNT),
-        LOTS_PER_ORDER("max lots per order", Unit.COUNT, canOff = false),
         MAX_OPEN("max open positions", Unit.COUNT),
         MAX_TRADES("max orders per day", Unit.COUNT),
         PAPER_TRADES("max paper orders per day", Unit.COUNT, canOff = false),
-        ORDERS_PER_DAY("max manual orders per day", Unit.COUNT, canOff = false),
         DRAWDOWN("the max drawdown", Unit.PERCENT),
         ORDER_VALUE("max value per order", Unit.RUPEES),
         EXPOSURE("max held in one instrument", Unit.RUPEES),
@@ -39,6 +39,15 @@ object SettingsTalk {
 
     enum class Unit { RUPEES, COUNT, PERCENT, TIME, PRODUCT, SWITCH }
 
+    /**
+     * The limits and protections the Account guard page asks the PIN to loosen ([loosens]) - its Zerodha limits, the expiry-day
+     * square-off, blocking naked option shorts, and the paper bots' daily loss limit and weekly loss stop (paper limits otherwise and the
+     * alerts are not). One list for the page and for Jarvis, so a change by voice is never looser than the page's own rule.
+     * 22 Nov 2026 (B6 review): the two switches were missing for Jarvis, who switched them off without the PIN.
+     */
+    val PIN_TO_LOOSEN: Set<Key> = setOf(Key.DAILY_LOSS, Key.DRAWDOWN, Key.MAX_OPEN, Key.MAX_TRADES, Key.ORDER_VALUE, Key.MAX_LOTS, Key.EXPOSURE,
+        Key.CUTOFF, Key.PAPER_DAILY_LOSS, Key.PAPER_WEEKLY_LOSS, Key.EXPIRY_SQUARE_OFF, Key.NAKED_SHORTS)
+
     /** Words naming each setting, most specific first (so "paper daily loss" is not "daily loss"). */
     private val NAMES: List<Pair<Key, String>> = listOf(
         // 25 Oct: before the daily ones ("paper weekly loss limit" is not "paper ... loss limit"); "paper" is needed ("your weekly loss
@@ -49,11 +58,11 @@ object SettingsTalk {
         Key.LOSS_ALERT to "(p l |pnl )?loss alert",
         Key.PROFIT_ALERT to "(p l |pnl )?profit alert",
         Key.DAILY_LOSS to "(daily (stop ?loss|sl)( limit)?|(stop ?loss|sl|max loss) (for|per) (the |a )?day|daily loss( limit)?|max(imum)? (daily )?loss|(?<!stop )loss limit|stop loss limit for the day)",
-        Key.LOTS_PER_ORDER to "(max(imum)? )?lots (per|an|each|a) order",
-        Key.MAX_LOTS to "max(imum)? lots( per instrument)?|lot limit",
+        // 22 Nov 2026 (B6 review): "lots per order" is the account guard's lots limit, the one the order checks apply to each order
+        // ([Key.MAX_LOTS]); "manual orders per day" its orders-a-day limit ([Key.MAX_TRADES]). Said back by their own names.
+        Key.MAX_LOTS to "(max(imum)? )?lots (per|an|each|a) order|max(imum)? lots( per instrument)?|lot limit",
         Key.MAX_OPEN to "max(imum)? (open )?positions|open positions limit",
-        Key.ORDERS_PER_DAY to "(max(imum)? )?manual orders( per day| a day)?",
-        Key.MAX_TRADES to "max(imum)? (orders|trades)( per day| a day)?|(orders|trades) (per|a) day( limit)?",
+        Key.MAX_TRADES to "(max(imum)? )?manual orders( per day| a day)?|max(imum)? (orders|trades)( per day| a day)?|(orders|trades) (per|a) day( limit)?",
         Key.DRAWDOWN to "(max(imum)? )?drawdown( limit)?",
         Key.ORDER_VALUE to "(max(imum)? )?(order value|value per order)",
         Key.EXPOSURE to "(max(imum)? )?(exposure|held in one instrument)",

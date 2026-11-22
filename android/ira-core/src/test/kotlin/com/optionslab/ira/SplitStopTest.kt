@@ -155,14 +155,16 @@ class SplitStopTest {
         assertEquals("daystop:mcx", stop.target)
         assertEquals(DayStop.Side.MCX, AutoChange.dayStopSide(stop.target))
         assertEquals(AutoChange.Risk.LOWER, AutoChange.riskOf(stop))
-        assertEquals(AutoChange.Scope.PAPER, stop.scope)
+        // 22 Nov 2026 (B6 review): the MCX arms are copied live, so the commodity side's stop is LIVE scope too (it was PAPER).
+        assertEquals(AutoChange.Scope.LIVE, stop.scope)
         assertTrue(stop.reason.contains("at 10:42") && stop.reason.contains("the index bots keep trading"), stop.reason)
         assertFalse(AutoChange.never(stop))
         assertTrue(AutoChange.bossOwn(AutoChange.Kind.DAY_STOP), "Boss's own: never undone by \"undo the last change\"")
         val (b1, e1) = AutoChange.record(AutoChange.Book(), stop, AutoChange.Status.KEPT, 1L, day, by = "your choice")
         val u = AutoChange.undo(b1, e1.id)!!
         assertEquals(AutoChange.RUNNING, u.inverse.to)
-        assertFalse(u.needsPin, "the commodity bots are paper: no PIN")
+        assertTrue(u.needsPin, "the MCX arms trade live: an Undo that lifts the commodity side's stop asks the PIN, as the index side's does")
+        assertFalse(AutoChange.undoNeedsPin(AutoChange.dayStop(DayStop.Side.MCX, stopped = false, by = "by you")), "stopping it again never asks")
         // The index side governs live entries: an Undo that lifts its stop asks the PIN; one that stops it again never does.
         val idx = AutoChange.dayStop(DayStop.Side.INDEX, stopped = true, by = "by you")
         assertEquals(AutoChange.Scope.LIVE, idx.scope)

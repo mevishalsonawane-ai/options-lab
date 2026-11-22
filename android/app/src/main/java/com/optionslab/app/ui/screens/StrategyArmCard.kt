@@ -131,9 +131,13 @@ internal const val AUTO_NOTE = "AUTO places the entry by itself at the start tim
 @Composable
 fun McxHomeCard(model: AppModel) {
     val st by model.mcxStop.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
+    val s by model.settings.collectAsState(kotlinx.coroutines.Dispatchers.Main.immediate)
     androidx.compose.runtime.LaunchedEffect(Unit) { model.refreshStrategies() }
     LedgerCard {
-        McxStopBar(st, onStop = { sell -> model.stopCommodities(sell) }, onStart = { model.startCommoditiesAgain() })
+        // 22 Nov 2026 (B6 review): the MCX arms trade live too, so starting them again in Live asks the PIN (with one set), as the index side does.
+        McxStopBar(st, onStop = { sell -> model.stopCommodities(sell) }, onStart = { pin -> model.startCommoditiesAgain(pinConfirmed = pin) },
+            startNeedsPin = { runCatching { com.optionslab.app.security.GuardPin.asks(true, com.optionslab.app.security.PinLock.isSet, s.live, zerodha = false) }.getOrDefault(true) },
+            pin = { onOk, onCancel -> Reauth(model, onOk = onOk, onCancel = onCancel, why = com.optionslab.app.data.Strategies.MCX_LIFT_WHY) })
         McxArmRows(divider = false)
     }
 }

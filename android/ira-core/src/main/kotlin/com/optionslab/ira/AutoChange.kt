@@ -528,7 +528,8 @@ object AutoChange {
     /**
      * 30 Oct (Boss: "Make stop bot different for index and comodities"): [side] stopped for today ([stopped]) or started again, by
      * Boss ([by]: "by you", "from the quick-settings tile", "by Jarvis on your word"), at [at] ("10:42"). The index side governs live
-     * entries too (LIVE scope: an Undo that lifts its stop asks the PIN where one is set); the commodity bots are paper (PAPER).
+     * entries too (LIVE scope: an Undo that lifts its stop asks the PIN where one is set). 22 Nov 2026 (B6 review): so does the commodity
+     * side - the MCX arms are copied live (NRML orders) - so its Undo that lifts the stop asks the PIN the same way (it was PAPER).
      */
     fun dayStop(side: DayStop.Side, stopped: Boolean, by: String, at: String? = null): Change = Change(Kind.DAY_STOP, DAY_STOP + side.wire,
         if (stopped) RUNNING else STOPPED, if (stopped) STOPPED else RUNNING,
@@ -536,7 +537,7 @@ object AutoChange {
             (if (side == DayStop.Side.INDEX) "; the commodity bots keep trading" else "; the index bots keep trading")
         else "${side.title} started again $by${at?.let { " at $it" } ?: ""} (a loss-limit stop is never lifted)",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (stopped) Risk.LOWER else Risk.RAISE,
-        if (side == DayStop.Side.INDEX) Scope.LIVE else Scope.PAPER, what = "${side.title}' day stop")
+        Scope.LIVE, what = "${side.title}' day stop")
 
     /** 19 Nov 2026: the target of a [Kind.LOSS_LIFT] (the index side's loss-limit stop of today). */
     const val LOSS_LIFT_TARGET = "lossstop:index"

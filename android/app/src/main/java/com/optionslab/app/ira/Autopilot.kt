@@ -713,6 +713,10 @@ internal object Autopilot {
             // 28 Oct: taking Boss's win-rate rule away loosens their own rule (as changing its number does): the PIN, where one is set.
             AutoChange.Kind.IDEA_RULE -> inverse.to == AutoChange.SWITCHED_OFF &&
                 runCatching { com.optionslab.app.security.PinLock.isSet }.getOrDefault(true)
+            // 22 Nov 2026 (B6 review): a day stop's Undo that starts a side again (an entry logged before the commodity side's became LIVE
+            // scope) asks the PIN wherever starting it again by hand does ([com.optionslab.app.data.Strategies.liftAsksPin]).
+            AutoChange.Kind.DAY_STOP -> inverse.to == AutoChange.RUNNING &&
+                runCatching { com.optionslab.app.data.Strategies.liftAsksPin() }.getOrDefault(true)
             else -> false
         }
     }
@@ -1075,7 +1079,7 @@ internal object Autopilot {
                     _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.DAY_STOP && it.change.target == c.target && it.status == AutoChange.Status.KEPT }
                         ?.let { _book.value = AutoChange.undone(_book.value, it.id, today) }
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
-                        note = if (side == com.optionslab.ira.DayStop.Side.INDEX) "index side: NSE and BSE; the kill switch stays global" else "commodity side: the MCX bots, paper").first
+                        note = if (side == com.optionslab.ira.DayStop.Side.INDEX) "index side: NSE and BSE; the kill switch stays global" else "commodity side: the MCX bots, paper and their live copies").first
                     save()
                 }
             }

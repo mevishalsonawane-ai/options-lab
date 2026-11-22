@@ -69,7 +69,7 @@ class AuditBatch2VoiceGatesTest : RobolectricTest() {
         runBlocking { Strategies.stopForToday(stopRunning = false, compromised = false) }
         val (said, act) = runBlocking { IraActions.prepare(com.optionslab.ira.Ask.parse("start the bots again").command!!) }
         assertTrue(said, said == IraActions.LIFT_PIN || said.contains(IraActions.LIFT_PIN_SHORT))
-        // At most the commodity side (paper) is offered; the index side stays stopped.
+        // Nothing starts the index side (22 Nov 2026, B6 review: nor the commodity side, whose arms trade live too).
         act?.let { runBlocking { it() } }
         assertTrue("the index bots stay stopped", stopped())
     }

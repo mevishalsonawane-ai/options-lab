@@ -21,8 +21,11 @@ import kotlinx.coroutines.launch
  */
 internal object IraActions {
     /** One thing Jarvis can act on, as numbered in its lists. */
-    /** [protective]: a resting stop-loss order (SL / SL-M) that guards an open position (19 Nov 2026, audit batch 2). */
-    data class Target(val name: String, val protective: Boolean = false, val run: suspend () -> String)
+    /**
+     * [protective]: a resting stop-loss order (SL / SL-M) that guards an open position (19 Nov 2026, audit batch 2). [paperRow]: a paper
+     * position's symbol and product (22 Nov 2026, B6 review: what its close does to its live copies is said before it goes).
+     */
+    data class Target(val name: String, val protective: Boolean = false, val paperRow: Pair<String, String>? = null, val run: suspend () -> String)
 
     /** The app's screen model while the app is open: the Live order paths (order review and send) need it. */
     @Volatile private var bridge: WeakReference<com.optionslab.app.ui.AppModel>? = null
@@ -220,12 +223,18 @@ internal object IraActions {
      */
     internal fun isStopType(type: String?): Boolean = type?.trim()?.uppercase(java.util.Locale.ENGLISH)?.let { it == "SL" || it == "SL-M" } == true
 
-    /** Open positions: the paper account's, then Zerodha's (closing a Zerodha one needs the app open). */
-    private suspend fun openPositions(): List<Target> {
+    /**
+     * Open positions: the paper account's, then Zerodha's (closing a Zerodha one needs the app open). 22 Nov 2026 (B6 review): [byHand] -
+     * Boss named one paper position for Jarvis to close: closed as his own hand close ([com.optionslab.app.data.PaperHandClose]: an NSE
+     * intraday live copy keeps running with its own stop, a carried or MCX one is sold with it); "close all" and the emergency exit close
+     * the paper as before (every live copy sold with its paper trade, and Zerodha's positions closed too).
+     */
+    private suspend fun openPositions(byHand: Boolean = false): List<Target> {
         val out = ArrayList<Target>()
         runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.positions?.positions?.filter { it.quantity != 0 }?.forEach { p ->
-            out += Target("paper ${p.symbol} (${p.quantity})") {
-                com.optionslab.app.data.Paper.close(p.symbol, p.product).also { r ->
+            out += Target("paper ${p.symbol} (${p.quantity})", paperRow = p.symbol to p.product) {
+                (if (byHand) com.optionslab.app.data.PaperHandClose.close(p.symbol, p.product, "paper row closed by Jarvis on your word")
+                    else com.optionslab.app.data.Paper.close(p.symbol, p.product)).also { r ->
                     r.orderId?.let { id -> com.optionslab.app.data.Strategies.tagOwner("paper:$id", com.optionslab.app.data.Origins.manual("Jarvis")) }
                 }.message
             }
@@ -339,9 +348,13 @@ internal object IraActions {
                     ?: if (runCatching { com.optionslab.app.data.LossBreaker.bossStoppedToday() }.getOrDefault(false)) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS) else null
                 val why = runCatching { com.optionslab.app.data.Strategies.stoppedWhy() }.getOrNull()
                 val mcxLoss = runCatching { com.optionslab.app.data.LossBreaker.mcxLossStop(why) }.getOrDefault(true)
+                // 22 Nov 2026 (B6 review): in Live with a PIN set, lifting either side's stop takes the PIN on Home - the MCX arms are copied
+                // live too (NRML orders), so the commodity side is never lifted by voice there either.
+                val liftPin = runCatching { com.optionslab.app.data.Strategies.liftAsksPin() }.getOrDefault(true)
                 if (c.side == com.optionslab.ira.DayStop.Side.MCX) {
                     val refused = com.optionslab.ira.DayStop.startRefusal(com.optionslab.ira.DayStop.Side.MCX, mcxKept, mcxLoss)
                     return if (refused != null) refused to null
+                    else if (liftPin) MCX_LIFT_PIN to null
                     else Commands.describe(c) to suspend {
                         val r = com.optionslab.app.data.Strategies.startCommoditiesAgain()
                         model()?.refreshStrategies()
@@ -355,16 +368,11 @@ internal object IraActions {
                 val mcxToo = c.side == null && mcxKept != null && !mcxLoss
                 // 15 Nov: Liquidity's books on but not cleared by Boss's own switch stay on paper - said, so it never sounds like they go live.
                 val liqNote = liquidityPaperNote()
-                // 19 Nov 2026 (audit batch 2): in Live with a PIN set, lifting the index side's stop takes the PIN on Home - never by voice
-                // (the commodity side, paper only, may still start).
-                if (st.lift && runCatching { com.optionslab.app.data.Strategies.liftAsksPin() }.getOrDefault(true)) {
-                    if (!mcxToo) return LIFT_PIN to null
-                    return "start the commodity bots again (the index bots stay stopped: $LIFT_PIN_SHORT)" to suspend {
-                        val r = com.optionslab.app.data.Strategies.startCommoditiesAgain()
-                        model()?.refreshStrategies()
-                        r
-                    }
-                }
+                // 19 Nov 2026 (audit batch 2): in Live with a PIN set, lifting the index side's stop takes the PIN on Home - never by voice.
+                // 22 Nov 2026 (B6 review): nor the commodity side's (its arms trade live too): nothing is started by voice there.
+                // (The index side held by the loss limit is still said: [st.say].)
+                if (liftPin && (st.lift || mcxToo)) return (if (st.lift && mcxToo) BOTH_LIFT_PIN else if (st.lift) LIFT_PIN
+                    else if (loss || why != null) "$MCX_LIFT_PIN ${st.say}" else MCX_LIFT_PIN) to null
                 if (!st.lift && !mcxToo) st.say + liqNote to null
                 else (if (st.lift) st.say else "start the commodity bots again (the index bots stay stopped: ${st.say})") +
                     (if (st.lift && mcxToo) "; and start the commodity bots again" else "") + liqNote to suspend {
@@ -411,9 +419,16 @@ internal object IraActions {
             Command.Kind.CANCEL_ONE -> {
                 val o = openOrders()
                 if (o.isEmpty()) return "There are no open orders to cancel." to null
-                val i = if (c.target == "last") o.lastIndex else pick(o.map { it.name }, "order")
-                    ?: return ("Which order? " + o.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
-                Commands.describe(c, o[i].name) to o[i].run
+                // 22 Nov 2026 (B6 review): "the last order" is the last one that is not a protective stop (SL / SL-M guarding an open
+                // position), as "cancel all" leaves those working; a stop is cancelled only by its name, and the confirm then says what it is.
+                val i = if (c.target == "last") {
+                    o.indexOfLast { !it.protective }.takeIf { it >= 0 }
+                        ?: return "There are no open orders to cancel besides your stop-loss orders. $CANCEL_KEEPS_STOPS" to null
+                } else {
+                    pick(o.map { it.name }, "order")
+                        ?: return ("Which order? " + o.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
+                }
+                Commands.describe(c, o[i].name) + (if (o[i].protective) PROTECTIVE_NOTE else "") to o[i].run
             }
             Command.Kind.CLOSE_ALL -> {
                 val paper = openPositions().filter { it.name.startsWith("paper") }
@@ -424,7 +439,7 @@ internal object IraActions {
                 }
             }
             Command.Kind.CLOSE_ONE -> {
-                val p = openPositions()
+                val p = openPositions(byHand = true)
                 if (p.isEmpty()) return "There are no open positions to close." to null
                 // "Close 1 lot of ...": only a whole position is closed here, never more than Boss asked for.
                 if (c.lots != null) return "I can only close a whole position, Boss, not ${c.lots} lot${if (c.lots == 1) "" else "s"} of it. Say \"close\" and its name to close all of it, or trim it on the Positions screen." to null
@@ -436,7 +451,9 @@ internal object IraActions {
                     return ("Which position? " + p.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
                 }
                 if (nickOn && posNick == null) runCatching { IraTools.nickPicked(c.kind, i, posNames) }
-                Commands.describe(c, p[i].name) + (posNick?.let { " (${it.second})" } ?: "") to p[i].run
+                // 22 Nov 2026 (B6 review): what closing this paper row does to its live copies at Zerodha, said before Boss confirms.
+                val liveWords = p[i].paperRow?.let { (sym, prod) -> runCatching { com.optionslab.app.data.PaperHandClose.words(sym, prod) }.getOrNull() }
+                Commands.describe(c, p[i].name) + (posNick?.let { " (${it.second})" } ?: "") + (liveWords?.let { ". $it" } ?: "") to p[i].run
             }
             // 18 Oct, review: clearing the kill switch asks for the PIN as the Account guard page does ([GuardPin]); Jarvis
             // cannot take a PIN, so he sends Boss to the switch. Turning it on never asks.
@@ -512,6 +529,8 @@ internal object IraActions {
                     // Checked again at Confirm: changed meanwhile (by hand, or another request), nothing is applied.
                     val nowV = setting(key, AppSettings.load())
                     if (nowV != old) "${key.label.replaceFirstChar { it.uppercase() }} changed since you asked (now ${SettingsTalk.show(key, nowV)}), so I left it. Ask again."
+                    // 22 Nov 2026 (B6 review): asked again at Confirm (a PIN, Live or Zerodha set up since the question), as the kill switch is.
+                    else if (key in GUARD_KEYS && SettingsTalk.loosens(key, old, v) && guardPinNeeded()) LIMIT_PIN
                     else {
                         com.optionslab.app.data.SettingsLog.nextBy = "Jarvis"
                         setSettings { applySetting(key, v, it) }
@@ -532,6 +551,8 @@ internal object IraActions {
                     val again = AppSettings.load()
                     if (group.any { setting(it.key, again) != it.new } || com.optionslab.app.data.SettingsLog.lastUndoable() != group)
                         "The limits changed since you asked, so I left them. Ask again."
+                    // 22 Nov 2026 (B6 review): asked again at Confirm, as for a change.
+                    else if (group.any { it.key in GUARD_KEYS && SettingsTalk.loosens(it.key, it.new, it.old) } && guardPinNeeded()) LIMIT_PIN
                     else {
                         com.optionslab.app.data.SettingsLog.nextBy = com.optionslab.app.data.SettingsLog.UNDO_BY
                         setSettings { s -> group.fold(s) { acc, ch -> applySetting(ch.key, ch.old, acc) } }
@@ -724,11 +745,9 @@ internal object IraActions {
         SettingsTalk.Key.PAPER_DAILY_LOSS -> s.guardPaperDailyLoss
         SettingsTalk.Key.PAPER_WEEKLY_LOSS -> s.paperWeeklyLoss
         SettingsTalk.Key.MAX_LOTS -> s.guardMaxLots.toDouble()
-        SettingsTalk.Key.LOTS_PER_ORDER -> s.maxLotsPerOrder.toDouble()
         SettingsTalk.Key.MAX_OPEN -> s.guardMaxOpen.toDouble()
         SettingsTalk.Key.MAX_TRADES -> s.guardMaxTrades.toDouble()
         SettingsTalk.Key.PAPER_TRADES -> s.guardPaperTrades.toDouble()
-        SettingsTalk.Key.ORDERS_PER_DAY -> s.maxOrdersPerDay.toDouble()
         SettingsTalk.Key.DRAWDOWN -> s.guardDrawdownPct
         SettingsTalk.Key.ORDER_VALUE -> s.guardMaxValue
         SettingsTalk.Key.EXPOSURE -> s.guardMaxExposure
@@ -782,11 +801,9 @@ internal object IraActions {
         SettingsTalk.Key.PAPER_DAILY_LOSS -> s.copy(guardPaperDailyLoss = v)
         SettingsTalk.Key.PAPER_WEEKLY_LOSS -> s.copy(paperWeeklyLoss = v)
         SettingsTalk.Key.MAX_LOTS -> s.copy(guardMaxLots = v.toInt())
-        SettingsTalk.Key.LOTS_PER_ORDER -> s.copy(maxLotsPerOrder = v.toInt())
         SettingsTalk.Key.MAX_OPEN -> s.copy(guardMaxOpen = v.toInt())
         SettingsTalk.Key.MAX_TRADES -> s.copy(guardMaxTrades = v.toInt())
         SettingsTalk.Key.PAPER_TRADES -> s.copy(guardPaperTrades = v.toInt())
-        SettingsTalk.Key.ORDERS_PER_DAY -> s.copy(maxOrdersPerDay = v.toInt())
         SettingsTalk.Key.DRAWDOWN -> s.copy(guardDrawdownPct = v)
         SettingsTalk.Key.ORDER_VALUE -> s.copy(guardMaxValue = v)
         SettingsTalk.Key.EXPOSURE -> s.copy(guardMaxExposure = v)
@@ -807,23 +824,29 @@ internal object IraActions {
     private fun guardPinNeeded(): Boolean =
         runCatching { com.optionslab.app.security.GuardPin.asks(true, AppSettings.load().live) }.getOrDefault(true)
 
-    /** The limits the Account guard page asks the PIN to loosen (its Zerodha limits; paper limits and alerts are not). */
-    private val GUARD_KEYS = setOf(SettingsTalk.Key.DAILY_LOSS, SettingsTalk.Key.DRAWDOWN, SettingsTalk.Key.MAX_OPEN,
-        SettingsTalk.Key.MAX_TRADES, SettingsTalk.Key.ORDER_VALUE, SettingsTalk.Key.MAX_LOTS, SettingsTalk.Key.EXPOSURE,
-        SettingsTalk.Key.CUTOFF,
-        // 25 Oct (merge review): the paper bots' daily loss limit asks the PIN to loosen on the Account guard page; by voice too.
-        SettingsTalk.Key.PAPER_DAILY_LOSS,
-        // 25 Oct (Boss's decision on the app audit): the paper weekly loss stop, the same way.
-        SettingsTalk.Key.PAPER_WEEKLY_LOSS)
+    /**
+     * The limits the Account guard page asks the PIN to loosen: the page's own list ([SettingsTalk.PIN_TO_LOOSEN]), so they never drift.
+     * 25 Oct: the paper bots' daily loss limit and weekly loss stop too. 22 Nov 2026 (B6 review): and the expiry-day square-off and
+     * blocking naked option shorts, which Jarvis switched off without the PIN.
+     */
+    private val GUARD_KEYS = SettingsTalk.PIN_TO_LOOSEN
 
-    const val LIMIT_PIN = "Loosening the account guard or the paper loss limits needs your app PIN, Boss. Change it on the Account guard page and enter your PIN there. Nothing changed."
+    const val LIMIT_PIN = "Loosening the account guard (its limits, the expiry-day square-off or blocking naked option shorts) or the paper loss " +
+        "limits needs your app PIN, Boss. Change it on the Account guard page and enter your PIN there. Nothing changed."
 
     /** 19 Nov 2026 (audit batch 2): lifting the index side's Stop for today by voice in Live (with a PIN set). */
     const val LIFT_PIN = "Starting the index bots again in Live needs your app PIN, Boss: open IraAlgo and tap Start index bots on Home. They stay stopped."
     const val LIFT_PIN_SHORT = "in Live that takes your PIN on Home"
+    /** 22 Nov 2026 (B6 review): lifting the commodity side's Stop for today by voice in Live (with a PIN set); and both sides'. */
+    const val MCX_LIFT_PIN = "Starting the commodity bots again in Live needs your app PIN, Boss (the MCX arms trade live too): open IraAlgo and " +
+        "tap Start again on the MCX card on Home. They stay stopped."
+    const val BOTH_LIFT_PIN = "Starting the bots again in Live needs your app PIN, Boss: open IraAlgo and tap Start index bots, and Start again " +
+        "on the MCX card, on Home. Both sides stay stopped."
 
     /** 19 Nov 2026 (audit batch 2): what "cancel all orders" leaves working - protective stop orders, said apart. */
     const val CANCEL_KEEPS_STOPS = "Your stop-loss orders stay working: cancel one by name if you mean it."
+    /** 22 Nov 2026 (B6 review): said in the confirm of a protective stop cancelled by name (the position is then left without it). */
+    const val PROTECTIVE_NOTE = " - this is a stop-loss protecting your open position: once cancelled, the position has no resting stop"
 
     /** 19 Nov 2026 (audit batch 2): raising Liquidity's lots by voice where the PIN is asked. */
     const val LIQ_LOTS_PIN = "Raising Liquidity 15+5's lots adds live risk, Boss, so it needs your app PIN: change it on its row on Home and enter your PIN there. Nothing changed."
