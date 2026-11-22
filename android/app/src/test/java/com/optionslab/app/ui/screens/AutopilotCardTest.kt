@@ -95,6 +95,18 @@ class AutopilotCardTest {
         assertTrue(opened)
     }
 
+    /** 22 Nov 2026 (B6-E): while the change timeline could not be read, one line says automatic changes are paused; read, it goes. */
+    @Test fun anUnreadTimelineIsSaidOnTheCard() {
+        val unread = androidx.compose.runtime.mutableStateOf(true)
+        set { AutopilotCardContent(book, AutoChange.Mode.SAFE, day, onOpen = {}, timelineUnread = unread.value) }
+        assertTrue(shows(AUTOPILOT_UNREAD))
+        assertEquals(1, compose.onAllNodesWithTag("autopilot-unread", useUnmergedTree = true).fetchSemanticsNodes().size)
+        unread.value = false
+        compose.frames()
+        assertFalse(shows(AUTOPILOT_UNREAD))
+        assertTrue("the rest of the card as before", shows("On probation 2 · kept 0 · reverted 1"))
+    }
+
     @Test fun theLogShowsEachChangeWithItsReasonAndUndo() {
         val asked = ArrayList<Pair<LogAction, String>>()
         var closed = false

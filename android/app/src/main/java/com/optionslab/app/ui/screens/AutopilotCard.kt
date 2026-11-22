@@ -46,6 +46,8 @@ import java.time.LocalDate
 
 /** The card's and the sheet's title. */
 internal const val AUTOPILOT_TITLE = "Autopilot"
+/** 22 Nov 2026 (B6-E): the card's line while the change timeline could not be read ([Autopilot.timelineUnread]). */
+internal const val AUTOPILOT_UNREAD = "Change timeline not read yet; automatic changes paused."
 internal const val AUTOPILOT_LOG_TITLE = "Autopilot change log"
 
 /**
@@ -59,11 +61,12 @@ internal fun AutopilotSection(model: AppModel) {
     if (!Autopilot.enabled()) return
     val book by Autopilot.book.collectAsState(Dispatchers.Main.immediate)
     val mode by Autopilot.mode.collectAsState(Dispatchers.Main.immediate)
+    val unread by Autopilot.timelineUnread.collectAsState(Dispatchers.Main.immediate)
     var open by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { runCatching { Autopilot.ensureLoaded() } } }
     val today = rememberMarketDay()
     Column(Modifier.fillMaxWidth()) {
-        AutopilotCardContent(book, mode, today, onOpen = { open = true })
+        AutopilotCardContent(book, mode, today, onOpen = { open = true }, timelineUnread = unread)
         // Jarvis's weekly self-report (11 Oct): its sheet from here.
         WeeklyReportButton()
         // S13-S15: every agent's changes today (undo everything today), last month's scorecard, the learning freeze.
@@ -84,9 +87,12 @@ internal fun rememberMarketDay(): LocalDate {
     return today
 }
 
-/** The card from plain state (tests drive it without an [AppModel]). */
+/**
+ * The card from plain state (tests drive it without an [AppModel]). 22 Nov 2026 (B6-E): [timelineUnread] - the change timeline could not be
+ * read (a Keystore hiccup): one line says automatic changes wait ([AUTOPILOT_UNREAD]).
+ */
 @Composable
-internal fun AutopilotCardContent(book: AutoChange.Book, mode: AutoChange.Mode, today: LocalDate, onOpen: () -> Unit) {
+internal fun AutopilotCardContent(book: AutoChange.Book, mode: AutoChange.Mode, today: LocalDate, timelineUnread: Boolean = false, onOpen: () -> Unit) {
     val p = LocalPalette.current
     val s = remember(book, today) { AutoChange.summary(book, today) }
     val todays = remember(book, today) { book.entries.filter { it.day == today && (it.applied || it.status == AutoChange.Status.OFFERED) }.takeLast(3).reversed() }
@@ -98,6 +104,8 @@ internal fun AutopilotCardContent(book: AutoChange.Book, mode: AutoChange.Mode, 
             AutoChange.Mode.SHADOW_ONLY -> " - shadow changes by itself, the rest asked."
             AutoChange.Mode.SAFE -> " - shadow and paper by itself, live only to lower risk."
         }, Modifier.padding(top = 2.dp))
+        if (timelineUnread) Text(AUTOPILOT_UNREAD, style = Type.label.copy(color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.padding(top = 4.dp).testTag("autopilot-unread"))
         Text(if (s.today == 0) "No changes today." else "Today: ${s.today} change${if (s.today == 1) "" else "s"} " +
             "(${s.todayPaper} paper, ${s.todayShadow} shadow, ${s.todayLive} live risk-lowering)",
             style = Type.label.copy(color = p.ink, fontSize = 13.sp), modifier = Modifier.padding(top = 6.dp).testTag("autopilot-today"))

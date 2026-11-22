@@ -249,6 +249,11 @@ object ManagerSpecialists {
             val today = Market.today()
             if (!Market.isTradingDay(today) || Market.minuteNow() < 15 * 60 + 45) return
             if (_book.value.reviewedOn == today.toString()) return
+            // 22 Nov 2026 (B6-E): not while Autopilot's change timeline cannot be read (a Keystore hiccup) - the weights Boss undid rest
+            // there, and the tuning is logged there. Not marked reviewed: tried again on the next look. (Read first: the freeze below
+            // holds while it is unread.)
+            runCatching { com.optionslab.app.ira.Autopilot.ensureLoaded() }
+            if (!com.optionslab.app.ira.Autopilot.timelineRead) return
             // S14: learning frozen - no self-tuning tonight (the records go on being kept by the trade manager).
             if (com.optionslab.app.ira.LearningFreeze.holds()) return
             review(today.toString(), nowMs)

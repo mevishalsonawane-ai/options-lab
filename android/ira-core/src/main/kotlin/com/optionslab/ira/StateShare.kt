@@ -167,7 +167,9 @@ object StateShare {
         // 22 Nov 2026 (B6 review, second look): the day form only for this year and last year (an older "date" is more likely another id).
         val yy = listOf(year, year - 1).joinToString("|") { "%02d".format(Math.floorMod(it, 100)) }
         return Regex("(?<![\\d.,])(?:(?:(?:$yy)(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{9,10})|" +
-            "(?<=(?i:\\b(?:orders?|entry|exit|sl(?:-m)?|gtt|target|tgt|stop)[\\s:#=(]{1,3}))\\d{11,20})(?![\\d.,])").also { orderIdFor = year to it }
+            // (22 Nov 2026, B6-E: and Kite's own field names - "exchange_order_id=...", "order_id": "..." - whose '_' hid the word.)
+            "(?<=(?i:\\b(?:(?:exchange_|parent_)?order_id|orders?|entry|exit|sl(?:-m)?|gtt|target|tgt|stop)[\\s:#=(\"']{1,4}))\\d{11,20})(?![\\d.,])")
+            .also { orderIdFor = year to it }
     }
     @Volatile private var orderIdFor: Pair<Int, Regex>? = null
 

@@ -25,6 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.LocalDate
@@ -85,6 +86,18 @@ internal object Autopilot {
     val knobs: StateFlow<Map<String, Double>> = _knobs
 
     @Volatile private var loaded = false
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): whether the change timeline is read (always, without Jarvis: there is none). False after a read that
+     * failed (a Keystore hiccup) until one succeeds: no pass runs, nothing is saved, the specialists' nightly tuning
+     * ([ManagerSpecialists.reviewIfDue]) and the learning freeze's refresh ([LearningFreeze.refresh]) wait - a freeze on stays on. Memory
+     * only; a worker asks [ensureLoaded] first.
+     */
+    val timelineRead: Boolean get() = !enabled() || loaded
+
+    private val _timelineUnread = MutableStateFlow(false)
+    /** 22 Nov 2026 (B6-E, round 3): a read of the change timeline failed and none succeeded since - the Autopilot card says so. */
+    val timelineUnread: StateFlow<Boolean> = _timelineUnread
     /**
      * Boss's setting really read from the vault (or set by him since). Until then the mode is OFF - nothing changes by itself
      * on a storage failure - and it is read again on the next [ensureLoaded] (review G5-4).
@@ -109,26 +122,38 @@ internal object Autopilot {
             com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() }
             // 21 Oct: commodities on their own paper limits by Boss's choice, shown once in the timeline (off the main thread).
             runCatching { if (com.optionslab.app.data.AppSettings.load().mcxOwnLimits) logSegmentSplitOnce() }
-            // 22 Nov 2026 (B6 review): the two order limits set by voice that nothing enforced, said once. (B6-E: once the timeline is read.)
-            runCatching { awaitLoaded(); logDeadOrderLimitsOnce() }
+            // 22 Nov 2026 (B6 review): the two order limits set by voice that nothing enforced, said once. (B6-E: once the timeline is read,
+            // in order with the other writers.)
+            runCatching { logOrder.withLock { awaitLoaded(); logDeadOrderLimitsOnce() } }
         }
     }
 
     /**
-     * 22 Nov 2026 (B6-E): the change timeline read - looked at again after each wait ([READ_AGAIN_MS]) while a Keystore hiccup keeps it
-     * unread, for about five minutes at most (a later start tries again). False: still not read. A worker's coroutine only.
+     * 22 Nov 2026 (B6-E): the change timeline read - looked at again after each wait ([READ_AGAIN_MS]) for as long as a Keystore hiccup keeps
+     * it unread. Never gives up: an entry waiting here is logged once it is read (a suspended wait costs nothing), never dropped. Returns
+     * once read. A worker's coroutine only.
+     * 22 Nov 2026 (B6-E, round 3): no cap any more - after one, Boss's own changes (a pause lifted, a day stop, a live switch) were lost from
+     * the timeline, and a lift left Autopilot's entries "applied" for good.
      */
-    private suspend fun awaitLoaded(): Boolean {
-        repeat(LOAD_TRIES) {
+    private suspend fun awaitLoaded() {
+        while (true) {
             ensureLoaded()
-            if (loaded) return true
-            kotlinx.coroutines.delay(READ_AGAIN_MS)
+            if (loaded) return
+            kotlinx.coroutines.delay(waitAgainMs)
         }
-        ensureLoaded()
-        if (!loaded) runCatching { Diag.record("autopilot", "the change timeline still could not be read: a change was not logged in it") }
-        return loaded
     }
-    private const val LOAD_TRIES = 10
+
+    /** How long between looks at a timeline that could not be read ([READ_AGAIN_MS]; a test, in debug builds, sets it shorter). */
+    @Volatile internal var waitAgainMs = READ_AGAIN_MS
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): the change timeline's background writers, one at a time in the order they were asked, each across its
+     * wait for the read ([awaitLoaded]) and its record: "Stop for today on" can never land after a later "off". Fair (first come, first
+     * served); every writer is launched on the one [trailLane], so they reach it in the order they were called. Never held on the order
+     * path, by the UI thread or under [lock].
+     */
+    private val logOrder = kotlinx.coroutines.sync.Mutex()
 
     /** 22 Nov 2026 (B6 review): set once [logDeadOrderLimitsOnce] has decided on this phone (logged or not): never decided again. */
     internal const val K_DEAD_LIMITS = "jarvis.autolearn.deadLimitsNoted"
@@ -154,7 +179,8 @@ internal object Autopilot {
         fun decided() = runCatching { SecurePrefs.putAllSoon(mapOf(K_DEAD_LIMITS to true)) }
         if (c == null) { decided(); return false }
         ensureLoaded()
-        // (B6-E, 22 Nov 2026: the timeline not read just now - a Keystore hiccup - is never judged nor saved over: the next start decides.)
+        // (B6-E, 22 Nov 2026: the timeline not read - a Keystore hiccup - is never judged nor saved over. The start waits for the read
+        // before it asks ([init]); asked before that, nothing is decided now.)
         if (!loaded) return false
         val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
         synchronized(lock) {
@@ -180,7 +206,7 @@ internal object Autopilot {
         synchronized(lock) {
             if (loaded && modeLoaded) return
             // (22 Nov 2026, B6 review: after a read that failed, read again no sooner than [READ_AGAIN_MS] - each look waits on the Keystore.)
-            if (!loaded && System.currentTimeMillis() - unreadAtMs >= READ_AGAIN_MS) loadFiles()
+            if (!loaded && System.currentTimeMillis() - unreadAtMs >= waitAgainMs) loadFiles()
             readMode()
         }
     }
@@ -205,7 +231,11 @@ internal object Autopilot {
         // timeline not read: nothing is saved over it ([save]) and no pass runs ([runIfDue]) until a later look reads it ([ensureLoaded]).
         val text = try { d?.let { readLog(it) } } catch (e: LogUnread) {
             unreadAtMs = System.currentTimeMillis()
-            if (!unreadTold) { unreadTold = true; runCatching { Diag.record("autopilot", "the change timeline could not be read just now (${e.cause?.javaClass?.simpleName}); kept, read again later") } }
+            _timelineUnread.value = true
+            // (Said at the first failed look, and again every 20th while it lasts - about every 10 minutes - so the diagnostics show it goes on.)
+            if (unreadLooks++ % 20 == 0) runCatching { Diag.record("autopilot", "the change timeline could not be read (${e.cause?.javaClass?.simpleName}, " +
+                "look $unreadLooks); kept, read again later; automatic changes wait") }
+            unreadTold = true
             return
         } catch (e: Exception) { null }
         val disk = AutoChange.decode(text)
@@ -213,10 +243,14 @@ internal object Autopilot {
         _book.value = if (_book.value == AutoChange.Book()) disk else withEarlier(disk, _book.value)
         loaded = true
         unreadTold = false
+        unreadLooks = 0
+        _timelineUnread.value = false
     }
 
     /** 22 Nov 2026 (B6 review): the read failure was said once (in the diagnostics) until a read succeeds; and when it last failed. */
     @Volatile private var unreadTold = false
+    /** 22 Nov 2026 (B6-E, round 3): failed looks since the last read that worked (under [lock]). */
+    private var unreadLooks = 0
     @Volatile private var unreadAtMs = 0L
     private const val READ_AGAIN_MS = 30_000L
 
@@ -226,8 +260,9 @@ internal object Autopilot {
     /** 22 Nov 2026 (B6 review): the timeline's file is there but could not be read now ([cause]: not a tampered file): read again later. */
     private class LogUnread(cause: Exception) : Exception(cause)
 
-    /** TEST ONLY: the timeline file's read instead of the vault's (a throw: as the vault's). */
+    /** TEST ONLY (debug builds): the timeline file's read instead of the vault's (a throw: as the vault's). */
     @Volatile internal var testReadLog: ((File) -> ByteArray?)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG || v == null) { "the test seam exists only in debug builds" }; field = v }
 
     /**
      * 22 Nov 2026 (B6 review): the timeline as read from its file ([disk]) with what memory recorded before the read ([mem]) on top: its
@@ -1096,13 +1131,14 @@ internal object Autopilot {
      * now, it waits for a later start.
      */
     private fun logBossOwnOnce(c: AutoChange.Change, note: String, sameReason: Boolean = false, once: String? = null) {
-        scope.launch {
-            runCatching {
+        scope.launch(trailLane) {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
-                // 22 Nov 2026 (B6 review): the timeline not read (a hiccup): waited for ([awaitLoaded]); still not read, not logged now - a later
-                // start logs it (its once-mark unwritten).
-                if (!awaitLoaded()) { runCatching { Diag.record("autopilot", "not logged yet (the timeline could not be read): ${c.what}") }; return@runCatching }
+                // 22 Nov 2026 (B6-E): the timeline not read (a Keystore hiccup): this waits until it is read ([awaitLoaded], in order with the
+                // other writers: [logOrder]), then logs it; its once-mark is written only after the entry's save landed. Only a process ended
+                // before that leaves it for the next start.
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     if (once != null && com.optionslab.app.data.TimelineOnce.done(once) != false) return@runCatching
@@ -1112,7 +1148,7 @@ internal object Autopilot {
                     } else true
                     if (once != null && kept) com.optionslab.app.data.TimelineOnce.mark(once)
                 }
-            }
+            } }
         }
     }
 
@@ -1169,9 +1205,9 @@ internal object Autopilot {
     fun logIdeaRuleFlip(on: Boolean, minPct: Double) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 if (appContext == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     val last = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.IDEA_RULE && it.status == AutoChange.Status.KEPT }
@@ -1185,7 +1221,7 @@ internal object Autopilot {
                     }
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1196,10 +1232,10 @@ internal object Autopilot {
     fun logIdeaHeld(c: AutoChange.Change) {
         if (!enabled() || c.kind != AutoChange.Kind.IDEA_HELD) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 // Best effort: the creators run long after start-up; before Autopilot's init nothing is logged (Diag keeps the line).
                 if (appContext == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     if (_book.value.entries.none { it.change.kind == AutoChange.Kind.IDEA_HELD && it.change.target == c.target }) {
@@ -1208,7 +1244,7 @@ internal object Autopilot {
                         save()
                     }
                 }
-            }
+            } }
         }
     }
 
@@ -1225,9 +1261,9 @@ internal object Autopilot {
         if (!enabled()) return
         val c = AutoChange.dayStop(side, stopped, by, at)
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 if (appContext == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.DAY_STOP && it.change.target == c.target && it.status == AutoChange.Status.KEPT }
@@ -1236,7 +1272,7 @@ internal object Autopilot {
                         note = if (side == com.optionslab.ira.DayStop.Side.INDEX) "index side: NSE and BSE; the kill switch stays global" else "commodity side: the MCX bots, paper and their live copies").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1248,16 +1284,16 @@ internal object Autopilot {
         if (!enabled()) return
         val c = AutoChange.lossLift(trip, how, at)
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 if (appContext == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
                         note = "your choice (19 Nov 2026): a loss limit you switch off or raise with your PIN lifts its stop of today").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1268,9 +1304,9 @@ internal object Autopilot {
     fun logSegmentSplit(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 if (appContext == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     if (on) _book.value = AutoChange.record(_book.value, AutoChange.segmentSplit(), AutoChange.Status.KEPT, System.currentTimeMillis(),
@@ -1281,7 +1317,7 @@ internal object Autopilot {
                     }
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1292,16 +1328,16 @@ internal object Autopilot {
      */
     fun mcxUnparkedByBoss(source: String) {
         if (!enabled()) return
-        scope.launch {
-            runCatching {
+        scope.launch(trailLane) {
+            logOrder.withLock { runCatching {
                 if (appContext == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     val e = _book.value.entries.lastOrNull { it.change.kind == AutoChange.Kind.ARM_PARK && it.change.target == AutoChange.MCX_ARM + source }
                     if (e != null && e.status == AutoChange.Status.KEPT) { _book.value = AutoChange.undone(_book.value, e.id, today); save() }
                 }
-            }
+            } }
         }
     }
 
@@ -1338,16 +1374,16 @@ internal object Autopilot {
     fun s5SwitchedByBoss(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): S5 Trail ${if (on) "on" else "off"}") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     bossPaperFlip(AutoChange.S5_TARGET, on, today, if (on) AutoChange.s5On() else AutoChange.paperArmOffByBoss(AutoChange.S5_TARGET, "S5 Trail"),
                         if (on) "switched on from its row; on paper - failed the research gates (your exception)" else "switched off from its row; paper only")
                 }
-            }
+            } }
         }
     }
 
@@ -1355,16 +1391,16 @@ internal object Autopilot {
     fun cisdSwitchedByBoss(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): CISD + network ${if (on) "on" else "off"}") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     bossPaperFlip(AutoChange.CISD_TARGET, on, today, if (on) AutoChange.cisdOn() else AutoChange.paperArmOffByBoss(AutoChange.CISD_TARGET, "CISD + network"),
                         if (on) "switched on from its row; on paper - failed gates, Boss's exception" else "switched off from its row; paper only")
                 }
-            }
+            } }
         }
     }
 
@@ -1372,16 +1408,16 @@ internal object Autopilot {
     fun flowSwitchedByBoss(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): IraThinker's flow ${if (on) "on" else "off"}") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     bossPaperFlip(AutoChange.FLOW_TARGET, on, today, if (on) AutoChange.flowOn() else AutoChange.paperArmOffByBoss(AutoChange.FLOW_TARGET, "IraThinker's flow"),
                         if (on) "switched on from its row; on paper - not proven (R110)" else "switched off from its row; paper only")
                 }
-            }
+            } }
         }
     }
 
@@ -1412,17 +1448,17 @@ internal object Autopilot {
     fun ft3SwitchedByBoss(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): FT3 ${if (on) "on" else "off"}") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     // 25 Oct (app audit): both ways logged, each dated today ([bossPaperFlip]).
                     bossPaperFlip(AutoChange.FT3_TARGET, on, today, if (on) AutoChange.ft3On() else AutoChange.paperArmOffByBoss(AutoChange.FT3_TARGET, "FT3 near-ATM morning"),
                         if (on) "switched on from its row; on paper - live only the standard way" else "switched off from its row; paper only")
                 }
-            }
+            } }
         }
     }
 
@@ -1435,17 +1471,17 @@ internal object Autopilot {
     fun heroTicketSwitchedByBoss(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): Hero ₹1,000 ticket ${if (on) "on" else "off"}") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     // 25 Oct (app audit): both ways logged, each dated today ([bossPaperFlip]).
                     bossPaperFlip(AutoChange.TICKET_TARGET, on, today, if (on) AutoChange.heroTicketOn() else AutoChange.paperArmOffByBoss(AutoChange.TICKET_TARGET, "Hero ₹1,000 ticket"),
                         if (on) "switched on from its row; paper only - it never trades on Zerodha" else "switched off from its row; paper only")
                 }
-            }
+            } }
         }
     }
 
@@ -1516,16 +1552,16 @@ internal object Autopilot {
     fun logBossRule(c: AutoChange.Change) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 if (appContext == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today,
                         by = "your choice", note = "from the Account guard page; paper only").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1557,15 +1593,15 @@ internal object Autopilot {
     fun logBossNoTwin(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
-                if (!awaitLoaded()) return@runCatching
+            logOrder.withLock { runCatching {
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, AutoChange.liqNoTwin(on), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
                         by = "your choice", note = "from the Strategy lab card; paper only").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1576,17 +1612,17 @@ internal object Autopilot {
     fun logSameDirCap(on: Boolean, max: Int) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): the same-direction cap") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, AutoChange.sameDirCap(on, max), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
                         by = "your choice", note = "from Bot settings; paper only").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1631,15 +1667,15 @@ internal object Autopilot {
         if (!enabled()) return
         val c = AutoChange.stepLock(on)
         scope.launch(trailLane) {
-            runCatching {
-                if (!awaitLoaded()) return@runCatching
+            logOrder.withLock { runCatching {
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
                         note = if (on) "your choice; paper and live, new trades" else "your choice (with your PIN); new trades back on V4 alone").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1648,15 +1684,15 @@ internal object Autopilot {
         if (!enabled()) return
         val c = AutoChange.stepTrail(on)
         scope.launch(trailLane) {
-            runCatching {
-                if (!awaitLoaded()) return@runCatching
+            logOrder.withLock { runCatching {
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
                         note = if (on) "your choice; paper and live, new trades" else "your choice (with your PIN); new trades use the arms' own exits").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1675,15 +1711,15 @@ internal object Autopilot {
         if (!enabled()) return
         val c = AutoChange.armAutoStop(rule, on, reason)
         scope.launch(trailLane) {
-            runCatching {
-                if (!awaitLoaded()) return@runCatching
+            logOrder.withLock { runCatching {
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
                         note = if (on) "your choice (Bot settings); R51, R72 and Liquidity" else "your choice (Bot settings, with your PIN); R51, R72 and Liquidity").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1693,7 +1729,9 @@ internal object Autopilot {
      */
     fun logCheaperStrikeOnOnce() {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.cheaperStrike(true), "the 20 Nov update (your ask: \"try cheaper options increment it 1 by 1\"); Boss's exception - live at once; Undo switches it off (one tap)")
+        // (22 Nov 2026, B6-E: its one-time mark written only after the entry's save - [com.optionslab.app.data.CheaperStrike.onceDue].)
+        logBossOwnOnce(AutoChange.cheaperStrike(true), "the 20 Nov update (your ask: \"try cheaper options increment it 1 by 1\"); Boss's exception - live at once; Undo switches it off (one tap)",
+            once = com.optionslab.app.data.CheaperStrike.K_ONCE)
     }
 
     /** 20 Nov 2026: Boss flipping the cheaper strike in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */
@@ -1701,15 +1739,15 @@ internal object Autopilot {
         if (!enabled()) return
         val c = AutoChange.cheaperStrike(on)
         scope.launch(trailLane) {
-            runCatching {
-                if (!awaitLoaded()) return@runCatching
+            logOrder.withLock { runCatching {
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice",
                         note = if (on) "your choice (Bot settings, with your PIN); R51, R72 and Liquidity, live" else "your choice (Bot settings); R51, R72 and Liquidity").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1744,17 +1782,17 @@ internal object Autopilot {
     fun logArmLive(key: String, label: String, on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): $label's live switch") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, AutoChange.armLive(key, label, on), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
                         by = "your choice", note = if (on) "live only in Live with AI trades on, never in the paper-only period" else "paper only from now on").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1766,17 +1804,17 @@ internal object Autopilot {
     fun logArmShadow(key: String, label: String, on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): $label's shadow switch") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, AutoChange.armShadow(key, label, on), AutoChange.Status.KEPT, System.currentTimeMillis(), today,
                         by = "your choice", note = if (on) "records what it would trade live, sends nothing" else "real live orders in Live with AI trades and its Trade live on").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1787,10 +1825,10 @@ internal object Autopilot {
     fun logPassedArmOff(source: String, label: String, why: String) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     val target = AutoChange.PAPER_ARM + source
@@ -1800,7 +1838,7 @@ internal object Autopilot {
                         by = "its forward-test bar", note = "paper only; switching it back on is your choice").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1811,10 +1849,10 @@ internal object Autopilot {
     fun ntfyPaperSwitchedByBoss(on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     val target = AutoChange.NTFY_PAPER
@@ -1824,7 +1862,7 @@ internal object Autopilot {
                         System.currentTimeMillis(), today, by = "your choice", note = "switched on from Settings → ntfy alerts; paper only").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1836,10 +1874,10 @@ internal object Autopilot {
     fun passedArmSwitchedByBoss(source: String, label: String, research: String, on: Boolean, from: String = AutoChange.SWITCHED_OFF) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     val target = AutoChange.PAPER_ARM + source
@@ -1849,7 +1887,7 @@ internal object Autopilot {
                         else AutoChange.paperArmOffByBoss(target, label).copy(from = from),
                         if (on) "switched on from its row; paper only - never live" else "switched off from its row; paper only")
                 }
-            }
+            } }
         }
     }
 
@@ -1876,10 +1914,10 @@ internal object Autopilot {
     private fun logRecordOnly(c: AutoChange.Change, note: String, once: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     if (once && _book.value.entries.any { it.change.kind == c.kind && it.change.target == c.target && it.change.reason == c.reason }) return@synchronized
@@ -1888,7 +1926,7 @@ internal object Autopilot {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1913,10 +1951,10 @@ internal object Autopilot {
     private fun logArmHide(c: AutoChange.Change, note: String) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     // The newest entry of this arm is the one that undoes ([AutoChange.superseded]); a kept older one is closed.
@@ -1925,7 +1963,7 @@ internal object Autopilot {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -1947,9 +1985,9 @@ internal object Autopilot {
     fun ownerLifted(key: String, paused: Boolean, parked: Boolean) {
         if (!enabled() || (!paused && !parked)) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 if (appContext == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     val ids = _book.value.entries.filter { e -> e.applied &&
@@ -1962,7 +2000,7 @@ internal object Autopilot {
                     save()
                 }
                 runCatching { Diag.record("autopilot", "$key: its ${listOfNotNull("pause".takeIf { paused }, "park to paper".takeIf { parked }).joinToString(" and ")} lifted by you") }
-            }
+            } }
         }
     }
 
@@ -1991,10 +2029,10 @@ internal object Autopilot {
         val c = AutoChange.trendExitOn(source, label, rule, research)
         // On the same lane as the sales, so the switch-on is always logged before them; once (by its "on", not any entry).
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): ${c.what}") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     if (_book.value.entries.none { it.change.kind == c.kind && it.change.target == c.target && it.change.to == AutoChange.ON }) {
@@ -2003,7 +2041,7 @@ internal object Autopilot {
                         save()
                     }
                 }
-            }
+            } }
         }
     }
 
@@ -2011,17 +2049,17 @@ internal object Autopilot {
     fun logTrendExitSold(source: String, label: String, line: String) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) { runCatching { Diag.record("autopilot", "not logged (Autopilot not started): $line") }; return@runCatching }
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, AutoChange.trendExitSold(source, label, line), AutoChange.Status.KEPT,
                         System.currentTimeMillis(), today, by = "the Trend watch", note = "paper only; research R63 T3").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -2032,10 +2070,10 @@ internal object Autopilot {
     fun trendExitSwitchedByBoss(source: String, label: String, on: Boolean) {
         if (!enabled()) return
         scope.launch(trailLane) {
-            runCatching {
+            logOrder.withLock { runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
                 if (waited == null) return@runCatching
-                if (!awaitLoaded()) return@runCatching
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     val target = AutoChange.TREND_TARGET + source
@@ -2046,7 +2084,7 @@ internal object Autopilot {
                         by = "your choice", note = "switched on in the Trend watch; paper only - never live").first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -2066,8 +2104,8 @@ internal object Autopilot {
         val note = if (on) "your choice; live trades never use it" else "your choice"
         // One lane, in the order Boss flipped it: two quick taps are logged as they were made.
         scope.launch(trailLane) {
-            runCatching {
-                if (!awaitLoaded()) return@runCatching
+            logOrder.withLock { runCatching {
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 // Every call is a real change ([com.optionslab.app.data.LiquidityTest.setTrail] logs only those): each is kept, and the
                 // older flips are no longer undoable ([AutoChange.superseded]), so the newest entry always matches the switch.
@@ -2075,7 +2113,7 @@ internal object Autopilot {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -2089,14 +2127,14 @@ internal object Autopilot {
         val c = AutoChange.liqBreakeven(on)
         val note = if (on) "your choice; live trades never use it" else "your choice"
         scope.launch(trailLane) {
-            runCatching {
-                if (!awaitLoaded()) return@runCatching
+            logOrder.withLock { runCatching {
+                awaitLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
                     _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                     save()
                 }
-            }
+            } }
         }
     }
 
@@ -2171,7 +2209,7 @@ internal object Autopilot {
         synchronized(lock) {
             _book.value = AutoChange.Book(); _knobs.value = emptyMap()
             _mode.value = AutoChange.Mode.SAFE; modeLoaded = true
-            if (appContext != null) loaded = true
+            if (appContext != null) { loaded = true; _timelineUnread.value = false }
             notified = null
             dir()?.let { runCatching { it.deleteRecursively() } }
         }
@@ -2188,7 +2226,8 @@ internal object Autopilot {
         synchronized(lock) { _book.value = AutoChange.Book(); _knobs.value = emptyMap() }
         _mode.value = AutoChange.Mode.SAFE
         loaded = true; modeLoaded = true; running.set(false); notified = null; testInputs = null; testLive = null; testReplay = null; testModeRead = null
-        testReadLog = null; unreadTold = false; unreadAtMs = 0L
+        testReadLog = null; unreadTold = false; unreadAtMs = 0L; unreadLooks = 0; _timelineUnread.value = false
+        if (com.optionslab.app.BuildConfig.DEBUG) waitAgainMs = READ_AGAIN_MS
     }
 
     /** TEST ONLY: as at a cold start - nothing read yet (the log and knobs kept in memory are dropped). */
@@ -2199,5 +2238,5 @@ internal object Autopilot {
     }
 
     /** TEST ONLY: [b] as the log. */
-    internal fun setForTest(b: AutoChange.Book) { synchronized(lock) { _book.value = b }; loaded = true; modeLoaded = true }
+    internal fun setForTest(b: AutoChange.Book) { synchronized(lock) { _book.value = b }; loaded = true; modeLoaded = true; _timelineUnread.value = false }
 }

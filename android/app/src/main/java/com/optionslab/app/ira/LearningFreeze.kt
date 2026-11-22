@@ -101,6 +101,9 @@ object LearningFreeze {
         if (!loaded && appContext != null) { scope.launch { runCatching { ensureLoaded() } }; return true }
         if (appContext != null && System.currentTimeMillis() - refreshedAt > REFRESH_MS && refreshing.compareAndSet(false, true))
             scope.launch { try { runCatching { refresh() } } finally { refreshing.set(false) } }
+        // 22 Nov 2026 (B6-E): Autopilot's change timeline could not be read (its change days are missing, so no verdict can be worked
+        // out): held as frozen until it is read - the agents' automatic changes wait, as the Autopilot card says. Memory only.
+        if (Autopilot.timelineUnread.value) return true
         return _state.value.frozen
     }
 
@@ -144,6 +147,10 @@ object LearningFreeze {
     fun refresh(today: LocalDate = runCatching { Market.today() }.getOrElse { LocalDate.now() }) {
         if (!enabled()) return
         ensureLoaded()
+        // 22 Nov 2026 (B6-E): the agents' change days are read from Autopilot's change timeline; while it cannot be read (a Keystore
+        // hiccup) nothing is worked out - a freeze on stays on, none is lifted on missing days. Asked again on the next look.
+        runCatching { Autopilot.ensureLoaded() }
+        if (!Autopilot.timelineRead) { refreshedAt = System.currentTimeMillis(); return }
         val gen = wipes
         refreshedAt = System.currentTimeMillis()
         val days = changeDays()

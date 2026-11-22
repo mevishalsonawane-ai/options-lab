@@ -769,4 +769,48 @@ class BackupTest : RobolectricTest() {
             assertNull(Backup.restoringRefusal())
         } finally { Backup.testLiveHeld = null; Vault.testFailWrites = emptySet(); Backup.restoreEndedForTest() }
     }
+
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): an entry already past the door when the restore starts (still sending, or sent and not yet booked) is
+     * waited for; still going at the bound, the restore is refused - nothing written, entries go again.
+     */
+    @Test fun aRestoreWaitsForAnEntryAlreadyOnItsWayAndRefusesIfItStaysBusy() {
+        seedPhone()
+        val c = backupWith(stratBook(), JSONObject().put("s.capital", 1.0))
+        try {
+            Backup.entryWaitMs = 300
+            Backup.testEntriesQuiet = { false }
+            val e = try { Backup.restore(context, c); null } catch (x: Backup.EntryInFlight) { x }
+            assertNotNull("refused", e)
+            assertEquals(Backup.ENTRY_IN_FLIGHT, e!!.message)
+            assertTrue(e is Backup.Refused)
+            assertFalse("nothing written - not even the disarm flag", SecurePrefs.getBoolean(Backup.DISARM, false))
+            assertEquals(321_000.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+            assertNull("entries go again", Backup.restoringRefusal())
+            // An entry that settles within the bound: waited for, then restored (the entry door refused new ones meanwhile).
+            var looks = 0
+            var atDoor: String? = null
+            val o = com.optionslab.engine.Kite.Order("NIFTY26NOV25000CE", com.optionslab.engine.Kite.Side.BUY, 65, 65, "MIS", "MARKET", null, exchange = "NFO")
+            Backup.entryWaitMs = 5_000
+            Backup.testEntriesQuiet = { if (looks++ == 1) atDoor = Broker.entryRecheck(o); looks > 3 }
+            Backup.restore(context, c)
+            assertTrue("it waited", looks > 3)
+            assertEquals(Backup.RESTORING, atDoor)
+            assertEquals(1.0, SecurePrefs.getDouble("s.capital", 0.0), 0.0)
+        } finally { Backup.restoreEndedForTest() }
+    }
+
+    /** The "no entry in flight" signal: the door idle and no entry sent in the settle window (its arm may still be booking it). */
+    @Test fun noEntryIsInFlightOnlyWithTheDoorIdleAndNoneSentJustNow() {
+        val now = 1_000_000L
+        assertFalse("inside the door", Broker.entriesQuiet(busy = true, sentAt = 0L, nowMs = now, settleMs = Broker.ENTRY_SETTLE_MS))
+        assertTrue(Broker.entriesQuiet(busy = false, sentAt = 0L, nowMs = now, settleMs = Broker.ENTRY_SETTLE_MS))
+        assertFalse("sent (or its reply lost) a moment ago", Broker.entriesQuiet(false, now - 2_000, now, Broker.ENTRY_SETTLE_MS))
+        assertFalse("its fill still waited for", Broker.entriesQuiet(false, now - 20_000, now, Broker.ENTRY_SETTLE_MS))
+        assertTrue("sent long ago", Broker.entriesQuiet(false, now - Broker.ENTRY_SETTLE_MS, now, Broker.ENTRY_SETTLE_MS))
+        assertTrue("a clock set back is no entry now", Broker.entriesQuiet(false, now + 60_000, now, Broker.ENTRY_SETTLE_MS))
+        assertTrue("a fresh phone", Broker.entriesQuiet())
+        assertTrue("the restore waits past the settle window", Backup.entryWaitMs > Broker.ENTRY_SETTLE_MS)
+    }
 }

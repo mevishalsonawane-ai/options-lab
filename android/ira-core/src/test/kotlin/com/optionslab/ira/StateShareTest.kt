@@ -82,6 +82,10 @@ class StateShareTest {
         assertEquals("ref ${StateShare.MASK} · order 250115000123456", StateShare.redact("ref 250115000123456 · order 250115000123456", year = 2027))
         assertEquals("ref ${StateShare.MASK}", StateShare.build(listOf(StateShare.Section("x", listOf("ref 230115000123456"))), year = 2026)
             .lines().first { it.startsWith("ref") })
+        // Kite's own field names keep their ids (round 3).
+        for (l in listOf("exchange_order_id=1300000012345678", "order_id: 1300000012345679", "\"parent_order_id\": \"1300000012345670\""))
+            assertEquals(l, StateShare.redact(l, year = 2026))
+        assertFalse(StateShare.redact("bank_id=1300000012345678 · demat_id 1300000012345678", year = 2026).contains("1300000012345678"))
     }
 
     @Test fun shortIdsHostsWithNoSchemeTopicsAndPassphrasesAreMasked() {

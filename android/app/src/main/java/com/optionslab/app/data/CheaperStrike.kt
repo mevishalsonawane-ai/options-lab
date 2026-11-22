@@ -150,13 +150,15 @@ object CheaperStrike {
 
     /**
      * The one-time timeline entry's decision: due when the switch was [never] set, Boss has not switched it in this process, it was never
-     * decided on this phone ([K_ONCE]) and the phone [ranBefore] this build. Decided either way, the mark is written, so it is never asked
-     * again. A worker thread only.
+     * decided on this phone ([K_ONCE]) and the phone [ranBefore] this build. Not due (a fresh install), the mark is written now, so it is
+     * never asked again. 22 Nov 2026 (B6-E, round 3): due, the mark is written only once the entry is in the saved timeline (Autopilot's
+     * logCheaperStrikeOnOnce marks it after the save) - a timeline that could not be read then no longer loses the entry for good. A worker
+     * thread only.
      */
     internal fun onceDue(never: Boolean, ranBefore: Boolean): Boolean {
         val decided = runCatching { SecurePrefs.getBoolean(K_ONCE, false) }.getOrDefault(true)
         if (decided || !never || switched) return false
-        runCatching { SecurePrefs.putAllSoon(mapOf(K_ONCE to true)) }
+        if (!ranBefore) runCatching { SecurePrefs.putAllSoon(mapOf(K_ONCE to true)) }
         return ranBefore
     }
 

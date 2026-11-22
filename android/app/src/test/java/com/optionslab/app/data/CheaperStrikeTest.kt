@@ -121,6 +121,10 @@ class CheaperStrikeTest : RobolectricTest() {
      */
     @Test fun theOneTimeTimelineEntryIsDecidedOncePerPhone() {
         assertTrue("a phone that ran an earlier build: logged", CheaperStrike.onceDue(never = true, ranBefore = true))
+        // 22 Nov 2026 (B6-E): its mark waits for the entry's save (Autopilot writes it then): asked again until then.
+        assertFalse(SecurePrefs.getBoolean(CheaperStrike.K_ONCE, false))
+        assertTrue("not saved yet: still due", CheaperStrike.onceDue(never = true, ranBefore = true))
+        TimelineOnce.mark(CheaperStrike.K_ONCE)
         SecurePrefs.flush()
         assertFalse("never again, even after the timeline pruned it", CheaperStrike.onceDue(never = true, ranBefore = true))
         SecurePrefs.put(CheaperStrike.K_ONCE, null)

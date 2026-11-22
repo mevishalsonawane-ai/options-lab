@@ -208,6 +208,10 @@ object Backup {
     }
 
     private fun restoreNow(ctx: Context, c: Contents, onFrozen: () -> Unit): Restored {
+        // 22 Nov 2026 (B6-E, round 3): an entry that passed the door a moment before the flag above may still be on its way to Zerodha, or
+        // sent and not yet booked by its arm - [liveHeld] cannot see it, and the freeze would drop its booking. Waited for (at most
+        // [entryWaitMs], 30 s: past [Broker.ENTRY_SETTLE_MS]; no new one starts meanwhile); still going: refused, nothing written.
+        if (!entriesSettled()) throw EntryInFlight()
         // 20 Nov 2026 (audit, B5 item 2): never while a live position is open - the restore replaces the books that record it (the
         // ORB and Liquidity book, the strategies' runs, the paper trades a live copy follows, the Zerodha trade record). Refused
         // before anything is written (not even the disarm flag): this phone's data stays exactly as it is.
@@ -327,8 +331,36 @@ object Backup {
 
     internal const val RESTORING = "refused: a backup is being restored (the app restarts when it is done); exits still go"
 
-    /** TEST ONLY: no restore running (a test's restore is never followed by the restart that would clear it). */
-    internal fun restoreEndedForTest() { restoring = false }
+    /** TEST ONLY: no restore running (a test's restore is never followed by the restart that would clear it); entries' seams back. */
+    internal fun restoreEndedForTest() { restoring = false; testEntriesQuiet = null; if (com.optionslab.app.BuildConfig.DEBUG) entryWaitMs = 30_000L }
+
+    /**
+     * 22 Nov 2026 (B6-E, round 3): a restore refused because an entry was still being sent to Zerodha (or booked by its arm) when it
+     * started, past [entryWaitMs]. Nothing was written.
+     */
+    class EntryInFlight : Refused(ENTRY_IN_FLIGHT)
+
+    internal const val ENTRY_IN_FLIGHT = "Not restored: an entry was still being sent to Zerodha, and a restore must never lose the record of a " +
+        "live position. Nothing on this phone was changed. Try again in a minute."
+
+    /** How long a restore waits for an entry already on its way ([Broker.entriesQuiet]). */
+    @Volatile internal var entryWaitMs = 30_000L
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    /** TEST ONLY (debug builds): the entries' state instead of [Broker.entriesQuiet]. */
+    @Volatile internal var testEntriesQuiet: (() -> Boolean)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG || v == null) { "the test seam exists only in debug builds" }; field = v }
+
+    /** No entry in flight, waited for at most [entryWaitMs] (a worker thread: a restore never runs on the main thread). */
+    private fun entriesSettled(): Boolean {
+        val until = System.currentTimeMillis() + entryWaitMs
+        while (true) {
+            if (testEntriesQuiet?.invoke() ?: Broker.entriesQuiet()) return true
+            if (System.currentTimeMillis() >= until) return false
+            // (Interrupted: refused as still busy - nothing was written - with the thread's interrupt kept.)
+            try { Thread.sleep(100) } catch (e: InterruptedException) { Thread.currentThread().interrupt(); return false }
+        }
+    }
 
     /**
      * 22 Nov 2026 (B6 review, item 1): the carried settings in [values] (the backup's) that hold live entries back, merged with this phone's
