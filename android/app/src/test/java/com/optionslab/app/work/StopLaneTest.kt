@@ -195,7 +195,7 @@ class StopLaneTest : RobolectricTest() {
 
     /**
      * 22 Nov 2026 (B6 third review): with no strategy run open, the strategies step reads nothing - never the Strategy Module's lock (a
-     * full pass may hold it), never its book (a vault read when not in memory), never the device check.
+     * full pass may hold it), never its book (a vault read when not in memory), never the device check. Its check is still noted done.
      */
     @Test fun theStrategiesStepReadsNothingWithNoRunOpen() {
         val strategies = com.optionslab.app.data.Strategies
@@ -203,11 +203,16 @@ class StopLaneTest : RobolectricTest() {
         val hint = strategies::class.java.getDeclaredField("runningHint").apply { isAccessible = true }
         val cache = strategies::class.java.getDeclaredField("cache").apply { isAccessible = true }
         val lock = strategies::class.java.getDeclaredField("lock").apply { isAccessible = true }.get(null) as kotlinx.coroutines.sync.Mutex
+        // The device check's "a background scan is under way" flag: set before a kicked scan starts, cleared only after it counted.
+        val scanning = integrity::class.java.getDeclaredField("scanning").apply { isAccessible = true }.get(null) as java.util.concurrent.atomic.AtomicBoolean
         val hintWas = hint.getBoolean(null)
         val cacheWas = cache.get(null)
-        integrity.resetForTest()
-        val scans = integrity.scans.get()
         try {
+            StopLane.resetCompletedForTest()
+            StopLane.completed.held(setOf(StopLane.B_STRATEGIES), 0L)        // seen held long ago, never completed: stale now
+            assertTrue(StopLane.completed.stale(System.currentTimeMillis()).any { it.first == StopLane.B_STRATEGIES })
+            integrity.resetForTest()                                            // no report kept: any device check would scan
+            val scans = integrity.scans.get()
             hint.setBoolean(null, false)                                        // no run open
             runBlocking {
                 lock.lock()                                                     // a full pass holding the lock
@@ -219,11 +224,15 @@ class StopLaneTest : RobolectricTest() {
                 } finally { lock.unlock() }
             }
             assertEquals("the device check not asked", 0L, integrity.askedAtForTest())
-            Thread.sleep(200)
+            // No scan kicked: none under way now, and (read after it) none counted - a kicked scan clears the flag only once counted.
+            assertFalse("no device scan under way", scanning.get())
             assertEquals("nor scanned", scans, integrity.scans.get())
+            assertFalse("the step's check noted done", StopLane.completed.stale(System.currentTimeMillis()).any { it.first == StopLane.B_STRATEGIES })
         } finally {
             hint.setBoolean(null, hintWas)
             if (cache.get(null) == null) cache.set(null, cacheWas)
+            StopLane.resetCompletedForTest()
+            integrity.resetForTest()
         }
     }
 
