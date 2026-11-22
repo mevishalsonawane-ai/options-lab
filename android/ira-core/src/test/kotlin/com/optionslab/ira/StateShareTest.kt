@@ -75,7 +75,7 @@ class StateShareTest {
         assertEquals("ssh to ${StateShare.MASK}-2 failed", StateShare.redact("ssh to vps.example.com-2 failed", year = 2026))
         assertEquals("relay ${StateShare.MASK} up · box ${StateShare.MASK} down", StateShare.redact("relay MyRelay.com up · box MyBox.in down", year = 2026))
         assertEquals("ref ${StateShare.MASK}", StateShare.redact("ref 230115000123456", year = 2026))
-        val kept = "bought CE24500 and PE4850 · ref 260115000123456 · ref 251231000123456 · R72.live · NIFTY.IN · MIDCPNIFTY.NFO · " +
+        val kept = "bought CE24500, PE4850 and PE12825 · ref 260115000123456 · ref 251231000123456 · R72.live · NIFTY.IN · MIDCPNIFTY.NFO · " +
             "OrbArms.view · Liquidity.run"
         assertEquals(kept, StateShare.redact(kept, year = 2026))
         // The same "dated" id a year on is an old one: masked (the order's word keeps any).

@@ -32,8 +32,9 @@ object AutomationSupport {
      * 22 Nov 2026 (B6 review): the app's start logs two entries in the change timeline in the background - Liquidity's no-twin rule, once
      * per phone ([TestApp] starts LiquidityTest; its one-time mark: [com.optionslab.app.data.TimelineOnce]), and the commodities' own limits
      * (Autopilot's own init, while they are on). A test that counts the timeline's entries waits for both (at most [waitMs]) after
-     * Autopilot's init, then starts from an empty timeline (memory and file); neither comes back. Not both in [waitMs]: the test fails
-     * here, saying so (never a later count off by one).
+     * Autopilot's init, then starts from an empty timeline (memory and file); neither comes back. Since B6-F it also waits for the start's
+     * last step, the dead order limits' decision (no entry on a fresh phone). Not all in [waitMs]: the test fails here, saying so (never a
+     * later count off by one).
      */
     fun settleStartTimeline(context: Context, waitMs: Long = 5_000L) {
         val end = System.currentTimeMillis() + waitMs
@@ -41,9 +42,12 @@ object AutomationSupport {
         val mcxOwn = runCatching { com.optionslab.app.data.AppSettings.load().mcxOwnLimits }.getOrDefault(false)
         fun noTwin() = com.optionslab.app.data.TimelineOnce.done(com.optionslab.app.data.TimelineOnce.LIQ_NO_TWIN) == true
         fun splitLogged() = !mcxOwn || com.optionslab.app.ira.Autopilot.book.value.entries.any { it.change.target == split }
-        while (!(noTwin() && splitLogged()) && System.currentTimeMillis() < end) Thread.sleep(20)
-        check(noTwin() && splitLogged()) {
-            "the start's timeline entries did not land in ${waitMs} ms (no-twin marked: ${noTwin()}, commodities' split logged: ${splitLogged()})"
+        // (And B6-F's dead order limits' decision, the start's last step: nothing set on a fresh phone, so decided with no entry.)
+        fun deadLimits() = com.optionslab.app.security.SecurePrefs.getBoolean(com.optionslab.app.ira.Autopilot.K_DEAD_LIMITS, false)
+        while (!(noTwin() && splitLogged() && deadLimits()) && System.currentTimeMillis() < end) Thread.sleep(20)
+        check(noTwin() && splitLogged() && deadLimits()) {
+            "the start's timeline entries did not land in ${waitMs} ms (no-twin marked: ${noTwin()}, commodities' split logged: ${splitLogged()}, " +
+                "dead limits decided: ${deadLimits()})"
         }
         com.optionslab.app.ira.Autopilot.resetForTest()
         File(context.noBackupFilesDir, "autopilot").deleteRecursively()

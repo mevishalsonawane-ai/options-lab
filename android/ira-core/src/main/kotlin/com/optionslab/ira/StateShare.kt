@@ -98,10 +98,10 @@ object StateShare {
      * ("FY2026", "CY2025"), an indicator's length, a strike word or an exchange ("EMA200", "ATM100", "NSE500"; "MA200", "SL500" are short).
      * 22 Nov 2026 (B6 review): nor an option's side and strike ("CE24500", "PE52000") or an F&O segment ("NFO1234"); the account's
      * own id is masked wherever it appears in any case (the app hands it in as a known value).
-     * 22 Nov 2026 (B6 review, second look): only a side with a strike's shape (hundreds or fifties, "CE24500", "PE4850") is kept -
-     * "PE4821" is masked.
+     * 22 Nov 2026 (B6 review, second look): only a side with an index strike's shape (steps of 25: "CE24500", "PE4850", "PE12825") is
+     * kept - "PE4821" is masked.
      */
-    private val CLIENT_ID = Regex("\\b(?:(?!(?:FY|CY|AY)\\d|(?:CE|PE)\\d{2,4}(?:00|50)\\b)[A-Z]{2}\\d{4,6}|(?!(?:IST|UTC|EMA|SMA|DMA|WMA|HMA|ATR|RSI|ADX|NSE|BSE|MCX|NFO|BFO|CDS|ATM|OTM|ITM|VIX|ORB|CCI|MFI|OBV|ROC|TSI)\\d)[A-Z]{3}\\d{3,6})\\b")
+    private val CLIENT_ID = Regex("\\b(?:(?!(?:FY|CY|AY)\\d|(?:CE|PE)\\d{2,4}(?:00|25|50|75)\\b)[A-Z]{2}\\d{4,6}|(?!(?:IST|UTC|EMA|SMA|DMA|WMA|HMA|ATR|RSI|ADX|NSE|BSE|MCX|NFO|BFO|CDS|ATM|OTM|ITM|VIX|ORB|CCI|MFI|OBV|ROC|TSI)\\d)[A-Z]{3}\\d{3,6})\\b")
     /** An ntfy topic, as a path on its server or after the word ("ntfy.sh/boss-topic", "topic boss-topic"; never "topic set"). */
     private val NTFY_PATH = Regex("(?i)\\b(ntfy\\.sh)/[^\\s\"'<>)]+")
     /** (Only a word shaped like a topic - with a digit, '-', '_' or '.' - never "the topic can post".) */

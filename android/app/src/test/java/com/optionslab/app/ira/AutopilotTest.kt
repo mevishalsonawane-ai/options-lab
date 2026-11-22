@@ -389,11 +389,12 @@ class AutopilotTest : RobolectricTest() {
         val dir = File(context.noBackupFilesDir, "autopilot")
         val enc = File(dir, "log.vault")
         val before = enc.readBytes()
-        Autopilot.unloadForTest()
         Autopilot.testReadLog = { throw java.security.KeyStoreException("the key was not returned; try again") }
+        Autopilot.unloadForTest()
         Autopilot.ensureLoaded()
         assertTrue(Autopilot.book.value.entries.isEmpty())
         assertFalse("nothing set aside", dir.listFiles()!!.any { it.name.contains(".unreadable.") })
+        assertTrue(Autopilot.diagLine(), Autopilot.diagLine().startsWith("Autopilot learning: the change timeline could not be read yet"))
         Autopilot.saveNow()
         assertTrue("never written over", before.contentEquals(enc.readBytes()))
         Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
@@ -409,10 +410,38 @@ class AutopilotTest : RobolectricTest() {
         assertTrue(Autopilot.runIfDue(context))
         assertEquals(2, AutoChange.decode(logText(enc)).entries.size)
         // A tampered file is still set aside (its check failed), as before.
-        Autopilot.unloadForTest()
         Autopilot.testReadLog = { throw com.optionslab.app.security.Vault.Tampered() }
+        Autopilot.unloadForTest()
         Autopilot.ensureLoaded()
         assertTrue(dir.listFiles()!!.any { it.name.startsWith("log.vault.unreadable.") })
+    }
+
+    /**
+     * 22 Nov 2026 (B6-E with B6-F merged): the dead order limits' note waits for a timeline that could not be read just now - not decided,
+     * not saved over the file - and is logged once it is read; its mark never travels in a backup.
+     */
+    @Test fun theDeadLimitsNoteWaitsForTheTimelineToBeRead() {
+        assertFalse("never in a backup", com.optionslab.ira.Upkeep.carried(Autopilot.K_DEAD_LIMITS))
+        // (The start's own decision landed in up(): nothing set on a fresh phone. Now this phone has the limits set.)
+        com.optionslab.app.security.SecurePrefs.putAll(mapOf(Autopilot.K_DEAD_LIMITS to null))
+        com.optionslab.app.data.AppSettings.save(com.optionslab.app.data.AppSettings.load().copy(maxLotsPerOrder = 1, guardMaxLots = 5))
+        Autopilot.setForTest(AutoChange.record(AutoChange.Book(), paperMute(), AutoChange.Status.KEPT, ms(day), day).first)
+        Autopilot.saveNow()
+        val enc = File(File(context.noBackupFilesDir, "autopilot"), "log.vault")
+        val before = enc.readBytes()
+        Autopilot.testReadLog = { throw java.security.KeyStoreException("the key was not returned; try again") }
+        Autopilot.unloadForTest()
+        assertFalse(Autopilot.logDeadOrderLimitsOnce())
+        assertFalse("not decided", com.optionslab.app.security.SecurePrefs.getBoolean(Autopilot.K_DEAD_LIMITS, false))
+        assertTrue("never written over", before.contentEquals(enc.readBytes()))
+        Autopilot.testReadLog = null
+        Autopilot.readAgainNowForTest()
+        assertTrue(Autopilot.logDeadOrderLimitsOnce())
+        assertTrue(com.optionslab.app.security.SecurePrefs.getBoolean(Autopilot.K_DEAD_LIMITS, false))
+        assertEquals(listOf(AutoChange.Kind.SPECIALIST_MUTE, AutoChange.Kind.SETTING_NOTE), AutoChange.decode(logText(enc)).entries.map { it.change.kind })
+        // A timeline set aside (its file failed its check) forgets the mark: the note is said again in the fresh one.
+        com.optionslab.app.data.TimelineOnce.forgetAll()
+        assertFalse(com.optionslab.app.security.SecurePrefs.getBoolean(Autopilot.K_DEAD_LIMITS, false))
     }
 
     /** 22 Nov 2026 (B6 review, second look): what memory recorded before the read goes on top of the file's timeline - nothing lost. */

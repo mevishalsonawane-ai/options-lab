@@ -35,9 +35,11 @@ internal object TimelineOnce {
 
     /**
      * The change timeline started afresh (its file could not be read and was set aside): every one-time mark forgotten - these and the
-     * cheaper strike's - so the updates' entries, with their Undo, are logged again.
+     * cheaper strike's - so the updates' entries, with their Undo, are logged again. 22 Nov 2026 (B6-E, merged with B6-F): the dead order
+     * limits' note's mark too ([com.optionslab.app.ira.Autopilot.K_DEAD_LIMITS]), so that note (it has no Undo) is said again.
      */
     fun forgetAll() {
-        runCatching { SecurePrefs.putAllSoon(SecurePrefs.keys(Upkeep.TIMELINE_ONCE).associateWith { null } + (CheaperStrike.K_ONCE to null)) }
+        runCatching { SecurePrefs.putAllSoon(SecurePrefs.keys(Upkeep.TIMELINE_ONCE).associateWith { null } + (CheaperStrike.K_ONCE to null) +
+            (com.optionslab.app.ira.Autopilot.K_DEAD_LIMITS to null)) }
     }
 }

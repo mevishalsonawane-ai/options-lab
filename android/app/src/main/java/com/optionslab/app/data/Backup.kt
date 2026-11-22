@@ -197,15 +197,17 @@ object Backup {
     fun restore(ctx: Context, c: Contents): Restored {
         // 22 Nov 2026 (B6 review): from here until the restart no new entry goes to Zerodha ([restoringRefusal], asked inside the entry
         // door): one sent in these seconds would be booked into a book the restore then replaces (or one frozen for it), and forgotten.
-        // Exits always go. A restore refused or failed lets entries go again.
+        // Exits always go. A restore refused, or failed before any file was frozen for it, lets entries go again; one that failed after
+        // keeps them held (the books are frozen, and both callers close the app after a failure).
         restoring = true
         var done = false
+        var frozen = false
         try {
-            return restoreNow(ctx, c).also { done = true }
-        } finally { if (!done) restoring = false }
+            return restoreNow(ctx, c) { frozen = true }.also { done = true }
+        } finally { if (!done && !frozen) restoring = false }
     }
 
-    private fun restoreNow(ctx: Context, c: Contents): Restored {
+    private fun restoreNow(ctx: Context, c: Contents, onFrozen: () -> Unit): Restored {
         // 20 Nov 2026 (audit, B5 item 2): never while a live position is open - the restore replaces the books that record it (the
         // ORB and Liquidity book, the strategies' runs, the paper trades a live copy follows, the Zerodha trade record). Refused
         // before anything is written (not even the disarm flag): this phone's data stays exactly as it is.
@@ -233,6 +235,7 @@ object Backup {
         // 20 Oct, review: the live stores keep saving their old books until the restart; from here only this restore writes
         // the vault files it replaces ([Vault.freezeForRestore]), so none of them is written over in those seconds.
         Vault.freezeForRestore(FILES.filter { it.second.endsWith(".vault") }.map { (dir, name) -> file(ctx, dir, name) })
+        onFrozen()
         // A restore that stops half-way (no restart follows) lets the stores save again, as before.
         try {
         for ((dir, name) in FILES) {
@@ -241,7 +244,10 @@ object Backup {
             // 22 Nov 2026 (B6 review, item 2): the arms' book with this phone's closed live trades kept - even when the backup has no book.
             val bytes = when (name) {
                 ORB -> orbRestored(b64?.let { Base64.decode(it, Base64.NO_WRAP) }, lotsHere, orbHere, notes)
-                STRATEGIES -> strategiesRestored(b64?.let { Base64.decode(it, Base64.NO_WRAP) }, strategiesHere, notes)
+                // (With a stop made since the book was read - its save dropped by the freeze - from Strategies' memory.)
+                STRATEGIES -> strategiesRestored(b64?.let { Base64.decode(it, Base64.NO_WRAP) }, withStopsInMemory(strategiesHere,
+                    runCatching { Strategies.stopKeptHint() }.getOrNull(), runCatching { Strategies.mcxStopHint() }.getOrNull(),
+                    runCatching { Strategies.mcxStopSellsHint() }.getOrDefault(true)), notes)
                 else -> b64?.let { disarmed(name, Base64.decode(it, Base64.NO_WRAP)) }
             }
             // An older backup without Jarvis's learning leaves the phone's own in place. So with the weekly reviews: an
@@ -463,18 +469,31 @@ object Backup {
         return SideStop(day, why, if (split) o.text("mcxStoppedAt") else o.text("stoppedAt"), o.optBoolean("mcxStopSells", true))
     }
 
-    /**
-     * Of [here] (this phone's) and [theirs] (the backup's), the later stop; on the same day this phone's, unless only the backup's is the
-     * daily loss limit's (the one Start cannot lift: [com.optionslab.ira.DayStop.mayLift]).
-     */
+    /** Of [here] (this phone's) and [theirs] (the backup's), the later stop; this phone's on the same day (its own is the newer). */
     private fun later(here: SideStop?, theirs: SideStop?): SideStop? = when {
         here == null -> theirs
         theirs == null -> here
         theirs.day > here.day -> theirs
-        theirs.day == here.day && theirs.why == LOSS_WHY && here.why != LOSS_WHY -> theirs
         else -> here
     }
-    private val LOSS_WHY = com.optionslab.ira.DayStop.Why.LOSS.wire
+
+    /**
+     * 22 Nov 2026 (B6 review): this phone's strategies' book as read ([here], its stop fields and counters) with today's stops Strategies
+     * holds in memory now ([index], [mcx] and its [mcxSells]): one made while the restore ran is never saved (the book is frozen for it),
+     * so it is taken from there - the newer on the same day. Null [here] and none in memory: null.
+     */
+    internal fun withStopsInMemory(here: JSONObject?, index: com.optionslab.ira.DayStop.Kept?, mcx: com.optionslab.ira.DayStop.Kept?,
+                                   mcxSells: Boolean): JSONObject? {
+        if (index == null && mcx == null) return here
+        val today = runCatching { Market.today() }.getOrElse { java.time.LocalDate.now() }.toString()
+        val i = later(index?.let { SideStop(today, it.why.wire, it.at) }, indexStop(here))
+        val m = later(mcx?.let { SideStop(today, it.why.wire, it.at, mcxSells) }, mcxStop(here))
+        val o = JSONObject().put("stopSides", 1).put("nextRunId", here?.optLong("nextRunId", 1) ?: 1L)
+            .put("nextStrategyId", here?.optLong("nextStrategyId", 1) ?: 1L)
+        i?.let { s -> o.put("stoppedDay", s.day); s.why?.let { o.put("stoppedWhy", it) }; s.at?.let { o.put("stoppedAt", it) } }
+        m?.let { s -> o.put("mcxStoppedDay", s.day); s.why?.let { o.put("mcxStoppedWhy", it) }; s.at?.let { o.put("mcxStoppedAt", it) }; o.put("mcxStopSells", s.sells) }
+        return o
+    }
 
     /**
      * 22 Nov 2026 (B6 review): the restored strategies' book [o] with each side's Stop for today the later of this phone's ([here]) and the
@@ -509,7 +528,7 @@ object Backup {
             theirs != null -> withDayStops(theirs, here, notes)
             listOfNotNull(indexStop(here), mcxStop(here)).any { it.day == today } -> withDayStops(JSONObject().put("defs", org.json.JSONArray())
                 .put("runs", JSONObject()).put("history", org.json.JSONArray()).put("brokerIds", JSONObject()).put("log", org.json.JSONArray())
-                .put("nextRunId", here!!.optLong("nextRunId", 1)).put("nextStrategyId", here.optLong("nextStrategyId", 1)), here, notes)
+                .put("nextRunId", here?.optLong("nextRunId", 1) ?: 1L).put("nextStrategyId", here?.optLong("nextStrategyId", 1) ?: 1L), here, notes)
             else -> return bytes?.let { disarmed(STRATEGIES, it) }
         }
         return out.toString().toByteArray(Charsets.UTF_8)

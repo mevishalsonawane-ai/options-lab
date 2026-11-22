@@ -564,7 +564,11 @@ class BackupTest : RobolectricTest() {
         .put("history", JSONArray()).put("brokerIds", JSONObject()).put("log", JSONArray()).put("nextRunId", 4).put("nextStrategyId", 7)
         .apply { stops.forEach { (k, v) -> put(k, v) } }
 
-    private fun phoneStrategies(book: JSONObject) { Vault.writeFile(stratFile(), book.toString().toByteArray()); Strategies.forgetCacheForTest() }
+    /** This phone's strategies' book [book], on disk and read by Strategies (its memory as the app's would be). */
+    private fun phoneStrategies(book: JSONObject) {
+        Vault.writeFile(stratFile(), book.toString().toByteArray()); Strategies.forgetCacheForTest()
+        runBlocking { Strategies.stoppedKept() }
+    }
 
     /** A crafted backup holding [strategies] (null: no strategies' book in it) and [prefs]. */
     private fun backupWith(strategies: JSONObject?, prefs: JSONObject = JSONObject(), orb: JSONObject? = null) = Backup.open(craft("IRABK3", 600_000,
@@ -607,20 +611,41 @@ class BackupTest : RobolectricTest() {
         assertEquals(1, JSONObject(String(Vault.readFile(stratFile())!!)).getInt("stopSides"))
         assertTrue("the backup's own stop is no news", r.notes.none { it.contains("Stop for today") })
         // This phone's older-build book stopped today, the backup's not stopped: both sides stay stopped.
-        Vault.writeFile(stratFile(), stratBook("stoppedDay" to t, "stoppedWhy" to "tile", "stoppedAt" to "12:05").toString().toByteArray())
+        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "tile", "stoppedAt" to "12:05"))
         Backup.restore(context, backupWith(stratBook("stopSides" to 1)))
         restarted()
         assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "12:05"), Strategies.stoppedKept())
         assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "12:05"), Strategies.mcxStoppedKept())
-        // Both today: this phone's, unless only the backup's is the daily loss limit's (the one Start cannot lift).
-        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "10:15", "stopSides" to 1))
+        // Both today: this phone's (the newer - a loss stop Boss lifted with his PIN since the backup stays lifted).
+        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "12:00", "stopSides" to 1))
         Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "loss", "stoppedAt" to "09:40", "stopSides" to 1)))
         restarted()
-        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.LOSS, "09:40"), Strategies.stoppedKept())
-        phoneStrategies(stratBook("stoppedDay" to t, "stoppedWhy" to "tile", "stoppedAt" to "10:15", "stopSides" to 1))
-        Backup.restore(context, backupWith(stratBook("stoppedDay" to t, "stoppedWhy" to "boss", "stoppedAt" to "09:40", "stopSides" to 1)))
+        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS, "12:00"), Strategies.stoppedKept())
+    }
+
+    /**
+     * A stop made while the restore runs is never saved (the book is frozen for it): it is taken from Strategies' memory, so the restart
+     * still has it - on either side.
+     */
+    @Test fun aStopMadeWhileTheRestoreRunsIsKept() = runBlocking {
+        phoneStrategies(stratBook("stopSides" to 1))
+        Vault.freezeForRestore(listOf(stratFile()))
+        Strategies.stopForToday(stopRunning = false, compromised = false, why = com.optionslab.ira.DayStop.Why.TILE)
+        Strategies.stopCommodities(sell = false)
+        Vault.thaw(); Strategies.forgetCacheForTest()
+        assertNull("its save was dropped", Backup.indexStop(JSONObject(String(Vault.readFile(stratFile())!!))))
+        assertNotNull("memory has it", Strategies.stopKeptHint())
+        Backup.restore(context, backupWith(stratBook("stopSides" to 1)))
         restarted()
-        assertEquals(com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "10:15"), Strategies.stoppedKept())
+        assertEquals(com.optionslab.ira.DayStop.Why.TILE, Strategies.stoppedKept()?.why)
+        assertEquals(com.optionslab.ira.DayStop.Why.BOSS, Strategies.mcxStoppedKept()?.why)
+        assertFalse(Strategies.mcxStopSells())
+        // The merge itself: memory's stop the newer on the same day; none in memory: the book as read.
+        val read = stratBook("stoppedDay" to today.toString(), "stoppedWhy" to "boss", "stoppedAt" to "09:00", "stopSides" to 1)
+        assertEquals("10:30", Backup.indexStop(Backup.withStopsInMemory(read, com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE, "10:30"),
+            null, true))?.at)
+        assertEquals(7L, Backup.withStopsInMemory(read, com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.TILE), null, true)!!.getLong("nextStrategyId"))
+        assertTrue(Backup.withStopsInMemory(read, null, null, true) === read)
     }
 
     /** Item 1: a backup with no strategies' book still keeps today's stop (an empty book that holds it); none today: removed, as before. */
@@ -726,13 +751,20 @@ class BackupTest : RobolectricTest() {
             Backup.restore(context, backupWith(null))
             assertEquals(Backup.RESTORING, Broker.entryRecheck(o))
             Backup.restoreEndedForTest()
-            // One that fails part-way (the settings vault unreadable) lets them go again too.
+            // One that failed after the books were frozen for it keeps them held (the app closes after a failure).
+            Vault.thaw()
+            Vault.testFailWrites = setOf("strategies.vault")
+            val late = try { Backup.restore(context, backupWith(stratBook())); null } catch (x: Exception) { x }
+            assertNotNull(late)
+            assertEquals(Backup.RESTORING, Backup.restoringRefusal())
+            Vault.testFailWrites = emptySet(); Vault.thaw(); Backup.restoreEndedForTest()
+            // One that fails before anything was written (the settings vault unreadable) lets them go again.
             SecurePrefs.put("x", 1)
             Vault.destroy()
             assertFalse(SecurePrefs.reload())
             val failed = try { Backup.restore(context, backupWith(null)); null } catch (x: Exception) { x }
             assertNotNull(failed)
             assertNull(Backup.restoringRefusal())
-        } finally { Backup.testLiveHeld = null; Backup.restoreEndedForTest() }
+        } finally { Backup.testLiveHeld = null; Vault.testFailWrites = emptySet(); Backup.restoreEndedForTest() }
     }
 }
