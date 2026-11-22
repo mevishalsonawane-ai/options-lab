@@ -40,7 +40,7 @@ object FillSlippage {
                           val intended: Double, val basis: Slippage.Basis, val tick: Double)
 
     private val pending = java.util.LinkedHashMap<String, Pending>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("FillSlippage"))
     private val fileLock = Mutex()
     private val memLock = Any()
     private var kept: ArrayList<Slippage.Fill>? = null

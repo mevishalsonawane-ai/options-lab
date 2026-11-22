@@ -16,7 +16,7 @@ import java.time.Instant
  */
 object BatteryMeter {
     val meter = LoopMeter(dayOf = { Instant.ofEpochMilli(it).atZone(com.optionslab.engine.IST).toLocalDate() })
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + com.optionslab.app.data.ScopeGuard.handler("BatteryMeter"))
     @Volatile private var started = false
 
     /** At the app's start: the stream's minutes on, from its own state (a collector suspends between changes). */

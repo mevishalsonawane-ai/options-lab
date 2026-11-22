@@ -153,8 +153,36 @@ internal object IraSolo {
                 o.optString("oid").ifEmpty { null }, o.optString("xoid").ifEmpty { null },
                 o.optString("rg").ifEmpty { null }, if (o.has("iv")) o.getDouble("iv") else null,
                 o.optString("tag").ifEmpty { null }, if (o.has("atr")) o.getDouble("atr") else null)
-        } }.getOrNull() }
+        } }.getOrNull() }.also { list -> holdingHint = list.any { !it.closed } }
     }.getOrDefault(emptyList())
+
+    /**
+     * 22 Nov 2026 (B6 review: the fast path's consumer thread read and parsed this book - a vault read of up to 500 trades - on every
+     * snapshot, through [holding]): whether the book as last read or written in this process holds an open trade, exactly as [holding]
+     * would have said then (null: not read yet). Set by every read that worked and every write; never by a read that failed. Memory only.
+     */
+    @Volatile internal var holdingHint: Boolean? = null
+        private set
+
+    private val hintReading = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var hintTriedAt = 0L
+
+    /**
+     * [holdingHint] for the event-driven checks' thread (memory only): not known yet, the book is read in the background (at most every
+     * 30 s while it cannot be read) and the answer is "held" meanwhile (unknown counts as held: the minute look runs, as for a held trade).
+     */
+    fun holdingQuick(): Boolean {
+        holdingHint?.let { return it }
+        val now = System.nanoTime() / 1_000_000L
+        if ((hintTriedAt == 0L || now - hintTriedAt !in 0 until 30_000L) && hintReading.compareAndSet(false, true)) {
+            hintTriedAt = now
+            runCatching { background.launch { try { all() } finally { hintReading.set(false) } } }.onFailure { hintReading.set(false) }
+        }
+        return true
+    }
+
+    /** TEST ONLY: as a new process (nothing read yet). */
+    internal fun forgetHintForTest() { holdingHint = null; hintTriedAt = 0L }
 
     private fun save(list: List<T>) = runCatching {
         com.optionslab.app.security.SecurePrefs.put(KEY, JSONArray().apply { list.takeLast(500).forEach { t ->
@@ -165,6 +193,7 @@ internal object IraSolo {
                     t.regime?.let { put("rg", it) }; t.ivRank?.takeIf { it.isFinite() }?.let { put("iv", it) }
                     t.tag?.let { put("tag", it) }; t.atr?.takeIf { it.isFinite() }?.let { put("atr", it) } })
         } }.toString())
+        holdingHint = list.takeLast(500).any { !it.closed }
     }
 
     /** Solo (midday)'s own trades (the forward test's), oldest first. */
@@ -226,7 +255,8 @@ internal object IraSolo {
 
     /** The day the slow reads were started early ([prefetch]), with the vault's generation. */
     @Volatile private var prefetched: Pair<Int, LocalDate>? = null
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // 22 Nov 2026 (B6 review): a failure escaping a job is noted, never the end of the process ([com.optionslab.app.data.ScopeGuard]).
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Solo"))
 
     /**
      * The 12:00 decision's slow reads - each index's ATR14 (the daily candles) and the instrument master - started on the
@@ -253,7 +283,7 @@ internal object IraSolo {
      * decision's day) and the card's switch shown off. Solo's trades, switch and counts are settings keys, wiped with the
      * settings. Never waits for Solo's [lock]; reads nothing.
      */
-    fun wipe() { resetForTest(); _onState.value = false }
+    fun wipe() { resetForTest(); _onState.value = false; holdingHint = null; hintTriedAt = 0L }
 
     /** Solo's day, what it saw, or its switch on in memory (the erase's test; memory only). */
     internal fun holdsForErase(): Boolean = runCatching {

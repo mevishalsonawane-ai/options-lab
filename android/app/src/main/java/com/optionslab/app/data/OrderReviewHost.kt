@@ -82,7 +82,7 @@ object OrderReviewHost {
     private val IST: ZoneId = com.optionslab.engine.IST
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("OrderReviewHost"))
     private val lock = Any()
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var loaded = false

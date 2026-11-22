@@ -59,7 +59,7 @@ object TrendWatchHost {
     @Volatile private var file: File? = null
     @Volatile private var app: Context? = null
     private val written = Vault.LastWrite()
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("TrendWatchHost.background"))
 
     fun init(context: Context) {
         app = context.applicationContext

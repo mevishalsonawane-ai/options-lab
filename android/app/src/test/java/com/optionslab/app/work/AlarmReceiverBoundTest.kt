@@ -86,6 +86,24 @@ class AlarmReceiverBoundTest : RobolectricTest() {
         assertEquals(1, late.get())
     }
 
+    /**
+     * 22 Nov 2026 (B6 review: a vault write that failed in the dead-man's check left the job by its scope - no handler - to the crash
+     * handler, which in a release build ends the process): a work that throws is noted and its job ends normally; nothing reaches the
+     * scope's handler (or, with none, the crash handler). A cancellation still goes up.
+     */
+    @Test fun aWorkThatThrowsIsNotedAndNeverLeavesItsJob() = runBlocking {
+        val escaped = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val plain = CoroutineScope(SupervisorJob() + Dispatchers.IO + kotlinx.coroutines.CoroutineExceptionHandler { _, e -> escaped += e })
+        val noted = com.optionslab.app.data.ScopeGuard.caughtCount
+        val finished = CountDownLatch(1)
+        val job = AlarmReceiver.finishWithin(5_000, plain, finish = { finished.countDown() }) { throw java.io.IOException("simulated disk fault") }
+        withTimeout(5_000) { job.join() }
+        assertTrue(finished.await(3, TimeUnit.SECONDS))
+        assertFalse("ended normally", job.isCancelled)
+        assertTrue("nothing escaped the job: $escaped", escaped.isEmpty())
+        assertEquals("noted once", noted + 1, com.optionslab.app.data.ScopeGuard.caughtCount)
+    }
+
     /** These alarms are background broadcasts (no FLAG_RECEIVER_FOREGROUND): Android allows 60 s; the bound is well inside it. */
     @Test fun theBoundIsWellUnderAndroidsBackgroundBroadcastLimitAndTheHoldOutlastsIt() {
         assertTrue(AlarmReceiver.FINISH_MS in 20_000L..50_000L)

@@ -266,7 +266,7 @@ object Notifier {
         // Zerodha: read the book again shortly, so a fill that closed the position takes its card down.
         // 19 Nov 2026 (CI): never once the cards were reset since (a test's fill read again in the next test, with no fake Zerodha).
         val gen = PositionCards.generation()
-        if (venue != "Paper") kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+        if (venue != "Paper") kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Notifier")).launch {
             kotlinx.coroutines.delay(2_000); if (PositionCards.generation() == gen) runCatching { PositionCards.refresh(context) }
         }
     }

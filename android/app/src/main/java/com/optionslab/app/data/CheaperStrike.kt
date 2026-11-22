@@ -92,7 +92,7 @@ object CheaperStrike {
     /** Bumped by [wipe]: a save queued before an erase never writes after it ([FundsCheck]'s rule). */
     @Volatile private var wipeGen = 0
     private val writeLock = Any()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("CheaperStrike"))
 
     /** Why the step started: (a) the free cash before sending, (b) Zerodha's definite funds refusal. */
     enum class Trigger(val words: String) { PRE_SEND("free cash short before sending"), REJECTED("Zerodha refused it for funds") }

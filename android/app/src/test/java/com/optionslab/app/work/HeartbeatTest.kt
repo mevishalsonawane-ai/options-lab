@@ -165,6 +165,32 @@ class HeartbeatTest : RobolectricTest() {
         assertNotNull(stalled())
     }
 
+    /**
+     * 22 Nov 2026 (B6 review): a settings vault that cannot be written (the disk, the Keystore) never stops the stalled-watch notice,
+     * and never throws out of the alarm's check (the release crash handler ended the process); the stall is still told once.
+     */
+    @Test fun aVaultThatCannotBeWrittenNeverStopsTheStallNotice() {
+        Background.at(WED, 11, 0)
+        SecurePrefs.put("hb.last", 1L)
+        SecurePrefs.flush()
+        ShadowSystemClock.advanceBy(Duration.ofMinutes(10))
+        com.optionslab.app.security.Vault.testFailWrites = setOf("prefs.vault")
+        // Off the main thread, as the alarm's job runs it (on the main thread a settings write is handed to the background writer).
+        fun checkOffMain(): Throwable? {
+            val err = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
+            Thread { try { Heartbeat.check(context) } catch (e: Throwable) { err.set(e) } }.apply { start(); join(10_000) }
+            return err.get()
+        }
+        try {
+            assertTrue(Heartbeat.stale())
+            assertNull("never thrown (an IOException before)", checkOffMain())
+            assertNotNull("told", stalled())
+            context.getSystemService(android.app.NotificationManager::class.java).cancelAll()
+            assertNull(checkOffMain())
+            assertNull("still told once per stall", stalled())
+        } finally { com.optionslab.app.security.Vault.testFailWrites = emptySet() }
+    }
+
     @Test fun outsideMarketHoursSilenceIsNormal() {
         SecurePrefs.put("hb.last", 1L)
         ShadowSystemClock.advanceBy(Duration.ofMinutes(10))

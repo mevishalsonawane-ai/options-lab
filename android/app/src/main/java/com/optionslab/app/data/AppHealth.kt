@@ -43,7 +43,7 @@ object AppHealth {
     private const val SAVE_DELAY_MS = 60_000L
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("AppHealth"))
     private val lock = Any()
     @Volatile private var book = HealthBook.Book()
     @Volatile private var loaded = false

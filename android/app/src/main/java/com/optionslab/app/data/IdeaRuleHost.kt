@@ -26,7 +26,7 @@ object IdeaRuleHost {
     @Volatile private var on = true
     @Volatile private var minPct = IdeaWinRate.DEFAULT_PCT
     private val noted: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("IdeaRuleHost"))
 
     /** Reads the rule in the background; logs it once in the Autopilot timeline while on. */
     fun init(@Suppress("UNUSED_PARAMETER") context: Context) {

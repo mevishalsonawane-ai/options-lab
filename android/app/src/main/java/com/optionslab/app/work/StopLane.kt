@@ -312,11 +312,7 @@ internal object StopLane {
             if (com.optionslab.app.data.ArmLive.holdingHint || com.optionslab.app.data.ArmLive.recoverHint) com.optionslab.ira.Supervisor.Step("15-second stop check: ${com.optionslab.app.data.FastPath.ARMS_LIVE}") { com.optionslab.app.data.ArmLive.watch(); done(B_ARMS_LIVE) } else null,
             // 18 Oct, review: the Strategy Module's open runs - their per-leg and basket stops, targets and trails (no scheduled
             // starts or square-offs: those stay in the full pass).
-            if (com.optionslab.app.data.Strategies.runningHint) com.optionslab.ira.Supervisor.Step("15-second stop check: strategies") {
-                val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
-                com.optionslab.app.data.Strategies.manageOnly(bad)
-                done(B_STRATEGIES)
-            } else null,
+            if (com.optionslab.app.data.Strategies.runningHint) com.optionslab.ira.Supervisor.Step("15-second stop check: strategies") { strategiesLook(context) } else null,
         ), if (quietNow) QUIET_EXITS_WAIT_MS else WatchWorkers.EXITS_WAIT_MS, inOrder = false, named = false)
         // Boss's 08 Oct safety items: the missed-lock sweeper (paper and Zerodha), the backup GTTs beside the bots' live stops,
         // and the no-price failsafe (REST quotes; a loud warning after two minutes).
@@ -326,6 +322,17 @@ internal object StopLane {
             guarded("15-second stop check: missed-lock sweep") { com.optionslab.app.data.Sweeper.run(context) }
             guarded("15-second stop check: stops and targets") { com.optionslab.app.data.Protections.tick(); done(B_PROTECTIONS) }
         }), SAFETY_WAIT_MS, inOrder = false, named = false)
+    }
+
+    /**
+     * The Strategy Module's open runs in the stop check (their per-leg and basket stops, targets and trails). 22 Nov 2026 (B6 review: a
+     * full device scan - a SHA-256 of a 10 MB asset, binder calls, /proc reads, a socket connect - ran here once a minute, ahead of
+     * the runs' exits): the device check's verdict is read from memory only ([com.optionslab.app.security.Integrity.entryRefused],
+     * kept fresh in the background); it only ever refuses an entry, unknown included, and the exits never wait on it.
+     */
+    internal suspend fun strategiesLook(context: Context) {
+        com.optionslab.app.data.Strategies.manageOnly(com.optionslab.app.security.Integrity.entryRefused(context))
+        done(B_STRATEGIES)
     }
 
     /** 26 Oct: how long a look waits for the paper book's pass before the arms' exits (it finishes by itself after). */
@@ -360,7 +367,7 @@ internal object StopLane {
 internal object WatchLanes {
     const val THREADS = 4
     private const val NAME = "watch-lane-"
-    private val io = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val io = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("StopLane.io"))
 
     /** On one of these threads now. */
     fun onLane(): Boolean = Thread.currentThread().name.startsWith(NAME)

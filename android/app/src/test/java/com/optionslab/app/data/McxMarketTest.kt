@@ -51,6 +51,60 @@ class McxMarketTest : RobolectricTest() {
         assertEquals(McxSession.Window(LocalTime.of(9, 0), LocalTime.of(23, 30)), McxMarket.calendar().window(LocalDate.of(2026, 10, 21)))
     }
 
+    /**
+     * 22 Nov 2026 (B6 review: [McxMarket.isOpen] read the calendar's file on first use, and the main thread asks it - the watch
+     * service's start, the watch's start check, the dead-man's alarm): the main thread's checks read the calendar from memory only -
+     * before it is read, the built-in one - and the file is read in the background ([McxMarket.warmSoon]).
+     */
+    @Test fun theMainThreadsChecksNeverReadTheCalendarFile() {
+        at("2026-10-08", "20:00")                                              // a Thursday evening: MCX trades
+        McxMarket.keepHolidays(mapOf(LocalDate.of(2026, 10, 8) to null))       // Upstox's list shuts it (kept on the phone)
+        assertFalse("the new list in memory at once", McxMarket.isOpen())
+        McxMarket.calendarReadsForTest.set(0)
+        McxMarket.calendarWatchedForTest = Thread.currentThread()
+        try {
+            // Closed by the built-in calendar too (past 23:30), the file not read yet: never a firm no - unknown (decided off the main
+            // thread), the file read in the background.
+            McxMarket.forgetCalendarForTest()
+            at("2026-10-08", "23:45")
+            assertNull(McxMarket.watchDueQuick())
+            val read = System.currentTimeMillis() + 5_000
+            while (!McxMarket.calendarKeptForTest() && System.currentTimeMillis() < read) Thread.sleep(5)
+            assertEquals("once in memory: a firm no", false, McxMarket.watchDueQuick())
+            at("2026-10-08", "20:00")
+            McxMarket.forgetCalendarForTest()                                   // a new process: the file not read yet
+            assertTrue("the built-in calendar meanwhile", McxMarket.isOpenQuick())
+            McxMarket.watchDueQuick()
+            McxMarket.nextOpenMillisQuick()
+            assertEquals("no calendar file read on the asking thread", 0L, McxMarket.calendarReadsForTest.get())
+            val end = System.currentTimeMillis() + 5_000
+            while (McxMarket.isOpenQuick() && System.currentTimeMillis() < end) Thread.sleep(5)
+            assertFalse("the file read in the background: shut that evening", McxMarket.isOpenQuick())
+            assertEquals(false, McxMarket.watchDueQuick())
+            assertEquals(0L, McxMarket.calendarReadsForTest.get())
+        } finally {
+            McxMarket.calendarWatchedForTest = null
+            McxMarket.forgetCalendarForTest()
+        }
+    }
+
+    /** 22 Nov 2026 (B6 review): "is anything held?" without MCX's part (most of its callers) never reads MCX's calendar at all. */
+    @Test fun anythingHeldLeavesMcxUnreadWhenItIsLeftOut() {
+        at("2026-10-08", "20:00")
+        McxMarket.forgetCalendarForTest()
+        McxMarket.calendarReadsForTest.set(0)
+        McxMarket.calendarWatchedForTest = Thread.currentThread()
+        try {
+            HeldNow.any()
+            assertEquals(0L, McxMarket.calendarReadsForTest.get())
+            HeldNow.any(mcxLive = true)
+            assertEquals("asked for it: read", 1L, McxMarket.calendarReadsForTest.get())
+        } finally {
+            McxMarket.calendarWatchedForTest = null
+            McxMarket.forgetCalendarForTest()
+        }
+    }
+
     @Test fun aPaperMcxOptionFillsWithMcxsSpreadAndChargesAndKeepsTheWatchUp() = runBlocking {
         at("2026-10-08", "20:00")
         assertFalse(McxMarket.exposure())
@@ -121,7 +175,9 @@ class McxMarketTest : RobolectricTest() {
         assertEquals(true, McxMarket.watchDueQuick())
         assertEquals(true, com.optionslab.app.work.Jobs.watchDueQuick())
         assertNull("the book was not read to answer", Paper.stateIfLoaded())
-        // MCX shut: no, at once.
+        // MCX shut: no, at once. (22 Nov 2026: with MCX's calendar in memory, as the app's start reads it - [McxMarket.warmSoon];
+        // before that, a closed answer from the built-in calendar is "unknown": [theMainThreadsChecksNeverReadTheCalendarFile].)
+        McxMarket.calendar()
         at("2026-10-08", "23:45")
         assertEquals(false, McxMarket.watchDueQuick())
         assertNull(Paper.stateIfLoaded())
@@ -148,8 +204,8 @@ class McxMarketTest : RobolectricTest() {
         // No arm armed and nothing held: no, at once.
         McxMarket.noteArmsArmed(false); McxMarket.wipe()
         assertEquals(false, McxMarket.watchDueQuick())
-        // MCX shut: no, whatever is armed.
-        McxMarket.noteArmsArmed(true); McxMarket.wipe()
+        // MCX shut: no, whatever is armed (22 Nov 2026: the calendar in memory, as the app's start reads it).
+        McxMarket.noteArmsArmed(true); McxMarket.wipe(); McxMarket.calendar()
         at("2026-10-08", "23:45")
         assertEquals(false, McxMarket.watchDueQuick())
         McxMarket.noteArmsArmed(false)

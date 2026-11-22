@@ -18,6 +18,7 @@ import com.optionslab.engine.sandbox.SandboxEvent
 import com.optionslab.engine.sandbox.SandboxJson
 import com.optionslab.engine.sandbox.SandboxState
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -551,7 +552,8 @@ object Paper {
      * (or nothing to tell by), and the regular pass fills it on the last price as before.
      */
     private fun restingFill(c: Contract, since: java.time.LocalDateTime, trigger: Double): Double? {
-        val tok = runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
+        // 22 Nov 2026 (B6 review): under this book's lock, on the stream's lane: the token from memory only ([knownToken]).
+        val tok = knownToken(c)?.takeIf { KiteStream.tick(it) != null }
         if (tok != null) return KiteStream.sellStopFill(tok, epochMs(since), trigger)
         val bars = barsAfter(c, since)?.filter { it.istDate == Market.today() } ?: return null
         return bars.firstNotNullOfOrNull { com.optionslab.engine.orb.ProfitLock.sellStopFill(trigger, it.open, it.low) }
@@ -559,7 +561,7 @@ object Paper {
 
     /** [restingFill] for a resting BUY stop (a short's; 22 Oct, arms audit): the stream's ticks, else the minutes' highs. */
     private fun restingBuyFill(c: Contract, since: java.time.LocalDateTime, trigger: Double): Double? {
-        val tok = runCatching { kiteToken(c) }.getOrNull()?.takeIf { KiteStream.tick(it) != null }
+        val tok = knownToken(c)?.takeIf { KiteStream.tick(it) != null }
         if (tok != null) return KiteStream.buyStopFill(tok, epochMs(since), trigger)
         val bars = barsAfter(c, since)?.filter { it.istDate == Market.today() } ?: return null
         return bars.firstNotNullOfOrNull { com.optionslab.engine.orb.ProfitLock.buyStopFill(trigger, it.open, it.high) }
@@ -648,6 +650,7 @@ object Paper {
 
     private fun kiteToken(c: Contract): Long? {
         kiteTokens[c.symbol]?.let { return it.takeIf { t -> t > 0 } }
+        if (Thread.currentThread() === lookupWatchedForTest) lookupsOnWatchedForTest.incrementAndGet()
         if (!Broker.loggedIn) return null
         if (c.isMcx) {
             // MCX: from the day's MCX list (none yet: asked again next time, not remembered as unlisted).
@@ -668,6 +671,71 @@ object Paper {
         // is looked up again once the day's list has been downloaded.
         if (t > 0 || Broker.instrumentsAreToday()) kiteTokens[c.symbol] = t
         return t.takeIf { it > 0 }
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review: the fast path's consumer thread and the resting stops' fills, under this book's lock, looked tokens up
+     * through [kiteToken] - the instruments file's stat and parse, MCX's list file): [c]'s Zerodha token from the tokens already looked
+     * up only (memory: never a file, the vault or the session). One not looked up yet is looked up in the background ([warmToken]) and
+     * the next look has it; meanwhile it is read as not streaming (the minute candles, as for any contract the stream does not have).
+     */
+    private fun knownToken(c: Contract): Long? {
+        val t = kiteTokens[c.symbol]
+        if (t == null) warmToken(c)
+        return t?.takeIf { it > 0 }
+    }
+
+    private val tokenReads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+        ScopeGuard.handler("paper token lookups"))
+    private val tokensWanted = java.util.concurrent.ConcurrentHashMap<String, Contract>()
+    /** When each symbol was last looked up in the background (monotonic ms): at most every [TOKEN_RETRY_MS] each. */
+    private val tokenTried = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val tokenWarming = java.util.concurrent.atomic.AtomicBoolean(false)
+    private const val TOKEN_RETRY_MS = 5_000L
+
+    /** [c]'s token looked up off the caller's thread (one lookup job at a time; each symbol at most every 5 s). Returns at once. */
+    private fun warmToken(c: Contract) {
+        val now = System.nanoTime() / 1_000_000L
+        tokenTried[c.symbol]?.let { if (now - it in 0 until TOKEN_RETRY_MS) return }
+        tokensWanted.putIfAbsent(c.symbol, c)
+        startTokenWorker()
+    }
+
+    /** The background lookup job, unless one runs; one asked for just as it ended is started again (none left waiting). */
+    private fun startTokenWorker() {
+        if (tokensWanted.isEmpty() || !tokenWarming.compareAndSet(false, true)) return
+        runCatching {
+            tokenReads.launch {
+                var found = false
+                try {
+                    while (true) {
+                        val sym = tokensWanted.keys.firstOrNull() ?: break
+                        val cc = tokensWanted.remove(sym) ?: continue
+                        tokenTried[sym] = System.nanoTime() / 1_000_000L
+                        if (runCatching { kiteToken(cc) }.getOrNull() != null) found = true
+                    }
+                } finally {
+                    tokenWarming.set(false)
+                    // The event-driven checks' next look takes the new tokens at once (not up to half a second later).
+                    if (found) runCatching { FastPath.stateChanged() }
+                    startTokenWorker()
+                }
+            }
+        }.onFailure { tokenWarming.set(false) }
+    }
+
+    /** TEST SEAM (JVM tests only): the thread whose lookups past the kept tokens (a file, the session) are counted. Null in the app. */
+    @Volatile internal var lookupWatchedForTest: Thread? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the lookup seam exists only in debug builds" }; field = v }
+    internal val lookupsOnWatchedForTest = java.util.concurrent.atomic.AtomicLong()
+
+    /** TEST SEAM (JVM tests only): [symbol]'s kept token (null: not looked up yet; 0: not listed). */
+    internal fun keptTokenForTest(symbol: String): Long? = kiteTokens[symbol]
+
+    /** TEST SEAM (JVM tests only): every kept token and background lookup forgotten (as a new process). */
+    internal fun forgetTokensForTest() {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "the token seam exists only in debug builds" }
+        kiteTokens.clear(); tokensWanted.clear(); tokenTried.clear()
     }
 
     /**
@@ -1050,7 +1118,8 @@ object Paper {
         var covered = true
         val tokens = HashSet<Long>()
         for (s in syms) {
-            val tok = b.contracts[s]?.let { runCatching { kiteToken(it) }.getOrNull() }
+            // 22 Nov 2026 (B6 review): memory only ([knownToken]); one not looked up yet comes from the background, the next look.
+            val tok = b.contracts[s]?.let { knownToken(it) }
             if (tok == null) { covered = false } else { tokens += tok; if (KiteStream.tick(tok) == null) covered = false }
         }
         // 21 Oct, enhancement round 3 (idea 3): the tokens looked up here (after a restart, the first time) followed at once.
@@ -1088,7 +1157,7 @@ object Paper {
         runCatching {
             val syms = watched(b.state)
             if (syms.isEmpty()) { follow(emptySet()); return }
-            // Those not looked up yet come with [streamCover], which looks them up and follows the whole set.
+            // Those not looked up yet come with [streamCover] - 22 Nov 2026: once its background lookup ([warmToken]) has them, the next look.
             follow(syms.mapNotNull { s -> kiteTokens[s]?.takeIf { it > 0 } }.toSet())
         }
     }

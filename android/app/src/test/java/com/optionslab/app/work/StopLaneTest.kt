@@ -162,6 +162,37 @@ class StopLaneTest : RobolectricTest() {
         assertEquals(0L, WatchClock.lookAt)
     }
 
+    /**
+     * 22 Nov 2026 (B6 review: a full device scan ran inside the stop check, ahead of the Strategy Module's exits): the strategies' step
+     * reads the device check's verdict from memory - a scan that takes 8 s never holds it, nor the look - and with no verdict yet the
+     * runs' entries are refused (unknown), while their exits go on.
+     */
+    @Test fun theStrategiesStepNeverWaitsOnTheDeviceCheck() {
+        val integrity = com.optionslab.app.security.Integrity
+        integrity.resetForTest()
+        integrity.testScanDelayMs = 8_000
+        integrity.scanWatchedForTest = Thread.currentThread()
+        // A run open (the hint its book keeps; set here as a loaded book with a running run would).
+        val hint = com.optionslab.app.data.Strategies::class.java.getDeclaredField("runningHint").apply { isAccessible = true }
+        hint.setBoolean(null, true)
+        try {
+            val t0 = System.nanoTime()
+            runBlocking { StopLane.strategiesLook(context) }
+            assertTrue("the step never waited on the scan", (System.nanoTime() - t0) / 1_000_000 < 2_000)
+            assertEquals("no scan on the step's thread", 0L, integrity.scansOnWatchedForTest.get())
+            assertTrue("no verdict yet: an entry would be refused", integrity.entryRefused(context))
+            // A whole NSE look with a run open: inside its window, never after the scan.
+            val t1 = System.nanoTime()
+            runBlocking { StopLane.look(context, StopLane.Mode.NSE, System.currentTimeMillis()) }
+            val ms = (System.nanoTime() - t1) / 1_000_000
+            assertTrue("the look took $ms ms", ms < 6_000)
+            assertEquals(0L, integrity.scansOnWatchedForTest.get())
+        } finally {
+            hint.setBoolean(null, false)
+            integrity.resetForTest()
+        }
+    }
+
     /** MCX's own pass comes back 15 s after it STARTED (it was 15 s after it ended: a 5 s pass came every 20 s). */
     @Test fun mcxsPassComesBack15sAfterItsStartNotItsEnd() = runTest {
         val clock = { testScheduler.currentTime + 1_000_000L }

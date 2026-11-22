@@ -37,7 +37,7 @@ object LiquidityTest {
     private const val FLUSH_MS = 2_000L
 
     @Volatile private var dir: File? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("LiquidityTest"))
     private val lock = Any()
     @Volatile private var loaded = false
 

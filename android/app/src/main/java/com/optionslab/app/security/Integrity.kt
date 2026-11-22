@@ -10,6 +10,7 @@ import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.MessageDigest
+import kotlinx.coroutines.launch
 
 /**
  * Checks for an environment in which the app's protections can be bypassed.
@@ -136,6 +137,12 @@ object Integrity {
 
     /** The static findings plus the ones that can change at any moment (root, hooks, debugger, ADB), read now. */
     private fun assemble(context: Context, st: Static): List<Finding> {
+        scans.incrementAndGet()
+        if (Thread.currentThread() === scanWatchedForTest) scansOnWatchedForTest.incrementAndGet()
+        testScanDelayMs.takeIf { it > 0 }?.let { ms ->
+            val end = System.currentTimeMillis() + ms
+            while (testScanDelayMs > 0 && System.currentTimeMillis() < end) Thread.sleep(10)
+        }
         val out = ArrayList<Finding>()
         out += st.sandbox
         out += if (rooted()) Finding("Root", Severity.DANGER, "su binaries, Magisk or test-keys present")
@@ -176,14 +183,154 @@ object Integrity {
 
     fun compromised(findings: List<Finding>): Boolean = findings.any { it.severity == Severity.DANGER }
 
-    private var cached: List<Finding>? = null
-    private var cachedAt = 0L
+    /**
+     * The last report and when it was read (SystemClock.elapsedRealtime). 22 Nov 2026 (B6 review): kept fresh by the background
+     * refresher ([startRefresher]) too, and read with no lock: [cachedAt] is written after [cached] and read before it, so a reader
+     * that sees a new time sees its report (an older time with a newer report only reads as older: never fresher than it is).
+     */
+    @Volatile private var cached: List<Finding>? = null
+    @Volatile private var cachedAt = 0L
 
-    /** [report], reused for up to [maxAgeMs] (the asset hash is not free); 0 = always fresh. */
-    @Synchronized
+    /** One scan at a time (the background one, a [reportWithin] that found nothing fresh); never held by a reader of the cache. */
+    private val scanLock = Any()
+
+    private fun keep(findings: List<Finding>, at: Long) { cached = findings; cachedAt = at }
+
+    /** The cached report when it is at most [maxAgeMs] old at [now] (as before: the clock is the process's own, never set back); else null. */
+    private fun fresh(maxAgeMs: Long, now: Long = android.os.SystemClock.elapsedRealtime()): List<Finding>? {
+        val at = cachedAt
+        val c = cached ?: return null
+        return c.takeIf { now - at <= maxAgeMs }
+    }
+
+    /**
+     * [report], reused for up to [maxAgeMs] (the asset hash is not free); 0 = always fresh. 22 Nov 2026 (B6 review): the cache is read
+     * with no lock (it was @Synchronized, so every caller waited behind a scan under way: a SHA-256 of the 10 MB asset, binder calls,
+     * /proc reads, a socket connect), and the background refresher keeps it under a minute old, so an entry's check reads memory.
+     */
     fun reportWithin(context: Context, maxAgeMs: Long): List<Finding> {
+        askedAt = android.os.SystemClock.elapsedRealtime()
+        fresh(maxAgeMs)?.let { return it }
+        return synchronized(scanLock) {
+            fresh(maxAgeMs) ?: run {
+                val now = android.os.SystemClock.elapsedRealtime()
+                report(context).also { keep(it, now) }
+            }
+        }
+    }
+
+    // ---- 22 Nov 2026 (B6 review: a full device scan ran inside the 15-second stop check) -------------------------------------
+
+    /** The background refresher's pace: the cached report stays under a minute old for [reportWithin]'s callers. */
+    const val REFRESH_MS = 40_000L
+    /** The oldest cached verdict an automatic entry goes on (as the minute the stop check's scan was reused before); older is unknown. */
+    const val VERDICT_MAX_AGE_MS = 60_000L
+    /** The refresher reads the parts that cannot change while the app runs (the APK, the 10 MB asset's hash) at most this often. */
+    private const val STATIC_REFRESH_MS = 10 * 60_000L
+
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+        com.optionslab.app.data.ScopeGuard.handler("device check"))
+    private val scanning = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var refresher: kotlinx.coroutines.Job? = null
+
+    /** Scans made in this process (the tests; memory only). */
+    internal val scans = java.util.concurrent.atomic.AtomicLong()
+
+    /**
+     * One scan now, kept as the cached report: the probes that can change read fresh, the static part reused ([STATIC_REFRESH_MS]).
+     * [unlessFresherThanMs] (0 or more): none when a report that fresh is kept already (another thread's scan just ended).
+     */
+    internal fun refresh(context: Context, unlessFresherThanMs: Long = -1L): List<Finding> = synchronized(scanLock) {
+        if (unlessFresherThanMs >= 0L) fresh(unlessFresherThanMs)?.let { return@synchronized it }
+        val at = android.os.SystemClock.elapsedRealtime()
+        reportForSend(context, STATIC_REFRESH_MS).also { keep(it, at) }
+    }
+
+    /** A scan in the background unless one is under way (returns at once). */
+    private fun kick(context: Context) {
+        if (!scanning.compareAndSet(false, true)) return
+        val app = context.applicationContext ?: context
+        runCatching { scope.launch { try { refresh(app, unlessFresherThanMs = REFRESH_MS) } finally { scanning.set(false) } } }
+            .onFailure { scanning.set(false) }
+    }
+
+    /**
+     * The device check's verdict for an automatic entry from memory only - never a scan on the caller's thread: compromised or not
+     * from a report at most [maxAgeMs] old, else null (unknown). A report missing or older than [REFRESH_MS] starts a scan in the
+     * background ([kick]). For the stop check and the passes: their exits never wait on the device check.
+     */
+    fun cachedCompromised(context: Context, maxAgeMs: Long = VERDICT_MAX_AGE_MS): Boolean? {
         val now = android.os.SystemClock.elapsedRealtime()
-        cached?.let { if (now - cachedAt <= maxAgeMs) return it }
-        return report(context).also { cached = it; cachedAt = now }
+        askedAt = now
+        val at = cachedAt
+        val c = cached
+        if (c == null || now - at > REFRESH_MS) kick(context)
+        return if (c != null && now - at <= maxAgeMs) compromised(c) else null
+    }
+
+    /** [cachedCompromised] for an automatic entry: unknown refuses it (an entry never goes on a guess), as a check that cannot run. */
+    fun entryRefused(context: Context): Boolean = cachedCompromised(context) ?: true
+
+    /**
+     * The verdict for the full pass, which may wait (never the 15-second stop check, whose exits never wait on it): the kept one; with
+     * none (the first pass after a start, the refresher off) the device is scanned here, as the pass always did ([reportWithin]: a scan
+     * already under way is waited for, never a second one) - so a scheduled start is never refused for want of a verdict.
+     */
+    fun entryRefusedPass(context: Context): Boolean =
+        cachedCompromised(context) ?: compromised(reportWithin(context, VERDICT_MAX_AGE_MS))
+
+    /** When a verdict or a report was last asked for (SystemClock.elapsedRealtime; 0: never): the refresher runs while it is recent. */
+    @Volatile private var askedAt = 0L
+    /** The refresher keeps scanning this long after the last ask (an entry's check, the stop check, a pass), [wanted] aside. */
+    private const val ASKED_KEEP_MS = 5 * 60_000L
+
+    /**
+     * The background refresher (started once by the app, after the open positions' books are read): a scan every [REFRESH_MS], off
+     * the main thread, so the cached verdict is always fresh for the entries' checks and nothing on a stop check ever scans. Only
+     * while it can matter (battery): [wanted] says so (the app in Live with real orders on), or a verdict was asked for in the last
+     * [ASKED_KEEP_MS]; otherwise the next ask starts a scan itself.
+     */
+    fun startRefresher(context: Context, wanted: () -> Boolean = { true }, afterStart: suspend () -> Unit = {}) {
+        val app = context.applicationContext ?: context
+        synchronized(this) {
+            if (refresher?.isActive == true) return
+            refresher = scope.launch {
+                runCatching { afterStart() }
+                while (true) {
+                    val asked = askedAt
+                    if (runCatching(wanted).getOrDefault(true) ||
+                        (asked > 0L && android.os.SystemClock.elapsedRealtime() - asked < ASKED_KEEP_MS)) runCatching { refresh(app) }
+                    kotlinx.coroutines.delay(REFRESH_MS)
+                }
+            }
+        }
+    }
+
+    /** TEST ONLY: each scan takes this much longer (ms), as a slow phone's can. 0 in the app; set only in debug builds. */
+    @Volatile internal var testScanDelayMs = 0L
+        set(v) { check(BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+    /** TEST ONLY: the thread whose scans are counted in [scansOnWatchedForTest] (null in the app). */
+    @Volatile internal var scanWatchedForTest: Thread? = null
+        set(v) { check(BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+    internal val scansOnWatchedForTest = java.util.concurrent.atomic.AtomicLong()
+
+    /**
+     * TEST ONLY: no refresher and no scan under way (each test's app start): a background scan an earlier test started is waited for
+     * (10 s at most), so it never lands in the next test's cache. The cache itself is kept, as before.
+     */
+    internal fun settleForTest() {
+        check(BuildConfig.DEBUG) { "test only" }
+        synchronized(this) { refresher?.cancel(); refresher = null }
+        testScanDelayMs = 0L
+        val end = System.currentTimeMillis() + 10_000L
+        while (scanning.get() && System.currentTimeMillis() < end) Thread.sleep(5)
+        synchronized(scanLock) { scanWatchedForTest = null; scansOnWatchedForTest.set(0L) }
+    }
+
+    /** TEST ONLY: [settleForTest], and no report kept (as a new process). */
+    internal fun resetForTest() {
+        settleForTest()
+        synchronized(scanLock) { cached = null; cachedAt = 0L }
+        askedAt = 0L
     }
 }

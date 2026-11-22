@@ -28,7 +28,8 @@ object Heartbeat {
     private const val STALLED = "hb.stalled.day"
 
     /** Jarvis's stalled-watch note runs here, apart from the alarm receiver, and is given up after [TELL_MS]. */
-    private val tellScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val tellScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+        com.optionslab.app.data.ScopeGuard.handler("dead-man check"))
     private const val TELL_MS = 20_000L
 
     /** The watch went silent at least once today (for the day report). */
@@ -278,7 +279,9 @@ object Heartbeat {
         runCatching { Jobs.ensureWatch(context) }
         val day = Market.today().toString()
         if (SecurePrefs.getString(ALERTED) == day) return
-        SecurePrefs.putAll(mapOf(ALERTED to day, STALLED to day))
+        // 22 Nov 2026 (B6 review): a vault write that fails (the disk, the Keystore) never stops the notice below - nor, thrown out of
+        // the alarm's job, ended the process; the mark is still kept in memory, so the stall is told once.
+        runCatching { SecurePrefs.putAll(mapOf(ALERTED to day, STALLED to day)) }
         val lastAt = java.time.Instant.ofEpochMilli(last()).atZone(Market.now().zone)
         val since = if (lastAt.toLocalDate() == Market.today()) lastAt.toLocalTime().withSecond(0).withNano(0).toString() else null
         val step = busy

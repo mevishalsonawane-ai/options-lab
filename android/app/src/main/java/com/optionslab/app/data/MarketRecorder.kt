@@ -127,7 +127,7 @@ object MarketRecorder {
 
     // ---- the pass, off the watch's path -------------------------------------------------------------------------------
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("MarketRecorder"))
     @Volatile private var job: Job? = null
     /** A pass is given this long; past it, it is stopped and written as a gap. */
     const val PASS_MS = 50_000L

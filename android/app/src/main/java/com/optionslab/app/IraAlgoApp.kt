@@ -164,7 +164,8 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.GrammarArm.init(this)
         com.optionslab.app.data.ShadowArms.init(this)
         com.optionslab.app.data.MarketRecorder.init(this)
-        com.optionslab.app.data.PineScripts.init(this)
+        // 22 Nov 2026 (B6 review): the file named only; its Keystore read waits for the positions step (warmed below).
+        com.optionslab.app.data.PineScripts.init(this, warm = false)
         com.optionslab.app.data.PineAuto.init(this)
         com.optionslab.app.data.Protections.init(this)
         com.optionslab.app.data.TradeBook.init(this)
@@ -176,6 +177,19 @@ class IraAlgoApp : Application() {
         com.optionslab.app.data.Diag.init(this)
         com.optionslab.app.data.KiteStream.init(this)
         com.optionslab.app.data.PositionsFirst.start(this)
+        // 22 Nov 2026 (B6 review): after the positions step is under way, so their reads come first: the Pine scripts' read ahead (it
+        // waits for that step), MCX's calendar file into memory (the main thread's checks then read memory only) and the device
+        // check's background refresher (the stop check and the passes read its cached verdict; it waits for that step too).
+        com.optionslab.app.data.PineScripts.warmSoon()
+        com.optionslab.app.data.McxMarket.warmSoon()
+        // (Only while it can matter: Live with real orders on, in NSE's day or MCX's hours; else an entry's own check asks for one.)
+        com.optionslab.app.security.Integrity.startRefresher(this,
+            wanted = {
+                com.optionslab.app.data.AppSettings.load().let { it.live && it.allowRealOrders } &&
+                    ((Market.isTradingDay() && Market.minuteNow() in (9 * 60)..(Market.foClose() + 5)) || com.optionslab.app.data.McxMarket.isOpen())
+            }) {
+            com.optionslab.app.data.PositionsFirst.awaitPositions()
+        }
         // 26 Oct: ntfy alerts' reader supervised on its own (started at 09:00, restarted within seconds); after the positions step above (it waits for it).
         if (!com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.data.NtfyReader.init(this)
         // Boss's 15 Oct arms cleanup: its small file read on its own worker; its first pass waits for the positions step above.
@@ -262,7 +276,8 @@ class IraAlgoApp : Application() {
 
     /** 21 Oct, enhancement round 3 (idea 7): the phone was unlocked; the Sunday review's catch-up, off the main thread. */
     internal object UnlockReceiver : android.content.BroadcastReceiver() {
-        private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+        private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+            com.optionslab.app.data.ScopeGuard.handler("unlock"))
         override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
             if (intent.action != android.content.Intent.ACTION_USER_PRESENT) return
             val app = context.applicationContext
@@ -277,7 +292,8 @@ class IraAlgoApp : Application() {
         // thread - never the position watch, its prices, its checks or their cadence.
         runCatching { com.optionslab.app.data.AppHealth.trim(level) }
         // 16 Nov (review): the live rule trades' option highs (a cache: each asked again on its next look; never the position watch).
-        runCatching { com.optionslab.app.data.RuleHighs.trim() }
+        // 22 Nov 2026 (B6 review): never for the screen merely hidden, and never an open trade's high ([RuleHighs.trim]).
+        runCatching { com.optionslab.app.data.RuleHighs.trim(level) }
         // 18 Oct, review: the settings still in memory go to disk first, on a background thread (a low-memory kill may follow).
         runCatching { SecurePrefs.flushSoon() }
         // 27 Oct (battery audit): the day's "Battery today" figures saved too, on a background thread (at most every 10 minutes).

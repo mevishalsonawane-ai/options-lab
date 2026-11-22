@@ -70,6 +70,35 @@ class FastPathTest : RobolectricTest() {
         throw AssertionError("timed out waiting for $what")
     }
 
+    /**
+     * 22 Nov 2026 (B6 review: the consumer thread's snapshot looked a paper contract's token up through the instruments file - and, in
+     * Jarvis, read Solo's whole book from the vault): it reads memory only. A token not looked up yet is looked up in the background,
+     * and the next look follows it.
+     */
+    @Test fun theSnapshotReadsNoFileAndNoVaultAndLooksANewTokenUpInTheBackground() {
+        val (c, _) = paperHoldingWithAStop(live = false)
+        Paper.forgetTokensForTest()                                   // as a new process: no token looked up yet
+        Paper.lookupsOnWatchedForTest.set(0)
+        Paper.lookupWatchedForTest = Thread.currentThread()
+        com.optionslab.app.security.SecurePrefs.readsForTest.set(0)
+        com.optionslab.app.security.SecurePrefs.countedThread = Thread.currentThread()
+        try {
+            val (first, covered) = FastPath.snapshotForTest()
+            assertTrue("not looked up yet: not on this look", token !in first)
+            assertTrue("not covered meanwhile (the pass reads the feed)", !covered)
+            assertEquals("no lookup past memory on the consumer's thread", 0L, Paper.lookupsOnWatchedForTest.get())
+            assertEquals("no settings or vault read", 0L, com.optionslab.app.security.SecurePrefs.readsForTest.get())
+            awaitTrue("the background lookup") { Paper.keptTokenForTest(c.symbol) == token }
+            val (next, _) = FastPath.snapshotForTest()
+            assertTrue("the next look follows it", token in next)
+            assertEquals(0L, Paper.lookupsOnWatchedForTest.get())
+            assertEquals(0L, com.optionslab.app.security.SecurePrefs.readsForTest.get())
+        } finally {
+            com.optionslab.app.security.SecurePrefs.countedThread = null
+            Paper.lookupWatchedForTest = null
+        }
+    }
+
     @Test fun aTickThroughAPaperStopFillsItAtOnceWithoutTheWatchPass() {
         val (_, stopId) = paperHoldingWithAStop(live = false)
         FastPath.start(context)

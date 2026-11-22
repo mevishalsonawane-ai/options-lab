@@ -58,6 +58,7 @@ object McxMarket {
     /** MCX's calendar: the fetched list where it covers the year, else the built-in one. */
     fun calendar(): McxSession.Calendar {
         cal?.let { return it }
+        if (Thread.currentThread() === calendarWatchedForTest) calendarReadsForTest.incrementAndGet()
         val fetched = if (!ready()) emptyMap() else runCatching {
             val o = JSONObject(holidaysFile().readText())
             o.keys().asSequence().associate { k ->
@@ -65,8 +66,12 @@ object McxMarket {
                 LocalDate.parse(k) to (if (v == "shut") null else McxSession.Window(LocalTime.parse(v.substringBefore('-')), LocalTime.parse(v.substringAfter('-'))))
             }
         }.getOrDefault(emptyMap())
-        return McxSession.Calendar(fetched).also { if (ready()) cal = it }
+        // 22 Nov 2026 (B6 review): kept only when no newer list came in meanwhile ([keepHolidays] sets it while this read runs).
+        return McxSession.Calendar(fetched).let { read -> if (!ready()) read else synchronized(calLock) { cal ?: read.also { cal = it } } }
     }
+
+    /** Guards the calendar's swaps: a file read finishing late never replaces a newer list [keepHolidays] kept. */
+    private val calLock = Any()
 
     /** Upstox's MCX days ([McxSession.parseUpstox]), read with NSE's holidays: kept for the calendar. An empty read keeps the old list. */
     fun keepHolidays(days: Map<LocalDate, McxSession.Window?>) {
@@ -74,11 +79,49 @@ object McxMarket {
         val o = JSONObject()
         days.forEach { (d, w) -> o.put(d.toString(), w?.let { "%02d:%02d-%02d:%02d".format(it.open.hour, it.open.minute, it.close.hour, it.close.minute) } ?: "shut") }
         runCatching { holidaysFile().writeText(o.toString()) }
-        cal = null
+        // 22 Nov 2026 (B6 review): the new list kept in memory at once (it was dropped and read from the file again on next use,
+        // perhaps on the main thread): the same days the file now holds.
+        synchronized(calLock) { cal = McxSession.Calendar(days) }
     }
 
     /** MCX is trading now (its own hours and holidays). */
     fun isOpen(): Boolean = runCatching { calendar().isOpen(now()) }.getOrDefault(false)
+
+    // ---- 22 Nov 2026 (B6 review: the main thread read the calendar's file on its first use) ------------------------------
+
+    private val calendarWarming = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /**
+     * The calendar read into memory off the main thread (the app's start; [calendarQuick] when it finds none): [isOpen]'s first use
+     * read the holidays file, and the main thread asks it - the watch service's start, the watch's start check, the dead-man's alarm.
+     * Returns at once; one read at a time.
+     */
+    fun warmSoon() {
+        if (!ready() || cal != null || !calendarWarming.compareAndSet(false, true)) return
+        runCatching {
+            Thread({ try { runCatching { calendar() } } finally { calendarWarming.set(false) } }, "mcx-calendar").apply { isDaemon = true }.start()
+        }.onFailure { calendarWarming.set(false) }
+    }
+
+    /**
+     * [calendar] from memory only, for the main thread: the one read, else the built-in one (MCX's regular hours and the built-in
+     * holidays) while the file is read in the background ([warmSoon]). Never a file.
+     */
+    internal fun calendarQuick(): McxSession.Calendar = cal ?: run { warmSoon(); McxSession.DEFAULT }
+
+    /** [isOpen] from memory only ([calendarQuick]): for the main thread. */
+    fun isOpenQuick(): Boolean = runCatching { calendarQuick().isOpen(now()) }.getOrDefault(false)
+
+    /** TEST SEAM (JVM tests only): the thread whose calendar file reads are counted (null in the app). */
+    @Volatile internal var calendarWatchedForTest: Thread? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the calendar seam exists only in debug builds" }; field = v }
+    internal val calendarReadsForTest = java.util.concurrent.atomic.AtomicLong()
+
+    /** TEST SEAM (JVM tests only): the calendar not read yet (as a new process); the file is kept. */
+    internal fun forgetCalendarForTest() { cal = null }
+
+    /** TEST SEAM (JVM tests only): the calendar is in memory. */
+    internal fun calendarKeptForTest(): Boolean = cal != null
 
     /** [isOpen], or null when it cannot be told now (20 Oct: a failed read is not "closed" for what runs only after the close). */
     fun openOrNull(): Boolean? = runCatching { calendar().isOpen(now()) }.getOrNull()
@@ -423,7 +466,11 @@ object McxMarket {
      * caller then decides off the main thread, or lets the watch's own loop (off it) decide.
      */
     fun watchDueQuick(): Boolean? {
-        if (!isOpen()) return false
+        // 22 Nov 2026 (B6 review): the calendar from memory only. Not read yet, the built-in one never says a firm no (the fetched
+        // list may open a day it shuts: a special session, a year it does not cover): unknown, decided off the main thread.
+        val kept = cal
+        val open = runCatching { (kept ?: calendarQuick()).isOpen(now()) }.getOrDefault(false)
+        if (!open) return if (kept == null) null else false
         if (liveExposure()) return true
         // The books themselves when this process has read them, else what their last write left in the hint file.
         val paper = runCatching { Paper.mcxExposureIfLoaded() }.getOrNull() ?: hint(H_PAPER)
@@ -504,16 +551,20 @@ object McxMarket {
 
     /** [nextOpenMillis] for the main thread: [exposureQuick], and the arms' next window only when their book is in memory. */
     fun nextOpenMillisQuick(): Long? {
-        val arms = runCatching { McxPaperArms.nextWakeMillisIfLoaded() }.getOrNull()
-        val held = runCatching { heldNextOpenMillis(exposureQuick()) }.getOrNull()
+        // 22 Nov 2026 (B6 review): the calendar from memory only - the arms' windows read it too, so they are asked only once it is
+        // in memory ([calendarQuick] starts its read; the dead-man's own alarm, off the main thread, then arms with them).
+        val inMemory = cal != null
+        val known = calendarQuick()
+        val arms = if (!inMemory) null else runCatching { McxPaperArms.nextWakeMillisIfLoaded() }.getOrNull()
+        val held = runCatching { heldNextOpenMillis(exposureQuick(), known) }.getOrNull()
         return listOfNotNull(arms, held).minOrNull()
     }
 
     /** MCX's next open (epoch ms) while something is held or working there ([exposed]); null otherwise (or if not within a week). */
-    private fun heldNextOpenMillis(exposed: Boolean): Long? {
+    private fun heldNextOpenMillis(exposed: Boolean, known: McxSession.Calendar? = null): Long? {
         if (!exposed) return null
         val now = now()
-        val c = calendar()
+        val c = known ?: calendar()
         for (i in 0..7) {
             val d = now.toLocalDate().plusDays(i.toLong())
             val w = c.window(d) ?: continue
