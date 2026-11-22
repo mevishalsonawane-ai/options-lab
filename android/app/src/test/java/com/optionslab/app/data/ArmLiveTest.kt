@@ -2199,7 +2199,10 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(view().openReal.isEmpty())
     }
 
-    /** Audit A2: a lost exit that the book never shows (it never went) holds the contract for its 10 s only; then the exit goes. */
+    /**
+     * Audit A2: a lost exit that the book never shows (it never went) holds the contract; then the exit goes. 22 Nov 2026 (B6 review, M4):
+     * held until a read of the book that succeeded two minutes after it was sent does not show it - no longer 10 s.
+     */
     @Test fun aLostExitNeverFoundLetsTheExitGoAfterTheHold() {
         ArmLive.entered(ask(donchian, "lost-none"))
         watch()
@@ -2210,7 +2213,9 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.testNow = ArmLive.testNow!!.plusSeconds(5); watch()
         assertEquals(1, marketSells()); assertEquals(30, held())
         ArmLive.testNow = ArmLive.testNow!!.plusSeconds(6); watch()
-        assertEquals("sent again once the hold ended", 2, marketSells())
+        assertEquals("still held past the old 10 s", 1, marketSells())
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(110); watch()
+        assertEquals("sent again once a good read two minutes on did not show it", 2, marketSells())
         assertEquals(0, held())
         assertEquals("paper_exit", view().closed.single().why)
     }
@@ -2463,9 +2468,9 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     /**
-     * Review item 3: the lost exit's hold ends on time on the live lane too (no read of the order book there): past its 10 s the stream
-     * look lets the contract go; the book is searched once before anything is sold (never found here: said), and the exit goes once more,
-     * never twice.
+     * Review item 3: the live lane never reads the order book for a lost exit. 22 Nov 2026 (B6 review, M4): nor does it ever let one go -
+     * past two minutes its looks still hold the contract; the next regular look's good read (not found here: said once) lets it go, and the
+     * exit goes once more, never twice.
      */
     @Test fun aLostExitsHoldEndsOnTimeOnTheLiveLane() {
         com.optionslab.app.work.Alerts.forgetPosted()
@@ -2478,9 +2483,10 @@ class ArmLiveTest : RobolectricTest() {
         assertEquals(1, marketSells())
         ArmLive.testNow = ArmLive.testNow!!.plusSeconds(5)
         runBlocking { ArmLive.watch(stream = true) }
-        assertEquals("held within its 10 s", 0, posted("was not found in Zerodha's order book"))
-        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(6)
+        assertEquals("held", 0, posted("was not found in Zerodha's order book"))
+        ArmLive.testNow = ArmLive.testNow!!.plusSeconds(120)
         runBlocking { ArmLive.watch(stream = true) }
+        assertEquals("the live lane never lets it go", 1, marketSells())
         watch()
         assertEquals("searched once, not found: said once", 1, posted("was not found in Zerodha's order book"))
         assertEquals("sold once more, never twice", 2, marketSells())
@@ -2489,8 +2495,8 @@ class ArmLiveTest : RobolectricTest() {
     }
 
     /**
-     * Review item 3: a lost exit that filled, its hold ended while only the live lane looked: it is searched for before anything more is
-     * sold, found, and booked as the exit by the next regular look - one sale only, never a naked short.
+     * Review item 3: a lost exit that filled, while only the live lane looked: it is searched for before anything more is sold, found, and
+     * booked as the exit by the next regular look - one sale only, never a naked short.
      */
     @Test fun aLostExitFoundAfterItsHoldIsTheExitNeverASecondSale() {
         ArmLive.entered(ask(donchian, "lost-late"))

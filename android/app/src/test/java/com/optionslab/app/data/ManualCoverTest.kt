@@ -332,7 +332,9 @@ class ManualCoverTest : RobolectricTest() {
         Market.testClock = java.time.Clock.offset(java.time.Clock.system(com.optionslab.engine.IST), java.time.Duration.between(java.time.Instant.now(), now.toInstant()))
         val n = kite.placed.size
         twoLooks()
-        assertEquals("a new day's intraday buy is covered", listOf("SL", "LIMIT"), kite.placed.drop(n).map { it.form["order_type"] })
+        // (22 Nov 2026, B6 review: intraday only the stop rests at Zerodha; the target is the app's own.)
+        assertEquals("a new day's intraday buy is covered", listOf("SL"), kite.placed.drop(n).map { it.form["order_type"] })
+        assertTrue(runBlocking { Protections.active() }.single { it.symbol == sym }.appTarget)
     }
 
     @Test fun bossesOwnExitSentJustBeforePlacingIsRespected() {

@@ -112,7 +112,8 @@ class ProtectionsDayOcoTest : RobolectricTest() {
         DayOco.resetForTest(on = true)
         kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
         protect(product = "MIS")
-        assertEquals(listOf("SL", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        // (22 Nov 2026, B6 review: intraday only the stop rests at Zerodha; the target is the app's own - never a GTT either.)
+        assertEquals(listOf("SL"), kite.placed.map { it.form["order_type"] })
         kite.position(sym, 0, 0.0, product = "MIS"); kite.position(sym, 75, 100.0)
         val before = kite.placed.size
         protect(target = null)

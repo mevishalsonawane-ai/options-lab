@@ -214,7 +214,7 @@ class ProtectionsAuditTest : RobolectricTest() {
         protect(product = "MIS")
         val p = active().single()
         at(12, 5)
-        kite.order(p.targetOrderId!!).status = "CANCELLED"
+        assertNull("intraday: the target is the app's own (22 Nov 2026)", p.targetOrderId)
         kite.order(p.stopOrderId!!).status = "CANCELLED"
         kite.position(sym, 0, 0.0, product = "MIS")                        // sold by hand
         fun warned() = Alerts.posted.any { it.kind == Alerts.Kind.ERROR && (it.text.contains("not protected", true) || it.text.contains("cancelled by you")) }
@@ -311,19 +311,21 @@ class ProtectionsAuditTest : RobolectricTest() {
 
     // ---- item 3: an intraday stop and target, two orders ------------------------------------------------------------------------
 
-    @Test fun anIntradayProtectionSaysItRestsAsTwoOrders() {
+    /** 22 Nov 2026 (B6 review): an intraday stop and target never rest as two orders: Boss is told the target is the app's own. */
+    @Test fun anIntradayProtectionSaysTheTargetIsTheApps() {
         kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
         val msg = protect(product = "MIS")
-        assertTrue(msg, msg.contains(Protections.INTRADAY_TWO_ORDERS))
-        // A carried one is not told so.
+        assertTrue(msg, msg.contains(Protections.TARGET_BY_APP))
+        assertEquals(listOf("SL"), kite.placed.map { it.form["order_type"] })
+        // A carried one is not told so (its stop and target rest as two orders, or one GTT).
         kite.position(sym2, 75, 100.0)
         val carried = protect(sym2)
-        assertFalse(carried, carried.contains(Protections.INTRADAY_TWO_ORDERS))
+        assertFalse(carried, carried.contains(Protections.TARGET_BY_APP))
     }
 
+    /** (22 Nov 2026, B6 review: two resting orders are a carried protection's now - the day GTT off - so it is tested on one.) */
     @Test fun aTargetThatCannotBeCancelledAfterTheStopFilledIsSaidLoudlyAndTriedAgain() {
-        kite.position(sym, 0, 0.0); kite.position(sym, 75, 100.0, product = "MIS")
-        protect(product = "MIS")
+        protect()
         val p = active().single()
         at(12, 5)
         kite.fill(p.stopOrderId!!)

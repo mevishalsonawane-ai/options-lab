@@ -59,13 +59,20 @@ object Protections {
          * before this field: its [id] (when it was set).
          */
         val endedAt: Long? = null,
+        /**
+         * 22 Nov 2026 (B6 review, M5: Zerodha takes no second full sale beside a resting stop - it reads it as a new short and refuses it for
+         * funds - so an intraday target was never placed, saved as none, and nothing watched it): the [target] is the app's own, with no order
+         * at Zerodha: only the stop rests there, and when the price reaches the target the app takes the stop out and sells ([sellAtTarget]).
+         * Always so for an intraday (MIS) stop and target; a carried one only when Zerodha refused its target that way. Saved.
+         */
+        val appTarget: Boolean = false,
     ) {
         val direction: Int get() = if (qty > 0) 1 else -1
         val exitSide: String get() = if (qty > 0) "SELL" else "BUY"
         fun spec() = Protection.Spec(direction, stop, trail, target, best, tick)
         fun describe(): String = listOfNotNull(
             stop?.let { (if (trail != null) "trailing stop %.2f (%.2f behind)".format(it, trail) else "stop %.2f".format(it)) },
-            target?.let { "target %.2f".format(it) },
+            target?.let { "target %.2f".format(it) + if (appTarget) " (watched by the app)" else "" },
         ).joinToString(" · ")
     }
 
@@ -96,6 +103,9 @@ object Protections {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.noBackupFilesDir, "protections.vault")
+        marksFile = File(app.noBackupFilesDir, MARKS_FILE)
+        // 22 Nov 2026 (B6 review): the square-offs count the app's own target sales as going ([targetSalesGoing]) and take no stop out beside one.
+        SquareOffExit.lostPendingProviders["protections"] = { sym, product -> targetSalesGoing(sym, product) }
     }
 
     private fun load(): MutableList<Item> {
@@ -114,7 +124,9 @@ object Protections {
                     s("stopId"), s("targetId"), active, o.optString("note"), o.optLong("gtt", 0L).takeIf { it > 0L },
                     // 7 Nov: both new (an older file has neither): not automatic; a finished one ended no earlier than it was set.
                     auto = o.optBoolean("auto", false),
-                    endedAt = o.optLong("endedAt", 0L).takeIf { it > 0L } ?: if (active) null else o.getLong("id"))
+                    endedAt = o.optLong("endedAt", 0L).takeIf { it > 0L } ?: if (active) null else o.getLong("id"),
+                    // 22 Nov 2026 (B6 review): new (an older file has none): the target an order at Zerodha, as before.
+                    appTarget = o.optBoolean("appTarget", false))
             }
         }
         // 26 Oct: a read refused because everything is being erased is not a damaged file: never set aside (the copy would
@@ -125,6 +137,8 @@ object Protections {
             Alerts.error("The saved stops and targets could not be read and were set aside. Their orders may still be resting: check the order book.", "Protection")
         }
         loadGen = gen
+        // 22 Nov 2026 (B6 review, M6): the taken-over marks kept on disk, read with the list (this worker, never the tick path).
+        if (gen == wipeGen) synchronized(marksMon) { loadMarksLocked() }
         // 15 Nov, review: a new id is never one already on the list (a clock moved back after a restart included).
         // Review (R2): never an id from a clock that was once ahead (more than [ID_SLACK_MS] past now): it would carry on to every new one.
         val seedMax = nowMs() + ID_SLACK_MS
@@ -231,7 +245,8 @@ object Protections {
             a.put(JSONObject().put("id", p.id).put("live", p.live).put("symbol", p.symbol).put("exchange", p.exchange).put("product", p.product)
                 .put("qty", p.qty).put("lot", p.lotSize).put("tick", p.tick).put("stop", p.stop ?: JSONObject.NULL).put("trail", p.trail ?: JSONObject.NULL)
                 .put("target", p.target ?: JSONObject.NULL).put("best", p.best).put("stopId", p.stopOrderId ?: "").put("targetId", p.targetOrderId ?: "")
-                .put("active", p.active).put("note", p.note).put("gtt", p.gttId ?: 0L).put("auto", p.auto).put("endedAt", p.endedAt ?: 0L))
+                .put("active", p.active).put("note", p.note).put("gtt", p.gttId ?: 0L).put("auto", p.auto).put("endedAt", p.endedAt ?: 0L)
+                .apply { if (p.appTarget) put("appTarget", true) })
         }
         // 26 Oct: a list read before an erase is never written back over it.
         if (loadGen != wipeGen) return
@@ -407,13 +422,19 @@ object Protections {
                 placeTracked(Kite.Order(symbol, side, abs(qty), spec.lotSize, product, "SL", stopLimit(s0, side, spec.tickSize),
                     spec.tickSize, exchange, "iraprotect", triggerPrice = s0), known)
             } catch (e: Exception) { return@withLock "Not protected: ${e.message}" }
-            if (target != null) targetId = try {
+            // 22 Nov 2026 (B6 review, M5): intraday, a stop and a target are never both at Zerodha (it refuses the second full sale for funds):
+            // only the stop rests there; the target is the app's ([Item.appTarget], [sellAtTarget]). A target alone rests as before.
+            var appTarget = product == "MIS" && stopId != null && target != null
+            if (target != null && !appTarget) targetId = try {
                 placeTracked(Kite.Order(symbol, side, abs(qty), spec.lotSize, product, "LIMIT",
                     Kite.onTick(target, spec.tickSize, side), spec.tickSize, exchange, "iraprotect"), known + listOfNotNull(stopId))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 if (stopId == null) return@withLock "Not protected: ${e.message}"
-                // The stop is at Zerodha: it is kept and watched rather than cancelled, and the owner told.
-                partly = " The target was not placed (${e.message}); only the stop rests at Zerodha."
+                // The stop is at Zerodha: it is kept and watched rather than cancelled, and the owner told. (22 Nov 2026: refused for funds -
+                // the same refusal as intraday - the target is the app's instead.)
+                if (CheaperStrike.fundsRefused(e.message)) appTarget = true
+                else partly = " The target was not placed (${e.message}); only the stop rests at Zerodha."
                 null
             }
             stopId?.let { Strategies.tagOwner("kite:$it", "Protection · stop") }
@@ -421,12 +442,11 @@ object Protections {
             // 21 Oct, enhancement round 5 (idea 1): the two orders in the day GTT's place, counted for the diagnostics.
             if (replaced && (stopId != null || targetId != null)) DayOco.note(DayGttTally.Event.REPLACED)
             val item = Item(newId(), true, symbol, exchange, product, qty, spec.lotSize, spec.tickSize, s0, trail,
-                target.takeIf { targetId != null }, price, stopId, targetId, auto = auto)
+                target.takeIf { targetId != null || appTarget }, price, stopId, targetId, auto = auto, appTarget = appTarget)
             list += item; save(list)
-            // 20 Nov 2026 (audit): an intraday stop and target are two orders (Zerodha's GTT takes no MIS): said, so Boss knows a dead
-            // phone cannot take the other out when one fills.
-            val twoOrders = if (product == "MIS" && stopId != null && targetId != null) " $INTRADAY_TWO_ORDERS" else ""
-            "Protected $symbol at Zerodha: ${item.describe()}$partly$resized$twoOrders"
+            // 20 Nov 2026 (audit): Boss is told how the target is kept. 22 Nov 2026 (B6 review): the app watches it (a dead phone cannot sell there).
+            val watched = if (appTarget) " $TARGET_BY_APP" else ""
+            "Protected $symbol at Zerodha: ${item.describe()}$partly$resized$watched"
         }
     }
 
@@ -454,6 +474,8 @@ object Protections {
         var why: String? = null
         var targetMissed: String? = null
         var one: Item? = null
+        // 22 Nov 2026 (B6 review, M5): intraday, each slice rests only its stop; its target is the app's ([Item.appTarget], as one order's).
+        var anyAppTarget = false
         for (q in sizes) {
             var stopId: String? = null
             var targetId: String? = null
@@ -468,22 +490,27 @@ object Protections {
                 if (stopId == null) break
                 sent += stopId
             }
-            if (target != null) {
+            var appTarget = product == "MIS" && stopId != null && target != null
+            if (target != null && !appTarget) {
                 try {
                     targetId = placeTracked(Kite.Order(symbol, side, q, lot, product, "LIMIT", Kite.onTick(target, tick, side), tick, exchange,
                         "iraprotect"), sent)
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
-                    // The stop rests: kept and watched, the target's refusal said (as for one order). No stop either: the end.
-                    if (stopId == null) why = e.message ?: "an error" else targetMissed = e.message ?: "an error"
+                    // The stop rests: kept and watched, the target's refusal said (as for one order). No stop either: the end. (22 Nov 2026:
+                    // refused for funds beside the stop - the target is the app's instead.)
+                    if (stopId == null) why = e.message ?: "an error"
+                    else if (CheaperStrike.fundsRefused(e.message)) appTarget = true
+                    else targetMissed = e.message ?: "an error"
                 }
                 targetId?.let { sent += it }
             }
             if (stopId == null && targetId == null) break
             stopId?.let { Strategies.tagOwner("kite:$it", "Protection · stop") }
             targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
-            val item = Item(newId(), true, symbol, exchange, product, qty.sign() * q, lot, tick, s0, trail, target.takeIf { targetId != null },
-                price, stopId, targetId, auto = auto)
+            if (appTarget) anyAppTarget = true
+            val item = Item(newId(), true, symbol, exchange, product, qty.sign() * q, lot, tick, s0, trail, target.takeIf { targetId != null || appTarget },
+                price, stopId, targetId, auto = auto, appTarget = appTarget)
             list += item; save(list)
             one = item
             covered += q
@@ -491,7 +518,8 @@ object Protections {
         }
         val shown = one ?: return "Not protected: ${why ?: "nothing could be placed"}"
         val kind = if (s0 != null) "stop" else "target"
-        val missed = targetMissed?.let { " The target was not placed on every slice ($it); their stops rest at Zerodha." } ?: ""
+        val missed = (targetMissed?.let { " The target was not placed on every slice ($it); their stops rest at Zerodha." } ?: "") +
+            (if (anyAppTarget) " $TARGET_BY_APP" else "")
         if (covered < total) {
             unprotected("$symbol: only $covered of $total is protected at Zerodha. The $kind for the other ${total - covered} could not be " +
                 "placed ($why). That part has NO stop: set one for it yourself, or close it in Trade.")
@@ -592,16 +620,89 @@ object Protections {
 
     /**
      * 15 Nov: the stop and target orders the app cancelled itself to send Boss's exit (the exit takeover in Trade), id to when, for
-     * an hour at most. Memory only (after a restart a cancelled stop is said as before). Read by the watch ([tickLive]): one of them
-     * found cancelled while the position is still held is placed again, never ended as Boss's choice.
+     * an hour at most. Read by the watch ([tickLive]): one of them found cancelled while the position is still held is placed again,
+     * never ended as Boss's choice.
+     * 22 Nov 2026 (B6 review, M6: memory only - after a restart that followed a square-off's or Boss's in-app exit, the cancelled stop read as
+     * Boss's own and was never put back): kept on disk too ([MARKS_FILE], encrypted like the list), handed to this object's own writer before
+     * the cancel goes ([noteTakenOver]); read back with the list after a restart; each for [TAKEN_OVER_MS] at most, and one whose stop is still
+     * working [TAKEN_SETTLE_MS] after it was made ends there (its cancel never took: a later cancel of it by Boss in Kite is his).
      */
     private val takenOver = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** 22 Nov 2026 (B6 review): how long a taken-over mark is kept (an hour, as before). */
+    private const val TAKEN_OVER_MS = 60 * 60_000L
+    /** 22 Nov 2026 (B6 review): a stop seen working this long after its mark was made: that cancel never took. */
+    internal const val TAKEN_SETTLE_MS = 2 * 60_000L
 
-    /** 15 Nov: [ids] are being cancelled by the app for Boss's exit ([takenOver]). Memory only; never blocks. */
+    /**
+     * 15 Nov: [ids] are being cancelled by the app for Boss's exit ([takenOver]). Never blocks. 22 Nov 2026 (B6 review, M6): in memory at once,
+     * and handed to the marks' own writer now - before the caller's cancel goes - so a restart keeps it (never the disk on the caller's thread).
+     */
     fun noteTakenOver(ids: Collection<String>) {
         val now = System.currentTimeMillis()
-        takenOver.entries.removeIf { now - it.value > 60 * 60_000L }
+        takenOver.entries.removeIf { now - it.value > TAKEN_OVER_MS }
         ids.forEach { takenOver[it] = now }
+        if (ids.isNotEmpty()) writeMarksSoon()
+    }
+
+    /** 22 Nov 2026 (B6 review, M6): the taken-over marks' own file, beside the list's. */
+    private const val MARKS_FILE = "protections_marks.vault"
+    @Volatile private var marksFile: File? = null
+    /** 22 Nov 2026 (B6 review): the marks' file read and its writes, one at a time (the writer thread and the list's load). */
+    private val marksMon = Any()
+    /** Whether this process read the marks' file (guarded by [marksMon]). */
+    @Volatile private var marksLoaded = false
+    /** Marks forgotten before the file was read: never taken back from it ([loadMarksLocked] reads it after its merge too). */
+    private val marksForgotten: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val marksWriter = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "protections-marks").apply { isDaemon = true } }
+
+    /** 22 Nov 2026 (B6 review): the marks' file read into memory once (under [marksMon]; a worker, never the tick path). */
+    private fun loadMarksLocked() {
+        if (marksLoaded) return
+        val now = System.currentTimeMillis()
+        marksFile?.let { f -> runCatching {
+            val o = JSONObject(String(Vault.readFileSteady(f) ?: return@runCatching, Charsets.UTF_8))
+            o.keys().forEach { k -> val at = o.optLong(k, 0L); if (k !in marksForgotten && now - at in 0..TAKEN_OVER_MS) takenOver.putIfAbsent(k, at) }
+        } }
+        // (Review: one forgotten while the file was read - its own removal may have come before the merge - is taken out again; loaded only then.)
+        takenOver.keys.removeAll(marksForgotten)
+        marksLoaded = true
+        marksForgotten.clear()
+    }
+
+    /** 22 Nov 2026 (B6 review): the marks in memory written on their own writer, in order (an erase since drops the write). Never blocks. */
+    private fun writeMarksSoon() {
+        if (marksFile == null) return
+        val gen = wipeGen
+        runCatching { marksWriter.execute { synchronized(marksMon) {
+            if (gen != wipeGen) return@synchronized
+            loadMarksLocked()
+            val now = System.currentTimeMillis()
+            val o = JSONObject().apply { takenOver.forEach { (k, at) -> if (now - at in 0..TAKEN_OVER_MS) put(k, at) } }
+            runCatching { marksFile?.let { Vault.writeFile(it, o.toString().toByteArray(Charsets.UTF_8)) } }
+        } } }
+    }
+
+    /** TEST ONLY: every marks write handed to the writer so far is done. */
+    internal fun drainMarksForTest() { marksWriter.submit {}.get(10, java.util.concurrent.TimeUnit.SECONDS) }
+
+    /** TEST ONLY: as after a restart - the list and the marks forgotten in memory, both read again from disk. */
+    internal fun restartForTest() {
+        drainMarksForTest(); forgetMemoryForTest(); takenOver.clear(); targetHit.clear()
+        synchronized(marksMon) { marksLoaded = false; marksForgotten.clear() }
+    }
+
+    /** TEST ONLY: [id]'s taken-over mark made [ms] earlier than it was. */
+    internal fun ageTakenOverForTest(id: String, ms: Long) { takenOver.computeIfPresent(id) { _, at -> at - ms } }
+
+    /**
+     * 22 Nov 2026 (B6 review): the taken-over mark on [id], whose stop is seen working, belongs to a cancel that never took when made
+     * [TAKEN_SETTLE_MS] or more ago: it ends ([forgetTakenOver]), so a later cancel of that stop by Boss in Kite is his. Memory at once.
+     */
+    private fun endIfSettled(id: String) {
+        val at = takenOver[id] ?: return
+        if (System.currentTimeMillis() - at in 0 until TAKEN_SETTLE_MS) return
+        runCatching { Diag.record("protection", "the app's own cancel of $id never took (still working): its mark ended") }
+        forgetTakenOver(listOf(id))
     }
 
     /**
@@ -620,7 +721,14 @@ object Protections {
      * 20 Nov 2026 (audit, the square-offs): [ids] were noted ([noteTakenOver]) but their cancel did not take (still working at Zerodha):
      * forgotten, so a later cancel of them by Boss in Kite is his (never put back). Memory only; never blocks.
      */
-    fun forgetTakenOver(ids: Collection<String>) { ids.forEach { takenOver.remove(it) } }
+    fun forgetTakenOver(ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        // (22 Nov 2026, B6 review, M6: on disk too - one forgotten before the file was read is never taken back from it: noted first, then
+        // removed, so a read in progress either skips it or takes it out again after its merge.)
+        if (!marksLoaded) marksForgotten += ids
+        ids.forEach { takenOver.remove(it) }
+        writeMarksSoon()
+    }
 
     /**
      * 15 Nov, review: Boss's exit for which [ids] were taken over ([noteTakenOver]) filled in full (AppModel, once every leg of it
@@ -1251,17 +1359,29 @@ object Protections {
                 return p.copy(active = false, note = "stop not placed again")
             }
         }
-        val targetId = p.target?.let { t ->
-            runCatching {
+        // 22 Nov 2026 (B6 review, M5): intraday, the target is never placed beside the stop (Zerodha refuses it for funds): the app's
+        // ([Item.appTarget]). A target refused for funds beside the stop is the app's too; one refused otherwise is said (it was dropped
+        // unsaid before - its failure swallowed) and only the stop rests.
+        var appTarget = p.product == "MIS" && stopId != null && p.target != null
+        var targetWhy: String? = null
+        val targetId = if (appTarget) null else p.target?.let { t ->
+            try {
                 placeTracked(Kite.Order(p.symbol, side, abs(p.qty), p.lotSize, p.product, "LIMIT", Kite.onTick(t, p.tick, side),
                     p.tick, p.exchange, "iraprotect"), known + listOfNotNull(stopId))
-            }.getOrNull()
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) {
+                if (stopId != null && CheaperStrike.fundsRefused(e.message)) appTarget = true else targetWhy = e.message ?: "an error"
+                null
+            }
         }
         if (stopId == null && targetId == null) return null
         stopId?.let { Strategies.tagOwner("kite:$it", "Protection · stop") }
         targetId?.let { Strategies.tagOwner("kite:$it", "Protection · target") }
         val next = p.copy(id = newId(), stopOrderId = stopId, targetOrderId = targetId,
-            target = p.target.takeIf { targetId != null }, note = "placed again for today")
+            target = p.target.takeIf { targetId != null || appTarget }, appTarget = appTarget, note = "placed again for today")
+        targetWhy?.let { why -> p.target?.let { t ->
+            Alerts.post("${p.symbol}: its target ${"%.2f".format(java.util.Locale.ENGLISH, t)} could not be placed again at Zerodha ($why); only its stop " +
+                "rests there. Set the target again if you want it.", Alerts.Kind.ERROR, "Protection") } }
         Alerts.post(said?.let { "${p.symbol}: $it (${next.describe()})." }
             ?: "${p.symbol}: its stop and target ended with yesterday's session and were placed again at Zerodha (${next.describe()}).",
             Alerts.Kind.SUCCESS, "Protection")
@@ -1588,9 +1708,141 @@ object Protections {
         return false
     }
 
-    /** 20 Nov 2026: said when an intraday (MIS) protection rests its stop and target as two orders. */
-    internal const val INTRADAY_TWO_ORDERS = "Intraday, Zerodha cannot hold the stop and target as one order that cancels the other, so " +
-        "the app cancels the other as soon as one fills. If the phone is off then, cancel the other in Kite yourself."
+    /**
+     * 22 Nov 2026 (B6 review, M5): said when a protection's target is the app's own ([Item.appTarget]) - every intraday stop and target since
+     * Zerodha refuses a second full sale beside the stop (20 Nov 2026: before, said as two orders, and the target was never placed).
+     */
+    internal const val TARGET_BY_APP = "Zerodha does not hold a target beside the stop (it would take a second sale for a new position), so " +
+        "only the stop rests there: the app watches the target and, when it is reached, takes the stop out and sells. If the phone is off " +
+        "then, the target is not taken (the stop still is)."
+
+    /**
+     * 22 Nov 2026 (B6 review, M5): by protection id, when a stream look saw its app-watched target reached ([Item.appTarget]): the look apart it
+     * asked for ([TARGET_LOOK_MS]) sells within [TARGET_HIT_KEEP_MS] of it even if the price has just slipped back. Memory only.
+     */
+    private val targetHit = java.util.concurrent.ConcurrentHashMap<Long, Long>()
+    private const val TARGET_LOOK_MS = 1L
+    private const val TARGET_HIT_KEEP_MS = 5_000L
+    /** 22 Nov 2026 (B6 review): the key a target sale whose reply was lost is looked for under ([Broker.noteLost]), by protection id. */
+    private const val TARGET_LOST = "prottarget:"
+
+    /**
+     * 22 Nov 2026 (B6 review): the app's own target sales ([sellAtTarget]) by protection id - symbol, product, quantity, when (wall ms), and
+     * the key its lost reply is looked for under, if lost. Counted as going for the square-offs ([targetSalesGoing]). Memory only.
+     */
+    private data class TargetSale(val symbol: String, val product: String, val qty: Int, val atMs: Long, val lostKey: String? = null)
+    private val targetSales = java.util.concurrent.ConcurrentHashMap<Long, TargetSale>()
+
+    /**
+     * 22 Nov 2026 (B6 review): the square-offs' look ([SquareOffExit.lostPendingProviders], "protections") at the app's own target sales on
+     * Zerodha's [symbol] [product] row, by quantity: each from just before it goes until the square-offs' gap after ([SquareOffExit.gapMs]:
+     * [SquareOffExit.GAP_MS] in the app - the books may not show it yet), and one whose reply was lost while it is looked for
+     * ([Broker.lostPending]). Memory only: never the lock, the disk or the network.
+     */
+    internal fun targetSalesGoing(symbol: String, product: String): Int {
+        val now = System.currentTimeMillis()
+        targetSales.entries.removeIf { (_, t) -> now - t.atMs !in 0 until SquareOffExit.gapMs && (t.lostKey == null || !Broker.lostPending(t.lostKey)) }
+        return targetSales.values.filter { it.symbol == symbol && it.product == product }.sumOf { it.qty }
+    }
+
+    /** TEST ONLY: the target sales counted for the square-offs made [ms] older. */
+    internal fun ageTargetSalesForTest(ms: Long) { targetSales.replaceAll { _, t -> t.copy(atMs = t.atMs - ms) } }
+
+    /**
+     * 22 Nov 2026 (B6 review, M5: Zerodha takes no second full sale beside the resting stop, so an intraday target was never placed - and
+     * nothing watched it): [p]'s own target ([Item.appTarget]) reached at [ltp] - sold by the app, in the contract's one exit turn. What may be
+     * sold - held (the lag guard on), less every other exit working on it and what the other slices cover - and the order's gates are worked
+     * out FIRST, so its stop [so] comes out only when a sale will go. The stop's cancel is marked the app's own first ([noteTakenOver]: kept
+     * across a restart) and confirmed: filled meanwhile, it was the exit; filled in part, only the rest is sold; still working or not known,
+     * nothing is sold (the next look tries again). The sale refused: the stop is put back at once ([restAgainInTurn]). Its reply lost and not
+     * found: nothing is put back beside a sale that may be selling until the book shows it or lets it go ([TARGET_LOST]). Otherwise the stop
+     * stays out while the sale fills, and if the position is still held once it is done (refused later, part filled), the look puts the stop
+     * back ([exitFilledFor], the taken-over branch). [p] as it then stands. Never two exits; never a stop out unless its sale goes.
+     */
+    private suspend fun sellAtTarget(p: Item, so: Broker.OrderRow, ltp: Double?): Item = ExitCoordinator.turn(p.exchange, p.symbol, "protection target") {
+        targetHit.remove(p.id)
+        // Boss is exiting it by hand, or a square-off's sale is on its way: theirs.
+        if (ArmLive.handsOffNow(p.exchange, p.symbol) || SquareOffExit.inGap(p.exchange, p.symbol, p.product)) return p
+        val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
+        val book = runCatching { ExitCoordinator.orders(p.exchange, p.symbol, "protection target") }.getOrNull() ?: return p
+        val stop = book.firstOrNull { it.id == so.id }?.takeIf { it.working } ?: return p
+        val gttBook = runCatching { ExitCoordinator.gtts(p.exchange, p.symbol, "protection target") }.getOrNull() ?: return p
+        val held = heldAgain(p, book, lagSafe = true) ?: return p
+        if (held == 0 || held.sign() != p.qty.sign()) return p
+        if (siblingCoverKnown(p, book, gttBook) == null) return p
+        val room = (abs(held) - siblingCover(p, book, gttBook)).coerceAtLeast(0)
+        val busy = othersBusy(p, side, book, gttBook, listOfNotNull(p.stopOrderId, p.targetOrderId))
+        val planned = com.optionslab.engine.risk.ExitQty.sendable(room, busy, abs(p.qty), p.lotSize)
+        if (planned <= 0) return p                                         // covered by another exit: nothing taken out
+        val o = Kite.Order(p.symbol, side, planned, p.lotSize, p.product, "MARKET", null, p.tick, p.exchange, "iraprotect")
+        val bad = Kite.refusals(o, AppSettings.load().limits(), Broker.sentToday(), false, exit = true)
+        if (bad.isNotEmpty()) {
+            Alerts.post("${p.symbol}: its target was reached but the sale could not be sent (${bad.joinToString("; ")}); its stop stays at Zerodha. " +
+                "Close it in Trade if you want it out.", Alerts.Kind.ERROR, "Protection", throttle = true)
+            return p
+        }
+        noteTakenOver(listOf(stop.id))
+        val refused = try { Broker.cancel(stop.id, stop.variety); false } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) { Broker.definite(e) }
+        // (Not known: nothing sold; the next look reads it - cancelled: put back while held; working: the target tried again.)
+        val st = (try { Broker.orderState(stop.id) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }) ?: return p
+        // (The stop filled meanwhile: it was the exit - the next look books it.)
+        if (st.status == "COMPLETE") return p
+        if (st.status != "CANCELLED" && st.status != "REJECTED") {
+            // (Still working: nothing sold. A cancel Zerodha refused outright did not take - its mark ends at once.)
+            if (refused) forgetTakenOver(listOf(stop.id))
+            return p
+        }
+        // (What of it filled since the read that sized the sale - in part as it came out: only the rest is sold.)
+        val filled = (st.filled - stop.filled).coerceAtLeast(0)
+        val lot = p.lotSize.coerceAtLeast(1)
+        val sell = (planned - filled).coerceAtLeast(0) / lot * lot
+        if (sell <= 0) return p
+        val order = o.copy(quantity = sell)
+        val known = book.map { it.id }
+        // (22 Nov 2026, with the square-offs' protocol: counted as going FIRST, then a square-off's sale looked at - one selling it now: nothing
+        // from here, and its stop put back by the next looks only beside what is left.)
+        targetSales[p.id] = TargetSale(p.symbol, p.product, sell, System.currentTimeMillis())
+        SquareOffExit.saleStarting(p.symbol)
+        if (SquareOffExit.inGap(p.exchange, p.symbol, p.product)) { targetSales.remove(p.id); return p }
+        val id = try { Broker.placeOrder(order, exit = true) } catch (e: kotlinx.coroutines.CancellationException) { targetSales.remove(p.id); throw e } catch (e: Exception) {
+            if (Broker.definite(e)) {
+                targetSales.remove(p.id)
+                // Refused: the stop goes back now, for what is held (the lag guard on), as it was.
+                val left = held.sign() * (abs(held) - filled).coerceAtLeast(0)
+                val back = if (left == 0) null else restAgainInTurn(p.copy(qty = p.qty.sign() * minOf(abs(p.qty), abs(left))), left,
+                    said = "its target was reached but Zerodha refused the sale (${e.message}), so its stop rests at Zerodha again", lagSafe = true)
+                // (Zerodha's words never go through a format: a "%" in them would throw.)
+                Alerts.error("${p.symbol}: its target ${"%.2f".format(java.util.Locale.ENGLISH, p.target ?: 0.0)} was reached but Zerodha refused the sale (${e.message})." +
+                    when {
+                        back != null && back.id != p.id && back.stopOrderId != null -> " Its stop rests at Zerodha again."
+                        back != null && !back.active -> " Its stop could not be placed again: close it in Trade."
+                        else -> " Its stop is put back on the next look; close it in Trade if you want it out."
+                    },
+                    "Protection")
+                // (Placed again under a new id, or refused again - ended, said by [restAgainInTurn]: that is what it is now.)
+                if (back != null && (back.id != p.id || !back.active)) { forgetTakenOver(listOf(stop.id)); return back }
+                return p
+            }
+            val found = try { Broker.findRecentRetrying(order, known) } catch (x: kotlinx.coroutines.CancellationException) { throw x } catch (_: Exception) { null }
+            found ?: run {
+                // (Its reply lost and not found yet: it may be selling - no stop goes back beside it until the book shows it or lets it go.)
+                Broker.noteLost(TARGET_LOST + p.id, order, known, "${p.symbol}: its target's sale")
+                noteTakenOver(listOf(TARGET_LOST + p.id))                     // (kept on disk: a restart still waits for it)
+                targetSales[p.id] = TargetSale(p.symbol, p.product, sell, System.currentTimeMillis(), TARGET_LOST + p.id)
+                Alerts.error("${p.symbol}: its target was reached and its stop taken out, but Zerodha's answer to the sale was lost. The app looks for " +
+                    "it and puts the stop back only once it knows the sale did not go; check ${p.symbol} in Kite.", "Protection")
+                return p
+            }
+        }
+        runCatching { Strategies.tagOwner("kite:$id", "Protection · target") }
+        // The stop stays out while the sale fills; still held once it is done (refused later, part filled): put back by the next looks.
+        exitFilledFor(listOf(stop.id), mapOf(id to sell))
+        Alerts.post("${p.symbol}: its target %.2f was reached (%s): its stop was taken out and $sell sold at market."
+            .format(java.util.Locale.ENGLISH, p.target ?: 0.0, ltp?.let { "%.2f".format(java.util.Locale.ENGLISH, it) } ?: "seen a moment ago"),
+            Alerts.Kind.SUCCESS, "Protection")
+        return p
+    }
 
     /** 20 Nov 2026: [ocoOut]'s mark for an order Kite does not know at all. */
     private const val NOT_FOUND = "NOT FOUND"
@@ -1663,6 +1915,8 @@ object Protections {
         settleExits(rows.values)
         val so = p.stopOrderId?.let { rows[it] }; val to = p.targetOrderId?.let { rows[it] }
         val stopDone = so?.status == "COMPLETE"; val targetDone = to?.status == "COMPLETE"
+        // 22 Nov 2026 (B6 review, M6): a taken-over mark whose order still works [TAKEN_SETTLE_MS] after it was made ends (its cancel never took).
+        if (!stream) listOfNotNull(so, to).filter { it.working }.forEach { endIfSettled(it.id) }
         // 20 Nov 2026 (audit): a read with no row for the contract is not known ([heldIn]), never "flat".
         suspend fun heldRead(): Int? = runCatching { heldIn(passPositions(stream), p) }.getOrNull()
         // ... and a read showing it closed or turned round ends nothing until a second read agrees ([heldConfirmed]).
@@ -1740,9 +1994,24 @@ object Protections {
         // exit refused, failed or only part filled - is placed again at its levels for what is held, once Boss's exit is done. Only
         // ever puts back the stop it had: it never covers more than is held less every other exit ([restAgain]).
         if (p.gttId == null && listOfNotNull(so, to).any { it.status == "CANCELLED" && takenOver.containsKey(it.id) }) {
+            // 22 Nov 2026 (B6 review, M5): the app's own target sale whose reply was lost ([sellAtTarget]): nothing goes back beside it while it
+            // may be selling; found, it is the exit (the stop put back only if the position is still held once it is done).
+            when (val l = Broker.lookLost(TARGET_LOST + p.id)) {
+                Broker.LostLook.Searching -> return p
+                is Broker.LostLook.Found -> { forgetTakenOver(listOf(TARGET_LOST + p.id)); exitFilledFor(listOfNotNull(p.stopOrderId), mapOf(l.id to l.qty)); return p }
+                Broker.LostLook.GaveUp -> forgetTakenOver(listOf(TARGET_LOST + p.id))
+                null -> {
+                    // (After a restart its search, memory only, is gone; its mark is kept on disk: nothing goes back for [Broker.LOST_SEARCH_MS]
+                    // from the sale - the order book shows any sale Zerodha took by then - and the lag-guarded reads below decide after.)
+                    val at = takenOver[TARGET_LOST + p.id]
+                    if (at != null && System.currentTimeMillis() - at in 0 until Broker.LOST_SEARCH_MS) return p
+                }
+            }
             if (net == null || net == 0 || net.sign() != p.qty.sign()) return p     // not read (or its first minute): next pass
             if (stream) return p                                                     // the regular look places (never a stream look)
             if (ArmLive.handsOffNow(p.exchange, p.symbol)) return p                  // Boss's exit is still going
+            // (22 Nov 2026, B6 review: nor beside a square-off's sale on its way - its gap; the next look reads the books again.)
+            if (SquareOffExit.inGap(p.exchange, p.symbol, p.product)) return p
             // Review (R1): always on what is held less every exit fill of today the positions do not show yet (the lag guard forced,
             // any age: [restAgain]) - never a naked stop on a flat account, and a part still held gets its stop at once. Only when
             // Kite's positions do not give the day's quantity (the guard cannot work) does it wait, for [EXIT_DONE_MS] after Boss's
@@ -1764,7 +2033,7 @@ object Protections {
                 return p.copy(active = false, stopOrderId = null, targetOrderId = null, note = "stop not placed again")
             }
             if (back.active && back.id == p.id) return p                             // not placed this look: asked again next pass
-            listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { takenOver.remove(it) }
+            forgetTakenOver(listOfNotNull(p.stopOrderId, p.targetOrderId, TARGET_LOST + p.id))
             return back
         }
         // A stop refused or cancelled at Zerodha leaves the position unprotected: say so.
@@ -1785,6 +2054,8 @@ object Protections {
             val note = if (byExchange) com.optionslab.ira.ManualCoverRule.STOP_BY_EXCHANGE else "stop ${so.status.lowercase()}"
             unprotected("${p.symbol}: the stop at Zerodha was ${so.status.lowercase()}${so.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""}. " +
                 (if (!alone) "${abs(p.qty)} of the position (one slice of its stops) is not protected by a stop." else "The position is not protected by a stop.") +
+                // (22 Nov 2026, B6 review: the app watched its target only beside its stop - said, so Boss knows it is not watched any more.)
+                (if (p.appTarget && p.target != null) " Its target %.2f, which the app watched, is not watched any more either.".format(java.util.Locale.ENGLISH, p.target) else "") +
                 when {
                     !byExchange -> " It was cancelled by you (in Kite?), so the app leaves it as it is: set a stop yourself if you want one."
                     // Review: one slice of several - the other slices keep the position "protected", so nothing covers these units
@@ -1877,11 +2148,28 @@ object Protections {
             }
             if (reduced && abs(mine) < abs(p.qty)) cur = p.copy(qty = mine)
         }
-        if (cur.trail == null || so == null || !so.working) return cur
+        // 22 Nov 2026 (B6 review, M5): the app's own target ([Item.appTarget]) watched while its stop rests and the position is held: reached
+        // (the price now, or a stream look's tick a moment ago), it is sold - on a regular look; a stream look (the live lane, every tick) only
+        // marks it and asks a look apart at once ([targetHit]), never a Zerodha call from the tick.
+        val watchTarget = cur.appTarget && cur.target != null && so != null && so.working && net != null && net != 0 && net.sign() == cur.qty.sign()
+        if ((cur.trail == null && !watchTarget) || so == null || !so.working) return cur
         val key = "${p.exchange}:${p.symbol}"
         val streamed = if (stream) runCatching { Broker.tokenOf(key)?.let { KiteStream.freshTick(it) }?.last?.takeIf { it > 0 } }.getOrNull() else null
         // 18 Oct: the fallback is Zerodha's quote unless a tick is 2 s fresh ([Broker.stopQuotes]), never a tick up to 5 s old.
-        val ltp = streamed ?: Broker.stopQuotes(listOf(key))[key]?.last ?: return cur
+        // (22 Nov 2026: a stream look with no fresh tick reads no quote for the target alone - the regular look does.)
+        val ltp = streamed ?: (if (stream && cur.trail == null) null else Broker.stopQuotes(listOf(key))[key]?.last)
+        if (watchTarget) {
+            val t = cur.target!!
+            val reached = ltp != null && ltp > 0 && (if (cur.qty > 0) ltp >= t - 1e-9 else ltp <= t + 1e-9)
+            if (reached && stream) {
+                targetHit[cur.id] = nowMs()
+                followUpMs = if (followUpMs == 0L) TARGET_LOOK_MS else minOf(followUpMs, TARGET_LOOK_MS)
+                return cur
+            }
+            val marked = targetHit[cur.id]?.let { nowMs() - it in 0 until TARGET_HIT_KEEP_MS } == true
+            if (!stream && (reached || marked)) return sellAtTarget(cur, so, ltp)
+        }
+        if (cur.trail == null || ltp == null) return cur
         val n = Protection.next(cur.spec(), ltp)
         val ns = n.stop   // a local: the engine's property cannot be smart-cast across modules
         if (ns != null && ns != cur.stop && abs(ns - (cur.stop ?: 0.0)) >= p.tick - 1e-9) {
@@ -1982,7 +2270,9 @@ object Protections {
         wipeGen++
         synchronized(this) { lastId = 0L }
         cache = null; published = null; activeHint = null; autoHint = false; liveKeysHint = emptyList(); overnightHint = false; mcxOvernightHint = false; dayGttHint = emptyMap()
-        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L; takenOver.clear(); exitFilled.clear(); exitOrders.clear()
+        freshDayGtts = emptyMap(); trackedOnly = false; blindWarned = 0L; takenOver.clear(); exitFilled.clear(); exitOrders.clear(); targetHit.clear(); targetSales.clear()
+        // (22 Nov 2026, B6 review: the marks' file deleted beside no write in flight - a write handed over before this erase is dropped.)
+        synchronized(marksMon) { marksLoaded = false; marksForgotten.clear(); marksFile?.let { runCatching { it.delete() } } }
         runCatching { gttTries.clear() }
         flatSince.clear(); ocoSaid.clear(); ocoPending.clear()
         filesForErase().forEach { runCatching { it.delete() } }
@@ -1996,7 +2286,8 @@ object Protections {
     internal fun filesForErase(): List<File> {
         if (!::file.isInitialized) return emptyList()
         val aside = file.parentFile?.listFiles { f -> f.name.startsWith("${file.name}.unreadable.") }.orEmpty().toList()
-        return listOf(file) + aside
+        // (22 Nov 2026, B6 review: the taken-over marks' own file too.)
+        return listOf(file) + aside + listOfNotNull(marksFile)
     }
 
     /** TEST ONLY: memory forgotten (the file kept), as after a restart: the next look reads the file. */

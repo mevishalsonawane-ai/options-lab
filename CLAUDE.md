@@ -203,6 +203,8 @@ notes; match the surrounding code.
   own cancel, and with blank or unrecognised words, is Boss's: never put back, the app sells at the level. Exchange / RMS / market
   protection words, or a cancel outside market hours, are Zerodha's: put back. A GTT "deleted" with no app mark is Boss's. The app's own
   cancels (arm exits and Boss's manual exit from the app) are marked before they go and saved in the book, so a restart never misreads them.
+  (22 Nov) The protections' marks (a square-off's, Boss's exit from the app, an app-watched target's sale) are saved the same way. Any
+  mark whose cancel never took (refused, or the stop still working two minutes later) ends, so Boss's later cancel of that stop is his.
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)
@@ -250,6 +252,8 @@ notes; match the surrounding code.
     or let go only on a read of the order book that started at least 2 minutes after the sale was sent and still does not show it
     (searched from 3 minutes before its send time; failed reads never let it go; Boss is told its state is unknown, and again at 15:10). The lost sale is
     kept in the book, so a restart keeps the wait and the window. Then the exits run as usual.
+    (22 Nov) The arms' live copies hold their own lost exit sale the same way: no second sale and no stop on that contract until it is
+    found and booked or let go on such a read; kept in their book; and the square-offs count it too.
   Every change that touches background work must test this.
 - Nothing about the account is spoken on a locked phone.
 - Market times: NSE F&O closes 15:40, index/cash 15:30, expiry square-off 15:05.
