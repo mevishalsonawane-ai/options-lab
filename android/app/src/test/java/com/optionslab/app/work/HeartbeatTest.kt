@@ -39,6 +39,11 @@ class HeartbeatTest : RobolectricTest() {
         Background.clearAlerts()
         Background.calendar(WED)
         Background.grantNotifications(context)
+        // 22 Nov 2026 (B6 review): MCX known from memory - its calendar read and nothing held or armed there - as after the app's start;
+        // the main thread's schedule counts an unknown MCX as due ([anUnknownMcxOnTheMainThreadKeepsTheCheckMinutesAway]).
+        com.optionslab.app.data.McxMarket.calendar()
+        com.optionslab.app.data.McxMarket.notePaperExposure(false)
+        com.optionslab.app.data.McxMarket.noteArmsArmed(false)
     }
 
     @After fun down() { Heartbeat.pulseStopped(); Background.reset() }
@@ -94,6 +99,27 @@ class HeartbeatTest : RobolectricTest() {
         assertFalse("MCX's evening with nothing held or armed there", Heartbeat.stale())
         Background.at(WED, 11, 0)
         assertTrue(Heartbeat.stale())
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): on the main thread (a boot, an update), MCX's answer unknown from memory - here its calendar not read yet,
+     * past 23:30 by the built-in one - is due: the next check in minutes (which decides off the main thread), never the next session's
+     * with something perhaps held on MCX.
+     */
+    @Test fun anUnknownMcxOnTheMainThreadKeepsTheCheckMinutesAway() {
+        Background.at(WED, 23, 45)
+        com.optionslab.app.data.McxMarket.forgetCalendarForTest()
+        try {
+            // (Asked first by the schedule itself: any earlier ask starts the calendar's background read, which can land before it.)
+            assertFalse("the calendar not in memory", com.optionslab.app.data.McxMarket.calendarKeptForTest())
+            Heartbeat.schedule(context)
+            val t = beats().single().triggerAtMs
+            assertTrue("trigger $t", abs(t - 300_000L - SystemClock.uptimeMillis()) < 5_000 || abs(t - 300_000L - java.time.Instant.now().toEpochMilli()) < 60_000)
+            // Known (the calendar in memory): MCX shut, the next session's check as before.
+            com.optionslab.app.data.McxMarket.calendar()
+            Heartbeat.schedule(context)
+            assertEquals("the next trading day's", at(WED.plusDays(1), 9, 20), beats().single().triggerAtMs)
+        } finally { com.optionslab.app.data.McxMarket.forgetCalendarForTest() }
     }
 
     @Test fun beforeTheOpenItWaitsForTodayAndItSkipsClosedDays() {
@@ -163,6 +189,32 @@ class HeartbeatTest : RobolectricTest() {
         SecurePrefs.put("hb.last", 1L)
         Heartbeat.check(context)
         assertNotNull(stalled())
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): a settings vault that cannot be written (the disk, the Keystore) never stops the stalled-watch notice,
+     * and never throws out of the alarm's check (the release crash handler ended the process); the stall is still told once.
+     */
+    @Test fun aVaultThatCannotBeWrittenNeverStopsTheStallNotice() {
+        Background.at(WED, 11, 0)
+        SecurePrefs.put("hb.last", 1L)
+        SecurePrefs.flush()
+        ShadowSystemClock.advanceBy(Duration.ofMinutes(10))
+        com.optionslab.app.security.Vault.testFailWrites = setOf("prefs.vault")
+        // Off the main thread, as the alarm's job runs it (on the main thread a settings write is handed to the background writer).
+        fun checkOffMain(): Throwable? {
+            val err = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
+            Thread { try { Heartbeat.check(context) } catch (e: Throwable) { err.set(e) } }.apply { start(); join(10_000) }
+            return err.get()
+        }
+        try {
+            assertTrue(Heartbeat.stale())
+            assertNull("never thrown (an IOException before)", checkOffMain())
+            assertNotNull("told", stalled())
+            context.getSystemService(android.app.NotificationManager::class.java).cancelAll()
+            assertNull(checkOffMain())
+            assertNull("still told once per stall", stalled())
+        } finally { com.optionslab.app.security.Vault.testFailWrites = emptySet() }
     }
 
     @Test fun outsideMarketHoursSilenceIsNormal() {

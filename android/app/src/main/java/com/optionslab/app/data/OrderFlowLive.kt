@@ -52,7 +52,7 @@ object OrderFlowLive {
     fun droppedTicks(): Long = queue.dropped
     private val pumping = AtomicBoolean(false)
     private val thread = Executors.newSingleThreadExecutor { r -> Thread(r, "order-flow").apply { isDaemon = true } }.asCoroutineDispatcher()
-    private val scope = CoroutineScope(SupervisorJob() + thread)
+    private val scope = CoroutineScope(SupervisorJob() + thread + ScopeGuard.handler("order flow pump"))
     @Volatile private var appContext: Context? = null
     private var layoutJob: Job? = null
 
@@ -71,7 +71,7 @@ object OrderFlowLive {
         MoveRecorder.init(context)
         if (!enabled || layoutJob != null) return
         // Every 30 s: the instruments to follow (only while the stream runs), the paper results and the shadow log's flush.
-        layoutJob = CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+        layoutJob = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("order flow layout")).launch {
             // The big-move recorder's switch read once here, off the main thread (the stream's checks then read memory).
             runCatching { MoveRecorder.refreshSwitch() }
             while (true) {
@@ -97,7 +97,7 @@ object OrderFlowLive {
         val u = underlying.uppercase(Locale.ENGLISH)
         if (u !in OrderFlow.INDICES || u == focus) return
         focus = u
-        if (enabled && !testOff) CoroutineScope(Dispatchers.IO).launch { runCatching { relayout() } }
+        if (enabled && !testOff) CoroutineScope(Dispatchers.IO + ScopeGuard.handler("order flow layout")).launch { runCatching { relayout() } }
     }
 
     // ---- what to follow ------------------------------------------------------------------------------------------------
@@ -171,7 +171,7 @@ object OrderFlowLive {
         val next = c?.takeIf { it.name in OrderFlow.INDICES }?.let { OrderFlow.Board.Entry(it.token, it.name, OrderFlow.Role.WATCH, it.strike) }
         if (next == watching) return
         watching = next
-        if (!testOff) CoroutineScope(Dispatchers.IO).launch { runCatching { relayout() } }
+        if (!testOff) CoroutineScope(Dispatchers.IO + ScopeGuard.handler("order flow layout")).launch { runCatching { relayout() } }
     }
 
     /** Whether the charted option is followed (the sheets offer its tape and heatmap). */
@@ -362,13 +362,42 @@ object OrderFlowLive {
     private suspend fun pump() {
         var idle = 0
         while (true) {
-            val n = drain()
-            val now = System.currentTimeMillis()
-            if (n > 0) { idle = 0; publish(now) } else if (++idle > 40) return
-            if (now - lastSecond >= 1000) { lastSecond = now; runCatching { perSecond(now) } }
+            // 22 Nov 2026 (B6 review): a round that throws (a packet the board cannot take, a read it cannot make) is noted and the pump
+            // goes on - it left this job, whose scope had no handler, to the crash handler, which ends the process. A failing round
+            // counts as idle, so a fault that repeats ends the pump after 10 s like a quiet stream (the next tick starts it again).
+            try {
+                pumpFaultForTest?.invoke()
+                val n = drain()
+                val now = System.currentTimeMillis()
+                if (n > 0) { idle = 0; publish(now) } else if (++idle > 40) return
+                if (now - lastSecond >= 1000) { lastSecond = now; runCatching { perSecond(now) } }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                // (22 Nov 2026, B6 second review: a fatal error - out of memory, a class that cannot load - still ends the process,
+                // through the scope.)
+                if (ScopeGuard.fatal(e)) throw e
+                pumpFailed(e)
+                if (++idle > 40) return
+            }
             delay(250)
         }
     }
+
+    @Volatile private var pumpFailNotedAt = 0L
+    /** Rounds of the pump that failed in this process (the tests; memory only). */
+    internal val pumpFailures = java.util.concurrent.atomic.AtomicLong()
+
+    /** A round failed: counted, and noted in the diary at most once a minute. */
+    private fun pumpFailed(e: Throwable) {
+        pumpFailures.incrementAndGet()
+        val now = System.currentTimeMillis()
+        if (now - pumpFailNotedAt !in 0 until 60_000L) { pumpFailNotedAt = now; ScopeGuard.caught("order flow pump", e) }
+    }
+
+    /** TEST ONLY (22 Nov 2026): run at the start of each pump round (a test makes it throw). Null in the app; set only in debug builds. */
+    @Volatile internal var pumpFaultForTest: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test hook exists only in debug builds" }; field = v }
 
     @Synchronized private fun drain(): Int {
         var n = 0
@@ -711,6 +740,7 @@ object OrderFlowLive {
         queue.drain(); board.layout(emptyList()); watched = emptySet(); _reads.value = emptyMap(); testRead = null
         testAuction = null; _auction.value = emptyMap(); _chartLevels.value = emptyMap(); watching = null
         synchronized(cursors) { cursors.clear() }; sequencer.clear(); centred.clear(); expiries.clear(); testManual = false
+        pumpFaultForTest = null; pumpFailNotedAt = 0L
         Recorder.resetForTest()
     }
 }

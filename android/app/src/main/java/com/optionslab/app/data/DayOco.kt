@@ -33,7 +33,7 @@ object DayOco {
     @Volatile private var loaded = false
     /** Boss changed the switch in this process (the start's late read never overrides it). */
     @Volatile private var switched = false
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("DayOco"))
     /** 21 Oct, enhancement round 5 (idea 1): the day GTT's counts, the last week (memory; written on a worker thread). */
     @Volatile private var tally: List<DayGttTally.Day> = emptyList()
     @Volatile private var tallyLoaded = false

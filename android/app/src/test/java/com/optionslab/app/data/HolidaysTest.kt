@@ -26,10 +26,40 @@ class HolidaysTest : RobolectricTest() {
 
     @Before fun fresh() = restart()
 
-    @After fun down() = Holidays.resetForTest()
+    @After fun down() { Holidays.duringWriteForTest = null; Holidays.resetForTest() }
 
     private val monday = LocalDate.of(2026, 10, 5)
     private val saturday = LocalDate.of(2026, 10, 3)
+
+    /**
+     * 22 Nov 2026 (B6 review: a change's file sync ran under the lock every [Market.isTradingDay] caller took - the watch's and the stop
+     * checks' among them): a reader never waits for a change being written. It sees the book before the change until the change is on
+     * disk, then the new one.
+     */
+    @Test fun aChangeBeingWrittenNeverHoldsUpTheReaders() {
+        assertFalse(Holidays.isHoliday(monday))
+        val writing = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        Holidays.duringWriteForTest = { writing.countDown(); release.await(10, java.util.concurrent.TimeUnit.SECONDS) }
+        val add = Thread { Holidays.add(monday) }.apply { start() }
+        try {
+            assertTrue("the change is being written", writing.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            val pool = java.util.concurrent.Executors.newSingleThreadExecutor()
+            try {
+                val read = pool.submit<Boolean> { Market.isTradingDay(monday) }
+                assertTrue("answered at once, from the book before the change", read.get(2, java.util.concurrent.TimeUnit.SECONDS))
+            } finally { pool.shutdownNow() }
+            assertFalse(Holidays.isHoliday(monday))
+        } finally {
+            release.countDown()
+            add.join(10_000)
+        }
+        assertTrue("the change, once written", Holidays.isHoliday(monday))
+        restart()
+        assertTrue("and on disk", Holidays.isHoliday(monday))
+        Holidays.remove(monday)
+        assertFalse(Holidays.isHoliday(monday))
+    }
 
     @Test fun aFreshPhoneKnowsNoHolidays() {
         val b = Holidays.book()

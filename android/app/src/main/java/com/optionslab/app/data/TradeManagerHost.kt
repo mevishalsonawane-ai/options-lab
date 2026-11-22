@@ -43,7 +43,7 @@ object TradeManagerHost {
     private const val SETTLE_LAG_MS = 5_000L
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("TradeManagerHost"))
 
     fun init(context: Context) {
         appContext = context.applicationContext

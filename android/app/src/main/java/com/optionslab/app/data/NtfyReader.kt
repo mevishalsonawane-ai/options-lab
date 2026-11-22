@@ -55,7 +55,7 @@ object NtfyReader {
     private val _status = MutableStateFlow(Status())
     val status: StateFlow<Status> = _status
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("NtfyReader"))
     @Volatile private var job: Job? = null
     @Volatile private var call: Call? = null
 

@@ -162,6 +162,80 @@ class StopLaneTest : RobolectricTest() {
         assertEquals(0L, WatchClock.lookAt)
     }
 
+    /**
+     * 22 Nov 2026 (B6 review: a full device scan ran inside the stop check, ahead of the Strategy Module's exits): the strategies' step
+     * reads the device check's verdict from memory - a scan that takes 8 s never holds it, nor the look - and with no verdict yet the
+     * runs' entries are refused (unknown), while their exits go on.
+     */
+    @Test fun theStrategiesStepNeverWaitsOnTheDeviceCheck() {
+        val integrity = com.optionslab.app.security.Integrity
+        integrity.resetForTest()
+        integrity.testScanDelayMs = 8_000
+        integrity.scanWatchedForTest = Thread.currentThread()
+        // A run open (the hint its book keeps; set here as a loaded book with a running run would).
+        val hint = com.optionslab.app.data.Strategies::class.java.getDeclaredField("runningHint").apply { isAccessible = true }
+        hint.setBoolean(null, true)
+        try {
+            val t0 = System.nanoTime()
+            runBlocking { StopLane.strategiesLook(context) }
+            assertTrue("the step never waited on the scan", (System.nanoTime() - t0) / 1_000_000 < 2_000)
+            assertEquals("no scan on the step's thread", 0L, integrity.scansOnWatchedForTest.get())
+            assertTrue("no verdict yet: an entry would be refused", integrity.entryRefused(context))
+            // A whole NSE look with a run open: inside its window, never after the scan.
+            val t1 = System.nanoTime()
+            runBlocking { StopLane.look(context, StopLane.Mode.NSE, System.currentTimeMillis()) }
+            val ms = (System.nanoTime() - t1) / 1_000_000
+            assertTrue("the look took $ms ms", ms < 6_000)
+            assertEquals(0L, integrity.scansOnWatchedForTest.get())
+        } finally {
+            hint.setBoolean(null, false)
+            integrity.resetForTest()
+        }
+    }
+
+    /**
+     * 22 Nov 2026 (B6 third review): with no strategy run open, the strategies step reads nothing - never the Strategy Module's lock (a
+     * full pass may hold it), never its book (a vault read when not in memory), never the device check. Its check is still noted done.
+     */
+    @Test fun theStrategiesStepReadsNothingWithNoRunOpen() {
+        val strategies = com.optionslab.app.data.Strategies
+        val integrity = com.optionslab.app.security.Integrity
+        val hint = strategies::class.java.getDeclaredField("runningHint").apply { isAccessible = true }
+        val cache = strategies::class.java.getDeclaredField("cache").apply { isAccessible = true }
+        val lock = strategies::class.java.getDeclaredField("lock").apply { isAccessible = true }.get(null) as kotlinx.coroutines.sync.Mutex
+        // The device check's "a background scan is under way" flag: set before a kicked scan starts, cleared only after it counted.
+        val scanning = integrity::class.java.getDeclaredField("scanning").apply { isAccessible = true }.get(null) as java.util.concurrent.atomic.AtomicBoolean
+        val hintWas = hint.getBoolean(null)
+        val cacheWas = cache.get(null)
+        try {
+            StopLane.resetCompletedForTest()
+            StopLane.completed.held(setOf(StopLane.B_STRATEGIES), 0L)        // seen held long ago, never completed: stale now
+            assertTrue(StopLane.completed.stale(System.currentTimeMillis()).any { it.first == StopLane.B_STRATEGIES })
+            integrity.resetForTest()                                            // no report kept: any device check would scan
+            val scans = integrity.scans.get()
+            hint.setBoolean(null, false)                                        // no run open
+            runBlocking {
+                lock.lock()                                                     // a full pass holding the lock
+                try {
+                    cache.set(null, null)                                       // the book not in memory, as after a restart
+                    kotlinx.coroutines.withTimeout(2_000) { StopLane.strategiesLook(context) }
+                    // (Asked while the lock is still held: no other reader can have loaded the book meanwhile.)
+                    assertEquals("the book was not read", null, cache.get(null))
+                } finally { lock.unlock() }
+            }
+            assertEquals("the device check not asked", 0L, integrity.askedAtForTest())
+            // No scan kicked: none under way now, and (read after it) none counted - a kicked scan clears the flag only once counted.
+            assertFalse("no device scan under way", scanning.get())
+            assertEquals("nor scanned", scans, integrity.scans.get())
+            assertFalse("the step's check noted done", StopLane.completed.stale(System.currentTimeMillis()).any { it.first == StopLane.B_STRATEGIES })
+        } finally {
+            hint.setBoolean(null, hintWas)
+            if (cache.get(null) == null) cache.set(null, cacheWas)
+            StopLane.resetCompletedForTest()
+            integrity.resetForTest()
+        }
+    }
+
     /** MCX's own pass comes back 15 s after it STARTED (it was 15 s after it ended: a 5 s pass came every 20 s). */
     @Test fun mcxsPassComesBack15sAfterItsStartNotItsEnd() = runTest {
         val clock = { testScheduler.currentTime + 1_000_000L }

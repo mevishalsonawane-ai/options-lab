@@ -44,7 +44,7 @@ object OrderCountCheck {
     private var would = 0
     private var refused = 0
     private val seen = HashSet<String>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("OrderCountCheck"))
 
     /** Bot settings' card: the switch, whether it was read, and today's counts. */
     data class View(val on: Boolean = false, val loaded: Boolean = false, val wouldToday: Int = 0, val refusedToday: Int = 0)

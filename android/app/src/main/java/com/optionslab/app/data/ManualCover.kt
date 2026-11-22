@@ -70,7 +70,7 @@ object ManualCover {
     /** Boss changed the switch in this process (the start's late read never overrides it). */
     @Volatile private var switched = false
     @Volatile private var app: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("ManualCover"))
 
     /** One pass at a time (the watch runs one; a test's pass could overlap). */
     private val passLock = Mutex()

@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
  * the disk, the settings vault or the network on the caller's thread.
  */
 object MemoryTrim {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + ScopeGuard.handler("MemoryTrim"))
 
     /** When Android last asked (a counted trim; 0: not in this process): the knowledge's load waits after one in market hours. */
     @Volatile var lastAt = 0L

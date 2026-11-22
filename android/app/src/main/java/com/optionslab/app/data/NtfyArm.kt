@@ -452,7 +452,7 @@ object NtfyArm {
 
     // ---- the quick pass (26 Oct) -------------------------------------------------------------------------------------------
 
-    private val kickScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val kickScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("NtfyArm.kickScope"))
     /** Kicks waiting for the quick pass: any number while one runs makes ONE more pass (conflated). */
     private val kicks = Channel<Unit>(Channel.CONFLATED)
     @Volatile private var kicker: Job? = null

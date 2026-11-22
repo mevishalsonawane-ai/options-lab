@@ -48,7 +48,7 @@ object MarketContext {
     private const val K_PAUSE = "context.eventPause"
     private const val REFRESH_MS = 60_000L
     private val IST: ZoneId = ZoneId.of("Asia/Kolkata")
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + ScopeGuard.handler("MarketContext"))
     @Volatile private var app: Context? = null
     @Volatile private var started = false
 

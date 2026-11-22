@@ -18,7 +18,7 @@ import kotlinx.coroutines.sync.withLock
  * the callback simply keeps the old behaviour (the stream's watchdog and the relay's keep-alives).
  */
 object NetWatch {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("NetWatch"))
     private val started = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var state = com.optionslab.ira.NetChange.State()
 

@@ -98,7 +98,7 @@ object GitHubSync {
     @Volatile private var app: Context? = null
     /** GitHub over HTTPS; a test gives a fake. */
     @Volatile internal var http: GitHubReleases.Http = HttpsGitHub
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("GitHubSync"))
     private val runLock = Mutex()
     private val extras = CopyOnWriteArrayList<(LocalDate) -> List<File>>()
 

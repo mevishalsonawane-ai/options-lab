@@ -17,10 +17,11 @@ import java.time.LocalDateTime
  * Never read on a look itself: [ask] starts one background read per trade at a time (a feed that is slow or stalled never holds a
  * position's stop check), [peek] returns the last high found (memory only). One shared helper for the arms' live books ([ArmLive],
  * [OrbArms]). Bounded ([KEPT]), forgotten with each trade ([forget]) and released under memory pressure ([trim]): the position watch
- * itself never depends on it (the stream's price still counts as before).
+ * itself never depends on it (the stream's price still counts as before). 22 Nov 2026 (B6 review): a trim lets go only of trades no
+ * longer asked for - never an open trade's high.
  */
 internal object RuleHighs {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("RuleHighs"))
     private val highs = java.util.concurrent.ConcurrentHashMap<String, Double>()
     private val inFlight = java.util.concurrent.ConcurrentHashMap<String, Job>()
     /** When each trade's read was last started (the market's clock, ms): at most one a minute each ([EVERY_MS]); and its age for pruning. */
@@ -73,11 +74,43 @@ internal object RuleHighs {
     /** The trade [key] closed: its high forgotten. */
     fun forget(key: String) { highs.remove(key); asked.remove(key); inFlight.remove(key)?.cancel() }
 
-    /** Memory short: everything released (each trade asks again on its next regular look; the stops never depend on it). */
-    fun trim() { highs.clear() }
+    /**
+     * Memory short. 22 Nov 2026 (B6 review: every trim - the screen merely hidden too - cleared every trade's high, an open live trade's
+     * included, and kept its "asked" stamp, so its next read waited up to a minute: the step lock and the breakeven missed a spike
+     * meanwhile): only when the system is critical while the app shows ([com.optionslab.ira.MemoryPlan.RUNNING_CRITICAL]) or the app is
+     * in the background ([com.optionslab.ira.MemoryPlan.BACKGROUND] and above: from Android 14 the only real signal), never for the
+     * screen merely hidden; and only the trades not asked for in [ACTIVE_MS] (closed, or no longer looked at) - each with its stamp
+     * ([forget]). A trade still asked for, or with a read under way, keeps its high. Returns how many were let go.
+     */
+    fun trim(level: Int, nowMs: Long = marketMs()): Int {
+        if (level != com.optionslab.ira.MemoryPlan.RUNNING_CRITICAL && level < com.optionslab.ira.MemoryPlan.BACKGROUND) return 0
+        var n = 0
+        for (key in highs.keys + asked.keys) {
+            // A read under way, or just made and not started yet (its job is lazy): its trade is being looked at.
+            if (inFlight.containsKey(key)) continue
+            val at = asked[key]
+            // (A stamp up to [ACTIVE_MS] "in the future" - the clock set back a little - counts as recent; one further ahead belongs to a
+            // trade no longer asked for: an open trade's next ask stamps it afresh.)
+            if (at != null && nowMs - at in -ACTIVE_MS until ACTIVE_MS) continue
+            forget(key); n++
+        }
+        return n
+    }
+
+    /** A trade asked for within this long is still looked at (its looks ask at least every minute while it is open): never trimmed. */
+    internal const val ACTIVE_MS = 10 * 60_000L
+
+    /** Whether a high is kept for [key] (the tests). */
+    internal fun has(key: String): Boolean = highs.containsKey(key)
+
+    /** Whether [key]'s read stamp is kept (the tests: a trimmed trade asks again at once). */
+    internal fun askedFor(key: String): Boolean = asked.containsKey(key)
 
     /** How many highs are kept (the tests). */
     internal fun kept(): Int = highs.size
+
+    /** TEST ONLY: [key]'s high kept as a read at [askedAtMs] (the market's clock) would have left it. */
+    internal fun putForTest(key: String, high: Double, askedAtMs: Long) { asked[key] = askedAtMs; highs[key] = high }
 
     /** TEST ONLY: the reads under way finished. */
     internal suspend fun settleForTest() { inFlight.values.toList().joinAll() }

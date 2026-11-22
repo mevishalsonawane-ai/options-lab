@@ -97,7 +97,7 @@ object CheaperStrike {
     /** Bumped by [wipe]: a save queued before an erase never writes after it ([FundsCheck]'s rule). */
     @Volatile private var wipeGen = 0
     private val writeLock = Any()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("CheaperStrike"))
     /** 22 Nov 2026 (B6 review): the app, for the bought notice ([bought]); set at [init] (a test sets it itself). */
     @Volatile internal var app: Context? = null
 

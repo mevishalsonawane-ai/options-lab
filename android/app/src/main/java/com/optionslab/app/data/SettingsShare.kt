@@ -124,7 +124,7 @@ object SettingsShare {
     } catch (e: Exception) { listOf("$name: could not be read (${e.javaClass.simpleName})") }
 
     /** The report's own worker ([text]): one that runs past its bound finishes there, never holding the share up. */
-    private val reportScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val reportScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + ScopeGuard.handler("SettingsShare.reportScope"))
 
     /** TEST ONLY: the part whose read throws (a failing view). Debug builds only. */
     @Volatile internal var testFailPart: String? = null

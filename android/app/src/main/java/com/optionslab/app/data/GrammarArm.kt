@@ -60,7 +60,7 @@ object GrammarArm {
     private lateinit var app: Context
     private lateinit var file: File
     private val lock = Mutex()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("GrammarArm"))
 
     fun init(context: Context) {
         app = context.applicationContext

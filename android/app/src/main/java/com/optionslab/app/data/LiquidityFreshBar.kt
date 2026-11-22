@@ -60,7 +60,7 @@ object LiquidityFreshBar {
     /** Today's signals the list wait (off) would have kept, by "book|bar". */
     private val listSeen = LinkedHashSet<String>()
     private var seenDay: LocalDate? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("LiquidityFreshBar"))
 
     /** Bot settings' card: the switches, whether they were read, today's counts. */
     data class View(val on: Boolean = false, val loaded: Boolean = false, val wouldSkipToday: Int = 0, val skippedToday: Int = 0,

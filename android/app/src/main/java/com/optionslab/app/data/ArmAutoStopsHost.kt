@@ -41,7 +41,7 @@ object ArmAutoStopsHost {
     /** The rules Boss switched in this process (the start's late read never overrides them). Under [lock]. */
     private val switched = HashSet<Rule>()
     private val lock = Any()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("ArmAutoStopsHost"))
 
     /** Bot settings' rows and the arm rows: each switch, and whether it was read. */
     data class View(val loaded: Boolean = false, val state: ArmAutoStops.State = ArmAutoStops.State(),

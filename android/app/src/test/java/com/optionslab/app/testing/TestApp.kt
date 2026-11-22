@@ -253,6 +253,8 @@ class TestApp : Application() {
         com.optionslab.app.data.Broker.resetForTest()
         // The stream's ticks too: Broker.quotes answers from one up to 5 s old, so an earlier test's price would be this one's.
         com.optionslab.app.data.KiteStream.resetForTest()
+        // 22 Nov 2026 (B6 review): a device check an earlier test started in the background finishes before this test begins.
+        com.optionslab.app.security.Integrity.settleForTest()
         // The Live check's last run and the watch's check stamps of an earlier test (memory only).
         com.optionslab.app.data.LiveSelfTest.resetForTest()
         // A Live check a screen starts sees a closed market (no stream to wait on, no feed to read): the hour CI runs at never matters.
