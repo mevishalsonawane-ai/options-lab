@@ -207,7 +207,7 @@ notes; match the surrounding code.
   own cancel, and with blank or unrecognised words, is Boss's: never put back, the app sells at the level. Exchange / RMS / market
   protection words, or a cancel outside market hours, are Zerodha's: put back. A GTT "deleted" with no app mark is Boss's. The app's own
   cancels (arm exits and Boss's manual exit from the app) are marked before they go and queued to be saved in the book before the cancel
-  goes, so a restart never misreads them (one written just after, while the book is busy, can be misread only in that moment).
+  goes, so a restart does not misread them (one written just after, while the book is busy, can be misread only in that moment).
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)

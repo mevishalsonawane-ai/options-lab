@@ -205,6 +205,34 @@ object ExitCoordinator {
     }.getOrDefault(false)
 
     /**
+     * 22 Nov 2026 (B6 review, third round): whether [read] - a FRESH read of the orders (a square-off's, under the row's claim) - misses an
+     * exit sent from here on [exchange]:[symbol] in the last minute ([ExitDesk.KEEP_MS]) whose id Zerodha gave: its book trails that order,
+     * so the lag guard cannot count its fill - the caller leaves the row to its next look. Whatever the switch says (only ever less is
+     * sent). A lost reply (no id) is left to its sender's own count ([SquareOffExit.lostPendingProviders]) - it may never have become an
+     * order. Said in the diary. Memory only.
+     */
+    fun missesAnswered(exchange: String, symbol: String, who: String, read: List<Broker.OrderRow>): Boolean = runCatching {
+        val key = ExitDesk.key(exchange, symbol)
+        val miss = registry.missingFrom(ExitRegistry.Kind.ORDER, key, orderRows(read)).filter { it.state == ExitRegistry.State.ANSWERED }
+        if (miss.isEmpty()) return@runCatching false
+        count { it.copy(readAgain = it.readAgain + 1) }
+        record("$who $key: a fresh read of the orders missed ${words(miss)}; left to the next look")
+        true
+    }.getOrDefault(false)
+
+    /**
+     * 22 Nov 2026 (B6 review, third round): the quantity of the exits on the [side] of [exchange]:[symbol] sent from here in the last
+     * minute that are still on their way or lost their reply (no id from Zerodha yet) and that [read] does not show - but the sales sent
+     * under a tag in [exceptBy] (a square-off's own, or a book that counts its own sales). A stop (SL, SL-M) counts whoever sent it: it
+     * may be resting where the read does not show it. Memory only.
+     */
+    fun unshownPending(exchange: String, symbol: String, side: String, read: List<Broker.OrderRow>, exceptBy: Set<String> = emptySet()): Int = runCatching {
+        registry.missingFrom(ExitRegistry.Kind.ORDER, ExitDesk.key(exchange, symbol), orderRows(read))
+            .filter { it.state != ExitRegistry.State.ANSWERED && it.side.equals(side, ignoreCase = true) &&
+                (it.by !in exceptBy || it.type == "SL" || it.type == "SL-M") }.sumOf { it.qty }
+    }.getOrDefault(0)
+
+    /**
      * 21 Oct, enhancement round 3 (idea 1): what Zerodha holds of [exchange]:[symbol] [product] (net, signed) for an exit sender,
      * from a positions read made AFTER its read of the orders ([orders], that whole read). An exit sent from here a moment ago
      * can show COMPLETE in the orders before the positions move ([ExitDesk.positionsLag]); then the sender would find nothing
