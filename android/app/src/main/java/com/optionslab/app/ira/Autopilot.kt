@@ -9,6 +9,7 @@ import com.optionslab.app.data.Market
 import com.optionslab.app.data.SmartWorkers
 import com.optionslab.app.data.TradeManagerHost
 import com.optionslab.app.security.SecurePrefs
+import com.optionslab.app.security.Vault
 import com.optionslab.ira.AutoChange
 import com.optionslab.ira.AutoGate
 import com.optionslab.ira.Experiments
@@ -51,12 +52,16 @@ import java.util.Locale
  * at most) - a worse replay is skipped and logged "pre-flight failed".
  *
  * Every probation is checked again ([AutoChange.review], a sequential test capped at the old 15 cases / 5 days): worse
- * reverts by itself, or is asked when the revert would raise live risk. The log lives in noBackupFilesDir/autopilot (never the vault, never a backup); its setting
+ * reverts by itself, or is asked when the revert would raise live risk. The log lives in noBackupFilesDir/autopilot (never a backup; 22 Nov 2026:
+ * encrypted, as the diagnostics' diary - it holds rupee figures); its setting
  * ([K_MODE]) is never taken from a backup ([com.optionslab.ira.Upkeep.PRIVATE]) and a voice may only lower it. Not in GOLD.
  */
 internal object Autopilot {
     private const val DIR = "autopilot"
-    private const val LOG = "log.txt"
+    /** 22 Nov 2026 (B6 review, item 5): the change timeline, encrypted ([Vault]): its reasons hold rupee figures. */
+    private const val LOG = "log.vault"
+    /** The plain-text timeline of before 22 Nov 2026: read once, written again encrypted ([LOG]), then deleted ([readLog]). */
+    private const val OLD_LOG = "log.txt"
     private const val KNOBS = "knobs.txt"
     /** Boss's setting (OFF / SAFE / SHADOW_ONLY): on this phone only - never in or from a backup. */
     const val K_MODE = "jarvis.autolearn.mode"
@@ -131,7 +136,7 @@ internal object Autopilot {
 
     private fun loadFiles() {
         val d = dir()
-        val text = runCatching { d?.let { File(it, LOG) }?.takeIf { it.isFile }?.readText() }.getOrNull()
+        val text = runCatching { d?.let { readLog(it) } }.getOrNull()
         if (_book.value == AutoChange.Book()) _book.value = AutoChange.decode(text)
         val kn = runCatching { d?.let { File(it, KNOBS) }?.takeIf { it.isFile }?.readLines() }.getOrNull().orEmpty()
             .mapNotNull { l -> l.split('=').takeIf { it.size == 2 }?.let { (k, v) -> v.toDoubleOrNull()?.let { x -> k to x } } }
@@ -140,15 +145,45 @@ internal object Autopilot {
         loaded = true
     }
 
-    private fun save() {
-        val d = dir() ?: return
-        // 26 Oct: after "Erase everything" an empty log writes no files (a save may still be queued).
-        if (_book.value == AutoChange.Book() && _knobs.value.isEmpty() && !File(d, LOG).exists() && !File(d, KNOBS).exists()) return
-        runCatching {
-            d.mkdirs()
-            write(File(d, LOG), AutoChange.encode(_book.value))
-            write(File(d, KNOBS), _knobs.value.toSortedMap().entries.joinToString("\n") { "${it.key}=${it.value}" })
+    /**
+     * 22 Nov 2026 (B6 review, item 5): the change timeline's text from its encrypted file in [d] (as the diagnostics' diary is kept); null:
+     * none yet. A phone's plain log.txt of before is read once, written again encrypted and only then deleted (a write that did not land
+     * keeps it, for the next start). An encrypted file that cannot be read is set aside - never written over - and the timeline starts
+     * afresh, said in the diagnostics. A worker thread only (a Keystore read).
+     */
+    private fun readLog(d: File): String? {
+        val f = File(d, LOG)
+        val old = File(d, OLD_LOG)
+        if (f.isFile) {
+            val text = try { Vault.readFileSteady(f)?.let { String(it, Charsets.UTF_8) } } catch (e: Exception) {
+                runCatching { Vault.setAside(f) }
+                runCatching { Diag.record("autopilot", "the change timeline could not be read (${e.javaClass.simpleName}); it was set aside and starts afresh") }
+                // (Its "switched on by the update" entries, with their Undo, are logged again: their one-time marks go.)
+                com.optionslab.app.data.TimelineOnce.forgetAll()
+                null
+            }
+            // (A plain copy left by a move cut short after its encrypted write: the encrypted one stands.)
+            if (text != null) { runCatching { old.delete() }; return text }
         }
+        val plain = if (old.isFile) runCatching { old.readText(Charsets.UTF_8) }.getOrNull() ?: return null else return null
+        if (runCatching { Vault.writeFileWritten(f, plain.toByteArray(Charsets.UTF_8)) }.getOrDefault(false) && f.isFile) runCatching { old.delete() }
+        return plain
+    }
+
+    /** The log and the knobs written (under [lock]); true when the log's write landed (22 Nov 2026: [logBossOwnOnce]'s one-time marks). */
+    private fun save(): Boolean {
+        val d = dir() ?: return false
+        // 26 Oct: after "Erase everything" an empty log writes no files (a save may still be queued).
+        if (_book.value == AutoChange.Book() && _knobs.value.isEmpty() && !File(d, LOG).exists() && !File(d, OLD_LOG).exists() &&
+            !File(d, KNOBS).exists()) return false
+        return runCatching {
+            d.mkdirs()
+            // 22 Nov 2026 (B6 review, item 5): encrypted ([Vault]); a plain copy of before goes once the log was read and this write landed.
+            val written = Vault.writeFileWritten(File(d, LOG), AutoChange.encode(_book.value).toByteArray(Charsets.UTF_8))
+            if (written && loaded) File(d, OLD_LOG).takeIf { it.exists() }?.delete()
+            write(File(d, KNOBS), _knobs.value.toSortedMap().entries.joinToString("\n") { "${it.key}=${it.value}" })
+            written
+        }.getOrDefault(false)
     }
 
     private fun write(f: File, text: String) {
@@ -941,8 +976,11 @@ internal object Autopilot {
      * review: it first waits for [init] - the arms' books are read at start-up before Autopilot's init, and reading the log
      * before its file is known would load an empty log, mark it read and later save over Boss's real change history.
      * 1 Nov: [sameReason] narrows "once" to the same target AND wording (a target that already has an older entry of its own).
+     * 22 Nov 2026 (B6 review, item 4): [once] - an update's "switched on" entry ([com.optionslab.app.data.TimelineOnce]): logged once per
+     * phone, never again after the timeline prunes it (its mark is written once the entry is in the saved timeline); its mark unreadable
+     * now, it waits for a later start.
      */
-    private fun logBossOwnOnce(c: AutoChange.Change, note: String, sameReason: Boolean = false) {
+    private fun logBossOwnOnce(c: AutoChange.Change, note: String, sameReason: Boolean = false, once: String? = null) {
         scope.launch {
             runCatching {
                 val waited = kotlinx.coroutines.withTimeoutOrNull(INIT_WAIT_MS) { while (appContext == null) kotlinx.coroutines.delay(100) }
@@ -950,10 +988,12 @@ internal object Autopilot {
                 ensureLoaded()
                 val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
                 synchronized(lock) {
-                    if (_book.value.entries.none { it.change.kind == c.kind && it.change.target == c.target && (!sameReason || it.change.reason == c.reason) }) {
+                    if (once != null && com.optionslab.app.data.TimelineOnce.done(once) != false) return@runCatching
+                    val kept = if (_book.value.entries.none { it.change.kind == c.kind && it.change.target == c.target && (!sameReason || it.change.reason == c.reason) }) {
                         _book.value = AutoChange.record(_book.value, c, AutoChange.Status.KEPT, System.currentTimeMillis(), today, by = "your choice", note = note).first
                         save()
-                    }
+                    } else true
+                    if (once != null && kept) com.optionslab.app.data.TimelineOnce.mark(once)
                 }
             }
         }
@@ -1001,7 +1041,8 @@ internal object Autopilot {
     fun logIdeaRuleOn(minPct: Double) {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.ideaRule(true, minPct), "the 28 Oct update (your rule: \"Dont create a pine script or stratergies " +
-            "automatically, until 65% + winrate is found\"); it only holds automatic ideas back - nothing running is switched off")
+            "automatically, until 65% + winrate is found\"); it only holds automatic ideas back - nothing running is switched off",
+            once = com.optionslab.app.data.TimelineOnce.IDEA_RULE)
     }
 
     /**
@@ -1328,7 +1369,8 @@ internal object Autopilot {
      */
     fun logSameDirCapOn(max: Int) {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.sameDirCap(true, max), "the 19 Oct update (your ask: \"Resolve the issues\"); paper only - live only logs what it would refuse")
+        logBossOwnOnce(AutoChange.sameDirCap(true, max), "the 19 Oct update (your ask: \"Resolve the issues\"); paper only - live only logs what it would refuse",
+            once = com.optionslab.app.data.TimelineOnce.SAME_DIR_CAP)
     }
 
     /**
@@ -1377,7 +1419,8 @@ internal object Autopilot {
      */
     fun logBookPriceOn() {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.paperBookPrice(true), "the 28 Oct update (your ask: \"Yes fix finnifty\"); paper only - never mirrored live")
+        logBossOwnOnce(AutoChange.paperBookPrice(true), "the 28 Oct update (your ask: \"Yes fix finnifty\"); paper only - never mirrored live",
+            once = com.optionslab.app.data.TimelineOnce.BOOK_PRICE)
     }
 
     /**
@@ -1386,7 +1429,8 @@ internal object Autopilot {
      */
     fun logLiqNoTwinOn() {
         if (!enabled()) return
-        logBossOwnOnce(AutoChange.liqNoTwin(true), "the 20 Oct update (19 Oct's triple stop); paper only - live only logs what it would skip")
+        logBossOwnOnce(AutoChange.liqNoTwin(true), "the 20 Oct update (19 Oct's triple stop); paper only - live only logs what it would skip",
+            once = com.optionslab.app.data.TimelineOnce.LIQ_NO_TWIN)
     }
 
     /**
@@ -1449,7 +1493,8 @@ internal object Autopilot {
     fun logStepTrailOn() {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.stepTrail(true), "the 15 Nov update (your ask: \"Switch to + picker + breakeven at +10% " +
-            "(V4)\"; it replaced the ₹500 step trail); failed gates, Boss's exception - paper and live, new trades")
+            "(V4)\"; it replaced the ₹500 step trail); failed gates, Boss's exception - paper and live, new trades",
+            once = com.optionslab.app.data.TimelineOnce.STEP_TRAIL)
     }
 
     /**
@@ -1461,7 +1506,7 @@ internal object Autopilot {
         if (!enabled()) return
         logBossOwnOnce(AutoChange.stepLock(true), "the 16 Nov update (your ask: \"For r51/r72 use Step lock (+₹500 at +₹1,000, and so on) " +
             "And for liquidity use Breakeven at +₹1,000\"); added on top of the breakeven at +10% (V4 -> V5); failed gates, Boss's exception - " +
-            "paper and live, new trades; Undo goes back to V4 (with your PIN)", sameReason = true)
+            "paper and live, new trades; Undo goes back to V4 (with your PIN)", sameReason = true, once = com.optionslab.app.data.TimelineOnce.STEP_LOCK)
     }
 
     /** 16 Nov: Boss switching the fourth version in Bot settings - each flip kept, the newest one undoes ([AutoChange.superseded]). */

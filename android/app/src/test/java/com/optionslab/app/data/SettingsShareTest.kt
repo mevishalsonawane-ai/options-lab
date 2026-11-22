@@ -73,6 +73,16 @@ class SettingsShareTest : RobolectricTest() {
                 "Daily loss limit:", "Day lock:", "Liquidity's live stop rule", "Weekly loss stop", "liveMarkets: ", "armLiveLots: ",
                 "Exit coordinator", "R151 picker", "Paper refusals go live", "Funds check", "Order count check", "Trade manager modes"))
             assertTrue(w, text.contains(w))
+        // 22 Nov 2026 (B6 review): the guard's enforced limits by their own names; the old order limits never said as limits.
+        val s = AppSettings.load()
+        assertTrue(text, text.contains("Guard limits (every entry is checked against these): max open ${s.guardMaxOpen}, max orders per day " +
+            "${s.guardMaxTrades}, max lots per instrument ${s.guardMaxLots}"))
+        val guard = lines.single { it.startsWith("Guard limits") }
+        assertFalse(guard, guard.contains("orders a day") || guard.contains("lots an order"))
+        for (f in SettingsShare.NOT_ENFORCED) assertTrue(f, lines.any { it.startsWith("- $f: ") && it.endsWith("(kept, not enforced: the guard's " +
+            "max orders per day and max lots per instrument are)") })
+        assertTrue(lines.any { it.startsWith("- guardMaxLots: ") && !it.contains("not enforced") })
+        assertEquals("", SettingsShare.notEnforced("guardMaxTrades: 10"))
         // Not cut: the whole report and today's 200 diary lines of the arms' live path.
         assertTrue("${lines.size} lines", lines.size > 140)
         assertTrue(text, text.contains("break 199 held back"))
@@ -182,6 +192,38 @@ class SettingsShareTest : RobolectricTest() {
         assertTrue(SettingsShare.filesForErase().single().exists())
         SettingsShare.wipe()
         assertFalse(SettingsShare.filesForErase().single().exists())
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 7): the process died before a file's 30-minute delete - the next start deletes one older than 30 minutes
+     * at once (and one dated far after now: a clock that moved), and a newer one - or one being written at this moment - when its 30
+     * minutes are up.
+     */
+    @Test fun aFileLeftByADeadProcessIsDeletedAtTheNextStart() {
+        val dir = java.io.File(context.cacheDir, "exports/state").apply { mkdirs() }
+        val now = 1_800_000_000_000L
+        val old = java.io.File(dir, "iraalgo-settings-and-state-2026-11-20.txt").apply { writeText("old"); setLastModified(now - SettingsShare.KEEP_MS - 1_000) }
+        val ahead = java.io.File(dir, "ahead.txt").apply { writeText("ahead"); setLastModified(now + SettingsShare.KEEP_MS + 60_000) }
+        val fresh = java.io.File(dir, "iraalgo-settings-and-state-2026-11-22.txt").apply { writeText("fresh"); setLastModified(now - 60_000) }
+        val justNow = java.io.File(dir, "being-written.txt").apply { writeText("now"); setLastModified(now + 5) }
+        val waiting = SettingsShare.sweepsWaiting()
+        assertEquals(2, SettingsShare.sweepOld(dir, now))
+        assertFalse(old.exists()); assertFalse(ahead.exists())
+        assertTrue("its 30 minutes are not up yet", fresh.exists())
+        assertTrue("a share writing it now keeps it", justNow.exists())
+        assertEquals("their own deletes wait", waiting + 2, SettingsShare.sweepsWaiting())
+        justNow.delete()
+        // When it comes (as written), it goes; nothing in an empty or missing folder.
+        SettingsShare.sweep(fresh, fresh.lastModified())
+        assertFalse(fresh.exists())
+        assertEquals(0, SettingsShare.sweepOld(dir, now))
+        assertEquals(0, SettingsShare.sweepOld(java.io.File(context.cacheDir, "none"), now))
+        // The start does it in the background, off the main thread.
+        val left = java.io.File(dir, "left.txt").apply { writeText("left"); setLastModified(System.currentTimeMillis() - SettingsShare.KEEP_MS - 5_000) }
+        SettingsShare.init(context)
+        val end = System.currentTimeMillis() + 10_000
+        while (left.exists() && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertFalse(left.exists())
     }
 
     @Test fun theNameScrubCoversTheHolderGitHubAndTheOwner() {

@@ -70,6 +70,8 @@ class AutopilotTest : RobolectricTest() {
         at(LocalTime.of(16, 0))
         Autopilot.resetForTest(); JarvisLearning.resetForTest(); SmartWorkers.resetForTest(); TradeManagerHost.resetForTest()
         Autopilot.init(context)
+        // 22 Nov 2026 (B6 review): the start's own background timeline entry (logged once per phone) lands first, then the timeline is empty.
+        AutomationSupport.settleStartTimeline(context)
         Autopilot.testLive = false
         runBlocking { IraHub.forgetAll() }
     }
@@ -91,10 +93,10 @@ class AutopilotTest : RobolectricTest() {
         assertEquals(AutoChange.Scope.PAPER, e.change.scope)
         // Once a day.
         assertFalse(Autopilot.runIfDue(context))
-        // Kept in noBackupFilesDir and read back the same.
-        val f = File(context.noBackupFilesDir, "autopilot/log.txt")
+        // Kept in noBackupFilesDir (encrypted, 22 Nov 2026) and read back the same.
+        val f = File(context.noBackupFilesDir, "autopilot/log.vault")
         assertTrue(f.isFile)
-        assertEquals(Autopilot.book.value.entries.map { it.id }, AutoChange.decode(f.readText()).entries.map { it.id })
+        assertEquals(Autopilot.book.value.entries.map { it.id }, AutoChange.decode(logText(f)).entries.map { it.id })
         // Jarvis's answers come from the log.
         assertTrue(Autopilot.answer(AutoChange.Ask(AutoChange.AskKind.TODAY)).contains("Night (R3)'s new paper entries: on → paused"))
         assertTrue(Autopilot.answer(AutoChange.Ask(AutoChange.AskKind.HOW)).contains("1 on probation"))
@@ -196,8 +198,8 @@ class AutopilotTest : RobolectricTest() {
         assertTrue(e.note, e.note.startsWith("pre-flight failed: 10 cases replayed"))
         assertFalse(e.applied); assertEquals(0, Autopilot.book.value.trials)
         // Kept in the log file with its note.
-        val f = File(context.noBackupFilesDir, "autopilot/log.txt")
-        assertEquals(AutoChange.Status.SKIPPED, AutoChange.decode(f.readText()).entries.single().status)
+        val f = File(context.noBackupFilesDir, "autopilot/log.vault")
+        assertEquals(AutoChange.Status.SKIPPED, AutoChange.decode(logText(f)).entries.single().status)
     }
 
     @Test fun aPassedPreflightIsKeptBesideTheChangeAndCountsATrial() = runBlocking<Unit> {
@@ -321,12 +323,58 @@ class AutopilotTest : RobolectricTest() {
 
     @Test fun thePassDayIsKeptOnDiskBeforeAnythingElse() = runBlocking<Unit> {
         // Review 2 #11: a pass that dies half-way never runs again the same day after a restart.
-        val f = File(context.noBackupFilesDir, "autopilot/log.txt")
+        val f = File(context.noBackupFilesDir, "autopilot/log.vault")
         f.delete()
         Autopilot.testInputs = { _ -> error("the agents' stores could not be read") }
         assertNull(Autopilot.run(day, healthOnly = false))
         assertTrue(f.isFile)
-        assertEquals(day, AutoChange.decode(f.readText()).lastRun)
+        assertEquals(day, AutoChange.decode(logText(f)).lastRun)
+    }
+
+    /** The change timeline's text as the app reads it (22 Nov 2026: encrypted). */
+    private fun logText(f: File): String = String(com.optionslab.app.security.Vault.readFile(f)!!, Charsets.UTF_8)
+
+    /**
+     * 22 Nov 2026 (B6 review, item 5): the change timeline holds rupee figures, so it is kept encrypted (as the diagnostics' diary): a write
+     * leaves no plain text, and a phone's plain log of before is read once, written again encrypted and deleted - nothing of it lost.
+     */
+    @Test fun theTimelineIsKeptEncryptedAndAPlainOneOfBeforeIsMovedOnce() {
+        val reason = "its record says it loses -Rs 12,345 over 30 trades"
+        val (b, e) = AutoChange.record(AutoChange.Book(), AutoChange.armAutoStop(com.optionslab.ira.ArmAutoStops.Rule.FORWARD_BAR, false, reason),
+            AutoChange.Status.KEPT, ms(day), day, by = "your choice")
+        // A phone of before: the plain file only.
+        val dir = File(context.noBackupFilesDir, "autopilot").apply { mkdirs() }
+        val plain = File(dir, "log.txt")
+        val enc = File(dir, "log.vault")
+        enc.delete()
+        plain.writeText(AutoChange.encode(b))
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertEquals(listOf(e.id), Autopilot.book.value.entries.map { it.id })
+        assertEquals(reason, Autopilot.book.value.entries.single().change.reason)
+        assertFalse("the plain file is gone", plain.exists())
+        assertTrue(enc.isFile)
+        assertFalse("no figure in the clear", String(enc.readBytes(), Charsets.ISO_8859_1).contains("12,345"))
+        assertEquals(listOf(e.id), AutoChange.decode(logText(enc)).entries.map { it.id })
+        // Read back after a restart: the same book, from the encrypted file.
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertEquals(listOf(e.id), Autopilot.book.value.entries.map { it.id })
+        // A save writes no plain text either.
+        Autopilot.saveNow()
+        assertFalse(plain.exists())
+        assertFalse(String(enc.readBytes(), Charsets.ISO_8859_1).contains("Rs 12,345"))
+    }
+
+    /** 22 Nov 2026 (B6 review, item 5): an encrypted timeline that cannot be read is set aside, never written over, and starts afresh. */
+    @Test fun anUnreadableTimelineIsSetAsideNeverWrittenOver() {
+        val dir = File(context.noBackupFilesDir, "autopilot").apply { mkdirs() }
+        val enc = File(dir, "log.vault")
+        enc.writeBytes(ByteArray(48) { 3 })
+        Autopilot.unloadForTest()
+        Autopilot.ensureLoaded()
+        assertTrue(Autopilot.book.value.entries.isEmpty())
+        assertTrue("kept aside", dir.listFiles()!!.any { it.name.startsWith("log.vault.unreadable.") })
     }
 
     @Test fun undoingAPaperMuteWhereTheManagerActsLiveTakesThePin() {

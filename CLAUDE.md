@@ -213,8 +213,9 @@ notes; match the surrounding code.
     when positions cannot be read, and nothing when the order book cannot be read. Turned on by the guard, Jarvis, voice or
     Autopilot, it only logs which entries it would cancel.
 - R51 / R72 STALE HISTORY (20 Nov audit B5). The earlier sessions a break's 20-bar channel reads must reach the last trading day by
-  the calendar, whole in its last 20 five-minute bars. A missing, empty or stale history is read again in the background (1, 2, then
-  every 5, then every 15 minutes after about an hour); a worse read never replaces a better one, and a history already in use is
+  the calendar, whole in its last 20 five-minute bars. A missing, empty or stale history is read again in the background: with its switch
+  (below) on, after 1, 2, then every 5 minutes, and every 15 after about an hour; off, as before, every 10 minutes while one is missing
+  and once an hour while one is only empty or stale (for the log); a worse read never replaces a better one, and a history already in use is
   replaced only with the switch on (off, the first one kept stays for the day and is pinned on the phone, as before, and a better
   read is only logged). Its Bot settings switch "Hold R51 / R72 breaks on a stale history" is off by default (shadow: taken as
   before, logged "would have skipped (stale history)"); on, such a break waits in its fill window and is let go when the window

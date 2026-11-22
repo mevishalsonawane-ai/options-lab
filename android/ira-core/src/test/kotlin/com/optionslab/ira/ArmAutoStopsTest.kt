@@ -150,16 +150,24 @@ class ArmAutoStopsTest {
     }
 
     @Test fun rowsSayWhichStopsNoLongerApply() {
+        // 22 Nov 2026 (B6 review): since 20 Nov the live stop rule's switch lifts R51 / R72's arms' live-copies account stop - their rows say so.
         val r51 = ArmAutoStops.rowLine(allOff, DonchianArm.SOURCE)!!
-        assertTrue(r51.startsWith("Auto-stop off by Boss's choice (19 Nov): the forward-test switch-off, the paper account stop no longer stop it"), r51)
+        assertTrue(r51.startsWith("Auto-stop off by Boss's choice (19 Nov): the forward-test switch-off, the arms' live-copies account stop, " +
+            "the paper account stop no longer stop it"), r51)
         assertFalse(r51.contains("live stop rule"), r51)
         val liq = ArmAutoStops.rowLine(allOff, LiquidityRules.ARM.source)!!
         assertTrue(liq.contains("the live stop rule, the self-review park and pause, the paper account stop, Jarvis's losing-arm cutoff"), liq)
         assertFalse(liq.contains("forward-test"), liq)
+        assertFalse(liq.contains("live-copies"), liq)
         assertNull(ArmAutoStops.rowLine(allOff, "orb"))
-        // Only the live stop off: R51's row has nothing to say; Liquidity's names it alone.
+        // Only the live stop off: R51 and R72's rows name their live-copies account stop alone; Liquidity's names its rule alone.
         val one = ArmAutoStops.set(on, Rule.LIVE_STOP, false, 5L, pinConfirmed = true).state
-        assertNull(ArmAutoStops.rowLine(one, BreadthDonchianArm.SOURCE))
+        assertEquals("Auto-stop off by Boss's choice (19 Nov): the arms' live-copies account stop no longer stops it; it runs until you stop it " +
+            "(Bot settings to switch them back on)", ArmAutoStops.rowLine(one, BreadthDonchianArm.SOURCE))
+        assertEquals(ArmAutoStops.rowLine(one, BreadthDonchianArm.SOURCE), ArmAutoStops.rowLine(one, DonchianArm.SOURCE))
+        // The switch's own words say what it covers on R51 and R72.
+        assertTrue(Rule.LIVE_STOP.words.contains("for R51 and R72 the arms' live-copies account stop"), Rule.LIVE_STOP.words)
+        assertTrue(ArmAutoStops.set(on, Rule.LIVE_STOP, false, 5L, pinConfirmed = true).said.contains("live-copies account stop"))
         assertTrue(ArmAutoStops.rowLine(one, LiquidityRules.ARM5.source)!!.contains("the live stop rule no longer stops it"))
         assertTrue(ArmAutoStops.rowLine(one, LiquidityRules.ARM.source)!!.contains("the live stop rule no longer stops it"))
         // The live stop rule never covered FINNIFTY or MIDCPNIFTY: their rows never claim it.
@@ -242,7 +250,7 @@ class ArmAutoStopsTest {
 
     /** 20 Nov 2026 (minor fixes, item 3): the card's notice when Boss's choice was not applied - why, and how to switch one off (PIN). */
     @Test fun theNotAppliedNoticeSaysWhyAndHowToSwitchOneOff() {
-        for (w in ArmAutoStops.NotApplied.entries) {
+        for (w in ArmAutoStops.NotApplied.entries - ArmAutoStops.NotApplied.CUT_SHORT) {
             val n = ArmAutoStops.notAppliedNote(w, on)!!
             assertTrue(n.contains("not applied on this phone") && n.contains(w.why), n)
             assertTrue(n.contains("enter your PIN"), n)
@@ -253,9 +261,27 @@ class ArmAutoStopsTest {
         assertNull(ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.NEW_PHONE, allOff), "all off already: nothing to tell")
         val oneOff = ArmAutoStops.set(on, Rule.LIVE_STOP, false, 5L, pinConfirmed = true).state
         assertNotNull(ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.NEW_PHONE, oneOff), "some still on: still told")
+        // 22 Nov 2026 (B6 review): the first choice ran (four off) and a restore cut its cutoff step short - said exactly, never "not applied".
+        val fourOff = allOff.copy(on = allOff.on + (Rule.JARVIS_CUTOFF to true))
+        val part = ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.CUT_SHORT, fourOff)!!
+        assertEquals("Your 19 Nov choice (all of these off) was applied on this phone only in part: a backup was restored before its last step " +
+            "(Jarvis's losing-arm cutoff) ran, and a restore never switches an automatic stop off. Jarvis's losing-arm cutoff stays on. " +
+            "To switch one off, tap its switch below and enter your PIN.", part)
+        assertFalse(part.contains("not applied"), part)
+        // The choice never ran, and Boss had switched some off himself: not applied, and exactly which are still on.
+        val bossOwn = ArmAutoStops.set(ArmAutoStops.set(on, Rule.FORWARD_BAR, false, 5L, pinConfirmed = true).state, Rule.SELF_REVIEW, false, 6L,
+            pinConfirmed = true).state
+        val notRun = ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.RESTORE, bossOwn)!!
+        assertTrue(notRun.startsWith("Your 19 Nov choice (all of these off) was not applied on this phone: a backup was restored"), notRun)
+        assertTrue(notRun.contains("The live stop rule, the paper account stop, Jarvis's losing-arm cutoff stay on."), notRun)
+        assertFalse(notRun.contains("only in part"), notRun)
+        // None off: the whole choice was not applied, as before.
+        assertTrue(ArmAutoStops.notAppliedNote(ArmAutoStops.NotApplied.RESTORE, on)!!.contains("a backup was restored, and a restore never " +
+            "switches an automatic stop off. The stops stay on."))
         // The vault keeps the new phone's and the restore's reasons; never an unread one.
         assertEquals(ArmAutoStops.NotApplied.NEW_PHONE, ArmAutoStops.NotApplied.ofKey("new"))
         assertEquals(ArmAutoStops.NotApplied.RESTORE, ArmAutoStops.NotApplied.ofKey("restore"))
+        assertEquals(ArmAutoStops.NotApplied.CUT_SHORT, ArmAutoStops.NotApplied.ofKey("restoreCutoff"))
         assertNull(ArmAutoStops.NotApplied.ofKey("unread")); assertNull(ArmAutoStops.NotApplied.ofKey("")); assertNull(ArmAutoStops.NotApplied.ofKey(null))
     }
 }

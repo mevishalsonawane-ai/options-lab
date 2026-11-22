@@ -265,8 +265,8 @@ class SmartWorkersTest : RobolectricTest() {
 
     /**
      * 19 Nov (review): the daily review reads Boss's automatic-stop switches itself when the start could not - his saved "off" is then
-     * what Liquidity's review acts on (said as his choice). Still unreadable, they count as on (their default, the side that lowers
-     * risk): the park is done as before, never held back on a guess, and never said to be his choice. Hero as before either way.
+     * what Liquidity's review acts on (said as his choice). 22 Nov 2026 (B6 review): still unreadable, Liquidity's park waits for them
+     * (below). Hero as before either way.
      */
     @Test fun theReviewReadsTheSwitchesItselfAndUnreadableTheyCountAsOn() = runBlocking {
         clockAt(java.time.LocalDateTime.of(2026, 10, 14, 15, 50))
@@ -291,19 +291,57 @@ class SmartWorkersTest : RobolectricTest() {
         } finally { Market.testClock = null; SmartWorkers.testReviews = null }
     }
 
-    @Test fun unreadableSwitchesCountAsOnAndTheParkIsDone() = runBlocking {
+    /**
+     * 22 Nov 2026 (B6 review, item 3): Boss's automatic-stop switches unreadable (or his one-time choice not run yet) - Liquidity's park
+     * WAITS (his saved "off" is never beaten by a read that has not landed) and the day is not marked reviewed; every other review acts
+     * now, once. A minute on, the switches read (on): the waiting park is done and the day marked; Hero is not acted on twice.
+     */
+    @Test fun unreadableSwitchesHoldLiquiditysParkBackAndTheDayWaitsForThem() = runBlocking {
         clockAt(java.time.LocalDateTime.of(2026, 10, 14, 15, 50))
         try {
             SmartWorkers.ensureLoaded()
             val liq = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.LIQUIDITY, List(30) { -2_000.0 }, live = true)
-            SmartWorkers.testReviews = listOf(liq)
+            val heroPaper = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.HERO, List(20) { -5_000.0 }, live = false)
+            val heroLive = heroPaper.copy(live = true)
+            SmartWorkers.testReviews = listOf(liq, heroPaper, heroLive)
             ArmAutoStopsHost.resetForTest(com.optionslab.ira.ArmAutoStops.State(), loaded = false)
             ArmAutoStopsHost.testReadFails = true
             SmartWorkers.reviewIfDue(context)
-            assertEquals("the day is reviewed", "2026-10-14", SecurePrefs.getString("brain.reviewedOn"))
-            assertTrue("parked as before (the switches count as on)", "liquidity" in SmartWorkers.settings.value.parked)
+            assertFalse("Liquidity's park waits for the switches", "liquidity" in SmartWorkers.settings.value.parked)
+            assertTrue("Hero acted on now", "hero" in SmartWorkers.settings.value.parked)
+            assertTrue("not marked reviewed", SecurePrefs.getString("brain.reviewedOn") != "2026-10-14")
             assertTrue(Diag.lines().none { it.contains("not parked or paused: ${com.optionslab.ira.ArmAutoStops.CHOICE}") })
+            val waits = "its park or pause waits until your automatic-stop switches are read"
+            val end = System.currentTimeMillis() + 10_000
+            while (Diag.lines().none { it.contains(waits) } && System.currentTimeMillis() < end) Thread.sleep(20)
+            assertTrue(Diag.lines().any { it.contains(waits) })
+            // Within the minute: not tried again.
+            ArmAutoStopsHost.testReadFails = false
+            SmartWorkers.reviewIfDue(context)
+            assertFalse("liquidity" in SmartWorkers.settings.value.parked)
+            // A minute on, the switches read (on, as Boss left them; his choice run): the park is done, the day reviewed.
+            ArmAutoStopsHost.resetForTest()
+            SmartWorkers.reviewAgainNowForTest()
+            SmartWorkers.reviewIfDue(context)
+            assertTrue("parked once they are read (the switch on)", "liquidity" in SmartWorkers.settings.value.parked)
+            assertEquals("the day is reviewed", "2026-10-14", SecurePrefs.getString("brain.reviewedOn"))
+            Diag.flush()
+            assertEquals("Hero's paper warning said once, not again on the later pass", 1,
+                Diag.lines().count { it.contains("Hero") && it.contains("(paper): drifting from its backtest (warned") })
         } finally { Market.testClock = null; SmartWorkers.testReviews = null }
+    }
+
+    /** 22 Nov 2026 (B6 review, item 3): which reviews wait while the switches are not read - a park or pause of the three only. */
+    @Test fun onlyAParkOrPauseOfTheThreeWaitsForTheSwitches() {
+        val liqLive = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.LIQUIDITY, List(30) { -2_000.0 }, live = true)
+        val liqPaper = liqLive.copy(live = false)
+        val hero = com.optionslab.ira.DriftReview.review(com.optionslab.ira.ForwardCheck.HERO, List(20) { -5_000.0 }, live = true)
+        val s = SmartWorkers.Settings()
+        // Paper with the WARN policy only warns: nothing latches, nothing waits.
+        assertEquals(listOf(liqLive), SmartWorkers.latchWaits(listOf(liqLive, liqPaper, hero), s))
+        assertEquals(listOf(liqLive, liqPaper), SmartWorkers.latchWaits(listOf(liqLive, liqPaper, hero), s.copy(paperDrift = com.optionslab.ira.DriftReview.PaperPolicy.PAUSE)))
+        // Already parked: nothing to do, nothing waits.
+        assertEquals(emptyList<com.optionslab.ira.DriftReview.Review>(), SmartWorkers.latchWaits(listOf(liqLive), s.copy(parked = setOf("liquidity"))))
     }
 
     /** G8-3: the relay down, then switched off by Boss: live entries are no longer refused for it. G8-7: its breaker acts. */

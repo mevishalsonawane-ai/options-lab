@@ -329,4 +329,77 @@ class ArmAutoStopsHostTest : RobolectricTest() {
         ArmAutoStopsHost.load()
         assertNull(ArmAutoStopsHost.view.value.notApplied)
     }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 9a): the paper account stop's reach cannot be read - its switch-off is refused (never taken as "not
+     * reached", losing a stop already reached), and Boss's one-time choice waits for a later pass with every stop still on.
+     */
+    @Test fun anUnreadableReachRefusesThePaperAccountSwitchOffAndHoldsTheChoice() {
+        ArmAutoStopsHost.resetForTest()
+        ArmAutoStopsHost.testHeldFails = true
+        assertEquals(ArmAutoStopsHost.HELD_UNREAD, ArmAutoStopsHost.set(Rule.PAPER_ACCOUNT, false, pinConfirmed = true, log = false))
+        assertTrue(ArmAutoStopsHost.isOn(Rule.PAPER_ACCOUNT))
+        // Another switch never reads it: as before.
+        assertTrue(ArmAutoStopsHost.set(Rule.LIVE_STOP, false, pinConfirmed = true, log = false).startsWith("Off"))
+        // The one-time choice: not run on a guess - every stop on, the choice still due.
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = true)
+        ArmAutoStopsHost.testHeldFails = true
+        assertFalse(runBlocking { ArmAutoStopsHost.migrateNow(existed = true) })
+        assertTrue(Rule.entries.all { ArmAutoStopsHost.isOn(it) })
+        assertTrue(ArmAutoStopsHost.deferring())
+        SecurePrefs.flush()
+        assertFalse(SecurePrefs.getBoolean(ArmAutoStops.MIGRATION_KEY, false))
+        // Readable again: it runs (and the switch-off goes through).
+        ArmAutoStopsHost.testHeldFails = false
+        assertTrue(runBlocking { ArmAutoStopsHost.migrateNow(existed = true) })
+        assertTrue(Rule.entries.none { ArmAutoStopsHost.isOn(it) })
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 9a): the paper account stop's record not read (an erase's fresh state, or a start's read that failed) - it
+     * is read again before the switch goes off, so a stop already reached is kept, never taken as "not reached".
+     */
+    @Test fun anUnreadReachIsReadAgainAndAReachedStopKeptAsItGoesOff() {
+        ArmAutoStopsHost.resetForTest()
+        val since = Market.today().minusDays(20)
+        SecurePrefs.putAll(mapOf("g.boss.acct.since" to since.toString(), "g.boss.acct.reached" to "${Market.today().minusDays(2)}|month"))
+        BossRiskHost.wipe()
+        assertFalse(BossRiskHost.readOk)
+        assertTrue(ArmAutoStopsHost.set(Rule.PAPER_ACCOUNT, false, pinConfirmed = true, log = false).startsWith("Off"))
+        assertTrue(BossRiskHost.readOk)
+        val key = BossRiskHost.accountKeyNow()
+        assertTrue("reached, as saved", key != null)
+        assertTrue("reached before it went off: still holds R51", ArmAutoStopsHost.paperAccountActs(DonchianArm.SOURCE, key))
+        BossRiskHost.resetForTest(paperOn = false)
+    }
+
+    /** 22 Nov 2026 (B6 review, item 9a): a settings vault that cannot be read now refuses the switch-off too (its saved reach is unknown). */
+    @Test fun anUnreadableVaultRefusesThePaperAccountSwitchOff() {
+        ArmAutoStopsHost.resetForTest()
+        SecurePrefs.put("x", 1)
+        com.optionslab.app.security.Vault.destroy()
+        assertFalse(SecurePrefs.reload())
+        assertEquals(ArmAutoStopsHost.HELD_UNREAD, ArmAutoStopsHost.set(Rule.PAPER_ACCOUNT, false, pinConfirmed = true, log = false))
+        assertTrue(ArmAutoStopsHost.isOn(Rule.PAPER_ACCOUNT))
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 9b): Boss switches a rule back on at the very moment his one-time choice is written - his switch is
+     * the one kept, in memory and in the vault (the choice is written under its lock, before his).
+     */
+    @Test fun aSwitchSetAsTheChoiceIsWrittenIsNeverOverwritten() {
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = true)
+        ArmAutoStopsHost.testAfterChoice = { assertTrue(ArmAutoStopsHost.set(Rule.FORWARD_BAR, true, log = false).startsWith("On")) }
+        assertTrue(runBlocking { ArmAutoStopsHost.migrateNow(existed = true) })
+        assertTrue(ArmAutoStopsHost.isOn(Rule.FORWARD_BAR))
+        assertFalse(ArmAutoStopsHost.isOn(Rule.LIVE_STOP))
+        SecurePrefs.flush()
+        assertTrue("his on is the one written", SecurePrefs.getBoolean(Rule.FORWARD_BAR.prefKey, false))
+        assertFalse(SecurePrefs.getBoolean(Rule.LIVE_STOP.prefKey, true))
+        // A restart reads his switch back.
+        ArmAutoStopsHost.resetForTest(ArmAutoStops.State(), loaded = false)
+        ArmAutoStopsHost.load()
+        assertTrue(ArmAutoStopsHost.isOn(Rule.FORWARD_BAR))
+        assertFalse(ArmAutoStopsHost.isOn(Rule.LIVE_STOP))
+    }
 }

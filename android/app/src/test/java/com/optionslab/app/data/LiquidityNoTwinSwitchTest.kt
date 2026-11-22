@@ -18,7 +18,9 @@ import org.junit.Test
 class LiquidityNoTwinSwitchTest : RobolectricTest() {
     @Before fun up() {
         LiquidityTest.setStateForTest(LiquidityFreeze.State())
-        if (Autopilot.enabled()) { Autopilot.resetForTest(); Autopilot.init(context); Autopilot.testLive = false }
+        if (Autopilot.enabled()) { Autopilot.resetForTest(); Autopilot.init(context); Autopilot.testLive = false
+            // 22 Nov 2026 (B6 review): the start's own background entry (logged once per phone) lands first; the timeline then starts empty.
+            com.optionslab.app.testing.AutomationSupport.settleStartTimeline(context) }
     }
 
     @After fun down() {
@@ -65,11 +67,19 @@ class LiquidityNoTwinSwitchTest : RobolectricTest() {
     /** The update's own switch-on: logged once (kept), so "Today's changes" shows it; never twice. */
     @Test fun theUpdatesSwitchOnIsLoggedOnce() {
         org.junit.Assume.assumeTrue("the change timeline is in IraAlgo with Jarvis only", Autopilot.enabled())
+        // (A phone that never logged it: no one-time mark yet - 22 Nov 2026.)
+        com.optionslab.app.security.SecurePrefs.putAll(mapOf(TimelineOnce.LIQ_NO_TWIN to null))
         Autopilot.logLiqNoTwinOn(); Autopilot.logLiqNoTwinOn()
         waitFor("the update's entry") { flips().size == 1 }
         Thread.sleep(300)
         assertEquals(1, flips().size)
         assertEquals(AutoChange.ON, flips().single().change.to)
         assertEquals(AutoChange.Risk.LOWER, AutoChange.riskOf(flips().single().change))
+        // 22 Nov 2026 (B6 review): pruned from the timeline later, it is never logged again (its one-time mark).
+        waitFor("its mark") { TimelineOnce.done(TimelineOnce.LIQ_NO_TWIN) == true }
+        Autopilot.setForTest(AutoChange.Book())
+        Autopilot.logLiqNoTwinOn()
+        Thread.sleep(500)
+        assertEquals(0, flips().size)
     }
 }

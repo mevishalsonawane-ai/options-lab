@@ -28,6 +28,22 @@ import java.time.ZonedDateTime
  * "told once" set, the security report cache), so each test starts on a fresh phone without a seam.
  */
 object AutomationSupport {
+    /**
+     * 22 Nov 2026 (B6 review): the app's start logs two entries in the change timeline in the background - Liquidity's no-twin rule, once
+     * per phone ([TestApp] starts LiquidityTest; its one-time mark: [com.optionslab.app.data.TimelineOnce]), and the commodities' own limits
+     * (Autopilot's own init, while they are on). A test that counts the timeline's entries waits for both (at most [waitMs]) after
+     * Autopilot's init, then starts from an empty timeline (memory and file); neither comes back.
+     */
+    fun settleStartTimeline(context: Context, waitMs: Long = 5_000L) {
+        val end = System.currentTimeMillis() + waitMs
+        val split = com.optionslab.ira.AutoChange.segmentSplit().target
+        val mcxOwn = runCatching { com.optionslab.app.data.AppSettings.load().mcxOwnLimits }.getOrDefault(false)
+        while ((com.optionslab.app.data.TimelineOnce.done(com.optionslab.app.data.TimelineOnce.LIQ_NO_TWIN) != true ||
+                (mcxOwn && com.optionslab.app.ira.Autopilot.book.value.entries.none { it.change.target == split })) &&
+            System.currentTimeMillis() < end) Thread.sleep(20)
+        com.optionslab.app.ira.Autopilot.resetForTest()
+        File(context.noBackupFilesDir, "autopilot").deleteRecursively()
+    }
 
     /** Today (IST, as the app sees it) at [h]:[m]. */
     fun todayAt(h: Int, m: Int = 0): ZonedDateTime = Market.today().atTime(LocalTime.of(h, m)).atZone(IST)
