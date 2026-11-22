@@ -39,11 +39,15 @@ internal const val START_MCX = "Start again"
  * "Stop commodities" (no new MCX entries today; optionally sell what the MCX arms hold through their own exits) or "Start again"
  * (refused while a loss stop holds: plans only lower risk). The main "Stop index bots" button never touches this side; Jarvis's
  * "stop all" stops both. Plain state and callbacks, so tests need no [AppModel].
+ * 22 Nov 2026 (B6 review): the MCX arms are copied live, so in Live (with an app PIN set) "Start again" asks the PIN first, as Home's
+ * "Start index bots" does: [startNeedsPin] says whether it asks now, [pin] is the PIN step, and [onStart] gets whether it was taken.
  */
 @Composable
-internal fun McxStopBar(st: AppModel.McxStopState, onStop: (sell: Boolean) -> Unit, onStart: () -> Unit) {
+internal fun McxStopBar(st: AppModel.McxStopState, onStop: (sell: Boolean) -> Unit, onStart: (pinConfirmed: Boolean) -> Unit,
+                        startNeedsPin: () -> Boolean = { false }, pin: PinStep = { _, _ -> }) {
     val p = LocalPalette.current
     var asking by remember { mutableStateOf(false) }
+    var askPin by remember { mutableStateOf(false) }
     val tone = if (st.stopped) p.oxblood else p.verdigris
     Row(Modifier.fillMaxWidth().padding(bottom = 6.dp).background(tone.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
         .padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -55,7 +59,10 @@ internal fun McxStopBar(st: AppModel.McxStopState, onStop: (sell: Boolean) -> Un
             modifier = Modifier.semantics { contentDescription = label }.clickable { asking = true }
                 .heightIn(min = 48.dp).padding(horizontal = 10.dp, vertical = 14.dp))
     }
-    if (asking) McxStopDialog(st, onStop = { sell -> asking = false; onStop(sell) }, onStart = { asking = false; onStart() }) { asking = false }
+    if (asking) McxStopDialog(st, onStop = { sell -> asking = false; onStop(sell) },
+        onStart = { asking = false; if (startNeedsPin()) askPin = true else onStart(false) }) { asking = false }
+    // (Cancel, or a wrong PIN, starts nothing.)
+    if (askPin) pin({ askPin = false; onStart(true) }, { askPin = false })
 }
 
 @Composable
