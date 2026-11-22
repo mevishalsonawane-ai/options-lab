@@ -1086,6 +1086,21 @@ object ArmLive {
     /** 22 Nov 2026 (B6 review): why [zerodha] gave no contract when the instruments list is not in memory yet ([askWhenListed]). */
     private const val NOT_LOADED = "Zerodha's instrument list is not loaded yet (loading it in the background)"
 
+    /**
+     * 22 Nov 2026 (B6 review, third look): why an entry asked again late ([askWhenListed]) is not sent - Zerodha's price for it ([quote]: the
+     * offer for a buy, the bid for a sale; else [last]) worse than its paper fill [paper] by more than the entry LIMIT's own buffer over the
+     * offer ([LiveMirror.ENTRY_BUFFER], at least two ticks) - or null: within it.
+     */
+    internal fun lateMoved(side: Int, paper: Double, quote: Broker.Quote?, last: Double, tick: Double): String? {
+        if (!paper.isFinite() || paper <= 0) return null
+        val t = tick.takeIf { it.isFinite() && it > 0 } ?: 0.05
+        val room = maxOf(2 * t, paper * LiveMirror.ENTRY_BUFFER)
+        val px = (if (side > 0) quote?.ask else quote?.bid)?.takeIf { it.isFinite() && it > 0 } ?: last
+        val worse = if (side > 0) px > paper + room + 1e-9 else px < paper - room - 1e-9
+        return if (worse) "asked again once the instrument list loaded, Zerodha's price %.2f is past its paper fill %.2f by more than the entry buffer (%.2f): not sent"
+            .format(Locale.ENGLISH, px, paper, room) else null
+    }
+
     /** 22 Nov 2026 (B6 review): how long [askWhenListed] waits for today's list once an earlier day's is in memory. */
     private const val LISTED_GRACE_MS = 5_000L
 
@@ -1123,7 +1138,7 @@ object ArmLive {
                     if (dropped || cleared) save(b)
                 }
                 note(a.key, "asked again for ${a.ref}: Zerodha's instrument list is in memory now")
-                enterNow(a)
+                enterNow(a, late = true)
             }
         }
     }
@@ -1171,13 +1186,13 @@ object ArmLive {
     }
 
     /** The live (or shadow) entry for [a], when the gate allows it. */
-    private suspend fun enterNow(a: Ask) = entryLock.withLock { enterLocked(a, t0 = a.atNanos) }
+    private suspend fun enterNow(a: Ask, late: Boolean = false) = entryLock.withLock { enterLocked(a, t0 = a.atNanos, late = late) }
 
     /**
      * [enterNow]'s body, under the entry lock. 20 Nov 2026 (Boss's exception, [CheaperStrike]): with [step], the same entry once more on the
      * cheaper strike it chose - every gate below runs again for it; one lot; its paper trade keeps its own strike.
      */
-    private suspend fun enterLocked(a: Ask, step: CheaperStrike.Pick? = null, t0: Long = System.nanoTime()): Unit = run withLock@{
+    private suspend fun enterLocked(a: Ask, step: CheaperStrike.Pick? = null, t0: Long = System.nanoTime(), late: Boolean = false): Unit = run withLock@{
         val spec = LiveMirror.spec(a.key) ?: return@withLock
         // (20 Nov 2026: whether the cheaper strike was already tried for this entry - never twice.)
         var stepTried = step != null
@@ -1231,6 +1246,9 @@ object ArmLive {
         // (22 Nov 2026, B6 review, item 7: the fresh read with no stale fallback either - never an old tick; no price, no entry.)
         } ?: runCatching { Broker.stopQuotes(listOf(qkey), staleFallback = false)[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
+        // 22 Nov 2026 (B6 review, third look): an entry asked again late ([askWhenListed]) goes only while Zerodha's price is still within the
+        // arm's own entry buffer of its paper fill ([lateMoved]); past it, not mirrored and said - never a worse entry than the paper's.
+        if (late && step == null) lateMoved(a.side, a.paperEntry, quote, last, ins.tick)?.let { notMirrored(a, it); return@withLock }
         // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; "make it default, don't have one
         // more option"): an index option buy of more than one lot is cut to the lots the free cash fits - only ever fewer than his
         // setting, never more. Priced at the higher of the last price, the offer and its own limit (19 Nov 2026: a buy at the LIMIT it

@@ -3452,6 +3452,68 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue("its note stays", view().notMirrored.any { it.ref == "gone" })
     }
 
+    // ---- 22 Nov 2026 (B6 review, third look): the late re-ask's price and gates -----------------------------------------------------
+
+    /** A cold-list refusal of [ref], then the list made loadable again: returns once it is in memory. */
+    private fun coldThenLoaded(ref: String, between: () -> Unit) {
+        Broker.forgetInstrumentsMemoForTest()
+        java.io.File(context.filesDir, "kite_instruments.json").delete()
+        kite.down += "/instruments/NFO"
+        ArmLive.entered(ask(donchian, ref))
+        assertTrue(view().notMirrored.any { it.ref == ref && "instrument list is not loaded yet" in it.why })
+        between()
+        kite.down.clear(); Broker.resetInstrumentsRetryForTest()
+        val end = System.currentTimeMillis() + 5_000
+        while (Broker.instrumentsInMemory() == null && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertNotNull(Broker.instrumentsInMemory())
+    }
+
+    private fun waitFor(ms: Long = 8_000, ok: () -> Boolean): Boolean {
+        val end = System.currentTimeMillis() + ms
+        while (!ok() && System.currentTimeMillis() < end) Thread.sleep(25)
+        return ok()
+    }
+
+    /** The late re-ask goes only while Zerodha's price is within the entry buffer of the paper fill: past it, nothing is sent and it is said. */
+    @Test fun aLateReAskWhosePriceMovedPastTheEntryBufferIsNotSent() {
+        coldThenLoaded("moved") { kite.quote("NFO:$sym", 205.0, 204.95, 205.05) }   // paper filled at 200; the buffer is 1.00
+        assertTrue(view().notMirrored.toString(), waitFor { view().notMirrored.any { it.ref == "moved" && "past its paper fill" in it.why } })
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertTrue(view().openReal.none { it.ref == "moved" })
+    }
+
+    @Test fun lateMovedJudgesTheOfferForABuyAndTheBidForASale() {
+        fun q(bid: Double, ask: Double) = Broker.Quote(200.0, bid, ask, 200.0)
+        assertNull("within the buffer (1.00 on 200)", ArmLive.lateMoved(1, 200.0, q(200.0, 200.95), 200.0, 0.05))
+        assertNotNull(ArmLive.lateMoved(1, 200.0, q(200.0, 201.10), 200.0, 0.05))
+        assertNull("a buy cheaper than its paper fill goes", ArmLive.lateMoved(1, 200.0, q(190.0, 190.05), 190.0, 0.05))
+        assertNull(ArmLive.lateMoved(-1, 200.0, q(199.05, 199.10), 199.0, 0.05))
+        assertNotNull("a sale's bid past the buffer below", ArmLive.lateMoved(-1, 200.0, q(198.90, 199.0), 199.0, 0.05))
+        assertNotNull("no offer: the last price", ArmLive.lateMoved(1, 200.0, Broker.Quote(202.0, null, null, 200.0), 202.0, 0.05))
+        assertNull("two ticks at least on a cheap option", ArmLive.lateMoved(1, 5.0, q(5.0, 5.10), 5.0, 0.05))
+    }
+
+    /** The kill switch put on while the late re-ask waited for the list: it refuses it as any entry - nothing sent. */
+    @Test fun aLateReAskIsRefusedByTheKillSwitchSwitchedOnMeanwhile() {
+        try {
+            coldThenLoaded("killed") { SecurePrefs.put("g.kill", true) }
+            assertTrue(view().refused.toString(), waitFor { view().refused[donchian]?.contains("kill switch") == true })
+            Thread.sleep(300)
+            assertTrue("nothing sent", kite.placed.isEmpty())
+        } finally { SecurePrefs.put("g.kill", false) }
+    }
+
+    /** Stop for today put on while the late re-ask waited: refused as any entry - nothing sent. */
+    @Test fun aLateReAskIsRefusedByStopForTodaySwitchedOnMeanwhile() {
+        try {
+            coldThenLoaded("stopped") { runBlocking { Strategies.stopForToday(false, false, log = false) } }
+            assertTrue(view().refused.toString(), waitFor { view().refused[donchian]?.contains("stopped for today") == true })
+            Thread.sleep(300)
+            assertTrue("nothing sent", kite.placed.isEmpty())
+            assertTrue(view().openReal.none { it.ref == "stopped" })
+        } finally { runBlocking { Strategies.startAgain(log = false) } }
+    }
+
     /** Item 6: a second ask for a paper trade that already has its live trade is noted in the diagnostics - never skipped silently. */
     @Test fun aSecondAskForAPaperTradeAlreadyMirroredIsNotedNeverSkippedSilently() {
         ArmLive.entered(ask(donchian, "dup"))
