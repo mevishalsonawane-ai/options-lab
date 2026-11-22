@@ -1014,6 +1014,9 @@ class PassedArmsHostTest : RobolectricTest() {
         val live = com.optionslab.app.data.ArmLive.view.value.open.single()
         assertEquals(DonchianArm.SOURCE, live.key)
         assertEquals(PassedArmsHost.mirrorRef(wb), live.ref)
+        // 22 Nov 2026 (B6 review, item 6): its live reference is its own id, never the pass's time another would-be trade shares.
+        assertNotNull(wb.wb)
+        assertEquals("passed:${DonchianArm.SOURCE}:${wb.wb}", live.ref)
         assertTrue(PassedArmsHost.shadowWords(wb).contains("its live copy was asked"))
         // Its would-be's own stop sells the live copy too (the Zerodha stop out first).
         market(LocalTime.of(9, 31), call = { t -> if (t.isBefore(LocalTime.of(9, 30))) 100.0 else 80.0 })
@@ -1024,9 +1027,26 @@ class PassedArmsHostTest : RobolectricTest() {
         assertEquals("CANCELLED", kite.order(live.stopOrderId!!).status)
         assertEquals("stop", com.optionslab.app.data.ArmLive.view.value.closed.single().why)
         assertEquals("flat at Zerodha, never short", 0, kite.positions["NFO:$sym:MIS"]?.first ?: 0)
-        // Persisted: a restart reads it back as copied.
+        // Persisted: a restart reads it back as copied, with the same live reference.
         AutomationSupport.reloadFromDisk(PassedArmsHost)
         assertTrue(view().closedOf(DonchianArm.SOURCE).single().copied)
+        assertEquals(live.ref, PassedArmsHost.mirrorRef(view().closedOf(DonchianArm.SOURCE).single()))
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 6: two indices' would-be trades of one arm on one pass shared the pass's time as their live reference,
+     * so the second's live copy was refused as the first's): each would-be trade's reference is its own id; a real paper trade keeps its
+     * paper order's, and a would-be trade saved before (no id) keeps its old reference, so a live copy already asked with it still follows.
+     */
+    @Test fun wouldBeTradesOfOnePassNeverShareALiveReference() {
+        val t = day.atTime(9, 20)
+        fun pos(index: String, orderId: String? = null, wb: String? = null) = PassedArmsHost.Pos(DonchianArm.SOURCE, index, "$index-TEST-CE", "CE", 65,
+            100.0, t, orderId, shadow = if (orderId == null) PassedArmsHost.SHADOW_HELD else null, copied = orderId == null, wb = wb)
+        val a = pos("NIFTY", wb = "11111111-1111-1111-1111-111111111111")
+        val b = pos("BANKNIFTY", wb = "22222222-2222-2222-2222-222222222222")
+        assertTrue("two would-be trades of the pass: two references", PassedArmsHost.mirrorRef(a) != PassedArmsHost.mirrorRef(b))
+        assertEquals("passed:${DonchianArm.SOURCE}:P1", PassedArmsHost.mirrorRef(pos("NIFTY", orderId = "P1")))
+        assertEquals("saved before: as it was", "passed:${DonchianArm.SOURCE}:$t", PassedArmsHost.mirrorRef(pos("NIFTY")))
     }
 
     /** B2-B: with the switch off (the default: shadow), a break held on paper by another arm skips live as before and is only logged. */

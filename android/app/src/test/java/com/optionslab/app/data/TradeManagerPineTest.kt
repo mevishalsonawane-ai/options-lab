@@ -67,6 +67,9 @@ class TradeManagerPineTest : RobolectricTest() {
         kite.instruments += FakeKite.Ins(33_000_002, pe, "BANKNIFTY", expiry, 52_000.0, "PE", 30)
         kite.quote("NFO:$ce", 300.0, 299.95, 300.05)
         kite.quote("NFO:$pe", 280.0, 279.95, 280.05)
+        // 22 Nov 2026 (B6 review, item 5): the day's instruments list in memory, as the app's own reads leave it (a Pine live entry under
+        // the scripts' lock no longer downloads it).
+        runBlocking { Broker.instruments() }
         id = PineScripts.put(PineScripts.Item(0, "Level", code)).id
         PineScripts.setAuto(id, PineScripts.Auto(symbol = "BANKNIFTY", interval = "5m", lots = 1, buy = "Buy", sell = "Sell", shortWith = "exit"))
         TradeManagerHost.testNoWake = true

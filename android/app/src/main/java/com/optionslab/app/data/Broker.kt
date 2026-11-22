@@ -247,35 +247,67 @@ object Broker {
             if (Strategies.stopRefusesAtDoor(mcx = o.exchange == "MCX")) return "stopped_for_today"
             DayLockGuard.refusal(true)?.let { return it }
             // Smart workers (10 Oct): a news window paused ON, unreliable data, the relay down - memory only, lower risk only.
-            runCatching { SmartWorkers.doorRefusal(o.tradingSymbol) }.getOrNull()?.let { return it }
+            // 22 Nov 2026 (B6 review, item 4: the door's checks failed open): each check below that THROWS refuses the entry while its
+            // live switch is on ([doorPart], EntryGate's rule: an entry never goes on a guess); in shadow it lets it go, as before.
+            doorPart("the smart workers", { SmartWorkers.doorActs() }) { SmartWorkers.doorRefusal(o.tradingSymbol) }?.let { return it }
             // The portfolio guard (TODO S12): a live entry ITS arm ([arm]) was just blocked from by the guard - memory only, it
             // only blocks. Review R1: another arm's entry and a saved strategy's basket leg (no arm) are never refused here.
             if (o.tag != "iraalgostrat")
-                runCatching { PortfolioHost.doorRefusal(arm, o.tradingSymbol, o.side == Kite.Side.BUY) }.getOrNull()?.let { return it }
+                doorPart("the portfolio guard", { PortfolioHost.doorActs() }) { PortfolioHost.doorRefusal(arm, o.tradingSymbol, o.side == Kite.Side.BUY) }?.let { return it }
             // 19 Oct: the same-direction cap on the bots' live index-option entries - in SHADOW by default (what it would refuse is
             // only recorded; nothing changes) until Boss switches it on in Bot settings. Memory only; it only ever refuses. A saved
             // strategy's basket leg is never asked (refusing one leg of a hedged basket could leave the rest unhedged).
             if (o.tag != "iraalgostrat")
-                runCatching { ExposureCapHost.liveCheck(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag) }.getOrNull()?.let { return it }
+                doorPart("the same-direction cap", { ExposureCapHost.liveActs() }) { ExposureCapHost.liveCheck(o.tradingSymbol, o.exchange, o.side == Kite.Side.BUY, arm ?: o.tag) }?.let { return it }
             // 20 Oct, enhancement round 1 (idea 4): Boss's account stop rule over the whole Zerodha account - in SHADOW by default
             // (what it would refuse is only recorded) until Boss switches it on in Bot settings. Memory only; it only refuses. A
             // saved strategy's basket leg is never asked (one leg refused could leave the rest unhedged): its automatic start is.
             if (o.tag != "iraalgostrat")
-                runCatching { AccountStopHost.doorCheck(o.tradingSymbol, arm ?: o.tag) }.getOrNull()?.let { return it }
+                doorPart("the account stop rule", { AccountStopHost.doorActs() }) { AccountStopHost.doorCheck(o.tradingSymbol, arm ?: o.tag) }?.let { return it }
             // 25 Oct (Boss's decisions on the app audit, [BossRiskHost]): the weekly loss stop, opposite bets, the 2% risk cap and h14's
             // capped limit on the bots' live BUYs - each in SHADOW (logged only) unless Boss switches its live switch on; the spread
             // check is shadow only. Memory only; they only ever refuse. A saved strategy's basket leg is never asked.
             if (o.tag != "iraalgostrat" && o.side == Kite.Side.BUY)
-                runCatching { BossRiskHost.liveDoor(o.tradingSymbol, o.exchange, arm ?: o.tag, o.quantity * o.multiplier.coerceAtLeast(1),
-                    o.lotSize * o.multiplier.coerceAtLeast(1), intended ?: o.price, stop) }.getOrNull()?.let { return it }
+                doorPart("your risk rules", { BossRiskHost.liveActs() }) { BossRiskHost.liveDoor(o.tradingSymbol, o.exchange, arm ?: o.tag, o.quantity * o.multiplier.coerceAtLeast(1),
+                    o.lotSize * o.multiplier.coerceAtLeast(1), intended ?: o.price, stop) }?.let { return it }
         }
         return null
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 4: "entry checks at the door fail open"): one of the door's own checks ([check]: the smart workers, the
+     * portfolio guard, the same-direction cap, the account stop rule, Boss's risk rules). One that throws refuses the entry when its live
+     * switch is on ([on]; a switch that cannot be read counts as on) - EntryGate's rule: an entry never goes on a guess. With the switch off
+     * (shadow: it would only have logged) the entry goes, as before. Memory only, as the checks and their switches are; never on a tick.
+     */
+    internal fun doorPart(what: String, on: () -> Boolean, check: () -> String?): String? =
+        try { check() } catch (e: Throwable) { doorUnread(what, runCatching(on).getOrDefault(true), e) }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 4): what a door check that could not be read ([e]) says: with its live switch [on], the entry's refusal
+     * (noted in the diagnostics); off (shadow), null - the entry goes as it would have. The hosts' own checks answer with it too.
+     */
+    internal fun doorUnread(what: String, on: Boolean, e: Throwable): String? {
+        if (!on) return null
+        val why = "refused: $what could not be checked (${e.javaClass.simpleName}); the entry was not sent"
+        runCatching { Diag.record("risk", why) }
+        return why
     }
 
     fun init(context: Context) { app = context.applicationContext }
 
     class NotLoggedIn : IOException("Log in to Zerodha for today first")
     class KiteError(val type: String, msg: String) : IOException(msg)
+
+    /**
+     * 22 Nov 2026 (B6 review, item 1: "an unsure Kite error is treated as a definite refusal"): Kite answered one of [UNSURE] (DataException,
+     * GeneralException: the order may have been placed all the same) and the order book read after it ([sendChecked]) did not show the
+     * order yet. Neither a refusal nor definite ([definite] false, [ArmOrderLabels.zerodhaRefused] false, never a funds refusal): the
+     * caller keeps the order UNKNOWN, as for a lost reply - an entry stays unconfirmed and is settled from the book by its tag, an exit
+     * or a stop is looked for ([noteLost]) - never sent again or rested twice beside it. [type]: Kite's own error type. Before, the error
+     * itself was thrown and taken as a refusal: an entry the exchange filled late was dropped with no stop.
+     */
+    class KiteUnsure(val type: String, msg: String) : IOException(msg)
 
     // ---- credentials ------------------------------------------------------------
 
@@ -544,7 +576,10 @@ object Broker {
                 // (B5 merge review: a read with a budget waits for the main gate only while at least [MIN_CALL_MS] of it would be left for
                 // the call itself - one whose time is spent takes no slot, and its cut never collapses to a few ms; the slot is given back
                 // when its quote turn then runs out, as its request never went.)
-                val slot = if (write || budget == null) { rate.acquire(p); null } else {
+                // 22 Nov 2026 (B6 review, item 8): a bot's new entry's order waits for its turn [ENTRY_TURN_WAIT_MS] at most ([entryTurn]);
+                // later, it is refused with nothing sent. Exits, stops, cancels, Boss's own orders, a basket's legs and every other write
+                // wait as before.
+                val slot = if (write || budget == null) { writeTurn(rate, p, entry = write && ctx[EntrySend]?.bounded == true); null } else {
                     // (A free slot is still taken at once with no time left to wait: a short read - an order poll's last second - goes.)
                     val most = minOf(mainGateWaitMs(budget, System.currentTimeMillis() - began), ctx[QuoteQueueCap]?.ms ?: Long.MAX_VALUE)
                     rate.acquireStamp(p, most.coerceAtLeast(0L))
@@ -728,7 +763,14 @@ object Broker {
      * 20 Nov 2026 (audit B5, item 3): marks a NEW entry's order on its coroutine ([placeOrder]), so its POST takes the entries' lane,
      * below the exits' and the stop checks' reads ([writePriority]). Memory only.
      */
-    private class EntrySend : kotlin.coroutines.AbstractCoroutineContextElement(EntrySend) {
+    private class EntrySend(
+        /**
+         * 22 Nov 2026 (B6 review, item 8): a bot's own single-order entry (ORB, Liquidity, Pine, the arms' live copies), whose turn in the
+         * request budget is bounded ([entryTurn]). Boss's own orders and a saved strategy's basket legs wait as before - one leg of a hedged
+         * basket refused could leave the rest unhedged, the reason the door never refuses them on its risk checks either.
+         */
+        val bounded: Boolean = false,
+    ) : kotlin.coroutines.AbstractCoroutineContextElement(EntrySend) {
         companion object Key : kotlin.coroutines.CoroutineContext.Key<EntrySend>
     }
 
@@ -744,6 +786,28 @@ object Broker {
 
     /** TEST ONLY: [writePriority] as a new entry's order would ask. */
     internal fun entryWritePriorityForTest(): com.optionslab.ira.RateGate.Priority = writePriority(true, EntrySend())
+
+    /**
+     * 22 Nov 2026 (B6 review, item 8: "ENTRY writes have no limit on their wait at the RateGate"): the longest a new entry's order waits for
+     * its turn in the one request budget ([rate]) - the exits, the stops and the stop checks' reads go first, and a busy minute could hold
+     * an entry there for long, to reach Zerodha at a price long gone.
+     */
+    const val ENTRY_TURN_WAIT_MS = 3_000L
+
+    /**
+     * 22 Nov 2026 (B6 review, item 8): a new entry's turn in [gate] (lane [p]), waited for [maxMs] at most; none by then, the entry is
+     * refused at the app's own door ("entry_gate": definite, nothing reached Zerodha) - never sent late. Exits and stops never come here.
+     */
+    internal suspend fun entryTurn(gate: com.optionslab.ira.RateGate, p: com.optionslab.ira.RateGate.Priority, maxMs: Long = ENTRY_TURN_WAIT_MS) {
+        if (gate.acquireWithin(p, maxMs)) return
+        throw KiteError("entry_gate", "refused: the phone's request budget stayed busy with exits and stop checks for ${maxMs / 1000} s; " +
+            "the entry was not sent")
+    }
+
+    /** 22 Nov 2026 (B6 review, item 8): a write's (or an unbudgeted read's) turn in [gate]: a new [entry]'s bounded ([entryTurn]), any other's waited for as before. */
+    internal suspend fun writeTurn(gate: com.optionslab.ira.RateGate, p: com.optionslab.ira.RateGate.Priority, entry: Boolean) {
+        if (entry) entryTurn(gate, p) else gate.acquire(p)
+    }
 
     /**
      * The budget of one read (null: not a read's budget - every write, which has its own since 20 Nov 2026 ([WRITE_BUDGET_MS]),
@@ -860,6 +924,9 @@ object Broker {
         // 18 Oct (review): a paper-only period the start could not read is read now (this is a worker thread, never the order
         // path), so the day's live entries are not refused for want of it.
         runCatching { PaperOnly.ensureLoaded() }
+        // 22 Nov 2026 (B6 review, item 5): the instruments list into memory now, in the background, so the arms' first live entry finds it
+        // there ([instrumentsInMemory]: an entry under an arm's lock never reads it itself).
+        runCatching { warmInstrumentsInBackground() }
         return data.optString("user_name", "you")
     }
 
@@ -1036,7 +1103,10 @@ object Broker {
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
         entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null
         killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
-        cancelLostSearches(); lostWrites.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false }
+        cancelLostSearches(); lostWrites.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false
+        // (22 Nov 2026, B6 review: no test's instruments list in memory left for the next test's entries, [instrumentsInMemory], nor a
+        // background read of it still running into the next test.)
+        instrumentsWarm?.cancel(); instrumentsWarm = null; instrumentsWarming.set(false); instrumentsMemo = null }
     /** TEST ONLY (20 Nov 2026): the ids of the orders sent from here forgotten, as after a restart (memory only). */
     internal fun forgetSentForTest() { sentIds.clear() }
 
@@ -1612,6 +1682,50 @@ object Broker {
     /** TEST ONLY: the background fetch's wait forgotten. */
     internal fun resetInstrumentsRetryForTest() { instrumentsTriedAt = 0L }
 
+    /**
+     * 22 Nov 2026 (B6 review, item 5: "the instrument list can be downloaded under the arms' locks"): the instruments list held in MEMORY
+     * only - never the file, never Zerodha - for an entry decided under an arm's lock (the ORB family's, the arms' live copies', Pine's):
+     * a download there is megabytes with no budget, and every other trade's look waits on that lock. Not today's list: answered with it,
+     * and today's fetched in the background, as [cachedInstruments] does. None in memory (a cold start): null - the caller refuses this
+     * entry with a note - and the list is loaded in the background ([warmInstrumentsInBackground]: the file first, then Zerodha's).
+     */
+    fun instrumentsInMemory(): List<Kite.Instrument>? {
+        val m = instrumentsMemo ?: run { warmInstrumentsInBackground(); return null }
+        if (!instrumentsCurrent(m)) refreshInstrumentsInBackground()
+        return m.list
+    }
+
+    private val instrumentsWarming = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var instrumentsWarm: kotlinx.coroutines.Job? = null
+
+    /**
+     * 22 Nov 2026 (B6 review, item 5): the instruments list read into memory in the background - the saved file, then today's from Zerodha
+     * when the file is not today's ([refreshInstrumentsInBackground], throttled). One at a time; returns at once (nothing on the caller).
+     */
+    internal fun warmInstrumentsInBackground() {
+        if (!instrumentsWarming.compareAndSet(false, true)) return
+        instrumentsWarm = readScope.launch {
+            try {
+                runCatching { instrumentsFile() }
+                if (!instrumentsCurrent(instrumentsMemo)) refreshInstrumentsInBackground()
+            } finally { instrumentsWarming.set(false) }
+        }
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): the instruments list read into memory once the app's start has read and watched the position books (never
+     * before them: [PositionsFirst.awaitPositions]), so the arms' first live entry finds it there ([instrumentsInMemory]). In the background.
+     */
+    fun warmAfterPositions() {
+        readScope.launch { runCatching { PositionsFirst.awaitPositions() }; warmInstrumentsInBackground() }
+    }
+
+    /** 22 Nov 2026 (B6 review): whether an instruments list is in memory - only looked at (no load started, nothing read). */
+    fun instrumentsHeld(): Boolean = instrumentsMemo != null
+
+    /** TEST ONLY (22 Nov 2026, B6 review): the instruments list in memory forgotten, as after a restart (the file is kept). */
+    internal fun forgetInstrumentsMemoForTest() { instrumentsMemo = null }
+
     /** NIFTY and BANKNIFTY options from GET /instruments/NFO, cached for the day. */
     suspend fun instruments(): List<Kite.Instrument> {
         val had = instrumentsFile()
@@ -1898,7 +2012,7 @@ object Broker {
         return when (val r = entryGate.enter("${o.exchange}:${o.tradingSymbol}", recheck = { entryRecheck(o, arm, intended, stop) }) {
             com.optionslab.app.work.TradingBusy.during {
                 // (20 Nov 2026, audit B5: its POST in the lane below the exits' ([EntrySend]); its id kept as an entry's for the kill switch.)
-                try { kotlinx.coroutines.withContext(EntrySend()) { sendChecked(o, false, arm, intended) }.also { noteKind(it, entry = true); if (counted) count() } }
+                try { kotlinx.coroutines.withContext(EntrySend(bounded = counted)) { sendChecked(o, false, arm, intended) }.also { noteKind(it, entry = true); if (counted) count() } }
                 catch (e: Exception) { if (counted && e !is kotlinx.coroutines.CancellationException && !definite(e)) runCatching { count() }; throw e }
             } }) {
             is com.optionslab.ira.EntryGate.Outcome.Went -> r.value
@@ -1922,9 +2036,11 @@ object Broker {
     /**
      * [send], and after one of the [UNSURE] errors the order book is read for the order before anything is decided, as for a
      * lost reply ([findRecentRetrying]: three looks two seconds apart, the book can trail the POST): found, it is the order placed
-     * (its id, as if Zerodha had answered); not there, the error stands as before (a refusal); the book unreadable, the order's
-     * fate is unknown (not definite, so the caller looks again). Only what really exists changes the outcome. An entry's look
-     * holds the entry door meanwhile: no other entry goes while this one's fate is unknown.
+     * (its id, as if Zerodha had answered); the book unreadable, the order's fate is unknown (not definite, so the caller looks
+     * again). Only what really exists changes the outcome. An entry's look holds the entry door meanwhile: no other entry goes while
+     * this one's fate is unknown.
+     * 22 Nov 2026 (B6 review, item 1): not there yet is no proof either (the book can trail the POST longer, a LIMIT may rest and fill
+     * later): [KiteUnsure], never the error itself - before, it was taken as a refusal and the entry's intent dropped.
      */
     private suspend fun sendChecked(o: Kite.Order, exit: Boolean, arm: String?, intended: Double?): String = try {
         send(o, exit, arm, intended)
@@ -1933,8 +2049,8 @@ object Broker {
         val found = try { findRecentRetrying(o, emptyList(), afterError = true) } catch (x: kotlinx.coroutines.CancellationException) { throw x
         } catch (_: Exception) { throw IOException("${e.message} (Zerodha's ${e.type}); its order book could not be read, so the order may exist") }
         runCatching { Diag.record("zerodha", "${o.tradingSymbol}: Zerodha answered ${e.type} (${e.message}); " +
-            (found?.let { "the order is in the book: $it" } ?: "no such order in the book: refused")) }
-        found ?: throw e
+            (found?.let { "the order is in the book: $it" } ?: "no such order in the book yet: its state is unknown (looked for again)")) }
+        found ?: throw KiteUnsure(e.type, "${e.message} (Zerodha's ${e.type}); the order is not in its order book yet, so it may still exist")
     }
 
     /**
@@ -2176,7 +2292,8 @@ object Broker {
      * True when [e] from [placeOrder] means the order was certainly NOT placed: Zerodha answered with a
      * refusal, or nothing was sent (not logged in). A lost reply (timeout, dropped connection, an
      * unreadable answer, Kite's own NetworkException) is not definite: the order may exist. Kite's DataException and
-     * GeneralException on an order are checked against the order book inside [placeOrder] first ([UNSURE]).
+     * GeneralException on an order are checked against the order book inside [placeOrder] first ([UNSURE]); not found there they are
+     * [KiteUnsure] (22 Nov 2026, B6 review), not definite either.
      */
     // 20 Nov 2026 (audit B5, item 2): and a write that never left the phone ([NotSent]: no network, no address for Zerodha, the
     // connection refused or not made in time, the relay down). Before, those read as lost replies and were searched for.
@@ -2244,13 +2361,18 @@ object Broker {
      * while a caller still asks after it (an unknown order dropped could be sent twice): each ends found, given up on after a good read,
      * or forgotten; only one no caller has asked after for an hour (its trade long gone) is let go, and only past 500 kept.
      */
-    fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false) {
+    fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false,
+                 /**
+                  * 22 Nov 2026 (B6 review): a lost reply its caller saved and takes back after a restart - when it was first noted (phone
+                  * ms: its [LOST_SEARCH_MS] window runs on from then) and when it was sent (its search's start). Null: now.
+                  */
+                 sinceMs: Long? = null, sentAt: java.time.LocalDateTime? = null) {
         // (Bounded: only ones no caller has asked after for an hour - their trades long gone - are let go, and only past 500.)
         if (lostWrites.size > 500) lostWrites.entries.removeIf { e ->
             (System.currentTimeMillis() - e.value.askedMs > 3_600_000L).also { gone -> if (gone) e.value.searching?.cancel() }
         }
-        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what, liveOnly,
-            runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }))
+        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), sinceMs ?: System.currentTimeMillis(), what, liveOnly,
+            sentAt ?: runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }))
     }
 
     /** Whether a lost reply is being looked for under [key]. Memory only. */

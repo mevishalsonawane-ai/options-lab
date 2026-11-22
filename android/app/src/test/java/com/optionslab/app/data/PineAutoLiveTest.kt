@@ -67,6 +67,10 @@ class PineAutoLiveTest : RobolectricTest() {
         kite.instruments += FakeKite.Ins(33_000_002, pe, "BANKNIFTY", expiry, 52_000.0, "PE", 30)
         kite.quote("NFO:$ce", 300.0, 299.95, 300.05)
         kite.quote("NFO:$pe", 280.0, 279.95, 280.05)
+        // 22 Nov 2026 (B6 review, item 5): the day's instruments list in memory, as the app's own reads leave it (an entry under the
+        // scripts' lock no longer downloads it: [withTheInstrumentListNotInMemoryNothingIsSentAndItLoadsInTheBackground]).
+        runBlocking { Broker.instruments() }
+        kite.requests.clear()
         id = PineScripts.put(PineScripts.Item(0, "Level", code)).id
         auto()
     }
@@ -425,6 +429,7 @@ class PineAutoLiveTest : RobolectricTest() {
         kite.nextPlace(reply = Reply.INPUT_EXCEPTION)              // the market sell is refused
         pass(51_900.0)                                             // SELL signal; shortWith = exit
         assertEquals("the stop was taken out for the sale", "CANCELLED", kite.order(stop).status)
+        assertTrue("marked the app's own cancel (22 Nov 2026, B6 review, item 9)", PineAuto.ownCancelForTest(stop))
         val h = held()!!
         assertEquals("still held: the sale did not go", 30, h.qty)
         // M1: the stop is back at Zerodha where it rested, for what is still held.
@@ -582,6 +587,7 @@ class PineAutoLiveTest : RobolectricTest() {
         assertTrue(log(), log().contains("is no longer held"))
         // Its resting stop is taken out at Zerodha too, confirmed: it can never sell what is no longer held.
         assertEquals("CANCELLED", kite.order(stop).status)
+        assertTrue("marked the app's own cancel (22 Nov 2026, B6 review, item 9)", PineAuto.ownCancelForTest(stop))
         assertFalse("nothing left to take out", PineAuto.holding())
     }
 
@@ -1249,5 +1255,543 @@ class PineAutoLiveTest : RobolectricTest() {
         runBlocking { PineAuto.load() }
         assertEquals(1, PineAuto.log.value.count { it.script == 2L && it.text.startsWith("Switched off: the same strategy") })
         assertEquals(mapOf(1L to true, 2L to false, 3L to true, 4L to true), PineScripts.items.value.associate { it.id to it.auto.on })
+    }
+
+    // ---- 22 Nov 2026 (B6 review): lost sales and buys, the app's own cancels, the instruments list --------------------------------------
+
+    /**
+     * Item 2: the exit sale's answer is lost and the book does not show it through ~4 s of looks. Before, the stop went back at once beside
+     * a sale that had filled (a resting SELL on a flat position). Now nothing more is sold and no stop rests beside it while it is looked
+     * for; once the book shows the sale, it is booked - one sale, nothing left working.
+     */
+    @Test fun aLostExitSaleIsHeldWithNoStopBesideItAndBookedOnceTheBookShowsIt() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        val sl = held()!!.stop!!
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)            // the sale's answer is lost; it fills at Zerodha
+        kite.trailReads = 50                                       // and the book does not list it yet
+        pass(51_900.0)                                             // SELL signal: the exit
+        assertEquals("CANCELLED", kite.order(sl).status)
+        assertEquals("one sale", 1, side("SELL").size)
+        assertEquals("flat at Zerodha", 0, kite.positions.getValue("NFO:$ce:MIS").first)
+        assertEquals("no stop put back beside the sale", 1, stops().size)
+        assertNotNull("held while its sale is looked for", held())
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "exit of $ce was lost" in it })
+        // The next passes: still looked for - nothing sold again, no stop.
+        pass(51_890.0)
+        pass(51_880.0)
+        assertEquals(1, side("SELL").size); assertEquals(1, stops().size)
+        assertNotNull(held())
+        kite.showInBook()
+        pass(51_870.0)
+        assertNull("booked from its own sale", held())
+        assertTrue(log(), log().contains("Sold 30 $ce at"))
+        assertEquals(1, side("SELL").size); assertEquals(1, stops().size)
+        assertTrue("nothing working on the flat contract", kite.orders.values.none { it.working })
+    }
+
+    /**
+     * Item 2: a lost sale the book never shows (Zerodha in fact rejected it) is given up on only once a read that succeeded past the window
+     * still does not show it - then the holding goes on as before: its stop back, the owed exit sent again (and it goes).
+     */
+    @Test fun aLostExitSaleNeverShownIsGivenUpOnlyPastTheWindowThenTheHoldingGoesOn() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        kite.nextPlace(FakeKite.Scenario(reply = Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.REJECT))   // nothing sold
+        kite.trailReads = 50
+        pass(51_900.0)
+        assertEquals(1, side("SELL").size); assertEquals(1, stops().size)
+        pass(51_890.0)
+        assertEquals("still looked for: nothing sent", 1, side("SELL").size); assertEquals(1, stops().size)
+        assertEquals("still held at Zerodha", 30, kite.positions.getValue("NFO:$ce:MIS").first)
+        Broker.lostSearchMsForTest = 0                             // the window is over; the next read succeeds without it
+        pass(51_880.0)
+        assertEquals("its stop went back once given up on", 2, stops().size)
+        assertEquals("then the owed exit went again", 2, side("SELL").size)
+        assertNull("sold", held())
+        assertEquals(0, kite.positions.getValue("NFO:$ce:MIS").first)
+        assertTrue("nothing left working", kite.orders.values.none { it.working })
+    }
+
+    /**
+     * Item 2: the stop taken out for a sale that then finds nothing to sell (Boss's own sale covers what is held) is never left out for
+     * good: no stop beside his sale now (never more resting than held), and once there is room again it rests on the next check.
+     */
+    @Test fun aStopTakenOutForASaleWithNothingToSellGoesBackNeverLeftWithNone() {
+        bought()
+        val sl = held()!!.stop!!
+        val boss = kite.restingInKite(ce, "SELL", 30, 900.0, type = "LIMIT", tag = "", product = "MIS")
+        pass(51_900.0)                                             // SELL signal: the exit finds nothing to sell
+        assertEquals("CANCELLED", kite.order(sl).status)
+        assertTrue("no sale sent", side("SELL").isEmpty())
+        assertNotNull(held())
+        assertNull(held()!!.stop)
+        assertEquals("no stop beside Boss's sale", 1, stops().size)
+        // Boss's own sale gone and the signal back to BUY: the stop rests again on the next check.
+        kite.order(boss).status = "CANCELLED"
+        pass(52_010.0)
+        val h = held()!!
+        assertNotNull("its stop is back", h.stop)
+        assertEquals("TRIGGER PENDING", kite.order(h.stop!!).status)
+        assertEquals(30, kite.order(h.stop!!).qty)
+        assertEquals(270.0, kite.order(h.stop!!).trigger, 1e-9)
+    }
+
+    /**
+     * Item 3: the buy's answer is lost and the book does not show it through ~4 s of looks. Before, that was "nothing bought" - a buy that
+     * filled was left at Zerodha with no stop. Now it is held as unconfirmed and looked for; once the book shows it filled, it is tracked
+     * with its stop at Zerodha.
+     */
+    @Test fun aLostBuyNotFoundAtOnceIsHeldAndTrackedWithItsStopOnceItFills() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        switchOn()
+        pass(51_900.0)
+        kite.nextPlace(FakeKite.Scenario(reply = Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.OPEN))
+        kite.trailReads = 50
+        pass(52_010.0)
+        val h = held()!!
+        assertTrue("held, unconfirmed", h.unconfirmed)
+        assertNull(h.order)
+        assertFalse(log(), log().contains("nothing bought"))
+        pass(52_020.0)
+        assertTrue("still looked for", held()!!.unconfirmed)
+        assertEquals("nothing more bought meanwhile", 1, side("BUY").size)
+        assertTrue("no stop yet", stops().isEmpty())
+        // It fills late, and the book shows it.
+        val buy = kite.orders.values.single { it.side == "BUY" }
+        kite.fill(buy.id, 301.0)
+        kite.showInBook()
+        pass(52_030.0)
+        val settled = held()!!
+        assertFalse(settled.unconfirmed)
+        assertEquals(30, settled.qty); assertEquals(301.0, settled.entry, 1e-9)
+        assertEquals("one buy, never two", 1, side("BUY").size)
+        assertEquals("its stop rests at Zerodha", 1, stops().size)
+        assertEquals(kite.orders.values.single { it.type == "SL" }.id, settled.stop)
+    }
+
+    /** Item 3: one never found is let go only once the book, read past the window, still does not show it - never sooner. */
+    @Test fun aLostBuyNeverFoundIsLetGoOnlyPastTheWindow() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        switchOn()
+        pass(51_900.0)
+        kite.nextPlace(FakeKite.Scenario(reply = Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.REJECT))   // nothing bought
+        kite.trailReads = 50
+        pass(52_010.0)
+        assertTrue(held()!!.unconfirmed)
+        pass(52_020.0)
+        assertTrue("kept within the window", held()!!.unconfirmed)
+        Broker.lostSearchMsForTest = 0
+        pass(52_030.0)
+        assertNull("let go", held())
+        assertTrue(log(), log().contains("No buy of $ce reached Zerodha: nothing held"))
+        assertEquals(1, side("BUY").size)
+    }
+
+    /**
+     * Item 5: the instruments list is not in memory (a cold start): under the scripts' lock nothing is read from the file or downloaded -
+     * nothing is sent, said, and the list is loaded in the background; the next change of signal buys.
+     */
+    @Test fun withTheInstrumentListNotInMemoryNothingIsSentAndItLoadsInTheBackground() {
+        // A cold start with no list to be had yet: none in memory, no file, Zerodha's download failing for now.
+        Broker.forgetInstrumentsMemoForTest()
+        java.io.File(context.filesDir, "kite_instruments.json").delete()
+        kite.down += "/instruments/NFO"
+        switchOn()
+        pass(51_900.0)
+        pass(52_010.0)
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertNull(held())
+        assertTrue(log(), log().contains("instrument list is not loaded yet"))
+        // Zerodha answers again: the list is loaded in the background (never under the scripts' lock); the next change buys.
+        kite.down.clear(); Broker.resetInstrumentsRetryForTest()
+        val end = System.currentTimeMillis() + 5_000
+        while (Broker.instrumentsInMemory() == null && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertNotNull("loaded in the background", Broker.instrumentsInMemory())
+        pass(51_900.0)
+        pass(52_010.0)
+        assertEquals("the next change buys", 1, side("BUY").size)
+    }
+
+    /**
+     * Item 9: a stop the app took out itself for an exit, whose end Zerodha shows only later, is said as the app's own - never as gone from
+     * Zerodha (Boss's or the exchange's) - and the exit then goes.
+     */
+    @Test fun aStopTheAppTookOutItselfIsSaidAsItsOwnNeverAsGoneFromZerodha() {
+        bought()
+        val sl = held()!!.stop!!
+        kite.cancelLagReads = 1_000                                // its cancel is taken, but its end shows only later
+        AutomationSupport.clearAlerts()
+        pass(51_900.0)                                             // the exit takes the stop out; still working, nothing is sold beside it
+        assertTrue(PineAuto.ownCancelForTest(sl))
+        assertTrue("nothing sold beside a stop still working", side("SELL").isEmpty())
+        kite.order(sl).status = "CANCELLED"                        // its end shows now
+        pass(51_900.0)                                             // the next check reads it, then the owed exit goes
+        assertTrue(log(), log().contains("taken out by the app for an exit"))
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "taken out by the app for an exit" in it })
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().none { "is no longer at Zerodha" in it })
+        assertNull("sold", held())
+        assertEquals(1, side("SELL").size)
+        assertTrue("nothing left working", kite.orders.values.none { it.working })
+    }
+
+    // ---- 22 Nov 2026 (B6 review, second look) ----------------------------------------------------------------------------------------
+
+    /**
+     * The review's chain: a buy whose answer was lost (held unconfirmed), then its exit sale's answer lost too - the sale fills, Zerodha is
+     * flat. Before, the next pass settled the buy (now shown) and rested its stop on the flat contract, beside the sale; the sale found then
+     * closed the holding and left that SL SELL resting. Now no stop rests while the lost sale is looked for; found, the buy is settled and the
+     * sale booked against it - one buy, one sale, no stop ever, nothing working.
+     */
+    @Test fun anUnconfirmedBuysLostExitSaleNeverGetsAStopBesideItAndIsBookedOnceFound() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        switchOn()
+        pass(51_900.0)
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)            // the buy's answer lost; it fills at Zerodha
+        kite.trailReads = 500                                      // and the book does not list it yet
+        pass(52_010.0)
+        assertTrue("held, unconfirmed", held()!!.unconfirmed)
+        assertEquals(30, kite.positions.getValue("NFO:$ce:MIS").first)
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)            // the exit's answer lost too; it fills
+        kite.trailReads = 500
+        pass(51_900.0)                                             // SELL signal: the exit
+        assertEquals("one sale", 1, side("SELL").size)
+        val sale = kite.orders.values.single { it.side == "SELL" && it.type == "MARKET" }
+        assertEquals("flat at Zerodha", 0, kite.positions.getValue("NFO:$ce:MIS").first)
+        assertTrue(stops().isEmpty())
+        // The buy shows in the book now; the sale still does not.
+        kite.showInBook(); kite.hideFromBook(sale.id, 500)
+        pass(51_890.0)
+        assertFalse("its buy settled meanwhile (its unfilled rest would be cancelled)", held()!!.unconfirmed)
+        assertTrue("stamped as bought when its buy was sent (never 0, shared by every settled holding)", held()!!.at > 0L)
+        assertTrue("no stop beside the lost sale", stops().isEmpty())
+        assertEquals("nothing sold again", 1, side("SELL").size)
+        assertNotNull("still held while its sale is looked for", held())
+        pass(51_880.0)
+        assertTrue(stops().isEmpty()); assertEquals(1, side("SELL").size)
+        // The sale shows: the buy is settled and the sale booked against it.
+        kite.showInBook()
+        pass(51_870.0)
+        assertNull("booked from its own sale", held())
+        assertTrue(log(), log().contains("Sold 30 $ce at"))
+        assertEquals("one buy", 1, side("BUY").size)
+        assertEquals("one sale", 1, side("SELL").size)
+        assertTrue("no stop ever", stops().isEmpty())
+        assertTrue("nothing working on the flat contract", kite.orders.values.none { it.working })
+    }
+
+    /**
+     * The same chain with the sale shown first and the buy still not: the found sale is kept (held: no stop, nothing sold again) until the
+     * buy is settled - never a stop rested for the buy's whole fill on the contract the sale emptied - then booked against it.
+     */
+    @Test fun aLostSaleFoundBeforeItsBuyIsSettledIsKeptUntilItIsThenBooked() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        switchOn()
+        pass(51_900.0)
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 500
+        pass(52_010.0)
+        assertTrue(held()!!.unconfirmed)
+        val buy = kite.orders.values.single { it.side == "BUY" }
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 500
+        pass(51_900.0)
+        assertEquals(1, side("SELL").size)
+        // The sale shows in the book; the buy still does not.
+        kite.showInBook(); kite.hideFromBook(buy.id, 500)
+        pass(51_890.0)
+        assertTrue("its buy not settled yet", held()!!.unconfirmed)
+        assertTrue("no stop", stops().isEmpty())
+        pass(51_880.0)
+        assertTrue(stops().isEmpty()); assertEquals("nothing sold again", 1, side("SELL").size)
+        assertNotNull(held())
+        // The buy shows: settled, and the kept sale booked against it.
+        kite.showInBook()
+        pass(51_870.0)
+        assertNull("booked from its own sale", held())
+        assertTrue(log(), log().contains("Sold 30 $ce at"))
+        assertEquals(1, side("BUY").size); assertEquals(1, side("SELL").size)
+        assertTrue("no stop ever", stops().isEmpty())
+        assertTrue("nothing working", kite.orders.values.none { it.working })
+        assertTrue(Broker.lostKeys("pineexit:").isEmpty())
+    }
+
+    /**
+     * A lost sale found while its holding still names its stop (the stop's own state could not be read when the exit took it out): once the
+     * sale closes the holding, that stop and its own exits are taken out and confirmed gone at Zerodha ([PineAuto]'s takeOutExits).
+     */
+    @Test fun aLostSaleFoundWhileItsHoldingStillNamesAStopTakesThatStopOut() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        val sl = held()!!.stop!!
+        kite.down += "/orders/$sl"                                 // the stop's own state cannot be read (its cancel is taken)
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 500
+        pass(51_900.0)
+        assertEquals("CANCELLED", kite.order(sl).status)
+        assertEquals(1, side("SELL").size)
+        assertEquals("the holding still names its stop", sl, held()!!.stop)
+        kite.down.clear(); kite.showInBook()
+        val before = kite.requests.size
+        pass(51_890.0)
+        assertNull("booked from its own sale", held())
+        assertTrue(log(), log().contains("Sold 30 $ce at"))
+        assertTrue("its stop looked at and confirmed gone",
+            kite.requests.drop(before).any { it.path == "/orders/$sl" || it.path == "/orders/regular/$sl" })
+        assertEquals(1, side("SELL").size); assertEquals(1, stops().size)
+        assertTrue("nothing working", kite.orders.values.none { it.working })
+    }
+
+    /**
+     * A restart in a lost sale's window: the sale is saved with the book, so the hold is taken back - nothing sold again and no stop put
+     * back beside it - and once the book shows the sale, it is booked.
+     */
+    @Test fun aLostExitSalesHoldIsTakenBackAfterARestartInItsWindow() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        kite.nextPlace(reply = Reply.DROP_AFTER_ACCEPT)
+        kite.trailReads = 500
+        pass(51_900.0)
+        assertEquals(1, side("SELL").size); assertEquals(1, stops().size)
+        assertEquals(1, Broker.lostKeys("pineexit:").size)
+        // The restart: every memory gone, the book read back from disk.
+        Broker.forgetLostForTest(); PineAuto.forgetStaleForTest()
+        assertTrue(Broker.lostKeys("pineexit:").isEmpty())
+        AutomationSupport.reloadFromDisk(PineAuto)
+        runBlocking { PineAuto.load() }
+        assertEquals("its hold taken back", 1, Broker.lostKeys("pineexit:").size)
+        pass(51_890.0)
+        assertEquals("nothing sold again", 1, side("SELL").size)
+        assertEquals("no stop put back beside it", 1, stops().size)
+        assertNotNull(held())
+        kite.showInBook()
+        pass(51_880.0)
+        assertNull("booked from its own sale", held())
+        assertTrue(log(), log().contains("Sold 30 $ce at"))
+        assertEquals(1, side("SELL").size); assertEquals(1, stops().size)
+        assertTrue("nothing working", kite.orders.values.none { it.working })
+        assertTrue("its record dropped once found", Broker.lostKeys("pineexit:").isEmpty())
+        // And dropped from the saved book: a second restart takes nothing back.
+        Broker.forgetLostForTest(); PineAuto.forgetStaleForTest()
+        AutomationSupport.reloadFromDisk(PineAuto)
+        runBlocking { PineAuto.load() }
+        assertTrue(Broker.lostKeys("pineexit:").isEmpty())
+    }
+
+    /**
+     * WHO CANCELLED A STOP: the stop the app took out itself for an exit that then did not go (the signal turned back first) is the app's to
+     * put back - it rests again at Zerodha on the next check, never left with none.
+     */
+    @Test fun aStopTheAppTookOutForAnExitThatDidNotGoRestsAgain() {
+        bought()
+        val sl = held()!!.stop!!
+        // An earlier sale of the scripts' on the contract, filled two hours before (a part-sale long booked): never taken for this exit's.
+        kite.orders["old1"] = FakeKite.Order("old1", ce, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "irapine", "COMPLETE", filled = 30,
+            avg = 290.0, at = Market.now().toLocalDateTime().minusHours(2))
+        kite.cancelLagReads = 1_000                                // its cancel taken; its end shows only later: nothing sold beside it
+        pass(51_900.0)
+        assertTrue(PineAuto.ownCancelForTest(sl))
+        assertTrue(side("SELL").isEmpty())
+        kite.order(sl).status = "CANCELLED"                        // its end shows now
+        pass(52_010.0)                                             // and the signal is back to BUY: no exit owed
+        assertTrue("nothing sold", side("SELL").isEmpty())
+        val h = held()!!
+        assertNotNull("its stop rests again", h.stop)
+        assertTrue(h.stop != sl)
+        assertEquals("TRIGGER PENDING", kite.order(h.stop!!).status)
+        assertEquals(30, kite.order(h.stop!!).qty)
+        assertEquals(2, stops().size)
+        assertTrue(log(), log().contains("it rests again on the next check"))
+    }
+
+    /**
+     * The same, with Zerodha's positions unreadable when the stop's end is read: the holding has no stop from then (the app watches its
+     * level), and whether it rests again is decided on the next check's fresh reads - then it rests.
+     */
+    @Test fun anOwnCancelledStopsReRestWaitsForAFreshPositionsReadThenRests() {
+        bought()
+        val sl = held()!!.stop!!
+        kite.cancelLagReads = 1_000
+        pass(51_900.0)
+        assertTrue(side("SELL").isEmpty())
+        kite.order(sl).status = "CANCELLED"
+        kite.down += "/portfolio/positions"
+        pass(52_010.0)
+        assertNull("no stop on the holding: the app watches its level", held()!!.stop)
+        assertEquals("none rested again yet", 1, stops().size)
+        kite.down.clear()
+        pass(52_020.0)
+        val h = held()!!
+        assertNotNull("decided on fresh reads: it rests again", h.stop)
+        assertEquals("TRIGGER PENDING", kite.order(h.stop!!).status)
+        assertEquals(2, stops().size)
+        assertTrue(side("SELL").isEmpty())
+    }
+
+    // ---- 22 Nov 2026 (B6 review, third look) ---------------------------------------------------------------------------------------
+
+    /**
+     * M1: the app's cancel of its stop never took (answered, never landed) and a fresh read shows the stop still working 15 s on: the mark
+     * ends. Boss's own cancel of it in Kite later is his - never put back (WHO CANCELLED A STOP).
+     */
+    @Test fun anOwnCancelThatNeverTookEndsItsMarkSoBosssLaterCancelIsNeverPutBack() {
+        bought()
+        val sl = held()!!.stop!!
+        kite.cancelsLost = 1                                       // answered as taken; it never lands
+        pass(51_900.0)                                             // SELL: the exit takes the stop out - still working: nothing sold beside it
+        assertTrue(PineAuto.ownCancelForTest(sl))
+        assertTrue(side("SELL").isEmpty())
+        assertEquals("TRIGGER PENDING", kite.order(sl).status)
+        PineAuto.ageOwnCancelForTest(sl, PineAuto.OWN_CANCEL_RECHECK_MS + 1_000)
+        pass(52_010.0)                                             // back to BUY; a fresh read shows it still working 15 s on
+        assertFalse("its cancel never took: no longer the app's own", PineAuto.ownCancelForTest(sl))
+        assertEquals(sl, held()!!.stop)
+        // Later Boss cancels it himself in Kite.
+        kite.order(sl).status = "CANCELLED"
+        AutomationSupport.clearAlerts()
+        pass(52_020.0)
+        assertNull("the app watches the level", held()!!.stop)
+        assertEquals("Boss's cancel is never put back", 1, stops().size)
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "is no longer at Zerodha" in it })
+    }
+
+    /** The time of the app's own cancel is kept with the book: after a restart a fresh one still puts its stop back (never left with none). */
+    @Test fun aFreshOwnCancelStillPutsItsStopBackAfterARestart() {
+        bought()
+        val sl = held()!!.stop!!
+        kite.cancelLagReads = 1_000
+        pass(51_900.0)
+        assertTrue(side("SELL").isEmpty())
+        PineAuto.forgetStaleForTest()                              // the restart: the memory gone, the book read back
+        AutomationSupport.reloadFromDisk(PineAuto)
+        runBlocking { PineAuto.load() }
+        assertTrue(PineAuto.ownCancelForTest(sl))
+        kite.order(sl).status = "CANCELLED"
+        pass(52_010.0)
+        val h = held()!!
+        assertNotNull("put back", h.stop)
+        assertEquals(2, stops().size)
+        assertEquals(30, kite.order(h.stop!!).qty)
+    }
+
+    /** M1: an own cancel older than its freshness window is never put back either, whatever the reads show. */
+    @Test fun anOwnCancelPastItsFreshnessIsNeverPutBack() {
+        bought()
+        val sl = held()!!.stop!!
+        kite.cancelLagReads = 1_000
+        pass(51_900.0)
+        assertTrue(side("SELL").isEmpty())
+        PineAuto.ageOwnCancelForTest(sl, 11 * 60_000L)
+        kite.order(sl).status = "CANCELLED"
+        pass(52_010.0)
+        assertNull(held()!!.stop)
+        assertEquals("not put back", 1, stops().size)
+    }
+
+    /**
+     * M2: Boss's 1-lot SELL LIMIT, placed before the app's cancel of the 2-lot stop, fills after it - Zerodha holds 1 lot. Taken by its fill
+     * time as a sale since the cancel: the stop is not put back (before, an SL for 2 lots rested on 1 held).
+     */
+    @Test fun aSaleOfBosssPlacedBeforeTheCancelThatFillsAfterItKeepsTheStopFromBeingPutBack() {
+        bought(lots = 2)
+        val sl = held()!!.stop!!
+        assertEquals(60, kite.order(sl).qty)
+        val boss = kite.restingInKite(ce, "SELL", 30, 900.0, type = "LIMIT", tag = "", product = "MIS")
+        kite.cancelLagReads = 1_000
+        pass(51_900.0)                                             // the exit: stop taken out (shown later); Boss's sale covers the rest
+        assertTrue(side("SELL").isEmpty())
+        kite.fill(boss, 300.0)                                     // Boss's sale fills after the app's cancel
+        kite.order(sl).status = "CANCELLED"
+        pass(52_010.0)                                             // back to BUY: no exit owed
+        assertEquals(30, kite.positions.getValue("NFO:$ce:MIS").first)
+        assertNull(held()!!.stop)
+        assertEquals("never an SL above what Zerodha holds", 1, stops().size)
+    }
+
+    /** M2: Zerodha holds less than the holding with no sale seen since the cancel: never re-rested blindly - the app watches, Boss is told. */
+    @Test fun lessHeldAtZerodhaThanTheHoldingNeverPutsTheStopBack() {
+        bought(lots = 2)
+        val sl = held()!!.stop!!
+        val boss = kite.restingInKite(ce, "SELL", 30, 900.0, type = "LIMIT", tag = "", product = "MIS")
+        kite.cancelLagReads = 1_000
+        pass(51_900.0)
+        kite.fill(boss, 300.0)
+        kite.order(boss).updated = Market.now().toLocalDateTime().minusHours(1)   // its fill time unreadable as "since the cancel"
+        kite.order(sl).status = "CANCELLED"
+        AutomationSupport.clearAlerts()
+        pass(52_010.0)
+        assertNull(held()!!.stop)
+        assertEquals(1, stops().size)
+        assertTrue(AutomationSupport.alerts().toString(), AutomationSupport.alerts().any { "Zerodha holds 30 of $ce, less than the 60" in it })
+    }
+
+    /** M2: re-rested beside another owner's working sale, the stop is sized to what Zerodha holds less that sale - never above it. */
+    @Test fun aStopPutBackBesideAnotherWorkingSaleRestsOnlyForWhatItLeaves() {
+        bought(lots = 2)
+        val sl = held()!!.stop!!
+        kite.restingInKite(ce, "SELL", 30, 900.0, type = "LIMIT", tag = "", product = "MIS")   // Boss's sale, still working
+        kite.cancelLagReads = 1_000
+        pass(51_900.0)
+        kite.order(sl).status = "CANCELLED"
+        pass(52_010.0)
+        val h = held()!!
+        assertNotNull("put back", h.stop)
+        assertEquals("for what Boss's working sale leaves", 30, kite.order(h.stop!!).qty)
+        assertEquals(2, stops().size)
+    }
+
+    /**
+     * M3: an exit sale fills in part while the stop's own state could not be read at the exit: the unsold rest's stop rests again on the next
+     * check (its own booked sale is never taken for a sale since the cancel), sized to what Zerodha holds.
+     */
+    @Test fun theUnsoldRestOfAPartlyFilledExitGetsItsStopBack() {
+        bought(lots = 2)
+        val sl = held()!!.stop!!
+        kite.down += "/orders/$sl"                                 // the stop's state cannot be read at the exit (its cancel is taken)
+        kite.nextPlace(FakeKite.Scenario(outcome = FakeKite.Outcome.PARTIAL_THEN_CANCEL, partialQty = 30))
+        pass(51_900.0)
+        assertEquals(1, side("SELL").size)
+        assertEquals("CANCELLED", kite.order(sl).status)
+        assertEquals("the unsold rest still held", 30, held()!!.qty)
+        assertEquals(30, kite.positions.getValue("NFO:$ce:MIS").first)
+        kite.down.clear()
+        pass(52_010.0)                                             // back to BUY: no exit owed; the stop's end is read
+        val h = held()!!
+        assertNotNull("the rest's stop rests again", h.stop)
+        assertEquals(30, kite.order(h.stop!!).qty)
+        assertEquals(2, stops().size)
+        assertEquals(1, side("SELL").size)
+    }
+
+    /** A lost sale given up on at or after 15:15 never rests a stop again then: the square-off sells what is held. */
+    @Test fun aLostSaleGivenUpOnAfter1515RestsNoStopAndTheSquareOffSells() {
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        bought()
+        kite.nextPlace(FakeKite.Scenario(reply = Reply.DROP_AFTER_ACCEPT, outcome = FakeKite.Outcome.REJECT))   // nothing sold
+        kite.trailReads = 500
+        pass(51_900.0)
+        assertEquals(1, side("SELL").size); assertEquals(1, stops().size)
+        Broker.lostSearchMsForTest = 0                             // the window is over
+        val to1516 = java.time.Duration.between(now, now.toLocalDate().atTime(15, 16).atZone(now.zone)).toMinutes()
+        pass(51_890.0, minutes = to1516)
+        assertEquals("no stop rested again after 15:15", 1, stops().size)
+        assertEquals("the square-off sold it", 2, side("SELL").size)
+        assertNull(held())
+        assertEquals(0, kite.positions.getValue("NFO:$ce:MIS").first)
+        assertTrue("nothing working", kite.orders.values.none { it.working })
+    }
+
+    /** Item 9: the app's own cancel marks are saved with the book - after a restart a cancel the app made is still read as its own. */
+    @Test fun theAppsOwnCancelMarksAreKeptAcrossARestart() {
+        bought()
+        val sl = held()!!.stop!!
+        kite.cancelLagReads = 1_000                                // its cancel taken; nothing sold beside a stop still working
+        pass(51_900.0)
+        assertTrue(PineAuto.ownCancelForTest(sl))
+        PineAuto.forgetStaleForTest()                              // the memory gone, as after a restart
+        assertFalse(PineAuto.ownCancelForTest(sl))
+        AutomationSupport.reloadFromDisk(PineAuto)
+        runBlocking { PineAuto.load() }
+        assertTrue("read back from the book", PineAuto.ownCancelForTest(sl))
     }
 }

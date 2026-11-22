@@ -1075,10 +1075,72 @@ object ArmLive {
             val i = Broker.find(l, c.underlying, c.expiry, c.strike, c.right) ?: return null to "${c.symbol} is not listed on Zerodha"
             return Ins(i.tradingSymbol, "BFO", i.lotSize, i.tickSize, 1) to null
         }
-        val list = Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull() ?: return null to "Zerodha's instrument list could not be read"
+        // 22 Nov 2026 (B6 review, item 5): the list in memory only (the entry lock is held: never a file read or a download here); none in
+        // memory yet, this entry is not mirrored and the list is loaded in the background for the next one.
+        val list = Broker.instrumentsInMemory() ?: return null to NOT_LOADED
         val i = list.firstOrNull { it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6 }
             ?: return null to "${c.symbol} is not listed on Zerodha"
         return Ins(i.tradingSymbol, "NFO", i.lotSize, i.tickSize, 1) to null
+    }
+
+    /** 22 Nov 2026 (B6 review): why [zerodha] gave no contract when the instruments list is not in memory yet ([askWhenListed]). */
+    private const val NOT_LOADED = "Zerodha's instrument list is not loaded yet (loading it in the background)"
+
+    /**
+     * 22 Nov 2026 (B6 review, third look): why an entry asked again late ([askWhenListed]) is not sent - Zerodha's price for it ([quote]: the
+     * offer for a buy, the bid for a sale; else [last]) worse than its paper fill [paper] by more than the entry LIMIT's own buffer over the
+     * offer ([LiveMirror.ENTRY_BUFFER], at least two ticks) - or null: within it.
+     */
+    internal fun lateMoved(side: Int, paper: Double, quote: Broker.Quote?, last: Double, tick: Double): String? {
+        if (!paper.isFinite() || paper <= 0) return null
+        val t = tick.takeIf { it.isFinite() && it > 0 } ?: 0.05
+        val room = maxOf(2 * t, paper * LiveMirror.ENTRY_BUFFER)
+        val px = (if (side > 0) quote?.ask else quote?.bid)?.takeIf { it.isFinite() && it > 0 } ?: last
+        val worse = if (side > 0) px > paper + room + 1e-9 else px < paper - room - 1e-9
+        return if (worse) "asked again once the instrument list loaded, Zerodha's price %.2f is past its paper fill %.2f by more than the entry buffer (%.2f): not sent"
+            .format(Locale.ENGLISH, px, paper, room) else null
+    }
+
+    /** 22 Nov 2026 (B6 review): how long [askWhenListed] waits for today's list once an earlier day's is in memory. */
+    private const val LISTED_GRACE_MS = 5_000L
+
+    /** 22 Nov 2026 (B6 review): the paper trades already asked again once the instruments list loaded ([askWhenListed]). Memory only, bounded. */
+    private val listedAsks: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /**
+     * 22 Nov 2026 (B6 review: "the cold instrument list loses the entry for good"): [a] was not mirrored only because the instruments list
+     * was not in memory yet ([NOT_LOADED]). It is asked once more as soon as the list is (loaded in the background) - only while its paper
+     * trade is still open, within [CheaperStrike.CHASE_MS] of its paper fill and once at most - through every gate of [enterNow] as any
+     * entry; its "not mirrored" note for that reason is taken back first. On this object's own worker: the caller never waits.
+     */
+    private fun askWhenListed(a: Ask) {
+        if (listedAsks.size > 200) listedAsks.clear()
+        if (!listedAsks.add(a.ref)) return
+        val gen = wipeGen
+        scope.launch {
+            runCatching {
+                val end = a.atNanos + CheaperStrike.CHASE_MS * 1_000_000L
+                // (Only looked at here - the load itself was started by the refusal's own look; never a new read of the file per look. Today's
+                // list is waited for: an earlier day's, read from the file, may lack a new expiry - taken after [LISTED_GRACE_MS] all the same.)
+                var heldAt = 0L
+                while (gen == wipeGen && System.nanoTime() < end && !Broker.instrumentsAreToday()) {
+                    if (Broker.instrumentsHeld()) { if (heldAt == 0L) heldAt = System.nanoTime() else if (System.nanoTime() - heldAt >= LISTED_GRACE_MS * 1_000_000L) break }
+                    kotlinx.coroutines.delay(250)
+                }
+                if (gen != wipeGen || System.nanoTime() >= end || !Broker.instrumentsHeld()) return@runCatching
+                val spec = LiveMirror.spec(a.key) ?: return@runCatching
+                if (paperOpen(spec, a.ref) != true) return@runCatching
+                lock.withLock {
+                    val b = book()
+                    val dropped = b.notMirrored.removeAll { it.ref == a.ref && it.why == NOT_LOADED }
+                    // (Its arm's last refusal too, while it is still that one.)
+                    val cleared = b.refused[a.key]?.endsWith(NOT_LOADED) == true && b.refused.remove(a.key) != null
+                    if (dropped || cleared) save(b)
+                }
+                note(a.key, "asked again for ${a.ref}: Zerodha's instrument list is in memory now")
+                enterNow(a, late = true)
+            }
+        }
     }
 
     /** 18 Nov 2026 (audit A4): [p] in place of the entry intent of paper trade [ref] ([enterNow]), or added when there is none. */
@@ -1124,13 +1186,13 @@ object ArmLive {
     }
 
     /** The live (or shadow) entry for [a], when the gate allows it. */
-    private suspend fun enterNow(a: Ask) = entryLock.withLock { enterLocked(a, t0 = a.atNanos) }
+    private suspend fun enterNow(a: Ask, late: Boolean = false) = entryLock.withLock { enterLocked(a, t0 = a.atNanos, late = late) }
 
     /**
      * [enterNow]'s body, under the entry lock. 20 Nov 2026 (Boss's exception, [CheaperStrike]): with [step], the same entry once more on the
      * cheaper strike it chose - every gate below runs again for it; one lot; its paper trade keeps its own strike.
      */
-    private suspend fun enterLocked(a: Ask, step: CheaperStrike.Pick? = null, t0: Long = System.nanoTime()): Unit = run withLock@{
+    private suspend fun enterLocked(a: Ask, step: CheaperStrike.Pick? = null, t0: Long = System.nanoTime(), late: Boolean = false): Unit = run withLock@{
         val spec = LiveMirror.spec(a.key) ?: return@withLock
         // (20 Nov 2026: whether the cheaper strike was already tried for this entry - never twice.)
         var stepTried = step != null
@@ -1149,10 +1211,16 @@ object ArmLive {
         closedWhy(a.ref)?.let { notMirrored(a, "its paper trade is already closed ($it)"); return@withLock }
         // (19 Nov 2026, audit batch 2: one closed elsewhere before its live entry went is still closed - not mirrored, as before.)
         detachNotes[a.ref]?.let { notMirrored(a, "its paper trade is already closed (${it.second})"); return@withLock }
-        // One live trade per paper trade, ever.
-        if (lock.withLock { book().positions.any { it.ref == a.ref } }) return@withLock
+        // One live trade per paper trade, ever. (22 Nov 2026, B6 review, item 6: said in the diagnostics, never skipped silently - two paper
+        // trades sharing one reference would otherwise lose the second's live copy unseen.)
+        if (lock.withLock { book().positions.any { it.ref == a.ref } }) { note(a.key, "not mirrored: its paper trade ${a.ref} already has a live trade (one per paper trade)"); return@withLock }
         val (ins, insWhy) = step?.let { Ins(it.symbol, it.exchange, it.lot, it.tick, 1) to null } ?: zerodha(a.contract)
-        if (ins == null) { notMirrored(a, insWhy ?: "no contract"); return@withLock }
+        if (ins == null) {
+            notMirrored(a, insWhy ?: "no contract")
+            // (22 Nov 2026, B6 review: only for want of the list in memory - asked once more as soon as it is there.)
+            if (insWhy == NOT_LOADED && step == null) askWhenListed(a)
+            return@withLock
+        }
         LiveMirror.tooLate(now(), ins.exchange, spec.product, a.contract.expiry)?.let { notMirrored(a, it); return@withLock }
         val lots = LiveMirror.lots(a.paperQty, a.contract.lotSize)
         val s = AppSettings.load()
@@ -1175,8 +1243,12 @@ object ArmLive {
             kotlinx.coroutines.withContext(Broker.QuoteQueueCap(LIVE_ENTRY_QUOTE_WAIT_MS)) {
                 Broker.stopQuotes(listOf(qkey), com.optionslab.ira.RateGate.Priority.ENTRY, staleFallback = false)[qkey]
             }
-        } ?: runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
+        // (22 Nov 2026, B6 review, item 7: the fresh read with no stale fallback either - never an old tick; no price, no entry.)
+        } ?: runCatching { Broker.stopQuotes(listOf(qkey), staleFallback = false)[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
+        // 22 Nov 2026 (B6 review, third look): an entry asked again late ([askWhenListed]) goes only while Zerodha's price is still within the
+        // arm's own entry buffer of its paper fill ([lateMoved]); past it, not mirrored and said - never a worse entry than the paper's.
+        if (late && step == null) lateMoved(a.side, a.paperEntry, quote, last, ins.tick)?.let { notMirrored(a, it); return@withLock }
         // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; "make it default, don't have one
         // more option"): an index option buy of more than one lot is cut to the lots the free cash fits - only ever fewer than his
         // setting, never more. Priced at the higher of the last price, the offer and its own limit (19 Nov 2026: a buy at the LIMIT it
@@ -1334,8 +1406,10 @@ object ArmLive {
             // The answer was lost, not necessarily the order: look before calling it unsent. 30 Oct (deep review): an order book that
             // does not show it yet is not proof it was never placed (the book can trail the POST) - the entry is held as UNCONFIRMED
             // with no order id, so [settle] keeps looking for it by its tag for [UNCONFIRMED_GRACE_MS] before dropping it, and a filled
-            // order is never left at Zerodha with no stop and no watch.
-            try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }
+            // order is never left at Zerodha with no stop and no watch. (22 Nov 2026, B6 review, item 1: Kite's DataException or
+            // GeneralException with no order in the book yet - [Broker.KiteUnsure], not definite - is held the same way, never dropped;
+            // already looked for in the door, it is not looked for a second time here under the entry lock.)
+            if (e is Broker.KiteUnsure) null else try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }
             }
         }
         // 15 Nov: by its id in memory at once too (the order review reads it even if the labels' book could not be read just now).
@@ -4121,7 +4195,7 @@ object ArmLive {
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L; shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims()
         saveDue = false; blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2()
         _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); handsOffUntil.clear(); levels.clear(); closedRefs.clear()
-        com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear()
+        com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); listedAsks.clear()
     }
 
     /** 26 Oct (Erase everything): [wipe], and the book's files deleted (a set-aside copy too). */

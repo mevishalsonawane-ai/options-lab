@@ -35,8 +35,9 @@ import java.time.LocalDateTime
  *
  *  - an error Kite gives after it TOOK the order (DataException 502, GeneralException 500) is checked against the order book:
  *    the order found is the order (it was a refusal, so an ORB entry the exchange filled was left untracked with no stop, and
- *    an ORB exit that filled put a fresh stop back on a flat position: a sell resting with nothing held); not found, it is the
- *    refusal it was. A gateway's 502 page is a lost reply, looked for by the caller;
+ *    an ORB exit that filled put a fresh stop back on a flat position: a sell resting with nothing held); not found, it is
+ *    UNKNOWN (22 Nov 2026, B6 review: [Broker.KiteUnsure], never a refusal - the book can trail longer, a LIMIT can fill later).
+ *    A gateway's 502 page is a lost reply, looked for by the caller;
  *  - Kite's 10-orders-a-second and quote limits: every order goes exactly once, the 429s are waited out;
  *  - a connection dropped before the order was read places nothing and is never re-sent by the HTTP stack;
  *  - a session Zerodha ends mid-trade: nothing is cancelled, the stop resting at Zerodha stays, and Boss is told;
@@ -137,15 +138,24 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         assertEquals(kite.orders.keys.single { it !in known }, Broker.findRecentRetrying(order(), emptyList(), tries = 1, waitMs = 10))
     }
 
-    @Test fun aGeneralExceptionWithNothingPlacedIsStillARefusalAfterTheBookIsRead() = runBlocking {
+    /**
+     * 22 Nov 2026 (B6 review, item 1): a GeneralException with no order in the book after the three looks is UNKNOWN, not a refusal
+     * ([Broker.KiteUnsure]: not definite, never Zerodha's refusal) - before, it was the refusal it named and a filled entry could be dropped
+     * with no stop. The caller keeps looking for it as for a lost reply.
+     */
+    @Test fun aGeneralExceptionWithNothingInTheBookIsUnknownNotARefusalAfterTheBookIsRead() = runBlocking {
         kite.nextPlace(reply = Reply.GENERAL_EXCEPTION)
         val t0 = System.nanoTime()
-        try { Broker.placeOrder(order(), exit = true); fail("nothing was placed") } catch (e: Broker.KiteError) {
+        try { Broker.placeOrder(order(), exit = true); fail("nothing was placed") } catch (e: Broker.KiteUnsure) {
             assertEquals("GeneralException", e.type)
-            assertTrue("a refusal, as before", Broker.definite(e))
+            assertFalse("unknown, never a refusal", Broker.definite(e))
+            assertFalse(ArmOrderLabels.zerodhaRefused(e))
+            assertFalse(CheaperStrike.definiteRefusal(e))
+            assertFalse(CheaperStrike.appRefused(e))
+            assertTrue(e.message, e.message!!.contains("may still exist"))
         }
         val took = ms(t0, System.nanoTime())
-        println("E2E Kite GeneralException, nothing placed: refusal known after the order book was read, in $took ms")
+        println("E2E Kite GeneralException, nothing placed: unknown after the order book was read, in $took ms")
         assertTrue(kite.orders.isEmpty())
         assertEquals("the book read three times, as for a lost reply", 3, kite.requests.count { it.method == "GET" && it.path == "/orders" })
         // An order the phone already has the id of is never taken for another's lost reply.
@@ -162,9 +172,11 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         val exit = order()
         try { Broker.placeOrder(exit, exit = true); fail("nothing was placed") } catch (e: Exception) { assertFalse(Broker.definite(e)) }
         assertNull("the stop is not the market exit", Broker.findRecentRetrying(exit, emptyList(), tries = 1, waitMs = 10))
-        // A Kite GeneralException on the exit is not turned into the stop's id either: it stays the refusal it was.
+        // A Kite GeneralException on the exit is not turned into the stop's id either: not in the book, it is unknown (22 Nov 2026, B6
+        // review: [Broker.KiteUnsure], looked for by the caller), never the stop.
         kite.nextPlace(reply = Reply.GENERAL_EXCEPTION)
-        try { Broker.placeOrder(exit, exit = true); fail("nothing was placed") } catch (e: Broker.KiteError) { assertTrue(Broker.definite(e)) }
+        try { Broker.placeOrder(exit, exit = true); fail("nothing was placed") } catch (e: Broker.KiteUnsure) { assertFalse(Broker.definite(e)) }
+        assertNull("still not the stop", Broker.findRecentRetrying(exit, emptyList(), tries = 1, waitMs = 10))
     }
 
     /**
@@ -178,9 +190,10 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         kite.orders["250926000000702"] = FakeKite.Order("250926000000702", sym, "NFO", "SELL", 30, "MIS", "LIMIT", 199.0, 0.0, "irae2e", "REJECTED")
         kite.orders["250926000000703"] = FakeKite.Order("250926000000703", sym, "NFO", "SELL", 30, "MIS", "LIMIT", 199.0, 0.0, "irae2e", "CANCELLED")
         kite.nextPlace(reply = Reply.GENERAL_EXCEPTION)
-        try { Broker.placeOrder(lim, exit = true); fail("nothing was placed") } catch (e: Broker.KiteError) {
+        try { Broker.placeOrder(lim, exit = true); fail("nothing was placed") } catch (e: Broker.KiteUnsure) {
             assertEquals("GeneralException", e.type)
-            assertTrue("the refusal it was, none of those taken for it", Broker.definite(e))
+            // (22 Nov 2026, B6 review: not in the book - unknown, never a refusal; none of those taken for it.)
+            assertFalse("unknown, none of those taken for it", Broker.definite(e))
         }
         // Kite took the LIMIT at that price and answered DataException: that order is found.
         val before = kite.orders.keys.toList()
