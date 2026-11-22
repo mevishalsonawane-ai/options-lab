@@ -165,9 +165,20 @@ object ExposureCapHost {
         else "Same-direction cap off for paper: automatic entries are no longer refused by it."
     }
 
-    /** Boss's number (1-5). */
-    fun setMax(n: Int): String {
+    /** 22 Nov 2026 (B6 review): what is said when a higher number is asked while live is on, without the PIN. */
+    const val PIN_RAISE = "A higher same-direction cap lets more of the bots' live entries through while its live switch is on: enter your " +
+        "app PIN on its Bot settings card. Nothing changed."
+
+    /**
+     * Boss's number (1-5). A worker thread (the card's saves are).
+     * 22 Nov 2026 (B6 review): a higher number while the live switch is on (in memory or as saved; a vault that cannot be read counts as
+     * on) loosens a live protection, so it takes [pinConfirmed] (the card asks the PIN first) wherever the guard's own rule asks it; a
+     * lower one, or any number while live is in shadow, never asks.
+     */
+    fun setMax(n: Int, pinConfirmed: Boolean = false): String {
+        if (!loaded) runCatching { load() }
         val v = n.coerceIn(1, SameDirectionCap.CHOICES.max())
+        if (v > max && !pinConfirmed && pinAsked() && liveRuleOn()) return PIN_RAISE
         max = v
         runCatching { SecurePrefs.putAllSoon(mapOf(K_MAX to v)) }
         runCatching { Diag.record("risk", "Same-direction cap set to $v") }
@@ -187,8 +198,7 @@ object ExposureCapHost {
     fun setLiveOn(on: Boolean, pinConfirmed: Boolean = false): String {
         // 19 Nov 2026 (audit batch 2, second review): on in memory OR as saved (a worker thread, as the card's saves are; a vault that
         // cannot be read counts as on), so a switch-off is never let through on a stale or unread "off".
-        if (!on && !pinConfirmed && pinAsked() && (liveOn ||
-                runCatching { SecurePrefs.unreadable || SecurePrefs.getBoolean(K_LIVE, false) }.getOrDefault(true))) return PIN_OFF
+        if (!on && !pinConfirmed && pinAsked() && liveRuleOn()) return PIN_OFF
         liveOn = on
         runCatching { SecurePrefs.putAllSoon(mapOf(K_LIVE to on)) }
         runCatching { Diag.record("risk", "Same-direction cap on live ${if (on) "on: live entries past it are refused" else "in shadow: logged only"}") }
@@ -200,6 +210,9 @@ object ExposureCapHost {
     private fun pinAsked(): Boolean = runCatching {
         com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true))
     }.getOrDefault(true)
+
+    /** The live switch on, in memory OR as saved (a vault that cannot be read counts as on). A worker thread; not the order path. */
+    private fun liveRuleOn(): Boolean = liveOn || runCatching { SecurePrefs.unreadable || SecurePrefs.getBoolean(K_LIVE, false) }.getOrDefault(true)
 
     // ---- live (the entry door; memory only) -----------------------------------------------------------------------------
 

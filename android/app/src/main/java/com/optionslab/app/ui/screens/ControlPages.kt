@@ -774,11 +774,9 @@ internal fun ArmLotsCard(model: AppModel) {
                 if (com.optionslab.app.security.GuardPin.asks(true, s.live)) ask = to else setArmLots(model, to)
             }
         }
-        val caps = listOfNotNull(
-            s.maxLotsPerOrder.takeIf { it in 1 until n }?.let { "max lots per order is $it" },
-            s.guardMaxLots.takeIf { it in 1 until n }?.let { "max lots per instrument is $it" },
-        )
-        if (caps.isNotEmpty()) Note("Above your order limits (${caps.joinToString(" and ")}): those entries are refused until you raise them too.")
+        // 22 Nov 2026 (B6 review): only the lots limit the order checks apply (the account guard's, per instrument and so per order); the
+        // older "max lots per order" setting named here was never read.
+        armLotsCapNote(n, s.guardMaxLots)?.let { Note(it) }
         if (n > 1) Note("The order value and exposure limits in the account guard still apply to the bigger size.")
         // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; always on, no switch).
         if (n > 1) Note("When the free cash is short, an arm's live index option buy takes as many of these lots as it fits " +
@@ -814,6 +812,14 @@ internal fun LiveIndicesCard(model: AppModel) {
     }
 }
 
+/**
+ * 22 Nov 2026 (B6 review): the Live lots card's line when [n] lots a trade is above the account guard's lots limit [guardMaxLots] (per
+ * instrument: an order above it is refused); null when it is not (or the limit is off). Words only.
+ */
+internal fun armLotsCapNote(n: Int, guardMaxLots: Int): String? = guardMaxLots.takeIf { it in 1 until n }?.let {
+    "Above your order limits (max lots per instrument is $it, in the account guard): those entries are refused until you raise it too."
+}
+
 private fun setIndices(model: AppModel, to: Set<String>) {
     val v = to.filter { it in com.optionslab.engine.orb.LiveMirror.INDEX_MARKETS }.toSet()
     model.update { it.copy(liveMarkets = v) }
@@ -846,13 +852,18 @@ private fun GuardCard(model: AppModel) {
     // A limit of 0 (or a cut-off below 0) is off: any limit is tighter than off; off, or a higher one, is looser.
     fun looser(cur: Double, next: Double) = cur > 0 && (next <= 0 || next > cur)
     val askLimit = "Enter your app PIN to loosen the account guard on Zerodha."
+    // 22 Nov 2026 (B6 review): a row of a setting Jarvis can change asks the PIN by the list Jarvis uses ([SettingsTalk.PIN_TO_LOOSEN]),
+    // so the page and the voice never drift apart (Jarvis had switched the expiry square-off and the naked-shorts block off without it).
+    fun loosenKey(k: com.optionslab.ira.SettingsTalk.Key, cur: Double, next: Double, why: String, action: () -> Unit) =
+        loosen(k in com.optionslab.ira.SettingsTalk.PIN_TO_LOOSEN && com.optionslab.ira.SettingsTalk.loosens(k, cur, next), why, action)
     // 19 Nov 2026 (Boss's choice): a daily loss limit switched off, or raised, that made today's stop lifts it - always behind the
     // PIN (on Paper too); without a PIN set nothing is lifted. Lowering it, or switching it on, never lifts anything.
     fun loosenLimit(limit: com.optionslab.app.data.LossBreaker.Limit, cur: Double, next: Double, why: String, apply: () -> Unit) {
         if (com.optionslab.app.data.LossBreaker.mayLift(limit, cur, next) && com.optionslab.app.security.PinLock.isSet)
             liftGuard = (if (next <= 0.0) "$why This can lift today's loss-limit stop." else "$why This can lift today's loss-limit stop if today's loss is inside the new limit.") to
                 { apply(); model.liftLossStop(limit, cur, next, pinVerified = true) }
-        else loosen(looser(cur, next), why, apply)
+        else loosenKey(if (limit == com.optionslab.app.data.LossBreaker.Limit.ZERODHA) com.optionslab.ira.SettingsTalk.Key.DAILY_LOSS
+            else com.optionslab.ira.SettingsTalk.Key.PAPER_DAILY_LOSS, cur, next, why, apply)
     }
     confirmKill?.let { turnOn ->
         AlertDialog(
@@ -884,21 +895,21 @@ private fun GuardCard(model: AppModel) {
         val loss = listOf(1_000.0, 2_000.0, 5_000.0, 10_000.0, 0.0)
         ParamTokens("Daily loss limit", loss.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardDailyLoss) }) { i -> loosenLimit(com.optionslab.app.data.LossBreaker.Limit.ZERODHA, s.guardDailyLoss, loss[i], askLimit) { model.update { it.copy(guardDailyLoss = loss[i]) } } }
         val dd = listOf(5.0, 10.0, 20.0, 0.0)
-        ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> loosen(looser(s.guardDrawdownPct, dd[i]), askLimit) { model.update { it.copy(guardDrawdownPct = dd[i]) } } }
+        ParamTokens("Max drawdown (from capital and from peak)", dd.map { (if (it == 0.0) "off" else "${it.toInt()}%") to (it == s.guardDrawdownPct) }) { i -> loosenKey(com.optionslab.ira.SettingsTalk.Key.DRAWDOWN, s.guardDrawdownPct, dd[i], askLimit) { model.update { it.copy(guardDrawdownPct = dd[i]) } } }
         val open = listOf(1, 2, 3, 5, 0)
-        ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> loosen(looser(s.guardMaxOpen.toDouble(), open[i].toDouble()), askLimit) { model.update { it.copy(guardMaxOpen = open[i]) } } }
+        ParamTokens("Max open positions", open.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxOpen) }) { i -> loosenKey(com.optionslab.ira.SettingsTalk.Key.MAX_OPEN, s.guardMaxOpen.toDouble(), open[i].toDouble(), askLimit) { model.update { it.copy(guardMaxOpen = open[i]) } } }
         val trades = listOf(5, 10, 20, 0)
-        ParamTokens("Max orders per day (entries, stops and exits)", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> loosen(looser(s.guardMaxTrades.toDouble(), trades[i].toDouble()), askLimit) { model.update { it.copy(guardMaxTrades = trades[i]) } } }
+        ParamTokens("Max orders per day (entries, stops and exits)", trades.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxTrades) }) { i -> loosenKey(com.optionslab.ira.SettingsTalk.Key.MAX_TRADES, s.guardMaxTrades.toDouble(), trades[i].toDouble(), askLimit) { model.update { it.copy(guardMaxTrades = trades[i]) } } }
         val value = listOf(100_000.0, 200_000.0, 500_000.0, 1_000_000.0, 0.0)
-        ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> loosen(looser(s.guardMaxValue, value[i]), askLimit) { model.update { it.copy(guardMaxValue = value[i]) } } }
+        ParamTokens("Max value per order", value.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxValue) }) { i -> loosenKey(com.optionslab.ira.SettingsTalk.Key.ORDER_VALUE, s.guardMaxValue, value[i], askLimit) { model.update { it.copy(guardMaxValue = value[i]) } } }
         val lots = listOf(1, 2, 5, 0)
-        ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> loosen(looser(s.guardMaxLots.toDouble(), lots[i].toDouble()), askLimit) { model.update { it.copy(guardMaxLots = lots[i]) } } }
+        ParamTokens("Max lots per instrument", lots.map { (if (it == 0) "off" else "$it") to (it == s.guardMaxLots) }) { i -> loosenKey(com.optionslab.ira.SettingsTalk.Key.MAX_LOTS, s.guardMaxLots.toDouble(), lots[i].toDouble(), askLimit) { model.update { it.copy(guardMaxLots = lots[i]) } } }
         val expo = listOf(100_000.0, 200_000.0, 500_000.0, 0.0)
-        ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> loosen(looser(s.guardMaxExposure, expo[i]), askLimit) { model.update { it.copy(guardMaxExposure = expo[i]) } } }
+        ParamTokens("Max held in one instrument", expo.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.guardMaxExposure) }) { i -> loosenKey(com.optionslab.ira.SettingsTalk.Key.EXPOSURE, s.guardMaxExposure, expo[i], askLimit) { model.update { it.copy(guardMaxExposure = expo[i]) } } }
         val cut = listOf(14 * 60, 14 * 60 + 30, 14 * 60 + 55, 15 * 60, -1)
         ParamTokens("No new entries after", cut.map { (if (it < 0) "off" else "%02d:%02d".format(it / 60, it % 60)) to (it == s.guardCutoff) }) { i ->
             // The cut-off: -1 is off; a later time is looser.
-            loosen(s.guardCutoff >= 0 && (cut[i] < 0 || cut[i] > s.guardCutoff), askLimit) { model.update { it.copy(guardCutoff = cut[i]) } }
+            loosenKey(com.optionslab.ira.SettingsTalk.Key.CUTOFF, s.guardCutoff.toDouble(), cut[i].toDouble(), askLimit) { model.update { it.copy(guardCutoff = cut[i]) } }
         }
         // 25 Oct (Boss: "Daily loss was off" - the Zerodha limit above was, but the paper bots' own limit, ₹6,000 then, was on no screen
         // and stopped every paper bot on 23 Oct): the paper daily loss limit, shown and set here.
@@ -912,7 +923,7 @@ private fun GuardCard(model: AppModel) {
         // paper week is down by it. Loosening it (more, or off) takes the PIN, as the paper daily loss limit does; tightening goes at once.
         val paperWeek = com.optionslab.ira.BossRisk.WEEKLY_CHOICES
         ParamTokens("Paper bots' weekly loss stop (no new paper entries until Monday)", paperWeek.map { (if (it == 0.0) "off" else rupees(it)) to (it == s.paperWeeklyLoss) }) { i ->
-            loosen(looser(s.paperWeeklyLoss, paperWeek[i]), ASK_PAPER_WEEK) { model.update { it.copy(paperWeeklyLoss = paperWeek[i]) } }
+            loosenKey(com.optionslab.ira.SettingsTalk.Key.PAPER_WEEKLY_LOSS, s.paperWeeklyLoss, paperWeek[i], ASK_PAPER_WEEK) { model.update { it.copy(paperWeeklyLoss = paperWeek[i]) } }
         }
         // The day lock (08 Oct): only ever stops new automatic entries; set here alone (never by voice or a backup).
         val dayLocks = com.optionslab.engine.risk.DayLock.CHOICES
@@ -947,7 +958,7 @@ private fun GuardCard(model: AppModel) {
                 "${since.year} (change the date)", style = Type.label.copy(color = p.inkSoft))
         }
         ToggleRow("Square off on expiry day at 15:05", "Closes every option position expiring today, paper and live, MIS and NRML", s.expirySquareOff) { on ->
-            loosen(!on, askLimit) { model.update { it.copy(expirySquareOff = on) } }
+            loosenKey(com.optionslab.ira.SettingsTalk.Key.EXPIRY_SQUARE_OFF, if (s.expirySquareOff) 1.0 else 0.0, if (on) 1.0 else 0.0, askLimit) { model.update { it.copy(expirySquareOff = on) } }
         }
         if (s.expirySquareOff) ToggleRow("Keep the Expiry Put to settlement", "Its legs are left for the 15:30 settlement, as the strategy intends", s.keepExpiryPut) { on ->
             loosen(on, askLimit) { model.update { it.copy(keepExpiryPut = on) } }
@@ -958,7 +969,7 @@ private fun GuardCard(model: AppModel) {
             loosen(!on, askLimit) { model.update { it.copy(mcxExpiryExit = on) } }
         }
         ToggleRow("Block naked option shorts", "Selling an option to open needs a bought option of the same index, expiry and type held first", s.guardNakedShort) { on ->
-            loosen(!on, askLimit) { model.update { it.copy(guardNakedShort = on) } }
+            loosenKey(com.optionslab.ira.SettingsTalk.Key.NAKED_SHORTS, if (s.guardNakedShort) 1.0 else 0.0, if (on) 1.0 else 0.0, askLimit) { model.update { it.copy(guardNakedShort = on) } }
         }
         TextButton({
             val live = s.live

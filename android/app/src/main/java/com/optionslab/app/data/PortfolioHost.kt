@@ -84,9 +84,18 @@ object PortfolioHost {
             PortfolioRisk.pairLines(guard.matrix), c.capPct, c.on, c.capRs)
     }
 
-    /** Boss's cap, % of capital (Bot settings). Returns what to say. */
-    fun setCapPct(pct: Double): String {
+    /** 22 Nov 2026 (B6 review): what is said when a higher cap is asked while the guard is on, without the PIN. */
+    const val PIN_RAISE = "A higher portfolio cap lets more correlated arms open on Zerodha on one day: enter your app PIN on its Bot " +
+        "settings card. Nothing changed."
+
+    /**
+     * Boss's cap, % of capital (Bot settings). Returns what to say. A worker thread (the card's saves are).
+     * 22 Nov 2026 (B6 review): a higher cap while the guard is on (it blocks Zerodha entries too) loosens a live protection, so it takes
+     * [pinConfirmed] (the card asks the PIN first) wherever the guard's own rule asks it; a lower one, or any cap while it is off, never asks.
+     */
+    fun setCapPct(pct: Double, pinConfirmed: Boolean = false): String {
         val v = pct.coerceIn(0.5, 10.0)
+        if (!pinConfirmed && raisesLiveCap(v) && pinAsked()) return PIN_RAISE
         runCatching { SecurePrefs.putAllSoon(mapOf(K_CAP to v)) }
         guard.setConfig(guard.config.copy(capPct = v))
         runCatching { publish(Market.today()) }
@@ -117,6 +126,21 @@ object PortfolioHost {
     private fun pinAsked(): Boolean = runCatching {
         com.optionslab.app.security.GuardPin.asks(true, runCatching { AppSettings.load().live }.getOrDefault(true))
     }.getOrDefault(true)
+
+    /**
+     * 22 Nov 2026 (B6 review): [v] is above the cap while the guard is on - above the cap in force (memory), or above the one saved (the
+     * guard takes it at its next [refresh], which may not have run yet). On in memory OR as saved (a vault that cannot be read counts as
+     * on); a cap at or below both is never a raise (an unreadable vault: the one in force decides). A worker thread.
+     */
+    private fun raisesLiveCap(v: Double): Boolean {
+        val c = guard.config
+        val unread = runCatching { SecurePrefs.unreadable }.getOrDefault(true)
+        val on = c.on || unread || runCatching { SecurePrefs.getBoolean(K_ON, true) }.getOrDefault(true)
+        if (!on) return false
+        if (v > c.capPct + 1e-9) return true
+        val saved = if (unread) null else runCatching { SecurePrefs.getDouble(K_CAP, PortfolioRisk.CAP_PCT_DEFAULT) }.getOrNull()
+        return saved != null && v > saved + 1e-9
+    }
 
     /**
      * An arm's NEW entry ([key]: its strategy key, "liquidity:BANKNIFTY", "orb"; [side] +1 / -1), paper or [live]: the block's

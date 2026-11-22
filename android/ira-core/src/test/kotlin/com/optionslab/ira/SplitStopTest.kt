@@ -155,18 +155,21 @@ class SplitStopTest {
         assertEquals("daystop:mcx", stop.target)
         assertEquals(DayStop.Side.MCX, AutoChange.dayStopSide(stop.target))
         assertEquals(AutoChange.Risk.LOWER, AutoChange.riskOf(stop))
-        assertEquals(AutoChange.Scope.PAPER, stop.scope)
+        // 22 Nov 2026 (B6 review): the MCX arms are copied live, so the commodity side's stop is LIVE scope too (it was PAPER).
+        assertEquals(AutoChange.Scope.LIVE, stop.scope)
         assertTrue(stop.reason.contains("at 10:42") && stop.reason.contains("the index bots keep trading"), stop.reason)
         assertFalse(AutoChange.never(stop))
         assertTrue(AutoChange.bossOwn(AutoChange.Kind.DAY_STOP), "Boss's own: never undone by \"undo the last change\"")
         val (b1, e1) = AutoChange.record(AutoChange.Book(), stop, AutoChange.Status.KEPT, 1L, day, by = "your choice")
         val u = AutoChange.undo(b1, e1.id)!!
         assertEquals(AutoChange.RUNNING, u.inverse.to)
-        assertFalse(u.needsPin, "the commodity bots are paper: no PIN")
-        // The index side governs live entries: an Undo that lifts its stop asks the PIN; one that stops it again never does.
+        // 22 Nov 2026 (B6 review): the PIN for a day stop's Undo is the app's to decide (asked whenever a PIN is set; none set, no step):
+        // never by the change's scope alone, on either side.
+        assertFalse(u.needsPin, "decided by the app (Autopilot.needsPin), not by the scope")
+        assertFalse(AutoChange.undoNeedsPin(AutoChange.dayStop(DayStop.Side.MCX, stopped = false, by = "by you")), "stopping it again never asks")
         val idx = AutoChange.dayStop(DayStop.Side.INDEX, stopped = true, by = "by you")
         assertEquals(AutoChange.Scope.LIVE, idx.scope)
-        assertTrue(AutoChange.undoNeedsPin(idx))
+        assertFalse(AutoChange.undoNeedsPin(idx))
         assertFalse(AutoChange.undoNeedsPin(AutoChange.dayStop(DayStop.Side.INDEX, stopped = false, by = "by you")))
         assertEquals(AutoChange.Risk.RAISE, AutoChange.riskOf(AutoChange.dayStop(DayStop.Side.MCX, stopped = false, by = "by you")))
         // Stopped again since: only the newest entry undoes.

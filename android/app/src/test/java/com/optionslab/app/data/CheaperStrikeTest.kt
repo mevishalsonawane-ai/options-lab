@@ -362,4 +362,38 @@ class CheaperStrikeTest : RobolectricTest() {
         CheaperStrike.load()
         assertEquals(1, CheaperStrike.recsOf().count { it.bought })
     }
+
+    /**
+     * 22 Nov 2026 (B6 review): the buy was only an in-app banner (missed with the app closed): now a notification in the shade too -
+     * private on a locked phone (only "Unlock to read" there) while amounts are hidden, the default - and a line in Jarvis's activity.
+     */
+    @Test fun aBuyIsNotifiedPrivatelyOnTheLockScreenAndToldToJarvis() {
+        val bg = com.optionslab.app.testing.Background
+        bg.grantNotifications(context)
+        com.optionslab.app.work.Alerts.forgetPosted()
+        CheaperStrike.app = context
+        try {
+            list(); kite.quote("NFO:${sym(51900.0)}", 50.0, 49.9, 50.1); runBlocking { Broker.instruments() }
+            val p = runBlocking { CheaperStrike.find(req(5_000.0)) }!!
+            CheaperStrike.bought(p, 1)
+            val words = CheaperStrike.boughtWords(p, 1)
+            // The banner at once, as before.
+            assertTrue(com.optionslab.app.work.Alerts.posted.any { it.text == words && it.title == CheaperStrike.NOTICE_TITLE })
+            val end = System.currentTimeMillis() + 10_000
+            val id = CheaperStrike.noticeId(p.symbol)
+            assertTrue(id in 9700..9739)
+            while (bg.notifications(context).getNotification(id) == null && System.currentTimeMillis() < end) Thread.sleep(20)
+            val n = bg.notifications(context).getNotification(id)
+            assertNotNull("in the shade", n)
+            assertEquals(CheaperStrike.NOTICE_TITLE, bg.title(n!!))
+            assertEquals(android.app.Notification.VISIBILITY_PRIVATE, n.visibility)
+            assertEquals("Unlock to read", bg.text(n.publicVersion!!))
+            assertTrue("no rupees", !words.contains("Rs") && !words.contains("₹"))
+            if (com.optionslab.app.BuildConfig.JARVIS) {
+                val end2 = System.currentTimeMillis() + 10_000
+                while (com.optionslab.app.ira.IraActivity.entries().none { it.what.contains(words) } && System.currentTimeMillis() < end2) Thread.sleep(20)
+                assertTrue(com.optionslab.app.ira.IraActivity.entries().any { it.what.startsWith(CheaperStrike.NOTICE_TITLE) && it.what.contains(words) })
+            }
+        } finally { CheaperStrike.app = null }
+    }
 }

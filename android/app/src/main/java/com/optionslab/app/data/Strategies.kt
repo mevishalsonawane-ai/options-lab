@@ -1180,10 +1180,16 @@ object Strategies {
         "on Home. They stay stopped for today."
     /** 19 Nov 2026 (audit batch 2): the PIN prompt's words on Home. */
     const val LIFT_WHY = "Enter your app PIN to start the index bots again today (the app is in Live)."
+    /** 22 Nov 2026 (B6 review): [LIFT_PIN] for the commodity side ([startCommoditiesAgain]). */
+    const val MCX_LIFT_PIN = "Not started: in Live, starting the commodity bots again takes your app PIN - open IraAlgo and tap Start again " +
+        "on the MCX card on Home. They stay stopped for today."
+    /** 22 Nov 2026 (B6 review): [LIFT_WHY] for the commodity side (the MCX card). */
+    const val MCX_LIFT_WHY = "Enter your app PIN to start the commodity bots again today (the app is in Live; the MCX arms trade live)."
 
     /**
      * 19 Nov 2026 (audit batch 2): whether lifting the index side's Stop for today asks the PIN now - the app in Live with an app PIN
      * set (with none there is nothing to ask). Unknown counts as yes. A settings read: never the order path.
+     * 22 Nov 2026 (B6 review): the commodity side's too ([startCommoditiesAgain]).
      */
     fun liftAsksPin(): Boolean = runCatching {
         com.optionslab.app.security.GuardPin.asks(true, com.optionslab.app.security.PinLock.isSet, AppSettings.load().live, zerodha = false)
@@ -1221,10 +1227,15 @@ object Strategies {
      * Undo [stopCommodities]: the armed MCX arms trade again. Never while a loss stop holds on the commodity side (their own limit, or
      * the index loss stop where it stops both, [LossBreaker.mcxLossStop]): that holds until tomorrow. Also lifts an older build's
      * stop kept for the MCX arms ([LossBreaker.noteBossStop]).
+     * 22 Nov 2026 (B6 review): the MCX arms are copied live (NRML orders), so lifting this side's stop in Live with an app PIN set takes
+     * [pinConfirmed] too, as [startAgain] does ([liftAsksPin]): the MCX card asks the PIN first; voice is refused and told to open the app;
+     * the change timeline's Undo ([log] false) took the PIN itself.
      */
-    suspend fun startCommoditiesAgain(log: Boolean = true): String {
+    suspend fun startCommoditiesAgain(log: Boolean = true, pinConfirmed: Boolean = !log): String {
         val loss = runCatching { LossBreaker.mcxLossStop(stoppedWhy()) }.getOrDefault(true)
         val legacy = runCatching { LossBreaker.bossStoppedToday() }.getOrDefault(false)
+        // (Read before the lock: a settings read.)
+        val asks = !pinConfirmed && liftAsksPin()
         var lifted = false
         val said = lock.withLock {
             val b = book()
@@ -1232,6 +1243,7 @@ object Strategies {
             val kept = if (b.mcxStoppedDay == today) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.of(b.mcxStoppedWhy), b.mcxStoppedAt)
                 else if (legacy) com.optionslab.ira.DayStop.Kept(com.optionslab.ira.DayStop.Why.BOSS) else null
             com.optionslab.ira.DayStop.startRefusal(com.optionslab.ira.DayStop.Side.MCX, kept, loss)?.let { return@withLock it }
+            if (asks) return@withLock MCX_LIFT_PIN
             b.mcxStoppedDay = null; b.mcxStoppedWhy = null; b.mcxStoppedAt = null; b.mcxStopSells = true
             save(b)
             lifted = true

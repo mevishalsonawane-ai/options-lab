@@ -35,14 +35,39 @@ class BotTile : TileService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var live: kotlinx.coroutines.Job? = null
+    /** TEST ONLY: the panel's refresh loop while it is open (a test waits for it to end). */
+    internal val liveForTest: kotlinx.coroutines.Job? get() = live
+    /** 22 Nov 2026 (B6 review): the panel is open (set on the main thread): only then may the tile show an amount. */
+    @Volatile private var listening = false
 
     /** While the panel is open the tile's second line is today's P&L, refreshed every second. */
     override fun onStartListening() {
+        listening = true
+        // 22 Nov 2026 (B6 review): a P&L left from the last time is never shown again as the panel opens (on the lock screen too): the
+        // state alone at once, before the first read; the read then shows today's figure where it may.
+        stateOnly()
         live?.cancel()
-        live = scope.launch { while (true) { refresh(); kotlinx.coroutines.delay(1_000) } }
+        live = scope.launch { while (true) { refreshNow(); kotlinx.coroutines.delay(1_000) } }
     }
 
-    override fun onStopListening() { live?.cancel(); live = null }
+    /**
+     * 22 Nov 2026 (B6 review): the panel closed - the last P&L stayed on the tile (seen again on the lock screen, however stale): the
+     * second line goes back to the state alone, at once, and a refresh still on its way shows no amount.
+     */
+    override fun onStopListening() {
+        listening = false
+        live?.cancel(); live = null
+        stateOnly()
+    }
+
+    /** 22 Nov 2026 (B6 review): the tile's second line as its state alone, no amount (the main thread; no read: the tile's own state). */
+    private fun stateOnly() {
+        runCatching {
+            val t = qsTile ?: return@runCatching
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) t.subtitle = subtitle(t.state == Tile.STATE_ACTIVE, null, listening = false, locked = false, hideOnLock = true)
+            t.updateTile()
+        }
+    }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
 
@@ -55,20 +80,22 @@ class BotTile : TileService() {
         }
     }
 
-    private fun refresh() {
-        scope.launch {
-            val on = runCatching { running() }.getOrDefault(false)
-            // Today's P&L in place of "tap to stop / start" - unless the phone is locked and the owner hides figures there.
-            val hide = isLocked && runCatching { com.optionslab.app.data.AppSettings.load().hideAmountsOnLockScreen }.getOrDefault(true)
-            val pnl = if (hide) null else runCatching { todayPnl() }.getOrNull()
-            withContext(Dispatchers.Main) {
-                val t = qsTile ?: return@withContext
-                t.icon = Icon.createWithResource(this@BotTile, R.drawable.ic_notification_art)
-                t.label = if (com.optionslab.app.BuildConfig.GOLD) "Gold bot" else "Index bots"   // 30 Oct: the tile stops the index side only
-                t.state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) t.subtitle = pnl ?: if (on) "Running" else "Stopped"
-                t.updateTile()
-            }
+    private fun refresh() { scope.launch { refreshNow() } }
+
+    private suspend fun refreshNow() {
+        val on = runCatching { running() }.getOrDefault(false)
+        // Today's P&L in place of "tap to stop / start" - unless the phone is locked and the owner hides figures there.
+        val hideOnLock = runCatching { com.optionslab.app.data.AppSettings.load().hideAmountsOnLockScreen }.getOrDefault(true)
+        val pnl = if ((isLocked && hideOnLock) || !listening) null else runCatching { todayPnl() }.getOrNull()
+        withContext(Dispatchers.Main) {
+            val t = qsTile ?: return@withContext
+            t.icon = Icon.createWithResource(this@BotTile, R.drawable.ic_notification_art)
+            t.label = if (com.optionslab.app.BuildConfig.GOLD) "Gold bot" else "Index bots"   // 30 Oct: the tile stops the index side only
+            t.state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            // 22 Nov 2026 (B6 review): decided again here, on the main thread, as it is shown: a phone locked since the read, or a panel
+            // closed meanwhile, shows no amount.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) t.subtitle = subtitle(on, pnl, listening, runCatching { isLocked }.getOrDefault(true), hideOnLock)
+            t.updateTile()
         }
     }
 
@@ -141,5 +168,12 @@ class BotTile : TileService() {
 
         /** 19 Nov 2026 (audit batch 2): the notice the tile's Start posts for what [Strategies.startAgain] said; null: none. */
         internal fun startNotice(said: String): String? = if (said == Strategies.LIFT_PIN) TILE_PIN_TEXT else null
+
+        /**
+         * 22 Nov 2026 (B6 review): the tile's second line - today's [pnl] while the panel is open ([listening]), never on a [locked] phone
+         * with "hide amounts on the lock screen" on ([hideOnLock]); otherwise the state alone ([on]), with no amount.
+         */
+        internal fun subtitle(on: Boolean, pnl: String?, listening: Boolean, locked: Boolean, hideOnLock: Boolean): String =
+            pnl?.takeIf { listening && !(locked && hideOnLock) } ?: if (on) "Running" else "Stopped"
     }
 }
