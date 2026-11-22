@@ -210,7 +210,7 @@ class TestApp : Application() {
         com.optionslab.app.ira.IraHub.testLive = { emptyList() }
         com.optionslab.app.ira.IraHub.testFeed = { "" }
         // Caches from an earlier test (the files behind them are already gone with its directories).
-        Paper.loadInlineForTest = false; Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
+        Paper.loadInlineForTest = false; Paper.wipe(); Strategies.wipe(); OrbArms.wipe(); OrbArms.forgetSalesBookedForTest(); ShadowArms.wipe(); PineAuto.wipe(); Protections.wipe(); TradeBook.wipe(); Journal.wipe(); com.optionslab.app.data.Diag.wipe()
         com.optionslab.app.data.MarketRecorder.wipe()
         com.optionslab.app.data.McxMarket.wipe()
         com.optionslab.app.data.McxPaperArms.wipe(); com.optionslab.app.data.McxPaperArms.testDaily = null
