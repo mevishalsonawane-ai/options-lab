@@ -173,13 +173,23 @@ object PortfolioHost {
      * The entry door's part for [arm]'s live order (Broker's entry gate; [arm]: the strategy key its entry check asked with):
      * refused only when the guard's latest live decision for that arm this way was a block. An order with no arm (a saved
      * strategy's basket leg, Boss's own) is never refused here. Memory only.
+     * 22 Nov 2026 (B6 review, item 4: the door's checks failed open): a check that throws refuses the entry while the guard is on
+     * ([doorActs]); off, the entry goes as before.
      */
     fun doorRefusal(arm: String?, symbol: String, buy: Boolean): String? = runCatching {
         if (arm == null) return@runCatching null
         val s = symbol.uppercase()
         val dir = when { s.endsWith("CE") -> 1; s.endsWith("PE") -> -1; else -> 1 } * (if (buy) 1 else -1)
+        testDoorThrows?.let { throw it }
         guard.doorRefusal(PortfolioRisk.canon(arm), dir, Market.today(), System.currentTimeMillis())
-    }.getOrNull()
+    }.getOrElse { e -> Broker.doorUnread("the portfolio guard", doorActs(), e) }
+
+    /** 22 Nov 2026 (B6 review, item 4): whether the guard acts (its switch; memory only). Unreadable: true. */
+    fun doorActs(): Boolean = runCatching { guard.config.on }.getOrDefault(true)
+
+    /** TEST ONLY (22 Nov 2026, B6 review): the door's check throws this, while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testDoorThrows: Exception? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /** Jarvis: "how correlated are my strategies?" / "why was X blocked?". Reads memory (refreshes first when stale). */
     suspend fun answer(q: String): String {
@@ -211,5 +221,5 @@ object PortfolioHost {
     @Volatile internal var testOpened: MutableList<String>? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
-    internal fun resetForTest() { guard.clear(); guard.update(PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap()), emptyMap(), PortfolioGuard.Config()); refreshedAt = 0L; _view.value = View(); testOwners = null }
+    internal fun resetForTest() { guard.clear(); guard.update(PortfolioRisk.Matrix(emptyList(), emptyMap(), emptyMap()), emptyMap(), PortfolioGuard.Config()); refreshedAt = 0L; _view.value = View(); testOwners = null; testDoorThrows = null }
 }

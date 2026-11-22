@@ -809,4 +809,62 @@ class LiquidityArmLiveTest : RobolectricTest() {
             SmartWorkers.resetForTest()
         }
     }
+
+    // ---- 22 Nov 2026 (B6 review): the entry side ------------------------------------------------------------------------------------
+
+    /**
+     * Item 1: Kite answers DataException for the live buy (it took the order) and its book does not show it through ~8 s of looks. Before,
+     * the error was a refusal ("order_refused", the intent dropped): a buy that filled later was left at Zerodha with no stop. Now the
+     * entry is held as unconfirmed, and once the book shows it filled the settle takes it with its stop - one buy, never two.
+     */
+    @Test fun anUnsureKiteErrorNotFoundInTheBookIsHeldAndTakenWithItsStopOnceItFills() {
+        // (The pass's index candles from a local fake, never the real host; the market clock kept, which the fake clears.)
+        val clock = Market.testClock
+        val upstox = com.optionslab.app.testing.FakeUpstox()
+        Market.testClock = clock
+        try { unsureEntryHeldThenTaken() } finally { upstox.close() }
+    }
+
+    private fun unsureEntryHeldThenTaken() {
+        state()
+        kite.trailReads = 1_000
+        kite.nextPlace(FakeKite.Scenario(reply = FakeKite.Reply.DATA_EXCEPTION_AFTER_ACCEPT, outcome = FakeKite.Outcome.OPEN))
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertFalse(msg, msg.contains("efused"))
+        val held = row().open!!
+        assertTrue("held as unconfirmed, never dropped", held.unconfirmed)
+        assertNull(held.entryOrderId); assertNull(held.stopOrderId)
+        val buy = kite.orders.values.single { it.side == "BUY" }
+        kite.fill(buy.id, 200.0)
+        kite.showInBook()
+        runBlocking { OrbArms.priceCheckOnly() }
+        val p = row().open!!
+        assertFalse(p.unconfirmed)
+        assertEquals("taken from its own order", buy.id, p.entryOrderId)
+        assertEquals(30, p.qty)
+        val stop = kite.orders.values.single { it.side == "SELL" && it.type == "SL" && it.working }
+        assertEquals(p.stopOrderId, stop.id)
+        assertEquals("one buy, never two", 1, kite.placed.count { it.form["transaction_type"] == "BUY" })
+    }
+
+    /**
+     * Item 5: the instruments list is not in memory (a cold start): under the arms' lock nothing is read from the file or downloaded - the
+     * entry is refused with a note, nothing is sent, and the list is loaded in the background.
+     */
+    @Test fun withTheInstrumentListNotInMemoryTheEntryIsRefusedAndTheListLoadsInTheBackground() {
+        state()
+        // A cold start with no list to be had yet: none in memory, no file, Zerodha's download failing for now.
+        Broker.forgetInstrumentsMemoForTest()
+        java.io.File(context.filesDir, "kite_instruments.json").delete()
+        kite.down += "/instruments/NFO"
+        val msg = runBlocking { OrbArms.approve("liquidity", pinConfirmed = true) }
+        assertTrue(msg, msg.contains("instrument list is not loaded yet"))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertNull(row().open)
+        // Zerodha answers again: the list is loaded in the background, never on an entry.
+        kite.down.clear(); Broker.resetInstrumentsRetryForTest()
+        val end = System.currentTimeMillis() + 5_000
+        while (Broker.instrumentsInMemory() == null && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertNotNull("loaded in the background", Broker.instrumentsInMemory())
+    }
 }

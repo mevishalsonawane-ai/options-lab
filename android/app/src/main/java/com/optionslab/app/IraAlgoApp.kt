@@ -200,6 +200,9 @@ class IraAlgoApp : Application() {
             }) {
             com.optionslab.app.data.PositionsFirst.awaitPositions()
         }
+        // 22 Nov 2026 (B6 review): the Kite instruments list into memory once the positions step above is done (never before it), so the
+        // arms' first live entry finds it there - an entry under an arm's lock never reads or downloads it itself.
+        if (!com.optionslab.app.BuildConfig.GOLD) Broker.warmAfterPositions()
         // 26 Oct: ntfy alerts' reader supervised on its own (started at 09:00, restarted within seconds); after the positions step above (it waits for it).
         if (!com.optionslab.app.BuildConfig.GOLD) com.optionslab.app.data.NtfyReader.init(this)
         // Boss's 15 Oct arms cleanup: its small file read on its own worker; its first pass waits for the positions step above.

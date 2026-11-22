@@ -644,7 +644,8 @@ object LiveSelfTest {
 
     /** Zerodha's own error text is already free of keys and URLs; anything else is named by its type only. */
     private fun reason(e: Throwable): String = when (e) {
-        is Broker.KiteError, is Broker.NotLoggedIn, is IllegalStateException -> e.message ?: e.javaClass.simpleName
+        // (22 Nov 2026, B6 review: Kite's unsure answer not yet in the book - [Broker.KiteUnsure] - with Zerodha's own words too.)
+        is Broker.KiteError, is Broker.KiteUnsure, is Broker.NotLoggedIn, is IllegalStateException -> e.message ?: e.javaClass.simpleName
         is java.net.UnknownHostException -> "no internet connection"
         is java.net.SocketTimeoutException -> "Zerodha did not answer in time"
         else -> e.javaClass.simpleName

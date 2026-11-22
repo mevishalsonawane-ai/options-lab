@@ -3934,7 +3934,10 @@ object OrbArms {
                 }
             }
         }
-        val ins = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull())?.firstOrNull {
+        // 22 Nov 2026 (B6 review, item 5): the list in memory only (the arms' lock is held: never a file read or a download here); none in
+        // memory yet, this entry is refused with a note and the list is loaded in the background for the next one.
+        val insList = Broker.instrumentsInMemory() ?: return "refused: Zerodha's instrument list is not loaded yet (loading it in the background); nothing sent"
+        val ins = insList.firstOrNull {
             it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6
         } ?: return "refused: ${c.symbol} is not listed on Zerodha"
         val sym = ins.tradingSymbol
@@ -4064,7 +4067,9 @@ object OrbArms {
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
             // (19 Nov 2026: not found is not proof it was never placed - a LIMIT may rest and fill later. The intent stays unconfirmed with no
             // order id: the settle's lost-id search finds it, cancels what still works and keeps what filled, or drops it after its wait.)
-            try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }   // null: not found yet, or the book unreadable
+            // (22 Nov 2026, B6 review, item 1: so is Kite's DataException or GeneralException with no order in the book yet - [Broker.KiteUnsure];
+            // already looked for in the door, not a second time here under the arms' lock.)
+            if (e is Broker.KiteUnsure) null else try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }   // null: not found yet, or the book unreadable
         }
         // (B5: its order id written down at once on the writer thread - never a disk wait before its stop goes; a restart before that write
         // finds the order by the search, which takes this arm's own unclaimed entry orders too, [settleEntry]. The labels after it never
