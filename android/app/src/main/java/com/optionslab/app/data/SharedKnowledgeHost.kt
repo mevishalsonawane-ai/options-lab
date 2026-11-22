@@ -57,7 +57,7 @@ object SharedKnowledgeHost {
     const val SNAPSHOT = "findings_snapshot.vault"
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("SharedKnowledgeHost"))
     private val building = AtomicBoolean(false)
 
     @Volatile private var current: SharedKnowledge.Snapshot = SharedKnowledge.EMPTY
@@ -86,7 +86,7 @@ object SharedKnowledgeHost {
      */
     private val background = CoroutineScope(SupervisorJob() + java.util.concurrent.Executors.newSingleThreadExecutor { r ->
         Thread({ runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND) }; r.run() }, "knowledge").apply { isDaemon = true }
-    }.asCoroutineDispatcher())
+    }.asCoroutineDispatcher() + ScopeGuard.handler("SharedKnowledgeHost.background"))
 
     /**
      * The first build, after the start (Boss, 14 Oct): once the open positions are watched and the stream is back, and - in

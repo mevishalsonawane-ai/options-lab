@@ -55,7 +55,7 @@ object TickZoneRecorder {
     private const val DIR = "recordings"
 
     @Volatile private var root: File? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("TickZoneRecorder"))
     private val queue = TickZone.SecondQueue()
     private val writeLock = Mutex()
     @Volatile private var jobs: List<Job> = emptyList()
@@ -77,7 +77,7 @@ object TickZoneRecorder {
         if (jobs.any { it.isActive }) return
         jobs = listOf(
             scope.launch { while (true) { if (!testOff) runCatching { layout() }; delay(TickRest.LAYOUT_MS); layoutRest() } },
-            CoroutineScope(SupervisorJob() + Dispatchers.Default).launch { sampler() },
+            CoroutineScope(SupervisorJob() + Dispatchers.Default + ScopeGuard.handler("TickZoneRecorder")).launch { sampler() },
             scope.launch {
                 while (true) {
                     delay(TickRest.DRAIN_MS)

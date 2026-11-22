@@ -35,7 +35,7 @@ object FlowGate {
     private const val MAX_BYTES = 4L * 1024 * 1024
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("FlowGate"))
     private val lock = Any()
 
     fun init(context: Context) {

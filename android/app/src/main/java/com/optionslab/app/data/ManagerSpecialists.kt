@@ -45,7 +45,7 @@ object ManagerSpecialists {
     fun who(id: String): String = "${TradeManager.WHO} · ${ManagerTeam.nameOf(id)}"
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("ManagerSpecialists"))
 
     fun init(context: Context) {
         appContext = context.applicationContext

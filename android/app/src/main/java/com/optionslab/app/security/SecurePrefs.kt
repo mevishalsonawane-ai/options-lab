@@ -235,7 +235,7 @@ object SecurePrefs {
         return true
     }
 
-    private val flushScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val flushScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("SecurePrefs.flushScope"))
     /** How many [flushSoon]s ran (the tests: the screen's stop and the memory trim are wired to it). */
     internal val flushSoonRuns = java.util.concurrent.atomic.AtomicInteger()
 

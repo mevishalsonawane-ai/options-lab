@@ -652,7 +652,7 @@ object LiveSelfTest {
 
     // ---- the automatic 09:20 run (its switch off by default) ---------------------------------------------------------------
 
-    private val autoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val autoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("LiveSelfTest.autoScope"))
 
     /** The automatic run's switch (the settings vault; read off the screen's thread). */
     fun autoOn(): Boolean = runCatching { com.optionslab.app.security.SecurePrefs.getBoolean(KEY_AUTO, false) }.getOrDefault(false)

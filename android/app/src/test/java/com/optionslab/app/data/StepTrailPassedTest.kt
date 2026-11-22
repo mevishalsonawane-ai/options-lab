@@ -675,10 +675,12 @@ class StepTrailPassedTest : RobolectricTest() {
         assertEquals(expect, back.stopTrigger!!, 1e-9)
         assertEquals(expect, kite.order(live.stopOrderId!!).trigger, 1e-9)
         assertTrue(marketSells.isEmpty())
-        // Kept per live trade; forgotten when it closes, and all of it released on memory pressure (the stop never depends on it).
+        // Kept per live trade; forgotten when it closes. 22 Nov 2026 (B6 review): a memory trim never lets go of an open trade's high
+        // (the screen hidden, or the harshest level alike), so its lock never misses a spike for it.
         assertEquals(1, RuleHighs.kept())
-        RuleHighs.trim()
-        assertEquals(0, RuleHighs.kept())
+        RuleHighs.trim(com.optionslab.ira.MemoryPlan.UI_HIDDEN)
+        RuleHighs.trim(com.optionslab.ira.MemoryPlan.COMPLETE)
+        assertEquals(1, RuleHighs.kept())
     }
 
     /**

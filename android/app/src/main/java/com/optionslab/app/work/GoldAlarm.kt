@@ -49,7 +49,7 @@ object GoldAlarm {
 class GoldReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+        CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("GoldAlarm")).launch {
             // Battery (round 8): the feed is read only with something to watch ([com.optionslab.ira.GoldPass]); any doubt reads.
             try { if (runCatching { GoldService.passDue() }.getOrDefault(true)) GoldPaper.tick() } finally {
                 runCatching { GoldAlarm.schedule(context) }
@@ -115,7 +115,7 @@ class GoldService : android.app.Service() {
         }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("GoldAlarm"))
     private var loop: kotlinx.coroutines.Job? = null
 
     override fun onBind(intent: Intent?): android.os.IBinder? = null

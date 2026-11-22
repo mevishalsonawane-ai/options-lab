@@ -22,7 +22,7 @@ object RemovedFeatureCleanup {
     internal const val PREFIX = "telegram."
     internal val FILES = listOf("tdlib", "signals.vault")
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("RemovedFeatureCleanup"))
 
     fun init(context: Context) {
         val app = context.applicationContext

@@ -208,7 +208,7 @@ object McxNr7Record {
     // ---- the pass ---------------------------------------------------------------------------------------------------------
 
     /** This record's own background job: the watch's passes and lanes start it ([kick]) and never wait for it. */
-    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + ScopeGuard.handler("McxNr7Record"))
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /**

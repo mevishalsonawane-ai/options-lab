@@ -49,7 +49,7 @@ object ExitCoordinator {
     @Volatile private var turns = ExitTurns()
     private val lock = Any()
     private var counts = ExitDesk.Counts()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("ExitCoordinator"))
 
     data class View(val on: Boolean = false, val line: String = "", val lagOn: Boolean = false, val lagLine: String = "")
     private val _view = MutableStateFlow(View())

@@ -54,7 +54,7 @@ object FundsCheck {
      */
     @Volatile private var wipeGen = 0
     private val writeLock = Any()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("FundsCheck"))
 
     /**
      * One entry the check would skip ([applied] false: shadow, it went as before) or skipped ([applied] true: not sent, kept as a

@@ -45,7 +45,7 @@ object AccountStopHost {
     private val shadowSeen = HashSet<String>()
     @Volatile private var shadowDay: java.time.LocalDate? = null
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("AccountStopHost"))
 
     data class View(val on: Boolean = false, val line: String = "", val reached: Boolean = false)
     private val _view = MutableStateFlow(View())

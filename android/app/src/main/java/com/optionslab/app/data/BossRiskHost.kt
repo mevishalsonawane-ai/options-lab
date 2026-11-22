@@ -113,7 +113,7 @@ object BossRiskHost {
                   val underlying: Double?, val iv: Double?)
     private var ivs: List<Iv> = emptyList()
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("BossRiskHost"))
 
     data class View(val paper: Map<Rule, Boolean> = emptyMap(), val live: Map<Rule, Boolean> = emptyMap(), val weekLimit: Double = BossRisk.PAPER_WEEKLY_DEFAULT,
                     val lines: List<String> = emptyList(), val accountReached: Boolean = false, val weekReached: Boolean = false)

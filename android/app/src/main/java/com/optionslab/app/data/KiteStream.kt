@@ -149,18 +149,42 @@ object KiteStream {
     /** 20 Nov 2026: a subscribe or unsubscribe message the socket did not take: tried again on the watchdog's next look. */
     @Volatile private var subscribeOwed = false
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // 22 Nov 2026 (B6 review): a failure escaping one of its jobs is noted, never the end of the process ([ScopeGuard]).
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("price stream"))
     private var loop: Job? = null
     @Volatile private var socket: WebSocket? = null
 
-    private val client: OkHttpClient by lazy {
-        OkHttpClient.Builder()
-            .sslSocketFactory(KitePin.streamSocketFactory, KitePin.streamTrust)
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(0, TimeUnit.MILLISECONDS)      // a stream; Kite sends a heartbeat every second
-            .pingInterval(20, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(false)
-            .build()
+    private val client: OkHttpClient by lazy { streamClient() }
+
+    /**
+     * 22 Nov 2026 (B6 review: the stream could sit in CONNECTING for ever - a TLS handshake or Zerodha's 101 upgrade that stalled never
+     * timed out, with no read limit on a stream and nothing else watching a socket that never opened): how long a connection may take
+     * to OPEN (the connect, the TLS handshake and the upgrade) before it is given up and tried again. Two guards: the client's call
+     * limit ends a stalled handshake by itself - OkHttp lifts that limit the moment the socket opens (its Exchange.newWebSocketStreams
+     * calls timeoutEarlyExit), so an open stream is never cut by it - and the watch gives up on one not open by then ([watch]).
+     */
+    internal const val OPEN_TIMEOUT_MS = 20_000L
+
+    /** The stream's client: pinned like the REST calls, no read limit (a stream: Kite sends a heartbeat every second), [openTimeoutMs] to open. */
+    internal fun streamClient(openTimeoutMs: Long = OPEN_TIMEOUT_MS): OkHttpClient = OkHttpClient.Builder()
+        .sslSocketFactory(KitePin.streamSocketFactory, KitePin.streamTrust)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.MILLISECONDS)      // a stream; Kite sends a heartbeat every second
+        .callTimeout(openTimeoutMs, TimeUnit.MILLISECONDS)
+        .pingInterval(20, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(false)
+        .build()
+
+    /** 22 Nov 2026: a connection asked for at [startedAt] (the monotonic clock) and still not open at [now] after [limitMs]: given up. Pure. */
+    internal fun openOverdue(opened: Boolean, startedAt: Long, now: Long, limitMs: Long = OPEN_TIMEOUT_MS): Boolean =
+        !opened && now - startedAt > limitMs
+
+    /**
+     * 22 Nov 2026 (B6 review: the status stayed CONNECTING or RETRYING after [stop]): [s] is set only while [still] holds, under the
+     * same lock as [stop], so a stop landing anywhere in the loop or in an open is never followed by a stale status. True when set.
+     */
+    private inline fun setStatus(s: Status, still: () -> Boolean): Boolean = synchronized(this) {
+        if (still()) { _status.value = s; true } else false
     }
 
     // ---- what to follow -------------------------------------------------------------------
@@ -424,6 +448,34 @@ object KiteStream {
     @Volatile internal var testOff = false
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test switch exists only in debug builds" }; field = v }
 
+    /**
+     * TEST ONLY (22 Nov 2026): the stream's address and client in place of Zerodha's (a fake server on this machine). Null in the app,
+     * always: the setters throw unless BuildConfig.DEBUG.
+     */
+    @Volatile internal var urlForTest: String? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test address exists only in debug builds" }; field = v }
+    @Volatile internal var clientForTest: OkHttpClient? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test client exists only in debug builds" }; field = v }
+    /** TEST ONLY (22 Nov 2026): run in the loop right after a connection ended, before its drop is handled (a test stops the stream there). */
+    @Volatile internal var afterEndForTest: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test hook exists only in debug builds" }; field = v }
+
+    /** TEST ONLY (22 Nov 2026): run in the loop just before it takes the connection (a test stops and starts the stream there). */
+    @Volatile internal var beforeConnectForTest: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test hook exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: the current connection's number (null: none). */
+    internal fun connIdForTest(): Int? = conn?.id
+
+    /** TEST ONLY: the loop running now (null: none). */
+    internal fun loopForTest(): Job? = loop
+
+    /** TEST ONLY: [start] as [ensure] calls it (the tests' fake stream runs in any hour). Throws unless BuildConfig.DEBUG. */
+    internal fun startForTest() {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        start()
+    }
+
     @Synchronized
     private fun start() {
         if (testOff) return
@@ -431,10 +483,11 @@ object KiteStream {
         // 20 Oct, review: the armed arms' other indices (FINNIFTY, MIDCPNIFTY) kept too, not wiped until the next ORB pass.
         wants["index"] = INDEX_TOKENS + wants["index"].orEmpty()
         loop = scope.launch {
+            val me = coroutineContext[Job]
             var wait = 0L
             var fails = 0
             var lastCause: StreamHealth.Cause? = null
-            while (isActive) {
+            try { while (isActive) {
                 if (!Broker.loggedIn) break
                 // 27 Oct (battery audit): out of hours, no new connection. Before, only ensure(), a logout or the watch's normal
                 // end stopped this loop: a watch cancelled or destroyed left it reconnecting all night, the app cached. MCX's
@@ -443,28 +496,38 @@ object KiteStream {
                     runCatching { Diag.record(StreamHealth.AREA, "stream: not reconnecting outside market hours (nothing held on MCX)") }
                     break
                 }
-                _status.value = if (wait == 0L) Status.CONNECTING else Status.RETRYING
+                // 22 Nov 2026 (B6 review): never after a stop() (it set OFF): the loop ends instead.
+                if (!setStatus(if (wait == 0L) Status.CONNECTING else Status.RETRYING) { isActive }) break
                 val token = Broker.streamToken() ?: break
                 val key = Broker.apiKey ?: break
                 val c = Conn().also { it.network = networkId() }
                 // 20 Nov 2026: a kick left from before this try (a network change while it waited) is spent here.
                 kick.tryReceive()
-                val url = "wss://${KitePin.WS_HOST}/?api_key=$key&access_token=$token"
+                val url = urlForTest?.let { "$it?api_key=$key&access_token=$token" } ?: "wss://${KitePin.WS_HOST}/?api_key=$key&access_token=$token"
+                val cl = clientForTest ?: client
+                beforeConnectForTest?.invoke()
                 // conn is set before the socket is made: onOpen (on OkHttp's thread) checks `conn !== c`, and a fast open
-                // landing before the assignment would otherwise close a healthy socket.
-                conn = c
-                val ws = client.newWebSocket(Request.Builder().url(url).build(), listener(c))
-                socket = ws
+                // landing before the assignment would otherwise close a healthy socket. 22 Nov 2026 (B6 second review): taken under stop()'s
+                // lock and only while this loop is still the running one - a loop stop() cancelled (ensure() may stop and start again at
+                // once) never takes the connection from the new loop, whose ticks would then all be dropped as another connection's. The
+                // socket is only asked for here (OkHttp makes it on its own threads), so the lock is held for no I/O.
+                val ws = synchronized(this@KiteStream) {
+                    if (!isActive || loop !== me) null
+                    else { conn = c; cl.newWebSocket(Request.Builder().url(url).build(), listener(c)).also { socket = it } }
+                } ?: break
                 try {
                     watch(c, ws)
                 } finally {
                     // Cancelled by stop() (or anything else): this loop's socket is closed here, never left open. Before, a stop()
                     // landing while the socket was being made left it running for good - one of Kite's 3 connections per API key
                     // held by nobody, still feeding ticks and setting the status.
-                    if (!c.done.isCompleted) ws.close(1000, null)
+                    // 22 Nov 2026 (B6 review): one that never opened is cancelled, not closed - a close only queues a close frame
+                    // behind the handshake, which then went on (stalled) until its own limit.
+                    if (!c.done.isCompleted) { if (c.opened.get()) ws.close(1000, null) else ws.cancel() }
                     if (conn === c) conn = null
                     if (socket === ws) socket = null
                 }
+                afterEndForTest?.invoke()
                 // ---- the drop, with its reason ----
                 val opened = c.opened.get()
                 val now = System.currentTimeMillis()
@@ -506,7 +569,7 @@ object KiteStream {
                         // 20 Oct: it reconnects by itself (each drop is also counted in the stream's own line): a warning, not an error.
                         severity = com.optionslab.ira.DiagErrors.Severity.WARNING)
                 }
-                _status.value = Status.RETRYING
+                if (!setStatus(Status.RETRYING) { isActive }) break
                 // 27 Oct (battery audit): anything held - exactly as before; nothing held - a flapping network backs off further,
                 // spread a little ([StreamHealth.waitFor]). Memory only (HeldNow reads no disk, vault or network).
                 val heldNow = runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true)
@@ -521,22 +584,28 @@ object KiteStream {
                     while (mono() < until && !runCatching { HeldNow.any(mcxLive = true) }.getOrDefault(true))
                         if (pause(minOf(1_000L, (until - mono()).coerceAtLeast(1L)))) break
                 }
+            } } finally {
+                // 22 Nov 2026 (B6 review): OFF however this loop ends (a break, a stop()'s cancel, a failure) - unless a newer loop
+                // has started meanwhile, whose status it never touches.
+                synchronized(this@KiteStream) { if (loop == null || loop === me) _status.value = Status.OFF }
             }
-            _status.value = Status.OFF
         }
     }
 
     private fun listener(c: Conn) = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             if (conn !== c) { webSocket.close(1000, null); return }
-            // An open landing before the loop has stored its socket: this is that socket (conn is c), so it is stored
-            // here too, or [resubscribe] would find none and the stream would open with nothing subscribed.
-            socket = webSocket
             val now = mono()
             c.openedAt = now; c.lastFrame = now; c.opened.set(true)
             // 20 Nov 2026: the kept orders and positions are read afresh (updates may have been missed while it was down).
             runCatching { Broker.reconStale() }
-            _status.value = Status.LIVE
+            // 22 Nov 2026 (B6 review): LIVE only while this is still the current connection - a stop() since the look above is never
+            // followed by LIVE; the socket is closed instead. 22 Nov 2026 (B6 second review): the socket is stored (for [resubscribe]) only with it, so a
+            // connection stopped meanwhile never leaves its socket behind.
+            if (!setStatus(Status.LIVE) { (conn === c).also { if (it) socket = webSocket } }) {
+                webSocket.close(1000, null)
+                return
+            }
             com.optionslab.app.work.Alerts.post("Live prices streaming from Zerodha", com.optionslab.app.work.Alerts.Kind.SUCCESS, throttle = true)
             synchronized(subscribed) { subscribed.clear() }
             resubscribe()
@@ -574,6 +643,7 @@ object KiteStream {
      */
     private suspend fun watch(c: Conn, ws: WebSocket) {
         var lastLook = mono()
+        val askedAt = lastLook
         var graceUntil = 0L
         while (true) {
             if (withTimeoutOrNull(StreamHealth.STEP_MS) { c.done.await() } != null) return
@@ -583,6 +653,14 @@ object KiteStream {
             StreamHealth.paused(lastLook, now)?.let { sec -> c.pausedSec = sec; graceUntil = now + 5_000 }
             lastLook = now
             if (now < graceUntil) continue
+            // 22 Nov 2026 (B6 review): a connection not OPEN [OPEN_TIMEOUT_MS] after it was asked for (a handshake or Zerodha's 101 that
+            // stalled) is given up - cancelled, never closed: it never opened - and tried again. The watchdog below judges open ones only.
+            if (openOverdue(c.opened.get(), askedAt, now)) {
+                c.end.compareAndSet(null, StreamHealth.Drop(forced = StreamHealth.Cause.TIMEOUT, message = "did not open within ${OPEN_TIMEOUT_MS / 1000} s"))
+                ws.cancel()
+                c.done.complete(Unit)
+                return
+            }
             val marketOpen = runCatching { Market.isOpen() || Market.specialOpen() || McxMarket.isOpen() }.getOrDefault(false)
             if (StreamHealth.stalled(c.opened.get(), marketOpen, c.lastFrame, now)) {
                 val sec = (now - c.lastFrame) / 1000
@@ -632,8 +710,10 @@ object KiteStream {
     fun stop(why: String? = null) {
         val was = loop?.isActive == true
         loop?.cancel(); loop = null
+        val c = conn
         conn = null
-        socket?.close(1000, null); socket = null
+        // 22 Nov 2026 (B6 review): a socket that never opened is cancelled (a close would wait behind its handshake).
+        socket?.let { if (c != null && c.opened.get()) it.close(1000, null) else it.cancel() }; socket = null
         synchronized(subscribed) { subscribed.clear() }
         synchronized(updates) { updates.clear() }
         _status.value = Status.OFF
@@ -823,6 +903,7 @@ object KiteStream {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
         ticks.clear(); paths.clear(); candles.clear(); sessionCandles.clear(); touched.clear(); stamps.clear()
         reconnects = 0; reconnectDay = null
+        urlForTest = null; clientForTest = null; afterEndForTest = null; beforeConnectForTest = null
         synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L
         _status.value = Status.OFF

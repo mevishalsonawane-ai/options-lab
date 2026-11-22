@@ -48,7 +48,7 @@ object ArmOrderLabels {
     private val byId = LinkedHashMap<String, String>()
     private var seq = 0L
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("ArmOrderLabels"))
 
     /**
      * What keeps a label found by [labelOf] past a restart: (order id, label) into the app's order labels, in the background.
