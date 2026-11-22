@@ -1075,7 +1075,9 @@ object ArmLive {
             val i = Broker.find(l, c.underlying, c.expiry, c.strike, c.right) ?: return null to "${c.symbol} is not listed on Zerodha"
             return Ins(i.tradingSymbol, "BFO", i.lotSize, i.tickSize, 1) to null
         }
-        val list = Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull() ?: return null to "Zerodha's instrument list could not be read"
+        // 22 Nov 2026 (B6 review, item 5): the list in memory only (the entry lock is held: never a file read or a download here); none in
+        // memory yet, this entry is not mirrored and the list is loaded in the background for the next one.
+        val list = Broker.instrumentsInMemory() ?: return null to "Zerodha's instrument list is not loaded yet (loading it in the background)"
         val i = list.firstOrNull { it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6 }
             ?: return null to "${c.symbol} is not listed on Zerodha"
         return Ins(i.tradingSymbol, "NFO", i.lotSize, i.tickSize, 1) to null
@@ -1149,8 +1151,9 @@ object ArmLive {
         closedWhy(a.ref)?.let { notMirrored(a, "its paper trade is already closed ($it)"); return@withLock }
         // (19 Nov 2026, audit batch 2: one closed elsewhere before its live entry went is still closed - not mirrored, as before.)
         detachNotes[a.ref]?.let { notMirrored(a, "its paper trade is already closed (${it.second})"); return@withLock }
-        // One live trade per paper trade, ever.
-        if (lock.withLock { book().positions.any { it.ref == a.ref } }) return@withLock
+        // One live trade per paper trade, ever. (22 Nov 2026, B6 review, item 6: said in the diagnostics, never skipped silently - two paper
+        // trades sharing one reference would otherwise lose the second's live copy unseen.)
+        if (lock.withLock { book().positions.any { it.ref == a.ref } }) { note(a.key, "not mirrored: its paper trade ${a.ref} already has a live trade (one per paper trade)"); return@withLock }
         val (ins, insWhy) = step?.let { Ins(it.symbol, it.exchange, it.lot, it.tick, 1) to null } ?: zerodha(a.contract)
         if (ins == null) { notMirrored(a, insWhy ?: "no contract"); return@withLock }
         LiveMirror.tooLate(now(), ins.exchange, spec.product, a.contract.expiry)?.let { notMirrored(a, it); return@withLock }
@@ -1175,7 +1178,8 @@ object ArmLive {
             kotlinx.coroutines.withContext(Broker.QuoteQueueCap(LIVE_ENTRY_QUOTE_WAIT_MS)) {
                 Broker.stopQuotes(listOf(qkey), com.optionslab.ira.RateGate.Priority.ENTRY, staleFallback = false)[qkey]
             }
-        } ?: runCatching { Broker.stopQuotes(listOf(qkey))[qkey] }.getOrNull()
+        // (22 Nov 2026, B6 review, item 7: the fresh read with no stale fallback either - never an old tick; no price, no entry.)
+        } ?: runCatching { Broker.stopQuotes(listOf(qkey), staleFallback = false)[qkey] }.getOrNull()
         val last = quote?.last?.takeIf { it > 0 } ?: run { notMirrored(a, "no Zerodha price for ${ins.symbol}"); return@withLock }
         // 4 Nov (Boss: "if I select 3 lots, buy 3 if the money is there, else try 2, else 1"; "make it default, don't have one
         // more option"): an index option buy of more than one lot is cut to the lots the free cash fits - only ever fewer than his
@@ -1334,8 +1338,10 @@ object ArmLive {
             // The answer was lost, not necessarily the order: look before calling it unsent. 30 Oct (deep review): an order book that
             // does not show it yet is not proof it was never placed (the book can trail the POST) - the entry is held as UNCONFIRMED
             // with no order id, so [settle] keeps looking for it by its tag for [UNCONFIRMED_GRACE_MS] before dropping it, and a filled
-            // order is never left at Zerodha with no stop and no watch.
-            try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }
+            // order is never left at Zerodha with no stop and no watch. (22 Nov 2026, B6 review, item 1: Kite's DataException or
+            // GeneralException with no order in the book yet - [Broker.KiteUnsure], not definite - is held the same way, never dropped;
+            // already looked for in the door, it is not looked for a second time here under the entry lock.)
+            if (e is Broker.KiteUnsure) null else try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null }
             }
         }
         // 15 Nov: by its id in memory at once too (the order review reads it even if the labels' book could not be read just now).

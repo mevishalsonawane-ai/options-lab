@@ -237,13 +237,23 @@ object ExposureCapHost {
      */
     fun liveCheck(symbol: String, exchange: String, buy: Boolean, owner: String): String? = runCatching {
         if (!buy) return@runCatching null
+        testDoorThrows?.let { throw it }
         val (dir, _) = liveDir(symbol, exchange) ?: return@runCatching null
         ledgerToday()
         val why = SameDirectionCap.refusal(ledger.open(), dir, max) ?: return@runCatching null
         val on = liveOn
         refused(owner, symbol, dir, null, live = true, applied = on, why = why)
         if (on) "refused: $why" else null
-    }.getOrNull()
+    // 22 Nov 2026 (B6 review, item 4: the door's checks failed open): a check that throws refuses the BUY while the live switch is on;
+    // in shadow (off, the default) it goes as before.
+    }.getOrElse { e -> Broker.doorUnread("the same-direction cap", liveOn, e) }
+
+    /** 22 Nov 2026 (B6 review, item 4): whether the cap acts on live entries (its live switch; memory only). */
+    fun liveActs(): Boolean = liveOn
+
+    /** TEST ONLY (22 Nov 2026, B6 review): the door's check throws this, while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testDoorThrows: Exception? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     /** 25 Oct: the bots' live index-option entries open now (the live opposite-bets shadow, [BossRiskHost]). Memory only. */
     fun liveOpen(): List<SameDirectionCap.Open> = runCatching { ledgerToday(); ledger.open() }.getOrDefault(emptyList())
@@ -289,5 +299,6 @@ object ExposureCapHost {
         synchronized(lock) { blocked = emptyList() }
         ledger.clear(); ledgerDay = null
         _view.value = View()
+        testDoorThrows = null
     }
 }

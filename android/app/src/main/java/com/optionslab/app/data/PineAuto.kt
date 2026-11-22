@@ -144,6 +144,8 @@ object PineAuto {
                 bk.removing += Removing(r.getLong("script"), r.getString("kite"), ids, r.optString("day"), r.optBoolean("scanned", true),
                     r.optInt("tries"), r.optBoolean("told"), r.optLong("at", 0L)) } }
             o.optJSONObject("closed")?.let { m -> m.keys().forEach { k -> bk.closed[k] = m.getInt(k) } }
+            // 22 Nov 2026 (B6 review, item 9): the app's own cancels saved with the book, so a restart never reads one as Boss's.
+            o.optJSONArray("ownCancels")?.let { a -> for (i in 0 until a.length()) ownCancels += a.getString(i) }
             // A restore not yet disarmed (the app clears the flag once it has): no script may trade live on restored approvals.
             if (com.optionslab.app.security.SecurePrefs.getBoolean(Backup.DISARM, false)) bk.liveOk.clear()
             bk
@@ -180,6 +182,8 @@ object PineAuto {
             .put("ids", JSONObject().apply { r.ids.forEach { (k, v) -> put(k, v) } }).put("day", r.day).put("scanned", r.scanned)
             .put("tries", r.tries).put("told", r.told).put("at", r.at)) } })
         o.put("closed", JSONObject().apply { b.closed.forEach { (k, v) -> put(k, v) } })
+        // 22 Nov 2026 (B6 review, item 9): the app's own cancels, the newest [OWN_CANCELS_SAVED] (a cancel of a day's DAY order matters that day).
+        o.put("ownCancels", JSONArray(synchronized(ownCancels) { ownCancels.toList() }.takeLast(OWN_CANCELS_SAVED)))
         written.write(file, o.toString().toByteArray(Charsets.UTF_8))
         synchronized(this) {
             // Erased while it was written: the file it may have put back is deleted again, and nothing is shown.
@@ -463,7 +467,10 @@ object PineAuto {
             wipes++
             cache = null; written.forget(); _held.value = emptyMap(); _log.value = emptyList()
             stopNoted.clear(); removingHint = false; flatSince.clear(); flatAlertSaid.clear(); reentrySaid.clear()
+            ownCancels.clear(); lostExitWhy.clear()
         }
+        // (22 Nov 2026, B6 review: the lost sales and buys still looked for under its keys forgotten with it - never one a later holding reads.)
+        runCatching { (Broker.lostKeys("pineexit:") + Broker.lostKeys("pinebuy:")).forEach { Broker.forgetLost(it) } }
         if (::file.isInitialized) file.delete()
     }
 
@@ -688,7 +695,11 @@ object PineAuto {
             val item = all.firstOrNull { it.id == id } ?: continue
             if (!item.auto.on && id !in b.winding) continue
             runCatching {
-                if (stopFilled(b, id, item, h)) return@runCatching
+                // 22 Nov 2026 (B6 review, item 2): a lost exit sale still looked for: nothing more sold, no stop beside it ([lostExit]; a fast
+                // look only holds it - its booking or give-up is the 15-second check's and the pass's).
+                if (lostExit(b, id, item, h, quick = fast) == LostExit.HELD) return@runCatching
+                val h1 = b.held[id] ?: return@runCatching
+                if (stopFilled(b, id, item, h1)) return@runCatching
                 val cur = b.held[id] ?: return@runCatching
                 if (stopped || (item.auto.squareOff && mins >= 15 * 60 + 15)) {
                     exit(b, id, item, cur, if (stopped) stopSays else "15:15 square-off")
@@ -746,6 +757,10 @@ object PineAuto {
             if (h != null && !h.unconfirmed && h.live && h.stop == null) h = placeLiveStop(b, item, h.copy(at = System.currentTimeMillis()))
             if (h == null) b.held.remove(id) else b.held[id] = h
         }
+        // 22 Nov 2026 (B6 review, item 2): a live exit sale whose answer was lost and is still looked for: the holding is left alone this
+        // pass - no stop beside the sale, no new sale, nothing bought ([lostExit]); found, it was booked; given up on, its stop is back.
+        if (h != null && !h.unconfirmed && lostExit(b, id, item, h) == LostExit.HELD) return
+        h = b.held[id]
         // The resting stop filled (the paper book or Zerodha sold at it): that was the exit.
         if (h != null && !h.unconfirmed && stopFilled(b, id, item, h)) return
         h = b.held[id]
@@ -878,7 +893,8 @@ object PineAuto {
     private val staleSaid = java.util.concurrent.ConcurrentHashMap<Long, Long>()
 
     /** TEST ONLY: forget which late candles were told (a new process starts without them). */
-    internal fun forgetStaleForTest() { staleSaid.clear(); stopNotRested.clear(); stopShort.clear(); topUpAt.clear(); topUpGapMsForTest = null }
+    internal fun forgetStaleForTest() { staleSaid.clear(); stopNotRested.clear(); stopShort.clear(); topUpAt.clear(); topUpGapMsForTest = null
+        ownCancels.clear(); lostExitWhy.clear() }
 
     /** The option a signal [target] backs ("CE" / "PE"), or null: none (flat, or short with no put). */
     private fun wantFor(item: PineScripts.Item, target: Int): String? = when {
@@ -1060,6 +1076,8 @@ object PineAuto {
         // (20 Nov 2026, delta review: its lost stop and retries forgotten - a later holding of the same key never inherits them; its own
         // exits are taken out at Zerodha as before.)
         lostStopKeyOf(id, h).let { k -> Broker.forgetLost(k); stopNotRested -= k; stopShort.remove(k) }
+        // (22 Nov 2026, B6 review, item 2: and a lost exit sale of it, if one is still kept.)
+        if (h.live) lostExitKeyOf(id, h).let { k -> Broker.forgetLost(k); lostExitWhy.remove(k) }
     }
 
     /** A sell stop-limit's limit price: 5% (at least 2 points) under its trigger, so it fills in a fast fall (as the ORB arms'). */
@@ -1196,7 +1214,8 @@ object PineAuto {
             val sells = book.filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && it.id !in removingIds }
             // (20 Nov 2026, delta review: never one another holding's lost reply may be - it takes it when found; one taken is claimed, and one for
             // less than is held leaves the rest asked again ([stopShort]).)
-            sells.filter { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed && !Broker.lostMayBe(it, lostKey) &&
+            // (22 Nov 2026, B6 review, item 9: never one the app is taking out itself - [ownCancels].)
+            sells.filter { it.tag == "irapine" && (it.type == "SL" || it.type == "SL-M") && it.id !in claimed && !ownCancel(it.id) && !Broker.lostMayBe(it, lostKey) &&
                 com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) in 1..h.qty }
                 .minByOrNull { kotlin.math.abs(it.trigger - trig) }?.let { orphan ->
                     Broker.forgetLost(lostKey); stopNotRested -= lostKey; Broker.claimStop(orphan.id)
@@ -1226,7 +1245,9 @@ object PineAuto {
         }
         val o = if (stopQty < h.qty) o0.copy(quantity = stopQty) else o0
         val oid = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite()) }.getOrNull()
+            // (22 Nov 2026, B6 review: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already: straight to the
+            // background search, never a second ~4 s under the scripts' lock.)
+            if (Broker.definite(e)) null else (if (e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, knownKite()) }.getOrNull())
                 ?: null.also { Broker.noteLost(lostKey, o, knownKite(), "${label(item)}: its stop", liveOnly = true) }
         }
         if (oid == null) {
@@ -1345,7 +1366,14 @@ object PineAuto {
                 return true
             }
             "CANCELLED", "REJECTED" -> {
-                com.optionslab.app.work.Alerts.error("${label(item)}: the resting stop on ${h.kite} is no longer at Zerodha " +
+                // 22 Nov 2026 (B6 review, item 9): one the app took out itself for an exit ([ownCancels]) is said as such, never as gone from
+                // Zerodha; either way the app watches the level itself, as before.
+                if (so.status == "CANCELLED" && ownCancel(sid)) {
+                    note(b, id, "${h.kite}: its resting stop was taken out by the app for an exit; the app watches the stop itself")
+                    // (Still held here: that exit did not take it all - Boss told, in the app's own words.)
+                    com.optionslab.app.work.Alerts.error("${label(item)}: the resting stop on ${h.kite} was taken out by the app for an exit that " +
+                        "has not sold it all; the app watches the stop itself.", "Pine live")
+                } else com.optionslab.app.work.Alerts.error("${label(item)}: the resting stop on ${h.kite} is no longer at Zerodha " +
                     "(${so.status.lowercase()}); the app watches the stop itself.", "Pine live")
                 b.held[id] = h.copy(stop = null)
             }
@@ -1500,7 +1528,11 @@ object PineAuto {
         val findings = runCatching { com.optionslab.app.security.Integrity.reportWithin(app, 60_000) }.getOrDefault(emptyList())
         if (com.optionslab.app.security.Integrity.compromised(findings)) { note(b, id, "This phone failed the security check: no live order sent"); return }
         if (!Broker.loggedIn) { note(b, id, "Not logged in to Zerodha today: nothing sent"); return }
-        val ins = (Broker.cachedInstruments() ?: runCatching { Broker.instruments() }.getOrNull())?.firstOrNull {
+        // 22 Nov 2026 (B6 review, item 5): the list in memory only (the scripts' lock is held - the holdings' 15-second checks wait on it:
+        // never a download here); none in memory yet, nothing is sent and the list is loaded in the background for the next change.
+        val insList = Broker.instrumentsInMemory()
+            ?: run { note(b, id, "Zerodha's instrument list is not loaded yet (loading it in the background): nothing sent"); return }
+        val ins = insList.firstOrNull {
             it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6
         } ?: run { note(b, id, "${c.symbol} is not listed on Zerodha: nothing sent"); return }
         val sym = ins.tradingSymbol
@@ -1544,11 +1576,19 @@ object PineAuto {
         val known = knownKite()
         // 22 Oct: the checks above cleared this order: stamped with its fingerprint, recomputed at the door ([OrderVerdicts]).
         val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), "pine"), "Pine live checks")
+        // (22 Nov 2026, B6 review, item 3: when it was sent, by the clock the settle reads ([Held.since]) - the key its lost reply is kept under.)
+        val sentMs = Market.now().toInstant().toEpochMilli()
         val orderId: String? = try { Broker.placeOrder(o, arm = "pine", verdict = verdict) } catch (e: Exception) {
             if (Broker.definite(e)) { note(b, id, "Zerodha refused the buy: ${e.message}"); return }
             // The answer was lost, not necessarily the order: look (the book can trail the POST) before calling it unsent.
-            try { Broker.findRecentRetrying(o, known) ?: run { note(b, id, "Zerodha did not answer the buy (${e.message}) and no such order is in its book: nothing bought"); return } }
-            catch (_: Exception) { null }                                          // the order book could not be read either
+            // 22 Nov 2026 (B6 review, item 3: "a lost Pine entry not found in about 4 s is treated as nothing bought"): not there yet is no
+            // proof - the book can trail the POST, and Kite's unsure DataException / GeneralException ([Broker.KiteUnsure]) may have placed
+            // it. Held as unconfirmed (below, as when the book is unreadable) and looked for in the background ([Broker.noteLost]); the
+            // settle takes it once found ([settle]: its fill booked, its stop rested), or lets it go only once the book, read past
+            // [Broker.LOST_SEARCH_MS], still does not show it.
+            // (Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already: never a second ~4 s under the scripts' lock.)
+            (if (e is Broker.KiteUnsure) null else try { Broker.findRecentRetrying(o, known) } catch (_: Exception) { null })
+                ?: null.also { Broker.noteLost(lostBuyKeyOf(id, sym, sentMs), o, known, "${label(item)}: its buy") }
         }
         orderId?.let { ownerTag("kite:$it", "${label(item)} · entry") }
         FlowGate.outcome(flow, "entered_live")
@@ -1564,7 +1604,7 @@ object PineAuto {
             // settled from the order book on the next passes, rather than left unwatched.
             // 25 Oct: [since] is compared with Zerodha's order time ([settle]: [Broker.latestTagged]), so it reads [Market.now] (the
             // system clock on the phone; in a test the market clock the fake Zerodha stamps its orders from), never another clock.
-            b.held[id] = Held(c.symbol, right.name, o.quantity, ins.lotSize, quote, today.toString(), true, sym, orderId, Market.now().toInstant().toEpochMilli())
+            b.held[id] = Held(c.symbol, right.name, o.quantity, ins.lotSize, quote, today.toString(), true, sym, orderId, sentMs)
             runCatching { save(b) }
             com.optionslab.app.work.Alerts.error("${label(item)}: Zerodha did not confirm the buy of $sym. It is treated as held until the order book shows what filled.", "Pine auto-trade")
             note(b, id, "Zerodha did not confirm the buy of $sym: tracked as held until checked")
@@ -1601,10 +1641,26 @@ object PineAuto {
             return null
         }
         val oid = h.order ?: run {
+            // 22 Nov 2026 (B6 review, item 3): its lost reply looked for in the background ([Broker.lookLost]): found, that order; given up
+            // on (the book read past the window does not show it), nothing held; still looked for (or none kept), the book read now as before.
+            val key = lostBuyKeyOf(id, sym, h.since)
+            val lost = Broker.lookLost(key)
+            when (lost) {
+                is Broker.LostLook.Found -> { ownerTag("kite:${lost.id}", "Pine · entry"); return@run lost.id }
+                Broker.LostLook.GaveUp -> { note(b, id, "No buy of $sym reached Zerodha: nothing held"); return null }
+                else -> Unit
+            }
             // The order id itself was lost: the entry is found in today's book by its symbol, side, tag and time.
             val since = java.time.Instant.ofEpochMilli(h.since).atZone(com.optionslab.engine.IST).toLocalDateTime().minusSeconds(30)
             val row = runCatching { Broker.latestTagged(sym, "BUY", "irapine", since, knownKite()) }.getOrElse { return h }
-                ?: run { note(b, id, "No buy of $sym reached Zerodha: nothing held"); return null }
+                ?: run {
+                    // (22 Nov 2026, B6 review, item 3: not in the book yet is no proof - held while its lost reply is still looked for, or,
+                    // with none kept (after a restart), for the search's window from its send; only then nothing held.)
+                    if (lost == Broker.LostLook.Searching || Market.now().toInstant().toEpochMilli() - h.since in 0 until Broker.LOST_SEARCH_MS) return h
+                    note(b, id, "No buy of $sym reached Zerodha: nothing held"); return null
+                }
+            // (Found by its tag: its background search is over.)
+            Broker.forgetLost(key)
             ownerTag("kite:${row.id}", "Pine · entry")
             row.id
         }
@@ -1659,6 +1715,14 @@ object PineAuto {
         }
         val sym = h.kite ?: run { b.held.remove(id); return }
         if (!Broker.loggedIn) { note(b, id, "Not logged in to Zerodha: cannot sell $sym. Close it in Trade."); return }
+        // 22 Nov 2026 (B6 review, item 2): an earlier sale of this holding whose answer was lost, still looked for: nothing more is sold and
+        // no stop rests beside it ([lostExit]); found, it was booked there. Given up on: its stop is put back at once (so no early return
+        // below leaves the holding with none), then sold as below - the stop taken out first, as always.
+        when (lostExit(b, id, item, h)) {
+            LostExit.HELD -> return
+            LostExit.GAVE_UP -> h = b.held[id] ?: return
+            LostExit.NONE -> Unit
+        }
         // A buy not yet confirmed: its unfilled rest is cancelled first, and only what filled is sold.
         if (h.unconfirmed) {
             h = settle(b, id, h) ?: run { b.held.remove(id); return }
@@ -1689,7 +1753,13 @@ object PineAuto {
         // resting on the symbol (a protection's stop, an ORB stop, the owner's own limit) is left alone and subtracted:
         // together they never sell more than is held, and none of them can block this exit.
         val orders = runCatching { Broker.orders() }.getOrNull() ?: return
-        orders.filter { it.working && it.symbol == sym && it.side == "SELL" && it.tag == "irapine" }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
+        // (22 Nov 2026, B6 review, item 2: the stop it rests with now - after a lost sale given up on, the one just put back.)
+        val stopBefore = h.stop
+        // 22 Nov 2026 (B6 review, item 9): this holding's own only - never another holding's stop (one Pine holding per index and side, so on
+        // this contract every other working "irapine" sale is its own: its stop, an earlier sale; or a closed holding's, on its way out) -
+        // each marked the app's own cancel BEFORE it goes ([cancelOwn]), so its end is never read as Boss's or Zerodha's.
+        val othersStops = b.held.filterKeys { it != id }.values.mapNotNull { it.stop }.toSet()
+        orders.filter { it.working && it.symbol == sym && it.side == "SELL" && it.tag == "irapine" && it.id !in othersStops }.forEach { cancelOwn(it.id, it.variety) }
         // Its resting stop was among them: if it filled meanwhile, that was the exit; once out, the holding has none (a stop
         // that could not be taken out is still working and is subtracted below, so the two never sell more than is held).
         h.stop?.let { sid ->
@@ -1702,7 +1772,8 @@ object PineAuto {
         }
         // The resting stop was taken out for this sale: if the sale then does not go (refused, failed, not filled) it goes
         // back for what is still held, at the level it rested at (never lower), so the holding is never left without one.
-        val tookStop = h0.stop != null && h.stop == null
+        // (22 Nov 2026, B6 review, item 2: as it rested just before - after a lost sale given up on, the stop put back counts too.)
+        val tookStop = (h0.stop != null || stopBefore != null) && h.stop == null
         suspend fun restop(left: Held) {
             if (tookStop && left.qty > 0) b.held[id] = placeLiveStop(b, item, left.copy(stop = null), left.stopAt)
         }
@@ -1710,18 +1781,23 @@ object PineAuto {
         // from here ([ExitCoordinator]); and the orders first, then the positions read again (an exit filling between the two reads
         // shows as still working, never as still held with nothing on its way out).
         val orderId = ExitCoordinator.turn("NFO", sym, "Pine ${label(item)}") {
-            val book = runCatching { ExitCoordinator.orders("NFO", sym, "Pine ${label(item)}") }.getOrNull() ?: return
+            // (22 Nov 2026, B6 review, item 2: a read that fails after the stop came out puts it back, as the held read's failure below does.)
+            val book = runCatching { ExitCoordinator.orders("NFO", sym, "Pine ${label(item)}") }.getOrNull() ?: run { restop(h); return }
             val working = book.filter { it.working && it.symbol == sym && it.side == "SELL" && it.product == "MIS" }
             // Review: the read failing here, after its stop came out, puts the stop back (as every other "not sold" path does).
             // 21 Oct, enhancement round 3 (idea 1): held, checked against that orders read's fills ([ExitCoordinator.held]).
             val heldNow = runCatching { ExitCoordinator.held("NFO", sym, "MIS", "Pine ${label(item)}", book) }
                 .getOrNull() ?: run { restop(h); return }
-            val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: return
+            val spec = runCatching { Broker.spec("NFO", sym) }.getOrNull() ?: run { restop(h); return }
             val qty = com.optionslab.engine.risk.ExitQty.sendable(heldNow, working.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) },
                 h.qty, spec.lotSize)
             if (qty <= 0) {
                 note(b, id, if (h.unconfirmed) "$sym: the buy is not confirmed yet and nothing of it is held to sell; checked again next pass"
                     else "$sym: other exits already working at Zerodha cover what is held; checked again next pass")
+                // 22 Nov 2026 (B6 review, item 2): its stop, taken out above for this sale, is never left out for good: while Zerodha still
+                // holds the contract (only other sales cover it), it is asked again on the next checks ([stopNotRested]: rested by [one] for
+                // what the other sales leave once there is room). Never now - there is none - and never when Zerodha holds nothing.
+                if (tookStop && heldNow > 0 && !h.unconfirmed) stopNotRested += lostStopKey(item, h)
                 return
             }
             val o = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, spec.lotSize, "MIS", "MARKET", null, spec.tickSize, "NFO", "irapine")
@@ -1732,14 +1808,31 @@ object PineAuto {
                 return
             }
             try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-                val found = if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, knownKite() + orders.map { it.id }) }.getOrNull()
+                val seen = knownKite() + orders.map { it.id }
+                // (22 Nov 2026, B6 review: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already: not again here.)
+                val found = if (Broker.definite(e) || e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, seen) }.getOrNull()
                 found ?: run {
+                    // 22 Nov 2026 (B6 review, item 2: "a Pine live exit has no lost-exit hold"): a lost answer not found in ~4 s may still be a
+                    // sale that filled - its stop is NOT put back beside it, and nothing more is sold, until the book shows it or a read of it
+                    // past [Broker.LOST_SEARCH_MS] still does not ([lostExit]). Only Zerodha's own refusal puts the stop back at once.
+                    if (!Broker.definite(e)) { holdLostExit(b, id, item, h, o, seen, why, e.message); return }
                     com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit failed (${e.message}); retrying on the next pass.", "Pine live")
                     restop(h)
                     return
                 }
             }
         }
+        bookSale(b, id, item, h, orderId, why) { restop(it) }
+    }
+
+    /**
+     * The live exit sale [orderId] of holding [h] ([why]) waited for and booked: what filled is the exit (all: the holding closed; a part:
+     * the rest held, [restop] for it); nothing filled and ended, [restop] for all of it; its state unknown, left to the next pass (what is
+     * held is read from Zerodha before anything is placed). 22 Nov 2026 (B6 review, item 2): taken out of [exit] whole, for a lost sale
+     * found later too ([lostExit]).
+     */
+    private suspend fun bookSale(b: Book, id: Long, item: PineScripts.Item, h: Held, orderId: String, why: String, restop: suspend (Held) -> Unit) {
+        val sym = h.kite ?: return
         ownerTag("kite:$orderId", "${label(item)} · $why")
         var f = runCatching { Broker.awaitOrder(orderId, 15_000) }.getOrNull()
         if (f?.status !in DONE) {
@@ -1759,6 +1852,100 @@ object PineAuto {
             if (f.status in DONE) b.held[id]?.let { restop(it) }       // the unsold rest keeps its stop
         }
         note(b, id, "Sold ${f.filled} $sym at ${"%.2f".format(java.util.Locale.ENGLISH, px)} ($why, LIVE)")
+    }
+
+    // ---- 22 Nov 2026 (B6 review, items 2, 3 and 9): lost sales and buys, and the app's own cancels ----------------------------------
+
+    /** What a holding's lost exit sale ([lostExitKeyOf]) means for this look: none kept, held (still looked for, or just booked), given up on. */
+    private enum class LostExit { NONE, HELD, GAVE_UP }
+
+    /**
+     * The key a live holding's lost exit sale is looked for under: the script and the contract (a script holds one holding at a time, and
+     * one whose sale is still looked for is never closed another way meanwhile - [lostExit]).
+     */
+    private fun lostExitKeyOf(id: Long, h: Held) = "pineexit:$id:${h.kite}"
+
+    /** The key a live buy whose answer was lost is looked for under: the script, the contract and when it was sent ([Held.since]). */
+    private fun lostBuyKeyOf(id: Long, sym: String, sentMs: Long) = "pinebuy:$id:$sym:$sentMs"
+
+    /** Why each lost exit sale was sent (its key -> the words), for its booking once found. Memory only; bounded. */
+    private val lostExitWhy = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * Holding [h]'s exit sale [o] ([why]) answered with a lost reply and not found in the book: kept UNKNOWN under [lostExitKeyOf]
+     * ([Broker.noteLost]; [seen]: never adopted for it), its stop left out, Boss told once. [lostExit] follows it on each later look.
+     */
+    private fun holdLostExit(b: Book, id: Long, item: PineScripts.Item, h: Held, o: com.optionslab.engine.Kite.Order, seen: Collection<String>,
+                             why: String, err: String?) {
+        val key = lostExitKeyOf(id, h)
+        Broker.noteLost(key, o, seen, "${label(item)}: its exit")
+        if (lostExitWhy.size > 200) lostExitWhy.clear()
+        lostExitWhy[key] = why
+        note(b, id, "${h.kite}: Zerodha's answer to the exit sale was lost ($err) and the sale is not in its order book yet: nothing more is " +
+            "sold and no stop is put back beside it until the book shows it")
+        com.optionslab.app.work.Alerts.error("${label(item)}: Zerodha's answer to the exit of ${h.kite} was lost and the sale is not in its order " +
+            "book yet. Until the book shows it (about 2 minutes) nothing more is sold and no stop rests on it, so it is unprotected if the " +
+            "sale did not go: check ${h.kite} in Kite.", "Pine live")
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 2: "a Pine live exit has no lost-exit hold" - a MARKET sale whose answer was lost and that the book did not
+     * show in ~4 s put the whole stop back beside a sale that may have filled): live holding [h]'s lost exit sale ([holdLostExit]). Still
+     * looked for: [LostExit.HELD] - nothing more is sold and no stop rests beside it. Found: booked
+     * as the sale ([bookSale]; nothing filled, its stop goes back), [LostExit.HELD]. Given up on - only once a read of the book that SUCCEEDED
+     * past [Broker.LOST_SEARCH_MS] still does not show it ([Broker.lookLost]) - [LostExit.GAVE_UP]: the holding goes on as before, its stop
+     * put back now (an exit then takes it out first, as always). Meanwhile the holding has NO stop and is not sold at its level either (a
+     * second sale beside one that may have filled is what this prevents): Boss is told so when it is lost ([holdLostExit]). A fast look
+     * ([quick], or a stream look) reads and sends nothing: one still kept is held. Memory only, but for the found sale's booking and the
+     * stop put back.
+     */
+    private suspend fun lostExit(b: Book, id: Long, item: PineScripts.Item, h: Held, quick: Boolean = false): LostExit {
+        if (!h.live) return LostExit.NONE
+        val key = lostExitKeyOf(id, h)
+        if (quick || streamLook) return if (Broker.lostPending(key)) LostExit.HELD else LostExit.NONE
+        return when (val l = Broker.lookLost(key)) {
+            null -> LostExit.NONE
+            Broker.LostLook.Searching -> LostExit.HELD
+            is Broker.LostLook.Found -> {
+                val why = lostExitWhy.remove(key) ?: "exit"
+                note(b, id, "${h.kite}: the exit sale whose answer was lost is in Zerodha's order book (order ${l.id})")
+                bookSale(b, id, item, h, l.id, why) { left -> if (left.stop == null && left.qty > 0) b.held[id] = placeLiveStop(b, item, left, left.stopAt) }
+                LostExit.HELD
+            }
+            Broker.LostLook.GaveUp -> {
+                lostExitWhy.remove(key)
+                if (h.stop == null && h.qty > 0) b.held[id] = placeLiveStop(b, item, h, h.stopAt)
+                LostExit.GAVE_UP
+            }
+        }
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 9): the orders the scripts' own exits take out themselves (a holding's stop and its own earlier sales -
+     * [exit], [removeExits]), each marked BEFORE its cancel goes ([cancelOwn]): such an end is the app's, never read as Boss's or Zerodha's
+     * (WHO CANCELLED A STOP) - said as the app's own ([stopFilled]) and never taken as a stop with no owner ([placeLiveStop]). Memory only,
+     * bounded (the oldest dropped first), as the ORB arms' own marks; a mark whose cancel Zerodha refused is taken back.
+     */
+    private val ownCancels: MutableSet<String> = java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(
+        object : java.util.LinkedHashMap<String, Boolean>() {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?): Boolean = size > 500
+        }))
+
+    private fun ownCancel(oid: String): Boolean = oid in ownCancels
+
+    /** How many of the app's own cancels are saved with the book ([ownCancels]). */
+    private const val OWN_CANCELS_SAVED = 200
+
+    /** TEST ONLY: whether [oid] is marked the app's own cancel. */
+    internal fun ownCancelForTest(oid: String): Boolean = ownCancel(oid)
+
+    /** [oid] marked the app's own cancel ([ownCancels]), then cancelled; a cancel Zerodha refused is unmarked. True when it was taken. */
+    private suspend fun cancelOwn(oid: String, variety: String = "regular"): Boolean {
+        ownCancels += oid
+        val e = runCatching { Broker.cancel(oid, variety) }.exceptionOrNull() ?: return true
+        // (Zerodha's refusal: it did not take - a later cancel of it is not the app's. A lost answer may have taken: kept marked.)
+        if (Broker.definite(e)) ownCancels -= oid
+        return false
     }
 
     /**
@@ -1899,7 +2086,9 @@ object PineAuto {
         h.stop?.let { sid -> ids[sid] = (orders ?: if (streamLook) runCatching { Broker.ordersRecon() }.getOrNull() else null)
             ?.firstOrNull { it.id == sid }?.filled
             ?: (if (streamLook) null else runCatching { Broker.orderState(sid) }.getOrNull()?.filled) ?: UNKNOWN_FILL }
-        orders.orEmpty().filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" }
+        // (22 Nov 2026, B6 review, item 9: never another holding's stop.)
+        val othersStops = b.held.filterKeys { it != id }.values.mapNotNull { it.stop }.toSet()
+        orders.orEmpty().filter { it.working && it.symbol == sym && it.exchange == "NFO" && it.side == "SELL" && it.tag == "irapine" && it.id !in othersStops }
             .forEach { ids[it.id] = it.filled }
         // (19 Nov 2026, third review: an order an earlier holding's removal already holds stays with it - one order, one entry.)
         val pending = b.removing.flatMap { it.ids.keys }.toSet()
@@ -1950,7 +2139,8 @@ object PineAuto {
                 // (A fill not known when it was recorded: what a still-working order has filled now, before its cancel.)
                 if (base == UNKNOWN_FILL && st != null && st.status !in DONE) base = st.filled
                 if (st == null || st.status !in DONE) {
-                    runCatching { Broker.cancel(oid) }
+                    // (22 Nov 2026, B6 review, item 9: marked the app's own before it goes.)
+                    cancelOwn(oid)
                     st = runCatching { Broker.orderState(oid) }.getOrNull()
                 }
                 if (st == null || st.status !in DONE) { left[oid] = base; continue }

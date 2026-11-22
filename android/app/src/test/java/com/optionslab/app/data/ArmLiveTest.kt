@@ -3362,4 +3362,81 @@ class ArmLiveTest : RobolectricTest() {
         assertTrue(w, w.contains(sym) && w.contains(s2) && w.contains("they stay open with their own stops"))
         assertEquals(1, ArmLive.liveCopiesOpen(contract.symbol).size)
     }
+
+    // ---- 22 Nov 2026 (B6 review): the entry side ------------------------------------------------------------------------------------
+
+    /**
+     * Item 1: Kite answers DataException for the live buy (it took the order) and its book does not show it through ~8 s of looks (the
+     * unsure search and the lost-reply search). Before, the error was taken as a refusal and the intent dropped: a buy that filled later
+     * had no stop. Now it is held as unconfirmed, and once the book shows it filled it is adopted from its own order with its stop.
+     */
+    @Test fun anUnsureKiteErrorNotFoundInTheBookIsHeldAndAdoptedWithItsStopOnceItFills() {
+        kite.trailReads = 1_000                                       // the order book does not list the buy while it is entered
+        kite.nextPlace(FakeKite.Scenario(reply = FakeKite.Reply.DATA_EXCEPTION_AFTER_ACCEPT, outcome = FakeKite.Outcome.OPEN))
+        ArmLive.entered(ask(donchian, "unsure"))
+        val waiting = view().openReal.single()
+        assertTrue("held as unconfirmed, never dropped as refused", waiting.unconfirmed)
+        assertNull(waiting.entryOrderId)
+        assertTrue("never 'not mirrored'", view().notMirrored.none { it.ref == "unsure" })
+        // It fills at Zerodha later, and the book shows it.
+        val buy = kite.orders.values.single { it.side == "BUY" }
+        kite.fill(buy.id, 201.0)
+        kite.showInBook()
+        watch()
+        val p = view().openReal.single()
+        assertFalse(p.unconfirmed)
+        assertEquals("adopted from its own order", buy.id, p.entryOrderId)
+        assertEquals(30, p.qty); assertEquals(201.0, p.entry, 1e-9)
+        val stop = kite.orders.values.single { it.side == "SELL" && it.type == "SL" && it.working }
+        assertEquals(p.stopOrderId, stop.id)
+        assertEquals("one buy, never two", 1, kite.placed.count { it.form["transaction_type"] == "BUY" })
+    }
+
+    /**
+     * Item 5: the instruments list is not in memory (a cold start): under the entry lock nothing is read from the file or downloaded -
+     * the entry is not mirrored, said, and the list is loaded in the background; the next entry goes.
+     */
+    @Test fun withTheInstrumentListNotInMemoryTheEntryIsNotMirroredAndTheListLoadsInTheBackground() {
+        // A cold start with no list to be had yet: none in memory, no file, Zerodha's download failing for now.
+        Broker.forgetInstrumentsMemoForTest()
+        java.io.File(context.filesDir, "kite_instruments.json").delete()
+        kite.down += "/instruments/NFO"
+        ArmLive.entered(ask(donchian, "cold"))
+        assertTrue("nothing sent", kite.placed.isEmpty())
+        assertTrue(view().notMirrored.toString(), view().notMirrored.any { it.ref == "cold" && "instrument list is not loaded yet" in it.why })
+        // Zerodha answers again: the list is loaded in the background (never on an entry), and the next entry goes.
+        kite.down.clear(); Broker.resetInstrumentsRetryForTest()
+        val end = System.currentTimeMillis() + 5_000
+        while (Broker.instrumentsInMemory() == null && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertNotNull("loaded in the background", Broker.instrumentsInMemory())
+        ArmLive.entered(ask(donchian, "warm"))
+        assertEquals("the next entry goes: its buy and its stop", 2, kite.placed.size)
+    }
+
+    /** Item 6: a second ask for a paper trade that already has its live trade is noted in the diagnostics - never skipped silently. */
+    @Test fun aSecondAskForAPaperTradeAlreadyMirroredIsNotedNeverSkippedSilently() {
+        ArmLive.entered(ask(donchian, "dup"))
+        assertEquals(2, kite.placed.size)
+        ArmLive.entered(ask(donchian, "dup"))
+        assertEquals("one live trade per paper trade", 2, kite.placed.size)
+        Diag.flush()
+        assertTrue(Diag.lines().toString(), Diag.lines().any { "already has a live trade" in it && "dup" in it })
+    }
+
+    /**
+     * Item 7: the entry's price - the first read (in the entries' lane) and its fallback read both fail: no entry, even with a stream tick
+     * 3 s old at hand (the fallback once took up to a 5 s old tick, against its own "never an old tick").
+     */
+    @Test fun withNoFreshPriceTheEntryIsNotMirroredNeverOnAnOldTick() {
+        KiteStream.feedForTest(listOf(com.optionslab.engine.KiteTicks.Tick(22_000_001L, 150.0, bid = 149.95, ask = 150.05)),
+            atMs = System.currentTimeMillis() - 3_000)
+        kite.down += "/quote"
+        ArmLive.entered(ask(donchian, "old"))
+        assertTrue("nothing sent on the old tick", kite.placed.isEmpty())
+        assertTrue(view().notMirrored.toString(), view().notMirrored.any { it.ref == "old" && "no Zerodha price" in it.why })
+        // A fresh read again: it goes, at Zerodha's price.
+        kite.down.clear()
+        ArmLive.entered(ask(donchian, "fresh"))
+        assertEquals(2, kite.placed.size)
+    }
 }

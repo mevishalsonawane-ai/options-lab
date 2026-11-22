@@ -92,8 +92,13 @@ object PassedArmsHost {
         ArmLive.register(com.optionslab.engine.orb.LiveMirror.PASSED) { mirrorLegs() }
     }
 
-    /** A paper trade's reference for its live path ([ArmLive]): its arm and its paper order (or its entry time). */
-    internal fun mirrorRef(p: Pos): String = "passed:${p.arm}:${p.orderId ?: p.entryTime}"
+    /**
+     * A paper trade's reference for its live path ([ArmLive]): its arm and its paper order (or its entry time). 22 Nov 2026 (B6 review,
+     * item 6: two indices' would-be trades of one arm on one pass share that pass's time, so the second's live copy was refused as a
+     * duplicate of the first): a would-be trade (no paper order) is told apart by its own id ([Pos.wb]); one saved before has none and
+     * keeps its old reference, so a live copy already asked with it still follows it.
+     */
+    internal fun mirrorRef(p: Pos): String = "passed:${p.arm}:${p.orderId ?: p.wb ?: p.entryTime}"
 
     /** Today's and the open paper trades, each with what it still holds (0 once closed); null until the book is read. Memory only. */
     private fun mirrorLegs(): List<ArmLive.PaperLeg>? {
@@ -279,6 +284,11 @@ object PassedArmsHost {
          * copy follows it (its own exits) exactly as a real paper trade's; every live gate still applies. Persisted.
          */
         val copied: Boolean = false,
+        /**
+         * 22 Nov 2026 (B6 review, item 6): a would-be trade's own id (a random UUID made with it; persisted), its live copy's reference
+         * ([mirrorRef]) in place of a paper order id it never had. Null: a real paper trade, or a would-be one saved before.
+         */
+        val wb: String? = null,
     ) {
         val open: Boolean get() = exit == null
         val day: LocalDate get() = entryTime.toLocalDate()
@@ -666,7 +676,8 @@ object PassedArmsHost {
             p.optBoolean("l25", false), if (p.has("breadth")) p.getBoolean("breadth") else null, p.optString("soldBy").ifEmpty { null }, p.optBoolean("st", false),
             p.optString("shadow").ifEmpty { null }, p.optBoolean("np5", false), d("pick"),
             if (p.has("w20")) p.getBoolean("w20") else null, p.optBoolean("step500", false),
-                p.optInt("lot500", 0).takeIf { it > 0 }, p.optBoolean("stepLock", false), p.optBoolean("copied", false))
+                p.optInt("lot500", 0).takeIf { it > 0 }, p.optBoolean("stepLock", false), p.optBoolean("copied", false),
+            wb = p.optString("wb").ifEmpty { null })
     }
 
     private fun writePos(p: Pos): JSONObject = JSONObject().put("arm", p.arm).put("index", p.index).put("symbol", p.symbol).put("right", p.right)
@@ -688,6 +699,7 @@ object PassedArmsHost {
             p.lot?.let { put("lot500", it) }
             if (p.sl) put("stepLock", true)
             if (p.copied) put("copied", true)
+            p.wb?.let { put("wb", it) }
         }
 
     private val written = Vault.LastWrite()
@@ -2534,7 +2546,9 @@ object PassedArmsHost {
         runCatching { Paper.rememberContract(c) }
         val pos = Pos(arm, u, c.symbol, right.name, c.lotSize, ref, now, null, setup, ref, idx, atr, lock = b.lockOn, l25 = b.lockOn && b.l25On,
             breadth = breadth, st = arm == DonchianArm.SOURCE && b.stOn, shadow = kind, np5 = arm == OovArm.SOURCE && b.np5On && !copied,
-            fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 }, copied = copied).let { it.copy(sl = it.fx && StepTrailExits.lockOn()) }
+            fx = StepTrailExits.forEntry(arm), lot = c.lotSize.takeIf { it > 0 }, copied = copied,
+            // (22 Nov 2026, B6 review, item 6: its own id - its live copy's reference, never shared with another would-be trade of the pass.)
+            wb = java.util.UUID.randomUUID().toString()).let { it.copy(sl = it.fx && StepTrailExits.lockOn()) }
         b.positions += pos
         if (c.symbol !in b.marks) b.marks[c.symbol] = ref
         b.decided += keys

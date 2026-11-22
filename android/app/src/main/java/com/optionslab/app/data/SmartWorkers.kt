@@ -244,11 +244,32 @@ object SmartWorkers {
     /**
      * The entry door's part (a bot's NEW live entry, asked inside the door): a news window paused ON, the data unreliable
      * (acting by default), the relay down. Memory only; null when it may go.
+     * 22 Nov 2026 (B6 review, item 4: the door's checks failed open): a check here that throws - the relay's health included, which
+     * read as "up" before - refuses the entry while any of them acts on live entries ([doorActs]); else the entry goes, as before.
      */
-    fun doorRefusal(symbol: String, nowMs: Long = System.currentTimeMillis()): String? {
+    fun doorRefusal(symbol: String, nowMs: Long = System.currentTimeMillis()): String? = try { doorChecks(symbol, nowMs) } catch (e: Exception) {
+        Broker.doorUnread("the smart workers", doorActs(), e)
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, item 4): whether any of [doorRefusal]'s checks acts on live entries now - a news window's pause ON, the
+     * unreliable-data reaction acting, or the static-IP relay on. Memory only (the relay's switch is kept in memory); unreadable: true.
+     */
+    fun doorActs(): Boolean = runCatching {
+        val s = _settings.value
+        s.pause.mode(MarketBrain.Cause.NEWS) == MarketBrain.Mode.ON ||
+            s.reactions.mode("*", Findings.Reaction.DATA_UNRELIABLE) == Findings.Mode.ACT || Relay.enabled
+    }.getOrDefault(true)
+
+    /** TEST ONLY (22 Nov 2026, B6 review): the door's checks throw this, while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testDoorThrows: Exception? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
+
+    private fun doorChecks(symbol: String, nowMs: Long): String? {
+        testDoorThrows?.let { throw it }
         val s = _settings.value
         val und = underlyingOf(symbol)
-        if (runCatching { health.fallbacks(nowMs).blockLiveEntries }.getOrDefault(false))
+        if (health.fallbacks(nowMs).blockLiveEntries)
             return "refused: the static-IP relay is not answering (new live entries wait; exits still go)"
         if (s.pause.mode(MarketBrain.Cause.NEWS) == MarketBrain.Mode.ON)
             _brain.value.activeWindows(nowMs, und).firstOrNull { it.kind == MarketBrain.Kind.NEWS }?.let { return "refused: paused for the ${it.name} window" }
@@ -916,7 +937,7 @@ object SmartWorkers {
         bus.clear(); health.reset(); sched.resetCounts(); lastPost.clear()
         _brain.value = MarketBrain.Context(); _settings.value = Settings(); loaded = true
         _reviews.value = emptyList(); reviewedOn = null; nearUntil = 0L; reviewGuard.reset(); testReadsFail = false
-        testReviews = null
+        testReviews = null; testDoorThrows = null
         synchronized(trapsSeen) { trapsSeen.clear() }; synchronized(sideSeen) { sideSeen.clear() }
         activeWindowsSeen.clear(); synchronized(closedSeen) { closedSeen.clear() }
     }

@@ -190,7 +190,10 @@ object CheaperStrike {
         kotlinx.coroutines.withContext(Broker.Lane(com.optionslab.ira.RateGate.Priority.ENTRY)) { Broker.freeCash() }
     }.getOrNull()
 
-    /** Kite's error types after which an order may still exist ([Broker.sendChecked] rethrows them when its book search found nothing). */
+    /**
+     * Kite's error types after which an order may still exist. (22 Nov 2026, B6 review: [Broker.sendChecked] throws [Broker.KiteUnsure] in
+     * their place when its book search found nothing - never a KiteError, so never a refusal here either way.)
+     */
     private val UNSURE = setOf("DataException", "GeneralException", "NetworkException")
 
     /**

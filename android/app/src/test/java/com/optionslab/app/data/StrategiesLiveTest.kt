@@ -262,6 +262,29 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("complete", entry(id).run!!.legs.values.single().entryStatus)
     }
 
+    /**
+     * 22 Nov 2026 (B6 review, item 1): Kite answers DataException for the entry (it took the order) and the book does not show it through
+     * ~8 s of looks. Before, the error was taken as Zerodha's refusal ("rejected"): a buy that filled stayed untracked with no stop. Now
+     * it is looked for as a lost reply; once the book shows it filled it is the leg's entry - one buy - and the leg's stop rests.
+     */
+    @Test fun anUnsureKiteErrorOnTheEntryIsLookedForAndTheFilledLegGetsItsStop() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        kite.nextPlace(reply = FakeKite.Reply.DATA_EXCEPTION_AFTER_ACCEPT)
+        kite.trailReads = 50
+        Broker.lostLookGapMsForTest = 0; Broker.lostSearchInlineForTest = true
+        startLive(id)
+        assertEquals(1, buys().size)
+        assertTrue("never refused", entry(id).run!!.legs.values.none { it.entryStatus == "rejected" })
+        kite.showInBook()
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("one buy, never two", 1, buys().size)
+        assertEquals("complete", entry(id).run!!.legs.values.single().entryStatus)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("the leg's stop rests at Zerodha", 1, restingStops().size)
+    }
+
     @Test fun aStopLossOnTheTickSellsTheLegOnce() {
         live()
         val id = saved(Position.B to OptionType.CE)

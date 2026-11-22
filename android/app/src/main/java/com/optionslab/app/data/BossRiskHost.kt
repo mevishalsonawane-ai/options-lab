@@ -296,6 +296,7 @@ object BossRiskHost {
      * its live switch is on, else (the default) the refusal it would have given is logged and null returned. Memory only; never throws.
      */
     fun liveDoor(symbol: String, exchange: String, owner: String, qty: Int, lotSize: Int, price: Double?, stop: Double?): String? = runCatching {
+        testDoorThrows?.let { throw it }
         val token = Broker.tokenKnown("$exchange:$symbol")
         val tick = token?.let { runCatching { KiteStream.tick(it) }.getOrNull() }
         val px = price?.takeIf { it > 0 } ?: tick?.last?.takeIf { it > 0 }
@@ -334,7 +335,16 @@ object BossRiskHost {
                 why = "capped limit: would buy at most %.2f (+0.5%% over %.2f), worked 3 minutes, never moved (live, shadow: logged only)".format(Locale.ENGLISH, c, px))
         }
         null
-    }.getOrNull()
+    // 22 Nov 2026 (B6 review, item 4: the door's checks failed open): a check that throws refuses the BUY while any of these rules' live
+    // switches is on ([liveActs]); all in shadow (the default) it goes as before.
+    }.getOrElse { e -> Broker.doorUnread("your risk rules", liveActs(), e) }
+
+    /** 22 Nov 2026 (B6 review, item 4): whether any of the live rules acts (a live switch on; memory only). Unreadable: true. */
+    fun liveActs(): Boolean = runCatching { LIVE_RULES.any { liveOn[it] == true } }.getOrDefault(true)
+
+    /** TEST ONLY (22 Nov 2026, B6 review): the door's check throws this, while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testDoorThrows: Exception? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     // ---- IV at entry (record only) --------------------------------------------------------------------------------------------
 
@@ -596,6 +606,7 @@ object BossRiskHost {
     internal fun resetForTest(paperOn: Boolean = true) {
         PAPER_RULES.forEach { this.paperOn[it] = paperOn }
         LIVE_RULES.forEach { liveOn[it] = false }
+        testDoorThrows = null
         loaded = true; daysReadAt = Long.MAX_VALUE / 2
         acctSince = null; acctReached = null; weekReachedOn = null; weekLimit = BossRisk.PAPER_WEEKLY_DEFAULT; liveCapital = null
         synchronized(lock) { paperDays = emptyList(); log = emptyList(); ivs = emptyList() }
