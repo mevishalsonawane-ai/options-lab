@@ -720,19 +720,21 @@ class BackupTest : RobolectricTest() {
         SecurePrefs.putAll(mapOf(review to false, SmartWorkers.K_PARKED to "hero", SmartWorkers.K_PAUSED to ""))
         Backup.restore(context, backupWith(null, theirs))
         assertEquals("the backup's other park still added", "hero,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
-        assertEquals("", SecurePrefs.getString(SmartWorkers.K_PAUSED))
+        assertEquals("", SecurePrefs.getString(SmartWorkers.K_PAUSED).orEmpty())
         // This phone's own park of it is kept (only Boss lifts it).
         SecurePrefs.putAll(mapOf(SmartWorkers.K_PARKED to "liquidity"))
         Backup.restore(context, backupWith(null, JSONObject().put(SmartWorkers.K_PARKED, "")))
         assertEquals("liquidity", SecurePrefs.getString(SmartWorkers.K_PARKED))
-        // The review's stop on here (or switched on by the backup): both sets, as before.
+        // The review's stop on here: both sets, as before.
         SecurePrefs.putAll(mapOf(review to true, SmartWorkers.K_PARKED to "hero"))
         Backup.restore(context, backupWith(null, theirs))
         assertEquals("hero,liquidity,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        // The switch itself is this phone's alone: a backup's never comes back.
+        assertFalse(com.optionslab.ira.Upkeep.carried(review))
         SecurePrefs.putAll(mapOf(review to false, SmartWorkers.K_PARKED to "hero"))
         Backup.restore(context, backupWith(null, JSONObject(theirs.toString()).put(review, true)))
-        assertEquals("hero,liquidity,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
-        assertTrue(SecurePrefs.getBoolean(review, false))
+        assertEquals("hero,solo", SecurePrefs.getString(SmartWorkers.K_PARKED))
+        assertFalse(SecurePrefs.getBoolean(review, true))
     }
 
     /** Item 3: from the restore's start no entry goes through the door (exits never come there); refused or failed, entries go again. */

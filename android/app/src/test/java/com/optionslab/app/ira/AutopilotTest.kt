@@ -397,9 +397,10 @@ class AutopilotTest : RobolectricTest() {
         assertTrue(Autopilot.diagLine(), Autopilot.diagLine().startsWith("Autopilot learning: the change timeline could not be read yet"))
         Autopilot.saveNow()
         assertTrue("never written over", before.contentEquals(enc.readBytes()))
-        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
+        // (A shadow change: its notice's words are no other test's, so the banners' 20 s throttle never hides one of theirs.)
+        Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("trap:stop_hunt", "Trades taken with the trap guard's \"possible stop hunt\" flag up", -1, 30))) }
         assertFalse("no pass on a timeline not read", Autopilot.runIfDue(context))
-        assertFalse("night_r3" in SmartWorkers.settings.value.paused)
+        assertTrue(Autopilot.book.value.entries.isEmpty())
         // Readable again (the next look after the wait): the file's timeline; then the pass runs and saves on top of it.
         Autopilot.testReadLog = null
         Autopilot.ensureLoaded()
@@ -458,7 +459,7 @@ class AutopilotTest : RobolectricTest() {
         assertEquals(e2.copy(id = m.entries[1].id), m.entries[1])
         assertTrue(m.entries[1].id != e1.id)
         assertEquals(d, m.lastRun)
-        assertEquals(4, m.trials)
+        assertEquals(disk.trials + mem.trials, m.trials)
         assertEquals(mapOf("x" to d, "y" to d), m.blacklist)
         // An entry already in the file is not added twice.
         assertEquals(1, Autopilot.withEarlier(disk, disk).entries.size)
@@ -540,6 +541,8 @@ class AutopilotTest : RobolectricTest() {
     @Test fun theEveningsChangesAreToldAfterAMiddayNotice() = runBlocking<Unit> {
         // Review G5-7: the 12:30 pass made one change and told it; the evening's change is told too (the notice replaced).
         com.optionslab.app.work.Alerts.forgetPosted()
+        // (22 Nov 2026: the banners' 20 s repeat filter emptied too - an earlier test's same words would hide the midday notice.)
+        com.optionslab.app.testing.Background.clearAlerts()
         Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("strat:night (r3)", "Night (R3)", -1, 30))) }
         Autopilot.run(day, healthOnly = true)
         Autopilot.testInputs = { d -> AutoChange.Inputs(d, listOf(lesson("trap:stop_hunt", "Trades taken with the trap guard's \"possible stop hunt\" flag up", -1, 30))) }

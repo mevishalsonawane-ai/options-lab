@@ -347,14 +347,10 @@ object Backup {
                 "(${com.optionslab.engine.orb.LiveMirror.rs(kept)}, this phone had ${com.optionslab.engine.orb.LiveMirror.rs(here)}): a restore never lowers it. If this phone's was lowered for " +
                 "payouts, lower it again on the Account guard page with your PIN."
         }
-        // 22 Nov 2026 (B6 review): a park or pause of R51, R72 or Liquidity while their self-review stop is off (Boss's 19 Nov choice: they
-        // run until he stops them) stays as this phone has it - a backup never adds one, and this phone's own are kept. Off: on this phone
-        // now and after the restore (the backup's switch is carried; one it switches on makes the review act again, so both then).
-        // Every other key: both.
-        val reviewKey = com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW.prefKey
-        val reviewOnHere = runCatching { SecurePrefs.getBoolean(reviewKey, true) }.getOrDefault(true)
-        val reviewOnAfter = when (val v = values[reviewKey]) { is Boolean -> v; is String -> v.toBooleanStrictOrNull() ?: reviewOnHere; else -> reviewOnHere }
-        val reviewOff = !reviewOnHere && !reviewOnAfter
+        // 22 Nov 2026 (B6 review): a park or pause of R51, R72 or Liquidity while their self-review stop is off on this phone (Boss's 19 Nov
+        // choice: they run until he stops them; the switch is this phone's alone, never in a backup) stays as this phone has it - a backup
+        // never adds one, and this phone's own are kept. Every other key: both.
+        val reviewOff = !runCatching { SecurePrefs.getBoolean(com.optionslab.ira.ArmAutoStops.Rule.SELF_REVIEW.prefKey, true) }.getOrDefault(true)
         for (k in listOf(SmartWorkers.K_PARKED, SmartWorkers.K_PAUSED))
             if (values.containsKey(k)) values[k] = com.optionslab.ira.Upkeep.union(SecurePrefs.getString(k), values[k] as? String,
                 hereOnly = { reviewOff && com.optionslab.ira.ArmAutoStops.covers(it) })
