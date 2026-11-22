@@ -1740,7 +1740,7 @@ object Protections {
      * ([Broker.lostPending]). Memory only: never the lock, the disk or the network.
      */
     internal fun targetSalesGoing(symbol: String, product: String): Int {
-        val now = System.currentTimeMillis()
+        val now = runCatching { SquareOffExit.clock() }.getOrDefault(System.currentTimeMillis())
         targetSales.entries.removeIf { (_, t) -> now - t.atMs !in 0 until SquareOffExit.gapMs && (t.lostKey == null || !Broker.lostPending(t.lostKey)) }
         return targetSales.values.filter { it.symbol == symbol && it.product == product }.sumOf { it.qty }
     }
@@ -1759,8 +1759,19 @@ object Protections {
      * stays out while the sale fills, and if the position is still held once it is done (refused later, part filled), the look puts the stop
      * back ([exitFilledFor], the taken-over branch). [p] as it then stands. Never two exits; never a stop out unless its sale goes.
      */
-    private suspend fun sellAtTarget(p: Item, so: Broker.OrderRow, ltp: Double?): Item = ExitCoordinator.turn(p.exchange, p.symbol, "protection target") {
+    private suspend fun sellAtTarget(p: Item, so: Broker.OrderRow, ltp: Double?): Item {
         targetHit.remove(p.id)
+        // (22 Nov 2026, with the square-offs' protocol: one seller at a time on the row - taken before the stop comes out, let go in a finally;
+        // held by a square-off: nothing taken out, it sells the row.)
+        val claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER) ?: return p
+        try { return sellAtTargetClaimed(p, so, ltp) } finally { claim.release() }
+    }
+
+    /** 22 Nov 2026 (B6 review): the protections' name on a position row's exit claim ([SquareOffExit.claimExit]). */
+    internal const val CLAIM_OWNER = "protections"
+
+    /** [sellAtTarget] with the row's exit claim held. */
+    private suspend fun sellAtTargetClaimed(p: Item, so: Broker.OrderRow, ltp: Double?): Item = ExitCoordinator.turn(p.exchange, p.symbol, "protection target") {
         // Boss is exiting it by hand, or a square-off's sale is on its way: theirs.
         if (ArmLive.handsOffNow(p.exchange, p.symbol) || SquareOffExit.inGap(p.exchange, p.symbol, p.product)) return p
         val side = if (p.qty > 0) Kite.Side.SELL else Kite.Side.BUY
@@ -1802,8 +1813,8 @@ object Protections {
         val known = book.map { it.id }
         // (22 Nov 2026, with the square-offs' protocol: counted as going FIRST, then a square-off's sale looked at - one selling it now: nothing
         // from here, and its stop put back by the next looks only beside what is left.)
-        targetSales[p.id] = TargetSale(p.symbol, p.product, sell, System.currentTimeMillis())
-        SquareOffExit.saleStarting(p.symbol)
+        targetSales[p.id] = TargetSale(p.symbol, p.product, sell, runCatching { SquareOffExit.clock() }.getOrDefault(System.currentTimeMillis()))
+        SquareOffExit.saleStarting(p.symbol, p.product)
         if (SquareOffExit.inGap(p.exchange, p.symbol, p.product)) { targetSales.remove(p.id); return p }
         val id = try { Broker.placeOrder(order, exit = true) } catch (e: kotlinx.coroutines.CancellationException) { targetSales.remove(p.id); throw e } catch (e: Exception) {
             if (Broker.definite(e)) {
@@ -1829,7 +1840,7 @@ object Protections {
                 // (Its reply lost and not found yet: it may be selling - no stop goes back beside it until the book shows it or lets it go.)
                 Broker.noteLost(TARGET_LOST + p.id, order, known, "${p.symbol}: its target's sale")
                 noteTakenOver(listOf(TARGET_LOST + p.id))                     // (kept on disk: a restart still waits for it)
-                targetSales[p.id] = TargetSale(p.symbol, p.product, sell, System.currentTimeMillis(), TARGET_LOST + p.id)
+                targetSales[p.id] = TargetSale(p.symbol, p.product, sell, runCatching { SquareOffExit.clock() }.getOrDefault(System.currentTimeMillis()), TARGET_LOST + p.id)
                 Alerts.error("${p.symbol}: its target was reached and its stop taken out, but Zerodha's answer to the sale was lost. The app looks for " +
                     "it and puts the stop back only once it knows the sale did not go; check ${p.symbol} in Kite.", "Protection")
                 return p

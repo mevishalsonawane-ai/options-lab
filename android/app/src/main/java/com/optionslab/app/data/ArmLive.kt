@@ -2269,6 +2269,27 @@ object ArmLive {
      * the closed parts and the rest still open.
      */
     private suspend fun exitLive(p0: Pos, qty: Int, why: String, ltp: Double?, g: Broker.GttRow? = null): List<Pos> {
+        // 22 Nov 2026 (B6 review, with the square-offs' protocol): one seller at a time on the position row ([SquareOffExit.claimExit]) - taken
+        // FIRST, before this trade's stop comes out, and let go once its sale went or it gave up. Held by a square-off: this exit waits with
+        // its stop resting (the square-off sells the row); the next look tries again.
+        val claim = SquareOffExit.claimExit(p0.exchange, p0.symbol, p0.product, CLAIM_OWNER) ?: run {
+            // (In the diary at most once a minute for the trade: the live lane comes every tick.)
+            val minute = runCatching { nowMs() / 60_000 }.getOrDefault(0L)
+            if (claimSaid.size > 200) claimSaid.clear()
+            if (claimSaid.put(p0.ref, minute) != minute) runCatching { Diag.record("armlive", "${p0.label}: ${p0.symbol}'s live exit ($why) waits: " +
+                "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(p0.exchange, p0.symbol, p0.product))} is selling it; its stop stays") }
+            return listOf(p0)
+        }
+        try { return exitLiveClaimed(p0, qty, why, ltp, g) } finally { claim.release() }
+    }
+
+    /** 22 Nov 2026 (B6 review): these arms' name on a position row's exit claim ([SquareOffExit.claimExit]). */
+    internal const val CLAIM_OWNER = "armlive"
+    /** 22 Nov 2026 (B6 review): by trade (ref), the minute its exit's wait for another seller's claim was last written in the diary. Memory. */
+    private val claimSaid = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** [exitLive] with the row's exit claim held. */
+    private suspend fun exitLiveClaimed(p0: Pos, qty: Int, why: String, ltp: Double?, g: Broker.GttRow?): List<Pos> {
         runCatching { OrderTiming.decided() }
         val exitSide = if (p0.side > 0) Kite.Side.SELL else Kite.Side.BUY
         // 18 Nov 2026 (audit A2): never a second exit on a contract while one whose reply was lost may still be selling it. 22 Nov 2026 (B6
@@ -2386,10 +2407,11 @@ object ArmLive {
                 val o = Kite.Order(p.symbol, exitSide, sendable, p.lot, p.product, "MARKET", null, p.tick, p.exchange, LiveMirror.TAG, multiplier = p.multiplier)
                 // 22 Nov 2026 (B6 review): counted as on its way FIRST, then the square-offs' sales looked at - a square-off starts its gap before
                 // its own last look at these sales ([SquareOffExit.lostPendingProviders]): of the two senders, at most one sells. One selling it
-                // now: nothing from here, and no stop put back beside its sale (the app watches the level; the next look reads the books again).
+                // now: nothing from here, and the stop put back as it was ([back]: never beside a square-off's sale in its gap, [restStop] - the
+                // app watches the level until the next look).
                 salesInFlight.merge(flight, sendable, Int::plus); inFlight = sendable
-                SquareOffExit.saleStarting(p.symbol)
-                if (squareOffSelling(p, book)) return closed + cur
+                SquareOffExit.saleStarting(p.symbol, p.product)
+                if (squareOffSelling(p, book)) return closed + back(cur)
                 try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
                     // 10 Nov (the 3 Nov refusal, for an exit): Zerodha blocks MARKET orders on a contract with little open interest, so
                     // the same exit goes once as a LIMIT at the bid (the offer for a buy back), never more than 1% through the last price
@@ -3013,21 +3035,22 @@ object ArmLive {
     internal fun unsettledSales(symbol: String, product: String): Int {
         val wall = System.currentTimeMillis()
         if (wall < lostAsideUntil || (cache == null && wall < lostUnknownUntil)) return -1
+        val gapNow = runCatching { SquareOffExit.clock() }.getOrDefault(wall)
         return lostExits.values.filter { it.order.tradingSymbol == symbol && it.order.product == product }.sumOf { it.order.quantity } +
             (salesInFlight["$symbol|$product"] ?: 0) +
-            (bookedSales["$symbol|$product"].orEmpty().filter { (_, at) -> wall - at in 0 until SquareOffExit.gapMs }.sumOf { it.first })
+            (bookedSales["$symbol|$product"].orEmpty().filter { (_, at) -> gapNow - at in 0 until SquareOffExit.gapMs }.sumOf { it.first })
     }
 
     /**
      * 22 Nov 2026 (B6 review, with the square-offs' protocol): by "SYMBOL|PRODUCT", these arms' exit sales booked within the square-offs'
-     * gap ([SquareOffExit.gapMs]: [SquareOffExit.GAP_MS] in the app; quantity, wall ms) - still counted as going ([unsettledSales]): a
-     * square-off whose read of the books came before the sale, or whose positions read trails its fill, never sells beside it. Memory only,
-     * bounded.
+     * gap ([SquareOffExit.gapMs]: [SquareOffExit.GAP_MS] in the app; quantity, and when by the square-offs' clock) - still counted as going
+     * ([unsettledSales]): a square-off whose read of the books came before the sale, or whose positions read trails its fill, never sells
+     * beside it. Memory only, bounded.
      */
     private val bookedSales = java.util.concurrent.ConcurrentHashMap<String, List<Pair<Int, Long>>>()
     private fun noteBookedSale(symbol: String, product: String, qty: Int) {
         if (qty <= 0) return
-        val wall = System.currentTimeMillis()
+        val wall = runCatching { SquareOffExit.clock() }.getOrDefault(System.currentTimeMillis())
         val gap = maxOf(SquareOffExit.gapMs, SquareOffExit.GAP_MS)
         if (bookedSales.size > 100) bookedSales.entries.removeIf { e -> e.value.none { wall - it.second in 0 until gap } }
         bookedSales.merge("$symbol|$product", listOf(qty to wall)) { a, b -> a.filter { wall - it.second in 0 until gap } + b }

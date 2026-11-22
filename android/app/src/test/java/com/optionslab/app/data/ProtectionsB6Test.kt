@@ -112,6 +112,24 @@ class ProtectionsB6Test : RobolectricTest() {
         assertTrue(Alerts.posted.any { it.text.contains("its target 130.00 was reached") })
     }
 
+    /** One seller at a time on a row: while a square-off holds the row's claim, the target takes nothing out; then it sells. */
+    @Test fun theTargetWaitsWhileASquareOffHoldsTheRowsClaim() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", "iraalgoflat")!!
+        try {
+            tick()
+            assertTrue("its stop left resting", kite.order(p.stopOrderId!!).working)
+            assertTrue(sales().isEmpty())
+        } finally { claim.release() }
+        tick()
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals(1, sales().size)
+        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+    }
+
     /** The sale refused outright: the stop is put back at once, the target still the app's. */
     @Test fun aRefusedTargetSalePutsTheStopBackAtOnce() {
         protect()

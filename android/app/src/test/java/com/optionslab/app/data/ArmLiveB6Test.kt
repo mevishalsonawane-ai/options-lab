@@ -197,10 +197,10 @@ class ArmLiveB6Test : RobolectricTest() {
         watch()
         @Suppress("UNCHECKED_CAST")
         val started = SquareOffExit::class.java.getDeclaredField("salesStarted").apply { isAccessible = true }.get(SquareOffExit) as Map<String, Long>
-        val before = started[sym] ?: 0L
+        val before = started["$sym:MIS"] ?: 0L
         var during = -2
         var startedDuring = -1L
-        kite.afterNext("/orders/regular") { during = ArmLive.unsettledSales(sym, "MIS"); startedDuring = started[sym] ?: 0L }
+        kite.afterNext("/orders/regular") { during = ArmLive.unsettledSales(sym, "MIS"); startedDuring = started["$sym:MIS"] ?: 0L }
         legs["flight"] = donchian to 0
         watch()
         assertEquals("counted while it is sent", 30, during)
@@ -236,6 +236,31 @@ class ArmLiveB6Test : RobolectricTest() {
     }
 
     /**
+     * One seller at a time on a row ([SquareOffExit.claimExit]): while a square-off holds the row's claim, the arm's exit takes nothing out
+     * and sells nothing (its stop rests); while the arm's exit holds it, a square-off cannot take it.
+     */
+    @Test fun anArmsExitWaitsWhileASquareOffHoldsTheRowsClaim() {
+        ArmLive.entered(ask(donchian, "claim"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", "iraalgoexpiry")!!
+        try {
+            legs["claim"] = donchian to 0
+            watch()
+            assertEquals("nothing sold beside it", 0, marketSells())
+            assertTrue("its stop left resting", kite.order(sid).working)
+        } finally { claim.release() }
+        // The arm's exit holds the claim while it sells: a square-off cannot take it then.
+        var squareOffGot: Boolean? = null
+        kite.afterNext("/orders/regular") { squareOffGot = SquareOffExit.claimExit("NFO", sym, "MIS", "iraalgoflat")?.also { it.release() } != null }
+        watch()
+        assertEquals(1, marketSells())
+        assertEquals("the row was the arm's while its sale went", false, squareOffGot)
+        assertEquals("let go after", null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+        assertEquals(0, held())
+    }
+
+    /**
      * The handover: the expiry square-off leaves an arm's expiring trade to the arm until 15:08, then sells what is left itself. An arm's exit
      * sale lost at noon on expiry day, not shown yet: at the 15:08 backstop the square-off sells nothing beside it (with it filled, selling
      * the 30 Zerodha's positions still show would go short) and says why; once the arm finds and books it, nothing is left to sell.
@@ -259,7 +284,7 @@ class ArmLiveB6Test : RobolectricTest() {
         runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
         fun expirySells() = kite.placed.count { it.form["tag"] == "iraalgoexpiry" }
         assertEquals("nothing sold beside the arm's lost exit", 0, expirySells())
-        assertTrue("Boss told why", com.optionslab.app.work.Alerts.queue.value.any { "exit sale on it is not settled yet" in it.text })
+        assertTrue("Boss told why", com.optionslab.app.work.Alerts.queue.value.any { "exit sale on it has not settled yet" in it.text })
         kite.showInBook(); kite.positionsCatchUp()
         later(4); watch()
         assertEquals("booked as the arm's exit", "paper_exit", view().closed.single().why)
@@ -269,6 +294,37 @@ class ArmLiveB6Test : RobolectricTest() {
         runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
         assertEquals(0, expirySells())
         assertEquals("flat, never short", 0, held(s))
+    }
+
+    /**
+     * With the square-offs' protocol: an arm's exit sale started and booked after the expiry square-off read Zerodha's books (the arm's whole
+     * exit runs between its reads and its decision) is never sold again - the square-off sees a sale started since its reads and leaves the
+     * row to its next pass: exactly one sale, flat.
+     */
+    @Test fun anArmsSaleStartedAndBookedAfterTheSquareOffsReadsIsNeverSoldAgain() {
+        val today = Market.today()
+        val s = "BANKNIFTY26NOV52000CE"
+        kite.instruments += FakeKite.Ins(22_000_050, s, "BANKNIFTY", today, 52_000.0, "CE", 30)
+        kite.quote("NFO:$s", 200.0, 199.95, 200.05)
+        java.io.File(context.filesDir, "kite_instruments.json").delete(); runBlocking { Broker.instruments() }
+        val c = Paper.Contract("BANKNIFTY-TEST-52000CE-X", "BANKNIFTY", today, 52_000.0, Right.CE, 30, "NSE_FO|TESTX")
+        ArmLive.entered(ask(donchian, "after", c = c))
+        watch()
+        assertEquals(30, held(s))
+        legs["after"] = donchian to 0                                        // its paper trade sold: its exit is due
+        try {
+            ExpirySquareOff.testAfterReads = { ArmLive.watch() }              // the arm's whole exit, after the square-off's reads
+            ExpirySquareOff.testNow = today.atTime(15, 8).atZone(com.optionslab.engine.IST)
+            runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
+        } finally { ExpirySquareOff.testAfterReads = null }
+        fun expirySells() = kite.placed.count { it.form["tag"] == "iraalgoexpiry" }
+        assertEquals("the arm sold its lot", 1, marketSells())
+        assertEquals("paper_exit", view().closed.single().why)
+        assertEquals("the square-off sold nothing on its older reads", 0, expirySells())
+        assertEquals("flat, never short", 0, held(s))
+        ExpirySquareOff.testNow = today.atTime(15, 9).atZone(com.optionslab.engine.IST)
+        runBlocking { ExpirySquareOff.maybeRun(context, AppSettings.load()) }
+        assertEquals("nor on its next pass", 0, expirySells())
     }
 
     // ---- m1: the arms' GTT stops ----------------------------------------------------------------------------------------------

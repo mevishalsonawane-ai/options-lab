@@ -149,6 +149,9 @@ internal object SquareOffExit {
         "iraalgoexpiry" -> "the expiry square-off"
         "iraalgoflat" -> "the flat-by"
         "orb" -> "an ORB / Liquidity 15+5 exit"
+        // (22 Nov 2026, B6 review: the arms' live copies' exits and the protections' app-watched targets claim their rows too.)
+        "armlive" -> "an arm's live exit"
+        "protections" -> "a protection's target sale"
         else -> "another seller ($owner)"
     }
 
