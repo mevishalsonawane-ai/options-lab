@@ -207,7 +207,7 @@ notes; match the surrounding code.
   own cancel, and with blank or unrecognised words, is Boss's: never put back, the app sells at the level. Exchange / RMS / market
   protection words, or a cancel outside market hours, are Zerodha's: put back. A GTT "deleted" with no app mark is Boss's. The app's own
   cancels (arm exits and Boss's manual exit from the app) are marked before they go and queued to be saved in the book before the cancel
-  goes, so a restart never misreads them (one written just after, while the book is busy, can be misread only in that moment).
+  goes, so a restart does not misread them (one written just after, while the book is busy, can be misread only in that moment).
   (22 Nov) The protections' marks (a square-off's, Boss's exit from the app, an app-watched target's sale) are saved the same way. Any
   mark whose cancel never took (refused, or its stop still seen working well after the cancel) ends, so Boss's later cancel of it is his.
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).

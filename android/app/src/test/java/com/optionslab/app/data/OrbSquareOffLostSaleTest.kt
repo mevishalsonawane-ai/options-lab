@@ -377,9 +377,10 @@ class OrbSquareOffLostSaleTest : RobolectricTest() {
     }
 
     /**
-     * A square-off pass runs while the arm's exit is taking its stop out (second round of the review: each looked at the other, and both
-     * could back off with the stop already out - or both sell): the arm holds the row ([SquareOffExit.claimExit]) from before its stop
-     * comes out until its sale went, so exactly one sale goes out - the arm's - and no stop is left out with no sale.
+     * A square-off comes to the row while the arm's exit is taking its stop out (second round of the review: each looked at the other, and
+     * both could back off with the stop already out - or both sell): the arm is held right there until the square-off has been refused
+     * the row ([SquareOffExit.claimExit]: it takes nothing out and sends nothing); then the arm sells. Exactly one sale - the arm's - and
+     * no stop left out with no sale; the square-off's next pass finds nothing to sell.
      */
     @Test fun aSquareOffSaleSentWhileTheArmTakesItsStopOutIsNeverDoubled() {
         SquareOffExit.resetForTest()                                       // the gap on, as it ships
@@ -387,26 +388,53 @@ class OrbSquareOffLostSaleTest : RobolectricTest() {
         state(listOf(liquidity(30, 200.0, s1, 170.0)))                     // its time stop is due
         kite.position(sym, 30, 200.0, product = "MIS")
         runBlocking { OrbArms.view() }                                     // (the book read: the square-off may sell its lots)
-        at(15, 5)
+        val row = Broker.Position(sym, "MIS", 30, 200.0, 200.0, 0.0)
+        val refused = java.util.concurrent.atomic.AtomicReference<Boolean?>()
         val claimedBy = java.util.concurrent.atomic.AtomicReference<String?>()
-        val squareOff = java.util.concurrent.atomic.AtomicReference<Thread?>()
         kite.afterNext("/orders/regular/$s1") {
+            // The arm is inside its exit, its stop's cancel just answered: it waits here until the square-off has tried the row.
             claimedBy.set(SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
-            squareOff.set(Thread { expiryPass() }.apply { start() })      // the expiry square-off runs now, beside the arm's exit
+            refused.set(!runBlocking {
+                SquareOffExit.send(row, 30, 0.05, emptyList(), emptyList(), Broker.Positions(listOf(row), emptyList()), AppSettings.load().limits(),
+                    "expiry square-off", "iraalgoexpiry", Origins.EXPIRY, "expires today", "expiry") { _, _ -> }
+            })
         }
         kite.requests.clear()
+        pass()
+        assertEquals("the arm held the row as its stop came out", OrbArms.CLAIM_OWNER, claimedBy.get())
+        assertEquals("the square-off was refused the row", true, refused.get())
+        assertEquals("and said so (counted as a pass that left it unsold)", 1, SquareOffExit.skipsForTest("NFO", sym, "MIS"))
+        assertEquals("its stop came out", "CANCELLED", kite.order(s1).status)
+        assertEquals("exactly one sale: the arm's", listOf("iraorb" to "30"), marketSells().map { it.form["tag"] to it.form["quantity"] })
+        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+        at(15, 5); expiryPass()
+        assertEquals("nothing more on the square-off's next pass", 1, marketSells().size)
+        assertEquals("flat, never short", 0, held())
+        val trade = today("liquidity").single()
+        assertFalse("sold and booked: no stop left out with no sale", trade.open)
+        assertEquals("time_stop", trade.why)
+    }
+
+    /**
+     * The same with a whole expiry pass running on another thread beside the arm's exit (its reads, its owner checks, its own loop): it
+     * is refused the row or finds the arm's sale in its fresh read - exactly one sale, the arm's, and flat.
+     */
+    @Test fun aSquareOffPassRunningBesideTheArmsExitSellsNothingMore() {
+        SquareOffExit.resetForTest()
+        val s1 = stopOrder(30, 170.0, 161.5)
+        state(listOf(liquidity(30, 200.0, s1, 170.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        runBlocking { OrbArms.view() }
+        at(15, 5)
+        val squareOff = java.util.concurrent.atomic.AtomicReference<Thread?>()
+        kite.afterNext("/orders/regular/$s1") { squareOff.set(Thread { expiryPass() }.apply { start() }) }
         pass()
         val t = squareOff.get()!!
         t.join(30_000)
         assertFalse("the square-off's pass ended", t.isAlive)
-        assertEquals("the arm held the row as its stop came out", OrbArms.CLAIM_OWNER, claimedBy.get())
-        assertEquals("its stop came out", "CANCELLED", kite.order(s1).status)
         assertEquals("exactly one sale: the arm's", listOf("iraorb" to "30"), marketSells().map { it.form["tag"] to it.form["quantity"] })
         assertEquals("flat, never short", 0, held())
-        val row = today("liquidity").single()
-        assertFalse("sold and booked: no stop left out with no sale", row.open)
-        assertEquals("time_stop", row.why)
-        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+        assertFalse(today("liquidity").single().open)
     }
 
     // ---- one seller at a time on a row ([SquareOffExit.claimExit]) ---------------------------------------------------------------------
@@ -537,5 +565,152 @@ class OrbSquareOffLostSaleTest : RobolectricTest() {
         at(15, 7); expiryPass()
         assertTrue("a new one: said", told())
         assertTrue(squareOffSells("iraalgoexpiry").isEmpty())
+    }
+
+    // ---- third round: what is sold is worked out from a fresh read under the claim ---------------------------------------------------
+
+    /**
+     * The finding (third round): an arm's sale started before the square-off's snapshot, missed by its reads (the order book's list and the
+     * positions trailing it), and booked more than the gap before the pass reached the row - the claim free, nothing started since, the
+     * booked cushion gone - was sold again. Now the square-off works its sale out from a fresh read of the orders under the claim, through
+     * the lag guard: that sale shows as a fill, so nothing is sold again.
+     */
+    @Test fun anArmsSaleMissedByTheReadsAndBookedLongBeforeTheRowIsReachedIsNeverSoldAgain() {
+        SquareOffExit.resetForTest()                                       // the gap on, as it ships
+        var clock = 1_000_000L
+        SquareOffExit.clock = { clock }
+        val s1 = stopOrder(30, 170.0, 161.5)
+        state(listOf(liquidity(30, 200.0, s1, 170.0)))                     // its time stop is due
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.trailReads = 1_000                                            // the order book's list trails the arm's sale
+        kite.positionsTrailReads = 1_000                                   // and the positions its fill
+        pass()                                                             // the arm sells and books - before the square-off's snapshot
+        assertEquals("time_stop", today("liquidity").single().why)
+        ExpirySquareOff.testAfterReads = {                                 // after the pass's reads, which miss it:
+            clock += SquareOffExit.GAP_MS + 2_000                          // the pass spends more than the gap on earlier rows
+            kite.showInBook()                                              // the order book shows the sale by now; the positions still trail
+        }
+        at(15, 5); expiryPass()
+        assertTrue("nothing sold again: ${squareOffSells("iraalgoexpiry")}", squareOffSells("iraalgoexpiry").isEmpty())
+        assertEquals("exactly one sale", 1, marketSells().size)
+        assertEquals("flat, never short", 0, held())
+    }
+
+    /** ...and while even the fresh read misses that sale (the book still trailing an order sent a moment ago): nothing this pass, then flat. */
+    @Test fun whileEvenTheFreshReadMissesTheArmsSaleNothingIsSold() {
+        SquareOffExit.resetForTest()
+        var clock = 1_000_000L
+        SquareOffExit.clock = { clock }
+        val s1 = stopOrder(30, 170.0, 161.5)
+        state(listOf(liquidity(30, 200.0, s1, 170.0)))
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.trailReads = 1_000
+        kite.positionsTrailReads = 1_000
+        pass()
+        ExpirySquareOff.testAfterReads = { clock += SquareOffExit.GAP_MS + 2_000 }
+        at(15, 5); expiryPass()
+        assertTrue("nothing sold beside it", squareOffSells("iraalgoexpiry").isEmpty())
+        assertEquals("a pass that left it unsold", 1, SquareOffExit.skipsForTest("NFO", sym, "MIS"))
+        ExpirySquareOff.testAfterReads = null
+        kite.showInBook(); kite.positionsCatchUp()
+        at(15, 6); expiryPass()
+        assertTrue(squareOffSells("iraalgoexpiry").isEmpty())
+        assertEquals("exactly one sale", 1, marketSells().size)
+        assertEquals("flat, never short", 0, held())
+    }
+
+    /**
+     * A lost sale of the arm's found and booked after the square-off read the books ([OrbArms] books it from its look's own read: no
+     * cushion after it) - the pass's reads missing it, the positions trailing: the fresh read under the claim shows it, so only B's lot is
+     * sold - flat, never short.
+     */
+    @Test fun aLostSaleFoundAndBookedAfterTheReadsIsNeverSoldAgain() {
+        lostSaleOnABesideB(bStop = false)                                  // B with no stop resting; Zerodha's reads still show 60
+        ExpirySquareOff.testAfterReads = {
+            kite.showInBook()                                              // A's lost sale shows in the order book now
+            OrbArms.testNow = OrbArms.testNow!!.plusSeconds(OrbArms.LOST_EXIT_HOLD_MS / 1000 + 1)
+            OrbArms.priceCheckOnly(); searchDone(); OrbArms.priceCheckOnly()   // its own looks find and book it
+        }
+        at(15, 5); expiryPass()
+        assertFalse("found and booked", OrbArms.lostExitForTest(sym))
+        assertEquals("booked as A's exit", "time_stop", today("liquidity").single { it.arm == "liquidity5" }.why)
+        assertEquals("B's lot only", listOf("30"), squareOffSells("iraalgoexpiry"))
+        kite.positionsCatchUp()
+        assertEquals("flat, never short", 0, held())
+    }
+
+    /**
+     * Another sender's exit sale on the row (no book counts it: a protection's, Boss's from the app) sent a moment ago whose reply was lost,
+     * not in Zerodha's order book yet: the square-off sells nothing beside it; once the book shows it, only what it left is sold - flat.
+     */
+    @Test fun anotherSendersExitSaleNotInTheBookYetHoldsTheRowBack() {
+        state(emptyList())
+        runBlocking { OrbArms.view() }
+        kite.position(sym, 60, 200.0, product = "MIS")
+        kite.positionsTrailReads = 1_000                                   // the positions trail its fill
+        kite.trailReads = 1_000                                            // and the order book's list the sale
+        kite.nextPlace(reply = FakeKite.Reply.DROP_AFTER_ACCEPT)           // its reply lost
+        runCatching { runBlocking { Broker.placeOrder(Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", ""), exit = true) } }
+        kite.requests.clear()
+        at(15, 5); expiryPass()
+        assertTrue("nothing sold beside it", squareOffSells("iraalgoexpiry").isEmpty())
+        assertEquals(1, SquareOffExit.skipsForTest("NFO", sym, "MIS"))
+        kite.showInBook()
+        at(15, 6); expiryPass()
+        assertEquals("only what it left", listOf("30"), squareOffSells("iraalgoexpiry"))
+        kite.positionsCatchUp()
+        assertEquals("flat, never short", 0, held())
+    }
+
+    // ---- third round: a row left unsold pass after pass is told ----------------------------------------------------------------------
+
+    private fun unsoldTold(what: String) = com.optionslab.app.work.Alerts.queue.value.any { "has left it unsold $what" in it.text }
+
+    /** A row an arm keeps selling (its claim held) is left unsold pass after pass: Boss is told once, at the third in a row. */
+    @Test fun aRowLeftUnsoldThreePassesInARowIsToldOnce() {
+        state(emptyList())
+        runBlocking { OrbArms.view() }
+        kite.position(sym, 30, 200.0, product = "MIS")
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", OrbArms.CLAIM_OWNER)!!
+        try {
+            at(15, 5); expiryPass()
+            at(15, 6); expiryPass()
+            assertFalse("not after two", unsoldTold("on 2 passes"))
+            at(15, 7); expiryPass()
+            assertTrue("told at the third", unsoldTold("on 3 passes in a row"))
+            assertTrue(squareOffSells("iraalgoexpiry").isEmpty())
+        } finally { claim.release() }
+        at(15, 9); expiryPass()
+        assertEquals("sold once free", listOf("30"), squareOffSells("iraalgoexpiry"))
+        assertEquals("the count starts again", 0, SquareOffExit.skipsForTest("NFO", sym, "MIS"))
+    }
+
+    /** From the expiry square-off's backstop minute a row left unsold is told at once. */
+    @Test fun fromTheBackstopMinuteARowLeftUnsoldIsToldAtOnce() {
+        state(emptyList())
+        runBlocking { OrbArms.view() }
+        kite.position(sym, 30, 200.0, product = "MIS")
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", OrbArms.CLAIM_OWNER)!!
+        try {
+            at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); expiryPass()
+            assertTrue("told at once", unsoldTold("at its last minutes"))
+        } finally { claim.release() }
+    }
+
+    /**
+     * From the backstop minute, an arm's sale started after the pass's reads no longer puts the row off: the square-off reads again under
+     * the claim (that sale a fill in it) and sells the rest in the same pass - flat, never short.
+     */
+    @Test fun fromTheBackstopMinuteASaleStartedAfterTheReadsIsReadAgainNotPutOff() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        state(listOf(liquidity(30, 200.0, s1, 170.0)))                     // the arm's lot, its time stop due
+        kite.position(sym, 60, 200.0, product = "MIS")                     // and 30 more that are no arm's
+        runBlocking { OrbArms.view() }
+        ExpirySquareOff.testAfterReads = { OrbArms.priceCheckOnly() }      // the arm's whole exit, after the square-off's reads
+        at(ExpirySquareOff.BACKSTOP_MINUTE / 60, ExpirySquareOff.BACKSTOP_MINUTE % 60); expiryPass()
+        assertEquals("the arm sold its lot", listOf("30"), squareOffSells("iraorb"))
+        assertEquals("the rest sold in the same pass", listOf("30"), squareOffSells("iraalgoexpiry"))
+        assertEquals(0, SquareOffExit.skipsForTest("NFO", sym, "MIS"))
+        assertEquals("flat, never short", 0, held())
     }
 }

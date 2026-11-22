@@ -79,6 +79,7 @@ object OrbArms {
         ArmLive.register(com.optionslab.engine.orb.LiveMirror.ORB) { mirrorLegs }
         // 22 Nov 2026 (B6 review): the square-offs subtract these arms' unsettled exit sales (lost, or on their way) and take no stop out beside one.
         SquareOffExit.lostPendingProviders["orb"] = { sym, product -> if (product == "MIS") unsettledSales(sym) else 0 }
+        SquareOffExit.lostPendingTags += "iraorb"                       // (22 Nov 2026, third round: its sales counted there, by row)
     }
 
     /**
@@ -1377,7 +1378,7 @@ object OrbArms {
         // (20 Nov 2026: today's booked exit sales - a lost exit's search never takes one for its own after a restart.)
         // (Each with its own day, so a restart never stamps an older one as today's.)
         o.put("exitSales", JSONObject().apply { exitSales.filterValues { it == day }.keys.forEach { put(it, day) } })
-        // (22 Nov 2026, B6 review: the app's own stop cancels, by order id and when marked - a restart never reads one as Boss's; and a
+        // (22 Nov 2026, B6 review: the app's own stop cancels, by order id and when marked - a restart does not read one as Boss's; and a
         // closed trade's found lost stop still being cancelled, with the day it was taken out - the sweep goes on after a restart that day.)
         ownCancelsKept().takeIf { it.isNotEmpty() }?.let { kept -> o.put("ownCancels", JSONObject().apply { kept.forEach { (id, at) -> put(id, at) } }) }
         // (22 Nov 2026, B6 review, second round: and the stops Boss's manual exit from the app or a square-off marked ([exitMarks]).)
@@ -4521,6 +4522,8 @@ object OrbArms {
                 orders.values.none { it.symbol == sym && it.working && it.tag in SquareOffExit.TAGS } &&
                 // (19 Nov 2026, final check: nor in the gap after a square-off's exit on it - a read can miss an order placed a moment ago.)
                 !SquareOffExit.inGap("NFO", sym, "MIS") &&
+                // (22 Nov 2026, B6 review, third round: nor while another seller holds the row - a square-off working out its sale.)
+                SquareOffExit.exitClaimedBy("NFO", sym, "MIS").let { it == null || it == CLAIM_OWNER } &&
                 // (20 Nov 2026, audit PC: nor while a lost exit on it is neither found nor let go - it may still be selling; every trade's
                 // level is still watched by the app meanwhile and sold there.)
                 lostOf(cur) == null &&
@@ -4533,7 +4536,12 @@ object OrbArms {
                 // (19 Nov 2026, review: a stop of these arms resting unclaimed is [orphanStop]'s to judge - taken, waited on, or a stop capped
                 // beside it - never a reason by itself to place nothing.)
                 val adoptOnly = ownSaleWorking(cur, sym, orders.values, b.positions.mapNotNull { it.stopOrderId }.toSet(), ownStops = false)
-                val rested = runCatching { restExchangeStop(b, cur, sym, held, ltp, tick, orders.values, adoptOnly, positions = pbook) }.getOrNull()
+                // (22 Nov 2026, B6 review, third round: the row claimed while its stop goes in - a square-off is refused it meanwhile, so it
+                // never works its sale out from a read made without this stop; held by another seller: nothing put back this look.)
+                val rowClaim = SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_OWNER)
+                val rested = if (rowClaim == null) null else try {
+                    runCatching { restExchangeStop(b, cur, sym, held, ltp, tick, orders.values, adoptOnly, positions = pbook) }.getOrNull()
+                } finally { rowClaim.release() }
                 if (rested != null) { b.positions[i] = rested.first; rested.second?.let { b.positions += it }; continue }
             }
             val runThrough = cur.stopTrigger?.let { ltp < stopLimit(it, tick) } == true
@@ -4881,7 +4889,9 @@ object OrbArms {
                 // Its stop: an unclaimed one of these arms taken first (always - so a sale this pass takes it out as its own); else placed,
                 // never from 15:10, with Stop for today or at the expiry square-off (the same pass sells it); unclear: none now, watched.
                 val mayRest = !stopped && t.toLocalTime().isBefore(OrbRules.SQUARE_OFF) && !expiryClosing(paperSym, sym, t, orders) &&
-                    !SquareOffExit.inGap("NFO", sym, "MIS")
+                    !SquareOffExit.inGap("NFO", sym, "MIS") &&
+                    // (22 Nov 2026, B6 review, third round: nor while another seller holds the row.)
+                    SquareOffExit.exitClaimedBy("NFO", sym, "MIS").let { it == null || it == CLAIM_OWNER }
                 var stopId: String? = null
                 var stopAt: Double = trig
                 // (19 Nov 2026, review / final check: never a stop - taken or placed - for more than is held less every other working sale on
@@ -4906,14 +4916,16 @@ object OrbArms {
                     Orphan.None, Orphan.Other -> if (mayRest) {
                         covered = minOf(qty, held - othersAll).coerceAtLeast(0) / lot * lot
                         capLeftNone = covered <= 0
-                        if (covered > 0) {
+                        // (22 Nov 2026, B6 review, third round: placed with the row claimed, as [restExchangeStop]; held by another seller: none now.)
+                        val rowClaim = if (covered > 0) SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_OWNER) else null
+                        if (rowClaim != null) try {
                             val r = placeStop(a.label, sym, covered, lot, ins.tickSize, fill, knownKite(b) + o.id, liquidity = a.liquidity || safety, at = trig,
                                 lostKey = orbLostKey(a.label, sym, fill, qty))      // (the row's own quantity: what the next look asks)
                             stopSoldPart = r.sold
                             val (id, tr, _, cov) = r
                             stopId = id; stopAt = tr ?: trig
                             if (id != null) { covered = cov; placed(sym, covered, id) }
-                        }
+                        } finally { rowClaim.release() }
                     }
                     else -> {}
                 }
@@ -5219,7 +5231,7 @@ object OrbArms {
      * 16 Nov (review): the stop orders this process cancelled itself (an exit taking its stop out first, a gone position's stop): a
      * cancel of one of these is the app's, never taken as Boss's ([Position.stopByYou]). Bounded (the oldest dropped first).
      * 22 Nov 2026 (B6 review, WHO CANCELLED A STOP): by order id, when it was marked ([wallMs]); kept in the book too ([encodeBook]) and
-     * queued to be saved before the cancel goes ([cancelOwnStop]), so a restart between a cancel and the pass's own save never reads it
+     * queued to be saved before the cancel goes ([cancelOwnStop]), so a restart between a cancel and the pass's own save does not read it
      * as Boss's. A mark whose cancel never took ends ([ownCancelSeenWorking], [cancelOwnStop]), so Boss's own later cancel of it is his.
      */
     private val ownCancels = java.util.concurrent.ConcurrentHashMap<String, Long>()
