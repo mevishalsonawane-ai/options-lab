@@ -3404,13 +3404,52 @@ class ArmLiveTest : RobolectricTest() {
         ArmLive.entered(ask(donchian, "cold"))
         assertTrue("nothing sent", kite.placed.isEmpty())
         assertTrue(view().notMirrored.toString(), view().notMirrored.any { it.ref == "cold" && "instrument list is not loaded yet" in it.why })
-        // Zerodha answers again: the list is loaded in the background (never on an entry), and the next entry goes.
+        // Zerodha answers again: the list is loaded in the background (never on an entry), and that same entry is asked again then
+        // (22 Nov 2026, B6 review: its paper trade still open, within the minute) - through every gate, once.
+        kite.down.clear(); Broker.resetInstrumentsRetryForTest()
+        val end = System.currentTimeMillis() + 10_000
+        while (kite.placed.size < 2 && System.currentTimeMillis() < end) { Broker.instrumentsInMemory(); Thread.sleep(20) }
+        assertEquals("asked again once loaded: its buy and its stop", 2, kite.placed.size)
+        assertEquals("cold", view().openReal.single().ref)
+        assertTrue("its 'not mirrored' note taken back", view().notMirrored.none { it.ref == "cold" })
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): the list on file but not in memory (a restart before anything read it): the entry is not mirrored at once
+     * (nothing is read under the entry lock), the list is read into memory in the background, and the same entry is asked again - once.
+     * The app's start reads it into memory too, after the positions step ([Broker.warmAfterPositions]).
+     */
+    @Test fun withTheListOnFileButNotInMemoryTheEntryIsAskedAgainOnceItIsRead() {
+        Broker.forgetInstrumentsMemoForTest()                          // the file is kept
+        ArmLive.entered(ask(donchian, "onfile"))
+        val end = System.currentTimeMillis() + 10_000
+        while (kite.placed.size < 2 && System.currentTimeMillis() < end) Thread.sleep(20)
+        assertEquals("asked again once read: its buy and its stop", 2, kite.placed.size)
+        assertEquals("onfile", view().openReal.single().ref)
+        assertTrue(view().notMirrored.none { it.ref == "onfile" })
+        // The app's start: read into memory once the positions are (no positions step in a test: at once).
+        Broker.forgetInstrumentsMemoForTest()
+        Broker.warmAfterPositions()
+        val end2 = System.currentTimeMillis() + 5_000
+        while (!Broker.instrumentsAreToday() && System.currentTimeMillis() < end2) Thread.sleep(20)
+        assertTrue(Broker.instrumentsAreToday())
+    }
+
+    /** 22 Nov 2026 (B6 review): asked again only while its paper trade is open - one closed meanwhile is never bought. */
+    @Test fun aColdListEntryWhosePaperTradeClosedMeanwhileIsNotAskedAgain() {
+        Broker.forgetInstrumentsMemoForTest()
+        java.io.File(context.filesDir, "kite_instruments.json").delete()
+        kite.down += "/instruments/NFO"
+        ArmLive.entered(ask(donchian, "gone"))
+        assertTrue(view().notMirrored.any { it.ref == "gone" })
+        legs.remove("gone")                                            // its paper trade closed
         kite.down.clear(); Broker.resetInstrumentsRetryForTest()
         val end = System.currentTimeMillis() + 5_000
         while (Broker.instrumentsInMemory() == null && System.currentTimeMillis() < end) Thread.sleep(20)
-        assertNotNull("loaded in the background", Broker.instrumentsInMemory())
-        ArmLive.entered(ask(donchian, "warm"))
-        assertEquals("the next entry goes: its buy and its stop", 2, kite.placed.size)
+        assertNotNull(Broker.instrumentsInMemory())
+        Thread.sleep(600)                                              // past the re-ask's next look (every 250 ms)
+        assertTrue("never bought", kite.placed.isEmpty())
+        assertTrue("its note stays", view().notMirrored.any { it.ref == "gone" })
     }
 
     /** Item 6: a second ask for a paper trade that already has its live trade is noted in the diagnostics - never skipped silently. */

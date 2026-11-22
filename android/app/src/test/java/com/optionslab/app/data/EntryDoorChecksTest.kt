@@ -46,6 +46,7 @@ class EntryDoorChecksTest : RobolectricTest() {
     @After fun down() {
         SmartWorkers.testDoorThrows = null; PortfolioHost.testDoorThrows = null; ExposureCapHost.testDoorThrows = null
         AccountStopHost.testDoorThrows = null; BossRiskHost.testDoorThrows = null
+        SmartWorkers.testRelayThrows = null; BossRiskHost.testPartThrows = null
         kite.close()
         assertEquals(emptyList<String>(), NetworkGuard.blocked.toList())
     }
@@ -116,6 +117,52 @@ class EntryDoorChecksTest : RobolectricTest() {
         assertTrue(BossRiskHost.liveActs())
         assertRefusedFor("your risk rules")
         BossRiskHost.setLive(BossRiskHost.Rule.WEEKLY, false, pinConfirmed = true)
+        assertNull(recheck())
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, second look): each smart-workers part on its own - the relay's health check that throws refuses only with the
+     * relay on (the news pause and the data reaction acting by default do not make it refuse), and so on for each part.
+     */
+    @Test fun aSmartWorkersPartThatThrowsRefusesOnlyWhileThatPartActs() {
+        SmartWorkers.testRelayThrows = boom
+        assertFalse(Relay.enabled)
+        assertTrue("the news pause and the data reaction act (their defaults)", SmartWorkers.doorActs())
+        assertNull("the relay off: its health check that throws refuses nothing", recheck())
+        try {
+            Relay.enabled = true
+            val why = recheck()
+            assertTrue("the relay on: refused ($why)",
+                why != null && why.startsWith("refused: the smart workers (the relay's health) could not be checked (IllegalStateException)"))
+        } finally { Relay.enabled = false }
+        SmartWorkers.testRelayThrows = null
+        assertNull(recheck())
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review, second look): each of Boss's risk rules on its own - one whose part throws refuses only while ITS live switch
+     * is on; another rule's live switch on does not make it refuse, and h14's capped limit (shadow only, live) never refuses.
+     */
+    @Test fun aRiskRulePartThatThrowsRefusesOnlyWhileThatRuleIsLive() {
+        BossRiskHost.setLive(BossRiskHost.Rule.WEEKLY, true)
+        try {
+            BossRiskHost.testPartThrows = BossRiskHost.Rule.CAPPED
+            assertNull("the capped limit (shadow only) refuses nothing", recheck())
+            BossRiskHost.testPartThrows = BossRiskHost.Rule.RISK
+            assertNull("the 2% risk cap in shadow: the weekly stop live does not make its throw refuse", recheck())
+            BossRiskHost.setLive(BossRiskHost.Rule.RISK, true)
+            val why = recheck()
+            assertTrue("the 2% risk cap live: refused ($why)",
+                why != null && why.startsWith("refused: your risk rules (2% risk cap) could not be checked (IllegalStateException)"))
+            BossRiskHost.testPartThrows = BossRiskHost.Rule.OPPOSITE
+            assertNull("opposite bets in shadow: refuses nothing", recheck())
+            BossRiskHost.testPartThrows = BossRiskHost.Rule.WEEKLY
+            assertTrue(recheck().orEmpty().startsWith("refused: your risk rules (weekly loss stop) could not be checked"))
+        } finally {
+            BossRiskHost.testPartThrows = null
+            BossRiskHost.setLive(BossRiskHost.Rule.RISK, false, pinConfirmed = true)
+            BossRiskHost.setLive(BossRiskHost.Rule.WEEKLY, false, pinConfirmed = true)
+        }
         assertNull(recheck())
     }
 

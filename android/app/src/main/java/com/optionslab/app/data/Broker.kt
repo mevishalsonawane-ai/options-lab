@@ -1712,6 +1712,17 @@ object Broker {
         }
     }
 
+    /**
+     * 22 Nov 2026 (B6 review): the instruments list read into memory once the app's start has read and watched the position books (never
+     * before them: [PositionsFirst.awaitPositions]), so the arms' first live entry finds it there ([instrumentsInMemory]). In the background.
+     */
+    fun warmAfterPositions() {
+        readScope.launch { runCatching { PositionsFirst.awaitPositions() }; warmInstrumentsInBackground() }
+    }
+
+    /** 22 Nov 2026 (B6 review): whether an instruments list is in memory - only looked at (no load started, nothing read). */
+    fun instrumentsHeld(): Boolean = instrumentsMemo != null
+
     /** TEST ONLY (22 Nov 2026, B6 review): the instruments list in memory forgotten, as after a restart (the file is kept). */
     internal fun forgetInstrumentsMemoForTest() { instrumentsMemo = null }
 
@@ -2350,13 +2361,18 @@ object Broker {
      * while a caller still asks after it (an unknown order dropped could be sent twice): each ends found, given up on after a good read,
      * or forgotten; only one no caller has asked after for an hour (its trade long gone) is let go, and only past 500 kept.
      */
-    fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false) {
+    fun noteLost(key: String, o: Kite.Order, known: Collection<String>, what: String, liveOnly: Boolean = false,
+                 /**
+                  * 22 Nov 2026 (B6 review): a lost reply its caller saved and takes back after a restart - when it was first noted (phone
+                  * ms: its [LOST_SEARCH_MS] window runs on from then) and when it was sent (its search's start). Null: now.
+                  */
+                 sinceMs: Long? = null, sentAt: java.time.LocalDateTime? = null) {
         // (Bounded: only ones no caller has asked after for an hour - their trades long gone - are let go, and only past 500.)
         if (lostWrites.size > 500) lostWrites.entries.removeIf { e ->
             (System.currentTimeMillis() - e.value.askedMs > 3_600_000L).also { gone -> if (gone) e.value.searching?.cancel() }
         }
-        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), System.currentTimeMillis(), what, liveOnly,
-            runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }))
+        lostWrites.putIfAbsent(key, LostWrite(o, known.toSet(), sinceMs ?: System.currentTimeMillis(), what, liveOnly,
+            sentAt ?: runCatching { Market.now().toLocalDateTime() }.getOrElse { java.time.LocalDateTime.now() }))
     }
 
     /** Whether a lost reply is being looked for under [key]. Memory only. */

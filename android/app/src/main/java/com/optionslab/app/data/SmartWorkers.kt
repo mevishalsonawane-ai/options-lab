@@ -269,15 +269,31 @@ object SmartWorkers {
         testDoorThrows?.let { throw it }
         val s = _settings.value
         val und = underlyingOf(symbol)
-        if (health.fallbacks(nowMs).blockLiveEntries)
-            return "refused: the static-IP relay is not answering (new live entries wait; exits still go)"
-        if (s.pause.mode(MarketBrain.Cause.NEWS) == MarketBrain.Mode.ON)
-            _brain.value.activeWindows(nowMs, und).firstOrNull { it.kind == MarketBrain.Kind.NEWS }?.let { return "refused: paused for the ${it.name} window" }
-        if (s.reactions.mode("*", Findings.Reaction.DATA_UNRELIABLE) == Findings.Mode.ACT &&
-            bus.recent(nowMs, und, setOf(Findings.Kind.DATA_UNRELIABLE)).isNotEmpty())
-            return "refused: the data is unreliable just now (new entries wait; exits still go)"
+        // 22 Nov 2026 (B6 review): each part on its own - one that throws refuses only while THAT part acts on live entries ([doorPart]): the
+        // relay's health only with the relay on (SelfHeal marks it down only then), the news pause only ON, the data reaction only ACT.
+        doorPart("the relay's health", { Relay.enabled }) {
+            testRelayThrows?.let { throw it }
+            if (health.fallbacks(nowMs).blockLiveEntries) "refused: the static-IP relay is not answering (new live entries wait; exits still go)" else null
+        }?.let { return it }
+        doorPart("the news windows", { s.pause.mode(MarketBrain.Cause.NEWS) == MarketBrain.Mode.ON }) {
+            if (s.pause.mode(MarketBrain.Cause.NEWS) != MarketBrain.Mode.ON) null
+            else _brain.value.activeWindows(nowMs, und).firstOrNull { it.kind == MarketBrain.Kind.NEWS }?.let { "refused: paused for the ${it.name} window" }
+        }?.let { return it }
+        doorPart("the data's health", { s.reactions.mode("*", Findings.Reaction.DATA_UNRELIABLE) == Findings.Mode.ACT }) {
+            if (s.reactions.mode("*", Findings.Reaction.DATA_UNRELIABLE) == Findings.Mode.ACT &&
+                bus.recent(nowMs, und, setOf(Findings.Kind.DATA_UNRELIABLE)).isNotEmpty())
+                "refused: the data is unreliable just now (new entries wait; exits still go)" else null
+        }?.let { return it }
         return null
     }
+
+    /** 22 Nov 2026 (B6 review): one part of [doorChecks]; a throw refuses only while that part acts ([acts]; unreadable: it does). */
+    private fun doorPart(what: String, acts: () -> Boolean, check: () -> String?): String? =
+        try { check() } catch (e: Exception) { Broker.doorUnread("the smart workers ($what)", runCatching(acts).getOrDefault(true), e) }
+
+    /** TEST ONLY (22 Nov 2026, B6 review): the relay's health check throws this, while set. Null in the app, always; debug builds only. */
+    @Volatile internal var testRelayThrows: Exception? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test seam exists only in debug builds" }; field = v }
 
     // ---- findings ----------------------------------------------------------------------------------------------------------
 
@@ -937,7 +953,7 @@ object SmartWorkers {
         bus.clear(); health.reset(); sched.resetCounts(); lastPost.clear()
         _brain.value = MarketBrain.Context(); _settings.value = Settings(); loaded = true
         _reviews.value = emptyList(); reviewedOn = null; nearUntil = 0L; reviewGuard.reset(); testReadsFail = false
-        testReviews = null; testDoorThrows = null
+        testReviews = null; testDoorThrows = null; testRelayThrows = null
         synchronized(trapsSeen) { trapsSeen.clear() }; synchronized(sideSeen) { sideSeen.clear() }
         activeWindowsSeen.clear(); synchronized(closedSeen) { closedSeen.clear() }
     }

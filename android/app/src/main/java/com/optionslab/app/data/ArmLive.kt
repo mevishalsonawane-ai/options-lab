@@ -1077,10 +1077,55 @@ object ArmLive {
         }
         // 22 Nov 2026 (B6 review, item 5): the list in memory only (the entry lock is held: never a file read or a download here); none in
         // memory yet, this entry is not mirrored and the list is loaded in the background for the next one.
-        val list = Broker.instrumentsInMemory() ?: return null to "Zerodha's instrument list is not loaded yet (loading it in the background)"
+        val list = Broker.instrumentsInMemory() ?: return null to NOT_LOADED
         val i = list.firstOrNull { it.name == c.underlying && it.expiry == c.expiry && it.right == c.right && kotlin.math.abs(it.strike - c.strike) < 1e-6 }
             ?: return null to "${c.symbol} is not listed on Zerodha"
         return Ins(i.tradingSymbol, "NFO", i.lotSize, i.tickSize, 1) to null
+    }
+
+    /** 22 Nov 2026 (B6 review): why [zerodha] gave no contract when the instruments list is not in memory yet ([askWhenListed]). */
+    private const val NOT_LOADED = "Zerodha's instrument list is not loaded yet (loading it in the background)"
+
+    /** 22 Nov 2026 (B6 review): how long [askWhenListed] waits for today's list once an earlier day's is in memory. */
+    private const val LISTED_GRACE_MS = 5_000L
+
+    /** 22 Nov 2026 (B6 review): the paper trades already asked again once the instruments list loaded ([askWhenListed]). Memory only, bounded. */
+    private val listedAsks: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /**
+     * 22 Nov 2026 (B6 review: "the cold instrument list loses the entry for good"): [a] was not mirrored only because the instruments list
+     * was not in memory yet ([NOT_LOADED]). It is asked once more as soon as the list is (loaded in the background) - only while its paper
+     * trade is still open, within [CheaperStrike.CHASE_MS] of its paper fill and once at most - through every gate of [enterNow] as any
+     * entry; its "not mirrored" note for that reason is taken back first. On this object's own worker: the caller never waits.
+     */
+    private fun askWhenListed(a: Ask) {
+        if (listedAsks.size > 200) listedAsks.clear()
+        if (!listedAsks.add(a.ref)) return
+        val gen = wipeGen
+        scope.launch {
+            runCatching {
+                val end = a.atNanos + CheaperStrike.CHASE_MS * 1_000_000L
+                // (Only looked at here - the load itself was started by the refusal's own look; never a new read of the file per look. Today's
+                // list is waited for: an earlier day's, read from the file, may lack a new expiry - taken after [LISTED_GRACE_MS] all the same.)
+                var heldAt = 0L
+                while (gen == wipeGen && System.nanoTime() < end && !Broker.instrumentsAreToday()) {
+                    if (Broker.instrumentsHeld()) { if (heldAt == 0L) heldAt = System.nanoTime() else if (System.nanoTime() - heldAt >= LISTED_GRACE_MS * 1_000_000L) break }
+                    kotlinx.coroutines.delay(250)
+                }
+                if (gen != wipeGen || System.nanoTime() >= end || !Broker.instrumentsHeld()) return@runCatching
+                val spec = LiveMirror.spec(a.key) ?: return@runCatching
+                if (paperOpen(spec, a.ref) != true) return@runCatching
+                lock.withLock {
+                    val b = book()
+                    val dropped = b.notMirrored.removeAll { it.ref == a.ref && it.why == NOT_LOADED }
+                    // (Its arm's last refusal too, while it is still that one.)
+                    val cleared = b.refused[a.key]?.endsWith(NOT_LOADED) == true && b.refused.remove(a.key) != null
+                    if (dropped || cleared) save(b)
+                }
+                note(a.key, "asked again for ${a.ref}: Zerodha's instrument list is in memory now")
+                enterNow(a)
+            }
+        }
     }
 
     /** 18 Nov 2026 (audit A4): [p] in place of the entry intent of paper trade [ref] ([enterNow]), or added when there is none. */
@@ -1155,7 +1200,12 @@ object ArmLive {
         // trades sharing one reference would otherwise lose the second's live copy unseen.)
         if (lock.withLock { book().positions.any { it.ref == a.ref } }) { note(a.key, "not mirrored: its paper trade ${a.ref} already has a live trade (one per paper trade)"); return@withLock }
         val (ins, insWhy) = step?.let { Ins(it.symbol, it.exchange, it.lot, it.tick, 1) to null } ?: zerodha(a.contract)
-        if (ins == null) { notMirrored(a, insWhy ?: "no contract"); return@withLock }
+        if (ins == null) {
+            notMirrored(a, insWhy ?: "no contract")
+            // (22 Nov 2026, B6 review: only for want of the list in memory - asked once more as soon as it is there.)
+            if (insWhy == NOT_LOADED && step == null) askWhenListed(a)
+            return@withLock
+        }
         LiveMirror.tooLate(now(), ins.exchange, spec.product, a.contract.expiry)?.let { notMirrored(a, it); return@withLock }
         val lots = LiveMirror.lots(a.paperQty, a.contract.lotSize)
         val s = AppSettings.load()
@@ -4127,7 +4177,7 @@ object ArmLive {
         readFailedMs = 0L; readFails = 0; liveKept = null; loginAsked.clear(); candlesOffUntil = 0L; shortSince.clear(); noRowSaid.clear(); shortSaid.clear(); forgetLostClaims()
         saveDue = false; blockSaid.clear(); lostExits.clear(); unsearchedLost.clear(); searchingLost.clear(); negSaid.clear(); placedStops.clear(); noStopSince.clear(); forgetBatch2()
         _view.value = View(); holdingHint = false; shadowHint = false; liveKeysHint = emptyList(); paperMirroredHint = emptySet(); handsOffUntil.clear(); levels.clear(); closedRefs.clear()
-        com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear()
+        com.optionslab.engine.orb.StepTrail.clearLadders(); RuleHighs.clear(); listedAsks.clear()
     }
 
     /** 26 Oct (Erase everything): [wipe], and the book's files deleted (a set-aside copy too). */
