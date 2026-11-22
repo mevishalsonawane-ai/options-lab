@@ -193,6 +193,40 @@ class StopLaneTest : RobolectricTest() {
         }
     }
 
+    /**
+     * 22 Nov 2026 (B6 third review): with no strategy run open, the strategies step reads nothing - never the Strategy Module's lock (a
+     * full pass may hold it), never its book (a vault read when not in memory), never the device check.
+     */
+    @Test fun theStrategiesStepReadsNothingWithNoRunOpen() {
+        val strategies = com.optionslab.app.data.Strategies
+        val integrity = com.optionslab.app.security.Integrity
+        val hint = strategies::class.java.getDeclaredField("runningHint").apply { isAccessible = true }
+        val cache = strategies::class.java.getDeclaredField("cache").apply { isAccessible = true }
+        val lock = strategies::class.java.getDeclaredField("lock").apply { isAccessible = true }.get(null) as kotlinx.coroutines.sync.Mutex
+        val hintWas = hint.getBoolean(null)
+        val cacheWas = cache.get(null)
+        integrity.resetForTest()
+        val scans = integrity.scans.get()
+        try {
+            hint.setBoolean(null, false)                                        // no run open
+            runBlocking {
+                lock.lock()                                                     // a full pass holding the lock
+                try {
+                    cache.set(null, null)                                       // the book not in memory, as after a restart
+                    kotlinx.coroutines.withTimeout(2_000) { StopLane.strategiesLook(context) }
+                    // (Asked while the lock is still held: no other reader can have loaded the book meanwhile.)
+                    assertEquals("the book was not read", null, cache.get(null))
+                } finally { lock.unlock() }
+            }
+            assertEquals("the device check not asked", 0L, integrity.askedAtForTest())
+            Thread.sleep(200)
+            assertEquals("nor scanned", scans, integrity.scans.get())
+        } finally {
+            hint.setBoolean(null, hintWas)
+            if (cache.get(null) == null) cache.set(null, cacheWas)
+        }
+    }
+
     /** MCX's own pass comes back 15 s after it STARTED (it was 15 s after it ended: a 5 s pass came every 20 s). */
     @Test fun mcxsPassComesBack15sAfterItsStartNotItsEnd() = runTest {
         val clock = { testScheduler.currentTime + 1_000_000L }

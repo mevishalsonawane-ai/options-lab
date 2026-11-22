@@ -331,6 +331,8 @@ internal object StopLane {
      * kept fresh in the background); it only ever refuses an entry, unknown included, and the exits never wait on it.
      */
     internal suspend fun strategiesLook(context: Context) {
+        // 22 Nov 2026 (B6 third review): no run open - nothing read at all (no lock, no book, no device check), as manageOnly itself.
+        if (!com.optionslab.app.data.Strategies.runningHint) { done(B_STRATEGIES); return }
         // 22 Nov 2026 (B6 second review): asked for (a scan started, the refresher kept on) only for a LIVE run; a paper run's entries
         // never read it. (A read that fails counts as a live run; a cancellation goes up.)
         val liveRun = try { com.optionslab.app.data.Strategies.anyLiveRunning() } catch (e: kotlinx.coroutines.CancellationException) { throw e }
