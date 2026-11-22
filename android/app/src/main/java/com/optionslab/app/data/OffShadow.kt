@@ -40,7 +40,7 @@ object OffShadow {
     private const val LOG_KEPT = 200
     private val lock = Mutex()
     /** 30 Oct (review): an entry with no price in memory is priced here, on its own worker - never under the asking arm's lock. */
-    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + ScopeGuard.handler("OffShadow"))
     @Volatile private var file: File? = null
     private val written = Vault.LastWrite()
 

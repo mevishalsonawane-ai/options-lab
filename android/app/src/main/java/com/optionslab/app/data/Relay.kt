@@ -102,11 +102,11 @@ object Relay {
      * test's "off" is always saved. The card only awaits the answer, and updates itself only while it is still shown.
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val saves = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
+    private val saves = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1) + ScopeGuard.handler("Relay.saves"))
 
     /** Connect & test runs here, never on [saves], so a switch "off" tapped during a slow test is saved at once (review, 6 Nov). */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private val tests = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
+    private val tests = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1) + ScopeGuard.handler("Relay.tests"))
 
     /** Switch taps asked so far: a Connect & test that fails leaves the switch alone if Boss touched it meanwhile. */
     private val switchTaps = java.util.concurrent.atomic.AtomicInteger()

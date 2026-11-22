@@ -82,11 +82,28 @@ object PineScripts {
 
     @Volatile private var loaded = false
 
-    fun init(ctx: Context) {
+    /** [warm] false: the file named only (the app's start warms it after the positions step: [warmSoon]). */
+    fun init(ctx: Context, warm: Boolean = true) {
         file = File(ctx.filesDir, "pine.vault")
-        // Keystore work stays off the main thread.
-        Thread { ensure() }.start()
+        if (warm) warmSoon()
     }
+
+    /**
+     * The scripts read ahead, off the main thread (Keystore work). 22 Nov 2026 (B6 review: the app's start queued this read in the
+     * Keystore ahead of the open positions' books): it waits for the start's positions step first ([PositionsFirst.awaitPositions], as
+     * the gold books and Jarvis's memory do; at once when the start never ran it, and at most 20 s). A pass that needs the scripts
+     * before then reads them itself ([loadNow]) - the positions step's own Pine read among them - so nothing waits on this.
+     */
+    fun warmSoon() {
+        Thread({
+            runCatching { kotlinx.coroutines.runBlocking { PositionsFirst.awaitPositions() } }
+            runCatching { ensure() }
+        }, "pine-scripts").apply { isDaemon = true }.start()
+    }
+
+    /** TEST ONLY: whether the scripts are read; [unloadForTest] makes the next read come from the file again. */
+    internal fun loadedForTest(): Boolean = loaded
+    @Synchronized internal fun unloadForTest() { loaded = false }
 
     @Synchronized private fun ensure() {
         if (loaded) return

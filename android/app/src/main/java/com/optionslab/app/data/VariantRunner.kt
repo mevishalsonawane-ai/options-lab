@@ -65,7 +65,7 @@ object VariantRunner {
     const val WHO = "Strategy lab"
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("VariantRunner"))
     private val lock = Any()
 
     private val _variants = MutableStateFlow(VariantLab.Book())

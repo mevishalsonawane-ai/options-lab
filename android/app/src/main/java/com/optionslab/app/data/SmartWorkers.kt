@@ -53,7 +53,7 @@ object SmartWorkers {
     val brain: StateFlow<MarketBrain.Context> = _brain
 
     @Volatile private var appContext: Context? = null
-    private val ioScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val ioScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + ScopeGuard.handler("SmartWorkers.ioScope"))
     @Volatile private var warmJob: kotlinx.coroutines.Job? = null
 
     /** At the app's start: Boss's brain settings read on an IO thread (review G8-4), so no entry is ever the first to read them. */
@@ -533,7 +533,7 @@ object SmartWorkers {
         null
     }
 
-    private val nightlyScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val nightlyScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + ScopeGuard.handler("SmartWorkers.nightlyScope"))
     private val nightlyRunning = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var nightlyJob: kotlinx.coroutines.Job? = null
 

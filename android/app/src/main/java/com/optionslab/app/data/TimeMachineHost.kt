@@ -132,7 +132,7 @@ object TimeMachineHost {
     /** One daemon thread at the lowest priority: a check never competes with the position watch or the order path. */
     private val scope = CoroutineScope(SupervisorJob() + Executors.newSingleThreadExecutor { r ->
         Thread(r, "time-machine").apply { priority = Thread.MIN_PRIORITY; isDaemon = true }
-    }.asCoroutineDispatcher())
+    }.asCoroutineDispatcher() + ScopeGuard.handler("TimeMachineHost"))
     /** Checks queued or running (memory): the tests wait for zero before the fake feed closes. */
     private val inFlight = AtomicInteger()
     private val io = Any()

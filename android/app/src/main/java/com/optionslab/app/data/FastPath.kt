@@ -63,8 +63,9 @@ object FastPath {
             .onFailure { runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_MORE_FAVORABLE) } }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + consumer)
-    private val laneScope = CoroutineScope(SupervisorJob() + lanePool)
+    // 22 Nov 2026 (B6 review): a failure escaping a job is noted, never the end of the process ([ScopeGuard]).
+    private val scope = CoroutineScope(SupervisorJob() + consumer + ScopeGuard.handler("fast checks"))
+    private val laneScope = CoroutineScope(SupervisorJob() + lanePool + ScopeGuard.handler("fast check lanes"))
     private val busy = FastLane.Busy()
     @Volatile private var job: Job? = null
     @Volatile private var app: Context? = null
@@ -190,8 +191,21 @@ object FastPath {
         }
     }
 
-    private val warmScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val warmScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("fast check token lookups"))
+
+    /** 22 Nov 2026: what is held or followed changed (a token looked up in the background): the next look builds its snapshot afresh. */
+    internal fun stateChanged() { snap = null }
     private const val WARM_MS = 5_000L
+
+    /**
+     * TEST ONLY (22 Nov 2026): [snapshot] built now on the caller's thread (the consumer's work), as (the instruments it follows, whether
+     * the paper book is covered by the stream). Throws unless BuildConfig.DEBUG.
+     */
+    internal fun snapshotForTest(now: Long = System.currentTimeMillis()): Pair<Set<Long>, Boolean> {
+        check(com.optionslab.app.BuildConfig.DEBUG) { "test only" }
+        snap = null
+        return snapshot(now).let { it.tokens to it.st.covered }
+    }
 
     private fun snapshot(now: Long): Snap {
         snap?.takeIf { now - it.at in 0 until STATE_MS }?.let { return it }
@@ -216,7 +230,8 @@ object FastPath {
             S5Arm.holding() ||
             CisdArm.holding() ||
             McxPaperArms.view.value.let { v -> v.armed.values.any { it } || v.open.isNotEmpty() } ||
-            (jarvis && runCatching { com.optionslab.app.ira.IraSolo.holding() }.getOrDefault(false)) ||
+            // 22 Nov 2026 (B6 review): Solo's hint from memory (it read and parsed its whole book from the vault here, on this thread).
+            (jarvis && runCatching { com.optionslab.app.ira.IraSolo.holdingQuick() }.getOrDefault(false)) ||
             holding || liveHolding || anyLive
         val live = runCatching { liveTokens() }.getOrDefault(emptySet())
         // The held instruments followed on the stream (their ticks are what the live exits decide on).

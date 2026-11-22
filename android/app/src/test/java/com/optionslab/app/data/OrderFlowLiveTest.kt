@@ -74,6 +74,27 @@ class OrderFlowLiveTest : RobolectricTest() {
         assertNull(OrderFlowLive.readNow("NIFTY"))
     }
 
+    /**
+     * 22 Nov 2026 (B6 review: a round of the flow's pump that threw left its job - whose scope had no handler - to the crash handler,
+     * which ends the process): the round is noted and the same pump goes on, publishing the next reads.
+     */
+    @Test fun aPumpRoundThatThrowsIsNotedAndThePumpGoesOn() {
+        OrderFlowLive.layoutForTest(listOf(OrderFlow.Board.Entry(fut, "BANKNIFTY", OrderFlow.Role.FUTURE)))
+        val failures = OrderFlowLive.pumpFailures.get()
+        val thrown = java.util.concurrent.atomic.AtomicBoolean(false)
+        OrderFlowLive.pumpFaultForTest = { if (thrown.compareAndSet(false, true)) throw IllegalStateException("a bad round") }
+        try {
+            val t0 = System.currentTimeMillis()
+            KiteStream.feedForTest(KiteTicks.parse(message(packet(fut, 55_000.0, 1_000, 54_999.0, 300, 55_001.0, 300, 1_000_000))), t0)
+            KiteStream.feedForTest(KiteTicks.parse(message(packet(fut, 55_001.0, 1_030, 55_000.0, 400, 55_002.0, 100, 1_000_500))), t0 + 300)
+            val end = System.currentTimeMillis() + 5_000
+            while (OrderFlowLive.reads.value["BANKNIFTY"] == null && System.currentTimeMillis() < end) Thread.sleep(10)
+            assertTrue("the first round threw", thrown.get())
+            assertEquals("noted once", failures + 1, OrderFlowLive.pumpFailures.get())
+            assertTrue("the pump went on and published", OrderFlowLive.reads.value["BANKNIFTY"] != null)
+        } finally { OrderFlowLive.pumpFaultForTest = null }
+    }
+
     @Test fun theShadowLogsTheFlowBesideASignalWithoutSkippingIt() {
         OrderFlowLive.testRead = { u -> com.optionslab.app.testing.FlowFixtures.read(u, 30, 1_000) }
         FlowGate.testNowSec = 1_000

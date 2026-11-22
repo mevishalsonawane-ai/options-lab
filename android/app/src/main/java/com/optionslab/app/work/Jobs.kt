@@ -261,7 +261,7 @@ object Jobs {
     private fun onMainThread(): Boolean = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
 
     /** Where [ensureWatch] finishes a decision that needs a vault read when it was called on the main thread. */
-    private val offMain = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val offMain = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Jobs.offMain"))
 
     /**
      * Start the watch now if it should be running; it is a no-op when it already is. On the main thread (the app's start,
@@ -305,7 +305,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val pending = goAsync()
         val app = context.applicationContext ?: context
         var wake: android.os.PowerManager.WakeLock? = null
-        finishWithin(FINISH_MS, CoroutineScope(SupervisorJob() + Dispatchers.IO), finish = { runCatching { pending?.finish() } },
+        finishWithin(FINISH_MS, CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("alarm")), finish = { runCatching { pending?.finish() } },
             late = {
                 wake = runCatching {
                     app.getSystemService(android.os.PowerManager::class.java)?.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, WAKE_TAG)
@@ -328,7 +328,9 @@ class AlarmReceiver : BroadcastReceiver() {
          * 15 Nov: [work] on [scope], and [finish] (the broadcast's end) called exactly once - when [work] ends (or throws), or after
          * [boundMs] if it is still running then. In that case [late] runs first (the processor's hold), and [settle] (its release)
          * runs once the work ends. [work] is never cancelled by the bound. [late], [finish] and [settle] never throw out of here.
-         * The work's job.
+         * The work's job. 22 Nov 2026 (B6 review: a vault write that failed in the dead-man's check left this job by the scope, which had
+         * no handler, to the crash handler - in a release build the end of the whole process): nor does [work]: its failure is noted in
+         * the diary ([com.optionslab.app.data.ScopeGuard]) and the job ends normally; a cancellation still goes up.
          */
         internal fun finishWithin(boundMs: Long, scope: CoroutineScope, finish: () -> Unit, late: () -> Unit = {}, settle: () -> Unit = {},
                                   work: () -> Unit): Job {
@@ -344,7 +346,12 @@ class AlarmReceiver : BroadcastReceiver() {
                 if (go) runCatching { finish() }
             }
             return scope.launch {
-                try { work() } finally {
+                try { work() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
+                    // (22 Nov 2026, B6 second review: a fatal error - out of memory, a class that cannot load - still ends the process,
+                    // through the scope.)
+                    if (com.optionslab.app.data.ScopeGuard.fatal(e)) throw e
+                    runCatching { com.optionslab.app.data.ScopeGuard.caught("alarm", e) }
+                } finally {
                     timer.cancel()
                     val finishNow = synchronized(state) {
                         if (!finished) { finished = true; true } else { if (wentLate) runCatching { settle() }; false }
@@ -423,7 +430,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         if (intent.action == PositionCards.ACTION_CLOSE_PAPER) {
             val symbol = intent.getStringExtra(PositionCards.EXTRA_SYMBOL) ?: return
             val done = goAsync()
-            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("close from a notice")).launch {
                 try { closePaper(context, symbol) } finally { done.finish() }
             }
         }
@@ -900,7 +907,7 @@ object Tasks {
      * pass waited on them. They run here instead, one at a time, never awaited by the watch, and a relay that fails is
      * tried again after 2, 4, 8, then every 10 minutes (not every minute). An order still connects the relay itself.
      */
-    private val warmScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val warmScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Jobs.warmScope"))
     @Volatile private var warmJob: Job? = null
     @Volatile private var relayFails = 0
     @Volatile private var relayTriedAt = 0L
@@ -1252,8 +1259,12 @@ object Tasks {
             // 21 Oct, review: started in its own job ([com.optionslab.app.data.McxNr7Record.kick]); this group never waits for its reads.
             com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.kick() },
             com.optionslab.ira.Supervisor.Step("strategies") {
-                val bad = com.optionslab.app.security.Integrity.compromised(com.optionslab.app.security.Integrity.reportWithin(context, 60_000))
-                com.optionslab.app.data.Strategies.tickAll(bad)
+                // 22 Nov 2026 (B6 review): the device check from memory (kept fresh in the background), no scan of its own each pass;
+                // with none kept yet (the first pass after a start) it is scanned here once, as before. Asked for only for a live run.
+                val liveRun = com.optionslab.app.data.Strategies.runningHint &&
+                    try { com.optionslab.app.data.Strategies.anyLiveRunning() } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: Throwable) { true }
+                com.optionslab.app.data.Strategies.tickAll(com.optionslab.app.security.Integrity.entryRefusedPass(context, liveRun, s.live && s.allowRealOrders))
             },
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,
@@ -1628,7 +1639,7 @@ class WatchService : Service() {
         }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("watch service"))
     private val running = java.util.concurrent.ConcurrentHashMap<Jobs.Kind, Job>()
     /** 19 Nov 2026 (audit batch 2): the newest watch run's start note, run beside the watch ([noteStart]); its passes wait for it. */
     @Volatile private var startNote: Job? = null
@@ -1783,8 +1794,10 @@ class WatchService : Service() {
                 if (k == Jobs.Kind.HARVEST) {
                     // No notice, as before: the harvest line says so, and WorkManager retries it (it resumes
                     // where this stopped) until the session's retry budget is spent.
-                    SecurePrefs.put("harvest.last", "$session: did not complete (${Tasks.reason(e)})")
-                    if (Tasks.harvestFailed(session) < Tasks.HARVEST_TRIES) runCatching { Jobs.enqueueHarvest(this@WatchService, session, manual = false) }
+                    // 22 Nov 2026 (B6 review): a vault write that fails here (the disk, the Keystore) is not thrown out of this catch
+                    // either: it reached the crash handler, which ends the process.
+                    runCatching { SecurePrefs.put("harvest.last", "$session: did not complete (${Tasks.reason(e)})") }
+                    runCatching { if (Tasks.harvestFailed(session) < Tasks.HARVEST_TRIES) Jobs.enqueueHarvest(this@WatchService, session, manual = false) }
                 } else runCatching {
                     Notifier.post(this@WatchService, 2900 + k.ordinal, Notifier.SCHEDULE,
                         "${k.name.lowercase().replaceFirstChar { it.uppercase() }} did not complete",

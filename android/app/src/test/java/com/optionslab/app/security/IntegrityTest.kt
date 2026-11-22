@@ -24,6 +24,8 @@ class IntegrityTest : RobolectricTest() {
      * here would be reused by every later test that asks for a recent one.
      */
     @org.junit.Before @org.junit.After fun dropCachedReport() {
+        // 22 Nov 2026: and no background scan or refresher of a test left running.
+        Integrity.resetForTest()
         Integrity::class.java.getDeclaredField("cached").apply { isAccessible = true }.set(null, null)
         Integrity::class.java.getDeclaredField("cachedAt").apply { isAccessible = true }.setLong(null, 0L)
     }
@@ -108,5 +110,131 @@ class IntegrityTest : RobolectricTest() {
         assertSame("within a minute the report is reused", first, Integrity.reportWithin(context, 60_000))
         ShadowSystemClock.advanceBy(Duration.ofSeconds(31))
         assertTrue("older than a minute it is redone", Integrity.compromised(Integrity.reportWithin(context, 60_000)))
+    }
+
+    // ---- 22 Nov 2026 (B6 review: a full scan ran inside the 15-second stop check) ------------------------------------------
+
+    private fun awaitTrue(what: String, timeoutMs: Long = 10_000, ok: () -> Boolean) {
+        val end = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < end) { if (ok()) return; Thread.sleep(5) }
+        throw AssertionError("timed out waiting for $what")
+    }
+
+    /** The stop check's question: answered from memory at once, never a scan on its thread; with no verdict yet an entry is refused. */
+    @Test fun theStopChecksVerdictIsReadFromMemoryAndUnknownRefusesAnEntry() {
+        ShadowSystemClock.advanceBy(Duration.ofDays(365))
+        cleanDevice()
+        Integrity.testScanDelayMs = 1_500
+        Integrity.scanWatchedForTest = Thread.currentThread()
+        val t0 = System.nanoTime()
+        assertEquals("nothing kept yet: unknown", null, Integrity.cachedCompromised(context))
+        assertTrue("unknown refuses an entry", Integrity.entryRefused(context))
+        assertTrue("never waited on the scan", (System.nanoTime() - t0) / 1_000_000 < 1_000)
+        // The scan it started runs in the background and is kept.
+        awaitTrue("the background scan") { Integrity.cachedCompromised(context) != null }
+        assertEquals(false, Integrity.cachedCompromised(context))
+        assertFalse(Integrity.entryRefused(context))
+        assertEquals("no scan ran on the asking thread", 0L, Integrity.scansOnWatchedForTest.get())
+        // A compromised verdict refuses; one older than a minute is unknown again (refused) and its rescan starts.
+        Integrity.testScanDelayMs = 0
+        ShadowBuild.setTags("test-keys")
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(61))
+        assertEquals(null, Integrity.cachedCompromised(context))
+        awaitTrue("the rescan") { Integrity.cachedCompromised(context) == true }
+        assertTrue(Integrity.entryRefused(context))
+        assertEquals(0L, Integrity.scansOnWatchedForTest.get())
+    }
+
+    /**
+     * The full pass (never the stop check) with no verdict kept - the first pass after a start - scans once, as it always did, so a
+     * scheduled start is never refused for want of a verdict; with one kept it reads it and scans nothing.
+     */
+    @Test fun theFullPassScansOnceWhenNoVerdictIsKeptAndOtherwiseReadsIt() {
+        ShadowSystemClock.advanceBy(Duration.ofDays(365))
+        cleanDevice()
+        Integrity.testScanDelayMs = 300
+        val before = Integrity.scans.get()
+        assertFalse("a clean phone, scanned for the pass", Integrity.entryRefusedPass(context))
+        Thread.sleep(500)                                   // the background scan it also asked for finds this one fresh
+        assertEquals("one scan, not two", before + 1, Integrity.scans.get())
+        Integrity.testScanDelayMs = 0
+        assertFalse(Integrity.entryRefusedPass(context))
+        assertEquals("the kept verdict: no scan", before + 1, Integrity.scans.get())
+        ShadowBuild.setTags("test-keys")
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(61))
+        assertTrue("an old one: scanned again, compromised", Integrity.entryRefusedPass(context))
+    }
+
+    /**
+     * Second review: only a LIVE strategy run asks for the verdict (a scan started, the refresher kept on); with only paper runs the pass
+     * reads what is kept, and scans when none is kept only while a live entry can be made (Live with real orders on).
+     */
+    @Test fun onlyALiveRunAsksAndOnlyALiveAppScansForThePass() {
+        ShadowSystemClock.advanceBy(Duration.ofDays(365))
+        cleanDevice()
+        val before = Integrity.scans.get()
+        // Paper only: nothing kept - refused (no paper run reads it), nothing scanned, nothing asked.
+        assertTrue(Integrity.entryRefusedPass(context, liveRun = false, liveApp = false))
+        Thread.sleep(300)
+        assertEquals("no scan", before, Integrity.scans.get())
+        assertEquals("not asked", 0L, Integrity.askedAtForTest())
+        // Live with real orders on, no live run yet (a scheduled live start may come): scanned here, still not asked.
+        assertFalse(Integrity.entryRefusedPass(context, liveRun = false, liveApp = true))
+        assertEquals(before + 1, Integrity.scans.get())
+        assertEquals("not asked", 0L, Integrity.askedAtForTest())
+        // Kept now: read with no scan, still not asked.
+        assertFalse(Integrity.entryRefusedPass(context, liveRun = false, liveApp = false))
+        assertEquals(before + 1, Integrity.scans.get())
+        assertEquals(0L, Integrity.askedAtForTest())
+        // A live run open: asked (the refresher stays on for it).
+        assertFalse(Integrity.entryRefusedPass(context, liveRun = true, liveApp = true))
+        assertTrue(Integrity.askedAtForTest() > 0L)
+    }
+
+    /**
+     * Second review: the refresher scans only in Live with real orders on, in NSE's day or while MCX's watch is due (something held,
+     * working or armed there) - never merely because MCX is open, as it is every weekday evening.
+     */
+    @Test fun theRefresherIsWantedOnlyInLiveAndWhileAMarketNeedsTheWatch() {
+        val asked = java.util.concurrent.atomic.AtomicInteger()
+        assertFalse(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = false, nseDay = true) { asked.incrementAndGet(); true })
+        assertTrue(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = true, nseDay = true) { asked.incrementAndGet(); false })
+        assertEquals("MCX not asked when it cannot decide", 0, asked.get())
+        assertFalse(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = true, nseDay = false) { false })
+        assertTrue(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = true, nseDay = false) { true })
+        // A Thursday evening: MCX open, nothing held, working or armed there - not wanted.
+        val was = com.optionslab.app.data.Market.testClock
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
+            java.time.LocalDate.of(2026, 10, 8).atTime(20, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+        try {
+            assertTrue(com.optionslab.app.data.McxMarket.isOpen())
+            assertFalse(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = true, nseDay = false) { com.optionslab.app.data.McxMarket.watchDue() })
+        } finally { com.optionslab.app.data.Market.testClock = was }
+    }
+
+    /**
+     * The refresher keeps the verdict fresh off the asking threads, and an entry's own check ([Integrity.reportWithin]) reads it -
+     * never waiting behind a scan another thread is making (it was one lock for both).
+     */
+    @Test fun theRefresherKeepsItFreshAndAReaderNeverWaitsBehindAScan() {
+        ShadowSystemClock.advanceBy(Duration.ofDays(365))
+        cleanDevice()
+        val before = Integrity.scans.get()
+        Integrity.startRefresher(context)
+        awaitTrue("the refresher's first scan") { Integrity.cachedCompromised(context) != null }
+        assertTrue(Integrity.scans.get() > before)
+        val kept = Integrity.reportWithin(context, 60_000)
+        val n = Integrity.scans.get()
+        assertSame("served from the refresher's report", kept, Integrity.reportWithin(context, 60_000))
+        assertEquals("no scan of its own", n, Integrity.scans.get())
+        // A slow scan under way on another thread (holding the scans' lock): a reader of the fresh report is answered at once.
+        Integrity.testScanDelayMs = 3_000
+        val other = Thread { Integrity.refresh(context) }.apply { start() }
+        Thread.sleep(200)
+        val t0 = System.nanoTime()
+        assertSame(kept, Integrity.reportWithin(context, 60_000))
+        assertTrue("never waited behind the other scan", (System.nanoTime() - t0) / 1_000_000 < 1_000)
+        Integrity.testScanDelayMs = 0
+        other.join(10_000)
     }
 }

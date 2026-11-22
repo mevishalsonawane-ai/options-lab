@@ -52,7 +52,7 @@ object LiveRecorder {
     @Volatile private var exports: File? = null
     /** 26 Oct: bumped by [wipe]: a write begun before an erase deletes the day folder it recreated instead of keeping it. */
     @Volatile private var wipeGen = 0
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("LiveRecorder"))
     private val queue = LiveRecord.Queue<Pending>()
     private val wake = Channel<Unit>(Channel.CONFLATED)
     private val writeLock = Mutex()

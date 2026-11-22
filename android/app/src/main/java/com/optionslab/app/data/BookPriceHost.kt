@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 object BookPriceHost {
     private const val K_ON = "g.paperBookPrice.on"
     @Volatile private var paperOn = true
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("BookPriceHost"))
 
     /** Reads the switch in the background; logs it once in the Autopilot timeline while on. */
     fun init(@Suppress("UNUSED_PARAMETER") context: Context) {

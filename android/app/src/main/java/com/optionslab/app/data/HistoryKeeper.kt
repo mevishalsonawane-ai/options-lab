@@ -49,7 +49,7 @@ object HistoryKeeper {
     private val scope by lazy {
         CoroutineScope(SupervisorJob() + Executors.newSingleThreadExecutor { r ->
             Thread(r, "history-keeper").apply { priority = Thread.MIN_PRIORITY; isDaemon = true }
-        }.asCoroutineDispatcher())
+        }.asCoroutineDispatcher() + ScopeGuard.handler("HistoryKeeper"))
     }
 
     fun init(context: Context) { app = context.applicationContext }

@@ -38,7 +38,7 @@ object ProblemsHost {
     const val SWEEP_MS = 10 * 60_000L
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("ProblemsHost"))
     private val lock = Any()
     @Volatile private var loaded = false
     private val saving = AtomicBoolean(false)

@@ -4,6 +4,7 @@ import com.optionslab.app.testing.RobolectricTest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -84,6 +85,41 @@ class AlarmReceiverBoundTest : RobolectricTest() {
         withTimeout(5_000) { job.join() }
         assertTrue(settled.await(3, TimeUnit.SECONDS))
         assertEquals(1, late.get())
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review: a vault write that failed in the dead-man's check left the job by its scope - no handler - to the crash
+     * handler, which in a release build ends the process): a work that throws is noted and its job ends normally; nothing reaches the
+     * scope's handler (or, with none, the crash handler). A cancellation still goes up.
+     */
+    @Test fun aWorkThatThrowsIsNotedAndNeverLeavesItsJob() = runBlocking {
+        val escaped = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val plain = CoroutineScope(SupervisorJob() + Dispatchers.IO + kotlinx.coroutines.CoroutineExceptionHandler { _, e -> escaped += e })
+        val noted = com.optionslab.app.data.ScopeGuard.caughtCount
+        val finished = CountDownLatch(1)
+        val job = AlarmReceiver.finishWithin(5_000, plain, finish = { finished.countDown() }) { throw java.io.IOException("simulated disk fault") }
+        withTimeout(5_000) { job.join() }
+        assertTrue(finished.await(3, TimeUnit.SECONDS))
+        assertFalse("ended normally", job.isCancelled)
+        assertTrue("nothing escaped the job: $escaped", escaped.isEmpty())
+        assertEquals("noted once", noted + 1, com.optionslab.app.data.ScopeGuard.caughtCount)
+    }
+
+    /** Second review: a fatal error in the work (out of memory) is not swallowed: it still reaches the thread's handler, as before. */
+    @Test fun aFatalErrorInTheWorkStillReachesTheThreadsHandler() = runBlocking {
+        val passed = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val pool = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "alarm-test").apply { isDaemon = true; uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, e -> passed += e } }
+        }
+        val scope = CoroutineScope(SupervisorJob() + pool.asCoroutineDispatcher() + com.optionslab.app.data.ScopeGuard.handler("alarm"))
+        try {
+            val finished = CountDownLatch(1)
+            val oom = OutOfMemoryError("test")
+            val job = AlarmReceiver.finishWithin(5_000, scope, finish = { finished.countDown() }) { throw oom }
+            withTimeout(5_000) { job.join() }
+            assertTrue("the alarm is still let go", finished.await(3, TimeUnit.SECONDS))
+            assertEquals(listOf<Throwable>(oom), passed.toList())
+        } finally { pool.shutdownNow() }
     }
 
     /** These alarms are background broadcasts (no FLAG_RECEIVER_FOREGROUND): Android allows 60 s; the bound is well inside it. */

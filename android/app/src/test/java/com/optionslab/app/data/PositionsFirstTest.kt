@@ -234,12 +234,17 @@ class PositionsFirstTest : RobolectricTest() {
         assertTrue(runCatching { com.optionslab.app.ira.IraSolo.holdingOrThrow() }.isFailure)
         if (com.optionslab.app.BuildConfig.JARVIS) assertTrue("an unreadable book counts as open", runBlocking { PositionsFirst.restore() })
         // A trade without its closed flag cannot be told closed: open.
-        SecurePrefs.put(key, JSONArray().put(JSONObject().put("d", "2026-10-14")).toString())
+        SecurePrefs.put(key, JSONArray().put(JSONObject().put("d", "2026-10-14").put("c", true)).toString())
         assertTrue(runCatching { com.optionslab.app.ira.IraSolo.holdingOrThrow() }.isFailure)
-        // Open and closed trades read normally.
-        SecurePrefs.put(key, JSONArray().put(JSONObject().put("c", true)).toString())
+        // Open and closed trades read normally, by the closed flag ("x", as the book writes it). 22 Nov 2026 (B6 review): never by the
+        // trade's side ("c": true a call, false a put) - a closed put is not held, an open call is.
+        SecurePrefs.put(key, JSONArray().put(JSONObject().put("c", true).put("x", true)).toString())
         assertFalse(com.optionslab.app.ira.IraSolo.holdingOrThrow())
-        SecurePrefs.put(key, JSONArray().put(JSONObject().put("c", true)).put(JSONObject().put("c", false)).toString())
+        SecurePrefs.put(key, JSONArray().put(JSONObject().put("c", false).put("x", true)).toString())
+        assertFalse("a closed put is not held", com.optionslab.app.ira.IraSolo.holdingOrThrow())
+        SecurePrefs.put(key, JSONArray().put(JSONObject().put("c", true).put("x", false)).toString())
+        assertTrue("an open call is held", com.optionslab.app.ira.IraSolo.holdingOrThrow())
+        SecurePrefs.put(key, JSONArray().put(JSONObject().put("c", false).put("x", true)).put(JSONObject().put("c", true).put("x", false)).toString())
         assertTrue(com.optionslab.app.ira.IraSolo.holdingOrThrow())
         // Empty book: nothing open.
         SecurePrefs.put(key, null)

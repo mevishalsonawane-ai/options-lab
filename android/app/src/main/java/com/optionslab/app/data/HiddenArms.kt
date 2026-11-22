@@ -52,7 +52,7 @@ object HiddenArms {
 
     private lateinit var file: File
     private val lock = Mutex()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("HiddenArms"))
     private val poke = Channel<Unit>(Channel.CONFLATED)
 
     private val _state = MutableStateFlow(ArmsCleanup.State())
