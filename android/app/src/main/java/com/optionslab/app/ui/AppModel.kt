@@ -2088,8 +2088,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     /** "Stop commodities" on the MCX card: no new MCX entries today; [sell]: the MCX arms sell what they hold through their own exits. */
     fun stopCommodities(sell: Boolean) = strategyDo { com.optionslab.app.data.Strategies.stopCommodities(sell) }
 
-    /** The MCX card's "Start again": never lifts a loss-limit stop. */
-    fun startCommoditiesAgain() = strategyDo { com.optionslab.app.data.Strategies.startCommoditiesAgain() }
+    /** The MCX card's "Start again": never lifts a loss-limit stop. 22 Nov 2026 (B6 review): [pinConfirmed], the card took the PIN (in Live). */
+    fun startCommoditiesAgain(pinConfirmed: Boolean = false) = strategyDo { com.optionslab.app.data.Strategies.startCommoditiesAgain(pinConfirmed = pinConfirmed) }
 
     fun skipStrategy(id: Long) = strategyDo { com.optionslab.app.data.Strategies.skip(id); "Skipped for today." }
 
@@ -2564,24 +2564,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     fun paperClose(symbol: String, product: String, area: String = "Close position") = paperDo(mcx = com.optionslab.app.data.Paper.contractIfLoaded(symbol)?.isMcx == true) {
         // 19 Nov 2026 (audit batch 2: closing a paper row by hand sold its live copy at market): a live copy of this paper row stops
         // following it first and keeps its own stop and exits - nothing at Zerodha is sold - and the answer says so.
-        runCatching { com.optionslab.app.data.ArmLive.refresh() }
-        // (B2-B: the words name every live copy of the row - one with its own 15:15 square-off stays open, a carried or MCX one is sold.)
-        val open = runCatching { com.optionslab.app.data.ArmLive.liveCopiesOpen(symbol, product) }.getOrDefault(emptyList())
-        val copies = runCatching { com.optionslab.app.data.ArmLive.detachPaperSymbol(symbol, "paper row closed by hand", product) }.getOrDefault(emptyList())
-        val words = com.optionslab.app.data.ArmLive.liveCopyWords(open)
-        // (A close that did not go - it threw, or the paper row is still held - gives the live copies back to their paper trade.)
-        suspend fun giveBack() = copies.forEach { runCatching { com.optionslab.app.data.ArmLive.undetach(it.ref) } }
-        // Closing is an exit: nothing stops it, the kill switch included (it only refuses new entries).
-        val closed = try { com.optionslab.app.data.Paper.close(symbol, product) } catch (e: Exception) { giveBack(); throw e }
-        closed.let { r ->
-            if (!r.ok && runCatching { com.optionslab.app.data.Paper.state.positions.any { it.symbol == symbol && it.product == product && it.quantity != 0 } }.getOrDefault(true)) {
-                giveBack(); r
-            } else {
-                // (Closed: the live copies' mark written now, so a kill before the next look never sells them.)
-                if (copies.isNotEmpty()) runCatching { com.optionslab.app.data.ArmLive.applyDetached() }
-                if (words == null) r else r.copy(message = "${r.message} $words")
-            }
-        }.also { r ->
+        // 22 Nov 2026 (B6 review): one helper with the shade's close and Jarvis's ([com.optionslab.app.data.PaperHandClose]).
+        com.optionslab.app.data.PaperHandClose.close(symbol, product, "paper row closed by hand").also { r ->
             r.orderId?.let { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual(area)) }
             r.events.filterIsInstance<com.optionslab.engine.sandbox.SandboxEvent.Fill>().firstOrNull()?.let { fl ->
                 com.optionslab.app.ira.BossTradeLog.filled("paper:${fl.orderId}", symbol, fl.action.equals("BUY", true), live = false, entry = fl.price, closing = true) }

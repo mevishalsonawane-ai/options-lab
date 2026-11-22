@@ -446,6 +446,8 @@ class NotificationActionReceiver : BroadcastReceiver() {
             } else readState().positions.filter { it.symbol == symbol && it.quantity != 0 }
             if (open.isEmpty() && accepts) Alerts.post("No open paper position in $symbol.", Alerts.Kind.ERROR)
             for (p in open) {
+                // 22 Nov 2026 (B6 review): a plain paper close, never [com.optionslab.app.data.PaperHandClose]: the app is usually closed when
+                // the shade is used and its words would reach no screen, so an arm's live copy of the row is sold with it, as before.
                 val r = com.optionslab.app.data.Paper.close(p.symbol, p.product)
                 r.orderId?.let { runCatching { com.optionslab.app.data.Strategies.tagOwner("paper:$it", com.optionslab.app.data.Origins.manual("Notification close")) } }
                 Alerts.post(r.message, if (r.ok) Alerts.Kind.SUCCESS else Alerts.Kind.ERROR, if (r.ok) "Paper position closed" else "Could not close")
