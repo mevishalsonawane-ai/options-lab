@@ -90,8 +90,8 @@ internal object Autopilot {
     /**
      * 22 Nov 2026 (B6-E, round 3): whether the change timeline is read (always, without Jarvis: there is none). False after a read that
      * failed (a Keystore hiccup) until one succeeds: no pass runs, nothing is saved, the specialists' nightly tuning
-     * ([ManagerSpecialists.reviewIfDue]) and the learning freeze's refresh ([LearningFreeze.refresh]) wait - a freeze on stays on. Memory
-     * only; a worker asks [ensureLoaded] first.
+     * ([ManagerSpecialists.reviewIfDue]) and the learning freeze's refresh ([LearningFreeze.refresh]) wait, and the freeze holds as frozen
+     * ([LearningFreeze.holds], from [timelineUnread]) - one on stays on. Memory only; a worker asks [ensureLoaded] first.
      */
     val timelineRead: Boolean get() = !enabled() || loaded
 
