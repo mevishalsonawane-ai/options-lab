@@ -28,7 +28,8 @@ object Heartbeat {
     private const val STALLED = "hb.stalled.day"
 
     /** Jarvis's stalled-watch note runs here, apart from the alarm receiver, and is given up after [TELL_MS]. */
-    private val tellScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val tellScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+        com.optionslab.app.data.ScopeGuard.handler("dead-man check"))
     private const val TELL_MS = 20_000L
 
     /** The watch went silent at least once today (for the day report). */
@@ -166,7 +167,9 @@ object Heartbeat {
         // thread (a boot, an app update, a holiday added) from memory and MCX's plain hint only: never a vault decryption
         // there (ANR fix, 9 Oct); the alarm's own check, off the main thread, reads the books themselves.
         val main = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
-        val mcx = if (main) runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() == true }.getOrDefault(false)
+        // 22 Nov 2026 (B6 review): unknown from memory (a book or MCX's calendar not read yet) is due - the next check in minutes,
+        // which then decides off the main thread - never the next session's, with something perhaps held on MCX.
+        val mcx = if (main) runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() != false }.getOrDefault(true)
             else runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
         // 19 Nov 2026 (audit batch 2): every minute while a LIVE position is held (memory hints), as an alarm clock (Android's most
         // reliable alarm, never held back by Doze); else every 5 minutes, as before.
@@ -278,7 +281,9 @@ object Heartbeat {
         runCatching { Jobs.ensureWatch(context) }
         val day = Market.today().toString()
         if (SecurePrefs.getString(ALERTED) == day) return
-        SecurePrefs.putAll(mapOf(ALERTED to day, STALLED to day))
+        // 22 Nov 2026 (B6 review): a vault write that fails (the disk, the Keystore) never stops the notice below - nor, thrown out of
+        // the alarm's job, ended the process; the mark is still kept in memory, so the stall is told once.
+        runCatching { SecurePrefs.putAll(mapOf(ALERTED to day, STALLED to day)) }
         val lastAt = java.time.Instant.ofEpochMilli(last()).atZone(Market.now().zone)
         val since = if (lastAt.toLocalDate() == Market.today()) lastAt.toLocalTime().withSecond(0).withNano(0).toString() else null
         val step = busy

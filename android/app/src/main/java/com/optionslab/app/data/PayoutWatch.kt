@@ -49,7 +49,7 @@ object PayoutWatch {
      * erase never brings the old payouts back.
      */
     @Volatile private var wipeGen = 0
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("PayoutWatch"))
 
     /** [offer]: the payouts Bot settings offers to lower the peak by (on, and they alone explain the limit reached); null: none. */
     data class View(val on: Boolean = false, val line: String = "", val offer: Double? = null)

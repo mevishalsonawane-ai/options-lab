@@ -154,6 +154,8 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue(kite.placed.isEmpty())
         val log = runBlocking { Strategies.log() }.joinToString("\n") { it.message }
         assertTrue(log, log.contains("signs of compromise"))
+        // 22 Nov 2026 (B6 review): the same refusal when the check has not finished yet (unknown) - said honestly, not only "compromise".
+        assertTrue(log, log.contains("or its security check has not finished yet"))
     }
 
     @Test fun exitsStillGoInPaperModeAndOnACompromisedPhone() {
@@ -303,6 +305,30 @@ class StrategiesLiveTest : RobolectricTest() {
         kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
         runBlocking { Strategies.manageOnly(compromised = true) }
         assertEquals(1, sells().size)
+    }
+
+    /**
+     * 22 Nov 2026 (B6 review): the 15-second stop check's strategies step ([com.optionslab.app.work.StopLane.strategiesLook]) with the
+     * device check's verdict unknown - none kept, its scan slow (a restart's first seconds): a leg through its stop is still sold; only
+     * entries wait for the verdict.
+     */
+    @Test fun theStopChecksStrategiesStepSellsALegWhileTheDeviceVerdictIsUnknown() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        val integrity = com.optionslab.app.security.Integrity
+        integrity.resetForTest()
+        integrity.testScanDelayMs = 10_000
+        try {
+            assertNull("no verdict yet", integrity.cachedCompromised(context))
+            kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+            val t0 = System.nanoTime()
+            runBlocking { com.optionslab.app.work.StopLane.strategiesLook(context) }
+            assertTrue("never waited on the 10 s scan", (System.nanoTime() - t0) / 1_000_000 < 8_000)
+            assertEquals("the leg's exit went", 1, sells().size)
+            assertNull("still unknown", integrity.cachedCompromised(context, ask = false))
+        } finally { integrity.resetForTest() }
     }
 
     @Test fun theStopChecksOwnPassReadsNothingWithNoRunOpen() {

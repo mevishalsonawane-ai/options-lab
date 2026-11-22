@@ -1306,7 +1306,7 @@ object PassedArmsHost {
      */
     internal fun readsHistory(series: List<PassedArms.Bar5>, today: LocalDate, b: Int): Boolean =
         series.count { it.date == today && it.b < b } < DonchianArm.LOOKBACK
-    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("PassedArmsHost.background"))
 
     /** 4 Nov: the day each index's history read last finished (found or not): until then a rule needing it waits. Memory only. */
     private val histRead = java.util.concurrent.ConcurrentHashMap<String, LocalDate>()

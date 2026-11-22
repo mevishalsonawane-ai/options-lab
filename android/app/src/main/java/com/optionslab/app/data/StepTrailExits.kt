@@ -59,7 +59,7 @@ object StepTrailExits {
     @Volatile private var loaded = false
     /** Boss changed the switch in this process (the start's late read never overrides it). */
     @Volatile private var switched = false
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("StepTrailExits"))
 
     /** [loaded]: the switch was read (until then the card says so). */
     data class View(val on: Boolean = true, val loaded: Boolean = false,

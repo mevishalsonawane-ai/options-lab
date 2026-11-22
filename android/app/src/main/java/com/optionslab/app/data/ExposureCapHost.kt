@@ -40,7 +40,7 @@ object ExposureCapHost {
     private val ledger = SameDirectionCap.LiveLedger()
     @Volatile private var ledgerDay: java.time.LocalDate? = null
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("ExposureCapHost"))
 
     data class View(val paperOn: Boolean = true, val max: Int = SameDirectionCap.DEFAULT_MAX, val liveOn: Boolean = false,
                     val line: String = "", val openNow: List<String> = emptyList())

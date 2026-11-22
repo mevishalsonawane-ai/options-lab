@@ -49,6 +49,7 @@ object HeldNow {
      * loop on its 15-second path all day for nothing on a paper-only day.
      */
     fun any(mcxLive: Boolean = false): Boolean = runCatching {
-        com.optionslab.ira.Held.any(sources().let { if (mcxLive) it else it.copy(mcxLive = false) })
+        // 22 Nov 2026 (B6 review): MCX's part is not even read when it is left out (its calendar, its book's hint).
+        com.optionslab.ira.Held.any(sources(mcx = mcxLive))
     }.getOrDefault(true)
 }

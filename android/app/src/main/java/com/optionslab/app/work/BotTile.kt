@@ -32,7 +32,7 @@ import kotlinx.coroutines.withContext
  * Nothing new is decided here: the tile calls the app's own stop / start.
  */
 class BotTile : TileService() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("BotTile"))
 
     private var live: kotlinx.coroutines.Job? = null
     /** TEST ONLY: the panel's refresh loop while it is open (a test waits for it to end). */

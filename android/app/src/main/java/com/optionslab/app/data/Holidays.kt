@@ -71,20 +71,35 @@ object Holidays {
 
     @Volatile private var cache: Book? = null
 
-    @Synchronized
+    /**
+     * 22 Nov 2026 (B6 review: [save]'s write - a file sync and a directory sync - ran under the same lock as [book], so every
+     * [Market.isTradingDay] caller, the watch's and the stop checks' among them, waited behind the disk): the book is read with no lock
+     * once in memory; [loadLock] guards only its first read from the file, and [writeLock] the changes, which write the file outside
+     * both and then swap the book in memory. A reader sees the book before a change or after it, never waits for one.
+     */
+    private val loadLock = Any()
+    private val writeLock = Any()
+
     fun book(): Book {
         cache?.let { return it }
-        val b = runCatching {
-            val o = JSONObject(file.readText())
-            fun set(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { LocalDate.parse(a.getString(it)) }.toSet() } ?: emptySet()
-            val nse = o.optJSONObject("nse")?.let { m -> m.keys().asSequence().associate { LocalDate.parse(it) to m.getString(it) } } ?: emptyMap()
-            Book(o.optString("fetched").takeIf { it.isNotBlank() }?.let(LocalDate::parse), nse, set("added"), set("removed"), set("extra"))
-        }.getOrElse { Book(null, emptyMap(), emptySet(), emptySet()) }
-        cache = b
-        return b
+        return synchronized(loadLock) {
+            cache ?: runCatching {
+                val o = JSONObject(file.readText())
+                fun set(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { LocalDate.parse(a.getString(it)) }.toSet() } ?: emptySet()
+                val nse = o.optJSONObject("nse")?.let { m -> m.keys().asSequence().associate { LocalDate.parse(it) to m.getString(it) } } ?: emptyMap()
+                Book(o.optString("fetched").takeIf { it.isNotBlank() }?.let(LocalDate::parse), nse, set("added"), set("removed"), set("extra"))
+            }.getOrElse { Book(null, emptyMap(), emptySet(), emptySet()) }.also { cache = it }
+        }
     }
 
-    @Synchronized
+    /** TEST ONLY: run while a change's write is under way (after the file is synced, before the book in memory is swapped). */
+    @Volatile internal var duringWriteForTest: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test hook exists only in debug builds" }; field = v }
+
+    /** [change] applied to the book and written, then kept in memory: one change at a time ([writeLock]); readers never wait for it. */
+    private fun update(change: (Book) -> Book) = synchronized(writeLock) { save(change(book())) }
+
+    /** Under [writeLock] only: [b] written (synced), then swapped in for the readers. A failed write keeps the old book and throws. */
     private fun save(b: Book) {
         val o = JSONObject()
         b.fetched?.let { o.put("fetched", it.toString()) }
@@ -96,6 +111,7 @@ object Holidays {
         java.io.FileOutputStream(tmp).use { it.write(o.toString().toByteArray(Charsets.UTF_8)); it.fd.sync() }
         if (!tmp.renameTo(file)) { file.delete(); tmp.renameTo(file) }
         com.optionslab.app.security.Vault.syncDir(file.parentFile)
+        duringWriteForTest?.invoke()
         cache = b
     }
 
@@ -104,18 +120,14 @@ object Holidays {
 
     fun isHoliday(d: LocalDate): Boolean = book().holiday(d)
 
-    @Synchronized
-    fun add(d: LocalDate) = book().let { save(it.copy(added = it.added + d, removed = it.removed - d)) }
-    @Synchronized
-    fun remove(d: LocalDate) = book().let { save(it.copy(added = it.added - d, removed = it.removed + d)) }
+    fun add(d: LocalDate) = update { it.copy(added = it.added + d, removed = it.removed - d) }
+    fun remove(d: LocalDate) = update { it.copy(added = it.added - d, removed = it.removed + d) }
 
     /** A special session on a day that is otherwise shut (a weekend): the market trades it. */
     fun isExtraSession(d: LocalDate): Boolean = d in book().extra
 
-    @Synchronized
-    fun addSession(d: LocalDate) = book().let { save(it.copy(extra = it.extra + d)) }
-    @Synchronized
-    fun removeSession(d: LocalDate) = book().let { save(it.copy(extra = it.extra - d)) }
+    fun addSession(d: LocalDate) = update { it.copy(extra = it.extra + d) }
+    fun removeSession(d: LocalDate) = update { it.copy(extra = it.extra - d) }
 
     /** Whether the cached list is older than a week, or does not cover this year. */
     fun stale(today: LocalDate): Boolean {
@@ -133,8 +145,9 @@ object Holidays {
      */
     fun refresh(): Int {
         val read = testList?.invoke() ?: fetch()
-        // Read and written under the one lock (18 Oct): a date added by hand while the fetch ran is kept.
-        synchronized(this) {
+        // Read and written under the one lock (18 Oct): a date added by hand while the fetch ran is kept. 22 Nov 2026: the changes'
+        // lock, never the readers' ([writeLock]).
+        synchronized(writeLock) {
             // 19 Nov 2026 (audit batch 2, item 5): a refreshed list may not close today once it has started trading (the watch,
             // its stops and the arms' exits run on today being a trading day); today's entry waits until tomorrow.
             val today = Market.today()
@@ -162,7 +175,7 @@ object Holidays {
      */
     const val REFRESH_TIMEOUT_MS = 60_000L
 
-    private val bg = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val bg = CoroutineScope(SupervisorJob() + Dispatchers.IO + ScopeGuard.handler("Holidays.bg"))
     /** Guards [pending] and [work]. */
     private val refreshLock = Any()
     /** The refresh's wait (it ends at the limit) and its work (the reads, which may outlive the wait while a stuck read unwinds). */
