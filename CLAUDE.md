@@ -186,7 +186,8 @@ notes; match the surrounding code.
 - No bypass of: PIN, lock, Live, AI-live, guard, kill switch, day lock, Google speech.
 - LIVE GATES ADDED BY THE 19-20 NOV AUDIT (batch 2). Each one only refuses an entry or a loosening, never an exit:
   - Lifting Stop for today in Live takes the PIN, on the index side and the commodity (MCX) side alike. The quick tile and voice cannot
-    lift it; the tile tells Boss to open the app.
+    lift it; the tile tells Boss to open the app. The change timeline's Undo that starts either side again asks the PIN whenever one is
+    set (in Paper too); with no PIN set it has no PIN step.
   - A saved strategy's automatic live entries (scheduler runs) need Live and "AI trades go live". A run Boss started himself does not.
   - Switching off a live risk rule (account stop, exposure cap, Boss's risk rules) takes the PIN, even before the saved switch is
     read; so does raising the same-direction cap while its live switch is on, or the portfolio cap while it is on. Raising Liquidity's
@@ -197,8 +198,8 @@ notes; match the surrounding code.
     (anyone who learns a public topic can post). The phones where it was on by the old default were switched off once, logged in the
     change timeline. Boss confirmed it on 20 Nov ("Keep ntfy off").
 - PAPER ENDS AND LIVE COPIES (20 Nov audit). Every automatic paper end (square-off, loss limit, sweeper, expiry exit, an unreadable book)
-  sells the live copy, as before. Only Boss's own paper reset or hand close (in Trade, the shade's Close position, or Jarvis closing one
-  named paper position on his word) leaves a live copy running, and only an NSE intraday (MIS)
+  sells the live copy, as before. Only Boss's own paper reset or hand close (in Trade, or Jarvis closing one paper position Boss names, by
+  name, number or nickname) leaves a live copy running, and only an NSE intraday (MIS)
   copy, which keeps its own Zerodha stop, its rule exits and the 15:15 square-off; Night (NRML) and MCX copies are sold with the paper.
   A paper-only refusal (another arm holds the option on paper, the paper guard, no paper price) still skips live: it is logged "would
   have gone live", and its Bot settings switch (off by default, on takes the PIN) would send the live copy.

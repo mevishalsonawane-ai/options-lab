@@ -182,6 +182,11 @@ object AutoChange {
          * way back is the limit itself). Never proposed or applied by Autopilot.
          */
         LOSS_LIFT("risk guards", "a loss-limit stop lifted on your choice"),
+        /**
+         * 22 Nov 2026 (B6 review): a note about Boss's limits, logged once by an update ([deadOrderLimits]): recorded SKIPPED, as a held
+         * idea is - nothing was changed, so there is nothing to undo. Never proposed or applied by Autopilot.
+         */
+        SETTING_NOTE("settings", "a note on your limits"),
         SAFETY_SETTING("settings", "a safety setting", never = true),
         SIZE("sizing", "size or lots", never = true),
         STOP_WIDER("stops", "a wider stop", never = true),
@@ -368,8 +373,8 @@ object AutoChange {
             Kind.LIQ_BREAKEVEN -> if (c.to == ON) Risk.LOWER else Risk.RAISE
             // 28 Oct: the win-rate rule only ever holds automatic ideas back: on lowers risk, off takes the hold away.
             Kind.IDEA_RULE -> if (c.to == ON) Risk.LOWER else Risk.RAISE
-            // A held idea is a note: nothing was made.
-            Kind.IDEA_HELD -> Risk.LOWER
+            // A held idea is a note: nothing was made. 22 Nov 2026: a note on Boss's limits likewise: nothing was changed.
+            Kind.IDEA_HELD, Kind.SETTING_NOTE -> Risk.LOWER
             // 30 Oct: a side stopped lowers risk; started again it may trade again (adds risk).
             Kind.DAY_STOP -> if (c.to == STOPPED) Risk.LOWER else Risk.RAISE
             // 19 Nov 2026: lifted it may trade again today (adds risk); put back lowers risk.
@@ -528,8 +533,8 @@ object AutoChange {
     /**
      * 30 Oct (Boss: "Make stop bot different for index and comodities"): [side] stopped for today ([stopped]) or started again, by
      * Boss ([by]: "by you", "from the quick-settings tile", "by Jarvis on your word"), at [at] ("10:42"). The index side governs live
-     * entries too (LIVE scope: an Undo that lifts its stop asks the PIN where one is set). 22 Nov 2026 (B6 review): so does the commodity
-     * side - the MCX arms are copied live (NRML orders) - so its Undo that lifts the stop asks the PIN the same way (it was PAPER).
+     * entries too (LIVE scope). 22 Nov 2026 (B6 review): so does the commodity side - the MCX arms are copied live (NRML orders) - LIVE
+     * too (it was PAPER). An Undo that starts either side again asks the PIN whenever one is set (decided by the app, not [undoNeedsPin]).
      */
     fun dayStop(side: DayStop.Side, stopped: Boolean, by: String, at: String? = null): Change = Change(Kind.DAY_STOP, DAY_STOP + side.wire,
         if (stopped) RUNNING else STOPPED, if (stopped) STOPPED else RUNNING,
@@ -538,6 +543,32 @@ object AutoChange {
         else "${side.title} started again $by${at?.let { " at $it" } ?: ""} (a loss-limit stop is never lifted)",
         Evidence(0, 0.0, AgentLessons.Confidence.STRONG), if (stopped) Risk.LOWER else Risk.RAISE,
         Scope.LIVE, what = "${side.title}' day stop")
+
+    /** 22 Nov 2026 (B6 review): the target of the note on the two order limits nothing enforced ([deadOrderLimits]). */
+    const val DEAD_LIMITS_TARGET = "note:dead_order_limits"
+    /** Its "to". */
+    const val NEVER_ENFORCED = "never enforced"
+
+    /**
+     * 22 Nov 2026 (B6 review): "max lots per order" ([lotsPerOrder], its default [lotsDefault]) and "max manual orders per day"
+     * ([ordersPerDay], [ordersDefault]) could be set by voice but no order check ever read them, and they are gone. When either was set on
+     * this phone - away from its default, or changed in the settings log ([logged]: the log's key names) - Boss is told once, in the
+     * timeline, that it was never enforced and which limits are: the account guard's lots per instrument ([guardLots], each order too)
+     * and orders a day ([guardOrders]); 0 is off. Nothing is tightened by it. Null: neither was set. Pure.
+     */
+    fun deadOrderLimits(lotsPerOrder: Int, lotsDefault: Int, ordersPerDay: Int, ordersDefault: Int, logged: Set<String>,
+                        guardLots: Int, guardOrders: Int): Change? {
+        val lots = lotsPerOrder.takeIf { it != lotsDefault || "LOTS_PER_ORDER" in logged }
+        val orders = ordersPerDay.takeIf { it != ordersDefault || "ORDERS_PER_DAY" in logged }
+        if (lots == null && orders == null) return null
+        fun n(v: Int) = if (v > 0) v.toString() else "off"
+        val old = listOfNotNull(lots?.let { "max lots per order ${n(it)}" }, orders?.let { "max manual orders per day ${n(it)}" })
+        return Change(Kind.SETTING_NOTE, DEAD_LIMITS_TARGET, old.joinToString("; "), NEVER_ENFORCED,
+            "${old.joinToString(" and ").replaceFirstChar { it.uppercase() }}, set earlier, ${if (old.size == 1) "was" else "were"} never checked " +
+                "by any order. The limits in force are the account guard's: max lots per instrument ${n(guardLots)} (each order too) and max " +
+                "orders per day ${n(guardOrders)}. Nothing was changed: set those on the Account guard page if you want them tighter",
+            Evidence(0, 0.0, AgentLessons.Confidence.STRONG), Risk.LOWER, Scope.LIVE, what = "Order limits set by voice")
+    }
 
     /** 19 Nov 2026: the target of a [Kind.LOSS_LIFT] (the index side's loss-limit stop of today). */
     const val LOSS_LIFT_TARGET = "lossstop:index"
@@ -1235,8 +1266,12 @@ object AutoChange {
         return back.copy(risk = riskOf(back))
     }
 
-    /** Does undoing [c] raise live risk (and so need Boss's PIN)? */
-    fun undoNeedsPin(c: Change): Boolean = c.scope == Scope.LIVE && riskOf(inverse(c, "")) == Risk.RAISE
+    /**
+     * Does undoing [c] raise live risk (and so need Boss's PIN)? 22 Nov 2026 (B6 review): a side's day stop ([Kind.DAY_STOP]) is decided by
+     * the app as Boss's own start does it - with a PIN set an Undo that starts a side asks it, with none set there is no PIN step (one could
+     * never be passed): never here.
+     */
+    fun undoNeedsPin(c: Change): Boolean = c.kind != Kind.DAY_STOP && c.scope == Scope.LIVE && riskOf(inverse(c, "")) == Risk.RAISE
 
     // ---- evidence from records -------------------------------------------------------------------------------------------------
 

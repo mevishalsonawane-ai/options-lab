@@ -69,11 +69,12 @@ object ChangeTimeline {
      */
     fun fromAutopilot(book: AutoChange.Book, day: LocalDate, undoNeedsPin: (AutoChange.Entry) -> Boolean = { false }): List<Item> = book.entries
         .filter { it.day == day && it.status != AutoChange.Status.DECLINED &&
-            (it.status != AutoChange.Status.SKIPPED || it.change.kind == AutoChange.Kind.IDEA_HELD) }
+            (it.status != AutoChange.Status.SKIPPED || it.change.kind == AutoChange.Kind.IDEA_HELD || it.change.kind == AutoChange.Kind.SETTING_NOTE) }
         .map { e ->
             val c = e.change
             val tuning = e.by.startsWith("specialists")
-            val state = if (c.kind == AutoChange.Kind.IDEA_HELD) UndoState.HELD else when (e.status) {
+            // 22 Nov 2026 (B6 review): a note on Boss's limits changed nothing: no undo.
+            val state = if (c.kind == AutoChange.Kind.IDEA_HELD) UndoState.HELD else if (c.kind == AutoChange.Kind.SETTING_NOTE) UndoState.NO_UNDO else when (e.status) {
                 AutoChange.Status.UNDONE -> UndoState.UNDONE
                 AutoChange.Status.REVERTED -> UndoState.REVERTED
                 AutoChange.Status.OFFERED -> UndoState.ASKED

@@ -181,6 +181,11 @@ class SettingsTalkTest {
         assertEquals("MAX_LOTS" to 2.0, set("change lots per order to 2"))
         assertEquals("MAX_TRADES" to 5.0, set("set max manual orders per day to 5"))
         assertEquals("MAX_TRADES" to 8.0, set("set manual orders a day to 8"))
+        // "Manual orders" names the limit only beside "max", "limit", "per day" or "a day": never "disable my manual orders".
+        for (t in listOf("disable my manual orders", "remove manual orders", "turn off manual orders", "block manual orders"))
+            assertTrue(c(t)?.let { it.kind == Command.Kind.SET_LIMIT && it.target == "MAX_TRADES" } != true, t)
+        assertEquals("MAX_TRADES" to 0.0, set("turn off the manual orders limit"))
+        assertEquals("MAX_TRADES" to 0.0, set("disable max manual orders per day"))
         // The older keys are gone: nothing can set what nothing reads.
         assertTrue(SettingsTalk.Key.entries.none { it.name == "LOTS_PER_ORDER" || it.name == "ORDERS_PER_DAY" })
         assertEquals("change max lots per instrument from 2 to 3", SettingsTalk.describe(SettingsTalk.Key.MAX_LOTS, 2.0, 3.0))

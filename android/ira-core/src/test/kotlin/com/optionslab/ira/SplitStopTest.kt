@@ -163,12 +163,13 @@ class SplitStopTest {
         val (b1, e1) = AutoChange.record(AutoChange.Book(), stop, AutoChange.Status.KEPT, 1L, day, by = "your choice")
         val u = AutoChange.undo(b1, e1.id)!!
         assertEquals(AutoChange.RUNNING, u.inverse.to)
-        assertTrue(u.needsPin, "the MCX arms trade live: an Undo that lifts the commodity side's stop asks the PIN, as the index side's does")
+        // 22 Nov 2026 (B6 review): the PIN for a day stop's Undo is the app's to decide (asked whenever a PIN is set; none set, no step):
+        // never by the change's scope alone, on either side.
+        assertFalse(u.needsPin, "decided by the app (Autopilot.needsPin), not by the scope")
         assertFalse(AutoChange.undoNeedsPin(AutoChange.dayStop(DayStop.Side.MCX, stopped = false, by = "by you")), "stopping it again never asks")
-        // The index side governs live entries: an Undo that lifts its stop asks the PIN; one that stops it again never does.
         val idx = AutoChange.dayStop(DayStop.Side.INDEX, stopped = true, by = "by you")
         assertEquals(AutoChange.Scope.LIVE, idx.scope)
-        assertTrue(AutoChange.undoNeedsPin(idx))
+        assertFalse(AutoChange.undoNeedsPin(idx))
         assertFalse(AutoChange.undoNeedsPin(AutoChange.dayStop(DayStop.Side.INDEX, stopped = false, by = "by you")))
         assertEquals(AutoChange.Risk.RAISE, AutoChange.riskOf(AutoChange.dayStop(DayStop.Side.MCX, stopped = false, by = "by you")))
         // Stopped again since: only the newest entry undoes.

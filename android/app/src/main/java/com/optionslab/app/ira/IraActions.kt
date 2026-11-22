@@ -224,17 +224,15 @@ internal object IraActions {
     internal fun isStopType(type: String?): Boolean = type?.trim()?.uppercase(java.util.Locale.ENGLISH)?.let { it == "SL" || it == "SL-M" } == true
 
     /**
-     * Open positions: the paper account's, then Zerodha's (closing a Zerodha one needs the app open). 22 Nov 2026 (B6 review): [byHand] -
-     * Boss named one paper position for Jarvis to close: closed as his own hand close ([com.optionslab.app.data.PaperHandClose]: an NSE
-     * intraday live copy keeps running with its own stop, a carried or MCX one is sold with it); "close all" and the emergency exit close
-     * the paper as before (every live copy sold with its paper trade, and Zerodha's positions closed too).
+     * Open positions: the paper account's, then Zerodha's (closing a Zerodha one needs the app open). A paper one's [Target.run] closes it as
+     * "close all" and the emergency exit do (every live copy sold with its paper trade, and Zerodha's positions closed too); one Boss names
+     * for Jarvis to close is his own hand close instead ([closePaperByHand], 22 Nov 2026, B6 review).
      */
-    private suspend fun openPositions(byHand: Boolean = false): List<Target> {
+    private suspend fun openPositions(): List<Target> {
         val out = ArrayList<Target>()
         runCatching { com.optionslab.app.data.Paper.snapshot() }.getOrNull()?.positions?.positions?.filter { it.quantity != 0 }?.forEach { p ->
             out += Target("paper ${p.symbol} (${p.quantity})", paperRow = p.symbol to p.product) {
-                (if (byHand) com.optionslab.app.data.PaperHandClose.close(p.symbol, p.product, "paper row closed by Jarvis on your word")
-                    else com.optionslab.app.data.Paper.close(p.symbol, p.product)).also { r ->
+                com.optionslab.app.data.Paper.close(p.symbol, p.product).also { r ->
                     r.orderId?.let { id -> com.optionslab.app.data.Strategies.tagOwner("paper:$id", com.optionslab.app.data.Origins.manual("Jarvis")) }
                 }.message
             }
@@ -244,6 +242,16 @@ internal object IraActions {
         }
         return out
     }
+
+    /**
+     * 22 Nov 2026 (B6 review): one paper position Boss named (by name, number or nickname), closed as his own hand close
+     * ([com.optionslab.app.data.PaperHandClose]: an NSE intraday live copy keeps running with its own stop, a carried or MCX one is sold
+     * with it) - only while its live copies are still those he was told of when he asked ([asked]); else nothing is closed and he is told.
+     */
+    private suspend fun closePaperByHand(symbol: String, product: String, asked: Set<String>): String =
+        com.optionslab.app.data.PaperHandClose.close(symbol, product, "paper row closed by Jarvis on your word", asked).also { r ->
+            r.orderId?.let { id -> com.optionslab.app.data.Strategies.tagOwner("paper:$id", com.optionslab.app.data.Origins.manual("Jarvis")) }
+        }.message
 
     /** Closes Jarvis's own Zerodha position in [symbol] through the app's square-off (the app must be open). */
     suspend fun closeLiveSymbol(symbol: String): String {
@@ -439,7 +447,7 @@ internal object IraActions {
                 }
             }
             Command.Kind.CLOSE_ONE -> {
-                val p = openPositions(byHand = true)
+                val p = openPositions()
                 if (p.isEmpty()) return "There are no open positions to close." to null
                 // "Close 1 lot of ...": only a whole position is closed here, never more than Boss asked for.
                 if (c.lots != null) return "I can only close a whole position, Boss, not ${c.lots} lot${if (c.lots == 1) "" else "s"} of it. Say \"close\" and its name to close all of it, or trim it on the Positions screen." to null
@@ -451,9 +459,16 @@ internal object IraActions {
                     return ("Which position? " + p.mapIndexed { n, x -> "${n + 1}. ${x.name}" }.joinToString("; ") + ".") to null
                 }
                 if (nickOn && posNick == null) runCatching { IraTools.nickPicked(c.kind, i, posNames) }
-                // 22 Nov 2026 (B6 review): what closing this paper row does to its live copies at Zerodha, said before Boss confirms.
-                val liveWords = p[i].paperRow?.let { (sym, prod) -> runCatching { com.optionslab.app.data.PaperHandClose.words(sym, prod) }.getOrNull() }
-                Commands.describe(c, p[i].name) + (posNick?.let { " (${it.second})" } ?: "") + (liveWords?.let { ". $it" } ?: "") to p[i].run
+                // 22 Nov 2026 (B6 review): what closing this paper row does to its live copies at Zerodha, said before Boss confirms; at
+                // Confirm the copies are read again, and if they changed since (one closed, the arm entered again) nothing is closed.
+                // (One read for both the words and the copies they name; the arms' book unread: nothing offered.)
+                val row = p[i].paperRow ?: return Commands.describe(c, p[i].name) + (posNick?.let { " (${it.second})" } ?: "") to p[i].run
+                val copies = com.optionslab.app.data.PaperHandClose.copiesNow(row.first, row.second)
+                    ?: return com.optionslab.app.data.PaperHandClose.UNREAD to null
+                val asked = copies.map { it.ref }.toSet()
+                val liveWords = com.optionslab.app.data.ArmLive.liveCopyWords(copies)
+                Commands.describe(c, p[i].name) + (posNick?.let { " (${it.second})" } ?: "") + (liveWords?.let { ". $it" } ?: "") to
+                    suspend { closePaperByHand(row.first, row.second, asked) }
             }
             // 18 Oct, review: clearing the kill switch asks for the PIN as the Account guard page does ([GuardPin]); Jarvis
             // cannot take a PIN, so he sends Boss to the switch. Turning it on never asks.

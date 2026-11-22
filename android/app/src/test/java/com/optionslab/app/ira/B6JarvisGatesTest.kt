@@ -198,7 +198,78 @@ class B6JarvisGatesTest : RobolectricTest() {
         assertEquals(AutoChange.Scope.LIVE, AutoChange.dayStop(DayStop.Side.MCX, stopped = true, by = "by you").scope)
     }
 
+    /** 22 Nov 2026 (B6 review): with no PIN set, a day stop's timeline Undo has no PIN step (none could be passed); with one, it asks. */
+    @Test fun aDayStopsUndoAsksThePinOnlyWhenOneIsSet() {
+        val day = com.optionslab.app.data.Market.today()
+        runBlocking { Strategies.stopCommodities(sell = false) }
+        assertTrue(mcxStopped())
+        val (book, e) = AutoChange.record(AutoChange.Book(), AutoChange.dayStop(DayStop.Side.MCX, stopped = true, by = "by you"),
+            AutoChange.Status.KEPT, 1L, day, by = "your choice")
+        Autopilot.setForTest(book)
+        AutomationSupport.liveSettings()
+        assertFalse("no PIN set: no PIN step, in Live too", Autopilot.undoNeedsPin(e.id))
+        assertTrue(Autopilot.undo(e.id).startsWith("Undone"))
+        assertFalse(mcxStopped())
+        // With a PIN set: asked, on Paper too (as the index side's Undo always was).
+        runBlocking { Strategies.stopCommodities(sell = false) }
+        val (book2, e2) = AutoChange.record(AutoChange.Book(), AutoChange.dayStop(DayStop.Side.INDEX, stopped = true, by = "by you"),
+            AutoChange.Status.KEPT, 2L, day, by = "your choice")
+        val (book3, e3) = AutoChange.record(book2, AutoChange.dayStop(DayStop.Side.MCX, stopped = true, by = "by you"), AutoChange.Status.KEPT, 3L, day, by = "your choice")
+        Autopilot.setForTest(book3)
+        PinLock.setPin(pin.toCharArray())
+        AutomationSupport.liveSettings(live = false)
+        assertTrue(Autopilot.undoNeedsPin(e2.id))
+        assertTrue(Autopilot.undoNeedsPin(e3.id))
+        assertEquals(Autopilot.PIN_UNDO, Autopilot.undo(e3.id))
+        assertTrue("still stopped", mcxStopped())
+        // Stopping a side again (the Undo of a start) never asks.
+        val (book4, e4) = AutoChange.record(AutoChange.Book(), AutoChange.dayStop(DayStop.Side.MCX, stopped = false, by = "by you"),
+            AutoChange.Status.KEPT, 4L, day, by = "your choice")
+        Autopilot.setForTest(book4)
+        assertFalse(Autopilot.undoNeedsPin(e4.id))
+    }
+
     // ---- 4. the order limits said and set by voice ---------------------------------------------------------------------------------
+
+    /**
+     * The settings log's raw key names, those of the two limits gone since included (its decoded list leaves them out), and a later save
+     * keeps those rows (what they say is never lost).
+     */
+    @Test fun theSettingsLogStillNamesTheLimitsGoneSinceAcrossASave() {
+        com.optionslab.app.security.SecurePrefs.putAll(mapOf("settings.history" to org.json.JSONArray()
+            .put(org.json.JSONObject().put("t", "2026-10-05T10:00").put("k", "LOTS_PER_ORDER").put("o", 2.0).put("n", 1.0).put("b", "Jarvis"))
+            .put(org.json.JSONObject().put("t", "2026-10-05T10:00").put("k", "MAX_LOTS").put("o", 2.0).put("n", 1.0).put("b", "Jarvis")).toString()))
+        assertEquals(setOf("LOTS_PER_ORDER", "MAX_LOTS"), com.optionslab.app.data.SettingsLog.keysLogged())
+        assertEquals("the decoded list drops the gone key", listOf(SettingsTalk.Key.MAX_LOTS), com.optionslab.app.data.SettingsLog.all().map { it.key })
+        stored { it.copy(guardMaxOpen = it.guardMaxOpen + 1) }
+        assertEquals(setOf("LOTS_PER_ORDER", "MAX_LOTS", "MAX_OPEN"), com.optionslab.app.data.SettingsLog.keysLogged())
+        assertEquals(listOf(SettingsTalk.Key.MAX_LOTS, SettingsTalk.Key.MAX_OPEN), com.optionslab.app.data.SettingsLog.all().map { it.key })
+    }
+
+    /** Set on this phone: one line in the timeline, once ever; nothing tightened. Never set: nothing, and decided for good. */
+    @Test fun theDeadLimitsAreSaidOnceInTheTimelineAndNothingIsTightened() {
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
+        Autopilot.setForTest(AutoChange.Book())
+        stored { it.copy(maxLotsPerOrder = 1, guardMaxLots = 5, guardMaxTrades = 10) }
+        assertTrue(Autopilot.logDeadOrderLimitsOnce())
+        val e = Autopilot.book.value.entries.single { it.change.kind == AutoChange.Kind.SETTING_NOTE }
+        assertEquals(AutoChange.Status.SKIPPED, e.status)
+        assertTrue(e.change.reason, e.change.reason.contains("max lots per instrument 5") && e.change.reason.contains("max orders per day 10"))
+        assertTrue("its text once, not twice", e.note.isNotEmpty() && !e.note.contains("never checked"))
+        assertEquals("nothing tightened", 5, AppSettings.load().guardMaxLots)
+        assertFalse("never again", Autopilot.logDeadOrderLimitsOnce())
+        Autopilot.setForTest(AutoChange.Book())
+        assertFalse("not even after the log is emptied", Autopilot.logDeadOrderLimitsOnce())
+    }
+
+    @Test fun neverSetTheyAreNeverSaid() {
+        org.junit.Assume.assumeTrue("the change log is in IraAlgo with Jarvis only", Autopilot.enabled())
+        Autopilot.setForTest(AutoChange.Book())
+        assertFalse(Autopilot.logDeadOrderLimitsOnce())
+        assertTrue(Autopilot.book.value.entries.none { it.change.kind == AutoChange.Kind.SETTING_NOTE })
+        assertTrue("decided", com.optionslab.app.security.SecurePrefs.getBoolean(Autopilot.K_DEAD_LIMITS, false))
+    }
+
 
     @Test fun lotsPerOrderAndManualOrdersByVoiceSetTheGuardsEnforcedLimits() {
         stored { it.copy(mode = "live", allowRealOrders = true, guardMaxLots = 2, guardMaxTrades = 10) }
@@ -285,13 +356,50 @@ class B6JarvisGatesTest : RobolectricTest() {
         assertTrue("an automatic paper end: the copy goes with it", heard.none { it.startsWith("detach|") })
     }
 
-    @Test fun theShadesClosePositionIsBossesHandCloseToo() = withFeed {
+    /**
+     * The shade's "Close position" stays a plain paper close: the app is usually closed when it is used, so the live copy's words would
+     * reach no screen - the copy is never detached, and goes with its paper trade as before.
+     */
+    @Test fun theShadesClosePositionStillSellsTheLiveCopyWithThePaper() = withFeed {
         val heard = heldWithLiveCopy()
         com.optionslab.app.work.Alerts.forgetPosted()
         runBlocking { com.optionslab.app.work.NotificationActionReceiver().closePaper(context, sym) }
         assertEquals(0, held())
-        assertEquals(listOf("detach|passed:r51:b6|paper row closed from the notification"), heard.filter { it.startsWith("detach|") })
-        assertTrue(com.optionslab.app.work.Alerts.posted.any { it.text.contains("A live copy is open at Zerodha") })
+        assertTrue("never detached: sold with its paper trade", heard.none { it.startsWith("detach|") })
+        assertTrue(com.optionslab.app.work.Alerts.posted.none { it.text.contains("A live copy is open at Zerodha") })
+        assertTrue("it still follows its paper trade", ArmLive.liveCopiesOpen(sym, "MIS").isNotEmpty())
+    }
+
+    /** Boss's yes comes after the arm's live copies of the row changed (it entered the contract again): nothing is closed, and he is told. */
+    @Test fun aJarvisCloseConfirmedAfterTheLiveCopiesChangedClosesNothing() = withFeed {
+        val heard = heldWithLiveCopy()
+        val (said, act) = prepare(Command(Command.Kind.CLOSE_ONE, number = 1))
+        assertTrue(said, said.contains("A live copy is open at Zerodha"))
+        // Meanwhile that copy closed and the arm entered the same contract again: another copy, never mentioned to Boss.
+        val again = ArmLive.view.value.open.single().copy(ref = "passed:r51:b6-again")
+        ArmLive.viewForTest(ArmLive.View(open = listOf(again), loaded = true))
+        assertEquals(com.optionslab.app.data.PaperHandClose.CHANGED, runBlocking { act!!() })
+        assertEquals("the paper row is left open", 65, held())
+        assertTrue("nothing detached", heard.none { it.startsWith("detach|") })
+        // The arms' book unreadable at Confirm: never read as "no copies" - nothing closed, and said so.
+        ArmLive.viewForTest(ArmLive.View(open = listOf(again), loaded = true, unreadable = true))
+        assertEquals(com.optionslab.app.data.PaperHandClose.UNREAD, runBlocking { act!!() })
+        assertEquals(65, held())
+        // Only the copy Boss was told of, and it has closed since by its own stop: nothing can be left behind, so the close goes.
+        ArmLive.viewForTest(ArmLive.View(open = emptyList(), loaded = true))
+        runBlocking { act!!() }
+        assertEquals(0, held())
+        assertTrue("nothing detached", heard.none { it.startsWith("detach|") })
+    }
+
+    /** The arms' book unreadable when Boss asks: nothing is offered (a copy is never left running unsaid). */
+    @Test fun aJarvisCloseIsNotOfferedWhileTheArmsBookCannotBeRead() = withFeed {
+        heldWithLiveCopy()
+        ArmLive.viewForTest(ArmLive.View(open = ArmLive.view.value.open, loaded = true, unreadable = true))
+        val (said, act) = prepare(Command(Command.Kind.CLOSE_ONE, number = 1))
+        assertEquals(com.optionslab.app.data.PaperHandClose.UNREAD, said)
+        assertNull(act)
+        assertEquals(65, held())
     }
 
     // ---- 9. "cancel the last order" --------------------------------------------------------------------------------------------------

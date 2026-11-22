@@ -59,10 +59,12 @@ object SettingsTalk {
         Key.PROFIT_ALERT to "(p l |pnl )?profit alert",
         Key.DAILY_LOSS to "(daily (stop ?loss|sl)( limit)?|(stop ?loss|sl|max loss) (for|per) (the |a )?day|daily loss( limit)?|max(imum)? (daily )?loss|(?<!stop )loss limit|stop loss limit for the day)",
         // 22 Nov 2026 (B6 review): "lots per order" is the account guard's lots limit, the one the order checks apply to each order
-        // ([Key.MAX_LOTS]); "manual orders per day" its orders-a-day limit ([Key.MAX_TRADES]). Said back by their own names.
+        // ([Key.MAX_LOTS]); "manual orders per day" its orders-a-day limit ([Key.MAX_TRADES]). Said back by their own names. "Manual orders"
+        // names the limit only with "max", "limit", "per day" or "a day" beside it: "disable my manual orders" never switches it off.
         Key.MAX_LOTS to "(max(imum)? )?lots (per|an|each|a) order|max(imum)? lots( per instrument)?|lot limit",
         Key.MAX_OPEN to "max(imum)? (open )?positions|open positions limit",
-        Key.MAX_TRADES to "(max(imum)? )?manual orders( per day| a day)?|max(imum)? (orders|trades)( per day| a day)?|(orders|trades) (per|a) day( limit)?",
+        Key.MAX_TRADES to "max(imum)? manual orders( per day| a day)?( limit)?|manual orders (per|a) day( limit)?|manual orders limit|" +
+            "max(imum)? (orders|trades)( per day| a day)?|(orders|trades) (per|a) day( limit)?",
         Key.DRAWDOWN to "(max(imum)? )?drawdown( limit)?",
         Key.ORDER_VALUE to "(max(imum)? )?(order value|value per order)",
         Key.EXPOSURE to "(max(imum)? )?(exposure|held in one instrument)",

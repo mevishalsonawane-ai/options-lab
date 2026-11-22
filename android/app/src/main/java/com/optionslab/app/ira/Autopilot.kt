@@ -104,7 +104,43 @@ internal object Autopilot {
             com.optionslab.app.data.PositionsFirst.awaitPositions(); runCatching { ensureLoaded() }
             // 21 Oct: commodities on their own paper limits by Boss's choice, shown once in the timeline (off the main thread).
             runCatching { if (com.optionslab.app.data.AppSettings.load().mcxOwnLimits) logSegmentSplitOnce() }
+            // 22 Nov 2026 (B6 review): the two order limits set by voice that nothing enforced, said once.
+            runCatching { logDeadOrderLimitsOnce() }
         }
+    }
+
+    /** 22 Nov 2026 (B6 review): set once [logDeadOrderLimitsOnce] has decided on this phone (logged or not): never decided again. */
+    internal const val K_DEAD_LIMITS = "jarvis.autolearn.deadLimitsNoted"
+
+    /**
+     * 22 Nov 2026 (B6 review): "max lots per order" and "max manual orders per day" could be set by voice, but no order check ever read
+     * them, and they are gone. When either was set on this phone ([AutoChange.deadOrderLimits]: away from its default, or in the settings
+     * log), one line in the change timeline says it was never enforced and names the limits in force (the account guard's, with their
+     * values now); nothing is tightened. Decided once ([K_DEAD_LIMITS], written either way; an unreadable vault waits for the next start)
+     * and never logged twice. A worker thread. True when logged now.
+     */
+    internal fun logDeadOrderLimitsOnce(): Boolean {
+        if (!enabled()) return false
+        if (runCatching { SecurePrefs.unreadable || SecurePrefs.getBoolean(K_DEAD_LIMITS, false) }.getOrDefault(true)) return false
+        val s = runCatching { AppSettings.load() }.getOrNull() ?: return false
+        val d = AppSettings()
+        val c = AutoChange.deadOrderLimits(s.maxLotsPerOrder, d.maxLotsPerOrder, s.maxOrdersPerDay, d.maxOrdersPerDay,
+            com.optionslab.app.data.SettingsLog.keysLogged(), s.guardMaxLots, s.guardMaxTrades)
+        fun decided() = runCatching { SecurePrefs.putAllSoon(mapOf(K_DEAD_LIMITS to true)) }
+        if (c == null) { decided(); return false }
+        ensureLoaded()
+        val today = runCatching { Market.today() }.getOrElse { LocalDate.now() }
+        synchronized(lock) {
+            if (_book.value.entries.none { it.change.kind == AutoChange.Kind.SETTING_NOTE && it.change.target == AutoChange.DEAD_LIMITS_TARGET }) {
+                // (SKIPPED, as a held idea: a note - nothing changed, nothing to undo.)
+                _book.value = AutoChange.record(_book.value, c, AutoChange.Status.SKIPPED, System.currentTimeMillis(), today, by = "the 22 Nov update",
+                    note = "the 22 Nov update's note: nothing was changed").first
+                save()
+            } else { decided(); return false }
+        }
+        // (Decided only once the note is in the log: a failure before that is tried again at the next start.)
+        decided()
+        return true
     }
 
     private fun dir(): File? = appContext?.let { File(it.noBackupFilesDir, DIR) }
@@ -713,10 +749,10 @@ internal object Autopilot {
             // 28 Oct: taking Boss's win-rate rule away loosens their own rule (as changing its number does): the PIN, where one is set.
             AutoChange.Kind.IDEA_RULE -> inverse.to == AutoChange.SWITCHED_OFF &&
                 runCatching { com.optionslab.app.security.PinLock.isSet }.getOrDefault(true)
-            // 22 Nov 2026 (B6 review): a day stop's Undo that starts a side again (an entry logged before the commodity side's became LIVE
-            // scope) asks the PIN wherever starting it again by hand does ([com.optionslab.app.data.Strategies.liftAsksPin]).
+            // 22 Nov 2026 (B6 review): a day stop's Undo that starts a side again (either side; an entry logged as PAPER too) asks the PIN
+            // whenever one is set, in Paper too, as the index side's always did; with none set there is no PIN step (none could be passed).
             AutoChange.Kind.DAY_STOP -> inverse.to == AutoChange.RUNNING &&
-                runCatching { com.optionslab.app.data.Strategies.liftAsksPin() }.getOrDefault(true)
+                runCatching { com.optionslab.app.security.PinLock.isSet }.getOrDefault(true)
             else -> false
         }
     }
@@ -727,9 +763,12 @@ internal object Autopilot {
         // An older flip of Boss's Liquidity paper trail switch: only the newest one undoes (13 Oct review). Said, nothing changed.
         AutoChange.entry(_book.value, id)?.let { e -> if (e.applied && AutoChange.superseded(_book.value, e)) return AutoChange.SUPERSEDED_UNDO }
         val u = AutoChange.undo(_book.value, id) ?: return "That change can't be undone now (it was already undone or reverted)."
-        if (needsPin(u.inverse, u.needsPin) && !pinConfirmed) return PIN_UNDO
+        val pinAsked = needsPin(u.inverse, u.needsPin)
+        if (pinAsked && !pinConfirmed) return PIN_UNDO
+        // 22 Nov 2026 (B6 review): a day stop's Undo with no PIN set to ask (none could be passed) goes as Boss's own start would.
+        val confirmed = pinConfirmed || (u.inverse.kind == AutoChange.Kind.DAY_STOP && !pinAsked)
         // 19 Nov (review): [ownUndo] - Boss's own tap may park or pause Liquidity again whatever its automatic stop's switch says.
-        val said = runCatching { apply(u.inverse, pinConfirmed, ownUndo = true) }.getOrNull() ?: return "Nothing changed: ${u.entry.change.what} could not be put back just now."
+        val said = runCatching { apply(u.inverse, confirmed, ownUndo = true) }.getOrNull() ?: return "Nothing changed: ${u.entry.change.what} could not be put back just now."
         synchronized(lock) { _book.value = AutoChange.undone(_book.value, id, Market.today()) }
         runCatching { Diag.record("autopilot", "undone by you: ${u.entry.change.what}") }
         saveSoon()

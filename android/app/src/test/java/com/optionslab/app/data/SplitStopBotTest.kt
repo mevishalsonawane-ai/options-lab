@@ -361,8 +361,9 @@ class SplitStopBotTest : RobolectricTest() {
         assertEquals("daystop:mcx", e.change.target)
         assertEquals(com.optionslab.ira.AutoChange.STOPPED, e.change.to)
         assertTrue(e.change.reason, e.change.reason.contains("at 10:42"))
-        // Its Undo starts the commodity side again. 22 Nov 2026 (B6 review): the MCX arms trade live too, so it takes the PIN (LIVE scope,
-        // as the index side's): without it nothing is started.
+        // Its Undo starts the commodity side again. 22 Nov 2026 (B6 review): the MCX arms trade live too, so with a PIN set it takes the
+        // PIN, as the index side's does (without it nothing is started); with no PIN set there is no PIN step.
+        com.optionslab.app.security.PinLock.setPin("482915".toCharArray())
         assertTrue(com.optionslab.app.ira.Autopilot.undoNeedsPin(e.id))
         assertEquals(com.optionslab.app.ira.Autopilot.PIN_UNDO, com.optionslab.app.ira.Autopilot.undo(e.id))
         assertTrue("still stopped", mcxStopped())
