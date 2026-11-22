@@ -391,7 +391,9 @@ object SettingsShare {
     /** [f] deleted unless a later share wrote it again since [written] (its own sweep deletes that one). */
     internal fun sweep(f: File, written: Long) { if (f.lastModified() == written) runCatching { f.delete() } }
 
-    private val startScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    /** The start's sweep of old share files (22 Nov 2026: guarded as B6-D guards every background scope - a failure noted, never a crash). */
+    private val startScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+        ScopeGuard.handler("SettingsShare.startScope"))
 
     /**
      * 22 Nov 2026 (B6 review, item 7): at the app's start, the files a share left in the cache's exports/state/ - the process may have died
