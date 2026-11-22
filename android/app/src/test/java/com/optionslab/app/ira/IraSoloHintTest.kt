@@ -31,6 +31,19 @@ class IraSoloHintTest : RobolectricTest() {
         throw AssertionError("timed out waiting for $what")
     }
 
+    /** Second review: the hint and the start-up's strict read agree - both by the closed flag ("x"), never the call / put side ("c"). */
+    @Test fun theHintAndTheStrictReadAgreeOnAClosedPutAndAnOpenCall() {
+        val put = trade(closed = true).put("c", false)
+        SecurePrefs.put(key, JSONArray().put(put).toString())
+        assertEquals(false, IraSolo.holdingOrThrow())
+        assertEquals(false, IraSolo.holding())
+        assertEquals(false, IraSolo.holdingHint)
+        SecurePrefs.put(key, JSONArray().put(put).put(trade(closed = false)).toString())
+        assertEquals(true, IraSolo.holdingOrThrow())
+        assertEquals(true, IraSolo.holding())
+        assertEquals(true, IraSolo.holdingHint)
+    }
+
     @Test fun theHintAnswersFromMemoryAndFollowsTheBook() {
         SecurePrefs.put(key, JSONArray().put(trade(closed = true)).toString())
         assertNull("nothing read yet in this process", IraSolo.holdingHint)

@@ -167,7 +167,9 @@ object Heartbeat {
         // thread (a boot, an app update, a holiday added) from memory and MCX's plain hint only: never a vault decryption
         // there (ANR fix, 9 Oct); the alarm's own check, off the main thread, reads the books themselves.
         val main = android.os.Looper.myLooper() == android.os.Looper.getMainLooper()
-        val mcx = if (main) runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() == true }.getOrDefault(false)
+        // 22 Nov 2026 (B6 review): unknown from memory (a book or MCX's calendar not read yet) is due - the next check in minutes,
+        // which then decides off the main thread - never the next session's, with something perhaps held on MCX.
+        val mcx = if (main) runCatching { com.optionslab.app.data.McxMarket.watchDueQuick() != false }.getOrDefault(true)
             else runCatching { com.optionslab.app.data.McxMarket.watchDue() }.getOrDefault(false)
         // 19 Nov 2026 (audit batch 2): every minute while a LIVE position is held (memory hints), as an alarm clock (Android's most
         // reliable alarm, never held back by Doze); else every 5 minutes, as before.

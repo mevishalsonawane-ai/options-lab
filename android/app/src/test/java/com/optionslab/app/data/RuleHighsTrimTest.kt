@@ -39,5 +39,12 @@ class RuleHighsTrimTest : RobolectricTest() {
         assertEquals(1, RuleHighs.trim(MemoryPlan.COMPLETE, now))
         assertEquals(221.0, RuleHighs.peek("live:open")!!, 1e-9)
         assertEquals(1, RuleHighs.kept())
+        // A stamp a little "in the future" (the clock set back since it was asked): recent, kept. One a day ahead belongs to a trade no
+        // longer asked for (an open trade's next ask stamps it afresh): let go.
+        RuleHighs.putForTest("live:ahead", 150.0, now + 60_000)
+        RuleHighs.putForTest("orb:far", 140.0, now + 24 * 3_600_000L)
+        assertEquals(1, RuleHighs.trim(MemoryPlan.COMPLETE, now))
+        assertTrue(RuleHighs.has("live:ahead"))
+        assertFalse(RuleHighs.has("orb:far"))
     }
 }

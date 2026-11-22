@@ -109,9 +109,6 @@ object McxMarket {
      */
     internal fun calendarQuick(): McxSession.Calendar = cal ?: run { warmSoon(); McxSession.DEFAULT }
 
-    /** [isOpen] from memory only ([calendarQuick]): for the main thread. */
-    fun isOpenQuick(): Boolean = runCatching { calendarQuick().isOpen(now()) }.getOrDefault(false)
-
     /** TEST SEAM (JVM tests only): the thread whose calendar file reads are counted (null in the app). */
     @Volatile internal var calendarWatchedForTest: Thread? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the calendar seam exists only in debug builds" }; field = v }

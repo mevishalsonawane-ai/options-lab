@@ -347,6 +347,9 @@ class AlarmReceiver : BroadcastReceiver() {
             }
             return scope.launch {
                 try { work() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
+                    // (22 Nov 2026, B6 second review: a fatal error - out of memory, a class that cannot load - still ends the process,
+                    // through the scope.)
+                    if (com.optionslab.app.data.ScopeGuard.fatal(e)) throw e
                     runCatching { com.optionslab.app.data.ScopeGuard.caught("alarm", e) }
                 } finally {
                     timer.cancel()
@@ -1255,8 +1258,11 @@ object Tasks {
             com.optionslab.ira.Supervisor.Step("NR7 crude (record only)") { com.optionslab.app.data.McxNr7Record.kick() },
             com.optionslab.ira.Supervisor.Step("strategies") {
                 // 22 Nov 2026 (B6 review): the device check from memory (kept fresh in the background), no scan of its own each pass;
-                // with none kept yet (the first pass after a start) it is scanned here once, as before.
-                com.optionslab.app.data.Strategies.tickAll(com.optionslab.app.security.Integrity.entryRefusedPass(context))
+                // with none kept yet (the first pass after a start) it is scanned here once, as before. Asked for only for a live run.
+                val liveRun = com.optionslab.app.data.Strategies.runningHint &&
+                    try { com.optionslab.app.data.Strategies.anyLiveRunning() } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: Throwable) { true }
+                com.optionslab.app.data.Strategies.tickAll(com.optionslab.app.security.Integrity.entryRefusedPass(context, liveRun, s.live && s.allowRealOrders))
             },
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Jarvis's trades") { com.optionslab.app.ira.IraNewsTrades.tick() } else null,
             if (com.optionslab.app.BuildConfig.JARVIS) com.optionslab.ira.Supervisor.Step("Solo") { com.optionslab.app.ira.IraSolo.tick() } else null,

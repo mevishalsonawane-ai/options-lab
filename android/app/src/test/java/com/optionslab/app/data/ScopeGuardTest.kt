@@ -4,6 +4,7 @@ import com.optionslab.app.testing.RobolectricTest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -29,6 +30,30 @@ class ScopeGuardTest : RobolectricTest() {
         // A cancellation is not a failure.
         withTimeout(5_000) { scope.launch { throw kotlinx.coroutines.CancellationException("stopped") }.join() }
         assertEquals(before + 1, ScopeGuard.caughtCount)
+    }
+
+    /**
+     * Second review: a fatal error - out of memory, a class that cannot load or initialise - is not swallowed: it is passed on to the
+     * thread's own handler (in the app the crash handler, which ends the process; the restart restores the open positions first).
+     */
+    @Test fun aFatalErrorIsPassedOnToTheThreadsOwnHandler() = runBlocking {
+        val passed = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val pool = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "scope-guard-test").apply { isDaemon = true; uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, e -> passed += e } }
+        }
+        val scope = CoroutineScope(SupervisorJob() + pool.asCoroutineDispatcher() + ScopeGuard.handler("test scope"))
+        try {
+            val before = ScopeGuard.caughtCount
+            val fatal = listOf(OutOfMemoryError("test"), StackOverflowError(), NoClassDefFoundError("test"), ExceptionInInitializerError("test"))
+            for (e in fatal) withTimeout(5_000) { scope.launch { throw e }.join() }
+            assertEquals("each passed on", fatal, passed.toList())
+            assertEquals("none swallowed as noted", before, ScopeGuard.caughtCount)
+            // An ordinary failure is still noted, never passed on.
+            withTimeout(5_000) { scope.launch { throw IllegalStateException("ordinary") }.join() }
+            assertEquals(fatal.size, passed.size)
+            assertEquals(before + 1, ScopeGuard.caughtCount)
+            assertTrue(ScopeGuard.fatal(OutOfMemoryError()) && ScopeGuard.fatal(ExceptionInInitializerError()) && !ScopeGuard.fatal(RuntimeException()))
+        } finally { pool.shutdownNow() }
     }
 
     @Test fun theNoteNamesTheClassAndTheFrameNeverTheMessage() {

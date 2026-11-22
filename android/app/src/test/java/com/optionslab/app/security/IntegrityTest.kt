@@ -166,6 +166,53 @@ class IntegrityTest : RobolectricTest() {
     }
 
     /**
+     * Second review: only a LIVE strategy run asks for the verdict (a scan started, the refresher kept on); with only paper runs the pass
+     * reads what is kept, and scans when none is kept only while a live entry can be made (Live with real orders on).
+     */
+    @Test fun onlyALiveRunAsksAndOnlyALiveAppScansForThePass() {
+        ShadowSystemClock.advanceBy(Duration.ofDays(365))
+        cleanDevice()
+        val before = Integrity.scans.get()
+        // Paper only: nothing kept - refused (no paper run reads it), nothing scanned, nothing asked.
+        assertTrue(Integrity.entryRefusedPass(context, liveRun = false, liveApp = false))
+        Thread.sleep(300)
+        assertEquals("no scan", before, Integrity.scans.get())
+        assertEquals("not asked", 0L, Integrity.askedAtForTest())
+        // Live with real orders on, no live run yet (a scheduled live start may come): scanned here, still not asked.
+        assertFalse(Integrity.entryRefusedPass(context, liveRun = false, liveApp = true))
+        assertEquals(before + 1, Integrity.scans.get())
+        assertEquals("not asked", 0L, Integrity.askedAtForTest())
+        // Kept now: read with no scan, still not asked.
+        assertFalse(Integrity.entryRefusedPass(context, liveRun = false, liveApp = false))
+        assertEquals(before + 1, Integrity.scans.get())
+        assertEquals(0L, Integrity.askedAtForTest())
+        // A live run open: asked (the refresher stays on for it).
+        assertFalse(Integrity.entryRefusedPass(context, liveRun = true, liveApp = true))
+        assertTrue(Integrity.askedAtForTest() > 0L)
+    }
+
+    /**
+     * Second review: the refresher scans only in Live with real orders on, in NSE's day or while MCX's watch is due (something held,
+     * working or armed there) - never merely because MCX is open, as it is every weekday evening.
+     */
+    @Test fun theRefresherIsWantedOnlyInLiveAndWhileAMarketNeedsTheWatch() {
+        val asked = java.util.concurrent.atomic.AtomicInteger()
+        assertFalse(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = false, nseDay = true) { asked.incrementAndGet(); true })
+        assertTrue(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = true, nseDay = true) { asked.incrementAndGet(); false })
+        assertEquals("MCX not asked when it cannot decide", 0, asked.get())
+        assertFalse(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = true, nseDay = false) { false })
+        assertTrue(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = true, nseDay = false) { true })
+        // A Thursday evening: MCX open, nothing held, working or armed there - not wanted.
+        val was = com.optionslab.app.data.Market.testClock
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(
+            java.time.LocalDate.of(2026, 10, 8).atTime(20, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST)
+        try {
+            assertTrue(com.optionslab.app.data.McxMarket.isOpen())
+            assertFalse(com.optionslab.app.IraAlgoApp.deviceCheckWanted(live = true, nseDay = false) { com.optionslab.app.data.McxMarket.watchDue() })
+        } finally { com.optionslab.app.data.Market.testClock = was }
+    }
+
+    /**
      * The refresher keeps the verdict fresh off the asking threads, and an entry's own check ([Integrity.reportWithin]) reads it -
      * never waiting behind a scan another thread is making (it was one lock for both).
      */

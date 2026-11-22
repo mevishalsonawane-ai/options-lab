@@ -460,6 +460,13 @@ object KiteStream {
     @Volatile internal var afterEndForTest: (() -> Unit)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test hook exists only in debug builds" }; field = v }
 
+    /** TEST ONLY (22 Nov 2026): run in the loop just before it takes the connection (a test stops and starts the stream there). */
+    @Volatile internal var beforeConnectForTest: (() -> Unit)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "the test hook exists only in debug builds" }; field = v }
+
+    /** TEST ONLY: the current connection's number (null: none). */
+    internal fun connIdForTest(): Int? = conn?.id
+
     /** TEST ONLY: the loop running now (null: none). */
     internal fun loopForTest(): Job? = loop
 
@@ -497,11 +504,17 @@ object KiteStream {
                 // 20 Nov 2026: a kick left from before this try (a network change while it waited) is spent here.
                 kick.tryReceive()
                 val url = urlForTest?.let { "$it?api_key=$key&access_token=$token" } ?: "wss://${KitePin.WS_HOST}/?api_key=$key&access_token=$token"
+                val cl = clientForTest ?: client
+                beforeConnectForTest?.invoke()
                 // conn is set before the socket is made: onOpen (on OkHttp's thread) checks `conn !== c`, and a fast open
-                // landing before the assignment would otherwise close a healthy socket.
-                conn = c
-                val ws = (clientForTest ?: client).newWebSocket(Request.Builder().url(url).build(), listener(c))
-                socket = ws
+                // landing before the assignment would otherwise close a healthy socket. 22 Nov 2026 (B6 second review): taken under stop()'s
+                // lock and only while this loop is still the running one - a loop stop() cancelled (ensure() may stop and start again at
+                // once) never takes the connection from the new loop, whose ticks would then all be dropped as another connection's. The
+                // socket is only asked for here (OkHttp makes it on its own threads), so the lock is held for no I/O.
+                val ws = synchronized(this@KiteStream) {
+                    if (!isActive || loop !== me) null
+                    else { conn = c; cl.newWebSocket(Request.Builder().url(url).build(), listener(c)).also { socket = it } }
+                } ?: break
                 try {
                     watch(c, ws)
                 } finally {
@@ -582,17 +595,14 @@ object KiteStream {
     private fun listener(c: Conn) = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             if (conn !== c) { webSocket.close(1000, null); return }
-            // An open landing before the loop has stored its socket: this is that socket (conn is c), so it is stored
-            // here too, or [resubscribe] would find none and the stream would open with nothing subscribed.
-            socket = webSocket
             val now = mono()
             c.openedAt = now; c.lastFrame = now; c.opened.set(true)
             // 20 Nov 2026: the kept orders and positions are read afresh (updates may have been missed while it was down).
             runCatching { Broker.reconStale() }
             // 22 Nov 2026 (B6 review): LIVE only while this is still the current connection - a stop() since the look above is never
-            // followed by LIVE; the socket is closed instead.
-            if (!setStatus(Status.LIVE) { conn === c }) {
-                if (socket === webSocket) socket = null
+            // followed by LIVE; the socket is closed instead. 22 Nov 2026 (B6 second review): the socket is stored (for [resubscribe]) only with it, so a
+            // connection stopped meanwhile never leaves its socket behind.
+            if (!setStatus(Status.LIVE) { (conn === c).also { if (it) socket = webSocket } }) {
                 webSocket.close(1000, null)
                 return
             }
@@ -893,7 +903,7 @@ object KiteStream {
         check(com.optionslab.app.BuildConfig.DEBUG) { "the test reset exists only in debug builds" }
         ticks.clear(); paths.clear(); candles.clear(); sessionCandles.clear(); touched.clear(); stamps.clear()
         reconnects = 0; reconnectDay = null
-        urlForTest = null; clientForTest = null; afterEndForTest = null
+        urlForTest = null; clientForTest = null; afterEndForTest = null; beforeConnectForTest = null
         synchronized(updates) { updates.clear() }   // an earlier test's order update would answer for the same order id
         lastTickAt = 0L
         _status.value = Status.OFF

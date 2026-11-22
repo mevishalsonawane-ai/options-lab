@@ -67,7 +67,7 @@ class LiveCheckHooksTest : RobolectricTest() {
         com.optionslab.app.security.SecurePrefs.put("jarvis.solo.trades", "{not json")
         if (com.optionslab.app.BuildConfig.JARVIS) assertTrue(runBlocking { LiveSelfTest.Real.booksOpen() })
         // Readable and closed, but no Zerodha session to read the live books afresh: still counted as open.
-        com.optionslab.app.security.SecurePrefs.put("jarvis.solo.trades", org.json.JSONArray().put(org.json.JSONObject().put("c", true)).toString())
+        com.optionslab.app.security.SecurePrefs.put("jarvis.solo.trades", org.json.JSONArray().put(org.json.JSONObject().put("c", true).put("x", true)).toString())
         assertFalse(Broker.loggedIn)
         assertTrue(runBlocking { LiveSelfTest.Real.booksOpen() })
     }

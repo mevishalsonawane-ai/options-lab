@@ -56,6 +56,9 @@ class McxMarketTest : RobolectricTest() {
      * service's start, the watch's start check, the dead-man's alarm): the main thread's checks read the calendar from memory only -
      * before it is read, the built-in one - and the file is read in the background ([McxMarket.warmSoon]).
      */
+    /** The main thread's open-now answer from memory only (the built-in calendar until the file is read). */
+    private fun quickOpen(): Boolean = McxMarket.calendarQuick().isOpen(McxMarket.now())
+
     @Test fun theMainThreadsChecksNeverReadTheCalendarFile() {
         at("2026-10-08", "20:00")                                              // a Thursday evening: MCX trades
         McxMarket.keepHolidays(mapOf(LocalDate.of(2026, 10, 8) to null))       // Upstox's list shuts it (kept on the phone)
@@ -73,13 +76,13 @@ class McxMarketTest : RobolectricTest() {
             assertEquals("once in memory: a firm no", false, McxMarket.watchDueQuick())
             at("2026-10-08", "20:00")
             McxMarket.forgetCalendarForTest()                                   // a new process: the file not read yet
-            assertTrue("the built-in calendar meanwhile", McxMarket.isOpenQuick())
+            assertTrue("the built-in calendar meanwhile", quickOpen())
             McxMarket.watchDueQuick()
             McxMarket.nextOpenMillisQuick()
             assertEquals("no calendar file read on the asking thread", 0L, McxMarket.calendarReadsForTest.get())
             val end = System.currentTimeMillis() + 5_000
-            while (McxMarket.isOpenQuick() && System.currentTimeMillis() < end) Thread.sleep(5)
-            assertFalse("the file read in the background: shut that evening", McxMarket.isOpenQuick())
+            while (quickOpen() && System.currentTimeMillis() < end) Thread.sleep(5)
+            assertFalse("the file read in the background: shut that evening", quickOpen())
             assertEquals(false, McxMarket.watchDueQuick())
             assertEquals(0L, McxMarket.calendarReadsForTest.get())
         } finally {

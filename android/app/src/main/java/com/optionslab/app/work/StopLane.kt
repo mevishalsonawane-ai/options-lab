@@ -331,7 +331,13 @@ internal object StopLane {
      * kept fresh in the background); it only ever refuses an entry, unknown included, and the exits never wait on it.
      */
     internal suspend fun strategiesLook(context: Context) {
-        com.optionslab.app.data.Strategies.manageOnly(com.optionslab.app.security.Integrity.entryRefused(context))
+        // 22 Nov 2026 (B6 second review): asked for (a scan started, the refresher kept on) only for a LIVE run; a paper run's entries
+        // never read it. (A read that fails counts as a live run; a cancellation goes up.)
+        val liveRun = try { com.optionslab.app.data.Strategies.anyLiveRunning() } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Throwable) { true }
+        val integrity = com.optionslab.app.security.Integrity
+        val refused = if (liveRun) integrity.entryRefused(context) else integrity.cachedCompromised(context, ask = false) ?: true
+        com.optionslab.app.data.Strategies.manageOnly(refused)
         done(B_STRATEGIES)
     }
 

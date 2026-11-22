@@ -21,6 +21,13 @@ class IraAlgoApp : Application() {
         private const val OLD_CRASH_FILE = "last_crash.txt"
 
         /**
+         * 22 Nov 2026 (B6 review): whether the device check's background refresher scans now: Live with real orders on ([live]) and in
+         * NSE's day ([nseDay]) or while MCX's watch is due ([mcxDue]: something held or working there, or an MCX arm armed - not merely
+         * MCX open, which is every weekday evening). [mcxDue] is asked last, only when it decides.
+         */
+        internal fun deviceCheckWanted(live: Boolean, nseDay: Boolean, mcxDue: () -> Boolean): Boolean = live && (nseDay || mcxDue())
+
+        /**
          * Exception class names and stack frames only - never an exception's message, which can
          * carry an API reply, a token, an amount or a symbol. Causes and suppressed ones included.
          */
@@ -182,11 +189,14 @@ class IraAlgoApp : Application() {
         // check's background refresher (the stop check and the passes read its cached verdict; it waits for that step too).
         com.optionslab.app.data.PineScripts.warmSoon()
         com.optionslab.app.data.McxMarket.warmSoon()
-        // (Only while it can matter: Live with real orders on, in NSE's day or MCX's hours; else an entry's own check asks for one.)
+        // (Only while it can matter: [deviceCheckWanted]; else an entry's own check asks for one.)
         com.optionslab.app.security.Integrity.startRefresher(this,
             wanted = {
-                com.optionslab.app.data.AppSettings.load().let { it.live && it.allowRealOrders } &&
-                    ((Market.isTradingDay() && Market.minuteNow() in (9 * 60)..(Market.foClose() + 5)) || com.optionslab.app.data.McxMarket.isOpen())
+                val s = com.optionslab.app.data.AppSettings.load()
+                deviceCheckWanted(s.live && s.allowRealOrders, Market.isTradingDay() && Market.minuteNow() in (9 * 60)..(Market.foClose() + 5)) {
+                    // From memory and the plain hint first; the books (and the paper book's lock) only when that cannot tell.
+                    com.optionslab.app.data.McxMarket.watchDueQuick() ?: com.optionslab.app.data.McxMarket.watchDue()
+                }
             }) {
             com.optionslab.app.data.PositionsFirst.awaitPositions()
         }

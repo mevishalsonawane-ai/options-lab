@@ -810,7 +810,7 @@ object Strategies {
             if (order.kind == "entry" && (!s.live || !s.allowRealOrders)) return StrategyHost.Placed.Refused("the app is in Paper mode (switch to Live with the badge at the top)")
             // 19 Nov 2026 (audit batch 2): an automatic entry also needs "AI trades go live" (asked again inside the door, [Broker]).
             if (order.kind == "entry" && !ownerStart) autoLiveRefusal()?.let { return StrategyHost.Placed.Refused("automatic live entry refused: $it") }
-            if (compromised && order.kind == "entry") return StrategyHost.Placed.Refused("this device shows signs of compromise")
+            if (compromised && order.kind == "entry") return StrategyHost.Placed.Refused("this device shows signs of compromise, or its security check has not finished yet")
             if (!Broker.loggedIn) return StrategyHost.Placed.Refused("not logged in to Zerodha today")
             // The order flow can only refuse this entry (CONFIRM), never add to it; exits are never asked.
             val flow = flowGate(def, order, live = true)

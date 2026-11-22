@@ -392,11 +392,12 @@ internal object IraSolo {
     /**
      * [holding] that lets a vault or parse failure through (review, 14 Oct): the start-up's restore counts an unreadable book
      * as open and starts the watch, where [holding] (and [all]) would read it as empty. A trade without its closed flag
-     * fails too, so it also counts as open.
+     * fails too, so it also counts as open. 22 Nov 2026 (B6 review): the closed flag is "x", as [save] writes it and [all] reads it
+     * - it read "c", the trade's call / put side, so any closed put in the book read as held and an open call as not held.
      */
     internal fun holdingOrThrow(): Boolean {
         val a = JSONArray(com.optionslab.app.security.SecurePrefs.getString(KEY) ?: "[]")
-        return (0 until a.length()).any { !a.getJSONObject(it).getBoolean("c") }
+        return (0 until a.length()).any { !a.getJSONObject(it).getBoolean("x") }
     }
 
     /** One pass at [t], after the market watch's gates ([tick]); tests call it directly. */

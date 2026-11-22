@@ -89,7 +89,9 @@ internal object RuleHighs {
             // A read under way, or just made and not started yet (its job is lazy): its trade is being looked at.
             if (inFlight.containsKey(key)) continue
             val at = asked[key]
-            if (at != null && nowMs - at in 0 until ACTIVE_MS) continue
+            // (A stamp up to [ACTIVE_MS] "in the future" - the clock set back a little - counts as recent; one further ahead belongs to a
+            // trade no longer asked for: an open trade's next ask stamps it afresh.)
+            if (at != null && nowMs - at in -ACTIVE_MS until ACTIVE_MS) continue
             forget(key); n++
         }
         return n

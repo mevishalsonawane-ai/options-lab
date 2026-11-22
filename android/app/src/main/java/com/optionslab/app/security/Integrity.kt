@@ -208,8 +208,8 @@ object Integrity {
      * with no lock (it was @Synchronized, so every caller waited behind a scan under way: a SHA-256 of the 10 MB asset, binder calls,
      * /proc reads, a socket connect), and the background refresher keeps it under a minute old, so an entry's check reads memory.
      */
-    fun reportWithin(context: Context, maxAgeMs: Long): List<Finding> {
-        askedAt = android.os.SystemClock.elapsedRealtime()
+    fun reportWithin(context: Context, maxAgeMs: Long, ask: Boolean = true): List<Finding> {
+        if (ask) askedAt = android.os.SystemClock.elapsedRealtime()
         fresh(maxAgeMs)?.let { return it }
         return synchronized(scanLock) {
             fresh(maxAgeMs) ?: run {
@@ -257,14 +257,16 @@ object Integrity {
     /**
      * The device check's verdict for an automatic entry from memory only - never a scan on the caller's thread: compromised or not
      * from a report at most [maxAgeMs] old, else null (unknown). A report missing or older than [REFRESH_MS] starts a scan in the
-     * background ([kick]). For the stop check and the passes: their exits never wait on the device check.
+     * background ([kick]). For the stop check and the passes: their exits never wait on the device check. [ask] false (22 Nov 2026,
+     * second review: no live strategy run needs it): not counted as asked, so the refresher is not kept on; [kickIfStale] whether a
+     * missing or ageing report still starts a background scan.
      */
-    fun cachedCompromised(context: Context, maxAgeMs: Long = VERDICT_MAX_AGE_MS): Boolean? {
+    fun cachedCompromised(context: Context, maxAgeMs: Long = VERDICT_MAX_AGE_MS, ask: Boolean = true, kickIfStale: Boolean = ask): Boolean? {
         val now = android.os.SystemClock.elapsedRealtime()
-        askedAt = now
+        if (ask) askedAt = now
         val at = cachedAt
         val c = cached
-        if (c == null || now - at > REFRESH_MS) kick(context)
+        if (kickIfStale && (c == null || now - at > REFRESH_MS)) kick(context)
         return if (c != null && now - at <= maxAgeMs) compromised(c) else null
     }
 
@@ -275,9 +277,20 @@ object Integrity {
      * The verdict for the full pass, which may wait (never the 15-second stop check, whose exits never wait on it): the kept one; with
      * none (the first pass after a start, the refresher off) the device is scanned here, as the pass always did ([reportWithin]: a scan
      * already under way is waited for, never a second one) - so a scheduled start is never refused for want of a verdict.
+     * 22 Nov 2026 (second review: every pass kept the refresher on, Paper mode included): asked for (the refresher kept on) only while a
+     * LIVE strategy run is open ([liveRun]); kept fresh (a background scan when it ages) and scanned when none is kept only while a live
+     * entry can be made at all ([liveApp]: Live with real orders on) - otherwise the kept verdict or a refusal, which no paper run reads.
+     * The pass's own scan reuses the parts that cannot change while the app runs ([refresh]), never a fresh hash of the 10 MB asset.
      */
-    fun entryRefusedPass(context: Context): Boolean =
-        cachedCompromised(context) ?: compromised(reportWithin(context, VERDICT_MAX_AGE_MS))
+    fun entryRefusedPass(context: Context, liveRun: Boolean = true, liveApp: Boolean = true): Boolean = when {
+        liveRun -> cachedCompromised(context) ?: compromised(refresh(context, unlessFresherThanMs = VERDICT_MAX_AGE_MS))
+        liveApp -> cachedCompromised(context, ask = false, kickIfStale = true)
+            ?: compromised(refresh(context, unlessFresherThanMs = VERDICT_MAX_AGE_MS))
+        else -> cachedCompromised(context, ask = false) ?: true
+    }
+
+    /** TEST ONLY: when a verdict was last asked for (0: never). */
+    internal fun askedAtForTest(): Long = askedAt
 
     /** When a verdict or a report was last asked for (SystemClock.elapsedRealtime; 0: never): the refresher runs while it is recent. */
     @Volatile private var askedAt = 0L

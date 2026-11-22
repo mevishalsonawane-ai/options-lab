@@ -374,6 +374,9 @@ object OrderFlowLive {
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Throwable) {
+                // (22 Nov 2026, B6 second review: a fatal error - out of memory, a class that cannot load - still ends the process,
+                // through the scope.)
+                if (ScopeGuard.fatal(e)) throw e
                 pumpFailed(e)
                 if (++idle > 40) return
             }
