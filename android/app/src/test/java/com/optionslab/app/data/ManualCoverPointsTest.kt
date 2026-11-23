@@ -51,6 +51,7 @@ class ManualCoverPointsTest : RobolectricTest() {
     @After fun down() {
         ManualCover.resetForTest(on = false)
         Protections.resetFollowUpForTest()
+        Protections.cancelWaitMsForTest = null
         pineHeld(emptyMap())
         Market.testClock = null
         if (::kite.isInitialized) kite.close()
@@ -808,6 +809,7 @@ class ManualCoverPointsTest : RobolectricTest() {
 
     /** Item 1: the app's stop already cancelled for his stop (its target's cancel not through), then his stop refused: the stop goes back. */
     @Test fun theAppsStopAlreadyCancelledForBosssRefusedStopIsPutBack() {
+        Protections.cancelWaitMsForTest = 0L                                       // the target's cancel never reached Zerodha: not waited for
         val p = autoProtected()
         val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
         later(65)
@@ -946,5 +948,132 @@ class ManualCoverPointsTest : RobolectricTest() {
         assertEquals("the wing keeps its protection", "TRIGGER PENDING", kite.order(wing.stopOrderId!!).status)
         assertTrue(runBlocking { Protections.active() }.any { it.id == wing.id })
         assertFalse(Alerts.posted.any { it.text.contains("removed because it is now part of a spread/hedge") })
+    }
+
+
+    // ---- round 4, the final gate's cases ---------------------------------------------------------------------------------------
+
+    /**
+     * Major 1 (the reviewer's sequence): NRML, 150 held. His own GTT stop for 75 brings the app's stop down to 75; it fires (first with its
+     * order not in the book yet, then its LIMIT resting unfilled under a falling price) - the app's stop is never raised back beside it, so the
+     * two never sell more than is held.
+     */
+    @Test fun bossesFiredGttStopIsStillHisStopAndTheAppsIsNeverRaisedBesideIt() {
+        val s75 = "NIFTY26N0925100CE"
+        kite.instruments += FakeKite.Ins(12_345_680, s75, "NIFTY", Market.today().plusDays(2), 25_100.0, "CE", 75)
+        kite.quote("NFO:$s75", 126.0, 125.95, 126.05)
+        kite.position(s75, 150, 125.35)
+        look(); later(25); look()
+        val p = runBlocking { Protections.active() }.single { it.symbol == s75 }
+        assertEquals(150, kite.order(p.stopOrderId!!).qty)
+        val gid = 6_101L
+        kite.gtts[gid] = org.json.JSONObject().put("id", gid).put("type", "single").put("status", "active").put("created_at", "2026-11-23 10:00:00")
+            .put("condition", org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", s75)
+                .put("trigger_values", org.json.JSONArray().put(120.0)).put("last_price", 126.0))
+            .put("orders", org.json.JSONArray().put(org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", s75).put("transaction_type", "SELL")
+                .put("quantity", 75).put("product", "NRML").put("order_type", "LIMIT").put("price", 119.0)))
+        later(65)
+        tick()
+        assertEquals("brought down beside his GTT stop", 75, kite.order(p.stopOrderId!!).qty)
+        // It fires; its order not in the book yet.
+        kite.gtts.getValue(gid).put("status", "triggered")
+            .put("updated_at", Market.now().toLocalDateTime().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+        tick()
+        assertEquals("never raised while his fired stop's order is on its way", 75, kite.order(p.stopOrderId!!).qty)
+        // Its LIMIT rests unfilled: the price fell under it.
+        kite.quote("NFO:$s75", 118.0, 117.95, 118.05)
+        val fired = kite.triggerGtt(gid)
+        assertEquals("OPEN", kite.order(fired).status)
+        tick(); tick()
+        assertEquals("never raised beside his resting stop", 75, kite.order(p.stopOrderId!!).qty)
+        assertFalse(said("so the app's automatic stop covers 150 again"))
+        assertEquals("the two together never sell more than is held", 150, kite.order(p.stopOrderId!!).qty + kite.order(fired).qty)
+    }
+
+    /** Major 2: Boss cancels the app's SL in Kite himself while it was being taken out, then his own SL is refused - his cancel is respected. */
+    @Test fun aStopBossCancelledHimselfIsNeverPutBackWhenHisOwnIsRefused() {
+        Protections.cancelWaitMsForTest = 0L                                       // the target's cancel never reached Zerodha: not waited for
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        kite.afterNext("/orders") { kite.order(p.stopOrderId!!).status = "CANCELLED" }   // he cancels the app's stop in Kite just then
+        kite.drop += "/orders/regular/${p.targetOrderId}"                               // and the app's cancel of its target does not get through
+        tick()
+        assertEquals("OPEN", kite.order(p.targetOrderId!!).status)
+        kite.drop.clear()
+        kite.order(own).status = "REJECTED"
+        val stops = kite.placed.count { it.form["order_type"] == "SL" }
+        tick(); tick()
+        assertEquals("his cancel respected: no stop put back", stops, kite.placed.count { it.form["order_type"] == "SL" })
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertTrue(said("cancelled in Kite (by you), so it is not put back"))
+    }
+
+    /** Minor 1: his after-market sell for part, waiting for the open, brings the app's overnight GTT down - never two exits at the open. */
+    @Test fun bossesAfterMarketSellCountsBesideTheOvernightGtt() {
+        val p = autoProtected()
+        at(15, 45)
+        listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { kite.order(it).status = "CANCELLED" }
+        tick()
+        val g = kite.gtts.keys.single()
+        val amo = kite.restingInKite(sym, "SELL", 65, 108.0, type = "SL", trigger = 108.0, product = "NRML")
+        kite.order(amo).status = "AMO REQ RECEIVED"
+        tick()
+        assertEquals("the GTT kept", "active", kite.gtts.getValue(g).getString("status"))
+        assertEquals(65, kite.gtts.getValue(g).getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+    }
+
+    /** Review: his after-market stop for all of it, waiting for the open - it may be refused then: the app's GTT stays, and he is told loudly. */
+    @Test fun anAfterMarketStopForAllNeverTakesTheAppsGttOut() {
+        val p = autoProtected()
+        at(15, 45)
+        listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { kite.order(it).status = "CANCELLED" }
+        tick()
+        val g = kite.gtts.keys.single()
+        val amo = kite.restingInKite(sym, "SELL", 130, 108.0, type = "SL", trigger = 108.0, product = "NRML")
+        kite.order(amo).status = "AMO REQ RECEIVED"
+        tick()
+        val told = Alerts.posted.count { it.text.contains("part of it may not sell") }
+        assertTrue("told", told > 0)
+        tick(); tick()
+        assertEquals("the GTT kept whole", "active", kite.gtts.getValue(g).getString("status"))
+        assertEquals(130, kite.gtts.getValue(g).getJSONArray("orders").getJSONObject(0).getInt("quantity"))
+        assertTrue(runBlocking { Protections.active() }.single().note != "removing")
+        assertEquals("told once", told, Alerts.posted.count { it.text.contains("part of it may not sell") })
+    }
+
+    /** Minor 2: the app's stop fills while his own target still works on the closed position - said loudly, never "nothing else rested". */
+    @Test fun theAppsStopFillingBesideBosssWorkingTargetIsSaidLoudly() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 140.0, product = "NRML")
+        later(65)
+        tick()
+        assertEquals("his target is the target", "CANCELLED", kite.order(p.targetOrderId!!).status)
+        kite.fill(p.stopOrderId!!, 115.35)
+        tick()
+        assertEquals("OPEN", kite.order(own).status)
+        assertTrue(said("your own sell order for 130 still works in Kite. If the position is closed now, cancel it in Kite"))
+        assertFalse(said("nothing else rested on it"))
+    }
+
+    /** Minor 3: its overnight GTT already deleted for his stop, then his stop refused - the old id cleared, and a new GTT rests. */
+    @Test fun theOvernightGttDeletedForBosssRefusedStopRestsAgain() {
+        val p = autoProtected()
+        at(15, 45)
+        listOfNotNull(p.stopOrderId, p.targetOrderId).forEach { kite.order(it).status = "CANCELLED" }
+        tick()
+        val g = kite.gtts.keys.single()
+        val own = kite.restingInKite(sym, "SELL", 130, 108.0, type = "SL", trigger = 108.0, product = "NRML")
+        kite.afterNext("/gtt/triggers/$g") { kite.gttReadFailures = 5 }      // deleted, but its delete not confirmed this look
+        tick()
+        assertFalse("deleted", kite.gtts[g]?.optString("status") == "active")
+        kite.gttReadFailures = 0
+        kite.order(own).status = "REJECTED"
+        tick(); tick()
+        val now = runBlocking { Protections.active() }.single()
+        val g2 = now.gttId
+        assertNotNull("a new overnight GTT rests", g2)
+        assertTrue(g2 != g && kite.gtts.getValue(g2!!).getString("status") == "active")
+        assertTrue(said("rests its overnight GTT at Zerodha again"))
     }
 }
