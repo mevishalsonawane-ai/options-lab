@@ -223,7 +223,8 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
             Broker.lostSearchInlineForTest = true
             val look = Broker.lookLost("testexit:9")
             assertTrue("found on its look: $look", look is Broker.LostLook.Found)
-            assertEquals("counted once as it is found", listOf("found" to 30), seen)
+            // (23 Nov 2026, B6 review, ninth round: and once more as its kept write is handed to the found ones - never twice, never none.)
+            assertEquals("counted once as it is found and as it is handed over", listOf("found" to 30, "handed" to 30), seen)
             assertEquals("and once just after", 30, Broker.lostSales("testexit:", sym, "MIS"))
         } finally {
             Broker.lostFoundStepForTest = null

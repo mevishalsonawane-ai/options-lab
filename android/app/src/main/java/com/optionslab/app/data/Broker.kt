@@ -2380,7 +2380,8 @@ object Broker {
     @Volatile internal var lostSearchInlineForTest = false
     /**
      * TEST SEAM (23 Nov 2026, B6 follow-ups, round 4): called with a step name and the lost reply's key between its search writing down
-     * when it found the sale and what it found ("found"), so a test can read [lostSales] there. Null in the app.
+     * when it found the sale and what it found ("found"), so a test can read [lostSales] there. 23 Nov 2026 (B6 review, ninth round): and
+     * ("handed") just after [lookLost] hands its kept write over to the found ones. Null in the app.
      */
     @Volatile internal var lostFoundStepForTest: ((String, String) -> Unit)? = null
 
