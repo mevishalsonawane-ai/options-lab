@@ -319,7 +319,8 @@ class OrderFlowLive2Test : RobolectricTest() {
         BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
         kite.position(ce, 0, 0.0)                                           // closed from Kite meanwhile
         m.sendPlan()
-        assertTrue(refused(m).startsWith("Not sent: $ce changed since the review (open now 0"))
+        // (22 Nov 2026, B6 review, third round: sized under the row's claim before anything resting is taken over.)
+        assertTrue(refused(m).startsWith("Not sent: nothing of $ce is left to sell - Zerodha shows it closed"))
         assertTrue("nothing modified or sent", kite.writes.none { it.method == "PUT" } && kite.placed.size == 1)
         assertEquals("the resting order is left as it was", "LIMIT", kite.order(target).type); assertEquals(130.0, kite.order(target).price, 1e-9)
     }

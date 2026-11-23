@@ -175,7 +175,8 @@ internal object SquareOffExit {
         "armlive" -> "an arm's live exit"
         "protections" -> "a protection's exit"
         BOSS_OWNER -> "your own exit from the app"
-        else -> "another seller ($owner)"
+        // (22 Nov 2026, B6-B third round: each of Boss's sends claims under its own name, "boss#...".)
+        else -> if (owner.startsWith("$BOSS_OWNER#")) "your own exit from the app" else "another seller ($owner)"
     }
 
     /** 22 Nov 2026 (B6 review, second round): the name Boss's own exit from the app claims a row by ([claimExit]; AppModel's takeover). */

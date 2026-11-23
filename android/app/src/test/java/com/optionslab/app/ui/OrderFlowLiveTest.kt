@@ -221,6 +221,9 @@ class OrderFlowLiveTest : RobolectricTest() {
         paperMode()
         for ((held, side) in listOf(75 to "SELL", -150 to "BUY")) {
             kite.orders.clear(); kite.requests.clear()
+            // (22 Nov 2026, B6 review, third round: the book is wiped between the two runs here, so the phone's memory of the first exit goes
+            // with it - a real book never drops an order, and an exit it does not show yet holds the next one back.)
+            com.optionslab.app.data.ExitCoordinator.restartForTest()
             kite.position(sym, held, 100.0)
             val model = model()
             model.planSquareOff(position(held), "Close (Paper mode)", direct = true)
