@@ -207,6 +207,32 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         Broker.forgetLostForTest()
     }
 
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): as a lost sale is found - its search writing down when, then what - and as its look takes it
+     * off (and notes it as found lately, in one step), the square-offs' count holds it exactly once: never zero times (sold again beside
+     * it), never twice.
+     */
+    @Test fun aFoundLostSaleIsCountedOnceAsItChangesHands() = runBlocking {
+        Broker.noteLost("testexit:9", order(), emptyList(), "a test exit")
+        kite.orders["250926000000998"] = FakeKite.Order("250926000000998", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "irae2e", "COMPLETE",
+            filled = 30, avg = 200.0)
+        val seen = ArrayList<Pair<String, Int>>()
+        Broker.lostFoundStepForTest = { step, key -> if (key == "testexit:9") seen += step to Broker.lostSales("testexit:", sym, "MIS") }
+        try {
+            Broker.lostLookGapMsForTest = 0
+            Broker.lostSearchInlineForTest = true
+            val look = Broker.lookLost("testexit:9")
+            assertTrue("found on its look: $look", look is Broker.LostLook.Found)
+            assertEquals("counted once as it is found", listOf("found" to 30), seen)
+            assertEquals("and once just after", 30, Broker.lostSales("testexit:", sym, "MIS"))
+        } finally {
+            Broker.lostFoundStepForTest = null
+            Broker.lostSearchInlineForTest = false
+            Broker.lostLookGapMsForTest = null
+            Broker.forgetLostForTest()
+        }
+    }
+
     @Test fun aRestingStopOfTheSameSizeAndTagIsNeverTakenForAMarketExitsLostReply() = runBlocking {
         // As after a restart: an SL SELL the app placed before (its id no longer in memory) rests in the book.
         kite.orders["250926000000777"] = FakeKite.Order("250926000000777", sym, "NFO", "SELL", 30, "MIS", "SL", 152.0, 160.0, "irae2e", "TRIGGER PENDING")

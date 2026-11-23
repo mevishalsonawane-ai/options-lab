@@ -206,6 +206,11 @@ class FakeKite : Closeable {
     @Volatile var cancelsLost = 0
     private val cancelLag = HashMap<String, Int>()
     private val trailing = HashMap<String, Int>()
+    /** 23 Nov 2026 (B6 follow-ups, round 4): order id -> (quantity, price) more of it fills at the exchange as its cancel lands. */
+    private val fillOnCancel = HashMap<String, Pair<Int, Double>>()
+
+    /** 23 Nov 2026: when order [id]'s cancel lands, [qty] more of it has filled at [price] just before (the rest cancelled). */
+    fun fillsAsCancelled(id: String, qty: Int, price: Double) = synchronized(lock) { fillOnCancel[id] = qty to price }
 
     fun nextPlace(s: Scenario) = synchronized(lock) { scenarios.addLast(s) }
     fun nextPlace(reply: Reply = Reply.OK, outcome: Outcome = Outcome.FILL, partialQty: Int = 0, message: String = "") =
@@ -639,6 +644,7 @@ class FakeKite : Closeable {
         if (!o.working) return error(400, "InputException", "Order cannot be cancelled as it is being processed. Try later.")
         if (cancelsLost > 0) { cancelsLost--; return ok(JSONObject().put("order_id", id)) }
         if (cancelLagReads > 0) { cancelLag[id] = cancelLagReads; cancelLagReads = 0; return ok(JSONObject().put("order_id", id)) }
+        fillOnCancel.remove(id)?.let { (q, px) -> fillPart(id, q, px); if (!o.working) return error(400, "InputException", "Order cannot be cancelled as it is being processed. Try later.") }
         o.status = "CANCELLED"
         return ok(JSONObject().put("order_id", id))
     }

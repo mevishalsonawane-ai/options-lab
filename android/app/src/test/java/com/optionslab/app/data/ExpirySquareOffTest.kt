@@ -439,6 +439,92 @@ class ExpirySquareOffTest : RobolectricTest() {
     }
 
     /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): a square-off's LIMIT past its chase that fills in part as its cancel lands (75 of 150): nothing
+     * sold that pass (the fill came after the books were read); the next pass reads again and sells only the 75 left - flat, never short.
+     */
+    @Test fun aStaleLimitThatFillsAsItIsCancelledSellsNothingThatPass() {
+        val t0 = today.atTime(15, 5).atZone(com.optionslab.engine.IST).toInstant()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0, com.optionslab.engine.IST)
+        kite.position(ce, 150, 20.0)
+        val lim = kite.restsInKite(ce, "SELL", 150, 9.95, product = "NRML", tag = "iraalgoexpiry")
+        kite.fillsAsCancelled(lim, 75, 9.95)
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0.plusSeconds(60), com.optionslab.engine.IST)
+        pass()
+        assertEquals("CANCELLED", kite.order(lim).status)
+        assertEquals(75, kite.order(lim).filled)
+        assertTrue("nothing sold that pass", kite.placed.isEmpty())
+        at(15, 7); pass()
+        assertEquals("the 75 left, once", listOf(Triple(ce, "SELL", "75")), sent())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+    }
+
+    /**
+     * An arm's LIMIT exit ([com.optionslab.engine.orb.LiveMirror.TAG]) for all [held] of [ce] (the arm's position), placed [restedS] seconds
+     * before the minute [nowMinute] of today, which the clocks then read. Its id.
+     */
+    private fun armLimitResting(restedS: Long, nowMinute: Int, held: Int = 75): String {
+        val now = today.atTime(nowMinute / 60, nowMinute % 60).atZone(com.optionslab.engine.IST).toInstant()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(now.minusSeconds(restedS), com.optionslab.engine.IST)
+        kite.position(ce, held, 20.0)
+        ExpirySquareOff.armOwns = { it == ce }
+        val lim = kite.restsInKite(ce, "SELL", held, 12.0, product = "NRML", tag = com.optionslab.engine.orb.LiveMirror.TAG)
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(now, com.optionslab.engine.IST)
+        at(nowMinute / 60, nowMinute % 60)
+        kite.requests.clear()
+        return lim
+    }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): at the backstop, an arm's LIMIT exit resting unfilled past its chase (by Zerodha's stamp) is no
+     * longer cover - cancelled, confirmed out, and the square-off sells what is held: once, flat, never carried into the settlement.
+     */
+    @Test fun atTheBackstopAnArmsLimitRestingPastItsChaseIsCancelledThenSoldOnce() {
+        val lim = armLimitResting(restedS = 60, nowMinute = ExpirySquareOff.BACKSTOP_MINUTE)
+        pass()
+        assertEquals("CANCELLED", kite.order(lim).status)
+        assertEquals("sold once by the square-off", listOf(Triple(ce, "SELL", "75")), sent())
+        assertEquals("iraalgoexpiry", kite.placed.single().form["tag"])
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        pass()
+        assertEquals("nothing more", 1, kite.placed.size)
+    }
+
+    /** ... and one that fills in part as its cancel lands: nothing sold that pass; the next sells only what is left, once. */
+    @Test fun atTheBackstopAnArmsStaleLimitFillingAsItIsCancelledSellsOnlyTheRestNextPass() {
+        val lim = armLimitResting(restedS = 60, nowMinute = ExpirySquareOff.BACKSTOP_MINUTE, held = 150)
+        kite.fillsAsCancelled(lim, 75, 12.0)
+        pass()
+        assertEquals("CANCELLED", kite.order(lim).status)
+        assertTrue("nothing sold that pass", kite.placed.isEmpty())
+        pass()
+        assertEquals("the 75 left, once", listOf(Triple(ce, "SELL", "75")), sent())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+    }
+
+    /**
+     * At the backstop, an arm's LIMIT placed 20 s ago - past a square-off's own 12 s chase, but within [SquareOffExit.ARM_LIMIT_STALE_MS]:
+     * the arm may still be waiting on it (it would put its stop back when it saw it cancelled) - is left to the arm: never cancelled,
+     * nothing sold beside it.
+     */
+    @Test fun atTheBackstopAnArmsLimitItMayStillWaitOnIsLeftAlone() {
+        val lim = armLimitResting(restedS = 20, nowMinute = ExpirySquareOff.BACKSTOP_MINUTE)
+        pass()
+        assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(lim).status)
+        assertTrue("nothing sold", kite.placed.isEmpty())
+    }
+
+    /** Before the backstop, an arm's LIMIT exit resting long past its chase, on a row the square-off sells, is still cover, as before. */
+    @Test fun beforeTheBackstopAnArmsLimitRestingLongStaysCover() {
+        val lim = armLimitResting(restedS = 60, nowMinute = 15 * 60 + 6)
+        ExpirySquareOff.armOwns = { false }
+        pass()
+        assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(lim).status)
+        assertTrue("nothing sold beside it", kite.placed.isEmpty())
+    }
+
+    /**
      * 19 Nov 2026 (final review, item 5): the blocked-MARKET exit's LIMIT confirmed cancelled unfilled leaves no gap - nothing of it is
      * out, so the next pass tries again at once (near 15:05 a 15 s hold is a long time).
      */

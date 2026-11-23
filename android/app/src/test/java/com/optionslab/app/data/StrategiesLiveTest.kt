@@ -1297,12 +1297,232 @@ class StrategiesLiveTest : RobolectricTest() {
         kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)                    // under the 30-point stop: the run's own exit is due
         runBlocking { Strategies.tickAll(compromised = false) }
         val l = leg(id)
-        assertEquals("booked: only the 75 sold", (70.0 - 100.0) * 75 + (if (l.qty == 0) (60.0 - 100.0) * 75 else 0.0), l.realizedPnl, 1e-6)
+        // (23 Nov 2026, round 4: exact - this look books the stop's 75 only; the 75 left are sold by the run's next exit.)
+        assertEquals("open for the rest", "open", l.status)
+        assertEquals(75, l.qty)
+        assertEquals("booked: only the 75 sold, at the stop's 70", (70.0 - 100.0) * 75, l.realizedPnl, 1e-6)
         val kinds = runBlocking { Strategies.log() }.map { it.kind }
         assertTrue("no exit-rejected alarm: $kinds", "leg_exit_rejected" !in kinds)
         runBlocking { Strategies.tickAll(compromised = false) }
         assertEquals("the rest sold once, at market", listOf("iraalgostrat" to "75"), exits())
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:MIS").first)
+        val sale = kite.orders.values.single { it.tag == "iraalgostrat" && it.side == "SELL" && it.type == "MARKET" }
+        assertEquals("the stop's 75 at 70 and the sale's 75 at its own fill", (70.0 - 100.0) * 75 + (sale.avg - 100.0) * 75, leg(id).realizedPnl, 1e-6)
+    }
+
+    // ---- 23 Nov 2026 (B6 follow-ups, round 4) ---------------------------------------------------------------------------------------
+
+    /**
+     * The run's own stop exit, due while the leg's SL still rests, which fills in part (75 of 150, at 70) as the exit takes it out: that
+     * part is booked as a done exit of that size ("COMPLETE", as when the stop had ended before) - no "exit rejected" alarm; the leg stays
+     * open for the 75 left, and the run's next exit sells only those 75, once.
+     */
+    @Test fun theRunsOwnExitBooksAStopThatFillsInPartAsItComesOutWithNoFalseAlarm() {
+        val id = twoLotLeg()
+        startLive(id)
+        val stop = kite.orders.values.single { it.type == "SL" && it.working }
+        kite.fillsAsCancelled(stop.id, 75, 70.0)
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)                    // under the 30-point stop: the run's own exit is due
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("CANCELLED", kite.order(stop.id).status)
+        val l = leg(id)
+        assertEquals("open for the rest", "open", l.status)
+        assertEquals(75, l.qty)
+        assertEquals((70.0 - 100.0) * 75, l.realizedPnl, 1e-6)
+        val kinds = runBlocking { Strategies.log() }.map { it.kind }
+        assertTrue("no exit-rejected alarm: $kinds", "leg_exit_rejected" !in kinds)
+        assertTrue("nothing sold beside the stop", exits().isEmpty())
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("the rest sold once, at market", listOf("iraalgostrat" to "75"), exits())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:MIS").first)
+    }
+
+    /**
+     * Boss's Exit on a leg whose SL fills in part (75 of 150) as his exit takes it out: that part is booked, and the exit is driven once
+     * more for the 75 left - sold once, at market; he is told both. Flat, never short; the leg closed with both parts' P&L.
+     */
+    @Test fun bossesExitWhenTheStopFillsInPartAsItComesOutSellsTheRestOnce() {
+        val id = twoLotLeg()
+        startLive(id)
+        val legId = leg(id).legId
+        val stop = kite.orders.values.single { it.type == "SL" && it.working }
+        kite.fillsAsCancelled(stop.id, 75, 70.0)
+        val said = runBlocking { Strategies.closeLeg(id, legId, compromised = false) }
+        assertEquals("Leg $legId: its stop at Zerodha had sold 75; exit sent for the rest of the leg.", said)
+        assertEquals("CANCELLED", kite.order(stop.id).status)
+        assertEquals("the rest sold once, at market", listOf("iraalgostrat" to "75"), exits())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:MIS").first)
+        val sale = kite.orders.values.single { it.tag == "iraalgostrat" && it.side == "SELL" && it.type == "MARKET" }
+        val l = leg(id)
+        assertEquals(0, l.qty)
+        assertEquals((70.0 - 100.0) * 75 + (sale.avg - 100.0) * 75, l.realizedPnl, 1e-6)
+        assertTrue("no exit-rejected alarm", runBlocking { Strategies.log() }.none { it.kind == "leg_exit_rejected" })
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("nothing more", 1, exits().size)
+    }
+
+    /** A leg's SL that had already ended part filled (75 sold at 70) when Boss taps Exit: that part booked, the 75 left sold once. */
+    @Test fun bossesExitAfterTheStopSoldPartSellsTheRestOnce() {
+        val id = twoLotLeg()
+        startLive(id)
+        val legId = leg(id).legId
+        val stop = kite.orders.values.single { it.type == "SL" && it.working }
+        kite.fillPart(stop.id, 75, 70.0)
+        kite.order(stop.id).apply { status = "CANCELLED"; message = "Cancelled by the exchange (RMS)" }
+        val said = runBlocking { Strategies.closeLeg(id, legId, compromised = false) }
+        assertEquals("Leg $legId: its stop at Zerodha had sold 75; exit sent for the rest of the leg.", said)
+        assertEquals(listOf("iraalgostrat" to "75"), exits())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:MIS").first)
+    }
+
+    /** A leg's SL that had already sold the whole leg when Boss taps Exit: booked from it, nothing sent, and he is told so - never "sent". */
+    @Test fun bossesExitAfterTheStopSoldTheWholeLegSaysNothingWasSent() {
+        val id = twoLotLeg()
+        startLive(id)
+        val legId = leg(id).legId
+        val stop = kite.orders.values.single { it.type == "SL" && it.working }
+        kite.fill(stop.id, 70.0)
+        val said = runBlocking { Strategies.closeLeg(id, legId, compromised = false) }
+        assertEquals("Leg $legId: its stop at Zerodha had sold 150; nothing more was sent.", said)
+        assertTrue("nothing sold", exits().isEmpty())
+        assertEquals(0, leg(id).qty)
+        assertEquals((70.0 - 100.0) * 150, leg(id).realizedPnl, 1e-6)
+    }
+
+    /**
+     * ... and when the rest cannot go now (a square-off holds the row): the stop's part is still booked (reading only), nothing is sold, and
+     * Boss is told what the stop sold and what is still open - never "sent". Tapped again once the row is free, the 75 left go, once.
+     */
+    @Test fun bossesExitAfterTheStopSoldPartSaysWhatIsStillOpenWhenTheRestIsRefused() {
+        val id = twoLotLeg()
+        startLive(id)
+        val legId = leg(id).legId
+        val stop = kite.orders.values.single { it.type == "SL" && it.working }
+        kite.fillPart(stop.id, 75, 70.0)
+        kite.order(stop.id).apply { status = "CANCELLED"; message = "Cancelled by the exchange (RMS)" }
+        val claim = SquareOffExit.claimExit("NFO", NIFTY_CE, "MIS", "iraalgoflat")!!
+        val said = try { runBlocking { Strategies.closeLeg(id, legId, compromised = false) } } finally { claim.release() }
+        assertTrue(said, said.startsWith("Leg $legId: its stop at Zerodha had sold 75; 75 still open (refused for now: the flat-by is selling $NIFTY_CE"))
+        assertTrue(said, said.endsWith("): tap Exit again, or close it in Kite."))
+        assertTrue("nothing sold", exits().isEmpty())
+        val l = leg(id)
+        assertEquals("open", l.status)
+        assertEquals(75, l.qty)
+        assertEquals((70.0 - 100.0) * 75, l.realizedPnl, 1e-6)
+        assertEquals("Leg $legId exit sent.", runBlocking { Strategies.closeLeg(id, legId, compromised = false) })
+        assertEquals(listOf("iraalgostrat" to "75"), exits())
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:MIS").first)
+    }
+
+    /** A carried (NRML) leg's GTT stop, put to "triggered" with no order listed yet (Zerodha placing it): its leg's GTT id. */
+    private fun bareFiredGtt(id: Long): Long {
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.gtts.getValue(gid).put("status", "triggered")
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)                    // above the stop: no exit of the run's own is due
+        return gid
+    }
+
+    /**
+     * A fired GTT stop that lists no order yet is not put back on that look (its order may be on its way: a stop beside it could sell
+     * twice). Its order shows on the next look and fills: booked from it, with no second stop and nothing sold beside it.
+     */
+    @Test fun aFiredGttListingNoOrderYetIsNotPutBackOnOneLook() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        val gid = bareFiredGtt(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("no stop put back beside it", listOf(gid), kite.gtts.keys.toList())
+        kite.quote("NFO:$NIFTY_CE", 67.0, 66.95, 67.05)
+        val oid = kite.triggerGtt(gid)                                     // its order shows now, and fills
+        assertEquals("COMPLETE", kite.order(oid).status)
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val l = leg(id)
+        assertEquals("booked closed from its own order", 0, l.qty)
+        assertEquals((kite.order(oid).avg - 100.0) * 150, l.realizedPnl, 1e-6)
+        assertEquals("no second stop", listOf(gid), kite.gtts.keys.toList())
+        assertTrue("nothing sold beside it", sells().none { it.form["tag"] != "gtt" })
+        assertEquals("flat, never short", 0, kite.positions["NFO:$NIFTY_CE:NRML"]?.first ?: 0)
+    }
+
+    /** One that still lists no order on a second look [Strategies.GTT_BARE_AGREE_MS] later is taken as never placed: a stop rests again. */
+    @Test fun aFiredGttStillListingNoOrderOnASecondLookIsPutBack() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        val gid = bareFiredGtt(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("not on the first look", listOf(gid), kite.gtts.keys.toList())
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val active = kite.gtts.values.filter { it.optString("status") == "active" }
+        assertEquals("a GTT stop again, for the whole leg", listOf(150), active.map { gttQty(it) })
+        assertTrue("nothing sold", sells().isEmpty())
+    }
+
+    /**
+     * The run's own exit due while the leg's fired GTT lists no order yet: nothing sold beside it on that look (its order may be on its
+     * way); still none on a look [Strategies.GTT_BARE_AGREE_MS] later, it is taken as never placed and the leg sold once, at market.
+     */
+    @Test fun theRunsExitWaitsOnAFiredGttListingNoOrderThenSellsOnce() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        bareFiredGtt(id)
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)                    // under the 30-point stop: the run's own exit is due
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertTrue("nothing sold beside it", sells().isEmpty())
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        runBlocking { Strategies.tickAll(compromised = false) }
+        runBlocking { Strategies.tickAll(compromised = false) }
+        assertEquals("sold once", listOf("NRML" to "150"), sells().map { it.form["product"] to it.form["quantity"] })
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:NRML").first)
+    }
+
+    /**
+     * Held no more at Zerodha (the stop sold 75 at 70, Boss the other 75 by hand): the stop taken out has filled in part, so it stays on
+     * record; after a save and a reload of the book, the next look books that part - only it, at the stop's own fill.
+     */
+    @Test fun aStopPartFilledAsItComesOffAFlatLegIsBookedNextLookAfterAReload() {
+        val id = twoLotLeg()
+        startLive(id)
+        val stop = kite.orders.values.single { it.type == "SL" && it.working }
+        kite.fillPart(stop.id, 75, 70.0)
+        kite.position(NIFTY_CE, 0, 0.0, product = "MIS")                  // and Boss sold the other 75 in Kite
+        runBlocking { Strategies.manageOnly(compromised = false) }        // two agreeing reads: the stop comes out
+        assertEquals("CANCELLED", kite.order(stop.id).status)
+        assertEquals("not booked yet", 150, leg(id).qty)
+        Strategies.forgetCacheForTest()                                   // the book read from its file again
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val l = leg(id)
+        assertEquals("only the stop's 75 booked", 75, l.qty)
+        assertEquals((70.0 - 100.0) * 75, l.realizedPnl, 1e-6)
+        assertTrue("no exit-rejected alarm", runBlocking { Strategies.log() }.none { it.kind == "leg_exit_rejected" })
+        assertTrue("nothing sold", exits().isEmpty())
+        assertTrue("no stop on a flat position", kite.orders.values.none { it.type == "SL" && it.working })
+    }
+
+    /**
+     * No room for the stop (Boss's own sale of all 150 rests in Kite): the stop taken out has filled in part (75 at 70) as it came out, so
+     * it stays on record; after a save and a reload, the next look books that part only. No stop beside Boss's sale; nothing sold.
+     */
+    @Test fun aStopPartFilledAsItComesOutForNoRoomIsBookedNextLookAfterAReload() {
+        val id = twoLotLeg()
+        startLive(id)
+        val stop = kite.orders.values.single { it.type == "SL" && it.working }
+        val boss = kite.restsInKite(NIFTY_CE, "SELL", 150, 150.0, product = "MIS")
+        kite.fillsAsCancelled(stop.id, 75, 70.0)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("CANCELLED", kite.order(stop.id).status)
+        assertEquals(75, kite.order(stop.id).filled)
+        assertEquals("not booked yet", 150, leg(id).qty)
+        Strategies.forgetCacheForTest()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val l = leg(id)
+        assertEquals("only the stop's 75 booked", 75, l.qty)
+        assertEquals((70.0 - 100.0) * 75, l.realizedPnl, 1e-6)
+        assertTrue("nothing sold", exits().isEmpty())
+        assertTrue("no stop beside Boss's sale", kite.orders.values.none { it.type == "SL" && it.working })
+        assertEquals("Boss's sale untouched", "OPEN", kite.order(boss).status)
     }
 
     /**

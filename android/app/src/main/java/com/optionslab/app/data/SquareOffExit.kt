@@ -47,6 +47,22 @@ internal object SquareOffExit {
         "strategy exit $what $symbol $orderId ${sinceMs.coerceAtLeast(0L) / STRATEGY_REMIND_MS}"
     private val STAMP = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): an arm's LIMIT exit ([com.optionslab.engine.orb.LiveMirror.TAG]) resting unfilled past
+     * [ARM_LIMIT_STALE_MS] by Zerodha's stamp - no longer its closing in progress once the expiry backstop minute has come ([send],
+     * [ExpirySquareOff]).
+     */
+    internal fun armLimitStale(o: Broker.OrderRow): Boolean =
+        o.tag == com.optionslab.engine.orb.LiveMirror.TAG && o.type.equals("LIMIT", true) && restedMs(o) > ARM_LIMIT_STALE_MS
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4, review): how long an arm's LIMIT exit may rest before [armLimitStale] - well past the arm's
+     * own 15 s wait on it ([ArmLive]'s exit: not filled by then, it cancels it itself and puts its stop back), so the square-off never
+     * cancels one the arm is still waiting on (the arm would then put its stop back beside the square-off's sale). A margin for a phone
+     * clock ahead of Zerodha's.
+     */
+    const val ARM_LIMIT_STALE_MS = 45_000L
+
     /** How long it has rested by the market's clock (Zerodha's stamps are IST; a phone behind it reads young; unread: 0). */
     private fun restedMs(o: Broker.OrderRow): Long = runCatching {
         val at = java.time.LocalDateTime.parse(o.placedAt, STAMP).atZone(com.optionslab.engine.IST).toInstant().toEpochMilli()
@@ -386,8 +402,15 @@ internal object SquareOffExit {
             // of one square-off at once).
             fun staleLimit(o: Broker.OrderRow) = (o.tag == tag || o.tag in TAGS) && o.type.equals("LIMIT", true) && !chasing.containsKey(rowKey) &&
                 (restedMs(o) > LIMIT_CHASE_MS || soldAt[rowKey]?.let { clock() - it > LIMIT_CHASE_MS } == true)
+            // 23 Nov 2026 (B6 follow-ups, round 4: an arm's LIMIT exit resting unfilled counted as cover even at the expiry backstop, so an
+            // expiring row could be held into the settlement): from [backstop] (the expiry square-off's backstop minute; the flat-by has no
+            // such minute), with this square-off holding the row's claim, an arm's LIMIT exit resting past [ARM_LIMIT_STALE_MS] by
+            // Zerodha's stamp ([armLimitStale]: the arm no longer waiting on it; [ExpirySquareOff] no longer leaves the row to the arm for
+            // it) is not cover: taken out like any other resting order ([takeOut]: marked as the app's own cancel, cancelled and confirmed
+            // out; more of it filled meanwhile, nothing sold this pass - the next reads again, the lag guard on), then what is held is
+            // sold. Before the backstop it stays cover, as before.
             val cover = same.filter { ((it.tag == tag || it.tag in TAGS) && !staleLimit(it)) ||
-                (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) ||
+                (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it) && !(backstop && armLimitStale(it))) ||
                 (it.tag == STRATEGY_TAG && !isStop(it) && !takeOver(it)) }
             same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && (restedMs(it) > STRATEGY_COVER_MS || takeOver(it)) }?.let {
                 if (takeOver(it)) {
