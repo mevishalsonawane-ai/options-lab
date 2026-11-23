@@ -109,6 +109,8 @@ object BossTradeLog {
     fun filled(venueId: String, symbol: String, buy: Boolean, live: Boolean, entry: Double? = null, stop: Double? = null, target: Double? = null,
                closing: Boolean? = null) {
         if (!enabled()) return
+        // (23 Nov 2026, B6 review, ninth round: an order that closed a trade already is never taken again - nor prompted.)
+        if (closing == true && trades.any { it.closeId == venueId }) return
         fills.add(Fill(venueId, symbol, buy, live, System.currentTimeMillis(), entry, stop, target, closing))
         _prompt.value = Prompt(venueId, symbol, exit = closing == true, atMs = System.currentTimeMillis())
         scope.launch { runCatching { drain() } }
@@ -161,6 +163,8 @@ object BossTradeLog {
     }
 
     private fun closeOne(f: Fill, gen: Int) {
+        // (23 Nov 2026, B6 review, ninth round: an order that closed a trade already is never booked as a close again.)
+        if (trades.any { it.closeId == f.venueId }) return
         val open = trades.lastOrNull { it.symbol == f.symbol && it.live == f.live && it.open } ?: return
         // Pending until the trade book holds this close's own round trip (G6-4): a live exit's comes only on the next account
         // load, so its net is filled in then ([settle]) - never 0, never an earlier trip's on the same symbol.

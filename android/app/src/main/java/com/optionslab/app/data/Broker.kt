@@ -2500,6 +2500,29 @@ object Broker {
     /** 20 Nov 2026 (delta review): how long ago the lost reply under [key] was noted (null: none kept). */
     fun lostAgeMs(key: String): Long? = lostWrites[key]?.let { System.currentTimeMillis() - it.sinceMs }
 
+    /**
+     * 23 Nov 2026 (B6 review, ninth round, MAJOR 2: Boss's found exit was counted nowhere between the look that took it off and its caller's
+     * own note of it): the lost replies under [prefix] on [symbol]'s [product] row closing [side] ([exchange]: that one only, when given),
+     * read in one go with the found hand-over ([foundHandover]) - each one still kept, whatever its age (its search may be failing; one given
+     * up on is no longer kept), and each one found within [foundMs], whether still kept or already taken. Memory only, never a wait.
+     */
+    fun lostQtyNow(prefix: String, symbol: String, product: String, side: Kite.Side, exchange: String?, foundMs: Long): Int {
+        val now = System.currentTimeMillis()
+        fun row(o: Kite.Order) = o.side == side && o.tradingSymbol == symbol && o.product == product && (exchange == null || o.exchange == exchange)
+        synchronized(foundHandover) {
+            val kept = lostWrites.entries.sumOf { (k, w) ->
+                if (k.startsWith(prefix) && row(w.order) && (w.foundId == null || now - w.foundAtMs < foundMs)) w.order.quantity else 0
+            }
+            return kept + foundLately.entries.sumOf { (k, v) -> if (k.startsWith(prefix) && row(v.first) && now - v.second < foundMs) v.first.quantity else 0 }
+        }
+    }
+
+    /** 23 Nov 2026 (B6 review, ninth round): every lost reply under [prefix] forgotten, kept or found (Erase everything). Memory only. */
+    fun forgetLostPrefix(prefix: String) {
+        lostWrites.keys.filter { it.startsWith(prefix) }.forEach { forgetLost(it) }
+        synchronized(foundHandover) { foundLately.keys.removeIf { it.startsWith(prefix) } }
+    }
+
     /** 23 Nov 2026 (B6 review, eighth round): the order kept under the lost reply [key], if any. Memory only. */
     fun lostOrder(key: String): Kite.Order? = lostWrites[key]?.order
 
@@ -2578,6 +2601,7 @@ object Broker {
                 if (foundLately.size > 200) foundLately.entries.removeIf { now - it.value.second > FOUND_COUNTED_MS }
                 foundLately[key] = w.order to (w.foundAtMs.takeIf { it > 0 } ?: now)
             }
+            lostFoundStepForTest?.invoke("handed", key)
             w.searching?.cancel()
             runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
             return LostLook.Found(found, w.order.quantity, w.order.triggerPrice).also { it.symbol = w.order.tradingSymbol }

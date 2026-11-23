@@ -108,7 +108,7 @@ internal object SquareOffExit {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear(); bossFoundAt.clear(); bossLost.clear(); bossFoundQty.clear() }
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear(); bossFoundAt.clear(); bossLost.clear() }
 
     /**
      * 23 Nov 2026 (B6 follow-ups, round 2): by position row ("EXCHANGE:SYMBOL:PRODUCT"), the square-off passes chasing a blocked MARKET
@@ -244,7 +244,7 @@ internal object SquareOffExit {
     private val bossLost = java.util.concurrent.ConcurrentHashMap<String, BossLost>()
     private val bossScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
     /** 23 Nov 2026 (B6 review, eighth round): how long a lost exit is asked after by its own watch ([watchBossLost]), and how often. */
-    private const val BOSS_WATCH_MS = 30 * 60_000L
+    private const val BOSS_WATCH_MS = 12 * 60 * 60_000L
     @Volatile internal var bossWatchGapMsForTest: Long? = null
 
     /**
@@ -257,7 +257,7 @@ internal object SquareOffExit {
         val rec = BossLost(key, order, known.toSet(), System.currentTimeMillis(),
             runCatching { Market.now().toLocalDateTime() }.getOrNull(), session, source)
         bossLost[key] = rec
-        bossFoundAt.remove(key); bossFoundQty.remove(key)
+        bossFoundAt.remove(key)
         Broker.noteLost(key, order, known, "Your exit", sinceMs = rec.sinceMs, sentAt = rec.sentAt)
         runCatching { Protections.bossLostChanged() }
         watchBossLost(rec)
@@ -304,7 +304,6 @@ internal object SquareOffExit {
             // a read begun just before it was found never puts a stop back beside it.)
             is Broker.LostLook.Found -> {
                 bossFoundAt[key] = now
-                bossFoundQty[key] = FoundQty(noted?.quantity ?: l.qty, noted?.side ?: Kite.Side.SELL, now)
                 bossFound(key, l, noted)
                 true
             }
@@ -317,9 +316,6 @@ internal object SquareOffExit {
         }
     }
     private val bossFoundAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
-    /** 23 Nov 2026 (B6 review, eighth round): a lost exit just found - its size and side - for [bossLostQty]'s short count after it is found. */
-    private data class FoundQty(val qty: Int, val side: Kite.Side, val at: Long)
-    private val bossFoundQty = java.util.concurrent.ConcurrentHashMap<String, FoundQty>()
     /**
      * 23 Nov 2026 (B6 review, eighth round, review): how long a found exit is still counted by the exits' sizes - long enough for a read begun
      * just before it was found, short enough that its working order or fill (in the book from then on) is not counted twice for long.
@@ -328,9 +324,9 @@ internal object SquareOffExit {
     /** TEST ONLY: the found exit under [key] found [ms] earlier than it was ([Broker.FOUND_COUNTED_MS]). */
     internal fun ageBossFoundForTest(key: String, ms: Long) { bossFoundAt.computeIfPresent(key) { _, at -> at - ms } }
     /** TEST ONLY: Boss's lost exits forgotten from memory, as after a restart (the marks' file kept). */
-    internal fun forgetBossLostForTest() { bossLost.clear(); bossFoundAt.clear(); bossFoundQty.clear() }
+    internal fun forgetBossLostForTest() { bossLost.clear(); bossFoundAt.clear() }
     /** 23 Nov 2026 (B6 review, eighth round): Erase everything - Boss's lost exits forgotten (their watches end with them). Memory only. */
-    internal fun forgetBossLostForErase() { bossLost.clear(); bossFoundAt.clear(); bossFoundQty.clear() }
+    internal fun forgetBossLostForErase() { bossLost.clear(); bossFoundAt.clear(); Broker.forgetLostPrefix(BOSS_LOST) }
 
     /**
      * 23 Nov 2026 (B6 review, eighth round, m1: a lost exit found was never said): Boss's lost exit [l] found in Zerodha's book - its state
@@ -347,9 +343,9 @@ internal object SquareOffExit {
     private val ENDED = setOf("COMPLETE", "REJECTED", "CANCELLED")
 
     private suspend fun tellFound(key: String, rec: BossLost?, l: Broker.LostLook.Found, noted: Kite.Order?) {
-        // (Review: no longer kept on disk first - written before he is told or it is booked, so a restart a moment later never tells or books
-        // it twice.)
-        if (rec != null) runCatching { Protections.bossLostWritten() }
+        // (Review: no longer kept on disk first - written before he is told, so a restart a moment later never tells or books it twice. Ninth
+        // round: he is told at once either way - a refusal must never wait - and it is booked only once that write took (below).)
+        var written = rec == null || runCatching { Protections.bossLostWritten() }.getOrDefault(false)
         val sym = rec?.order?.tradingSymbol ?: noted?.tradingSymbol ?: l.symbol
         val side = rec?.order?.side ?: noted?.side ?: Kite.Side.SELL
         val source = rec?.source ?: Origins.MANUAL
@@ -370,22 +366,33 @@ internal object SquareOffExit {
                     else " The other ${l.qty - f.filled} is still working at Zerodha (order ${l.id}): check Kite.") else "")
             f.status == "REJECTED" || f.status == "CANCELLED" -> {
                 // (Nothing sold: no grace, nor counted as going - the stops taken out for it go back on the next look.)
-                bossFoundAt.remove(key); bossFoundQty.remove(key); Broker.forgetFound(key)
+                bossFoundAt.remove(key); Broker.forgetFound(key)
                 "Your exit on $sym was ${f.status} by Zerodha${f.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""}. The position is still " +
                     "open; its stops go back."
             }
             else -> "Your exit on $sym is at Zerodha (order ${l.id}, ${f.status.lowercase()}), not filled yet: check Kite."
         }
-        if (f != null && f.filled > 0) {
-            rec?.session?.let { day -> runCatching { Ledger.attachOrders(day, listOf(f.orderId), null, null) } }
-            if (source.startsWith(Origins.MANUAL)) runCatching {
-                com.optionslab.app.ira.BossTradeLog.filled("kite:${f.orderId}", sym, side == Kite.Side.BUY, live = true, entry = f.avgPrice, closing = true)
-            }
-        }
         runCatching { Diag.record("zerodha", words) }
         runCatching { com.optionslab.app.work.Alerts.post(words, if (f != null && f.filled > 0) com.optionslab.app.work.Alerts.Kind.SUCCESS
             else com.optionslab.app.work.Alerts.Kind.ERROR, "Zerodha") }
+        val done = f ?: return
+        if (done.filled <= 0) return
+        // (Ninth round: booked only once its saved record's removal is written - tried again every 30 s until it is, [BOSS_BOOK_MS] at most -
+        // so a restart that finds it again never books it twice; never written, it is said in the diary.)
+        val until2 = System.currentTimeMillis() + BOSS_BOOK_MS
+        while (!written && System.currentTimeMillis() < until2) {
+            kotlinx.coroutines.delay(30_000L)
+            written = runCatching { Protections.bossLostWritten() }.getOrDefault(false)
+        }
+        if (!written) { runCatching { Diag.record("zerodha", "$sym: the found exit ${l.id} not booked - the saved record of it could not be cleared") }; return }
+        rec?.session?.let { day -> runCatching { Ledger.attachOrders(day, listOf(done.orderId), null, null) } }
+        if (source.startsWith(Origins.MANUAL)) runCatching {
+            com.optionslab.app.ira.BossTradeLog.filled("kite:${done.orderId}", sym, side == Kite.Side.BUY, live = true, entry = done.avgPrice, closing = true)
+        }
     }
+
+    /** 23 Nov 2026 (B6 review, ninth round): how long a found exit's booking waits for its saved record's removal to be written. */
+    private const val BOSS_BOOK_MS = 12 * 60 * 60_000L
 
     /**
      * 23 Nov 2026 (B6 review, eighth round): Boss's lost exits closing [side] on [symbol]'s [product] row, their quantity. Each is asked after
@@ -393,23 +400,20 @@ internal object SquareOffExit {
      * Memory only.
      */
     fun bossLostQty(symbol: String, product: String, side: Kite.Side, exchange: String? = null): Int {
-        var n = 0
+        settleBossLost(symbol, product, exchange)
+        // (Review: counted for as long as it is still looked for - whatever the count window: the order book may be failing - and a found one
+        // [BOSS_FOUND_SIZING_MS] more, a read begun just before it was found not showing it. Ninth round, MAJOR 2: read in one go with the found
+        // hand-over, so it is never counted nowhere in between.)
+        return Broker.lostQtyNow(BOSS_LOST, symbol, product, side, exchange, BOSS_FOUND_SIZING_MS)
+    }
+
+    /** 23 Nov 2026 (B6 review, ninth round): each of Boss's lost exits on the row asked after ([bossExitLost]): one found or given up on is settled. */
+    private fun settleBossLost(symbol: String, product: String, exchange: String?) {
         for (k in Broker.lostKeys(BOSS_LOST)) {
             val parts = k.removePrefix(BOSS_LOST).split(':')
             if (parts.size != 3 || parts[1] != symbol || parts[2] != product || (exchange != null && parts[0] != exchange)) continue
-            val o = Broker.lostOrder(k) ?: continue
-            // (Review: counted for as long as it is still looked for - Searching, whatever the count window: the order book may be failing.)
-            val still = runCatching { bossExitLost(parts[0], symbol, product) }.getOrDefault(true) && Broker.lostPending(k)
-            if (still && o.side == side) n += o.quantity
+            runCatching { bossExitLost(parts[0], symbol, product) }
         }
-        // (Found a moment ago: counted [BOSS_FOUND_SIZING_MS] more - a read begun just before it was found does not show it.)
-        val now = System.currentTimeMillis()
-        bossFoundQty.entries.removeIf { now - it.value.at >= BOSS_FOUND_SIZING_MS }
-        for ((k, f) in bossFoundQty) {
-            val parts = k.removePrefix(BOSS_LOST).split(':')
-            if (parts.size == 3 && parts[1] == symbol && parts[2] == product && (exchange == null || parts[0] == exchange) && f.side == side) n += f.qty
-        }
-        return n
     }
 
     /**
@@ -434,7 +438,13 @@ internal object SquareOffExit {
 
     init {
         // (23 Nov 2026, B6 review, seventh round: Boss's own exit sale whose reply was lost is counted by the square-offs, as each book's own.)
-        lostPendingProviders[BOSS_OWNER] = { sym, product -> Broker.lostSales(BOSS_LOST, sym, product) }
+        // (Ninth round: either side - a short row's exit is a BUY; a row is one way round, so his exit on it is only ever the one that closes it.)
+        // (Review: counted as the exits count it - for as long as it is still looked for, each asked after first - and a found one the square-offs'
+        // own [Broker.FOUND_COUNTED_MS].)
+        lostPendingProviders[BOSS_OWNER] = { sym, product ->
+            settleBossLost(sym, product, null)
+            Broker.lostQtyNow(BOSS_LOST, sym, product, Kite.Side.SELL, null, Broker.FOUND_COUNTED_MS) +
+                Broker.lostQtyNow(BOSS_LOST, sym, product, Kite.Side.BUY, null, Broker.FOUND_COUNTED_MS) }
     }
 
     /**

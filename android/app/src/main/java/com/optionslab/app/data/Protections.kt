@@ -797,6 +797,16 @@ object Protections {
         marksForgotten.clear()
     }
 
+    /**
+     * 23 Nov 2026 (B6 review, ninth round): the marks' file read now - at the start's positions step, before the arms, the ORB books and the
+     * square-offs look ([PositionsFirst]), so Boss's lost exits kept there hold and count from the first look. That step's own worker only.
+     */
+    internal fun loadMarksNow() {
+        if (marksFile == null) return
+        val gen = wipeGen
+        synchronized(marksMon) { if (gen == wipeGen) loadMarksLocked() }
+    }
+
     /** 23 Nov 2026 (B6 review, eighth round, m5): Boss's lost exits changed ([SquareOffExit.noteBossLost]): the marks written again. Never blocks. */
     internal fun bossLostChanged() = writeMarksSoon()
 
@@ -855,22 +865,29 @@ object Protections {
      * of Boss's is no longer kept before he is told or it is booked ([SquareOffExit]), so a restart never tells it twice. Only off the
      * order and tick paths (its caller's own background work).
      */
-    internal fun bossLostWritten() {
-        if (marksFile == null) return
-        runCatching { marksWriter.submit(marksWrite(wipeGen)).get(5, java.util.concurrent.TimeUnit.SECONDS) }
+    internal fun bossLostWritten(): Boolean {
+        if (marksFile == null) return false
+        // (Ninth round: true only once the file was written - its read failing, or the write, it is not.)
+        val gen = wipeGen
+        return runCatching { marksWriter.submit(java.util.concurrent.Callable { marksWriteNow(gen) }).get(5, java.util.concurrent.TimeUnit.SECONDS) }
+            .getOrDefault(false)
     }
 
-    private fun marksWrite(gen: Int) = Runnable {
+    private fun marksWrite(gen: Int) = Runnable { marksWriteNow(gen) }
+
+    /** The marks written now (the marks' writer only). True once written. */
+    private fun marksWriteNow(gen: Int): Boolean {
         synchronized(marksMon) {
-            if (gen != wipeGen) return@synchronized
+            if (gen != wipeGen) return false
             loadMarksLocked()
-            if (!marksLoaded) return@synchronized
+            if (!marksLoaded) return false
             val now = System.currentTimeMillis()
             val o = JSONObject().apply { takenOver.forEach { (k, at) -> if (now - at in 0..TAKEN_OVER_MS) put(k, at) } }
             // (23 Nov 2026, B6 review, eighth round, m5: Boss's lost exits beside them.)
             val lost = SquareOffExit.bossLostRecords()
             if (lost.isNotEmpty()) o.put(BOSS_LOST_KEY, JSONArray().apply { lost.forEach { put(bossLostJson(it)) } })
-            runCatching { marksFile?.let { Vault.writeFile(it, o.toString().toByteArray(Charsets.UTF_8)) } }
+            val f = marksFile ?: return false
+            return runCatching { Vault.writeFile(f, o.toString().toByteArray(Charsets.UTF_8)) }.isSuccess
         }
     }
 
@@ -1428,9 +1445,19 @@ object Protections {
                 // is that much sold - placed again for the rest once the book shows it; one refused or cancelled covers nothing.)
                 val firedFills = HashMap<String, Int>()
                 for (oid in (g?.orderIds.orEmpty() + gttFired[gid].orEmpty()).distinct()) {
-                    val st = (try { Broker.orderState(oid) } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                    // (Ninth round: one Zerodha does not know yet - it fired a moment ago - is not known: never "covers nothing", nothing goes
+                    // beside it, and Boss is told - for [Broker.LOST_SEARCH_MS] from the mark, by when its book shows any order it took; after
+                    // that, an order it does not know covers nothing.)
+                    val young = takenOver["gtt:$gid"]?.let { System.currentTimeMillis() - it in 0 until Broker.LOST_SEARCH_MS } == true
+                    val st = try { Broker.orderState(oid) } catch (e: kotlinx.coroutines.CancellationException) { throw e
                     } catch (e: Broker.KiteError) { if (e.type == "InputException") null else return p
-                    } catch (_: Exception) { return p }) ?: continue
+                    } catch (_: Exception) { return p }
+                    if (st == null) {
+                        if (!young) continue
+                        Alerts.post("${p.symbol}: its GTT fired as your exit took it out and Zerodha does not show its order $oid yet, so no stop " +
+                            "goes beside it; check Kite.", Alerts.Kind.ERROR, "Protection", throttle = true)
+                        return p
+                    }
                     if (st.status !in GONE) {
                         // (Review: never silent - said as the fired branch says it, each minute while it works.)
                         Alerts.post("${p.symbol}: its GTT fired as your exit took it out; its ${p.exitSide.lowercase()} rests at Zerodha unfilled, so no " +
@@ -1750,6 +1777,12 @@ object Protections {
         if (cap <= so.qty) return p.copy(whole = null, note = "")
         val to = minOf(want, cap - busy) / lot * lot
         if (to <= so.qty) return p
+        // (Ninth round: never grown on positions that do not give the day's quantities - the lag guard cannot count a fill they trail; said.)
+        if (!dayQtyKnown(p)) {
+            Alerts.post("${p.symbol}: its stop covers ${so.qty} of $want; it grows once Zerodha's positions show today's quantities.",
+                Alerts.Kind.ERROR, "Protection", throttle = true)
+            return p
+        }
         val r = runCatching { Broker.modify(so, to, so.type, if (so.type == "SL-M") null else so.price, so.trigger) }
         if (r.isFailure) {
             Alerts.post("${p.symbol}: its stop covers ${so.qty} of $want and could not be grown (${r.exceptionOrNull()?.message?.take(120)}); " +
@@ -2744,7 +2777,13 @@ object Protections {
         }
         // (23 Nov 2026, B6 review, eighth round, m4: a stop put back for only part beside Boss's own exit whose reply was lost ([BOSS_CUT]) grows
         // once that exit is known - a regular look, never the stream's.)
-        if (!stream && cur.whole != null && so != null && !SquareOffExit.bossExitLostOn(cur.exchange, cur.symbol)) cur = growStop(cur)
+        // (Ninth round, MAJOR 1: the look ends with the change - this look's [so] and [stopQty] were read before it, and a trail modify on them
+        // would shrink the grown stop back to its old size; the next look trails it on a fresh read.)
+        if (!stream && cur.whole != null && so != null && !SquareOffExit.bossExitLostOn(cur.exchange, cur.symbol)) {
+            val g = growStop(cur)
+            if (g.qty != cur.qty) return g
+            cur = g
+        }
         // 22 Nov 2026 (B6 review, M5): the app's own target ([Item.appTarget]) watched while its stop rests and the position is held: reached
         // (the price now, or a stream look's tick a moment ago), it is sold - on a regular look; a stream look (the live lane, every tick) only
         // marks it and asks a look apart at once ([targetHit]), never a Zerodha call from the tick.

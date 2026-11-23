@@ -1988,4 +1988,30 @@ class PineAutoLiveTest : RobolectricTest() {
         assertEquals("rested on the next check", 1, stops().size)
         assertEquals("30", stops().single().form["quantity"])
     }
+
+    /**
+     * B6 review, ninth round, MAJOR 3: Boss's own exit on the holding's row whose reply was lost may be selling it. Pine's exit sells nothing
+     * beside it, and the stop it took out is not put back beside it on the next checks (the app watches the level meanwhile); once his exit is
+     * known not to have gone, Pine's owed exit goes - once.
+     */
+    @Test fun noStopIsPutBackNorSoldBesideBossesLostExit() {
+        bought()                                                   // 30 at 300, its stop resting at 270
+        val stop = held()!!.stop!!
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        val key = SquareOffExit.bossLostKey("NFO", ce, "MIS")
+        Broker.noteLost(key, Kite.Order(ce, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null), emptyList(), "Your exit")
+        try {
+            pass(51_900.0)                                         // SELL signal: the stop comes out, nothing is sold beside his exit
+            assertEquals("CANCELLED", kite.order(stop).status)
+            assertTrue("nothing sold beside his exit", side("SELL").isEmpty())
+            pass(51_900.0)
+            pass(51_900.0)
+            assertEquals("no stop put back beside it", 1, stops().size)
+            assertTrue(side("SELL").isEmpty())
+            Broker.ageLostForTest(key, Broker.LOST_SEARCH_MS + 1_000)
+            pass(51_900.0)
+            assertEquals("the owed exit goes once his is known not to have gone", 1, side("SELL").size)
+            assertNull(held())
+        } finally { Broker.lostSearchInlineForTest = false; Broker.lostLookGapMsForTest = null; Broker.forgetLost(key) }
+    }
 }
