@@ -1242,7 +1242,7 @@ internal const val AUTOMATIONS_ALWAYS = "Always on, with no switch: live prices 
  * The "AI trades go live" switch's vault writes (17 Oct): off the screen's thread, one at a time and in the order tapped, in a
  * scope of the app's own (not the screen's), so leaving the page at once never drops the write.
  */
-internal val AI_LIVE_WRITES = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1))
+internal val AI_LIVE_WRITES = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1) + com.optionslab.app.data.ScopeGuard.handler("AI live writes"))
 
 @Composable
 private fun AutomationsCard() {

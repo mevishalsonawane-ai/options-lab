@@ -167,7 +167,10 @@ object ExpirySquareOff {
                 // Second review: at the backstop, an arm's own exit still working on it (its market sell, or its stop it is about to
                 // replace with one) is its closing in progress: never cancelled here (it would only rest it again, and the two
                 // could both sell). The arm is left to finish; this pass sends nothing for it and says so once.
-                if (backstop && armHolds(p.symbol) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG }) {
+                // (23 Nov 2026, B6 follow-ups, round 4: not its LIMIT exit resting unfilled long past the arm's own wait on it -
+                // [SquareOffExit.armLimitStale] - which held an expiring row into the settlement: that one the square-off takes out and
+                // sells, under the row's claim.)
+                if (backstop && armHolds(p.symbol) && same.any { it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !SquareOffExit.armLimitStale(it) }) {
                     tellOnce(context, "arm closing ${p.symbol}", "${p.symbol} expires today and its arm is still closing it at Zerodha; watch it in Trade.")
                     continue
                 }

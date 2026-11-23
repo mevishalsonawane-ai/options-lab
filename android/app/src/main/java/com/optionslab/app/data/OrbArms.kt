@@ -2838,7 +2838,7 @@ object OrbArms {
             ?.let { c -> Paper.Contract(Paper.symbolOf(c), c.underlying, c.expiry, c.strike, c.right, c.lotSize, c.instrumentKey) }
 
     /** 19 Nov 2026 (audit batch 2): the arms' own work off the lock (the instrument list's download). */
-    private val offLock = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val offLock = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("OrbArms.offLock"))
     /** 20 Nov 2026 (b5-stream merge): a lost exit sale's background search and its cancels read and write in the stop checks' lane. */
     private val SAFETY_LANE = Broker.Lane(com.optionslab.ira.RateGate.Priority.SAFETY)
     @Volatile private var warming: kotlinx.coroutines.Deferred<Unit>? = null
@@ -3826,7 +3826,9 @@ object OrbArms {
             else -> Unit
         }
         val id = try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-            if (Broker.definite(e)) { refused = true; null } else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
+            // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already: straight to
+            // the background search, never a second ~4 s under the arms' lock.)
+            if (Broker.definite(e)) { refused = true; null } else (if (e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull())
                 ?: null.also { Broker.noteLost(lostKey, o, known, "$label: its stop", liveOnly = true) }
         }
         // (22 Nov 2026, B6 review: labelled without waiting on the Strategy Module's lock, held across its Zerodha calls - as the square-offs.)
@@ -6685,7 +6687,9 @@ object OrbArms {
                 val sentAt = runCatching { Market.now().toLocalDateTime() }.getOrDefault(java.time.ZonedDateTime.now(com.optionslab.engine.IST).toLocalDateTime())
                 try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
                     val definite = Broker.definite(e)
-                    val found = if (definite) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
+                    // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already:
+                    // straight to the lost-sale hold below, never a second ~4 s under the arms' lock.)
+                    val found = if (definite || e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, knownKite(b) + working.map { it.id }) }.getOrNull()
                     found ?: run {
                         // Refused outright: nothing went, so the stop goes back. A lost reply with no order found may still have gone.
                         if (definite) {

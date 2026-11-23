@@ -151,7 +151,7 @@ object IraHub {
     const val KEEP_DAYS = 60
 
     private val _state = MutableStateFlow(State())
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + com.optionslab.app.data.ScopeGuard.handler("IraHub"))
     private var app: Context? = null
     /** The last candles read (stored + live), for backtests. */
     @Volatile private var histories: Map<IraMarket, History> = emptyMap()
@@ -187,6 +187,12 @@ object IraHub {
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
     /** TEST ONLY: a feed's text instead of the network. */
     @Volatile internal var testFeed: (suspend (String) -> String)? = null
+        set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
+    /** 23 Nov 2026 (B6 follow-ups, round 2): the keeper's tries of one save, and the wait between them. */
+    private const val SAVE_TRIES = 3
+    private const val SAVE_RETRY_MS = 2_000L
+    /** TEST ONLY (23 Nov 2026, B6 follow-ups, round 2): run by the keeper just before each save (a save that fails). */
+    @Volatile internal var testBeforeSave: (() -> Unit)? = null
         set(v) { check(com.optionslab.app.BuildConfig.DEBUG) { "test seam" }; field = v }
 
     fun appContext(): Context? = app
@@ -251,7 +257,22 @@ object IraHub {
         }
         if (keeper == null) keeper = scope.launch {
             var last: List<Msg>? = null
-            _state.collect { st -> if (st.messages !== last) { last = st.messages; kotlinx.coroutines.delay(300); saveState() } }
+            _state.collect { st ->
+                if (st.messages !== last) {
+                    last = st.messages
+                    kotlinx.coroutines.delay(300)
+                    // 23 Nov 2026 (B6 follow-ups, round 2: with the scope's handler a failed save no longer ended the process, but it ended this
+                    // keeper - nothing more was saved for the rest of the process): a save that fails is tried again twice, 2 s apart; still
+                    // failing, it is noted and the next change saves again.
+                    for (attempt in 1..SAVE_TRIES) {
+                        try { testBeforeSave?.invoke(); saveState(); break } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+                            if (attempt < SAVE_TRIES) kotlinx.coroutines.delay(SAVE_RETRY_MS)
+                            else runCatching { com.optionslab.app.data.Diag.record("jarvis", "the conversation could not be saved " +
+                                "(${e.javaClass.simpleName}, $SAVE_TRIES tries); the next change saves again") }
+                        }
+                    }
+                }
+            }
         }
     }
 

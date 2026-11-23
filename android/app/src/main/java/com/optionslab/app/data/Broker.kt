@@ -43,7 +43,7 @@ object Broker {
     private lateinit var app: Context
 
     /** Where a bounded read runs ([within]): apart from its caller, so a caller that stops waiting is not held. */
-    private val readScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val readScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Broker.readScope"))
 
     /**
      * A Zerodha read with a real deadline. [call] does blocking HttpsURLConnection I/O (20 s connect, 60 s read) that does
@@ -735,7 +735,7 @@ object Broker {
     private fun failed(notSent: Boolean, msg: String): IOException = if (notSent) NotSent(msg) else IOException(msg)
 
     /** The relay's connects for a write, off the caller ([relayWithin]): one that outlives the write's budget finishes here. */
-    private val relayScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val relayScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Broker.relayScope"))
 
     /**
      * 20 Nov 2026 (audit B5, item 1): the relay's proxy for a write, waited for at most [ms] (what is left of the write's budget). The
@@ -830,7 +830,7 @@ object Broker {
     private val cutter = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "zerodha-cut").apply { isDaemon = true } }
 
     @Volatile private var warmedAt = 0L
-    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Broker.warmScope"))
 
     /**
      * Get the order route ready while the owner is still reviewing (or, for the bots, during market hours):
@@ -1105,7 +1105,8 @@ object Broker {
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
         entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null; lastEntrySentAt = 0L
         killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
-        cancelLostSearches(); lostWrites.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false
+        cancelLostSearches(); lostWrites.clear(); foundLately.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false
+        lostFoundStepForTest = null
         // (22 Nov 2026, B6 review: no test's instruments list in memory left for the next test's entries, [instrumentsInMemory], nor a
         // background read of it still running into the next test.)
         instrumentsWarm?.cancel(); instrumentsWarm = null; instrumentsWarming.set(false); instrumentsMemo = null }
@@ -2351,6 +2352,8 @@ object Broker {
         /** When a caller last asked after it ([lookLost]): one no caller has asked after for long belongs to a trade long gone. */
         @Volatile var askedMs = sinceMs
         @Volatile var foundId: String? = null
+        /** 23 Nov 2026 (B6 follow-ups, round 2): when [foundId] was found (phone ms; 0: not yet) - [lostSales]. */
+        @Volatile var foundAtMs = 0L
         /** When a read of the book last SUCCEEDED without finding it (0: never). */
         @Volatile var readOkAtMs = 0L
         /** When a read of the book last FAILED (0: never). */
@@ -2361,7 +2364,7 @@ object Broker {
     private val lostWrites = java.util.concurrent.ConcurrentHashMap<String, LostWrite>()
     // (B5 merge review: the searches' order-book reads in the stop checks' lane, SAFETY - an ORB / Liquidity exit or a stop's re-rest
     // waits on them, so they are never starved behind entries or Jarvis; only exits and stops (EXIT) go before them.)
-    private val lostScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + Lane(com.optionslab.ira.RateGate.Priority.SAFETY))
+    private val lostScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + Lane(com.optionslab.ira.RateGate.Priority.SAFETY) + com.optionslab.app.data.ScopeGuard.handler("Broker.lostScope"))
 
     /** TEST ONLY: the lane the lost replies' searches read the book in. */
     internal fun lostLaneForTest(): com.optionslab.ira.RateGate.Priority? = lostScope.coroutineContext[Lane]?.priority
@@ -2375,6 +2378,11 @@ object Broker {
     @Volatile internal var lostLookGapMsForTest: Long? = null
     /** TEST SEAM: the book searched on the caller's thread (the tests' looks are one after another), not in the background. */
     @Volatile internal var lostSearchInlineForTest = false
+    /**
+     * TEST SEAM (23 Nov 2026, B6 follow-ups, round 4): called with a step name and the lost reply's key between its search writing down
+     * when it found the sale and what it found ("found"), so a test can read [lostSales] there. Null in the app.
+     */
+    @Volatile internal var lostFoundStepForTest: ((String, String) -> Unit)? = null
 
     /** What [lookLost] found: the order, still looking (UNKNOWN: send nothing), or given up on (Boss told; the caller may go on). */
     sealed class LostLook { data class Found(val id: String, val qty: Int, val trigger: Double? = null) : LostLook() { var symbol: String = "" }; object Searching : LostLook(); object GaveUp : LostLook() }
@@ -2405,6 +2413,41 @@ object Broker {
 
     /** The keys of the lost replies being looked for that start with [prefix]. Memory only. */
     fun lostKeys(prefix: String): List<String> = lostWrites.keys.filter { it.startsWith(prefix) }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, item 2): a book's unresolved lost exit SALES on one position row, for the square-offs
+     * ([SquareOffExit.lostPendingProviders]): the quantity of the lost replies kept under keys starting with [prefix] that sell [symbol]
+     * in [product], noted less than the lost search's window ([LOST_SEARCH_MS]) and a minute ago. Past that age one still kept is not
+     * counted (its search is over, or nobody asks after it), so a write no caller takes off never holds a square-off back for good.
+     * Round 2: one found in Zerodha's book is in the square-offs' fresh reads from then on - counted [FOUND_COUNTED_MS] more only (found,
+     * or found and taken by its caller: [foundLately]), so a read that began just before it was found, or a caller that took it at once,
+     * never leaves it in neither, and a square-off is held back seconds, not minutes. Memory only, never a wait.
+     */
+    fun lostSales(prefix: String, symbol: String, product: String): Int {
+        val now = System.currentTimeMillis()
+        val window = (lostSearchMsForTest ?: LOST_SEARCH_MS) + 60_000L
+        fun row(o: Kite.Order) = o.side == Kite.Side.SELL && o.tradingSymbol == symbol && o.product == product
+        // (23 Nov 2026, B6 follow-ups, round 4: both books read in one go, never across a look's hand-over of a found sale from the one to
+        // the other - [foundHandover] - which could have counted it twice, or not at all.)
+        synchronized(foundHandover) {
+            val kept = lostWrites.entries.sumOf { (k, w) ->
+                if (k.startsWith(prefix) && row(w.order) && now - w.sinceMs < window && (w.foundId == null || now - w.foundAtMs < FOUND_COUNTED_MS))
+                    w.order.quantity else 0
+            }
+            return kept + foundLately.entries.sumOf { (k, v) -> if (k.startsWith(prefix) && row(v.first) && now - v.second < FOUND_COUNTED_MS) v.first.quantity else 0 }
+        }
+    }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): held while a look hands a found sale over from [lostWrites] to [foundLately], and while
+     * [lostSales] reads the two - map operations only (no read, write or wait inside), so never long.
+     */
+    private val foundHandover = Any()
+
+    /** 23 Nov 2026 (B6 follow-ups, round 2): how long a found lost sale is still counted for the square-offs ([lostSales]). */
+    const val FOUND_COUNTED_MS = 20_000L
+    /** Lost replies found and taken by their caller lately (key -> the order, when it was found): [lostSales]. Memory only; bounded. */
+    private val foundLately = java.util.concurrent.ConcurrentHashMap<String, Pair<Kite.Order, Long>>()
 
     /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed (its search stopped). Memory only. */
     fun forgetLost(key: String) { lostWrites.remove(key)?.searching?.cancel() }
@@ -2453,17 +2496,29 @@ object Broker {
     fun lostTrigger(key: String): Double? = lostWrites[key]?.order?.triggerPrice
 
     /** TEST ONLY: the lost reply under [key] noted [ms] earlier than it was (the real waits judged, never shortened). */
-    internal fun ageLostForTest(key: String, ms: Long) { lostWrites[key]?.let { it.sinceMs -= ms; it.askedMs = it.sinceMs } }
+    internal fun ageLostForTest(key: String, ms: Long) {
+        lostWrites[key]?.let { it.sinceMs -= ms; it.askedMs = it.sinceMs; if (it.foundAtMs > 0) it.foundAtMs -= ms }
+        foundLately.computeIfPresent(key) { _, v -> v.first to v.second - ms }
+    }
 
     /** TEST ONLY: every lost reply forgotten, as after a restart. */
-    internal fun forgetLostForTest() { cancelLostSearches(); lostWrites.clear() }
+    internal fun forgetLostForTest() { cancelLostSearches(); lostWrites.clear(); foundLately.clear() }
 
     /** One search of the book for [w]: found, or a read that succeeded without it; a read that failed changes nothing. */
     private suspend fun searchLost(w: LostWrite) {
         val found = try { findRecent(w.order, w.known, liveOnly = w.liveOnly, sentAt = w.sentAt) } catch (e: kotlinx.coroutines.CancellationException) { throw e
         } catch (_: Exception) { w.readFailAtMs = System.currentTimeMillis(); return }
         // (20 Nov 2026, delta review: an order claimed by another trade meanwhile ([claimStop]) is not this one: looked for again.)
-        if (found != null) synchronized(w) { if (!claimedIds.containsKey(found)) w.foundId = found } else w.readOkAtMs = System.currentTimeMillis()
+        // (23 Nov 2026, B6 follow-ups, round 4: when it was found is written BEFORE what was found - [lostSales] reading the found id
+        // with no time yet would have counted the sale zero times.)
+        if (found != null) synchronized(w) {
+            if (!claimedIds.containsKey(found)) {
+                w.foundAtMs = System.currentTimeMillis()
+                lostFoundStepForTest?.let { step -> lostWrites.entries.firstOrNull { it.value === w }?.let { step("found", it.key) } }
+                w.foundId = found
+            }
+        }
+        else w.readOkAtMs = System.currentTimeMillis()
     }
 
     /**
@@ -2504,7 +2559,14 @@ object Broker {
         w.foundId?.let { found ->
             // (20 Nov 2026, delta review: only the look that takes it off acts on it - another look at the same moment still reads
             // Searching, never "none kept" - and its search is stopped.)
-            if (!lostWrites.remove(key, w)) return LostLook.Searching
+            // (23 Nov 2026, B6 follow-ups, round 2: still counted a moment for the square-offs once taken - [lostSales]. Round 4: taken
+            // off and noted there in one step, under [foundHandover], so [lostSales] counts it once, never twice nor zero times; and
+            // noted only by the look that took it off.)
+            synchronized(foundHandover) {
+                if (!lostWrites.remove(key, w)) return LostLook.Searching
+                if (foundLately.size > 200) foundLately.entries.removeIf { now - it.value.second > FOUND_COUNTED_MS }
+                foundLately[key] = w.order to (w.foundAtMs.takeIf { it > 0 } ?: now)
+            }
             w.searching?.cancel()
             runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
             return LostLook.Found(found, w.order.quantity, w.order.triggerPrice).also { it.symbol = w.order.tradingSymbol }
@@ -2537,11 +2599,18 @@ object Broker {
     }
 
     /**
+     * TEST ONLY (23 Nov 2026, B6 follow-ups, item 1): how many times a caller ran its own lost-reply search ([findRecentRetrying], not the
+     * door's after Kite's unsure answer, [sendChecked]) in this process - a debug build's count, memory only.
+     */
+    internal val callerSearchesForTest = java.util.concurrent.atomic.AtomicInteger()
+
+    /**
      * [findRecent] for a POST whose reply was lost, tried [tries] times [waitMs] apart (the order book can
      * trail the POST by a moment). The order id; null when the book was read and holds no such order;
      * throws when the book could not be read at all, so the caller knows the order's fate is unknown.
      */
     suspend fun findRecentRetrying(o: Kite.Order, known: Collection<String>, tries: Int = 3, waitMs: Long = 2_000, afterError: Boolean = false): String? {
+        if (!afterError && com.optionslab.app.BuildConfig.DEBUG) callerSearchesForTest.incrementAndGet()
         var read = false
         var err: Exception? = null
         for (i in 0 until tries) {
@@ -2779,7 +2848,7 @@ object Broker {
         return held >= 0
     }
 
-    private val killScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val killScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Broker.killScope"))
 
     /**
      * 20 Nov 2026 (audit B5, item 9): the kill switch just went on ([why]). [act] (only Boss's own act in the app: his kill switch, or

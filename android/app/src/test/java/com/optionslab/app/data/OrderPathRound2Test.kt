@@ -545,6 +545,14 @@ class OrderPathRound2Test : RobolectricTest() {
                 160.0, 240.0, now + 3 * 3_600_000L, live = true, entryMs = now, kite = sym)))
             tick(201.0)
             awaitTrue("the token resolved at the attach") { TradeManagerHost.premiumForTest(id) == 201.0 }
+            // 23 Nov 2026 (B6 follow-ups, round 4: CI): the file gone, a look at it starts the day's list in the background
+            // ([Broker.refreshInstrumentsInBackground]); that download could still be on its way when the test closed the fake Kite,
+            // and went to the real host (the network guard failed the test, by test order). Any one already started is let finish
+            // first, and the background refresh is held as just tried for this test (reset after), so the file stays gone.
+            awaitTrue("no background list read on its way") {
+                !(Broker::class.java.getDeclaredField("instrumentsLoading").apply { isAccessible = true }.get(null) as java.util.concurrent.atomic.AtomicBoolean).get()
+            }
+            Broker::class.java.getDeclaredField("instrumentsTriedAt").apply { isAccessible = true }.setLong(null, System.nanoTime() / 1_000_000L)
             // No file to read and no map kept: a look that went to the file would find nothing.
             java.io.File(context.filesDir, "kite_instruments.json").delete()
             Broker::class.java.getDeclaredField("tokenMap").apply { isAccessible = true }.set(null, null)
@@ -556,7 +564,7 @@ class OrderPathRound2Test : RobolectricTest() {
             SecurePrefs.countedThread = null
             assertEquals(202.0, px!!, 1e-9)
             assertEquals(0L, SecurePrefs.readsForTest.get())
-        } finally { TradeManagerHost.resetForTest() }
+        } finally { TradeManagerHost.resetForTest(); Broker.resetInstrumentsRetryForTest() }
     }
 
     /** Review R1: a shared read is joined only within one lane - an exit's SAFETY read never waits on a lower lane's read. */

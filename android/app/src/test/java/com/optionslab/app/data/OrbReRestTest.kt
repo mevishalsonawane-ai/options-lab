@@ -424,4 +424,24 @@ class OrbReRestTest : RobolectricTest() {
         assertEquals(1, slCount())
         assertEquals("160.00", kite.placed.last().form["trigger_price"])
     }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, item 1): the stop put back answered by Kite's GeneralException with nothing in the book after the door's
+     * ~4 s of looks ([Broker.KiteUnsure]): kept UNKNOWN and looked for in the background at once - no second ~4 s search of its own under
+     * the arms' lock - and no second stop sent beside it while it may rest.
+     */
+    @Test fun anUnsureAnswerToAStopPutBackGoesStraightToTheBackgroundSearch() {
+        val s = held("orb")
+        kite.reject(s, message = exchangeCancel, status = "CANCELLED")
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        val searches = Broker.callerSearchesForTest.get()
+        pass()
+        assertEquals("one stop sent", 1, slCount())
+        assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
+        assertTrue("looked for in the background", Broker.lostKeys("orbstop:").isNotEmpty())
+        assertEquals("no stop known to rest", null, row().open!!.stopOrderId)
+        pass()
+        assertEquals("none sent beside it while it is looked for", 1, slCount())
+        assertTrue(marketSells.isEmpty())
+    }
 }

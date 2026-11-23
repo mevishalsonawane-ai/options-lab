@@ -895,4 +895,59 @@ class OrbSquareOffLostSaleTest : RobolectricTest() {
         assertTrue("no buy beside it", kite.placed.none { it.form["tag"] == "iraalgoexpiry" })
         assertEquals(1, SquareOffExit.skipsForTest("NFO", sym, "MIS"))
     }
+
+    // ---- 23 Nov 2026 (B6 follow-ups, item 1): Kite's unsure answer is looked for once, in the door ------------------------------------
+
+    /** The counter the tests below read: a caller's own lost-reply search counts, the door's after Kite's unsure answer does not. */
+    @Test fun theCallersOwnSearchesAreCountedAndTheDoorsAreNot() = runBlocking {
+        val o = Kite.Order(sym, Kite.Side.SELL, 30, 30, "MIS", "MARKET", null, 0.05, "NFO", "iraorb")
+        val before = Broker.callerSearchesForTest.get()
+        Broker.findRecentRetrying(o, emptyList(), tries = 1, waitMs = 0)
+        assertEquals(before + 1, Broker.callerSearchesForTest.get())
+        Broker.findRecentRetrying(o, emptyList(), tries = 1, waitMs = 0, afterError = true)
+        assertEquals("the door's own look is not a caller's", before + 1, Broker.callerSearchesForTest.get())
+    }
+
+    /**
+     * An arm's exit sale answered by Kite's GeneralException with nothing in the book after the door's ~4 s of looks ([Broker.KiteUnsure]):
+     * held as a lost sale at once - no second ~4 s search of its own under the arms' lock (before, ~8 s while the other trades' checks
+     * waited) - its stop out (it came out for the sale), nothing more sold, the square-offs told of it.
+     */
+    @Test fun anUnsureAnswerToAnArmsExitSaleIsHeldAsLostWithoutASecondSearch() {
+        val s1 = stopOrder(30, 170.0, 161.5)
+        state(listOf(liquidity(30, 200.0, s1, 170.0)))                     // its time stop is due
+        kite.position(sym, 30, 200.0, product = "MIS")
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        val searches = Broker.callerSearchesForTest.get()
+        pass()
+        assertEquals("one sale sent", listOf("30"), marketSells().map { it.form["quantity"] })
+        assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
+        assertTrue("held as a lost sale", OrbArms.lostExitForTest(sym))
+        assertEquals("the square-offs see it", 30, OrbArms.unsettledSales(sym))
+        assertEquals("its stop came out for the sale", "CANCELLED", kite.order(s1).status)
+        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+        pass()
+        assertEquals("nothing more sold while it is looked for", 1, marketSells().size)
+    }
+
+    /**
+     * The expiry square-off's own sale answered so: no second search in the row's exit turn - the sale may be out, so the row's gap stays and
+     * its sale stamp is kept; the next pass within the gap sends nothing more.
+     */
+    @Test fun anUnsureAnswerToTheSquareOffsSaleKeepsItsGapWithoutASecondSearch() {
+        state(emptyList())
+        runBlocking { OrbArms.view() }                                     // (the arms' book read: its sales known - none)
+        kite.position(sym, 30, 200.0, product = "MIS")
+        SquareOffExit.resetForTest()                                       // the gap on, as it ships
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        val searches = Broker.callerSearchesForTest.get()
+        at(15, 5); expiryPass()
+        assertEquals("one sale sent", listOf("30"), squareOffSells("iraalgoexpiry"))
+        assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
+        assertTrue("the gap holds the row", SquareOffExit.inGap("NFO", sym, "MIS"))
+        assertTrue("its sale stamped", SquareOffExit.lastSaleAt("NFO", sym, "MIS") != null)
+        at(15, 5); expiryPass()
+        assertEquals("nothing more within the gap", 1, squareOffSells("iraalgoexpiry").size)
+        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+    }
 }

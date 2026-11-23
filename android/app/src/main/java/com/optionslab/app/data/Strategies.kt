@@ -62,6 +62,10 @@ object Strategies {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.filesDir, "strategies.vault")
+        // 23 Nov 2026 (B6 follow-ups, item 2): the square-offs subtract a live exit sale whose answer was lost and is still looked for
+        // ([LOST] ids, [Broker.lostSales]) and take no stop out beside it. Only those are counted there - not a sale on its way - so the
+        // strategies' tag is not one the square-offs leave to that count: one of their sales not in their read holds the row back.
+        SquareOffExit.lostPendingProviders[CLAIM_OWNER] = { sym, product -> Broker.lostSales(LOST + "x", sym, product) }
     }
 
     data class LogLine(val at: Long, val strategy: String, val kind: String, val message: String, val severity: String)
@@ -796,10 +800,19 @@ object Strategies {
      * looked for on each status read ([Broker.lookLost]); [lostFound]: the Zerodha id each one turned out to be. Memory only.
      */
     internal const val LOST = "lost:"
+    /** 23 Nov 2026 (B6 follow-ups, item 2): the Strategy Module's name on a contract's exit claim ([SquareOffExit.claimExit]). */
+    internal const val CLAIM_OWNER = "strategy"
+    /** ... and on a contract's row claim while a leg's stop goes in at Zerodha ([restLegStops]). */
+    internal const val CLAIM_STOP_OWNER = "strategy-stop"
     private val lostSeq = java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis())
     private val lostFound = java.util.concurrent.ConcurrentHashMap<String, String>()
     /** Lost ids from before a restart that Boss was told of (once each). Memory only. */
     private val restartedLost: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): while Boss's [closeLeg] drives a leg's exit (this book's lock held), the broker ids of exits
+     * that were the leg's own stop at Zerodha filling, booked as that exit ([kiteExec]). Null at every other time. Memory only.
+     */
+    private var stopBooked: MutableSet<String>? = null
 
     /** [ownerStart]: the entries of Boss's own start from the app ([start]); false: automatic ones ([autoLiveRefusal] asks them). */
     private fun kiteExec(b: Book, def: StrategyDef, v: Venue, compromised: Boolean, ownerStart: Boolean = false, known: () -> Collection<String>) = object : StrategyHost.Executor {
@@ -829,12 +842,39 @@ object Strategies {
                 // 20 Oct, enhancement round 2: an exit is read and sent in the contract's one exit turn, from an orders read that shows
                 // every exit sent from here ([ExitCoordinator]): another sender's exit sent a moment ago is subtracted, never doubled.
                 val pass = if (exit) ExitCoordinator.enter(ref.exchange, kiteSym, "strategy ${def.name}") else null
+                // 23 Nov 2026 (B6 follow-ups, item 2: the 15:05 expiry square-off or the flat-by could sell the leg beside this exit, each
+                // taking the other's stop out): one seller at a time on the contract's row ([SquareOffExit.claimExit], as the ORB / Liquidity
+                // exits) - taken FIRST, before the leg's stop comes out, and released once this exit's order went or it gave up (finally).
+                // Held by another seller, or a square-off's sale sent on it a moment ago ([SquareOffExit.inGap]): nothing taken out or sent,
+                // the leg's stop left resting - refused for now, so the run asks again on its next look. Memory only, never a wait.
+                var claim: SquareOffExit.ExitClaim? = null
+                /**
+                 * The leg's stop at Zerodha filled ([sid], [st]): that fill IS this exit, booked as this order's - only what filled (23 Nov
+                 * 2026, B6 follow-ups, round 3: a stop resting for fewer lots than the leg, or ended part filled, books its own fill as a
+                 * done exit of that size; the run keeps the leg open for the rest - [com.optionslab.engine.strategy.Engine.applyFill] - with
+                 * no "exit rejected" alarm, and a stop rests again for it).
+                 */
+                fun stopFilled(sk: String, sid: String, st: Broker.Fill): StrategyHost.Placed {
+                    b.legStops.remove(sk)
+                    b.owners["kite:$sid"] = ownerLabel(def, order)
+                    stopBooked?.add("kite:$sid")
+                    Notifier.orderFilled(app, side.name, st.filled, kiteSym, st.avgPrice, "Live", "${def.name} · leg ${order.legId} stop at Zerodha", sid)
+                    return StrategyHost.Placed.Accepted("kite:$sid", "COMPLETE", st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
+                }
                 val id = try {
                     if (exit) {
                         // 18 Oct: the leg's own stop resting at Zerodha ([restLegStops]) comes out FIRST, confirmed out - else both could
                         // fill. One that already filled IS this exit (its fill is booked as this order's).
                         val sk = b.runs[def.id]?.runId?.let { legKey(it, order.legId) }
                         val rest = sk?.let { b.legStops[it] }
+                        // 23 Nov 2026 (B6 follow-ups, round 2): a leg's stop already filled - or ended part filled (round 3) - is booked at once:
+                        // read only, nothing taken out or sold, so no claim on the row is asked for it ([legStopFilled]).
+                        if (sk != null && rest != null) legStopFilled(rest)?.let { st -> return@runBlocking stopFilled(sk, st.orderId, st) }
+                        claim = SquareOffExit.claimExit(ref.exchange, kiteSym, order.product, CLAIM_OWNER)
+                            ?: return@runBlocking StrategyHost.Placed.Refused("refused for now: ${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(ref.exchange, kiteSym, order.product))} " +
+                                "is selling $kiteSym (the leg's stop stays resting at Zerodha)")
+                        if (SquareOffExit.inGap(ref.exchange, kiteSym, order.product)) return@runBlocking StrategyHost.Placed.Refused(
+                            "refused for now: a square-off sold $kiteSym a moment ago (the leg's stop stays resting at Zerodha)")
                         if (sk != null && rest != null) {
                             // Taken out and confirmed out: an SL order cancelled (one of an earlier session is gone with it), a GTT
                             // deleted (a fired one's own orders cancelled). Its state, and its fill when it filled meanwhile.
@@ -844,17 +884,17 @@ object Strategies {
                             when (out?.first) {
                                 "COMPLETE" -> {
                                     val st = st ?: return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be read; tried again next look")
-                                    b.legStops.remove(sk)
-                                    b.owners["kite:$sid"] = ownerLabel(def, order)
-                                    Notifier.orderFilled(app, side.name, st.filled, kiteSym, st.avgPrice, "Live", "${def.name} · leg ${order.legId} stop at Zerodha", sid)
-                                    return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", "COMPLETE", st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
+                                    return@runBlocking stopFilled(sk, sid, st)
                                 }
                                 "CANCELLED", "REJECTED" -> {
                                     b.legStops.remove(sk)
                                     // Part of it filled before it came out: that part is this exit's (the run asks again for the rest).
+                                    // 23 Nov 2026 (B6 follow-ups, round 4): booked as a done exit of that size ("COMPLETE", as [legStopFilled]'s
+                                    // path): the run keeps the leg open for the rest, with no false "exit rejected" alarm for a stop that sold.
                                     if (st != null && st.filled > 0) {
                                         b.owners["kite:$sid"] = ownerLabel(def, order)
-                                        return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", st.status, st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
+                                        stopBooked?.add("kite:$sid")
+                                        return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", "COMPLETE", st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
                                     }
                                 }
                                 else -> return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be confirmed out yet; tried again next look")
@@ -897,6 +937,16 @@ object Strategies {
                     if (why.isNotEmpty()) return@runBlocking StrategyHost.Placed.Refused(why.joinToString("; "))
                     // 22 Oct: the checks above cleared this order: stamped with its fingerprint, recomputed at the door ([OrderVerdicts]).
                     val verdict = OrderVerdicts.cleared(OrderVerdicts.liveFields(o, Market.today(), OrderVerdicts.sourceOf(o, null)), "strategy checks")
+                    // 23 Nov 2026 (B6 follow-ups, item 2): an exit's sale is about to go - said to the square-offs ([SquareOffExit.saleStarting]),
+                    // then the gap looked at once more, in the ORB exits' order: nothing sent beside a square-off's sale. (An NSE row's gap starts
+                    // only under the row's claim, held here; an MCX leg's row can still get one from the MCX expiry exit, which claims nothing.
+                    // What keeps a square-off off this sale once the claim is let go is its fresh read of the books, the exits sent from here not
+                    // in it yet ([ExitCoordinator.unshownPending]: this tag is not left to a count) and, while its answer is lost, [Broker.lostSales].)
+                    if (exit) {
+                        SquareOffExit.saleStarting(kiteSym, order.product)
+                        if (SquareOffExit.inGap(ref.exchange, kiteSym, order.product)) return@runBlocking StrategyHost.Placed.Refused(
+                            "refused for now: a square-off sold $kiteSym a moment ago; nothing sent beside it")
+                    }
                     try {
                         // 19 Nov 2026 (audit batch 2): an automatic entry is marked for the door, which asks "AI trades go live" again.
                         if (!exit && !ownerStart) Broker.automaticStrategyEntry(o) { Broker.placeOrder(o, exit, verdict = verdict) }
@@ -907,7 +957,9 @@ object Strategies {
                         // 20 Nov 2026 (audit B5 deep review): not found yet is UNKNOWN, never "refused" (a run could then send it again,
                         // or leave a live order untracked): accepted under a lost id ([LOST]), looked for on each later status read for
                         // [Broker.LOST_SEARCH_MS]; found, it is the order; not there by then, Boss is told and it reads as rejected.
-                        runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull()
+                        // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already:
+                        // straight to the lost id, never a second ~4 s under the strategies' lock.)
+                        (if (e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, known().map { it.removePrefix("kite:") }) }.getOrNull())
                             ?: run {
                                 val lostId = LOST + (if (exit) "x" else "e") + lostSeq.incrementAndGet()
                                 Broker.noteLost(lostId, o, known().map { it.removePrefix("kite:") }, "Strategy ${def.name}: its ${if (exit) "exit" else "entry"}")
@@ -916,7 +968,7 @@ object Strategies {
                                     "Zerodha's answer was lost (${e.message}); looking for the order in its book")
                             }
                     }
-                } finally { pass?.leave() }
+                } finally { pass?.leave(); claim?.release() }
                 b.owners["kite:$id"] = ownerLabel(def, order)
                 FlowGate.outcome(flow, "entered_live")
                 // From here the order exists at Zerodha: never report it as refused. An unknown
@@ -1328,9 +1380,51 @@ object Strategies {
         val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
         val run = b.runs[id] ?: return@withLock "Not running."
         val v = try { venue(run.mode) } catch (e: Exception) { return@withLock "Could not load the contracts: ${e.message}" }
-        val next = host.closeLeg(run, def, legId, Market.now(), exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, id))
+        val before = run.orders.keys.toSet()
+        val booked = HashSet<String>()
+        stopBooked = booked
+        val next = try {
+            host.closeLeg(run, def, legId, Market.now(), exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, id))
+        } finally { stopBooked = null }
         b.runs[id] = next; finish(b, next); save(b)
-        "Leg $legId exit sent."
+        // 23 Nov 2026 (B6 follow-ups, round 2): Boss's own close is not tried again by itself, so what he is told comes from the leg's own
+        // exit order this close made: refused (a square-off selling its contract, a read that failed, held back while a short it covers
+        // is open) - said so, never "sent"; none made (not open, or its exit already on its way) - said so too.
+        val exits = next.orders.filter { (oid, o) -> oid !in before && o.legId == legId && o.kind != "entry" }.values
+        // 23 Nov 2026 (B6 follow-ups, round 4): the leg's stop at Zerodha had already sold part of it - booked as this close's exit (done,
+        // only that part), the rest still open with nothing on its way out and no stop resting for it now. Boss asked for the whole leg,
+        // so its exit is driven once more for the rest: the same exit path, under the row's claim, sized from fresh reads of Zerodha
+        // (what it holds less the exits working, the lag guard on), so never a second sale of what the stop sold. Refused, he is told
+        // what the stop sold and what is still open, never "sent".
+        val ids = b.brokerIds[next.runId].orEmpty()
+        val sold = exits.filter { it.status == "complete" && ids[it.id] in booked }.sumOf { it.filledQty }
+        val leg = next.leg(legId)
+        if (sold <= 0) return@withLock closeSaid(legId, exits)
+        // (A short leg's stop buys it back.)
+        val stopDid = "Leg $legId: its stop at Zerodha had " + (if (leg != null && leg.position != "B") "bought back" else "sold") + " $sold"
+        // (Review: the stop had done the whole leg - nothing was sent, and he is told so, never "exit sent".)
+        if (leg == null || leg.status != "open" || leg.qty <= 0) return@withLock "$stopDid; nothing more was sent."
+        if (next.stoppedAt != null || leg.exitOrderId != null) return@withLock closeSaid(legId, exits)
+        val rest = leg.qty
+        val before2 = next.orders.keys.toSet()
+        val again = host.closeLeg(next, def, legId, Market.now(), exec(b, def, v, next.mode, compromised), b.brokerIds.getOrPut(next.runId) { HashMap() }, checkpoint(b, id))
+        b.runs[id] = again; finish(b, again); save(b)
+        val exits2 = again.orders.filter { (oid, o) -> oid !in before2 && o.legId == legId && o.kind != "entry" }.values
+        if (exits2.any { it.status != "rejected" && it.status != "pending" }) "$stopDid; exit sent for the rest of the leg."
+        else {
+            val why = exits2.firstNotNullOfOrNull { it.rejectReason }?.removeSuffix("; tried again next look")?.removeSuffix("; will retry")
+            "$stopDid; $rest still open${why?.let { " ($it)" } ?: ""}: tap Exit again, or close it in Kite."
+        }
+    }
+
+    /** What Boss is told of his close of leg [legId], from the exit orders [exits] that close made (round 2's wording). */
+    private fun closeSaid(legId: Int, exits: Collection<com.optionslab.engine.strategy.OrderRecord>): String = when {
+        exits.any { it.status != "rejected" && it.status != "pending" } -> "Leg $legId exit sent."
+        exits.isNotEmpty() -> {
+            val why = (exits.firstNotNullOfOrNull { it.rejectReason } ?: "refused").removeSuffix("; tried again next look").removeSuffix("; will retry")
+            "Leg $legId exit not sent: $why. Tap again in a moment, or close it in Kite."
+        }
+        else -> "Leg $legId: no exit was sent - it is not open, or its exit is already on its way. Check it in Kite."
     }
 
     /**
@@ -1526,6 +1620,40 @@ object Strategies {
     private val GTT_GONE = setOf("deleted", "cancelled", "expired", "rejected", "disabled")
 
     /**
+     * 23 Nov 2026 (B6 follow-ups, round 2): the leg's stop [rest] already filled at Zerodha, read only - nothing cancelled or deleted: an SL
+     * order COMPLETE, or a GTT that fired and whose order is COMPLETE; that order's fill. Null: not filled, or not readable now ([legStopOut]
+     * then takes it out under the row's claim, as before). Round 3: also one that ENDED part filled - nothing of it still working (cancelled
+     * or refused after a part filled, by the exchange or in Kite) - with that part's fill: the run books only what filled.
+     */
+    private suspend fun legStopFilled(rest: String): Broker.Fill? {
+        val gid = gttOf(rest)
+        val ids = if (gid == null) listOf(rest.substringBefore('|'))
+            else runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrNull()?.takeIf { it.status.lowercase() == "triggered" }?.orderIds ?: return null
+        if (ids.isEmpty()) return null
+        val states = ids.map { oid -> runCatching { Broker.orderState(oid) }.getOrNull() }
+        states.firstOrNull { it?.status == "COMPLETE" }?.let { return it }
+        // (Ended part filled: only on reads of every one of its orders - one not read may still be working.)
+        val read = states.filterNotNull()
+        return if (read.size == states.size && read.all { it.status in STOP_ENDED }) read.firstOrNull { it.filled > 0 } else null
+    }
+
+    /** 23 Nov 2026 (B6 follow-ups, round 3): a leg stop's order states that are over - nothing of it still works at Zerodha. */
+    private val STOP_ENDED = setOf("COMPLETE", "CANCELLED", "REJECTED")
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 3; CLAUDE.md, WHO CANCELLED A STOP): whether a leg stop's order [o] was ended by Zerodha or the
+     * exchange - refused, ended in their words ([com.optionslab.ira.ManualCoverRule.endedByExchange]), or ended outside market hours -
+     * and so is put back; else (in market hours, blank or unknown words) it is Boss's own cancel in Kite. A time that cannot be read is
+     * judged by the clock now.
+     */
+    private fun endedByZerodha(o: Broker.OrderRow): Boolean = runCatching {
+        if (com.optionslab.ira.ManualCoverRule.endedByExchange(o.status, o.message)) return@runCatching true
+        val at = o.updatedAt.takeIf { it.isNotBlank() }?.let { runCatching { java.time.LocalDateTime.parse(it, STAMP) }.getOrNull() }
+        !(if (at != null) Market.testOrdersAnyTime || Market.isOpenAt(at.toLocalDate(), at.hour * 60 + at.minute) else Market.acceptsOrders())
+    }.getOrDefault(false)
+    private val STAMP: java.time.format.DateTimeFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+    /**
      * The leg's resting stop [rest] taken out and confirmed out: (state, fill) - "COMPLETE" with its fill when it filled meanwhile,
      * "CANCELLED"/"REJECTED" (with any part filled) when out; null when it could not be confirmed out (nothing else may be sent: both
      * could fill). An SL order is cancelled (one of an earlier session is gone with it); a GTT deleted, and a fired GTT's own working
@@ -1541,6 +1669,10 @@ object Strategies {
             }
             if (g == null || g.status.lowercase() in GTT_GONE) return "CANCELLED" to null
             if (g.status.lowercase() != "triggered") return null
+            // 23 Nov 2026 (B6 follow-ups, round 4, as [restLegStops]): fired, listing no order yet - its order may be on its way, so it is
+            // not out until a second look at least [GTT_BARE_AGREE_MS] later still lists none (nothing sold beside it meanwhile).
+            if (g.orderIds.isEmpty()) return if (gttBareConfirmed("out|$gid")) { gttBareSince.remove("out|$gid"); "CANCELLED" to null } else null
+            gttBareSince.remove("out|$gid")
             for (oid in g.orderIds) {
                 var st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return null
                 if (st.status !in setOf("COMPLETE", "CANCELLED", "REJECTED")) { runCatching { Broker.cancel(oid) }; st = runCatching { Broker.orderState(oid) }.getOrNull() ?: return null }
@@ -1579,6 +1711,24 @@ object Strategies {
         val first = legFlatSince.putIfAbsent(k, now) ?: return false
         // (Kept once confirmed: a stop whose taking out is not confirmed this look is tried again on the next without a new count.)
         return now - first >= FLAT_AGREE_MS
+    }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): when each leg's fired GTT ("runId:legId|gttId") was first read listing no order. Memory only (a
+     * restart starts the count again); bounded.
+     */
+    private val gttBareSince = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** 23 Nov 2026: how far apart the two looks must be before a fired GTT that lists no order is taken as never placed. */
+    internal const val GTT_BARE_AGREE_MS = 10_000L
+
+    /** Whether the fired GTT [key] has listed no order on a look at least [GTT_BARE_AGREE_MS] before this one (the first such look: false). */
+    private fun gttBareConfirmed(key: String): Boolean {
+        val now = Market.now().toInstant().toEpochMilli()
+        // (Review: bounded by age - one left behind long ago goes; a leg's wait in progress is never reset.)
+        if (gttBareSince.size > 100) gttBareSince.entries.removeIf { now - it.value > 600_000L }
+        val first = gttBareSince.putIfAbsent(key, now) ?: return false
+        return now - first >= GTT_BARE_AGREE_MS
     }
 
     /** When each leg's "stop not rested" was last told (memory): told at most once in [NOT_RESTED_EVERY_MS] (review C7). */
@@ -1636,6 +1786,9 @@ object Strategies {
         val lostClosed = Broker.lostKeys(lostLegStopKey("${run.runId}:")).filter { key -> open.none { lostLegStopKey(legKey(run.runId, it.legId)) == key } }
         for (key in lostClosed) takeOutLostLegStop(key, def.name)
         if (open.isEmpty() && mine.isEmpty()) return
+        // (23 Nov 2026, B6 follow-ups, item 2: when this look read the books, by the square-offs' clock - a stop goes in only on reads made
+        // after any square-off's sale on its row, [SquareOffExit.lastSaleAt].)
+        val readAt = SquareOffExit.clock()
         val orders = runCatching { Broker.orders().associateBy { it.id } }.getOrNull() ?: return
         val book = runCatching { Broker.positionBook() }.getOrNull() ?: return
         val net = book.net
@@ -1684,16 +1837,44 @@ object Strategies {
             val g = gid?.let { gtts[it] }
             // A stop of an earlier session (a DAY order) is gone: rested again today. A GTT gone at Zerodha likewise.
             if (cur != null && gid == null && so == null && stopDay(cur)?.isBefore(Market.today()) == true) { b.legStops.remove(k); continue }
+            // (23 Nov 2026, B6 follow-ups, round 4: a fired GTT that lists no order yet - below; one that lists it now, or is gone, starts
+            // its count again.)
+            val bare = g?.status?.lowercase() == "triggered" && g.orderIds.isEmpty()
+            if (!bare && gid != null) gttBareSince.remove("$k|$gid")
             if (gid != null && (g == null || g.status.lowercase() in GTT_GONE)) { b.legStops.remove(k); continue }
             val gttFilled = g?.status?.lowercase() == "triggered" && g.orderIds.isNotEmpty() && g.orderIds.all { orders[it]?.status == "COMPLETE" }
-            if ((so != null && so.status == "COMPLETE") || gttFilled) {
+            // 23 Nov 2026 (B6 follow-ups, round 3: a stop that ended part filled - an SL cancelled or refused after a part of it filled, by
+            // the exchange or in Kite; a fired GTT whose order ended so - was dropped and that part never booked): booked the same way, the
+            // run's exit taking only what filled ([legStopFilled]) - the leg stays open for the rest, whose stop rests again on a later look,
+            // sized to what the leg still holds and Zerodha shows held. A fired GTT whose order ended with nothing filled is spent: rested again.
+            val gttEnded = g?.status?.lowercase() == "triggered" && g.orderIds.isNotEmpty() && g.orderIds.all { orders[it]?.status in STOP_ENDED }
+            val partFilled = (so != null && so.status in setOf("CANCELLED", "REJECTED") && so.filled > 0) ||
+                (gttEnded && g?.orderIds.orEmpty().any { (orders[it]?.filled ?: 0) > 0 })
+            if ((so != null && so.status == "COMPLETE") || gttFilled || partFilled) {
                 // The stop filled at Zerodha: the run closes the leg (its exit books that fill; nothing new is sent).
-                val bid = b.brokerIds.getOrPut(run.runId) { HashMap() }
-                val next = host.closeLeg(run, def, leg.legId, now, exec(b, def, v, run.mode, compromised), bid, checkpoint(b, def.id))
+                // (23 Nov 2026, B6 follow-ups, round 3: from the run as it is now - another leg's stop booked earlier in this look is kept.)
+                val now0 = b.runs[def.id] ?: return
+                val bid = b.brokerIds.getOrPut(now0.runId) { HashMap() }
+                val next = host.closeLeg(now0, def, leg.legId, now, exec(b, def, v, now0.mode, compromised), bid, checkpoint(b, def.id))
                 b.runs[def.id] = next; finish(b, next)
                 continue
             }
             if (so != null && so.status in setOf("CANCELLED", "REJECTED")) { b.legStops.remove(k) }
+            // (Round 3: a fired GTT spent with nothing filled - its order refused or cancelled by Zerodha or the exchange, ended outside
+            // market hours, or never placed at all - rests again. One whose order Boss cancelled in Kite (in market hours, blank or unknown
+            // words) is his: never put back; the run watches its level and sells there - WHO CANCELLED A STOP.)
+            // 23 Nov 2026 (B6 follow-ups, round 4): a fired GTT that lists no order yet may be one Zerodha is placing this moment (its
+            // order id shows a little after the "triggered"): a stop put back now could rest beside that order and both sell. Taken as
+            // never placed only on a second look at least [GTT_BARE_AGREE_MS] later that still lists none; until then nothing is done for
+            // the leg. (One whose order shows and has ended is judged above and below, by that order.)
+            if (bare) {
+                if (gttBareConfirmed("$k|$gid")) { gttBareSince.remove("$k|$gid"); b.legStops.remove(k) }
+                continue
+            }
+            if (gttEnded) {
+                if (g?.orderIds.orEmpty().all { oid -> orders[oid]?.let { endedByZerodha(it) } == true }) b.legStops.remove(k)
+                continue
+            }
             // 20 Nov 2026 (audit: a malformed or partial positions reply was read as "no positions", and the leg's stop taken out): a
             // read with no row at all for the contract is not a reading (Zerodha lists every contract held or traded today, at 0 once
             // closed): nothing is taken out, shrunk or placed on it this look. (A stop resting since an earlier day - a carried leg's
@@ -1708,7 +1889,9 @@ object Strategies {
             if (held > 0) legFlatSince.remove(k) else if (!legFlatConfirmed(k)) { flatSeen.incrementAndGet(); continue }
             // Held no more at Zerodha (closed by hand): its stop must not rest on a flat position.
             if (held <= 0) {
-                if (cur != null && b.legStops.containsKey(k) && legStopOut(cur) != null) b.legStops.remove(k)
+                if (cur != null && b.legStops.containsKey(k)) legStopOut(cur)?.let { (_, st) -> if ((st?.filled ?: 0) <= 0) b.legStops.remove(k) }
+                // (23 Nov 2026, B6 follow-ups, round 3: one that filled in part before it came out stays noted: the next look books that
+                // part, [legStopFilled].)
                 continue
             }
             // Zerodha holds less than this stop covers beside the other exits working on it (part sold by hand in Kite, or another
@@ -1724,7 +1907,8 @@ object Strategies {
                 else -> null
             }
             if (cur != null && covers != null && covers > room) {
-                if (room <= 0) { if (legStopOut(cur) != null) b.legStops.remove(k); continue }
+                // (23 Nov 2026, B6 follow-ups, round 3: one that filled in part before it came out stays noted: the next look books that part.)
+                if (room <= 0) { legStopOut(cur)?.let { (_, st) -> if ((st?.filled ?: 0) <= 0) b.legStops.remove(k) }; continue }
                 val r = runCatching {
                     if (gid != null) {
                         val px = q.firstOrNull { it.symbol == leg.symbol }?.ltp ?: error("no price")
@@ -1742,26 +1926,38 @@ object Strategies {
             }
             val want = leg.effectiveSl?.let { Kite.onTick(it, ref.tick, if (dir > 0) Kite.Side.SELL else Kite.Side.BUY) }?.takeIf { it > ref.tick } ?: continue
             val ltp = q.firstOrNull { it.symbol == leg.symbol }?.ltp ?: continue
-            val qty = minOf(leg.entryFilledQty.takeIf { it > 0 } ?: leg.qty, room)
+            // (23 Nov 2026, B6 follow-ups, round 3: never above what the leg still holds - after a part of it was sold its entry's size is
+            // more, and a positions read that trails that sale shows it held still.)
+            val qty = minOf(leg.qty, room)
             if (!b.legStops.containsKey(k)) {
                 if (!com.optionslab.engine.orb.LiveMirror.mayRest(want, ltp, ref.tick, dir) || leg.exitInFlight || qty <= 0) continue
                 // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no stop beside his sale (tried again next look).
                 if (ArmLive.handsOffNow(ex, kiteSym)) continue
-                val id: String? = if (product != "MIS") {
-                    // A carried (NRML) leg: a single-leg GTT, the only broker-side stop that outlives the session (review C7).
-                    val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
-                    // A lost reply never leaves a second GTT ([Broker.placeGttOnce] adopts the one that went through).
-                    gtt?.let { x -> Broker.placeGttOnce(x, b.legStops.values.mapNotNull(::gttOf).toSet())?.let { "gtt:$it" } }
-                } else {
-                    val lostKey = lostLegStopKey(k)
-                    val o = Kite.Order(kiteSym, exitSide, qty, ref.lot, product, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(want, ref.tick, dir), ref.tick,
-                        ex, "iraalgostrat", triggerPrice = want)
-                    val known = b.owners.keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") }
-                    try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
-                        if (Broker.definite(e)) null else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull()
-                            ?: null.also { Broker.noteLost(lostKey, o, known, "Strategy ${def.name}: leg ${leg.legId}'s stop", liveOnly = true) }
+                // 23 Nov 2026 (B6 follow-ups, item 2): the leg's stop goes in with the contract's row claimed ([SquareOffExit.claimExit], as the
+                // ORB / Liquidity stops go back), so a square-off never works its sale out from a read made without it; and none goes in while
+                // another seller holds the row, a square-off's sale went on it a moment ago ([SquareOffExit.inGap]), or one went since this look
+                // read the books ([SquareOffExit.lastSaleAt]: those reads may still show it held) - tried again on the next look. Memory only.
+                val rowClaim = SquareOffExit.claimExit(ex, kiteSym, product, CLAIM_STOP_OWNER) ?: continue
+                val id: String? = try {
+                    if (SquareOffExit.inGap(ex, kiteSym, product) || SquareOffExit.lastSaleAt(ex, kiteSym, product)?.let { it >= readAt } == true) continue
+                    if (product != "MIS") {
+                        // A carried (NRML) leg: a single-leg GTT, the only broker-side stop that outlives the session (review C7).
+                        val (gtt, _) = Kite.protect(Kite.Spec(ex, kiteSym, 0L, ref.lot, ref.tick), product, qty * dir, ltp, want, null, stopSlippage = Kite.STOP_GTT_SLIPPAGE)
+                        // A lost reply never leaves a second GTT ([Broker.placeGttOnce] adopts the one that went through).
+                        gtt?.let { x -> Broker.placeGttOnce(x, b.legStops.values.mapNotNull(::gttOf).toSet())?.let { "gtt:$it" } }
+                    } else {
+                        val lostKey = lostLegStopKey(k)
+                        val o = Kite.Order(kiteSym, exitSide, qty, ref.lot, product, "SL", com.optionslab.engine.orb.LiveMirror.stopLimit(want, ref.tick, dir), ref.tick,
+                            ex, "iraalgostrat", triggerPrice = want)
+                        val known = b.owners.keys.filter { it.startsWith("kite:") }.map { it.removePrefix("kite:") }
+                        try { Broker.placeOrder(o, exit = true) } catch (e: Exception) {
+                            // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already:
+                            // straight to the background search, never a second ~4 s under the strategies' lock.)
+                            if (Broker.definite(e)) null else (if (e is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(o, known) }.getOrNull())
+                                ?: null.also { Broker.noteLost(lostKey, o, known, "Strategy ${def.name}: leg ${leg.legId}'s stop", liveOnly = true) }
+                        }
                     }
-                }
+                } finally { rowClaim.release() }
                 if (id == null) {
                     // Told once in ten minutes per leg (each 15-second look tries again).
                     val nowMs = System.currentTimeMillis()
@@ -1867,7 +2063,7 @@ object Strategies {
     fun wipe() {
         synchronized(ioLock) { synchronized(writeOrder) { wipeGen++; ownersPending = null; saveSeq++; cache = null } }
         ownersSoon.clear()
-        clearHints(); notRestedAt.clear(); legFlatSince.clear()
+        clearHints(); notRestedAt.clear(); legFlatSince.clear(); gttBareSince.clear()
         written.forget()
         filesForErase().forEach { runCatching { it.delete() } }
     }

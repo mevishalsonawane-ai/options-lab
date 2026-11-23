@@ -490,7 +490,7 @@ object Paper {
     const val GAP_READ_WAIT_MS = 3_000L
 
     /** The background reads of [gapHighSince] (they outlive a caller that stopped waiting; each keeps its candles when done). */
-    private val gapReads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val gapReads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Paper.gapReads"))
     /** Each symbol's gap read in flight (one at a time: a slow feed never piles reads up) and when it started (memory only). */
     private val gapInFlight = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Deferred<List<Upstox.Bar>>>()
     private val gapReadFrom = java.util.concurrent.ConcurrentHashMap<String, Long>()
@@ -839,7 +839,7 @@ object Paper {
     }
 
     /** [exitPriceNow]'s fresh reads (their own threads: a blocking read never holds an arm). */
-    private val exitReads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val exitReads = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Paper.exitReads"))
 
     /**
      * 20 Nov 2026 (review): [block] run on its own background job and waited for [ms] at most (null past it, or on a failure). A

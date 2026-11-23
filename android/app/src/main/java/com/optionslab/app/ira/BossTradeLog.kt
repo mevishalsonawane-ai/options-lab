@@ -35,7 +35,7 @@ object BossTradeLog {
     const val PROMPT_MS = 3 * 60_000L
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("BossTradeLog"))
     private val lock = Any()
     /**
      * One writer at a time: [drain] and [answer] both run on the IO pool and [com.optionslab.app.security.Vault.writeFile]

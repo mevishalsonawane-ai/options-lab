@@ -153,7 +153,9 @@ object McxGuard {
                         else {
                             // The reply was lost, not necessarily the order (19 Nov 2026: the contract's gap starts either way).
                             SquareOffExit.notePlaced(Mcx.EXCHANGE, p.symbol, p.product)
-                            runCatching { Broker.findRecentRetrying(o, working.map { it.id }) }
+                            // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door
+                            // already: not a second ~4 s in the contract's exit turn; the gap holds it and the next pass reads the books.)
+                            if (e !is Broker.KiteUnsure) runCatching { Broker.findRecentRetrying(o, working.map { it.id }) }
                         }
                     }
                 } finally { pass.leave() }

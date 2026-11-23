@@ -106,8 +106,15 @@ class SelfRoadmapTest : RobolectricTest() {
     @Test fun aFallAfterTheAgentsChangesFreezesAndOnlyBossUnfreezesWithThePinWhenLive() {
         assumeTrue("the learning freeze and Boss's trades are in IraAlgo with Jarvis only", Autopilot.enabled())
         Autopilot.setForTest(AutoChange.record(AutoChange.Book(), pause("night_r3"), AutoChange.Status.PROBATION, ms(15, 50), day).first)
-        LearningFreeze.testDaily = { live -> if (live) emptyMap() else mapOf(day to -5_000.0) }
+        // 23 Nov 2026 (B6 follow-ups, item 4): the line is twice the average losing day of the last 60 days, at least ₹3,000
+        // ([FreezeRule.threshold], ira-core's FreezeRuleTest). With today's -₹5,000 as the only losing day the line was ₹10,000, so this
+        // fall never froze anything (the test failed with Jarvis on; CI runs without Jarvis and skips it). Ten small losing days earlier
+        // (-₹1,000 each, before the agents' change, so not part of the fall) bring the line to its ₹3,000 floor.
+        val earlier = (1..10).associate { day.minusDays(10L + it) to -1_000.0 }
+        LearningFreeze.testDaily = { live -> if (live) emptyMap() else earlier + (day to -5_000.0) }
         LearningFreeze.refresh(day)
+        assertEquals("the default line, at its floor", 3_000.0,
+            LearningFreeze.verdicts.value.single { it.account == FreezeRule.Account.PAPER }.threshold, 0.0)
         assertTrue(LearningFreeze.state.value.frozen)
         assertTrue(LearningFreeze.answer().startsWith("Yes, Boss"))
         LearningFreeze.testLive = true

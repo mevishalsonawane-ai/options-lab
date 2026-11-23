@@ -165,6 +165,74 @@ class LiveOrderPathsE2ETest : RobolectricTest() {
         assertNull("not $first again", Broker.findRecentRetrying(order(), emptyList(), tries = 1, waitMs = 10))
     }
 
+    /**
+     * 23 Nov 2026 (B6 follow-ups, item 2 and round 2): a book's unresolved lost exit sales on one row, for the square-offs
+     * ([Broker.lostSales]): counted while not found, within the lost search's window and a minute; only SALES of that row, under that book's
+     * keys. One found is in the square-offs' fresh reads from then on: counted [Broker.FOUND_COUNTED_MS] more only - found, or found and
+     * taken by its caller - so a read that began just before it was found never leaves it in neither, and nothing waits minutes on it.
+     */
+    @Test fun aBooksLostSalesAreCountedUntilFoundAndOnlyWithinTheirWindow() = runBlocking {
+        val sale = order()
+        Broker.noteLost("testexit:1", sale, emptyList(), "a test exit")
+        assertEquals(30, Broker.lostSales("testexit:", sym, "MIS"))
+        assertEquals("another product's row", 0, Broker.lostSales("testexit:", sym, "NRML"))
+        assertEquals("another book's keys", 0, Broker.lostSales("other:", sym, "MIS"))
+        Broker.noteLost("testexit:buy", order(side = Kite.Side.BUY), emptyList(), "a test buy back")
+        assertEquals("a buy is never a sale", 30, Broker.lostSales("testexit:", sym, "MIS"))
+        // The sale is in Zerodha's book (it went after all): the background search finds it.
+        kite.orders["250926000000999"] = FakeKite.Order("250926000000999", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "irae2e", "COMPLETE",
+            filled = 30, avg = 200.0)
+        Broker.lostLookGapMsForTest = 0
+        assertTrue(Broker.lookLost("testexit:1") is Broker.LostLook.Searching)
+        Broker.lostSearchForTest("testexit:1")?.join()
+        assertTrue("found, not taken yet", Broker.lostPending("testexit:1"))
+        assertEquals("just found: still counted a moment", 30, Broker.lostSales("testexit:", sym, "MIS"))
+        Broker.ageLostForTest("testexit:1", Broker.FOUND_COUNTED_MS + 1_000L)
+        assertEquals("found a while ago: in the square-offs' read, never twice", 0, Broker.lostSales("testexit:", sym, "MIS"))
+        // Taken by its caller: counted the same moment more from when it was found, then not.
+        Broker.ageLostForTest("testexit:1", -(Broker.FOUND_COUNTED_MS + 1_000L))
+        assertTrue(Broker.lookLost("testexit:1") is Broker.LostLook.Found)
+        assertEquals("taken just after it was found", 30, Broker.lostSales("testexit:", sym, "MIS"))
+        Broker.ageLostForTest("testexit:1", Broker.FOUND_COUNTED_MS + 1_000L)
+        assertEquals(0, Broker.lostSales("testexit:", sym, "MIS"))
+        // Past its window (the lost search's, as the tests set it, and a minute): no longer counted.
+        Broker.noteLost("testexit:2", sale, emptyList(), "a second test exit")
+        assertEquals(30, Broker.lostSales("testexit:", sym, "MIS"))
+        Broker.lostSearchMsForTest = 1_000L
+        Broker.ageLostForTest("testexit:2", 62_000L)
+        assertEquals("past its window", 0, Broker.lostSales("testexit:", sym, "MIS"))
+        Broker.lostSearchMsForTest = null
+        assertEquals("within the app's own window", 30, Broker.lostSales("testexit:", sym, "MIS"))
+        Broker.lostLookGapMsForTest = null
+        Broker.forgetLostForTest()
+    }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): as a lost sale is found - its search writing down when, then what - and as its look takes it
+     * off (and notes it as found lately, in one step), the square-offs' count holds it exactly once: never zero times (sold again beside
+     * it), never twice.
+     */
+    @Test fun aFoundLostSaleIsCountedOnceAsItChangesHands() = runBlocking {
+        Broker.noteLost("testexit:9", order(), emptyList(), "a test exit")
+        kite.orders["250926000000998"] = FakeKite.Order("250926000000998", sym, "NFO", "SELL", 30, "MIS", "MARKET", 0.0, 0.0, "irae2e", "COMPLETE",
+            filled = 30, avg = 200.0)
+        val seen = ArrayList<Pair<String, Int>>()
+        Broker.lostFoundStepForTest = { step, key -> if (key == "testexit:9") seen += step to Broker.lostSales("testexit:", sym, "MIS") }
+        try {
+            Broker.lostLookGapMsForTest = 0
+            Broker.lostSearchInlineForTest = true
+            val look = Broker.lookLost("testexit:9")
+            assertTrue("found on its look: $look", look is Broker.LostLook.Found)
+            assertEquals("counted once as it is found", listOf("found" to 30), seen)
+            assertEquals("and once just after", 30, Broker.lostSales("testexit:", sym, "MIS"))
+        } finally {
+            Broker.lostFoundStepForTest = null
+            Broker.lostSearchInlineForTest = false
+            Broker.lostLookGapMsForTest = null
+            Broker.forgetLostForTest()
+        }
+    }
+
     @Test fun aRestingStopOfTheSameSizeAndTagIsNeverTakenForAMarketExitsLostReply() = runBlocking {
         // As after a restart: an SL SELL the app placed before (its id no longer in memory) rests in the book.
         kite.orders["250926000000777"] = FakeKite.Order("250926000000777", sym, "NFO", "SELL", 30, "MIS", "SL", 152.0, 160.0, "irae2e", "TRIGGER PENDING")

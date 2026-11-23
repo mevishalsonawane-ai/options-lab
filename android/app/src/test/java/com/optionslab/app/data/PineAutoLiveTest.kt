@@ -9,6 +9,8 @@ import com.optionslab.app.testing.RobolectricTest
 import com.optionslab.engine.Kite
 import com.optionslab.engine.Right
 import com.optionslab.engine.Upstox
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -1793,5 +1795,197 @@ class PineAutoLiveTest : RobolectricTest() {
         AutomationSupport.reloadFromDisk(PineAuto)
         runBlocking { PineAuto.load() }
         assertTrue("read back from the book", PineAuto.ownCancelForTest(sl))
+    }
+
+    // ---- 23 Nov 2026 (B6 follow-ups, item 2): one seller at a time on the contract's row ([SquareOffExit.claimExit]) --------------------
+
+    /** The MARKET sales sent, by tag and quantity (the stops, SL, left out). */
+    private fun sales() = kite.placed.filter { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }
+        .map { it.form["tag"] to it.form["quantity"] }
+
+    /**
+     * While a square-off (the 15:05 expiry square-off, the flat-by) holds the row, Pine's exit waits with its stop resting at Zerodha -
+     * nothing taken out, nothing sold - and says so once; once the row is free, the next pass takes the stop out and sells.
+     */
+    @Test fun whileASquareOffHoldsTheRowPinesExitWaitsWithItsStopResting() {
+        bought()
+        val stop = held()!!.stop!!
+        val claim = SquareOffExit.claimExit("NFO", ce, "MIS", "iraalgoexpiry")!!
+        try {
+            pass(51_900.0)                                         // SELL signal; shortWith = exit: the exit is due
+            assertTrue("nothing sold", sales().isEmpty())
+            assertEquals("its stop rests", "TRIGGER PENDING", kite.order(stop).status)
+            assertEquals(30, held()!!.qty)
+            assertTrue(log(), log().contains("the expiry square-off is selling it"))
+        } finally { claim.release() }
+        pass(51_900.0)
+        assertEquals("its stop out first", "CANCELLED", kite.order(stop).status)
+        assertEquals(listOf("irapine" to "30"), sales())
+        assertNull(held())
+        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", ce, "MIS"))
+    }
+
+    /**
+     * A square-off that comes to the row while Pine's exit is taking its stop out is refused the row: it takes nothing out and sends nothing
+     * (counted as a pass that left it unsold); Pine sells - exactly one sale, and the row free again.
+     */
+    @Test fun whilePinesExitHoldsTheRowASquareOffTakesNothingOutAndSendsNothing() {
+        bought()
+        val stop = held()!!.stop!!
+        val row = Broker.Position(ce, "MIS", 30, 300.0, 300.0, 0.0)
+        val refused = java.util.concurrent.atomic.AtomicReference<Boolean?>()
+        val claimedBy = java.util.concurrent.atomic.AtomicReference<String?>()
+        kite.afterNext("/orders/regular/$stop") {
+            // Pine is inside its exit, its stop's cancel just answered: the square-off tries the row now.
+            claimedBy.set(SquareOffExit.exitClaimedBy("NFO", ce, "MIS"))
+            refused.set(!runBlocking {
+                SquareOffExit.send(row, 30, 0.05, emptyList(), emptyList(), Broker.Positions(listOf(row), emptyList()), AppSettings.load().limits(),
+                    "expiry square-off", "iraalgoexpiry", Origins.EXPIRY, "expires today", "expiry") { _, _ -> }
+            })
+        }
+        pass(51_900.0)
+        assertEquals("Pine held the row as its stop came out", PineAuto.CLAIM_OWNER, claimedBy.get())
+        assertEquals("the square-off was refused the row", true, refused.get())
+        assertEquals(1, SquareOffExit.skipsForTest("NFO", ce, "MIS"))
+        assertEquals("CANCELLED", kite.order(stop).status)
+        assertEquals("exactly one sale: Pine's", listOf("irapine" to "30"), sales())
+        assertNull(held())
+        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", ce, "MIS"))
+    }
+
+    /** A square-off's sale on the contract a moment ago ([SquareOffExit.inGap]): Pine's exit waits with its stop resting; past it, it sells. */
+    @Test fun aSquareOffsSaleAMomentAgoMakesPinesExitWait() {
+        bought()
+        val stop = held()!!.stop!!
+        SquareOffExit.resetForTest()                               // the gap on, as it ships
+        var clock = 1_000_000L
+        SquareOffExit.clock = { clock }
+        SquareOffExit.notePlaced("NFO", ce, "MIS")
+        pass(51_900.0)
+        assertTrue("nothing sold beside it", sales().isEmpty())
+        assertEquals("its stop rests", "TRIGGER PENDING", kite.order(stop).status)
+        assertNull(SquareOffExit.exitClaimedBy("NFO", ce, "MIS"))
+        clock += SquareOffExit.GAP_MS
+        pass(51_900.0)
+        assertEquals(listOf("irapine" to "30"), sales())
+        assertNull(held())
+    }
+
+    /**
+     * Pine's exit cut short while it waits for the contract's exit turn (the exit coordinator on, another sender holding the turn; the pass
+     * cancelled) - its claim on the row is let go all the same, so no square-off is shut out of the row by it.
+     */
+    @Test fun anExitCutShortLetsTheRowGo() {
+        bought()
+        val stop = held()!!.stop!!
+        ExitCoordinator.resetForTest(on = true)
+        val other = runBlocking { ExitCoordinator.enter("NFO", ce, "another sender") }
+        now = now.plusMinutes(5); PineAuto.testNow = now
+        closes = List(9) { 51_900.0 } + 51_900.0
+        val job = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { PineAuto.tick() }
+        try {
+            val end = System.currentTimeMillis() + 3_000
+            while (!(kite.order(stop).status == "CANCELLED" && SquareOffExit.exitClaimedBy("NFO", ce, "MIS") == PineAuto.CLAIM_OWNER) &&
+                System.currentTimeMillis() < end) Thread.sleep(5)
+            assertEquals("waiting for its turn, the row claimed", PineAuto.CLAIM_OWNER, SquareOffExit.exitClaimedBy("NFO", ce, "MIS"))
+            runBlocking { job.cancelAndJoin() }
+            assertNull("let go though the exit was cut short", SquareOffExit.exitClaimedBy("NFO", ce, "MIS"))
+            assertTrue("nothing sold", sales().isEmpty())
+        } finally { runBlocking { job.cancelAndJoin() }; other.leave(); ExitCoordinator.resetForTest() }
+    }
+
+    /**
+     * A stop put back (the lots a part-fill of the stop left) waits while a square-off holds the row - never placed beside its sale - and
+     * goes in on the next check once the row is free.
+     */
+    @Test fun aStopPutBackWaitsWhileASquareOffHoldsTheRow() {
+        bought(lots = 2)
+        val stop = held()!!.stop!!
+        // Zerodha's stop sold 30 of the 60, then ended: the 30 left get a stop again on the next checks.
+        kite.order(stop).apply { status = "COMPLETE"; filled = 30; avg = 270.0 }
+        kite.position(ce, 30, 300.0, product = "MIS")
+        pass(52_020.0)
+        assertEquals(30, held()!!.qty)
+        assertNull(held()!!.stop)
+        val before = stops().size
+        val claim = SquareOffExit.claimExit("NFO", ce, "MIS", "iraalgoexpiry")!!
+        try {
+            pass(52_030.0)
+            assertEquals("no stop put back while a square-off holds the row", before, stops().size)
+            assertNull(held()!!.stop)
+        } finally { claim.release() }
+        pass(52_040.0)
+        assertEquals("put back once the row is free", before + 1, stops().size)
+        assertEquals("30", stops().last().form["quantity"])
+        assertEquals("TRIGGER PENDING", kite.order(held()!!.stop!!).status)
+        assertNull(SquareOffExit.exitClaimedBy("NFO", ce, "MIS"))
+    }
+
+    /**
+     * The first stop after a live buy also goes in with the row claimed: while a square-off holds the row none is placed beside its sale,
+     * and the next check rests it on fresh reads.
+     */
+    @Test fun theFirstStopAfterABuyWaitsWhileASquareOffHoldsTheRow() {
+        val claim = SquareOffExit.claimExit("NFO", ce, "MIS", "iraalgoflat")!!
+        try {
+            bought()
+            assertEquals(1, side("BUY").size)
+            assertTrue("no stop beside the square-off's sale", stops().isEmpty())
+            assertNull(held()!!.stop)
+        } finally { claim.release() }
+        pass(52_020.0)
+        assertEquals("rested on the next check", 1, stops().size)
+        assertEquals("30", stops().single().form["quantity"])
+        assertEquals("TRIGGER PENDING", kite.order(held()!!.stop!!).status)
+        assertNull(SquareOffExit.exitClaimedBy("NFO", ce, "MIS"))
+    }
+
+    /**
+     * A live exit sale whose answer was lost is counted for the square-offs on its row while it is looked for ([Broker.lostSales]): they take
+     * no stop out beside it and sell only what it leaves. Past its window it no longer holds them back.
+     */
+    @Test fun aLostExitSaleIsCountedForTheSquareOffsWhileItIsLookedFor() {
+        bought()
+        kite.nextPlace(reply = Reply.NETWORK_EXCEPTION)
+        pass(51_900.0)
+        assertEquals(30, SquareOffExit.lostPending(ce, "MIS"))
+        assertEquals("never another product's row", 0, SquareOffExit.lostPending(ce, "NRML"))
+        Broker.ageLostForTest(Broker.lostKeys("pineexit:").single(), Broker.LOST_SEARCH_MS + 60_000L)
+        assertEquals("past its window: not counted", 0, SquareOffExit.lostPending(ce, "MIS"))
+    }
+
+    /**
+     * Round 2: a square-off's sale on the contract long before this buy (the row's sale stamp never expires in memory) does not make the
+     * first stop wait for fresh reads - those can still miss the new buy's fill, and the stop would be left out with a "holds none" alert. It
+     * rests at once from the buy, the positions trailing it.
+     */
+    @Test fun aSquareOffsOldSaleNeverHoldsTheFirstStopBack() {
+        SquareOffExit.resetForTest()                               // the square-offs' gap as it ships
+        SquareOffExit.clock = { 1_000L }                           // a square-off sold this contract long ago, in this process
+        SquareOffExit.noteSold("NFO", ce, "MIS")
+        SquareOffExit.clock = System::currentTimeMillis
+        kite.positionsTrailReads = 1_000                           // Zerodha's positions trail the buy's fill
+        bought()
+        assertEquals("its stop rests at once", 1, stops().size)
+        assertEquals("30", stops().single().form["quantity"])
+        assertNotNull(held()!!.stop)
+        assertTrue(AutomationSupport.alerts().none { "already cover what Zerodha holds" in it })
+    }
+
+    /**
+     * Round 2: a square-off's sale on the contract around this buy (within its gap before it, or after) does: the first stop is sized on
+     * fresh reads, never above what Zerodha holds - none while the positions trail the buy, then the next check rests it.
+     */
+    @Test fun aSquareOffsSaleAroundTheBuySizesTheFirstStopOnFreshReads() {
+        SquareOffExit.resetForTest()                               // the square-offs' gap as it ships
+        SquareOffExit.noteSold("NFO", ce, "MIS")                   // just before the buy (by the same clock)
+        kite.positionsTrailReads = 1_000
+        bought()
+        assertTrue("none above what Zerodha shows held", stops().isEmpty())
+        assertNull(held()!!.stop)
+        kite.positionsCatchUp()
+        pass(52_020.0)
+        assertEquals("rested on the next check", 1, stops().size)
+        assertEquals("30", stops().single().form["quantity"])
     }
 }

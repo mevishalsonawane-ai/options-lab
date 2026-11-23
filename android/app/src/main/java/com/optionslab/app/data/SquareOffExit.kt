@@ -28,6 +28,11 @@ internal object SquareOffExit {
     /** ... and longer than this, taken over by the square-off (cancelled, then sold). */
     const val TAKEOVER_MS = 120_000L
     /**
+     * 23 Nov 2026 (B6 follow-ups, round 2): a square-off's own LIMIT (the blocked-MARKET fallback, [send]) resting longer than this - its
+     * 10 s chase for a fill and a moment more - is no longer cover: cancelled, confirmed, and sent again.
+     */
+    const val LIMIT_CHASE_MS = 12_000L
+    /**
      * 20 Nov 2026 (minor fixes, item 2: the stuck-exit alert came every minute from 15:15, its key carrying the minutes left): a
      * strategy's stuck exit sale is told once per leg per stuck episode (its order), then reminded at most this often while it lasts.
      */
@@ -41,6 +46,22 @@ internal object SquareOffExit {
     internal fun strategyAlertKey(what: String, symbol: String, orderId: String, sinceMs: Long): String =
         "strategy exit $what $symbol $orderId ${sinceMs.coerceAtLeast(0L) / STRATEGY_REMIND_MS}"
     private val STAMP = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4): an arm's LIMIT exit ([com.optionslab.engine.orb.LiveMirror.TAG]) resting unfilled past
+     * [ARM_LIMIT_STALE_MS] by Zerodha's stamp - no longer its closing in progress once the expiry backstop minute has come ([send],
+     * [ExpirySquareOff]).
+     */
+    internal fun armLimitStale(o: Broker.OrderRow): Boolean =
+        o.tag == com.optionslab.engine.orb.LiveMirror.TAG && o.type.equals("LIMIT", true) && restedMs(o) > ARM_LIMIT_STALE_MS
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 4, review): how long an arm's LIMIT exit may rest before [armLimitStale] - well past the arm's
+     * own 15 s wait on it ([ArmLive]'s exit: not filled by then, it cancels it itself and puts its stop back), so the square-off never
+     * cancels one the arm is still waiting on (the arm would then put its stop back beside the square-off's sale). A margin for a phone
+     * clock ahead of Zerodha's.
+     */
+    const val ARM_LIMIT_STALE_MS = 45_000L
 
     /** How long it has rested by the market's clock (Zerodha's stamps are IST; a phone behind it reads young; unread: 0). */
     private fun restedMs(o: Broker.OrderRow): Long = runCatching {
@@ -86,7 +107,14 @@ internal object SquareOffExit {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear() }
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear() }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 2): by position row ("EXCHANGE:SYMBOL:PRODUCT"), the square-off passes chasing a blocked MARKET
+     * with a LIMIT now ([send]: placed, its 10 s wait, its cancel) - its LIMIT is never taken for a stale one ([LIMIT_CHASE_MS]) meanwhile.
+     * Memory only.
+     */
+    private val chasing = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     /**
      * 22 Nov 2026 (B6 review, fourth round: an arm's look that began before a square-off sold its row, and reached the row after the gap,
@@ -122,7 +150,8 @@ internal object SquareOffExit {
      * [lostPendingProviders] (by product row) - "iraorb" for [OrbArms], [com.optionslab.engine.orb.LiveMirror.TAG] for [ArmLive]. [send]
      * leaves those sales to their book's count; another sender's exit
      * sale sent a moment ago and not in the fresh read ([ExitCoordinator.unshownPending]) holds the row back. A book adds its tag with
-     * its provider.
+     * its provider. (23 Nov 2026, B6 follow-ups: [PineAuto] and [Strategies] count only their sales whose answer was lost - not those on
+     * their way - so they add no tag: their sales not in the fresh read hold the row back as another sender's, the safe side.)
      */
     internal val lostPendingTags: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
@@ -146,7 +175,8 @@ internal object SquareOffExit {
      * already out): one seller at a time on a position row ([exchange], [symbol], [product]). A sender takes the claim BEFORE it takes any
      * stop, target or GTT out, and holds it until its own sale went (or it gave up), releasing it in a finally ([ExitClaim.release]):
      *  - [send] (the expiry square-off, the flat-by) takes it, as its [tag], before it looks at the row at all;
-     *  - an arm's exit takes it, as its book's own name ("orb": [OrbArms]), before its stop comes out.
+     *  - an arm's exit takes it, as its book's own name ("orb": [OrbArms]; 23 Nov: "pine": [PineAuto], "strategy": [Strategies]), before its
+     *    stop comes out.
      * Null: another [owner] holds it - send nothing, take nothing out, leave every stop resting, and look again next pass. The same [owner]
      * taking it again (a nested call of its own, or two of its runs at once) gets it too, and the row stays claimed until every one of them
      * released. Never waits, never blocks; memory only (a restart starts with none).
@@ -178,6 +208,12 @@ internal object SquareOffExit {
         // (23 Nov 2026, B6-B fourth round: the arms' and the protections' stops going back hold the row under their own names.)
         "armlive-stop" -> "an arm's stop going back at Zerodha"
         "protections-stop" -> "a protection's stop going back at Zerodha"
+        // (23 Nov 2026, B6 follow-ups, item 2: Pine's live exits and the saved strategies' exits claim their rows too, and so do their stops
+        // while they go in at Zerodha - [PineAuto], [Strategies].)
+        PineAuto.CLAIM_OWNER -> "a Pine script's exit"
+        PineAuto.CLAIM_STOP_OWNER -> "a Pine script's stop going in at Zerodha"
+        Strategies.CLAIM_OWNER -> "a saved strategy's exit"
+        Strategies.CLAIM_STOP_OWNER -> "a saved strategy's stop going in at Zerodha"
         BOSS_OWNER -> "your exit from the app"
         // (22 Nov 2026, B6-B third round: each of Boss's sends claims under its own name, "boss#...".)
         else -> if (owner.startsWith("$BOSS_OWNER#")) "your exit from the app" else "another seller ($owner)"
@@ -185,6 +221,14 @@ internal object SquareOffExit {
 
     /** 22 Nov 2026 (B6 review, second round): the name Boss's own exit from the app claims a row by ([claimExit]; AppModel's takeover). */
     const val BOSS_OWNER = "boss"
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, item 2; one rule with B6-B's): the owners that hold a row only while a stop goes in at Zerodha - no sale
+     * of theirs is going out - are those whose name ends [STOP_SUFFIX] ("orb-stop", "armlive-stop", "protections-stop", "pine-stop",
+     * "strategy-stop"; a new one by its name alone). Every place that tells a stop from a sale asks this.
+     */
+    const val STOP_SUFFIX = "-stop"
+    fun isStopOwner(owner: String?): Boolean = owner?.endsWith(STOP_SUFFIX) == true
 
     /** A row's claim ([claimExit]): [release] it in a finally. Each claim releases once (a second call changes nothing). */
     class ExitClaim internal constructor(private val key: String, private val owner: String) {
@@ -279,6 +323,8 @@ internal object SquareOffExit {
                      tell: (String, String) -> Unit): Boolean {
         val pass = ExitCoordinator.enter(p.exchange, p.symbol, who)
         var claim: ExitClaim? = null
+        /** 23 Nov 2026 (B6 follow-ups, round 2): this pass chased a blocked MARKET with a LIMIT ([chasing]). */
+        var chased = false
         val rowKey = "${p.exchange}:${p.symbol}:${p.product}"
         val skipKey = "$tag|$rowKey"
         val soldBefore = soldAt[rowKey]
@@ -311,8 +357,9 @@ internal object SquareOffExit {
             // the next pass looks again.
             claim = claimExit(p.exchange, p.symbol, p.product, tag) ?: run {
                 val holder = exitClaimedBy(p.exchange, p.symbol, p.product)
-                // (Review: a stop of an arm going back at Zerodha holds the row a moment - no sale of its is going out.)
-                skipped("${claimWords(holder)} held it", armSelling = holder?.endsWith("-stop") != true)
+                // (Review: a stop of an arm going back at Zerodha holds the row a moment - no sale of its is going out. 23 Nov 2026: a Pine
+                // script's or a saved strategy's stop going in, likewise - one rule, [isStopOwner].)
+                skipped("${claimWords(holder)} held it", armSelling = !isStopOwner(holder))
                 return false
             }
             // 22 Nov 2026 (B6 review): an arm's exit sale on this row not settled yet - its reply lost, or on its way ([lostPendingProviders])
@@ -364,7 +411,25 @@ internal object SquareOffExit {
             // protected MARKET left behind as the price moved), it is cancelled, confirmed out with nothing more filled, and the
             // square-off sells what is held - so a stuck one never carries the position into the settlement.
             fun takeOver(o: Broker.OrderRow) = backstop || restedMs(o) > TAKEOVER_MS
-            val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) ||
+            // 23 Nov 2026 (B6 follow-ups, round 2: a blocked-MARKET exit's LIMIT whose answer was unsure or lost, that showed in the book
+            // later and rested unfilled, counted as cover pass after pass - an expiring low-OI row held into the settlement): a square-off's
+            // own LIMIT ([staleLimit]: the fallback below) past its chase is not cover - cancelled, confirmed out, and the row sold again, as
+            // the fallback's own chase does after its 10 s. Past its chase by Zerodha's stamp, or by this phone's own clock since a
+            // square-off last sent a sale on the row ([soldAt]) - so a stamp that cannot be read, or a phone clock behind Zerodha's, never
+            // keeps one sent in this process cover. (One from before a restart: Zerodha's stamp decides.) Never while a chase is under way
+            // on the row ([chasing]: another square-off's sender holds the row's claim through its chase anyway; this also covers two runs
+            // of one square-off at once).
+            fun staleLimit(o: Broker.OrderRow) = (o.tag == tag || o.tag in TAGS) && o.type.equals("LIMIT", true) && !chasing.containsKey(rowKey) &&
+                (restedMs(o) > LIMIT_CHASE_MS || soldAt[rowKey]?.let { clock() - it > LIMIT_CHASE_MS } == true)
+            // 23 Nov 2026 (B6 follow-ups, round 4: an arm's LIMIT exit resting unfilled counted as cover even at the expiry backstop, so an
+            // expiring row could be held into the settlement): from [backstop] (the expiry square-off's backstop minute; the flat-by has no
+            // such minute), with this square-off holding the row's claim, an arm's LIMIT exit resting past [ARM_LIMIT_STALE_MS] by
+            // Zerodha's stamp ([armLimitStale]: the arm no longer waiting on it; [ExpirySquareOff] no longer leaves the row to the arm for
+            // it) is not cover: taken out like any other resting order ([takeOut]: marked as the app's own cancel, cancelled and confirmed
+            // out; more of it filled meanwhile, nothing sold this pass - the next reads again, the lag guard on), then what is held is
+            // sold. Before the backstop it stays cover, as before.
+            val cover = same.filter { ((it.tag == tag || it.tag in TAGS) && !staleLimit(it)) ||
+                (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it) && !(backstop && armLimitStale(it))) ||
                 (it.tag == STRATEGY_TAG && !isStop(it) && !takeOver(it)) }
             same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && (restedMs(it) > STRATEGY_COVER_MS || takeOver(it)) }?.let {
                 if (takeOver(it)) {
@@ -522,6 +587,7 @@ internal object SquareOffExit {
                         // filled in 10 s: cancelled, so it never sits as "cover" while the price moves away, and said as a refusal (the next
                         // pass prices it again). A lost reply is counted by the next pass's read of the working orders, as every exit here.
                         if (com.optionslab.engine.orb.LiveMirror.marketBlocked(e.message)) {
+                            if (!chased) { chased = true; chasing.merge(rowKey, 1, Int::plus) }
                             val key = "${p.exchange}:${p.symbol}"
                             val q = runCatching { Broker.quotes(listOf(key), lane = com.optionslab.ira.RateGate.Priority.SAFETY)[key] }.getOrNull()   // B5-D: an exit's read
                             val limit = com.optionslab.engine.orb.LiveMirror.blockedMarketExit(o, q?.last, q?.ask, q?.bid)
@@ -537,7 +603,9 @@ internal object SquareOffExit {
                                     if (Broker.definite(e2)) null else {
                                         limitLost = true; unsure = true
                                         notePlaced(p.exchange, p.symbol, p.product); noteSold(p.exchange, p.symbol, p.product)
-                                        runCatching { Broker.findRecentRetrying(l, placed + workingNow.map { it.id }) }.getOrNull()
+                                        // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for
+                                        // in the door already: not a second ~4 s in the row's exit turn; the next pass reads the books.)
+                                        if (e2 is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(l, placed + workingNow.map { it.id }) }.getOrNull()
                                     }
                                 }
                             }
@@ -564,7 +632,9 @@ internal object SquareOffExit {
                     // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out
                     // either way, so the contract's gap starts ([GAP_MS]).
                     notePlaced(p.exchange, p.symbol, p.product); noteSold(p.exchange, p.symbol, p.product); unsure = true
-                    runCatching { Broker.findRecentRetrying(o, placed + workingNow.map { it.id }) }.getOrNull()?.let { placed += it }
+                    // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already: not
+                    // a second ~4 s while the row is claimed; the gap holds the row and the next pass reads the books.)
+                    if (e !is Broker.KiteUnsure) runCatching { Broker.findRecentRetrying(o, placed + workingNow.map { it.id }) }.getOrNull()?.let { placed += it }
                     break
                 }
             }
@@ -581,6 +651,9 @@ internal object SquareOffExit {
             }
             if (placed.isNotEmpty()) workedOut()
             return placed.isNotEmpty()
-        } finally { claim?.release(); pass.leave() }
+        } finally {
+            if (chased) chasing.computeIfPresent(rowKey) { _, n -> (n - 1).takeIf { it > 0 } }
+            claim?.release(); pass.leave()
+        }
     }
 }

@@ -70,7 +70,7 @@ object JarvisApproval {
 
 /** Approve / Reject on [JarvisApproval]'s pop-up. Not exported: only the app's own buttons reach it. */
 class JarvisActionReceiver : BroadcastReceiver() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + com.optionslab.app.data.ScopeGuard.handler("JarvisApproval"))
 
     override fun onReceive(context: Context, intent: Intent) {
         if (!com.optionslab.app.BuildConfig.JARVIS) return

@@ -119,7 +119,7 @@ object IraModel {
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state
     private var app: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + com.optionslab.app.data.ScopeGuard.handler("IraModel"))
     private val lock = Mutex()
     @Volatile private var handle = 0L
     /** Which of the model's memory slots each prompt reads into (used under [lock] only; as many as the runner has). */

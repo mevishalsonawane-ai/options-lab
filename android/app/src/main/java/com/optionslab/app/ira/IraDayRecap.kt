@@ -42,7 +42,7 @@ internal object IraDayRecap {
      * The slow reads, apart from the asker: a file read and decrypted cannot be interrupted (a held lock, a decrypt), so the
      * asker stops waiting at the limit and the read finishes, or fails, here on its own (its result dropped).
      */
-    private val reads = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val reads = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("IraDayRecap.reads"))
 
     /** Set when a part took longer than its limit (the recap says so under what was read). */
     private class Slow { @Volatile var hit = false }
