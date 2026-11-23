@@ -2580,7 +2580,9 @@ object Broker {
                       val triggers: List<Double>, val lastPrice: Double, val orders: String, val created: String,
                       val orderIds: List<String> = emptyList(), val legPrices: List<Double> = emptyList(),
                       /** 18 Oct review: each leg's side, quantity and product (what an active GTT would sell or buy). */
-                      val legSides: List<String> = emptyList(), val legQtys: List<Int> = emptyList(), val legProducts: List<String> = emptyList()) {
+                      val legSides: List<String> = emptyList(), val legQtys: List<Int> = emptyList(), val legProducts: List<String> = emptyList(),
+                      /** 23 Nov 2026 (B6 review, fifth round): triggered, but Zerodha could not place its order (its result "failed", or refused). */
+                      val placeFailed: Boolean = false) {
         val active: Boolean get() = status.lowercase() == "active"
         /** The quantity this GTT, while active, would send on [side] in [product] (its first leg: a single-leg stop). */
         fun covers(side: String, product: String): Int =
@@ -2597,7 +2599,9 @@ object Broker {
             rows(g.optJSONArray("orders")).map { it.optDouble("price", 0.0) },
             rows(g.optJSONArray("orders")).map { it.optString("transaction_type") },
             rows(g.optJSONArray("orders")).map { it.optInt("quantity") },
-            rows(g.optJSONArray("orders")).map { it.optString("product") })
+            rows(g.optJSONArray("orders")).map { it.optString("product") },
+            rows(g.optJSONArray("orders")).any { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.let { r ->
+                r.optString("order_id").isBlank() && (r.optString("status").equals("failed", ignoreCase = true) || r.optString("rejection_reason").isNotBlank()) } == true })
     }.sortedByDescending { it.created }.also { ExitCoordinator.gttsRead(it) }
 
     /** Places a GTT. Callers must have had the owner confirm it. */

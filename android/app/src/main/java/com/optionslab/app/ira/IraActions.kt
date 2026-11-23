@@ -299,7 +299,8 @@ internal object IraActions {
         return when (sent) {
             is com.optionslab.app.ui.Load.Done -> "Sent to Zerodha: ${p.title}. " + sent.value.joinToString("; ") { "${it.status} ${it.filled} at ${"%.2f".format(it.avgPrice)}" +
                 (com.optionslab.app.data.Origins.shortId(it.orderId)?.let { id -> " (order $id)" } ?: "") }
-            is com.optionslab.app.ui.Load.Failed -> "Zerodha refused: ${sent.why}"
+            // 23 Nov 2026 (B6 review, fifth round): a part of the exit sent alone ("Sent X of N ...") is said as it is, never as refused.
+            is com.optionslab.app.ui.Load.Failed -> if (sent.why.startsWith("Sent ")) sent.why else "Zerodha refused: ${sent.why}"
             else -> "Sent; Zerodha has not confirmed yet - see the Trade tab."
         }
     }

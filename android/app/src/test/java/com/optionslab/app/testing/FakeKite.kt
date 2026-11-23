@@ -122,6 +122,8 @@ class FakeKite : Closeable {
     @Volatile var positionsTrailReads = 0
     /** 21 Oct, enhancement round 4: the next this many reads of the GTT list fail (500 GeneralException). */
     @Volatile var gttReadFailures = 0
+    /** 23 Nov 2026 (B6 review, fifth round): the next this many GTT deletes are refused (500 GeneralException), the GTT left as it was. */
+    @Volatile var gttDeleteFailures = 0
     /** 21 Oct, enhancement round 4: the next this many GTTs placed are made, but their answers are lost. */
     @Volatile var gttRepliesLost = 0
     /** ...and the next this many reads of the GTT list after such a lost answer fail (the sender cannot find it at once). */
@@ -505,6 +507,7 @@ class FakeKite : Closeable {
                 if (g != null) ok(g) else error(400, "InputException", "Invalid trigger ID.")
             }
             m == "PUT" && path.startsWith("/gtt/triggers/") -> modifyGtt(path.substringAfterLast('/').toLongOrNull(), parseForm(body))
+            m == "DELETE" && path.startsWith("/gtt/triggers/") && gttDeleteFailures > 0 -> { gttDeleteFailures--; error(500, "GeneralException", "Something went wrong. Please try again.") }
             m == "DELETE" && path.startsWith("/gtt/triggers/") -> {
                 val id = path.substringAfterLast('/').toLong()
                 if (gtts.remove(id) != null) ok(JSONObject().put("trigger_id", id)) else error(400, "InputException", "Invalid trigger ID.")

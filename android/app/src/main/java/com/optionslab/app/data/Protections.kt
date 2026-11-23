@@ -1892,13 +1892,20 @@ object Protections {
      */
     private suspend fun sellAtTarget(p: Item, so: Broker.OrderRow, ltp: Double?, out: Boolean = false): Item {
         // (22 Nov 2026, with the square-offs' protocol: one seller at a time on the row - taken before the stop comes out, let go in a finally;
-        // held by a square-off: nothing taken out, it sells the row. 23 Nov 2026, fourth round: one of the protections' own stops going back
-        // holds it only a moment - waited for, up to about a second.)
+        // held by a square-off: nothing taken out, it sells the row.)
         var claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
-        var waited = 0
-        while (claim == null && waited < 1_000 && SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product) == STOP_CLAIM_OWNER) {
-            kotlinx.coroutines.delay(100); waited += 100
+        // (23 Nov 2026, B6 review, fifth round, #7: one of the protections' own stops going back holds it only a moment - never waited for
+        // under the look's lock: skipped this look, its reached mark kept, and the stream looks leave it be only about a second. Let go
+        // between the two reads: taken now.)
+        var holder = if (claim == null) SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product) else null
+        if (claim == null && holder == null) {
             claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
+            if (claim == null) holder = SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)
+        }
+        // (Second review: any of the app's stops going back - its name ends "-stop" - holds the row only a moment.)
+        if (claim == null && holder?.endsWith("-stop") == true) {
+            targetWait[p.id] = nowMs() + TARGET_PENDING_LOOK_MS
+            return p
         }
         targetHit.remove(p.id)
         // (Second round, m-1: until this try takes something out, the stream looks leave it be for a while - [targetWait].)

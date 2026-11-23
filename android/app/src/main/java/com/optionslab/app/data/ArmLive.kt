@@ -2398,16 +2398,11 @@ object ArmLive {
     /** 22 Nov 2026 (B6 review, second round, m-3): one exit's claim on [p]'s position row, taken at most once ([take]); [exitLive] lets it go. */
     private class RowClaim(private val p: Pos, private val why: String) {
         private var held: SquareOffExit.ExitClaim? = null
-        suspend fun take(): Claimed {
+        fun take(): Claimed {
             if (held != null) return Claimed.BEFORE
             held = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
-            // (23 Nov 2026, B6 review, fourth round: one of these arms' own stops going back holds it only a moment - waited for, up to about a
-            // second, never a look lost to it.)
-            var waited = 0
-            while (held == null && waited < 1_000 && SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product) == STOP_CLAIM_OWNER) {
-                kotlinx.coroutines.delay(100); waited += 100
-                held = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
-            }
+            // (23 Nov 2026, B6 review, fifth round, #7: one of these arms' own stops going back holds it only a moment - never waited for here,
+            // under the book's lock: this trade's exit is skipped this pass and the next look tries again.)
             if (held != null) { claimsTakenForTest.incrementAndGet(); return Claimed.NOW }
             // (In the diary at most once a minute for the trade: the live lane comes every tick.)
             val minute = runCatching { nowMs() / 60_000 }.getOrDefault(0L)

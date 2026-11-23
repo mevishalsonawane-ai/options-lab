@@ -72,6 +72,12 @@ class BossExitClaimTest : RobolectricTest() {
         (m.sending.value as? Load.Failed)?.why ?: (m.sending.value as? Load.Done)?.let { throw AssertionError("sent: $it") }
     }
 
+    /** Fifth round: a part sent - what went, said; never Done. */
+    private fun partSent(m: AppModel): String = BrokerArea.await("the part sent", 40_000) {
+        (m.sending.value as? Load.Failed)?.why ?: (m.sending.value as? Load.Done)?.let { throw AssertionError("all sent: $it") }
+    }
+    private fun sells() = kite.placed.filter { it.form["transaction_type"] == "SELL" }
+
     private fun sent(m: AppModel): List<Broker.Fill> = BrokerArea.await("the send", 40_000) {
         (m.sending.value as? Load.Done)?.value ?: (m.sending.value as? Load.Failed)?.let { throw AssertionError(it.why) }
     }
@@ -141,17 +147,17 @@ class BossExitClaimTest : RobolectricTest() {
         m.sendPlan()
         val why = refused(m)
         assertTrue(why, why.startsWith("Not sent: Zerodha shows $ce closed") && why.contains("nothing of it is left to sell"))
-        assertTrue("what he can do", why.contains("If Kite still shows it open, close it there."))
+        assertTrue("what he can do", why.contains("If Kite still shows it open, close it in Kite."))
         assertEquals("nothing sent", placed, kite.placed.size)
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
         assertEquals(null, SquareOffExit.exitClaimedBy("NFO", ce, "NRML"))
     }
 
     /**
-     * Only part of the reviewed exit is left (the rest sold a moment ago, not shown yet): nothing is sent. Fourth round (m2): the part that can
-     * go is offered as a new exit for him to review - and it goes only once he confirms it.
+     * Only part of the reviewed exit is left (the rest sold a moment ago, not shown yet). Fifth round: the part that can go goes at once under
+     * the same confirmation - never more - and Boss is told what went and why the rest did not.
      */
-    @Test fun anExitWithOnlyPartLeftOffersThatPart() {
+    @Test fun anExitWithOnlyPartLeftSendsThatPartAndSaysSo() {
         kite.position(ce, 150, 90.0)
         kite.positionsTrailReads = 100_000
         runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(ce, com.optionslab.engine.Kite.Side.SELL, 75, 75, "NRML", "MARKET",
@@ -160,18 +166,15 @@ class BossExitClaimTest : RobolectricTest() {
         m.planSquareOff(position(ce))
         val plan = BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
         assertEquals(150, plan.legs.sumOf { it.quantity })
-        val placed = kite.placed.size
+        val before = sells().size
         m.sendPlan()
-        val why = refused(m)
-        assertTrue(why, why.contains("Zerodha holds only 75 of $ce now") && why.contains("Only 75 can go safely now"))
-        assertTrue(why, why.contains("If it must all go now, close it in Kite."))
-        assertEquals("nothing sent", placed, kite.placed.size)
-        val offered = BrokerArea.await("the offer") { (m.plan.value as? Load.Done)?.value?.takeIf { p -> p.legs.sumOf { it.quantity } == 75 } }
-        assertTrue(offered.title, offered.title.endsWith("the 75 that can go now"))
-        assertEquals(75, kite.positions.getValue("NFO:$ce:NRML").first)
-        m.sendPlan()                                                         // Boss confirms the offer
-        assertEquals("COMPLETE", sent(m).single().status)
+        val why = partSent(m)
+        assertTrue(why, why.startsWith("Sent 75 of 150 on $ce; the other 75 are not held at Zerodha any more (Zerodha holds 75;"))
+        assertFalse("no later legs to speak of", why.contains("remaining legs"))
+        assertTrue("nothing left to close, so no Kite advice: $why", why.endsWith("before its positions show it)."))
+        assertEquals("the part sent, once", listOf("75"), sells().drop(before).map { it.form["quantity"] })
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", ce, "NRML"))
     }
 
     /**
@@ -249,29 +252,29 @@ class BossExitClaimTest : RobolectricTest() {
     }
 
     /**
-     * m2: a book's own exit sale on the row has not settled (75 of 150 may still be selling): the 75 that can go safely is offered for Boss to
-     * confirm - nothing sent until he does - and the words say why, for about how long, and "close it in Kite".
+     * m2, fifth round: a book's own exit sale on the row has not settled (75 of 150 may still be selling): the 75 that can go safely goes under
+     * the same confirmation, and the words say what went, why the rest did not, for about how long, and "close it in Kite".
      */
-    @Test fun aBooksUnsettledSaleOffersTheSafeQuantity() {
+    @Test fun aBooksUnsettledSaleSendsTheSafeQuantity() {
         kite.position(ce, 150, 90.0)
         SquareOffExit.lostPendingProviders["test"] = { s, _ -> if (s == ce) 75 else 0 }
         try {
             val m = model()
             m.planSquareOff(position(ce))
             BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
-            val placed = kite.placed.size
+            val before = sells().size
             m.sendPlan()
-            val why = refused(m)
-            assertTrue(why, why.contains("has not settled yet") && why.contains("within about 2 minutes") && why.contains("Only 75 can go safely now"))
-            assertTrue(why, why.endsWith("If it must all go now, close it in Kite."))
-            assertEquals("nothing sent", placed, kite.placed.size)
-            val offered = BrokerArea.await("the offer") { (m.plan.value as? Load.Done)?.value?.takeIf { p -> p.legs.sumOf { it.quantity } == 75 } }
-            assertEquals(listOf(75), offered.legs.map { it.quantity })
+            val why = partSent(m)
+            assertTrue(why, why.startsWith("Sent 75 of 150 on $ce; the other 75 may still be selling by ") &&
+                why.contains("(75 not settled yet - found or let go within about 2 minutes)"))
+            assertTrue(why, why.endsWith("If it must go now, close it in Kite."))
+            assertEquals("the safe part only", listOf("75"), sells().drop(before).map { it.form["quantity"] })
+            assertEquals("what may still be selling is left", 75, kite.positions.getValue("NFO:$ce:NRML").first)
         } finally { SquareOffExit.lostPendingProviders.remove("test") }
     }
 
-    /** m2 (review): an offer from a plan in freeze slices - the contract's slices cut to the safe quantity, never more. */
-    @Test fun anOfferFromSlicesCutsThemToTheSafeQuantity() {
+    /** m2 (review), fifth round: a plan in freeze slices - the contract's slices cut to the safe quantity and sent, never more. */
+    @Test fun aPartFromSlicesCutsThemToTheSafeQuantity() {
         kite.position(ce, 2700, 90.0)
         SquareOffExit.lostPendingProviders["test"] = { s, _ -> if (s == ce) 900 else 0 }
         try {
@@ -279,18 +282,17 @@ class BossExitClaimTest : RobolectricTest() {
             m.planSquareOff(position(ce))
             val plan = BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
             assertEquals(listOf(1800, 900), plan.legs.map { it.quantity })
-            val placed = kite.placed.size
+            val before = sells().size
             m.sendPlan()
-            val why = refused(m)
-            assertTrue(why, why.contains("Only 1800 can go safely now"))
-            assertEquals("nothing sent", placed, kite.placed.size)
-            val offered = BrokerArea.await("the offer") { (m.plan.value as? Load.Done)?.value?.takeIf { p -> p.legs.sumOf { it.quantity } == 1800 } }
-            assertEquals(listOf(1800), offered.legs.map { it.quantity })
+            val why = partSent(m)
+            assertTrue(why, why.startsWith("Sent 1800 of 2700 on $ce; the other 900 may still be selling"))
+            assertEquals("one freeze slice, never the second", listOf("1800"), sells().drop(before).map { it.form["quantity"] })
+            assertEquals(900, kite.positions.getValue("NFO:$ce:NRML").first)
         } finally { SquareOffExit.lostPendingProviders.remove("test") }
     }
 
-    /** m2 (review): a leg refused for margin whose re-send finds a book's sale unsettled: the safe part offered, nothing sent again. */
-    @Test fun aMarginResendWithABooksUnsettledSaleOffersTheSafeQuantity() {
+    /** m2 (review), fifth round: a leg refused for margin whose re-send finds a book's sale unsettled: the safe part goes again, said. */
+    @Test fun aMarginResendWithABooksUnsettledSaleSendsTheSafeQuantity() {
         kite.position(ce, 150, 90.0)
         val m = model()
         m.planSquareOff(position(ce))
@@ -298,12 +300,12 @@ class BossExitClaimTest : RobolectricTest() {
         kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "Insufficient funds. Required margin is 95000.00 but available margin is 1200.00.")
         kite.afterNext("/orders/regular") { SquareOffExit.lostPendingProviders["test"] = { s, _ -> if (s == ce) 75 else 0 } }
         try {
+            val before = sells().size
             m.sendPlan()
-            val why = refused(m)
-            assertTrue(why, why.contains("refused for margin and not sent again") && why.contains("Only 75 can go safely now"))
-            assertEquals("sent once, never again", 1, kite.placed.count { it.form["transaction_type"] == "SELL" })
-            val offered = BrokerArea.await("the offer") { (m.plan.value as? Load.Done)?.value?.takeIf { p -> p.legs.sumOf { it.quantity } == 75 } }
-            assertEquals(listOf(75), offered.legs.map { it.quantity })
+            val why = partSent(m)
+            assertTrue(why, why.startsWith("Sent 75 of 150 on $ce; the other 75 may still be selling by "))
+            assertEquals("the refused 150, then the safe 75 - never the whole again", listOf("150", "75"), sells().drop(before).map { it.form["quantity"] })
+            assertEquals(75, kite.positions.getValue("NFO:$ce:NRML").first)
         } finally { SquareOffExit.lostPendingProviders.remove("test") }
     }
 
@@ -400,5 +402,273 @@ class BossExitClaimTest : RobolectricTest() {
         assertTrue("its stop left resting", kite.order(p.stopOrderId!!).working)
         assertTrue("nothing modified into a sell", kite.writes.none { it.method == "PUT" })
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+    }
+
+    // ---- fifth round ----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * A plan of several contracts - a short put bought back first, then its long hedge sold. Only part of the short can go safely (a protection's
+     * buy-back of 75 filled a moment ago, the positions not showing it yet): that part goes, and the send stops before the hedge leg - selling
+     * the hedge then could leave a naked short. Boss is told what went, why the rest did not, that the remaining legs were not sent, and Kite.
+     */
+    @Test fun aSeveralContractPlanSendsThePartAndStopsBeforeTheHedgeLeg() {
+        val pe = BrokerArea.symbol("NIFTY", expiry, 24_500.0, "PE")
+        kite.quote("NFO:$pe", 50.0, 49.95, 50.05)
+        kite.position(pe, -150, 60.0)
+        kite.positionsTrailReads = 100_000
+        runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(pe, com.optionslab.engine.Kite.Side.BUY, 75, 75, "NRML", "MARKET",
+            null, 0.05, "NFO", "iraprotect"), exit = true) }                 // a protection's buy-back: filled, the positions still show -150
+        val m = model()
+        m.planSquareOffList(listOf(position(pe), position(ce)), "Square off")
+        val plan = BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        assertEquals("the short first, then the hedge", listOf(pe to 150, ce to 75), plan.legs.map { it.tradingSymbol to it.quantity })
+        val mine = kite.placed.size
+        m.sendPlan()
+        val why = partSent(m)
+        assertTrue(why, why.startsWith("Sent 75 of 150 on $pe; the other 75 are not held at Zerodha any more"))
+        assertTrue(why, why.endsWith("; the remaining legs were not sent. If it must go now, close it in Kite."))
+        val sentNow = kite.placed.drop(mine)
+        assertEquals("only the short's safe part", listOf(Triple(pe, "BUY", "75")),
+            sentNow.map { Triple(it.form["tradingsymbol"], it.form["transaction_type"], it.form["quantity"]) })
+        assertEquals("the short closed, never turned long", 0, kite.positions.getValue("NFO:$pe:NRML").first)
+        assertEquals("the hedge left as it was", 75, kite.positions.getValue("NFO:$ce:NRML").first)
+        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", pe, "NRML"))
+    }
+
+    /**
+     * #6: the protection's day GTT triggered and its sale is not in Zerodha's order book yet: Boss's exit is not sent beside it (it would sell
+     * the 75 twice), and he is told why, for how long, and Kite. The GTT is never deleted as if it were still waiting.
+     */
+    @Test fun aTriggeredGttsSaleNotInTheBookYetHoldsTheExitBack() {
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            val said = runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            assertTrue(said, said.contains("as one GTT"))
+            val gid = kite.gtts.keys.single()
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            kite.quote("NFO:$ce", 70.0, 69.95, 70.05)                          // through the stop: it triggers; its sale rests above the bid
+            val oid = kite.triggerGtt(gid)
+            assertEquals("OPEN", kite.order(oid).status)
+            kite.hideFromBook(oid, 1_000)                                      // not in the order book yet
+            val mine = kite.placed.size
+            m.sendPlan()
+            val why = refused(m)
+            assertTrue(why, why.contains("its protection's GTT on $ce triggered and its sale (order $oid) is not in Zerodha's order book yet") &&
+                why.contains("send it again in a few seconds"))
+            assertTrue(why, why.endsWith("If it must go now, close it in Kite."))
+            assertEquals("nothing sent beside it", mine, kite.placed.size)
+            assertTrue("never deleted", kite.requests.none { it.method == "DELETE" && it.path == "/gtt/triggers/$gid" })
+            assertEquals(75, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { com.optionslab.app.data.DayOco.resetForTest() }
+    }
+
+    /**
+     * #6: the GTT triggered and its sale rests in the book: it is that sale that is taken over (turned into Boss's exit) - one sale, never the
+     * full 75 beside it, and the triggered GTT is not deleted.
+     */
+    @Test fun aTriggeredGttsRestingSaleIsTakenOverNeverSoldBeside() {
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            val gid = kite.gtts.keys.single()
+            val m = model()
+            kite.quote("NFO:$ce", 70.0, 69.95, 70.05)
+            val oid = kite.triggerGtt(gid)
+            assertEquals("OPEN", kite.order(oid).status)
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            kite.afterNext("/orders/regular/$oid") { kite.fill(oid) }       // turned into a sale at the bid: it fills
+            val mine = kite.placed.size
+            m.sendPlan()
+            assertEquals("its sale is the exit", listOf(oid), sent(m).map { it.orderId })
+            assertEquals("no second sale", mine, kite.placed.size)
+            assertTrue("never deleted", kite.requests.none { it.method == "DELETE" && it.path == "/gtt/triggers/$gid" })
+            assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { com.optionslab.app.data.DayOco.resetForTest() }
+    }
+
+    /** #6: the protection's GTT could not be deleted and is still active: nothing is sent beside it, said; its taken-over mark ends. */
+    @Test fun aGttWhoseDeleteFailsHoldsTheExitBack() {
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            val gid = kite.gtts.keys.single()
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            kite.gttDeleteFailures = 5
+            val mine = kite.placed.size
+            m.sendPlan()
+            val why = refused(m)
+            assertTrue(why, why.startsWith("Not sent: its protection's GTT on $ce could not be deleted (") && why.contains("it could still fire as your exit fills"))
+            assertTrue(why, why.endsWith("If it must go now, close it in Kite."))
+            assertEquals("nothing sent", mine, kite.placed.size)
+            assertTrue("the GTT still there", gid in kite.gtts.keys)
+            assertFalse("its mark ended, so Boss's own delete of it later is his", Protections.isTakenOver("gtt:$gid"))
+            assertEquals(75, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { com.optionslab.app.data.DayOco.resetForTest(); kite.gttDeleteFailures = 0 }
+    }
+
+    /**
+     * #5: a read that fails while the resting exits are taken over (here the GTT list, read just after the room check's own read, under the
+     * row's claim) is caught and said - what could not be read, that nothing went or was taken out, and Kite - never Zerodha's bare words.
+     */
+    @Test fun aReadFailingDuringTheTakeoverIsSaidWithTheKiteAdvice() {
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            val gid = kite.gtts.keys.single()
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            // After the first GTT read made under Boss's claim (the room check's), the next ones fail (the takeover's).
+            fun arm() {
+                kite.afterNext("/gtt/triggers") {
+                    if (SquareOffExit.exitClaimedBy("NFO", ce, "NRML")?.startsWith("${SquareOffExit.BOSS_OWNER}#") == true) kite.gttReadFailures = 5 else arm()
+                }
+            }
+            arm()
+            val mine = kite.placed.size
+            m.sendPlan()
+            val why = refused(m)
+            assertTrue(why, why.startsWith("Not sent: Zerodha's GTT list could not be read just before your exit on $ce went (") &&
+                why.contains("so it was not sent and nothing resting on it was taken out: send it again in a moment."))
+            assertTrue(why, why.endsWith("If it must go now, close it in Kite."))
+            assertEquals("nothing sent", mine, kite.placed.size)
+            assertTrue("the GTT left as it was", gid in kite.gtts.keys && kite.requests.none { it.method == "DELETE" && it.path == "/gtt/triggers/$gid" })
+        } finally { com.optionslab.app.data.DayOco.resetForTest(); kite.gttReadFailures = 0 }
+    }
+
+    /**
+     * #11: the note names whose resting exit filled as it came out, from its tag - an arm's exit here, not "your stop". Its 75 of the 150 sold as
+     * the takeover cancelled it: the 75 left goes under the same confirmation, said as a part.
+     */
+    @Test fun theFilledNoteNamesWhoseExitItWas() {
+        kite.position(ce, 150, 90.0)
+        val stop = runBlocking { Broker.placeOrder(com.optionslab.engine.Kite.Order(ce, com.optionslab.engine.Kite.Side.SELL, 75, 75, "NRML", "SL-M",
+            null, 0.05, "NFO", "iraarm", triggerPrice = 80.0), exit = true) }  // an arm's stop resting on part of it
+        val m = model()
+        m.planSquareOff(position(ce))
+        BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+        kite.positionsTrailReads = 100_000
+        kite.afterNext("/orders/regular/$stop") { kite.fill(stop, 80.0) }   // it triggered as the cancel went
+        val before = sells().size
+        m.sendPlan()
+        val why = partSent(m)
+        assertEquals("Sent 75 of 150 on $ce; the other 75 were sold as an arm's exit at Zerodha filled as it came out.", why)
+        assertEquals("only what was left", listOf("75"), sells().drop(before).map { it.form["quantity"] })
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+    }
+
+    /**
+     * Review (fifth round): the part is said as sent only once it filled - Zerodha refused it here, so Boss is told only that part could go
+     * safely, never "Sent", and what to do.
+     */
+    @Test fun aPartRefusedByZerodhaIsNeverSaidAsSent() {
+        kite.position(ce, 150, 90.0)
+        SquareOffExit.lostPendingProviders["test"] = { s, _ -> if (s == ce) 75 else 0 }
+        try {
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            kite.nextPlace(outcome = FakeKite.Outcome.REJECT, message = "RMS: blocked for this instrument.")
+            m.sendPlan()
+            val why = refused(m)
+            assertFalse(why, why.contains("Sent 75"))
+            assertTrue(why, why.startsWith("Leg 1 rejected: RMS: blocked for this instrument. Only 75 of 150 on $ce could go safely; the other 75 may " +
+                "still be selling by "))
+            assertTrue(why, why.endsWith(". If it must go now, close it in Kite."))
+            assertEquals(150, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { SquareOffExit.lostPendingProviders.remove("test") }
+    }
+
+    /** Review (fifth round): Jarvis says a part sent as it is - never "Zerodha refused". */
+    @Test fun jarvisSaysAPartSentAsItIs() {
+        kite.position(ce, 150, 90.0)
+        SquareOffExit.lostPendingProviders["test"] = { s, _ -> if (s == ce) 75 else 0 }
+        try {
+            val m = model()
+            com.optionslab.app.ira.IraActions.attach(m)
+            val said = java.util.concurrent.atomic.AtomicReference<String?>()
+            Thread { said.set(runBlocking { com.optionslab.app.ira.IraActions.closeLiveSymbol(ce) }) }.start()
+            val answer = BrokerArea.await("Jarvis's answer", 40_000) { said.get() }
+            assertTrue(answer, answer.startsWith("Sent 75 of 150 on $ce; the other 75 may still be selling by "))
+            assertEquals(listOf("75"), sells().map { it.form["quantity"] })
+        } finally { SquareOffExit.lostPendingProviders.remove("test") }
+    }
+
+    /**
+     * Review (fifth round): a protection's GTT that triggered in an earlier session (its order unknown to Zerodha now) is no sale on its way:
+     * Boss's exit is never held back by it.
+     */
+    @Test fun aGttTriggeredInAnEarlierSessionNeverHoldsTheExitBack() {
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            val gid = kite.gtts.keys.single()
+            kite.quote("NFO:$ce", 70.0, 69.95, 70.05)
+            val oid = kite.triggerGtt(gid)
+            kite.orders.remove(oid)                                            // yesterday's order: not in today's book, unknown to Zerodha
+            kite.quote("NFO:$ce", 100.0, 99.95, 100.05)
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            m.sendPlan()
+            assertEquals("COMPLETE", sent(m).single().status)
+            assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { com.optionslab.app.data.DayOco.resetForTest() }
+    }
+
+    /**
+     * Second review: a triggered GTT is a sale on its way only while one may be going - not when Zerodha could not place its order, nor when
+     * its order was refused; one with no order from Zerodha yet holds the exit back, said.
+     */
+    @Test fun aTriggeredGttHoldsTheExitBackOnlyWhileASaleMayBeGoing() {
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            val gid = kite.gtts.keys.single()
+            val g = kite.gtts.getValue(gid)
+            g.put("status", "triggered")                                       // triggered, Zerodha's order not given yet
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            val mine = kite.placed.size
+            m.sendPlan()
+            val why = refused(m)
+            assertTrue(why, why.startsWith("Not sent: its protection's GTT on $ce triggered and Zerodha has not given its sale's order yet") &&
+                why.endsWith("If it must go now, close it in Kite."))
+            assertEquals("nothing sent beside it", mine, kite.placed.size)
+            // Zerodha could not place it: no sale - the exit goes.
+            g.getJSONArray("orders").getJSONObject(0).put("result", org.json.JSONObject().put("order_result",
+                org.json.JSONObject().put("order_id", "").put("status", "failed").put("rejection_reason", "Insufficient funds")))
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan again") { (m.plan.value as? Load.Done)?.value?.takeIf { m.sending.value == Load.Idle } }
+            m.sendPlan()
+            assertEquals("COMPLETE", sent(m).single().status)
+            assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { com.optionslab.app.data.DayOco.resetForTest() }
+    }
+
+    /** Second review: a triggered GTT's order that Zerodha refused (not in the book read yet) is no sale: the exit goes. */
+    @Test fun aTriggeredGttsRefusedOrderNeverHoldsTheExitBack() {
+        com.optionslab.app.data.DayOco.resetForTest(on = true)
+        try {
+            runBlocking { Protections.protectLive(ce, "NFO", "NRML", 75, 100.0, 90.0, null, 130.0) }
+            val gid = kite.gtts.keys.single()
+            kite.quote("NFO:$ce", 70.0, 69.95, 70.05)
+            val oid = kite.triggerGtt(gid)
+            kite.reject(oid, "RMS: price band")
+            kite.hideFromBook(oid, 1_000)
+            kite.quote("NFO:$ce", 100.0, 99.95, 100.05)
+            val m = model()
+            m.planSquareOff(position(ce))
+            BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
+            m.sendPlan()
+            assertEquals("COMPLETE", sent(m).single().status)
+            assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        } finally { com.optionslab.app.data.DayOco.resetForTest() }
     }
 }

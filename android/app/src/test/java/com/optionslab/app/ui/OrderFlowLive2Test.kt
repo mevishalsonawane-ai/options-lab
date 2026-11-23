@@ -442,7 +442,8 @@ class OrderFlowLive2Test : RobolectricTest() {
         BrokerArea.await("the exit plan") { (m.plan.value as? Load.Done)?.value }
         kite.position(ce, 0, 0.0)                                           // closed from Kite web meanwhile
         m.sendPlan()
-        assertEquals("Not sent: $ce changed since the review (open now 0); review the exit again", refused(m))
+        // (23 Nov 2026, B6 review, fifth round, #5: with the Kite advice.)
+        assertEquals("Not sent: $ce changed since the review (open now 0); review the exit again. If it must go now, close it in Kite.", refused(m))
         assertTrue("a closed position must not be re-opened the other way", kite.placed.isEmpty())
     }
 

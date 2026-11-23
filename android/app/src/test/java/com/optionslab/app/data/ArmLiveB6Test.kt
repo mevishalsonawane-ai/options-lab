@@ -264,6 +264,38 @@ class ArmLiveB6Test : RobolectricTest() {
     }
 
     /**
+     * #7 (fifth round): one of these arms' own stops going back holds the row a moment. The arm's exit is never waited for under the book's
+     * lock: this pass skips the trade at once (nothing taken out or sold, its stop left resting) and the next pass sells it.
+     */
+    @Test fun anArmsExitSkipsThePassWhileItsOwnStopGoesBackAndNeverWaits() {
+        ArmLive.entered(ask(donchian, "back"))
+        watch()
+        val sid = view().openReal.single().stopOrderId!!
+        legs["back"] = donchian to 0
+        /** One pass with the row held by [owner]: how long it took; nothing sold, the stop left resting. */
+        fun heldPass(owner: String): Long {
+            val claim = SquareOffExit.claimExit("NFO", sym, "MIS", owner)!!
+            try {
+                val t0 = System.nanoTime()
+                watch()
+                return (System.nanoTime() - t0) / 1_000_000
+            } finally {
+                claim.release()
+                assertEquals("nothing sold beside it", 0, marketSells())
+                assertTrue("its stop left resting", kite.order(sid).working)
+            }
+        }
+        // A square-off's hold is never waited for; one of the arms' own stops going back now is not either (the old wait was a full second).
+        val other = heldPass("iraalgoflat")
+        val own = heldPass(ArmLive.STOP_CLAIM_OWNER)
+        assertTrue("never waited for its own stop: $own ms, against $other ms with a square-off holding it", own < other + 700)
+        watch()
+        assertEquals("sold on the next pass", 1, marketSells())
+        assertEquals(0, held())
+        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+    }
+
+    /**
      * The handover: the expiry square-off leaves an arm's expiring trade to the arm until 15:08, then sells what is left itself. An arm's exit
      * sale lost at noon on expiry day, not shown yet: at the 15:08 backstop the square-off sells nothing beside it (with it filled, selling
      * the 30 Zerodha's positions still show would go short) and says why; once the arm finds and books it, nothing is left to sell.

@@ -132,6 +132,38 @@ class ProtectionsB6Test : RobolectricTest() {
         assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
     }
 
+    /**
+     * #7 (fifth round): one of the protections' own stops going back holds the row a moment. The target sale is never waited for under the look's
+     * lock: this look skips it at once (its stop left resting, nothing sold) and the next look sells.
+     */
+    @Test fun theTargetSkipsTheLookWhileItsOwnStopGoesBackAndNeverWaits() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        /** One look with the row held by [owner]: how long it took; nothing sold, the stop left resting. */
+        fun heldLook(owner: String): Long {
+            val claim = SquareOffExit.claimExit("NFO", sym, "MIS", owner)!!
+            try {
+                val t0 = System.nanoTime()
+                tick()
+                return (System.nanoTime() - t0) / 1_000_000
+            } finally {
+                claim.release()
+                assertTrue("its stop left resting", kite.order(p.stopOrderId!!).working)
+                assertTrue(sales().isEmpty())
+            }
+        }
+        // A square-off's hold is never waited for; one of the protections' own stops going back now is not either (the old wait: a second).
+        val other = heldLook("iraalgoflat")
+        val own = heldLook(Protections.STOP_CLAIM_OWNER)
+        assertTrue("never waited for its own stop: $own ms, against $other ms with a square-off holding it", own < other + 700)
+        tick()
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("sold on the next look", 1, sales().size)
+        assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+    }
+
     /** The sale refused outright: the stop is put back at once, the target still the app's. */
     @Test fun aRefusedTargetSalePutsTheStopBackAtOnce() {
         protect()
