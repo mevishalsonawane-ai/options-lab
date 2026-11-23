@@ -1066,8 +1066,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     private sealed interface BossRoom {
         /** It goes as reviewed. */
         data object Go : BossRoom
-        /** Nothing goes now: [why] says why, for how long, and what he can do. */
-        data class Refuse(val why: String) : BossRoom
+        /**
+         * Nothing goes now: [why] says why, for how long, and what he can do; [flat]: Zerodha shows it closed (nothing left to close); [short]:
+         * Zerodha shows it short now (a long's sale refused because it turned round) - a hedge's sale must wait.
+         */
+        data class Refuse(val why: String, val flat: Boolean = false, val short: Boolean = false) : BossRoom
         /**
          * 23 Nov 2026 (B6 review, fifth round): only [safe] of this contract can go safely now - a part of what Boss confirmed, so it goes
          * under his confirmation (cut to whole lots and its freeze slices) and every later leg of the plan is held back; [other]: why the
@@ -1093,11 +1096,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * it until the leg is placed; taken here too - the same owner's, at once - so this is never done without it.)
      */
     private suspend fun takeOverLeg(legs: List<com.optionslab.engine.Kite.Order>, i: Int, taken: MutableList<String>? = null,
-                                    owner: String = com.optionslab.app.data.SquareOffExit.BOSS_OWNER): Took? {
+                                    owner: String = com.optionslab.app.data.SquareOffExit.BOSS_OWNER, notGoing: MutableSet<String> = HashSet()): Took? {
         val o = legs[i]
         if (o.product == "CNC") return null
         val claim = bossExitClaim(o, owner)
-        try { return takeOverLegClaimed(legs, i, taken) } finally { claim.release() }
+        try { return takeOverLegClaimed(legs, i, taken, notGoing) } finally { claim.release() }
     }
 
     /**
@@ -1119,10 +1122,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // (23 Nov 2026, B6 review, fourth round: a stop going back holds the row only a moment - said so; a sale is said as a sale.)
         val holder = sq.exitClaimedBy(o.exchange, o.tradingSymbol, o.product)
         throw java.io.IOException(if (holder?.endsWith("-stop") == true)
-            "${sq.claimWords(holder)} on ${o.tradingSymbol} - it holds the contract only a moment, so your exit was not sent beside it: send it " +
-                "again in a moment. If it must go now, close it in Kite."
+            "${sq.claimWords(holder)} on ${o.tradingSymbol} - it holds the contract only a moment, so your exit was not sent beside it: plan the " +
+                "exit again in a moment. If it must go now, close it in Kite."
         else "${sq.claimWords(holder)} is already selling ${o.tradingSymbol} at Zerodha, so your exit was not sent beside it - for a few seconds, " +
-            "while that sale goes. Look at Kite's orders and positions: if that sale went, the position is closing; if not, send it again. If it " +
+            "while that sale goes. Look at Kite's orders and positions: if that sale went, the position is closing; if not, plan the exit again. If it " +
             "must go now, close it in Kite.")
     }
 
@@ -1143,7 +1146,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * a sale on its way - its order waited for in the fresh read like any other, never sold beside.)
      */
     private suspend fun bossExitRoom(legs: List<com.optionslab.engine.Kite.Order>, i: Int, countWorking: Boolean = true, ownIds: Set<String> = emptySet(),
-                                     filledOut: Took.Filled? = null): BossRoom {
+                                     filledOut: Took.Filled? = null, notGoing: MutableSet<String> = HashSet()): BossRoom {
         val b = com.optionslab.app.data.Broker
         val ec = com.optionslab.app.data.ExitCoordinator
         val sq = com.optionslab.app.data.SquareOffExit
@@ -1153,7 +1156,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // (Fifth round, #11: who it was, from its tag.)
         val note = filledOut?.let { "${it.what} at Zerodha filled as it came out (${it.qty} sold)" }
         val pre = note?.let { "$it; " }.orEmpty()
-        fun refuse(why: String) = BossRoom.Refuse(pre + why)
+        fun refuse(why: String, flat: Boolean = false, short: Boolean = false) = BossRoom.Refuse(pre + why, flat, short)
         fun same(l: com.optionslab.engine.Kite.Order) = l.tradingSymbol == o.tradingSymbol && l.exchange == o.exchange && l.product == o.product && l.side == o.side
         val total = legs.drop(i).filter { same(it) }.sumOf { it.quantity }
         val sale = o.side == com.optionslab.engine.Kite.Side.SELL
@@ -1170,7 +1173,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         val protGtts = com.optionslab.app.data.Protections.dayGttHint[key].orEmpty().toSet()
         suspend fun readGtts() = if (protGtts.isEmpty()) emptyList() else b.gtts().filter { it.id in protGtts && it.symbol == sym && it.exchange == o.exchange }
         var gttRows = try { readGtts() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
-            return refuse("its protection's GTT on $sym could not be read just before your exit went, so it was not sent: send it again.$kite")
+            return refuse("its protection's GTT on $sym could not be read just before your exit went, so it was not sent: plan the exit again.$kite")
         }
         // (Review: one that triggered with no order from Zerodha yet is a sale on its way too - read again in the wait.)
         // (Second review: one whose order Zerodha could not place is no sale at all.)
@@ -1179,23 +1182,35 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         var orders: List<com.optionslab.app.data.Broker.OrderRow> = emptyList()
         var held: List<com.optionslab.ira.ExitRegistry.Sent> = emptyList()
         var unseenFired: Set<String> = emptySet()
+        var asked = false
+        // (Sixth round: one fired on an earlier day is no sale; one Zerodha does not know when first asked is asked again after the wait.)
+        notGoing += gttRows.filter { firedBeforeToday(it) }.flatMap { it.orderIds }
+        val unknownFired = HashSet<String>()
         while (true) {
             orders = runCatching { b.orders(fresh = true) }.getOrNull()
-                ?: return refuse("Zerodha's orders could not be read just before your exit on $sym went, so it was not sent: send it again.$kite")
+                ?: return refuse("Zerodha's orders could not be read just before your exit on $sym went, so it was not sent: plan the exit again.$kite")
             held = blockers(orders)
-            unseenFired = gttRows.filter { it.status.equals("triggered", ignoreCase = true) }.flatMap { it.orderIds }
-                .filter { id -> orders.none { it.id == id } }.toSet()
+            // (Sixth round: a row with an order is a GTT that fired, whatever its status says - one deleted as it fired among them.)
+            unseenFired = gttRows.flatMap { it.orderIds }.filter { id -> id !in notGoing && orders.none { it.id == id } }.toSet()
+            // (Sixth round: asked once, before any wait - one Zerodha refused or cancelled is no sale, and is never waited for again in this
+            // send; one it does not know yet is waited for once, below.)
+            if (!asked && unseenFired.isNotEmpty()) {
+                asked = true
+                unseenFired.forEach { id -> when (firedSale(id)) { FiredSale.ENDED -> notGoing += id; FiredSale.UNKNOWN -> unknownFired += id; FiredSale.GOING -> Unit } }
+                unseenFired = unseenFired - notGoing
+            }
             if ((held.isEmpty() && unseenFired.isEmpty() && !idless()) || System.currentTimeMillis() >= until) break
             kotlinx.coroutines.delay(300)
             if (idless()) gttRows = runCatching { readGtts() }.getOrNull() ?: gttRows
         }
         if (idless())
             return refuse("its protection's GTT on $sym triggered and Zerodha has not given its sale's order yet, so your exit was not sent beside " +
-                "it: send it again in a few seconds.$kite")
-        // (Review: an order not in today's book at all - an earlier session's, which Zerodha no longer knows - is no sale on its way.)
-        unseenFired.firstOrNull { firedSaleMayBeGoing(it) }?.let { id ->
+                "it: plan the exit again in a few seconds.$kite")
+        // (Sixth round: still not shown after the wait and still unknown to Zerodha - an earlier session's: no sale, never asked again in this send.)
+        unseenFired.filter { it in unknownFired && firedSale(it) == FiredSale.UNKNOWN }.let { gone -> notGoing += gone; unseenFired = unseenFired - gone.toSet() }
+        unseenFired.firstOrNull()?.let { id ->
             return refuse("its protection's GTT on $sym triggered and its sale (order $id) is not in Zerodha's order book yet, so your exit was " +
-                "not sent beside it: send it again in a few seconds.$kite")
+                "not sent beside it: plan the exit again in a few seconds.$kite")
         }
         if (held.isNotEmpty()) {
             // (Review, #11: the registry's own clock - the market's.)
@@ -1212,7 +1227,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     "again then.$kite") }
                 else -> refuse("another exit sale on $sym (${held.joinToString { com.optionslab.app.data.Origins.fromTag(it.by) ?: it.by }}), sent a " +
                     "moment ago, is not in Zerodha's order book yet, so your exit was not sent beside it - for up to $secs s, until Zerodha's book " +
-                    "shows it: send it again then.$kite")
+                    "shows it: plan the exit again then.$kite")
             }
         }
         // The books' own sales of it not settled yet (lost, or on their way): a size not known holds it back; a known one is taken off.
@@ -1220,12 +1235,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         pend.filterValues { it < 0 }.keys.takeIf { it.isNotEmpty() }?.let { who ->
             return refuse("${who.joinToString(" and ") { sq.claimWords(it) }} cannot tell yet whether a sale of its own on $sym is still going (up to 2 " +
                 "minutes after the app starts, while its book is read, or until a lost sale is found - at most about 2 minutes), so your exit was " +
-                "not sent beside it: send it again then.$kite")
+                "not sent beside it: plan the exit again then.$kite")
         }
         val lost = pend.values.filter { it > 0 }.sum()
         val lostWords = pend.filterValues { it > 0 }.keys.joinToString(" and ") { sq.claimWords(it) }
         val heldNow = runCatching { ec.held(o.exchange, sym, o.product, "your exit", orders, forceLag = true) }.getOrNull()
-            ?: return refuse("Zerodha's positions could not be read just before your exit on $sym went, so it was not sent: send it again.$kite")
+            ?: return refuse("Zerodha's positions could not be read just before your exit on $sym went, so it was not sent: plan the exit again.$kite")
         val closes = (sale && heldNow > 0) || (!sale && heldNow < 0)
         val gttBusy = if (!countWorking) 0 else gttRows.sumOf { it.covers(o.side.name, o.product) }
         val busy = if (!countWorking) 0 else orders.filter { it.working && it.symbol == sym && it.exchange == o.exchange && it.product == o.product &&
@@ -1246,9 +1261,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             busy > 0 -> busySaid
             else -> "Zerodha holds only $heldAbs of $sym now (an exit that filled a moment ago is counted even before its positions show it)"
         }
+        // (Sixth round: no Kite advice for a position Zerodha shows closed.)
+        if (safe <= 0 && heldNow == 0) return refuse("$why, so nothing of it is left to sell and nothing was sent.", flat = true)
+        if (safe <= 0 && !closes) return refuse("$why, so nothing of it is left to sell and nothing was sent: look at it in Kite.$kite", short = heldNow < 0)
         if (safe <= 0) return refuse(when {
-            heldNow == 0 || !closes -> "$why, so nothing of it is left to sell and nothing was sent. If Kite still shows it open, close it in Kite."
-            lost > 0 -> "$why, so nothing can go beside it now and nothing was sent: send it again then.$kite"
+            lost > 0 -> "$why, so nothing can go beside it now and nothing was sent: plan the exit again then.$kite"
             busy > 0 -> "$why, so nothing was sent - they may be filling now: cancel them in Kite first, or close it in Kite."
             else -> "$why - less than a lot ($lot), so nothing was sent.$kite"
         })
@@ -1259,22 +1276,32 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             if (busy > 0) "are covered by exit orders already working at Zerodha ($busy)" else null,
             if (lost == 0 && busy == 0 && note == null) "are not held at Zerodha any more (Zerodha holds $heldAbs; an exit that filled a moment ago is " +
                 "counted even before its positions show it)" else null,
+            // (Sixth round: what is held but less than a lot stays open - said, and counted as open.)
+            if (left > safe) "${left - safe} of them are less than a lot ($lot), so they cannot go as an order" else null,
         ).joinToString(" and ")
-        return BossRoom.Part(safe, other, open = lost > 0 || busy > 0)
+        return BossRoom.Part(safe, other, open = lost > 0 || busy > 0 || left > safe)
     }
 
+    /** 23 Nov 2026 (B6 review, sixth round): what a fired GTT's order not in the order book is ([firedSale]). */
+    private enum class FiredSale { GOING, ENDED, UNKNOWN }
+
     /**
-     * 23 Nov 2026 (B6 review, fifth round): a protection's triggered GTT's order [id], not in today's order book, may still be a sale on its
-     * way - unless Zerodha does not know it at all (an earlier session's order, as [com.optionslab.app.data.Protections] reads it: its
-     * InputException), or refused or cancelled it. A read that failed otherwise, or an empty history, is not known: taken as going.
+     * 23 Nov 2026 (B6 review, fifth and sixth rounds): a protection's fired GTT's order [id], not in today's order book: [FiredSale.ENDED] when
+     * Zerodha refused or cancelled it; [FiredSale.UNKNOWN] when Zerodha does not know it at all ([com.optionslab.app.data.Protections] reads
+     * an earlier session's order so: its InputException) - but one placed a moment ago may not show yet either, so that is told apart only
+     * after a wait; [FiredSale.GOING] otherwise (complete too - its fill is not in the book read to count it; a read that failed, an empty
+     * history: not known, taken as going).
      */
-    private suspend fun firedSaleMayBeGoing(id: String): Boolean = try {
-        // (Second review: one Zerodha refused or cancelled is no sale; one complete is - its fill is not in the book read to count it.)
-        com.optionslab.app.data.Broker.orderState(id)?.status?.uppercase() !in setOf("REJECTED", "CANCELLED")
+    private suspend fun firedSale(id: String): FiredSale = try {
+        if (com.optionslab.app.data.Broker.orderState(id)?.status?.uppercase() in setOf("REJECTED", "CANCELLED")) FiredSale.ENDED else FiredSale.GOING
     }
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
-        catch (e: com.optionslab.app.data.Broker.KiteError) { e.type != "InputException" }
-        catch (_: Exception) { true }
+        catch (e: com.optionslab.app.data.Broker.KiteError) { if (e.type == "InputException") FiredSale.UNKNOWN else FiredSale.GOING }
+        catch (_: Exception) { FiredSale.GOING }
+
+    /** 23 Nov 2026 (B6 review, sixth round): a GTT that fired on an earlier day ([com.optionslab.app.data.Broker.GttRow.firedAt]): its order is no sale today. */
+    private fun firedBeforeToday(g: com.optionslab.app.data.Broker.GttRow): Boolean =
+        runCatching { java.time.LocalDate.parse(g.firedAt.take(10)) < com.optionslab.app.data.Market.today() }.getOrDefault(false)
 
     /** 23 Nov 2026 (B6 review, fifth round, #11): whose a resting exit was, from its order's tag, in Boss's words. */
     private fun exitWords(tag: String, type: String): String = when (tag) {
@@ -1290,7 +1317,8 @@ class AppModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** [takeOverLeg] with the position row's exit claim held. */
-    private suspend fun takeOverLegClaimed(legs: List<com.optionslab.engine.Kite.Order>, i: Int, taken: MutableList<String>?): Took? {
+    private suspend fun takeOverLegClaimed(legs: List<com.optionslab.engine.Kite.Order>, i: Int, taken: MutableList<String>?,
+                                           notGoing: MutableSet<String> = HashSet()): Took? {
         val b = com.optionslab.app.data.Broker
         val o = legs[i]
         fun same(l: com.optionslab.engine.Kite.Order) = l.tradingSymbol == o.tradingSymbol && l.exchange == o.exchange && l.product == o.product && l.side == o.side
@@ -1301,11 +1329,11 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // Zerodha's bare words.
         // (Review: what was taken out by then said as it is - a protection's GTT deleted for it is placed again by the protection.)
         var deleted = false
-        fun takenOut() = if (deleted) " (another protection's GTT on it, taken out for it, is placed again by the protection)" else ""
+        fun takenOut() = if (deleted) " (a protection's GTT taken out for it is placed again by the protection)" else ""
         suspend fun <T> read(what: String, r: suspend () -> T): T = try { r() } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) { throw java.io.IOException("Zerodha's $what could not be read just before your exit on $sym went (${e.message?.take(120)}), so " +
                 "it was not sent and " + (if (deleted) "its protection's GTT, taken out for it, is placed again by the protection" else
-                    "nothing resting on it was taken out") + ": send it again in a moment.$kite") }
+                    "nothing resting on it was taken out") + ": plan the exit again in a moment.$kite") }
         val row = read("positions") { b.positionBook() }.net.firstOrNull { it.symbol == o.tradingSymbol && it.exchange == o.exchange && it.product == o.product }
         val open = row?.qty ?: 0
         val closes = (o.side == com.optionslab.engine.Kite.Side.SELL && open > 0) || (o.side == com.optionslab.engine.Kite.Side.BUY && open < 0)
@@ -1320,17 +1348,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         // beside); one whose delete failed is read again - still there, nothing goes.
         val gttIds = com.optionslab.app.data.Protections.dayGttHint[key].orEmpty()
         val gttNow = if (gttIds.isEmpty()) emptyList() else read("GTT list") { b.gtts() }.filter { it.id in gttIds }
+        notGoing += gttNow.filter { firedBeforeToday(it) }.flatMap { it.orderIds }
         val fired = HashSet<String>()
         fun unmark(id: Long) {
             runCatching { com.optionslab.app.data.Protections.forgetTakenOver(listOf("gtt:$id")) }
             taken?.remove("gtt:$id")
         }
+        // (Sixth round: one that fired - a row with an order, whatever its status, or triggered with none given yet - is never deleted.)
+        fun firedRow(g: com.optionslab.app.data.Broker.GttRow) = g.orderIds.isNotEmpty() || g.status.equals("triggered", ignoreCase = true)
+        fun idlessRow(g: com.optionslab.app.data.Broker.GttRow) = g.status.equals("triggered", ignoreCase = true) && g.orderIds.isEmpty() && !g.placeFailed
+        val deletedIds = ArrayList<Long>()
         gttIds.forEach { id ->
             val g = gttNow.firstOrNull { it.id == id }
-            if (g != null && g.status.equals("triggered", ignoreCase = true)) {
+            if (g != null && firedRow(g)) {
                 // (Review: triggered with no order from Zerodha yet - its sale is on its way, unknown: nothing goes beside it.)
-                if (g.orderIds.isEmpty() && !g.placeFailed) throw java.io.IOException("its protection's GTT on $sym triggered and Zerodha has not given its " +
-                    "sale's order yet, so your exit was not sent beside it${takenOut()}: send it again in a few seconds.$kite")
+                if (idlessRow(g)) throw java.io.IOException("its protection's GTT on $sym triggered and Zerodha has not given its " +
+                    "sale's order yet, so your exit was not sent beside it${takenOut()}: plan the exit again in a few seconds.$kite")
                 fired += g.orderIds; return@forEach
             }
             // 15 Nov: told to the protections first, so a GTT deleted for an exit that then does not go is placed again ([Protections.noteTakenOver]).
@@ -1338,33 +1371,52 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             taken?.add("gtt:$id")
             val del = try { b.deleteGtt(id); null } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { e }
             if (del == null) {
-                deleted = true
+                deleted = true; deletedIds += id
                 runCatching { com.optionslab.app.data.Diag.record("orders", "square-off ${o.tradingSymbol}: its protection's GTT $id deleted first (you, the exit)") }
                 return@forEach
             }
             val again = try { b.gtts().firstOrNull { it.id == id } } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
                 unmark(id)
                 throw java.io.IOException("its protection's GTT on $sym could not be deleted (${del.message?.take(120)}) nor read again, so your exit was " +
-                    "not sent beside it${takenOut()} - it could still fire as your exit fills: send it again in a moment, or delete the GTT in Kite first.$kite")
+                    "not sent beside it${takenOut()} - it could still fire as your exit fills: plan the exit again in a moment, or delete the GTT in Kite first.$kite")
             }
             when {
-                again == null || again.status.lowercase() in setOf("deleted", "cancelled", "expired", "rejected", "disabled") -> Unit
-                again.status.equals("triggered", ignoreCase = true) -> {
+                // (Sixth round: gone all the same - the delete may have taken; its mark stays, so the protection places it again - said so. Fired
+                // before it went: its order is a sale.)
+                again == null || again.status.lowercase() in setOf("deleted", "cancelled", "expired", "rejected", "disabled") -> {
+                    deleted = true
+                    if (again != null) fired += again.orderIds
+                }
+                firedRow(again) -> {
                     unmark(id)
-                    if (again.orderIds.isEmpty() && !again.placeFailed) throw java.io.IOException("its protection's GTT on $sym triggered and Zerodha has not " +
-                        "given its sale's order yet, so your exit was not sent beside it${takenOut()}: send it again in a few seconds.$kite")
+                    if (idlessRow(again)) throw java.io.IOException("its protection's GTT on $sym triggered and Zerodha has not " +
+                        "given its sale's order yet, so your exit was not sent beside it${takenOut()}: plan the exit again in a few seconds.$kite")
                     fired += again.orderIds
                 }
                 else -> {
                     unmark(id)
                     throw java.io.IOException("its protection's GTT on $sym could not be deleted (${del.message?.take(120)}), so your exit was not sent " +
-                        "beside it${takenOut()} - it could still fire as your exit fills: send it again in a moment, or delete the GTT in Kite first.$kite")
+                        "beside it${takenOut()} - it could still fire as your exit fills: plan the exit again in a moment, or delete the GTT in Kite first.$kite")
                 }
             }
         }
+        // (Sixth round: one deleted as it fired - read again after the deletes: a row with an order is a sale on its way.)
+        if (deletedIds.isNotEmpty()) read("GTT list") { b.gtts() }.filter { it.id in deletedIds }.forEach { g ->
+            if (idlessRow(g)) throw java.io.IOException("its protection's GTT on $sym triggered as it was deleted and Zerodha has not given its sale's " +
+                "order yet, so your exit was not sent beside it${takenOut()}: plan the exit again in a few seconds.$kite")
+            fired += g.orderIds
+        }
         fun resting(rows: List<com.optionslab.app.data.Broker.OrderRow>) = rows.filter { it.working && it.symbol == o.tradingSymbol && it.exchange == o.exchange &&
             it.product == o.product && it.side == o.side.name }
-        var book = read("orders") { b.orders() }
+        // (Sixth round: a fresh read - a GTT's sale placed a moment ago is never missed for a book read before it.)
+        var book = read("orders") { b.orders(fresh = true) }
+        fired.removeAll(notGoing)
+        // (Sixth round: an order of a fired GTT not in the book - asked once, before any wait: one Zerodha refused or cancelled is no sale and
+        // is never waited for again in this send; one it does not know yet is asked again after the wait.)
+        val unknownFired = HashSet<String>()
+        fired.filter { id -> book.none { it.id == id } }.forEach { id ->
+            when (firedSale(id)) { FiredSale.ENDED -> { notGoing += id; fired.remove(id) }; FiredSale.UNKNOWN -> unknownFired += id; FiredSale.GOING -> Unit }
+        }
         // (#6: a triggered GTT's sale not in the book yet - read again for about 2 s; still not there, nothing goes beside it.)
         if (fired.isNotEmpty()) {
             val until = System.currentTimeMillis() + 2_000L
@@ -1372,10 +1424,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 kotlinx.coroutines.delay(300)
                 book = read("orders") { b.orders(fresh = true) }
             }
-            // (Review: one Zerodha does not know at all - an earlier session's - is no sale on its way.)
-            fired.filter { id -> book.none { it.id == id } }.firstOrNull { firedSaleMayBeGoing(it) }?.let { id ->
+            fired.filter { id -> book.none { it.id == id } && id in unknownFired && firedSale(id) == FiredSale.UNKNOWN }.forEach { id -> notGoing += id; fired.remove(id) }
+            fired.firstOrNull { id -> book.none { it.id == id } }?.let { id ->
                 throw java.io.IOException("its protection's GTT on $sym triggered and its sale (order $id) is not in Zerodha's order book yet, so your " +
-                    "exit was not sent beside it${takenOut()}: send it again in a few seconds.$kite")
+                    "exit was not sent beside it${takenOut()}: plan the exit again in a few seconds.$kite")
             }
         }
         val rest = resting(book)
@@ -1928,17 +1980,69 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         val part: PartSent? = null)
 
     /**
-     * 23 Nov 2026 (B6 review, fifth round): a part of Boss's exit going alone ([sendFrom]): of the [confirmed] he confirmed on [symbol], [sent]
-     * goes; the other [confirmed] - [sent] [other]. [later]: the plan's later legs held back; [open]: some of the rest may still be open.
+     * 23 Nov 2026 (B6 review, fifth and sixth rounds): what of Boss's exit went and what did not when part of it could not go ([sendFrom]),
+     * contract by contract in the plan's [order] (keys [keyOf]; [names], and what he [confirmed] of each), carried on a stuck leg to the legs
+     * sent after it. [cuts]: a contract cut to what could go safely; [notSent]: one not sent (refused, or a hedge's sale held back while a
+     * short may stay short), and why; [skipped]: the plan's legs (by their index as it goes) left unsent. What of each went is read from
+     * the plan's legs ([said]).
      */
-    data class PartSent(val symbol: String, val sent: Int, val confirmed: Int, val other: String, val later: Boolean, val open: Boolean) {
-        private val rest: String get() = "the other ${confirmed - sent} $other" + (if (later) "; the remaining legs were not sent" else "")
-        /** Said once the part filled: the Kite advice only while something is left to close. */
-        val done: String get() = "Sent $sent of $confirmed on $symbol; $rest." + (if (later || open) KITE_ADVICE else "")
-        /** Said beside a part that did not go or fill in full ([heldBare]: without the Kite advice, after words that give it). */
-        val heldBare: String get() = "Only $sent of $confirmed on $symbol could go safely; $rest."
-        val held: String get() = heldBare + KITE_ADVICE
+    data class PartSent(val order: List<String>, val names: Map<String, String>, val confirmed: Map<String, Int>,
+                        val cuts: Map<String, Cut> = emptyMap(), val notSent: Map<String, NotSent> = emptyMap(), val skipped: Set<Int> = emptySet()) {
+        /** Cut to [safe] in all (its slices sent before and the part); [other]: why the rest did not go, after "the other N"; [open]: some
+         *  of the rest may still be open at Zerodha. */
+        data class Cut(val safe: Int, val other: String, val open: Boolean)
+        /** Not sent: [why]; [open]: it may still be open at Zerodha (not when Zerodha shows it closed). */
+        data class NotSent(val why: String, val open: Boolean)
+
+        /** Something was cut or not sent: there is something to say. */
+        val any: Boolean get() = cuts.isNotEmpty() || notSent.isNotEmpty()
+
+        /**
+         * The words, from [legs] (the plan as it went): every leg before [upto] that is not [skipped] filled in full, and [partial] of leg
+         * [upto] when the send stopped there. [done]: every leg went - each contract said, the Kite advice only while something may be left
+         * to close; else what went so far ("On X, W of N went": only what went), with the advice.
+         */
+        fun said(legs: List<com.optionslab.engine.Kite.Order>, upto: Int, partial: Int, done: Boolean): String {
+            val went = HashMap<String, Int>()
+            legs.forEachIndexed { k, l -> if (k < upto && k !in skipped) went.merge(keyOf(l), l.quantity, Int::plus) }
+            if (!done && partial > 0) legs.getOrNull(upto)?.let { went.merge(keyOf(it), partial, Int::plus) }
+            val lines = order.mapNotNull { k ->
+                val n = confirmed[k] ?: return@mapNotNull null
+                val sym = names[k] ?: k
+                val w = went[k] ?: 0
+                val c = cuts[k]
+                val ns = notSent[k]
+                when {
+                    ns != null && w > 0 -> "Sent $w of $n on $sym; the other ${n - w} not sent - ${bare(ns.why)}"
+                    ns != null -> "$sym: not sent - ${bare(ns.why)}"
+                    c != null && done -> "Sent $w of $n on $sym; the other ${n - w} ${c.other}"
+                    c != null -> "On $sym, $w of $n went (only ${c.safe} could go safely; the other ${n - c.safe} ${c.other})"
+                    done && order.size > 1 -> "$sym: all $w sent"
+                    else -> null
+                }
+            }
+            val open = cuts.values.any { it.open } || notSent.values.any { it.open }
+            return lines.joinToString(". ", postfix = ".") + if (!done || open) KITE_ADVICE else ""
+        }
+
+        companion object {
+            fun keyOf(l: com.optionslab.engine.Kite.Order) = "${l.exchange}:${l.tradingSymbol}:${l.product}:${l.side}"
+            /** A refusal's words inside a line: without its own Kite advice and closing full stop. */
+            private fun bare(why: String) = why.removeSuffix(KITE_ADVICE).trimEnd().removeSuffix(".")
+            /** Nothing cut or refused yet, for the plan of [legs]. */
+            fun of(legs: List<com.optionslab.engine.Kite.Order>) = PartSent(legs.map { keyOf(it) }.distinct(),
+                legs.associate { keyOf(it) to it.tradingSymbol }, legs.groupBy { keyOf(it) }.mapValues { e -> e.value.sumOf { it.quantity } })
+        }
     }
+
+    /** 23 Nov 2026 (B6 review, sixth round): what [sendFrom] does with a leg after its room check. */
+    private enum class Step { GO, STOP, SKIP }
+
+    /**
+     * 23 Nov 2026 (B6 review, sixth round): what went with Boss's last send when part of it could not go - said beside its fills (Jarvis says
+     * it too); null when it all went, or before it ends.
+     */
+    val sendNote = MutableStateFlow<String?>(null)
     val stuck = MutableStateFlow<StuckLeg?>(null)
 
     private val WORKING = setOf("OPEN", "TRIGGER PENDING", "UNKNOWN", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING", "AMO REQ RECEIVED")
@@ -1976,6 +2080,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      */
     private fun sendFrom(cur: OrderPlan, start: Int, before: List<com.optionslab.app.data.Broker.Fill>, checks: Boolean, partBefore: PartSent? = null) {
         sending.value = Load.Busy("Sending to Zerodha")
+        sendNote.value = null
         // 6 Nov (Boss: "manual settling the trades is taking too much time"; the day's orders: his SELLs at 10:08 and 11:55 were
         // REJECTED "Insufficient funds" and went 11 and 8 minutes later): an arm or a protection rested a stop on the contract
         // between the exit's check and its send, so his sale and that stop together sold more than he held and Zerodha read
@@ -1991,11 +2096,25 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val taken = ArrayList<String>()
             // 23 Nov 2026 (B6 review, fifth round: the part that could go safely was offered as a new exit to review, a dead end on the screen):
             // the plan as it goes - when only part of a contract can go safely ([BossRoom.Part]), that part goes under this same confirmation,
-            // this contract's legs cut to it ([cutTo]: whole lots, its own freeze slices, each leg checked and stamped again), and every later
-            // leg of the plan is held back. What went, why the rest did not, and the Kite advice: [part] - said as sent only once it filled, as
+            // this contract's legs cut to it ([cutPart]: whole lots, its own freeze slices, each leg checked and stamped again), and (sixth round)
+            // the legs after it go on as far as that is safe ([split]). What went, why the rest did not, and the Kite advice: [part] - said as sent only once it filled, as
             // "could go safely" beside a part that did not (and carried on a stuck leg to the legs sent after it).
             var p = cur
-            var part: PartSent? = partBefore
+            var part: PartSent = partBefore ?: PartSent.of(cur.legs)
+            // (Sixth round: an order of a fired GTT that cannot be a sale - an earlier session's, refused, cancelled - asked once for this send.)
+            val notGoing: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
+            /** The leg the send is at, for the words of a failure caught below. */
+            var at = start
+            /** [t] with the part's words after it (what went so far, the send stopped at leg [stop] with [partial] of it filled), when something
+             *  was cut or not sent - the Kite advice once. */
+            fun withPart(t: String, stop: Int, partial: Int = 0): String {
+                if (!part.any) return t
+                val words = part.said(p.legs, stop, partial, done = false)
+                if (t.isBlank()) return words
+                // (Review: the Kite advice once, at the end - after what went.)
+                val head = t.trimEnd().removeSuffix(KITE_ADVICE.trim()).trimEnd().let { if (it.endsWith(".")) it else "$it." }
+                return "$head $words"
+            }
             try {
                 // The device check and (for exits) the fresh read of the positions run side by side: both must pass before anything is sent.
                 val (bad, stale) = kotlinx.coroutines.coroutineScope {
@@ -2004,99 +2123,164 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                     if (bad) exitCheck.cancel()
                     bad to (if (bad) null else exitCheck.await())
                 }
-                if (bad) { sending.value = Load.Failed("Refused: this device shows signs of compromise, so no real order is sent from it."); return@launch }
+                if (bad) { sending.value = Load.Failed(withPart("Refused: this device shows signs of compromise, so no real order is sent from it.", start)); return@launch }
                 // 2 Nov: an exit refused only because exits already rest on the contract (an arm's live stop, a protection) is not
                 // refused: each leg, in turn, takes them over just before it goes ([takeOverLeg]) and is checked again then.
                 val check = stale!!
                 val takeOver = checks && cur.exit && check.getOrNull()?.contains("working exit orders") == true
-                // (Fifth round, #5: with the Kite advice.)
-                if (!takeOver) check.getOrThrow()?.let { why -> sending.value = Load.Failed(kiteAdvised("Not sent: $why")); loadAccount(); return@launch }
-                /** [t] with the part's words after it, when a part was cut (the Kite advice once). */
-                fun withPart(t: String): String = part?.let { pt ->
-                    if (t.isBlank()) pt.held
-                    else t.trimEnd().let { if (it.endsWith(".")) it else "$it." }.let { head -> if ("close it in Kite" in head) "$head ${pt.heldBare}" else "$head ${pt.held}" }
-                } ?: t
-                /** Leg [i]'s contract cut to [r]'s safe quantity from leg [i] on, every later leg dropped; null, or why the app's checks refused it. */
-                fun cutTo(i: Int, r: BossRoom.Part): String? {
-                    val first = p.legs[i]
-                    fun same(l: com.optionslab.engine.Kite.Order) = l.tradingSymbol == first.tradingSymbol && l.exchange == first.exchange &&
-                        l.product == first.product && l.side == first.side
-                    // (What Boss confirmed of the contract - kept from a part before it, a stuck leg's sent on - and what of it goes: its slices sent
-                    // before this one and the part.)
-                    val was = part?.takeIf { it.symbol == first.tradingSymbol }
-                    val confirmed = was?.confirmed ?: cur.legs.filter { same(it) }.sumOf { it.quantity }
-                    var left = r.safe
-                    val cut = ArrayList<com.optionslab.engine.Kite.Order>()
-                    for (l in p.legs.drop(i).filter { same(it) }) {
-                        if (left <= 0) break
-                        val q = minOf(l.quantity, left)
-                        cut += l.copy(quantity = q); left -= q
-                    }
-                    val legs = p.legs.take(i) + cut
+                // (Fifth round, #5: with the Kite advice. Sixth round: a send after a stuck leg keeps the part's words.)
+                if (!takeOver) check.getOrThrow()?.let { why -> sending.value = Load.Failed(withPart(kiteAdvised("Not sent: $why"), start)); loadAccount(); return@launch }
+                // 23 Nov 2026 (B6 review, sixth round): after a contract was cut or refused, the legs after it go on when that is provably safe -
+                // a short's buy-back never adds a short, so later buy-backs always go; a later sale (a hedge's long) is held back only while that
+                // contract may stay short; after a long, or a short that will be flat, every leg goes. Each contract's outcome is said ([part]).
+                /** The legs after leg [i] of other contracts: those that go on, and those held back ([mayStayShort]: leg [i]'s short may stay). */
+                fun split(i: Int, mayStayShort: Boolean): Pair<List<com.optionslab.engine.Kite.Order>, List<com.optionslab.engine.Kite.Order>> {
+                    val k = PartSent.keyOf(p.legs[i])
+                    return p.legs.drop(i + 1).filter { PartSent.keyOf(it) != k }.partition { !mayStayShort || it.side == com.optionslab.engine.Kite.Side.BUY }
+                }
+                fun holdBack(hold: List<com.optionslab.engine.Kite.Order>, short: String) {
+                    if (hold.isNotEmpty()) part = part.copy(notSent = part.notSent + hold.map { PartSent.keyOf(it) }.distinct()
+                        .associateWith { PartSent.NotSent("held back while $short may stay short", open = true) })
+                }
+                /**
+                 * The plan as it goes on: [head], then [keep] - each leg checked and stamped again; the review shows it (so its stuck-leg card
+                 * follows it; only while it still shows this send's plan). Null, or why the app's checks refused legs [from] until [to].
+                 */
+                fun reshape(head: List<com.optionslab.engine.Kite.Order>, keep: List<com.optionslab.engine.Kite.Order>, from: Int, to: Int): String? {
+                    val legs = head + keep
                     val next = stamped(cur.copy(legs = legs, refusals = gate(legs, cur.holdToSettlement, cur.exit)))
-                    next.refusals.drop(i).flatten().distinct().takeIf { it.isNotEmpty() }?.let { return it.joinToString("; ") }
-                    // (The review shows what goes now - so its stuck-leg card, which follows the plan shown, follows the part; only while it
-                    // still shows this send's plan: one closed or planned afresh meanwhile is left as it is.)
+                    next.refusals.subList(from, to).flatten().distinct().takeIf { it.isNotEmpty() }?.let { return it.joinToString("; ") }
                     plan.compareAndSet(Load.Done(p), Load.Done(next))
                     p = next
-                    val sent = legs.filter { same(it) }.sumOf { it.quantity }
-                    part = PartSent(first.tradingSymbol, sent, confirmed, r.other, later = was?.later == true || cur.legs.drop(i).any { !same(it) }, open = r.open)
-                    runCatching { com.optionslab.app.data.Diag.record("orders", "exit ${first.tradingSymbol}: only $sent of $confirmed can go safely - that " +
-                        "part goes, the rest of the plan held back (you, the exit)") }
                     return null
                 }
                 for (i in start until cur.legs.size) {
-                    // (Fifth round: a part sent - nothing after it.)
                     if (i >= p.legs.size) break
+                    at = i
                     var leg = p.legs[i]
                     sending.value = Load.Busy("Leg ${i + 1} of ${p.legs.size}: ${leg.side} ${leg.tradingSymbol}")
-                    val done = if (i > start) "Legs ${start + 1} to $i went. " else ""
+                    // (Sixth round: a leg left unsent above is never said as gone.)
+                    val went = (start until i).filter { it !in part.skipped }
+                    val done = when {
+                        went.isEmpty() -> ""
+                        went.size == i - start -> "Legs ${start + 1} to $i went. "
+                        else -> "Leg${if (went.size > 1) "s" else ""} ${went.joinToString(", ") { "${it + 1}" }} went. "
+                    }
+                    var tookNow: Took? = null
+                    var placedId: String? = null
+                    /**
+                     * 23 Nov 2026 (B6 review, sixth round): leg [i] refused ([r]): it is not sent and its contract's later slices are dropped. The
+                     * legs after it that are safe go on ([split]); none - or its resting exits were taken out for it already ([tookOut]: they go back
+                     * at once, never left out while later legs fill) - the send ends here, said with the legs not sent.
+                     */
+                    fun refused(r: BossRoom.Refuse, tookOut: Boolean = false): Step {
+                        val (keep, hold) = split(i, mayStayShort = (leg.side == com.optionslab.engine.Kite.Side.BUY && !r.flat) || r.short)
+                        if (keep.isEmpty() || tookOut) {
+                            if (!tookOut) holdBack(hold, leg.tradingSymbol)
+                            val after = if (tookOut && (keep + hold).isNotEmpty()) " The legs after it were not sent: its stops, taken out for it, go back first." else ""
+                            sending.value = Load.Failed(withPart("${done}Not sent: ${r.why}$after", i))
+                            refreshLedger(); loadAccount()
+                            return Step.STOP
+                        }
+                        holdBack(hold, leg.tradingSymbol)
+                        reshape(p.legs.take(i + 1), keep, 0, 0)
+                        part = part.copy(notSent = part.notSent + (PartSent.keyOf(leg) to PartSent.NotSent(r.why, open = !r.flat)), skipped = part.skipped + i)
+                        runCatching { com.optionslab.app.data.Diag.record("orders", "exit ${leg.tradingSymbol}: not sent (${r.why.take(160)}); the ${keep.size} leg(s) " +
+                            "after it that are safe go on (you, the exit)") }
+                        return Step.SKIP
+                    }
+                    /**
+                     * 23 Nov 2026 (B6 review, fifth round: the part offered as a new exit to review was a dead end): only part of leg [i]'s contract
+                     * can go safely ([r]) - its slices from leg [i] on cut to it (whole lots, its own freeze slices) and it goes under this same
+                     * confirmation. Sixth round: the legs after it go on as [split] says.
+                     */
+                    fun cutPart(r: BossRoom.Part): Step {
+                        val first = leg
+                        val k = PartSent.keyOf(first)
+                        var left = r.safe
+                        val cut = ArrayList<com.optionslab.engine.Kite.Order>()
+                        for (l in p.legs.drop(i).filter { PartSent.keyOf(it) == k }) {
+                            if (left <= 0) break
+                            val q = minOf(l.quantity, left)
+                            cut += l.copy(quantity = q); left -= q
+                        }
+                        val (keep, hold) = split(i, mayStayShort = first.side == com.optionslab.engine.Kite.Side.BUY && r.open)
+                        reshape(p.legs.take(i) + cut, keep, i, i + cut.size)?.let { bad ->
+                            sending.value = Load.Failed(withPart(kiteAdvised("${done}Not sent: only ${r.safe} of ${first.tradingSymbol} could go safely now (the " +
+                                "rest ${r.other}), and the app's checks refused that part: $bad"), i))
+                            refreshLedger(); loadAccount()
+                            return Step.STOP
+                        }
+                        holdBack(hold, first.tradingSymbol)
+                        val safe = p.legs.take(i + cut.size).filter { PartSent.keyOf(it) == k }.sumOf { it.quantity }
+                        part = part.copy(cuts = part.cuts + (k to PartSent.Cut(safe, r.other, r.open)))
+                        leg = p.legs[i]
+                        runCatching { com.optionslab.app.data.Diag.record("orders", "exit ${first.tradingSymbol}: only $safe of ${part.confirmed[k]} can go safely - " +
+                            "that part goes; ${keep.size} later leg(s) go on, ${hold.size} held back (you, the exit)") }
+                        return Step.GO
+                    }
+                    fun stopped(r: BossRoom): Step = when (r) {
+                        BossRoom.Go -> Step.GO
+                        is BossRoom.Refuse -> refused(r)
+                        is BossRoom.Part -> cutPart(r)
+                    }
                     // 22 Nov 2026 (B6 review, third round): an exit leg (not a holding's sale) holds its row's claim ([bossExitClaim]) from before
                     // anything resting on it is taken out until the leg is placed and answered, or looked for and not found - let go in the
                     // finally, never before it goes (a square-off's pass meanwhile sells nothing on the row). Its size is checked under it,
                     // before anything is taken out, on fresh reads through the lag guard ([bossExitRoom]), and it is noted as starting for the square-offs
                     // ([com.optionslab.app.data.SquareOffExit.saleStarting]). (Left to the square-offs' look at sales not shown yet - no count of
-                    // its own.)
-                    val claim = if (cur.exit && leg.product != "CNC") bossExitClaim(leg, owner) else null
-                    var tookNow: Took? = null
-                    var placedId: String? = null
-                    // (23 Nov 2026, B6 review, fourth round: what [bossExitRoom] found - a refusal said with its reason, how long and the Kite
-                    // advice. Fifth round: only part safe - this contract cut to it ([cutTo]) and it goes; the rest of the plan held back.)
-                    fun stopped(r: BossRoom): Boolean {
-                        when (r) {
-                            BossRoom.Go -> return false
-                            is BossRoom.Refuse -> sending.value = Load.Failed(withPart("${done}Not sent: ${r.why}"))
-                            is BossRoom.Part -> {
-                                val bad = cutTo(i, r) ?: run { leg = p.legs[i]; return false }
-                                sending.value = Load.Failed(kiteAdvised("${done}Not sent: only ${r.safe} of ${leg.tradingSymbol} could go safely now (the rest ${r.other}), " +
-                                    "and the app's checks refused that part: $bad"))
-                            }
-                        }
-                        refreshLedger(); loadAccount()
-                        return true
-                    }
+                    // its own.) Sixth round: another seller holding it is a refusal of this leg like any other ([refused]).
+                    var claimWhy: String? = null
+                    val claim = if (cur.exit && leg.product != "CNC") try { bossExitClaim(leg, owner) }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: java.io.IOException) { claimWhy = e.message ?: "another sale holds it"; null }
+                        else null
+                    val cw = claimWhy
+                    if (cw != null) { if (refused(BossRoom.Refuse(cw)) == Step.STOP) return@launch; continue }
                     val own = fills.map { it.orderId }.toSet()
+                    var skip = false
                     try {
                     // (Review: sized before anything resting is taken out for it - a refusal leaves every stop resting.)
-                    if (claim != null && stopped(bossExitRoom(p.legs, i, countWorking = !takeOver, ownIds = own))) return@launch
-                    if (takeOver) {
-                        val took = takeOverLeg(p.legs, i, taken, owner)
-                        tookNow = took
-                        if (took !is Took.Exit) {
-                            // Cleared (or nothing rested): this contract's legs are checked again now, before the leg goes.
-                            // 23 Nov 2026 (B6 review, fourth round, M1): an exit leg on FRESH reads through the lag guard ([bossExitRoom], with what
-                            // works on it now) - a stop that filled as it came out is counted as sold, and said; never on the raw positions.
-                            if (claim != null) {
-                                if (stopped(bossExitRoom(p.legs, i, countWorking = true, ownIds = own, filledOut = took as? Took.Filled))) return@launch
-                            } else {
-                                val same = p.legs.drop(i).filter { it.tradingSymbol == leg.tradingSymbol && it.exchange == leg.exchange && it.product == leg.product && it.side == leg.side }
-                                exitsStillValid(same)?.let { why ->
-                                    sending.value = Load.Failed(kiteAdvised("${done}Not sent: $why")); refreshLedger(); loadAccount(); return@launch
+                    if (claim != null) when (stopped(bossExitRoom(p.legs, i, countWorking = !takeOver, ownIds = own, notGoing = notGoing))) {
+                        Step.STOP -> return@launch
+                        Step.SKIP -> skip = true
+                        Step.GO -> Unit
+                    }
+                    if (!skip && takeOver) {
+                        // (Sixth round: the takeover's worded refusal - a GTT that could not be deleted, a read that failed - is this leg's refusal;
+                        // anything already taken out for it ends the send, so its stops go back at once.)
+                        val takenBefore = taken.size
+                        var took: Took? = null
+                        try { took = takeOverLeg(p.legs, i, taken, owner, notGoing) }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                        catch (e: java.io.IOException) {
+                            if (e is com.optionslab.app.data.Broker.NotSent) throw e
+                            if (refused(BossRoom.Refuse(kiteAdvised(e.message ?: "the exits resting on it could not be taken over")),
+                                    tookOut = taken.size > takenBefore) == Step.STOP) return@launch
+                            skip = true
+                        }
+                        if (!skip) {
+                            tookNow = took
+                            if (took !is Took.Exit) {
+                                // Cleared (or nothing rested): this contract's legs are checked again now, before the leg goes.
+                                // 23 Nov 2026 (B6 review, fourth round, M1): an exit leg on FRESH reads through the lag guard ([bossExitRoom], with what
+                                // works on it now) - a stop that filled as it came out is counted as sold, and said; never on the raw positions.
+                                if (claim != null) {
+                                    val r2 = bossExitRoom(p.legs, i, countWorking = true, ownIds = own, filledOut = took as? Took.Filled, notGoing = notGoing)
+                                    when (if (r2 is BossRoom.Refuse) refused(r2, tookOut = taken.size > takenBefore) else stopped(r2)) {
+                                        Step.STOP -> return@launch
+                                        Step.SKIP -> skip = true
+                                        Step.GO -> Unit
+                                    }
+                                } else {
+                                    val same = p.legs.drop(i).filter { it.tradingSymbol == leg.tradingSymbol && it.exchange == leg.exchange && it.product == leg.product && it.side == leg.side }
+                                    exitsStillValid(same)?.let { why ->
+                                        sending.value = Load.Failed(withPart(kiteAdvised("${done}Not sent: $why"), i)); refreshLedger(); loadAccount(); return@launch
+                                    }
                                 }
                             }
                         }
                     }
-                    if (tookNow !is Took.Exit) {
+                    if (!skip && tookNow !is Took.Exit) {
                         if (claim != null) com.optionslab.app.data.SquareOffExit.saleStarting(leg.tradingSymbol, leg.product)
                         placedId = try {
                             b.placeOrder(leg, exit = cur.exit, verdict = p.verdicts.getOrNull(i), stop = cur.protect?.stop, target = cur.protect?.target)
@@ -2108,6 +2292,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         }
                     }
                     } finally { claim?.release() }
+                    if (skip) continue
                     val took = tookNow
                     if (takeOver) {
                         if (took is Took.Exit) {
@@ -2124,7 +2309,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                                 sending.value = Load.Failed("${done}Leg ${i + 1}: its stop at Zerodha was turned into a sell at %.2f, but it is %s%s%s. "
                                     .format(java.util.Locale.ENGLISH, took.price, f.status.lowercase(), if (f.filled > 0) " (${f.filled} of ${leg.quantity} filled)" else "",
                                         if (f.message.isNotBlank()) ": ${f.message.trimEnd().removeSuffix(".")}" else "") + (if (i + 1 < p.legs.size) "The remaining legs were NOT sent." else "")
-                                    .let { tail -> withPart(tail) })
+                                    .let { tail -> withPart(tail, i, f.filled) })
                                 refreshLedger(); loadAccount()
                                 return@launch
                             }
@@ -2150,16 +2335,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                             catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { why2 = e.message; null }
                         val own2 = (fills.map { it.orderId } + f.orderId).toSet()
                         // (23 Nov 2026, B6 review, fourth round: a refusal's words as [bossExitRoom] gives them. Fifth round: only part safe - this
-                        // contract cut to it as above ([cutTo]) and that part goes again; the rest of the plan held back.)
+                        // contract cut to it as above ([cutPart]) and that part goes again; sixth round: the legs after it as [split] says. The cut
+                        // refused by the app's checks: said there, nothing more sent.)
+                        var cutRefused = false
                         fun room2(r: BossRoom): String? = when (r) {
                             BossRoom.Go -> null
                             is BossRoom.Refuse -> r.why
-                            is BossRoom.Part -> cutTo(i, r)?.let { bad -> kiteAdvised("only ${r.safe} could go safely now (the rest ${r.other}), and the " +
-                                "app's checks refused that part: $bad") } ?: run { leg = p.legs[i]; null }
+                            is BossRoom.Part -> if (cutPart(r) == Step.GO) null else { cutRefused = true; "only part could go safely, and the app's checks refused it" }
                         }
                         if (why2 == null) try {
-                            why2 = if (claim2 != null) room2(bossExitRoom(p.legs, i, countWorking = false, ownIds = own2)) else null
-                            if (why2 == null) again2 = try { takeOverLeg(p.legs.drop(i), 0, taken, owner) }
+                            why2 = if (claim2 != null) room2(bossExitRoom(p.legs, i, countWorking = false, ownIds = own2, notGoing = notGoing)) else null
+                            if (cutRefused) return@launch
+                            if (why2 == null) again2 = try { takeOverLeg(p.legs.drop(i), 0, taken, owner, notGoing) }
                                 catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { why2 = e.message; null }
                             // (Fifth round, #5: nothing taken over because the position no longer holds what the leg closes - said, never Zerodha's
                             // old margin words alone.)
@@ -2169,8 +2356,10 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                                     "it was not sent again: look at Kite's positions and orders.$KITE_ADVICE"
                             if (why2 == null && (again2 == Took.Cleared || again2 is Took.Filled)) {
                                 // (M1: after the takeover, on fresh lag-guarded reads - a stop that filled as it came out counted as sold.)
-                                why2 = if (claim2 != null) room2(bossExitRoom(p.legs, i, countWorking = true, ownIds = own2, filledOut = again2 as? Took.Filled))
+                                why2 = if (claim2 != null) room2(bossExitRoom(p.legs, i, countWorking = true, ownIds = own2, filledOut = again2 as? Took.Filled,
+                                    notGoing = notGoing))
                                 else exitsStillValid(listOf(leg))?.let { kiteAdvised(it) }
+                                if (cutRefused) return@launch
                                 if (why2 == null) {
                                     if (claim2 != null) com.optionslab.app.data.SquareOffExit.saleStarting(leg.tradingSymbol, leg.product)
                                     id2 = try {
@@ -2216,7 +2405,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                                     working -> "It is still working at Zerodha; decide below."
                                     i + 1 < p.legs.size -> "The remaining legs were NOT sent."
                                     else -> ""
-                                }.let { tail -> withPart(tail) })
+                                }.let { tail -> withPart(tail, i, f.filled) })
                         // 18 Oct, review: a ledger failure here never replaces what Zerodha said about the leg.
                         cur.session?.let { runCatching { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) } }
                         refreshLedger(); loadAccount()
@@ -2229,11 +2418,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // Review (F1): with the exit's own orders, so a stop is put back only once Zerodha's order book shows them filled
                 // (the stream told this app first): until then the lag guard would have no fill to count.
                 if (taken.isNotEmpty()) runCatching { com.optionslab.app.data.Protections.exitFilledFor(taken, fills.associate { it.orderId to it.filled }) }
-                // (Fifth round: a part sent and filled - said as what went and why the rest did not, the screen left to close or plan again.)
+                // (Fifth round: a part sent and filled - said as what went and why the rest did not, the screen left to close or plan again. Sixth
+                // round: shown as what it is - the fills, with the words beside them as a success or an info alert - never a red failure.)
                 // 18 Oct, review: every leg filled, so it is shown as filled now. The steps after (the ledger, the MCX watch, the
                 // bracket's exits) each fail on their own and are said as "Filled, but ..." - never "Not sent", which could
                 // lead Boss to send the same live orders again.
-                sending.value = part?.let { Load.Failed(it.done) } ?: Load.Done(fills)
+                val words = if (part.any) part.said(p.legs, p.legs.size, 0, done = true) else null
+                sendNote.value = words
+                sending.value = Load.Done(fills)
+                words?.let { w ->
+                    runCatching { com.optionslab.app.work.Alerts.post(w, if (part.cuts.values.none { it.open } && part.notSent.isEmpty())
+                        com.optionslab.app.work.Alerts.Kind.SUCCESS else com.optionslab.app.work.Alerts.Kind.INFO, "Exit") }
+                }
                 val failed = ArrayList<String>()
                 suspend fun afterFill(what: String, step: suspend () -> Unit) {
                     try { step() } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; failed += "$what failed (${e.message})" }
@@ -2263,7 +2459,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 }
                 refreshLedger(); loadAccount()
                 val filled = "Filled: " + fills.joinToString(" · ") { "%s @ %.2f".format(it.orderId.takeLast(6), it.avgPrice) }
-                say(if (failed.isEmpty()) filled else "$filled. But ${failed.joinToString("; ")}.")
+                val saidFills = if (failed.isEmpty()) filled else "$filled. But ${failed.joinToString("; ")}."
+                // (Sixth round: when part of it could not go, the message keeps what went and why - the fills after it, never in its place.)
+                if (words == null) say(saidFills) else { message.value = "$words $saidFills"; com.optionslab.app.work.Alerts.post(saidFills) }
             } catch (e: Exception) {
                 // 18 Oct, review: legs that already filled are said, never hidden under "Not sent" (a resend would double them).
                 val filledLegs = fills.count { it.filled > 0 }
@@ -2273,7 +2471,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 val said = if (filledLegs == 0) "Not sent: $failWhy"
                     else "Not all sent: ${e.message}. $filledLegs earlier leg${if (filledLegs == 1) "" else "s"} filled at Zerodha; check Positions before sending again."
                 // (Second review: a part cut before it is said too.)
-                val told = part?.let { pt -> said.trimEnd().let { if (it.endsWith(".")) it else "$it." } + " " + (if ("close it in Kite" in said) pt.heldBare else pt.held) } ?: said
+                val told = withPart(said, at)
                 sending.value = Load.Failed(if (cur.exit) kiteAdvised(told) else told)
                 if (fills.isNotEmpty()) cur.session?.let { runCatching { Ledger.attachOrders(it, fills.map { x -> x.orderId }, null, null) } }
                 loadAccount()
@@ -2340,8 +2538,14 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val f = runCatching { com.optionslab.app.data.Broker.orderState(st.orderId) }.getOrNull()
             val leg = st.plan.legs[st.index]
+            // 23 Nov 2026 (B6 review, sixth round): when part of the exit could not go, its words stay with every answer here.
+            fun withPart(t: String, filled: Int) = st.part?.takeIf { it.any }?.let { pt ->
+                val words = pt.said(st.plan.legs, st.index, filled, done = false)
+                "${t.trimEnd().let { if (it.endsWith(".")) it else "$it." }} $words"
+            } ?: t
             if (f == null || f.status != "COMPLETE" || f.filled < leg.quantity) {
-                say("Leg ${st.index + 1} is ${f?.status?.lowercase() ?: "unknown"}${f?.let { " (${it.filled} of ${leg.quantity})" } ?: ""}: the rest are sent only after it has completely filled.")
+                say(withPart("Leg ${st.index + 1} is ${f?.status?.lowercase() ?: "unknown"}${f?.let { " (${it.filled} of ${leg.quantity})" } ?: ""}: the rest are sent only " +
+                    "after it has completely filled.", f?.filled ?: 0))
                 return@launch
             }
             val done = st.fills.dropLast(1) + f
@@ -2353,7 +2557,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             val rest = st.plan.legs.drop(st.index + 1)
             val again = gate(rest, st.plan.holdToSettlement, st.plan.exit)
             val why = again.flatten()
-            if (why.isNotEmpty()) { say("The remaining legs were not sent: " + why.distinct().joinToString(" ")); return@launch }
+            if (why.isNotEmpty()) { say(withPart("The remaining legs were not sent: " + why.distinct().joinToString(" "), f.filled)); return@launch }
             stuck.value = null
             // 22 Oct: this check is the one that clears the remaining legs now: stamped afresh with their fingerprints (the sent legs keep theirs).
             val fresh = stamped(st.plan.copy(refusals = List(st.index + 1) { st.plan.refusals.getOrNull(it).orEmpty() } + again))

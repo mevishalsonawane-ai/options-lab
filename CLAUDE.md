@@ -216,7 +216,8 @@ notes; match the surrounding code.
   long, and "close it in Kite" - only when another sale on it may still be filling (a lost or unshown sale, a triggered GTT's sale not
   shown yet, another seller holding the row), a read of Zerodha failed, a book cannot tell yet (up to 2 minutes after the app starts),
   working exits on it cannot be taken over, or a stop is going back on it. When the size is known, the safe part (whole lots) goes under
-  his confirmation and the plan's later legs are held back, said as "Sent X of N".
+  his confirmation. After a cut or refused leg the later legs go on only where that is safe (a short's buy-back always; a hedge's sale
+  only while no short may stay), and each contract is said ("Sent X of N").
 - ORDER COUNT AND KILL SWITCH (20 Nov audit, B5).
   - Today's order count at Zerodha that cannot be read (read twice) is unknown, never 0. The order count check starts in shadow: the
     live entry goes as before, logged "would have refused: order count unknown" and counted. Its Bot settings switch (off by default)

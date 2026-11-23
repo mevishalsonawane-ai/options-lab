@@ -39,7 +39,8 @@ import org.robolectric.annotation.ConscryptMode
 /**
  * 23 Nov 2026 (B6 review, fifth round): Boss's exit from the review dialog when only part of it can go safely. The part offered as a new exit
  * to review was a dead end on the screen; now, from the swipe and the PIN, the safe part goes under that same confirmation, the dialog says
- * what went, why the rest did not, and "close it in Kite" - and the send ends where he can close the dialog or plan the exit again.
+ * what went, why the rest did not, and "close it in Kite" - and the send ends where he can close the dialog or plan the exit again. Sixth
+ * round: the part that went is a success - its fill shown, the words as an info alert, never a red failure.
  */
 @RunWith(AndroidJUnit4::class)
 @ConscryptMode(ConscryptMode.Mode.OFF)
@@ -114,11 +115,15 @@ class BossPartExitScreenTest {
         hold()
         until("the PIN prompt") { shown("Confirm it is you") }
         enterPin(BrokerArea.PIN)
-        until("the part sent") { m.sending.value is Load.Failed }
-        val why = (m.sending.value as Load.Failed).why
+        until("the part sent") { m.sending.value is Load.Done || m.sending.value is Load.Failed }
+        val fills = (m.sending.value as? Load.Done)?.value ?: throw AssertionError("a red failure: ${(m.sending.value as Load.Failed).why}")
+        val why = m.sendNote.value!!
         assertTrue(why, why.startsWith("Sent 75 of 150 on $ce; the other 75 may still be selling by "))
         assertTrue(why, why.endsWith(". If it must go now, close it in Kite."))
         until("said on the screen") { shown("Sent 75 of 150 on $ce", substring = true) }
+        assertTrue("an info alert, not an error", com.optionslab.app.work.Alerts.posted.any { it.text == why && it.kind == com.optionslab.app.work.Alerts.Kind.INFO })
+        until("its fill shown") { shown("COMPLETE 75 @", substring = true) }
+        assertEquals(listOf(75), fills.map { it.filled })
         assertEquals("the safe part only, once", listOf("75"), sells().map { it.form["quantity"] })
         assertEquals("what may still be selling is left", 75, kite.positions.getValue("NFO:$ce:NRML").first)
         assertEquals("the review shows what went", listOf(75), (m.plan.value as Load.Done).value.legs.map { it.quantity })

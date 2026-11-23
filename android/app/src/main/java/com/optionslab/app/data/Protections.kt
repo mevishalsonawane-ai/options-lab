@@ -1902,11 +1902,16 @@ object Protections {
             claim = SquareOffExit.claimExit(p.exchange, p.symbol, p.product, CLAIM_OWNER)
             if (claim == null) holder = SquareOffExit.exitClaimedBy(p.exchange, p.symbol, p.product)
         }
-        // (Second review: any of the app's stops going back - its name ends "-stop" - holds the row only a moment.)
+        // (Second review: any of the app's stops going back - its name ends "-stop" - holds the row only a moment. Sixth round: a look about a
+        // second on is asked for, so the target is tried again even when the price slips back meanwhile - its reached mark kept.)
         if (claim == null && holder?.endsWith("-stop") == true) {
             targetWait[p.id] = nowMs() + TARGET_PENDING_LOOK_MS
+            askFollowUp(TARGET_PENDING_LOOK_MS)
             return p
         }
+        // (Sixth round: the mark of the stop this sale took out ends only now that the sale has the row - a look skipped for a stop going
+        // back never lets the next look put that stop back.)
+        if (out && claim != null) forgetTakenOver(listOf(TARGET_CANCEL + so.id))
         targetHit.remove(p.id)
         // (Second round, m-1: until this try takes something out, the stream looks leave it be for a while - [targetWait].)
         targetWait[p.id] = nowMs() + TARGET_WAIT_MS
@@ -2243,11 +2248,11 @@ object Protections {
                 val ltp = runCatching { Broker.stopQuotes(listOf(key))[key]?.last }.getOrNull()
                 val t = p.target!!
                 val reached = ltp != null && ltp > 0 && (if (p.qty > 0) ltp >= t - 1e-9 else ltp <= t + 1e-9)
-                // (One try for that cancel: its mark ends first, so a sale that does not go - the gates, another exit covering it, a read
-                // that failed - leaves the next look to put the stop back below; one that goes keeps it out while it fills. Another
-                // seller on the row: that seller's - this look waits above.)
+                // (One try for that cancel: its mark ends once the sale has the row's claim, so a sale that does not go - the gates, another
+                // exit covering it, a read that failed - leaves the next look to put the stop back below; one that goes keeps it out while it
+                // fills. Another seller on the row: that seller's - this look waits above; the mark kept, so a skip never puts the stop back.)
                 if (reached || System.currentTimeMillis() - cancelAt in 0 until TARGET_HIT_KEEP_MS) {
-                    forgetTakenOver(listOf(TARGET_CANCEL + so.id))
+                    // (Sixth round: its mark ends in [sellAtTarget], once the row's claim is taken.)
                     return sellAtTarget(p, so, ltp, out = true)
                 }
             }

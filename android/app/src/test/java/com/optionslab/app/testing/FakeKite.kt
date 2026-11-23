@@ -124,6 +124,8 @@ class FakeKite : Closeable {
     @Volatile var gttReadFailures = 0
     /** 23 Nov 2026 (B6 review, fifth round): the next this many GTT deletes are refused (500 GeneralException), the GTT left as it was. */
     @Volatile var gttDeleteFailures = 0
+    /** 23 Nov 2026 (B6 review, sixth round): a deleted GTT stays in the list, status "deleted" with its orders' results (as Kite lists it). */
+    @Volatile var keepDeletedGtts = false
     /** 21 Oct, enhancement round 4: the next this many GTTs placed are made, but their answers are lost. */
     @Volatile var gttRepliesLost = 0
     /** ...and the next this many reads of the GTT list after such a lost answer fail (the sender cannot find it at once). */
@@ -510,7 +512,9 @@ class FakeKite : Closeable {
             m == "DELETE" && path.startsWith("/gtt/triggers/") && gttDeleteFailures > 0 -> { gttDeleteFailures--; error(500, "GeneralException", "Something went wrong. Please try again.") }
             m == "DELETE" && path.startsWith("/gtt/triggers/") -> {
                 val id = path.substringAfterLast('/').toLong()
-                if (gtts.remove(id) != null) ok(JSONObject().put("trigger_id", id)) else error(400, "InputException", "Invalid trigger ID.")
+                val g = gtts[id]
+                if (keepDeletedGtts && g != null && g.optString("status") != "deleted") { g.put("status", "deleted"); ok(JSONObject().put("trigger_id", id)) }
+                else if (gtts.remove(id) != null) ok(JSONObject().put("trigger_id", id)) else error(400, "InputException", "Invalid trigger ID.")
             }
             else -> error(404, "GeneralException", "Route not found")
         }

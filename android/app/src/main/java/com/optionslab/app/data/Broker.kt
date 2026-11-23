@@ -2582,7 +2582,9 @@ object Broker {
                       /** 18 Oct review: each leg's side, quantity and product (what an active GTT would sell or buy). */
                       val legSides: List<String> = emptyList(), val legQtys: List<Int> = emptyList(), val legProducts: List<String> = emptyList(),
                       /** 23 Nov 2026 (B6 review, fifth round): triggered, but Zerodha could not place its order (its result "failed", or refused). */
-                      val placeFailed: Boolean = false) {
+                      val placeFailed: Boolean = false,
+                      /** 23 Nov 2026 (B6 review, sixth round): when it fired (its first order result's "timestamp", "yyyy-MM-dd HH:mm:ss"); "" when not. */
+                      val firedAt: String = "") {
         val active: Boolean get() = status.lowercase() == "active"
         /** The quantity this GTT, while active, would send on [side] in [product] (its first leg: a single-leg stop). */
         fun covers(side: String, product: String): Int =
@@ -2595,14 +2597,21 @@ object Broker {
         val os = rows(g.optJSONArray("orders")).joinToString(" / ") { "${it.optString("transaction_type")} ${it.optInt("quantity")} @ ${it.optDouble("price")}" }
         GttRow(g.optLong("id"), g.optString("type"), g.optString("status"), c.optString("exchange"), c.optString("tradingsymbol"),
             (0 until tv.length()).map { tv.getDouble(it) }, c.optDouble("last_price", 0.0), os, g.optString("created_at"),
-            rows(g.optJSONArray("orders")).mapNotNull { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.optString("order_id")?.takeIf { it.isNotBlank() } },
+            rows(g.optJSONArray("orders")).mapNotNull { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.let { gttStr(it, "order_id") }?.takeIf { it.isNotBlank() } },
             rows(g.optJSONArray("orders")).map { it.optDouble("price", 0.0) },
             rows(g.optJSONArray("orders")).map { it.optString("transaction_type") },
             rows(g.optJSONArray("orders")).map { it.optInt("quantity") },
             rows(g.optJSONArray("orders")).map { it.optString("product") },
             rows(g.optJSONArray("orders")).any { o -> o.optJSONObject("result")?.optJSONObject("order_result")?.let { r ->
-                r.optString("order_id").isBlank() && (r.optString("status").equals("failed", ignoreCase = true) || r.optString("rejection_reason").isNotBlank()) } == true })
+                gttStr(r, "order_id").isBlank() && (gttStr(r, "status").equals("failed", ignoreCase = true) || gttStr(r, "rejection_reason").isNotBlank()) } == true },
+            rows(g.optJSONArray("orders")).firstNotNullOfOrNull { o -> o.optJSONObject("result")?.let { gttStr(it, "timestamp") }?.takeIf { it.isNotBlank() } }.orEmpty())
     }.sortedByDescending { it.created }.also { ExitCoordinator.gttsRead(it) }
+
+    /**
+     * 23 Nov 2026 (B6 review, sixth round): a GTT order result's field as text - "" for a JSON null or a missing one (Android's optString
+     * gives the word "null" for a JSON null: an order id "null", or a "null" refusal read as Zerodha's).
+     */
+    internal fun gttStr(o: JSONObject, name: String): String = if (o.isNull(name)) "" else o.optString(name).let { if (it == "null") "" else it }
 
     /** Places a GTT. Callers must have had the owner confirm it. */
     /**

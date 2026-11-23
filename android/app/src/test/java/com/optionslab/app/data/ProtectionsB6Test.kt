@@ -134,34 +134,56 @@ class ProtectionsB6Test : RobolectricTest() {
 
     /**
      * #7 (fifth round): one of the protections' own stops going back holds the row a moment. The target sale is never waited for under the look's
-     * lock: this look skips it at once (its stop left resting, nothing sold) and the next look sells.
+     * lock: this look skips it at once (its stop left resting, nothing sold). Sixth round: the skip asks for a look about a second on, which
+     * sells once the stop has let the row go - within the same tick.
      */
-    @Test fun theTargetSkipsTheLookWhileItsOwnStopGoesBackAndNeverWaits() {
+    @Test fun theTargetSkipsTheLookWhileItsOwnStopGoesBackAndLooksAgain() {
         protect()
         val p = active().single()
         at(12, 5)
         kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
-        /** One look with the row held by [owner]: how long it took; nothing sold, the stop left resting. */
-        fun heldLook(owner: String): Long {
-            val claim = SquareOffExit.claimExit("NFO", sym, "MIS", owner)!!
-            try {
-                val t0 = System.nanoTime()
-                tick()
-                return (System.nanoTime() - t0) / 1_000_000
-            } finally {
-                claim.release()
-                assertTrue("its stop left resting", kite.order(p.stopOrderId!!).working)
-                assertTrue(sales().isEmpty())
-            }
-        }
-        // A square-off's hold is never waited for; one of the protections' own stops going back now is not either (the old wait: a second).
-        val other = heldLook("iraalgoflat")
-        val own = heldLook(Protections.STOP_CLAIM_OWNER)
-        assertTrue("never waited for its own stop: $own ms, against $other ms with a square-off holding it", own < other + 700)
-        tick()
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", Protections.STOP_CLAIM_OWNER)!!
+        val before = kite.requests.size
+        val ticking = Thread { tick() }.apply { start() }
+        // Once the look has begun (its first read), the look's lock is free again within its own work - never held a second for the stop.
+        val until = System.currentTimeMillis() + 10_000
+        while (kite.requests.size == before && System.currentTimeMillis() < until) Thread.sleep(5)
+        val t0 = System.nanoTime()
+        runBlocking { Protections.holdLockForTest(kotlinx.coroutines.CompletableDeferred(Unit)) }
+        val lockMs = (System.nanoTime() - t0) / 1_000_000
+        assertTrue("its stop left resting", kite.order(p.stopOrderId!!).working)
+        assertTrue(sales().isEmpty())
+        claim.release()
+        ticking.join(15_000)
+        assertTrue("never waited for the stop under the lock (the old wait was a full second): $lockMs ms", lockMs < 700)
         assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
-        assertEquals("sold on the next look", 1, sales().size)
+        assertEquals("sold on the look after", 1, sales().size)
         assertEquals(null, SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))
+    }
+
+    /**
+     * Sixth round: the stop a target sale took out showed cancelled late, and as the next look came one of the protections' own stops was going
+     * back on the row - that look skipped the sale. The cancel's mark is kept until the sale has the row, so the look after sells; the stop is
+     * never put back.
+     */
+    @Test fun aSkippedSaleKeepsTheLateCancelsMarkAndSellsNeverPutsTheStopBack() {
+        protect()
+        val p = active().single()
+        val sid = p.stopOrderId!!
+        at(12, 5)
+        kite.quote("NFO:$sym", 131.0, 130.95, 131.05)
+        kite.cancelLagReads = 50
+        fastLookAlone()
+        assertTrue("nothing sold while its cancel has not shown", sales().isEmpty())
+        assertTrue(Protections.takenOverForTest(sid))
+        kite.order(sid).status = "CANCELLED"                                 // the cancel shows now
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", Protections.STOP_CLAIM_OWNER)!!
+        Thread { Thread.sleep(400); claim.release() }.start()
+        tick()
+        assertEquals("sold on the look after", listOf("75"), sales().map { it.form["quantity"] })
+        assertEquals("never put back", 1, kite.placed.count { it.form["order_type"] == "SL" })
+        assertFalse(Alerts.posted.any { it.text.contains("cancelled them for your exit") })
+        assertEquals(0, held())
     }
 
     /** The sale refused outright: the stop is put back at once, the target still the app's. */
