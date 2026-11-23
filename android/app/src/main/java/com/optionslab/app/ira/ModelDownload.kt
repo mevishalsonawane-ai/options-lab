@@ -55,7 +55,7 @@ class ModelDownload : Service() {
         }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("ModelDownload"))
     private var job: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null

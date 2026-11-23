@@ -293,7 +293,7 @@ class JarvisVoice : Service() {
         val state: StateFlow<VoiceState> = _state
 
         /** Writes the durable settings to disk off the main thread. */
-        private val keeper = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private val keeper = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("JarvisVoice.keeper"))
 
         /**
          * A setting saved: readable at once, written to disk in the background. A [tightening] change (Google speech
@@ -897,7 +897,7 @@ class JarvisVoice : Service() {
     }
 
     private val main = Handler(Looper.getMainLooper())
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + com.optionslab.app.data.ScopeGuard.handler("JarvisVoice"))
     private var rec: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var voiceReady = false

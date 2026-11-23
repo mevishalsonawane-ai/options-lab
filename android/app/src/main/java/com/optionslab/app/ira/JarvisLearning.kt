@@ -36,7 +36,7 @@ internal object JarvisLearning {
     private const val WHY_MS = 10 * 60_000L
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("JarvisLearning"))
     private val lock = Any()
 
     private val _book = MutableStateFlow(AgentLessons.Book())

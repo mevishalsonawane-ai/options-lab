@@ -43,7 +43,7 @@ internal object SelfGrowth {
     const val NOTICE_ID = 5140
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("SelfGrowth"))
     private val lock = Any()
     private val running = AtomicBoolean(false)
 

@@ -1,6 +1,7 @@
 package com.optionslab.app.data
 
 import com.optionslab.app.testing.RobolectricTest
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -10,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -64,5 +66,57 @@ class ScopeGuardTest : RobolectricTest() {
         assertEquals("price stream: a background job failed (IllegalStateException at KiteStream.watch:612); the app carries on", line)
         assertFalse(line.contains("abc123"))
         assertFalse(line.contains("40,000"))
+    }
+
+    /** A long-lived scope of [owner] (a Kotlin object) held in its private field [field]. */
+    private fun scopeOf(owner: Any, field: String): CoroutineScope =
+        owner.javaClass.getDeclaredField(field).apply { isAccessible = true }.get(owner) as CoroutineScope
+
+    /** A scope held in the static field [field] of [cls] (a companion's or a file's). */
+    private fun staticScope(cls: Class<*>, field: String): CoroutineScope =
+        cls.getDeclaredField(field).apply { isAccessible = true }.get(null) as CoroutineScope
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, item 3): the remaining long-lived background scopes carry the handler too - Zerodha's reads, lost replies'
+     * searches and the kill switch's sweep ([Broker]), the ORB arms' switch-off work, the paper book's reads, Autopilot and every other
+     * Jarvis object's, service's and receiver's, the AI-live writes and the guide's. A failure in one is noted and the scope goes on.
+     */
+    @Test fun theLongLivedBackgroundScopesCarryTheHandler() = runBlocking {
+        val scopes = mapOf(
+            "Broker.readScope" to scopeOf(Broker, "readScope"),
+            "Broker.relayScope" to scopeOf(Broker, "relayScope"),
+            "Broker.warmScope" to scopeOf(Broker, "warmScope"),
+            "Broker.lostScope" to scopeOf(Broker, "lostScope"),
+            "Broker.killScope" to scopeOf(Broker, "killScope"),
+            "OrbArms.offLock" to scopeOf(OrbArms, "offLock"),
+            "Paper.gapReads" to scopeOf(Paper, "gapReads"),
+            "Paper.exitReads" to scopeOf(Paper, "exitReads"),
+            "Autopilot" to scopeOf(com.optionslab.app.ira.Autopilot, "scope"),
+            "IraAccount.behind" to scopeOf(com.optionslab.app.ira.IraAccount, "behind"),
+            "IraHub" to scopeOf(com.optionslab.app.ira.IraHub, "scope"),
+            "SelfJobs" to scopeOf(com.optionslab.app.ira.SelfJobs, "scope"),
+            "SelfGrowth" to scopeOf(com.optionslab.app.ira.SelfGrowth, "scope"),
+            "LearningFreeze" to scopeOf(com.optionslab.app.ira.LearningFreeze, "scope"),
+            "JarvisLearning" to scopeOf(com.optionslab.app.ira.JarvisLearning, "scope"),
+            "IraModel" to scopeOf(com.optionslab.app.ira.IraModel, "scope"),
+            "IraDayRecap.reads" to scopeOf(com.optionslab.app.ira.IraDayRecap, "reads"),
+            "BossTradeLog" to scopeOf(com.optionslab.app.ira.BossTradeLog, "scope"),
+            // (A companion's field lives on its class; a service's or a receiver's on each instance.)
+            "JarvisVoice.keeper" to staticScope(com.optionslab.app.ira.JarvisVoice::class.java, "keeper"),
+            "JarvisVoice" to scopeOf(com.optionslab.app.ira.JarvisVoice(), "scope"),
+            "ModelDownload" to scopeOf(com.optionslab.app.ira.ModelDownload(), "scope"),
+            "JarvisApproval" to scopeOf(com.optionslab.app.ira.JarvisActionReceiver(), "scope"),
+            "AI live writes" to com.optionslab.app.ui.screens.AI_LIVE_WRITES,
+            "the guide" to staticScope(Class.forName("com.optionslab.app.ui.screens.AskGuideSheetKt"), "guideScope"),
+        )
+        for ((name, s) in scopes) assertNotNull("$name carries a handler", s.coroutineContext[CoroutineExceptionHandler])
+        // ScopeGuard's own (the lost replies' lane, as one): a failure is noted, never the end of the process, and the scope goes on.
+        val lost = scopes.getValue("Broker.lostScope")
+        val before = ScopeGuard.caughtCount
+        withTimeout(5_000) { lost.launch { throw IllegalStateException("test") }.join() }
+        assertEquals(before + 1, ScopeGuard.caughtCount)
+        var ran = false
+        withTimeout(5_000) { lost.launch { ran = true }.join() }
+        assertTrue("the scope still runs its jobs", ran)
     }
 }

@@ -58,7 +58,7 @@ internal fun askAsTyped(context: android.content.Context, scope: CoroutineScope,
 }
 
 /** The guide's tap from Settings outlives the page (it closes as the chat opens): the spoken reply waits here. */
-private val guideScope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
+private val guideScope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main + com.optionslab.app.data.ScopeGuard.handler("guide"))
 
 /** The Ira page's small "?" beside the question box: opens the guide. 48dp, so it is an easy tap and never crowds the box. */
 @Composable

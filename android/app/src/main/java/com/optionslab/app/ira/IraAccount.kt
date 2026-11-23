@@ -148,7 +148,7 @@ internal object IraAccount {
     data class Quick(val view: AppView, val note: String?)
 
     /** Where a read behind a question runs (apart from the asker, so one it stopped waiting for still finishes and is kept). */
-    private val behind = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val behind = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("IraAccount.behind"))
     /** The one read behind under way ([readQuick] starts at most one at a time). */
     @Volatile private var behindJob: kotlinx.coroutines.Job? = null
 

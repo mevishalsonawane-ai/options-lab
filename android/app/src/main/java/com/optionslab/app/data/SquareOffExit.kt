@@ -122,7 +122,8 @@ internal object SquareOffExit {
      * [lostPendingProviders] (by product row) - "iraorb" for [OrbArms], [com.optionslab.engine.orb.LiveMirror.TAG] for [ArmLive]. [send]
      * leaves those sales to their book's count; another sender's exit
      * sale sent a moment ago and not in the fresh read ([ExitCoordinator.unshownPending]) holds the row back. A book adds its tag with
-     * its provider.
+     * its provider. (23 Nov 2026, B6 follow-ups: [PineAuto] and [Strategies] count only their sales whose answer was lost - not those on
+     * their way - so they add no tag: their sales not in the fresh read hold the row back as another sender's, the safe side.)
      */
     internal val lostPendingTags: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
@@ -146,7 +147,8 @@ internal object SquareOffExit {
      * already out): one seller at a time on a position row ([exchange], [symbol], [product]). A sender takes the claim BEFORE it takes any
      * stop, target or GTT out, and holds it until its own sale went (or it gave up), releasing it in a finally ([ExitClaim.release]):
      *  - [send] (the expiry square-off, the flat-by) takes it, as its [tag], before it looks at the row at all;
-     *  - an arm's exit takes it, as its book's own name ("orb": [OrbArms]), before its stop comes out.
+     *  - an arm's exit takes it, as its book's own name ("orb": [OrbArms]; 23 Nov: "pine": [PineAuto], "strategy": [Strategies]), before its
+     *    stop comes out.
      * Null: another [owner] holds it - send nothing, take nothing out, leave every stop resting, and look again next pass. The same [owner]
      * taking it again (a nested call of its own, or two of its runs at once) gets it too, and the row stays claimed until every one of them
      * released. Never waits, never blocks; memory only (a restart starts with none).
@@ -175,12 +177,21 @@ internal object SquareOffExit {
         // (22 Nov 2026, B6 review: the arms' live copies' exits and the protections' app-watched targets claim their rows too.)
         "armlive" -> "an arm's live exit"
         "protections" -> "a protection's target sale"
+        // (23 Nov 2026, B6 follow-ups, item 2: Pine's live exits and the saved strategies' exits claim their rows too, and so do their stops
+        // while they go in at Zerodha - [PineAuto], [Strategies].)
+        PineAuto.CLAIM_OWNER -> "a Pine script's exit"
+        PineAuto.CLAIM_STOP_OWNER -> "a Pine script's stop going in at Zerodha"
+        Strategies.CLAIM_OWNER -> "a saved strategy's exit"
+        Strategies.CLAIM_STOP_OWNER -> "a saved strategy's stop going in at Zerodha"
         BOSS_OWNER -> "your exit from the app"
         else -> "another seller ($owner)"
     }
 
     /** 22 Nov 2026 (B6 review, second round): the name Boss's own exit from the app claims a row by ([claimExit]; AppModel's takeover). */
     const val BOSS_OWNER = "boss"
+
+    /** 23 Nov 2026 (B6 follow-ups, item 2): the owners that hold a row only while a stop goes in at Zerodha - no sale of theirs is going out. */
+    private val STOP_OWNERS = setOf(OrbArms.CLAIM_STOP_OWNER, PineAuto.CLAIM_STOP_OWNER, Strategies.CLAIM_STOP_OWNER)
 
     /** A row's claim ([claimExit]): [release] it in a finally. Each claim releases once (a second call changes nothing). */
     class ExitClaim internal constructor(private val key: String, private val owner: String) {
@@ -297,8 +308,9 @@ internal object SquareOffExit {
             // the next pass looks again.
             claim = claimExit(p.exchange, p.symbol, p.product, tag) ?: run {
                 val holder = exitClaimedBy(p.exchange, p.symbol, p.product)
-                // (Review: a stop of an arm going back at Zerodha holds the row a moment - no sale of its is going out.)
-                skipped("${claimWords(holder)} held it", armSelling = holder != OrbArms.CLAIM_STOP_OWNER)
+                // (Review: a stop of an arm going back at Zerodha holds the row a moment - no sale of its is going out. 23 Nov 2026: a Pine
+                // script's or a saved strategy's stop going in, likewise.)
+                skipped("${claimWords(holder)} held it", armSelling = holder !in STOP_OWNERS)
                 return false
             }
             // 22 Nov 2026 (B6 review): an arm's exit sale on this row not settled yet - its reply lost, or on its way ([lostPendingProviders])
@@ -523,7 +535,9 @@ internal object SquareOffExit {
                                     if (Broker.definite(e2)) null else {
                                         limitLost = true; unsure = true
                                         notePlaced(p.exchange, p.symbol, p.product); noteSold(p.exchange, p.symbol, p.product)
-                                        runCatching { Broker.findRecentRetrying(l, placed + workingNow.map { it.id }) }.getOrNull()
+                                        // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for
+                                        // in the door already: not a second ~4 s in the row's exit turn; the next pass reads the books.)
+                                        if (e2 is Broker.KiteUnsure) null else runCatching { Broker.findRecentRetrying(l, placed + workingNow.map { it.id }) }.getOrNull()
                                     }
                                 }
                             }
@@ -550,7 +564,9 @@ internal object SquareOffExit {
                     // The reply was lost, not necessarily the order: look for it before trying again. 19 Nov 2026: it may be out
                     // either way, so the contract's gap starts ([GAP_MS]).
                     notePlaced(p.exchange, p.symbol, p.product); noteSold(p.exchange, p.symbol, p.product); unsure = true
-                    runCatching { Broker.findRecentRetrying(o, placed + workingNow.map { it.id }) }.getOrNull()?.let { placed += it }
+                    // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already: not
+                    // a second ~4 s while the row is claimed; the gap holds the row and the next pass reads the books.)
+                    if (e !is Broker.KiteUnsure) runCatching { Broker.findRecentRetrying(o, placed + workingNow.map { it.id }) }.getOrNull()?.let { placed += it }
                     break
                 }
             }

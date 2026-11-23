@@ -71,7 +71,7 @@ internal object Autopilot {
     private const val NIGHT = 15 * 60 + 45
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Autopilot"))
     private val lock = Any()
 
     private val _book = MutableStateFlow(AutoChange.Book())

@@ -266,8 +266,9 @@ class StrategiesLiveTest : RobolectricTest() {
 
     /**
      * 22 Nov 2026 (B6 review, item 1): Kite answers DataException for the entry (it took the order) and the book does not show it through
-     * ~8 s of looks. Before, the error was taken as Zerodha's refusal ("rejected"): a buy that filled stayed untracked with no stop. Now
-     * it is looked for as a lost reply; once the book shows it filled it is the leg's entry - one buy - and the leg's stop rests.
+     * the door's ~4 s of looks (23 Nov 2026: no second search of the strategy's own after it). Before, the error was taken as Zerodha's
+     * refusal ("rejected"): a buy that filled stayed untracked with no stop. Now it is looked for as a lost reply; once the book shows it
+     * filled it is the leg's entry - one buy - and the leg's stop rests.
      */
     @Test fun anUnsureKiteErrorOnTheEntryIsLookedForAndTheFilledLegGetsItsStop() {
         midSession()
@@ -916,5 +917,183 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue(e.running)
         assertEquals("NIFTY", e.def.underlying)
         assertTrue(Strategies.runningHint)
+    }
+
+    // ---- 23 Nov 2026 (B6 follow-ups) ------------------------------------------------------------------------------------------------
+
+    /** A live MIS leg bought at 100, its stop (70) resting at Zerodha as an SL order: that order. */
+    private fun liveLegWithItsStop(): FakeKite.Order {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        startLive(id)
+        assertEquals(1, buys().size)
+        return kite.orders.values.single { it.type == "SL" && it.working }
+    }
+
+    /** The MARKET exits sent, by tag and quantity. */
+    private fun exits() = kite.placed.filter { it.form["transaction_type"] == "SELL" && it.form["order_type"] == "MARKET" }.map { it.form["tag"] to it.form["quantity"] }
+
+    /**
+     * Item 1: a leg's stop answered by Kite's GeneralException with nothing in the book after the door's ~4 s of looks ([Broker.KiteUnsure]):
+     * kept UNKNOWN and looked for in the background at once - no second ~4 s search of its own under the strategies' lock - and no second
+     * stop sent beside it while it may rest.
+     */
+    @Test fun anUnsureAnswerToALegsStopGoesStraightToTheBackgroundSearch() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        kite.nextPlace(reply = FakeKite.Reply.OK)                          // the entry
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)           // its leg's stop
+        val searches = Broker.callerSearchesForTest.get()
+        startLive(id)
+        assertEquals(1, buys().size)
+        assertEquals("one stop sent", 1, restingStops().size)
+        assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
+        assertTrue("looked for in the background", Broker.lostKeys("stratstop:").isNotEmpty())
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("none sent beside it while it is looked for", 1, restingStops().size)
+    }
+
+    /**
+     * Item 1: the leg's exit sale answered so: accepted under a lost id at once (looked for on its later status reads) - no second search of
+     * its own - its stop out (it came out for the sale), and nothing more sold while it is looked for.
+     */
+    @Test fun anUnsureAnswerToALegsExitIsKeptLostWithoutASecondSearch() {
+        val stop = liveLegWithItsStop()
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)                    // under the 30-point stop: the exit is due
+        val searches = Broker.callerSearchesForTest.get()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("one sale sent", listOf("iraalgostrat" to "75"), exits())
+        assertEquals("no second search of its own", searches, Broker.callerSearchesForTest.get())
+        assertEquals("its stop came out for the sale", "CANCELLED", kite.order(stop.id).status)
+        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", NIFTY_CE, "MIS"))
+        assertEquals("counted for the square-offs while it is looked for", 75, SquareOffExit.lostPending(NIFTY_CE, "MIS"))
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("nothing more sold while it is looked for", 1, exits().size)
+    }
+
+    /**
+     * Item 2: while a square-off (the 15:05 expiry square-off, the flat-by) holds the row, the leg's exit waits with its stop resting at
+     * Zerodha - nothing taken out, nothing sold; once the row is free, the next look takes the stop out and sells, once.
+     */
+    @Test fun whileASquareOffHoldsTheRowTheLegsExitWaitsWithItsStopResting() {
+        val stop = liveLegWithItsStop()
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+        val claim = SquareOffExit.claimExit("NFO", NIFTY_CE, "MIS", "iraalgoexpiry")!!
+        try {
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            assertTrue("nothing sold", exits().isEmpty())
+            assertEquals("its stop rests", "TRIGGER PENDING", kite.order(stop.id).status)
+        } finally { claim.release() }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("its stop out first", "CANCELLED", kite.order(stop.id).status)
+        assertEquals(listOf("iraalgostrat" to "75"), exits())
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("sold once", 1, exits().size)
+        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", NIFTY_CE, "MIS"))
+    }
+
+    /**
+     * Item 2: a square-off that comes to the row while the leg's exit is taking its stop out is refused the row - it takes nothing out and
+     * sends nothing - and the strategy sells: exactly one sale.
+     */
+    @Test fun whileALegsExitHoldsTheRowASquareOffTakesNothingOutAndSendsNothing() {
+        val stop = liveLegWithItsStop()
+        val row = Broker.Position(NIFTY_CE, "MIS", 75, 100.0, 60.0, 0.0)
+        val refused = java.util.concurrent.atomic.AtomicReference<Boolean?>()
+        val claimedBy = java.util.concurrent.atomic.AtomicReference<String?>()
+        kite.afterNext("/orders/regular/${stop.id}") {
+            claimedBy.set(SquareOffExit.exitClaimedBy("NFO", NIFTY_CE, "MIS"))
+            refused.set(!runBlocking {
+                SquareOffExit.send(row, 75, 0.05, emptyList(), emptyList(), Broker.Positions(listOf(row), emptyList()), AppSettings.load().limits(),
+                    "expiry square-off", "iraalgoexpiry", Origins.EXPIRY, "expires today", "expiry") { _, _ -> }
+            })
+        }
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("the strategy held the row as its stop came out", Strategies.CLAIM_OWNER, claimedBy.get())
+        assertEquals("the square-off was refused the row", true, refused.get())
+        assertEquals(1, SquareOffExit.skipsForTest("NFO", NIFTY_CE, "MIS"))
+        assertEquals("CANCELLED", kite.order(stop.id).status)
+        assertEquals("exactly one sale: the strategy's", listOf("iraalgostrat" to "75"), exits())
+        assertNull("the row free again", SquareOffExit.exitClaimedBy("NFO", NIFTY_CE, "MIS"))
+    }
+
+    /**
+     * Item 2: a square-off's sale on the contract a moment ago ([SquareOffExit.inGap]): the leg's exit waits with its stop resting, and no
+     * stop goes in on the row either; past the gap it sells.
+     */
+    @Test fun aSquareOffsSaleAMomentAgoMakesTheLegsExitWait() {
+        val stop = liveLegWithItsStop()
+        SquareOffExit.resetForTest()                                       // the gap on, as it ships
+        var clock = 1_000_000L
+        SquareOffExit.clock = { clock }
+        SquareOffExit.notePlaced("NFO", NIFTY_CE, "MIS")
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("nothing sold beside it", exits().isEmpty())
+        assertEquals("its stop rests", "TRIGGER PENDING", kite.order(stop.id).status)
+        clock += SquareOffExit.GAP_MS
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(listOf("iraalgostrat" to "75"), exits())
+    }
+
+    /**
+     * Item 2: a leg's stop never goes in while a square-off holds the row, in its gap, or after a square-off's sale since the look read the
+     * books - tried again on the next look, and placed once the row is free.
+     */
+    @Test fun aLegsStopWaitsWhileASquareOffHoldsTheRow() {
+        midSession()
+        live()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        val claim = SquareOffExit.claimExit("NFO", NIFTY_CE, "MIS", "iraalgoflat")!!
+        try {
+            startLive(id)
+            assertEquals(1, buys().size)
+            assertTrue("no stop while a square-off holds the row", restingStops().isEmpty())
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            assertTrue(restingStops().isEmpty())
+        } finally { claim.release() }
+        // A square-off's sale on it since: no stop on that look's reads either.
+        SquareOffExit.resetForTest()
+        var clock = 1_000_000L
+        SquareOffExit.clock = { clock }
+        SquareOffExit.noteSold("NFO", NIFTY_CE, "MIS")
+        SquareOffExit.notePlaced("NFO", NIFTY_CE, "MIS")
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("none in the square-off's gap", restingStops().isEmpty())
+        clock += SquareOffExit.GAP_MS
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("placed once the row is free", 1, restingStops().size)
+        assertNull(SquareOffExit.exitClaimedBy("NFO", NIFTY_CE, "MIS"))
+    }
+
+    /**
+     * Item 2: a leg's stop going in holds the row under its own name - a square-off refused the row then is never told a sale is going out
+     * (at its backstop minute Boss is told to close it himself, not to wait for a sale that does not exist).
+     */
+    @Test fun aLegsStopGoingInIsNeverSaidAsASaleGoingOut() {
+        assertEquals("a saved strategy's stop going in at Zerodha", SquareOffExit.claimWords(Strategies.CLAIM_STOP_OWNER))
+        assertEquals("a saved strategy's exit", SquareOffExit.claimWords(Strategies.CLAIM_OWNER))
+        assertEquals("a Pine script's stop going in at Zerodha", SquareOffExit.claimWords(PineAuto.CLAIM_STOP_OWNER))
+        assertEquals("a Pine script's exit", SquareOffExit.claimWords(PineAuto.CLAIM_OWNER))
+        live()
+        kite.position(NIFTY_CE, 75, 100.0, product = "MIS")
+        val row = Broker.Position(NIFTY_CE, "MIS", 75, 100.0, 100.0, 0.0)
+        for ((owner, selling) in listOf(Strategies.CLAIM_STOP_OWNER to false, PineAuto.CLAIM_STOP_OWNER to false, Strategies.CLAIM_OWNER to true)) {
+            val told = ArrayList<String>()
+            val claim = SquareOffExit.claimExit("NFO", NIFTY_CE, "MIS", owner)!!
+            try {
+                assertFalse(runBlocking {
+                    SquareOffExit.send(row, 75, 0.05, emptyList(), emptyList(), Broker.Positions(listOf(row), emptyList()), AppSettings.load().limits(),
+                        "expiry square-off", "iraalgoexpiry", Origins.EXPIRY, "expires today", "expiry", backstop = true) { _, t -> told += t }
+                })
+            } finally { claim.release() }
+            assertTrue("$owner: told at the backstop: $told", told.isNotEmpty())
+            assertEquals("$owner: $told", selling, told.any { "let it finish" in it })
+        }
+        assertTrue("nothing sent", kite.placed.isEmpty())
     }
 }

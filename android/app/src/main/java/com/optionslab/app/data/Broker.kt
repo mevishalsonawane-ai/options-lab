@@ -43,7 +43,7 @@ object Broker {
     private lateinit var app: Context
 
     /** Where a bounded read runs ([within]): apart from its caller, so a caller that stops waiting is not held. */
-    private val readScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val readScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Broker.readScope"))
 
     /**
      * A Zerodha read with a real deadline. [call] does blocking HttpsURLConnection I/O (20 s connect, 60 s read) that does
@@ -735,7 +735,7 @@ object Broker {
     private fun failed(notSent: Boolean, msg: String): IOException = if (notSent) NotSent(msg) else IOException(msg)
 
     /** The relay's connects for a write, off the caller ([relayWithin]): one that outlives the write's budget finishes here. */
-    private val relayScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val relayScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Broker.relayScope"))
 
     /**
      * 20 Nov 2026 (audit B5, item 1): the relay's proxy for a write, waited for at most [ms] (what is left of the write's budget). The
@@ -830,7 +830,7 @@ object Broker {
     private val cutter = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "zerodha-cut").apply { isDaemon = true } }
 
     @Volatile private var warmedAt = 0L
-    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Broker.warmScope"))
 
     /**
      * Get the order route ready while the owner is still reviewing (or, for the bots, during market hours):
@@ -2361,7 +2361,7 @@ object Broker {
     private val lostWrites = java.util.concurrent.ConcurrentHashMap<String, LostWrite>()
     // (B5 merge review: the searches' order-book reads in the stop checks' lane, SAFETY - an ORB / Liquidity exit or a stop's re-rest
     // waits on them, so they are never starved behind entries or Jarvis; only exits and stops (EXIT) go before them.)
-    private val lostScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + Lane(com.optionslab.ira.RateGate.Priority.SAFETY))
+    private val lostScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + Lane(com.optionslab.ira.RateGate.Priority.SAFETY) + com.optionslab.app.data.ScopeGuard.handler("Broker.lostScope"))
 
     /** TEST ONLY: the lane the lost replies' searches read the book in. */
     internal fun lostLaneForTest(): com.optionslab.ira.RateGate.Priority? = lostScope.coroutineContext[Lane]?.priority
@@ -2405,6 +2405,22 @@ object Broker {
 
     /** The keys of the lost replies being looked for that start with [prefix]. Memory only. */
     fun lostKeys(prefix: String): List<String> = lostWrites.keys.filter { it.startsWith(prefix) }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, item 2): a book's unresolved lost exit SALES on one position row, for the square-offs
+     * ([SquareOffExit.lostPendingProviders]): the quantity of the lost replies kept under keys starting with [prefix] that sell [symbol]
+     * in [product], noted less than [LOST_SEARCH_MS] and a minute ago. Past that age one still kept is not counted (found, it is in the
+     * books the square-off reads; else its search is over or nobody asks after it), so a write no caller takes off never holds a
+     * square-off back for good. Memory only, never a wait.
+     */
+    fun lostSales(prefix: String, symbol: String, product: String): Int {
+        val now = System.currentTimeMillis()
+        return lostWrites.entries.sumOf { (k, w) ->
+            val o = w.order
+            if (k.startsWith(prefix) && o.side == Kite.Side.SELL && o.tradingSymbol == symbol && o.product == product &&
+                now - w.sinceMs < LOST_SEARCH_MS + 60_000L) o.quantity else 0
+        }
+    }
 
     /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed (its search stopped). Memory only. */
     fun forgetLost(key: String) { lostWrites.remove(key)?.searching?.cancel() }
@@ -2537,11 +2553,18 @@ object Broker {
     }
 
     /**
+     * TEST ONLY (23 Nov 2026, B6 follow-ups, item 1): how many times a caller ran its own lost-reply search ([findRecentRetrying], not the
+     * door's after Kite's unsure answer, [sendChecked]) in this process - a debug build's count, memory only.
+     */
+    internal val callerSearchesForTest = java.util.concurrent.atomic.AtomicInteger()
+
+    /**
      * [findRecent] for a POST whose reply was lost, tried [tries] times [waitMs] apart (the order book can
      * trail the POST by a moment). The order id; null when the book was read and holds no such order;
      * throws when the book could not be read at all, so the caller knows the order's fate is unknown.
      */
     suspend fun findRecentRetrying(o: Kite.Order, known: Collection<String>, tries: Int = 3, waitMs: Long = 2_000, afterError: Boolean = false): String? {
+        if (!afterError && com.optionslab.app.BuildConfig.DEBUG) callerSearchesForTest.incrementAndGet()
         var read = false
         var err: Exception? = null
         for (i in 0 until tries) {
@@ -2766,7 +2789,7 @@ object Broker {
         return held >= 0
     }
 
-    private val killScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+    private val killScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("Broker.killScope"))
 
     /**
      * 20 Nov 2026 (audit B5, item 9): the kill switch just went on ([why]). [act] (only Boss's own act in the app: his kill switch, or

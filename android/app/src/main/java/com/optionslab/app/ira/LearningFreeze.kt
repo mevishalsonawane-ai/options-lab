@@ -40,7 +40,7 @@ object LearningFreeze {
     const val NOTE = "learning frozen: recorded, not applied"
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("LearningFreeze"))
     private val lock = Any()
     private val refreshing = AtomicBoolean(false)
     @Volatile private var refreshedAt = 0L

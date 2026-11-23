@@ -116,6 +116,10 @@ object PineAuto {
     fun init(context: Context) {
         app = context.applicationContext
         file = File(app.noBackupFilesDir, "pine_auto.vault")
+        // 23 Nov 2026 (B6 follow-ups, item 2): the square-offs subtract a live holding's exit sale whose answer was lost and is still looked
+        // for ([lostExit], [Broker.lostSales]) and take no stop out beside it. Only those are counted there - not a sale on its way - so
+        // Pine's tag is not one the square-offs leave to that count: one of its sales not in their read holds the row back as another sender's.
+        SquareOffExit.lostPendingProviders[CLAIM_OWNER] = { sym, product -> Broker.lostSales(LOST_EXIT, sym, product) }
     }
 
     private fun book(): Book {
@@ -1239,6 +1243,35 @@ object PineAuto {
      * holding unchanged when it could not be placed (the app then watches the stop itself, as before).
      */
     private suspend fun placeLiveStop(b: Book, item: PineScripts.Item, h: Held, at: Double? = null, capToHeld: Boolean = false): Held {
+        // 23 Nov 2026 (B6 follow-ups, item 2): every live stop - the first after a buy, and one put back ([capToHeld]) - goes in with the
+        // contract's row claimed ([SquareOffExit.claimExit], as the ORB / Liquidity stops go in), so a square-off never works its sale out from
+        // a read made without it; and none while another seller holds the row or a square-off's sale went on it a moment ago
+        // ([SquareOffExit.inGap]): asked again on the next check ([stopNotRested]), which rests it on fresh reads. After a square-off's sale on
+        // the row in this process ([SquareOffExit.lastSaleAt]) the first stop too is sized on fresh reads, never above what Zerodha holds.
+        // This book's own exit holding the row (a stop put back after its sale did not go - the scripts' lock: only this call chain) needs
+        // no claim of its own. Memory only, never a wait.
+        if (!h.live || h.unconfirmed) return h
+        val sym = h.kite ?: return h
+        val own = SquareOffExit.exitClaimedBy("NFO", sym, "MIS") == CLAIM_OWNER
+        val claim = if (own) null else SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_STOP_OWNER)
+        if ((!own && claim == null) || SquareOffExit.inGap("NFO", sym, "MIS")) {
+            claim?.release()
+            if (stopNotRested.size > 200) stopNotRested.clear()
+            stopNotRested += lostStopKey(item, h)
+            runCatching { Diag.record("pine", "${label(item)}: its stop on $sym is not placed this check - " +
+                (if (!own && claim == null) "${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy("NFO", sym, "MIS"))} holds the row"
+                    else "a square-off sold it a moment ago") + "; asked again on the next check") }
+            return h
+        }
+        val fresh = capToHeld || SquareOffExit.lastSaleAt("NFO", sym, "MIS") != null
+        try { return placeLiveStopClaimed(b, item, h, at, fresh) } finally { claim?.release() }
+    }
+
+    /** 23 Nov 2026 (B6 follow-ups, item 2): Pine's name on a contract's row claim while one of its stops goes in at Zerodha ([placeLiveStop]). */
+    internal const val CLAIM_STOP_OWNER = "pine-stop"
+
+    /** [placeLiveStop]'s placing, with the row's claim held. 23 Nov 2026 (B6 follow-ups, item 2): taken out unchanged. */
+    private suspend fun placeLiveStopClaimed(b: Book, item: PineScripts.Item, h: Held, at: Double?, capToHeld: Boolean): Held {
         if (!h.live || h.unconfirmed) return h
         val sym = h.kite ?: return h
         // 22 Nov 2026 (B6 review): never beside an exit sale of this holding whose answer was lost and is still looked for ([lostExit]: it may
@@ -1871,6 +1904,36 @@ object PineAuto {
             return
         }
         managerId(id, h).let { flatSince.remove(it); flatAlertSaid.remove(it) }
+        // 23 Nov 2026 (B6 follow-ups, item 2: the 15:05 expiry square-off or the flat-by could sell the contract beside this sale, each taking
+        // the other's stop out): one seller at a time on the contract's row ([SquareOffExit.claimExit], as the ORB / Liquidity exits) - taken
+        // FIRST, before its stop comes out, and released once this sale went and was booked, or it gave up. Held by another seller, or a
+        // square-off's sale sent on it a moment ago ([SquareOffExit.inGap]): this exit waits with its stop resting, and the next check tries
+        // again (the square-off sells it; the next look reads the books again). Memory only, never a wait.
+        val claim = SquareOffExit.claimExit("NFO", sym, "MIS", CLAIM_OWNER) ?: run {
+            val holder = SquareOffExit.exitClaimedBy("NFO", sym, "MIS")
+            noteOnce(b, id, "claim:$id:$sym:${h.at}:$holder", "$sym: the exit ($why) waits - ${SquareOffExit.claimWords(holder)} is selling it; " +
+                "its stop stays resting and the exit is tried again on the next check")
+            return
+        }
+        try {
+            if (SquareOffExit.inGap("NFO", sym, "MIS")) {
+                noteOnce(b, id, "gap:$id:$sym:${h.at}", "$sym: the exit ($why) waits - a square-off sold it a moment ago; its stop stays resting " +
+                    "and the exit is tried again on the next check")
+                return
+            }
+            sellLive(b, id, item, h0, h, sym, why)
+        } finally { claim.release() }
+    }
+
+    /** 23 Nov 2026 (B6 follow-ups, item 2): Pine's name on a contract's exit claim ([SquareOffExit.claimExit]). */
+    internal const val CLAIM_OWNER = "pine"
+
+    /**
+     * [exit]'s live sale of [start] (the holding as [exit] left it; [h0]: as the exit was asked) on Zerodha contract [sym], with the
+     * contract's exit claim held ([SquareOffExit.claimExit]). 23 Nov 2026 (B6 follow-ups, item 2): taken out of [exit] unchanged.
+     */
+    private suspend fun sellLive(b: Book, id: Long, item: PineScripts.Item, h0: Held, start: Held, sym: String, why: String) {
+        var h = start
         // Its own exits still working (an earlier pass's, or one whose reply was lost) come out first; every other sell
         // resting on the symbol (a protection's stop, an ORB stop, the owner's own limit) is left alone and subtracted:
         // together they never sell more than is held, and none of them can block this exit.
@@ -1927,6 +1990,18 @@ object PineAuto {
             if (bad.isNotEmpty()) {
                 com.optionslab.app.work.Alerts.error("${label(item)}: the Zerodha exit was not sent (${bad.joinToString("; ")}). Close $sym in Trade.", "Pine live")
                 restop(h)
+                return
+            }
+            // 23 Nov 2026 (B6 follow-ups, item 2): this sale is about to go - said to the square-offs ([SquareOffExit.saleStarting]), then the
+            // gap looked at once more, in the ORB exits' order. (A backstop: with the row's claim held no square-off starts a sale on it
+            // meanwhile; what keeps a square-off off this sale once the claim is let go is its fresh read of the books, the exits sent from
+            // here not in it yet ([ExitCoordinator.unshownPending]: Pine's tag is not left to a count) and, while its answer is lost,
+            // [Broker.lostSales].) A square-off's sale on it a moment ago: none is sent beside it, and its stop is not put back beside that
+            // sale either (asked again on the next checks, which rest it only for what Zerodha still holds).
+            SquareOffExit.saleStarting(sym, "MIS")
+            if (SquareOffExit.inGap("NFO", sym, "MIS")) {
+                note(b, id, "$sym: a square-off sold it a moment ago; nothing sold beside it, the next check reads again")
+                if (tookStop && !h.unconfirmed) stopNotRested += lostStopKey(item, h)
                 return
             }
             // (22 Nov 2026, B6 review: when it is sent - a lost sale's search starts there, after a restart too.)
@@ -1994,7 +2069,9 @@ object PineAuto {
      * The key a live holding's lost exit sale is looked for under: the script and the contract (a script holds one holding at a time, and
      * one whose sale is still looked for is never closed another way meanwhile - [lostExit]).
      */
-    private fun lostExitKeyOf(id: Long, h: Held) = "pineexit:$id:${h.kite}"
+    private fun lostExitKeyOf(id: Long, h: Held) = "$LOST_EXIT$id:${h.kite}"
+    /** The prefix of [lostExitKeyOf] (23 Nov 2026: the square-offs' count of these sales, [Broker.lostSales]). */
+    private const val LOST_EXIT = "pineexit:"
 
     /** The key a live buy whose answer was lost is looked for under: the script, the contract and when it was sent ([Held.since]). */
     private fun lostBuyKeyOf(id: Long, sym: String, sentMs: Long) = "pinebuy:$id:$sym:$sentMs"

@@ -39,7 +39,7 @@ object SelfJobs {
     private const val CLOSE = 15 * 60 + 45
 
     @Volatile private var appContext: Context? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.optionslab.app.data.ScopeGuard.handler("SelfJobs"))
     private val running = AtomicBoolean(false)
     @Volatile private var marks: Map<String, String>? = null
     @Volatile private var healthDays: Set<LocalDate>? = null

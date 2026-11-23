@@ -151,7 +151,7 @@ object IraHub {
     const val KEEP_DAYS = 60
 
     private val _state = MutableStateFlow(State())
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + com.optionslab.app.data.ScopeGuard.handler("IraHub"))
     private var app: Context? = null
     /** The last candles read (stored + live), for backtests. */
     @Volatile private var histories: Map<IraMarket, History> = emptyMap()
