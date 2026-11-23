@@ -826,4 +826,173 @@ class ProtectionsB6Test : RobolectricTest() {
         active()
         assertFalse(Protections.takenOverForTest("x1"))
     }
+
+    // ---- eighth round of the B6 review ---------------------------------------------------------------------------------------
+
+    /** The working stop orders on [sym], their quantities. */
+    private fun stopQtys() = kite.orders.values.filter { it.symbol == sym && it.type == "SL" && it.working }.map { it.qty }
+    private fun sell(qty: Int) = com.optionslab.engine.Kite.Order(sym, com.optionslab.engine.Kite.Side.SELL, qty, 75, "MIS", "MARKET", null)
+
+    /**
+     * m3: an unsure stop given up on whose put-back cannot go this look (another seller holds the row) waits as "given up, to be placed" -
+     * never looked for again, and Boss is told it was not found once, not every two minutes. Placed once the row is free.
+     */
+    @Test fun aGivenUpStopWaitingToBePlacedIsNeverLookedForNorSaidAgain() {
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        protect()
+        val p = active().single()
+        assertEquals(Protections.STOP_LOST, p.note)
+        at(12, 5)
+        val key = "protstop:${p.id}"
+        fun saidNotFound() = Alerts.posted.count { it.text.contains("the order is not in its order book") }
+        val flat = SquareOffExit.claimExit("NFO", sym, "MIS", "iraalgoflat")!!     // another seller on the row: the put-back waits
+        try {
+            repeat(4) { Broker.ageLostForTest(key, Broker.LOST_SEARCH_MS + 1_000); tick() }
+            assertEquals(Protections.STOP_GAVE_UP, active().single().note)
+            assertEquals("said once", 1, saidNotFound())
+            assertFalse("never looked for again", Broker.lostPending(key))
+            assertEquals(emptyList<Int>(), stopQtys())
+        } finally { flat.release() }
+        tick()
+        assertEquals("placed once the row is free", listOf(75), stopQtys())
+        assertEquals(1, saidNotFound())
+    }
+
+    /**
+     * m4: Boss's own exit for part of the position, its reply lost, and the stop taken out for it: the protection's put-back rests a stop for
+     * what his exit leaves (never nothing - a protection has no level watched by the app), keeping the protection's size; once his exit is
+     * known not to have gone (a good read 2 minutes on), the stop grows to the whole.
+     */
+    @Test fun bossesLostPartExitPutsTheStopBackForTheRestAndItGrowsOnceKnown() {
+        kite.position(sym, 150, 100.0, product = "MIS")
+        protect(qty = 150)
+        val p = active().single()
+        assertEquals(listOf(150), stopQtys())
+        at(12, 5)
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        SquareOffExit.noteBossLost(sell(75), kite.orders.keys.toList(), null, Origins.MANUAL)
+        Protections.noteTakenOver(listOf(p.stopOrderId!!))
+        runBlocking { Broker.cancel(p.stopOrderId!!) }
+        tick()
+        val cut = active().single()
+        assertEquals("put back for what his exit leaves", listOf(75), stopQtys())
+        assertEquals(Protections.BOSS_CUT, cut.note)
+        assertEquals(75, cut.qty)
+        assertEquals("the protection keeps its whole size", 150, cut.whole)
+        tick()
+        assertEquals("not grown while his exit may be selling", listOf(75), stopQtys())
+        Broker.ageLostForTest(SquareOffExit.bossLostKey("NFO", sym, "MIS"), Broker.LOST_SEARCH_MS + 1_000)
+        tick(); tick()
+        assertEquals("grown once it is known not to have gone", listOf(150), stopQtys())
+        val grown = active().single()
+        assertEquals("", grown.note); assertEquals(150, grown.qty); assertEquals(null, grown.whole)
+        assertEquals(150, held())
+    }
+
+    /** m4 (review): a stop put back for part whose answer was unsure keeps the protection's whole size - placed for the whole once both are known. */
+    @Test fun aCutStopWhoseAnswerWasUnsureKeepsTheWholeSize() {
+        kite.position(sym, 150, 100.0, product = "MIS")
+        protect(qty = 150)
+        val p = active().single()
+        at(12, 5)
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        SquareOffExit.noteBossLost(sell(75), kite.orders.keys.toList(), null, Origins.MANUAL)
+        Protections.noteTakenOver(listOf(p.stopOrderId!!))
+        runBlocking { Broker.cancel(p.stopOrderId!!) }
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        tick()
+        val lost = active().single()
+        assertEquals(Protections.STOP_LOST, lost.note)
+        assertEquals(75, lost.qty); assertEquals(150, lost.whole)
+        Broker.ageLostForTest(SquareOffExit.bossLostKey("NFO", sym, "MIS"), Broker.LOST_SEARCH_MS + 1_000)
+        Broker.ageLostForTest("protstop:${lost.id}", Broker.LOST_SEARCH_MS + 1_000)
+        tick(); tick()
+        assertEquals("placed for the whole", listOf(150), stopQtys())
+    }
+
+    /** m4: his exit for all of it - nothing rests beside it while it may be selling (nothing it would leave), and the whole once it is known. */
+    @Test fun bossesLostWholeExitLeavesNothingToCoverUntilKnown() {
+        protect()
+        val p = active().single()
+        at(12, 5)
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        SquareOffExit.noteBossLost(sell(75), kite.orders.keys.toList(), null, Origins.MANUAL)
+        Protections.noteTakenOver(listOf(p.stopOrderId!!))
+        runBlocking { Broker.cancel(p.stopOrderId!!) }
+        tick(); tick()
+        assertEquals(emptyList<Int>(), stopQtys())
+        Broker.ageLostForTest(SquareOffExit.bossLostKey("NFO", sym, "MIS"), Broker.LOST_SEARCH_MS + 1_000)
+        tick(); tick()
+        assertEquals(listOf(75), stopQtys())
+    }
+
+    /** m5: Boss's lost exit is kept with the marks - a restart inside its search keeps the hold and the counts, looked for from when it went. */
+    @Test fun bossesLostExitIsKeptAcrossARestart() {
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        protect()
+        val key = SquareOffExit.bossLostKey("NFO", sym, "MIS")
+        SquareOffExit.noteBossLost(sell(75), kite.orders.keys.toList(), Market.today(), Origins.MANUAL)
+        Protections.restartForTest()                                         // the marks' writes done, then memory gone
+        SquareOffExit.forgetBossLostForTest(); Broker.forgetLostForTest()
+        assertEquals("gone from memory", 0, SquareOffExit.bossLostQty(sym, "MIS", com.optionslab.engine.Kite.Side.SELL))
+        active()                                                             // the start reads the list and its marks
+        assertTrue("looked for again", Broker.lostPending(key))
+        assertEquals("counted again", 75, SquareOffExit.bossLostQty(sym, "MIS", com.optionslab.engine.Kite.Side.SELL))
+        assertEquals("nothing beside it", 0, SquareOffExit.lessBossLost(75, sym, "MIS"))
+        assertTrue("held again", SquareOffExit.bossExitLost("NFO", sym, "MIS"))
+        // Once given up on it is no longer kept: a later restart never brings it back.
+        Broker.ageLostForTest(key, Broker.LOST_SEARCH_MS + 1_000)
+        assertFalse(SquareOffExit.bossExitLost("NFO", sym, "MIS"))
+        Protections.restartForTest(); SquareOffExit.forgetBossLostForTest(); Broker.forgetLostForTest()
+        active()
+        assertFalse("not brought back", Broker.lostPending(key))
+    }
+
+    /**
+     * Nit: a sliced protection whose second slice's stop answer was unsure, removed while it is looked for, is still "maybe resting" - the
+     * first slice's stop, taken out, is not put back beside it until that is known.
+     */
+    @Test fun aRemovedSliceWhoseStopMayBeRestingStillHoldsItsSiblingsPutBack() {
+        kite.position(sym, 2700, 100.0, product = "MIS")
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        kite.nextPlace(FakeKite.Scenario())
+        kite.nextPlace(reply = FakeKite.Reply.GENERAL_EXCEPTION)
+        val msg = protect(qty = 2700)
+        assertTrue(msg, msg.contains("may be resting"))
+        val slices = active()
+        val first = slices.single { it.stopOrderId != null }
+        val unsure = slices.single { it.note == Protections.STOP_LOST }
+        val said = runBlocking { Protections.remove(unsure.id) }
+        assertTrue(said, said.contains("its stop may be resting at Zerodha"))
+        at(12, 5)
+        Protections.noteTakenOver(listOf(first.stopOrderId!!))
+        runBlocking { Broker.cancel(first.stopOrderId!!) }
+        tick(); tick()
+        assertEquals("nothing beside the slice that may be resting", emptyList<Int>(), stopQtys())
+        Broker.ageLostForTest("protstop:${unsure.id}", Broker.LOST_SEARCH_MS + 1_000)
+        tick(); tick()
+        assertEquals("put back once that is known", listOf(first.qty), stopQtys())
+    }
+
+    /**
+     * Missing test: Boss's exit that filled part and was then cancelled for the rest - its stop goes back for what is left as soon as the
+     * book shows that fill, never after the whole 2 minutes ([Protections.exitFilledFor]).
+     */
+    @Test fun aStopGoesBackAtOnceAfterAnExitThatFilledPartThenEnded() {
+        kite.position(sym, 150, 100.0, product = "MIS")
+        protect(qty = 150)
+        val p = active().single()
+        at(12, 5)
+        Protections.noteTakenOver(listOf(p.stopOrderId!!))
+        runBlocking { Broker.cancel(p.stopOrderId!!) }
+        kite.nextPlace(outcome = FakeKite.Outcome.PARTIAL, partialQty = 75)
+        val exit = runBlocking { Broker.placeOrder(sell(150), exit = true) }
+        runBlocking { Broker.cancel(exit) }
+        assertEquals("CANCELLED", kite.order(exit).status); assertEquals(75, kite.order(exit).filled)
+        Protections.exitFilledFor(listOf(p.stopOrderId!!), mapOf(exit to 75))
+        tick(); tick()
+        assertEquals("put back for the 75 left, at once", listOf(75), stopQtys())
+        assertEquals(75, held())
+    }
 }

@@ -1096,11 +1096,13 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * it until the leg is placed; taken here too - the same owner's, at once - so this is never done without it.)
      */
     private suspend fun takeOverLeg(legs: List<com.optionslab.engine.Kite.Order>, i: Int, taken: MutableList<String>? = null,
-                                    owner: String = com.optionslab.app.data.SquareOffExit.BOSS_OWNER, notGoing: MutableSet<String> = HashSet()): Took? {
+                                    owner: String = com.optionslab.app.data.SquareOffExit.BOSS_OWNER, notGoing: MutableSet<String> = HashSet(),
+                                    /** 23 Nov 2026 (B6 review, eighth round, m2): the marks of deleted GTTs found fired, ended once the leg fills. */
+                                    firedMarks: MutableList<String>? = null): Took? {
         val o = legs[i]
         if (o.product == "CNC") return null
         val claim = bossExitClaim(o, owner)
-        try { return takeOverLegClaimed(legs, i, taken, notGoing) } finally { claim.release() }
+        try { return takeOverLegClaimed(legs, i, taken, notGoing, firedMarks) } finally { claim.release() }
     }
 
     /**
@@ -1322,7 +1324,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
 
     /** [takeOverLeg] with the position row's exit claim held. */
     private suspend fun takeOverLegClaimed(legs: List<com.optionslab.engine.Kite.Order>, i: Int, taken: MutableList<String>?,
-                                           notGoing: MutableSet<String> = HashSet()): Took? {
+                                           notGoing: MutableSet<String> = HashSet(), firedMarks: MutableList<String>? = null): Took? {
         val b = com.optionslab.app.data.Broker
         val o = legs[i]
         fun same(l: com.optionslab.engine.Kite.Order) = l.tradingSymbol == o.tradingSymbol && l.exchange == o.exchange && l.product == o.product && l.side == o.side
@@ -1363,7 +1365,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         fun idlessRow(g: com.optionslab.app.data.Broker.GttRow) = g.status.equals("triggered", ignoreCase = true) && g.orderIds.isEmpty() && !g.placeFailed
         val deletedIds = ArrayList<Long>()
         // (Seventh round, review: a deleted GTT found fired - its mark ends once its order may be a sale (going, filled, or not known yet); one
-        // whose order Zerodha refused or cancelled keeps it, so the protection places that stop again.)
+        // whose order Zerodha refused or cancelled keeps it, so the protection places that stop again. Eighth round, m2: it ends only once this
+        // leg filled ([firedMarks], the send's settle) - until then the protection's put-back counts that order as cover and places the stop
+        // again for what it leaves, never ending "NOT protected".)
         val firedGtts = HashMap<Long, List<String>>()
         gttIds.forEach { id ->
             val g = gttNow.firstOrNull { it.id == id }
@@ -1426,10 +1430,12 @@ class AppModel(app: Application) : AndroidViewModel(app) {
         fired.filter { id -> book.none { it.id == id } }.forEach { id ->
             when (firedSale(id)) { FiredSale.ENDED -> { notGoing += id; fired.remove(id) }; FiredSale.UNKNOWN -> unknownFired += id; FiredSale.GOING -> Unit }
         }
-        // (A deleted GTT's mark ends unless every order it gave is a dead one - refused or cancelled - in the book or as asked.)
+        // (A deleted GTT's mark ends - once the leg filled - unless every order it gave is a dead one, refused or cancelled, in the book or as asked;
+        // its orders told to the protections meanwhile, so their put-back counts them even while Zerodha's book does not show them.)
         firedGtts.forEach { (gid, ids) ->
             val dead = ids.all { id -> id in notGoing || book.firstOrNull { it.id == id }?.let { it.status in setOf("REJECTED", "CANCELLED") && it.filled == 0 } == true }
-            if (!dead) unmark(gid)
+            runCatching { com.optionslab.app.data.Protections.noteGttFired(gid, ids) }
+            if (!dead) { if (firedMarks != null) firedMarks += "gtt:$gid" else unmark(gid) }
         }
         // (#6: a triggered GTT's sale not in the book yet - read again for about 2 s; still not there, nothing goes beside it.)
         if (fired.isNotEmpty()) {
@@ -2095,19 +2101,22 @@ class AppModel(app: Application) : AndroidViewModel(app) {
      * 23 Nov 2026 (B6 review, seventh round: Boss's own exit whose reply was lost or unsure was said as not found, and once his hands-off
      * ended the protections and the arms could put back the stops taken out for it - on the full quantity, beside a sale that may exist):
      * [leg] noted as a lost reply under its row's key ([com.optionslab.app.data.SquareOffExit.bossLostKey], [known]: never adopted), looked
-     * for in the background; while it is, no stop is placed or put back on the row ([com.optionslab.app.data.SquareOffExit.bossExitLost];
-     * the level watches go on), the square-offs count it, and his own send again on it is refused ([bossExitRoom]). Given up on only after a
-     * good read 2 minutes on.
+     * for in the background; while it is, nothing beside it sells or covers what it may be selling ([com.optionslab.app.data.SquareOffExit.lessBossLost]:
+     * every exit sale and the protections' put-back; an arm's stop, watched at its level by the app, waits - [com.optionslab.app.data.ArmLive.noStopBeside]),
+     * the square-offs count it, and his own send again on it is refused ([bossExitRoom]). Given up on only after a good read 2 minutes on.
+     * Eighth round: told as an alert too (not only the Trade screen's words), and once found he is told what became of it - booked like any
+     * exit of his ([com.optionslab.app.data.SquareOffExit.noteBossLost], kept across a restart with the protections' marks).
      * An entry (not an exit): said as before.
      */
-    private fun lostExit(leg: com.optionslab.engine.Kite.Order, known: Collection<String>, e: Exception, exit: Boolean): java.io.IOException {
-        if (!exit || leg.product == "CNC")
+    private fun lostExit(leg: com.optionslab.engine.Kite.Order, known: Collection<String>, e: Exception, plan: OrderPlan): java.io.IOException {
+        if (!plan.exit || leg.product == "CNC")
             return java.io.IOException("${e.message}. No matching order was found at Zerodha; check the order book before trying again.")
-        com.optionslab.app.data.Broker.noteLost(com.optionslab.app.data.SquareOffExit.bossLostKey(leg.exchange, leg.tradingSymbol, leg.product), leg, known,
-            "Your exit")
+        com.optionslab.app.data.SquareOffExit.noteBossLost(leg, known, plan.session, plan.source)
         runCatching { com.optionslab.app.data.Diag.record("zerodha", "Your exit on ${leg.tradingSymbol}: reply lost (${e.message?.take(160)}); looked for 2 minutes") }
-        return ExitMaybeGone("Zerodha's reply to your exit on ${leg.tradingSymbol} was lost; the exit may have gone. Checking for 2 minutes - no stop " +
-            "is put back meanwhile. Don't send it again; check Kite.")
+        val words = "Zerodha's reply to your exit on ${leg.tradingSymbol} was lost; the exit may have gone. Checking for 2 minutes - no stop goes " +
+            "back beside it meanwhile. Don't send it again; check Kite."
+        runCatching { com.optionslab.app.work.Alerts.post(words, com.optionslab.app.work.Alerts.Kind.ERROR, "Zerodha") }
+        return ExitMaybeGone(words)
     }
 
     /**
@@ -2144,11 +2153,18 @@ class AppModel(app: Application) : AndroidViewModel(app) {
             // back only once Zerodha's book shows those fills, sized on what is still held: [Protections.exitFilledFor], in the finally. Second
             // review: each contract waits on its own orders only, never another contract's leg that may never show filled.)
             val filledBy = HashMap<String, MutableMap<String, Int>>()
+            // 23 Nov 2026 (B6 review, eighth round, m2): by contract, the marks of its protection's GTTs found fired as they were deleted - ended
+            // only once a leg of that contract filled; otherwise kept, so the protection places its stop again beside what that order leaves.
+            val firedBy = HashMap<String, MutableList<String>>()
             var settled = false
             fun settleFilled() {
                 if (settled) return
                 settled = true
                 takenBy.forEach { (k, ids) -> filledBy[k]?.let { own -> runCatching { com.optionslab.app.data.Protections.exitFilledFor(ids, own) } } }
+                firedBy.forEach { (k, marks) -> if (k in filledBy && marks.isNotEmpty()) {
+                    runCatching { com.optionslab.app.data.Protections.forgetTakenOver(marks) }
+                    taken.removeAll(marks.toSet())
+                } }
             }
             // 23 Nov 2026 (B6 review, fifth round: the part that could go safely was offered as a new exit to review, a dead end on the screen):
             // the plan as it goes - when only part of a contract can go safely ([BossRoom.Part]), that part goes under this same confirmation,
@@ -2309,7 +2325,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                         // anything already taken out for it ends the send, so its stops go back at once.)
                         val takenBefore = taken.toList()
                         var took: Took? = null
-                        try { took = takeOverLeg(p.legs, i, taken, owner, notGoing) }
+                        try { took = takeOverLeg(p.legs, i, taken, owner, notGoing, firedBy.getOrPut(PartSent.keyOf(leg)) { ArrayList() }) }
                         catch (e: kotlinx.coroutines.CancellationException) { throw e }
                         catch (e: java.io.IOException) {
                             val tookOut = noteTaken(leg, takenBefore)
@@ -2351,7 +2367,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                             // (23 Nov 2026, B6 follow-ups, item 1: Kite's unsure answer - [Broker.KiteUnsure] - was looked for in the door already:
                             // straight to the words below, never a second ~4 s search.)
                             (if (e is com.optionslab.app.data.Broker.KiteUnsure) null else runCatching { b.findRecentRetrying(leg, fills.map { it.orderId }) }.getOrNull())
-                                ?: throw lostExit(leg, fills.map { it.orderId }, e, cur.exit)
+                                ?: throw lostExit(leg, fills.map { it.orderId }, e, cur)
                         }
                     }
                     } finally { claim?.release() }
@@ -2411,7 +2427,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                             why2 = if (claim2 != null) room2(bossExitRoom(p.legs, i, countWorking = false, ownIds = own2, notGoing = notGoing)) else null
                             if (cutRefused) return@launch
                             val takenBefore2 = taken.toList()
-                            if (why2 == null) again2 = try { takeOverLeg(p.legs.drop(i), 0, taken, owner, notGoing) }
+                            if (why2 == null) again2 = try { takeOverLeg(p.legs.drop(i), 0, taken, owner, notGoing, firedBy.getOrPut(PartSent.keyOf(leg)) { ArrayList() }) }
                                 catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { why2 = e.message; null }
                             noteTaken(leg, takenBefore2)
                             // (Fifth round, #5: nothing taken over because the position no longer holds what the leg closes - said, never Zerodha's
@@ -2435,7 +2451,7 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                                         // A lost reply is not a lost order: looked for before anything is said ([findRecentRetrying]). (Kite's unsure
                                         // answer was looked for in the door already: not again.)
                                         (if (e is com.optionslab.app.data.Broker.KiteUnsure) null else runCatching { b.findRecentRetrying(leg, (fills.map { it.orderId } + f.orderId)) }.getOrNull())
-                                            ?: throw lostExit(leg, fills.map { it.orderId } + f.orderId, e, cur.exit)
+                                            ?: throw lostExit(leg, fills.map { it.orderId } + f.orderId, e, cur)
                                     }
                                 }
                             }
@@ -2558,7 +2574,9 @@ class AppModel(app: Application) : AndroidViewModel(app) {
                 // shows those fills, on what is still held - however the send ended. Memory only.)
                 settleFilled()
                 // 6 Nov: the exit is done (or refused): the arms and protections may rest stops on its contracts again. A leg still
-                // working at Zerodha (Boss decides on it) keeps them off until its hands-off runs out ([ArmLive.handsOff], 90 s).
+                // working at Zerodha (a stuck leg Boss decides on) keeps them off until its hands-off runs out ([ArmLive.handsOff], 90 s at
+                // most). (23 Nov 2026, B6 review, eighth round: a leg whose reply was lost is not stuck - its contract is handed back here, now;
+                // its own hold is [com.optionslab.app.data.SquareOffExit.bossExitLost] and [com.optionslab.app.data.SquareOffExit.lessBossLost].)
                 // (6 Nov review: only the stuck leg's own contract stays hands-off - Boss's working sale covers it; every other
                 // contract, flat or never sent, is watched by its arm again at once.)
                 val keep = stuck.value?.takeIf { it.plan === cur || it.plan === p }?.let { st -> st.plan.legs.getOrNull(st.index)?.let { it.exchange to it.tradingSymbol } }

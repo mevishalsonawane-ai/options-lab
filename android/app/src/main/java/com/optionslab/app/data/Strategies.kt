@@ -908,11 +908,15 @@ object Strategies {
                         // 21 Oct, enhancement round 3 (idea 1): held, checked against that orders read's fills ([ExitCoordinator.held]).
                         // 19 Nov 2026 (final check): the lag guard always on here (forceLag, as the square-offs and the protections): a sale a
                         // square-off made a moment ago, still trailing in the positions, is never sold again by this exit's retry.
-                        val held = runCatching { ExitCoordinator.held(ref.exchange, kiteSym, order.product, "strategy ${def.name}", working, forceLag = true) }.getOrNull()
+                        // (23 Nov 2026, B6 review, eighth round, M1: less what Boss's own exit whose reply was lost may be selling.)
+                        val heldRaw = runCatching { ExitCoordinator.held(ref.exchange, kiteSym, order.product, "strategy ${def.name}", working, forceLag = true) }.getOrNull()
                             ?: return@runBlocking StrategyHost.Placed.Refused("could not read Zerodha positions to confirm the exit; will retry")
-                        val closes = (side == Kite.Side.BUY && held < 0) || (side == Kite.Side.SELL && held > 0)
+                        val closes = (side == Kite.Side.BUY && heldRaw < 0) || (side == Kite.Side.SELL && heldRaw > 0)
                         if (!closes) return@runBlocking StrategyHost.Placed.Refused(
-                            "Zerodha shows $kiteSym ${order.product} net $held, so a ${side.name} would not close it; not sent")
+                            "Zerodha shows $kiteSym ${order.product} net $heldRaw, so a ${side.name} would not close it; not sent")
+                        val held = SquareOffExit.lessBossLost(heldRaw, kiteSym, order.product, ref.exchange)
+                        if (held == 0) return@runBlocking StrategyHost.Placed.Refused(
+                            "your own exit on $kiteSym whose reply from Zerodha was lost may still be selling it; nothing sent beside it - checked again next look")
                         val busy = working.filter { it.working && it.symbol == kiteSym && it.exchange == ref.exchange && it.product == order.product && it.side == side.name }
                             .sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
                         qty = com.optionslab.engine.risk.ExitQty.sendable(held, busy, order.quantity, ref.lot)

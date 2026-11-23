@@ -1542,4 +1542,28 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue("both legs booked closed: ${legs.map { it.status }}", legs.none { it.status == "open" })
         assertTrue("nothing sold beside the stops", exits().isEmpty())
     }
+
+    /**
+     * B6 review, eighth round (missing test): Boss's own exit on the leg's contract whose reply was lost may be selling it - the leg's stop is
+     * not rested beside it (the app watches the leg's level meanwhile) until it is known; given up on after a good read 2 minutes on, rested.
+     */
+    @Test fun aLegsStopIsNotRestedWhileBossesLostExitMayBeSellingIt() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        Broker.lostSearchInlineForTest = true; Broker.lostLookGapMsForTest = 0L
+        var key: String? = null
+        kite.afterNext("/orders/regular") {                                  // the entry went: then his exit's reply on the contract is lost
+            val s = kite.placed.last().form.getValue("tradingsymbol")
+            key = SquareOffExit.bossLostKey("NFO", s, "MIS")
+            Broker.noteLost(key!!, Kite.Order(s, Kite.Side.SELL, 75, 75, "MIS", "MARKET", null), emptyList(), "Your exit")
+        }
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("no stop beside his exit", restingStops().isEmpty())
+        Broker.ageLostForTest(key!!, Broker.LOST_SEARCH_MS + 1_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("rested once it is known not to have gone", 1, restingStops().size)
+    }
 }

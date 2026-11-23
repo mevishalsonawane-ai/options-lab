@@ -6029,11 +6029,13 @@ object OrbArms {
      * never sold beyond what is held. One the read shows is counted there already (working, or filled for the positions-lag guard).
      */
     private suspend fun lostPending(sym: String, p: Position, orders: Collection<Broker.OrderRow>): Int {
+        // (23 Nov 2026, B6 review, eighth round, M1: and what Boss's own exit on it whose reply was lost may be selling - never sold again.)
+        val boss = SquareOffExit.bossLostQty(sym, "MIS", com.optionslab.engine.Kite.Side.SELL, "NFO")
         val lost = lostOn(sym).filter { it.foundId == null && it.id != p.lostId }.sortedBy { it.id }
-        if (lost.isEmpty()) return 0
+        if (lost.isEmpty()) return boss
         // (A row shows a lost sale only when it could be it - NFO MIS, the same side, size, type and tag, not known when that sale went,
         // and claimed by no owner label (every sale the app knows the id of is labelled) - and each row shows one lost sale at most.)
-        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return lost.sumOf { it.order.quantity }
+        val owners = runCatching { Strategies.owners() }.getOrNull() ?: return lost.sumOf { it.order.quantity } + boss
         val foundIds = lostExits.values.mapNotNull { it.foundId }.toSet()
         val free = orders.filter { it.symbol == sym && it.exchange == "NFO" && it.product == "MIS" && it.side == "SELL" && "kite:${it.id}" !in owners &&
             it.id !in foundIds }.toMutableList()
@@ -6043,7 +6045,7 @@ object OrbArms {
             val row = free.firstOrNull { it.qty == l.order.quantity && it.type == l.order.orderType && it.tag == tag && it.id !in l.known }
             if (row != null) free.remove(row) else pending += l.order.quantity
         }
-        return pending
+        return pending + boss
     }
 
     /** True while [l] is within its hold (no read). */
