@@ -1105,7 +1105,7 @@ object Broker {
     internal fun resetForTest() { dropCreds(); dropKept(); sentKept = null; sentIds.clear(); paperOnlyNoticeDay = null
         entryIds.clear(); exitIds.clear(); sendMarks.clear(); serverOffset = null; killSweepAgainMs = 3_000L; relayConnect = null; lastEntrySentAt = 0L
         killJob?.cancel(); killJob = null; killJobActs = false; killRequestsForTest.clear(); killSweepOn = false
-        cancelLostSearches(); lostWrites.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false
+        cancelLostSearches(); lostWrites.clear(); foundLately.clear(); claimedIds.clear(); lostSearchMsForTest = null; lostLookGapMsForTest = null; lostSearchInlineForTest = false
         // (22 Nov 2026, B6 review: no test's instruments list in memory left for the next test's entries, [instrumentsInMemory], nor a
         // background read of it still running into the next test.)
         instrumentsWarm?.cancel(); instrumentsWarm = null; instrumentsWarming.set(false); instrumentsMemo = null }
@@ -2351,6 +2351,8 @@ object Broker {
         /** When a caller last asked after it ([lookLost]): one no caller has asked after for long belongs to a trade long gone. */
         @Volatile var askedMs = sinceMs
         @Volatile var foundId: String? = null
+        /** 23 Nov 2026 (B6 follow-ups, round 2): when [foundId] was found (phone ms; 0: not yet) - [lostSales]. */
+        @Volatile var foundAtMs = 0L
         /** When a read of the book last SUCCEEDED without finding it (0: never). */
         @Volatile var readOkAtMs = 0L
         /** When a read of the book last FAILED (0: never). */
@@ -2409,18 +2411,27 @@ object Broker {
     /**
      * 23 Nov 2026 (B6 follow-ups, item 2): a book's unresolved lost exit SALES on one position row, for the square-offs
      * ([SquareOffExit.lostPendingProviders]): the quantity of the lost replies kept under keys starting with [prefix] that sell [symbol]
-     * in [product], noted less than [LOST_SEARCH_MS] and a minute ago. Past that age one still kept is not counted (found, it is in the
-     * books the square-off reads; else its search is over or nobody asks after it), so a write no caller takes off never holds a
-     * square-off back for good. Memory only, never a wait.
+     * in [product], noted less than the lost search's window ([LOST_SEARCH_MS]) and a minute ago. Past that age one still kept is not
+     * counted (its search is over, or nobody asks after it), so a write no caller takes off never holds a square-off back for good.
+     * Round 2: one found in Zerodha's book is in the square-offs' fresh reads from then on - counted [FOUND_COUNTED_MS] more only (found,
+     * or found and taken by its caller: [foundLately]), so a read that began just before it was found, or a caller that took it at once,
+     * never leaves it in neither, and a square-off is held back seconds, not minutes. Memory only, never a wait.
      */
     fun lostSales(prefix: String, symbol: String, product: String): Int {
         val now = System.currentTimeMillis()
-        return lostWrites.entries.sumOf { (k, w) ->
-            val o = w.order
-            if (k.startsWith(prefix) && o.side == Kite.Side.SELL && o.tradingSymbol == symbol && o.product == product &&
-                now - w.sinceMs < LOST_SEARCH_MS + 60_000L) o.quantity else 0
+        val window = (lostSearchMsForTest ?: LOST_SEARCH_MS) + 60_000L
+        fun row(o: Kite.Order) = o.side == Kite.Side.SELL && o.tradingSymbol == symbol && o.product == product
+        val kept = lostWrites.entries.sumOf { (k, w) ->
+            if (k.startsWith(prefix) && row(w.order) && now - w.sinceMs < window && (w.foundId == null || now - w.foundAtMs < FOUND_COUNTED_MS))
+                w.order.quantity else 0
         }
+        return kept + foundLately.entries.sumOf { (k, v) -> if (k.startsWith(prefix) && row(v.first) && now - v.second < FOUND_COUNTED_MS) v.first.quantity else 0 }
     }
+
+    /** 23 Nov 2026 (B6 follow-ups, round 2): how long a found lost sale is still counted for the square-offs ([lostSales]). */
+    const val FOUND_COUNTED_MS = 20_000L
+    /** Lost replies found and taken by their caller lately (key -> the order, when it was found): [lostSales]. Memory only; bounded. */
+    private val foundLately = java.util.concurrent.ConcurrentHashMap<String, Pair<Kite.Order, Long>>()
 
     /** The lost reply under [key] forgotten: its stop was taken another way, or its position closed (its search stopped). Memory only. */
     fun forgetLost(key: String) { lostWrites.remove(key)?.searching?.cancel() }
@@ -2469,17 +2480,21 @@ object Broker {
     fun lostTrigger(key: String): Double? = lostWrites[key]?.order?.triggerPrice
 
     /** TEST ONLY: the lost reply under [key] noted [ms] earlier than it was (the real waits judged, never shortened). */
-    internal fun ageLostForTest(key: String, ms: Long) { lostWrites[key]?.let { it.sinceMs -= ms; it.askedMs = it.sinceMs } }
+    internal fun ageLostForTest(key: String, ms: Long) {
+        lostWrites[key]?.let { it.sinceMs -= ms; it.askedMs = it.sinceMs; if (it.foundAtMs > 0) it.foundAtMs -= ms }
+        foundLately.computeIfPresent(key) { _, v -> v.first to v.second - ms }
+    }
 
     /** TEST ONLY: every lost reply forgotten, as after a restart. */
-    internal fun forgetLostForTest() { cancelLostSearches(); lostWrites.clear() }
+    internal fun forgetLostForTest() { cancelLostSearches(); lostWrites.clear(); foundLately.clear() }
 
     /** One search of the book for [w]: found, or a read that succeeded without it; a read that failed changes nothing. */
     private suspend fun searchLost(w: LostWrite) {
         val found = try { findRecent(w.order, w.known, liveOnly = w.liveOnly, sentAt = w.sentAt) } catch (e: kotlinx.coroutines.CancellationException) { throw e
         } catch (_: Exception) { w.readFailAtMs = System.currentTimeMillis(); return }
         // (20 Nov 2026, delta review: an order claimed by another trade meanwhile ([claimStop]) is not this one: looked for again.)
-        if (found != null) synchronized(w) { if (!claimedIds.containsKey(found)) w.foundId = found } else w.readOkAtMs = System.currentTimeMillis()
+        if (found != null) synchronized(w) { if (!claimedIds.containsKey(found)) { w.foundId = found; w.foundAtMs = System.currentTimeMillis() } }
+        else w.readOkAtMs = System.currentTimeMillis()
     }
 
     /**
@@ -2522,6 +2537,9 @@ object Broker {
             // Searching, never "none kept" - and its search is stopped.)
             if (!lostWrites.remove(key, w)) return LostLook.Searching
             w.searching?.cancel()
+            // (23 Nov 2026, B6 follow-ups, round 2: still counted a moment for the square-offs once taken - [lostSales].)
+            if (foundLately.size > 200) foundLately.entries.removeIf { now - it.value.second > FOUND_COUNTED_MS }
+            foundLately[key] = w.order to (w.foundAtMs.takeIf { it > 0 } ?: now)
             runCatching { Diag.record("zerodha", "${w.what} (${w.order.tradingSymbol}): its lost reply found in the book: order $found") }
             return LostLook.Found(found, w.order.quantity, w.order.triggerPrice).also { it.symbol = w.order.tradingSymbol }
         }

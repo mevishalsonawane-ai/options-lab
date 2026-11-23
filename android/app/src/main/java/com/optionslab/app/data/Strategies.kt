@@ -843,17 +843,27 @@ object Strategies {
                 // Held by another seller, or a square-off's sale sent on it a moment ago ([SquareOffExit.inGap]): nothing taken out or sent,
                 // the leg's stop left resting - refused for now, so the run asks again on its next look. Memory only, never a wait.
                 var claim: SquareOffExit.ExitClaim? = null
+                /** The leg's stop at Zerodha filled ([sid], [st]): that fill IS this exit, booked as this order's. */
+                fun stopFilled(sk: String, sid: String, st: Broker.Fill): StrategyHost.Placed {
+                    b.legStops.remove(sk)
+                    b.owners["kite:$sid"] = ownerLabel(def, order)
+                    Notifier.orderFilled(app, side.name, st.filled, kiteSym, st.avgPrice, "Live", "${def.name} · leg ${order.legId} stop at Zerodha", sid)
+                    return StrategyHost.Placed.Accepted("kite:$sid", "COMPLETE", st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
+                }
                 val id = try {
                     if (exit) {
-                        claim = SquareOffExit.claimExit(ref.exchange, kiteSym, order.product, CLAIM_OWNER)
-                            ?: return@runBlocking StrategyHost.Placed.Refused("${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(ref.exchange, kiteSym, order.product))} " +
-                                "is selling $kiteSym; this exit waits with the leg's stop resting at Zerodha, tried again next look")
-                        if (SquareOffExit.inGap(ref.exchange, kiteSym, order.product)) return@runBlocking StrategyHost.Placed.Refused(
-                            "a square-off sold $kiteSym a moment ago; this exit waits with the leg's stop resting at Zerodha, tried again next look")
                         // 18 Oct: the leg's own stop resting at Zerodha ([restLegStops]) comes out FIRST, confirmed out - else both could
                         // fill. One that already filled IS this exit (its fill is booked as this order's).
                         val sk = b.runs[def.id]?.runId?.let { legKey(it, order.legId) }
                         val rest = sk?.let { b.legStops[it] }
+                        // 23 Nov 2026 (B6 follow-ups, round 2): a leg's stop already filled is booked at once - read only, nothing taken out or
+                        // sold, so no claim on the row is asked for it ([legStopFilled]).
+                        if (sk != null && rest != null) legStopFilled(rest)?.let { st -> return@runBlocking stopFilled(sk, st.orderId, st) }
+                        claim = SquareOffExit.claimExit(ref.exchange, kiteSym, order.product, CLAIM_OWNER)
+                            ?: return@runBlocking StrategyHost.Placed.Refused("refused for now: ${SquareOffExit.claimWords(SquareOffExit.exitClaimedBy(ref.exchange, kiteSym, order.product))} " +
+                                "is selling $kiteSym (the leg's stop stays resting at Zerodha)")
+                        if (SquareOffExit.inGap(ref.exchange, kiteSym, order.product)) return@runBlocking StrategyHost.Placed.Refused(
+                            "refused for now: a square-off sold $kiteSym a moment ago (the leg's stop stays resting at Zerodha)")
                         if (sk != null && rest != null) {
                             // Taken out and confirmed out: an SL order cancelled (one of an earlier session is gone with it), a GTT
                             // deleted (a fired one's own orders cancelled). Its state, and its fill when it filled meanwhile.
@@ -863,10 +873,7 @@ object Strategies {
                             when (out?.first) {
                                 "COMPLETE" -> {
                                     val st = st ?: return@runBlocking StrategyHost.Placed.Refused("the leg's stop at Zerodha could not be read; tried again next look")
-                                    b.legStops.remove(sk)
-                                    b.owners["kite:$sid"] = ownerLabel(def, order)
-                                    Notifier.orderFilled(app, side.name, st.filled, kiteSym, st.avgPrice, "Live", "${def.name} · leg ${order.legId} stop at Zerodha", sid)
-                                    return@runBlocking StrategyHost.Placed.Accepted("kite:$sid", "COMPLETE", st.filled, st.avgPrice.takeIf { it > 0 }, st.message)
+                                    return@runBlocking stopFilled(sk, sid, st)
                                 }
                                 "CANCELLED", "REJECTED" -> {
                                     b.legStops.remove(sk)
@@ -924,7 +931,7 @@ object Strategies {
                     if (exit) {
                         SquareOffExit.saleStarting(kiteSym, order.product)
                         if (SquareOffExit.inGap(ref.exchange, kiteSym, order.product)) return@runBlocking StrategyHost.Placed.Refused(
-                            "a square-off sold $kiteSym a moment ago; nothing sent beside it, tried again next look")
+                            "refused for now: a square-off sold $kiteSym a moment ago; nothing sent beside it")
                     }
                     try {
                         // 19 Nov 2026 (audit batch 2): an automatic entry is marked for the door, which asks "AI trades go live" again.
@@ -1359,9 +1366,21 @@ object Strategies {
         val def = b.defs.firstOrNull { it.id == id } ?: return@withLock "No such strategy."
         val run = b.runs[id] ?: return@withLock "Not running."
         val v = try { venue(run.mode) } catch (e: Exception) { return@withLock "Could not load the contracts: ${e.message}" }
+        val before = run.orders.keys.toSet()
         val next = host.closeLeg(run, def, legId, Market.now(), exec(b, def, v, run.mode, compromised), b.brokerIds.getOrPut(run.runId) { HashMap() }, checkpoint(b, id))
         b.runs[id] = next; finish(b, next); save(b)
-        "Leg $legId exit sent."
+        // 23 Nov 2026 (B6 follow-ups, round 2): Boss's own close is not tried again by itself, so what he is told comes from the leg's own
+        // exit order this close made: refused (a square-off selling its contract, a read that failed, held back while a short it covers
+        // is open) - said so, never "sent"; none made (not open, or its exit already on its way) - said so too.
+        val exits = next.orders.filter { (oid, o) -> oid !in before && o.legId == legId && o.kind != "entry" }.values
+        when {
+            exits.any { it.status != "rejected" && it.status != "pending" } -> "Leg $legId exit sent."
+            exits.isNotEmpty() -> {
+                val why = (exits.firstNotNullOfOrNull { it.rejectReason } ?: "refused").removeSuffix("; tried again next look").removeSuffix("; will retry")
+                "Leg $legId exit not sent: $why. Tap again in a moment, or close it in Kite."
+            }
+            else -> "Leg $legId: no exit was sent - it is not open, or its exit is already on its way. Check it in Kite."
+        }
     }
 
     /**
@@ -1555,6 +1574,19 @@ object Strategies {
     private fun gttOf(v: String): Long? = v.substringBefore('|').takeIf { it.startsWith("gtt:") }?.removePrefix("gtt:")?.toLongOrNull()
 
     private val GTT_GONE = setOf("deleted", "cancelled", "expired", "rejected", "disabled")
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 2): the leg's stop [rest] already filled at Zerodha, read only - nothing cancelled or deleted: an SL
+     * order COMPLETE, or a GTT that fired and whose order is COMPLETE; that order's fill. Null: not filled, or not readable now ([legStopOut]
+     * then takes it out under the row's claim, as before).
+     */
+    private suspend fun legStopFilled(rest: String): Broker.Fill? {
+        val gid = gttOf(rest)
+        val ids = if (gid == null) listOf(rest.substringBefore('|'))
+            else runCatching { Broker.gtts().firstOrNull { it.id == gid } }.getOrNull()?.takeIf { it.status.lowercase() == "triggered" }?.orderIds ?: return null
+        for (oid in ids) runCatching { Broker.orderState(oid) }.getOrNull()?.takeIf { it.status == "COMPLETE" }?.let { return it }
+        return null
+    }
 
     /**
      * The leg's resting stop [rest] taken out and confirmed out: (state, fill) - "COMPLETE" with its fill when it filled meanwhile,

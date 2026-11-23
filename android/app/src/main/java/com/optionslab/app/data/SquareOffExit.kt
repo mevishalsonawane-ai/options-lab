@@ -28,6 +28,11 @@ internal object SquareOffExit {
     /** ... and longer than this, taken over by the square-off (cancelled, then sold). */
     const val TAKEOVER_MS = 120_000L
     /**
+     * 23 Nov 2026 (B6 follow-ups, round 2): a square-off's own LIMIT (the blocked-MARKET fallback, [send]) resting longer than this - its
+     * 10 s chase for a fill and a moment more - is no longer cover: cancelled, confirmed, and sent again.
+     */
+    const val LIMIT_CHASE_MS = 12_000L
+    /**
      * 20 Nov 2026 (minor fixes, item 2: the stuck-exit alert came every minute from 15:15, its key carrying the minutes left): a
      * strategy's stuck exit sale is told once per leg per stuck episode (its order), then reminded at most this often while it lasts.
      */
@@ -86,7 +91,14 @@ internal object SquareOffExit {
     }
 
     /** TEST ONLY. */
-    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear() }
+    internal fun resetForTest(gap: Long = GAP_MS) { placedAt.clear(); clock = System::currentTimeMillis; gapMs = gap; claims.clear(); skips.clear(); soldAt.clear(); chasing.clear() }
+
+    /**
+     * 23 Nov 2026 (B6 follow-ups, round 2): by position row ("EXCHANGE:SYMBOL:PRODUCT"), the square-off passes chasing a blocked MARKET
+     * with a LIMIT now ([send]: placed, its 10 s wait, its cancel) - its LIMIT is never taken for a stale one ([LIMIT_CHASE_MS]) meanwhile.
+     * Memory only.
+     */
+    private val chasing = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     /**
      * 22 Nov 2026 (B6 review, fourth round: an arm's look that began before a square-off sold its row, and reached the row after the gap,
@@ -276,6 +288,8 @@ internal object SquareOffExit {
                      tell: (String, String) -> Unit): Boolean {
         val pass = ExitCoordinator.enter(p.exchange, p.symbol, who)
         var claim: ExitClaim? = null
+        /** 23 Nov 2026 (B6 follow-ups, round 2): this pass chased a blocked MARKET with a LIMIT ([chasing]). */
+        var chased = false
         val rowKey = "${p.exchange}:${p.symbol}:${p.product}"
         val skipKey = "$tag|$rowKey"
         val soldBefore = soldAt[rowKey]
@@ -362,7 +376,18 @@ internal object SquareOffExit {
             // protected MARKET left behind as the price moved), it is cancelled, confirmed out with nothing more filled, and the
             // square-off sells what is held - so a stuck one never carries the position into the settlement.
             fun takeOver(o: Broker.OrderRow) = backstop || restedMs(o) > TAKEOVER_MS
-            val cover = same.filter { it.tag == tag || it.tag in TAGS || (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) ||
+            // 23 Nov 2026 (B6 follow-ups, round 2: a blocked-MARKET exit's LIMIT whose answer was unsure or lost, that showed in the book
+            // later and rested unfilled, counted as cover pass after pass - an expiring low-OI row held into the settlement): a square-off's
+            // own LIMIT ([staleLimit]: the fallback below) past its chase is not cover - cancelled, confirmed out, and the row sold again, as
+            // the fallback's own chase does after its 10 s. Past its chase by Zerodha's stamp, or by this phone's own clock since a
+            // square-off last sent a sale on the row ([soldAt]) - so a stamp that cannot be read, or a phone clock behind Zerodha's, never
+            // keeps one sent in this process cover. (One from before a restart: Zerodha's stamp decides.) Never while a chase is under way
+            // on the row ([chasing]: another square-off's sender holds the row's claim through its chase anyway; this also covers two runs
+            // of one square-off at once).
+            fun staleLimit(o: Broker.OrderRow) = (o.tag == tag || o.tag in TAGS) && o.type.equals("LIMIT", true) && !chasing.containsKey(rowKey) &&
+                (restedMs(o) > LIMIT_CHASE_MS || soldAt[rowKey]?.let { clock() - it > LIMIT_CHASE_MS } == true)
+            val cover = same.filter { ((it.tag == tag || it.tag in TAGS) && !staleLimit(it)) ||
+                (it.tag == com.optionslab.engine.orb.LiveMirror.TAG && !isStop(it)) ||
                 (it.tag == STRATEGY_TAG && !isStop(it) && !takeOver(it)) }
             same.firstOrNull { it.tag == STRATEGY_TAG && !isStop(it) && (restedMs(it) > STRATEGY_COVER_MS || takeOver(it)) }?.let {
                 if (takeOver(it)) {
@@ -520,6 +545,7 @@ internal object SquareOffExit {
                         // filled in 10 s: cancelled, so it never sits as "cover" while the price moves away, and said as a refusal (the next
                         // pass prices it again). A lost reply is counted by the next pass's read of the working orders, as every exit here.
                         if (com.optionslab.engine.orb.LiveMirror.marketBlocked(e.message)) {
+                            if (!chased) { chased = true; chasing.merge(rowKey, 1, Int::plus) }
                             val key = "${p.exchange}:${p.symbol}"
                             val q = runCatching { Broker.quotes(listOf(key), lane = com.optionslab.ira.RateGate.Priority.SAFETY)[key] }.getOrNull()   // B5-D: an exit's read
                             val limit = com.optionslab.engine.orb.LiveMirror.blockedMarketExit(o, q?.last, q?.ask, q?.bid)
@@ -583,6 +609,9 @@ internal object SquareOffExit {
             }
             if (placed.isNotEmpty()) workedOut()
             return placed.isNotEmpty()
-        } finally { claim?.release(); pass.leave() }
+        } finally {
+            if (chased) chasing.computeIfPresent(rowKey) { _, n -> (n - 1).takeIf { it > 0 } }
+            claim?.release(); pass.leave()
+        }
     }
 }

@@ -921,11 +921,15 @@ class StrategiesLiveTest : RobolectricTest() {
 
     // ---- 23 Nov 2026 (B6 follow-ups) ------------------------------------------------------------------------------------------------
 
+    /** The strategy [liveLegWithItsStop] saved and started. */
+    private var legStrategy = 0L
+
     /** A live MIS leg bought at 100, its stop (70) resting at Zerodha as an SL order: that order. */
     private fun liveLegWithItsStop(): FakeKite.Order {
         midSession()
         live()
         val id = saved(Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        legStrategy = id
         startLive(id)
         assertEquals(1, buys().size)
         return kite.orders.values.single { it.type == "SL" && it.working }
@@ -1095,5 +1099,68 @@ class StrategiesLiveTest : RobolectricTest() {
             assertEquals("$owner: $told", selling, told.any { "let it finish" in it })
         }
         assertTrue("nothing sent", kite.placed.isEmpty())
+    }
+
+    /**
+     * Round 2: the leg's stop already filled at Zerodha is booked as the leg's exit even while a square-off holds the row - booking a fill
+     * reads only; nothing is taken out or sold, so no claim is asked for it.
+     */
+    @Test fun aLegsStopFilledAtZerodhaIsBookedWhileASquareOffHoldsTheRow() {
+        val stop = liveLegWithItsStop()
+        kite.fill(stop.id, 70.0)                                           // Zerodha's stop sold the leg
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+        val claim = SquareOffExit.claimExit("NFO", NIFTY_CE, "MIS", "iraalgoexpiry")!!
+        try {
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            assertTrue("nothing sent", exits().isEmpty())
+            val leg = entry(legStrategy).run!!.legs.values.single()
+            assertTrue("booked closed: ${leg.status}", leg.status != "open")
+            assertEquals("booked at the stop's own fill", 70.0, leg.exitAvg!!, 1e-9)
+        } finally { claim.release() }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("nothing sent after either", exits().isEmpty())
+    }
+
+    /**
+     * Round 2: Boss's own Exit on a leg refused for now (a square-off selling its contract) says so - never "exit sent" - as it is not tried
+     * again by itself; tapped again once the row is free, it goes.
+     */
+    @Test fun bossesOwnExitRefusedWhileASquareOffHoldsTheRowSaysSo() {
+        val stop = liveLegWithItsStop()
+        val legId = entry(legStrategy).run!!.legs.values.single().legId
+        val claim = SquareOffExit.claimExit("NFO", NIFTY_CE, "MIS", "iraalgoflat")!!
+        val said = try { runBlocking { Strategies.closeLeg(legStrategy, legId, compromised = false) } } finally { claim.release() }
+        assertTrue(said, said.startsWith("Leg $legId exit not sent: refused for now: the flat-by is selling $NIFTY_CE"))
+        assertTrue(said, said.endsWith("Tap again in a moment, or close it in Kite."))
+        assertTrue("nothing sold", exits().isEmpty())
+        assertEquals("its stop rests", "TRIGGER PENDING", kite.order(stop.id).status)
+        assertEquals("Leg $legId exit sent.", runBlocking { Strategies.closeLeg(legStrategy, legId, compromised = false) })
+        assertEquals(listOf("iraalgostrat" to "75"), exits())
+        assertEquals("CANCELLED", kite.order(stop.id).status)
+        // Closed now: a further tap makes no exit, and says so - never "sent".
+        val again = runBlocking { Strategies.closeLeg(legStrategy, legId, compromised = false) }
+        assertTrue(again, again.startsWith("Leg $legId: no exit was sent"))
+        assertEquals(1, exits().size)
+    }
+
+    /** Round 2: a carried (NRML) leg's GTT stop that fired and filled is booked too while a square-off holds the row - read only, no sale. */
+    @Test fun aLegsFiredGttStopIsBookedWhileASquareOffHoldsTheRow() {
+        live()
+        midSession()
+        val id = saved(Position.B to OptionType.CE)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 66.95, 67.05)
+        val oid = kite.triggerGtt(gid)                                     // its LIMIT under the bid: it fills
+        assertEquals("COMPLETE", kite.order(oid).status)
+        val claim = SquareOffExit.claimExit("NFO", NIFTY_CE, "NRML", "iraalgoexpiry")!!
+        try {
+            runBlocking { Strategies.manageOnly(compromised = false) }
+            runBlocking { Strategies.tickAll(compromised = false) }
+            assertTrue("no sell beside the stop", sells().none { it.form["tag"] != "gtt" })
+            assertFalse("the leg is closed", entry(id).run!!.openLegs().any())
+        } finally { claim.release() }
+        assertEquals("flat, never short", 0, kite.positions["NFO:$NIFTY_CE:NRML"]?.first ?: 0)
     }
 }

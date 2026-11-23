@@ -1247,7 +1247,9 @@ object PineAuto {
         // contract's row claimed ([SquareOffExit.claimExit], as the ORB / Liquidity stops go in), so a square-off never works its sale out from
         // a read made without it; and none while another seller holds the row or a square-off's sale went on it a moment ago
         // ([SquareOffExit.inGap]): asked again on the next check ([stopNotRested]), which rests it on fresh reads. After a square-off's sale on
-        // the row in this process ([SquareOffExit.lastSaleAt]) the first stop too is sized on fresh reads, never above what Zerodha holds.
+        // the row around or after this buy ([SquareOffExit.lastSaleAt]: no older than the buy less the square-offs' gap) the first stop too is
+        // sized on fresh reads, never above what Zerodha holds. (Round 2: never for an older sale - a fresh read can still miss the new
+        // buy's fill, and the stop would be left out with a "holds none" alert; a buy with no time of its own counts as after it.)
         // This book's own exit holding the row (a stop put back after its sale did not go - the scripts' lock: only this call chain) needs
         // no claim of its own. Memory only, never a wait.
         if (!h.live || h.unconfirmed) return h
@@ -1263,7 +1265,7 @@ object PineAuto {
                     else "a square-off sold it a moment ago") + "; asked again on the next check") }
             return h
         }
-        val fresh = capToHeld || SquareOffExit.lastSaleAt("NFO", sym, "MIS") != null
+        val fresh = capToHeld || SquareOffExit.lastSaleAt("NFO", sym, "MIS")?.let { h.at <= 0L || it >= h.at - SquareOffExit.gapMs } == true
         try { return placeLiveStopClaimed(b, item, h, at, fresh) } finally { claim?.release() }
     }
 

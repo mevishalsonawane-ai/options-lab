@@ -1953,4 +1953,39 @@ class PineAutoLiveTest : RobolectricTest() {
         Broker.ageLostForTest(Broker.lostKeys("pineexit:").single(), Broker.LOST_SEARCH_MS + 60_000L)
         assertEquals("past its window: not counted", 0, SquareOffExit.lostPending(ce, "MIS"))
     }
+
+    /**
+     * Round 2: a square-off's sale on the contract long before this buy (the row's sale stamp never expires in memory) does not make the
+     * first stop wait for fresh reads - those can still miss the new buy's fill, and the stop would be left out with a "holds none" alert. It
+     * rests at once from the buy, the positions trailing it.
+     */
+    @Test fun aSquareOffsOldSaleNeverHoldsTheFirstStopBack() {
+        SquareOffExit.resetForTest()                               // the square-offs' gap as it ships
+        SquareOffExit.clock = { 1_000L }                           // a square-off sold this contract long ago, in this process
+        SquareOffExit.noteSold("NFO", ce, "MIS")
+        SquareOffExit.clock = System::currentTimeMillis
+        kite.positionsTrailReads = 1_000                           // Zerodha's positions trail the buy's fill
+        bought()
+        assertEquals("its stop rests at once", 1, stops().size)
+        assertEquals("30", stops().single().form["quantity"])
+        assertNotNull(held()!!.stop)
+        assertTrue(AutomationSupport.alerts().none { "already cover what Zerodha holds" in it })
+    }
+
+    /**
+     * Round 2: a square-off's sale on the contract around this buy (within its gap before it, or after) does: the first stop is sized on
+     * fresh reads, never above what Zerodha holds - none while the positions trail the buy, then the next check rests it.
+     */
+    @Test fun aSquareOffsSaleAroundTheBuySizesTheFirstStopOnFreshReads() {
+        SquareOffExit.resetForTest()                               // the square-offs' gap as it ships
+        SquareOffExit.noteSold("NFO", ce, "MIS")                   // just before the buy (by the same clock)
+        kite.positionsTrailReads = 1_000
+        bought()
+        assertTrue("none above what Zerodha shows held", stops().isEmpty())
+        assertNull(held()!!.stop)
+        kite.positionsCatchUp()
+        pass(52_020.0)
+        assertEquals("rested on the next check", 1, stops().size)
+        assertEquals("30", stops().single().form["quantity"])
+    }
 }

@@ -348,6 +348,97 @@ class ExpirySquareOffTest : RobolectricTest() {
     }
 
     /**
+     * 23 Nov 2026 (B6 follow-ups, round 2): the blocked-MARKET exit's LIMIT answered by Kite's unsure DataException and not in the book
+     * through the door's looks ([Broker.KiteUnsure]): no second search of the square-off's own, the row's gap kept. It shows in the book
+     * later and rests unfilled - before, every later pass counted it as cover and the expiring row was held into the settlement. Past its
+     * 10 s chase ([SquareOffExit.LIMIT_CHASE_MS]) it is cancelled, confirmed out, and the row sold again: flat.
+     */
+    @Test fun aLateUnsureLimitRestingUnfilledIsCancelledAndSoldAgainNeverCover() {
+        SquareOffExit.resetForTest()                                    // the contract's gap on, as it ships
+        var clock = 1_000_000L
+        SquareOffExit.clock = { clock }
+        val t0 = today.atTime(15, 6).atZone(com.optionslab.engine.IST).toInstant()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0, com.optionslab.engine.IST)
+        kite.position(ce, 75, 20.0)
+        kite.nextPlace(reply = Reply.INPUT_EXCEPTION, message = "NRML MARKET orders are blocked for this NIFTY contract due to its open interest (OI) being less than 100 lots.")
+        kite.trailReads = 1_000                                         // the LIMIT: taken, resting, but not in the book's list yet
+        kite.nextPlace(FakeKite.Scenario(reply = Reply.DATA_EXCEPTION_AFTER_ACCEPT, outcome = Outcome.OPEN))
+        pass()
+        assertEquals(listOf("MARKET", "LIMIT"), kite.placed.map { it.form["order_type"] })
+        assertEquals("no second search of its own", 0, Broker.callerSearchesForTest.get())
+        val limit = kite.orders.values.single { it.type == "LIMIT" }
+        assertEquals("resting, unfilled", "OPEN", limit.status)
+        assertTrue("the gap holds the row", SquareOffExit.inGap("NFO", ce, "NRML"))
+        kite.showInBook()                                               // it shows in the book a moment later
+        at(15, 6); pass()
+        assertEquals("nothing within the gap", 2, kite.placed.size)
+        // Past the gap and past its chase: not cover - cancelled, confirmed, and the row sold again.
+        clock += SquareOffExit.GAP_MS
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0.plusSeconds(20), com.optionslab.engine.IST)
+        at(15, 7); pass()
+        assertEquals("CANCELLED", limit.status)
+        assertEquals(listOf("MARKET", "LIMIT", "MARKET"), kite.placed.map { it.form["order_type"] })
+        assertEquals("flat", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+        at(15, 8); pass()
+        assertEquals("nothing more", 3, kite.placed.size)
+    }
+
+    /**
+     * Its own LIMIT still within its chase by both clocks (Zerodha's stamp, and this phone's since a square-off's sale on the row) stays
+     * cover: never cancelled, nothing doubled.
+     */
+    @Test fun aSquareOffsOwnLimitWithinItsChaseStaysCover() {
+        val t0 = today.atTime(15, 6).atZone(com.optionslab.engine.IST).toInstant()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0, com.optionslab.engine.IST)
+        kite.position(ce, 75, 20.0)
+        val lim = kite.restsInKite(ce, "SELL", 75, 9.95, product = "NRML", tag = "iraalgoexpiry")
+        SquareOffExit.noteSold("NFO", ce, "NRML")                       // sent a moment ago, by this phone's clock
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0.plusSeconds(5), com.optionslab.engine.IST)
+        kite.requests.clear()
+        pass()
+        assertTrue("not cancelled", kite.requests.none { it.method == "DELETE" })
+        assertEquals("OPEN", kite.order(lim).status)
+        assertTrue("nothing more sent", kite.placed.isEmpty())
+    }
+
+    /**
+     * The other square-off's LIMIT (the flat-by's) whose Zerodha stamp still reads young - this phone's clock behind Zerodha's, or a stamp
+     * that cannot be read - is past its chase by this phone's own clock since that sale: cancelled, confirmed, and the row sold again.
+     */
+    @Test fun aSquareOffsLimitPastItsChaseByThePhonesClockIsSoldAgain() {
+        SquareOffExit.resetForTest()
+        var clock = 1_000_000L
+        SquareOffExit.clock = { clock }
+        val t0 = today.atTime(15, 6).atZone(com.optionslab.engine.IST).toInstant()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0, com.optionslab.engine.IST)
+        kite.position(ce, 75, 20.0)
+        val lim = kite.restsInKite(ce, "SELL", 75, 9.95, product = "NRML", tag = "iraalgoflat")
+        SquareOffExit.noteSold("NFO", ce, "NRML")
+        clock += SquareOffExit.GAP_MS                                     // 15 s by this phone; Zerodha's stamp: 0 s
+        pass()
+        assertEquals("CANCELLED", kite.order(lim).status)
+        assertEquals(listOf("MARKET" to "75"), kite.placed.map { it.form["order_type"] to it.form["quantity"] })
+        assertEquals("flat", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+    }
+
+    /**
+     * A square-off's LIMIT from before a restart (no sale of a square-off on the row in this process), past its chase by Zerodha's stamp
+     * and part filled: cancelled, confirmed, and only what is still held sold - flat, never short.
+     */
+    @Test fun aPartFilledLimitFromBeforeARestartIsCancelledAndTheRestSold() {
+        val t0 = today.atTime(15, 5).atZone(com.optionslab.engine.IST).toInstant()
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0, com.optionslab.engine.IST)
+        kite.position(ce, 150, 20.0)
+        val lim = kite.restsInKite(ce, "SELL", 150, 9.95, product = "NRML", tag = "iraalgoexpiry")
+        kite.fillPart(lim, 75, 9.95)
+        com.optionslab.app.data.Market.testClock = java.time.Clock.fixed(t0.plusSeconds(60), com.optionslab.engine.IST)
+        pass()
+        assertEquals("CANCELLED", kite.order(lim).status)
+        assertEquals(listOf("MARKET" to "75"), kite.placed.map { it.form["order_type"] to it.form["quantity"] })
+        assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$ce:NRML").first)
+    }
+
+    /**
      * 19 Nov 2026 (final review, item 5): the blocked-MARKET exit's LIMIT confirmed cancelled unfilled leaves no gap - nothing of it is
      * out, so the next pass tries again at once (near 15:05 a 15 s hold is a long time).
      */
