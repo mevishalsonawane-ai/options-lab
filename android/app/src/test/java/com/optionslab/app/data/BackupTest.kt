@@ -813,4 +813,36 @@ class BackupTest : RobolectricTest() {
         assertTrue("a fresh phone", Broker.entriesQuiet())
         assertTrue("the restore waits past the settle window", Backup.entryWaitMs > Broker.ENTRY_SETTLE_MS)
     }
+
+
+    /**
+     * 23 Nov 2026 (B6-E, with B6-A's book): the arms' book's own stop-cancel marks (ownCancels, exitMarks, sweepCancels) are this phone's
+     * after a restore - never dropped, and never the backup's stale ones (read as the app's own, a cancel Boss made in Kite would be put back).
+     */
+    @Test fun aRestoreKeepsThisPhonesStopCancelMarksAndNeverTheBackups() {
+        val now = System.currentTimeMillis()
+        val t = today.toString()
+        fun marks(own: String, exit: String, sweep: String) = book().put("ownCancels", JSONObject().put(own, now))
+            .put("exitMarks", JSONObject().put(exit, now)).put("sweepCancels", JSONObject().put(sweep, JSONObject().put("what", "R51|NIFTY").put("day", t)))
+        Vault.writeFile(orbFile(), marks("here-own", "here-exit", "here-sweep").toString().toByteArray())
+        Backup.restore(context, backupWith(null, orb = marks("old-own", "old-exit", "old-sweep")))
+        var o = JSONObject(String(Vault.readFile(orbFile())!!))
+        assertEquals(listOf("here-own"), o.getJSONObject("ownCancels").keys().asSequence().toList())
+        assertEquals(listOf("here-exit"), o.getJSONObject("exitMarks").keys().asSequence().toList())
+        assertEquals(listOf("here-sweep"), o.getJSONObject("sweepCancels").keys().asSequence().toList())
+        // The backup has no arms' book and this phone no live trade: this phone's marks are still kept (its own book with only them).
+        Vault.thaw()
+        Vault.writeFile(orbFile(), marks("here-own", "here-exit", "here-sweep").toString().toByteArray())
+        Backup.restore(context, backupWith(null))
+        o = JSONObject(String(Vault.readFile(orbFile())!!))
+        assertEquals(now, o.getJSONObject("ownCancels").getLong("here-own"))
+        assertEquals(0, o.getJSONArray("positions").length())
+        assertEquals(0, o.getJSONObject("armed").length())
+        // None on this phone: none of the backup's come in.
+        Vault.thaw()
+        Vault.writeFile(orbFile(), book().toString().toByteArray())
+        Backup.restore(context, backupWith(null, orb = marks("old-own", "old-exit", "old-sweep")))
+        o = JSONObject(String(Vault.readFile(orbFile())!!))
+        for (k in Backup.STOP_MARKS) assertFalse("$k from the backup", o.has(k))
+    }
 }

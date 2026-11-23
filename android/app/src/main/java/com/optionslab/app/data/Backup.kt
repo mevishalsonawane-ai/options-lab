@@ -656,16 +656,32 @@ object Backup {
      * live trades: this phone's own book with only those, disarmed (its parkings and one-time changes as they are). Null: no book to write
      * (none in the backup, no live trade here - removed, as before); a backup's book not in the expected shape with none here is written
      * as it is (the disarm flag alone disarms it at the next start, as before).
+     * 23 Nov 2026 (B6-E, with B6-A's book): the app's own stop-cancel marks ([STOP_MARKS]: its own cancels, the exits' marks and the found
+     * lost stops' pending cancels) are always this phone's - the backup's are dropped (another time's, or another phone's orders: read as
+     * the app's own, a cancel Boss made in Kite would be put back). This phone's with nothing else to keep: its own book with only those.
      */
     internal fun orbRestored(bytes: ByteArray?, lotsHere: Int?, here: JSONObject?, notes: MutableList<String> = ArrayList()): ByteArray? {
         val live = closedLive(here)
         val theirs = bytes?.let { runCatching { JSONObject(String(it, Charsets.UTF_8)) }.getOrNull() }
+        val marksHere = STOP_MARKS.any { here?.optJSONObject(it)?.length()?.let { n -> n > 0 } == true }
         val out = when {
             theirs != null -> withoutOpenLive(withClosedLive(liquidityLots(disarmBook(theirs), lotsHere), live), notes)
-            live.isNotEmpty() -> disarmBook(JSONObject(here.toString())).put("positions", org.json.JSONArray(live))
+            live.isNotEmpty() || marksHere -> disarmBook(JSONObject(here.toString())).put("positions", org.json.JSONArray(live))
             else -> return bytes
         }
-        return out.toString().toByteArray(Charsets.UTF_8)
+        return withStopMarksHere(out, here).toString().toByteArray(Charsets.UTF_8)
+    }
+
+    /** 23 Nov 2026 (B6-E): the arms' book's keys for the app's own stop-cancel marks (OrbArms: ownCancels, exitMarks, sweepCancels). */
+    internal val STOP_MARKS = listOf("ownCancels", "exitMarks", "sweepCancels")
+
+    /** [o] (the book to write) with this phone's stop-cancel marks ([here]'s) and none of the backup's. */
+    internal fun withStopMarksHere(o: JSONObject, here: JSONObject?): JSONObject {
+        for (k in STOP_MARKS) {
+            o.remove(k)
+            here?.optJSONObject(k)?.takeIf { it.length() > 0 }?.let { o.put(k, JSONObject(it.toString())) }
+        }
+        return o
     }
 
     /**
