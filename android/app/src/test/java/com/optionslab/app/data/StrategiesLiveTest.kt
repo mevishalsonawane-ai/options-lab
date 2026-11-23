@@ -1283,6 +1283,9 @@ class StrategiesLiveTest : RobolectricTest() {
     /** One whose order Boss cancelled himself in Kite (blank words, in market hours) is his: never put back (WHO CANCELLED A STOP). */
     @Test fun aFiredGttStopBossCancelledIsNeverPutBack() {
         assertEquals(emptyList<Int>(), firedGttEndedUnfilled(""))
+        // (B6-H round 2: said as the GTT's own order, never "its SL order".)
+        val said = runBlocking { Strategies.log() }.single { it.kind == "stop_cancelled_by_you" }.message
+        assertTrue(said, said.contains("the GTT's order was cancelled") && !said.contains("SL order"))
     }
 
     /**
@@ -1568,8 +1571,8 @@ class StrategiesLiveTest : RobolectricTest() {
             assertEquals("outside market hours: Zerodha's", Strategies.StopEnd.ZERODHA, Strategies.stopEndOf(false, "CANCELLED", "", afterClose))
             assertEquals(Strategies.StopEnd.BOSS, Strategies.stopEndOf(false, "CANCELLED", "", inHours))
             assertEquals("the app's own at any hour", Strategies.StopEnd.APP, Strategies.stopEndOf(true, "CANCELLED", "", afterClose))
-            // An MCX contract by MCX's own hours (now), never NSE's.
-            assertEquals(if (McxMarket.isOpen()) Strategies.StopEnd.BOSS else Strategies.StopEnd.ZERODHA,
+            // An MCX contract by MCX's own hours (at the end's own time), never NSE's.
+            assertEquals(if (McxMarket.calendarQuick().isOpen(afterClose)) Strategies.StopEnd.BOSS else Strategies.StopEnd.ZERODHA,
                 Strategies.stopEndOf(false, "CANCELLED", "", afterClose, "MCX"))
         } finally { Market.testOrdersAnyTime = true }
         assertEquals(Strategies.StopEnd.BOSS, Strategies.gttEndOf(false, "deleted"))
@@ -1584,8 +1587,8 @@ class StrategiesLiveTest : RobolectricTest() {
     }
 
     /**
-     * Item 1: a leg's SL order Boss cancelled himself in Kite (in market hours, blank words, no mark of the app's own) is never put back -
-     * he is told once - and the run watches its level itself: under it, the leg is sold once, at market.
+     * Item 1: a leg's SL order Boss cancelled themselves in Kite (in market hours, blank words, no mark of the app's own) is never put back -
+     * they are told once - and the run watches its level itself: under it, the leg is sold once, at market.
      */
     @Test fun aLegsStopBossCancelledInKiteIsNeverPutBackAndTheRunSellsAtItsLevel() {
         val stop = liveLegWithItsStop()
@@ -1595,7 +1598,7 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("one stop ever", 1, restingStops().size)
         assertEquals("told once", 1, logged("stop_cancelled_by_you").size)
         assertTrue(logged("stop_cancelled_by_you").single().message.contains("looks cancelled by you in Kite"))
-        // Restarted: still his - nothing put back, not told again.
+        // Restarted: still theirs - nothing put back, not told again.
         Strategies.forgetCacheForTest()
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertTrue(workingStops().isEmpty())
@@ -1607,7 +1610,7 @@ class StrategiesLiveTest : RobolectricTest() {
         assertEquals("flat, never short", 0, kite.positions.getValue("NFO:$NIFTY_CE:MIS").first)
     }
 
-    /** Item 1: one Zerodha ended in its own words (the exchange, its risk system) is put back: a stop rests again, Boss not told it was his. */
+    /** Item 1: one Zerodha ended in its own words (the exchange, its risk system) is put back: a stop rests again, Boss not told it was theirs. */
     @Test fun aLegsStopZerodhaCancelledIsPutBack() {
         val stop = liveLegWithItsStop()
         kite.order(stop.id).apply { status = "CANCELLED"; message = "Cancelled by the exchange (RMS)" }
@@ -1628,8 +1631,11 @@ class StrategiesLiveTest : RobolectricTest() {
         val stop = liveLegWithItsStop()
         val legId = leg(legStrategy).legId
         kite.down += "/orders/${stop.id}"                                  // its own history unreadable: the cancel cannot be confirmed
+        // (B6-H round 2: the book's queued write made on the caller's thread, so the file shows what was queued; read BEFORE the fake handles
+        // the cancel - what the phone had saved by the time the cancel reached Zerodha, never a timing.)
+        Strategies.writeInlineForTest = true
         var markedOnDisk = false
-        kite.afterNext("/orders/regular/${stop.id}") {
+        kite.beforeNext("/orders/regular/${stop.id}") {
             val f = Strategies.filesForErase().first()
             val o = org.json.JSONObject(String(com.optionslab.app.security.Vault.readFileSteady(f)!!, Charsets.UTF_8))
             markedOnDisk = o.optJSONObject("ownCancels")?.has(stop.id) == true
@@ -1637,7 +1643,7 @@ class StrategiesLiveTest : RobolectricTest() {
         val said = runBlocking { Strategies.closeLeg(legStrategy, legId, compromised = false) }
         assertTrue(said, said.startsWith("Leg $legId exit not sent"))
         assertEquals("cancelled at Zerodha", "CANCELLED", kite.order(stop.id).status)
-        assertTrue("the mark was in the book on disk when the cancel went", markedOnDisk)
+        assertTrue("the mark was in the book on disk before the cancel reached Zerodha", markedOnDisk)
         assertTrue("nothing sold", exits().isEmpty())
         kite.down -= "/orders/${stop.id}"
         AutomationSupport.reloadFromDisk(Strategies)                       // as after a restart
@@ -1649,7 +1655,7 @@ class StrategiesLiveTest : RobolectricTest() {
 
     /**
      * Item 1: an own-cancel mark whose cancel never took ends once a fresh read still shows the stop working [Strategies.OWN_CANCEL_RECHECK_MS]
-     * after it - never before - so Boss's own cancel of it in Kite afterwards is his: not put back.
+     * after it - never before - so Boss's own cancel of it in Kite afterwards is theirs: not put back.
      */
     @Test fun anOwnCancelMarkEndsWhenItsStopIsStillWorkingAndBossesLaterCancelIsHis() {
         val stop = liveLegWithItsStop()
@@ -1665,7 +1671,7 @@ class StrategiesLiveTest : RobolectricTest() {
         assertFalse("ended: still working well after the mark", runBlocking { Strategies.ownCancelForTest(stop.id) })
         kite.order(stop.id).status = "CANCELLED"                           // now Boss cancels it in Kite
         runBlocking { Strategies.manageOnly(compromised = false) }
-        assertTrue("his: never put back", workingStops().isEmpty())
+        assertTrue("theirs: never put back", workingStops().isEmpty())
         assertEquals(1, logged("stop_cancelled_by_you").size)
     }
 
@@ -1691,7 +1697,7 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue(logged("stop_cancelled_by_you").isEmpty())
     }
 
-    /** Item 1: one Boss cancels after a part of it sold: that part booked, the rest of the leg gets no stop again, and he is told once. */
+    /** Item 1: one Boss cancels after a part of it sold: that part booked, the rest of the leg gets no stop again, and they are told once. */
     @Test fun aStopBossCancelsAfterAPartSoldBooksThePartAndRestsNoStopForTheRest() {
         val id = twoLotLeg()
         startLive(id)
@@ -1710,8 +1716,8 @@ class StrategiesLiveTest : RobolectricTest() {
     }
 
     /**
-     * Item 1: a stop Boss cancelled after a part of it sold, on a leg he then closed by hand too (Zerodha holds none): that part is booked by
-     * the stop checks, with no note that the stop was his - a flat leg needs none.
+     * Item 1: a stop Boss cancelled after a part of it sold, on a leg they then closed by hand too (Zerodha holds none): that part is booked by
+     * the stop checks, with no note that the stop was theirs - a flat leg needs none.
      */
     @Test fun aPartFilledStopBossCancelledOnALegNoLongerHeldIsBookedWithoutANote() {
         val id = twoLotLeg()
@@ -1769,7 +1775,7 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue("nothing sold", sells().none { it.form["tag"] == "iraalgostrat" })
     }
 
-    /** Item 1: a stop Boss cancelled on a leg no longer held (he closed it too) is simply taken off the books: no note, no stop, nothing sold. */
+    /** Item 1: a stop Boss cancelled on a leg no longer held (they closed it too) is simply taken off the books: no note, no stop, nothing sold. */
     @Test fun aStopCancelledOnALegNoLongerHeldIsDroppedWithoutANote() {
         val stop = liveLegWithItsStop()
         kite.position(NIFTY_CE, 0, 0.0, product = "MIS")
@@ -1793,6 +1799,7 @@ class StrategiesLiveTest : RobolectricTest() {
         kite.quote("NFO:$NIFTY_CE", 67.0, 60.0, 67.05)                     // the bid under its limit: its order rests, unfilled
         val oid = kite.triggerGtt(gid)
         runBlocking { Strategies.ageLegStopsForTest(1) }                    // the GTT was placed the day before
+        gttFiredAt(gid, dayBefore().atTime(14, 0))                         // and fired that day (Zerodha's own time of its order)
         kite.orders.remove(oid)                                            // that day's order: gone from today's book and from Kite
         kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
         runBlocking { Strategies.manageOnly(compromised = false) }
@@ -1822,6 +1829,7 @@ class StrategiesLiveTest : RobolectricTest() {
         kite.quote("NFO:$NIFTY_CE", 67.0, 60.0, 67.05)
         val oid = kite.triggerGtt(gid)
         runBlocking { Strategies.ageLegStopsForTest(1) }
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
         kite.hideFromBook(oid, 1_000)
         kite.down += "/orders/$oid"                                        // its own history: no answer
         kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
@@ -1844,6 +1852,7 @@ class StrategiesLiveTest : RobolectricTest() {
         val oid = kite.triggerGtt(gid)                                     // its LIMIT under the bid: it fills
         assertEquals("COMPLETE", kite.order(oid).status)
         runBlocking { Strategies.ageLegStopsForTest(1) }
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
         kite.hideFromBook(oid, 1_000)                                      // not in today's book; its own history still answers
         kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
         runBlocking { Strategies.manageOnly(compromised = false) }
@@ -1864,7 +1873,7 @@ class StrategiesLiveTest : RobolectricTest() {
         startLive(id)
         val stop = workingStops().single()
         assertEquals("room for one lot only", 75, stop.qty)
-        kite.order(other).status = "CANCELLED"                             // Boss takes his own sale back
+        kite.order(other).status = "CANCELLED"                             // Boss takes their own sale back
         runBlocking { Strategies.manageOnly(compromised = false) }
         assertEquals("grown to the whole leg", 150, kite.order(stop.id).qty)
         assertTrue(kite.order(stop.id).working)
@@ -1939,5 +1948,336 @@ class StrategiesLiveTest : RobolectricTest() {
         assertTrue(all.joinToString { it.message }, all.none { it.kind == "leg_close_manual" || "exit_leg_manual" in it.message })
         assertEquals("Test basket · leg ${leg(legStrategy).legId} stop", runBlocking { Strategies.owners() }["kite:${stop.id}"])
         assertTrue(exits().isEmpty())
+    }
+
+    // ---- 23 Nov 2026 (B6-H round 2) ---------------------------------------------------------------------------------------------------
+
+    /** The GTT [gid]'s fired order's result time set to [at] (Zerodha's own time of the order it placed). */
+    private fun gttFiredAt(gid: Long, at: java.time.LocalDateTime) {
+        kite.gtts.getValue(gid).getJSONArray("orders").getJSONObject(0).getJSONObject("result")
+            .put("timestamp", at.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+    }
+
+    /** The trading day before today. */
+    private fun dayBefore(): java.time.LocalDate { var d = Market.today().minusDays(1); while (!Market.isTradingDay(d)) d = d.minusDays(1); return d }
+
+    /** Item 1: a stop Boss made smaller themselves in Kite is kept at their size - never grown back - and its size is kept as the leg's stop's. */
+    @Test fun aStopBossResizedInKiteIsNeverGrownBack() {
+        val id = twoLotLeg()
+        startLive(id)
+        val stop = workingStops().single()
+        assertEquals(150, stop.qty)
+        kite.order(stop.id).qty = 75                                       // Boss cuts it to one lot in Kite
+        val puts = { kite.requests.count { it.method == "PUT" && it.path.endsWith("/${stop.id}") } }
+        repeat(3) { runBlocking { Strategies.manageOnly(compromised = false) } }
+        assertEquals("their size kept", 75, kite.order(stop.id).qty)
+        assertEquals("never modified back", 0, puts())
+        assertEquals("one stop", 1, workingStops().size)
+        assertEquals("told once", 1, logged("stop_resized_by_you").size)
+        assertTrue(logged("stop_grown").isEmpty())
+        // Restarted: still their size, still not grown.
+        Strategies.forgetCacheForTest()
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(75, kite.order(stop.id).qty)
+        assertEquals(0, puts())
+    }
+
+    /**
+     * Item 3: Boss cancels the leg's SL in Kite and, before the next stop check, the run's own exit is due and is refused after it found the
+     * stop gone: the stop's end is judged then - Boss's - so no later look rests it again; they are told once.
+     */
+    @Test fun aStopBossCancelledBeforeTheRunsExitIsJudgedAndNeverRestedAgain() {
+        val stop = liveLegWithItsStop()
+        kite.order(stop.id).status = "CANCELLED"                           // Boss cancels it in Kite
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)                    // under the stop: the run's own exit is due
+        kite.nextPlace(reply = FakeKite.Reply.INPUT_EXCEPTION, message = "Quantity exceeds the freeze limit.")   // and its sale is refused
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("its sale tried once, refused", 1, exits().size)
+        assertEquals("nothing sold", 75, kite.positions.getValue("NFO:$NIFTY_CE:MIS").first)
+        assertEquals("judged theirs at once", 1, logged("stop_cancelled_by_you").size)
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)                    // back above it: a stop could rest again
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) } }
+        assertTrue("never rested again", workingStops().isEmpty())
+        assertEquals(1, logged("stop_cancelled_by_you").size)
+    }
+
+    /** Item 4a: a GTT placed the day before that fired TODAY (its own time) is never taken for an earlier day's - however long its order is unknown. */
+    @Test fun aGttFiredTodayByItsOwnTimeIsNeverTakenForAnEarlierDays() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 60.0, 67.05)
+        val oid = kite.triggerGtt(gid)                                     // fired now: its result's time is today's
+        runBlocking { Strategies.ageLegStopsForTest(1) }                    // though the stop was placed the day before
+        kite.orders.remove(oid)
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        repeat(3) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.EARLY_UNREAD_AGREE_MS) }
+        assertTrue("never let go", logged("stop_fired_earlier").isEmpty())
+        assertEquals("no stop beside its order", listOf(gid), kite.gtts.keys.toList())
+        assertTrue(sells().none { it.form["tag"] == "iraalgostrat" })
+    }
+
+    /** Item 4a: ... and one whose own time is an earlier day's is judged so, whatever day the stop's record says. */
+    @Test fun aGttWhoseOwnFireTimeIsAnEarlierDayIsJudgedByIt() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 60.0, 67.05)
+        val oid = kite.triggerGtt(gid)
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
+        kite.orders.remove(oid)                                            // Kite: "no such order"
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("let go, told once", 1, logged("stop_fired_earlier").size)
+    }
+
+    /** Item 4a: Kite's 500 GeneralException for that order is no answer: not let go on two looks, only after the long wait. */
+    @Test fun aGeneralExceptionForTheOrderIsNoAnswer() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 60.0, 67.05)
+        val oid = kite.triggerGtt(gid)
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
+        kite.hideFromBook(oid, 1_000)
+        kite.kiteErrors["/orders/$oid"] = 500 to "GeneralException"
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        repeat(3) { runBlocking { Strategies.manageOnly(compromised = false) }; later(Strategies.GTT_BARE_AGREE_MS + 1_000) }
+        assertTrue("not on a few looks", logged("stop_fired_earlier").isEmpty())
+        later(Strategies.EARLY_UNREAD_AGREE_MS)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("after the long wait", 1, logged("stop_fired_earlier").size)
+    }
+
+    /** Item 4b: a count begun while the order was unknown ends once the order shows again - a later unknown spell counts from its own start. */
+    @Test fun anEarlierDaysCountEndsWhenTheGttIsNoLongerOne() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 60.0, 67.05)
+        val oid = kite.triggerGtt(gid)
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        val order = kite.orders.remove(oid)!!
+        runBlocking { Strategies.manageOnly(compromised = false) }        // the count starts
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        kite.orders[oid] = order                                           // the order shows in today's book: no longer such a one
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        kite.orders.remove(oid)                                            // unknown again
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("a fresh count, not the old one", logged("stop_fired_earlier").isEmpty())
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(1, logged("stop_fired_earlier").size)
+    }
+
+    /** An earlier day's GTT stop that sold the whole leg, its order unknown now and nothing held ([zeroPrice]: its order's price not given): (strategy, its limit). */
+    private fun earlierDaysGttSoldAll(zeroPrice: Boolean): Pair<Long, Double> {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        kite.quote("NFO:$NIFTY_CE", 67.0, 66.95, 67.05)
+        val oid = kite.triggerGtt(gid)                                     // its LIMIT under the bid: it filled, nothing held now
+        assertEquals(0, kite.positions.getValue("NFO:$NIFTY_CE:NRML").first)
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
+        val limit = kite.gtts.getValue(gid).getJSONArray("orders").getJSONObject(0).getDouble("price")
+        assertEquals("it filled at its limit", limit, kite.order(oid).avg, 1e-9)
+        if (zeroPrice) kite.gtts.getValue(gid).getJSONArray("orders").getJSONObject(0).put("price", 0.0)
+        kite.orders.remove(oid)
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }        // (its own follow-up read agrees nothing is held)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        return id to limit
+    }
+
+    /** Item 4c: ... is closed in the run as sold by that stop at its order's limit price, said so - never refused for ever, nothing sold. */
+    @Test fun anEarlierDaysGttThatSoldTheLegIsBookedAtItsLimitPrice() {
+        val (id, limit) = earlierDaysGttSoldAll(zeroPrice = false)
+        val l = leg(id)
+        assertEquals("closed in the run", 0, l.qty)
+        assertEquals((limit - 100.0) * 150, l.realizedPnl, 1e-6)
+        val said = logged("stop_fired_earlier").single()
+        assertTrue(said.message, said.message.contains("the GTT order's limit price - neither its fill nor that price is confirmed"))
+        assertEquals("an alert to check", "critical", said.severity)
+        assertTrue(sells().none { it.form["tag"] == "iraalgostrat" })
+    }
+
+    /** Item 4c: ... with no price known, closed as sold at an UNKNOWN price - no P&L booked for it, flagged, Boss told - never a made-up price. */
+    @Test fun anEarlierDaysGttWithNoPriceIsClosedFlaggedAtAnUnknownPrice() {
+        val (id, _) = earlierDaysGttSoldAll(zeroPrice = true)
+        val l = leg(id)
+        assertEquals("closed in the run", 0, l.qty)
+        assertNull("no price made up", l.exitAvg)
+        assertEquals(0.0, l.realizedPnl, 1e-9)
+        val said = logged("stop_fired_earlier").single()
+        assertEquals("critical", said.severity)
+        assertTrue(said.message, said.message.contains("UNKNOWN price"))
+        assertTrue(sells().none { it.form["tag"] == "iraalgostrat" })
+    }
+
+    /** Nit: the own-cancel marks last two trading days - a Friday's to Monday and Tuesday - never a day's clock. */
+    @Test fun ownCancelMarksAreKeptByTradingDays() {
+        var mon = Market.today()
+        while (!(mon.dayOfWeek == java.time.DayOfWeek.MONDAY && Market.isTradingDay(mon) && Market.isTradingDay(mon.minusDays(3)) && Market.isTradingDay(mon.minusDays(4)) &&
+                Market.isTradingDay(mon.plusDays(1)) && Market.isTradingDay(mon.plusDays(2)))) mon = mon.plusDays(1)
+        assertEquals("Monday keeps from Thursday on", mon.minusDays(4), Strategies.keepMarksFrom(mon))
+        fun at(d: java.time.LocalDate) { Market.testClock = java.time.Clock.fixed(d.atTime(11, 0).atZone(com.optionslab.engine.IST).toInstant(), com.optionslab.engine.IST) }
+        at(mon.minusDays(3))                                               // Friday
+        Strategies.markOwnCancels(listOf("880000001"))
+        runBlocking { Strategies.tagOwner("kite:x", "x") }                 // (a save: the mark goes in the book)
+        at(mon)
+        runBlocking { Strategies.tagOwner("kite:x", "x") }
+        assertTrue("Friday's mark on Monday", runBlocking { Strategies.ownCancelForTest("880000001") })
+        at(mon.plusDays(2))                                                // Wednesday: three trading days on
+        runBlocking { Strategies.tagOwner("kite:x", "y") }
+        assertFalse(runBlocking { Strategies.ownCancelForTest("880000001") })
+    }
+
+    /** Nit: the square-offs' marks are bounded by dropping the oldest: the newest is still taken back, the oldest no longer is. */
+    @Test fun theSquareOffsMarksDropTheOldestFirst() {
+        val ids = (0..500).map { "77000$it" }
+        Strategies.markOwnCancels(ids)
+        Strategies.unmarkOwnCancels(listOf(ids.last()))
+        assertFalse("the newest taken back", runBlocking { Strategies.ownCancelForTest(ids.last()) })
+        Strategies.unmarkOwnCancels(listOf(ids.first()))
+        assertTrue("the oldest no longer known as a square-off's: kept", runBlocking { Strategies.ownCancelForTest(ids.first()) })
+        assertTrue(runBlocking { Strategies.ownCancelForTest(ids[250]) })
+    }
+
+    /** Nit: an MCX contract's stop end judged at Zerodha's own time of it, by MCX's hours. */
+    @Test fun anMcxStopEndIsJudgedAtItsOwnTimeByMcxHours() {
+        var d = Market.today()
+        while (McxMarket.calendarQuick().window(d) == null || d.dayOfWeek == java.time.DayOfWeek.FRIDAY) d = d.plusDays(1)
+        Market.testOrdersAnyTime = false
+        try {
+            assertEquals("20:00, MCX open, NSE shut: Boss's", Strategies.StopEnd.BOSS, Strategies.stopEndOf(false, "CANCELLED", "", d.atTime(20, 0), "MCX"))
+            assertEquals("02:00, MCX shut: Zerodha's", Strategies.StopEnd.ZERODHA, Strategies.stopEndOf(false, "CANCELLED", "", d.plusDays(1).atTime(2, 0), "MCX"))
+            assertEquals("NSE at 20:00: Zerodha's", Strategies.StopEnd.ZERODHA, Strategies.stopEndOf(false, "CANCELLED", "", d.atTime(20, 0), "NFO"))
+        } finally { Market.testOrdersAnyTime = true }
+    }
+
+    /** Nit: a trail never moves the leg's stop while Boss is exiting the contract from the app - their exit may have made it a LIMIT sale. */
+    @Test fun aTrailNeverTurnsBossesLimitExitBackIntoAStop() {
+        midSession()
+        live()
+        val d = AutomationSupport.strategy("Test basket", Position.B to OptionType.CE, product = com.optionslab.engine.strategy.Product.MIS)
+        assertNull(runBlocking { Strategies.save(d.copy(legs = d.legs.map { it.copy(trail = com.optionslab.engine.strategy.Trail(10.0, 5.0)) })) })
+        val id = runBlocking { Strategies.all().single { it.def.name == "Test basket" }.def.id }
+        runBlocking { Strategies.setLiveEnabled(id, true) }
+        legStrategy = id
+        startLive(id)
+        val stop = workingStops().single()
+        val trigger0 = stop.trigger
+        ArmLive.handsOff("NFO", NIFTY_CE)                                  // Boss exits it from the app: their exit made the stop a LIMIT sale
+        kite.order(stop.id).apply { type = "LIMIT"; price = 119.0; status = "OPEN" }
+        kite.quote("NFO:$NIFTY_CE", 125.0, 124.95, 125.05)                 // up: the leg's trail moves its stop
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue("the trail moved the leg's own level", (leg(id).effectiveSl ?: 0.0) > trigger0)
+        assertEquals("their sale left a LIMIT", "LIMIT", kite.order(stop.id).type)
+        assertTrue("never modified", kite.requests.none { it.method == "PUT" && it.path.endsWith("/${stop.id}") })
+        ArmLive.handsBack("NFO", NIFTY_CE)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("nor once they are done: it is no longer a stop", "LIMIT", kite.order(stop.id).type)
+    }
+
+    /** Item 1 (review): a stop the app's own paths resized - a sweep that made it a LIMIT sale, Boss's exit from the app - is never taken for their cut. */
+    @Test fun aStopResizedByTheAppsOwnPathsIsNeverTakenForBossesCut() {
+        val id = twoLotLeg()
+        startLive(id)
+        val stop = workingStops().single()
+        ArmLive.handsOff("NFO", NIFTY_CE)                                  // Boss's exit from the app takes it in hand
+        kite.order(stop.id).qty = 75
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        ArmLive.handsBack("NFO", NIFTY_CE)
+        kite.order(stop.id).apply { type = "LIMIT"; price = 69.0; status = "OPEN" }   // a sweep turned it into a LIMIT sale
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertTrue(logged("stop_resized_by_you").isEmpty())
+    }
+
+    /** Item 1 (review): the app's own shrink whose answer was lost, that did go through, is recorded at its size - never taken for Boss's cut. */
+    @Test fun anAppShrinkWhoseAnswerWasLostIsNeverTakenForBossesCut() {
+        val id = twoLotLeg()
+        startLive(id)
+        val stop = workingStops().single()
+        kite.position(NIFTY_CE, 75, 100.0, product = "MIS")               // part sold by hand: the stop shrinks
+        kite.drop += "/orders/regular/${stop.id}"                          // its modify's answer lost
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        kite.drop.clear()
+        kite.order(stop.id).qty = 75                                       // it had gone through after all
+        repeat(2) { runBlocking { Strategies.manageOnly(compromised = false) } }
+        assertTrue(logged("stop_resized_by_you").isEmpty())
+        assertEquals(75, kite.order(stop.id).qty)
+    }
+
+    /**
+     * Item 3 (review): Boss's cancel found by an exit that then sells the leg is still noted theirs (that sale could yet be refused at the
+     * exchange: no stop would come back), said as the run's exit selling the leg - sold once.
+     */
+    @Test fun aStopBossCancelledFoundByAnExitThatSellsIsNotedAsSelling() {
+        val stop = liveLegWithItsStop()
+        kite.order(stop.id).status = "CANCELLED"
+        kite.quote("NFO:$NIFTY_CE", 60.0, 59.95, 60.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(listOf("iraalgostrat" to "75"), exits())
+        assertEquals("flat", 0, kite.positions.getValue("NFO:$NIFTY_CE:MIS").first)
+        val said = logged("stop_cancelled_by_you").single().message
+        assertTrue(said, said.contains("the run's own exit is selling the leg now"))
+    }
+
+    /**
+     * Item 4c (review): an earlier day's GTT that covered fewer lots than the leg (Boss's own sale covered the rest, and sold it): only its own
+     * lot is booked at its price - the rest at no price, flagged - never the whole leg at the GTT's price.
+     */
+    @Test fun anEarlierDaysGttForFewerLotsBooksOnlyItsOwnAtItsPrice() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        val other = kite.restsInKite(NIFTY_CE, "SELL", 75, 150.0, product = "NRML")
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        assertEquals(75, gttQty(kite.gtts.getValue(gid)))
+        kite.quote("NFO:$NIFTY_CE", 67.0, 66.95, 67.05)
+        val oid = kite.triggerGtt(gid)                                     // its lot sold at its limit
+        kite.fill(other, 150.0)                                            // and Boss's own sale sold the other
+        assertEquals(0, kite.positions.getValue("NFO:$NIFTY_CE:NRML").first)
+        val limit = kite.gtts.getValue(gid).getJSONArray("orders").getJSONObject(0).getDouble("price")
+        gttFiredAt(gid, dayBefore().atTime(14, 0))
+        kite.orders.remove(oid)
+        kite.quote("NFO:$NIFTY_CE", 72.0, 71.95, 72.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        later(Strategies.GTT_BARE_AGREE_MS + 1_000)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val l = leg(id)
+        assertEquals("closed in the run", 0, l.qty)
+        assertEquals("only the GTT's own lot at its price", (limit - 100.0) * 75, l.realizedPnl, 1e-6)
+        val said = logged("stop_fired_earlier").single()
+        assertEquals("critical", said.severity)
+        assertTrue(said.message, said.message.contains("SELL 75 $NIFTY_CE at") && said.message.contains("the other 75 at an UNKNOWN price"))
+    }
+
+    /** Item 1 (review): a GTT stop's shrink that could not even be tried (no price at that moment) is tried again - never recorded as done. */
+    @Test fun aGttShrinkNotTriedIsTriedAgainNeverRecordedDone() {
+        val id = twoLotLeg(com.optionslab.engine.strategy.Product.NRML)
+        startLive(id)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        val gid = kite.gtts.keys.single()
+        assertEquals(150, gttQty(kite.gtts.getValue(gid)))
+        kite.position(NIFTY_CE, 75, 100.0)                                 // one lot sold by hand: the GTT must shrink
+        kite.quotes.remove("NFO:$NIFTY_CE")                                // no price this look: the shrink cannot be worked out
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals(150, gttQty(kite.gtts.getValue(gid)))
+        kite.quote("NFO:$NIFTY_CE", 100.0, 99.95, 100.05)
+        runBlocking { Strategies.manageOnly(compromised = false) }
+        assertEquals("shrunk on the next look", 75, gttQty(kite.gtts.getValue(gid)))
     }
 }

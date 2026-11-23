@@ -120,7 +120,18 @@ object McxGuard {
                     val same = working.filter { it.symbol == p.symbol && it.side == side.name && it.product == p.product }
                     // A resting stop or target on it would keep the market exit from going: cancelled first, exit next pass.
                     val others = same.filter { it.tag != "iraalgoexpiry" }
-                    if (others.isNotEmpty()) { others.forEach { runCatching { Broker.cancel(it.id, it.variety) } }; continue }
+                    if (others.isNotEmpty()) {
+                        // 23 Nov 2026 (B6-H round 2, WHO CANCELLED A STOP): marked the app's own in the saved strategies' book before the cancels go
+                        // ([Strategies.markOwnCancels]: only its leg stops' ids are kept), so a leg's stop among them found cancelled is never read as
+                        // Boss's; a cancel Zerodha refused outright (nothing of the app's was cancelled) is taken back. One whose cancel never took ends
+                        // its mark itself once a fresh read still shows it working 15 s after. (The saved strategies trade NFO contracts only today. Should
+                        // they trade MCX, this exit must take out and sell in one pass under the row's claim, as the NSE square-offs do - a stop marked
+                        // the app's own rests again before the next pass, and would be taken out again each pass.)
+                        runCatching { Strategies.markOwnCancels(others.map { it.id }) }
+                        val refused = others.filter { o -> runCatching { Broker.cancel(o.id, o.variety) }.exceptionOrNull()?.let { Broker.definite(it) } == true }
+                        if (refused.isNotEmpty()) runCatching { Strategies.unmarkOwnCancels(refused.map { it.id }) }
+                        continue
+                    }
                     // 21 Oct, enhancement round 4 (idea 1): a protection's day GTT on it deleted first, confirmed ([Protections.dayGttsOut]).
                     if (!Protections.dayGttsOut(Mcx.EXCHANGE, p.symbol, "MCX expiry exit")) continue
                     val pending = same.sumOf { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) }
