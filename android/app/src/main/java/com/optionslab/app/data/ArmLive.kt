@@ -294,6 +294,15 @@ object ArmLive {
     internal fun handsOffNow(exchange: String, symbol: String): Boolean =
         handsOffUntil["$exchange:$symbol"]?.let { System.currentTimeMillis() < it } == true
 
+    /**
+     * 23 Nov 2026 (B6 review, seventh round): no stop placed or put back on [exchange]:[symbol] - Boss is exiting it by hand ([handsOffNow]), or
+     * his exit on it whose reply was lost may be selling ([SquareOffExit.bossExitLostOn]: a stop rested beside a sale that went would be left to
+     * sell what is no longer held). Only the paths that place a stop ask this; the level watches and the exits' own sales keep their full
+     * cadence once his hands-off ends (the open-positions rule). Memory only.
+     */
+    internal fun noStopBeside(exchange: String, symbol: String): Boolean =
+        handsOffNow(exchange, symbol) || SquareOffExit.bossExitLostOn(exchange, symbol)
+
     /** 2 Nov: the paper contracts an open live trade copies (memory only): their paper card and notice stay down ([Notifier.liveCopyShown]). */
     @Volatile var paperMirroredHint: Set<String> = emptySet()
         private set
@@ -1837,7 +1846,9 @@ object ArmLive {
         // (22 Nov 2026, B6 review: nor while a square-off's sale on the contract is on its way - its gap: the app watches the level meanwhile.
         // Second round, m-2: nor while another seller holds the row's claim - a square-off whose stops take longer to come out than its gap
         // would otherwise see this stop rest again beside its sale.)
-        if (lostExitHolds(p.contract) || SquareOffExit.inGap(p.exchange, p.symbol, p.product) || rowClaimedByOther(p)) return p.copy(stopTrigger = trigger)
+        // (23 Nov 2026, B6 review, seventh round: nor while Boss's own exit on the row whose reply was lost may be selling it.)
+        if (lostExitHolds(p.contract) || SquareOffExit.inGap(p.exchange, p.symbol, p.product) || rowClaimedByOther(p) ||
+            SquareOffExit.bossExitLost(p.exchange, p.symbol, p.product)) return p.copy(stopTrigger = trigger)
         // 20 Nov 2026 (audit B5 deep review): this trade's own stop whose reply was lost and is not found yet is UNKNOWN: looked for again,
         // and no second stop rests beside it while it may (the app watches the level meanwhile); found, it is the trade's stop. Given up
         // on after [Broker.LOST_SEARCH_MS] (Boss told), a stop is rested as usual.

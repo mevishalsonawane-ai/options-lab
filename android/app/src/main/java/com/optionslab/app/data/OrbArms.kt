@@ -5722,7 +5722,8 @@ object OrbArms {
         // Liquidity 15+5's -15%, the breakeven, the breakeven at +₹1,000, its lock - is always put back at Zerodha (Liquidity first; the
         // ORB arms by Boss's "yes" the same day). [AppSettings.exchangeStops] is no longer read. The caller's guards decide when.
         // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no new stop beside his sale (asked again next look).
-        if (ArmLive.handsOffNow("NFO", sym)) return null
+        // (23 Nov 2026, B6 review, seventh round: nor while his exit on it whose reply was lost may be selling.)
+        if (ArmLive.noStopBeside("NFO", sym)) return null
         // (Review of the b5-orders merge, C1: never for a part whose own lost sale is pending - no stop placed, and a lost stop found is not
         // attached; it rests as cover, left to its own lost reply, until that sale is booked or let go.)
         if (lostOf(p) != null) return null

@@ -1932,7 +1932,8 @@ object Strategies {
             if (!b.legStops.containsKey(k)) {
                 if (!com.optionslab.engine.orb.LiveMirror.mayRest(want, ltp, ref.tick, dir) || leg.exitInFlight || qty <= 0) continue
                 // 6 Nov: Boss is exiting this contract by hand ([ArmLive.handsOff]): no stop beside his sale (tried again next look).
-                if (ArmLive.handsOffNow(ex, kiteSym)) continue
+                // (23 Nov 2026, B6 review, seventh round: nor while his exit on it whose reply was lost may be selling.)
+                if (ArmLive.noStopBeside(ex, kiteSym)) continue
                 // 23 Nov 2026 (B6 follow-ups, item 2): the leg's stop goes in with the contract's row claimed ([SquareOffExit.claimExit], as the
                 // ORB / Liquidity stops go back), so a square-off never works its sale out from a read made without it; and none goes in while
                 // another seller holds the row, a square-off's sale went on it a moment ago ([SquareOffExit.inGap]), or one went since this look

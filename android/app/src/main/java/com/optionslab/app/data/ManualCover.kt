@@ -494,7 +494,8 @@ object ManualCover {
             // confirmed only later, under the protections' own "removed").
             endedToday = prot.second.filter { it.live && synchronized(mem) { it.id !in unhedgedIds } }
                 .map { ManualCoverRule.Ended(it.symbol, it.note, today = (it.endedAt ?: it.id) >= today0, exchange = it.exchange) },
-            handsOff = candidates.filter { ArmLive.handsOffNow(it.exchange, it.symbol) }.map { it.key }.toSet(),
+            // (23 Nov 2026, B6 review, seventh round: and while his exit on it whose reply was lost may be selling - no cover beside it.)
+            handsOff = candidates.filter { ArmLive.noStopBeside(it.exchange, it.symbol) }.map { it.key }.toSet(),
             expiring = expiringNow(s, day, candidates),
             shortUnderlyings = shorts,
             hedgeUnderlyings = hedges,
@@ -559,7 +560,7 @@ object ManualCover {
                 if (next == ManualCoverRule.FollowUp.NONE) next = ManualCoverRule.FollowUp.SIGHTED
                 continue
             }
-            if (ArmLive.handsOffNow(p.exchange, p.symbol)) continue
+            if (ArmLive.noStopBeside(p.exchange, p.symbol)) continue
             if (cover(d, p.copy(qty = qty, avg = row.avg, last = row.last), now, names)) next = ManualCoverRule.FollowUp.READ_FAILED
         }
         return next
