@@ -415,6 +415,15 @@ class OrderPathRound2Test : RobolectricTest() {
             } finally { SecurePrefs.countedThread = null }
             assertEquals("settings reads on the stream's thread for Boss's sell", 0L, SecurePrefs.readsForTest.get())
             assertEquals("the protections' look asked for (in their own worker)", asked + 1, Protections.lookSoonAskedForTest())
+            // (Round 3: Zerodha refusing a sale of his - noted in memory, the words left to the protections' look.)
+            SecurePrefs.readsForTest.set(0)
+            SecurePrefs.countedThread = Thread.currentThread()
+            try {
+                KiteStream.textForTest("""{"type":"order","data":{"order_id":"9103","status":"REJECTED","tradingsymbol":"$sym","exchange":"NFO",""" +
+                    """"product":"MIS","transaction_type":"SELL","quantity":30,"filled_quantity":0,"average_price":0,"tag":null}}""")
+            } finally { SecurePrefs.countedThread = null }
+            assertEquals("settings reads on the stream's thread for Boss's refused sell", 0L, SecurePrefs.readsForTest.get())
+            assertEquals("the protections' look asked for again", asked + 2, Protections.lookSoonAskedForTest())
         } finally { ManualCover.resetForTest(on = false); Protections.resetFollowUpForTest() }
     }
 

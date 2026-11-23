@@ -211,6 +211,12 @@ object Protections {
         // Review: every active live protection's GTT (a day one, an overnight one, one being removed), not only those noted DAY_GTT.
         dayGttHint = list.filter { it.active && it.live && it.gttId != null }
             .groupBy { "${it.exchange}:${it.symbol}" }.mapValues { e -> e.value.mapNotNull { it.gttId } }
+        // (Round 3: his targets seen only for protections still active.)
+        hisTargetsSeen.keys.retainAll(list.filter { it.active }.map { it.id }.toSet())
+        // 23 Nov 2026 (B6-I round 3): every GTT of a protection seen, kept for the day (one that fired loses its id from the list).
+        if (appGttsSeen.size > 2_000) appGttsSeen.clear()
+        appGttsSeen += list.mapNotNull { it.gttId } + freshDayGtts.values.flatten() + runCatching { ArmLive.gttIdsHint() }.getOrDefault(emptySet()) +
+            Strategies.gttIdsHint
         freshDayGtts = emptyMap()
     }
 
@@ -951,6 +957,8 @@ object Protections {
     suspend fun remove(id: Long, note: String = "removed"): String = lock.withLock {
         val list = load()
         val p = list.firstOrNull { it.id == id && it.active } ?: return@withLock "Nothing to remove."
+        // (23 Nov 2026, B6-I round 3: removed by Boss or the switch - no longer for his exit beside it: never kept back by [recheckBossExit].)
+        bossExits.remove(id)
         if (!cancelOrders(p)) {
             // Kept, and cancelled again on every pass: marked finished now, an exit still resting at the
             // broker would be forgotten while it can still fill.
@@ -972,6 +980,7 @@ object Protections {
         var changed = false
         for ((i, p) in list.withIndex()) {
             if (!p.active || p.live != live || p.symbol != symbol || p.exchange != exchange) continue
+            bossExits.remove(p.id)    // (Round 3: as [remove].)
             list[i] = if (cancelOrders(p, "position_closed")) p.copy(active = false, note = "position closed") else p.copy(note = REMOVING).also {
                 // (23 Nov 2026, B6 review, seventh round: one whose stop may be resting - looked for, and cancelled once found.)
                 if (p.note == STOP_LOST) Alerts.error("$symbol: its protection's stop may be resting at Zerodha (its answer was unsure); the app " +
@@ -1711,34 +1720,81 @@ object Protections {
     internal fun resetFollowUpForTest() {
         followJob?.let { j -> kotlinx.coroutines.runBlocking { j.cancelAndJoin() } }
         followJob = null; followApart.set(false)
-        // (23 Nov 2026, B6-I round 2: and a look asked for at once - [lookSoon] - finished, never left running into the next test.)
+        // (23 Nov 2026, B6-I round 2: and a look asked for at once - [lookSoon] - finished, never left running into the next test. Round 3:
+        // none asked again after it.)
+        soonAgain.set(false)
         soonJob?.let { j -> kotlinx.coroutines.runBlocking { kotlinx.coroutines.withTimeoutOrNull(15_000) { j.join() } } }
+        soonAgain.set(false)
         soonJob = null; soonApart.set(false)
     }
 
     /**
      * 23 Nov 2026 (B6-I round 2): a regular look ([tick], its follow-ups included) in this object's own worker, at once - never on the
-     * caller's thread (the stream's: [bossSaleReported]). At most one waiting; one that has started lets the next ask queue another.
+     * caller's thread (the stream's: [bossSaleReported]). Round 3 (review: a burst of updates queued a look each): one worker at a time;
+     * asked while it waits or looks, it looks exactly once more when it is done ([soonAgain]) - a burst of updates costs two looks at most.
      */
     fun lookSoon() {
         soonAsked.incrementAndGet()
+        soonAgain.set(true)
+        startSoon()
+    }
+
+    private fun startSoon() {
         if (!soonApart.compareAndSet(false, true)) return
         runCatching {
-            // (Started ATOMIC, so a cancel before it runs still reaches the finally: never left "waiting" for good.)
+            // (Started ATOMIC, so a cancel before it runs still reaches the finally: never left "running" for good.)
             soonJob = followScope.launch(start = kotlinx.coroutines.CoroutineStart.ATOMIC) {
-                try { kotlinx.coroutines.yield() } finally { soonApart.set(false) }
-                runCatching { tick() }.onFailure { e ->
-                    if (e is kotlinx.coroutines.CancellationException && !kotlinx.coroutines.currentCoroutineContext().isActive) throw e
-                    runCatching { Diag.record("protection", "a look asked for at once failed: ${e.javaClass.simpleName}: ${e.message}") }
+                try {
+                    kotlinx.coroutines.yield()
+                    while (soonAgain.getAndSet(false)) {
+                        soonRan.incrementAndGet()
+                        runCatching { soonLook() }.onFailure { e ->
+                            if (e is kotlinx.coroutines.CancellationException && !kotlinx.coroutines.currentCoroutineContext().isActive) throw e
+                            runCatching { Diag.record("protection", "a look asked for at once failed: ${e.javaClass.simpleName}: ${e.message}") }
+                        }
+                    }
+                } finally {
+                    soonApart.set(false)
+                    // (One asked between the last check and the worker let go - or while a cancelled one still held the worker - is never lost.)
+                    if (soonAgain.get()) startSoon()
                 }
             }
         }.onFailure { soonApart.set(false) }
     }
+    /**
+     * Round 3 (review: the worker's [tick] waited through its follow-ups - seconds - while a new ask waited behind it): one regular look and
+     * its follow-ups as [tick] makes them, but a look asked for meanwhile ([soonAgain]) ends the wait at once - the worker's next look is a
+     * regular look too, and does the follow-up's work (one confirming a closed read asks again for the time it still needs).
+     */
+    private suspend fun soonLook() {
+        var wait = look(fast = false, stream = false)
+        var rounds = 0
+        while (wait > 0L && rounds < FOLLOW_UPS && !soonAgain.get()) {
+            val end = System.nanoTime() + wait * 1_000_000L
+            while (!soonAgain.get()) {
+                val left = (end - System.nanoTime()) / 1_000_000L
+                if (left <= 0) break
+                kotlinx.coroutines.delay(minOf(left, 50L))
+            }
+            if (soonAgain.get()) return
+            rounds++
+            wait = look(fast = false, stream = false)
+        }
+    }
+
+    /** A worker of [lookSoon] is waiting or looking (at most one). */
     private val soonApart = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** Round 3: a look asked for since the worker's last look began ([lookSoon]): it looks once more. */
+    private val soonAgain = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var soonJob: kotlinx.coroutines.Job? = null
     /** Looks asked for at once, counted (memory; the order-path test reads it). */
     private val soonAsked = java.util.concurrent.atomic.AtomicInteger()
     internal fun lookSoonAskedForTest(): Int = soonAsked.get()
+    /** Round 3: the looks [lookSoon]'s worker made, counted (memory; tests). */
+    private val soonRan = java.util.concurrent.atomic.AtomicInteger()
+    internal fun lookSoonRanForTest(): Int = soonRan.get()
+    /** TEST ONLY: whether [lookSoon]'s worker is waiting or looking, or a look is still asked for. */
+    internal fun lookSoonPendingForTest(): Boolean = soonApart.get() || soonAgain.get() || soonJob?.isActive == true
 
     /**
      * 23 Nov 2026 (B6-I round 2): Boss's own sale on [exchange]:[symbol] [product] (a tag not the app's) that Zerodha reported on the stream:
@@ -1758,12 +1814,86 @@ object Protections {
     private const val BOSS_SOLD_MS = 120_000L
 
     /**
+     * 23 Nov 2026 (B6-I round 3, review: "the app's stop already rests" was said at once, while the app might be taking it out): Boss's own
+     * sale on [exchange]:[symbol] that Zerodha refused (order [orderId], Zerodha's [message]), on a contract with an automatic protection.
+     * Memory only - safe on the stream's thread - and a regular look asked for at once; what is said comes after that look, as things are
+     * then ([sayRefused]).
+     */
+    fun bossSaleRefused(orderId: String, exchange: String, symbol: String, message: String) {
+        val now = nowMs()
+        if (bossRefused.size > 50) bossRefused.entries.removeIf { now - it.value.atMs !in 0..REFUSED_WAIT_MS }
+        bossRefused.putIfAbsent(orderId, Refused(exchange, symbol, message, now))
+        lookSoon()
+    }
+    private data class Refused(val exchange: String, val symbol: String, val message: String, val atMs: Long)
+    private val bossRefused = java.util.concurrent.ConcurrentHashMap<String, Refused>()
+    /** Round 3: how long a refused sale's words wait for a protection being taken out to settle (then said as things are). */
+    private const val REFUSED_WAIT_MS = 60_000L
+
+    /**
+     * Round 3: the refused sales of Boss's ([bossSaleRefused]) said once each, after a regular look (under [lock]), only as true then: the
+     * app's automatic stop rests at Zerodha on the position - its order working in the look's own read of the book, or its GTT - with how to
+     * exit while it rests; or it was taken out earlier for another exit order of his (loudly: only his own orders protect it). While one is
+     * being taken out, or its stop is not resting (being put back), it waits for the looks after (at most [REFUSED_WAIT_MS]); then said as it is.
+     */
+    private suspend fun sayRefused(list: List<Item>) {
+        if (bossRefused.isEmpty() || streamLook) return
+        val now = nowMs()
+        val rows = runCatching { passOrders(stream = false) }.getOrNull()?.associateBy { it.id }
+        val gtts = if (list.any { it.active && it.gttId != null }) runCatching { passGtts() }.getOrNull() else emptyList()
+        for ((id, r) in bossRefused.entries.toList()) {
+            val on = list.filter { it.live && it.auto && it.exchange == r.exchange && it.symbol == r.symbol }
+            val active = on.filter { it.active }
+            val resting = rows != null && active.any { a -> a.note != REMOVING &&
+                (a.gttId?.let { g -> gtts?.any { it.id == g && it.active } == true } ?: (a.stopOrderId?.let { s -> rows[s]?.working } == true)) }
+            val waiting = now - r.atMs in 0 until REFUSED_WAIT_MS
+            if (waiting && !resting && active.isNotEmpty()) continue
+            bossRefused.remove(id)
+            val head = "${r.symbol}: Zerodha refused your own sell order${r.message.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""} - "
+            // (The book never read meanwhile: told all the same, with nothing said that could be untrue.)
+            if (rows == null && active.isNotEmpty()) { unprotected(head + "check the position and its stop in Kite."); continue }
+            val last = on.maxByOrNull { it.id }
+            when {
+                resting -> Alerts.post(head + "the app's stop rests on the position. ${com.optionslab.ira.ManualCoverRule.OWN_EXIT_HELP}",
+                    Alerts.Kind.ERROR, "Protection")
+                active.isNotEmpty() -> unprotected(head + "the app's stop is not resting at Zerodha on it now: check the position in Kite.")
+                last != null && last.note == BOSS_EXIT ->
+                    unprotected(head + "the app's own stop was taken out earlier for your other exit order in Kite, so only your own orders protect " +
+                        "it now: check them in Kite.")
+                else -> runCatching { Diag.record("protection", head + "nothing of the app's rests on it.") }
+            }
+        }
+    }
+
+    /**
      * 23 Nov 2026 (B6-I round 2: a quick scalp left the app's stop resting on a flat account through the protection's first minute): Boss's
      * own sale on [p]'s contract reported filled in the last two minutes - its first minute is no reason not to read what is held then (two
      * agreeing reads still decide it closed).
      */
     // (Review: only a sale reported after this protection was set - one before it, a re-entry's, never.)
     private fun soldLately(p: Item): Boolean = p.auto && bossSold["${p.exchange}:${p.symbol}:${p.product}"]?.let { it >= p.id && nowMs() - it in 0 until BOSS_SOLD_MS } == true
+
+    /**
+     * 23 Nov 2026 (B6-I round 3, review: Boss's target beside the app's stop filled, the stream's report of it missed, and the app's stop rested
+     * on a flat account through the protection's first minute): his targets seen beside [p] on the last regular look ([bossBeside]), by
+     * protection id - an order id, or "gtt:<id>" for a GTT of his. Memory.
+     */
+    private val hisTargetsSeen = java.util.concurrent.ConcurrentHashMap<Long, Set<String>>()
+
+    /**
+     * Round 3: whether a target of Boss's seen beside [p] on the last look ([hisTargetsSeen]) is no longer working and filled (an order
+     * COMPLETE or part filled in the book [rows]; a GTT of his that fired with its order filled) - then what is held is read in its
+     * first minute too (two agreeing reads still decide it closed). Refused or cancelled with nothing filled: no reason to read.
+     */
+    private suspend fun hisTargetFilled(p: Item, rows: Map<String, Broker.OrderRow>): Boolean {
+        val ids = hisTargetsSeen[p.id] ?: return false
+        // (Only one the book shows filled - never one a trailing book leaves out: a read of a fresh position in its first minute can trail too.)
+        if (ids.any { id -> !id.startsWith("gtt:") && rows[id].let { it != null && !it.working && (it.status == "COMPLETE" || it.filled > 0) } }) return true
+        val gttIds = ids.filter { it.startsWith("gtt:") }.mapNotNull { it.removePrefix("gtt:").toLongOrNull() }
+        if (gttIds.isEmpty() || streamLook) return false
+        val gtts = runCatching { passGtts() }.getOrNull() ?: return false
+        return gtts.filter { it.id in gttIds && !it.active }.any { g -> g.orderIds.any { (rows[it]?.filled ?: 0) > 0 } }
+    }
 
     /** 20 Nov 2026: follow-up looks after one [tick] at most. */
     private const val FOLLOW_UPS = 4
@@ -1882,7 +2012,8 @@ object Protections {
 
     private suspend fun tickLocked(fast: Boolean) {
         val list = load()
-        if (list.none { it.active }) return
+        // (Round 3: Boss's refused sales said as things are - also when nothing is active any more.)
+        if (list.none { it.active }) { sayRefused(list); return }
         warnIfBlind(list)
         var changed = false
         // [fast]: an event-driven look ([FastPath]). A change of the best price seen alone (a trail not yet moved) stays in
@@ -1902,6 +2033,7 @@ object Protections {
         }
         // An overnight GTT refused (counted in memory, nothing saved) ends the watch's evening look for it ([overnightHint]).
         hint(list)
+        sayRefused(list)
     }
 
     /** A fast look left a best-price change in memory only ([tick]): the next regular look writes it. */
@@ -2355,7 +2487,15 @@ object Protections {
     private suspend fun tickLiveOnce(p0: Item): Item {
         if (!Broker.loggedIn) return p0
         // (23 Nov 2026, B6-I: one taken out for Boss's own exit beside it ends as such, said once: [removedNote].)
-        if (p0.note == REMOVING) return if (cancelOrders(p0)) p0.copy(active = false, note = removedNote(p0)) else p0
+        // (Round 3: one marked for Boss's own exit is checked again on this look's own reads before anything is cancelled: [recheckBossExit].)
+        if (p0.note == REMOVING) {
+            if (p0.auto && bossExits.containsKey(p0.id)) {
+                recheckBossExit(p0)?.let { return it }
+                // (Its cancels go now: a mark dropped later notes them as the app's own - [recheckBossExit].)
+                bossExits.computeIfPresent(p0.id) { _, m -> m.copy(tried = true) }
+            }
+            return if (cancelOrders(p0)) p0.copy(active = false, note = removedNote(p0)) else p0
+        }
         // 23 Nov 2026 (B6-I, review): an automatic protection resting as a GTT (all day as one GTT, or overnight) with Boss's own sell
         // working beside it is taken out the same way as one resting as orders (below). Only while its GTT is active (a fired one's own
         // order is never taken for his) and both books were read.
@@ -2382,7 +2522,7 @@ object Protections {
                 }
                 // (Review: brought down beside his stop earlier and his stops cover less now: raised again, as the orders' [regrowForBoss].)
                 val guarded = ArmLive.handsOffNow(p0.exchange, p0.symbol) || SquareOffExit.inGap(p0.exchange, p0.symbol, p0.product) || rowClaimedByOther(p0)
-                if (!guarded && !hasSibs && read != null && shrunkFor.containsKey(p0.id)) {
+                if (!guarded && !hasSibs && read != null && shrunkFor.containsKey(p0.id) && !hisInFlight(p0, book.associateBy { it.id })) {
                     val safe = heldAgain(p0, book, lagSafe = true)?.takeIf { it != 0 && it.sign() == p0.qty.sign() }?.let { abs(it) }
                     if (safe != null) regrowGttForBoss(p0, own, b?.stopCover ?: 0, minOf(safe, read))?.let { return it }
                 }
@@ -2444,7 +2584,11 @@ object Protections {
         // (Not in its first minute: the position book can trail a fresh fill. 23 Nov 2026, B6-I round 2: unless Boss's own sale on it was
         // reported filled a moment ago - [soldLately].)
         // Review (R2): an id ahead of now (a clock once ahead) is never "its first minute" for ever.
-        val net = if (nowMs() - p.id in 0L until 60_000L && !soldLately(p)) null else netNow()
+        // (Round 3: nor when a target of Boss's seen beside it on the last look is gone since with a fill - his sale reported on the stream or
+        // not: [hisTargetFilled].)
+        val firstMinute = nowMs() - p.id in 0L until 60_000L
+        val targetFilled = firstMinute && !stream && hisTargetFilled(p, rows)
+        val net = if (firstMinute && !soldLately(p) && !targetFilled) null else netNow()
         if (net != null && (net == 0 || net.sign() != p.qty.sign())) {
             listOfNotNull(so, to).filter { it.working }.forEach { runCatching { Broker.cancel(it.id, it.variety) } }
             val still = runCatching { Broker.orders().filter { it.id == p.stopOrderId || it.id == p.targetOrderId }.any { it.working } }.getOrElse { true }
@@ -2666,11 +2810,15 @@ object Protections {
                 val read = net ?: runCatching { heldIn(passPositions(false), p) }.getOrNull()
                 val known = read?.takeIf { it != 0 && it.sign() == p.qty.sign() }?.let { abs(it) }
                 val held = known ?: appCover
+                // (Round 3: his targets seen beside it, so the next look - its first minute too - reads what is held once one is gone: filled.)
+                // (One gone with a fill stays noted until the position's reads decide: its confirming look reads them again.)
+                if (b != null && b.targetIds.isNotEmpty()) hisTargetsSeen[p.id] = b.targetIds + (if (targetFilled) hisTargetsSeen[p.id].orEmpty() else emptySet())
+                else if (!targetFilled && gtts != null) hisTargetsSeen.remove(p.id)
                 if (b != null) {
                     if (b.stopCover >= held) return markBossExit(p, wholeWords(p, b, held))
                     if (b.stopCover > 0 && b.stopCover + appCover > held) {
                         val rest = minOf((held - b.stopCover - sibs).coerceAtLeast(0) / p.lotSize.coerceAtLeast(1) * p.lotSize.coerceAtLeast(1), abs(p.qty))
-                        if (rest <= 0) return markBossExit(p, wholeWords(p, b, held))
+                        if (rest <= 0) return markBossExit(p, wholeWords(p, b, held, sibs))
                         return shrinkForBoss(p, so, to, b, rest, held)
                     }
                     if (b.hisTarget && p.target != null) return dropTargetForBoss(p, to, b, held)
@@ -2678,7 +2826,7 @@ object Protections {
                 // (Brought down beside his stop earlier, and his stops cover less now - cancelled, part filled: raised again, never past what it
                 // covered before nor what is held less his - sized on a read that counts a fill the positions do not show yet as sold, and
                 // only with every book read.)
-                if (known != null && gtts != null && shrunkFor.containsKey(p.id)) {
+                if (known != null && gtts != null && shrunkFor.containsKey(p.id) && !hisInFlight(p, rows)) {
                     val safe = heldAgain(p, rows.values.toList(), lagSafe = true)?.takeIf { it != 0 && it.sign() == p.qty.sign() }?.let { abs(it) }
                     if (safe != null) regrowForBoss(p, so, to, b?.stopCover ?: 0, minOf(safe, known), sibs)?.let { return it }
                 }
@@ -2779,7 +2927,9 @@ object Protections {
      * 23 Nov 2026 (B6-I): automatic protections being taken out for Boss's own exit beside them, by id, with what is said once out and
      * whether his exit is no stop ([BossExit.bare]). Memory (after a restart it ends as "removed", unsaid).
      */
-    private data class BossExit(val said: String, val bare: Boolean)
+    // (Round 3: [prev] its note before the mark; [his] his stops counted at the mark - order ids, "gtt:<id>" - so one that filled since counts as
+    // the sale gone; [tried] its cancels sent.)
+    private data class BossExit(val said: String, val bare: Boolean, val prev: String = "", val his: Set<String> = emptySet(), val tried: Boolean = false)
     private val bossExits = java.util.concurrent.ConcurrentHashMap<Long, BossExit>()
     /** 23 Nov 2026 (B6-I): the levels Boss moved, said once each ("id|stop|target"). Memory. */
     private val bossMovedSaid = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
@@ -2791,35 +2941,141 @@ object Protections {
      * cancel's mark), with a look asked at once after it that cancels its exits, confirmed ([removedNote] then says [b] once).
      */
     private fun markBossExit(p: Item, b: BossExit): Item {
-        bossExits[p.id] = b
+        // (Round 3: with its note before, so a mark dropped on the look after - his order refused meanwhile - gives it back: [recheckBossExit].)
+        bossExits[p.id] = b.copy(prev = p.note)
         askFollowUp(BOSS_EXIT_LOOK_MS)
         runCatching { Diag.record("protection", "${p.symbol}: your own exit works beside the app's automatic stop and target: the app takes its own out") }
         return p.copy(note = REMOVING)
     }
 
     /**
+     * 23 Nov 2026 (B6-I round 3, review: the app's stop came out beside a sale of Boss's that Zerodha then refused): [p], marked to come out for
+     * his own exit ([markBossExit]), checked again on this look's own reads before anything of it is cancelled. Null: it comes out (his exits
+     * Zerodha has taken still cover all that is held - the words said once out are this look's - or the position is closed). Otherwise the
+     * protection as it stays: a stream look, a book not read, or the app's own exits on their way - nothing this look; his cover fell (his
+     * order refused or cancelled since) - the mark dropped and its note given back, and an exit of it this removal already cancelled noted as
+     * the app's own cancel ([noteTakenOver]), so the next look puts it back for what is held ([restAgain]), never reads it as Boss's cancel.
+     */
+    private suspend fun recheckBossExit(p: Item): Item? {
+        val mark = bossExits[p.id] ?: return null
+        if (streamLook) return p
+        if (ArmLive.handsOffNow(p.exchange, p.symbol) || SquareOffExit.inGap(p.exchange, p.symbol, p.product) || rowClaimedByOther(p)) return p
+        val book = runCatching { passOrders(stream = false) }.getOrNull() ?: return p
+        val rows = book.associateBy { it.id }
+        // (Review: the GTT list not read - his orders cannot be told from the app's own GTTs' - the mark dropped, so the protection's own
+        // checks go on meanwhile (an exit filled, the position closed); the next look that reads both marks it again.)
+        val gtts = runCatching { passGtts() }.getOrNull() ?: return dropBossMark(p, mark, rows, null, b = null, hisFilled = 0, said = false)
+        // (Review: a stop of his counted at the mark still on its way to the exchange - a trigger's order being placed - is not gone: decided on
+        // the look after it settles.)
+        if (mark.his.any { rows[it]?.status in IN_FLIGHT }) { askFollowUp(FLAT_RECHECK_MS); return p }
+        val own = p.gttId?.let { id -> gtts.firstOrNull { it.id == id } }
+        val b = bossBeside(p, if (own != null) book.filter { it.id !in own.orderIds } else book, gtts)
+        // (Review: his stops counted at the mark that filled since - his sale went: then what is held now decides, read lag-safe (a fill the
+        // positions do not show yet counted as sold), so the app's stop never stays on what his sale sold, nor comes off what is still held.
+        // A fired GTT of his by its orders' fills.)
+        val hisFilled = mark.his.sumOf { id ->
+            if (id.startsWith("gtt:")) gtts.firstOrNull { "gtt:${it.id}" == id }?.orderIds?.sumOf { rows[it]?.filled ?: 0 } ?: 0
+            else rows[id]?.filled ?: 0
+        }
+        val sibs = siblingCover(p, book, gtts)
+        val cover = b?.stopCover ?: 0
+        if (hisFilled > 0) {
+            val safe = heldAgain(p, book, lagSafe = true)
+            // (Not read: decided on a look soon after - nothing cancelled, nothing kept back on a guess.)
+            if (safe == null) { askFollowUp(FLAT_RECHECK_MS); return p }
+            val left = if (safe == 0 || safe.sign() != p.qty.sign()) 0 else abs(safe)
+            if (left <= cover + sibs) {
+                bossExits[p.id] = BossExit("${p.symbol}: your own stop in Kite sold $hisFilled, so the app took its own stop" +
+                    (if (p.target != null) " and target" else "") + " out: never two exits on one position." +
+                    (if (left > 0 && b != null) " Your own exit (${b.what}) works for the rest." else ""), bare = false,
+                    prev = mark.prev, his = mark.his + (b?.stopIds ?: emptySet()), tried = mark.tried)
+                return null
+            }
+        } else {
+            val read = runCatching { heldIn(passPositions(false), p) }.getOrNull()
+            // (One read showing it closed - or turned round - is no proof: it may trail a fresh fill. What the app covers is what is held then;
+            // a closed position's stop comes out by the usual two agreeing reads once the mark is dropped.)
+            val closed = read != null && (read == 0 || read.sign() != p.qty.sign())
+            val held = (if (closed) null else read?.let { abs(it) }) ?: (abs(p.qty) + sibs)
+            if (b != null && (cover >= held || (cover > 0 && (p.gttId == null || sibs == 0) && held - cover - sibs < p.lotSize.coerceAtLeast(1)))) {
+                bossExits[p.id] = wholeWords(p, b, held, sibs).copy(prev = mark.prev, his = mark.his + b.stopIds, tried = mark.tried)
+                return null
+            }
+        }
+        // His cover fell since the mark (his order refused or cancelled): the app's own stop stays, or goes back.
+        return dropBossMark(p, mark, rows, own, b, hisFilled, said = true)
+    }
+
+    /**
+     * Round 3: [p]'s mark for Boss's own exit dropped ([recheckBossExit]): its note given back, and - when its cancels went ([BossExit.tried]) -
+     * every exit of it not filled noted as the app's own cancel ([noteTakenOver]; the WHO CANCELLED A STOP rule: the app's cancels are marked,
+     * and one that never took ends its mark by itself, [endIfSettled]), a GTT of it deleted too, with the look that puts it back at once.
+     * [said]: Boss told once why ([hisFilled]: what his stop sold first).
+     */
+    private fun dropBossMark(p: Item, mark: BossExit, rows: Map<String, Broker.OrderRow>, own: Broker.GttRow?, b: BossBeside?, hisFilled: Int,
+                             said: Boolean): Item {
+        bossExits.remove(p.id)
+        val gttGone = p.gttId != null && own?.active != true && said
+        val ours = if (!mark.tried) emptyList() else listOfNotNull(p.stopOrderId, p.targetOrderId).filter { rows[it]?.status != "COMPLETE" } +
+            listOfNotNull(p.gttId?.takeIf { gttGone }?.let { "gtt:$it" })
+        if (ours.isNotEmpty()) { noteTakenOver(ours); askFollowUp(BOSS_EXIT_LOOK_MS) }
+        if (!said) { runCatching { Diag.record("protection", "${p.symbol}: taking the app's stop out for your own exit waits: the GTT list could not be read") }; return p.copy(note = mark.prev) }
+        val cancelled = mark.tried && (listOfNotNull(p.stopOrderId, p.targetOrderId).any { rows[it]?.status == "CANCELLED" } || gttGone)
+        val words = "${p.symbol}: your own exit order in Kite that the app was taking its stop out for " +
+            (if (hisFilled > 0) "sold $hisFilled and does not cover the rest held" else "is not resting any more (refused or cancelled)") +
+            ", so the app keeps its own stop" + (if (cancelled) " and puts back what it had already cancelled." else ".")
+        runCatching { Diag.record("protection", words) }
+        if (bossShrinkSaid.add("${p.id}|kept|${b?.stopCover ?: 0}")) Alerts.post(words, Alerts.Kind.INFO, "Protection")
+        return p.copy(note = mark.prev)
+    }
+
+    /** Round 3: an order still on its way to the exchange (Zerodha may yet refuse it): neither counted as Boss's cover nor as gone. */
+    private val IN_FLIGHT = setOf("PUT ORDER REQ RECEIVED", "VALIDATION PENDING", "OPEN PENDING")
+
+    /**
      * 23 Nov 2026 (B6-I round 2): Boss's own exits beside an automatic protection - his working sells ([orders]) and active GTTs ([gtts]),
      * what they cover in all, whether one of them is a stop ([hisStop]: an SL / SL-M, or a GTT with a leg under the price) and whether one
      * is a target ([hisTarget]: any other sell, or a GTT with a leg over the price), and [what] in words.
      */
-    private data class BossBeside(val covers: Int, val hisStop: Boolean, val hisTarget: Boolean, val what: String, val stopCover: Int = 0)
+    private data class BossBeside(val covers: Int, val hisStop: Boolean, val hisTarget: Boolean, val what: String, val stopCover: Int = 0,
+                                  val targetIds: Set<String> = emptySet(), val stopIds: Set<String> = emptySet())
+
+    /**
+     * 23 Nov 2026 (B6-I round 3): the order states in which Zerodha has taken an order of Boss's ([bossBeside]): resting at the exchange, or
+     * a change of it being checked. Never one still on its way (PUT ORDER REQ RECEIVED, VALIDATION PENDING, OPEN PENDING): Zerodha may yet
+     * refuse it, and the app's stop must not come out beside a sale that never rests.
+     */
+    private val BOSS_ACCEPTED = setOf("OPEN", "TRIGGER PENDING", "MODIFY PENDING", "MODIFY VALIDATION PENDING")
+
+    /**
+     * 23 Nov 2026 (B6-I round 3): the GTT ids of the app's own (every protection's seen today, the arms' live copies', the saved strategies'
+     * legs'): a fired one's order carries no tag, so it is never taken for Boss's ([bossBeside]). Memory; added to by [hint].
+     */
+    private val appGttsSeen: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    /** TEST ONLY: [id] noted as a GTT of the app's own ([appGttsSeen]). */
+    internal fun noteAppGttForTest(id: Long) { appGttsSeen += id }
 
     /**
      * 23 Nov 2026 (B6-I, Boss: "never two exits"; the app respects his own stop): Boss's own exits on [p]'s contract (same exchange, symbol
      * and product, on its exit side) beside its own; null when there is none. His: any order whose tag is not the app's
      * ([com.optionslab.ira.ManualCoverRule.bossTag] - none, the app's own order screen's, another app's) and no protection's order; round 2:
-     * and any active GTT on it that no protection rests ([gtts]: null when not read - his orders alone then). Never while the app's own
-     * exits are on their way (his exit from the app, a square-off's sale and its gap, another seller holding the row).
+     * and any active GTT on it that no protection rests. Never while the app's own exits are on their way (his exit from the app, a
+     * square-off's sale and its gap, another seller holding the row). Round 3: only orders Zerodha has taken ([BOSS_ACCEPTED]), never one a
+     * GTT of the app's own placed when it fired ([appGttsSeen]: such an order has no tag); and nothing at all while the GTT list was not read
+     * ([gtts] null: such an order could not be told from his).
      */
     private fun bossBeside(p: Item, orders: Collection<Broker.OrderRow>, gtts: List<Broker.GttRow>?): BossBeside? {
         if (ArmLive.handsOffNow(p.exchange, p.symbol) || SquareOffExit.inGap(p.exchange, p.symbol, p.product) || rowClaimedByOther(p)) return null
+        if (gtts == null) return null
         val active = cache.orEmpty().filter { it.active }
         val apps = active.flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }.toSet() + listOfNotNull(p.stopOrderId, p.targetOrderId)
-        val appGtts = active.mapNotNull { it.gttId }.toSet() + dayGttMarks(p.exchange, p.symbol).mapNotNull { it.removePrefix("gtt:").toLongOrNull() }
+        val appGtts = active.mapNotNull { it.gttId }.toSet() + dayGttMarks(p.exchange, p.symbol).mapNotNull { it.removePrefix("gtt:").toLongOrNull() } +
+            appGttsSeen + runCatching { ArmLive.gttIdsHint() }.getOrDefault(emptySet()) + Strategies.gttIdsHint
+        val firedApp = gtts.filter { it.id in appGtts }.flatMap { it.orderIds }.toSet()
         fun left(o: Broker.OrderRow) = com.optionslab.engine.risk.ExitQty.remaining(o.qty, o.filled, o.pending)
-        val mine = orders.filter { it.working && it.exchange == p.exchange && it.symbol == p.symbol && it.product == p.product &&
-            it.side == p.exitSide && it.id !in apps && com.optionslab.ira.ManualCoverRule.bossTag(it.tag) && left(it) > 0 }
-        val hisGtts = gtts.orEmpty().filter { it.active && it.exchange == p.exchange && it.symbol == p.symbol && it.id !in appGtts &&
+        val mine = orders.filter { it.status in BOSS_ACCEPTED && it.exchange == p.exchange && it.symbol == p.symbol && it.product == p.product &&
+            it.side == p.exitSide && it.id !in apps && it.id !in firedApp && com.optionslab.ira.ManualCoverRule.bossTag(it.tag) && left(it) > 0 }
+        val hisGtts = gtts.filter { it.active && it.exchange == p.exchange && it.symbol == p.symbol && it.id !in appGtts &&
             it.covers(p.exitSide, p.product) > 0 }
         if (mine.isEmpty() && hisGtts.isEmpty()) return null
         val long = p.qty > 0
@@ -2835,17 +3091,24 @@ object Protections {
         // covers is the larger of his stops' cover and his targets', never their sum, which would count those units twice.)
         val stopCover = mine.filter { it.type == "SL" || it.type == "SL-M" }.sumOf { left(it) } + hisGtts.filter { stopLeg(it) }.sumOf { it.covers(p.exitSide, p.product) }
         val targetCover = mine.filter { it.type != "SL" && it.type != "SL-M" }.sumOf { left(it) } + hisGtts.filter { targetLeg(it) }.sumOf { it.covers(p.exitSide, p.product) }
-        return BossBeside(maxOf(stopCover, targetCover), stopCover > 0, targetCover > 0, what, stopCover)
+        val targetIds = mine.filter { it.type != "SL" && it.type != "SL-M" }.map { it.id }.toSet() + hisGtts.filter { targetLeg(it) }.map { "gtt:${it.id}" }
+        val stopIds = mine.filter { it.type == "SL" || it.type == "SL-M" }.map { it.id }.toSet() + hisGtts.filter { stopLeg(it) }.map { "gtt:${it.id}" }
+        return BossBeside(maxOf(stopCover, targetCover), stopCover > 0, targetCover > 0, what, stopCover, targetIds, stopIds)
     }
 
-    /** 23 Nov 2026 (B6-I): the words when the app's protection comes out whole beside Boss's own exit [b] ([held]: what is held). */
-    private fun wholeWords(p: Item, b: BossBeside, held: Int): BossExit =
-        BossExit("${p.symbol}: your own exit in Kite (${b.what}) works beside the app's automatic stop" + (if (p.target != null) " and target" else "") +
+    /**
+     * 23 Nov 2026 (B6-I): the words when the app's protection comes out whole beside Boss's own exit [b] ([held]: what is held). Round 3 (review:
+     * said only when true): [others] - what the app's other slices on it still cover; his stops and those cover all, or the rest is said bare.
+     */
+    private fun wholeWords(p: Item, b: BossBeside, held: Int, others: Int = 0): BossExit {
+        val bare = b.stopCover + others < held
+        return BossExit("${p.symbol}: your own exit in Kite (${b.what}) works beside the app's automatic stop" + (if (p.target != null) " and target" else "") +
             ", so the app took its own out: never two exits on one position. " +
-            (if (b.covers < held) "Your exit and the app's other stops on it cover the rest."
-            else if (!b.hisStop) "Your order is not a stop: the position has no stop now; set one yourself if you want it."
-            else if (b.stopCover < held) "Your stop covers ${b.stopCover} of the $held held: the rest has no stop now; set one yourself if you want it."
-            else "Only your order protects it now."), b.covers >= held && b.stopCover < held)
+            (if (!b.hisStop) "Your order is not a stop: the position has no stop now; set one yourself if you want it."
+            else if (b.stopCover >= held) "Only your order protects it now."
+            else if (!bare) "Your stop covers ${b.stopCover} of the $held held, and the app's other stops on it cover the rest."
+            else "Your stop covers ${b.stopCover} of the $held held: the rest has no stop now; set one yourself if you want it."), bare, his = b.stopIds)
+    }
 
     /**
      * 23 Nov 2026 (B6-I round 2, review): a target of Boss's own beside the app's target, his stops (if any) leaving room for the app's stop:
@@ -2899,6 +3162,7 @@ object Protections {
         }
         val out = cur.copy(qty = p.qty.sign() * rest)
         shrunkFor.putIfAbsent(p.id, abs(p.qty))
+        shrunkHis.merge(p.id, b.stopIds) { a, c -> a + c }
         if (bossShrinkSaid.add("${p.id}|${b.stopCover}")) {
             val said = "${p.symbol}: your own stop in Kite (${b.what}) covers ${b.stopCover} of the $held held, so the app's automatic stop now covers the " +
                 "other $rest only: never two exits on one position." + (if (cur.target == null && p.target != null) " The app's target was dropped: yours is the target." else "")
@@ -2910,6 +3174,9 @@ object Protections {
 
     /** 23 Nov 2026 (B6-I round 2, review): the automatic protections brought down beside Boss's own exit, by id, with the size before. Memory. */
     private val shrunkFor = java.util.concurrent.ConcurrentHashMap<Long, Int>()
+    /** Round 3 (review): his stops beside each one brought down (order ids, "gtt:<id>"): never raised while one is on its way ([IN_FLIGHT]). */
+    private val shrunkHis = java.util.concurrent.ConcurrentHashMap<Long, Set<String>>()
+    private fun hisInFlight(p: Item, rows: Map<String, Broker.OrderRow>): Boolean = shrunkHis[p.id].orEmpty().any { rows[it]?.status in IN_FLIGHT }
 
     /**
      * 23 Nov 2026 (B6-I round 2, review): [p] was brought down beside Boss's own stop ([shrinkForBoss]) and his cover is less now ([covers]:
@@ -2963,7 +3230,7 @@ object Protections {
                     "yet (to $rest${if (dropTarget) ", its target leg dropped" else ""}): cancel one of them in Kite if they could both fill. Retrying.")
             return p
         }
-        if (rest < abs(p.qty)) shrunkFor.putIfAbsent(p.id, abs(p.qty))
+        if (rest < abs(p.qty)) { shrunkFor.putIfAbsent(p.id, abs(p.qty)); shrunkHis.merge(p.id, b.stopIds) { a, c -> a + c } }
         val said = "${p.symbol}: your own exit in Kite (${b.what}) works beside the app's GTT, so it now covers $rest of the $held held" +
             (if (dropTarget) ", its stop only (yours is the target)" else "") + ": never two exits on one position."
         runCatching { Diag.record("protection", said) }
@@ -3044,30 +3311,61 @@ object Protections {
      * extra rests as slices of their own ([protectSliced]: the stop and target levels of the protection already there), so the slices
      * together never sell more than is held (the caller sizes [extra] from a fresh read, never more than held less what is covered).
      * [precheck] runs inside this object's lock with the order ids of the protection already there (not Boss's): null goes on.
+     * Round 3 (review: the app's stop raised again beside Boss's cancelled stop - [regrowForBoss] - between the caller's reads and here, and
+     * the lots added covered on top of it): [covered], what the caller saw the app's protection cover; inside the lock [extra] is capped at
+     * what is held (orders read fresh, the positions after them, a fill they trail counted as sold - read just before the lock) less what the
+     * protection covers now (the larger of [covered], its saved slices and their stops resting) - nothing at all when that is none
+     * ([AddResult.ALREADY]).
      */
-    suspend fun addAutoSlices(symbol: String, exchange: String, product: String, extra: Int, price: Double,
-                              precheck: suspend (own: Set<String>) -> String?): String {
+    suspend fun addAutoSlices(symbol: String, exchange: String, product: String, extra: Int, price: Double, covered: Int,
+                              precheck: suspend (own: Set<String>) -> String?): AddResult {
         val s = AppSettings.load()
-        if (!s.live || !s.allowRealOrders) return "Switch to Live with the badge at the top first."
-        if (extra <= 0) return "Not protected: nothing more to cover."
-        val spec = runCatching { Broker.spec(exchange, symbol) }.getOrNull() ?: return "Could not read $symbol's lot and tick from Zerodha."
+        if (!s.live || !s.allowRealOrders) return AddResult("Switch to Live with the badge at the top first.")
+        if (extra <= 0) return AddResult("Not protected: nothing more to cover.")
+        val spec = runCatching { Broker.spec(exchange, symbol) }.getOrNull() ?: return AddResult("Could not read $symbol's lot and tick from Zerodha.")
+        val again = com.optionslab.ira.ManualCoverRule.CHECKED_AGAIN
+        // (Review: read just before the lock - never a wait under it, which every stop's watch shares. What the protection covers is read
+        // inside it, after any raise of its stop a look made meanwhile.)
+        val orders = Broker.within(2_500) { Broker.orders(fresh = true) } ?: return AddResult("Not protected: $again: Zerodha's orders could not be read")
+        val heldNow = Broker.within(2_500) { ExitCoordinator.held(exchange, symbol, product, "protection", orders, forceLag = true) }
+            ?: return AddResult("Not protected: $again: what is held could not be read")
+        // (Review: less than the caller just read held - this read trailing his buy, or a sale since: tried again soon, never "already covered".)
+        if (heldNow < covered + extra) return AddResult("Not protected: $again: what is held could not be read in full yet (it shows $heldNow)")
         return lock.withLock {
             val list = load()
             val mine = list.filter { it.active && it.live && it.symbol == symbol }
             val first = mine.firstOrNull()
             if (first == null || mine.any { !it.auto || it.exchange != exchange || it.product != product || it.qty <= 0 || it.gttId != null ||
                     it.note == REMOVING || it.note == STOP_LOST || it.note == DAY_GTT || it.note == WAITING })
-                return@withLock "Not protected: its protection is not only the app's own automatic one now."
+                return@withLock AddResult("Not protected: its protection is not only the app's own automatic one now.")
             val own = mine.flatMap { listOfNotNull(it.stopOrderId, it.targetOrderId) }.toSet()
-            runCatching { precheck(own) }.getOrElse { "${com.optionslab.ira.ManualCoverRule.CHECKED_AGAIN}: it failed (${it.message})" }?.let { why ->
-                return@withLock "Not protected: $why" }
+            runCatching { precheck(own) }.getOrElse { "$again: it failed (${it.message})" }?.let { why ->
+                return@withLock AddResult("Not protected: $why") }
+            val rows = orders.associateBy { it.id }
+            val resting = mine.sumOf { m -> m.stopOrderId?.let { rows[it] }?.takeIf { it.working }
+                ?.let { com.optionslab.engine.risk.ExitQty.remaining(it.qty, it.filled, it.pending) } ?: 0 }
+            val coverNow = maxOf(covered, mine.sumOf { abs(it.qty) }, resting)
+            val lot = spec.lotSize.coerceAtLeast(1)
+            val n = minOf(extra, (heldNow - coverNow).coerceAtLeast(0) / lot * lot)
+            if (n <= 0) return@withLock AddResult("${AddResult.ALREADY}: the app's own stop covers $coverNow of the $heldNow held.", 0, coverNow, heldNow)
             val freeze = Kite.freezeQuantity(exchange, symbol)
-            val sizes = Kite.slices(extra, spec.lotSize, freeze)
-            val r = protectSliced(list, symbol, exchange, product, extra, price, first.stop, null, first.target, spec.lotSize, spec.tickSize,
-                own.toList(), true, sizes, freeze ?: extra)
-            if (!r.startsWith("Protected")) r
-            else "Protected $extra more of $symbol at Zerodha: ${first.describe()}, as the rest." +
-                (if (product == "MIS" && first.target != null) " $TARGET_BY_APP" else "")
+            val sizes = Kite.slices(n, spec.lotSize, freeze)
+            val r = protectSliced(list, symbol, exchange, product, n, price, first.stop, null, first.target, spec.lotSize, spec.tickSize,
+                own.toList(), true, sizes, freeze ?: n)
+            if (!r.startsWith("Protected")) AddResult(r, 0, coverNow, heldNow)
+            else AddResult("Protected $n more of $symbol at Zerodha: ${first.describe()}, as the rest." +
+                (if (product == "MIS" && first.target != null) " $TARGET_BY_APP" else ""), n, coverNow + n, heldNow)
+        }
+    }
+
+    /**
+     * 23 Nov 2026 (B6-I round 3): what [addAutoSlices] did - its [words] (as before), the units it [added], and what the app's protection
+     * covers of what is held after it ([coveredNow] of [heldNow]; 0 when not read).
+     */
+    data class AddResult(val words: String, val added: Int = 0, val coveredNow: Int = 0, val heldNow: Int = 0) {
+        companion object {
+            /** Nothing added: the app's own protection already covers all that is held now. */
+            const val ALREADY = "Already covered"
         }
     }
 
@@ -3169,6 +3467,8 @@ object Protections {
         flatSince.clear(); ocoSaid.clear(); ocoPending.clear()
         // (23 Nov 2026, B6-I: the automatic protections being taken out for Boss's own exit, and the levels he moved, said.)
         bossExits.clear(); bossMovedSaid.clear(); bossShrinkSaid.clear(); appMoves.clear(); bossSold.clear(); shrunkFor.clear(); autoKeysHint = emptySet()
+        // (Round 3.)
+        appGttsSeen.clear(); hisTargetsSeen.clear(); bossRefused.clear(); shrunkHis.clear()
         filesForErase().forEach { runCatching { it.delete() } }
     }
 
@@ -3192,5 +3492,6 @@ object Protections {
     internal suspend fun holdLockForTest(release: kotlinx.coroutines.CompletableDeferred<Unit>) { lock.withLock { release.await() } }
 
     internal fun forgetMemoryForTest() { resetFollowUpForTest(); cache = null; published = null; gttTries.clear(); flatSince.clear(); synchronized(this) { lastId = 0L }
-        bossExits.clear(); bossMovedSaid.clear(); bossShrinkSaid.clear(); appMoves.clear(); bossSold.clear(); shrunkFor.clear() }
+        bossExits.clear(); bossMovedSaid.clear(); bossShrinkSaid.clear(); appMoves.clear(); bossSold.clear(); shrunkFor.clear()
+        appGttsSeen.clear(); hisTargetsSeen.clear(); bossRefused.clear(); shrunkHis.clear() }
 }

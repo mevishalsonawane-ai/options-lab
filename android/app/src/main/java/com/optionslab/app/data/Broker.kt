@@ -1022,7 +1022,10 @@ object Broker {
         val value: Double get() = last * (qty + t1)
     }
 
-    private val WORKING = setOf("OPEN", "TRIGGER PENDING", "AMO REQ RECEIVED", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING")
+    // 23 Nov 2026 (B6-I round 3): and MODIFY VALIDATION PENDING - an order still resting at the exchange while a change to it (Boss trailing
+    // his own stop, the app's own trail) is checked - is working: never read as gone (a stop put back beside it, his cover taken as ended).
+    private val WORKING = setOf("OPEN", "TRIGGER PENDING", "AMO REQ RECEIVED", "OPEN PENDING", "VALIDATION PENDING", "PUT ORDER REQ RECEIVED", "MODIFY PENDING",
+        "MODIFY VALIDATION PENDING")
 
     suspend fun funds(): Funds {
         // Workers asking at once share one read ([SHARE_MS]); kept and published with when that read began.

@@ -517,7 +517,8 @@ class ManualCoverPointsTest : RobolectricTest() {
         update(sold, "COMPLETE", 65, qty = 65, side = "SELL", symbol = short)
         Background.await("the wing's protection off at once") { runBlocking { Protections.active() }.isEmpty() }
         assertEquals("CANCELLED", kite.order(wing.stopOrderId!!).status)
-        assertTrue(Alerts.posted.any { it.text.contains("removed because it is now part of a spread/hedge") })
+        // (Round 3: said just after the removal returns, in the look's own job - waited for, never read the same moment.)
+        Background.await("said") { Alerts.posted.any { it.text.contains("removed because it is now part of a spread/hedge") } }
     }
 
     /** Item 3b: Boss adds lots seconds after the cover - the lots added are covered too, at the same stop; never more than held. */
@@ -704,5 +705,246 @@ class ManualCoverPointsTest : RobolectricTest() {
         tick()
         assertEquals("raised back to the 130 held", 130, kite.gtts.getValue(g).getJSONArray("orders").getJSONObject(0).getInt("quantity"))
         assertEquals(130, runBlocking { Protections.active() }.single().qty)
+    }
+
+
+    // ---- round 3, the review's cases ----------------------------------------------------------------------------------------
+
+    /** Item 1: his stop seen while still on its way at Zerodha, then refused - never counted: the app's stop and target stay as they are. */
+    @Test fun bossesStopStillOnItsWayThenRefusedLeavesTheAppsStop() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        for (st in listOf("PUT ORDER REQ RECEIVED", "VALIDATION PENDING", "OPEN PENDING", "REJECTED")) {
+            kite.order(own).status = st
+            tick()
+            assertEquals("$st: the app's stop stays", "TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+            assertEquals("$st: and its target", "OPEN", kite.order(p.targetOrderId!!).status)
+        }
+        assertEquals(130, kite.order(p.stopOrderId!!).qty)
+        val now = runBlocking { Protections.active() }.single()
+        assertEquals(130, now.qty); assertTrue(now.note != "removing")
+        assertFalse(said("your own exit in Kite"))
+    }
+
+    /** Item 1: his stop resting when the look marked the app's to come out, refused before the look that cancels it: the app's stays. */
+    @Test fun bossesStopRefusedRightAfterTheMarkLeavesTheAppsStop() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        // Zerodha refuses it just after the look that saw it resting reads the order book.
+        kite.afterNext("/orders") { kite.order(own).status = "REJECTED" }
+        tick()
+        assertEquals("TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        assertEquals("OPEN", kite.order(p.targetOrderId!!).status)
+        val now = runBlocking { Protections.active() }.single()
+        assertTrue("its mark dropped: ${now.note}", now.note != "removing")
+        assertTrue(said("so the app keeps its own stop."))
+        assertFalse(said("Only your order protects it now"))
+        // Nothing more happens on later looks.
+        val n = writes().size
+        tick()
+        assertEquals(n, writes().size)
+    }
+
+    /** Item 1, review: his stop fills between the look that marked the app's to come out and the look that cancels it - it still comes out. */
+    @Test fun bossesStopThatFilledAfterTheMarkStillTakesTheAppsOut() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        kite.afterNext("/orders") { kite.fill(own, 108.0) }               // his stop sells all, just after the marking look read the book
+        tick()
+        assertEquals("the app's stop out: his sale went", "CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("CANCELLED", kite.order(p.targetOrderId!!).status)
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+        assertTrue(said("your own stop in Kite sold 130"))
+        assertFalse(said("so the app keeps its own stop"))
+    }
+
+    /** Item 1, review: his stop sells part after the mark and the rest of it is cancelled - the app's stop stays for what is still held. */
+    @Test fun bossesStopThatSoldPartThenEndedLeavesTheAppsStopForTheRest() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        kite.afterNext("/orders") { kite.fillPart(own, 65, 108.0); kite.order(own).status = "CANCELLED" }
+        tick()
+        assertEquals("the app's stop kept", "TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        assertTrue(said("sold 65 and does not cover the rest held, so the app keeps its own stop."))
+        tick()
+        assertEquals("and brought down to the 65 still held", 65, kite.order(p.stopOrderId!!).qty)
+        assertTrue(runBlocking { Protections.active() }.single().active)
+    }
+
+    /** Item 1, review: his stop just marked, then seen still on its way at Zerodha (an order being placed) - nothing comes out until it settles. */
+    @Test fun bossesStopOnItsWayAfterTheMarkWaitsForItToSettle() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        kite.afterNext("/orders") { kite.order(own).status = "OPEN PENDING" }
+        tick()
+        assertEquals("nothing cancelled while his is on its way", "TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        assertEquals("still marked", "removing", runBlocking { Protections.active() }.single().note)
+        assertFalse(said("so the app keeps its own stop"))
+        kite.order(own).status = "OPEN"
+        tick()
+        assertEquals("settled and resting: the app's out", "CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
+    /** Item 1, review: the GTT list not read on the look after the mark - the mark dropped (its own checks go on), taken out once both read. */
+    @Test fun aGttListNotReadAfterTheMarkKeepsTheAppsStopUntilBothAreRead() {
+        val p = autoProtected()
+        kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        kite.afterNext("/gtt/triggers") { kite.gttReadFailures = 20 }
+        tick()
+        assertEquals("TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        assertTrue("the mark dropped", runBlocking { Protections.active() }.single().note != "removing")
+        kite.gttReadFailures = 0
+        tick()
+        assertEquals("both read: the app's out", "CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertTrue(runBlocking { Protections.active() }.isEmpty())
+    }
+
+    /** Item 1: the app's stop already cancelled for his stop (its target's cancel not through), then his stop refused: the stop goes back. */
+    @Test fun theAppsStopAlreadyCancelledForBosssRefusedStopIsPutBack() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 108.0, type = "SL", product = "NRML")
+        later(65)
+        kite.drop += "/orders/regular/${p.targetOrderId}"             // the target's cancel never reaches Zerodha
+        tick()
+        assertEquals("CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("OPEN", kite.order(p.targetOrderId!!).status)
+        kite.drop.clear()
+        kite.order(own).status = "REJECTED"
+        tick(); tick()
+        val now = runBlocking { Protections.active() }.single()
+        val sl = kite.order(now.stopOrderId!!)
+        assertEquals("a stop rests again", "TRIGGER PENDING", sl.status)
+        assertEquals("for all held", 130, sl.qty)
+        assertEquals("at its level", 115.35, sl.trigger, 1e-9)
+        assertTrue(said("puts back what it had already cancelled"))
+        assertEquals("the old target taken out first: one target only", "CANCELLED", kite.order(p.targetOrderId!!).status)
+        assertTrue(now.targetOrderId != p.targetOrderId && kite.order(now.targetOrderId!!).status == "OPEN")
+    }
+
+    /** Item 2: lots added while the app's stop is raised back beside his cancelled stop - the slices never cover more than is held. */
+    @Test fun lotsAddedNeverCoverMoreThanHeldWhenTheAppsStopIsRaisedMeanwhile() {
+        ManualCover.fillGraceMsForTest = 200L
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 65, 108.0, type = "SL", product = "NRML")
+        later(65)
+        tick()
+        assertEquals("brought down beside his", 65, kite.order(p.stopOrderId!!).qty)
+        kite.order(own).status = "CANCELLED"                           // he cancels his own stop ...
+        val more = kite.boughtInKite(sym, 65, 125.35, product = "NRML")  // ... and buys 65 more at once
+        // The app's stop raised back at Zerodha (the protections' look beside his cancel) between the switch's reads and its slices.
+        kite.afterNext("/quote") { kite.order(p.stopOrderId!!).qty = 130 }
+        val placed = kite.placed.size
+        update(more, "COMPLETE", 65, qty = 65, product = "NRML")
+        Background.await("the lots added covered") { kite.placed.size > placed }
+        settled()
+        val added = kite.placed.drop(placed).filter { it.form["order_type"] == "SL" }
+        assertEquals("only what the raised stop leaves: 195 held, 130 + 65", listOf("65"), added.map { it.form["quantity"] })
+        assertTrue(ManualCover.view.value.last, ManualCover.view.value.last.contains("195 of 195 held, 65 added"))
+    }
+
+    /** Item 3: a burst of Boss's buy updates while a look runs - two looks at most, never one per update. */
+    @Test fun aBurstOfUpdatesCostsTwoLooksAtMost() {
+        ManualCover.fillGraceMsForTest = 0L
+        kite.slowMs["/portfolio/positions"] = 300L
+        val ran = ManualCover.lookNowRanForTest()
+        val id = kite.boughtInKite(sym, 130, 125.35)
+        update(id, "COMPLETE", 130)
+        Background.await("its look started") { ManualCover.lookNowRanForTest() > ran }
+        repeat(19) { update(id, "COMPLETE", 130) }
+        settled()
+        kite.slowMs.clear()
+        val n = ManualCover.lookNowRanForTest() - ran
+        assertTrue("at most two looks for 20 updates, made $n", n in 1..2)
+        assertEquals("covered once", 1, kite.placed.count { it.form["order_type"] == "SL" })
+    }
+
+    /** Item 3: a burst of Boss's sale updates beside the app's stop while the protections look - two of their looks at most. */
+    @Test fun aBurstOfBossesSalesCostsTwoProtectionLooksAtMost() {
+        autoProtected()
+        later(65)
+        val own = kite.restsInKite(sym, "SELL", 65, 140.0, product = "NRML")
+        kite.slowMs["/orders"] = 300L
+        val ran = Protections.lookSoonRanForTest()
+        update(own, "OPEN", 0, qty = 65, product = "NRML", side = "SELL")
+        Background.await("its look started") { Protections.lookSoonRanForTest() > ran }
+        repeat(19) { update(own, "OPEN", 0, qty = 65, product = "NRML", side = "SELL") }
+        Background.await("the looks done") { !Protections.lookSoonPendingForTest() }
+        kite.slowMs.clear()
+        val n = Protections.lookSoonRanForTest() - ran
+        assertTrue("at most two looks for 20 updates, made $n", n in 1..2)
+    }
+
+    /** Item 4: his target beside the app's stop fills in its first minute, the stream's report missed: the app's stop comes out (two reads). */
+    @Test fun bossesTargetThatFilledUnreportedTakesTheAppsStopOutInItsFirstMinute() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 130, 140.0, product = "NRML")
+        tick()
+        assertEquals("his target is the target", "CANCELLED", kite.order(p.targetOrderId!!).status)
+        assertEquals("TRIGGER PENDING", kite.order(p.stopOrderId!!).status)
+        kite.fill(own, 140.0)                                       // filled at Zerodha; no update on the stream
+        tick()
+        assertEquals("the app's stop out on the flat account", "CANCELLED", kite.order(p.stopOrderId!!).status)
+        assertEquals("position closed", runBlocking { Protections.endedSince(0) }.single { it.id == p.id }.note)
+        assertTrue("still its first minute", Market.now().toInstant().toEpochMilli() - p.id < 60_000L)
+    }
+
+    /** Item 5: Boss trails his own stop (a change being checked at Zerodha): it still covers - the app's stop is never raised beside it. */
+    @Test fun bossTrailingHisOwnStopNeverRaisesTheAppsStop() {
+        val p = autoProtected()
+        val own = kite.restsInKite(sym, "SELL", 65, 108.0, type = "SL", product = "NRML")
+        later(65)
+        tick()
+        assertEquals(65, kite.order(p.stopOrderId!!).qty)
+        kite.order(own).status = "MODIFY VALIDATION PENDING"
+        tick()
+        assertEquals("not raised beside his", 65, kite.order(p.stopOrderId!!).qty)
+        assertFalse(said("covers less now"))
+        kite.order(own).status = "TRIGGER PENDING"
+        tick()
+        assertEquals(65, kite.order(p.stopOrderId!!).qty)
+    }
+
+    /** Item 6: an order a GTT of the app's own placed when it fired (no tag of the app's) is never taken for Boss's target. */
+    @Test fun anOrderTheAppsOwnGttPlacedIsNeverTakenForBosss() {
+        val p = autoProtected()
+        later(65)
+        kite.gtts[7_001L] = org.json.JSONObject().put("id", 7_001L).put("type", "single").put("status", "active").put("created_at", "2026-11-23 10:00:00")
+            .put("condition", org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", sym)
+                .put("trigger_values", org.json.JSONArray().put(139.0)).put("last_price", 126.0))
+            .put("orders", org.json.JSONArray().put(org.json.JSONObject().put("exchange", "NFO").put("tradingsymbol", sym).put("transaction_type", "SELL")
+                .put("quantity", 65).put("product", "NRML").put("order_type", "LIMIT").put("price", 140.0)))
+        Protections.noteAppGttForTest(7_001L)                          // another of the app's own (a slice, an arm's copy, a strategy's leg)
+        val fired = kite.triggerGtt(7_001L)
+        assertEquals("its sale works", "OPEN", kite.order(fired).status)
+        tick()
+        assertEquals("the app's target kept", "OPEN", kite.order(p.targetOrderId!!).status)
+        assertNotNull(runBlocking { Protections.active() }.single().target)
+        assertFalse(said("is the target now"))
+    }
+
+    /** Item 6: a sale on the other leg that a buy of his there explains (the positions trailing it) never takes the wing's protection at once. */
+    @Test fun aSaleAPositionsLagCouldExplainNeverTakesTheWingOffAtOnce() {
+        val id = kite.boughtInKite(sym, 65, 125.35)
+        update(id, "COMPLETE", 65, qty = 65)
+        Background.await("the wing covered") { kite.placed.isNotEmpty() }
+        settled()
+        val wing = runBlocking { Protections.active() }.single()
+        val other = "NIFTY26N0925200CE"
+        kite.positionsTrailReads = 50
+        kite.boughtInKite(other, 65, 90.0)                             // his buy there, the positions trailing it
+        val sell = kite.restsInKite(other, "SELL", 65, 100.0)           // and his target on it
+        update(sell, "OPEN", 0, qty = 65, side = "SELL", symbol = other)
+        settled()
+        kite.positionsCatchUp()
+        assertEquals("the wing keeps its protection", "TRIGGER PENDING", kite.order(wing.stopOrderId!!).status)
+        assertTrue(runBlocking { Protections.active() }.any { it.id == wing.id })
+        assertFalse(Alerts.posted.any { it.text.contains("removed because it is now part of a spread/hedge") })
     }
 }

@@ -364,6 +364,9 @@ class ManualCoverRuleTest {
         // 23 Nov 2026 (B6-I round 2): another app's order (a third-party tag) is Boss's own too.
         assertTrue(t(tag = "sensibull"), "another app's tag: Boss's"); assertTrue(t(tag = "Streak"))
         assertFalse(t(tag = "iraprotect")); assertFalse(t(tag = "iraalgostrat")); assertFalse(t(tag = "iraalgoexpiry")); assertFalse(t(tag = "iraalgoflat"))
+        // (Round 3: the tag trimmed, as [ManualCoverRule.appTag] does - the app's order screen's with spaces is still left to the two looks.)
+        assertFalse(t(tag = " iraalgo "), "the order screen's tag with spaces"); assertFalse(t(tag = "IRAALGO"))
+        assertFalse(t(tag = " iraorb "))
     }
 
     /** 23 Nov 2026 (B6-I round 2): the app's own tags, and Boss's - none, the app's order screen's, another app's. */

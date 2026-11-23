@@ -176,11 +176,14 @@ object ExitCoordinator {
     } catch (e: kotlinx.coroutines.CancellationException) { throw e
     } catch (_: Exception) { null }
 
-    /** Zerodha's orders for an exit sender on [exchange]:[symbol]: [Broker.orders], read again while it misses an exit sent from here. */
-    suspend fun orders(exchange: String, symbol: String, who: String): List<Broker.OrderRow> {
+    /**
+     * Zerodha's orders for an exit sender on [exchange]:[symbol]: [Broker.orders], read again while it misses an exit sent from here.
+     * [fresh] (23 Nov 2026, B6-I round 3: [ManualCover]'s last check): never a read already on its way ([Broker.orders] fresh).
+     */
+    suspend fun orders(exchange: String, symbol: String, who: String, fresh: Boolean = false): List<Broker.OrderRow> {
         val key = ExitDesk.key(exchange, symbol)
         // Review: what is missing is judged against THIS read's rows (another worker's later read showing the exit never vouches for it).
-        return ExitDesk.settle(on, { Broker.orders() }, { r -> registry.missingFrom(ExitRegistry.Kind.ORDER, key, orderRows(r)) }) { s, m -> noteRead(key, who, "orders", s, m) }
+        return ExitDesk.settle(on, { Broker.orders(fresh) }, { r -> registry.missingFrom(ExitRegistry.Kind.ORDER, key, orderRows(r)) }) { s, m -> noteRead(key, who, "orders", s, m) }
     }
 
     /** Zerodha's GTTs for an exit sender, as [orders] does for the order book. */

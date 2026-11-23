@@ -2118,6 +2118,12 @@ object ArmLive {
     /** The GTT ids this path already tracks (memory): never adopted for a lost reply. */
     private fun knownGtts(): Set<Long> = _view.value.open.mapNotNull { it.gttId }.toSet()
 
+    /**
+     * 23 Nov 2026 (B6-I round 3): the live copies' GTT ids (memory only, any thread): a fired one's order carries no tag, so the protections
+     * never take it for Boss's own sell ([Protections]).
+     */
+    fun gttIdsHint(): Set<Long> = runCatching { knownGtts() }.getOrDefault(emptySet())
+
     private fun stopFailed(p: Pos, trigger: Double, why: String) {
         com.optionslab.app.work.Alerts.post("${p.label}: the live ${stopWords(p)} at %.2f could not rest at Zerodha (%s); the app watches it and tries again."
             .format(Locale.ENGLISH, trigger, why), com.optionslab.app.work.Alerts.Kind.ERROR, WHO, throttle = true)

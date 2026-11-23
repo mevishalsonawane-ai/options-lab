@@ -175,7 +175,15 @@ object Strategies {
         stopHintWhy = com.optionslab.ira.DayStop.Why.of(b.stoppedWhy)
         stopHintAt = b.stoppedAt
         mcxHint = b.mcxStoppedDay?.let { McxHint(it, com.optionslab.ira.DayStop.Why.of(b.mcxStoppedWhy), b.mcxStoppedAt, b.mcxStopSells) }
+        gttIdsHint = runCatching { b.legStops.values.mapNotNull(::gttOf).toSet() }.getOrDefault(emptySet())
     }
+
+    /**
+     * 23 Nov 2026 (B6-I round 3): the live legs' stops resting as GTTs, their ids, as of the last load or save (memory only, any thread): a
+     * fired one's order carries no tag, so the protections never take it for Boss's own sell ([Protections]).
+     */
+    @Volatile var gttIdsHint: Set<Long> = emptySet()
+        private set
 
     /** 30 Oct: the commodity side's stop as of the last load or save, read without the lock (one volatile: never torn). */
     private class McxHint(val day: String, val why: com.optionslab.ira.DayStop.Why, val at: String?, val sells: Boolean)
@@ -275,7 +283,7 @@ object Strategies {
         return loaded
     }
 
-    private fun clearHints() { runningHint = false; exposureHint = emptyList(); stopHintDay = null; stopHintAt = null; mcxHint = null }
+    private fun clearHints() { runningHint = false; exposureHint = emptyList(); stopHintDay = null; stopHintAt = null; mcxHint = null; gttIdsHint = emptySet() }
 
     /** What this process last wrote to the book's file: an unchanged save is not encrypted and synced again ([Vault.LastWrite]). */
     private val written = Vault.LastWrite()

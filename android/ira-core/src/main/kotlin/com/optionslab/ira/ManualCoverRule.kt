@@ -351,7 +351,7 @@ object ManualCoverRule {
     // (23 Nov 2026, B6-I round 2: any order that is not the app's own - Kite's own app or site, or another app's tag: Sensibull, Streak... -
     // looked at at once; still never the app's own order screen's, "iraalgo".)
     fun fillTriggers(side: String, exchange: String, product: String, symbol: String, status: String, filled: Int, tag: String): Boolean =
-        bossTag(tag) && !tag.equals(HAND_TAG, ignoreCase = true) && side.equals("BUY", ignoreCase = true) && exchange in EXCHANGES &&
+        bossTag(tag) && !tag.trim().equals(HAND_TAG, ignoreCase = true) && side.equals("BUY", ignoreCase = true) && exchange in EXCHANGES &&
             product in PRODUCTS && isOption(symbol) && filled > 0 &&
             (status.equals("COMPLETE", ignoreCase = true) || status.equals("CANCELLED", ignoreCase = true))
 
